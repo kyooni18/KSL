@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "scope": "realtime-prediction-latency",
+  "sourceFlight": "FlightLogs/2026-09-11T16-05-21Z-STS-N-vehicle.jsonl",
+  "observedFailure": {
+    "phase": "TAEM",
+    "firstDirectlyPersistedWallGapMilliseconds": 9413.4,
+    "firstGapDestinationTick": 7594,
+    "firstGapKspUtAdvanceSeconds": 4.74,
+    "peerTimestampAuditWallGapsSeconds": [9.413, 9.294, 8.873],
+    "nextLargestWholeFlightWallGapSecondsBeforePathology": 1.007
+  },
+  "causalFinding": {
+    "blockingPath": "controller dynamic_prediction -> predictor_simulate_terminal_shadow_ensemble -> cloned guidance_update -> terminal_predict",
+    "whyExpensive": "One terminal advisory ensemble runs a nominal 600 s shadow plus two 360 s stress shadows; cloned TAEM guidance repeatedly invokes its own terminal candidate planner.",
+    "ruledOutAsDominant": ["kRPC telemetry I/O", "split-log serialization", "SQLite physics persistence", "rendering"],
+    "independentCpuSample": "Hot samples were overwhelmingly nested terminal shadow -> guidance_update -> terminal_predict."
+  },
+  "implementedContract": {
+    "hardLoop": "Once taem_exec owns the vehicle, dynamic_prediction is cache-only and contains no call to predictor_simulate_terminal_shadow_ensemble.",
+    "advisoryWorker": "A dedicated worker snapshots terminal state under the controller mutex, releases it, executes the full ensemble off the command path, then conditionally publishes a still-relevant result.",
+    "completionRelativeCadence": "The next terminal advisory interval is measured from the freshest KSP UT observed when the previous ensemble completes, preventing immediate catch-up reruns after a slow solve.",
+    "predictionFidelityPreserved": true,
+    "terminalSafetyPlannerPreserved": true
+  },
+  "offlineTiming": {
+    "fullTerminalShadowEnsembleWallSeconds": {"min": 5.96, "max": 6.85},
+    "interpretation": "The expensive computation remains intentionally available for advisory fidelity, but it is no longer on the TAEM command-critical path."
+  },
+  "verification": {
+    "CNanoArchitectureTests": "PASS",
+    "fullCTestSuite": "PASS",
+    "architectureAssertions": [
+      "full terminal shadow ensemble is absent from dynamic_prediction",
+      "the only full ensemble call is in terminal_prediction_worker",
+      "controller mutex is released before ensemble execution",
+      "worker publication requires current terminal ownership and non-stale request UT",
+      "terminal advisory cadence is completion-relative"
+    ]
+  },
+  "nextLiveMetrics": {
+    "vehicleRuntimeFields": [
+      "loopWallDeltaMilliseconds",
+      "telemetryLatencyMilliseconds",
+      "guidanceComputeMilliseconds",
+      "applyLatencyMilliseconds",
+      "controlLoopMilliseconds"
+    ],
+    "primaryAcceptance": "TAEM must show no repeated multi-second control-loop stalls attributable to advisory prediction; no terminal advisory computation may appear inside guidance/apply latency.",
+    "diagnosticTarget": "Normal TAEM loopWallDelta should remain near the pre-pathology ~100 ms cadence; investigate any isolated >1 s tick and treat any repeated >=2 s TAEM ticks as a failure."
+  },
+  "liveKspValidation": "Not performed by this offline lane; terminal-guidance-live-loop retains exclusive vessel control."
+}

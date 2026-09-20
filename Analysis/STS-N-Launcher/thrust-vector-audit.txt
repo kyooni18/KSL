@@ -1,0 +1,63 @@
+=== NOMINAL PITCH / RESULTANT VECTOR ===
+SRB burnout: 135.294 s
+2g cap starts (vacuum-equivalent): 304.496 s
+ET depletion with 2g cap: 363.242 s (not 355.190 s full-throttle equivalent)
+Best small fixed Cougar cant with 60% SRB gimbal limiter: -0.55 deg; worst shared pitch input 45.6%
+Representative states using zero fixed cant (simpler build):
+t=  0.000s ET= 276.92t thr=1.000  pitch input=-0.091..-0.081  core=-0.55/-0.49deg  SRB=-0.41/-0.36deg  resultant tilt=-0.405..-0.361deg  axial loss<=0.0028%
+t= 40.000s ET= 245.74t thr=1.000  pitch input=-0.124..-0.114  core=-0.75/-0.68deg  SRB=-0.56/-0.51deg  resultant tilt=-0.553..-0.504deg  axial loss<=0.0053%
+t= 80.000s ET= 214.55t thr=1.000  pitch input=-0.021..-0.010  core=-0.13/-0.06deg  SRB=-0.09/-0.04deg  resultant tilt=-0.093..-0.044deg  axial loss<=0.0001%
+t=120.000s ET= 183.36t thr=1.000  pitch input=-0.097..-0.086  core=-0.58/-0.52deg  SRB=-0.44/-0.39deg  resultant tilt=-0.428..-0.380deg  axial loss<=0.0033%
+t=130.000s ET= 175.57t thr=1.000  pitch input=-0.253..-0.246  core=-1.52/-1.48deg  SRB=-1.14/-1.11deg  resultant tilt=-1.113..-1.080deg  axial loss<=0.0238%
+t=135.000s ET= 171.67t thr=1.000  pitch input=-0.278..-0.272  core=-1.67/-1.63deg  SRB=-1.25/-1.22deg  resultant tilt=-1.220..-1.192deg  axial loss<=0.0289%
+t=135.294s ET= 171.44t thr=1.000  pitch input=-0.541..-0.533  core=-3.20/-3.25deg  SRB=-2.40/-2.43deg  resultant tilt=-2.344..-2.317deg  axial loss<=0.1158%
+t=160.000s ET= 152.18t thr=1.000  pitch input=-0.506..-0.499  core=-2.99/-3.04deg  SRB=-2.24/-2.28deg  resultant tilt=-2.194..-2.167deg  axial loss<=0.1015%
+t=200.000s ET= 120.99t thr=1.000  pitch input=-0.436..-0.429  core=-2.57/-2.62deg  SRB=-1.93/-1.96deg  resultant tilt=-1.891..-1.862deg  axial loss<=0.0753%
+t=240.000s ET=  89.81t thr=1.000  pitch input=-0.340..-0.333  core=-2.00/-2.04deg  SRB=-1.50/-1.53deg  resultant tilt=-1.474..-1.445deg  axial loss<=0.0458%
+t=280.000s ET=  58.62t thr=1.000  pitch input=-0.201..-0.193  core=-1.16/-1.21deg  SRB=-0.87/-0.90deg  resultant tilt=-0.870..-0.840deg  axial loss<=0.0160%
+t=300.000s ET=  43.03t thr=1.000  pitch input=-0.105..-0.097  core=-0.58/-0.63deg  SRB=-0.44/-0.47deg  resultant tilt=-0.453..-0.422deg  axial loss<=0.0043%
+t=304.496s ET=  39.52t thr=1.000  pitch input=-0.079..-0.072  core=-0.43/-0.48deg  SRB=-0.32/-0.36deg  resultant tilt=-0.344..-0.313deg  axial loss<=0.0025%
+t=320.000s ET=  27.91t thr=0.923  pitch input=+0.016..+0.023  core=+0.14/+0.09deg  SRB=+0.10/+0.07deg  resultant tilt=+0.068..+0.099deg  axial loss<=0.0002%
+t=340.000s ET=  14.22t thr=0.833  pitch input=+0.158..+0.165  core=+0.99/+0.95deg  SRB=+0.74/+0.71deg  resultant tilt=+0.683..+0.716deg  axial loss<=0.0108%
+t=360.000s ET=   1.88t thr=0.751  pitch input=+0.327..+0.334  core=+2.00/+1.96deg  SRB=+1.50/+1.47deg  resultant tilt=+1.415..+1.449deg  axial loss<=0.0442%
+t=363.242s ET=   0.00t thr=0.739  pitch input=+0.357..+0.364  core=+2.18/+2.14deg  SRB=+1.64/+1.61deg  resultant tilt=+1.547..+1.581deg  axial loss<=0.0526%
+
+=== BOOSTER FUEL/THRUST ASYMMETRY ===
+initial pair fill mismatch 0.10%: burn +=135.340s / -=135.246s, worst=53.4% yaw input at t=135.2s
+initial pair fill mismatch 0.50%: burn +=135.526s / -=135.060s, worst=60.6% yaw input at t=135.5s
+initial pair fill mismatch 1.00%: burn +=135.760s / -=134.828s, worst=60.6% yaw input at t=135.8s
+initial pair fill mismatch 2.00%: burn +=136.226s / -=134.362s, worst=60.7% yaw input at t=135.5s
+initial pair fill mismatch 5.00%: burn +=137.626s / -=132.984s, worst=62.2% yaw input at t=135.5s
+
+=== COMMAND/LIMITER MISMATCH SENSITIVITY ===
+t=  0.0s curve=0.950, pair thrust mismatch= 1.0% -> approx yaw input   1.4% (moment 0.154 MNm)
+t=  0.0s curve=0.950, pair thrust mismatch= 5.0% -> approx yaw input   6.8% (moment 0.768 MNm)
+t=  0.0s curve=0.950, pair thrust mismatch=10.0% -> approx yaw input  13.5% (moment 1.535 MNm)
+  radial placement difference for 50% yaw input: about 1.644 m
+t= 40.0s curve=0.660, pair thrust mismatch= 1.0% -> approx yaw input   1.2% (moment 0.107 MNm)
+t= 40.0s curve=0.660, pair thrust mismatch= 5.0% -> approx yaw input   6.0% (moment 0.534 MNm)
+t= 40.0s curve=0.660, pair thrust mismatch=10.0% -> approx yaw input  11.9% (moment 1.067 MNm)
+  radial placement difference for 50% yaw input: about 1.864 m
+t= 80.0s curve=0.717, pair thrust mismatch= 1.0% -> approx yaw input   1.2% (moment 0.116 MNm)
+t= 80.0s curve=0.717, pair thrust mismatch= 5.0% -> approx yaw input   6.1% (moment 0.580 MNm)
+t= 80.0s curve=0.717, pair thrust mismatch=10.0% -> approx yaw input  12.3% (moment 1.159 MNm)
+  radial placement difference for 50% yaw input: about 1.815 m
+t=120.0s curve=0.358, pair thrust mismatch= 1.0% -> approx yaw input   0.9% (moment 0.058 MNm)
+t=120.0s curve=0.358, pair thrust mismatch= 5.0% -> approx yaw input   4.5% (moment 0.290 MNm)
+t=120.0s curve=0.358, pair thrust mismatch=10.0% -> approx yaw input   9.0% (moment 0.579 MNm)
+  radial placement difference for 50% yaw input: about 2.482 m
+t=130.0s curve=0.176, pair thrust mismatch= 1.0% -> approx yaw input   0.6% (moment 0.028 MNm)
+t=130.0s curve=0.176, pair thrust mismatch= 5.0% -> approx yaw input   2.9% (moment 0.142 MNm)
+t=130.0s curve=0.176, pair thrust mismatch=10.0% -> approx yaw input   5.9% (moment 0.284 MNm)
+  radial placement difference for 50% yaw input: about 3.782 m
+t=135.0s curve=0.150, pair thrust mismatch= 1.0% -> approx yaw input   0.5% (moment 0.024 MNm)
+t=135.0s curve=0.150, pair thrust mismatch= 5.0% -> approx yaw input   2.6% (moment 0.121 MNm)
+t=135.0s curve=0.150, pair thrust mismatch=10.0% -> approx yaw input   5.3% (moment 0.243 MNm)
+  radial placement difference for 50% yaw input: about 4.211 m
+
+=== LIQUID-ENGINE THRUST-RATIO FAULTS, POST-SRB ===
+t= 135.29s ET= 171.44t CoM-z=0.647m: J=0.0x:+2.34deg  J=0.5x:-0.43deg  J=0.8x:-2.09deg  J=0.9x:-2.65deg  J=1.0x:-3.20deg  J=1.1x:-3.76deg  J=1.2x:-4.31deg
+t= 200.00s ET= 120.99t CoM-z=0.787m: J=0.0x:+2.92deg  J=0.5x:+0.18deg  J=0.8x:-1.47deg  J=0.9x:-2.02deg  J=1.0x:-2.57deg  J=1.1x:-3.12deg  J=1.2x:-3.68deg
+t= 280.00s ET=  58.62t CoM-z=1.075m: J=0.0x:+4.24deg  J=0.5x:+1.54deg  J=0.8x:-0.08deg  J=0.9x:-0.62deg  J=1.0x:-1.16deg  J=1.1x:-1.70deg  J=1.2x:-2.25deg
+t= 320.00s ET=  27.91t CoM-z=1.311m: J=0.0x:+5.45deg  J=0.5x:+2.80deg  J=0.8x:+1.20deg  J=0.9x:+0.67deg  J=1.0x:+0.14deg  J=1.1x:-0.40deg  J=1.2x:-0.93deg
+t= 363.24s ET=   0.00t CoM-z=1.638m: J=0.0x:FAIL  J=0.5x:+4.77deg  J=0.8x:+3.22deg  J=0.9x:+2.70deg  J=1.0x:+2.18deg  J=1.1x:+1.67deg  J=1.2x:+1.15deg

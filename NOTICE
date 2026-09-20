@@ -1,0 +1,11 @@
+Third-party software notice
+
+This repository vendors kRPC C-Nano 0.6.0 and nanopb 0.4.9.1 under
+`ThirdParty/`. Their upstream license files and notices remain authoritative.
+The desktop UI depends on PyQt6 through `PyQtApp/requirements.txt` and installs
+that dependency into an isolated UI virtual environment.
+
+The production landing backend has no Python kRPC dependency. The optional
+`Tools/ksp_test_guard.py` live-test safety utility is intentionally separate
+from the landing runtime and may use a separately installed Python kRPC client;
+set `KSP_LANDER_GUARD_PYTHON` to that interpreter when using the guard.

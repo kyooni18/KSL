@@ -1,0 +1,174 @@
+cmake_minimum_required(VERSION 3.15)
+project(krpc_cnano VERSION 0.6.0 LANGUAGES C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+include(FetchContent)
+
+option(KRPC_FETCH_DEPS       "Use FetchContent for all dependencies (nanopb, protobuf)" OFF)
+option(KRPC_FETCH_NANOPB     "Use FetchContent for nanopb"                              OFF)
+option(KRPC_FETCH_PROTOBUF   "Use FetchContent for protobuf (for protoc; only used with KRPC_REGENERATE_PROTO=ON)" OFF)
+option(KRPC_FETCH_ABSL       "Use FetchContent for abseil (only relevant when KRPC_FETCH_PROTOBUF=ON)"             OFF)
+option(KRPC_REGENERATE_PROTO "Re-run protoc+nanopb to regenerate proto sources (requires Python protobuf package)" OFF)
+
+if(KRPC_FETCH_DEPS)
+  set(KRPC_FETCH_NANOPB ON)
+  if(KRPC_REGENERATE_PROTO)
+    set(KRPC_FETCH_PROTOBUF ON)
+  endif()
+endif()
+
+# ---- Protobuf (protoc, only needed when regenerating) ----
+if(KRPC_REGENERATE_PROTO)
+  if(KRPC_FETCH_PROTOBUF)
+    message(STATUS "Fetching protobuf via FetchContent...")
+    set(protobuf_BUILD_TESTS       OFF CACHE BOOL "" FORCE)
+    set(protobuf_BUILD_CONFORMANCE OFF CACHE BOOL "" FORCE)
+    set(protobuf_BUILD_EXAMPLES    OFF CACHE BOOL "" FORCE)
+    set(protobuf_INSTALL           ON  CACHE BOOL "" FORCE)
+    if(NOT KRPC_FETCH_ABSL)
+      find_package(absl QUIET)
+      if(NOT absl_FOUND)
+        message(FATAL_ERROR "abseil not found. Install abseil or set KRPC_FETCH_ABSL=ON "
+                "(or KRPC_FETCH_DEPS=ON) to download it automatically via FetchContent.")
+      endif()
+      set(protobuf_ABSL_PROVIDER "package" CACHE STRING "" FORCE)
+    endif()
+    FetchContent_Declare(protobuf
+      GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+      GIT_TAG        v35.1
+      GIT_SHALLOW    TRUE)
+    FetchContent_MakeAvailable(protobuf)
+    include("${protobuf_SOURCE_DIR}/cmake/protobuf-generate.cmake")
+  else()
+    find_package(protobuf CONFIG)
+    if(NOT protobuf_FOUND)
+      message(FATAL_ERROR "protobuf not found. Install protobuf or set KRPC_FETCH_PROTOBUF=ON "
+              "(or KRPC_FETCH_DEPS=ON) to download it automatically via FetchContent.")
+    endif()
+    message(STATUS "Found protobuf ${protobuf_VERSION}")
+  endif()
+endif()
+
+# ---- nanopb ----
+if(KRPC_FETCH_NANOPB)
+  message(STATUS "Fetching nanopb via FetchContent...")
+  set(nanopb_BUILD_GENERATOR OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(nanopb
+    GIT_REPOSITORY https://github.com/nanopb/nanopb.git
+    GIT_TAG        0.4.9.1
+    GIT_SHALLOW    TRUE)
+  FetchContent_MakeAvailable(nanopb)
+  set(NANOPB_INCLUDE_DIRS "${nanopb_SOURCE_DIR}")
+  add_library(nanopb::protobuf-nanopb-static ALIAS protobuf-nanopb-static)
+  if(KRPC_REGENERATE_PROTO)
+    set(NANOPB_GENERATOR_PLUGIN "${nanopb_SOURCE_DIR}/generator/protoc-gen-nanopb")
+  endif()
+else()
+  find_package(nanopb CONFIG)
+  if(NOT nanopb_FOUND)
+    message(FATAL_ERROR "nanopb not found. Install nanopb or set KRPC_FETCH_NANOPB=ON "
+            "(or KRPC_FETCH_DEPS=ON) to download it automatically via FetchContent.")
+  endif()
+  message(STATUS "Found nanopb ${nanopb_VERSION}")
+  get_target_property(NANOPB_INCLUDE_DIRS nanopb::protobuf-nanopb-static INTERFACE_INCLUDE_DIRECTORIES)
+  if(KRPC_REGENERATE_PROTO)
+    get_filename_component(_nanopb_prefix "${nanopb_DIR}/../../.." ABSOLUTE)
+    find_program(NANOPB_GENERATOR_PLUGIN
+      NAMES protoc-gen-nanopb protoc-gen-nanopb.bat
+      HINTS "${_nanopb_prefix}/tools/nanopb"
+      REQUIRED)
+  endif()
+endif()
+
+# Copy nanopb headers into krpc_cnano/ so <krpc_cnano/pb.h> etc. resolve.
+set(NANOPB_COMPAT_DIR "${CMAKE_CURRENT_BINARY_DIR}/nanopb_compat")
+file(GLOB _nanopb_pub_hdrs "${NANOPB_INCLUDE_DIRS}/*.h")
+file(COPY ${_nanopb_pub_hdrs} DESTINATION "${NANOPB_COMPAT_DIR}/krpc_cnano")
+
+# ---- Proto sources ----
+if(KRPC_REGENERATE_PROTO)
+  # Re-generate krpc.pb.c / krpc.pb.h from krpc.proto using protoc + nanopb.
+  protobuf_generate(
+    PROTOS          "${CMAKE_CURRENT_SOURCE_DIR}/protobuf/krpc.proto"
+    LANGUAGE        nanopb
+    PLUGIN          "protoc-gen-nanopb=${NANOPB_GENERATOR_PLUGIN}"
+    PROTOC_OPTIONS  "--nanopb_opt=-I${CMAKE_CURRENT_SOURCE_DIR}/protobuf"
+    GENERATE_EXTENSIONS .pb.c .pb.h
+    OUT_VAR         PROTO_GENERATED
+    PROTOC_OUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}"
+    IMPORT_DIRS     "${CMAKE_CURRENT_SOURCE_DIR}/protobuf"
+    DEPENDENCIES    "${CMAKE_CURRENT_SOURCE_DIR}/protobuf/krpc.options")
+
+  foreach(_f ${PROTO_GENERATED})
+    if(_f MATCHES "\\.h$")
+      set(PROTO_HDR_GEN "${_f}")
+    elseif(_f MATCHES "\\.c$")
+      list(APPEND PROTO_SRCS "${_f}")
+    endif()
+  endforeach()
+
+  set(PROTO_HDR_COMPAT "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnano/krpc.pb.h")
+  add_custom_command(
+    OUTPUT "${PROTO_HDR_COMPAT}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnano"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${PROTO_HDR_GEN}" "${PROTO_HDR_COMPAT}"
+    DEPENDS "${PROTO_HDR_GEN}")
+  add_custom_target(krpc_cnano_proto_hdr DEPENDS "${PROTO_HDR_COMPAT}")
+endif()
+
+# ---- Library ----
+# When not regenerating, the glob picks up the pre-generated src/krpc.pb.c.
+file(GLOB KRPC_CNANO_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+if(KRPC_REGENERATE_PROTO)
+  add_library(krpc_cnano STATIC ${KRPC_CNANO_SRC} ${PROTO_SRCS})
+  add_dependencies(krpc_cnano krpc_cnano_proto_hdr)
+else()
+  add_library(krpc_cnano STATIC ${KRPC_CNANO_SRC})
+endif()
+add_library(krpc_cnano::krpc_cnano ALIAS krpc_cnano)
+
+target_include_directories(krpc_cnano PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${NANOPB_COMPAT_DIR}>"
+  "$<INSTALL_INTERFACE:include>")
+
+target_link_libraries(krpc_cnano PUBLIC
+  "$<BUILD_INTERFACE:nanopb::protobuf-nanopb-static>"
+  "$<INSTALL_INTERFACE:nanopb::protobuf-nanopb-static>")
+
+set_target_properties(krpc_cnano PROPERTIES
+  VERSION   ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR})
+
+# ---- Install ----
+include(GNUInstallDirs)
+install(TARGETS krpc_cnano
+  EXPORT krpc_cnanoTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+if(KRPC_REGENERATE_PROTO)
+  install(FILES "${PROTO_HDR_COMPAT}"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/krpc_cnano")
+endif()
+install(DIRECTORY "${NANOPB_COMPAT_DIR}/krpc_cnano/"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/krpc_cnano")
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/krpc_cnanoConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnanoConfig.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/krpc_cnano")
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnanoConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnanoConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/krpc_cnanoConfigVersion.cmake"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/krpc_cnano")
+install(EXPORT krpc_cnanoTargets
+  NAMESPACE krpc_cnano::
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/krpc_cnano")

@@ -1,0 +1,3578 @@
+[
+  {
+    "name": "nflv-engine-ar1c-1",
+    "title": "KS-600AJ 'Manatee' Liquid Fuel Engine",
+    "mass": 13.9,
+    "bulkhead": "size3, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-ar1c-1.cfg",
+    "engineID": "AR1",
+    "thrust": 4500.0,
+    "gimbal": 2.0,
+    "ispVac": 315.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 33.01239538417754
+  },
+  {
+    "name": "Size3EngineCluster",
+    "title": "S3 KS-25x4 \"Mammoth\" Liquid Fuel Engine",
+    "mass": 15.0,
+    "bulkhead": "size3",
+    "parentUrl": "Squad/Parts/Engine/Size3EngineCluster/part.cfg",
+    "engineID": "KS25",
+    "thrust": 4000.0,
+    "gimbal": 2.0,
+    "ispVac": 315.0,
+    "ispSL": 295.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.192432346078085
+  },
+  {
+    "name": "PC_5Seg_RSRM",
+    "title": "RSRB-5 Solid Rocket Booster",
+    "mass": 7.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_5Seg_RSRM.cfg",
+    "engineID": "S1SRB",
+    "thrust": 3632.0,
+    "gimbal": 7.5,
+    "ispVac": 267.0,
+    "ispSL": 241.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 52.90870407908337
+  },
+  {
+    "name": "DIRECT_SRB_5",
+    "title": "S2 SRB-KD75k \u201cMonsoon\u201d Solid Rocket Booster",
+    "mass": 24.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "reDIRECT/Phase1/Parts/Boosters/DIRECT_SRB_5.cfg",
+    "engineID": "S2SRB",
+    "thrust": 3587.0,
+    "gimbal": 6.0,
+    "ispVac": 269.0,
+    "ispSL": 237.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 15.240508566465952
+  },
+  {
+    "name": "Clydesdale",
+    "title": "S2-33 \"Clydesdale\" Solid Fuel Booster",
+    "mass": 21.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "Squad/Parts/Engine/solidBoosterS2-33/solidBoosterS2-33.cfg",
+    "engineID": null,
+    "thrust": 3300.0,
+    "gimbal": 1.0,
+    "ispVac": 235.0,
+    "ispSL": 210.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 16.024111918224587
+  },
+  {
+    "name": "j_linear_aerospike",
+    "title": "OPT-E J Linear Aerospike Engine",
+    "mass": 10.2,
+    "bulkhead": "j",
+    "parentUrl": "OPT/Parts/main/j_aerospike.cfg",
+    "engineID": null,
+    "thrust": 3200.0,
+    "gimbal": 0.0,
+    "ispVac": 385.0,
+    "ispSL": 335.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 31.991096877738933
+  },
+  {
+    "name": "DIRECT_SRB_2",
+    "title": "S2 SRB-KD25k \u201cThunderstorm\u201d Solid Rocket Booster",
+    "mass": 6.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "reDIRECT/Phase1/Parts/Boosters/DIRECT_SRB_2.cfg",
+    "engineID": "S2SRB",
+    "thrust": 3100.0,
+    "gimbal": 6.0,
+    "ispVac": 269.0,
+    "ispSL": 237.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 52.685337670526295
+  },
+  {
+    "name": "PC_4Seg_RSRM",
+    "title": "RSRB-4 Solid Rocket Booster",
+    "mass": 6.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_4Seg_RSRM.cfg",
+    "engineID": "S1SRB",
+    "thrust": 3000.0,
+    "gimbal": 7.5,
+    "ispVac": 268.0,
+    "ispSL": 242.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 50.98581064889641
+  },
+  {
+    "name": "DIRECT_SRB_4",
+    "title": "S2 SRB-KD50k \u201cTyphoon\u201d Solid Rocket Booster",
+    "mass": 19.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "reDIRECT/Phase1/Parts/Boosters/DIRECT_SRB_4.cfg",
+    "engineID": "S2SRB",
+    "thrust": 2690.0,
+    "gimbal": 6.0,
+    "ispVac": 268.0,
+    "ispSL": 242.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 14.437034804792773
+  },
+  {
+    "name": "TE_19_F9_S1_Engine",
+    "title": "VL-9R \"Octopus\" Liquid Fuel Engine",
+    "mass": 9.4,
+    "bulkhead": "size3",
+    "parentUrl": "TundraExploration/Parts/Ghidorah9/TE_19_F9_S1_Engine.cfg",
+    "engineID": "AllEngines",
+    "thrust": 2560.0,
+    "gimbal": 2.0,
+    "ispVac": 311.0,
+    "ispSL": 282.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.770994736420175
+  },
+  {
+    "name": "restock-srb-anvil-1",
+    "title": "STS-1 'Anvil' Solid Rocket Booster",
+    "mass": 10.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-srb-anvil.cfg",
+    "engineID": null,
+    "thrust": 2250.0,
+    "gimbal": 3.0,
+    "ispVac": 238.0,
+    "ispSL": 212.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 22.943614792003387
+  },
+  {
+    "name": "PC_3Seg_RSRM",
+    "title": "RSRB-3 Solid Rocket Booster",
+    "mass": 4.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_3Seg_RSRM.cfg",
+    "engineID": "RSRM3",
+    "thrust": 2242.0,
+    "gimbal": 7.5,
+    "ispVac": 277.0,
+    "ispSL": 246.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 57.155093737412884
+  },
+  {
+    "name": "nflv-engine-rd701-1",
+    "title": "KR-701 'Cougar' Liquid Fuel Engine",
+    "mass": 8.5,
+    "bulkhead": "size3, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-rd701-1.cfg",
+    "engineID": "RD701",
+    "thrust": 2150.0,
+    "gimbal": 6.0,
+    "ispVac": 345.0,
+    "ispSL": 295.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 25.792821857677012
+  },
+  {
+    "name": "Size2LFB",
+    "title": "LFB KR-1x2 \"Twin-Boar\" Liquid Fuel Engine",
+    "mass": 10.5,
+    "bulkhead": "size2, srf",
+    "parentUrl": "Squad/Parts/Engine/Size2LFB/part.cfg",
+    "engineID": "KSLFB",
+    "thrust": 2000.0,
+    "gimbal": 1.5,
+    "ispVac": 300.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.423165961484347
+  },
+  {
+    "name": "Size2LFB_v2",
+    "title": "LFB KR-1x2 \"Twin-Boar\" Liquid Fuel Engine",
+    "mass": 10.5,
+    "bulkhead": "size2, srf",
+    "parentUrl": "Squad/Parts/Engine/Size2LFB_v2/part.cfg",
+    "engineID": "KSLFB",
+    "thrust": 2000.0,
+    "gimbal": 1.5,
+    "ispVac": 300.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.423165961484347
+  },
+  {
+    "name": "Size3AdvancedEngine",
+    "title": "Kerbodyne KR-2L+ \"Rhino\" Liquid Fuel Engine",
+    "mass": 9.0,
+    "bulkhead": "size3",
+    "parentUrl": "Squad/Parts/Engine/Size3AdvancedEngine/part.cfg",
+    "engineID": "KSX",
+    "thrust": 2000.0,
+    "gimbal": 4.0,
+    "ispVac": 340.0,
+    "ispSL": 205.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 22.660360288398405
+  },
+  {
+    "name": "PC_2_5Seg_RSRM",
+    "title": "RSRB-2.5 Solid Rocket Booster",
+    "mass": 3.5,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_2_5Seg_RSRM.cfg",
+    "engineID": "RSRM2_5",
+    "thrust": 1871.0,
+    "gimbal": 7.5,
+    "ispVac": 277.0,
+    "ispSL": 246.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 54.511115270905826
+  },
+  {
+    "name": "TE_19_F9_S1_Engine",
+    "title": "VL-9R \"Octopus\" Liquid Fuel Engine",
+    "mass": 9.4,
+    "bulkhead": "size3",
+    "parentUrl": "TundraExploration/Parts/Ghidorah9/TE_19_F9_S1_Engine.cfg",
+    "engineID": "ThreeLanding",
+    "thrust": 1706.0,
+    "gimbal": 2.0,
+    "ispVac": 311.0,
+    "ispSL": 282.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 18.506764461067508
+  },
+  {
+    "name": "nflv-engine-stbe-kero-1",
+    "title": "KS-160 'Orca' Liquid Fuel Engine",
+    "mass": 6.25,
+    "bulkhead": "size2, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-stbe-kero-1.cfg",
+    "engineID": "STBE",
+    "thrust": 1700.0,
+    "gimbal": 4.0,
+    "ispVac": 318.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.73628099299965
+  },
+  {
+    "name": "Thoroughbred",
+    "title": "S2-17 \"Thoroughbred\" Solid Fuel Booster",
+    "mass": 10.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "Squad/Parts/Engine/solidBoosterS2-17/solidBoosterS2-17.cfg",
+    "engineID": null,
+    "thrust": 1700.0,
+    "gimbal": 1.0,
+    "ispVac": 230.0,
+    "ispSL": 205.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 17.33517562062478
+  },
+  {
+    "name": "TE_19_F910_S1_Engine",
+    "title": "VL-9D \"Octopus\" Liquid Fuel Engine",
+    "mass": 9.4,
+    "bulkhead": "size3",
+    "parentUrl": "TundraExploration/Parts/Bagorah9/TE_19_F910_S1_Engine.cfg",
+    "engineID": "AllEngines",
+    "thrust": 1600.0,
+    "gimbal": 2.0,
+    "ispVac": 304.8,
+    "ispSL": 275.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 17.35687171026261
+  },
+  {
+    "name": "PC_2Seg_RSRM",
+    "title": "RSRB-2 Solid Rocket Booster",
+    "mass": 3.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_2Seg_RSRM.cfg",
+    "engineID": "RSRM3",
+    "thrust": 1500.0,
+    "gimbal": 7.5,
+    "ispVac": 277.0,
+    "ispSL": 246.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 50.98581064889641
+  },
+  {
+    "name": "liquidEngineMainsail_v2",
+    "title": "RE-M3 \"Mainsail\" Liquid Fuel Engine",
+    "mass": 6.0,
+    "bulkhead": "size2",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineMainsail_v2/liquidEngineMainsail_v2.cfg",
+    "engineID": null,
+    "thrust": 1500.0,
+    "gimbal": 2.0,
+    "ispVac": 310.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 25.492905324448206
+  },
+  {
+    "name": "nflv-engine-rs84-1",
+    "title": "KR-84 'Ocelot' Liquid Fuel Engine",
+    "mass": 5.5,
+    "bulkhead": "size1p5, size2, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-rs84-1.cfg",
+    "engineID": "RS84",
+    "thrust": 1400.0,
+    "gimbal": 2.0,
+    "ispVac": 340.0,
+    "ispSL": 300.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 25.95641269398363
+  },
+  {
+    "name": "restock-engine-galleon-1",
+    "title": "UR-1 'Galleon' Liquid Fuel Engine",
+    "mass": 5.0,
+    "bulkhead": "size1, size1p5, size2, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-engine-galleon.cfg",
+    "engineID": null,
+    "thrust": 1350.0,
+    "gimbal": 5.0,
+    "ispVac": 305.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.532337750404064
+  },
+  {
+    "name": "LiquidEngineKE-1",
+    "title": "Kerbodyne KE-1 \"Mastodon\" Liquid Fuel Engine",
+    "mass": 5.0,
+    "bulkhead": "size1, size1p5, size2, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineKE-1.cfg",
+    "engineID": null,
+    "thrust": 1350.0,
+    "gimbal": 5.0,
+    "ispVac": 305.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.532337750404064
+  },
+  {
+    "name": "nflv-engine-tr107-1",
+    "title": "KS-107 'Porpoise' Liquid Fuel Engine",
+    "mass": 4.8,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-tr107-1.cfg",
+    "engineID": "TR107",
+    "thrust": 1300.0,
+    "gimbal": 2.0,
+    "ispVac": 320.0,
+    "ispSL": 288.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 27.617314101485558
+  },
+  {
+    "name": "restock-srb-castor-1",
+    "title": "TCK-2 'Castor' Solid Rocket Booster",
+    "mass": 8.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-srb-castor.cfg",
+    "engineID": null,
+    "thrust": 1300.0,
+    "gimbal": 3.0,
+    "ispVac": 225.0,
+    "ispSL": 200.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 16.570388460891333
+  },
+  {
+    "name": "Pollux",
+    "title": "THK \"Pollux\" Solid Fuel Booster",
+    "mass": 8.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/solidBoosterTHK/solidBoosterTHK.cfg",
+    "engineID": null,
+    "thrust": 1300.0,
+    "gimbal": 3.0,
+    "ispVac": 225.0,
+    "ispSL": 200.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 16.570388460891333
+  },
+  {
+    "name": "nflv-engine-rd704-1",
+    "title": "KR-74 'Lynx' Liquid Fuel Engine",
+    "mass": 4.5,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-rd704-1.cfg",
+    "engineID": "RD704",
+    "thrust": 1050.0,
+    "gimbal": 6.0,
+    "ispVac": 345.0,
+    "ispSL": 298.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 23.793378302818326
+  },
+  {
+    "name": "restock-engine-boar",
+    "title": "KR-1 'Boar' Liquid Fuel Engine",
+    "mass": 3.5,
+    "bulkhead": "size2, size1, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/25/restock-engine-boar.cfg",
+    "engineID": "MainExhaust",
+    "thrust": 1000.0,
+    "gimbal": 3.0,
+    "ispVac": 300.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 29.134748942226526
+  },
+  {
+    "name": "SSME",
+    "title": "S3 KS-25 \"Vector\" Liquid Fuel Engine",
+    "mass": 1.2,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineSSME/SSME.cfg",
+    "engineID": "KS25",
+    "thrust": 1000.0,
+    "gimbal": 10.5,
+    "ispVac": 315.0,
+    "ispSL": 295.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 84.97635108149402
+  },
+  {
+    "name": "SEP_23_BOOSTER_CLUSTER",
+    "title": "Behemoth \"Andrada\" Engine Cluster",
+    "mass": 0.0,
+    "bulkhead": null,
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_BOOSTER_CLUSTER.cfg",
+    "engineID": "AllEngines",
+    "thrust": 1000.0,
+    "gimbal": 7.0,
+    "ispVac": 342.0,
+    "ispSL": 327.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": null
+  },
+  {
+    "name": "SEP_23_BOOSTER_CLUSTER",
+    "title": "Behemoth \"Andrada\" Engine Cluster",
+    "mass": 0.0,
+    "bulkhead": null,
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_BOOSTER_CLUSTER.cfg",
+    "engineID": "MiddleInner",
+    "thrust": 1000.0,
+    "gimbal": 7.0,
+    "ispVac": 342.0,
+    "ispSL": 327.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": null
+  },
+  {
+    "name": "SEP_23_BOOSTER_CLUSTER",
+    "title": "Behemoth \"Andrada\" Engine Cluster",
+    "mass": 0.0,
+    "bulkhead": null,
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_BOOSTER_CLUSTER.cfg",
+    "engineID": "CenterThree",
+    "thrust": 1000.0,
+    "gimbal": 7.0,
+    "ispVac": 342.0,
+    "ispSL": 327.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": null
+  },
+  {
+    "name": "nfa-liftfan-10-1",
+    "title": "HVR-ONE Ultra-Heavy Lift Fan",
+    "mass": 8.5,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-10-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 980.0,
+    "gimbal": 4.0,
+    "ispVac": 12400.0,
+    "ispSL": 12400.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 11.756728102569056
+  },
+  {
+    "name": "opt_vtol_jumpa2",
+    "title": "OPT-E WarpJet M.A.R.G.E.",
+    "mass": 4.584,
+    "bulkhead": "srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesAT-WJ.cfg",
+    "engineID": "WJOpen",
+    "thrust": 900.0,
+    "gimbal": 0.0,
+    "ispVac": 300.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 20.02060627574467
+  },
+  {
+    "name": "opt_vtol_jumpa2",
+    "title": "OPT-E WarpJet M.A.R.G.E.",
+    "mass": 4.584,
+    "bulkhead": "srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesAT-WJ.cfg",
+    "engineID": "WJClosed",
+    "thrust": 900.0,
+    "gimbal": 0.0,
+    "ispVac": 3000.0,
+    "ispSL": 30.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 20.02060627574467
+  },
+  {
+    "name": "opt_vtol_jumpa1",
+    "title": "OPT-E VT \"Valkyrie\" Tilt Engine",
+    "mass": 3.82,
+    "bulkhead": "srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesAT.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 900.0,
+    "gimbal": 0.0,
+    "ispVac": 9000.0,
+    "ispSL": 9000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 24.0247275308936
+  },
+  {
+    "name": "opt_vtol_jumpa1",
+    "title": "OPT-E VT \"Valkyrie\" Tilt Engine",
+    "mass": 3.82,
+    "bulkhead": "srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesAT.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 900.0,
+    "gimbal": 0.0,
+    "ispVac": 800.0,
+    "ispSL": 720.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 24.0247275308936
+  },
+  {
+    "name": "nfa-liftfan-10-1",
+    "title": "HVR-ONE Ultra-Heavy Lift Fan",
+    "mass": 8.5,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-10-1.cfg",
+    "engineID": "ElectricalDrive",
+    "thrust": 890.0,
+    "gimbal": 4.0,
+    "ispVac": 12400.0,
+    "ispSL": 12400.0,
+    "propellants": [
+      "ElectricCharge",
+      "IntakeAtm"
+    ],
+    "TWR_engine_vac": 10.677028582945368
+  },
+  {
+    "name": "DIRECT_SSME_B",
+    "title": "S3 KS-25B \"Rainstorm\" Liquid Fuel Engine",
+    "mass": 1.2,
+    "bulkhead": "srf, size1",
+    "parentUrl": "reDIRECT/Phase1/Parts/Placeholder/SSME.cfg",
+    "engineID": "DIRECT_KS25",
+    "thrust": 850.0,
+    "gimbal": 7.0,
+    "ispVac": 452.0,
+    "ispSL": 366.0,
+    "propellants": [
+      "LqdHydrogen",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 72.22989841926992
+  },
+  {
+    "name": "nfa-atomic-multimode-25-1",
+    "title": "J-N500 'Project Eeloo' Multimode Nuclear Engine",
+    "mass": 14.9,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Atomic/nfa-atomic-multimode-25-1.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 820.0,
+    "gimbal": 2.0,
+    "ispVac": 580.0,
+    "ispSL": 500.0,
+    "propellants": [
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 5.6118610378651095
+  },
+  {
+    "name": "nfa-multimodal-25-1",
+    "title": "AE-1 B.R.O.A.D.S.W.O.R.D. Engine",
+    "mass": 7.6,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-25-1.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 820.0,
+    "gimbal": 3.0,
+    "ispVac": 330.0,
+    "ispSL": 295.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 11.002201245288175
+  },
+  {
+    "name": "opt_nebula_engine",
+    "title": "OPT-E J-92 \"Nebula\" Shcramjet",
+    "mass": 4.26,
+    "bulkhead": "size2",
+    "parentUrl": "OPT/Parts/engines/Nebula/nebula_engine.cfg",
+    "engineID": "Shcramjet",
+    "thrust": 800.0,
+    "gimbal": 3.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 19.149600243716964
+  },
+  {
+    "name": "DIRECT_LaunchEscapeSystem",
+    "title": "LAS-120 Launch Abort System",
+    "mass": 0.9,
+    "bulkhead": "size1",
+    "parentUrl": "reDIRECT/Phase2/Parts/Orion/DIRECT_LAS.cfg",
+    "engineID": "LES",
+    "thrust": 800.0,
+    "gimbal": 0,
+    "ispVac": 180.0,
+    "ispSL": 160.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 90.64144115359363
+  },
+  {
+    "name": "TE_19_F9_S1_Engine",
+    "title": "VL-9R \"Octopus\" Liquid Fuel Engine",
+    "mass": 9.4,
+    "bulkhead": "size3",
+    "parentUrl": "TundraExploration/Parts/Ghidorah9/TE_19_F9_S1_Engine.cfg",
+    "engineID": "CenterOnly",
+    "thrust": 764.0,
+    "gimbal": 2.0,
+    "ispVac": 311.0,
+    "ispSL": 282.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 8.287906241650395
+  },
+  {
+    "name": "nflv-engine-ar1-1",
+    "title": "KS-10AJ 'Walrus' Liquid Fuel Engine",
+    "mass": 2.4,
+    "bulkhead": "size1, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-ar1-1.cfg",
+    "engineID": "AR1",
+    "thrust": 750.0,
+    "gimbal": 2.0,
+    "ispVac": 315.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 31.86613165556026
+  },
+  {
+    "name": "opt_vtol_wrapk2",
+    "title": "OPT-E WarpJet FVT-K",
+    "mass": 7.95,
+    "bulkhead": "k,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperK-WJ.cfg",
+    "engineID": "WJOpen",
+    "thrust": 750.0,
+    "gimbal": 0.0,
+    "ispVac": 300.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 9.61996427337668
+  },
+  {
+    "name": "opt_vtol_wrapk2",
+    "title": "OPT-E WarpJet FVT-K",
+    "mass": 7.95,
+    "bulkhead": "k,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperK-WJ.cfg",
+    "engineID": "WJClosed",
+    "thrust": 750.0,
+    "gimbal": 0.0,
+    "ispVac": 3000.0,
+    "ispSL": 30.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 9.61996427337668
+  },
+  {
+    "name": "opt_vtol_wrapk1",
+    "title": "OPT-E FVT-K",
+    "mass": 6.0,
+    "bulkhead": "k,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperK.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 750.0,
+    "gimbal": 0.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 12.746452662224103
+  },
+  {
+    "name": "opt_vtol_wrapk1",
+    "title": "OPT-E FVT-K",
+    "mass": 6.0,
+    "bulkhead": "k,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperK.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 750.0,
+    "gimbal": 0.0,
+    "ispVac": 800.0,
+    "ispSL": 720.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 12.746452662224103
+  },
+  {
+    "name": "PC_1Seg_RSRM",
+    "title": "RSRB-1 Solid Rocket Booster",
+    "mass": 2.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_1Seg_RSRM.cfg",
+    "engineID": "RSRM3",
+    "thrust": 750.0,
+    "gimbal": 7.5,
+    "ispVac": 277.0,
+    "ispSL": 246.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 38.23935798667231
+  },
+  {
+    "name": "restock-engine-375-corgi",
+    "title": "KR-10A 'Corgi' Liquid Fuel Engine Cluster",
+    "mass": 5.25,
+    "bulkhead": "size3, size2",
+    "parentUrl": "ReStockPlus/Parts/Engine/375/restock-engine-corgi.cfg",
+    "engineID": "MainExhaust",
+    "thrust": 750.0,
+    "gimbal": 4.0,
+    "ispVac": 355.0,
+    "ispSL": 95.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.567374471113261
+  },
+  {
+    "name": "LaunchEscapeSystem",
+    "title": "Launch Escape System",
+    "mass": 0.9,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Utility/launchEscapeSystem/part.cfg",
+    "engineID": "LES",
+    "thrust": 750.0,
+    "gimbal": 0,
+    "ispVac": 180.0,
+    "ispSL": 160.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 84.97635108149403
+  },
+  {
+    "name": "nfa-multimodal-25-2",
+    "title": "AE-2 C.U.T.L.A.S.S. Engine",
+    "mass": 7.9,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-25-2.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 700.0,
+    "gimbal": 1.5,
+    "ispVac": 345.0,
+    "ispSL": 225.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 9.0354601149943
+  },
+  {
+    "name": "MassiveBooster",
+    "title": "S1 SRB-KD25k \"Kickback\" Solid Fuel Booster",
+    "mass": 4.5,
+    "bulkhead": "size1, srf",
+    "parentUrl": "Squad/Parts/Engine/MassiveSRB/part.cfg",
+    "engineID": "S1SRB",
+    "thrust": 670.0,
+    "gimbal": 3.0,
+    "ispVac": 220.0,
+    "ispSL": 195.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 15.18244139322693
+  },
+  {
+    "name": "engineLargeSkipper_v2",
+    "title": "RE-I5 \"Skipper\" Liquid Fuel Engine",
+    "mass": 3.0,
+    "bulkhead": "size2",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineSkipper_v2/skipperLiquidEngine_v2.cfg",
+    "engineID": null,
+    "thrust": 650.0,
+    "gimbal": 2.0,
+    "ispVac": 320.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 22.093851281188446
+  },
+  {
+    "name": "TE_19_F9_S2_Engine",
+    "title": "RU-1K \"Marlin\" Vacuum Engine",
+    "mass": 4.2,
+    "bulkhead": "size2",
+    "parentUrl": "TundraExploration/Parts/Ghidorah9/TE_19_F9_S2_Engine.cfg",
+    "engineID": null,
+    "thrust": 580.0,
+    "gimbal": 2.0,
+    "ispVac": 348.0,
+    "ispSL": 85.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.081795322076152
+  },
+  {
+    "name": "orbital-engine-375",
+    "title": "LV-601-4 Orbital Maneuvering Engine Cluster",
+    "mass": 3.6,
+    "bulkhead": "size3",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/orbital-engine/orbital-engine-375.cfg",
+    "engineID": null,
+    "thrust": 560.0,
+    "gimbal": 2.0,
+    "ispVac": 337.0,
+    "ispSL": 213.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 15.862252201878885
+  },
+  {
+    "name": "DIRECT_K2X",
+    "title": "K-2X \"Jackdaw\" Cryogenic Rocket Engine",
+    "mass": 2.0,
+    "bulkhead": "size2",
+    "parentUrl": "reDIRECT/Phase3/Parts/Engines/DIRECT_K2X.cfg",
+    "engineID": "DIRECT_K2X",
+    "thrust": 550.0,
+    "gimbal": 4.0,
+    "ispVac": 448.0,
+    "ispSL": 220.0,
+    "propellants": [
+      "LqdHydrogen",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 28.042195856893027
+  },
+  {
+    "name": "nfa-turbojet-25-1",
+    "title": "JE-X4 'Valkyrie' Turbo Ramjet Engine",
+    "mass": 6.75,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/JetEngines/nfa-turbojet-25-1.cfg",
+    "engineID": null,
+    "thrust": 540.0,
+    "gimbal": 1.0,
+    "ispVac": 4300.0,
+    "ispSL": 4300.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 8.157729703823426
+  },
+  {
+    "name": "nfa-multimodal-25-1",
+    "title": "AE-1 B.R.O.A.D.S.W.O.R.D. Engine",
+    "mass": 7.6,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-25-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 530.0,
+    "gimbal": 3.0,
+    "ispVac": 3600.0,
+    "ispSL": 3600.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 7.111178853661869
+  },
+  {
+    "name": "nfa-turbofan-25-2",
+    "title": "J-593 'Arcadia' Turbofan Engine",
+    "mass": 6.75,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/JetEngines/nfa-turbofan-25-2.cfg",
+    "engineID": "Cruise",
+    "thrust": 510.0,
+    "gimbal": 1.0,
+    "ispVac": 9000.0,
+    "ispSL": 9000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 7.704522498055459
+  },
+  {
+    "name": "nfa-liftfan-375-1",
+    "title": "HVR-TWO Heavy Lift Fan",
+    "mass": 4.24,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-375-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 510.0,
+    "gimbal": 2.0,
+    "ispVac": 11000.0,
+    "ispSL": 11000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 12.26545444855527
+  },
+  {
+    "name": "restock-engine-caravel-1",
+    "title": "UR-2 'Caravel' Liquid Fuel Engine",
+    "mass": 2.0,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-engine-caravel.cfg",
+    "engineID": null,
+    "thrust": 510.0,
+    "gimbal": 2.0,
+    "ispVac": 320.0,
+    "ispSL": 265.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 26.002763430937172
+  },
+  {
+    "name": "engine_darkDrive",
+    "title": "OPT-E BH-S3 \"Dark Drive\"",
+    "mass": 12.84,
+    "bulkhead": "size3",
+    "parentUrl": "OPT/Parts/engines/DarkDrive/engine_darkDrive.cfg",
+    "engineID": "DarkDrive",
+    "thrust": 500.0,
+    "gimbal": 1.0,
+    "ispVac": 13500000.0,
+    "ispSL": 0.001,
+    "propellants": [
+      "ElectricCharge",
+      "OBH"
+    ],
+    "TWR_engine_vac": 3.970857527172618
+  },
+  {
+    "name": "opt_vtol_wrapj2",
+    "title": "OPT-E WarpJet FVT-J",
+    "mass": 5.3,
+    "bulkhead": "j,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperJ-WJ.cfg",
+    "engineID": "WJOpen",
+    "thrust": 500.0,
+    "gimbal": 0.0,
+    "ispVac": 300.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 9.619964273376683
+  },
+  {
+    "name": "opt_vtol_wrapj2",
+    "title": "OPT-E WarpJet FVT-J",
+    "mass": 5.3,
+    "bulkhead": "j,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperJ-WJ.cfg",
+    "engineID": "WJClosed",
+    "thrust": 500.0,
+    "gimbal": 0.0,
+    "ispVac": 3000.0,
+    "ispSL": 30.0,
+    "propellants": [
+      "IntakeAtm",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 9.619964273376683
+  },
+  {
+    "name": "opt_vtol_wrapj1",
+    "title": "OPT-E FVT-J",
+    "mass": 4.0,
+    "bulkhead": "j,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperJ.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 500.0,
+    "gimbal": 0.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 12.746452662224105
+  },
+  {
+    "name": "opt_vtol_wrapj1",
+    "title": "OPT-E FVT-J",
+    "mass": 4.0,
+    "bulkhead": "j,srf",
+    "parentUrl": "OPT/Parts/engines/VTOL/EnginesWrapperJ.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 500.0,
+    "gimbal": 0.0,
+    "ispVac": 800.0,
+    "ispSL": 720.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 12.746452662224105
+  },
+  {
+    "name": "nfa-multimodal-25-2",
+    "title": "AE-2 C.U.T.L.A.S.S. Engine",
+    "mass": 7.9,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-25-2.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 470.0,
+    "gimbal": 1.5,
+    "ispVac": 3800.0,
+    "ispSL": 3800.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 6.06666607721046
+  },
+  {
+    "name": "nfa-liftfan-375-1",
+    "title": "HVR-TWO Heavy Lift Fan",
+    "mass": 4.24,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-375-1.cfg",
+    "engineID": "ElectricalDrive",
+    "thrust": 455.0,
+    "gimbal": 2.0,
+    "ispVac": 11000.0,
+    "ispSL": 11000.0,
+    "propellants": [
+      "ElectricCharge",
+      "IntakeAtm"
+    ],
+    "TWR_engine_vac": 10.942709360965974
+  },
+  {
+    "name": "LiquidEngineLV-TX87",
+    "title": "LV-TX87 \"Bobcat\" Liquid Fuel Engine",
+    "mass": 2.0,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineLV-TX87.cfg",
+    "engineID": null,
+    "thrust": 400.0,
+    "gimbal": 5.0,
+    "ispVac": 310.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "nfa-turbofan-25-1",
+    "title": "J-90 'Dudley' Heavy Turbofan Engine",
+    "mass": 5.775,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/JetEngines/nfa-turbofan-25-1.cfg",
+    "engineID": "Cruise",
+    "thrust": 380.0,
+    "gimbal": 1.0,
+    "ispVac": 10600.0,
+    "ispSL": 10600.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 6.7098209685127745
+  },
+  {
+    "name": "LiquidEngineRE-J10",
+    "title": "RE-J10 \"Wolfhound\" Liquid Fuel Engine",
+    "mass": 3.3,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineRE-J10.cfg",
+    "engineID": null,
+    "thrust": 375.0,
+    "gimbal": 3.0,
+    "ispVac": 380.0,
+    "ispSL": 70.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 11.587684238385549
+  },
+  {
+    "name": "nfa-liftfan-25-1",
+    "title": "HVR-THREE Lift Fan",
+    "mass": 2.75,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-25-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 370.0,
+    "gimbal": 2.0,
+    "ispVac": 9200.0,
+    "ispSL": 9200.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 13.71981813824849
+  },
+  {
+    "name": "turboFanSize2",
+    "title": "J-90 \"Goliath\" Turbofan Engine",
+    "mass": 4.5,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/jetEngines/jetEngineBig.cfg",
+    "engineID": "Cruise",
+    "thrust": 360.0,
+    "gimbal": 0,
+    "ispVac": 12600.0,
+    "ispSL": 12600.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 8.157729703823426
+  },
+  {
+    "name": "TE_19_F910_S2_Engine",
+    "title": "RU-1C \"Marlin\" Vacuum Engine",
+    "mass": 3.4,
+    "bulkhead": "size2",
+    "parentUrl": "TundraExploration/Parts/Bagorah9/TE_19_F910_S2_Engine.cfg",
+    "engineID": null,
+    "thrust": 352.0,
+    "gimbal": 2.0,
+    "ispVac": 342.0,
+    "ispSL": 85.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 10.557061969653844
+  },
+  {
+    "name": "nfa-atomic-multimode-25-1",
+    "title": "J-N500 'Project Eeloo' Multimode Nuclear Engine",
+    "mass": 14.9,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Atomic/nfa-atomic-multimode-25-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 350.0,
+    "gimbal": 2.0,
+    "ispVac": 3600.0,
+    "ispSL": 3600.0,
+    "propellants": [
+      "IntakeAtm"
+    ],
+    "TWR_engine_vac": 2.3953065405521805
+  },
+  {
+    "name": "nfa-liftfan-25-1",
+    "title": "HVR-THREE Lift Fan",
+    "mass": 2.75,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/LiftFans/nfa-liftfan-25-1.cfg",
+    "engineID": "ElectricalDrive",
+    "thrust": 330.0,
+    "gimbal": 2.0,
+    "ispVac": 9300.0,
+    "ispSL": 9300.0,
+    "propellants": [
+      "ElectricCharge",
+      "IntakeAtm"
+    ],
+    "TWR_engine_vac": 12.23659455573514
+  },
+  {
+    "name": "SEP_23_RAPTOR2_SL_RB",
+    "title": "MK2 SL-B \"Nagata\" Engine",
+    "mass": 1.5,
+    "bulkhead": "size1",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_RAPTOR2_SL_RB.cfg",
+    "engineID": "nagata",
+    "thrust": 308.0,
+    "gimbal": 0,
+    "ispVac": 342.0,
+    "ispSL": 327.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 20.938172906480126
+  },
+  {
+    "name": "SEP_23_RAPTOR2_SL_RC",
+    "title": "MK2 SL-C \"Nagata\" Engine",
+    "mass": 1.5,
+    "bulkhead": "size1",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_RAPTOR2_SL_RC.cfg",
+    "engineID": "nagata",
+    "thrust": 308.0,
+    "gimbal": 0.0,
+    "ispVac": 342.0,
+    "ispSL": 327.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 20.938172906480126
+  },
+  {
+    "name": "SEP_23_RAPTOR_VAC",
+    "title": "MK2 Vacuum \"Draper\" Engine",
+    "mass": 2.0,
+    "bulkhead": "size1",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_RAPTOR_VAC.cfg",
+    "engineID": "draper",
+    "thrust": 308.0,
+    "gimbal": 0,
+    "ispVac": 378.0,
+    "ispSL": 125.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 15.703629679860097
+  },
+  {
+    "name": "opt_nebula_engine",
+    "title": "OPT-E J-92 \"Nebula\" Shcramjet",
+    "mass": 4.26,
+    "bulkhead": "size2",
+    "parentUrl": "OPT/Parts/engines/Nebula/nebula_engine.cfg",
+    "engineID": "Turbojet",
+    "thrust": 300.0,
+    "gimbal": 3.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 7.181100091393861
+  },
+  {
+    "name": "restock-engine-cherenkov",
+    "title": "LV-N410 'Cherenkov' Atomic Rocket Motor",
+    "mass": 12.0,
+    "bulkhead": "size2, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/25/restock-engine-cherenkov.cfg",
+    "engineID": "MainExhaust",
+    "thrust": 300.0,
+    "gimbal": 5.0,
+    "ispVac": 820.0,
+    "ispSL": 200.0,
+    "propellants": [
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 2.5492905324448207
+  },
+  {
+    "name": "solidBooster1-1",
+    "title": "BACC \"Thumper\" Solid Fuel Booster",
+    "mass": 1.5,
+    "bulkhead": "size1, srf",
+    "parentUrl": "Squad/Parts/Engine/solidBoosterBACC/solidBoosterBACC.cfg",
+    "engineID": null,
+    "thrust": 300.0,
+    "gimbal": 3.0,
+    "ispVac": 210.0,
+    "ispSL": 175.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "LiquidEngineRE-I2",
+    "title": "RE-I2 \"Skiff\" Liquid Fuel Engine",
+    "mass": 1.6,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineRE-I2.cfg",
+    "engineID": null,
+    "thrust": 300.0,
+    "gimbal": 2.0,
+    "ispVac": 330.0,
+    "ispSL": 265.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.119678993336155
+  },
+  {
+    "name": "nfa-atomic-jet-25-1",
+    "title": "J-N160 'Fireflash' Air-Breathing Nuclear Engine",
+    "mass": 12.9,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Atomic/nfa-atomic-jet-25-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 280.0,
+    "gimbal": 3.0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAtm"
+    ],
+    "TWR_engine_vac": 2.2133375165412397
+  },
+  {
+    "name": "nfa-turbofan-25-2",
+    "title": "J-593 'Arcadia' Turbofan Engine",
+    "mass": 6.75,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/JetEngines/nfa-turbofan-25-2.cfg",
+    "engineID": "ReverseThrust",
+    "thrust": 260.0,
+    "gimbal": 1.0,
+    "ispVac": 9000.0,
+    "ispSL": 9000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 3.9277957833223907
+  },
+  {
+    "name": "restock-engine-ursa-1",
+    "title": "RK-107 'Ursa' Liquid Fuel Engine",
+    "mass": 1.25,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-engine-ursa.cfg",
+    "engineID": null,
+    "thrust": 260.0,
+    "gimbal": 0,
+    "ispVac": 300.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 21.21009722994091
+  },
+  {
+    "name": "LiquidEngineRK-7",
+    "title": "RK-7 \"Kodiak\" Liquid Fueled Engine",
+    "mass": 1.25,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineRK-7.cfg",
+    "engineID": null,
+    "thrust": 260.0,
+    "gimbal": 0,
+    "ispVac": 300.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 21.21009722994091
+  },
+  {
+    "name": "AAengine",
+    "title": "OPT-E ARI-75b S.C.O.O.P. Rocket",
+    "mass": 1.14,
+    "bulkhead": "size1",
+    "parentUrl": "OPT/Parts/engines/ARI/engine.cfg",
+    "engineID": "Air-augmented",
+    "thrust": 250.0,
+    "gimbal": 7.0,
+    "ispVac": 380.0,
+    "ispSL": 950.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 22.362197653024744
+  },
+  {
+    "name": "AAengine",
+    "title": "OPT-E ARI-75b S.C.O.O.P. Rocket",
+    "mass": 1.14,
+    "bulkhead": "size1",
+    "parentUrl": "OPT/Parts/engines/ARI/engine.cfg",
+    "engineID": "Standard",
+    "thrust": 250.0,
+    "gimbal": 7.0,
+    "ispVac": 380.0,
+    "ispSL": 320.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 22.362197653024744
+  },
+  {
+    "name": "liquidEngine2-2_v2",
+    "title": "RE-L10 \"Poodle\" Liquid Fuel Engine",
+    "mass": 1.75,
+    "bulkhead": "size2",
+    "parentUrl": "Squad/Parts/Engine/liquidEnginePoodle_v2/liquidEnginePoodle_v2.cfg",
+    "engineID": null,
+    "thrust": 250.0,
+    "gimbal": 5.0,
+    "ispVac": 350.0,
+    "ispSL": 90.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.567374471113263
+  },
+  {
+    "name": "TE2_19_F9_Merlin_1D",
+    "title": "DF-1K Marlin Liquid Fuel Engine",
+    "mass": 1.0,
+    "bulkhead": "size3",
+    "parentUrl": "TundraExploration/Parts/Ghidorah9/TE2_19_F9_Merlin_1D.cfg",
+    "engineID": null,
+    "thrust": 250.0,
+    "gimbal": 2.0,
+    "ispVac": 311.0,
+    "ispSL": 282.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 25.49290532444821
+  },
+  {
+    "name": "mpdt-25",
+    "title": "LF-9 'Colossus' Magnetoplasmadynamic Engine",
+    "mass": 2.5,
+    "bulkhead": "size2",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/mpdt-25/mpdt-25.cfg",
+    "engineID": "largestMPDT",
+    "thrust": 242.2,
+    "gimbal": 1.0,
+    "ispVac": 3400.0,
+    "ispSL": 34.0,
+    "propellants": [
+      "ElectricCharge",
+      "Lithium"
+    ],
+    "TWR_engine_vac": 9.87901067133017
+  },
+  {
+    "name": "liquidEngine",
+    "title": "LV-T30 \"Reliant\" Liquid Fuel Engine",
+    "mass": 1.25,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-T30/liquidEngineLV-T30.cfg",
+    "engineID": null,
+    "thrust": 240.0,
+    "gimbal": 0,
+    "ispVac": 310.0,
+    "ispSL": 265.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.578551289176225
+  },
+  {
+    "name": "liquidEngine_v2",
+    "title": "LV-T30 \"Reliant\" Liquid Fuel Engine",
+    "mass": 1.25,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-T30_v2/liquidEngineLV-T30_v2.cfg",
+    "engineID": null,
+    "thrust": 240.0,
+    "gimbal": 0,
+    "ispVac": 310.0,
+    "ispSL": 265.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.578551289176225
+  },
+  {
+    "name": "TE_18_DRAGONV2_POD",
+    "title": "Rodan Command Pod",
+    "mass": 3.4,
+    "bulkhead": null,
+    "parentUrl": "TundraExploration/Parts/RodanV2/TE_CD2_POD.cfg",
+    "engineID": null,
+    "thrust": 228.0,
+    "gimbal": 0,
+    "ispVac": 305.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 6.8380969576166954
+  },
+  {
+    "name": "TE_18_DRAGONV2_POD_I4",
+    "title": "Rodan Tourism Command Pod",
+    "mass": 3.4,
+    "bulkhead": null,
+    "parentUrl": "TundraExploration/Parts/RodanV2/TE_CD2_POD_I4.cfg",
+    "engineID": null,
+    "thrust": 228.0,
+    "gimbal": 0,
+    "ispVac": 305.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 6.8380969576166954
+  },
+  {
+    "name": "solidBooster_v2",
+    "title": "RT-10 \"Hammer\" Solid Fuel Booster",
+    "mass": 0.75,
+    "bulkhead": "size1, srf",
+    "parentUrl": "Squad/Parts/Engine/Size1_SRBs/solidBoosterRT-10_v2.cfg",
+    "engineID": null,
+    "thrust": 227.0,
+    "gimbal": 1.0,
+    "ispVac": 195.0,
+    "ispSL": 170.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 30.86341071279863
+  },
+  {
+    "name": "liquidEngine2",
+    "title": "LV-T45 \"Swivel\" Liquid Fuel Engine",
+    "mass": 1.5,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-T45/liquidEngineLV-T45.cfg",
+    "engineID": null,
+    "thrust": 215.0,
+    "gimbal": 3.0,
+    "ispVac": 320.0,
+    "ispSL": 250.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.615932386016972
+  },
+  {
+    "name": "liquidEngine2_v2",
+    "title": "LV-T45 \"Swivel\" Liquid Fuel Engine",
+    "mass": 1.5,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-T45_v2/liquidEngineLV-T45_v2.cfg",
+    "engineID": null,
+    "thrust": 215.0,
+    "gimbal": 3.0,
+    "ispVac": 320.0,
+    "ispSL": 250.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.615932386016972
+  },
+  {
+    "name": "nfa-vtol-125-1",
+    "title": "JL-40 'Hornet' VTOL Engine",
+    "mass": 0.25,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/VTOL/nfa-vtol-125-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 210.0,
+    "gimbal": 6.0,
+    "ispVac": 6950.0,
+    "ispSL": 6950.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 85.65616189014598
+  },
+  {
+    "name": "nfa-multimodal-125-1",
+    "title": "AE-2B S.C.I.M.I.T.A.R. Engine",
+    "mass": 2.1,
+    "bulkhead": "size1",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-125-1.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 200.0,
+    "gimbal": 3.0,
+    "ispVac": 310.0,
+    "ispSL": 295.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 9.711582980742174
+  },
+  {
+    "name": "opt_mk2_engine_short",
+    "title": "OPT-E HAE-02 High Altitude TurboRamjet",
+    "mass": 2.16,
+    "bulkhead": "mk2",
+    "parentUrl": "OPT/Parts/engines/mk2Short/opt_mk2_engine_short.cfg",
+    "engineID": null,
+    "thrust": 200.0,
+    "gimbal": 10.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 9.44181678683267
+  },
+  {
+    "name": "restock-engine-les-2",
+    "title": "Launch Escape System Jr.",
+    "mass": 0.5,
+    "bulkhead": "size0",
+    "parentUrl": "ReStockPlus/Parts/Engine/0625/restock-engine-les-2.cfg",
+    "engineID": "LES",
+    "thrust": 200.0,
+    "gimbal": 0,
+    "ispVac": 180.0,
+    "ispSL": 160.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 40.78864851911713
+  },
+  {
+    "name": "TE_F1_S1_Engine",
+    "title": "RU-1Ci \"Marlin 1Ci\" Booster Engine",
+    "mass": 0.9,
+    "bulkhead": "size2",
+    "parentUrl": "TundraExploration/Parts/Falcon1/TE_F1_S1_Engine.cfg",
+    "engineID": null,
+    "thrust": 198.0,
+    "gimbal": 6.0,
+    "ispVac": 303.0,
+    "ispSL": 261.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 22.433756685514425
+  },
+  {
+    "name": "solidBooster_sm_v2",
+    "title": "RT-5 \"Flea\" Solid Fuel Booster",
+    "mass": 0.45,
+    "bulkhead": "size1, srf",
+    "parentUrl": "Squad/Parts/Engine/Size1_SRBs/solidBoosterRT-5_v2.cfg",
+    "engineID": null,
+    "thrust": 192.0,
+    "gimbal": 1.0,
+    "ispVac": 165.0,
+    "ispSL": 140.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 43.50789175372494
+  },
+  {
+    "name": "toroidalAerospike",
+    "title": "T-1 Toroidal Aerospike \"Dart\" Liquid Fuel Engine",
+    "mass": 1.0,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineAerospike/liquidEngineAerospike.cfg",
+    "engineID": null,
+    "thrust": 180.0,
+    "gimbal": 0,
+    "ispVac": 340.0,
+    "ispSL": 290.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 18.35489183360271
+  },
+  {
+    "name": "RAPIER",
+    "title": "CR-7 R.A.P.I.E.R. Engine",
+    "mass": 2.0,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/rapierEngine/rapierEngine.cfg",
+    "engineID": "ClosedCycle",
+    "thrust": 180.0,
+    "gimbal": 3.0,
+    "ispVac": 305.0,
+    "ispSL": 275.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 9.177445916801355
+  },
+  {
+    "name": "DIRECT_SRB_cone",
+    "title": "Assisted Separation Nose Cone",
+    "mass": 0.075,
+    "bulkhead": "size1",
+    "parentUrl": "reDIRECT/Phase1/Parts/Boosters/DIRECT_SRB_cone.cfg",
+    "engineID": null,
+    "thrust": 170.0,
+    "gimbal": 0,
+    "ispVac": 154.0,
+    "ispSL": 118.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 231.13567494166375
+  },
+  {
+    "name": "nfa-turboprop-125-1",
+    "title": "AP4000 \"Buzzsaw\" Turboprop Engine",
+    "mass": 1.9,
+    "bulkhead": "size1",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Propellers/nfa-turboprop-125-1.cfg",
+    "engineID": null,
+    "thrust": 148.0,
+    "gimbal": 0,
+    "ispVac": 11600.0,
+    "ispSL": 11600.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 7.94305260635439
+  },
+  {
+    "name": "orbital-engine-125",
+    "title": "LV-601 Orbital Maneuvering Engine",
+    "mass": 0.9,
+    "bulkhead": "size1",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/orbital-engine/orbital-engine-125-1.cfg",
+    "engineID": null,
+    "thrust": 140.0,
+    "gimbal": 2.0,
+    "ispVac": 325.0,
+    "ispSL": 210.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 15.862252201878885
+  },
+  {
+    "name": "turboJet",
+    "title": "J-404 \"Panther\" Afterburning Turbofan",
+    "mass": 1.2,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/jetEngines/jetEngineAfterburning.cfg",
+    "engineID": "Wet",
+    "thrust": 130.0,
+    "gimbal": 10.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 11.046925640594223
+  },
+  {
+    "name": "turboFanEngine",
+    "title": "J-X4 \"Whiplash\" Turbo Ramjet Engine",
+    "mass": 1.8,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/jetEngines/jetEngineTurbo.cfg",
+    "engineID": null,
+    "thrust": 130.0,
+    "gimbal": 1.0,
+    "ispVac": 4000.0,
+    "ispSL": 4000.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 7.364617093729482
+  },
+  {
+    "name": "restock-srb-striker-1",
+    "title": "RT-2 'Striker' Solid Rocket Booster",
+    "mass": 0.45,
+    "bulkhead": "size0, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/0625/restock-srb-striker-1.cfg",
+    "engineID": null,
+    "thrust": 125.0,
+    "gimbal": 0,
+    "ispVac": 165.0,
+    "ispSL": 140.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 28.32545036049801
+  },
+  {
+    "name": "LiquidEngineLV-T91",
+    "title": "LV-T91 \"Cheetah\" Liquid Fuel Engine",
+    "mass": 1.0,
+    "bulkhead": "size1, size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineLV-T91.cfg",
+    "engineID": null,
+    "thrust": 125.0,
+    "gimbal": 2.0,
+    "ispVac": 355.0,
+    "ispSL": 150.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 12.746452662224105
+  },
+  {
+    "name": "vasimr-25",
+    "title": "VW-10K 'Cyclotron' VASIMR Plasma Engine",
+    "mass": 2.8,
+    "bulkhead": "size2",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-25/vasimr-25.cfg",
+    "engineID": "XenonMode",
+    "thrust": 124.45,
+    "gimbal": 2.0,
+    "ispVac": 4000.0,
+    "ispSL": 40.0,
+    "propellants": [
+      "XenonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 4.532274382325114
+  },
+  {
+    "name": "nfa-propfan-125-1",
+    "title": "AP27 'Corkscrew' Propfan Engine",
+    "mass": 1.7,
+    "bulkhead": "size1",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Propellers/nfa-propfan-125-1.cfg",
+    "engineID": null,
+    "thrust": 120.0,
+    "gimbal": 1.0,
+    "ispVac": 13000.0,
+    "ispSL": 13000.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 7.197996797491258
+  },
+  {
+    "name": "engine-rocket-pack-2",
+    "title": "96-8S 'Hummingbird' Landing Engine",
+    "mass": 0.15,
+    "bulkhead": "size0",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/landing-engine/engine-rocket-pack-2.cfg",
+    "engineID": null,
+    "thrust": 120.0,
+    "gimbal": 0,
+    "ispVac": 230.0,
+    "ispSL": 220.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 81.57729703823426
+  },
+  {
+    "name": "JetEngine",
+    "title": "J-33 \"Wheesley\" Turbofan Engine",
+    "mass": 1.5,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/jetEngines/jetEngineBasic.cfg",
+    "engineID": "Cruise",
+    "thrust": 120.0,
+    "gimbal": 0,
+    "ispVac": 10500.0,
+    "ispSL": 10500.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 8.157729703823426
+  },
+  {
+    "name": "radialLiquidEngine1-2",
+    "title": "Mk-55 \"Thud\" Liquid Fuel Engine",
+    "mass": 0.9,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineMk55/liquidEngineMk55.cfg",
+    "engineID": null,
+    "thrust": 120.0,
+    "gimbal": 8.0,
+    "ispVac": 305.0,
+    "ispSL": 275.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 13.596216173039045
+  },
+  {
+    "name": "restock-srb-mallet-1",
+    "title": "RT-1 'Mallet' Solid Rocket Booster",
+    "mass": 0.45,
+    "bulkhead": "size0, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/0625/restock-srb-mallet-1.cfg",
+    "engineID": null,
+    "thrust": 115.0,
+    "gimbal": 0,
+    "ispVac": 165.0,
+    "ispSL": 140.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 26.059414331658168
+  },
+  {
+    "name": "orbital-engine-25",
+    "title": "LV-95-6 Orbital Maneuvering Engine Cluster",
+    "mass": 1.0,
+    "bulkhead": "size2",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/orbital-engine/orbital-engine-25-1.cfg",
+    "engineID": null,
+    "thrust": 110.0,
+    "gimbal": 2.0,
+    "ispVac": 328.0,
+    "ispSL": 195.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 11.21687834275721
+  },
+  {
+    "name": "restock-engine-schnauzer-1",
+    "title": "UR-137 'Schnauzer' Liquid Fuel Engine",
+    "mass": 0.8,
+    "bulkhead": "size2, size1p5, size1, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/1875/restock-engine-schnauzer.cfg",
+    "engineID": null,
+    "thrust": 110.0,
+    "gimbal": 3.0,
+    "ispVac": 350.0,
+    "ispSL": 70.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 14.021097928446514
+  },
+  {
+    "name": "nfa-multimodal-125-1",
+    "title": "AE-2B S.C.I.M.I.T.A.R. Engine",
+    "mass": 2.1,
+    "bulkhead": "size1",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/Multimode/nfa-multimodal-125-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 105.0,
+    "gimbal": 3.0,
+    "ispVac": 3200.0,
+    "ispSL": 3200.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 5.0985810648896415
+  },
+  {
+    "name": "RAPIER",
+    "title": "CR-7 R.A.P.I.E.R. Engine",
+    "mass": 2.0,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/rapierEngine/rapierEngine.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 105.0,
+    "gimbal": 3.0,
+    "ispVac": 3200.0,
+    "ispSL": 3200.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 5.353510118134124
+  },
+  {
+    "name": "restock-engine-125-valiant",
+    "title": "LV-T15 'Valiant' Liquid Fuel Engine",
+    "mass": 0.75,
+    "bulkhead": "size1",
+    "parentUrl": "ReStockPlus/Parts/Engine/125/restock-engine-valiant.cfg",
+    "engineID": null,
+    "thrust": 100.0,
+    "gimbal": 5.0,
+    "ispVac": 270.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 13.596216173039043
+  },
+  {
+    "name": "mpdt-125",
+    "title": "LF-2 'Pyrios' Magnetoplasmadynamic Thruster",
+    "mass": 0.9,
+    "bulkhead": "size1",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/mpdt-125/mpdt-125.cfg",
+    "engineID": "largeMPDT",
+    "thrust": 96.4,
+    "gimbal": 1.0,
+    "ispVac": 3000.0,
+    "ispSL": 30.0,
+    "propellants": [
+      "ElectricCharge",
+      "Lithium"
+    ],
+    "TWR_engine_vac": 10.922293659008034
+  },
+  {
+    "name": "nflv-engine-m1d-1",
+    "title": "KS-1M 'Otter' Liquid Fuel Engine",
+    "mass": 0.435,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-m1d-1.cfg",
+    "engineID": "M1D",
+    "thrust": 96.0,
+    "gimbal": 4.0,
+    "ispVac": 295.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 22.504081941581866
+  },
+  {
+    "name": "nflv-engine-m1d-vac-1",
+    "title": "KR-1M-V 'Sphinx' Liquid Fuel Engine",
+    "mass": 0.55,
+    "bulkhead": "size1, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-m1d-vac-1.cfg",
+    "engineID": "RS84",
+    "thrust": 95.0,
+    "gimbal": 4.0,
+    "ispVac": 330.0,
+    "ispSL": 260.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 17.613280042346034
+  },
+  {
+    "name": "SmallCapsuleEngine",
+    "title": "SuperDraco Engine",
+    "mass": 0.2,
+    "bulkhead": "srf",
+    "parentUrl": "KerbalReusabilityExpansion/Engine/Engine.cfg",
+    "engineID": null,
+    "thrust": 90.0,
+    "gimbal": 0,
+    "ispVac": 270.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 45.88722958400677
+  },
+  {
+    "name": "SmallCapsuleEngineRCS",
+    "title": "SuperDraco Engine RCS",
+    "mass": 0.25,
+    "bulkhead": "srf",
+    "parentUrl": "KerbalReusabilityExpansion/Engine/EngineRCS.cfg",
+    "engineID": null,
+    "thrust": 90.0,
+    "gimbal": 0,
+    "ispVac": 270.0,
+    "ispSL": 240.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 36.70978366720542
+  },
+  {
+    "name": "turboJet",
+    "title": "J-404 \"Panther\" Afterburning Turbofan",
+    "mass": 1.2,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/jetEngines/jetEngineAfterburning.cfg",
+    "engineID": "Dry",
+    "thrust": 85.0,
+    "gimbal": 10.0,
+    "ispVac": 9000.0,
+    "ispSL": 9000.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 7.222989841926992
+  },
+  {
+    "name": "nfa-vtol-0625-1",
+    "title": "JL-16 'Yellowjacket' VTOL Engine",
+    "mass": 0.1,
+    "bulkhead": "srf",
+    "parentUrl": "NearFutureAeronautics/Parts/Engine/VTOL/nfa-vtol-0625-1.cfg",
+    "engineID": "AirBreathing",
+    "thrust": 80.0,
+    "gimbal": 6.0,
+    "ispVac": 6900.0,
+    "ispSL": 6900.0,
+    "propellants": [
+      "LiquidFuel",
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 81.57729703823426
+  },
+  {
+    "name": "DIRECT_KL10_B",
+    "title": "KL10-B Mark II \"Caesar\" Cryogenic Engine",
+    "mass": 1.4,
+    "bulkhead": "size1",
+    "parentUrl": "reDIRECT/Phase1/Parts/5m_Tanks/DIRECT_KL10_B-2.cfg",
+    "engineID": "DIRECT_KL10B-2",
+    "thrust": 80.0,
+    "gimbal": 2.2,
+    "ispVac": 465.0,
+    "ispSL": 120.0,
+    "propellants": [
+      "LqdHydrogen",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 5.826949788445305
+  },
+  {
+    "name": "vasimr-25",
+    "title": "VW-10K 'Cyclotron' VASIMR Plasma Engine",
+    "mass": 2.8,
+    "bulkhead": "size2",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-25/vasimr-25.cfg",
+    "engineID": "ArgonMode",
+    "thrust": 73.5,
+    "gimbal": 2.0,
+    "ispVac": 6000.0,
+    "ispSL": 60.0,
+    "propellants": [
+      "ArgonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 2.676755059067062
+  },
+  {
+    "name": "liquidEngine3_v2",
+    "title": "LV-909 \"Terrier\" Liquid Fuel Engine",
+    "mass": 0.5,
+    "bulkhead": "srf, size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-909_v2/liquidEngineLV-909_v2.cfg",
+    "engineID": null,
+    "thrust": 60.0,
+    "gimbal": 4.0,
+    "ispVac": 345.0,
+    "ispSL": 85.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 12.23659455573514
+  },
+  {
+    "name": "nuclearEngine",
+    "title": "LV-N \"Nerv\" Atomic Rocket Motor",
+    "mass": 3.0,
+    "bulkhead": "size1",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-N/liquidEngineLV-N.cfg",
+    "engineID": null,
+    "thrust": 60.0,
+    "gimbal": 0,
+    "ispVac": 800.0,
+    "ispSL": 185.0,
+    "propellants": [
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 2.0394324259558565
+  },
+  {
+    "name": "engine-rocket-pack-1",
+    "title": "64-8S 'Chickadee' Landing Engine",
+    "mass": 0.08,
+    "bulkhead": "size0",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/landing-engine/engine-rocket-pack-1.cfg",
+    "engineID": null,
+    "thrust": 55.0,
+    "gimbal": 0,
+    "ispVac": 230.0,
+    "ispSL": 220.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 70.10548964223257
+  },
+  {
+    "name": "restock-engine-torch",
+    "title": "Mk-1H 'Torch' Liquid Fuel Engine",
+    "mass": 0.29,
+    "bulkhead": "size0, srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/0625/restock-engine-torch.cfg",
+    "engineID": "MainExhaust",
+    "thrust": 55.0,
+    "gimbal": 1.0,
+    "ispVac": 295.0,
+    "ispSL": 275.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 19.339445418546916
+  },
+  {
+    "name": "mpdt-0625",
+    "title": "LF-1 'Charon' Magnetoplasmadynamic Thruster",
+    "mass": 0.33,
+    "bulkhead": "size0",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/mpdt-0625/mpdt-0625.cfg",
+    "engineID": "small",
+    "thrust": 47.3,
+    "gimbal": 1.0,
+    "ispVac": 2600.0,
+    "ispSL": 26.0,
+    "propellants": [
+      "ElectricCharge",
+      "Lithium"
+    ],
+    "TWR_engine_vac": 14.615932386016972
+  },
+  {
+    "name": "pit-25",
+    "title": "KX-XK 'Repulsor' Pulsed Inductive Thruster",
+    "mass": 2.0,
+    "bulkhead": "size2",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/pit-25/pit-25.cfg",
+    "engineID": "largePIT",
+    "thrust": 41.1,
+    "gimbal": 0,
+    "ispVac": 5500.0,
+    "ispSL": 55.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 2.0955168176696426
+  },
+  {
+    "name": "restock-engine-panda-1",
+    "title": "RK-1 'Trash Panda' Vernier Engine",
+    "mass": 0.18,
+    "bulkhead": "srf",
+    "parentUrl": "ReStockPlus/Parts/Engine/radial/restock-engine-panda.cfg",
+    "engineID": null,
+    "thrust": 32.0,
+    "gimbal": 22.5,
+    "ispVac": 300.0,
+    "ispSL": 285.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 18.128288230718724
+  },
+  {
+    "name": "restock-fueltank-1875-soyuz-1",
+    "title": "FL-S1200 Liquid Fuel Tank",
+    "mass": 0.75,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "ReStockPlus/Parts/FuelTank/1875/restock-fueltank-1875-soyuz-1.cfg",
+    "engineID": null,
+    "thrust": 32.0,
+    "gimbal": 0,
+    "ispVac": 154.0,
+    "ispSL": 118.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 4.350789175372494
+  },
+  {
+    "name": "LiquidEngineRV-1",
+    "title": "RV-1 \"Cub\" Vernier Engine",
+    "mass": 0.18,
+    "bulkhead": "size0, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/Engine/LiquidEngineRV-1.cfg",
+    "engineID": null,
+    "thrust": 32.0,
+    "gimbal": 22.5,
+    "ispVac": 310.0,
+    "ispSL": 280.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 18.128288230718724
+  },
+  {
+    "name": "Size1p5_Tank_05",
+    "title": "FL-C1000 Fuel Tank",
+    "mass": 0.75,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "SquadExpansion/MakingHistory/Parts/FuelTank/Size1p5_Tank_05.cfg",
+    "engineID": null,
+    "thrust": 32.0,
+    "gimbal": 0,
+    "ispVac": 154.0,
+    "ispSL": 118.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 4.350789175372494
+  },
+  {
+    "name": "benjee10_AJ10_v2",
+    "title": "KJ-10b \"Viking\" Orbital Manoeuvring Engine",
+    "mass": 0.8,
+    "bulkhead": "size0",
+    "parentUrl": "Benjee10_sharedAssets/Parts/Engines/AJ10_v2.cfg",
+    "engineID": null,
+    "thrust": 30.0,
+    "gimbal": 5.0,
+    "ispVac": 316.0,
+    "ispSL": 27.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 3.8239357986672307
+  },
+  {
+    "name": "Shrimp",
+    "title": "F3S0 \"Shrimp\" Solid Fuel Booster",
+    "mass": 0.15,
+    "bulkhead": "size0, srf",
+    "parentUrl": "Squad/Parts/Engine/SolidBoostersF/SolidBoosterF3S0.cfg",
+    "engineID": null,
+    "thrust": 30.0,
+    "gimbal": 0,
+    "ispVac": 215.0,
+    "ispSL": 190.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "pit-125",
+    "title": "KP-XL 'Inductor' Pulsed Inductive Thruster",
+    "mass": 0.75,
+    "bulkhead": "size1",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/pit-125/pit-125.cfg",
+    "engineID": "largePIT",
+    "thrust": 26.7,
+    "gimbal": 0,
+    "ispVac": 4500.0,
+    "ispSL": 45.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 3.630189718201424
+  },
+  {
+    "name": "TE_F1_S2_Engine",
+    "title": "Tetra VAC Engine",
+    "mass": 0.2,
+    "bulkhead": "size2",
+    "parentUrl": "TundraExploration/Parts/Falcon1/TE_F1_S2_Engine.cfg",
+    "engineID": null,
+    "thrust": 26.0,
+    "gimbal": 4.0,
+    "ispVac": 317.0,
+    "ispSL": 85.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 13.256310768713067
+  },
+  {
+    "name": "restock-engine-125-pug",
+    "title": "LV-303 'Pug' Liquid Fuel Engine",
+    "mass": 0.2,
+    "bulkhead": "size1",
+    "parentUrl": "ReStockPlus/Parts/Engine/125/restock-engine-pug.cfg",
+    "engineID": null,
+    "thrust": 25.0,
+    "gimbal": 0,
+    "ispVac": 330.0,
+    "ispSL": 150.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 12.746452662224103
+  },
+  {
+    "name": "vasimr-125",
+    "title": "VW-200 'Magnotron' VASIMR Plasma Thruster",
+    "mass": 1.0,
+    "bulkhead": "size1",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-125/vasimr-125.cfg",
+    "engineID": "XenonMode",
+    "thrust": 24.9,
+    "gimbal": 2.0,
+    "ispVac": 4000.0,
+    "ispSL": 40.0,
+    "propellants": [
+      "XenonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 2.539093370315041
+  },
+  {
+    "name": "nflv-engine-rutherford-1",
+    "title": "KS-1E 'Goldfish' Liquid Fuel Engine",
+    "mass": 0.1,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-rutherford-1.cfg",
+    "engineID": "Rutherford",
+    "thrust": 20.0,
+    "gimbal": 4.0,
+    "ispVac": 280.0,
+    "ispSL": 270.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "omsEngine",
+    "title": "O-10 \"Puff\" MonoPropellant Fuel Engine",
+    "mass": 0.09,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/OMSEngine/omsEngine.cfg",
+    "engineID": null,
+    "thrust": 20.0,
+    "gimbal": 6.0,
+    "ispVac": 250.0,
+    "ispSL": 120.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 22.660360288398408
+  },
+  {
+    "name": "liquidEngineMini_v2",
+    "title": "48-7S \"Spark\" Liquid Fuel Engine",
+    "mass": 0.13,
+    "bulkhead": "size0",
+    "parentUrl": "Squad/Parts/Engine/liquidEngine48-7S_v2/liquidEngine48-7S_v2.cfg",
+    "engineID": null,
+    "thrust": 20.0,
+    "gimbal": 3.0,
+    "ispVac": 320.0,
+    "ispSL": 265.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 15.687941738121973
+  },
+  {
+    "name": "miniJetEngine",
+    "title": "J-20 \"Juno\" Basic Jet Engine",
+    "mass": 0.25,
+    "bulkhead": "size0",
+    "parentUrl": "Squad/Parts/Engine/miniJet/SmallJetEngine.cfg",
+    "engineID": "Cruise",
+    "thrust": 20.0,
+    "gimbal": 0,
+    "ispVac": 6400.0,
+    "ispSL": 6400.0,
+    "propellants": [
+      "IntakeAir",
+      "LiquidFuel"
+    ],
+    "TWR_engine_vac": 8.157729703823426
+  },
+  {
+    "name": "nflv-engine-rutherford-vac-1",
+    "title": "KR-1E-V 'Angora' Liquid Fuel Engine",
+    "mass": 0.12,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFutureLaunchVehicles/Parts/Engine/nflv-engine-rutherford-vac-1.cfg",
+    "engineID": "Rutherford",
+    "thrust": 18.0,
+    "gimbal": 4.0,
+    "ispVac": 320.0,
+    "ispSL": 250.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 15.295743194668926
+  },
+  {
+    "name": "sepMotor1",
+    "title": "Sepratron I",
+    "mass": 0.0125,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/solidBoosterSep/solidBoosterSep.cfg",
+    "engineID": null,
+    "thrust": 18.0,
+    "gimbal": 0,
+    "ispVac": 154.0,
+    "ispSL": 118.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 146.83913466882166
+  },
+  {
+    "name": "smallRadialEngine",
+    "title": "24-77 \"Twitch\" Liquid Fuel Engine",
+    "mass": 0.09,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/liquidEngine24-77/liquidEngine24-77.cfg",
+    "engineID": null,
+    "thrust": 16.0,
+    "gimbal": 8.0,
+    "ispVac": 290.0,
+    "ispSL": 250.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 18.128288230718724
+  },
+  {
+    "name": "smallRadialEngine_v2",
+    "title": "24-77 \"Twitch\" Liquid Fuel Engine",
+    "mass": 0.08,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/liquidEngine24-77_v2/liquidEngine24-77_v2.cfg",
+    "engineID": null,
+    "thrust": 16.0,
+    "gimbal": 8.0,
+    "ispVac": 290.0,
+    "ispSL": 275.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "PC_Nose",
+    "title": "RSRB Nose Cone",
+    "mass": 0.075,
+    "bulkhead": "size1p5, srf",
+    "parentUrl": "PhotonCorp/Parts/SpaceShuttleSRB/PC_Nose.cfg",
+    "engineID": null,
+    "thrust": 15.0,
+    "gimbal": 0,
+    "ispVac": 154.0,
+    "ispSL": 118.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 20.394324259558566
+  },
+  {
+    "name": "pit-0625",
+    "title": "KP-01 'Scintillator' Pulsed Inductive Thruster",
+    "mass": 0.25,
+    "bulkhead": "size0",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/pit-0625/pit-0625.cfg",
+    "engineID": "smallPIT",
+    "thrust": 14.8,
+    "gimbal": 0,
+    "ispVac": 3500.0,
+    "ispSL": 35.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 6.036719980829336
+  },
+  {
+    "name": "vasimr-125",
+    "title": "VW-200 'Magnotron' VASIMR Plasma Thruster",
+    "mass": 1.0,
+    "bulkhead": "size1",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-125/vasimr-125.cfg",
+    "engineID": "ArgonMode",
+    "thrust": 14.7,
+    "gimbal": 2.0,
+    "ispVac": 6000.0,
+    "ispSL": 60.0,
+    "propellants": [
+      "ArgonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 1.4989828330775545
+  },
+  {
+    "name": "orbital-engine-0625",
+    "title": "LV-95 Orbital Maneuvering Engine",
+    "mass": 0.11,
+    "bulkhead": "size0",
+    "parentUrl": "NearFutureSpacecraft/Parts/Engine/orbital-engine/orbital-engine-0625.cfg",
+    "engineID": null,
+    "thrust": 14.0,
+    "gimbal": 2.0,
+    "ispVac": 315.0,
+    "ispSL": 190.0,
+    "propellants": [
+      "MonoPropellant"
+    ],
+    "TWR_engine_vac": 12.978206346991815
+  },
+  {
+    "name": "Mite",
+    "title": "FM1 \"Mite\" Solid Fuel Booster",
+    "mass": 0.075,
+    "bulkhead": "size0, srf",
+    "parentUrl": "Squad/Parts/Engine/SolidBoostersF/SolidBoosterFM1.cfg",
+    "engineID": null,
+    "thrust": 12.5,
+    "gimbal": 0,
+    "ispVac": 210.0,
+    "ispSL": 185.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 16.995270216298806
+  },
+  {
+    "name": "opt_retro_rcs",
+    "title": "OPT Retro RCS Port",
+    "mass": 0.3,
+    "bulkhead": "srf",
+    "parentUrl": "OPT/Parts/rcs/opt_retro_rcs.cfg",
+    "engineID": "Standard",
+    "thrust": 12.0,
+    "gimbal": 0,
+    "ispVac": 380.0,
+    "ispSL": 320.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 4.078864851911713
+  },
+  {
+    "name": "ionArgon-0625-3",
+    "title": "GW3 'Triplet' Nested-Channel Hall Thruster",
+    "mass": 0.3,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionArgon-0625/ionArgon-0625-3.cfg",
+    "engineID": null,
+    "thrust": 8.4,
+    "gimbal": 0,
+    "ispVac": 3300.0,
+    "ispSL": 33.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 2.8552053963381994
+  },
+  {
+    "name": "vasimr-0625",
+    "title": "VX-100 'Helicon' VASIMR Plasma Thruster",
+    "mass": 0.35,
+    "bulkhead": "size0",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-0625/vasimr-0625.cfg",
+    "engineID": "XenonMode",
+    "thrust": 6.22,
+    "gimbal": 2.0,
+    "ispVac": 4000.0,
+    "ispSL": 40.0,
+    "propellants": [
+      "XenonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 1.8121813842064898
+  },
+  {
+    "name": "ionXenon-0625-2",
+    "title": "FI-1124 'HI-SNAP' Ion Thruster",
+    "mass": 0.25,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionXenon-0625/ionXenon-0625-2.cfg",
+    "engineID": null,
+    "thrust": 4.3,
+    "gimbal": 0,
+    "ispVac": 9650.0,
+    "ispSL": 96.5,
+    "propellants": [
+      "ElectricCharge",
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.7539118863220367
+  },
+  {
+    "name": "ionXenon-0625-3",
+    "title": "FI-2154 'Jewel-4' Gridded Ion Thruster",
+    "mass": 0.25,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionXenon-0625/ionXenon-0625-3.cfg",
+    "engineID": null,
+    "thrust": 3.85,
+    "gimbal": 0,
+    "ispVac": 19200.0,
+    "ispSL": 192.0,
+    "propellants": [
+      "ElectricCharge",
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.5703629679860096
+  },
+  {
+    "name": "vasimr-0625",
+    "title": "VX-100 'Helicon' VASIMR Plasma Thruster",
+    "mass": 0.35,
+    "bulkhead": "size0",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/vasimr-0625/vasimr-0625.cfg",
+    "engineID": "ArgonMode",
+    "thrust": 3.67,
+    "gimbal": 2.0,
+    "ispVac": 6000.0,
+    "ispSL": 60.0,
+    "propellants": [
+      "ArgonGas",
+      "ElectricCharge"
+    ],
+    "TWR_engine_vac": 1.0692452861797135
+  },
+  {
+    "name": "ionArgon-0625-2",
+    "title": "GW7201 'Gyro-2' Lensed Hall Thruster",
+    "mass": 0.15,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionArgon-0625/ionArgon-0625-2.cfg",
+    "engineID": null,
+    "thrust": 3.35,
+    "gimbal": 0,
+    "ispVac": 2700.0,
+    "ispSL": 27.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 2.27736620898404
+  },
+  {
+    "name": "ionXenon-0625",
+    "title": "IX-8219 'AFTER' Ion Thruster",
+    "mass": 0.2,
+    "bulkhead": "size0, srf",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionXenon-0625/ionXenon-0625.cfg",
+    "engineID": null,
+    "thrust": 2.1,
+    "gimbal": 0,
+    "ispVac": 6380.0,
+    "ispSL": 63.8,
+    "propellants": [
+      "ElectricCharge",
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.0707020236268248
+  },
+  {
+    "name": "radialEngineMini_v2",
+    "title": "LV-1R \"Spider\" Liquid Fuel Engine",
+    "mass": 0.02,
+    "bulkhead": "srf",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-1_v2/liquidEngineLV-1R _v2.cfg",
+    "engineID": null,
+    "thrust": 2.0,
+    "gimbal": 10.0,
+    "ispVac": 290.0,
+    "ispSL": 260.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 10.197162129779283
+  },
+  {
+    "name": "microEngine_v2",
+    "title": "LV-1 \"Ant\" Liquid Fuel Engine",
+    "mass": 0.02,
+    "bulkhead": "size0, srf",
+    "parentUrl": "Squad/Parts/Engine/liquidEngineLV-1_v2/liquidEngineLV-1_v2.cfg",
+    "engineID": null,
+    "thrust": 2.0,
+    "gimbal": 0,
+    "ispVac": 315.0,
+    "ispSL": 80.0,
+    "propellants": [
+      "LiquidFuel",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 10.197162129779283
+  },
+  {
+    "name": "ionArgon-0625",
+    "title": "GW0101 'Gyro-1' Hall Thruster",
+    "mass": 0.1,
+    "bulkhead": "size0",
+    "parentUrl": "NearFuturePropulsion/Parts/Engines/ionArgon-0625/ionArgon-0625.cfg",
+    "engineID": null,
+    "thrust": 1.5,
+    "gimbal": 0,
+    "ispVac": 2200.0,
+    "ispSL": 22.0,
+    "propellants": [
+      "ElectricCharge",
+      "ArgonGas"
+    ],
+    "TWR_engine_vac": 1.5295743194668923
+  },
+  {
+    "name": "pp_vvthin",
+    "title": "Plume Party Vapor Vent Thin",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvmach",
+    "title": "Plume Party Vapor Vent Mach",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvwingtip",
+    "title": "Plume Party Vapor Vent Wintip",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvground",
+    "title": "Plume Party Vapor Vent Ground",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvthick",
+    "title": "Plume Party Vapor Vent Thick",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvmach",
+    "title": "Plume Party Vapor Vent Mach",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvwingtip",
+    "title": "Plume Party Vapor Vent Wintip",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvground",
+    "title": "Plume Party Vapor Vent Ground",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvthick",
+    "title": "Plume Party Vapor Vent Thick",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PhotonCorp/FX/PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvthin",
+    "title": "Plume Party Vapor Vent Thin",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvmach",
+    "title": "Plume Party Vapor Vent Mach",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvwingtip",
+    "title": "Plume Party Vapor Vent Wintip",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvground",
+    "title": "Plume Party Vapor Vent Ground",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvthick",
+    "title": "Plume Party Vapor Vent Thick",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvmach",
+    "title": "Plume Party Vapor Vent Mach",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvwingtip",
+    "title": "Plume Party Vapor Vent Wintip",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3000.0,
+    "ispSL": 3000.0,
+    "propellants": [
+      "IntakeAir"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvground",
+    "title": "Plume Party Vapor Vent Ground",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "pp_vvthick",
+    "title": "Plume Party Vapor Vent Thick",
+    "mass": 0.001,
+    "bulkhead": "srf",
+    "parentUrl": "PlumeParty/Vapor/vent.cfg",
+    "engineID": "Smoke",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3125.0,
+    "ispSL": 3125.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 101.97162129779282
+  },
+  {
+    "name": "ionEngine",
+    "title": "IX-6315 \"Dawn\" Electric Propulsion System",
+    "mass": 0.15,
+    "bulkhead": "size0",
+    "parentUrl": "Squad/Parts/Engine/ionEngine/ionEngine.cfg",
+    "engineID": "Ion",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 3690.0,
+    "ispSL": 36.9,
+    "propellants": [
+      "ElectricCharge",
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 0.6798108086519522
+  },
+  {
+    "name": "SEP_23_BOOSTER_INTEGRATED",
+    "title": "Behemoth Core",
+    "mass": 55.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_BOOSTER_INTEGRATED.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.001854029478141688
+  },
+  {
+    "name": "SEP_23_SHIP_BODY",
+    "title": "Donnager MK-1 Main Body",
+    "mass": 13.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_BODY.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.007843970869060987
+  },
+  {
+    "name": "SEP_23_SHIP_BODY_EXP",
+    "title": "Donnager MK-1 Expendable Main Body",
+    "mass": 13.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_BODY_EXP.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.007843970869060987
+  },
+  {
+    "name": "SEP_23_SHIP_CARGO",
+    "title": "Donnager MK-1 Cargo Module",
+    "mass": 9.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_CARGO.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.011330180144199203
+  },
+  {
+    "name": "SEP_23_SHIP_CREW",
+    "title": "Donnager MK-1 Crew Module",
+    "mass": 10.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_CREW.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.010197162129779284
+  },
+  {
+    "name": "SEP_23_SHIP_DEPOT",
+    "title": "Donnager MK-1 Depot",
+    "mass": 23.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_DEPOT.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.004433548752077949
+  },
+  {
+    "name": "SEP_23_SHIP_TANKER",
+    "title": "Donnager MK-1 Tanker Module",
+    "mass": 9.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_TANKER.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.011330180144199203
+  },
+  {
+    "name": "SEP_24_HOPPY",
+    "title": "Donnager MK-2 Hopper",
+    "mass": 6.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_24_HOPPY.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.016995270216298805
+  },
+  {
+    "name": "SEP_24_SHIP_PROTO_BODY",
+    "title": "Donnager MK-2 Main Body",
+    "mass": 13.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_24_SHIP_PROTO_BODY.cfg",
+    "engineID": "Vents",
+    "thrust": 1.0,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "LqdMethane",
+      "Oxidizer"
+    ],
+    "TWR_engine_vac": 0.007843970869060987
+  },
+  {
+    "name": "SEP_23_BOOSTER_HSR",
+    "title": "Behemoth Hot Stage Ring",
+    "mass": 5.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_BOOSTER_HSR.cfg",
+    "engineID": "hotstage",
+    "thrust": 0.15,
+    "gimbal": 0,
+    "ispVac": 1.0,
+    "ispSL": 1.0,
+    "propellants": [
+      "SolidFuel"
+    ],
+    "TWR_engine_vac": 0.003059148638933785
+  },
+  {
+    "name": "SEP_23_SHIP_CARGO",
+    "title": "Donnager MK-1 Cargo Module",
+    "mass": 9.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_CARGO.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.1330180144199203e-06
+  },
+  {
+    "name": "SEP_23_SHIP_CARGO_EXP",
+    "title": "Donnager MK-1 Expendable Cargo Module",
+    "mass": 9.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_CARGO_EXP.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.1330180144199203e-06
+  },
+  {
+    "name": "SEP_23_SHIP_CREW",
+    "title": "Donnager MK-1 Crew Module",
+    "mass": 10.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_CREW.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.0197162129779284e-06
+  },
+  {
+    "name": "SEP_23_SHIP_DEPOT",
+    "title": "Donnager MK-1 Depot",
+    "mass": 23.0,
+    "bulkhead": "size4, srf",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_DEPOT.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 4.4335487520779493e-07
+  },
+  {
+    "name": "SEP_23_SHIP_NOSE_EXP",
+    "title": "Donnager MK-1 Expendable Nosecone Module",
+    "mass": 10.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_NOSE_EXP.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.0197162129779284e-06
+  },
+  {
+    "name": "SEP_23_SHIP_TANKER",
+    "title": "Donnager MK-1 Tanker Module",
+    "mass": 9.0,
+    "bulkhead": "size4",
+    "parentUrl": "StarshipExpansionProject/Parts/SEP_23_SHIP_TANKER.cfg",
+    "engineID": "SEPVaporEngine",
+    "thrust": 0.0001,
+    "gimbal": 0,
+    "ispVac": 999999.0,
+    "ispSL": 999999.0,
+    "propellants": [
+      "XenonGas"
+    ],
+    "TWR_engine_vac": 1.1330180144199203e-06
+  }
+]

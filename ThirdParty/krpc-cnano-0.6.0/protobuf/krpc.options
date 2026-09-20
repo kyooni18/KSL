@@ -1,0 +1,13 @@
+# These assume you don't want to batch RPC calls
+krpc.schema.Request.calls          max_count:32
+krpc.schema.Response.results       max_count:32
+krpc.schema.Response.error         type:FT_CALLBACK
+krpc.schema.ProcedureResult.error  type:FT_CALLBACK
+
+# Set service and procedure names in ProcedureCall to empty
+# as this client uses id numbers
+krpc.schema.ProcedureCall.service    max_size:0  type:FT_IGNORE
+krpc.schema.ProcedureCall.procedure  max_size:0  type:FT_IGNORE
+
+# Version string should never exceed this length
+krpc.schema.Status.version  max_size:16

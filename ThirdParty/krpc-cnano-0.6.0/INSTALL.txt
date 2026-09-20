@@ -1,0 +1,80 @@
+Installing the kRPC C-nano client library
+=========================================
+
+Via vcpkg
+---------
+
+The library can be installed using the bundled vcpkg overlay port. Extract this
+archive and run:
+
+On Linux:
+
+    vcpkg install krpc-cnano --overlay-ports=vcpkg-port
+
+On Windows:
+
+    vcpkg install krpc-cnano:x64-windows --overlay-ports=vcpkg-port
+
+Then pass the vcpkg toolchain file when configuring your CMake project:
+
+    cmake -B build -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+And link the library in your CMakeLists.txt:
+
+    find_package(krpc_cnano CONFIG REQUIRED)
+    target_link_libraries(my_app PRIVATE krpc_cnano::krpc_cnano)
+
+
+Via CMake
+---------
+
+Requirements
+------------
+
+ * CMake 3.15 or later
+ * A C99-compatible compiler
+ * protoc (the protobuf compiler)
+ * Python 3 (used by the nanopb generator at build time)
+
+By default, CMake looks for a system-installed nanopb with CMake config support.
+Alternatively, CMake can download nanopb automatically via FetchContent — see
+"Using FetchContent for dependencies" below.
+
+
+Building and installing
+-----------------------
+
+    cmake -B build
+    cmake --build build
+    sudo cmake --install build
+    sudo ldconfig
+
+To install to a custom location, pass CMAKE_INSTALL_PREFIX:
+
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/install/path
+    cmake --build build
+    cmake --install build
+
+
+Using FetchContent for dependencies
+------------------------------------
+
+To download nanopb automatically at build time instead of using a system
+package, pass KRPC_FETCH_DEPS=ON:
+
+    cmake -B build -DKRPC_FETCH_DEPS=ON
+    cmake --build build
+    sudo cmake --install build
+
+The fine-grained option KRPC_FETCH_NANOPB=ON is also accepted. When an option
+is OFF (the default), the system package is required and CMake will error if it
+cannot be found.
+
+
+Using the installed library
+---------------------------
+
+After installation, downstream CMake projects can locate the library with:
+
+    find_package(krpc_cnano CONFIG REQUIRED)
+    target_link_libraries(my_target PRIVATE krpc_cnano::krpc_cnano)

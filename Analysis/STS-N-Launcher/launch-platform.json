@@ -1,0 +1,60 @@
+{
+  "orbiter": {
+    "name": "STS-N",
+    "launchPreparedMass_t": 40.155,
+    "removeOxidizer_units": 902.0,
+    "engine": "nfa-atomic-multimode-25-1",
+    "engineVacThrust_kN": 820.0,
+    "engineVacIsp_s": 580.0,
+    "engineSeaLevelIsp_s": 500.0,
+    "gimbalLimit_percent": 0.0
+  },
+  "externalTank": {
+    "part": "DIRECT_STS_tank",
+    "dryMass_t": 62.700370187,
+    "liquidFuel_units": 30555.587421,
+    "oxidizer_units": 24828.564223,
+    "oxidizerFillFraction": 0.664830283,
+    "propellantMass_t": 276.920758222
+  },
+  "coreEngine": {
+    "part": "nflv-engine-rd701-1",
+    "vacThrust_kN": 2150.0,
+    "vacIsp_s": 345.0,
+    "seaLevelIsp_s": 295.0,
+    "gimbalRange_deg": 6.0,
+    "gimbalLimit_percent": 100.0,
+    "fixedCant_deg": 0.0,
+    "lateralOffsetAwayFromOrbiter_m": 0.141
+  },
+  "boosters": {
+    "count": 2,
+    "part": "PC_5Seg_RSRM",
+    "vacMaxThrustEach_kN": 3632.0,
+    "solidFuelEach_t": 122.925,
+    "burnTime_s": 135.294,
+    "gimbalRange_deg": 7.5,
+    "gimbalLimit_percent": 60.0,
+    "recommendedCenterlineRadius_m": [
+      4.4,
+      4.5
+    ],
+    "separationTriggerMinFuelEach_t": 0.27,
+    "nominalSeparation_s": 134.0
+  },
+  "launcher": {
+    "initialMass_t": 649.371128408,
+    "initialSeaLevelTWR": 1.378,
+    "srbSeparation_s": 135.294,
+    "fullThrottleEquivalentETDepletion_s": 355.189592,
+    "twoGThrottleCapStartApprox_s": 304.5,
+    "worstNominalCougarTrim_deg": 2.76,
+    "cougarAcceptanceTrimLimit_deg": 5.0,
+    "mathematicalSrbBurnout_s": 135.294,
+    "actualEtDepletionWith2gCap_s": 363.242,
+    "maxNominalResultantTilt_deg": 1.99,
+    "lateJn500FlameoutUntrimmableAfter_s": 319.97,
+    "lateJn500FlameoutEtPropAtLimit_t": 27.93,
+    "etSeparationRequiresZeroThrottleWhenJn500GimbalLocked": true
+  }
+}

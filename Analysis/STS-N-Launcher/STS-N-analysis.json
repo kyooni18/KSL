@@ -1,0 +1,822 @@
+{
+  "dryMass": 30.33499998882413,
+  "wetMass": 44.66499998882413,
+  "dryCoM": [
+    2.012520191939452e-06,
+    9.631221273473356,
+    -8.71909182715738
+  ],
+  "wetCoM": [
+    1.3668375689078075e-06,
+    9.708811129480276,
+    -10.027318224102938
+  ],
+  "missing": [],
+  "parts": [
+    {
+      "name": "benjee10_shuttle_forwardFuselage",
+      "craftName": "benjee10.shuttle.forwardFuselage",
+      "raw": "benjee10.shuttle.forwardFuselage_4294339174",
+      "pos": [
+        0.0,
+        10.0,
+        0.0
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        0.0,
+        9.500000081142122,
+        -1.1000002163789926
+      ],
+      "dryMass": 4.3,
+      "resourceMass": 0.8,
+      "wetMass": 5.1,
+      "resources": [
+        {
+          "name": "ElectricCharge",
+          "amount": 150.0,
+          "maxAmount": 150.0,
+          "density": 0.0,
+          "mass": 0.0
+        },
+        {
+          "name": "MonoPropellant",
+          "amount": 200.0,
+          "maxAmount": 200.0,
+          "density": 0.004,
+          "mass": 0.8
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_midFuselage",
+      "craftName": "benjee10.shuttle.midFuselage",
+      "raw": "benjee10.shuttle.midFuselage_4294210194",
+      "pos": [
+        0.0,
+        10.0,
+        -8.24058914
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        0.0,
+        9.499999661907824,
+        -6.240588937144695
+      ],
+      "dryMass": 5.0,
+      "resourceMass": 0.31,
+      "wetMass": 5.31,
+      "resources": [
+        {
+          "name": "ElectricCharge",
+          "amount": 0.0,
+          "maxAmount": 10.0,
+          "density": 0.0,
+          "mass": 0.0
+        },
+        {
+          "name": "LiquidFuel",
+          "amount": 40.0,
+          "maxAmount": 40.0,
+          "density": 0.005,
+          "mass": 0.2
+        },
+        {
+          "name": "Oxidizer",
+          "amount": 22.0,
+          "maxAmount": 22.0,
+          "density": 0.005,
+          "mass": 0.11
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_deltaWing",
+      "craftName": "benjee10.shuttle.deltaWing",
+      "raw": "benjee10.shuttle.deltaWing_4294209040",
+      "pos": [
+        -3.41414404,
+        8.61576748,
+        -10.5658426
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        -3.41414404,
+        8.61576748,
+        -10.5658426
+      ],
+      "dryMass": 0.8,
+      "resourceMass": 0.0,
+      "wetMass": 0.8,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_deltaWing",
+      "craftName": "benjee10.shuttle.deltaWing",
+      "raw": "benjee10.shuttle.deltaWing_4294206272",
+      "pos": [
+        3.41414404,
+        8.61576748,
+        -10.5658426
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        3.41414404,
+        8.61576748,
+        -10.5658426
+      ],
+      "dryMass": 0.8,
+      "resourceMass": 0.0,
+      "wetMass": 0.8,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_aftFuselage",
+      "craftName": "benjee10.shuttle.aftFuselage",
+      "raw": "benjee10.shuttle.aftFuselage_4294188636",
+      "pos": [
+        0.0,
+        10.000001,
+        -14.4585209
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        0.0,
+        10.000001,
+        -14.4585209
+      ],
+      "dryMass": 2.4,
+      "resourceMass": 7.0,
+      "wetMass": 9.4,
+      "resources": [
+        {
+          "name": "ElectricCharge",
+          "amount": 50.0,
+          "maxAmount": 50.0,
+          "density": 0.0,
+          "mass": 0.0
+        },
+        {
+          "name": "MonoPropellant",
+          "amount": 200.0,
+          "maxAmount": 200.0,
+          "density": 0.004,
+          "mass": 0.8
+        },
+        {
+          "name": "LiquidFuel",
+          "amount": 800.0,
+          "maxAmount": 800.0,
+          "density": 0.005,
+          "mass": 4.0
+        },
+        {
+          "name": "Oxidizer",
+          "amount": 440.0,
+          "maxAmount": 440.0,
+          "density": 0.005,
+          "mass": 2.2
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_bodyFlap",
+      "craftName": "benjee10.shuttle.bodyFlap",
+      "raw": "benjee10.shuttle.bodyFlap_4294179066",
+      "pos": [
+        0.0,
+        8.48019981,
+        -16.210886
+      ],
+      "rot": [
+        0.707106829,
+        0.0,
+        0.0,
+        0.707106829
+      ],
+      "com": [
+        0.0,
+        8.48019981,
+        -16.210886
+      ],
+      "dryMass": 0.23,
+      "resourceMass": 0.0,
+      "wetMass": 0.23,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_elevon2",
+      "craftName": "benjee10.shuttle.elevon2",
+      "raw": "benjee10.shuttle.elevon2_4294178710",
+      "pos": [
+        -3.34171414,
+        8.49642563,
+        -14.0628214
+      ],
+      "rot": [
+        0.706713259,
+        0.0106315194,
+        -0.0106315194,
+        0.707340419
+      ],
+      "com": [
+        -3.34171414,
+        8.49642563,
+        -14.0628214
+      ],
+      "dryMass": 0.23,
+      "resourceMass": 0.0,
+      "wetMass": 0.23,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_elevon1",
+      "craftName": "benjee10.shuttle.elevon1",
+      "raw": "benjee10.shuttle.elevon1_4294178302",
+      "pos": [
+        -5.68064737,
+        8.5668087,
+        -14.0236549
+      ],
+      "rot": [
+        0.707068801,
+        0.00734293228,
+        -0.00734293228,
+        0.707068682
+      ],
+      "com": [
+        -5.68064737,
+        8.5668087,
+        -14.0236549
+      ],
+      "dryMass": 0.12,
+      "resourceMass": 0.0,
+      "wetMass": 0.12,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_elevon2",
+      "craftName": "benjee10.shuttle.elevon2",
+      "raw": "benjee10.shuttle.elevon2_4294166496",
+      "pos": [
+        3.34171414,
+        8.49643135,
+        -14.0628214
+      ],
+      "rot": [
+        0.707340598,
+        -0.0106331678,
+        0.0106331678,
+        0.70671308
+      ],
+      "com": [
+        3.34171414,
+        8.49643135,
+        -14.0628214
+      ],
+      "dryMass": 0.23,
+      "resourceMass": 0.0,
+      "wetMass": 0.23,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_elevon1",
+      "craftName": "benjee10.shuttle.elevon1",
+      "raw": "benjee10.shuttle.elevon1_4294165998",
+      "pos": [
+        5.68064737,
+        8.5668087,
+        -14.0236549
+      ],
+      "rot": [
+        0.707068801,
+        -0.00734293228,
+        0.00734293228,
+        0.707068682
+      ],
+      "com": [
+        5.68064737,
+        8.5668087,
+        -14.0236549
+      ],
+      "dryMass": 0.12,
+      "resourceMass": 0.0,
+      "wetMass": 0.12,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_rudder",
+      "craftName": "benjee10.shuttle.rudder",
+      "raw": "benjee10.shuttle.rudder_4294164996",
+      "pos": [
+        0.0,
+        11.5187817,
+        -13.8863039
+      ],
+      "rot": [
+        0.50000006,
+        0.50000006,
+        0.50000006,
+        0.50000006
+      ],
+      "com": [
+        0.0,
+        11.5187817,
+        -13.8863039
+      ],
+      "dryMass": 0.48,
+      "resourceMass": 0.0,
+      "wetMass": 0.48,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_noseGear",
+      "craftName": "benjee10.shuttle.noseGear",
+      "raw": "benjee10.shuttle.noseGear_4294090752",
+      "pos": [
+        2.75496076e-17,
+        7.70999146,
+        0.883380532
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.00000012
+      ],
+      "com": [
+        2.75496076e-17,
+        7.70999146,
+        0.883380532
+      ],
+      "dryMass": 0.045,
+      "resourceMass": 0.0,
+      "wetMass": 0.045,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_mainGear",
+      "craftName": "benjee10.shuttle.mainGear",
+      "raw": "benjee10.shuttle.mainGear_4294088752",
+      "pos": [
+        -2.13564801,
+        6.89420748,
+        -10.7553101
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.00000012
+      ],
+      "com": [
+        -2.13564801,
+        6.89420748,
+        -10.7553101
+      ],
+      "dryMass": 0.07,
+      "resourceMass": 0.0,
+      "wetMass": 0.07,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "benjee10_shuttle_mainGear",
+      "craftName": "benjee10.shuttle.mainGear",
+      "raw": "benjee10.shuttle.mainGear_4294086644",
+      "pos": [
+        2.13652015,
+        6.89420748,
+        -10.7553101
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.00000012
+      ],
+      "com": [
+        2.13652015,
+        6.89420748,
+        -10.7553101
+      ],
+      "dryMass": 0.07,
+      "resourceMass": 0.0,
+      "wetMass": 0.07,
+      "resources": [],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "Rockomax8BW",
+      "craftName": "Rockomax8BW",
+      "raw": "Rockomax8BW_4291865412",
+      "pos": [
+        0.0,
+        9.80000114,
+        -12.7585363
+      ],
+      "rot": [
+        0.50000006,
+        0.50000006,
+        0.50000006,
+        0.50000006
+      ],
+      "com": [
+        0.0,
+        9.80000114,
+        -12.7585363
+      ],
+      "dryMass": 0.4999999888241291,
+      "resourceMass": 6.2,
+      "wetMass": 6.699999988824129,
+      "resources": [
+        {
+          "name": "LiquidFuel",
+          "amount": 800.0,
+          "maxAmount": 360.0,
+          "density": 0.005,
+          "mass": 4.0
+        },
+        {
+          "name": "Oxidizer",
+          "amount": 440.0,
+          "maxAmount": 440.0,
+          "density": 0.005,
+          "mass": 2.2
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "nfa-atomic-multimode-25-1",
+      "craftName": "nfa-atomic-multimode-25-1",
+      "raw": "nfa-atomic-multimode-25-1_4291925208",
+      "pos": [
+        0.0,
+        9.80000114,
+        -13.4585524
+      ],
+      "rot": [
+        0.707106888,
+        0.0,
+        0.0,
+        0.707106888
+      ],
+      "com": [
+        0.0,
+        9.80000008260069,
+        -9.958551342600689
+      ],
+      "dryMass": 14.9,
+      "resourceMass": 0.0,
+      "wetMass": 14.9,
+      "resources": [],
+      "dstg": "0",
+      "istg": "0"
+    },
+    {
+      "name": "IntakeRadialLong",
+      "craftName": "IntakeRadialLong",
+      "raw": "IntakeRadialLong_4291826310",
+      "pos": [
+        -1.77954841,
+        8.79483891,
+        -12.4642143
+      ],
+      "rot": [
+        -2.98023295e-08,
+        0.0,
+        -1.00000012,
+        -4.21468513e-08
+      ],
+      "com": [
+        -1.77954841,
+        8.79483891,
+        -12.4642143
+      ],
+      "dryMass": 0.01,
+      "resourceMass": 0.005,
+      "wetMass": 0.015,
+      "resources": [
+        {
+          "name": "IntakeAir",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        },
+        {
+          "name": "IntakeAtm",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "IntakeRadialLong",
+      "craftName": "IntakeRadialLong",
+      "raw": "IntakeRadialLong_4291823780",
+      "pos": [
+        1.77954841,
+        8.79483795,
+        -12.4642181
+      ],
+      "rot": [
+        -2.98023295e-08,
+        0.0,
+        1.00000012,
+        -4.214683e-08
+      ],
+      "com": [
+        1.77954841,
+        8.79483795,
+        -12.4642181
+      ],
+      "dryMass": 0.01,
+      "resourceMass": 0.005,
+      "wetMass": 0.015,
+      "resources": [
+        {
+          "name": "IntakeAir",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        },
+        {
+          "name": "IntakeAtm",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "IntakeRadialLong",
+      "craftName": "IntakeRadialLong",
+      "raw": "IntakeRadialLong_4291820172",
+      "pos": [
+        -2.04487467,
+        8.79893589,
+        -12.4721603
+      ],
+      "rot": [
+        -2.98023295e-08,
+        0.0,
+        -1.00000012,
+        -4.21468513e-08
+      ],
+      "com": [
+        -2.04487467,
+        8.79893589,
+        -12.4721603
+      ],
+      "dryMass": 0.01,
+      "resourceMass": 0.005,
+      "wetMass": 0.015,
+      "resources": [
+        {
+          "name": "IntakeAir",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        },
+        {
+          "name": "IntakeAtm",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    },
+    {
+      "name": "IntakeRadialLong",
+      "craftName": "IntakeRadialLong",
+      "raw": "IntakeRadialLong_4291817858",
+      "pos": [
+        2.04487467,
+        8.79893494,
+        -12.4721642
+      ],
+      "rot": [
+        -2.98023295e-08,
+        0.0,
+        1.00000012,
+        -4.214683e-08
+      ],
+      "com": [
+        2.04487467,
+        8.79893494,
+        -12.4721642
+      ],
+      "dryMass": 0.01,
+      "resourceMass": 0.005,
+      "wetMass": 0.015,
+      "resources": [
+        {
+          "name": "IntakeAir",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        },
+        {
+          "name": "IntakeAtm",
+          "amount": 0.5,
+          "maxAmount": 0.5,
+          "density": 0.005,
+          "mass": 0.0025
+        }
+      ],
+      "dstg": "0",
+      "istg": "-1"
+    }
+  ],
+  "summary": [
+    {
+      "name": "IntakeRadialLong",
+      "title": "Adjustable Ramp Intake (Radial)",
+      "count": 4,
+      "dryMass": 0.04,
+      "wetMass": 0.06,
+      "resources": {
+        "IntakeAir": 2.0,
+        "IntakeAtm": 2.0
+      }
+    },
+    {
+      "name": "Rockomax8BW",
+      "title": "Rockomax X200-8 Fuel Tank",
+      "count": 1,
+      "dryMass": 0.4999999888241291,
+      "wetMass": 6.699999988824129,
+      "resources": {
+        "LiquidFuel": 800.0,
+        "Oxidizer": 440.0
+      }
+    },
+    {
+      "name": "benjee10_shuttle_aftFuselage",
+      "title": "OV-100 Aft Fuselage Module",
+      "count": 1,
+      "dryMass": 2.4,
+      "wetMass": 9.4,
+      "resources": {
+        "ElectricCharge": 50.0,
+        "MonoPropellant": 200.0,
+        "LiquidFuel": 800.0,
+        "Oxidizer": 440.0
+      }
+    },
+    {
+      "name": "benjee10_shuttle_bodyFlap",
+      "title": "OV-100 Body Flap",
+      "count": 1,
+      "dryMass": 0.23,
+      "wetMass": 0.23,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_deltaWing",
+      "title": "OV-100 Delta Wing",
+      "count": 2,
+      "dryMass": 1.6,
+      "wetMass": 1.6,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_elevon1",
+      "title": "OV-100 Outer Elevon",
+      "count": 2,
+      "dryMass": 0.24,
+      "wetMass": 0.24,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_elevon2",
+      "title": "OV-100 Inner Elevon",
+      "count": 2,
+      "dryMass": 0.46,
+      "wetMass": 0.46,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_forwardFuselage",
+      "title": "OV-100 Forward Fuselage Module",
+      "count": 1,
+      "dryMass": 4.3,
+      "wetMass": 5.1,
+      "resources": {
+        "ElectricCharge": 150.0,
+        "MonoPropellant": 200.0
+      }
+    },
+    {
+      "name": "benjee10_shuttle_mainGear",
+      "title": "OV-100 Main Gear",
+      "count": 2,
+      "dryMass": 0.14,
+      "wetMass": 0.14,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_midFuselage",
+      "title": "OV-100 Mid Fuselage Section",
+      "count": 1,
+      "dryMass": 5.0,
+      "wetMass": 5.31,
+      "resources": {
+        "ElectricCharge": 0.0,
+        "LiquidFuel": 40.0,
+        "Oxidizer": 22.0
+      }
+    },
+    {
+      "name": "benjee10_shuttle_noseGear",
+      "title": "OV-100 Nose Gear",
+      "count": 1,
+      "dryMass": 0.045,
+      "wetMass": 0.045,
+      "resources": {}
+    },
+    {
+      "name": "benjee10_shuttle_rudder",
+      "title": "OV-100 Vertical Stabilizer",
+      "count": 1,
+      "dryMass": 0.48,
+      "wetMass": 0.48,
+      "resources": {}
+    },
+    {
+      "name": "nfa-atomic-multimode-25-1",
+      "title": "J-N500 'Project Eeloo' Multimode Nuclear Engine",
+      "count": 1,
+      "dryMass": 14.9,
+      "wetMass": 14.9,
+      "resources": {}
+    }
+  ]
+}

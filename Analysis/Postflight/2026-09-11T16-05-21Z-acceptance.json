@@ -1,0 +1,261 @@
+{
+  "acceptance": "FAIL",
+  "entryReversals": {
+    "plannerSamplesWithPlannedReversal": 174,
+    "scheduledEventCount": 3,
+    "scheduledEvents": [
+      {
+        "observedTick": 2678,
+        "observedUT": 67150.8525485282,
+        "plannedRangeM": 16666.9280881726,
+        "plannedUT": 67582.6751094041,
+        "sign": -1
+      },
+      {
+        "observedTick": 3397,
+        "observedUT": 67225.9325485435,
+        "plannedRangeM": 35638.8056290522,
+        "plannedUT": 67571.8777692535,
+        "sign": -1
+      },
+      {
+        "observedTick": 4450,
+        "observedUT": 67300.9925485588,
+        "plannedRangeM": 63673.599361393,
+        "plannedUT": 67555.1735737784,
+        "sign": -1
+      }
+    ]
+  },
+  "flags": [
+    {
+      "code": "HISTORIC_1605_OVERSHOOT_SIGNATURE",
+      "crossTrackThresholdM": 5000.0,
+      "rangeThresholdM": 30000.0,
+      "severity": "error"
+    },
+    {
+      "code": "REPEATED_TAEM_LOOP_GAPS_OVER_2S",
+      "count": 2,
+      "severity": "error"
+    },
+    {
+      "code": "ABORT_OUTCOME",
+      "severity": "error"
+    }
+  ],
+  "outcome": {
+    "abortSeen": true,
+    "disconnectSeen": true,
+    "finalSeen": false,
+    "flareSeen": false,
+    "lastPhase": "Abort",
+    "lastSituation": "flying",
+    "lastTick": 7853,
+    "lastUT": 67616.7125486231,
+    "outcome": "abort",
+    "touchdownSeen": false
+  },
+  "ownershipHandoff": {
+    "altitudeM": 23895.7736422049,
+    "rangeToSiteM": 8066.55410024219,
+    "runwayAlongTrackM": 202.639733864633,
+    "runwayCrossTrackM": 8064.00862667604,
+    "tick": 7557,
+    "trueAirSpeedMps": 1299.63354492188,
+    "ut": 67587.9725486172
+  },
+  "phaseSummary": {
+    "Abort": {
+      "durationUTSeconds": 0.0,
+      "firstTick": 7853,
+      "firstUT": 67616.7125486231,
+      "lastTick": 7853,
+      "lastUT": 67616.7125486231,
+      "updates": 2
+    },
+    "Attitude Recovery": {
+      "durationUTSeconds": 17.260000003603636,
+      "firstTick": 7595,
+      "firstUT": 67599.3725486195,
+      "lastTick": 7852,
+      "lastUT": 67616.6325486231,
+      "updates": 258
+    },
+    "Entry Interface": {
+      "durationUTSeconds": 102.20890626229811,
+      "firstTick": 1,
+      "firstUT": 66898.4836422353,
+      "lastTick": 769,
+      "lastUT": 67000.6925484976,
+      "updates": 769
+    },
+    "Idle": {
+      "durationUTSeconds": 0.0,
+      "firstTick": 1,
+      "firstUT": 66898.4836422353,
+      "lastTick": 1,
+      "lastUT": 66898.4836422353,
+      "updates": 1
+    },
+    "MM304 Entry": {
+      "durationUTSeconds": 587.1400001196016,
+      "firstTick": 770,
+      "firstUT": 67000.7725484976,
+      "lastTick": 7556,
+      "lastUT": 67587.9125486172,
+      "updates": 6787
+    },
+    "TAEM": {
+      "durationUTSeconds": 6.680000001404551,
+      "firstTick": 7557,
+      "firstUT": 67587.9725486172,
+      "lastTick": 7594,
+      "lastUT": 67594.6525486186,
+      "updates": 38
+    }
+  },
+  "planner": {
+    "missing": false,
+    "path": "/Users/kyooni18/Code/C/KSPShuttleLander/FlightLogs/2026-09-11T16-05-21Z-STS-N-planner.jsonl",
+    "sessionId": "2026-09-11T16-05-21Z-50503-77104235094"
+  },
+  "plannerLineage": {
+    "available": true,
+    "continuityBreakCount": 0,
+    "continuityBreaks": [],
+    "distinctPlanVersions": 14,
+    "first": [
+      1,
+      1
+    ],
+    "last": [
+      6,
+      1
+    ]
+  },
+  "runtimeLatency": {
+    "byPhase": {
+      "Abort": {
+        "loopWallDeltaMilliseconds": {
+          "count": 1,
+          "max": 104.54200000094716,
+          "mean": 104.54200000094716,
+          "p50": 104.54200000094716,
+          "p95": 104.54200000094716,
+          "p99": 104.54200000094716
+        }
+      },
+      "Attitude Recovery": {
+        "loopWallDeltaMilliseconds": {
+          "count": 258,
+          "max": 8872.84599999839,
+          "mean": 139.3007286821466,
+          "p50": 103.6789999998291,
+          "p95": 113.37260000509534,
+          "p99": 166.60365999938222
+        }
+      },
+      "Entry Interface": {
+        "loopWallDeltaMilliseconds": {
+          "count": 769,
+          "max": 307.981000005384,
+          "mean": 105.05412743823186,
+          "p50": 104.1549999936251,
+          "p95": 105.44439999503084,
+          "p99": 153.89779999968417
+        }
+      },
+      "Idle": {
+        "loopWallDeltaMilliseconds": {
+          "count": 1,
+          "max": 35.08000000147149,
+          "mean": 35.08000000147149,
+          "p50": 35.08000000147149,
+          "p95": 35.08000000147149,
+          "p99": 35.08000000147149
+        }
+      },
+      "MM304 Entry": {
+        "loopWallDeltaMilliseconds": {
+          "count": 6787,
+          "max": 1006.9399999920279,
+          "mean": 109.03233181081409,
+          "p50": 103.97199999715667,
+          "p95": 133.99809999973513,
+          "p99": 225.1597199906251
+        }
+      },
+      "TAEM": {
+        "loopWallDeltaMilliseconds": {
+          "count": 38,
+          "max": 9413.380000012694,
+          "mean": 592.3738157894389,
+          "p50": 103.66000000067288,
+          "p95": 1545.5990000067557,
+          "p99": 9369.056590005348
+        }
+      }
+    },
+    "source": "inferred tick-to-tick wallMonotonicSeconds",
+    "taemSourcePhaseGapCountOver2Seconds": 2,
+    "wallGapEventsOver2Seconds": [
+      {
+        "fromTick": 7593,
+        "fromUT": 67589.9125486176,
+        "kspUTAdvanceSeconds": 4.740000000994769,
+        "sourcePhase": "TAEM",
+        "toTick": 7594,
+        "toUT": 67594.6525486186,
+        "wallGapMilliseconds": 9413.380000012694
+      },
+      {
+        "fromTick": 7594,
+        "fromUT": 67594.6525486186,
+        "kspUTAdvanceSeconds": 4.720000000903383,
+        "sourcePhase": "TAEM",
+        "toTick": 7595,
+        "toUT": 67599.3725486195,
+        "wallGapMilliseconds": 9293.58699999284
+      },
+      {
+        "fromTick": 7595,
+        "fromUT": 67599.3725486195,
+        "kspUTAdvanceSeconds": 4.280000000901055,
+        "sourcePhase": "Attitude Recovery",
+        "toTick": 7596,
+        "toUT": 67603.6525486204,
+        "wallGapMilliseconds": 8872.84599999839
+      }
+    ]
+  },
+  "schemaVersion": 1,
+  "sessionPairingValid": true,
+  "terminalProgress": {
+    "firstTerminalCommit": null,
+    "hacRemainingRange": [
+      0.0,
+      0.0
+    ],
+    "maximumHACCircuitCount": 0.0,
+    "maximumHACTransitionProgress": 0.0,
+    "mixRange": [
+      0.106999999858818,
+      0.596999999924689
+    ],
+    "plannerTAEMSamples": 2,
+    "terminalCandidateValid": 2,
+    "terminalCommitted": 0,
+    "terminalPredictionValid": 2
+  },
+  "thresholds": {
+    "historicOvershootCrossTrackM": 5000.0,
+    "historicOvershootRangeM": 30000.0,
+    "loopGapWarningMsec": 2000.0
+  },
+  "vehicle": {
+    "path": "/Users/kyooni18/Code/C/KSPShuttleLander/FlightLogs/2026-09-11T16-05-21Z-STS-N-vehicle.jsonl",
+    "schemaVersion": 4,
+    "sessionId": "2026-09-11T16-05-21Z-50503-77104235094"
+  }
+}

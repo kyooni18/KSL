@@ -1,0 +1,66 @@
+[
+  {
+    "seed": 0,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 268,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 4860.203,
+    "final_air_speed_mps": 84.884,
+    "final_along_m": -7093.75,
+    "final_cross_m": -35511.182,
+    "phases": [
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 1,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 272,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 4691.871,
+    "final_air_speed_mps": 84.994,
+    "final_along_m": -8009.585,
+    "final_cross_m": -37231.143,
+    "phases": [
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 2,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 256,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 5518.792,
+    "final_air_speed_mps": 84.994,
+    "final_along_m": -7467.999,
+    "final_cross_m": 34866.514,
+    "phases": [
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 3,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 260,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 5677.704,
+    "final_air_speed_mps": 84.792,
+    "final_along_m": -6178.122,
+    "final_cross_m": 35014.582,
+    "phases": [
+      "ENTRY_ENERGY"
+    ]
+  }
+]

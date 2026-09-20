@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+brain_v2.safetensors
+training_report.json

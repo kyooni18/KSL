@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "scope": "predictor-physics-shadow-fidelity",
+  "source": {
+    "vehicleLog": "FlightLogs/2026-09-11T16-05-21Z-STS-N-vehicle.jsonl",
+    "plannerLog": "FlightLogs/2026-09-11T16-05-21Z-STS-N-planner.jsonl",
+    "sessionId": "2026-09-11T16-05-21Z-50503-77104235094",
+    "physicsSession": "native-50503-1789142721-204369000",
+    "integratedEvidence": "Analysis/PredictorFidelity/2026-09-11T16-05-21Z-integrated-fidelity.json"
+  },
+  "observedTAEMOwnershipBoundary": {
+    "tickSequence": 7557,
+    "ut": 67587.9725486172,
+    "trueAirSpeedMps": 1299.6335,
+    "altitudeM": 23895.77,
+    "rangeToSiteM": 8066.55,
+    "runwayAlongTrackM": 202.64,
+    "runwayCrossTrackM": 8064.01,
+    "diagnosis": "Live MM304 crossed the one-way V_TAEM ownership boundary with essentially no terminal staging room. Predictor control-plan simulation previously continued synthetic Entry after this boundary and could discover a later recovery that live entry_exec would never execute."
+  },
+  "implementedFixes": [
+    "predictor_simulate_entry_control_plan now terminates at the live one-way V_TAEM ownership boundary",
+    "a missed terminal capture remains reached_taem=false so supervision rejects the counterfactual",
+    "the exact accepted or missed ownership-boundary state is retained in predictor trajectory evidence",
+    "planner logs consume executable EntryControlPlan lineage and force trajectory evidence on semantic events",
+    "rejected planner candidates retain bounded path geometry and search/model identity",
+    "fidelity lab reconstructs paired sparse vehicle/planner streams and separates closed-loop shadow guidance from recorded-control open-loop physics",
+    "aero cross-validation excludes every observation sharing the target stable flight_key"
+  ],
+  "preFixClosedLoopShadowP95": {
+    "note": "Diagnostic 16:05 flight predates the predictor V_TAEM ownership-boundary fix; do not treat these values as post-fix acceptance.",
+    "30s": {"horizontalM": 290.3970010325536, "altitudeM": 8.947177644778273, "speedMps": 18.97810807711028},
+    "60s": {"horizontalM": 1095.1773499867354, "altitudeM": 100.1355519908021, "speedMps": 39.20667610497252},
+    "120s": {"horizontalM": 2181.217869435891, "altitudeM": 1687.839422622446, "speedMps": 26.193788549405117}
+  },
+  "recordedControlOpenLoopPhysics": {
+    "priorPolicy": "production physics_store_load_history with entire target flight_key excluded",
+    "certifiedPriorCells": 192,
+    "eligibleRecordedStates": 1129,
+    "coveredStates": 892,
+    "coverage": 0.790079716563,
+    "forceCombinedRelativeP95": 0.411139598501,
+    "oneStepPositionErrorP95M": 0.370480018339,
+    "oneStepVelocityErrorP95Mps": 1.59251740556,
+    "interpretation": "Short-step production-prior dynamics under recorded controls are tight relative to the kilometer-scale 60-120 s closed-loop drift. Long-horizon error is therefore not explained by numerical integration alone; shadow/control-policy divergence and incomplete/sparse aerodynamic support materially contribute, while the ~41% p95 force residual confirms remaining physics uncertainty."
+  },
+  "wholeFlightLeakageSafeAeroCV": {
+    "eligibleRows": 34273,
+    "independentFlightKeys": 56,
+    "attempts": 1800,
+    "recommendedQLocality": "keep_hard_q_locality",
+    "hardQ": {"coverage": 0.20277777777777778, "combinedRelativeP95": 0.31604227013068936, "dragRelativeP95": 0.2593462876461727, "liftRelativeP95": 0.38344258902395023},
+    "softQ": {"coverage": 0.2722222222222222, "combinedRelativeP95": 0.3480274862622297},
+    "noQ": {"coverage": 0.31055555555555553, "combinedRelativeP95": 0.483710465344361}
+  },
+  "verification": {
+    "pythonLabCompiled": true,
+    "integratedLabCompleted": true,
+    "fullCTestSuite": "PASS",
+    "liveKSPValidation": "not run by this lane; live KSP control is explicitly outside predictor-fidelity scope"
+  },
+  "remainingIntegrationRisk": "The entry/live-guidance owner must validate that the corrected live delivery/staging policy reaches the V_TAEM handoff with usable terminal geometry. The predictor lane now refuses to certify a recovery requiring synthetic post-handoff Entry continuation."
+}

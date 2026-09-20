@@ -1,0 +1,10 @@
+# flybrain-indi-cem-v1
+attitude_gain=2.5
+rate_gain=1.5541775379074434
+indi_gain=0.34341797748051678
+reference_feedforward=0.56624931160183212
+accel_filter_alpha=0.21828618774274433
+authority_rise_tau=1.4978230490398468
+authority_fall_tau=0.35617907791916076
+control_slew_per_second=3.6201671398847366
+max_rate_deg_s=8

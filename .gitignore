@@ -1,0 +1,87 @@
+# macOS and editor metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# Local editor settings
+.idea/
+.vscode/
+*.code-workspace
+
+# C/C++ and CMake build products
+/.build/
+**/.build/
+**/build/
+**/build-*/
+**/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.d
+*.gcda
+*.gcno
+*.gcov
+
+# Python caches, virtual environments, and local packaging metadata
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Local logs, locks, databases, and process state
+*.log
+*.pid
+*.lock
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+
+# Local agent/session state and generated runtime data
+/.pi/
+/.yeet/
+**/.pi/
+**/.yeet/
+/work/
+/AgentWork/
+/FlightLogs/
+/Runtime/
+**/FlightLogs/
+**/Runtime/
+/ShuttleSim/runs/
+
+# Simulator campaign and reinforcement-learning outputs
+/ShuttleSim/campaigns/
+/ShuttleSim/rl/results/
+
+# Local simulator datasets and fitted telemetry
+/ShuttleSim/data/
+
+# Generated reports and archives
+*.coverage
+*.profraw
+*.profdata
+*.tar
+*.tar.gz
+*.zip
+
+# Local environment files; keep shareable examples
+.env
+.env.*
+!.env.example

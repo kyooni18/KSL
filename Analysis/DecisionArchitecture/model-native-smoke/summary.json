@@ -1,0 +1,70 @@
+[
+  {
+    "seed": 0,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 217,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 6095.02,
+    "final_air_speed_mps": 84.933,
+    "final_along_m": 5675.355,
+    "final_cross_m": -16827.635,
+    "phases": [
+      "ATTITUDE_RECOVERY",
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 1,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 217,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 6050.673,
+    "final_air_speed_mps": 84.745,
+    "final_along_m": 4487.406,
+    "final_cross_m": -18550.942,
+    "phases": [
+      "ATTITUDE_RECOVERY",
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 2,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 223,
+    "final_phase": "ATTITUDE_RECOVERY",
+    "final_altitude_m": 6096.578,
+    "final_air_speed_mps": 84.704,
+    "final_along_m": -21067.516,
+    "final_cross_m": 15886.112,
+    "phases": [
+      "ATTITUDE_RECOVERY",
+      "ENTRY_ENERGY"
+    ]
+  },
+  {
+    "seed": 3,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "unsafe_or_abort",
+    "elapsed": 218,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 6525.178,
+    "final_air_speed_mps": 84.899,
+    "final_along_m": -21008.84,
+    "final_cross_m": 17748.297,
+    "phases": [
+      "ATTITUDE_RECOVERY",
+      "ENTRY_ENERGY"
+    ]
+  }
+]

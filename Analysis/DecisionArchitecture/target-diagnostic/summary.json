@@ -1,0 +1,18 @@
+[
+  {
+    "seed": 0,
+    "success": false,
+    "touchdown": false,
+    "rollout_valid": false,
+    "outcome": "timeout",
+    "elapsed": 1,
+    "final_phase": "ENTRY_ENERGY",
+    "final_altitude_m": 16486.494,
+    "final_air_speed_mps": 479.402,
+    "final_along_m": -7453.481,
+    "final_cross_m": -124.643,
+    "phases": [
+      "ENTRY_ENERGY"
+    ]
+  }
+]

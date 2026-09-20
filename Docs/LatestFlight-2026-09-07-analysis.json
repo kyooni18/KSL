@@ -1,0 +1,187 @@
+{
+  "source": "FlightLogs/2026-09-07T08-36-52Z-STS-N.jsonl",
+  "runtime": {
+    "bridgeProtocol": "3",
+    "pythonVersion": "3.14.7",
+    "krpcVersion": "0.5.4",
+    "nativeBuild": "Sep  7 2026 16:52:56"
+  },
+  "snapshots": 7301,
+  "phaseCounts": {
+    "Idle": 2,
+    "Entry Interface": 692,
+    "Entry / S-Turn": 5528,
+    "Attitude Recovery": 1076,
+    "Abort": 3
+  },
+  "transitions": [
+    {
+      "sequence": 3,
+      "phase": "Entry Interface",
+      "ut": 20849.4609653255,
+      "status": "TEST-ONLY reentry guidance resumed from an unqualified in-atmosphere checkpoint."
+    },
+    {
+      "sequence": 695,
+      "phase": "Entry / S-Turn",
+      "ut": 21095.2147934558,
+      "status": "Entry MPC: cost inf, TAEM pending, energy +2390 kJ/kg, capture miss +2 km, radius inf km, segment 0 s, bank +0\u00b0, AoA 18\u00b0, reversals 0."
+    },
+    {
+      "sequence": 6124,
+      "phase": "Attitude Recovery",
+      "ut": 21963.0147934747,
+      "status": "Attitude recovery: unloading and leveling wings; terminal progression inhibited."
+    },
+    {
+      "sequence": 6191,
+      "phase": "Entry / S-Turn",
+      "ut": 21973.2947934749,
+      "status": "Entry MPC: cost inf, TAEM pending, energy -264 kJ/kg, capture miss +10 km, radius inf km, segment 0 s, bank +0\u00b0, AoA 16\u00b0, reversals 0."
+    },
+    {
+      "sequence": 6195,
+      "phase": "Attitude Recovery",
+      "ut": 21974.054793475,
+      "status": "Attitude recovery: unloading and leveling wings; terminal progression inhibited."
+    },
+    {
+      "sequence": 6221,
+      "phase": "Entry / S-Turn",
+      "ut": 21978.2947934751,
+      "status": "Entry MPC: cost inf, TAEM pending, energy -302 kJ/kg, capture miss +8 km, radius inf km, segment 0 s, bank +0\u00b0, AoA 18\u00b0, reversals 0."
+    },
+    {
+      "sequence": 6227,
+      "phase": "Attitude Recovery",
+      "ut": 21979.2547934751,
+      "status": "Attitude recovery: unloading and leveling wings; terminal progression inhibited."
+    },
+    {
+      "sequence": 7126,
+      "phase": "Entry / S-Turn",
+      "ut": 21994.0547934754,
+      "status": "Entry MPC: cost inf, TAEM pending, energy -350 kJ/kg, capture miss +6 km, radius inf km, segment 0 s, bank +0\u00b0, AoA 18\u00b0, reversals 0."
+    },
+    {
+      "sequence": 7209,
+      "phase": "Attitude Recovery",
+      "ut": 22006.7547934757,
+      "status": "Attitude recovery: unloading and leveling wings; terminal progression inhibited."
+    },
+    {
+      "sequence": 7264,
+      "phase": "Entry / S-Turn",
+      "ut": 22014.8947934759,
+      "status": "Entry MPC: cost inf, TAEM pending, energy -369 kJ/kg, capture miss +4 km, radius inf km, segment 0 s, bank +0\u00b0, AoA 18\u00b0, reversals 0."
+    },
+    {
+      "sequence": 7270,
+      "phase": "Attitude Recovery",
+      "ut": 22015.9147934759,
+      "status": "Attitude recovery: unloading and leveling wings; terminal progression inhibited."
+    },
+    {
+      "sequence": 7299,
+      "phase": "Abort",
+      "ut": 22020.394793476,
+      "status": "Automation aborted. Manual control restored."
+    }
+  ],
+  "stations": [
+    {
+      "stationMetres": -8000,
+      "sequence": 5714,
+      "phase": "Entry / S-Turn",
+      "ut": 21896.9547934733,
+      "meanAltitude": 24828.2570993192,
+      "trueAirSpeed": 879.512573242188,
+      "runwayAlongTrack": -7945.13650073866,
+      "runwayCrossTrack": 4368.86655861472,
+      "rangeToSite": 9067.01074758299,
+      "courseToSiteError": -29.2737406945367,
+      "angleOfAttack": 23.4119739532471,
+      "liftForce": 314451.899461809,
+      "dragForce": 492172.334673807,
+      "mass": 43331.66015625
+    },
+    {
+      "stationMetres": -500,
+      "sequence": 5772,
+      "phase": "Entry / S-Turn",
+      "ut": 21906.3347934735,
+      "meanAltitude": 24145.9357942616,
+      "trueAirSpeed": 788.474853515625,
+      "runwayAlongTrack": -463.941475575,
+      "runwayCrossTrack": 4431.36541198209,
+      "rangeToSite": 4455.58479288709,
+      "courseToSiteError": -84.4931381744782,
+      "angleOfAttack": 21.9475212097168,
+      "liftForce": 271631.746918919,
+      "dragForce": 409912.52726222,
+      "mass": 43318.53125
+    },
+    {
+      "stationMetres": 0,
+      "sequence": 5776,
+      "phase": "Entry / S-Turn",
+      "ut": 21907.1347934735,
+      "meanAltitude": 24088.7443738297,
+      "trueAirSpeed": 780.912231445312,
+      "runwayAlongTrack": 137.046473710889,
+      "runwayCrossTrack": 4436.2848674748,
+      "rangeToSite": 4438.40114246269,
+      "courseToSiteError": -92.2375808301134,
+      "angleOfAttack": 23.3985080718994,
+      "liftForce": 317350.711504785,
+      "dragForce": 465275.640869334,
+      "mass": 43317.46875
+    }
+  ],
+  "aoaErrorMedianQ500to7000": 4.375810623168952,
+  "reversals": [
+    {
+      "sequence": 4606,
+      "ut": 21719.6547934694,
+      "range": 273929.291997742,
+      "dwellAfter12degCapture": 580.2400000126981
+    },
+    {
+      "sequence": 5053,
+      "ut": 21791.174793471,
+      "range": 148259.395959852,
+      "dwellAfter12degCapture": 56.44000000130109
+    },
+    {
+      "sequence": 5201,
+      "ut": 21815.3947934715,
+      "range": 108849.338704769,
+      "dwellAfter12degCapture": 8.960000000199216
+    },
+    {
+      "sequence": 5351,
+      "ut": 21839.914793472,
+      "range": 72367.1511183791,
+      "dwellAfter12degCapture": 9.280000000198925
+    },
+    {
+      "sequence": 5607,
+      "ut": 21880.1947934729,
+      "range": 23825.3384823359,
+      "dwellAfter12degCapture": 24.460000000501168
+    }
+  ],
+  "last": {
+    "ut": 22020.394793476,
+    "meanAltitude": 5031.743322719,
+    "trueAirSpeed": 165.007141113281,
+    "runwayAlongTrack": 47416.6704269241,
+    "runwayCrossTrack": 5491.01586953756,
+    "rangeToSite": 47732.7104731337,
+    "courseToSiteError": 177.364764525388,
+    "angleOfAttack": 3.96921277046204,
+    "liftForce": 275722.567810446,
+    "dragForce": 167041.482369682,
+    "mass": 43259.7890625
+  }
+}

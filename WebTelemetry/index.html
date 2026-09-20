@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <link rel="stylesheet" href="/styles.css?v=20260919-rl-handoff">
+</head>
+<body>
+  <main class="grid">
+    <section class="panel nav-panel">
+      <div class="strip">
+        <div class="status"><span id="connection-dot" class="dot"></span><span id="connection">CONNECTING</span></div>
+        <div id="phase" class="phase">OFFLINE</div>
+        <div id="vessel" class="muted">—</div>
+      </div>
+      <div id="simulation-status" class="simulation-status" hidden>
+        <span id="sim-state" class="sim-state">SIM IDLE</span>
+        <span id="sim-run" class="sim-field">—</span>
+        <span id="sim-mode" class="sim-field">—</span>
+        <span id="sim-time" class="sim-field">T+ —</span>
+        <span id="sim-rate" class="sim-field">—×</span>
+        <span id="sim-lockstep" class="sim-field">LOCKSTEP</span>
+        <span id="sim-replay" class="sim-field" hidden>REPLAY</span>
+      </div>
+      <div class="nav-wrap"><canvas id="navball"></canvas></div>
+      <div class="nav-readout">
+        <span><b id="pitch">—</b><small id="pitch-label">PITCH</small></span>
+        <span><b id="roll">—</b><small id="roll-label">ROLL</small></span>
+        <span><b id="heading">—</b><small id="heading-label">HDG</small></span>
+        <span><b id="aoa">—</b><small id="aoa-label">AOA</small></span>
+      </div>
+    </section>
+
+    <section class="panel map-panel">
+      <div class="strip map-strip">
+        <div class="legend">
+          <span><i class="swatch actual"></i>ACTUAL</span>
+          <span class="orbit-only"><i class="swatch orbit"></i>ORBIT</span>
+          <span class="orbit-only"><i class="swatch burn"></i>DEORBIT BURN</span>
+          <span><i class="swatch predicted"></i>PREDICTED</span>
+          <span class="entry-only"><i class="swatch taem-projected"></i>TAEM PROJ</span>
+          <span class="entry-only"><i class="swatch planned"></i>PLAN</span>
+        </div>
+        <div id="coordinates" class="muted">—</div>
+      </div>
+      <div class="map-wrap"><canvas id="trajectory-map"></canvas></div>
+      <div class="map-footer">
+        <span id="range-site">KSC —</span>
+        <button id="toggle-3d" class="view-toggle" type="button" aria-expanded="false">3D</button>
+        <span id="planner-state" class="muted">PLAN WAIT</span>
+      </div>
+      <div id="scene3d-panel" class="scene3d-panel" hidden>
+        <canvas id="scene3d-canvas"></canvas>
+        <div class="scene3d-overlay">
+          <div class="scene3d-state"><span id="scene3d-status">3D IDLE</span><span id="scene3d-meta" class="muted"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel telemetry-panel">
+      <div id="entry-metrics" class="metric-grid entry-only">
+        <div><small>ALT MSL</small><b id="altitude">—</b></div>
+        <div><small>RADAR</small><b id="radar-altitude">—</b></div>
+        <div><small>TAS</small><b id="tas">—</b></div>
+        <div><small>VERT</small><b id="vertical-speed">—</b></div>
+        <div><small>MACH</small><b id="mach">—</b></div>
+        <div><small>Q</small><b id="dynamic-pressure">—</b></div>
+        <div><small>G</small><b id="g-force">—</b></div>
+        <div><small>FPA</small><b id="fpa">—</b></div>
+      </div>
+      <div id="orbit-metrics" class="metric-grid orbit-only">
+        <div><small>ORBIT V</small><b id="orbit-speed">—</b></div>
+        <div><small>APOAPSIS</small><b id="orbit-ap">—</b></div>
+        <div><small>PERIAPSIS</small><b id="orbit-pe">—</b></div>
+        <div><small>WARP</small><b id="orbit-warp">—</b></div>
+        <div><small>T → AP</small><b id="orbit-t-ap">—</b></div>
+        <div><small>T → PE</small><b id="orbit-t-pe">—</b></div>
+        <div><small>DECEL</small><b id="orbit-decel">—</b></div>
+        <div><small>ECC / INC</small><b id="orbit-shape">—</b></div>
+      </div>
+    </section>
+
+    <section class="panel guidance-panel">
+      <div class="guidance-head">
+        <div class="mode-line"><span id="guidance-phase">OFFLINE</span><span id="plan-valid" class="chip">NO PLAN</span></div>
+        <div id="guidance-status" class="muted one-line">Waiting for telemetry</div>
+      </div>
+
+      <div class="command-bars entry-only">
+        <div class="command-row">
+          <div><small>AOA</small><b id="target-aoa">—</b></div>
+          <div class="bar"><span id="aoa-bar"></span><i id="aoa-now"></i></div>
+          <em id="aoa-current">—</em>
+        </div>
+        <div class="command-row">
+          <div><small>BANK</small><b id="target-bank">—</b></div>
+          <div class="bar centered"><span id="bank-bar"></span><i id="bank-now"></i></div>
+          <em id="bank-current">—</em>
+        </div>
+        <div class="command-row">
+          <div><small>HDG</small><b id="target-heading">—</b></div>
+          <div class="bar centered"><span id="heading-bar"></span><i id="heading-now"></i></div>
+          <em id="heading-current">—</em>
+        </div>
+      </div>
+
+      <div class="plan-grid entry-only">
+        <div><small>SEGMENT</small><b id="segment-remaining">—</b></div>
+        <div><small>REVERSAL</small><b id="reversal">—</b></div>
+        <div><small>TAEM ΔR</small><b id="taem-range">—</b></div>
+        <div><small>TAEM ΔE</small><b id="taem-energy">—</b></div>
+        <div><small>HAC R</small><b id="hac-radius">—</b></div>
+        <div><small>HAC REM</small><b id="hac-remaining">—</b></div>
+        <div><small>TERMINAL</small><b id="terminal-state">—</b></div>
+        <div><small>BLEND</small><b id="terminal-blend">—</b></div>
+      </div>
+      <div id="orbit-guidance" class="plan-grid orbit-only orbit-guidance-grid">
+        <div><small>ENGINE</small><b id="orbit-engine">—</b></div>
+        <div><small>T → BURN</small><b id="orbit-t-burn">—</b></div>
+        <div><small>BURN ΔV</small><b id="orbit-burn-dv">—</b></div>
+        <div><small>ΔV REM</small><b id="orbit-dv-rem">—</b></div>
+        <div><small>THROTTLE</small><b id="orbit-throttle">—</b></div>
+        <div><small>THRUST</small><b id="orbit-thrust">—</b></div>
+        <div><small>RETRO ERR</small><b id="orbit-retro-error">—</b></div>
+        <div><small>POST-BURN PE</small><b id="orbit-postburn-pe">—</b></div>
+      </div>
+    </section>
+
+    <section class="panel rl-panel" aria-label="Offline reinforcement learning monitor">
+      <div class="rl-head">
+        <div class="mode-line"><span>RL / OFFLINE MONITOR</span><span id="rl-boundary" class="chip">NOT LIVE CONTROL</span></div>
+        <div id="rl-status" class="muted one-line">No offline training run detected</div>
+      </div>
+      <div class="rl-grid">
+        <div class="rl-block">
+          <div class="rl-block-head">RUN</div>
+          <div class="rl-values rl-run-values">
+            <div><small>RUN</small><b id="rl-run">—</b></div>
+            <div><small>STATE</small><b id="rl-state">—</b></div>
+            <div><small>POLICY</small><b id="rl-policy">—</b></div>
+            <div><small>LAST SEED</small><b id="rl-seed">—</b></div>
+          </div>
+        </div>
+        <div class="rl-block">
+          <div class="rl-block-head">LATEST CASE / QUEUE</div>
+          <div class="rl-values rl-condition-values">
+            <div><small>CASE</small><b id="rl-ap">—</b></div>
+            <div><small>ALT / AP</small><b id="rl-pe">—</b></div>
+            <div><small>SPEED / INC</small><b id="rl-inc">—</b></div>
+            <div><small>FPA / POST PE</small><b id="rl-post-pe">—</b></div>
+            <div><small>ALONG / ENTRY FPA</small><b id="rl-fpa">—</b></div>
+            <div><small>CROSS / ENTRY SPEED</small><b id="rl-entry-speed">—</b></div>
+            <div><small>QUEUE LEFT</small><b id="rl-upstream">—</b></div>
+            <div><small>RUNS DONE</small><b id="rl-crossrange">—</b></div>
+          </div>
+        </div>
+        <div class="rl-block">
+          <div class="rl-block-head">LEARNER / VALIDATION</div>
+          <div class="rl-values rl-learning-values">
+            <div><small>EPISODES</small><b id="rl-episodes">—</b></div>
+            <div><small>ELIGIBLE</small><b id="rl-eligible">—</b></div>
+            <div><small>ACTIVE</small><b id="rl-active">—</b></div>
+            <div><small>FALLBACKS</small><b id="rl-fallback">—</b></div>
+            <div><small>HANDOFFS / TD</small><b id="rl-touchdowns">—</b></div>
+            <div><small>SUCCESS</small><b id="rl-success">—</b></div>
+            <div><small>VALID ROLLOUTS</small><b id="rl-valid">—</b></div>
+            <div><small>MEAN RETURN</small><b id="rl-return">—</b></div>
+          </div>
+        </div>
+      </div>
+      <div id="rl-note" class="rl-note">Reads the simulator training artifact only; it cannot command this vessel.</div>
+    </section>
+  </main>
+
+  <aside id="playback-dock" class="playback-dock collapsed live-active" aria-label="Telemetry playback controls">
+    <div id="sim-history-panel" class="sim-history-panel playback-history" hidden>
+      <div class="sim-history-head">
+        <div><b>SIMULATION HISTORY</b><span id="sim-history-count" class="muted"></span></div>
+        <button id="sim-history-close" type="button" aria-label="Close simulation history">×</button>
+      </div>
+      <div id="sim-history-list" class="sim-history-list"><div class="sim-history-empty">Loading runs…</div></div>
+    </div>
+
+    <div class="playback-shell">
+      <div class="playback-summary">
+        <button id="sim-replay-live" class="playback-live active" type="button" aria-pressed="true">
+          <span class="playback-live-dot"></span><span>LIVE</span>
+        </button>
+        <button id="sim-history-open" class="playback-runs" type="button">RUNS</button>
+        <div class="playback-context">
+          <strong id="playback-run-name">LIVE TELEMETRY</strong>
+          <span id="sim-replay-position">LIVE</span>
+        </div>
+        <button id="playback-toggle" class="playback-toggle" type="button" aria-expanded="false" aria-label="Expand playback controls">⌃</button>
+      </div>
+
+      <div id="sim-replay-controls" class="playback-controls" aria-label="Replay transport">
+        <button id="sim-replay-back" type="button" title="Back 10 seconds" aria-label="Back 10 seconds">−10s</button>
+        <button id="sim-replay-play" class="playback-primary" type="button">PLAY</button>
+        <button id="sim-replay-forward" type="button" title="Forward 10 seconds" aria-label="Forward 10 seconds">+10s</button>
+        <select id="sim-replay-speed" aria-label="Replay speed">
+          <option value="1">1×</option>
+          <option value="5">5×</option>
+          <option value="20" selected>20×</option>
+          <option value="100">100×</option>
+          <option value="500">500×</option>
+        </select>
+        <input id="sim-replay-seek" type="range" min="0" max="0" value="0" step="1" aria-label="Replay position">
+      </div>
+    </div>
+  </aside>
+
+  <script src="/app.js?v=20260919-rl-handoff"></script>
+</body>
+</html>

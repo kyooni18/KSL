@@ -1,0 +1,182 @@
+{
+  "aeroCrossValidation": {
+    "database": "/Users/kyooni18/Code/C/KSPShuttleLander/Runtime/Physics/observations.sqlite3",
+    "eligibleRows": 34273,
+    "independentFlightEpochs": 56,
+    "leakageGuard": "Each validation target excludes all observations from the same flight_key+timeline_epoch.",
+    "policies": {
+      "hard_q": {
+        "attempts": 300,
+        "combinedRelativeError": {
+          "count": 64,
+          "max": 1.617228787927861,
+          "mean": 0.12523929586870125,
+          "p50": 0.047952621065193865,
+          "p95": 0.3763883296624001
+        },
+        "coverage": 0.21333333333333335,
+        "dragRelativeError": {
+          "count": 64,
+          "max": 1.1617376657092715,
+          "mean": 0.09251649204699211,
+          "p50": 0.040426910100697995,
+          "p95": 0.2619201730150026
+        },
+        "independentSources": {
+          "count": 64,
+          "max": 9.0,
+          "mean": 2.390625,
+          "p50": 2.0,
+          "p95": 3.8499999999999943
+        },
+        "liftRelativeError": {
+          "count": 64,
+          "max": 1.970082105161511,
+          "mean": 0.1333733755220082,
+          "p50": 0.024957923302163926,
+          "p95": 0.5245601451698093
+        },
+        "predictions": 64
+      },
+      "no_q": {
+        "attempts": 300,
+        "combinedRelativeError": {
+          "count": 94,
+          "max": 1.3022557232706249,
+          "mean": 0.1653011525727065,
+          "p50": 0.09341591139869787,
+          "p95": 0.4754098415814426
+        },
+        "coverage": 0.31333333333333335,
+        "dragRelativeError": {
+          "count": 94,
+          "max": 0.8991194975767053,
+          "mean": 0.18720449654267737,
+          "p50": 0.09506346536794984,
+          "p95": 0.6508973025912033
+        },
+        "independentSources": {
+          "count": 94,
+          "max": 9.0,
+          "mean": 2.4574468085106385,
+          "p50": 2.0,
+          "p95": 4.0
+        },
+        "liftRelativeError": {
+          "count": 94,
+          "max": 1.7407043581441957,
+          "mean": 0.09292129974386153,
+          "p50": 0.028978538442005125,
+          "p95": 0.23710362782763234
+        },
+        "predictions": 94
+      },
+      "soft_q": {
+        "attempts": 300,
+        "combinedRelativeError": {
+          "count": 84,
+          "max": 1.261839212285312,
+          "mean": 0.10708979522692823,
+          "p50": 0.05572112653762716,
+          "p95": 0.2644554094733701
+        },
+        "coverage": 0.28,
+        "dragRelativeError": {
+          "count": 84,
+          "max": 0.9226606903096104,
+          "mean": 0.10038653844752345,
+          "p50": 0.053393067831179156,
+          "p95": 0.35431947154745047
+        },
+        "independentSources": {
+          "count": 84,
+          "max": 9.0,
+          "mean": 2.4285714285714284,
+          "p50": 2.0,
+          "p95": 4.0
+        },
+        "liftRelativeError": {
+          "count": 84,
+          "max": 1.6818110654333394,
+          "mean": 0.09104616737869733,
+          "p50": 0.022324991963455915,
+          "p95": 0.25323577602597136
+        },
+        "predictions": 84
+      }
+    },
+    "ranges": {
+      "aoaDeg": [
+        -66.2038803100586,
+        77.13397216796875
+      ],
+      "betaDeg": [
+        -73.2220230102539,
+        59.45145797729492
+      ],
+      "mach": [
+        0.3578944504261017,
+        7.280031681060791
+      ],
+      "q": [
+        1.0000909566879272,
+        73464.1171875
+      ]
+    },
+    "recommendedPolicyEvidence": {
+      "attempts": 300,
+      "combinedRelativeError": {
+        "count": 84,
+        "max": 1.261839212285312,
+        "mean": 0.10708979522692823,
+        "p50": 0.05572112653762716,
+        "p95": 0.2644554094733701
+      },
+      "coverage": 0.28,
+      "dragRelativeError": {
+        "count": 84,
+        "max": 0.9226606903096104,
+        "mean": 0.10038653844752345,
+        "p50": 0.053393067831179156,
+        "p95": 0.35431947154745047
+      },
+      "independentSources": {
+        "count": 84,
+        "max": 9.0,
+        "mean": 2.4285714285714284,
+        "p50": 2.0,
+        "p95": 4.0
+      },
+      "liftRelativeError": {
+        "count": 84,
+        "max": 1.6818110654333394,
+        "mean": 0.09104616737869733,
+        "p50": 0.022324991963455915,
+        "p95": 0.25323577602597136
+      },
+      "predictions": 84
+    },
+    "recommendedQLocality": "replace_hard_q_gate_with_soft_q_weight",
+    "selectionObjective": "p95 combined normalized-force relative error + 0.20*(1-coverage)"
+  },
+  "flightLogs": [
+    {
+      "actualSamples": 0,
+      "instrumentationGap": "No raw predictor trajectory stream is persisted; raw-vs-stabilized forecast error cannot yet be separated.",
+      "path": "/Users/kyooni18/Code/C/KSPShuttleLander/FlightLogs/2026-09-11T16-05-21Z-STS-N-planner.jsonl",
+      "publishedStreamPresent": false,
+      "rawStreamPresent": false,
+      "rawStreams": [],
+      "streams": {}
+    }
+  ],
+  "horizonsSeconds": [
+    10.0,
+    30.0,
+    60.0,
+    120.0,
+    180.0,
+    300.0
+  ],
+  "schemaVersion": 1
+}
