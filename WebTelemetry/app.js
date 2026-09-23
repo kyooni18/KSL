@@ -84,13 +84,31 @@
     return g.terminalPathCommitted === true || g.terminalPathCaptured === true || g.terminalPathComplete === true;
   };
   const displayablePlannedTrajectory = (source) => {
+    if (isReplaySnapshot(source)) return replayAwarePlannedTrajectory(source);
     const allowed = isTerminalPhase(source?.phase) ? terminalReferenceDisplayable(source) : entryPlanDisplayable(source);
     return allowed && Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : [];
   };
-  const displayableReferenceTrajectory = (source) => terminalReferenceDisplayable(source) && Array.isArray(source?.referenceTrajectory)
-    ? source.referenceTrajectory : [];
+  const displayableReferenceTrajectory = (source) => {
+    if (isReplaySnapshot(source)) {
+      const committed = Array.isArray(source?.referenceTrajectory) ? source.referenceTrajectory : [];
+      return trajectoryCount(committed) >= 2 ? committed : replayCandidateTrajectory(source);
+    }
+    return terminalReferenceDisplayable(source) && Array.isArray(source?.referenceTrajectory)
+      ? source.referenceTrajectory : [];
+  };
   const displayableProjectedTAEMTrajectory = (source) => entryPlanDisplayable(source) && Array.isArray(source?.projectedTAEMTrajectory)
     ? source.projectedTAEMTrajectory : [];
+  const isReplaySnapshot = (source) => String(source?.simulation?.sourceMode || "").toLowerCase() === "replay";
+  const replayCandidateTrajectory = (source) => isReplaySnapshot(source) && Array.isArray(source?.replayCandidateTrajectory)
+    ? source.replayCandidateTrajectory : [];
+  const replayCandidatePrediction = (source) => isReplaySnapshot(source) && Array.isArray(source?.replayCandidatePrediction)
+    ? source.replayCandidatePrediction : [];
+
+  const replayAwarePlannedTrajectory = (source) => {
+    if (!isReplaySnapshot(source)) return [];
+    const committed = Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : [];
+    return trajectoryCount(committed) >= 2 ? committed : replayCandidateTrajectory(source);
+  };
 
   const predictionHasFuture = (trajectory, currentUt) => {
     if (!Array.isArray(trajectory) || !trajectory.length) return false;
@@ -101,8 +119,9 @@
   };
   const futurePredictionTrajectory = (source) => {
     const trajectory = Array.isArray(source?.predictedTrajectory) ? source.predictedTrajectory : [];
+    const archived = replayCandidatePrediction(source);
     const currentUt = source?.telemetry?.ut;
-    if (!trajectory.length || !finite(currentUt)) return trajectory;
+    if (!trajectory.length || !finite(currentUt)) return trajectory.length ? trajectory : archived;
     const now = n(currentUt);
     let firstFuture = -1, timed = 0;
     for (let i = 0; i < trajectory.length; i++) {
@@ -112,7 +131,7 @@
       if (firstFuture < 0 && n(point.ut) >= now - .25) firstFuture = i;
     }
     if (!timed) return trajectory;
-    if (firstFuture < 0) return [];
+    if (firstFuture < 0) return archived;
     return trajectory.slice(Math.max(0, firstFuture - 1));
   };
 
@@ -1399,7 +1418,8 @@
       const active = !!(sim && (sim.active || sim.sourceMode === "simulator" || sim.sourceMode === "replay"));
       simStatus.hidden = !active;
       document.body.classList.toggle("simulation-mode", active);
-      document.body.classList.toggle("replay-mode", active && String(sim && sim.sourceMode || "").toLowerCase() === "replay");
+      const replaying = active && String(sim && sim.sourceMode || "").toLowerCase() === "replay";
+      document.body.classList.toggle("replay-mode", replaying);
       if (active) {
         const simState = String(sim.state || "idle").toUpperCase();
         const simMode = String(sim.mode || sim.sourceMode || "simulator").toUpperCase();
@@ -1419,15 +1439,35 @@
         $("sim-time").textContent = elapsed;
         $("sim-rate").textContent = effective;
         $("sim-lockstep").textContent = sim.lockstep ? "LOCKSTEP" : "FREE-RUN";
-        const replay = $("sim-replay");
-        if (replay) {
-          const replaying = String(sim.sourceMode || "").toLowerCase() === "replay";
-          replay.hidden = !replaying;
+        const view = $("sim-view");
+        if (view) {
+          view.hidden = false;
+          view.textContent = replaying ? "SIM REPLAY" : "SIMULATOR";
+          view.className = `sim-view-badge${replaying ? " replay" : ""}`;
           if (replaying) {
             const ri = finite(sim.replayIndex) ? Math.trunc(n(sim.replayIndex)) + 1 : null;
             const rc = finite(sim.replayCount) ? Math.trunc(n(sim.replayCount)) : null;
             const rs = finite(sim.replaySpeed) ? n(sim.replaySpeed).toFixed(1) + "×" : "";
-            replay.textContent = ri !== null && rc ? "REPLAY " + ri + "/" + rc + (rs ? " · " + rs : "") : "REPLAY" + (rs ? " · " + rs : "");
+            view.title = ri !== null && rc ? `Archived replay ${ri}/${rc}${rs ? ` at ${rs}` : ""}` : "Archived simulator replay";
+          } else view.title = "Live simulator telemetry";
+        }
+        const traces = $("sim-traces");
+        const statusLine = $("sim-status-line");
+        if (traces) {
+          traces.hidden = !replaying;
+          if (replaying) {
+            const candidatePlanCount = trajectoryCount(replayCandidateTrajectory(snapshot));
+            const planCount = Math.max(plannedCount, candidatePlanCount);
+            const predictionCount = Math.max(predictedCount, trajectoryCount(replayCandidatePrediction(snapshot)));
+            traces.textContent = `ACT ${actualCount || "—"} · PRED ${predictionCount || "—"} · PLAN ${planCount || "—"}`;
+            traces.title = `Archived geometry: actual ${actualCount} points, prediction ${predictionCount} points, path plan ${planCount} points`;
+          }
+        }
+        if (statusLine) {
+          statusLine.hidden = !replaying;
+          if (replaying) {
+            statusLine.textContent = `STATUS ${snapshot.statusMessage || phase}`;
+            statusLine.title = snapshot.warningMessage ? `${snapshot.statusMessage || phase} · WARNING: ${snapshot.warningMessage}` : (snapshot.statusMessage || phase);
           }
         }
         setTitle("sim-state", "source " + (sim.sourceMode || "simulator") + " · phase " + phase + " · state " + simState);
@@ -1436,6 +1476,10 @@
           (finite(sim.wallSeconds) ? " · wall " + n(sim.wallSeconds).toFixed(2) + " s" : "") +
           (finite(sim.physicsDt) ? " · dt " + n(sim.physicsDt).toFixed(3) + " s" : ""));
       }
+    } else {
+      $("sim-view")?.setAttribute("hidden", "");
+      $("sim-traces")?.setAttribute("hidden", "");
+      $("sim-status-line")?.setAttribute("hidden", "");
     }
     updateRLMonitor();
 
@@ -1572,7 +1616,15 @@
     setTitle("guidance-status", [snapshot.statusMessage, snapshot.warningMessage ? `WARNING: ${snapshot.warningMessage}` : ""].filter(Boolean).join(" · "));
 
     let planChip = "NO PLAN", planTone = "";
-    if (orbitMode) {
+    if (isReplaySnapshot(snapshot)) {
+      const candidatePlanCount = trajectoryCount(replayCandidateTrajectory(snapshot));
+      const candidatePredictionCount = trajectoryCount(replayCandidatePrediction(snapshot));
+      if (plannedCount >= 2 && predictedCount >= 2) { planChip = "ARCHIVE PLAN + PRED"; planTone = "good"; }
+      else if (plannedCount >= 2) { planChip = "ARCHIVE PLAN"; planTone = "warn"; }
+      else if (predictedCount >= 2 || candidatePredictionCount >= 2) { planChip = "ARCHIVE PRED"; planTone = "warn"; }
+      else if (candidatePlanCount >= 2) { planChip = "ARCHIVE CANDIDATE"; planTone = "warn"; }
+      else { planChip = "REPLAY STATUS ONLY"; }
+    } else if (orbitMode) {
       if (engineOn) { planChip = "DEORBIT BURN"; planTone = "good"; }
       else if (burnComplete) { planChip = "BURN COMPLETE"; planTone = "good"; }
       else if (burnWindowMissed) { planChip = "BURN WINDOW MISSED"; planTone = "warn"; }
@@ -1605,7 +1657,11 @@
     }
     $("plan-valid").textContent = planChip;
     $("plan-valid").className = `chip${planTone ? ` ${planTone}` : ""}`;
-    if (!orbitMode) setTitle("plan-valid", `Entry command ${g.entryPlanValid ? "valid" : "not valid"} · terminal handoff ${g.entryPlanTerminalReady ? "proven" : "unproven"} · terminal path ${terminalPlanProven ? "committed/captured" : "not committed"} · ${orbitalCount} orbital · ${predictedCount} predicted · ${plannedCount} proven plan · ${referenceCount} committed reference points${orbitalCount >= 2 ? " · orbital geometry is observer-only osculating propagation" : ""}`);
+    if (isReplaySnapshot(snapshot)) {
+      setTitle("plan-valid", `Archive view · ${predictedCount} prediction points · ${plannedCount} path-plan points · ${referenceCount} reference points · live KSP telemetry is paused behind the LIVE KSP switch`);
+    } else if (!orbitMode) {
+      setTitle("plan-valid", `Entry command ${g.entryPlanValid ? "valid" : "not valid"} · terminal handoff ${g.entryPlanTerminalReady ? "proven" : "unproven"} · terminal path ${terminalPlanProven ? "committed/captured" : "not committed"} · ${orbitalCount} orbital · ${predictedCount} predicted · ${plannedCount} proven plan · ${referenceCount} committed reference points${orbitalCount >= 2 ? " · orbital geometry is observer-only osculating propagation" : ""}`);
+    }
 
     // Entry command bars, retained for atmospheric mode.
     $("target-aoa").textContent = fmt(cmd.targetAoA,1,"°");
@@ -1837,15 +1893,18 @@
     dock.classList.toggle("replay-active", !!active);
     dock.classList.toggle("live-active", !active);
     const live = $("sim-replay-live");
+    const replayView = $("sim-history-open");
     live.classList.toggle("active", !active);
     live.setAttribute("aria-pressed", active ? "false" : "true");
+    replayView.classList.toggle("active", !!active);
+    replayView.setAttribute("aria-pressed", active ? "true" : "false");
     for (const id of ["sim-replay-back", "sim-replay-play", "sim-replay-forward", "sim-replay-speed", "sim-replay-seek"]) {
       $(id).disabled = !active;
     }
     if (active) {
       $("playback-run-name").textContent = archiveReplay.run?.runId || "REPLAY";
     } else {
-      $("playback-run-name").textContent = "LIVE TELEMETRY";
+      $("playback-run-name").textContent = "LIVE KSP TELEMETRY";
       $("sim-replay-play").textContent = "PLAY";
       $("sim-replay-seek").min = "0";
       $("sim-replay-seek").max = "0";
@@ -2020,7 +2079,8 @@
       row.type = "button";
       row.className = "sim-run-row";
       if (archiveReplay.active && archiveReplay.run?.runId === run.runId) row.classList.add("active");
-      row.disabled = !run.hasReplay;
+      const replayAvailable = !!run.hasReplay;
+      row.disabled = !replayAvailable;
       const dot = document.createElement("span");
       dot.className = "sim-run-dot " + (run.success ? "success" : run.state === "failed" ? "failed" : "");
       const main = document.createElement("span");
@@ -2032,7 +2092,8 @@
       meta.className = "sim-run-meta";
       const scenario = String(run.scenario || "").split("/").pop();
       const parts = [run.terminalPhase || run.state || "unknown", scenario];
-      if (finite(run.wallSeconds)) parts.push(n(run.wallSeconds).toFixed(1) + "s wall");
+      if (finite(run.simElapsedSeconds)) parts.push(n(run.simElapsedSeconds).toFixed(1) + "s sim");
+
       meta.textContent = parts.filter(Boolean).join(" · ");
       main.append(name, meta);
       const final = document.createElement("span");
@@ -2040,10 +2101,10 @@
       const f = run.final || {};
       final.textContent = "ALT " + runDistance(f.altitude) + " · A " + runDistance(f.runwayAlongTrack) + " · X " + runDistance(f.runwayCrossTrack);
       row.append(dot, main, final);
-      if (run.hasReplay) {
+      if (replayAvailable) {
         row.addEventListener("click", () => startArchiveReplay(run.runId, row).catch((error) => {
           $("sim-replay-position").textContent = "Unable to load run";
-          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE TELEMETRY";
+          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
           if (!archiveReplay.active) setReplayControlsActive(false);
           setReplayPlaying(false);
         }));
@@ -2063,6 +2124,7 @@
     setPlaybackExpanded(true);
     $("sim-history-panel").hidden = false;
     $("sim-history-open").classList.add("active");
+    $("sim-history-open").setAttribute("aria-pressed", "true");
     refreshRunHistory().catch((error) => {
       const list = $("sim-history-list");
       list.replaceChildren();
@@ -2075,7 +2137,10 @@
 
   function closeRunHistory() {
     $("sim-history-panel").hidden = true;
-    $("sim-history-open").classList.remove("active");
+    if (!archiveReplay.active) {
+      $("sim-history-open").classList.remove("active");
+      $("sim-history-open").setAttribute("aria-pressed", "false");
+    }
   }
 
   function connect() {

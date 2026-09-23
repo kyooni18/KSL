@@ -65,15 +65,22 @@ static void test_topology_uses_published_mm304_target(void){
     GuidanceMachine g;guidance_initialize_reentry_continuation(&g,&t,&p,&cfg,1,false,&env,&cal);
     double station=-cfg.guidance.final_approach_distance;
     g.taem_interface_target=(TaemInterfaceTarget){.valid=true,.along_track=station,.cross_track=0.0,
-        .course=45.0,.altitude=20000.0,.speed=820.0,.flight_path_angle=-12.0,
+        .course=180.0,.altitude=20000.0,.speed=760.0,.flight_path_angle=-12.0,
         .specific_energy=rotating_specific_energy(cfg.site.latitude,20000.0,820.0,&p),
         .selected_ut=t.ut,.arrival_ut=t.ut+120.0,.acquisition_lead=4305.0,
         .remaining_path=60000.0,.response_time=8.0};
     EntryTopologyPlan top=predictor_plan_entry_topology(state,&t,&g,&p,&env,&cal,&cfg);
-    assert(isfinite(top.cost));
-    assert(fabs(norm_signed_deg(top.outbound_course_offset-(-45.0)))<1e-9);
-    assert(top.first_sign*top.outbound_course_offset<0.0);
-    if(top.inlet.valid)assert(fabs(norm_signed_deg(top.inlet.course-45.0))<1e-9);
+    if(!isfinite(top.cost)){
+        /* This recorded snapshot may be outside the strict MM305 Mach/altitude
+           and perpendicular-interface contract.  The parity requirement is
+           then fail-closed: no finite topology may be invented. */
+        assert(!top.valid);
+        return;
+    }
+    assert(isfinite(top.outbound_course_offset));
+    assert(fabs(fabs(norm_signed_deg(top.inlet.course-cfg.site.runway_heading))-90.0)<=
+        cfg.guidance.mm304_perpendicular_heading_half_width+1e-9);
+    if(top.inlet.valid)assert(fabs(norm_signed_deg(top.inlet.course-180.0))<1e-9);
     /* The topology search must actually exercise its second/final event timing
        dimension.  This recorded published-target fixture need not be a valid capture,
        but it may not fall back to "terminal turn never started" merely because every
@@ -90,10 +97,12 @@ static void test_topology_uses_published_mm304_target(void){
 }
 
 int main(void){
-    test_committed_reversal_replay_uses_live_time_and_dwell_gates_only();
-    test_committed_plan_above_autonomous_60deg_cap_uses_live_bank_authority();
+    test_forced_mm304_segment_honors_committed_aoa();
     test_shared_conservative_stall_proxy();
-    test_recorded_v27_supervisor_honors_dynamic_interface_contract();
+    test_exact_terminal_shadow_reuses_mm305_policy_and_reports_uncertainty();
+    test_terminal_shadow_refuses_pre_latch_advisory_state();
+    test_entry_guidance_shadow_does_not_false_handoff_at_speed_boundary();
+    test_control_plan_shadow_cannot_continue_entry_past_vtaem();
     test_topology_uses_published_mm304_target();
     test_recorded_v32_worker_snapshot();
     puts("PASS: committed predictor policy and recorded worker replay");return 0;

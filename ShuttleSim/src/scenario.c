@@ -30,6 +30,7 @@ bool scenario_load(const char *path,Scenario *s){
         else if(!strcmp(k,"deorbit_delta_v_mps"))s->deorbit_delta_v_mps=strtod(v,NULL);
         else if(!strcmp(k,"deorbit_duration_s"))s->deorbit_duration_s=strtod(v,NULL);
         else if(!strcmp(k,"deorbit_delay_s"))s->deorbit_delay_s=strtod(v,NULL);
+        else if(!strcmp(k,"orbital_engine_available_thrust_n"))s->orbital_engine_available_thrust_n=strtod(v,NULL);
         else if(!strcmp(k,"runway_latitude_deg")){s->runway_latitude_deg=strtod(v,NULL);s->runway_override=true;}
         else if(!strcmp(k,"runway_longitude_deg")){s->runway_longitude_deg=strtod(v,NULL);s->runway_override=true;}
         else if(!strcmp(k,"runway_elevation_m")){s->runway_elevation_m=strtod(v,NULL);s->runway_override=true;}

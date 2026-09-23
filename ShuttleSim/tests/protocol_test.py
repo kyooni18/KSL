@@ -65,9 +65,21 @@ finally:
 for t in threads:t.join(timeout=3)
 rows=[json.loads(x) for x in out.splitlines() if x.startswith('{')]
 if not rows:raise SystemExit('no stdout telemetry')
-if not any(abs(r['attitude']['cmd_aoa_deg']-23.5)<0.01 and
-           abs(r['attitude']['cmd_bank_deg']+41.0)<0.01 for r in rows):
+if not any(abs(r['attitude'].get('requested_aoa_deg', float('nan'))-23.5)<0.01 and
+           abs(r['attitude'].get('requested_bank_deg', float('nan'))+41.0)<0.01 for r in rows):
     print(out);print(err,file=sys.stderr);raise SystemExit('UDP attitude command not observed')
+for previous, current in zip(rows, rows[1:]):
+    dt=current['sim_time']-previous['sim_time']
+    if dt <= 0:
+        continue
+    pa=previous['attitude']['cmd_aoa_deg']
+    ca=current['attitude']['cmd_aoa_deg']
+    pb=previous['attitude']['cmd_bank_deg']
+    cb=current['attitude']['cmd_bank_deg']
+    if abs(ca-pa)>previous['attitude']['max_pitch_rate_deg_s']*dt+1e-6:
+        raise SystemExit('simulator AoA target exceeded its rate limit')
+    if abs(cb-pb)>previous['attitude']['max_roll_rate_deg_s']*dt+1e-6:
+        raise SystemExit('simulator bank target exceeded its rate limit')
 response_fields=(
     'aoa_rate_deg_s','bank_rate_deg_s',
     'pitch_wn_s_inv','pitch_zeta','roll_wn_s_inv','roll_zeta',

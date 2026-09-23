@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="/styles.css?v=20260919-rl-handoff">
+  <link rel="stylesheet" href="/styles.css?v=20260920-live-replay-view">
 </head>
 <body>
   <main class="grid">
@@ -20,7 +20,9 @@
         <span id="sim-time" class="sim-field">T+ —</span>
         <span id="sim-rate" class="sim-field">—×</span>
         <span id="sim-lockstep" class="sim-field">LOCKSTEP</span>
-        <span id="sim-replay" class="sim-field" hidden>REPLAY</span>
+        <span id="sim-view" class="sim-view-badge" hidden>SIM REPLAY</span>
+        <span id="sim-traces" class="sim-field sim-traces" hidden>ACT — · PRED — · PLAN —</span>
+        <span id="sim-status-line" class="sim-field sim-status-line" hidden>STATUS —</span>
       </div>
       <div class="nav-wrap"><canvas id="navball"></canvas></div>
       <div class="nav-readout">
@@ -184,11 +186,11 @@
     <div class="playback-shell">
       <div class="playback-summary">
         <button id="sim-replay-live" class="playback-live active" type="button" aria-pressed="true">
-          <span class="playback-live-dot"></span><span>LIVE</span>
+          <span class="playback-live-dot"></span><span>LIVE KSP</span>
         </button>
-        <button id="sim-history-open" class="playback-runs" type="button">RUNS</button>
+        <button id="sim-history-open" class="playback-runs" type="button" aria-pressed="false">SIM REPLAY</button>
         <div class="playback-context">
-          <strong id="playback-run-name">LIVE TELEMETRY</strong>
+          <strong id="playback-run-name">LIVE KSP TELEMETRY</strong>
           <span id="sim-replay-position">LIVE</span>
         </div>
         <button id="playback-toggle" class="playback-toggle" type="button" aria-expanded="false" aria-label="Expand playback controls">⌃</button>
@@ -210,6 +212,6 @@
     </div>
   </aside>
 
-  <script src="/app.js?v=20260919-rl-handoff"></script>
+  <script src="/app.js?v=20260920-live-replay-view"></script>
 </body>
 </html>

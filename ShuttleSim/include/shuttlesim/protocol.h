@@ -21,6 +21,12 @@ typedef struct {
     bool gear_down;
     bool has_brakes;
     bool brakes;
+    bool has_airbrakes;
+    bool airbrakes;
+    bool has_wheel_steering;
+    double wheel_steering;
+    bool has_throttle;
+    double throttle;
     bool step;
     bool pause;
     bool resume;

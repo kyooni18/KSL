@@ -7,14 +7,21 @@ typedef struct {
     double bank_rad;
     double aoa_rate_rad_s;
     double bank_rate_rad_s;
+    /* Raw demand is retained for diagnostics; cmd_* is the bounded target
+       actually exposed to the physics and telemetry consumers. */
+    double requested_aoa_rad;
+    double requested_bank_rad;
     double cmd_aoa_rad;
     double cmd_bank_rad;
+    /* Retained as telemetry/configuration metadata for compatibility.  The
+       offline simulator does not model a low-level second-order servo. */
     double pitch_wn;
     double pitch_zeta;
     double roll_wn;
     double roll_zeta;
     double max_pitch_rate_rad_s;
     double max_roll_rate_rad_s;
+    /* Rate is the only attitude-following dynamic used by the simulator. */
     double max_pitch_accel_rad_s2;
     double max_roll_accel_rad_s2;
 } AttitudeModel;

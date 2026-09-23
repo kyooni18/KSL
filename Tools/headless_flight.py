@@ -24,6 +24,7 @@ from typing import Any, Callable, NamedTuple
 TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
+from clanding_layout import build_artifact as clanding_build_artifact
 from campaign_provenance import (
     load_pinned_campaign_artifacts,
     pin_campaign_artifacts,
@@ -1058,13 +1059,14 @@ class HUDCompanion:
 
 
 class BackendProcess:
-    def __init__(self, executable: Path, snapshot_sink: Callable[[dict[str, Any]], None] | None = None) -> None:
+    def __init__(self, executable: Path, snapshot_sink: Callable[[dict[str, Any]], None] | None = None,
+                 stderr_target: Any = None) -> None:
         env = os.environ.copy()
         self.process = subprocess.Popen(
             [str(executable)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=None,
+            stderr=stderr_target,
             text=False,
             bufsize=0,
             env=env,
@@ -1237,7 +1239,7 @@ def main() -> int:
         raise RuntimeError("Another headless live flight test is already running for this project") from exc
 
     parser = argparse.ArgumentParser(description="Run the KSP shuttle lander without PyQt.")
-    parser.add_argument("--backend", type=Path, default=root / "CLanding" / "build" / "landing_backend")
+    parser.add_argument("--backend", type=Path, default=clanding_build_artifact(root))
     parser.add_argument("--config", type=Path, default=root / "Configuration" / "default.json")
     parser.add_argument("--live", action="store_true", help="Engage guidance after an executable plan is found.")
     parser.add_argument("--no-pin-campaign-artifacts", action="store_true", help="For live runs only, disable the default immutable backend/config snapshot and process-inode verification.")

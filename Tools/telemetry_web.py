@@ -39,6 +39,7 @@ RL_SLOWRUNS_ROOT = ROOT / "Runtime" / "SlowRuns"
 RL_STATUS_POLL_SECONDS = 1.0
 
 
+
 def number(value: Any, default: float = 0.0) -> float:
     try:
         result = float(value)
@@ -515,6 +516,10 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
         )
         displayed_prediction = _displayable_entry_prediction(exact, predicted)
         snapshot["predictedTrajectory"] = displayed_prediction
+        if len(displayed_prediction) < 2 and len(predicted) >= 2:
+            # Keep rejected/stale forecast geometry available to the archive
+            # inspector. Live surfaces continue to use only the qualified path.
+            snapshot["replayCandidatePrediction"] = predicted
         snapshot["projectedTAEMTrajectory"] = (
             projected_taem_trajectory(displayed_prediction, terminal, configuration, exact_guidance)
             if exact_entry_plan_ready
@@ -531,6 +536,8 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
             # The controller can publish candidate/reference geometry before MM305
             # commits it. Keep that forensic geometry out of the operator PLAN/REF
             # surfaces; otherwise an unproven candidate looks like a fixed path.
+            if len(reference) >= 2:
+                snapshot["replayCandidateTrajectory"] = reference
             snapshot["referenceTrajectory"] = []
             if reference or _terminal_phase(exact.get("phase")):
                 snapshot["plannedTrajectory"] = []
@@ -545,39 +552,71 @@ def newest_planner_log(root: Path) -> Path | None:
     return max(logs, key=lambda path: path.stat().st_mtime, default=None)
 
 
+def _committed_plan_path(record: dict[str, Any], current: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the canonical forecast prefix covered by the committed Entry segment."""
+    published = record.get("publishedPrediction")
+    if not isinstance(published, list):
+        return []
+    planned_ut = optional_number(current.get("plannedUT"))
+    duration = optional_number(current.get("segmentDuration"))
+    if planned_ut is None or duration is None or duration <= 0.0:
+        return []
+    end_ut = planned_ut + duration
+    path: list[dict[str, Any]] = []
+    for item in published:
+        if not isinstance(item, dict):
+            continue
+        point_ut = optional_number(item.get("ut"))
+        if point_ut is None:
+            continue
+        if point_ut <= end_ut + 1e-6:
+            path.append(item)
+        elif path:
+            break
+    return path if len(path) >= 2 else []
+
+
 def candidate_path(record: dict[str, Any]) -> list[dict[str, Any]]:
     current_value = record.get("currentPlan")
     if not _entry_plan_displayable(current_value):
-        # plannerTrace can retain diagnostic or locally executable candidates even
-        # when the end-to-end terminal handoff is not proven. Never render those
-        # as PLAN geometry.
+        # Historical planner traces may contain local/diagnostic candidates even
+        # when terminal delivery was not proven. Never render those as PLAN.
         return []
     current = current_value
     trace = record.get("plannerTrace")
-    if not isinstance(trace, dict):
-        return []
-    candidates = trace.get("candidates")
-    if not isinstance(candidates, list):
-        return []
-    usable = [item for item in candidates if isinstance(item, dict) and isinstance(item.get("candidatePath"), list)]
-    if not usable:
-        return []
-    selected = next((item for item in usable if item.get("selected")), None)
-    if selected is None:
-        target_bank = number(current.get("targetBank"))
-        target_aoa = number(current.get("targetAoA"))
-        target_heading = number(current.get("targetHeading"))
+    if isinstance(trace, dict):
+        candidates = trace.get("candidates")
+        if isinstance(candidates, list):
+            usable = [
+                item for item in candidates
+                if isinstance(item, dict) and isinstance(item.get("candidatePath"), list)
+            ]
+            if usable:
+                selected = next((item for item in usable if item.get("selected")), None)
+                if selected is None:
+                    target_bank = number(current.get("targetBank"))
+                    target_aoa = number(current.get("targetAoA"))
+                    target_heading = number(current.get("targetHeading"))
 
-        def score(item: dict[str, Any]) -> float:
-            command = item.get("command") if isinstance(item.get("command"), dict) else item
-            return (
-                abs(number(command.get("bank", command.get("targetBank")), target_bank) - target_bank)
-                + 0.5 * abs(number(command.get("aoa", command.get("targetAoA")), target_aoa) - target_aoa)
-                + 0.05 * abs(number(command.get("heading", command.get("targetHeading")), target_heading) - target_heading)
-            )
+                    def score(item: dict[str, Any]) -> float:
+                        command = item.get("command") if isinstance(item.get("command"), dict) else item
+                        return (
+                            abs(number(command.get("bank", command.get("targetBank")), target_bank) - target_bank)
+                            + 0.5 * abs(number(command.get("aoa", command.get("targetAoA")), target_aoa) - target_aoa)
+                            + 0.05 * abs(number(command.get("heading", command.get("targetHeading")), target_heading) - target_heading)
+                        )
 
-        selected = min(usable, key=score)
-    return [item for item in selected.get("candidatePath", []) if isinstance(item, dict)]
+                    selected = min(usable, key=score)
+                historical_path = [
+                    item for item in selected.get("candidatePath", []) if isinstance(item, dict)
+                ]
+                if historical_path:
+                    return historical_path
+
+    # The current MM304 architecture has no second candidate-search policy. Use
+    # only the portion of the canonical published forecast covered by currentPlan;
+    # this keeps PLAN distinct from the longer PRED continuation.
+    return _committed_plan_path(record, current)
 
 
 class PlannerFollower:
@@ -860,8 +899,10 @@ def simulation_status(run: dict[str, Any] | None, snapshot: dict[str, Any] | Non
         wall_seconds = max(0.0, (finished if finished is not None else time.time()) - started)
     sim_time = optional_number(telemetry.get("ut"))
     base_ut = optional_number((run.get("prerollFinal") or {}).get("ut")) if isinstance(run.get("prerollFinal"), dict) else None
-    elapsed_sim = None
-    if sim_time is not None and base_ut is not None:
+    elapsed_sim = optional_number(run.get("simElapsedSeconds"))
+    if elapsed_sim is not None and elapsed_sim <= 1e-9:
+        elapsed_sim = None
+    if elapsed_sim is None and sim_time is not None and base_ut is not None:
         elapsed_sim = max(0.0, sim_time - base_ut)
     effective_rate = None
     if elapsed_sim is not None and wall_seconds is not None and wall_seconds > 1e-6:
@@ -883,7 +924,9 @@ def simulation_status(run: dict[str, Any] | None, snapshot: dict[str, Any] | Non
         "effectiveRate": effective_rate,
         "terminalPhase": run.get("terminalPhase") or snapshot.get("phase"),
         "final": run.get("final"),
-        "replayAvailable": bool(run.get("guidanceSnapshots") or replay_count),
+        "replayAvailable": bool(
+            run.get("guidanceSnapshots") or run.get("simulatorTelemetry") or replay_count
+        ),
         "guidanceSnapshots": run.get("guidanceSnapshots"),
         "simulatorTelemetry": run.get("simulatorTelemetry"),
         "runDirectory": run.get("runDirectory"),
@@ -1297,13 +1340,176 @@ def _downsample_replay_points(points: Any, limit: int = 120) -> list[dict[str, A
     return [copy.deepcopy(clean[i]) for i in indices]
 
 
+def _first_simulator_packet(path: Path) -> dict[str, Any] | None:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict) and value.get("source") == "sim" and value.get("type") == "telemetry":
+                    return value
+    except OSError:
+        return None
+    return None
+
+
+def _last_simulator_packet(path: Path) -> dict[str, Any] | None:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            position = handle.tell()
+            carry = b""
+            while position > 0:
+                size = min(65536, position)
+                position -= size
+                handle.seek(position)
+                data = handle.read(size) + carry
+                lines = data.splitlines()
+                if position > 0 and lines:
+                    carry = lines.pop(0)
+                else:
+                    carry = b""
+                for raw in reversed(lines):
+                    if not raw.strip():
+                        continue
+                    try:
+                        value = json.loads(raw.decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        continue
+                    if (isinstance(value, dict) and value.get("source") == "sim" and
+                            value.get("type") == "telemetry"):
+                        return value
+    except OSError:
+        return None
+    return None
+
+
+def _simulator_elapsed_seconds(manifest: dict[str, Any], simulator_file: Path) -> float | None:
+    elapsed = optional_number(manifest.get("simElapsedSeconds"))
+    if elapsed is not None and elapsed >= 1.0:
+        return elapsed
+    packet = _last_simulator_packet(simulator_file) if simulator_file.is_file() else None
+    elapsed = optional_number(packet.get("sim_time")) if packet else None
+    return elapsed if elapsed is not None and elapsed >= 1.0 else None
+
+
+def _legacy_run_manifest(root: Path, run_id: str) -> tuple[Path, dict[str, Any]] | None:
+    runs_root = root / "ShuttleSim" / "runs"
+    guidance_path = runs_root / f"{run_id}-guidance.jsonl"
+    simulator_path = runs_root / f"{run_id}-sim.jsonl"
+    exact_path = runs_root / f"{run_id}.jsonl"
+    if not simulator_path.is_file() and exact_path.is_file() and _first_simulator_packet(exact_path):
+        simulator_path = exact_path
+    if not guidance_path.is_file() and not simulator_path.is_file():
+        return None
+
+    timestamps = [path.stat().st_mtime for path in (guidance_path, simulator_path) if path.is_file()]
+    first_packet = _first_simulator_packet(simulator_path) if simulator_path.is_file() else None
+    manifest: dict[str, Any] = {
+        "schema": 1,
+        "runId": run_id,
+        "state": "finished",
+        "mode": "legacy-replay",
+        "scenario": first_packet.get("scenario") if first_packet else None,
+        "startedAt": min(timestamps) if timestamps else None,
+        "finishedAt": max(timestamps) if timestamps else None,
+        "guidanceSnapshots": str(guidance_path) if guidance_path.is_file() else None,
+        "simulatorTelemetry": str(simulator_path) if simulator_path.is_file() else None,
+        "runDirectory": str(runs_root),
+    }
+    return runs_root, manifest
+
+
+def _discover_simulation_run(root: Path, run_id: str) -> tuple[Path, dict[str, Any]] | None:
+    if not run_id or "/" in run_id or "\\" in run_id or run_id in {".", ".."}:
+        return None
+    runs_root = (root / "ShuttleSim" / "runs").resolve()
+    run_dir = (runs_root / run_id).resolve()
+    if run_dir.is_relative_to(runs_root):
+        manifest_path = run_dir / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = None
+        if isinstance(manifest, dict):
+            return run_dir, manifest
+    return _legacy_run_manifest(root, run_id)
+
+
+def _legacy_run_ids(root: Path) -> set[str]:
+    runs_root = root / "ShuttleSim" / "runs"
+    ids: set[str] = set()
+    try:
+        paths = list(runs_root.glob("*.jsonl"))
+    except OSError:
+        return ids
+    for path in paths:
+        name = path.name
+        if name.endswith("-guidance.jsonl"):
+            ids.add(name[:-len("-guidance.jsonl")])
+        elif name.endswith("-sim.jsonl"):
+            ids.add(name[:-len("-sim.jsonl")])
+        elif _first_simulator_packet(path):
+            ids.add(path.stem)
+    return ids
+
+
+
+def _simulation_run_summary(run_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    run_id = str(manifest.get("runId") or run_dir.name)
+    replay_file = _simulation_run_artifact(
+        run_dir, manifest.get("guidanceSnapshots"), "guidance-snapshots.jsonl"
+    )
+    simulator_file = _simulation_run_artifact(
+        run_dir, manifest.get("simulatorTelemetry"), "simulator-telemetry.jsonl"
+    )
+    sim_elapsed = _simulator_elapsed_seconds(manifest, simulator_file)
+    final = manifest.get("final") if isinstance(manifest.get("final"), dict) else {}
+    terminal = str(manifest.get("terminalPhase") or "")
+    landed = str(final.get("situation") or "").lower() == "landed"
+    along = optional_number(final.get("runwayAlongTrack"))
+    cross = optional_number(final.get("runwayCrossTrack"))
+    success = terminal == "Complete" or (
+        landed and along is not None and cross is not None and abs(along) <= 1800.0 and abs(cross) <= 100.0
+    )
+    try:
+        guidance_bytes = replay_file.stat().st_size if replay_file.is_file() else 0
+        simulator_bytes = simulator_file.stat().st_size if simulator_file.is_file() else 0
+    except OSError:
+        guidance_bytes = 0
+        simulator_bytes = 0
+    replay_bytes = guidance_bytes + simulator_bytes
+    has_replay = replay_bytes > 0
+    return {
+        "runId": run_id,
+        "state": manifest.get("state"),
+        "mode": manifest.get("mode"),
+        "scenario": manifest.get("scenario"),
+        "startedAt": manifest.get("startedAt"),
+        "finishedAt": manifest.get("finishedAt"),
+        "wallSeconds": manifest.get("wallSeconds"),
+        "simElapsedSeconds": sim_elapsed,
+        "terminalPhase": terminal or None,
+        "final": final,
+        "success": success,
+        "hasReplay": has_replay,
+        "replayBytes": replay_bytes,
+        "guidanceReplayBytes": guidance_bytes,
+        "simulatorReplayBytes": simulator_bytes,
+        "runDirectory": str(manifest.get("runDirectory") or run_dir),
+    }
+
+
 def list_simulation_runs(root: Path) -> list[dict[str, Any]]:
     runs_root = root / "ShuttleSim" / "runs"
     result: list[dict[str, Any]] = []
+    seen: set[str] = set()
     try:
         candidates = list(runs_root.glob("*/manifest.json"))
     except OSError:
-        return []
+        candidates = []
     for manifest_path in candidates:
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1311,41 +1517,24 @@ def list_simulation_runs(root: Path) -> list[dict[str, Any]]:
             continue
         if not isinstance(manifest, dict):
             continue
-        run_id = str(manifest.get("runId") or manifest_path.parent.name)
-        replay_path = manifest.get("guidanceSnapshots")
-        if isinstance(replay_path, str) and replay_path:
-            replay_file = Path(replay_path).expanduser()
-            if not replay_file.is_absolute():
-                replay_file = manifest_path.parent / replay_file
-        else:
-            replay_file = manifest_path.parent / "guidance-snapshots.jsonl"
-        final = manifest.get("final") if isinstance(manifest.get("final"), dict) else {}
-        terminal = str(manifest.get("terminalPhase") or "")
-        landed = str(final.get("situation") or "").lower() == "landed"
-        along = optional_number(final.get("runwayAlongTrack"))
-        cross = optional_number(final.get("runwayCrossTrack"))
-        success = terminal == "Complete" or (
-            landed and along is not None and cross is not None and abs(along) <= 1800.0 and abs(cross) <= 100.0
-        )
-        try:
-            replay_bytes = replay_file.stat().st_size if replay_file.is_file() else 0
-        except OSError:
-            replay_bytes = 0
-        result.append({
-            "runId": run_id,
-            "state": manifest.get("state"),
-            "mode": manifest.get("mode"),
-            "scenario": manifest.get("scenario"),
-            "startedAt": manifest.get("startedAt"),
-            "finishedAt": manifest.get("finishedAt"),
-            "wallSeconds": manifest.get("wallSeconds"),
-            "terminalPhase": terminal or None,
-            "final": final,
-            "success": success,
-            "hasReplay": replay_bytes > 0,
-            "replayBytes": replay_bytes,
-            "runDirectory": str(manifest_path.parent),
-        })
+        summary = _simulation_run_summary(manifest_path.parent, manifest)
+        result.append(summary)
+        seen.add(summary["runId"])
+
+    for run_id in sorted(_legacy_run_ids(root)):
+        if run_id in seen:
+            continue
+        discovered = _legacy_run_manifest(root, run_id)
+        if discovered is None:
+            continue
+        run_dir, manifest = discovered
+        result.append(_simulation_run_summary(run_dir, manifest))
+
+    result = [
+        row for row in result
+        if row.get("hasReplay") and optional_number(row.get("simElapsedSeconds")) is not None
+        and number(row.get("simElapsedSeconds")) >= 1.0
+    ]
     result.sort(key=lambda row: number(row.get("startedAt"), 0.0), reverse=True)
     return result
 
@@ -1422,7 +1611,8 @@ def normalize_replay_snapshot(snapshot: dict[str, Any],
 
     for key in (
         "predictedTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
-        "referenceTrajectory", "orbitalTrajectory",
+        "referenceTrajectory", "orbitalTrajectory", "replayCandidatePrediction",
+        "replayCandidateTrajectory",
     ):
         if not isinstance(out.get(key), list):
             out[key] = []
@@ -1447,7 +1637,8 @@ def compact_replay_snapshot(snapshot: dict[str, Any], run: dict[str, Any],
             out[key] = copy.deepcopy(snapshot[key])
     for key in (
         "predictedTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
-        "referenceTrajectory", "orbitalTrajectory",
+        "referenceTrajectory", "orbitalTrajectory", "replayCandidatePrediction",
+        "replayCandidateTrajectory",
     ):
         out[key] = _downsample_replay_points(snapshot.get(key), 120)
     out["actualTrajectory"] = []
@@ -1538,20 +1729,110 @@ def load_simulator_replay_frames(run_dir: Path, run: dict[str, Any],
     return frames
 
 
+def _replay_prediction_has_future(snapshot: dict[str, Any], current_ut: float | None) -> bool:
+    points = snapshot.get("predictedTrajectory")
+    if not isinstance(points, list) or not points:
+        return False
+    if current_ut is None:
+        return True
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        point_ut = optional_number(point.get("ut"))
+        if point_ut is None or point_ut > current_ut + 1e-6:
+            return True
+    return False
+
+
+def hydrate_archive_replay_frames(guidance_frames: list[dict[str, Any]],
+                                  simulator_frames: list[dict[str, Any]],
+                                  configuration: dict[str, Any]) -> list[dict[str, Any]]:
+    """Overlay sparse controller snapshots on the dense archived physics stream."""
+    if not simulator_frames:
+        return [normalize_replay_snapshot(frame, configuration) for frame in guidance_frames]
+
+    guidance = [frame for frame in guidance_frames if isinstance(frame, dict)]
+    timed_guidance: list[dict[str, Any]] = []
+    for frame in guidance:
+        telemetry = frame.get("telemetry") if isinstance(frame.get("telemetry"), dict) else {}
+        frame_ut = optional_number(telemetry.get("ut"))
+        if frame_ut is not None and frame_ut > 1.0:
+            timed_guidance.append(frame)
+
+    current: dict[str, Any] = guidance[0] if guidance else {}
+    current_normalized = normalize_replay_snapshot(current, configuration)
+    cursor = -1
+    held_prediction: list[dict[str, Any]] = []
+    held_prediction_revision: int | None = None
+    actual: list[dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
+
+    for simulator_frame in simulator_frames:
+        sim_ut = optional_number(simulator_frame.get("ut"))
+        while cursor + 1 < len(timed_guidance):
+            candidate = timed_guidance[cursor + 1]
+            candidate_telemetry = candidate.get("telemetry") if isinstance(candidate.get("telemetry"), dict) else {}
+            candidate_ut = optional_number(candidate_telemetry.get("ut"))
+            if sim_ut is None or candidate_ut is None or candidate_ut > sim_ut + 0.05:
+                break
+            cursor += 1
+            current = timed_guidance[cursor]
+            current_normalized = normalize_replay_snapshot(current, configuration)
+            prediction = current.get("predictedTrajectory")
+            if isinstance(prediction, list) and prediction and _replay_prediction_has_future(current, sim_ut):
+                held_prediction = copy.deepcopy(prediction)
+                revision = optional_number(current.get("trajectoryRevision", current.get("tickSequence")))
+                held_prediction_revision = int(revision) if revision is not None else cursor
+            else:
+                guidance_state = current.get("guidanceState") if isinstance(current.get("guidanceState"), dict) else {}
+                if (
+                    guidance_state.get("terminalPredictionValid") is False
+                    or not _replay_prediction_has_future({"predictedTrajectory": held_prediction}, sim_ut)
+                ):
+                    held_prediction = []
+                    held_prediction_revision = None
+
+        base = copy.deepcopy(current_normalized)
+        if not _replay_prediction_has_future(base, sim_ut) and _replay_prediction_has_future(
+            {"predictedTrajectory": held_prediction}, sim_ut
+        ):
+            base["predictedTrajectory"] = copy.deepcopy(held_prediction)
+            if held_prediction_revision is not None:
+                base["trajectoryRevision"] = held_prediction_revision
+
+        sim_telemetry = simulator_frame.get("telemetry")
+        if isinstance(sim_telemetry, dict):
+            existing = base.get("telemetry") if isinstance(base.get("telemetry"), dict) else {}
+            base["telemetry"] = {**existing, **sim_telemetry}
+        if not isinstance(base.get("command"), dict) or not base["command"]:
+            base["command"] = copy.deepcopy(simulator_frame.get("command") or {})
+
+        telemetry = base.get("telemetry") if isinstance(base.get("telemetry"), dict) else {}
+        latitude = optional_number(telemetry.get("latitude"))
+        longitude = optional_number(telemetry.get("longitude"))
+        altitude = optional_number(telemetry.get("meanAltitude"))
+        if latitude is not None and longitude is not None and altitude is not None:
+            actual.append({
+                "ut": optional_number(telemetry.get("ut")),
+                "latitude": latitude,
+                "longitude": longitude,
+                "altitude": altitude,
+                "phase": base.get("phase") or "REPLAY",
+            })
+            if len(actual) > 900:
+                actual = actual[::2]
+        base["actualTrajectory"] = copy.deepcopy(actual)
+        base["connectionStatus"] = "connected"
+        result.append(base)
+
+    return result
+
+
 def load_simulation_replay(root: Path, run_id: str, max_frames: int = 600) -> dict[str, Any] | None:
-    if not run_id or "/" in run_id or "\\" in run_id or run_id in {".", ".."}:
+    discovered = _discover_simulation_run(root, run_id)
+    if discovered is None:
         return None
-    run_dir = (root / "ShuttleSim" / "runs" / run_id).resolve()
-    runs_root = (root / "ShuttleSim" / "runs").resolve()
-    if not run_dir.is_relative_to(runs_root):
-        return None
-    manifest_path = run_dir / "manifest.json"
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(manifest, dict):
-        return None
+    run_dir, manifest = discovered
 
     max_frames = max(20, min(2000, max_frames))
     candidate = manifest.get("guidanceSnapshots")
@@ -1794,6 +2075,8 @@ def load_replay_frames(path: Path) -> list[dict[str, Any]]:
                     continue
                 if not isinstance(value, dict):
                     continue
+                if value.get("source") == "sim" and value.get("type") == "telemetry":
+                    continue
                 snapshot = value.get("snapshot") if isinstance(value.get("snapshot"), dict) else value
                 if isinstance(snapshot, dict):
                     frames.append(snapshot)
@@ -1806,19 +2089,6 @@ def replay_collector_loop(store: "SnapshotStore", root: Path, stop: threading.Ev
                           replay_path: Path, replay_speed: float, replay_loop: bool,
                           fallback_configuration: dict[str, Any] | None = None,
                           rl_output: Path | None = None) -> None:
-    frames = load_replay_frames(replay_path)
-    if not frames:
-        store.publish({
-            "connectionStatus": "failed",
-            "phase": "Offline",
-            "statusMessage": f"Replay has no readable frames: {replay_path}",
-            "simulation": {"active": True, "sourceMode": "replay", "state": "error",
-                           "mode": "replay", "replayCount": 0},
-            "server": {"generatedAt": time.time(), "source": "ShuttleSim replay", "simulation": True},
-        })
-        return
-    speed = max(0.05, replay_speed)
-
     run: dict[str, Any] | None = None
     manifest_path = replay_path.parent / "manifest.json"
     try:
@@ -1835,20 +2105,36 @@ def replay_collector_loop(store: "SnapshotStore", root: Path, stop: threading.Ev
             "guidanceSnapshots": str(replay_path),
         }
     configuration = _replay_configuration(root, run, fallback_configuration)
+    guidance_frames = load_replay_frames(replay_path)
+    simulator_frames = load_simulator_replay_frames(replay_path.parent, run, 2000)
+    frames = hydrate_archive_replay_frames(guidance_frames, simulator_frames, configuration)
+    if not frames:
+        store.publish({
+            "connectionStatus": "failed",
+            "phase": "Offline",
+            "statusMessage": f"Replay has no readable frames: {replay_path}",
+            "simulation": {"active": True, "sourceMode": "replay", "state": "error",
+                           "mode": "replay", "replayCount": 0},
+            "server": {"generatedAt": time.time(), "source": "ShuttleSim replay", "simulation": True},
+        })
+        return
+    speed = max(0.05, replay_speed)
     rl_monitor = RLTrainingMonitor(root, rl_output)
+    base_ut = optional_number((run.get("prerollFinal") or {}).get("ut")) if isinstance(run.get("prerollFinal"), dict) else None
 
     while not stop.is_set():
-        previous_ut: float | None = None
+        previous_time: float | None = None
         for index, raw in enumerate(frames):
             if stop.is_set():
                 return
-            snapshot = normalize_replay_snapshot(raw, configuration)
+            snapshot = copy.deepcopy(raw)
             snapshot["rlTraining"] = rl_monitor.poll()
             telemetry = snapshot.get("telemetry") if isinstance(snapshot.get("telemetry"), dict) else {}
             ut = optional_number(telemetry.get("ut"))
-            if previous_ut is not None and ut is not None:
-                stop.wait(min(1.0, max(0.0, ut - previous_ut) / speed))
-            previous_ut = ut if ut is not None else previous_ut
+            frame_time = max(0.0, ut - base_ut) if ut is not None and base_ut is not None else ut
+            if previous_time is not None and frame_time is not None:
+                stop.wait(min(1.0, max(0.0, frame_time - previous_time) / speed))
+            previous_time = frame_time if frame_time is not None else previous_time
             snapshot["simulation"] = simulation_status(
                 {**run, "state": "replay"}, snapshot, "replay",
                 replay_index=index, replay_count=len(frames), replay_speed=speed,
@@ -1861,7 +2147,7 @@ def replay_collector_loop(store: "SnapshotStore", root: Path, stop: threading.Ev
             }
             store.publish(snapshot)
         if not replay_loop:
-            final = normalize_replay_snapshot(frames[-1], configuration)
+            final = copy.deepcopy(frames[-1])
             final["rlTraining"] = rl_monitor.poll()
             final["simulation"] = simulation_status(
                 {**run, "state": "replay-finished"}, final, "replay",
@@ -2463,7 +2749,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--mode", choices=("live", "simulator", "replay"), default=os.environ.get("KSP_LANDER_WEB_MODE", "live"))
     parser.add_argument("--replay", type=Path, default=None,
-                        help="Guidance snapshot JSONL for replay mode; defaults to simulator-run.json guidanceSnapshots")
+                        help="Archived guidance or simulator JSONL for replay mode; defaults to simulator-run.json")
     parser.add_argument("--replay-speed", type=float, default=20.0)
     parser.add_argument("--replay-loop", action="store_true")
     parser.add_argument("--rl-output", type=Path, default=None,
@@ -2487,10 +2773,12 @@ def main() -> int:
         replay_path = args.replay
         if replay_path is None:
             run = read_simulator_run(ROOT)
-            candidate = (run or {}).get("guidanceSnapshots") if isinstance(run, dict) else None
+            candidate = None
+            if isinstance(run, dict):
+                candidate = run.get("guidanceSnapshots") or run.get("simulatorTelemetry")
             replay_path = Path(candidate) if candidate else None
         if replay_path is None:
-            raise SystemExit("Replay mode needs --replay FILE or simulator-run.json with guidanceSnapshots.")
+            raise SystemExit("Replay mode needs --replay FILE or simulator-run.json with archived telemetry.")
         target = replay_collector_loop
         collector_args = (
             store, ROOT, stop, replay_path.expanduser(), args.replay_speed,

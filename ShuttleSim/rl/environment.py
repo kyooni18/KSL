@@ -612,13 +612,17 @@ class Environment:
                        "longitude_deg": -74.7283333333,
                        "heading_deg": 90.0}
         self.horizon, self.log, self.randomized = horizon, Path(log) if log else None, randomized
+        # One guidance decision represents one simulator second.  The physics
+        # ABI receives this duration directly; it does not encode the interval
+        # as a fixed tick count or a wall-clock wait.
+        self.guidance_interval_s = 1.0
         suffix = ".dylib" if sys.platform == "darwin" else ".so"
         self.lib = C.CDLL(str(SIM / "build-offline" / ("libshuttlesim_offline" + suffix)))
         self.teacher = C.CDLL(str(SIM / "build-offline" / ("libshuttlesim_expert" + suffix)))
         signatures = [
             (self.lib, "offline_create", [C.c_char_p] * 4, C.c_void_p),
             (self.lib, "offline_destroy", [C.c_void_p], None),
-            (self.lib, "offline_step", [C.c_void_p, C.c_double, C.c_double, C.c_int, C.c_int, C.c_int], C.c_int),
+            (self.lib, "offline_step", [C.c_void_p, C.c_double, C.c_double, C.c_int, C.c_int, C.c_double], C.c_int),
             (self.lib, "offline_randomize", [C.c_void_p] + [C.c_double] * 6, C.c_int),
             (self.lib, "offline_set_initial_conditions",
              [C.c_void_p] + [C.c_double] * 6, C.c_int),
@@ -920,9 +924,9 @@ class Environment:
             self.initial_handoff_pending = False
         # Abort is authoritative: do not integrate another physics tick.
         if not e["abort"] and not initial_handoff_event:
-            if not self.lib.offline_step(self.handle, *command, e["gear"], e["brakes"], 50):
+            if not self.lib.offline_step(self.handle, *command, e["gear"], e["brakes"], self.guidance_interval_s):
                 raise RuntimeError("physics step rejected")
-            self.elapsed += 1
+            self.elapsed += self.guidance_interval_s
             self._sample()
         t, e = self.telemetry, self.expert
         terminal_path = self._record_terminal_path_contract()

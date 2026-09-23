@@ -69,7 +69,9 @@ Representative telemetry:
     "bank_deg": -60.0,
     "heading_deg": 90.0,
     "cmd_aoa_deg": 35.0,
-    "cmd_bank_deg": -68.0,
+    "cmd_bank_deg": -60.36,
+    "requested_aoa_deg": 35.0,
+    "requested_bank_deg": -68.0,
     "q_w": 1.0,
     "q_x": 0.0,
     "q_y": 0.0,
@@ -96,3 +98,9 @@ Representative telemetry:
 ```
 
 Guidance should depend on the semantic fields it needs rather than simulator internals. Telemetry Web can consume the same objects independently.
+
+`requested_*` is the raw UDP/replay demand. `cmd_*` is the rate- and
+acceleration-bounded target currently delivered to the attitude model. The
+production guidance program applies the same response-aware bound before
+sending commands; ShuttleSim keeps this second bound as a direct-input safety
+guard.

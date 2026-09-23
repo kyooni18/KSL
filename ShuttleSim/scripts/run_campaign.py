@@ -33,6 +33,11 @@ from dataclasses import dataclass
 from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
+def clanding_root() -> pathlib.Path:
+    raw = pathlib.Path(os.environ.get("KSP_CLANDING_ROOT", "CLanding")).expanduser()
+    return (raw if raw.is_absolute() else ROOT / raw).resolve()
 SIM = ROOT / "ShuttleSim"
 GUIDANCE_RUNNER = SIM / "scripts" / "run_guidance.py"
 BIN = SIM / "build" / "shuttlesim"
@@ -109,11 +114,13 @@ def scaled_book(src: pathlib.Path, dst: pathlib.Path, lift_scale: float, drag_sc
 
 def scaled_attitude(src: pathlib.Path, dst: pathlib.Path, scale: float) -> None:
     vals = load_ini(src)
-    for k in ("pitch_wn", "roll_wn", "max_pitch_rate_deg_s", "max_roll_rate_deg_s",
-              "max_pitch_accel_deg_s2", "max_roll_accel_deg_s2"):
+    # The simulator follows the commanded attitude directly.  Only the
+    # configured followable rate is part of its response model; the legacy
+    # natural-frequency/damping and acceleration fields remain metadata.
+    for k in ("max_pitch_rate_deg_s", "max_roll_rate_deg_s"):
         if k in vals:
             vals[k] = f"{float(vals[k]) * scale:.9g}"
-    write_ini(dst, vals, f"attitude response x{scale:.3f}")
+    write_ini(dst, vals, f"attitude-following rate x{scale:.3f}")
 
 
 def scenario_variant(src: pathlib.Path, dst: pathlib.Path, *,
@@ -707,7 +714,7 @@ def main() -> int:
         return 0
 
     # Build once before the worker pool.
-    subprocess.run(["make","-C",str(ROOT/"CLanding"),"-j","4"],check=True,stdout=subprocess.DEVNULL)
+    subprocess.run(["make","-C",str(clanding_root()),"-j","4"],check=True,stdout=subprocess.DEVNULL)
     subprocess.run(["cmake","--build",str(SIM/"build"),"-j","4"],check=True,stdout=subprocess.DEVNULL)
 
     results_path = campaign / "results.jsonl"

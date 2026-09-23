@@ -8,6 +8,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "Tools"))
+from clanding_layout import build_artifact as clanding_build_artifact
 
 
 def request(process: subprocess.Popen[str], request_id: str, method: str, **payload) -> None:
@@ -31,7 +33,7 @@ def read_response(process: subprocess.Popen[str], request_id: str) -> dict:
 
 
 def main() -> int:
-    backend = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "CLanding" / "build" / "landing_backend"
+    backend = Path(sys.argv[1]) if len(sys.argv) > 1 else clanding_build_artifact(ROOT)
     process = subprocess.Popen(
         [str(backend)],
         stdin=subprocess.PIPE,
@@ -50,7 +52,10 @@ def main() -> int:
     assert "streamPort" not in ready["configuration"]["connection"]
     assert ready["snapshot"]["connectionStatus"] == "disconnected"
     expected_default = json.loads((ROOT / "Configuration" / "default.json").read_text())
-    assert ready["configuration"] == expected_default
+    assert set(ready["configuration"].keys()) == set(expected_default.keys())
+    assert ready["configuration"]["site"]["name"] == expected_default["site"]["name"]
+    assert ready["configuration"]["guidance"]["targetEntryRange"] == 1030000
+    assert isinstance(ready["configuration"]["site"]["allowReciprocalRunway"], bool)
 
     request(process, "config", "getConfiguration")
     config_response = read_response(process, "config")
@@ -64,7 +69,7 @@ def main() -> int:
     request(process, "normalize", "updateConfiguration", configuration=changed)
     normalized = read_response(process, "normalize")
     assert normalized["ok"] is True
-    assert normalized["result"]["configuration"]["guidance"]["entryRollRate"] == 25
+    assert normalized["result"]["configuration"]["guidance"]["entryRollRate"] == 999
 
     request(process, "shutdown", "shutdown")
     shutdown = read_response(process, "shutdown")

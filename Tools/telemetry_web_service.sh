@@ -5,6 +5,7 @@ ROOT=${0:A:h:h}
 RUNTIME="$ROOT/Runtime/TelemetryWeb"
 PID_FILE="$RUNTIME/server.pid"
 LOG_FILE="$RUNTIME/server.log"
+LABEL=${KSP_LANDER_WEB_LAUNCH_LABEL:-com.kyooni18.ksp.telemetry-web}
 HOST=${KSP_LANDER_WEB_HOST:-127.0.0.1}
 PORT=${KSP_LANDER_WEB_PORT:-8789}
 MODE=${KSP_LANDER_WEB_MODE:-live}
@@ -21,14 +22,18 @@ find_python() {
   )
   local py
   for py in $candidates; do
-    if [[ -x "$py" ]] && "$py" -c 'import krpc' >/dev/null 2>&1; then
-      print -r -- "$py"
-      return 0
+    if [[ -x "$py" ]]; then
+      if [[ "$MODE" == "simulator" ]] || "$py" -c 'import krpc' >/dev/null 2>&1; then
+        print -r -- "$py"
+        return 0
+      fi
     fi
   done
-  if command -v python3 >/dev/null 2>&1 && python3 -c 'import krpc' >/dev/null 2>&1; then
-    command -v python3
-    return 0
+  if command -v python3 >/dev/null 2>&1; then
+    if [[ "$MODE" == "simulator" ]] || python3 -c 'import krpc' >/dev/null 2>&1; then
+      command -v python3
+      return 0
+    fi
   fi
   return 1
 }
@@ -42,7 +47,17 @@ current_pid() {
   print -r -- "$pid"
 }
 
+launchd_pid() {
+  local pid
+  pid=$(launchctl list 2>/dev/null | awk -v label="$LABEL" '$3 == label {print $1; exit}')
+  [[ "$pid" == <-> ]] || return 1
+  [[ "$pid" != "-" ]] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  print -r -- "$pid"
+}
+
 stop_server() {
+  launchctl remove "$LABEL" 2>/dev/null || true
   local pid=""
   if ! pid=$(current_pid); then
     local listener listener_cmd
@@ -77,8 +92,14 @@ case "$ACTION" in
     ;;
   start)
     if pid=$(current_pid); then
-      print "telemetry web already running: pid=$pid http://$HOST:$PORT"
-      exit 0
+      current_cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+      expected_script="$ROOT/Tools/telemetry_web.py"
+      if [[ "$current_cmd" == *"$expected_script"* ]]; then
+        print "telemetry web already running: pid=$pid http://$HOST:$PORT"
+        exit 0
+      fi
+      print -u2 "telemetry web process uses a stale repo root; restarting from $ROOT"
+      stop_server
     fi
     ;;
   *)
@@ -108,16 +129,19 @@ if [[ "$MODE" == "simulator" ]]; then
   MODE_ARGS+=(--sim-telemetry-port "$SIM_TELEMETRY_PORT")
 fi
 
-nohup "$PY" "$ROOT/Tools/telemetry_web.py" --host "$HOST" --port "$PORT" \
-  "${MODE_ARGS[@]}" "${RL_ARGS[@]}" >"$LOG_FILE" 2>&1 </dev/null &
-pid=$!
-disown "$pid" 2>/dev/null || true
-print -r -- "$pid" > "$PID_FILE"
-sleep 0.7
-if ! kill -0 "$pid" 2>/dev/null; then
+launchctl submit -l "$LABEL" -p "$PY" -o "$LOG_FILE" -e "$LOG_FILE" -- \
+  "$PY" "$ROOT/Tools/telemetry_web.py" --host "$HOST" --port "$PORT" \
+  "${MODE_ARGS[@]}" "${RL_ARGS[@]}"
+pid=""
+for _ in {1..20}; do
+  pid=$(launchd_pid || true)
+  [[ -n "$pid" ]] && break
+  sleep 0.1
+done
+if [[ -z "$pid" ]]; then
   print -u2 "telemetry web failed to start"
   tail -40 "$LOG_FILE" >&2 || true
-  rm -f "$PID_FILE"
   exit 5
 fi
+print -r -- "$pid" > "$PID_FILE"
 print "telemetry web running: pid=$pid http://$HOST:$PORT"

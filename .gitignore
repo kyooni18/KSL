@@ -85,3 +85,10 @@ env/
 .env
 .env.*
 !.env.example
+
+# Generated MM305 scenario matrices and reproducibility sweeps
+/ShuttleSim/scenarios/mm305-condition-matrix*/
+/ShuttleSim/scenarios/mm305-heading-position-*/
+/ShuttleSim/scenarios/mm305-heading-sweep-*/
+/ShuttleSim/scenarios/mm305-position-grid-*/
+/ShuttleSim/scenarios/mm305-hac-repro-*.ini

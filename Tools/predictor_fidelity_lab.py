@@ -18,6 +18,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
+from clanding_layout import build_artifact as clanding_build_artifact, source_root as clanding_source_root
+
 DEFAULT_HORIZONS = (10.0, 30.0, 60.0, 120.0, 180.0, 300.0)
 
 
@@ -409,9 +411,9 @@ def parse_horizons(text: str) -> tuple[float, ...]:
 
 
 def recorded_control_physics_replay(root: Path, db: Path, session: str) -> dict[str, Any]:
-    target = root / "CLanding" / "build" / "predictor_recorded_control_replay"
+    target = clanding_build_artifact(root, "predictor_recorded_control_replay")
     build = subprocess.run(
-        ["make", "-C", str(root / "CLanding"), "build/predictor_recorded_control_replay"],
+        ["make", "-C", str(clanding_source_root(root)), "build/predictor_recorded_control_replay"],
         text=True, capture_output=True,
     )
     if build.returncode != 0:

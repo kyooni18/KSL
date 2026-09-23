@@ -19,6 +19,7 @@ typedef struct {
     double deorbit_delta_v_mps;
     double deorbit_duration_s;
     double deorbit_delay_s;
+    double orbital_engine_available_thrust_n;
     bool runway_override;
     double runway_latitude_deg;
     double runway_longitude_deg;

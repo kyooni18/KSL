@@ -10,15 +10,57 @@ void attitude_seed(AttitudeModel *a){
     a->max_pitch_rate_rad_s=deg2rad(8.0); a->max_roll_rate_rad_s=deg2rad(18.0);
     a->max_pitch_accel_rad_s2=deg2rad(5.0); a->max_roll_accel_rad_s2=deg2rad(15.0);
 }
-void attitude_set_command(AttitudeModel *a,double aoa,double bank){ a->cmd_aoa_rad=aoa; a->cmd_bank_rad=wrap_pi(bank); }
-static void axis_step(double target,double *x,double *v,double wn,double zeta,double vmax,double amax,double dt,bool wrap){
-    double err=target-*x; if(wrap)err=wrap_pi(err);
-    double acc=wn*wn*err-2.0*zeta*wn*(*v); acc=clampd(acc,-amax,amax);
-    *v=clampd(*v+acc*dt,-vmax,vmax); *x+=*v*dt; if(wrap)*x=wrap_pi(*x);
+void attitude_set_command(AttitudeModel *a,double aoa,double bank){
+    a->requested_aoa_rad=aoa;
+    a->requested_bank_rad=wrap_pi(bank);
+}
+static void __attribute__((unused)) command_slew(double requested,double *command,double vmax,double dt,bool wrap){
+    if(!command||!isfinite(requested)||!isfinite(dt)||!(dt>0.0)||
+       !isfinite(vmax)||!(vmax>0.0))return;
+    double error=requested-*command;
+    if(wrap)error=wrap_pi(error);
+    *command+=clampd(error,-vmax*dt,vmax*dt);
+    if(wrap)*command=wrap_pi(*command);
+}
+static void __attribute__((unused)) axis_step(double target,double *x,double *v,double vmax,double dt,bool wrap){
+    if (!isfinite(dt) || !(dt > 0.0) || !isfinite(vmax) || vmax < 0.0) {
+        *v = 0.0;
+        return;
+    }
+    double err = target - *x;
+    if (wrap) err = wrap_pi(err);
+    double rate = fabs(vmax);
+    double step = clampd(err, -rate * dt, rate * dt);
+    *x += step;
+    if (wrap) *x = wrap_pi(*x);
+    *v = step / dt;
+    /* The target is followed exactly as soon as the bounded move reaches it.
+       There is no second-order servo, acceleration lag, or overshoot model in
+       the simulator; only the configured vehicle-followable rate remains. */
+    if (fabs(err) <= rate * dt) {
+        *x = target;
+        *v = 0.0;
+    }
 }
 void attitude_step(AttitudeModel *a,double dt){
-    axis_step(a->cmd_aoa_rad,&a->aoa_rad,&a->aoa_rate_rad_s,a->pitch_wn,a->pitch_zeta,a->max_pitch_rate_rad_s,a->max_pitch_accel_rad_s2,dt,false);
-    axis_step(a->cmd_bank_rad,&a->bank_rad,&a->bank_rate_rad_s,a->roll_wn,a->roll_zeta,a->max_roll_rate_rad_s,a->max_roll_accel_rad_s2,dt,true);
+    /* ShuttleSim is a guidance-trajectory validator, not an FCS/actuator
+       simulator.  The guidance backend already rate-limits the commanded
+       attitude with stabilized(); the sim should therefore treat that command
+       as perfectly followed so path errors come from trajectory law, energy,
+       and aerodynamics rather than an extra hidden attitude lag model. */
+    double previous_aoa=a->aoa_rad;
+    double previous_bank=a->bank_rad;
+    a->cmd_aoa_rad=a->requested_aoa_rad;
+    a->cmd_bank_rad=wrap_pi(a->requested_bank_rad);
+    a->aoa_rad=a->cmd_aoa_rad;
+    a->bank_rad=a->cmd_bank_rad;
+    if(isfinite(dt)&&dt>0.0){
+        a->aoa_rate_rad_s=(a->aoa_rad-previous_aoa)/dt;
+        a->bank_rate_rad_s=wrap_pi(a->bank_rad-previous_bank)/dt;
+    }else{
+        a->aoa_rate_rad_s=0.0;
+        a->bank_rate_rad_s=0.0;
+    }
 }
 Quat attitude_body_quat(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 flight=v3_normalized(vair), radial=v3_normalized(p);

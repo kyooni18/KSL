@@ -49,38 +49,73 @@ def _newest_planner_log(root: Path) -> Path | None:
     return max(logs, key=lambda path: path.stat().st_mtime, default=None)
 
 
+def _committed_plan_path(record: dict[str, Any], current: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return only the forecast interval owned by the currently committed MM304 segment."""
+    if current.get("terminalReady") is not True:
+        return []
+    published = record.get("publishedPrediction")
+    if not isinstance(published, list):
+        return []
+    planned_ut = _number(current.get("plannedUT"), float("nan"))
+    duration = _number(current.get("segmentDuration"), float("nan"))
+    if not math.isfinite(planned_ut) or not math.isfinite(duration) or duration <= 0.0:
+        return []
+    end_ut = planned_ut + duration
+    path: list[dict[str, Any]] = []
+    for item in published:
+        if not isinstance(item, dict):
+            continue
+        point_ut = _number(item.get("ut"), float("nan"))
+        if not math.isfinite(point_ut):
+            continue
+        if point_ut <= end_ut + 1e-6:
+            path.append(item)
+        elif path:
+            break
+    return path if len(path) >= 2 else []
+
+
 def _candidate_path(record: dict[str, Any]) -> list[dict[str, Any]]:
     current_value = record.get("currentPlan")
     if not isinstance(current_value, dict) or not current_value or current_value.get("valid") is False:
-        # A planner trace can outlive executable-plan lineage during safe release.
+        # A historical planner trace can outlive executable-plan lineage during safe release.
         # Keep that diagnostic candidate off the HUD instead of labelling it PLAN.
         return []
     current = current_value
     trace = record.get("plannerTrace")
-    if not isinstance(trace, dict):
-        return []
-    candidates = trace.get("candidates")
-    if not isinstance(candidates, list):
-        return []
-    usable = [item for item in candidates if isinstance(item, dict) and isinstance(item.get("candidatePath"), list)]
-    if not usable:
-        return []
-    selected = next((item for item in usable if item.get("selected")), None)
-    if selected is None:
-        target_bank = _number(current.get("targetBank"))
-        target_aoa = _number(current.get("targetAoA"))
-        target_heading = _number(current.get("targetHeading"))
+    if isinstance(trace, dict):
+        candidates = trace.get("candidates")
+        if isinstance(candidates, list):
+            usable = [
+                item for item in candidates
+                if isinstance(item, dict) and isinstance(item.get("candidatePath"), list)
+            ]
+            if usable:
+                selected = next((item for item in usable if item.get("selected")), None)
+                if selected is None:
+                    target_bank = _number(current.get("targetBank"))
+                    target_aoa = _number(current.get("targetAoA"))
+                    target_heading = _number(current.get("targetHeading"))
 
-        def score(item: dict[str, Any]) -> float:
-            command = item.get("command") if isinstance(item.get("command"), dict) else item
-            return (
-                abs(_number(command.get("bank", command.get("targetBank")), target_bank) - target_bank)
-                + 0.5 * abs(_number(command.get("aoa", command.get("targetAoA")), target_aoa) - target_aoa)
-                + 0.05 * abs(_number(command.get("heading", command.get("targetHeading")), target_heading) - target_heading)
-            )
+                    def score(item: dict[str, Any]) -> float:
+                        command = item.get("command") if isinstance(item.get("command"), dict) else item
+                        return (
+                            abs(_number(command.get("bank", command.get("targetBank")), target_bank) - target_bank)
+                            + 0.5 * abs(_number(command.get("aoa", command.get("targetAoA")), target_aoa) - target_aoa)
+                            + 0.05 * abs(_number(command.get("heading", command.get("targetHeading")), target_heading) - target_heading)
+                        )
 
-        selected = min(usable, key=score)
-    return [item for item in selected.get("candidatePath", []) if isinstance(item, dict)]
+                    selected = min(usable, key=score)
+                historical_path = [
+                    item for item in selected.get("candidatePath", []) if isinstance(item, dict)
+                ]
+                if historical_path:
+                    return historical_path
+
+    # Current backends have one MM304 command policy and no independent candidate
+    # search. PLAN therefore means only the committed segment of the canonical
+    # lineage-checked forecast; PRED remains the longer propagated continuation.
+    return _committed_plan_path(record, current)
 
 
 def _load_latest_plan(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:

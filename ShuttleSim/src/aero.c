@@ -76,10 +76,12 @@ bool aero_load_book_csv(AeroTable *a,const char *path){
     fclose(f); a->book_count=n; a->book_enabled=n>0; return n>0;
 }
 
-static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alpha,double *lift_per_q,double *drag_per_q){
+static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alpha,
+        double *lift_per_q,double *drag_per_q,double *coverage_out){
+    if(coverage_out)*coverage_out=0.0;
     if(!a->book_enabled||a->book_count==0||q<1.0)return false;
     const double log2v=0.69314718055994530942;
-    double sw=0,sl=0,sd=0; size_t used=0;
+    double sw=0,sl=0,sd=0,coverage=0; size_t used=0;
     for(size_t i=0;i<a->book_count;i++){
         const AeroBookPoint *p=&a->book[i];
         double q_oct=fabs(log(q/p->q_pa))/log2v;
@@ -87,17 +89,28 @@ static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alph
         double alpha_delta=fabs(alpha-p->alpha_deg);
         if(q_oct>1.0||mach_delta>0.5||alpha_delta>10.0)continue;
         /* Weight at the actual book-cell scale (half octave, 0.25 Mach, 5 deg),
-           while retaining the wider certified support gates above. */
+           while retaining the wider support gates.  The force book is sparse and
+           those gates are support limits, not permission for full-strength
+           extrapolation.  Fade continuously through the outer quarter of each
+           gate so crossing (for example) alpha_delta=10 deg cannot jump from a
+           distant KSP sample to the fallback polar in one physics step. */
         double dq=q_oct/0.5;
         double dm=mach_delta/0.25;
         double da=alpha_delta/5.0;
         double d2=dq*dq+dm*dm+da*da;
         double support=pow(fmax(1.0,p->support),0.25);
         double w=support/(0.02+d2);
+        double q_edge=clampd((1.0-q_oct)/0.25,0.0,1.0);
+        double mach_edge=clampd((0.5-mach_delta)/0.125,0.0,1.0);
+        double alpha_edge=clampd((10.0-alpha_delta)/2.5,0.0,1.0);
+        double point_coverage=fmin(q_edge,fmin(mach_edge,alpha_edge));
+        coverage=fmax(coverage,point_coverage);
         sw+=w; sl+=w*p->lift_per_q_m2; sd+=w*p->drag_per_q_m2; used++;
     }
     if(used<1||sw<=0)return false;
-    *lift_per_q=sl/sw; *drag_per_q=sd/sw; return true;
+    *lift_per_q=sl/sw; *drag_per_q=sd/sw;
+    if(coverage_out)*coverage_out=clampd(coverage,0.0,1.0);
+    return true;
 }
 
 void aero_coefficients(const AeroTable *a,double mach,double alpha,double *cl,double *cd){
@@ -115,15 +128,20 @@ AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,do
     out.airspeed_mps=speed; if(speed<1e-6||atm.density_kg_m3<=0)return out;
     out.mach=(atm.speed_of_sound_mps>1)?speed/atm.speed_of_sound_mps:0;
     out.dynamic_pressure_pa=0.5*atm.density_kg_m3*speed*speed;
-    double lift_per_q=0,drag_per_q=0;
-    if(aero_book_lookup(a,out.dynamic_pressure_pa,out.mach,rad2deg(aoa),&lift_per_q,&drag_per_q)){
-        out.lift_n=out.dynamic_pressure_pa*lift_per_q;
-        out.drag_n=out.dynamic_pressure_pa*drag_per_q;
+    double cl,cd; aero_coefficients(a,out.mach,rad2deg(aoa),&cl,&cd);
+    double fallback_lift_per_q=a->reference_area_m2*cl;
+    double fallback_drag_per_q=a->reference_area_m2*cd;
+    double lift_per_q=0,drag_per_q=0,book_coverage=0;
+    if(aero_book_lookup(a,out.dynamic_pressure_pa,out.mach,rad2deg(aoa),
+            &lift_per_q,&drag_per_q,&book_coverage)){
+        lift_per_q=fallback_lift_per_q+book_coverage*(lift_per_q-fallback_lift_per_q);
+        drag_per_q=fallback_drag_per_q+book_coverage*(drag_per_q-fallback_drag_per_q);
     }else{
-        double cl,cd; aero_coefficients(a,out.mach,rad2deg(aoa),&cl,&cd);
-        out.lift_n=out.dynamic_pressure_pa*a->reference_area_m2*cl;
-        out.drag_n=out.dynamic_pressure_pa*a->reference_area_m2*cd;
+        lift_per_q=fallback_lift_per_q;
+        drag_per_q=fallback_drag_per_q;
     }
+    out.lift_n=out.dynamic_pressure_pa*lift_per_q;
+    out.drag_n=out.dynamic_pressure_pa*drag_per_q;
     Vec3 fwd=v3_normalized(vair), up=v3_normalized(p);
     Vec3 right=v3_normalized(v3_cross(fwd,up));
     if(v3_norm(right)<1e-8) right=v3(0,1,0);

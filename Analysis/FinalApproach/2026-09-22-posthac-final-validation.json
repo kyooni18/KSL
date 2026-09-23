@@ -1,0 +1,190 @@
+{
+  "result": "REJECTED_AT_INITIAL_ADMISSION",
+  "landing_success": false,
+  "scope": "post-HAC final alignment / TAEM final-intercept / final approach only; HAC planning disabled",
+  "source_recording": "ShuttleSim/runs/mm305-flylearn-posthac-600-20260922/simulator-telemetry.jsonl",
+  "source_ut": 66768.169814,
+  "replay_scenario": "ShuttleSim/scenarios/recorded-posthac-final-align-20260922.ini",
+  "selection_reason": "Current-day recorded post-HAC state nearest the ~3.5 km final-alignment station with centerline and RW09 alignment; current aero replay reproduces recorded forces; it is the least-steep-FPA candidate among the qualifying archive states. It was then subjected to the required physical-reachability admission check and failed.",
+  "snapshot": {
+    "runway_local_along_m": -3496.79653341642,
+    "runway_local_cross_m": 7.52476836577993,
+    "mean_altitude_m": 1480.088,
+    "radar_altitude_m": 1480.088,
+    "inertial_velocity_mps": {
+      "x": -219.410775,
+      "y": 134.472349,
+      "z": -0.015457
+    },
+    "air_relative_inertial_velocity_mps": {
+      "x": -84.375978341,
+      "y": 22.572156045,
+      "z": -0.015457
+    },
+    "air_relative_local_velocity_mps": {
+      "east_mps": 79.36998618933765,
+      "north_mps": -0.046822049847265325,
+      "up_mps": -36.457
+    },
+    "air_relative_course_deg": 90.0338,
+    "ground_track_deg": 90.0338,
+    "true_airspeed_mps": 87.343,
+    "horizontal_speed_mps": 79.37,
+    "vertical_speed_mps": -36.457,
+    "fpa_deg": -24.670745,
+    "bank_deg": 13.4751,
+    "aoa_deg": 2.9973,
+    "dynamic_pressure_pa": 3391.625403,
+    "mass_kg": 40252.917969,
+    "lift_n": 362688.932105,
+    "drag_n": 166062.000974,
+    "situation": "flying"
+  },
+  "targets": {
+    "runway_heading_deg": 90.0,
+    "final_alignment_runway_local_m": {
+      "along": -3500.0,
+      "cross": 0.0
+    },
+    "final_alignment_target_altitude_m_at_minus3500": 1343.8958199317083,
+    "final_approach_profile_altitude_m_at_snapshot_range": 1342.7298534488186,
+    "final_alignment_target_speed_mps": 160.0,
+    "final_approach_reference_speed_mps": 115.0,
+    "minimum_safe_speed_mps": 85.0,
+    "target_fpa_deg": -20.0,
+    "flare_altitude_m": 55.0,
+    "touchdown_sink_target_mps": -1.5
+  },
+  "errors": {
+    "along_m": 3.2034665835799387,
+    "cross_m": 7.52476836577993,
+    "heading_deg": 0.033799999999999386,
+    "air_course_deg": 0.033799999999999386,
+    "ground_track_deg": 0.033799999999999386,
+    "altitude_to_profile_m": 137.35814655118133,
+    "fpa_deg": -4.670745,
+    "speed_to_alignment_mps": -72.657,
+    "speed_to_final_reference_mps": -27.656999999999996
+  },
+  "specific_energy_height": {
+    "actual_m": 1870.8364057418726,
+    "target_at_115_mps_m": 2020.1165857919143,
+    "error_vs_115_m": -149.28018005004174,
+    "target_at_160_mps_m": 2653.966174657382,
+    "error_vs_160_m": -783.1297689155094,
+    "required_dissipation_per_m_vs_115": -0.042690553660608005,
+    "required_dissipation_per_m_vs_160": -0.22395634445175466
+  },
+  "capture_envelope": {
+    "valid": true,
+    "reachable": true,
+    "runway_time_s": {
+      "available": 75.555011,
+      "required": 5.656909,
+      "margin": 69.898103
+    },
+    "vertical_recovery_m": {
+      "available": 1480.088,
+      "required": 238.189865,
+      "margin": 1241.898135
+    },
+    "speed_mps": {
+      "available": 87.343,
+      "required": 85.0,
+      "margin": 2.343
+    },
+    "dynamic_pressure_pa": {
+      "limit": 45000.0,
+      "actual": 3391.625403,
+      "margin": 41608.374597
+    },
+    "load_g": {
+      "limit": 3.5,
+      "actual": 1.010518,
+      "margin": 2.489482
+    },
+    "runway_remaining_m": {
+      "available": 5996.796533,
+      "required": 0.0,
+      "margin": 5996.796533
+    },
+    "lateral_capture_time_s": 5.656909,
+    "heading_capture_time_s": 4.677088,
+    "control_response_time_s": 4.675636,
+    "available_lateral_accel_mps2": 32.264346,
+    "maximum_normal_accel_mps2": 34.335,
+    "recoverable_fpa_deg": 64.136336
+  },
+  "preflare_plan": {
+    "feasible": false,
+    "reject_reason": "preflare-speed-aoa-or-stall-gate",
+    "trigger_altitude_m": 470.220129,
+    "required_height_m": 415.220129,
+    "response_time_s": 8.056156,
+    "pull_time_s": 10.386182,
+    "target_aoa_deg": 28.0,
+    "target_sink_mps": -1.5,
+    "target_drag_accel_mps2": 20.242707,
+    "air_path_m": 907.160295,
+    "predicted_speed_squared_m2ps2": -20991.385671,
+    "minimum_speed_squared_m2ps2": 7225.0,
+    "kinetic_margin_half_v2": -14108.1928355,
+    "equivalent_initial_speed_needed_if_other_terms_fixed_mps": 189.328248
+  },
+  "trace": [
+    {
+      "ut": 66768.169814,
+      "event": "recorded state restored",
+      "phase": "Idle",
+      "airborne": true
+    },
+    {
+      "ut": 66768.169814,
+      "event": "runway capture envelope evaluated",
+      "valid": true,
+      "reachable": true
+    },
+    {
+      "ut": 66768.169814,
+      "event": "preflare plan evaluated",
+      "result": "reject",
+      "reason": "preflare-speed-aoa-or-stall-gate"
+    },
+    {
+      "ut": 66768.169814,
+      "event": "terminal delivery contract",
+      "valid": false,
+      "reason": "preflare plan infeasible"
+    },
+    {
+      "ut": 66768.169814,
+      "event": "TAEM/final-intercept handoff",
+      "transition": "none",
+      "recoveryActive": false
+    }
+  ],
+  "archive_search": {
+    "telemetry_files_with_3km_station": 412,
+    "strict_qualified_states": 23,
+    "original_states_admission_tested": 19,
+    "accepted": 0,
+    "rejected": 19,
+    "common_reject_reason": "preflare-speed-aoa-or-stall-gate"
+  },
+  "failure_classification": [
+    "energy guidance / post-HAC energy-state failure",
+    "TAEM handoff predicate failure"
+  ],
+  "first_exhausted_margin": "preflare predicted kinetic-speed margin",
+  "failure_transition": "guidance_begin_final_test -> terminal_outer_gate -> terminal_preflare_plan -> preflare-speed-aoa-or-stall-gate; no guidance command issued and no TAEM transition occurred",
+  "smallest_fix_proposal": "Do not weaken final guidance. Record a new genuine post-HAC final-alignment state that arrives with substantially more kinetic reserve and a shallower sink/FPA, close to the configured 160 m/s alignment speed and -20 deg final slope, then replay that exact state through this final-only harness.",
+  "rerun_criteria": [
+    "recorded, not synthetic, state near along=-3500 m and cross=0",
+    "airborne and RW09 aligned",
+    "current-model replay reproduces recorded force/kinematics",
+    "terminal_preflare_plan feasible with predicted kinetic margin >= 0",
+    "runway capture envelope valid/reachable with positive authority margins",
+    "terminal delivery contract valid/feasible before starting the 120 s horizon",
+    "no recovery/replan/stale/lost condition at admission"
+  ]
+}

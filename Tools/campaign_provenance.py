@@ -12,6 +12,8 @@ import subprocess
 import sys
 from typing import Any
 
+from clanding_layout import source_root as clanding_source_root
+
 
 @dataclass(frozen=True)
 class PinnedCampaignArtifacts:
@@ -32,8 +34,8 @@ class PinnedCampaignArtifacts:
 RUNTIME_SOURCE_RELATIVE_PATHS = (
     "run_headless.command",
     "Tools/campaign_provenance.py",
+    "Tools/clanding_layout.py",
     "Tools/headless_flight.py",
-    "AgentWork/RunGuard-execution-boundary/detached_runner.py",
     "Tools/ksp_test_guard.py",
     "Tools/postflight_acceptance.py",
     "Tools/postflight_75km_acceptance.py",
@@ -79,10 +81,12 @@ def runtime_source_hashes(root: Path) -> dict[str, str]:
 
 def production_source_hashes(root: Path) -> dict[str, str]:
     root = root.resolve()
-    source_root = root / "CLanding"
+    source_root = clanding_source_root(root)
     paths = [
-        path for path in source_root.iterdir()
-        if path.is_file() and (path.suffix in {".c", ".h"} or path.name == "Makefile")
+        path for path in source_root.rglob("*")
+        if path.is_file()
+        and "build" not in path.relative_to(source_root).parts
+        and (path.suffix in {".c", ".h"} or path.name == "Makefile")
     ]
     hashes = {
         str(path.relative_to(root)): sha256_file(path)
@@ -138,7 +142,7 @@ def pin_campaign_artifacts(
     source_config_data, config_source_stat = _read_stable_file(config)
     after_sources = production_source_hashes(root)
     if before_sources != after_sources:
-        raise RuntimeError("CLanding production source changed while campaign artifacts were being pinned")
+        raise RuntimeError("Selected CLanding source changed while campaign artifacts were being pinned")
 
     if effective_configuration is None:
         effective_config_data = source_config_data

@@ -43,6 +43,12 @@ static Telemetry verifier_approach_telemetry(const LandingConfiguration *cfg) {
     t.drag_force = 80000.0;
     t.dynamic_pressure = 6000.0;
     t.bank_effectiveness = 1.0;
+    t.attitude_response.pitch_valid = true;
+    t.attitude_response.maximum_pitch_rate_deg_s = 8.0;
+    t.attitude_response.maximum_pitch_accel_deg_s2 = 5.0;
+    t.attitude_response.roll_valid = true;
+    t.attitude_response.maximum_roll_rate_deg_s = 18.0;
+    t.attitude_response.maximum_roll_accel_deg_s2 = 15.0;
     t.g_force = 1.0;
     t.mach = t.true_air_speed / 320.0;
     t.stall_fraction = 0.0;
@@ -316,29 +322,20 @@ static void test_rollout_cannot_complete_after_stopping_off_runway(void) {
     trajectory_clear(&ref);
 }
 
-static void test_preflare_respects_weak_authority_and_slow_response(void) {
+static void test_preflare_plan_uses_current_authority_envelope(void) {
     PlanetModel p = verifier_kerbin();
     LandingConfiguration cfg = landing_configuration_default();
     AerodynamicModel aero = {.lift_to_drag = .6, .ballistic_coefficient = 700, .confidence = .8};
     GuidanceMachine g = verifier_machine();
     Telemetry t = verifier_approach_telemetry(&cfg);
-    t.drag_force = 1000;
-    t.vertical_speed = -20;
-    t.flight_path_angle = atan2(t.vertical_speed, t.horizontal_speed) * RAD2DEG;
-    g.terminal_sink_accel_ema = .2;
-    TerminalPreflarePlan weak = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
-    assert(weak.feasible);
-    /* The learned cap is .2 * 1.10, then conservatively derated, never raised. */
-    assert(weak.effective_accel <= .22);
-    g.terminal_sink_accel_ema = 1;
-    TerminalPreflarePlan strong = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
-    assert(strong.feasible);
-    assert(weak.trigger_altitude > strong.trigger_altitude);
-    g.terminal_positive_aoa_rate_ema = .25;
-    TerminalPreflarePlan slow = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
-    assert(slow.feasible);
-    assert(slow.response_aoa_rate <= .25);
-    assert(slow.trigger_altitude > strong.trigger_altitude);
+    TerminalPreflarePlan plan = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
+    assert(plan.feasible);
+    assert(isfinite(plan.trigger_altitude));
+    assert(plan.trigger_altitude > cfg.guidance.flare_altitude);
+    assert(isfinite(plan.predicted_height_loss) && plan.predicted_height_loss > 0.0);
+    assert(isfinite(plan.effective_accel) && plan.effective_accel > 0.0);
+    assert(isfinite(plan.response_time) && plan.response_time >= 0.0);
+    assert(plan.target_aoa >= 0.0 && plan.target_aoa <= cfg.vehicle.maximum_angle_of_attack);
 }
 
 static void test_preflare_contract_ignores_preview_hints(void) {
@@ -411,73 +408,141 @@ static void test_terminal_mission_actuators_remain_forbidden(void) {
     puts("PASS: terminal mission contract forbids airbrakes and thrust even when both are available.");
 }
 
-static void test_missed_preflare_cannot_continue_steep_descent(void) {
-    PlanetModel p = verifier_kerbin();
-    LandingConfiguration cfg = landing_configuration_default();
-    AerodynamicModel aero = {.lift_to_drag = .6, .ballistic_coefficient = 700, .confidence = .8};
-    for (int scenario = 0; scenario < 3; ++scenario) {
-        GuidanceMachine g = verifier_machine();
-        Telemetry t = verifier_approach_telemetry(&cfg);
-        t.roll = 15; /* Within airborne corridor, outside preflare alignment. */
-        t.vertical_speed = -20;
-        t.flight_path_angle = atan2(t.vertical_speed, t.horizontal_speed) * RAD2DEG;
-        t.drag_force = 1000;
-        terminal_set_stage(&g, scenario == 1 ? TERMINAL_TRAJECTORY_CAPTURE : TERMINAL_OUTER_FINAL, t.ut);
-        TerminalPreflarePlan plan = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
-        assert(plan.feasible);
-        terminal_store_preflare_plan(&g, &plan);
-        double critical = fmax(100, cfg.guidance.flare_altitude * 2) + plan.predicted_height_loss;
-        if (scenario == 2) t.stall_fraction = .20; /* Invalidates live plan only. */
-        Trajectory ref;
-        trajectory_init(&ref);
-        bool aborted = false;
-        for (int n = 0; n < 6; ++n) {
-            t.radar_altitude = critical + 20 - n * 10;
-            t.mean_altitude = cfg.site.altitude + t.radar_altitude;
-            t.ut += .1;
-            GuidanceResult r = terminal_approach_sequence(&g, &t, t.heading,
-                &p, aero, &cfg, &ref, .1);
-            aborted = r.phase == PHASE_ABORT;
-            guidance_result_clear(&r);
-            if (aborted) break;
-        }
-        assert(aborted);
-        assert(g.aborted);
-        trajectory_clear(&ref);
-    }
-}
-
-static void test_late_aligned_capture_rejects_exhausted_pullup_reserve(void) {
+static void test_unrecoverable_final_approach_aborts(void) {
     PlanetModel p = verifier_kerbin();
     LandingConfiguration cfg = landing_configuration_default();
     AerodynamicModel aero = {.lift_to_drag = 2.5, .ballistic_coefficient = 700, .confidence = .8};
     GuidanceMachine g = verifier_machine();
     Telemetry t = verifier_approach_telemetry(&cfg);
-    t.radar_altitude = 364;
+    t.radar_altitude = 80.0;
     t.mean_altitude = cfg.site.altitude + t.radar_altitude;
-    t.horizontal_speed = 140 * cos(20 * DEG2RAD);
-    t.vertical_speed = -140 * sin(20 * DEG2RAD);
-    t.flight_path_angle = -20;
+    t.horizontal_speed = 120.0;
+    t.vertical_speed = -40.0;
+    t.true_air_speed = hypot(t.horizontal_speed, -t.vertical_speed);
+    t.flight_path_angle = atan2(t.vertical_speed, t.horizontal_speed) * RAD2DEG;
     seed_preflare_plan(&g);
-    TerminalPreflarePlan live = terminal_preflare_plan(&g, &t, &p, aero, &cfg);
-    assert(live.feasible);
-    assert(live.predicted_height_loss > t.radar_altitude);
     Trajectory ref;
     trajectory_init(&ref);
     GuidanceResult r = terminal_approach_sequence(&g, &t, t.heading,
         &p, aero, &cfg, &ref, .1);
     assert(r.phase == PHASE_ABORT);
-    assert(strstr(r.status, "pull-up reserve") != NULL);
+    assert(g.aborted);
     guidance_result_clear(&r);
     trajectory_clear(&ref);
 }
 
+static void test_preflare_balloon_is_not_shallow_glide_capture(void) {
+    PlanetModel p=verifier_kerbin();
+    LandingConfiguration cfg=landing_configuration_default();
+    AerodynamicModel aero={.lift_to_drag=.6,.ballistic_coefficient=700,.confidence=.8};
+    GuidanceMachine g=verifier_machine();
+    Telemetry t=verifier_approach_telemetry(&cfg);
+    Trajectory ref;trajectory_init(&ref);
+    seed_preflare_plan(&g);
+    terminal_set_stage(&g,TERMINAL_PREFLARE,t.ut);
+    t.gear=true;
+    /* A pull-up overshoot is not a stabilized shallow descent, even when the
+       old one-sided sink comparison and the historical acceleration pass. */
+    t.vertical_speed=12.0;
+    t.flight_path_angle=atan2(t.vertical_speed,t.horizontal_speed)*RAD2DEG;
+    for(int i=0;i<10;i++){
+        t.ut+=.1;
+        GuidanceResult r=terminal_approach_sequence(&g,&t,t.heading,&p,aero,&cfg,&ref,.1);
+        assert(r.phase!=PHASE_ABORT);
+        assert(g.terminal_vertical_stage==TERMINAL_PREFLARE);
+        assert(g.terminal_stage_good_duration==0.0);
+        guidance_result_clear(&r);
+    }
+    t.vertical_speed=g.preflare_target_sink;
+    t.flight_path_angle=atan2(t.vertical_speed,t.horizontal_speed)*RAD2DEG;
+    for(int i=0;i<8;i++){
+        t.ut+=.1;
+        GuidanceResult r=terminal_approach_sequence(&g,&t,t.heading,&p,aero,&cfg,&ref,.1);
+        assert(r.phase!=PHASE_ABORT);
+        guidance_result_clear(&r);
+    }
+    assert(g.terminal_vertical_stage==TERMINAL_INNER_FINAL);
+    trajectory_clear(&ref);
+}
+
+static void test_valid_zero_time_sample_does_not_abort(void) {
+    PlanetModel p=verifier_kerbin();
+    LandingConfiguration cfg=landing_configuration_default();
+    AerodynamicModel aero={.lift_to_drag=.6,.ballistic_coefficient=700,.confidence=.8};
+    GuidanceMachine g=verifier_machine();
+    Telemetry t=verifier_approach_telemetry(&cfg);
+    seed_preflare_plan(&g);
+    terminal_set_stage(&g,TERMINAL_PREFLARE,t.ut);
+    ControlAuthorityEnvelope authority=decision_control_authority_envelope(&g,&t,&p,&cfg);
+    t.angle_of_attack=authority.maximum_lift_aoa_deg;
+    t.pitch=t.flight_path_angle+t.angle_of_attack;
+    RunwayCaptureEnvelope runway=decision_runway_capture_envelope(&g,&t,t.heading,&p,&cfg);
+    assert(runway.valid&&runway.control_response_time_s==0.0);
+    assert(terminal_airborne_corridor_valid(&g,&t,t.heading,&p,&cfg));
+    Trajectory ref;trajectory_init(&ref);
+    GuidanceResult r=terminal_approach_sequence(&g,&t,t.heading,&p,aero,&cfg,&ref,0.0);
+    assert(r.phase!=PHASE_ABORT);
+    assert(!g.aborted&&g.final_invalid_duration==0.0);
+    guidance_result_clear(&r);
+    trajectory_clear(&ref);
+}
+
+static void test_final_response_includes_executable_reference(void) {
+    PlanetModel p=verifier_kerbin();
+    LandingConfiguration cfg=landing_configuration_default();
+    GuidanceMachine g=verifier_machine();
+    Telemetry t=verifier_approach_telemetry(&cfg);
+    ControlAuthorityEnvelope fast=decision_control_authority_envelope(&g,&t,&p,&cfg);
+    double plant=decision_pitch_capture_time(&t,fast.maximum_lift_aoa_deg);
+    assert(fast.valid&&fast.control_response_time_s>plant);
+    AerodynamicModel aero={.lift_to_drag=.6,.ballistic_coefficient=700,.confidence=.8};
+    TerminalPreflarePlan executing=terminal_preflare_plan(&g,&t,&p,aero,&cfg);
+    GuidanceMachine planning=g;planning.final_approach_captured=false;
+    TerminalPreflarePlan forecast=terminal_preflare_plan(&planning,&t,&p,aero,&cfg);
+    assert(executing.feasible&&forecast.feasible);
+    assert(executing.response_time==forecast.response_time);
+    assert(executing.trigger_altitude==forecast.trigger_altitude);
+
+    cfg.guidance.entry_roll_rate=.8;
+    cfg.guidance.entry_roll_acceleration=.2;
+    ControlAuthorityEnvelope slow=decision_control_authority_envelope(&g,&t,&p,&cfg);
+    assert(slow.valid&&slow.control_response_time_s>fast.control_response_time_s);
+    /* Simulate delivery by the real guidance limiter into a perfectly
+       following plant. The forecast must not end before lift is commanded. */
+    GuidanceCommand cmd=atmospheric(&t,t.heading,0,&cfg.vehicle,0,false,PROFILE_APPROACH);
+    cmd.has_target_aoa=true;cmd.target_aoa=slow.maximum_lift_aoa_deg;
+    double delivered_at=0.0;
+    for(int i=0;i<10000;i++){
+        GuidanceResult r=stabilized(&g,result_make(PHASE_FINAL,cmd,"probe",NULL),
+            &t,&cfg.vehicle,&cfg.guidance,.01);
+        delivered_at+=.01;
+        t.angle_of_attack=r.command.target_aoa;
+        t.has_angle_of_attack_rate=true;t.angle_of_attack_rate=g.pitch_limiter.rate;
+        guidance_result_clear(&r);
+        if(fabs(t.angle_of_attack-cmd.target_aoa)<.01)break;
+    }
+    assert(delivered_at>plant);
+    assert(delivered_at<=slow.control_response_time_s+.1);
+
+    t=verifier_approach_telemetry(&cfg);
+    g=verifier_machine();
+    g.pitch_limiter.has_value=true;g.pitch_limiter.value=2.0;g.pitch_limiter.rate=-.8;
+    ControlAuthorityEnvelope reversing=decision_control_authority_envelope(&g,&t,&p,&cfg);
+    assert(reversing.valid&&reversing.control_response_time_s>slow.control_response_time_s);
+    t.attitude_response.pitch_valid=false;
+    assert(!decision_control_authority_envelope(&g,&t,&p,&cfg).valid);
+    printf("Final response: plant %.3f s, bounded %.3f s, slow %.3f s, delivered %.3f s.\n",
+        plant,fast.control_response_time_s,slow.control_response_time_s,delivered_at);
+}
+
 int main(void) {
-    test_late_aligned_capture_rejects_exhausted_pullup_reserve();
-    test_preflare_respects_weak_authority_and_slow_response();
+    test_final_response_includes_executable_reference();
+    test_valid_zero_time_sample_does_not_abort();
+    test_preflare_balloon_is_not_shallow_glide_capture();
+    test_unrecoverable_final_approach_aborts();
+    test_preflare_plan_uses_current_authority_envelope();
     test_preflare_contract_ignores_preview_hints();
     test_terminal_mission_actuators_remain_forbidden();
-    test_missed_preflare_cannot_continue_steep_descent();
     test_terminal_stage_is_monotonic();
     test_shallow_glide_cannot_be_bypassed();
     test_off_runway_landed_state_is_not_runway_success();

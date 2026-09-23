@@ -26,6 +26,12 @@ static Telemetry sample(void){
     t.flight_path_angle=-7;t.vertical_speed=1923*sin(-7*DEG2RAD);
     t.horizontal_speed=1923*cos(-7*DEG2RAD);t.mass=40251;t.lift_force=t.mass*5;
     t.drag_force=t.mass*3;t.dynamic_pressure=3000;t.g_force=1;t.bank_effectiveness=1;
+    t.attitude_response.pitch_valid=true;
+    t.attitude_response.maximum_pitch_rate_deg_s=8.0;
+    t.attitude_response.maximum_pitch_accel_deg_s2=5.0;
+    t.attitude_response.roll_valid=true;
+    t.attitude_response.maximum_roll_rate_deg_s=18.0;
+    t.attitude_response.maximum_roll_accel_deg_s2=15.0;
     t.angle_of_attack=18;t.ground_track_heading=t.heading=92.4;t.roll=25;
     t.runway_along_track=-303000;t.runway_cross_track=-18675;t.range_to_site=303575;
     t.latitude=-1;t.longitude=-95;t.mach=6;t.aerodynamic_confidence=.8;
@@ -39,6 +45,7 @@ static GuidanceMachine machine(Telemetry*t,PlanetModel*p,LandingConfiguration*cf
     g.entry_reference_speed=2050;g.entry_reference_altitude=50000;g.entry_reference_range=440000;
     AerodynamicModel aero={.lift_to_drag=.8,.ballistic_coefficient=700,.confidence=.8};
     entry_publish_taem_tangent_target(&g,t,t->ground_track_heading,p,aero,cfg);
+    assert(g.taem_interface_target.valid);
     assert(fabs(norm_signed_deg(g.taem_interface_target.course-
         cfg->site.runway_heading))==90.0);
     return g;
@@ -593,7 +600,9 @@ static void test_overdue_terminal_geometry_retains_lateral_authority(void){
     t.flight_path_angle=path_fpa-1.0;
     t.vertical_speed=t.true_air_speed*sin(t.flight_path_angle*DEG2RAD);
     g.entry_reversal_scheduled=true;g.entry_reversal_is_final=false;
-    g.entry_reversal_sign=-1.0;g.entry_reversal_ut=t.ut-50.0;
+    double terminal_side=norm_signed_deg(g.taem_interface_target.course-
+        cfg.site.runway_heading)>=0.0?1.0:-1.0;
+    g.entry_reversal_sign=terminal_side;g.entry_reversal_ut=t.ut-50.0;
     g.has_s_turn_leg_started=true;g.s_turn_leg_started_ut=t.ut-100.0;
     assert(entry_program_terminal_geometry_blocked(&g,&t,&cfg));
     double vertical=entry_program_vertical_bank_ceiling(&g,&t,&p,
@@ -603,7 +612,10 @@ static void test_overdue_terminal_geometry_retains_lateral_authority(void){
         .bank_cap=cfg.vehicle.maximum_bank_angle};
     entry_program_apply_geometry_bank_demand(&g,&t,&p,
         (AerodynamicModel){.lift_to_drag=2.0,.ballistic_coefficient=700,.confidence=.9},&cfg,45.0,&plan);
-    assert(fabs(plan.target_bank)>vertical+5.0);
+    /* Geometry cannot spend vertical lift that the live altitude envelope
+       has already reserved.  Retain the owned turn at the feasible ceiling. */
+    assert(fabs(plan.target_bank)<=vertical+1e-9);
+    assert(plan.target_bank*g.s_turn_sign>=0.0);
     assert(fabs(plan.target_bank)<=dynamic_bank_limit(&t,&cfg.vehicle)+1e-9);
 }
 

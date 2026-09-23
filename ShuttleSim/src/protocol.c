@@ -24,19 +24,23 @@ static bool json_bool(const char *s,const char *key,bool *out){
 }
 bool protocol_parse_command(const char *json,SimCommand *cmd){
     memset(cmd,0,sizeof(*cmd));
-    double aoa=0,bank=0; bool ha=json_number(json,"aoa_deg",&aoa), hb=json_number(json,"bank_deg",&bank);
+    double aoa=0,bank=0,throttle=0,wheel_steering=0; bool ha=json_number(json,"aoa_deg",&aoa), hb=json_number(json,"bank_deg",&bank);
     if(!ha) ha=json_number(json,"aoa",&aoa);
     if(!hb) hb=json_number(json,"bank",&bank);
     if(ha&&hb){ cmd->has_attitude=true; cmd->aoa_deg=aoa; cmd->bank_deg=bank; }
+    if(json_number(json,"throttle",&throttle)){cmd->has_throttle=true;cmd->throttle=throttle;}
     bool gear=false; if(json_bool(json,"gear_down",&gear)){cmd->has_gear=true;cmd->gear_down=gear;}
     bool brakes=false; if(json_bool(json,"brakes",&brakes)){cmd->has_brakes=true;cmd->brakes=brakes;}
+    bool airbrakes=false; if(json_bool(json,"airbrakes",&airbrakes)){cmd->has_airbrakes=true;cmd->airbrakes=airbrakes;}
+    bool hw=json_number(json,"wheel_steering",&wheel_steering);if(!hw)hw=json_number(json,"wheelSteering",&wheel_steering);
+    if(hw){if(wheel_steering>1.0)wheel_steering=1.0;else if(wheel_steering< -1.0)wheel_steering=-1.0;cmd->has_wheel_steering=true;cmd->wheel_steering=wheel_steering;}
     if(strstr(json,"\"step\":true"))cmd->step=true;
     if(strstr(json,"\"pause\":true"))cmd->pause=true;
     if(strstr(json,"\"resume\":true"))cmd->resume=true;
     /* type matching without regex */
     if(strstr(json,"\"type\":\"pause\"")||strstr(json,"\"type\": \"pause\""))cmd->pause=true;
     if(strstr(json,"\"type\":\"resume\"")||strstr(json,"\"type\": \"resume\""))cmd->resume=true;
-    return cmd->has_attitude||cmd->has_gear||cmd->has_brakes||cmd->pause||cmd->resume||cmd->step;
+    return cmd->has_attitude||cmd->has_gear||cmd->has_brakes||cmd->has_airbrakes||cmd->has_wheel_steering||cmd->has_throttle||cmd->pause||cmd->resume||cmd->step;
 }
 bool protocol_open(Protocol *p,int command_port,const char *host,int telemetry_port,int web_telemetry_port){
     memset(p,0,sizeof(*p)); p->command_fd=-1;p->telemetry_fd=-1;

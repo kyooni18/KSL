@@ -22,6 +22,7 @@ static Telemetry entry_sample(void){
 static GuidanceMachine entry_machine(void){
     GuidanceMachine g;guidance_machine_init(&g);g.automation_engaged=true;
     g.phase=PHASE_ENTRY_ENERGY;g.s_turn_sign=1;g.terminal_prediction_ut=90;
+    g.entry_final_reversal_completed=true;
     g.taem_interface_target.valid=true;g.taem_interface_target.along_track=-32879;
     g.taem_interface_target.cross_track=12000;g.taem_interface_target.altitude=21800;
     g.taem_interface_target.speed=775.1;g.taem_interface_target.course=90;
@@ -39,6 +40,32 @@ static PlanetModel test_planet(void){
     p.atmosphere_density[0]=1.14;p.atmosphere_density[1]=0.0001;
     return p;
 }
+
+static void final_reversal_gate_test(void){
+    LandingConfiguration cfg=landing_configuration_default();landing_configuration_normalize(&cfg);
+    PlanetModel p=test_planet();
+    AerodynamicModel aero={.lift_to_drag=.8,.ballistic_coefficient=800,.confidence=1};
+    GuidanceMachine g=entry_machine();Telemetry t=entry_sample();
+    g.entry_final_reversal_completed=false;
+    g.terminal_prediction_ut=-INFINITY;
+    assert(!guidance_terminal_preview_allowed(&g));
+    assert(!guidance_plan_terminal_preview(&g,&t,&p,aero,&cfg));
+    assert(!isfinite(g.terminal_prediction_ut));
+    terminal_predict(&g,&t,90,&p,aero,&cfg,.1);
+    assert(!isfinite(g.terminal_prediction_ut));
+    assert(!g.terminal_candidate.valid);
+
+    GuidanceMachine request=g,result=g,live=g;
+    result.terminal_prediction_ut=t.ut;
+    result.terminal_candidate.valid=true;
+    result.terminal_candidate.arrival_ut=t.ut+20.0;
+    assert(!guidance_accept_terminal_preview(&live,&request,&result,&t,&cfg));
+
+    g.entry_final_reversal_completed=true;
+    assert(guidance_terminal_preview_allowed(&g));
+    puts("PASS: terminal preview planning is gated until Final Reversal completes.");
+}
+
 static void bank_allocation_test(void){
     LandingConfiguration cfg=landing_configuration_default();landing_configuration_normalize(&cfg);
     PlanetModel p=test_planet();
@@ -142,6 +169,15 @@ static void energy_uncertainty_monotonicity_test(void){
     double minimum_work=terminal_projected_drag_work(
         &g,&t,&p,aero,&cfg.vehicle,&cfg.guidance,target_aoa,minimum_path,slope);
     assert(isfinite(minimum_work)&&minimum_work>0.0);
+    /* Sub-frame settled-roll residuals are not an integration mesh. They
+       must give the same drag work as zero roll instead of refining an
+       entire kilometre-scale path to sub-metre segments. */
+    t.roll=1e-8;t.roll_rate=0.0;
+    double settled_work=terminal_projected_drag_work(
+        &g,&t,&p,aero,&cfg.vehicle,&cfg.guidance,target_aoa,minimum_path,slope);
+    assert(isfinite(settled_work));
+    assert(fabs(settled_work-minimum_work)<=1e-9*fmax(1.0,minimum_work));
+    t.roll=0.0;
 
     double gate_altitude=cfg.site.altitude+cfg.guidance.flare_altitude;
     double available=entry_remaining_specific_energy(
@@ -173,7 +209,7 @@ static void energy_uncertainty_monotonicity_test(void){
 }
 int main(void){
     candidate_margin_order_test();energy_uncertainty_monotonicity_test();
-    bank_allocation_test();publication_test();deferred_search_test();
+    final_reversal_gate_test();bank_allocation_test();publication_test();deferred_search_test();
     printf("Native snapshot sizes: guidance=%zu physics=%zu bytes.\n",sizeof(GuidanceMachine),sizeof(VesselPhysicsModel));
     return 0;
 }

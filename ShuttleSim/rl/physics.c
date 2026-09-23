@@ -32,14 +32,19 @@ void *offline_create(const char *scenario, const char *atmosphere,
 
 void offline_destroy(void *handle) { free(handle); }
 
-/* Each call uses the original fixed 20 ms integrator and attitude response. */
+/* Advance one guidance interval.  The caller supplies elapsed simulator time;
+ * the simulator derives exact physics substeps from its configured timestep,
+ * including a partial final step.  Replay speed is independent of a wall clock
+ * and the ABI has no fixed tick-count cap. */
 int offline_step(void *handle, double aoa, double bank, int gear, int brakes,
-                 int ticks) {
-  /* 1..50 ticks is the offline ABI's 20 ms integration batch domain: at most
-   * one policy-second per call, not a flight-behavior threshold. */
-  if (!handle || !isfinite(aoa) || !isfinite(bank) || ticks < 1 || ticks > 50)
+                 double duration_s) {
+  if (!handle || !isfinite(aoa) || !isfinite(bank) ||
+      !isfinite(duration_s) || !(duration_s > 0.0))
     return 0;
   OfflineSim *env = handle;
+  const double physics_dt_s = env->sim.physics_dt_s;
+  if (!isfinite(physics_dt_s) || !(physics_dt_s > 0.0))
+    return 0;
   SimCommand command = {.has_attitude = true,
                         .aoa_deg = aoa,
                         .bank_deg = bank,
@@ -48,8 +53,18 @@ int offline_step(void *handle, double aoa, double bank, int gear, int brakes,
                         .has_brakes = true,
                         .brakes = brakes != 0};
   sim_apply_command(&env->sim, &command);
-  for (int i = 0; i < ticks; ++i)
-    sim_step(&env->sim, 0.02);
+  double elapsed_s = 0.0;
+  while (elapsed_s < duration_s) {
+    const double remaining_s = duration_s - elapsed_s;
+    const double step_s = fmin(physics_dt_s, remaining_s);
+    if (!isfinite(step_s) || !(step_s > 0.0))
+      return 0;
+    sim_step(&env->sim, step_s);
+    const double next_elapsed_s = elapsed_s + step_s;
+    if (!(next_elapsed_s > elapsed_s))
+      return 0;
+    elapsed_s = next_elapsed_s;
+  }
   return 1;
 }
 
@@ -215,8 +230,10 @@ int offline_randomize(void *handle, double mass, double density, double lift,
     return 0;
   e->sim.state.mass_kg *= mass;
   e->sim.state.velocity_i_mps.x += velocity;
-  e->sim.state.attitude.pitch_wn *= lag;
-  e->sim.state.attitude.roll_wn *= lag;
+  /* The simulator has no low-level servo lag model.  Preserve the stress
+     dimension by varying the configured target-following rate instead. */
+  e->sim.state.attitude.max_pitch_rate_rad_s *= lag;
+  e->sim.state.attitude.max_roll_rate_rad_s *= lag;
   for (size_t i = 0; i < e->sim.world.atmosphere.count; ++i)
     e->sim.world.atmosphere.p[i].sample.density_kg_m3 *= density;
   for (size_t i = 0; i < e->sim.aero.mach_count; ++i)

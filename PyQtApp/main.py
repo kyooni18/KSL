@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .window import MainWindow
+from Tools.clanding_layout import build_artifact as clanding_build_artifact, source_root as clanding_source_root
 
 
 def project_root() -> Path:
@@ -16,8 +17,7 @@ def project_root() -> Path:
 
 
 def default_backend() -> Path:
-    root = project_root()
-    return root / "CLanding" / "build" / "landing_backend"
+    return clanding_build_artifact(project_root())
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         QMessageBox.critical(
             None,
             "Backend not built",
-            f"The C landing backend was not found at:\n{backend}\n\nRun: make -C CLanding",
+            f"The C landing backend was not found at:\n{backend}\n\nRun: make -C {clanding_source_root(project_root())}",
         )
         return 2
 

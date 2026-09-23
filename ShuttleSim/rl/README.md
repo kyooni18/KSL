@@ -32,14 +32,17 @@ customize run size. Evaluation does not update weights or simulator parameters.
 ## Architecture and integration boundary
 
 `physics.c` wraps existing `sim_init`, `sim_apply_command`, and `sim_step` in
-independent handles. The original 20 ms integration and attitude servo remain
-responsible for executing targets. `expert.c` adapts telemetry to the existing
-CLanding deterministic guidance, linked into a separate offline library.
-`Environment(simulator_only=True)` is the guidance adapter: reset, observe,
-project, execute 50 physics ticks, terminate, and log. It opens no network
-connections and never calls kRPC. The CMake option defaults OFF; normal UDP
-operation remains separate. The raw physics ABI is not a safety controller and
-must not be used as a shortcut around `Environment.step`.
+independent handles. The offline duration ABI advances the calculated
+simulator interval directly; it derives exact RK4 substeps from the configured
+physics timestep and has no fixed tick-count or wall-clock pacing rule. The
+native executable remains available with a configured small `--dt` for
+high-fidelity validation. `expert.c` adapts telemetry to the
+existing CLanding deterministic guidance, linked into a separate offline
+library. `Environment(simulator_only=True)` is the guidance adapter: reset,
+observe, project, execute a calculated duration, terminate, and log. It opens
+no network connections and never calls kRPC. The CMake option defaults OFF;
+normal UDP operation remains separate. The raw physics ABI is not a safety
+controller and must not be used as a shortcut around `Environment.step`.
 
 `reset(seed, policy_version)` returns observation and metadata;
 `step([aoa_residual, bank_residual])` returns observation, reward, terminated,
@@ -69,8 +72,11 @@ headroom exported by the deterministic expert, and target slew is derived from
 the production control-authority response-time envelope. It does **not** learn
 actuator, pitch/yaw torque, throttle, SAS, phase transitions, gear, airbrake,
 reversal commitment, HAC size or final handoff decisions. Those stay with the
-existing deterministic machine. This limited scope avoids a new low-level
-controller and is not represented as a full trajectory-learning solution.
+existing deterministic machine. The simulator also does not model a low-level
+attitude servo: the commanded target is followed kinematically, with only the
+configured pitch and roll rate limits applied. This limited scope avoids a new
+low-level controller and is not represented as a full trajectory-learning
+solution.
 
 The terminal curriculum reports two separate contracts. `initial_handoff` and
 `curriculum_handoff` describe the local MM304 interface set only. A terminal
@@ -145,7 +151,7 @@ fixed baseline remains constrained; it is not unsafe open-loop actuator control.
 
 At reset only, seeded independent perturbations apply to in-memory copies. The
 existing model uncertainty varies mass +/-2%, atmospheric density +/-5%,
-lift/drag +/-5%, pitch/roll natural frequency +/-5%, and inertial X velocity
+lift/drag +/-5%, pitch/roll attitude-following rate +/-5%, and inertial X velocity
 /-1 m/s. Randomized episodes now begin from a pre-deorbit orbital condition:
 apoapsis and periapsis are sampled in the 70--400 km band with periapsis no
 higher than apoapsis, inclination is sampled from 0--87 degrees, and a
@@ -165,8 +171,8 @@ logged as diagnostics only; they are not policy inputs. The force book and
 fallback aero table are scaled consistently. No fitted data files are written.
 Scales and initial conditions are fixed throughout an episode and logged.
 Stress cases use density x0.90, mass x1.05 (values in `run_campaign.py`) and
-natural frequency x0.90 (an additional milder lag stress, not the campaign's
-x0.70/x0.85 actuator cases).
+attitude-following rate x0.90 (an additional milder response stress, not the
+campaign's x0.70/x0.85 actuator cases).
 
 Density stress here changes density only, unlike campaign generation which also
 scales pressure. It is a sensitivity test, not a complete thermodynamic weather

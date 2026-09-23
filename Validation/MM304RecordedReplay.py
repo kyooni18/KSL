@@ -5,8 +5,11 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "Tools"))
+from clanding_layout import build_artifact as clanding_build_artifact
 _default_log = ROOT / 'FlightLogs/2026-09-14T12-55-49Z-STS-N-vehicle.jsonl'
 LOG = Path(os.environ.get('KSP_MM304_REPLAY_LOG', str(_default_log)))
 if not LOG.is_absolute():
@@ -64,5 +67,5 @@ for line in LOG.open():
         continue  # Initial samples may lack coordinate-rate telemetry.
     assert len(values)==33 and all(math.isfinite(x) for x in values)
     rows.append(' '.join(format(x,'.17g') for x in values))
-subprocess.run([str(ROOT/'CLanding/build/mm304_offline_tests'),'--replay'],
+subprocess.run([str(clanding_build_artifact(ROOT, 'mm304_offline_tests')),'--replay'],
     input='\n'.join(rows)+'\n',text=True,check=True)

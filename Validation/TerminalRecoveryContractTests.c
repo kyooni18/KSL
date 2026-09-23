@@ -36,6 +36,7 @@ int main(void) {
     GuidanceMachine g;
     guidance_machine_init(&g);
     g.terminal_path_committed=true;
+    g.final_approach_captured=true;
     Telemetry t=recovery_state(&cfg);
     AerodynamicModel aero={.lift_to_drag=cfg.vehicle.estimated_lift_to_drag,
         .ballistic_coefficient=cfg.vehicle.estimated_ballistic_coefficient};
@@ -56,7 +57,8 @@ int main(void) {
     TerminalPreflarePlan stale=terminal_preflare_plan(&g,&t,&p,aero,&cfg);
     assert(stale.predicted_height_loss==baseline_height);
 
-    t.attitude_response.maximum_pitch_accel_deg_s2/=2.0;
+    t.attitude_response.maximum_pitch_accel_deg_s2=
+        cfg.guidance.entry_roll_acceleration*.5;
     TerminalPreflarePlan slower=terminal_preflare_plan(&g,&t,&p,aero,&cfg);
     assert(slower.feasible && slower.predicted_height_loss>baseline_height);
 

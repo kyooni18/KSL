@@ -78,6 +78,12 @@ int main(int argc,char **argv){
     if(aero_book_path&&!aero_load_book_csv(&sim.aero,aero_book_path)){fprintf(stderr,"Failed to load aero data book: %s\n",aero_book_path);return 3;}
     if(attitude_path&&!attitude_load_ini(&sim.state.attitude,attitude_path)){fprintf(stderr,"Failed to load attitude model: %s\n",attitude_path);return 3;}
     if(has_fixed_aoa||has_fixed_bank){double a=has_fixed_aoa?fixed_aoa:rad2deg(sim.state.attitude.cmd_aoa_rad);double b=has_fixed_bank?fixed_bank:rad2deg(sim.state.attitude.cmd_bank_rad);sim_set_attitude(&sim,a,b);}
+    /* The first lockstep packet is a real state, not an uninitialized force
+       sample. Refresh after loading the selected atmosphere and aero models,
+       without advancing position, velocity, attitude or simulator time. */
+    sim.state.aero=aero_compute(&sim.world,&sim.aero,sim.state.position_i_m,
+        sim.state.velocity_i_mps,sim.state.ut,sim.state.mass_kg,
+        sim.state.attitude.aoa_rad,sim.state.attitude.bank_rad);
     AttitudeReplay replay={0};
     if(replay_path&&!replay_load_csv(&replay,replay_path)){fprintf(stderr,"Failed to load attitude replay: %s\n",replay_path);return 3;}
     if(strcmp(replay_mode,"command")&&strcmp(replay_mode,"actual")){fprintf(stderr,"--replay-mode must be command or actual\n");replay_free(&replay);return 2;}
@@ -85,6 +91,30 @@ int main(int argc,char **argv){
     FILE *record=NULL;
     if(record_path){record=fopen(record_path,"w");if(!record){fprintf(stderr,"Failed to open record file: %s\n",record_path);protocol_close(&proto);replay_free(&replay);return 3;}}
     double wall0=monotonic_s(),next_pub=0.0,pub_period=1.0/telemetry_hz;char json[4096];
+    const char *resend_env=getenv("SHUTTLESIM_LOCKSTEP_RESEND");
+    bool lockstep_resend=resend_env&&strcmp(resend_env,"1")==0;
+    if(lockstep&&!sim.paused){
+        double wall=monotonic_s()-wall0;
+        double observed=wall>1e-6?sim.state.sim_elapsed_s/wall:0;
+        sim_build_telemetry_json(&sim,observed,json,sizeof(json));
+        if(!quiet){puts(json);fflush(stdout);}
+        if(record){fprintf(record,"%s\n",json);fflush(record);}
+        protocol_send_telemetry(&proto,json,strlen(json));next_pub+=pub_period;
+        bool advance=false;double resend_at=monotonic_s()+0.02;
+        while(!advance){
+            SimCommand lc;
+            while(protocol_poll_command(&proto,&lc)){
+                sim_apply_command(&sim,&lc);
+                if(lc.step||lc.resume)advance=true;
+            }
+            double now=monotonic_s();
+            if(lockstep_resend&&!advance&&now>=resend_at){
+                protocol_send_telemetry(&proto,json,strlen(json));
+                resend_at=now+0.02;
+            }
+            if(!advance)sleep_s(0.0002);
+        }
+    }
     while(sim.state.sim_elapsed_s<max_time){
         SimCommand cmd;while(protocol_poll_command(&proto,&cmd))sim_apply_command(&sim,&cmd);
         if(sim.paused){sleep_s(0.005);continue;}
@@ -95,8 +125,8 @@ int main(int argc,char **argv){
                 if(!strcmp(replay_mode,"actual")){
                     sim.state.attitude.aoa_rad=deg2rad(rp.aoa_deg);
                     sim.state.attitude.bank_rad=deg2rad(rp.bank_deg);
-                    sim.state.attitude.cmd_aoa_rad=sim.state.attitude.aoa_rad;
-                    sim.state.attitude.cmd_bank_rad=sim.state.attitude.bank_rad;
+                    sim.state.attitude.cmd_aoa_rad=sim.state.attitude.requested_aoa_rad=sim.state.attitude.aoa_rad;
+                    sim.state.attitude.cmd_bank_rad=sim.state.attitude.requested_bank_rad=sim.state.attitude.bank_rad;
                     sim.state.attitude.aoa_rate_rad_s=0;
                     sim.state.attitude.bank_rate_rad_s=0;
                 }else{
@@ -111,7 +141,7 @@ int main(int argc,char **argv){
             if(!quiet){puts(json);fflush(stdout);}
             if(record){fprintf(record,"%s\n",json);fflush(record);}
             protocol_send_telemetry(&proto,json,strlen(json));next_pub+=pub_period;
-            if(lockstep&&!sim.state.on_ground){
+            if(lockstep){
                 bool advance=false;double resend_at=monotonic_s()+0.02;
                 while(!advance){
                     SimCommand lc;
@@ -120,7 +150,7 @@ int main(int argc,char **argv){
                         if(lc.step||lc.resume)advance=true;
                     }
                     double now=monotonic_s();
-                    if(!advance&&now>=resend_at){
+                    if(lockstep_resend&&!advance&&now>=resend_at){
                         protocol_send_telemetry(&proto,json,strlen(json));
                         resend_at=now+0.02;
                     }

@@ -48,21 +48,16 @@ The native backend vendors:
 The UI uses PyQt6 from `PyQtApp/requirements.txt`. Python is only an operator/UI
 or optional test-tool dependency; it is not in the kRPC control path.
 
-## Build and offline qualification
+## Build and regression gate
 
 ```bash
-make -C CLanding clean all
+make -C CLanding
 make -C CLanding test
-make -C CLanding qualification
-make -C CLanding offline-acceptance
-python3 Validation/BackendProtocolTests.py
-python3 Validation/CNanoArchitectureTests.py
 ```
 
-Those commands are offline and do not connect to KSP.
+`make test` is the maintained offline regression surface. It runs four focused checks only: MM304→MM305 ownership/architecture, TAEM interface energy/capture semantics, vessel physics, and the backend NDJSON protocol. It does not connect to live KSP or start a ShuttleSim campaign.
 
-Detailed migration provenance, polling tiers, wire-request budgets and offline
-coverage are recorded in `Docs/KRPC_CNANO_MIGRATION.md`.
+Historical investigation probes remain in `Validation/` as reference material for targeted debugging, but they are no longer Makefile targets or qualification requirements. Native implementation structure and the flight-logic invariants that refactors must preserve are documented in `CLanding/README.md` and `CLanding/ARCHITECTURE.md`.
 
 ## kRPC C-Nano connection
 

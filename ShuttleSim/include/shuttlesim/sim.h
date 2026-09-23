@@ -18,6 +18,10 @@ typedef struct {
     Quat body_q_i;
     bool gear_down;
     bool brakes;
+    bool airbrakes;
+    double wheel_steering;
+    double ground_lateral_accel_mps2;
+    double ground_airbrake_decel_mps2;
     bool on_ground;
     bool touchdown_seen;
     bool on_runway_at_touchdown;
@@ -37,12 +41,16 @@ typedef struct {
     double physics_dt_s;
     double rolling_mu;
     double brake_mu;
+    double ground_airbrake_cda_m2;
+    double ground_max_lateral_accel_g;
+    double ground_max_yaw_rate_rad_s;
     bool paused;
     double deorbit_burn_delay_remaining_s;
     double deorbit_burn_remaining_s;
     double deorbit_burn_pending_duration_s;
     double deorbit_impulse_pending_mps;
     double deorbit_burn_accel_mps2;
+    double commanded_throttle;
 } Simulation;
 
 void sim_init(Simulation *sim, const Scenario *scenario);

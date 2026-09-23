@@ -103,9 +103,10 @@ static void send_command(int fd,int port,const GuidanceCommand*c,const Telemetry
     double aoa=c->has_target_aoa?c->target_aoa:c->target_pitch-t->flight_path_angle;
     if(!isfinite(aoa))aoa=t->angle_of_attack;
     double bank=isfinite(c->target_roll)?c->target_roll:t->roll;
-    char b[512];
-    snprintf(b,sizeof(b),"{\"type\":\"attitude_command\",\"aoa_deg\":%.8g,\"bank_deg\":%.8g,\"gear_down\":%s,\"brakes\":%s,\"step\":true}",
-             aoa,bank,c->gear?"true":"false",c->brakes?"true":"false");
+    char b[640];
+    snprintf(b,sizeof(b),"{\"type\":\"attitude_command\",\"aoa_deg\":%.8g,\"bank_deg\":%.8g,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.8g,\"throttle\":0,\"step\":true}",
+             aoa,bank,c->gear?"true":"false",c->brakes?"true":"false",
+             c->airbrakes?"true":"false",clampd(c->wheel_steering,-1.0,1.0));
     send_json(fd,port,b);
 }
 static void send_resume(int fd,int port){send_json(fd,port,"{\"type\":\"resume\"}");}
@@ -146,7 +147,19 @@ int main(int argc,char**argv){
         fill_velocity_and_course(&t,&s,&planet,&have_prev,&prev_pos,&prev_ut,&prev_course);
         shuttle_sim_prepare_guidance_telemetry(&t,&cfg,&planet);
         if(!guidance_initialized){
-            guidance_initialize_reentry_continuation(&g,&t,&planet,&cfg,1.0,false,&envelope,&calibration);
+            const char *final_test=getenv("KSP_LANDER_FINAL_APPROACH_TEST");
+            if(final_test&&strcmp(final_test,"1")==0){
+                char status[512]={0};
+                double course=isfinite(t.heading)?t.heading:t.ground_track_heading;
+                if(!guidance_begin_final_test(&g,&t,course,&planet,aero,&cfg,status,sizeof(status))){
+                    fprintf(stderr,"guidance-runner: final-only admission rejected: %s\n",status[0]?status:"unknown reason");
+                    send_resume(tx,tx_port);
+                    break;
+                }
+                fprintf(stderr,"guidance-runner: final-only armed: %s\n",status);
+            }else{
+                guidance_initialize_reentry_continuation(&g,&t,&planet,&cfg,1.0,false,&envelope,&calibration);
+            }
             guidance_initialized=true;
         }
         double entry_ref=g.entry_reference_speed>0?g.entry_reference_speed:t.true_air_speed;
@@ -173,7 +186,7 @@ int main(int argc,char**argv){
         if(on_ground&&td_seen){
             fprintf(stderr,"SIM_TOUCHDOWN runway=%s along=%.2f cross=%.2f speed=%.2f phase=%s ticks=%u\n",
                     td_runway?"true":"false",t.runway_along_track,t.runway_cross_track,t.surface_speed,phase_name(r.phase),ticks);
-            if(t.surface_speed<2.0||!td_runway){guidance_result_clear(&r);break;}
+            if(t.surface_speed<0.5||!td_runway){guidance_result_clear(&r);break;}
         }
         guidance_result_clear(&r);
     }

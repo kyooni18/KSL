@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import signal
 import socket
+import shutil
 import subprocess
 import sys
 import time
@@ -23,6 +25,7 @@ TOOLS = ROOT / "Tools"
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
+from clanding_layout import build_artifact as clanding_build_artifact, source_root as clanding_source_root
 from headless_flight import BackendProcess, load_configuration
 
 TERMINAL_PHASES = {"Complete", "Abort", "Fault"}
@@ -113,12 +116,84 @@ def terminate(proc: subprocess.Popen[Any] | None, timeout: float = 2.0) -> None:
         proc.wait(timeout=timeout)
 
 
+
+
+def read_last_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            end = handle.tell()
+            if end <= 0:
+                return None
+            pos = end - 1
+            while pos >= 0:
+                handle.seek(pos)
+                if handle.read(1) not in b"\r\n":
+                    break
+                pos -= 1
+            if pos < 0:
+                return None
+            line_end = pos + 1
+            while pos >= 0:
+                handle.seek(pos)
+                if handle.read(1) == b"\n":
+                    pos += 1
+                    break
+                pos -= 1
+            if pos < 0:
+                pos = 0
+            handle.seek(pos)
+            raw = handle.read(line_end - pos)
+        value = json.loads(raw.decode("utf-8"))
+        return value if isinstance(value, dict) else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+
+
+def simulator_elapsed_seconds(path: Path) -> float | None:
+    packet = read_last_json_object(path)
+    if not packet:
+        return None
+    try:
+        elapsed = float(packet.get("sim_time"))
+    except (TypeError, ValueError):
+        return None
+    return elapsed if math.isfinite(elapsed) and elapsed >= 1.0 else None
+
+
+def simulator_horizon_packet(path: Path, max_sim_time: float,
+                             physics_dt: float = 0.02) -> dict[str, Any] | None:
+    packet = read_last_json_object(path)
+    if not packet:
+        return None
+    try:
+        sim_time = float(packet.get("sim_time"))
+    except (TypeError, ValueError):
+        return None
+    tolerance = max(1e-6, physics_dt * 1.5)
+    return packet if sim_time + tolerance >= max_sim_time else None
+
+
+def simulator_packet_final(packet: dict[str, Any]) -> dict[str, Any]:
+    position = packet.get("position") or {}
+    velocity = packet.get("velocity") or {}
+    runway = packet.get("runway") or {}
+    ground = packet.get("ground") or {}
+    return {
+        "ut": packet.get("ut"),
+        "altitude": position.get("altitude_m"),
+        "surfaceSpeed": velocity.get("surface_mps"),
+        "verticalSpeed": velocity.get("vertical_mps"),
+        "runwayAlongTrack": runway.get("along_m"),
+        "runwayCrossTrack": runway.get("cross_m"),
+        "situation": "landed" if ground.get("on_ground") else "flying",
+    }
 def build(root: Path) -> None:
     subprocess.run(["cmake", "-S", str(root / "ShuttleSim"), "-B", str(root / "ShuttleSim/build")],
                    check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["cmake", "--build", str(root / "ShuttleSim/build"), "-j", "4"],
                    check=True, stdout=subprocess.DEVNULL)
-    subprocess.run(["make", "-C", str(root / "CLanding"), "-j4"],
+    subprocess.run(["make", "-C", str(clanding_source_root(root)), "-j4"],
                    check=True, stdout=subprocess.DEVNULL)
 
 
@@ -126,7 +201,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Run Guidance closed-loop against ShuttleSim")
     ap.add_argument("--scenario", type=Path, default=ROOT / "ShuttleSim/scenarios/ksp86km-preburn.ini")
     ap.add_argument("--config", type=Path, default=ROOT / "Configuration/default.json")
-    ap.add_argument("--backend", type=Path, default=ROOT / "CLanding/build/landing_backend")
+    ap.add_argument("--backend", type=Path, default=clanding_build_artifact(ROOT))
     ap.add_argument("--simulator", type=Path, default=ROOT / "ShuttleSim/build/shuttlesim")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--max-sim-time", type=float, default=2600.0)
@@ -135,7 +210,7 @@ def main() -> int:
     ap.add_argument("--preroll-seconds", type=float, default=30.0,
                     help="Advance ShuttleSim through the prescribed deorbit burn before Guidance connects.")
     ap.add_argument("--no-build", action="store_true")
-    ap.add_argument("--engage", choices=("reentry", "full"), default="reentry")
+    ap.add_argument("--engage", choices=("reentry", "full", "hac", "hac-upstream"), default="reentry")
     args = ap.parse_args()
 
     if not args.no_build:
@@ -212,10 +287,11 @@ def main() -> int:
         # simulator's Web telemetry sink directly and release exactly one lockstep
         # frame at a time. This exercises the real simulator deorbit burn without
         # weakening Guidance's post-burn continuation gates.
+        os.environ["SHUTTLESIM_LOCKSTEP_RESEND"] = "1"
         preroll_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         preroll_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         preroll_socket.bind(("127.0.0.1", 8796))
-        preroll_socket.settimeout(2.0)
+        preroll_socket.settimeout(10.0)
 
         sim = subprocess.Popen(
             sim_cmd,
@@ -259,22 +335,37 @@ def main() -> int:
         # restart predictor does not certify this synthetic long-horizon state.
         # This environment variable is never set by live-KSP launchers.
         os.environ["KSP_LANDER_FORCE_REENTRY_TEST"] = "1"
+        # Only explicitly named MM305 fixtures may enter the fixed, dynamic
+        # runway-anchored HAC path.  The generic simulator flag alone must not
+        # alter unrelated ShuttleSim scenarios or native/offline tests.
+        scenario_name = args.scenario.name
+        mm305_fixed_fixture = scenario_name in {
+            "mm304-hac-interface.ini",
+            "mm304-hac-interface-20km.ini",
+        } or scenario_name.startswith("mm305-hac-")
+        if mm305_fixed_fixture:
+            os.environ["KSP_LANDER_MM305_FIXED_HAC"] = "1"
+        else:
+            os.environ.pop("KSP_LANDER_MM305_FIXED_HAC", None)
         os.environ["KSP_LANDER_ROOT"] = str(ROOT)
         os.environ["KSP_LANDER_SIM_PUBLISH_HZ"] = f"{args.publish_hz:g}"
+        if args.engage == "hac-upstream":
+            os.environ["KSP_LANDER_HAC_VARIANT_B"] = "1"
 
         recorder = SnapshotRecorder(run_dir, mirror, manifest)
         # BackendProcess inherits stderr; redirecting it requires launching a small
         # wrapper only for logs, so keep stderr in the campaign console for now.
-        backend = BackendProcess(args.backend, snapshot_sink=recorder)
+        backend = BackendProcess(args.backend, snapshot_sink=recorder, stderr_target=backend_stderr)
 
         backend.send("updateConfiguration", configuration=config, timeout=30.0)
         backend.send("connect", timeout=30.0)
 
-        # The simulator is waiting at the final pre-roll lockstep barrier. Release
-        # one frame now that Guidance owns UDP 8796 so its control thread receives
-        # the exact post-burn state rather than timing out on an empty socket.
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as wake:
-            wake.sendto(b'{"type":"step","step":true}', ("127.0.0.1", 8795))
+        # HAC fixtures must engage at the exact initial lockstep barrier. The
+        # resend path delivers that state after the backend binds its socket;
+        # an unconditional wake raced engagement against the first physics step.
+        if args.engage not in ("hac", "hac-upstream"):
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as wake:
+                wake.sendto(b'{"type":"step","step":true}', ("127.0.0.1", 8795))
 
         connected = backend.latest_snapshot
         if not connected or connected.get("connectionStatus") != "connected":
@@ -284,6 +375,19 @@ def main() -> int:
         if connected.get("connectionStatus") != "connected":
             raise RuntimeError(str(connected.get("lastError") or "simulator Guidance connect failed"))
 
+        if args.engage in ("hac", "hac-upstream"):
+            expected_ut = float(manifest["prerollFinal"]["ut"])
+            def fixture_ready(snapshot: dict[str, Any]) -> bool:
+                tel = snapshot.get("telemetry") or {}
+                return (isinstance(tel.get("ut"), (int, float)) and
+                        abs(float(tel["ut"]) - expected_ut) <= 1e-6 and
+                        float(tel.get("dynamicPressure") or 0.0) > 0.0)
+            if not fixture_ready(connected):
+                connected = backend.read_until(fixture_ready, 15.0)
+            if not fixture_ready(connected):
+                raise RuntimeError("HAC fixture did not reach its exact initialized lockstep state")
+            manifest["initialTelemetry"] = connected["telemetry"]
+
         manifest["state"] = "connected"
         atomic_json(run_meta, manifest)
         atomic_json(run_dir / "manifest.json", manifest)
@@ -291,6 +395,8 @@ def main() -> int:
         if args.engage == "full":
             backend.send("createPlan", timeout=180.0)
             backend.send("engage", timeout=30.0)
+        elif args.engage in ("hac", "hac-upstream"):
+            backend.send("engageHACTest", timeout=30.0)
         else:
             # Reentry-only qualification runs the production shadow executive
             # synchronously before the request is acknowledged. Keep the
@@ -305,19 +411,26 @@ def main() -> int:
         # waiting for an unrelated wall timeout.
         armed = backend.latest_snapshot or {}
         if not armed.get("automationEngaged"):
-            warning = str(armed.get("warningMessage") or armed.get("lastError") or "")
-            if warning:
-                manifest["state"] = "rejected"
-                manifest["finishedAt"] = time.time()
-                manifest["wallSeconds"] = time.monotonic() - started
-                manifest["engagementRejected"] = True
-                manifest["engagementWarning"] = warning
-                manifest["engagementPhase"] = armed.get("phase")
-                atomic_json(run_meta, manifest)
-                atomic_json(run_dir / "manifest.json", manifest)
-                print(json.dumps(manifest, indent=2, allow_nan=False))
-                exit_code = 2
-                return exit_code
+            # The synchronous request has returned. An unengaged snapshot is
+            # a rejection even when the warning was cleared by an idle frame;
+            # it must not strand a lockstep fixture until the wall timeout.
+            warning = str(armed.get("warningMessage") or armed.get("lastError") or
+                          armed.get("statusMessage") or "Engagement was not accepted")
+            sim_elapsed = simulator_elapsed_seconds(sim_record)
+            manifest["state"] = "rejected" if sim_elapsed is not None else "invalid"
+            manifest["finishedAt"] = time.time()
+            manifest["wallSeconds"] = time.monotonic() - started
+            manifest["simElapsedSeconds"] = sim_elapsed
+            if sim_elapsed is None:
+                manifest["invalidReason"] = "no-simulated-time"
+            manifest["engagementRejected"] = True
+            manifest["engagementWarning"] = warning
+            manifest["engagementPhase"] = armed.get("phase")
+            atomic_json(run_meta, manifest)
+            atomic_json(run_dir / "manifest.json", manifest)
+            print(json.dumps(manifest, indent=2, allow_nan=False))
+            exit_code = 2
+            return exit_code
 
         manifest["state"] = "running"
         manifest["engagedAt"] = time.time()
@@ -325,20 +438,43 @@ def main() -> int:
         atomic_json(run_dir / "manifest.json", manifest)
 
         deadline = time.monotonic() + args.wall_timeout
+        horizon_packet: dict[str, Any] | None = None
         while time.monotonic() < deadline:
-            if sim.poll() is not None and sim.returncode not in (None, 0):
-                raise RuntimeError(f"ShuttleSim exited with code {sim.returncode}")
-            remaining = max(0.05, min(2.0, deadline - time.monotonic()))
+            sim_code = sim.poll()
+            if sim_code is not None:
+                if sim_code != 0:
+                    raise RuntimeError(f"ShuttleSim exited with code {sim_code}")
+                horizon_packet = simulator_horizon_packet(sim_record, args.max_sim_time)
+                if horizon_packet is not None:
+                    terminal = backend.latest_snapshot or {}
+                    break
+                latest = backend.latest_snapshot or {}
+                if str(latest.get("phase") or "") in TERMINAL_PHASES:
+                    terminal = latest
+                    break
+                raise RuntimeError(
+                    "ShuttleSim exited cleanly before a terminal phase or the requested simulation horizon"
+                )
+            remaining = max(0.05, min(0.25, deadline - time.monotonic()))
             try:
                 snap = backend.read_until(
                     lambda s: str(s.get("phase") or "") in TERMINAL_PHASES,
                     remaining,
                 )
+                if str(snap.get("phase") or "") == "Fault":
+                    horizon_packet = simulator_horizon_packet(sim_record, args.max_sim_time)
+                    if horizon_packet is not None:
+                        terminal = snap
+                        break
                 terminal = snap
                 break
             except TimeoutError:
                 latest = backend.latest_snapshot or {}
                 if str(latest.get("phase") or "") in TERMINAL_PHASES:
+                    horizon_packet = simulator_horizon_packet(sim_record, args.max_sim_time)
+                    if str(latest.get("phase") or "") == "Fault" and horizon_packet is not None:
+                        terminal = latest
+                        break
                     terminal = latest
                     break
                 continue
@@ -347,32 +483,59 @@ def main() -> int:
             raise TimeoutError(f"closed-loop simulation exceeded {args.wall_timeout:g}s wall timeout")
 
         telemetry = terminal.get("telemetry") or {}
-        phase = str(terminal.get("phase") or "")
-        manifest["state"] = "finished"
+        phase = "Cutoff" if horizon_packet is not None else str(terminal.get("phase") or "")
+        sim_elapsed = simulator_elapsed_seconds(sim_record)
+        manifest["state"] = "finished" if sim_elapsed is not None else "invalid"
         manifest["finishedAt"] = time.time()
         manifest["wallSeconds"] = time.monotonic() - started
+        manifest["simElapsedSeconds"] = sim_elapsed
+        if sim_elapsed is None:
+            manifest["invalidReason"] = "no-simulated-time"
         manifest["terminalPhase"] = phase
-        manifest["final"] = {
-            "ut": telemetry.get("ut"),
-            "altitude": telemetry.get("meanAltitude"),
-            "surfaceSpeed": telemetry.get("surfaceSpeed"),
-            "verticalSpeed": telemetry.get("verticalSpeed"),
-            "runwayAlongTrack": telemetry.get("runwayAlongTrack"),
-            "runwayCrossTrack": telemetry.get("runwayCrossTrack"),
-            "situation": telemetry.get("vesselSituation"),
-        }
+        guidance_state = terminal.get("guidanceState") or {}
+        if isinstance(guidance_state, dict):
+            manifest["variantBPathCommitted"] = bool(
+                guidance_state.get("terminalPathCommitted")
+            )
+        if horizon_packet is not None:
+            manifest["maxSimTimeReached"] = True
+            manifest["final"] = simulator_packet_final(horizon_packet)
+        else:
+            manifest["final"] = {
+                "ut": telemetry.get("ut"),
+                "altitude": telemetry.get("meanAltitude"),
+                "surfaceSpeed": telemetry.get("surfaceSpeed"),
+                "verticalSpeed": telemetry.get("verticalSpeed"),
+                "runwayAlongTrack": telemetry.get("runwayAlongTrack"),
+                "runwayCrossTrack": telemetry.get("runwayCrossTrack"),
+                "situation": telemetry.get("vesselSituation"),
+            }
         atomic_json(run_meta, manifest)
         atomic_json(run_dir / "manifest.json", manifest)
         print(json.dumps(manifest, indent=2, allow_nan=False))
-        exit_code = 0 if phase == "Complete" else 2
+        if horizon_packet is not None:
+            exit_code = 0 if args.engage == "hac" or (
+                args.engage == "hac-upstream" and
+                manifest.get("variantBPathCommitted") is True
+            ) else 2
+        else:
+            exit_code = 0 if phase == "Complete" else 2
+        if sim_elapsed is None:
+            exit_code = 2
 
     except Exception as exc:
-        manifest["state"] = "failed"
+        sim_elapsed = simulator_elapsed_seconds(sim_record)
+        manifest["state"] = "failed" if sim_elapsed is not None else "invalid"
         manifest["finishedAt"] = time.time()
         manifest["wallSeconds"] = time.monotonic() - started
+        manifest["simElapsedSeconds"] = sim_elapsed
+        if sim_elapsed is None:
+            manifest["invalidReason"] = "no-simulated-time"
         manifest["error"] = str(exc)
         atomic_json(run_meta, manifest)
         atomic_json(run_dir / "manifest.json", manifest)
+        import traceback
+        traceback.print_exc()
         print(f"simulator campaign failed: {exc}", file=sys.stderr)
         exit_code = 1
     finally:
@@ -392,6 +555,14 @@ def main() -> int:
         backend_stderr.close()
         os.environ.clear()
         os.environ.update(old_env)
+        if manifest.get("invalidReason") == "no-simulated-time":
+            try:
+                current = json.loads(run_meta.read_text(encoding="utf-8")) if run_meta.is_file() else {}
+                if current.get("runId") == run_id:
+                    run_meta.unlink(missing_ok=True)
+            except (OSError, json.JSONDecodeError):
+                pass
+            shutil.rmtree(run_dir, ignore_errors=True)
     return exit_code
 
 

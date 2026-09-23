@@ -220,6 +220,21 @@ body.orbit-mode .phase { color: var(--cyan); }
 .sim-state.paused{border-style:dashed}
 .sim-state.finished{opacity:.82}
 .sim-state.bad{font-weight:900}
+.sim-view-badge{
+  flex:0 0 auto;
+  padding:3px 6px;
+  border:1px solid rgba(114,241,154,.30);
+  border-radius:5px;
+  color:var(--green);
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:.06em;
+}
+.sim-view-badge.replay{
+  color:var(--cyan);
+  border-color:rgba(102,216,239,.36);
+  background:rgba(102,216,239,.07);
+}
 .sim-field{
   min-width:0;
   overflow:hidden;
@@ -227,13 +242,16 @@ body.orbit-mode .phase { color: var(--cyan); }
   opacity:.82;
 }
 #sim-run{max-width:170px;font-weight:700;opacity:1}
-#sim-mode,#sim-lockstep,#sim-replay{flex:0 0 auto}
+#sim-mode,#sim-lockstep,#sim-view,#sim-traces{flex:0 0 auto}
 #sim-time,#sim-rate{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.sim-traces{color:var(--cyan);font-variant-numeric:tabular-nums}
+.sim-status-line{max-width:360px}
 body.replay-mode .simulation-status{border-style:dashed}
 @media (max-width:760px){
   .simulation-status{margin:0 8px 6px;gap:5px;overflow-x:auto}
   #sim-lockstep{display:none}
   #sim-run{max-width:120px}
+  .sim-status-line{max-width:240px}
 }
 
 .playback-dock{
@@ -306,6 +324,7 @@ body.replay-mode .simulation-status{border-style:dashed}
   box-shadow:0 0 0 2px rgba(114,241,154,.15),0 0 10px rgba(114,241,154,.28);
 }
 .playback-dock.replay-active .playback-live{color:var(--muted)}
+.playback-dock.replay-active .playback-runs{border-color:rgba(102,216,239,.34);background:rgba(102,216,239,.09);color:var(--cyan)}
 .playback-runs{min-width:58px;padding:0 10px}
 .playback-runs.active{border-color:rgba(102,216,239,.34);background:rgba(102,216,239,.09);color:var(--cyan)}
 .playback-context{

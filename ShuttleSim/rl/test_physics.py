@@ -37,7 +37,7 @@ class PhysicsTests(unittest.TestCase):
             ctypes.c_double,
             ctypes.c_int,
             ctypes.c_int,
-            ctypes.c_int,
+            ctypes.c_double,
         ]
         cls.lib.offline_step.restype = ctypes.c_int
         cls.lib.offline_set_initial_conditions.argtypes = [
@@ -86,7 +86,7 @@ class PhysicsTests(unittest.TestCase):
         for _ in range(10):
             for handle in (first, second):
                 self.assertEqual(
-                    self.lib.offline_step(handle, 35.0, -20.0, 0, 0, 50), 1
+                    self.lib.offline_step(handle, 35.0, -20.0, 0, 0, 1.0), 1
                 )
             self.assertEqual(
                 self.lib.offline_telemetry(first),
@@ -127,7 +127,10 @@ class PhysicsTests(unittest.TestCase):
         handle = self.create()
         self.assertEqual(self.lib.offline_set_initial_conditions(
             handle, 70.0, 1.0, -1.0, 90.0, -0.0486, -74.7240), 1)
-        self.assertEqual(self.lib.offline_step(handle, 0.0, 0.0, 1, 1, 50), 1)
+        # The first interval contains touchdown; the next calculated guidance
+        # interval exercises the braked ground model and rollout state.
+        self.assertEqual(self.lib.offline_step(handle, 0.0, 0.0, 1, 1, 1.0), 1)
+        self.assertEqual(self.lib.offline_step(handle, 0.0, 0.0, 1, 1, 1.0), 1)
         telemetry = json.loads(self.lib.offline_telemetry(handle))
         self.assertTrue(telemetry["ground"]["on_ground"])
         self.assertTrue(telemetry["ground"]["stopped"])
@@ -136,16 +139,46 @@ class PhysicsTests(unittest.TestCase):
     def test_invalid_input_does_not_advance(self):
         handle = self.create()
         before = self.lib.offline_telemetry(handle)
-        for aoa, bank, ticks in (
-            (float("nan"), 0, 1),
-            (0, float("inf"), 1),
-            (35, 0, 0),
-            (35, 0, 51),
+        for aoa, bank, duration_s in (
+            (float("nan"), 0, 1.0),
+            (0, float("inf"), 1.0),
+            (35, 0, 0.0),
+            (35, 0, -1.0),
         ):
             self.assertEqual(
-                self.lib.offline_step(handle, aoa, bank, 0, 0, ticks), 0
+                self.lib.offline_step(handle, aoa, bank, 0, 0, duration_s), 0
             )
             self.assertEqual(self.lib.offline_telemetry(handle), before)
+
+    def test_fractional_duration_uses_exact_simulator_time(self):
+        handle = self.create()
+        self.assertEqual(
+            self.lib.offline_step(handle, 35.0, -20.0, 0, 0, 0.037), 1
+        )
+        telemetry = json.loads(self.lib.offline_telemetry(handle))
+        self.assertAlmostEqual(telemetry["sim_time"], 0.037, places=12)
+
+    def test_attitude_target_and_state_are_rate_bounded(self):
+        handle = self.create()
+        self.assertEqual(
+            self.lib.offline_step(handle, 35.0, -20.0, 0, 0, 1.0), 1
+        )
+        telemetry = json.loads(self.lib.offline_telemetry(handle))
+        attitude = telemetry["attitude"]
+        self.assertAlmostEqual(attitude["requested_aoa_deg"], 35.0, places=5)
+        self.assertAlmostEqual(attitude["requested_bank_deg"], -20.0, places=5)
+        self.assertAlmostEqual(
+            attitude["aoa_deg"], attitude["cmd_aoa_deg"], places=5)
+        self.assertAlmostEqual(
+            attitude["bank_deg"], attitude["cmd_bank_deg"], places=5)
+        self.assertLessEqual(
+            attitude["cmd_aoa_deg"], attitude["max_pitch_rate_deg_s"] + 1e-5)
+        self.assertGreaterEqual(
+            attitude["cmd_bank_deg"], -attitude["max_roll_rate_deg_s"] - 1e-5)
+        self.assertLessEqual(
+            attitude["aoa_rate_deg_s"], attitude["max_pitch_rate_deg_s"] + 1e-5)
+        self.assertGreaterEqual(
+            attitude["bank_rate_deg_s"], -attitude["max_roll_rate_deg_s"] - 1e-5)
 
     def test_missing_scenario_fails_closed(self):
         self.assertFalse(self.lib.offline_create(b"", b"", b"", b""))
