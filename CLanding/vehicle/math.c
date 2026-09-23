@@ -17,6 +17,11 @@ TaemHandoffContract taem_handoff_contract(const GuidanceSettings *s) {
     return out;
 }
 
+void mm304_handoff_station(double *along_m,double *cross_m) {
+    if(along_m)*along_m=-8000.0; /* decision-literal-ok: fixed MM304 handoff contract */
+    if(cross_m)*cross_m=0.0;
+}
+
 double entry_s_turn_effective_minimum_leg(double true_air_speed,double taem_speed,const GuidanceSettings *settings) {
     double configured=settings?fmax(8.0,settings->s_turn_minimum_leg_duration):24.0;
     taem_speed=fmax(250.0,taem_speed);
@@ -655,9 +660,12 @@ bool entry_taem_handoff_geometry_ready(double altitude,double runway_along_track
     if(!s||!isfinite(altitude)||!isfinite(runway_along_track)||!isfinite(vertical_speed)||!isfinite(horizontal_speed))return false;
     double minimum=0.0,maximum=0.0;
     entry_taem_handoff_altitude_bounds(s,&minimum,&maximum);
+    double station_along=NAN,station_cross=NAN;
+    mm304_handoff_station(&station_along,&station_cross);
+    (void)station_cross;
     double station_lead=clampd(fabs(horizontal_speed)*2.0,180.0,2400.0);
     return altitude>=minimum&&altitude<=maximum&&
-        runway_along_track<-s->final_approach_distance-station_lead&&vertical_speed<0.0;
+        runway_along_track<station_along-station_lead&&vertical_speed<0.0;
 }
 
 bool entry_s_turn_bank_authority_available(double dynamic_pressure,double true_air_speed,

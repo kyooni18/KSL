@@ -45,6 +45,7 @@ typedef struct {
 } TaemHandoffContract;
 
 TaemHandoffContract taem_handoff_contract(const GuidanceSettings *settings);
+void mm304_handoff_station(double *along_m,double *cross_m);
 
 typedef struct {
     bool valid, ready;

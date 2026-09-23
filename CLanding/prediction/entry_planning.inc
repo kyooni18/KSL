@@ -375,8 +375,11 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                     double handoff_low=0.0,handoff_high=0.0;
                     entry_taem_handoff_altitude_bounds(&cfg->guidance,&handoff_low,&handoff_high);
                     double station_lead=clampd(synthetic.horizontal_speed*2.0,180.0,2400.0);
+                    double station_along=NAN,station_cross=NAN;
+                    mm304_handoff_station(&station_along,&station_cross);
+                    (void)station_cross;
                     out.taem_ownership_boundary_missed=
-                        synthetic.runway_along_track>=-cfg->guidance.final_approach_distance-station_lead||
+                        synthetic.runway_along_track>=station_along-station_lead||
                         geo.altitude<handoff_low;
                     (void)handoff_high;
                 }
@@ -526,7 +529,9 @@ bool deorbit_plan_preburn_state_compatible(const DeorbitPlan*plan,double live_ma
 }
 static double deorbit_alignment_position_error(const EntryPrediction*p,const GuidanceSettings*s){
     if(!p||!s||!isfinite(p->taem_along_track)||!isfinite(p->taem_cross_track))return INFINITY;
-    return hypot(p->taem_along_track+s->final_approach_distance,p->taem_cross_track);
+    double target_along=NAN,target_cross=NAN;
+    mm304_handoff_station(&target_along,&target_cross);
+    return hypot(p->taem_along_track-target_along,p->taem_cross_track-target_cross);
 }
 
 static double deorbit_alignment_course_error(const EntryPrediction*p,const LandingSite*site){

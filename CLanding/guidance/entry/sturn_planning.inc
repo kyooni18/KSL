@@ -233,13 +233,6 @@ static bool entry_taem_pose_setup_point(const GuidanceMachine*g,const Telemetry*
     return true;
 }
 
-static void entry_mm304_fixed_handoff_station(double*along,double*cross){
-    /* MM304 ownership ends at the user-defined rear alignment point.  The
-       instantaneous q/lift turn radius is an executability proof, not permission
-       to translate the ownership point tens of kilometres away from KSC. */
-    if(along)*along=-8000.0; /* decision-literal-ok: fixed MM304 handoff contract */
-    if(cross)*cross=0.0;
-}
 
 
 
@@ -249,7 +242,7 @@ static void entry_mm304_fixed_handoff_station(double*along,double*cross){
        !isfinite(q->course)||!isfinite(q->speed)||q->speed<=0.0)return false;
     TaemHandoffContract contract=taem_handoff_contract(&cfg->guidance);
     double expected_along=NAN,expected_cross=NAN;
-    entry_mm304_fixed_handoff_station(&expected_along,&expected_cross);
+    mm304_handoff_station(&expected_along,&expected_cross);
     double point_error=hypot(q->along_track-expected_along,
         q->cross_track-expected_cross);
     double runway_offset=fabs(norm_signed_deg(q->course-cfg->site.runway_heading));
@@ -347,7 +340,7 @@ void entry_publish_taem_tangent_target(GuidanceMachine*g,const Telemetry*t,
     double terminal_radius=fmax(s->hac_radius,
         speed_envelope.minimum_turn_radius_m*radius_scale);
     double target_along=NAN,target_cross=NAN;
-    entry_mm304_fixed_handoff_station(&target_along,&target_cross);
+    mm304_handoff_station(&target_along,&target_cross);
 
     double rh=cfg->site.runway_heading*DEG2RAD;
     GeoPoint origin={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
