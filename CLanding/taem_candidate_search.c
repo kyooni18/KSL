@@ -38,14 +38,13 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     double maximum_lead_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
         fmax(geometry->airspeed_mps * geometry->airspeed_mps, 1.0);
     const double curvature_fractions[] = {0.25, 0.35, 0.50, 0.70, 1.00};
-    const double bow_fractions[] = {-0.625, -0.60, -0.575};
-    const double initial_sag_fractions[] = {0.0, 0.125};
-    const double local_profile_supports[][2] = {
-        {0.16, 0.46}, {0.20, 0.50}, {0.24, 0.54}
+    const double bow_fractions[] = {-0.625, -0.60};
+    const double initial_sag_fractions[] = {0.0};
+    const double local_profile_supports[][3] = {
+        {0.12, 0.17, 0.42}, {0.12, 0.19, 0.50},
+        {0.12, 0.21, 0.60}
     };
-    const double local_bow_offsets_m[] = {
-        -1000.0, -875.0, -750.0, -625.0, -500.0
-    };
+    const double local_bow_offsets_m[] = {-1250.0, -1000.0, -750.0, -500.0};
     TaemFixedHacCandidate best_survivor;
     memset(&best_survivor, 0, sizeof(best_survivor));
     best_survivor.quality_score = INFINITY;
@@ -104,17 +103,20 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.route.profile_local_offset_m = local_bow_offsets_m[local];
                 trial.route.profile_local_start_fraction =
                     local_profile_supports[support][0];
-                trial.route.profile_local_end_fraction =
+                trial.route.profile_local_peak_fraction =
                     local_profile_supports[support][1];
+                trial.route.profile_local_end_fraction =
+                    local_profile_supports[support][2];
                 trial.replay = terminal_solver_replay(model, initial,
                     &trial.route, dt, maximum_elapsed);
                 if (diagnostics && strcmp(diagnostics, "1") == 0)
                     fprintf(stderr,
-                        "TAEM candidate: side=%+.0f curvature=%.2f bow=%+.0f local=%+.0f@%.2f-%.2f sag=%+.0f/%.0f lead=%zu length=%.0f status=%d elapsed=%.2f index=%zu reason=%s verticalError=%.2f lateralShort=%.2f vDemand=%.2f vDelivered=%.2f altErr=%.1f currentFPA=%.2f targetAlt=%.1f targetFPA=%.2f\n",
+                        "TAEM candidate: side=%+.0f curvature=%.2f bow=%+.0f local=%+.0f@%.2f^%.2f-%.2f sag=%+.0f/%.0f lead=%zu length=%.0f status=%d elapsed=%.2f index=%zu reason=%s verticalError=%.2f lateralShort=%.2f vDemand=%.2f vDelivered=%.2f altErr=%.1f currentFPA=%.2f targetAlt=%.1f targetFPA=%.2f\n",
                         side, curvature_fractions[curvature],
                         trial.route.profile_midpoint_offset_m,
                         trial.route.profile_local_offset_m,
                         trial.route.profile_local_start_fraction,
+                        trial.route.profile_local_peak_fraction,
                         trial.route.profile_local_end_fraction,
                         trial.route.profile_initial_sag_m,
                         trial.route.profile_initial_sag_length_m,

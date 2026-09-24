@@ -16,7 +16,8 @@ static double clamp(double x, double lo, double hi) { return fmax(lo, fmin(hi, x
 static void vertical_profile(const TerminalModel *m, double start_altitude,
         double start_fpa_deg, double total_length, double distance_from_start,
         double midpoint_offset, double local_offset,
-        double local_start_fraction, double local_end_fraction,
+        double local_start_fraction, double local_peak_fraction,
+        double local_end_fraction,
         double initial_sag, double initial_sag_length,
         double *altitude, double *fpa_deg) {
     double x = clamp(distance_from_start / total_length, 0.0, 1.0);
@@ -41,14 +42,26 @@ static void vertical_profile(const TerminalModel *m, double start_altitude,
     double initial_slope = initial_sag_length > 0.0 ?
         initial_sag * 32.0 * initial_u * (1.0 - initial_u) *
             (1.0 - 2.0 * initial_u) / initial_sag_length : 0.0;
-    double local_span = local_end_fraction - local_start_fraction;
-    double local_u = local_span > 1e-6 ?
-        clamp((x - local_start_fraction) / local_span, 0.0, 1.0) : 0.0;
-    double local_bow = 16.0 * local_u * local_u *
-        (1.0 - local_u) * (1.0 - local_u);
-    double local_slope = local_span > 1e-6 ?
-        local_offset * 32.0 * local_u * (1.0 - local_u) *
-            (1.0 - 2.0 * local_u) / (local_span * total_length) : 0.0;
+    double local_bow = 0.0, local_slope = 0.0;
+    double local_fall_span = local_peak_fraction - local_start_fraction;
+    double local_recovery_span = local_end_fraction - local_peak_fraction;
+    if (local_fall_span > 1e-6 && local_recovery_span > 1e-6) {
+        if (x >= local_start_fraction && x < local_peak_fraction) {
+            double u = clamp((x - local_start_fraction) / local_fall_span,
+                0.0, 1.0);
+            double smooth = u * u * (3.0 - 2.0 * u);
+            local_bow = smooth;
+            local_slope = local_offset * 6.0 * u * (1.0 - u) /
+                (local_fall_span * total_length);
+        } else if (x >= local_peak_fraction && x <= local_end_fraction) {
+            double u = clamp((x - local_peak_fraction) /
+                local_recovery_span, 0.0, 1.0);
+            double smooth = u * u * (3.0 - 2.0 * u);
+            local_bow = 1.0 - smooth;
+            local_slope = -local_offset * 6.0 * u * (1.0 - u) /
+                (local_recovery_span * total_length);
+        }
+    }
     double height = h00*h0 + h10*total_length*slope0 +
                     h01*h1 + h11*total_length*slope1 +
                     midpoint_offset * bow + local_offset * local_bow +
@@ -192,6 +205,7 @@ static bool route_finish(const TerminalModel *m, const TaemGeometryState *start,
     route->profile_midpoint_offset_m = 0.0;
     route->profile_local_offset_m = 0.0;
     route->profile_local_start_fraction = 0.08;
+    route->profile_local_peak_fraction = 0.24;
     route->profile_local_end_fraction = 0.40;
     route->profile_initial_sag_m = 0.0;
     route->profile_initial_sag_length_m = 0.0;
@@ -328,7 +342,8 @@ bool taem_route_reference(const TaemRoute *route, const TaemGeometryState *state
     }, route->profile_start_altitude_m, route->profile_start_fpa_deg,
         route->profile_total_length_m, station,
         route->profile_midpoint_offset_m, route->profile_local_offset_m,
-        route->profile_local_start_fraction, route->profile_local_end_fraction,
+        route->profile_local_start_fraction, route->profile_local_peak_fraction,
+        route->profile_local_end_fraction,
         route->profile_initial_sag_m,
         route->profile_initial_sag_length_m, &altitude, &fpa);
     *reference = (TaemPathReference){

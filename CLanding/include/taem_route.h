@@ -54,7 +54,7 @@ typedef struct {
     double profile_midpoint_offset_m;
     /* Localized interior bow for independently shaping the lead descent. */
     double profile_local_offset_m;
-    double profile_local_start_fraction;
+    double profile_local_start_fraction, profile_local_peak_fraction;
     double profile_local_end_fraction;
     /* Localized initial descent sag; also returns to zero with zero slope. */
     double profile_initial_sag_m;

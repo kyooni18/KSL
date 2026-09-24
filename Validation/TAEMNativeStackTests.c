@@ -187,6 +187,7 @@ int main(void) {
     shaped_route.profile_midpoint_offset_m = 1200.0;
     shaped_route.profile_local_offset_m = -500.0;
     shaped_route.profile_local_start_fraction = 0.12;
+    shaped_route.profile_local_peak_fraction = 0.22;
     shaped_route.profile_local_end_fraction = 0.42;
     shaped_route.profile_initial_sag_m = -120.0;
     shaped_route.profile_initial_sag_length_m = 3000.0;
