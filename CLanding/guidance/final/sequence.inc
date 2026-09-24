@@ -241,9 +241,10 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
 
     const double V_GLIDE=KP("KP_VG",115.0),FLARE_C=KP("KP_C",.2),H_MARGIN=KP("KP_HM",20.0);
     double h_arrest=INFINITY,v_arr=V;
-    if(!getenv("KP_FPA")&&!g->terminal_pull_latch&&height<600.0){
+    double pull_response_height=terminal_pull_lead_height(fmax(0.0,-V*sin(gamma)),fmax(0.0,-vs_lead));
+    if(!getenv("KP_FPA")&&!g->terminal_pull_latch){
         h_arrest=terminal_flare_predict(g,t,v,g0,height,aoa_max,pull_rate,sink_td+FLARE_C*H_MARGIN,&v_arr);
-        if(h_arrest<=H_MARGIN||height<=15.0){
+        if(h_arrest<=H_MARGIN+pull_response_height||height<=15.0){
             g->terminal_pull_latch=true;
             g->terminal_flare_k=fmax(0.0,sink-sink_td)/fmax(height,5.0);
             g->terminal_flare_ut=t->ut;g->terminal_flare_aoa0=t->angle_of_attack;
