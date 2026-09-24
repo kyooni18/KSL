@@ -250,11 +250,15 @@ static double fc_capped_pd_command(double angle_error,
 }
 
 static double fc_pitch_accel_for_profile(double reported,double cap,
-        ControlProfile profile){
+        ControlProfile profile,double radar_altitude){
     double used=reported>DBL_EPSILON&&reported<cap?reported:cap;
-    /* Live final telemetry overstates pitch authority; use a slightly lower
-       acceleration scale in flare so persistent AoA error requests more input. */
-    return profile==PROFILE_FLARE?fmin(used,28.0):used;
+    if(profile!=PROFILE_FLARE)return used;
+    /* Increase sustained flare input only near wheel contact, where the
+       measured AoA lag otherwise persists through touchdown. */
+    double height=fmax(0.0,fc_finite(radar_altitude,120.0));
+    double blend=fc_clamp((120.0-height)/80.0,0.0,1.0);
+    double flare_cap=cap+(16.0-cap)*blend;
+    return fmin(used,flare_cap);
 }
 
 bool flight_control_step(FlightControlState *state,
@@ -460,7 +464,7 @@ bool flight_control_step(FlightControlState *state,
     const double pitch_zeta=getenv("KSP_LANDER_PITCH_ZETA")?
         atof(getenv("KSP_LANDER_PITCH_ZETA")):1.15;
     double pitch_auth_used=fc_pitch_accel_for_profile(
-        pitch_authority,pitch_accel_max,profile);
+        pitch_authority,pitch_accel_max,profile,telemetry->radar_altitude);
     double pitch_command=fc_capped_pd_command(pitch_error,effective_pitch_rate,
         state->target_pitch_rate,pitch_auth_used,pitch_wn,pitch_zeta,pitch_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
