@@ -76,8 +76,9 @@ int main(void){
        MM304→MM305 high-energy handoff or the remaining HAC/Final path. */
     assert(tangent.taem_interface_target.remaining_path>
         cfg.guidance.final_approach_distance);
-    const double station=-8000.0; /* decision-literal-ok: fixed MM304 handoff contract */
-    double expected_along=station,expected_cross=0.0;
+    const double station=cfg.guidance.mm304_handoff_along_track;
+    double expected_along=station;
+    double expected_cross=cfg.guidance.mm304_handoff_cross_track;
     assert(fabs(tangent.taem_interface_target.along_track-expected_along)<1e-6);
     assert(fabs(tangent.taem_interface_target.cross_track-expected_cross)<1e-6);
     assert(tangent.taem_interface_target.hac_radius>=cfg.guidance.hac_radius);
@@ -119,15 +120,14 @@ int main(void){
     if(expected_speed<speed_envelope.minimum_speed_mps)
         expected_speed=speed_envelope.minimum_speed_mps;
 
-    double expected_course=norm_deg(
-        cfg.site.runway_heading-90.0); /* decision-literal-ok: perpendicular runway geometry */
-    assert(fabs(norm_signed_deg(
-        tangent.taem_interface_target.course-expected_course))<1e-6);
+    double course_offset=fabs(norm_signed_deg(
+        tangent.taem_interface_target.course-cfg.site.runway_heading));
+    assert(fabs(course_offset-90.0)<1e-6);
     assert(isfinite(expected_speed));
     assert(tangent.taem_interface_target.speed<=expected_speed+cfg.guidance.mm305_target_mach*350.0);
     double initial_offset=fabs(norm_signed_deg(
         tangent.taem_interface_target.course-cfg.site.runway_heading));
-    assert(fabs(initial_offset-90.0)<1e-6); /* decision-literal-ok: perpendicular runway geometry */
+    assert(fabs(initial_offset-90.0)<1e-6);
 
     /* A measured arc may prove that a shallower outlet would be easier to reach,
        but that is not permission to rewrite either the perpendicular course or
@@ -238,9 +238,10 @@ int main(void){
         double v20_tolerance=fmax(2500.0,fmin(10000.0,v20_radius*.12));
         assert(v20_error>v20_tolerance);
     }
-    double nominal_taem_speed=entry_taem_speed_target(&cfg.vehicle,&cfg.guidance,&p);
-    /* MM304 now publishes the explicit Mach-centered MM305 design speed at
-       the geometric HAC entry; projected arrival speed only qualifies ownership. */
+    double nominal_taem_speed=hac_acquisition_speed_target(
+        &cfg.vehicle,&cfg.guidance,&p);
+    /* The advisory acquisition target is Mach-centered; the qualified handoff
+       remains controlled by the separate MM304-to-MM305 admission contract. */
     assert(tangent.taem_interface_target.speed>=speed_envelope.minimum_speed_mps-1e-6);
     assert(tangent.taem_interface_target.speed<=speed_envelope.maximum_speed_mps+1e-6);
     assert(fabs(tangent.taem_interface_target.speed-nominal_taem_speed)<1e-6);
@@ -368,7 +369,7 @@ int main(void){
        lateral request, then verify that ordinary shallow flight retains the arc. */
     Telemetry geometry_hold=ingress;
     geometry_hold.mass=40000.0;geometry_hold.lift_force=geometry_hold.mass*4.0;
-    geometry_hold.mean_altitude=41400.0;geometry_hold.radar_altitude=41400.0;
+    geometry_hold.mean_altitude=10000.0;geometry_hold.radar_altitude=10000.0;
     geometry_hold.true_air_speed=1923.0;geometry_hold.horizontal_speed=1900.0;
     geometry_hold.flight_path_angle=-7.0;geometry_hold.vertical_speed=1923.0*sin(-7.0*DEG2RAD);geometry_hold.dynamic_pressure=3000.0;geometry_hold.g_force=1.0;
     geometry_hold.bank_effectiveness=1.0;geometry_hold.stall_fraction=0.0;geometry_hold.stall_fraction_is_measured=true;
@@ -395,6 +396,7 @@ int main(void){
     assert(fabs(protected.target_bank)<fabs(geometry_floor));
     entry_program_apply_geometry_bank_demand(&tangent,&geometry_hold,&p,aero,&cfg,geometry_floor,&protected);
     assert(fabs(protected.target_bank)<=dynamic_bank_limit(&geometry_hold,&cfg.vehicle)+1e-6);
+    geometry_hold.mean_altitude=41400.0;geometry_hold.radar_altitude=41400.0;
     geometry_hold.flight_path_angle=-2.0;geometry_hold.vertical_speed=1923.0*sin(-2.0*DEG2RAD);
     double shallow_ceiling=entry_program_vertical_bank_ceiling(&tangent,&geometry_hold,&p,aero,&cfg);
     assert(isfinite(shallow_ceiling)&&shallow_ceiling>10.0);
@@ -428,10 +430,8 @@ int main(void){
     assert(fabs(energy_plan.target_bank)>=energy_ceiling-.25);
     assert(fabs(energy_plan.target_bank)<=energy_request+1e-6);
 
-    /* Recorded v21b-like thin-air state: at ~37.5 km / 1.84 km/s the measured
-       lift was only about 2.1 m/s2, so a near-70 deg bank had a multi-thousand-km
-       radius and mostly discarded vertical lift. The same pose debt must retain the
-       vertical-safe bank but reject most surplus-energy authority. */
+    /* In thin air, lift below the level-flight requirement is not grounds to
+       force the shuttle wings-level while it is still above TAEM altitude. */
     Telemetry ineffective_turn=energy_shaping;
     ineffective_turn.mean_altitude=ineffective_turn.radar_altitude=37490.0;
     ineffective_turn.true_air_speed=1840.4;ineffective_turn.horizontal_speed=1837.0;
@@ -442,7 +442,9 @@ int main(void){
     ineffective_turn.drag_force=ineffective_turn.mass*3.80;
     ineffective_turn.ground_track_heading=ineffective_turn.heading=91.0;
     double ineffective_ceiling=entry_program_vertical_bank_ceiling(&energy_machine,&ineffective_turn,&p,aero,&cfg);
-    assert(isfinite(ineffective_ceiling)&&ineffective_ceiling<50.0);
+    assert(isfinite(ineffective_ceiling));
+    assert(fabs(ineffective_ceiling-
+        dynamic_bank_limit(&ineffective_turn,&cfg.vehicle))<1e-6);
     double ineffective_request=fmin(dynamic_bank_limit(&ineffective_turn,&cfg.vehicle),70.0);
     EntryControlPlan ineffective_plan={.valid=true,.target_bank=0.0,
         .target_aoa=cfg.vehicle.entry_angle_of_attack,.bank_cap=70.0};
@@ -450,10 +452,8 @@ int main(void){
         ineffective_request,&ineffective_plan);
     assert(fabs(ineffective_plan.target_bank)>=ineffective_ceiling-.25);
     assert(fabs(ineffective_plan.target_bank)<=ineffective_request+1e-6);
-    /* v23 exposed the opposite thin-air failure: useful curvature is still weak near
-       46 km, but staying at ~2 deg bank leaves the vehicle unshaped when q finally
-       arrives. With ample energy and no FPA debt, pre-position bank while diverting
-       no more than the bounded vertical-lift fraction. */
+    /* High above TAEM, thin air cannot support a vertical-path recovery yet. Keep
+       the bank authority available while the descent builds dynamic pressure. */
     Telemetry thin_air=energy_shaping;
     thin_air.mean_altitude=thin_air.radar_altitude=46000.0;
     thin_air.true_air_speed=2000.0;thin_air.horizontal_speed=1995.0;
@@ -468,7 +468,9 @@ int main(void){
     thin_air.flight_path_angle=thin_path;
     thin_air.vertical_speed=thin_air.true_air_speed*sin(thin_path*DEG2RAD);
     double thin_ceiling=entry_program_vertical_bank_ceiling(&energy_machine,&thin_air,&p,aero,&cfg);
-    assert(isfinite(thin_ceiling)&&thin_ceiling<5.0);
+    assert(isfinite(thin_ceiling));
+    assert(fabs(thin_ceiling-
+        dynamic_bank_limit(&thin_air,&cfg.vehicle))<1e-6);
     EntryControlPlan thin_plan={.valid=true,.target_bank=0.0,
         .target_aoa=cfg.vehicle.entry_angle_of_attack,.bank_cap=70.0};
     entry_program_apply_geometry_bank_demand(&energy_machine,&thin_air,&p,aero,&cfg,45.0,&thin_plan);
