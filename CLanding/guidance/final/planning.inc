@@ -506,7 +506,18 @@ bool terminal_final_conditioning_reachable(const GuidanceMachine*g,
         capture.runway_time.margin>=0.0&&capture.speed.margin>=0.0&&
         capture.dynamic_pressure.margin>=0.0&&capture.load.margin>=0.0&&
         capture.runway_remaining.margin>=0.0;
-    if(!capture_reachable_except_vertical)return false;
+    if(!capture_reachable_except_vertical){
+        const char*trace=getenv("KSP_LANDER_FINAL_CONDITIONING_DIAGNOSTICS");
+        if(trace&&strcmp(trace,"1")==0&&g->terminal_final_test_mode)
+            fprintf(stderr,"FINAL_CONDITIONING reason=capture ut=%.3f x=%.1f cross=%.1f h=%.1f sink=%.2f v=%.2f runwayTime=%.2f/%.2f/%.2f lateral=%.2f heading=%.2f speed=%.2f q=%.1f load=%.2f runway=%.1f\n",
+                t->ut,t->runway_along_track,t->runway_cross_track,t->radar_altitude,
+                t->vertical_speed,t->true_air_speed,capture.time_available_s,
+                capture.lateral_capture_time_s,capture.runway_time.margin,
+                capture.lateral_capture_time_s,capture.heading_capture_time_s,
+                capture.speed.margin,capture.dynamic_pressure.margin,
+                capture.load.margin,capture.runway_remaining.margin);
+        return false;
+    }
 
     double radar=isfinite(t->radar_altitude)?t->radar_altitude:
         t->mean_altitude-cfg->site.altitude;
@@ -517,7 +528,13 @@ bool terminal_final_conditioning_reachable(const GuidanceMachine*g,
     /* The final controller is already bounded to a 35 degree recovery dive.
        A state requiring a steeper zero-incidence path merely to reach the flare
        boundary is not a physically admissible final-only starting point. */
-    if(!isfinite(slope)||slope>35.0)return false;
+    if(!isfinite(slope)||slope>35.0){
+        const char*trace=getenv("KSP_LANDER_FINAL_CONDITIONING_DIAGNOSTICS");
+        if(trace&&strcmp(trace,"1")==0&&g->terminal_final_test_mode)
+            fprintf(stderr,"FINAL_CONDITIONING reason=slope ut=%.3f x=%.1f h=%.1f ground=%.1f slope=%.2f\n",
+                t->ut,t->runway_along_track,height,ground,slope);
+        return false;
+    }
     slope=fmax(0.0,slope);
 
     /* Certify the same force-derived incidence that the conditioning controller
@@ -533,11 +550,31 @@ bool terminal_final_conditioning_reachable(const GuidanceMachine*g,
     double available=entry_remaining_specific_energy(t->latitude,t->mean_altitude,
         t->true_air_speed,cfg->site.latitude,gate_altitude,minimum_speed,p);
     if(!isfinite(work)||work<0.0||!isfinite(available)||available<0.0||
-       !isfinite(end_speed)||end_speed<minimum_speed)return false;
+       !isfinite(end_speed)||end_speed<minimum_speed){
+        const char*trace=getenv("KSP_LANDER_FINAL_CONDITIONING_DIAGNOSTICS");
+        if(trace&&strcmp(trace,"1")==0&&g->terminal_final_test_mode)
+            fprintf(stderr,"FINAL_CONDITIONING reason=projection ut=%.3f x=%.1f cross=%.1f h=%.1f sink=%.2f v=%.2f ground=%.1f height=%.1f slope=%.2f aoa=%.2f work=%.1f endSpeed=%.2f minimum=%.2f available=%.1f\n",
+                t->ut,t->runway_along_track,t->runway_cross_track,t->radar_altitude,
+                t->vertical_speed,t->true_air_speed,ground,height,slope,
+                conditioning_aoa,work,end_speed,minimum_speed,available);
+        return false;
+    }
     EnergyPathEnvelope energy=decision_energy_path_envelope(t,p,available,work,ground);
     if(energy_out)*energy_out=energy;
     if(end_speed_out)*end_speed_out=end_speed;
     if(slope_out)*slope_out=slope;
+    const char*trace=getenv("KSP_LANDER_FINAL_CONDITIONING_DIAGNOSTICS");
+    if(trace&&strcmp(trace,"1")==0&&g->terminal_final_test_mode){
+        static double last_trace_ut=-INFINITY;
+        if(!isfinite(last_trace_ut)||t->ut-last_trace_ut>=1.0){
+            fprintf(stderr,"FINAL_CONDITIONING reason=energy ut=%.3f x=%.1f cross=%.1f h=%.1f sink=%.2f v=%.2f ground=%.1f height=%.1f slope=%.2f aoa=%.2f work=%.1f endSpeed=%.2f minimum=%.2f available=%.1f margin=%.1f feasible=%d\n",
+                t->ut,t->runway_along_track,t->runway_cross_track,t->radar_altitude,
+                t->vertical_speed,t->true_air_speed,ground,height,slope,
+                conditioning_aoa,work,end_speed,minimum_speed,available,
+                energy.energy.margin,energy.feasible?1:0);
+            last_trace_ut=t->ut;
+        }
+    }
     return energy.valid&&energy.feasible;
 }
 
