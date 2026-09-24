@@ -231,6 +231,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        Where the wheels touch is a consequence, not a target. */
     double drag=t->mass>1.0&&isfinite(t->drag_force)?t->drag_force:0.0;
     double v_dot=-drag/fmax(t->mass,1.0)-g0*sin(gamma);
+    double pull_rate=KP("KP_R",1.0);
     if(g->terminal_vs_prev_ut>0.0&&t->ut>g->terminal_vs_prev_ut+1e-3&&t->ut<g->terminal_vs_prev_ut+2.0){
         double r=(t->vertical_speed-g->terminal_vs_prev)/(t->ut-g->terminal_vs_prev_ut);
         if(isfinite(r))g->terminal_vs_rate_ema+=.3*(clampd(r,-30.0,30.0)-g->terminal_vs_rate_ema);
@@ -241,7 +242,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double V_GLIDE=KP("KP_VG",115.0),FLARE_C=KP("KP_C",.2),H_MARGIN=KP("KP_HM",20.0);
     double h_arrest=INFINITY,v_arr=V;
     if(!getenv("KP_FPA")&&!g->terminal_pull_latch&&height<600.0){
-        h_arrest=terminal_flare_predict(g,t,v,g0,height,aoa_max,KP("KP_R",2.0),sink_td+FLARE_C*H_MARGIN,&v_arr);
+        h_arrest=terminal_flare_predict(g,t,v,g0,height,aoa_max,pull_rate,sink_td+FLARE_C*H_MARGIN,&v_arr);
         if(h_arrest<=H_MARGIN||height<=15.0){
             g->terminal_pull_latch=true;
             g->terminal_flare_k=fmax(0.0,sink-sink_td)/fmax(height,5.0);
@@ -355,7 +356,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         /* Pull-up: the same incidence ramp the trigger simulated, so the
            arrest happens where it was predicted.  Hand over to the sink
            profile once the sink is down to it. */
-        aoa=fmin(aoa_max,g->terminal_flare_aoa0+KP("KP_R",1.0)*fmax(0.0,t->ut-g->terminal_flare_ut-.5));
+        aoa=fmin(aoa_max,g->terminal_flare_aoa0+pull_rate*fmax(0.0,t->ut-g->terminal_flare_ut-.5));
         if(sink<=sink_td+FLARE_C*height+1.0){
             g->terminal_flare_captured=true;g->terminal_flare_k=FLARE_C;g->terminal_aoa_trim=0.0;
         }
