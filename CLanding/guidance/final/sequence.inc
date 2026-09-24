@@ -175,9 +175,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double gamma=t->flight_path_angle*DEG2RAD;
     terminal_learn_aero(g,t,v);
 
-    /* Subsonic lift keeps rising to ~20 deg in the force data; the 15 deg
-       cruise limit leaves a third of the pull-up authority unused. */
-    double aoa_max=fmax(final_lift_aoa_limit(t,v),fmin(v->maximum_angle_of_attack,20.0));
+    double aoa_max=final_lift_aoa_limit(t,v);
     double v_td=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
     double sink_td=fmax(.6,fabs(s->touchdown_sink_rate));
     double sink=fmax(0.0,-t->vertical_speed);
