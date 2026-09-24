@@ -297,7 +297,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             if(Lq>.2*t->mass*g0&&isfinite(t->lift_force)&&t->lift_force>0.0)
                 g->terminal_lift_ratio+=fmin(1.0,dt/KP("KP_LRT",2.0))*(clampd(t->lift_force/Lq,.6,1.6)-g->terminal_lift_ratio);
         }
-        const double H_FLOAT=KP("KP_HT",2.0),S_FLOAT=KP("KP_STD",1.5);
+        const double H_FLOAT=KP("KP_HT",2.0),S_FLOAT=KP("KP_STD",.5);
         /* Aim the outer glide at a real touchdown point on the runway instead of
            switching from an energy gate to a fixed steep slope.  This keeps the
            reference geometric and continuous from final capture through preflare. */
