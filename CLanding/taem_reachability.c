@@ -60,11 +60,18 @@ bool taem_fixed_hac_turn_reachability(const TerminalModel *m,
         !(s->mass_kg > 0.0) || m->aero.alpha_count < 2) return false;
 
     double gravity = m->world.mu_m3_s2 / (local_radius * local_radius);
-    /* Lift curves are not monotonic in AoA.  Sampling only the vehicle's
-     * maximum incidence can evaluate a post-stall point and reject a turn
-     * that the tracker can make at the lower loaded-table lift peak. */
+    /* Lift curves are not monotonic in AoA.  Use the configured subsonic
+     * terminal CL-max incidence as the shared control/reachability limit, so
+     * neither side assumes authority on the post-stall side of the curve. */
     double max_aoa = fmin(m->vehicle.maximum_angle_of_attack,
                           m->aero.alpha_deg[m->aero.alpha_count - 1]);
+    AeroForces flow = aero_compute(&m->world, &m->aero,
+        s->position_i_m, s->velocity_i_mps, s->ut_s, s->mass_kg, 0.0, 0.0);
+    if (flow.mach < 1.0 &&
+        isfinite(m->vehicle.terminal_maximum_lift_angle_of_attack) &&
+        m->vehicle.terminal_maximum_lift_angle_of_attack > 0.0)
+        max_aoa = fmin(max_aoa,
+            m->vehicle.terminal_maximum_lift_angle_of_attack);
     double lift_accel = 0.0;
     for (double aoa_deg = 0.0; aoa_deg <= max_aoa + 1e-9; aoa_deg += 0.5) {
         AeroForces forces = aero_compute(&m->world, &m->aero,

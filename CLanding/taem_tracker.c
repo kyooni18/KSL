@@ -61,6 +61,13 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
 
     double aoa_max = fmin(m->vehicle.maximum_angle_of_attack,
                           m->aero.alpha_deg[m->aero.alpha_count - 1]);
+    AeroForces flow = aero_compute(&m->world, &m->aero,
+        s->position_i_m, s->velocity_i_mps, s->ut_s, s->mass_kg, 0.0, 0.0);
+    if (flow.mach < 1.0 &&
+        isfinite(m->vehicle.terminal_maximum_lift_angle_of_attack) &&
+        m->vehicle.terminal_maximum_lift_angle_of_attack > 0.0)
+        aoa_max = fmin(aoa_max,
+            m->vehicle.terminal_maximum_lift_angle_of_attack);
     double bank_max = fmin(m->vehicle.maximum_bank_angle, 80.0);
     double g_limit = fmax(0.0, m->vehicle.maximum_g_load) * gravity;
     double best_error = INFINITY;

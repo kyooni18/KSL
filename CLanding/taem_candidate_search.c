@@ -16,15 +16,19 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     memset(&reachability, 0, sizeof(reachability));
     if (!taem_fixed_hac_turn_reachability(model, initial, geometry,
             model->guidance.hac_radius, &reachability) ||
-        !reachability.lateral_authority_ok) {
+        !reachability.valid ||
+        !(reachability.available_lateral_accel_mps2 > 0.0)) {
         candidate.required_lateral_accel_mps2 = reachability.required_lateral_accel_mps2;
         candidate.available_lateral_accel_mps2 = reachability.available_lateral_accel_mps2;
-        candidate.reason = "fixed HAC circle exceeds live turn authority";
+        candidate.reason = "no measurable lateral authority for the finite lead";
         return candidate;
     }
     candidate.required_lateral_accel_mps2 = reachability.required_lateral_accel_mps2;
     candidate.available_lateral_accel_mps2 = reachability.available_lateral_accel_mps2;
-    /* Keep a small numerical margin, but do not reserve nearly a third of
+    /* Current-state lift bounds the finite lead.  HAC circle authority is
+     * checked during native replay at the evolving capture speed; rejecting
+     * from the initial speed here would discard leads that can slow the
+     * vehicle before the fixed arc.  Keep a small numerical margin, but do not reserve nearly a third of
      * the available turn authority here.  The solver propagates the complete
      * route with the live force and response limits, so an over-conservative
      * geometric prefilter can otherwise discard a candidate that replay

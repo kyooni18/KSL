@@ -254,25 +254,33 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             !search.candidates[selected].replay.path_constraints_ok) {
             char diagnostic[1024];
             snprintf(diagnostic,sizeof(diagnostic),
-                "MM305 fixed-HAC search rejected both sides: left=%s (need %.1f, have %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m); right=%s (need %.1f, have %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m)",
+                "MM305 fixed-HAC search rejected both sides: left=%s (lat %.1f/%.1f m/s2, vert short %.1f, demand %.1f/delivered %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m, FPA %.1f deg); right=%s (lat %.1f/%.1f m/s2, vert short %.1f, demand %.1f/delivered %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m, FPA %.1f deg)",
                 search.candidates[0].reason?search.candidates[0].reason:"unknown",
                 search.candidates[0].required_lateral_accel_mps2,
                 search.candidates[0].available_lateral_accel_mps2,
+                search.candidates[0].replay.maximum_vertical_authority_shortfall_mps2,
+                search.candidates[0].replay.failure_required_vertical_lift_mps2,
+                search.candidates[0].replay.failure_delivered_vertical_lift_mps2,
                 search.candidates[0].replay.elapsed_s,
                 search.candidates[0].replay.final_geometry.altitude_above_runway_m,
                 search.candidates[0].replay.final_route_index,
                 search.candidates[0].replay.maximum_cross_track_m,
                 search.candidates[0].replay.maximum_course_error_deg,
                 search.candidates[0].replay.maximum_altitude_error_m,
+                search.candidates[0].replay.final_geometry.flight_path_angle_deg,
                 search.candidates[1].reason?search.candidates[1].reason:"unknown",
                 search.candidates[1].required_lateral_accel_mps2,
                 search.candidates[1].available_lateral_accel_mps2,
+                search.candidates[1].replay.maximum_vertical_authority_shortfall_mps2,
+                search.candidates[1].replay.failure_required_vertical_lift_mps2,
+                search.candidates[1].replay.failure_delivered_vertical_lift_mps2,
                 search.candidates[1].replay.elapsed_s,
                 search.candidates[1].replay.final_geometry.altitude_above_runway_m,
                 search.candidates[1].replay.final_route_index,
                 search.candidates[1].replay.maximum_cross_track_m,
                 search.candidates[1].replay.maximum_course_error_deg,
-                search.candidates[1].replay.maximum_altitude_error_m);
+                search.candidates[1].replay.maximum_altitude_error_m,
+                search.candidates[1].replay.final_geometry.flight_path_angle_deg);
             return terminal_abort(g,diagnostic);
         }
 

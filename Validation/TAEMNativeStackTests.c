@@ -9,6 +9,7 @@
 #include "taem_geometry.h"
 #include "taem_reachability.h"
 #include "terminal_solver.h"
+#include "shuttlesim/math3.h"
 
 static double fixture_value(const char *path, const char *key) {
     FILE *f = fopen(path, "r");
@@ -78,10 +79,54 @@ int main(void) {
     double maximum_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
         fmax(geometry.airspeed_mps * geometry.airspeed_mps, 1.0);
 
+    TaemFixedHacGeometry fixed_geometry;
+    assert(taem_fixed_hac_geometry(&model, model.guidance.hac_radius, 1.0,
+                                   &fixed_geometry));
+    double capture_delta = (fixed_geometry.capture_course_deg -
+        model.site.runway_heading) * 3.14159265358979323846 / 180.0;
+    TaemGeometryState tangent_start = geometry;
+    tangent_start.runway_along_m = fixed_geometry.entry.x -
+        5000.0 * cos(capture_delta);
+    tangent_start.runway_cross_m = fixed_geometry.entry.y -
+        5000.0 * sin(capture_delta);
+    tangent_start.course_deg = fixed_geometry.capture_course_deg;
+
     TaemRoute route;
-    assert(taem_route_build_fixed_hac(&model, &geometry, 1.0, 500.0,
+    assert(taem_route_build_fixed_hac(&model, &tangent_start, 1.0, 500.0,
         maximum_curvature, &route, reason, sizeof(reason)));
     assert(route.valid && route.count > 3 && route.count <= TAEM_ROUTE_MAX_POINTS);
+
+    /* The subsonic terminal lift cap is shared by the MM305 reachability
+     * estimate and tracker search; never ask the native tracker to use a
+     * post-stall angle above the configured terminal CL-max incidence. */
+    TerminalModel limited_model = model;
+    limited_model.vehicle.terminal_maximum_lift_angle_of_attack = 3.0;
+    AeroForces flow = aero_compute(&limited_model.world, &limited_model.aero,
+        state.position_i_m, state.velocity_i_mps, state.ut_s, state.mass_kg,
+        0.0, 0.0);
+    assert(flow.mach < 1.0);
+    TaemPathReference high_lift_reference = {
+        .runway_along_m = geometry.runway_along_m,
+        .runway_cross_m = geometry.runway_cross_m,
+        .course_deg = geometry.course_deg,
+        .curvature_right_per_m = 0.0,
+        .altitude_m = geometry.altitude_above_runway_m,
+        .flight_path_angle_deg = geometry.flight_path_angle_deg + 20.0
+    };
+    TaemTrackerOutput capped_demand = taem_tracker_update(&limited_model,
+        &state, &geometry, &high_lift_reference, 0.25);
+    assert(capped_demand.valid);
+    assert(fabs(capped_demand.control.angle_of_attack_rad *
+        180.0 / 3.14159265358979323846 - 3.0) < 1e-9);
+    TaemRoute authority_probe_route;
+    assert(taem_route_build_fixed_hac(&limited_model, &geometry, 1.0,
+        500.0, 1.0, &authority_probe_route, reason, sizeof(reason)));
+    TerminalSolverResult authority_probe = terminal_solver_replay(
+        &limited_model, &state, &authority_probe_route, 0.25, 10.0);
+    assert(authority_probe.status == TERMINAL_SOLVER_INFEASIBLE);
+    assert(strcmp(authority_probe.reason,
+        "tracker exceeded vertical control authority") == 0);
+    assert(authority_probe.elapsed_s == 0.0);
 
     /* A fixed-size descriptor copies independently with GuidanceMachine state. */
     GuidanceMachine first = {0};
@@ -120,10 +165,25 @@ int main(void) {
     assert(search.selected_candidate == -1);
     for (size_t i = 0; i < 2; ++i) {
         const TaemFixedHacCandidate *candidate = &search.candidates[i];
-        assert(candidate->route_built);
+        assert(candidate->status != TAEM_PLAN_UNQUALIFIED ||
+               candidate->route_built);
         assert(candidate->replay.status != TERMINAL_SOLVER_UNQUALIFIED ||
                !candidate->replay.path_constraints_ok);
     }
+
+    TerminalDynamicState faster_state = state;
+    faster_state.velocity_i_mps = v3_scale(state.velocity_i_mps, 3.5);
+    TaemGeometryState faster_geometry;
+    assert(taem_geometry_state(&model, &faster_state, &faster_geometry));
+    TaemReachability faster_reachability;
+    assert(taem_fixed_hac_turn_reachability(&model, &faster_state,
+        &faster_geometry, model.guidance.hac_radius, &faster_reachability));
+    assert(!faster_reachability.lateral_authority_ok);
+    TaemFixedHacSearch faster_search = taem_fixed_hac_search(&model,
+        &faster_state, 500.0, 0.25, 1800.0);
+    for (size_t i = 0; i < 2; ++i)
+        assert(strcmp(faster_search.candidates[i].reason,
+            "fixed HAC circle exceeds live turn authority") != 0);
     puts("TAEM native model, route descriptor, Final interface, and replay gate tests passed.");
     return 0;
 }

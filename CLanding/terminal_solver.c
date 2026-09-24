@@ -90,6 +90,13 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
                                          fabs(demand.cross_track_error_m));
         out.maximum_course_error_deg = fmax(out.maximum_course_error_deg,
                                             fabs(demand.course_error_deg));
+        if (!demand.lateral_authority_ok || !demand.vertical_authority_ok) {
+            out.status = TERMINAL_SOLVER_INFEASIBLE;
+            out.reason = !demand.lateral_authority_ok ?
+                "tracker exceeded lateral control authority" :
+                "tracker exceeded vertical control authority";
+            break;
+        }
 
         AeroForces forces = aero_compute(&m->world, &m->aero,
             state.position_i_m, state.velocity_i_mps, state.ut_s, state.mass_kg,
