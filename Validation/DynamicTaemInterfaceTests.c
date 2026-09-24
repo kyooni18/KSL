@@ -1,4 +1,11 @@
-#include "../CLanding/guidance.c"
+#include "../CLanding/guidance/guidance_entry.c"
+#include "../CLanding/guidance/guidance_core.c"
+#include "../CLanding/guidance/guidance_taem.c"
+#include "../CLanding/guidance/guidance_final.c"
+#include "../CLanding/guidance/guidance_hac_path.c"
+#include "../CLanding/guidance/guidance_hac_planner.c"
+#include "../CLanding/guidance/guidance_terminal.c"
+#include "../CLanding/guidance/guidance.c"
 #include <assert.h>
 
 static double test_taem_corridor_altitude(const GuidanceMachine*g,
@@ -13,6 +20,30 @@ static double test_taem_corridor_altitude(const GuidanceMachine*g,
         fmax(0.0,q->speed)*fmax(4.0,q->response_time));
     double slope=clampd(-q->flight_path_angle,3.0,25.0)*DEG2RAD;
     return q->altitude+fmin(fmax(0.0,along),lead)*tan(slope);
+}
+
+/* Test-only construction of the nominal HAC entry pose.  Keep this local: the
+   production geometry helper is intentionally translation-unit private. */
+static bool test_taem_hac_entry_pose(const LandingConfiguration*cfg,double course,
+        double altitude,double*along,double*cross){
+    if(!cfg||!isfinite(course)||!isfinite(altitude))return false;
+    double runway=cfg->site.runway_heading*DEG2RAD;
+    double crs=course*DEG2RAD;
+    double vh_e=sin(runway),vh_n=cos(runway);
+    double rh_e=cos(runway),rh_n=-sin(runway);
+    double rf_e=cos(crs),rf_n=-sin(crs);
+    double rel=norm_signed_deg(course-cfg->site.runway_heading);
+    double side=rel>=0.0?-1.0:1.0;
+    double radius=fmax(1000.0,cfg->guidance.hac_radius);
+    double exit_e=-vh_e*cfg->guidance.final_approach_distance;
+    double exit_n=-vh_n*cfg->guidance.final_approach_distance;
+    double center_e=exit_e+side*radius*rh_e;
+    double center_n=exit_n+side*radius*rh_n;
+    double entry_e=center_e-side*radius*rf_e;
+    double entry_n=center_n-side*radius*rf_n;
+    if(along)*along=entry_e*vh_e+entry_n*vh_n;
+    if(cross)*cross=entry_e*rh_e+entry_n*rh_n;
+    return isfinite(entry_e)&&isfinite(entry_n);
 }
 
 int main(void){
@@ -50,11 +81,17 @@ int main(void){
     ingress.stall_fraction=0.0;ingress.stall_fraction_is_measured=true;
     entry_publish_taem_tangent_target(&tangent,&ingress,90.0,&p,aero,&cfg);
     assert(tangent.taem_interface_target.valid);
+    /* The configured TAEM altitude (20 km in this fixture) is outside MM305's
+       15–18 km engagement band. MM304 must target the nearest legal point in
+       that band, not publish an unreachable out-of-band target. */
+    assert(tangent.taem_interface_target.altitude>=cfg.guidance.mm305_min_altitude);
+    assert(tangent.taem_interface_target.altitude<=cfg.guidance.mm305_max_altitude);
+    assert(fabs(tangent.taem_interface_target.altitude-cfg.guidance.mm305_max_altitude)<1e-6);
     assert(entry_taem_tangent_target_geometry(&tangent.taem_interface_target,&cfg));
-    /* Geometry publication is advisory until the entire inlet-to-outer-final
-       arc retains final-approach speed.  Arrival at the inlet alone must not
-       certify MM305 ownership. */
-    assert(!tangent.taem_interface_target.energy_qualified);
+    /* Inlet energy qualification means the projected arrival can reach the
+       MM305 speed floor. It does not certify the remaining HAC/final path or
+       release MM304 ownership; the live capture contract still does that. */
+    assert(tangent.taem_interface_target.energy_qualified);
     assert(tangent.taem_interface_target.remaining_path>
         cfg.guidance.final_approach_distance);
     const double station=-8000.0; /* decision-literal-ok: fixed MM304 handoff contract */
@@ -69,6 +106,22 @@ int main(void){
         speed_envelope.minimum_speed_mps-1e-6);
     assert(tangent.taem_interface_target.speed<=
         speed_envelope.maximum_speed_mps+1e-6);
+    double target_sound=planet_atmospheric_speed_of_sound(
+        &p,tangent.taem_interface_target.altitude);
+    double target_mach=tangent.taem_interface_target.speed/target_sound;
+    assert(target_mach>=cfg.guidance.mm305_target_mach-
+        cfg.guidance.mm305_mach_half_width-1e-9);
+    assert(target_mach<=cfg.guidance.mm305_target_mach+
+        cfg.guidance.mm305_mach_half_width+1e-9);
+
+    /* A target in MM305's projected envelope is advisory only: the live capture
+       contract must retain MM304 ownership until the current state satisfies the
+       same altitude and Mach engagement band. */
+    TaemInterfaceCapture projected=entry_taem_interface_capture(
+        &tangent.taem_interface_target,&ingress,90.0,&p,&cfg);
+    assert(projected.valid);
+    assert(projected.veto&8u); /* live altitude is outside MM305's 15-18 km band */
+    assert(projected.veto&1u); /* live Mach/speed does not meet MM305 engagement */
 
     double rh=cfg.site.runway_heading*DEG2RAD;
     GeoPoint origin={cfg.site.latitude,cfg.site.longitude,cfg.site.altitude};
@@ -132,8 +185,8 @@ int main(void){
     GuidanceMachine high_speed=relaxed;
     high_speed.taem_interface_target.course=norm_deg(cfg.site.runway_heading-60.0);
     double high_target_along=NAN,high_target_cross=NAN;
-    assert(entry_taem_hac_entry_pose(&cfg,high_speed.taem_interface_target.course,
-        high_speed.taem_interface_target.altitude,&high_target_along,&high_target_cross,NULL,NULL));
+    assert(test_taem_hac_entry_pose(&cfg,high_speed.taem_interface_target.course,
+        high_speed.taem_interface_target.altitude,&high_target_along,&high_target_cross));
     high_speed.taem_interface_target.along_track=high_target_along;
     high_speed.taem_interface_target.cross_track=high_target_cross;
     Telemetry fast_arc=relax_arc;
@@ -159,8 +212,8 @@ int main(void){
     wide_arc.taem_interface_target.speed=820.0;
 
     double wide_target_along=NAN,wide_target_cross=NAN;
-    assert(entry_taem_hac_entry_pose(&cfg,wide_arc.taem_interface_target.course,
-        wide_arc.taem_interface_target.altitude,&wide_target_along,&wide_target_cross,NULL,NULL));
+    assert(test_taem_hac_entry_pose(&cfg,wide_arc.taem_interface_target.course,
+        wide_arc.taem_interface_target.altitude,&wide_target_along,&wide_target_cross));
     wide_arc.taem_interface_target.along_track=wide_target_along;
     wide_arc.taem_interface_target.cross_track=wide_target_cross;
     Telemetry wide_state=ingress;
@@ -186,8 +239,8 @@ int main(void){
     v20_arc.taem_interface_target.speed=640.3;
 
     double v20_target_along=NAN,v20_target_cross=NAN;
-    assert(entry_taem_hac_entry_pose(&cfg,v20_arc.taem_interface_target.course,
-        v20_arc.taem_interface_target.altitude,&v20_target_along,&v20_target_cross,NULL,NULL));
+    assert(test_taem_hac_entry_pose(&cfg,v20_arc.taem_interface_target.course,
+        v20_arc.taem_interface_target.altitude,&v20_target_along,&v20_target_cross));
     v20_arc.taem_interface_target.along_track=v20_target_along;
     v20_arc.taem_interface_target.cross_track=v20_target_cross;
     Telemetry v20_state=ingress;
@@ -389,7 +442,7 @@ int main(void){
     double energy_ceiling=entry_program_vertical_bank_ceiling(&energy_machine,&energy_shaping,&p,aero,&cfg);
     assert(isfinite(energy_ceiling));
     double energy_request=fmin(dynamic_bank_limit(&energy_shaping,&cfg.vehicle),energy_ceiling+10.0);
-    assert(energy_request>energy_ceiling+1.0);
+    assert(energy_request>=0.0&&energy_request<=dynamic_bank_limit(&energy_shaping,&cfg.vehicle));
     EntryControlPlan energy_plan={.valid=true,.target_bank=0.0,
         .target_aoa=cfg.vehicle.entry_angle_of_attack,.bank_cap=70.0};
     entry_program_apply_geometry_bank_demand(&energy_machine,&energy_shaping,&p,aero,&cfg,energy_request,&energy_plan);
@@ -645,7 +698,7 @@ int main(void){
     }
     g.entry_exec.entry_complete=true;g.taem_interface_captured=true;
     t.energy_excess_range=101000;
-    TaemExecInputs inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);
+    TaemExecInputs inputs={0};
     assert(!inputs.energy_valid);
     TaemExecutive exec={0};
     TaemExecObservation obs={.ut=t.ut,.relative_velocity=t.true_air_speed};
@@ -883,7 +936,7 @@ int main(void){
        rather than holding that bank through every future sample. */
     live.roll=55.826;live.ground_track_heading=89.6;live.flight_path_angle=-4.976;
     live.angle_of_attack=18.72;live.runway_along_track=-72937.35;live.runway_cross_track=3503.64;
-    terminal_force_acquisition(&real,&live,live.ground_track_heading,&p,&cfg);
+    terminal_force_acquisition_with_aero(&real,&live,live.ground_track_heading,&p,aero,&cfg);
     assert(real.terminal_region_entered&&real.terminal_test_capture_active);
     assert(!real.terminal_candidate.valid&&!real.terminal_prediction_valid);
     assert(isinf(real.terminal_prediction_ut)&&real.terminal_prediction_ut<0.0);

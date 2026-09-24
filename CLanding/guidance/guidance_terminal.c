@@ -14,10 +14,35 @@ static bool fixed_hac_lead_capture_update(GuidanceMachine *g,const Telemetry *t,
 static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, const VehicleState *state, double course,
         const PlanetModel *p, AerodynamicModel aero, const LandingConfiguration *cfg, double dt);
 
+static bool terminal_hac_acquisition_window_ready(const Telemetry*t,
+        const PlanetModel*p,const GuidanceSettings*s){
+    if(!t||!p||!s||!isfinite(t->mean_altitude)||
+       !isfinite(t->true_air_speed))return false;
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    return isfinite(mach)&&
+        t->mean_altitude<=s->hac_acquisition_altitude&&
+        mach<=s->hac_acquisition_mach;
+}
+
 static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double dt){
     const GuidanceSettings*s=&cfg->guidance;
     const VehicleProfile*v=&cfg->vehicle;
+
+    /* TAEM -> Final ownership is one-way.  Once final intercept has been
+       delivered, do not re-run TAEM admission while Preflare/Inner Final/Flare
+       are actively changing sink and speed according to their own certified
+       envelopes. */
+    if(g->final_approach_captured&&g->taem_exec.taem_complete){
+        Trajectory ref;
+        trajectory_init(&ref);
+        GuidanceResult result=terminal_approach_sequence(g,t,course,p,aero,cfg,&ref,dt);
+        trajectory_clear(&ref);
+        return result;
+    }
+
     TerminalPreflarePlan approach_plan={0};
     bool approach=terminal_outer_gate(g,t,course,p,aero,cfg,&approach_plan);
     TaemTerminalContract contract=terminal_delivery_contract(g,t,course,p,cfg,&approach_plan);
@@ -34,15 +59,29 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
                 taem_terminal_block_reason_string(evaluation.block_reason));
             return terminal_abort(g,reason);
         }
-        Trajectory conditioning_ref;trajectory_init(&conditioning_ref);
-        GuidanceResult result=final_guidance(g,t,course,p,cfg,&conditioning_ref,dt);
-        trajectory_clear(&conditioning_ref);
-        result.phase=PHASE_TAEM;
+        /* Execute the same runway-line/FPA solution that was just certified.
+           Calling final_guidance() here used the normal speed-dissipation trim,
+           which is intentionally more draggy than the conditioning proof and
+           could consume the preflare reserve before Final was admitted. */
+        HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,s,
+            planet_surface_gravity(p),course);
+        double conditioning_aoa=terminal_fpa_force_aoa(t,p,aero,v,-conditioning_slope);
+        GuidanceCommand command=atmospheric(t,line.heading,line.bank,v,0.0,false,PROFILE_TAEM);
+        command.heading_control_enabled=true;
+        command.has_target_aoa=true;
+        command.target_aoa=conditioning_aoa;
+        command.target_pitch=t->flight_path_angle+conditioning_aoa;
+        g->gear_command_latched=g->gear_command_latched||t->gear||
+            t->radar_altitude<=s->gear_deployment_altitude;
+        command.gear=t->gear||g->gear_command_latched;
+        terminal_speedbrake_closed(g);
+        GuidanceResult result=stabilized(g,result_make(PHASE_TAEM,command,NULL,NULL),
+            t,v,s,dt);
         g->phase=PHASE_TAEM;
         snprintf(result.status,sizeof(result.status),
-            "Post-HAC final alignment energy conditioning: V %.1f m/s, projected %.1f m/s at flare boundary, minimum %.1f m/s, slope %.1f deg, energy margin %+.0f J/kg.",
+            "Post-HAC final alignment energy conditioning: V %.1f m/s, projected %.1f m/s at flare boundary, minimum %.1f m/s, slope %.1f deg, AoA %.1f deg, energy margin %+.0f J/kg.",
             t->true_air_speed,projected_end_speed,v->minimum_safe_speed,conditioning_slope,
-            conditioning_energy.energy.margin);
+            conditioning_aoa,conditioning_energy.energy.margin);
         return result;
     }
     (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&contract,false,false);
@@ -53,7 +92,11 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
         if(g->taem_exec.taem_complete){
             g->final_approach_captured=true;
             terminal_store_preflare_plan(g,&approach_plan);
-            terminal_set_stage(g,TERMINAL_TRAJECTORY_CAPTURE,t->ut);
+            /* engageFinalTest admits only a runway-aligned post-HAC state and TAEM
+               completion has already proved the final-intercept contract.  Do not
+               burn another full control-response interval in a duplicate capture
+               dwell while a valid preflare energy window is closing. */
+            terminal_set_stage(g,TERMINAL_OUTER_FINAL,t->ut);
             robust_pid_reset(&g->final_altitude_pid);
             robust_pid_reset(&g->speed_pid);
             robust_pid_reset(&g->flare_sink_pid);
@@ -78,16 +121,13 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
 }
 static bool fixed_hac_lead_capture_update(GuidanceMachine *g,const Telemetry *t,
         double course,double radius,double e,double n,const HACTransitionPlan *lead){
-    HACPoint2 chord={lead->p3.e-lead->p0.e,lead->p3.n-lead->p0.n};
-    double chord_len=fmax(hypot(chord.e,chord.n),1.0);
-    double projected=((e-lead->p0.e)*chord.e+(n-lead->p0.n)*chord.n)/
-        (chord_len*chord_len);
-    double nearest=g->hac_transition_lead_curve?
-        hac_bezier_nearest_u(lead,e,n):clampd(projected,0.0,1.0);
-    double endpoint=hypot(e-lead->p3.e,n-lead->p3.n);
-    HACPoint2 end_dir=g->hac_transition_lead_curve?
-        hac_bezier_derivative(lead,1.0):chord;
-    double end_norm=hypot(end_dir.e,end_dir.n);
+    double nearest_distance=hac_lead_nearest_distance(lead,e,n);
+    double nearest=clampd(nearest_distance/
+        fmax(lead->lead_length,DBL_MIN),0.0,1.0);
+    double endpoint=hypot(e-lead->p0.e,n-lead->p0.n);
+    double end_heading=lead->lead_end_course*DEG2RAD;
+    HACPoint2 end_dir={sin(end_heading),cos(end_heading)};
+    double end_norm=1.0;
     double circle_radial=fabs(hypot(e-g->hac_transition_cone_center_e,
         n-g->hac_transition_cone_center_n)-radius);
     double end_course=end_norm>1e-6?
@@ -175,6 +215,79 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
         terminal_invalidate_frozen_path(g);
     }
     terminal_energy_observe(g,t,p);
+    if (!g->terminal_region_entered && !g->final_approach_captured) {
+        g->phase = PHASE_ENTRY_ENERGY;
+        GuidanceResult entry=entry_program_guidance(g,t,state,course,p,aero,cfg,dt);
+        bool acquisition_ready=mm305_acquisition_ready(t,p,cfg);
+        bool strict_handoff=acquisition_ready&&g->entry_exec.entry_complete;
+        g->taem_interface_captured=strict_handoff;
+        if(strict_handoff){
+            /*
+             * MM305 begins at the high-energy TAEM interface in Path Acquisition.
+             * A particular HAC is not an ownership prerequisite; the normal MM305
+             * planner will fly toward a live tangent and freeze it only after its
+             * geometry, vertical response, and energy contract are executable.
+             */
+            double loss=g->terminal_energy_loss_accel_ema;
+            double speed_loss=g->terminal_speed_loss_accel_ema;
+            bool rehearsal=g->terminal_rehearsal_mode;
+            terminal_glide_initialize(g,v,s);
+            g->terminal_energy_loss_accel_ema=loss;
+            g->terminal_speed_loss_accel_ema=speed_loss;
+            g->terminal_rehearsal_mode=rehearsal;
+            g->terminal_region_entered=true;
+            g->terminal_test_capture_active=true;
+            g->taem_safety_handoff=false;
+            g->terminal_path_kind=TERMINAL_PATH_NONE;
+            g->terminal_path_committed=false;
+            g->fixed_alignment_hac_latched=false;
+            g->hac_side_selected=false;
+            g->hac_captured=false;
+            g->hac_completed=false;
+            g->hac_progress_valid=false;
+            g->hac_transition_active=false;
+            g->hac_transition_heading_cone=false;
+            g->hac_transition_lead_curve=false;
+            g->hac_remaining=0.0;
+            g->hac_radius=s->hac_radius;
+            g->hac_side=terminal_default_hac_side(t,&cfg->site,course);
+            g->terminal_reference_heading=course;
+            g->terminal_reference_bank=0.0;
+            g->terminal_reference_fpa=t->flight_path_angle;
+            g->terminal_reference_aoa=clampd(t->angle_of_attack,0.0,
+                v->maximum_angle_of_attack);
+            g->phase=PHASE_TAEM;
+
+            if(!taem_exec_enter(g,t,s,p,aero,cfg,false))
+                return terminal_abort(g,
+                    "MM305 ownership handoff was qualified, but the TAEM executive could not enter Path Acquisition.");
+
+            terminal_predict(g,t,course,p,aero,cfg,dt);
+            taem_exec_sync(g,t,s,p,aero,cfg);
+            guidance_result_clear(&entry);
+        }else{
+            /* MM304 retains ownership until the published dynamic inlet and Entry
+               executive both report the same qualified handoff.  A HAC inlet cannot
+               be declared "passed" from a straight signed projection: MM304 is
+               explicitly allowed to fly an S-turn or a bounded return arc to the
+               fixed pose.  Near the MM305 engagement band, use the same live
+               curvature-bounded reachability model that selected the inlet. */
+            double handoff_low=0.0,handoff_high=0.0;
+            entry_taem_handoff_altitude_bounds(s,&handoff_low,&handoff_high);
+            double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+            double live_mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+                (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+            double minimum_handoff_mach=s->mm305_target_mach-s->mm305_mach_half_width;
+            bool handoff_lost=t->true_air_speed<v->minimum_safe_speed||
+                t->mean_altitude<cfg->site.altitude+100.0;
+            (void)handoff_low;(void)handoff_high;(void)sound;(void)live_mach;(void)minimum_handoff_mach;
+            if(handoff_lost)
+                return terminal_abort(g,
+                    "MM304 flight recovery margin was exhausted before TAEM acquisition.");
+            return entry;
+        }
+    }
+
     if(g->terminal_test_upstream_staging&&hac_variant_b_requested()){
         bool upstream_ready=false;
         GuidanceResult staging=terminal_variant_b_upstream_guidance(g,t,course,p,
@@ -207,11 +320,10 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
     double debug_capture_course=NAN;
     bool debug_fixture_state=terminal_hac_debug_fixture_state(t,course,cfg,
         &debug_capture_course);
-    bool explicit_mm305_fixture=hac_mm305_dynamic_fixture_requested();
     bool fixed_fixture_mode=!g->fixed_alignment_hac_latched&&
         (g->terminal_fixed_hac_fixture_latched||
          (g->terminal_test_capture_active&&g->terminal_rehearsal_mode&&
-          (explicit_mm305_fixture||debug_fixture_state)));
+          debug_fixture_state));
     if(fixed_fixture_mode){
         g->terminal_fixed_hac_fixture_latched=true;
         bool fixed_hac_acquired=terminal_force_acquisition_with_aero(
@@ -220,10 +332,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
             /* This fixture is an authority-gate diagnostic.  Do not let the
                generic terminal planner replace the rejected dynamic circle
                with a spline or an unqualified resized HAC. */
-            double final_station=g->terminal_test_final_approach_distance>0.0?
-                g->terminal_test_final_approach_distance:s->final_approach_distance;
-            if(terminal_capture_margin_exhausted(g,t,course,p,aero,cfg)||
-               t->runway_along_track>=-final_station)
+            if(terminal_capture_margin_exhausted(g,t,course,p,aero,cfg))
                 return terminal_abort(g,
                     "MM305 fixed-HAC admission found no lead, authority, and energy qualified circle before the runway maneuver margin was exhausted.");
             g->terminal_candidate.valid=false;
@@ -248,11 +357,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
                 t,v,s,dt);
         }
     }
+    bool hac_acquisition_window=terminal_hac_acquisition_window_ready(t,p,s);
     bool fixed_alignment_hac_mode=g->fixed_alignment_hac_latched&&!g->final_approach_captured;
     bool active_committed_heading_cone=g->terminal_path_committed&&
         g->terminal_path_kind==TERMINAL_PATH_HAC&&
         g->hac_transition_heading_cone&&g->hac_transition_active;
-    if(!fixed_alignment_hac_mode&&!active_committed_heading_cone&&g->terminal_region_entered&&
+    if(hac_acquisition_window&&!fixed_alignment_hac_mode&&
+       !active_committed_heading_cone&&g->terminal_region_entered&&
        entry_taem_tangent_target_geometry(&g->taem_interface_target,cfg)&&
        !g->final_approach_captured){
         TaemHandoffContract reacq_contract=taem_handoff_contract(&cfg->guidance);
@@ -274,27 +385,24 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
     }
     if(fixed_alignment_hac_mode||active_committed_heading_cone)
         g->terminal_test_capture_active=false;
-    else
+    else if(!g->runway_end_preview_valid)
         terminal_predict(g,t,course,p,aero,cfg,dt);
 
     /* MM304 -> MM305 ownership is evaluated only on the current strict
        interface contract below.  No speed/altitude/stability fallback may
        create terminal ownership independently of that contract. */
-    /* The path provider runs first so the executive can decide with the
-       current compact terminal candidate.  Then synchronize on every MM305
-       frame, not only while already in S-turn: this is what lets a 500+ m/s
-       Path-Acquisition start transition into physically propagated energy
-       management before the capture-preview branch returns. */
-    if(taem_exec_owns_vehicle(&g->taem_exec)){
+    /* The path provider runs first so the executive can classify the current
+       terminal-path state. MM305 has no S-turn state: excess-energy states must
+       be rejected or handled before the MM304 handoff, never converted into a
+       separate TAEM energy-dissipation maneuver. */
+    if(taem_exec_owns_vehicle(&g->taem_exec))
         taem_exec_sync(g,t,s,p,aero,cfg);
-        if(g->taem_exec.phase==TAEM_PHASE_S_TURN)
-            return taem_s_turn_guidance(g,t,course,p,aero,cfg,dt);
-    }
     if(g->terminal_glide_mode&&g->terminal_test_capture_active&&!fixed_alignment_hac_mode&&!active_committed_heading_cone){
         bool margin_exhausted=terminal_capture_margin_exhausted(g,t,course,p,aero,cfg);
         bool executable_preview=terminal_candidate_operationally_usable(
             g,&g->terminal_candidate,t,course,p,cfg)&&
-            !g->terminal_candidate.geometry_degraded;
+            !g->terminal_candidate.geometry_degraded&&
+            !g->terminal_candidate.energy_degraded;
         bool vertical_ready=terminal_candidate_vertical_response_ready_live(
             g,t,course,p,aero,cfg,&g->terminal_candidate);
         bool planning_blocked=!terminal_candidate_operationally_usable(
@@ -304,10 +412,12 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
             fmax(0.0,g->hac_capture_lost_duration-dt*2.0);
         double planning_grace=g->terminal_candidate.valid?
             fmax(8.0,g->terminal_candidate.response*1.5):10.0;
-        /* A dynamically regular path may be tracked before its energy budget
-           is nominal. Freeze it only after both geometry/control and energy
-           convergence are qualified. */
-        if(terminal_candidate_commit_ready(g,t,p,aero,cfg)){
+        /* Before the configured HAC-acquisition altitude/Mach gate, the
+           candidate is deliberately advisory: MM305 may fly and refresh its
+           acquisition geometry, but it may not freeze that geometry into the HAC.
+           Once inside the gate, the existing live geometry/control/energy proof owns
+           the commit decision. */
+        if(hac_acquisition_window&&terminal_candidate_commit_ready(g,t,p,aero,cfg)){
             terminal_publish_candidate(g);
             g->terminal_path_committed=true;g->terminal_test_capture_active=false;
             g->terminal_energy_mismatch_duration=0.0;
@@ -320,7 +430,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
                g->hac_capture_lost_duration>=planning_grace&&
                terminal_entry_recovery_available(g,t,v,s))
                 return terminal_return_to_entry(g,t,state,course,p,aero,cfg,dt);
-            if(margin_exhausted){
+            if(hac_acquisition_window&&margin_exhausted){
                 bool forced_spline=spline_candidate&&executable_preview&&
                     !g->terminal_candidate.geometry_degraded;
                 if(forced_spline){
@@ -375,8 +485,167 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
                 }
             }
             if(!executable_preview){
-                GuidanceCommand c=atmospheric(t,g->terminal_reference_heading,g->terminal_reference_bank,v,0,false,PROFILE_TAEM);
-                c.heading_control_enabled=false;c.has_target_aoa=true;c.target_aoa=g->terminal_reference_aoa;
+                /*
+                 * Acquisition is a temporary energy/geometry state, not a
+                 * separately tuned controller.  Use the same stock-KSP
+                 * force-derived lateral authority as the path planner.  The
+                 * acquisition circle is the preferred candidate/nominal HAC,
+                 * enlarged only when the live vehicle cannot physically turn it.
+                 * As energy is dissipated the authority radius naturally shrinks
+                 * back toward the planned HAC.
+                 */
+                ControlAuthorityEnvelope authority=
+                    decision_control_authority_envelope(g,t,p,cfg);
+                double lateral_speed=guidance_lateral_speed(t);
+                double physical_radius=authority.valid&&
+                    authority.maximum_lateral_accel_mps2>DBL_MIN&&
+                    lateral_speed>DBL_MIN?
+                    lateral_speed*lateral_speed/
+                        authority.maximum_lateral_accel_mps2:INFINITY;
+                bool regular_candidate=g->terminal_candidate.valid&&
+                    !g->terminal_candidate.geometry_degraded&&
+                    isfinite(g->terminal_candidate.radius)&&
+                    g->terminal_candidate.radius>DBL_MIN;
+                double preferred_radius=regular_candidate?
+                    g->terminal_candidate.radius:s->hac_radius;
+                double acq_r=fmax(preferred_radius,physical_radius);
+                if(!isfinite(acq_r)||!(acq_r>DBL_MIN))
+                    return terminal_abort(g,
+                        "TAEM acquisition has no finite lateral-control radius.");
+
+                double final_distance=regular_candidate&&
+                    isfinite(g->terminal_candidate.final_distance)&&
+                    g->terminal_candidate.final_distance>DBL_MIN?
+                    g->terminal_candidate.final_distance:s->final_approach_distance;
+                double course_rel=norm_signed_deg(
+                    course-cfg->site.runway_heading);
+                double aim_err=NAN,aim_course=course,aim_distance=INFINITY;
+                for(int sd=-1;sd<=1;sd+=2){
+                    double dx=-final_distance-t->runway_along_track;
+                    double dy=sd*acq_r-t->runway_cross_track;
+                    double d=hypot(dx,dy);
+                    double resolution=sqrt(DBL_EPSILON)*
+                        fmax(1.0,fmax(d,acq_r));
+                    double rel;
+                    double tangent_distance;
+                    if(d>acq_r+resolution){
+                        double ratio=clampd(acq_r/d,0.0,1.0);
+                        rel=atan2(dy,dx)*RAD2DEG-
+                            sd*asin(ratio)*RAD2DEG;
+                        tangent_distance=sqrt(fmax(0.0,
+                            d*d-acq_r*acq_r));
+                    }else{
+                        /* No external tangent exists inside/on the circle.
+                           Fly radially outward until a tangent exists. */
+                        rel=atan2(-dy,-dx)*RAD2DEG;
+                        tangent_distance=fmax(0.0,acq_r-d);
+                    }
+                    double err=norm_signed_deg(rel-course_rel);
+                    if(!isfinite(aim_err)||fabs(err)<fabs(aim_err)){
+                        aim_err=err;
+                        aim_course=norm_deg(cfg->site.runway_heading+rel);
+                        aim_distance=tangent_distance;
+                    }
+                }
+
+                double acq_lateral=0.0;
+                double acq_bank=0.0;
+                if(authority.valid&&authority.maximum_lateral_accel_mps2>DBL_MIN&&
+                   lateral_speed>DBL_MIN&&isfinite(aim_err)){
+                    double guidance_frame=s->guidance_rate>DBL_MIN?
+                        1.0/s->guidance_rate:0.0;
+                    double geometric_time=isfinite(aim_distance)?
+                        aim_distance/lateral_speed:INFINITY;
+                    double response=fmax(0.0,
+                        authority.control_response_time_s);
+                    double steering_time=fmax(guidance_frame,
+                        geometric_time-response);
+                    double required_lateral=lateral_speed*
+                        fabs(aim_err)*DEG2RAD/
+                        fmax(steering_time,DBL_MIN);
+                    HACGuidance acquisition_path={0};
+                    acquisition_path.lateral_acceleration=copysign(
+                        fmin(required_lateral,
+                            authority.maximum_lateral_accel_mps2),
+                        aim_err);
+                    acq_lateral=acquisition_path.lateral_acceleration;
+                    acq_bank=taem_bank_demand(t,&acquisition_path,acq_r,
+                        acquisition_path.lateral_acceleration>=0.0?1.0:-1.0,
+                        aero,v);
+                }
+
+                /*
+                 * Price energy over the shortest authority-bounded path to the
+                 * final-alignment state.  Solve AoA from the drag required to
+                 * reach the path/circle speed; if no dissipation is required,
+                 * fly the KSP-calibrated best-L/D incidence.
+                 */
+                double minimum_turn_radius=INFINITY;
+                double remaining_path=decision_target_path_length(
+                    g,t,course,-final_distance,0.0,cfg->site.runway_heading,
+                    authority.valid?authority.maximum_lateral_accel_mps2:NAN,
+                    p,cfg,&minimum_turn_radius);
+                if(!isfinite(remaining_path)||!(remaining_path>DBL_MIN))
+                    remaining_path=isfinite(aim_distance)&&
+                        aim_distance>DBL_MIN?aim_distance:acq_r;
+
+                /* MM305 acquisition must preserve the kinetic-energy state
+                   required at the configured HAC-acquisition gate.  Candidate speed
+                   is advisory before commit; never let a downstream/partial candidate
+                   pull the vehicle below the explicit Mach target for HAC acquisition. */
+                double acquisition_target_speed=hac_acquisition_speed_target(v,s,p);
+                double candidate_target_speed=regular_candidate&&
+                    isfinite(g->terminal_candidate.speed)&&
+                    g->terminal_candidate.speed>DBL_MIN?
+                    g->terminal_candidate.speed:NAN;
+                double target_speed=isfinite(acquisition_target_speed)&&
+                    acquisition_target_speed>DBL_MIN?
+                    acquisition_target_speed:
+                    fmax(v->minimum_safe_speed,v->final_approach_speed);
+                if(isfinite(candidate_target_speed)&&candidate_target_speed>DBL_MIN)
+                    target_speed=fmax(target_speed,candidate_target_speed);
+
+                double gate_altitude=cfg->site.altitude+
+                    fmax(0.0,g->terminal_test_preflare_altitude);
+                double height_to_gate=fmax(0.0,
+                    t->mean_altitude-gate_altitude);
+                double min_slope=0.0,max_slope=0.0;
+                terminal_path_slope_bounds(t,v,s,&min_slope,&max_slope);
+                double reference_slope=atan2(height_to_gate,
+                    fmax(remaining_path,DBL_MIN))*RAD2DEG;
+                if(isfinite(min_slope)&&isfinite(max_slope)&&
+                   max_slope>=min_slope)
+                    reference_slope=clampd(reference_slope,
+                        min_slope,max_slope);
+
+                double acq_drag_aoa=fixed_hac_lead_drag_aoa(t,p,aero,v,
+                    target_speed,remaining_path,reference_slope);
+                if(!isfinite(acq_drag_aoa))
+                    acq_drag_aoa=terminal_hac_energy_aoa(t,v);
+
+                /*
+                 * Energy trim cannot spend the normal-force reserve needed to keep
+                 * the acquisition trajectory airborne.  Solve incidence against
+                 * the bank actually being commanded, then enforce the lateral
+                 * lift floor from the same requested acceleration.  If that makes
+                 * the drag budget infeasible, the path is infeasible; diving at
+                 * zero AoA is not a valid way to manufacture range.
+                 */
+                Telemetry banked_state=*t;
+                banked_state.roll=acq_bank;
+                double vertical_support_aoa=terminal_fpa_force_aoa(
+                    &banked_state,p,aero,v,-reference_slope);
+                double lateral_support_aoa=terminal_required_aoa_for_lateral_limit(
+                    t,aero,v,acq_lateral,acq_bank,v->maximum_angle_of_attack);
+                double support_aoa=fmax(
+                    isfinite(vertical_support_aoa)?vertical_support_aoa:0.0,
+                    isfinite(lateral_support_aoa)?lateral_support_aoa:0.0);
+                double acq_aoa=fmax(
+                    isfinite(acq_drag_aoa)?acq_drag_aoa:0.0,support_aoa);
+                acq_aoa=clampd(acq_aoa,0.0,v->maximum_angle_of_attack);
+
+                GuidanceCommand c=atmospheric(t,aim_course,acq_bank,v,0,false,PROFILE_TAEM);
+                c.heading_control_enabled=false;c.has_target_aoa=true;c.target_aoa=acq_aoa;
                 c.target_pitch=t->flight_path_angle+c.target_aoa;
                 return stabilized(g,result_make(PHASE_TAEM,c,
                     g->terminal_candidate.valid?
@@ -404,117 +673,6 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
                prevents a neutral tangent hold from creating cross-track debt. */
         }
     }
-    if (!g->terminal_region_entered && !g->final_approach_captured) {
-        g->phase = PHASE_ENTRY_ENERGY;
-        GuidanceResult entry=entry_program_guidance(g,t,state,course,p,aero,cfg,dt);
-        TaemInterfaceCapture strict_capture=entry_dynamic_interface_capture(g,t,course,p,aero,cfg);
-        double debug_capture_course=NAN;
-        bool diagnostic_handoff=terminal_hac_debug_force_requested()&&
-            terminal_hac_debug_fixture_state(t,course,cfg,&debug_capture_course);
-        (void)debug_capture_course;
-        bool strict_handoff=(strict_capture.ready&&g->entry_exec.entry_complete)||
-            diagnostic_handoff;
-        g->taem_interface_captured=strict_handoff;
-        if(strict_handoff){
-            /* The strict fixed-point MM304 contract plus the Entry executive's
-               explicit qualified-handoff event is the sole ownership transfer.
-               Neither layer can manufacture MM305 ownership independently.  A
-               dynamically selected HAC also needs measured lateral-force authority at
-               this exact handoff state; if it is not executable, remain in
-               MM304 and spend energy before retrying the one-way transfer. */
-            /* Acquisition is transactional.  Several fixed-HAC admission
-               checks occur after terminal state is initialized; a rejected
-               candidate must not leak that partial MM305 state back into the
-               MM304 controller that retains ownership. */
-            GuidanceMachine acquisition_before=*g;
-            bool fixed_hac_acquired=terminal_force_acquisition_with_aero(
-                g,t,course,p,aero,cfg);
-            if(!fixed_hac_acquired){
-                *g=acquisition_before;
-                g->taem_interface_captured=false;
-                entry.has_warning=true;
-                snprintf(entry.warning,sizeof(entry.warning),
-                    "MM304 interface is geometrically qualified, but the selected HAC is not yet executable at measured lift/speed; retaining MM304 ownership.");
-                return entry;
-            }
-            guidance_result_clear(&entry);
-            /* If the newly latched TAEM plan begins with an energy-management
-               S-turn, execute it on this same frame so ownership and commands are
-               continuous across MM304 -> MM305. */
-            if(taem_exec_owns_vehicle(&g->taem_exec)&&g->taem_exec.phase==TAEM_PHASE_S_TURN)
-                return taem_s_turn_guidance(g,t,course,p,aero,cfg,dt);
-            if(g->terminal_path_committed&&g->terminal_path_kind==TERMINAL_PATH_HAC&&
-               g->hac_transition_heading_cone&&g->hac_transition_active){
-                HACGuidance immediate_path=hac_path_guidance(g,t,&cfg->site,s,p->radius,
-                    g->hac_side,planet_surface_gravity(p),course,g->hac_radius);
-                double immediate_bank=taem_bank_demand(t,&immediate_path,g->hac_radius,
-                    g->hac_side,aero,v);
-                const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
-                if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow)
-                    fprintf(stderr,"MM305 fixed-HAC command: UT %.2f true %.3f horiz %.3f surf %.3f fpa %.3f latSpeed %.3f lateral %.6f bank %.6f side %.0f R %.1f.\n",
-                        t->ut,t->true_air_speed,t->horizontal_speed,t->surface_speed,
-                        t->flight_path_angle,guidance_lateral_speed(t),
-                        immediate_path.lateral_acceleration,immediate_bank,
-                        g->hac_side,g->hac_radius);
-                GuidanceCommand immediate=atmospheric(t,
-                    isfinite(t->ground_track_heading)?t->ground_track_heading:course,
-                    immediate_bank,v,0.0,false,PROFILE_TAEM);
-                immediate.heading_control_enabled=false;
-                immediate.has_target_aoa=true;
-                immediate.target_aoa=clampd(g->terminal_reference_aoa,0.0,
-                    v->maximum_angle_of_attack);
-                immediate.target_pitch=t->flight_path_angle+immediate.target_aoa;
-                const char*fixed_status=g->hac_transition_lead_length>1.0&&
-                    g->hac_transition_lead_progress<.995?
-                    "MM305 fixed-HAC committed; acquiring the runway-anchored circle through its finite C1 lead.":
-                    "MM305 fixed-HAC committed; flying the runway-anchored heading-alignment arc.";
-                return stabilized(g,result_make(PHASE_TAEM,immediate,fixed_status,NULL),t,v,s,dt);
-            }
-            /*
-             * Ownership has just crossed the one-way boundary, but the first
-             * terminal candidate is still only a preview.  Do not fall through
-             * into the default HAC law on this same frame: that law has no
-             * published join and can command a large bank before the selector
-             * has established an executable path.  Give the next sample a
-             * neutral tangent/response frame so the candidate search and live
-             * vehicle state remain on the same side of the contract.
-            */
-            terminal_predict(g,t,course,p,aero,cfg,dt);
-            /* The response-projected candidate already carries the next
-               ownership boundary. If the shared forecast, vertical, and
-               energy envelopes all agree on this handoff sample, commit it
-               before the forecast clock becomes stale on the next tick. */
-            if(g->terminal_test_capture_active&&
-               terminal_candidate_commit_ready(g,t,p,aero,cfg)){
-                terminal_publish_candidate(g);
-                g->terminal_path_committed=true;
-                g->terminal_test_capture_active=false;
-                g->terminal_energy_mismatch_duration=0.0;
-                g->hac_commit_blend=0.0;
-            }else{
-            GuidanceCommand handoff_hold=atmospheric(t,course,0.0,v,0.0,
-                false,PROFILE_TAEM);
-            handoff_hold.heading_control_enabled=false;
-            handoff_hold.has_target_aoa=true;
-            handoff_hold.target_aoa=clampd(g->terminal_reference_aoa,0.0,
-                v->maximum_angle_of_attack);
-            handoff_hold.target_pitch=t->flight_path_angle+
-                handoff_hold.target_aoa;
-            return stabilized(g,result_make(PHASE_TAEM,handoff_hold,
-                "TAEM ownership latched; holding the current tangent while terminal geometry is qualified.",
-                "No executable terminal path has been published; lateral turn is inhibited."),
-                t,v,s,dt);
-            }
-        }else{
-            /* MM304 -> TAEM ownership is now exclusively the strict fixed-point
-               contract: live course 330..030 or 150..210 for KSC 09, positive
-               energy/speed/altitude/HAC suitability, and <=1 km horizontal
-               error at the final rear alignment point.  Do not use low-speed
-               or altitude safety fallbacks to enter TAEM; those produced TAEM
-               phases without a real capture_ready handoff. */
-            return entry;
-        }
-    }
 
     /* The runway-capture envelope is the fallback reserve for an uncommitted
        terminal state.  Once MM305 has frozen a regular HAC/spline, its route
@@ -528,7 +686,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
             "Terminal trajectory lost: the modeled runway-capture reserve is physically exhausted.");
     GuidanceSettings path_settings=terminal_path_settings(g,s);
     const GuidanceSettings*hs=&path_settings;
-    double radius=g->terminal_glide_mode?fmax(3000.0,g->hac_radius):fmax(s->hac_radius,g->hac_radius);
+    if(g->terminal_path_committed&&
+       (!g->terminal_final_handoff_latched||
+        !isfinite(g->terminal_final_handoff_distance)||
+        !(g->terminal_final_handoff_distance>0.0)))
+        return terminal_abort(g,
+            "MM305 terminal path is committed without a latched Final handoff station.");
+    double radius=g->hac_radius>DBL_MIN?g->hac_radius:s->hac_radius;
     bool fixed_alignment_hac_path=g->fixed_alignment_hac_latched&&
         g->hac_transition_active&&!g->hac_completed&&!g->final_approach_captured;
     bool spline_path=!fixed_alignment_hac_path&&
@@ -539,7 +703,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
     HACGuidance h=runway_line_path?
         terminal_runway_line_path_guidance(t,&cfg->site,hs,planet_surface_gravity(p),course):
         hac_guidance_radius(t,&cfg->site,hs,p->radius,g->hac_side,planet_surface_gravity(p),course,radius);
-    double nominal_bank=fmin(55.0,dynamic_bank_limit(t,v));
+    double nominal_bank=fmin(fabs(v->maximum_bank_angle),dynamic_bank_limit(t,v));
     g->minimum_turn_radius=live_turn_radius(t,aero,v,nominal_bank);
     bool feasible=runway_line_path?true:
         (isfinite(g->minimum_turn_radius)&&g->minimum_turn_radius<=radius/1.15);
@@ -561,32 +725,69 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
         if(!lead_done){
             HACTransitionPlan lead={0};
             lead.valid=true;
-            lead.p0=(HACPoint2){g->hac_transition_lead_start_e,g->hac_transition_lead_start_n};
-            lead.p1=(HACPoint2){g->hac_transition_lead_p1_e,g->hac_transition_lead_p1_n};
-            lead.p2=(HACPoint2){g->hac_transition_lead_p2_e,g->hac_transition_lead_p2_n};
-            lead.p3=transition.p0;lead.length=g->hac_transition_lead_length;
+            lead.lead_curve=g->hac_transition_lead_curve;
+            lead.lead_acquisition=g->hac_transition_lead_acquisition;
+            lead.lead_start=(HACPoint2){g->hac_transition_lead_start_e,
+                g->hac_transition_lead_start_n};
+            lead.p0=transition.p0;lead.p3=transition.p0;
+            lead.lead_p1=(HACPoint2){g->hac_transition_lead_p1_e,g->hac_transition_lead_p1_n};
+            lead.lead_p2=(HACPoint2){g->hac_transition_lead_p2_e,g->hac_transition_lead_p2_n};
+            lead.lead_length=g->hac_transition_lead_length;
+            lead.lead_start_course=g->hac_transition_lead_start_course;
+            lead.lead_end_course=g->hac_transition_lead_end_course;
+            lead.acquisition_center=(HACPoint2){g->hac_transition_acquisition_center_e,
+                g->hac_transition_acquisition_center_n};
+            lead.acquisition_tangent=(HACPoint2){g->hac_transition_acquisition_tangent_e,
+                g->hac_transition_acquisition_tangent_n};
+            lead.acquisition_radius=g->hac_transition_acquisition_radius;
+            lead.acquisition_side=g->hac_transition_acquisition_side;
+            lead.acquisition_start_angle=g->hac_transition_acquisition_start_angle;
+            lead.acquisition_end_angle=g->hac_transition_acquisition_end_angle;
+            lead.acquisition_arc_length=g->hac_transition_acquisition_arc_length;
+            lead.acquisition_tangent_length=g->hac_transition_acquisition_tangent_length;
             if(fixed_alignment_hac_path&&g->hac_transition_heading_cone){
                 lead_done=fixed_hac_lead_capture_update(g,t,course,radius,e,n,&lead);
             }else{
-                HACPoint2 chord={lead.p3.e-lead.p0.e,lead.p3.n-lead.p0.n};
-                double chord_len=fmax(hypot(chord.e,chord.n),1.0);
-                double chord_len2=chord_len*chord_len;
-                double projected=((e-lead.p0.e)*chord.e+(n-lead.p0.n)*chord.n)/chord_len2;
-                double nearest=g->hac_transition_lead_curve?
-                    hac_bezier_nearest_u(&lead,e,n):clampd(projected,0.0,1.0);
-                if(nearest>g->hac_transition_lead_progress)
-                    g->hac_transition_lead_progress=nearest;
-                double endpoint=hypot(e-lead.p3.e,n-lead.p3.n);
-                HACPoint2 end_dir=g->hac_transition_lead_curve?
-                    hac_bezier_derivative(&lead,1.0):chord;
+                double nearest_distance=hac_lead_nearest_distance(&lead,e,n);
+                double nearest=clampd(nearest_distance/
+                    fmax(lead.lead_length,DBL_MIN),0.0,1.0);
+
+                HACPoint2 endpoint_point={0};
+                double endpoint_course=NAN,endpoint_curvature=NAN;
+                bool endpoint_sampled=hac_lead_sample_distance(&lead,
+                    lead.lead_length,&endpoint_point,&endpoint_course,
+                    &endpoint_curvature);
+                double endpoint=endpoint_sampled?
+                    hypot(e-endpoint_point.e,n-endpoint_point.n):INFINITY;
+                double end_heading=endpoint_course*DEG2RAD;
+                HACPoint2 end_dir={
+                    isfinite(endpoint_course)?sin(end_heading):0.0,
+                    isfinite(endpoint_course)?cos(end_heading):0.0};
                 double end_norm=fmax(hypot(end_dir.e,end_dir.n),1.0);
-                double passed=((e-lead.p3.e)*end_dir.e+(n-lead.p3.n)*end_dir.n)/end_norm;
-                double cross=fabs((e-lead.p3.e)*end_dir.n-(n-lead.p3.n)*end_dir.e)/end_norm;
+                double passed=endpoint_sampled?
+                    ((e-endpoint_point.e)*end_dir.e+
+                     (n-endpoint_point.n)*end_dir.n)/end_norm:-INFINITY;
+                double cross=endpoint_sampled?
+                    fabs((e-endpoint_point.e)*end_dir.n-
+                         (n-endpoint_point.n)*end_dir.e)/end_norm:INFINITY;
                 bool close_endpoint=endpoint<=fmax(120.0,t->true_air_speed*.65);
-                bool passed_in_corridor=passed>=0.0&&cross<=fmax(350.0,radius*.12);
-                if(close_endpoint||passed_in_corridor)
-                    g->hac_transition_lead_progress=1.0;
-                lead_done=g->hac_transition_lead_progress>=.995;
+                bool passed_in_corridor=passed>=0.0&&
+                    cross<=fmax(350.0,radius*.12);
+                bool capture_valid=endpoint_sampled&&
+                    (close_endpoint||passed_in_corridor);
+
+                /* Nearest projection measures tracking progress, but reaching the
+                   numerical end station alone is not proof that the acquisition
+                   arc/tangent was actually delivered. Keep the measured progress
+                   below the transition threshold until the physical endpoint
+                   corridor is reached. */
+                double measured=capture_valid?nearest:fmin(nearest,.994);
+                if(measured>g->hac_transition_lead_progress)
+                    g->hac_transition_lead_progress=measured;
+                if(capture_valid)g->hac_transition_lead_progress=1.0;
+                else if(g->hac_transition_lead_progress>=.995)
+                    g->hac_transition_lead_progress=.994;
+                lead_done=capture_valid;
             }
         }
         if(lead_done){
@@ -774,7 +975,9 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
             last_join_diag_ut=t->ut;
         }
     }
-    double station=-hs->final_approach_distance;
+    double final_handoff_distance=g->terminal_final_handoff_latched?
+        g->terminal_final_handoff_distance:hs->final_approach_distance;
+    double station=-final_handoff_distance;
     double lead=clampd(t->horizontal_speed*hac_response_lead_time(t,s,g->hac_side*25.0),180.0,2400.0);
     bool at_exit=t->runway_along_track>=station-lead&&t->runway_along_track<=station+exit_window&&
         fabs(t->runway_cross_track)<fmax(250.0,fmin(1000.0,radius*.10))&&
@@ -829,9 +1032,12 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
         return terminal_abort(g,"HAC missed: no feasible high-pass circuit or final capture remains.");
     }
     if (!g->hac_completed && g->hac_progress_valid && g->hac_remaining <= exit_window) {
-        if(g->hac_remaining>=-exit_window&&g->hac_captured&&approach&&t->runway_along_track<0){g->hac_completed=true;g->hac_remaining=0;g->terminal_test_spiral_active=false;g->terminal_test_revolution_remaining=0;}
-        else if(g->hac_remaining < -exit_window)
-            return terminal_abort(g,"HAC missed: exit crossed without a valid final capture.");
+        if(g->hac_remaining>=-exit_window&&g->hac_captured&&
+           t->runway_along_track>=station-exit_window&&t->runway_along_track<0){
+            g->hac_completed=true;g->hac_remaining=0;
+            g->terminal_test_spiral_active=false;g->terminal_test_revolution_remaining=0;
+        }else if(g->hac_remaining < -exit_window)
+            return terminal_abort(g,"HAC missed: the planned MM305-to-Final handoff station was crossed outside the capture corridor.");
     }
     TaemTerminalContract delivery_contract=terminal_delivery_contract(g,t,course,p,cfg,&approach_plan);
     if(getenv("KSP_LANDER_HAC_DIAGNOSTICS")&&
@@ -865,7 +1071,15 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
        on the same qualified contract; coarse HAC-complete/approach booleans are
        no longer sufficient to bypass those checks. */
     (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&delivery_contract,false,false);
-    if(g->hac_completed && !g->final_approach_captured && !approach){
+    bool final_handoff_due=g->terminal_final_handoff_latched&&
+        t->runway_along_track>=station-exit_window;
+    if(g->hac_completed&&!g->final_approach_captured&&final_handoff_due&&
+       (!approach||!delivery_contract.valid||
+        !g->taem_exec.terminal_evaluation.feasible||
+        g->taem_exec.phase!=TAEM_PHASE_FINAL_INTERCEPT))
+        return terminal_abort(g,
+            "MM305 reached the planned Final handoff station without a feasible Final delivery contract.");
+    if(g->hac_completed && !g->final_approach_captured && !approach&&!final_handoff_due){
         /* A completed analytic HAC may reach the runway-aligned outer glide while
            an immediate pull-up projection is still speed-limited.  Final itself
            already treats that state as recoverable above the preflare trigger,
@@ -889,10 +1103,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
                 "Terminal runway-line exit rejected: final approach envelope is invalid and no conditioning path remains.":
                 "HAC exit rejected: final approach envelope is invalid and no conditioning path remains.");
     }
-    if (!g->final_approach_captured && g->hac_completed && approach && t->runway_along_track < 0 &&
+    if (!g->final_approach_captured && g->hac_completed && final_handoff_due && approach &&
         g->taem_exec.phase==TAEM_PHASE_FINAL_INTERCEPT&&g->taem_exec.terminal_evaluation.feasible) {
         (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&delivery_contract,true,true);
-        if(g->taem_exec.taem_complete){
+        if(!g->taem_exec.taem_complete)
+            return terminal_abort(g,
+                "MM305 Final delivery event failed to latch at the planned handoff station.");
+        {
             g->final_approach_captured = true;
             terminal_store_preflare_plan(g,&approach_plan);
             terminal_set_stage(g,TERMINAL_TRAJECTORY_CAPTURE,t->ut);
@@ -906,8 +1123,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
     trajectory_init(&ref);
     if(g->fixed_alignment_hac_latched&&!g->final_approach_captured)
         reference_trajectory_fixed_hac(&ref,&cfg->site,hs,p->radius,g);
+    else if(!g->final_approach_captured&&g->terminal_candidate.valid&&
+            g->terminal_candidate.kind==TERMINAL_PATH_HAC&&
+            g->terminal_candidate.join.valid)
+        reference_trajectory_terminal_candidate(&ref,&cfg->site,hs,p->radius,
+            &g->terminal_candidate,t->mean_altitude);
     else
-        reference_trajectory_radius(&ref, &cfg->site, hs, p->radius, g->hac_side, radius);
+        reference_trajectory_radius(&ref,&cfg->site,hs,p->radius,g->hac_side,radius);
     GuidanceResult r;
     if (!g->final_approach_captured || !g->taem_exec.taem_complete) {
         if(g->hac_captured)g->hac_progress_valid = true;
@@ -923,10 +1145,75 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t, 
     return r;
 }
 
+/*
+ * Execute terminal guidance in the same runway-end frame selected by the
+ * terminal planner.  Preview selection already evaluates RW09/RW27 as peers;
+ * the control path must not silently fall back to the configured primary frame.
+ */
+static GuidanceResult terminal_guidance_selected(GuidanceMachine*g,
+        const Telemetry*t,const VehicleState*state,double course,
+        const PlanetModel*p,AerodynamicModel aero,
+        const LandingConfiguration*cfg,double dt){
+    /*
+     * A qualified MM304 outlet is runway-end-specific.  Resolve that physical
+     * boundary before the generic RW09/RW27 terminal preview: otherwise preview
+     * can reframe a vehicle sitting in RW09's handoff disk into RW27 coordinates
+     * and make the same state fail MM305 ownership.  The guidance, not the fixture,
+     * chooses the end by testing the live pose against both configured outlets.
+     */
+    bool handoff_end_selected=false;
+    if(cfg->site.allow_reciprocal_runway&&!g->runway_end_committed&&
+       !g->terminal_region_entered){
+        LandingSite primary=cfg->site;
+        LandingSite reciprocal=runway_reciprocal_site(&primary,p->radius);
+        double primary_path=decision_runway_end_path_score(g,t,p,cfg,&primary);
+        double reciprocal_path=decision_runway_end_path_score(g,t,p,cfg,&reciprocal);
+        if(isfinite(primary_path)||isfinite(reciprocal_path)){
+            int best_end=(!isfinite(primary_path)||(isfinite(reciprocal_path)&&reciprocal_path<primary_path))?1:0;
+            g->runway_end_index=best_end;
+            g->runway_end_preview_valid=true;
+            handoff_end_selected=true;
+        }
+    }
+
+    double preview_period=fmax(cfg->guidance.prediction_interval,DBL_EPSILON);
+    bool preview_due=!g->runway_end_preview_valid||
+        !isfinite(g->terminal_prediction_ut)||
+        t->ut-g->terminal_prediction_ut>=preview_period;
+    if(!handoff_end_selected&&cfg->site.allow_reciprocal_runway&&
+       !g->runway_end_committed&&!g->terminal_planning_deferred&&preview_due){
+        GuidanceMachine request=*g,proposal=request;
+        if(guidance_plan_terminal_preview(&proposal,t,p,aero,cfg))
+            (void)guidance_accept_terminal_preview(g,&request,&proposal,t,cfg);
+    }
+
+    LandingConfiguration selected=*cfg;
+    Telemetry framed=*t;
+    if(cfg->site.allow_reciprocal_runway&&g->runway_end_preview_valid&&
+       g->runway_end_index==1)
+        selected.site=runway_reciprocal_site(&cfg->site,p->radius);
+
+    telemetry_reframe_runway(&framed,&selected.site,p->radius);
+    double entry_ref=g->entry_reference_speed>0.0?
+        g->entry_reference_speed:framed.true_air_speed;
+    EntryTerminalDemand demand=entry_terminal_demand(framed.latitude,
+        framed.mean_altitude,framed.range_to_site,framed.horizontal_speed,
+        framed.course_to_site_error,framed.vertical_speed,framed.true_air_speed,
+        entry_ref,p,&selected.vehicle,&selected.site,&selected.guidance);
+    framed.energy_excess_range=-demand.projected_taem_range_error;
+
+    GuidanceResult result=terminal_guidance(g,&framed,state,course,p,aero,
+        &selected,dt);
+    if(handoff_end_selected&&g->terminal_region_entered)
+        g->runway_end_committed=true;
+    if(g->terminal_path_committed)
+        g->runway_end_committed=true;
+    return result;
+}
+
 #define guidance_update guidance_update_impl
-GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){double dt=g->has_previous_ut?clampd(t->ut-g->previous_ut,0,1):.1;g->previous_ut=t->ut;g->has_previous_ut=true;if(g->aborted){GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_ABORT,c,g->abort_reason[0]?g->abort_reason:"Automation aborted. Manual control restored.",NULL);}if(!g->automation_engaged){g->phase=PHASE_IDLE;reset_limiters(g);GuidanceCommand c;guidance_command_init(&c);if(plan){if(plan->execution_qualified)return result_make(PHASE_IDLE,c,plan->execution_degraded?"Recoverable deorbit plan is ready. Engage guidance to begin execution.":"Robust deorbit plan is ready. Engage guidance to begin execution.",plan->execution_degraded?"The plan misses the preferred strict corridor but passed the guarded recovery envelope.":NULL);return result_make(PHASE_IDLE,c,"The current deorbit plan is preview-only and cannot be executed safely.","Replan for a later orbital opportunity or revise the vehicle/site model before engagement.");}return result_make(PHASE_IDLE,c,"Guidance is not engaged.",NULL);}if(g->paused){g->phase=PHASE_PAUSED;GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_PAUSED,c,"Guidance paused. Attitude hold released.",NULL);}const VehicleProfile*v=&cfg->vehicle;const GuidanceSettings*s=&cfg->guidance;double course=surface_course(state->position,state->velocity,planet_rotation_vector(p),p->north_axis,t->heading);if(g->terminal_glide_mode)return terminal_guidance(g,t,state,course,p,aero,cfg,dt);if(!plan){g->phase=PHASE_PLANNING;GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_PLANNING,c,"A deorbit plan is required before engagement.",NULL);}double entry_alt=entry_guidance_start_altitude(p,s);if(!g->deorbit_burn_completed&&t->mean_altitude<=entry_alt&&t->vertical_speed<0)g->deorbit_burn_completed=true;double peri_rem=t->periapsis_altitude-plan->predicted_post_burn_periapsis_altitude;bool has_peri=plan->predicted_post_burn_periapsis_altitude>10000&&plan->predicted_post_burn_periapsis_altitude<p->atmosphere_depth&&isfinite(t->periapsis_altitude)&&t->periapsis_altitude>-p->radius*.5,peri_hit=g->has_burn_command_started&&has_peri&&peri_rem<=300,state_hit=g->has_burn_command_started&&plan->live_cutoff_capture_qualified;double dvtarget=plan->delta_v+(has_peri?8:0);if(g->has_burn_command_started&&(g->delivered_delta_v>=dvtarget||peri_hit||state_hit))g->deorbit_burn_completed=true;bool still=g->has_burn_command_started&&!g->deorbit_burn_completed&&g->delivered_delta_v<dvtarget&&!peri_hit&&!state_hit;double burnstart=plan->burn_ut-plan->estimated_burn_duration*.5,open=t->ut>=burnstart;if(!g->deorbit_burn_completed&&t->mean_altitude>entry_alt-4500&&(t->vertical_speed>=-20||still||open)){GuidanceCommand c;guidance_command_init(&c);c.autopilot_engaged=true;c.use_inertial_direction=true;c.inertial_direction=vnorm(vscale(state->velocity,-1),v3(-1,0,0));c.navball_speed_mode=SPEED_ORBIT;c.control_profile=PROFILE_ORBITAL;if(t->ut<burnstart-12){g->phase=PHASE_COAST;char st[128];int sec=(int)fmax(0,round(burnstart-t->ut));snprintf(st,sizeof(st),"Coasting while acquiring retrograde. T−%02d:%02d.",sec/60,sec%60);return result_make(g->phase,c,st,NULL);}if(t->ut<burnstart){g->phase=PHASE_BURN_SETUP;return result_make(g->phase,c,"Aligning retrograde for the deorbit burn.",NULL);}if(g->delivered_delta_v<dvtarget&&!peri_hit&&!state_hit){g->phase=PHASE_DEORBIT_BURN;double maxthr=s->deorbit_maximum_throttle,avail=fmax(.05,t->available_thrust*maxthr/fmax(t->mass,1)),meas=fmax(0,t->current_thrust/fmax(t->mass,1)),align=fabs(t->autopilot_error);bool aligned=align<=10;if(!aligned&&!g->has_burn_command_started&&t->ut>burnstart+fmax(30,plan->estimated_burn_duration)){guidance_abort(g);GuidanceCommand safe;guidance_command_init(&safe);return result_make(PHASE_ABORT,safe,"Deorbit burn aborted because retrograde alignment missed the burn window.","The vehicle did not achieve the required retrograde alignment in time. Manual control restored; replan from the current orbit.");}if(aligned&&!g->has_burn_command_started){g->burn_command_started_ut=t->ut;g->has_burn_command_started=true;g->burn_active_elapsed=0;g->burn_progress_watch_ut=t->ut;g->burn_progress_watch_delta_v=g->delivered_delta_v;g->has_burn_progress_watch=true;}if(aligned&&g->has_burn_command_started){g->delivered_delta_v+=meas*fmax(0,cos(align*DEG2RAD))*dt;g->burn_active_elapsed+=dt;if(!g->has_burn_progress_watch||g->delivered_delta_v-g->burn_progress_watch_delta_v>=.25){g->burn_progress_watch_ut=t->ut;g->burn_progress_watch_delta_v=g->delivered_delta_v;g->has_burn_progress_watch=true;}}double rem=fmax(0,dvtarget-g->delivered_delta_v);double fraction=burn_fraction(g->burn_active_elapsed,rem,avail,s->deorbit_throttle_ramp_duration),authority=clampd((10-align)/6,0,1),pa=has_peri?clampd((peri_rem-250)/8000,0,1):1;c.target_throttle=rem<.08?0:(aligned?maxthr*fmin(fraction,pa)*authority:0);double expected_accel=fmax(0,t->available_thrust*c.target_throttle/fmax(t->mass,1));bool stalled=aligned&&g->has_burn_command_started&&g->has_burn_progress_watch&&rem>2&&t->ut-g->burn_progress_watch_ut>6&&expected_accel>.02&&meas<fmax(.01,expected_accel*.10);if(stalled){guidance_abort(g);GuidanceCommand safe;guidance_command_init(&safe);return result_make(PHASE_ABORT,safe,"Deorbit burn aborted after sustained loss of thrust/delta-v progress.","The burn stopped making measurable progress despite a meaningful commanded thrust level. Manual control restored; do not continue entry on the stale plan.");}char st[320];snprintf(st,sizeof(st),"Deorbit burn: %.1f / %.1f m/s, throttle %.0f%%.%s%s",g->delivered_delta_v,plan->delta_v,c.target_throttle*100,has_peri?" Periapsis closure active.":"",plan->live_cutoff_capture_qualified?" Cutoff-now trajectory is inside the entry corridor.":"");return result_make(g->phase,c,st,t->available_thrust<1?"No usable thrust is available.":align>10?"Holding throttle until retrograde alignment is stable.":NULL);}}
+GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){double dt=g->has_previous_ut?clampd(t->ut-g->previous_ut,0,1):.1;g->previous_ut=t->ut;g->has_previous_ut=true;if(g->aborted){GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_ABORT,c,g->abort_reason[0]?g->abort_reason:"Automation aborted. Manual control restored.",NULL);}if(!g->automation_engaged){g->phase=PHASE_IDLE;reset_limiters(g);GuidanceCommand c;guidance_command_init(&c);if(plan){if(plan->execution_qualified)return result_make(PHASE_IDLE,c,plan->execution_degraded?"Recoverable deorbit plan is ready. Engage guidance to begin execution.":"Robust deorbit plan is ready. Engage guidance to begin execution.",plan->execution_degraded?"The plan misses the preferred strict corridor but passed the guarded recovery envelope.":NULL);return result_make(PHASE_IDLE,c,"The current deorbit plan is preview-only and cannot be executed safely.","Replan for a later orbital opportunity or revise the vehicle/site model before engagement.");}return result_make(PHASE_IDLE,c,"Guidance is not engaged.",NULL);}if(g->paused){g->phase=PHASE_PAUSED;GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_PAUSED,c,"Guidance paused. Attitude hold released.",NULL);}const VehicleProfile*v=&cfg->vehicle;const GuidanceSettings*s=&cfg->guidance;double course=surface_course(state->position,state->velocity,planet_rotation_vector(p),p->north_axis,t->heading);if(g->terminal_glide_mode)return terminal_guidance_selected(g,t,state,course,p,aero,cfg,dt);if(!plan){g->phase=PHASE_PLANNING;GuidanceCommand c;guidance_command_init(&c);return result_make(PHASE_PLANNING,c,"A deorbit plan is required before engagement.",NULL);}double entry_alt=entry_guidance_start_altitude(p,s);if(!g->deorbit_burn_completed&&t->mean_altitude<=entry_alt&&t->vertical_speed<0)g->deorbit_burn_completed=true;double peri_rem=t->periapsis_altitude-plan->predicted_post_burn_periapsis_altitude;bool has_peri=plan->predicted_post_burn_periapsis_altitude>10000&&plan->predicted_post_burn_periapsis_altitude<p->atmosphere_depth&&isfinite(t->periapsis_altitude)&&t->periapsis_altitude>-p->radius*.5,peri_hit=g->has_burn_command_started&&has_peri&&peri_rem<=300,state_hit=g->has_burn_command_started&&plan->live_cutoff_capture_qualified;double dvtarget=plan->delta_v+(has_peri?8:0);if(g->has_burn_command_started&&(g->delivered_delta_v>=dvtarget||peri_hit||state_hit))g->deorbit_burn_completed=true;bool still=g->has_burn_command_started&&!g->deorbit_burn_completed&&g->delivered_delta_v<dvtarget&&!peri_hit&&!state_hit;double burnstart=plan->burn_ut-plan->estimated_burn_duration*.5,open=t->ut>=burnstart;if(!g->deorbit_burn_completed&&t->mean_altitude>entry_alt-4500&&(t->vertical_speed>=-20||still||open)){GuidanceCommand c;guidance_command_init(&c);c.autopilot_engaged=true;c.use_inertial_direction=true;c.inertial_direction=vnorm(vscale(state->velocity,-1),v3(-1,0,0));c.navball_speed_mode=SPEED_ORBIT;c.control_profile=PROFILE_ORBITAL;if(t->ut<burnstart-12){g->phase=PHASE_COAST;char st[128];int sec=(int)fmax(0,round(burnstart-t->ut));snprintf(st,sizeof(st),"Coasting while acquiring retrograde. T−%02d:%02d.",sec/60,sec%60);return result_make(g->phase,c,st,NULL);}if(t->ut<burnstart){g->phase=PHASE_BURN_SETUP;return result_make(g->phase,c,"Aligning retrograde for the deorbit burn.",NULL);}if(g->delivered_delta_v<dvtarget&&!peri_hit&&!state_hit){g->phase=PHASE_DEORBIT_BURN;double maxthr=s->deorbit_maximum_throttle,avail=fmax(.05,t->available_thrust*maxthr/fmax(t->mass,1)),meas=fmax(0,t->current_thrust/fmax(t->mass,1)),align=fabs(t->autopilot_error);bool aligned=align<=10;if(!aligned&&!g->has_burn_command_started&&t->ut>burnstart+fmax(30,plan->estimated_burn_duration)){guidance_abort(g);GuidanceCommand safe;guidance_command_init(&safe);return result_make(PHASE_ABORT,safe,"Deorbit burn aborted because retrograde alignment missed the burn window.","The vehicle did not achieve the required retrograde alignment in time. Manual control restored; replan from the current orbit.");}if(aligned&&!g->has_burn_command_started){g->burn_command_started_ut=t->ut;g->has_burn_command_started=true;g->burn_active_elapsed=0;g->burn_progress_watch_ut=t->ut;g->burn_progress_watch_delta_v=g->delivered_delta_v;g->has_burn_progress_watch=true;}if(aligned&&g->has_burn_command_started){g->delivered_delta_v+=meas*fmax(0,cos(align*DEG2RAD))*dt;g->burn_active_elapsed+=dt;if(!g->has_burn_progress_watch||g->delivered_delta_v-g->burn_progress_watch_delta_v>=.25){g->burn_progress_watch_ut=t->ut;g->burn_progress_watch_delta_v=g->delivered_delta_v;g->has_burn_progress_watch=true;}}double rem=fmax(0,dvtarget-g->delivered_delta_v);double fraction=burn_fraction(g->burn_active_elapsed,rem,avail,s->deorbit_throttle_ramp_duration),authority=clampd((10-align)/6,0,1),pa=has_peri?clampd((peri_rem-250)/8000,0,1):1;c.target_throttle=rem<.08?0:(aligned?maxthr*fmin(fraction,pa)*authority:0);double expected_accel=fmax(0,t->available_thrust*c.target_throttle/fmax(t->mass,1));bool stalled=aligned&&g->has_burn_command_started&&g->has_burn_progress_watch&&rem>2&&t->ut-g->burn_progress_watch_ut>6&&expected_accel>.02&&meas<fmax(.01,expected_accel*.10);if(stalled){guidance_abort(g);GuidanceCommand safe;guidance_command_init(&safe);return result_make(PHASE_ABORT,safe,"Deorbit burn aborted after sustained loss of thrust/delta-v progress.","The burn stopped making measurable progress despite a meaningful commanded thrust level. Manual control restored; do not continue entry on the stale plan.");}char st[320];snprintf(st,sizeof(st),"Deorbit burn: %.1f / %.1f m/s, throttle %.0f%%.%s%s",g->delivered_delta_v,plan->delta_v,c.target_throttle*100,has_peri?" Periapsis closure active.":"",plan->live_cutoff_capture_qualified?" Cutoff-now trajectory is inside the entry corridor.":"");return result_make(g->phase,c,st,t->available_thrust<1?"No usable thrust is available.":align>10?"Holding throttle until retrograde alignment is stable.":NULL);}}
     if(!g->deorbit_burn_completed){g->phase=PHASE_COAST;GuidanceCommand c;guidance_command_init(&c);c.autopilot_engaged=true;c.use_inertial_direction=true;c.inertial_direction=vnorm(vscale(state->velocity,-1),v3(-1,0,0));c.navball_speed_mode=SPEED_ORBIT;c.control_profile=PROFILE_ORBITAL;return result_make(g->phase,c,"Holding retrograde until the deorbit burn completes.",NULL);}if(!g->atmospheric_interface_crossed){double signed_entry_roll=norm_signed_deg(t->roll),entry_roll=fabs(signed_entry_roll),capture_aoa=entry_low_q_protective_aoa_floor(t->dynamic_pressure,v),entry_pitch_error=fabs(t->angle_of_attack-capture_aoa),entry_heading_error=fabs(norm_signed_deg(t->ground_track_heading-t->heading));bool entry_attitude_ready=entry_roll<=18&&entry_pitch_error<=4&&entry_heading_error<=15&&fabs(t->roll_rate)<=8&&fabs(t->pitch_rate)<=8&&fabs(t->heading_rate)<=8;bool entry_reached=t->mean_altitude<=entry_alt&&t->vertical_speed<0;if(entry_reached&&entry_attitude_ready){g->atmospheric_interface_crossed=true;/* Continue from the bank direction actually reached instead of forcing an unnecessary high-Mach reversal. */if(entry_roll>=5)g->s_turn_sign=signed_entry_roll<0?-1:1;}else{g->phase=PHASE_ENTRY_INTERFACE;const char*st=entry_reached?"Atmospheric interface reached. Holding prograde heading, entry AoA and wings-level attitude before MM304 guidance.":"Burn complete. Using RCS/direct control to capture prograde heading, entry AoA and wings-level attitude.";return result_make(g->phase,entry_capture(t,state,v),st,entry_reached&&!entry_attitude_ready?"MM304 guidance is inhibited until entry heading/AoA/roll attitude is stabilized.":NULL);}}
-    return terminal_guidance(g,t,state,course,p,aero,cfg,dt);
+    return terminal_guidance_selected(g,t,state,course,p,aero,cfg,dt);
 }
 #undef guidance_update
-

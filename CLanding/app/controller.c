@@ -2,6 +2,7 @@
 #include "flight_log_codec.h"
 #include "planner_log.h"
 #include "async_prediction_policy.h"
+#include "decision_envelope.h"
 
 #include <errno.h>
 #include <float.h>
@@ -29,9 +30,6 @@ struct LandingController {
     double last_terminal_prediction_request_ut, last_terminal_prediction_completion_ut;
     double last_terminal_prediction_completion_wall, last_terminal_prediction_solve_wall;
     LandingConfiguration configuration;
-    bool runway_end_initialized;
-    int runway_end_index; /* 0 = configured threshold/heading, 1 = reciprocal end */
-    double runway_end_primary_score, runway_end_reciprocal_score;
     KRPCSession *session;
     GuidanceMachine guidance;
     VesselPhysicsModel physics;

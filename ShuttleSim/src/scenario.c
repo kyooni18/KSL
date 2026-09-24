@@ -24,6 +24,8 @@ bool scenario_load(const char *path,Scenario *s){
         else if(!strcmp(k,"longitude_deg"))s->longitude_deg=strtod(v,NULL);
         else if(!strcmp(k,"altitude_m"))s->altitude_m=strtod(v,NULL);
         else if(!strcmp(k,"heading_deg"))s->heading_deg=strtod(v,NULL);
+        else if(!strcmp(k,"surface_speed_mps")||!strcmp(k,"speed_mps")){s->surface_speed_mps=strtod(v,NULL);s->has_surface_flight_state=true;}
+        else if(!strcmp(k,"flight_path_angle_deg"))s->flight_path_angle_deg=strtod(v,NULL);
         else if(!strcmp(k,"mass_kg"))s->mass_kg=strtod(v,NULL);
         else if(!strcmp(k,"initial_aoa_deg"))s->initial_aoa_deg=strtod(v,NULL);
         else if(!strcmp(k,"initial_bank_deg"))s->initial_bank_deg=strtod(v,NULL);

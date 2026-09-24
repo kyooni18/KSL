@@ -13,7 +13,7 @@ static HACPoint2 hac_bezier_second_derivative(const HACTransitionPlan*p,double u
 static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,double current_n,
         double future_e,double future_n,double start_course,double future_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side,
-        double start_air_speed,double end_air_speed,double speed_loss_accel,
+        double final_distance,double start_air_speed,double end_air_speed,double speed_loss_accel,
         double max_lateral_accel,double preferred_fixed_path,
         double min_fixed_path,double max_fixed_path,double entry_course);
 static double hac_tangent_entry_course(double e,double n,HACPoint2 center,

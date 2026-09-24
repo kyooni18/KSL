@@ -6,36 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Translation-unit private helpers. */
+/* Translation-unit private helpers; TAEM source slices are compiled below. */
 static double terminal_expected_speed_loss_accel(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,AerodynamicModel aero,const VehicleProfile*v);
-static bool terminal_mm305_energy_excess_range(const GuidanceMachine*g,
-        const Telemetry*t,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg,double*excess_range_out);
-static TaemExecProfile taem_exec_profile_production(const GuidanceSettings*s,
-        bool terminal_hac_rehearsal);
 static TaemExecInputs taem_exec_inputs_live_with_contract(const GuidanceMachine*g,const Telemetry*t,
         const GuidanceSettings*s,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg,const TaemTerminalContract*terminal_contract,
         bool has_final_approach_override,bool final_approach_override);
-static TaemSTurnProjection taem_s_turn_project_segment(const Telemetry*t,double course,
-        const PlanetModel*p,AerodynamicModel aero,const VehicleProfile*v,const GuidanceSettings*s,
-        const LandingSite*site,double target_bank,double target_aoa,double duration);
-static void taem_s_turn_target(const GuidanceMachine*g,const Telemetry*t,const PlanetModel*p,
-        const LandingConfiguration*cfg,double*target_along,double*target_cross,double*target_altitude,
-        double*target_speed,double*target_course);
-static bool taem_s_turn_rank_better(const TaemSTurnRank*a,
-        const TaemSTurnRank*b);
-static EntryControlPlan taem_plan_s_turn_segment(GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,
-        AerodynamicModel aero,const LandingConfiguration*cfg,
-        TaemSTurnProjection*chosen_projection);
-static bool taem_s_turn_inherited_reversal_due(
-        const GuidanceMachine*g,const Telemetry*t,const PlanetModel*p,
-        AerodynamicModel aero,const LandingConfiguration*cfg);
-static bool taem_s_turn_reversal_due(
-        const GuidanceMachine*g,const Telemetry*t,
-        const GuidanceSettings*s);
 static double terminal_drag_budget_aoa(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double allowed_drag,double preferred_aoa);
 static double terminal_preview_recovery_aoa(double preferred_aoa,double budget_aoa,
@@ -144,8 +121,9 @@ static bool terminal_lateral_incidence_priority(const GuidanceMachine*g,bool ene
 
 /* Internal source slices; compiled as this single translation unit. */
 #include "taem/state.inc"
-#include "taem/sturn.inc"
 #include "taem/energy.inc"
+#include "taem/executive_bridge.inc"
+#include "taem/rehearsal.inc"
 #include "taem/candidates.inc"
 #include "taem/preview.inc"
 #include "taem/control.inc"

@@ -531,7 +531,7 @@ static double terminal_prediction_refresh_period(const GuidanceMachine*g,
        candidate still cannot be committed without the full energy gate above. */
     if(g->terminal_region_entered&&g->terminal_candidate.valid&&
        !g->terminal_candidate.geometry_degraded&&!candidate_energy_ready)
-        requested_aoa=fmin(requested_aoa,terminal_hac_energy_aoa(v));
+        requested_aoa=fmin(requested_aoa,terminal_hac_energy_aoa(t,v));
     if(isfinite(staging_allowed_drag)){
         double budget_aoa=terminal_drag_budget_aoa(t,aero,v,staging_allowed_drag,
             requested_aoa);
@@ -577,15 +577,265 @@ static double terminal_prediction_refresh_period(const GuidanceMachine*g,
 /* Native planner worker entry point. This mutates only its private snapshot;
    execution ownership, command filters and control output remain on the live
    control thread. Offline shadows execute the same search synchronously. */
-bool guidance_plan_terminal_preview(GuidanceMachine*g,const Telemetry*t,const PlanetModel*p,
-        AerodynamicModel aero,const LandingConfiguration*cfg){
-    if(!g||!t||!p||!cfg||!guidance_terminal_preview_allowed(g))return false;
+static void terminal_preview_reframe_runway(Telemetry*out,const Telemetry*source,
+        const GuidanceMachine*g,const PlanetModel*p,
+        const LandingConfiguration*cfg,const LandingSite*site){
+    *out=*source;
+    telemetry_reframe_runway(out,site,p->radius);
+    double entry_ref=g&&g->entry_reference_speed>0.0?
+        g->entry_reference_speed:out->true_air_speed;
+    EntryTerminalDemand demand=entry_terminal_demand(out->latitude,
+        out->mean_altitude,out->range_to_site,out->horizontal_speed,
+        out->course_to_site_error,out->vertical_speed,out->true_air_speed,
+        entry_ref,p,&cfg->vehicle,site,&cfg->guidance);
+    out->energy_excess_range=-demand.projected_taem_range_error;
+}
+
+static bool guidance_plan_terminal_preview_single(GuidanceMachine*g,
+        const Telemetry*t,const PlanetModel*p,AerodynamicModel aero,
+        const LandingConfiguration*cfg){
     double previous=g->terminal_prediction_ut;
     g->terminal_planning_deferred=false;
-    double course=isfinite(t->ground_track_heading)?t->ground_track_heading:t->heading;
+    double course=isfinite(t->ground_track_heading)?
+        t->ground_track_heading:t->heading;
     terminal_predict(g,t,course,p,aero,cfg,0.0);
     return isfinite(g->terminal_prediction_ut)&&
         (!isfinite(previous)||g->terminal_prediction_ut>previous);
+}
+
+static bool terminal_full_topology_preview_due(const GuidanceMachine*g,
+        const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg){
+    if(!g||!t||!p||!cfg)return false;
+    const GuidanceSettings*s=&cfg->guidance;
+    if(g->terminal_candidate.valid)return true;
+    if(!isfinite(t->mean_altitude)||!isfinite(t->vertical_speed)||
+       !isfinite(t->true_air_speed))return false;
+
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    if(t->mean_altitude<=s->hac_acquisition_altitude||
+       (isfinite(mach)&&mach<=s->hac_acquisition_mach))
+        return true;
+
+    if(t->vertical_speed< -DBL_MIN){
+        double altitude_remaining=t->mean_altitude-s->hac_acquisition_altitude;
+        double eta=altitude_remaining/fmax(-t->vertical_speed,DBL_MIN);
+        double planning_lead=fmax(s->minimum_planning_lead_time,
+            fmax(s->prediction_interval,1.0/fmax(s->guidance_rate,DBL_MIN)));
+        if(isfinite(eta)&&eta<=planning_lead)return true;
+    }
+    return false;
+}
+
+bool guidance_plan_terminal_preview(GuidanceMachine*g,const Telemetry*t,const PlanetModel*p,
+        AerodynamicModel aero,const LandingConfiguration*cfg){
+    if(!g||!t||!p||!cfg||!guidance_terminal_preview_allowed(g))return false;
+
+    LandingSite primary=cfg->site;
+    LandingSite reciprocal=runway_reciprocal_site(&primary,p->radius);
+
+    /*
+     * High-energy MM305 acquisition does not need the full HAC/spline optimizer
+     * yet.  Choose the reversible runway end from the same live authority-bounded
+     * path metric used by the full planner, then let the analytic acquisition law
+     * fly toward KSC.  Start the expensive terminal topology search only within
+     * the configured planning lead of the HAC acquisition gate.
+     */
+    if(!g->runway_end_committed&&
+       !terminal_full_topology_preview_due(g,t,p,cfg)){
+        double primary_path=decision_runway_end_path_score(g,t,p,cfg,&primary);
+        double reciprocal_path=primary.allow_reciprocal_runway?
+            decision_runway_end_path_score(g,t,p,cfg,&reciprocal):INFINITY;
+        bool choose_reciprocal=false;
+        bool primary_finite=isfinite(primary_path);
+        bool reciprocal_finite=isfinite(reciprocal_path);
+        if(primary.allow_reciprocal_runway){
+            if(primary_finite!=reciprocal_finite)
+                choose_reciprocal=reciprocal_finite;
+            else if(primary_finite&&reciprocal_finite){
+                double scale=fmax(1.0,fmax(fabs(primary_path),fabs(reciprocal_path)));
+                double tolerance=sqrt(DBL_EPSILON)*scale;
+                if(reciprocal_path<primary_path-tolerance)
+                    choose_reciprocal=true;
+                else if(primary_path<reciprocal_path-tolerance)
+                    choose_reciprocal=false;
+                else if(g->runway_end_preview_valid)
+                    choose_reciprocal=g->runway_end_index==1;
+
+                if(g->runway_end_preview_valid&&
+                   choose_reciprocal!=(g->runway_end_index==1)){
+                    ControlAuthorityEnvelope authority=
+                        decision_control_authority_envelope(g,t,p,cfg);
+                    double switch_distance=t->horizontal_speed*
+                        (authority.valid?
+                         fmax(0.0,authority.control_response_time_s):0.0);
+                    double incumbent=g->runway_end_index==1?
+                        reciprocal_path:primary_path;
+                    double contender=choose_reciprocal?
+                        reciprocal_path:primary_path;
+                    if(isfinite(incumbent)&&isfinite(contender)&&
+                       contender+switch_distance>=incumbent)
+                        choose_reciprocal=g->runway_end_index==1;
+                }
+            }else if(g->runway_end_preview_valid){
+                choose_reciprocal=g->runway_end_index==1;
+            }
+        }
+
+        g->runway_end_preview_valid=true;
+        g->runway_end_committed=false;
+        g->runway_end_index=choose_reciprocal?1:0;
+        g->runway_end_primary_path=primary_path;
+        g->runway_end_reciprocal_path=reciprocal_path;
+        g->terminal_candidate.valid=false;
+        g->terminal_prediction_valid=false;
+        g->terminal_prediction_ut=t->ut;
+        g->terminal_prediction_altitude=t->mean_altitude;
+        g->terminal_prediction_speed=t->true_air_speed;
+        g->terminal_prediction_time=0.0;
+        return true;
+    }
+
+    /* Once a terminal path owns a runway end, planning stays in that frame. */
+    if(!primary.allow_reciprocal_runway||g->runway_end_committed){
+        LandingConfiguration selected=*cfg;
+        if(primary.allow_reciprocal_runway&&g->runway_end_committed&&
+           g->runway_end_index==1)
+            selected.site=reciprocal;
+        Telemetry framed;
+        terminal_preview_reframe_runway(&framed,t,g,p,&selected,&selected.site);
+        bool planned=guidance_plan_terminal_preview_single(g,&framed,p,aero,&selected);
+        if(planned){
+            g->runway_end_preview_valid=true;
+            if(!primary.allow_reciprocal_runway)g->runway_end_index=0;
+        }
+        return planned;
+    }
+
+    /*
+     * Before terminal-path commitment, RW09 and RW27 are peer candidates.
+     * Search both in their own threshold/course frames using the complete
+     * terminal predictor.  No controller-level runway choice is permitted.
+     */
+    GuidanceMachine primary_plan=*g;
+    GuidanceMachine reciprocal_plan=*g;
+    LandingConfiguration primary_cfg=*cfg;
+    LandingConfiguration reciprocal_cfg=*cfg;
+    reciprocal_cfg.site=reciprocal;
+    Telemetry primary_t,reciprocal_t;
+    terminal_preview_reframe_runway(&primary_t,t,g,p,&primary_cfg,&primary_cfg.site);
+    terminal_preview_reframe_runway(&reciprocal_t,t,g,p,&reciprocal_cfg,
+        &reciprocal_cfg.site);
+
+    bool diagnostic_shadow=g->diagnostic_shadow;
+    primary_plan.diagnostic_shadow=true;
+    reciprocal_plan.diagnostic_shadow=true;
+    bool primary_planned=guidance_plan_terminal_preview_single(
+        &primary_plan,&primary_t,p,aero,&primary_cfg);
+    bool reciprocal_planned=guidance_plan_terminal_preview_single(
+        &reciprocal_plan,&reciprocal_t,p,aero,&reciprocal_cfg);
+    primary_plan.diagnostic_shadow=diagnostic_shadow;
+    reciprocal_plan.diagnostic_shadow=diagnostic_shadow;
+    if(!primary_planned&&!reciprocal_planned)return false;
+
+    bool primary_candidate=primary_planned&&primary_plan.terminal_candidate.valid;
+    bool reciprocal_candidate=reciprocal_planned&&
+        reciprocal_plan.terminal_candidate.valid;
+    bool choose_reciprocal=false;
+    bool candidate_decided=false;
+
+    if(primary_candidate!=reciprocal_candidate){
+        choose_reciprocal=reciprocal_candidate;
+        candidate_decided=true;
+    }else if(primary_candidate&&reciprocal_candidate){
+        bool reciprocal_better=terminal_candidate_better(
+            &primary_plan.terminal_candidate,&reciprocal_plan.terminal_candidate);
+        bool primary_better=terminal_candidate_better(
+            &reciprocal_plan.terminal_candidate,&primary_plan.terminal_candidate);
+        if(reciprocal_better!=primary_better){
+            choose_reciprocal=reciprocal_better;
+            candidate_decided=true;
+            /* A runway-end change is itself an acquisition maneuver.  Preserve the
+               currently selected end unless the alternative saves more terminal
+               delivery time than the response needed to redirect onto it. */
+            if(g->runway_end_preview_valid&&
+               choose_reciprocal!=(g->runway_end_index==1)){
+                const TerminalCandidate*incumbent=g->runway_end_index==1?
+                    &reciprocal_plan.terminal_candidate:&primary_plan.terminal_candidate;
+                const TerminalCandidate*contender=choose_reciprocal?
+                    &reciprocal_plan.terminal_candidate:&primary_plan.terminal_candidate;
+                double incumbent_delivery=terminal_candidate_delivery_time(incumbent);
+                double contender_delivery=terminal_candidate_delivery_time(contender);
+                double switch_time=fmax(fmax(0.0,incumbent->response),
+                    fmax(0.0,contender->response));
+                if(!isfinite(contender_delivery)||
+                   (isfinite(incumbent_delivery)&&
+                    contender_delivery+switch_time>=incumbent_delivery))
+                    choose_reciprocal=g->runway_end_index==1;
+            }
+        }
+    }
+
+    /*
+     * If neither complete terminal solution separates the ends yet, use the
+     * physical authority-bounded path only as a reversible tie-breaker.  This
+     * never commits a runway direction.
+     */
+    double primary_path=decision_runway_end_path_score(g,t,p,cfg,&primary);
+    double reciprocal_path=decision_runway_end_path_score(g,t,p,cfg,&reciprocal);
+    if(!candidate_decided){
+        bool primary_finite=isfinite(primary_path);
+        bool reciprocal_finite=isfinite(reciprocal_path);
+        if(primary_finite!=reciprocal_finite)
+            choose_reciprocal=reciprocal_finite;
+        else if(primary_finite&&reciprocal_finite){
+            double scale=fmax(1.0,fmax(fabs(primary_path),fabs(reciprocal_path)));
+            double tolerance=sqrt(DBL_EPSILON)*scale;
+            if(reciprocal_path<primary_path-tolerance)
+                choose_reciprocal=true;
+            else if(primary_path<reciprocal_path-tolerance)
+                choose_reciprocal=false;
+            else if(g->runway_end_preview_valid)
+                choose_reciprocal=g->runway_end_index==1;
+
+            if(g->runway_end_preview_valid&&
+               choose_reciprocal!=(g->runway_end_index==1)){
+                ControlAuthorityEnvelope authority=
+                    decision_control_authority_envelope(g,t,p,cfg);
+                double switch_distance=t->horizontal_speed*
+                    (authority.valid?fmax(0.0,authority.control_response_time_s):0.0);
+                double incumbent_path=g->runway_end_index==1?reciprocal_path:primary_path;
+                double contender_path=choose_reciprocal?reciprocal_path:primary_path;
+                if(isfinite(incumbent_path)&&
+                   contender_path+switch_distance>=incumbent_path)
+                    choose_reciprocal=g->runway_end_index==1;
+            }
+        }else if(g->runway_end_preview_valid){
+            choose_reciprocal=g->runway_end_index==1;
+        }
+    }
+
+    GuidanceMachine selected=choose_reciprocal?
+        reciprocal_plan:primary_plan;
+    selected.diagnostic_shadow=diagnostic_shadow;
+    selected.runway_end_preview_valid=true;
+    selected.runway_end_committed=false;
+    selected.runway_end_index=choose_reciprocal?1:0;
+    selected.runway_end_primary_path=primary_path;
+    selected.runway_end_reciprocal_path=reciprocal_path;
+    *g=selected;
+
+    const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
+    if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow)
+        fprintf(stderr,
+            "RUNWAY_GUIDANCE_PREVIEW ut=%.3f selected=RW%02d "
+            "primaryCandidate=%d reciprocalCandidate=%d "
+            "primaryPath=%.1f reciprocalPath=%.1f committed=0\n",
+            t->ut,g->runway_end_index==1?27:9,
+            primary_candidate?1:0,reciprocal_candidate?1:0,
+            primary_path,reciprocal_path);
+    return true;
 }
 
 bool guidance_accept_terminal_preview(GuidanceMachine*g,const GuidanceMachine*request,
@@ -601,17 +851,23 @@ bool guidance_accept_terminal_preview(GuidanceMachine*g,const GuidanceMachine*re
     if(!isfinite(age)||age<-.001||age>fmax(3.0,cfg->guidance.prediction_interval*2.0)||
        result->terminal_prediction_ut<=g->terminal_prediction_ut)return false;
     /* Never resurrect an intercept that the live vehicle has already passed.
-       Candidate validity is not authority to commit: all existing live geometry,
-       energy, response and capture gates remain in terminal_guidance(). */
+       A live-origin path is different: selected_ut == arrival_ut because its p0 is
+       the current measured state, so equality with the current sample is valid and
+       must not be mistaken for a stale forecast. */
+    double candidate_time_scale=fmax(1.0,fmax(fabs(t->ut),
+        fabs(result->terminal_candidate.arrival_ut)));
+    double candidate_time_tolerance=sqrt(DBL_EPSILON)*candidate_time_scale;
     bool candidate_is_future=result->terminal_candidate.valid&&
         isfinite(result->terminal_candidate.arrival_ut)&&
-        result->terminal_candidate.arrival_ut>t->ut;
-    /* An asynchronous preview is advisory, but a stale propagated origin is
-       still dangerous: copying it into the retained preview lets hysteresis
-       preserve a path whose acquisition point is already behind the live
-       vehicle.  Accept only a genuinely future candidate.  Prediction timing
-       may still advance without replacing the retained path. */
-    if(result->terminal_candidate.valid&&!candidate_is_future){
+        result->terminal_candidate.arrival_ut>t->ut+candidate_time_tolerance;
+    bool candidate_is_live_origin=result->terminal_candidate.valid&&
+        isfinite(result->terminal_candidate.selected_ut)&&
+        isfinite(result->terminal_candidate.arrival_ut)&&
+        fabs(result->terminal_candidate.arrival_ut-
+             result->terminal_candidate.selected_ut)<=candidate_time_tolerance&&
+        fabs(result->terminal_candidate.arrival_ut-t->ut)<=candidate_time_tolerance;
+    bool candidate_is_current=candidate_is_future||candidate_is_live_origin;
+    if(result->terminal_candidate.valid&&!candidate_is_current){
         const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
         if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow)
             fprintf(stderr,
@@ -619,13 +875,18 @@ bool guidance_accept_terminal_preview(GuidanceMachine*g,const GuidanceMachine*re
                 t->ut,result->terminal_prediction_ut,
                 result->terminal_candidate.arrival_ut,
                 result->terminal_candidate.selected_ut);
-        /* The newer prediction is still publishable, but its stale path is
-           not.  Clear the retained candidate so preview hysteresis cannot
-           keep flying an origin that has already been passed. */
-        g->terminal_candidate.valid=false;
-        g->terminal_prediction_valid=false;
+        /* Keep the newer retained path; a genuinely stale asynchronous proposal
+           is advisory only and cannot erase or redirect current guidance. */
     }
-    if(candidate_is_future){
+    bool accept_preview_geometry=!result->terminal_candidate.valid||candidate_is_current;
+    if(accept_preview_geometry&&result->runway_end_preview_valid&&
+       !g->runway_end_committed){
+        g->runway_end_preview_valid=true;
+        g->runway_end_index=result->runway_end_index;
+        g->runway_end_primary_path=result->runway_end_primary_path;
+        g->runway_end_reciprocal_path=result->runway_end_reciprocal_path;
+    }
+    if(candidate_is_current){
         g->terminal_candidate=result->terminal_candidate;
         if(g->terminal_region_entered)g->taem_interface_target=result->taem_interface_target;
     }

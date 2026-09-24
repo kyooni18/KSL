@@ -13,6 +13,9 @@ typedef struct {
     double longitude_deg;
     double altitude_m;
     double heading_deg;
+    bool has_surface_flight_state;
+    double surface_speed_mps;
+    double flight_path_angle_deg;
     double mass_kg;
     double initial_aoa_deg;
     double initial_bank_deg;

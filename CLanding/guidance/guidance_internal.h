@@ -22,24 +22,6 @@ typedef struct {
     double capture_time_s;
 } EntryBankAllocationSample;
 
-typedef struct {
-    bool valid;
-    double along_track, cross_track, course, altitude, speed, specific_energy;
-    double minimum_speed, minimum_altitude, minimum_flight_path_angle;
-    double peak_dynamic_pressure_ratio, peak_g_ratio;
-} TaemSTurnProjection;
-
-typedef struct {
-    bool valid;
-    double safety_violation;
-    double energy_deficit;
-    double energy_excess;
-    double position_error;
-    double course_error;
-    double altitude_error;
-    double speed_error;
-    double control_effort;
-} TaemSTurnRank;
 
 typedef struct {
     bool feasible;
@@ -71,6 +53,7 @@ typedef struct {
     double arc_mean_drag_accel,partition_residual,modeled_work_residual,
         required_work_residual,arc_energy_closure,final_energy_closure;
     double drag_anchor,arc_end_altitude,arc_end_speed;
+    double arc_mean_aoa,arc_max_aoa,arc_min_lateral_margin;
     double altitude_residual,speed_residual,range_residual;
     double altitude_uncertainty,speed_uncertainty,range_uncertainty;
     double physics_relative_uncertainty,physics_relative_uncertainty_raw;
@@ -93,6 +76,9 @@ double hac_transition_nearest_u(const GuidanceMachine*g,double e,double n);
 double hac_bezier_nearest_u(const HACTransitionPlan*p,double e,double n);
 HACTransitionPlan hac_lead_bezier_from_plan(const HACTransitionPlan*p);
 double hac_bezier_advance_distance(const HACTransitionPlan*p,double u,double distance);
+bool hac_lead_sample_distance(const HACTransitionPlan*p,double distance,
+        HACPoint2*point,double*course,double*curvature);
+double hac_lead_nearest_distance(const HACTransitionPlan*p,double e,double n);
 double fixed_hac_lead_remaining(const GuidanceMachine*g);
 double hac_path_tracking_time(double speed,double curvature_radius);
 double hac_frenet_lateral(double speed,double curvature,double cross_track,
@@ -113,21 +99,28 @@ void hac_projected_local_state(const Telemetry*t,const LandingSite*site,double p
         double*out_e,double*out_n,double*out_course);
 double terminal_normalized_upper_violation(double value,double limit);
 double terminal_normalized_band_violation(double value,double minimum,double maximum);
+bool hac_shuttle_acquisition_plan(HACTransitionPlan*out,
+        double current_e,double current_n,double start_course,
+        const LandingSite*site,const GuidanceSettings*s,
+        double hac_radius,double hac_side,double acquisition_radius,
+        double final_distance);
 bool hac_transition_plan(HACTransitionPlan*out,double current_e,double current_n,
         double future_e,double future_n,double start_course,double future_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side,
-        double start_air_speed,double end_air_speed,double speed_loss_accel,
+        double final_distance,double start_air_speed,double end_air_speed,double speed_loss_accel,
         double max_lateral_accel,double preferred_fixed_path,
         double min_fixed_path,double max_fixed_path);
 bool hac_variant_b_requested(void);
 bool hac_upstream_runway_staging_requested(void);
 double hac_upstream_aoa_bias_deg(void);
 double hac_lead_aoa_bias_deg(void);
-bool hac_mm305_dynamic_fixture_requested(void);
 bool hac_fixed_alignment_geometry(HACPoint2*entry_out,
         HACPoint2*center_out,HACPoint2*exit_out,const LandingSite*site,
         const GuidanceSettings*s,double hac_radius,double capture_course,
         double side);
+bool hac_fixed_alignment_tangent_course(double current_e,double current_n,
+        const LandingSite*site,const GuidanceSettings*s,double hac_radius,
+        double side,double*course_out);
 bool hac_fixed_alignment_plan(HACTransitionPlan*out,
         double current_e,double current_n,double start_course,double capture_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side);
@@ -159,6 +152,7 @@ HACPhaseGuidance hac_phase_guidance(TaemPhase phase,const GuidanceMachine*g,
         double side,double gravity,double course,double hac_radius);
 void reference_trajectory_radius(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double radius,double side,double hac_radius);
 void reference_trajectory_fixed_hac(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double planet_radius,const GuidanceMachine*g);
+void reference_trajectory_terminal_candidate(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double planet_radius,const TerminalCandidate*c,double live_altitude);
 GuidanceResult result_make(GuidancePhase phase,GuidanceCommand c,const char*status,const char*warning);
 void guidance_result_clear(GuidanceResult*r);
 void reset_limiters(GuidanceMachine*g);
@@ -184,6 +178,8 @@ double live_lift_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProf
 double live_drag_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v);
 void entry_program_commit_planned_reversal(GuidanceMachine*g,EntryControlPlan*plan,
         double ut,bool replace_existing);
+double entry_taem_tangent_target_hac_side(const TaemInterfaceTarget*q,
+        const LandingConfiguration*cfg);
 bool entry_taem_tangent_target_geometry(const TaemInterfaceTarget*q,
         const LandingConfiguration*cfg);
 TaemInterfaceCapture entry_dynamic_interface_capture(const GuidanceMachine*g,
@@ -215,17 +211,15 @@ bool taem_exec_sync_with_contract(GuidanceMachine*g,const Telemetry*t,const Guid
         bool final_approach_override);
 void taem_exec_sync(GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg);
-GuidanceResult taem_s_turn_guidance(GuidanceMachine*g,const Telemetry*t,double course,
-        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double dt);
 double terminal_default_hac_side(const Telemetry*t,const LandingSite*site,double course);
-double terminal_hac_energy_aoa(const VehicleProfile*v);
+double terminal_hac_energy_aoa(const Telemetry*t,const VehicleProfile*v);
 double terminal_fpa_force_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double reference_fpa);
-double fixed_hac_lead_target_speed(const Telemetry*t,
+double fixed_hac_lead_target_speed(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double hac_radius);
-double fixed_hac_lead_drag_aoa(const Telemetry*t,AerodynamicModel aero,
-        const VehicleProfile*v,double target_speed,double remaining_distance,
-        double reference_slope_deg);
+double fixed_hac_lead_drag_aoa(const Telemetry*t,const PlanetModel*p,
+        AerodynamicModel aero,const VehicleProfile*v,double target_speed,
+        double remaining_distance,double reference_slope_deg);
 double fixed_hac_projected_drag_accel(const Telemetry*t,
         AerodynamicModel aero,const VehicleProfile*v,double aoa);
 double terminal_required_aoa_for_lateral_limit(const Telemetry*t,AerodynamicModel aero,
@@ -273,6 +267,8 @@ GuidanceResult taem_guidance(GuidanceMachine*g,const Telemetry*t,double course,c
 double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s);
 void terminal_store_preflare_plan(GuidanceMachine*g,const TerminalPreflarePlan*p);
 void terminal_set_stage(GuidanceMachine*g,TerminalVerticalStage stage,double ut);
+bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
+        const LandingConfiguration*cfg);
 bool terminal_outer_gate(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,
         TerminalPreflarePlan*out_plan);

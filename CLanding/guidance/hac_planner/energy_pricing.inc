@@ -1,3 +1,243 @@
+typedef struct {
+    bool valid;
+    Telemetry end;
+    double work;
+    double mean_drag;
+    double mean_aoa;
+    double max_aoa;
+    double minimum_lateral_margin;
+} FixedHacArcIntegration;
+
+/*
+ * Propagate the analytic HAC at the actual guidance command cadence.  This is
+ * the energy certificate's authoritative arc model:
+ *
+ *   reference FPA -> requested AoA
+ *   lateral curvature -> minimum AoA/bank requirement
+ *   measured pitch rate/acceleration -> applied AoA
+ *   stock-KSP / calibrated whole-vessel force -> lift and drag
+ *   lift + bank + local Kerbin gravity -> FPA and altitude
+ *   drag work + exact rotating potential difference -> next speed
+ *
+ * The radius is therefore judged at the speed/FPA/AoA that exists at each
+ * point on the arc, not at the high-energy MM305 state that existed before the
+ * lead.
+ */
+static FixedHacArcIntegration terminal_fixed_hac_integrate_arc(
+        const GuidanceMachine*g,const Telemetry*initial,const PlanetModel*p,
+        AerodynamicModel aero,const VehicleProfile*v,const GuidanceSettings*s,
+        const LandingSite*site,const HACTransitionPlan*plan,
+        const GuidanceMachine*vertical_profile,double radius,double arc_angle,
+        double drag_anchor){
+    FixedHacArcIntegration out={0};
+    out.minimum_lateral_margin=INFINITY;
+    if(!g||!initial||!p||!v||!s||!site||!plan||!plan->valid||
+       !vertical_profile||!vertical_profile->fixed_hac_reference_valid||
+       !(radius>DBL_MIN)||!(arc_angle>DBL_MIN)||
+       !(s->guidance_rate>DBL_MIN)||!isfinite(drag_anchor)||drag_anchor<0.0)
+        return out;
+
+    double arc_length=radius*arc_angle;
+    double plan_arc=fmax(0.0,plan->cone_arc_length);
+    double arc_tolerance=sqrt(DBL_EPSILON)*fmax(1.0,arc_length);
+    if(!(plan_arc>0.0)||fabs(plan_arc-arc_length)>arc_tolerance)return out;
+
+    double signed_angle=plan->cone_end_angle-plan->cone_start_angle;
+    if(!isfinite(signed_angle)||fabs(signed_angle)<=DBL_MIN)return out;
+    double side=signed_angle<0.0?1.0:-1.0;
+
+    Telemetry sim=*initial;
+    sim.physics_sample_valid=false;
+    sim.has_force_vectors=false;
+    sim.has_attitude_quaternion=false;
+    sim.has_command_pitch_error=false;
+    sim.has_command_roll_error=false;
+    sim.has_command_heading_error=false;
+
+    double aoa=clampd(fabs(initial->angle_of_attack),0.0,
+        v->maximum_angle_of_attack);
+    JerkLimiter aoa_limiter=g->pitch_limiter;
+    seed_stabilized_limiter(&aoa_limiter,aoa,
+        controlled_aoa_rate(initial),false);
+
+    GeoPoint origin={site->latitude,site->longitude,site->altitude};
+    double speed=initial->true_air_speed;
+    double altitude=initial->mean_altitude;
+    double gamma=initial->flight_path_angle*DEG2RAD;
+    double latitude=initial->latitude,longitude=initial->longitude;
+    double travelled=0.0,elapsed=0.0,work=0.0;
+    double drag_distance_integral=0.0,aoa_distance_integral=0.0;
+    double max_aoa=aoa;
+    const double command_dt=1.0/s->guidance_rate;
+
+    while(travelled<arc_length-arc_tolerance){
+        if(!(speed>DBL_MIN)||!isfinite(speed)||!isfinite(altitude)||
+           altitude<0.0||!isfinite(gamma))return out;
+
+        sim.mean_altitude=altitude;
+        sim.true_air_speed=speed;
+        sim.horizontal_speed=speed*fabs(cos(gamma));
+        sim.surface_speed=speed;
+        sim.flight_path_angle=gamma*RAD2DEG;
+        sim.vertical_speed=speed*sin(gamma);
+        sim.ut=initial->ut+elapsed;
+        sim.latitude=latitude;sim.longitude=longitude;
+        sim.angle_of_attack=aoa;
+        sim.angle_of_attack_rate=aoa_limiter.rate;
+        sim.has_angle_of_attack_rate=true;
+        sim.atmospheric_density=planet_atmospheric_density(p,altitude);
+        sim.speed_of_sound=planet_atmospheric_speed_of_sound(p,altitude);
+        sim.mach=sim.speed_of_sound>DBL_MIN?speed/sim.speed_of_sound:NAN;
+        sim.dynamic_pressure=.5*sim.atmospheric_density*speed*speed;
+        if(!isfinite(sim.atmospheric_density)||sim.atmospheric_density<0.0||
+           !isfinite(sim.speed_of_sound)||sim.speed_of_sound<=0.0||
+           !isfinite(sim.dynamic_pressure))return out;
+
+        double horizontal=sim.horizontal_speed;
+        if(!(horizontal>DBL_MIN))return out;
+        double remaining=arc_length-travelled;
+        double ground_ds=fmin(remaining,horizontal*command_dt);
+        double dt=ground_ds/horizontal;
+        if(!(dt>0.0)||!isfinite(dt))return out;
+
+        double reference_slope=fixed_hac_reference_slope(vertical_profile,
+            remaining);
+        if(!isfinite(reference_slope)||reference_slope<0.0||
+           reference_slope>=75.0)return out;
+
+        double upper=v->maximum_angle_of_attack;
+        if(sim.mach<1.0&&
+           isfinite(v->terminal_maximum_lift_angle_of_attack)&&
+           v->terminal_maximum_lift_angle_of_attack>0.0)
+            upper=fmin(upper,v->terminal_maximum_lift_angle_of_attack);
+        upper=fmax(0.0,upper);
+
+        double fpa_aoa=terminal_fpa_force_aoa(&sim,p,aero,v,
+            -reference_slope);
+        double bank_limit=fmin(v->maximum_bank_angle,
+            dynamic_bank_limit(&sim,v));
+        double required_lateral=horizontal*horizontal/radius;
+        double lateral_aoa=terminal_required_aoa_for_lateral_limit(
+            &sim,aero,v,required_lateral,bank_limit,upper);
+        double requested=0.0;
+        if(isfinite(fpa_aoa)&&isfinite(lateral_aoa))
+            requested=hypot(fmax(0.0,fpa_aoa),fmax(0.0,lateral_aoa));
+        else if(isfinite(fpa_aoa))requested=fmax(0.0,fpa_aoa);
+        else if(isfinite(lateral_aoa))requested=fmax(0.0,lateral_aoa);
+        requested=clampd(requested,0.0,upper);
+
+        GuidanceAttitudeLimits pitch_limits=stabilized_attitude_limits(
+            &sim,s,PHASE_TAEM,true);
+        aoa=clampd(jerk_update(&aoa_limiter,requested,
+            pitch_limits.rate_deg_s,pitch_limits.accel_deg_s2,dt),
+            0.0,upper);
+        aoa_limiter.value=aoa;
+        sim.angle_of_attack=aoa;
+        sim.angle_of_attack_rate=aoa_limiter.rate;
+
+        double lift=terminal_fixed_hac_projected_lift(g,&sim,aero,v,aoa);
+        double drag=terminal_fixed_hac_projected_drag(g,&sim,aero,v,aoa,
+            drag_anchor);
+        if(!isfinite(lift)||lift<0.0||!isfinite(drag)||drag<0.0)return out;
+
+        double local_radius=p->radius+altitude;
+        if(!(local_radius>DBL_MIN))return out;
+        double gravity=p->gravitational_parameter/(local_radius*local_radius);
+        double normal=fmin(lift,gravity*fmax(0.0,v->maximum_g_load));
+        double effectiveness=isfinite(sim.bank_effectiveness)&&
+            sim.bank_effectiveness>0.0?sim.bank_effectiveness:1.0;
+        effectiveness=clampd(effectiveness,.35,1.8);
+        double effective_limit=clampd(bank_limit*effectiveness,0.0,
+            nextafter(89.0,0.0))*DEG2RAD;
+        double available_lateral=normal*sin(effective_limit);
+        double lateral_margin=available_lateral-required_lateral;
+        out.minimum_lateral_margin=fmin(out.minimum_lateral_margin,
+            lateral_margin);
+        if(!isfinite(lateral_margin)||lateral_margin<
+           -sqrt(DBL_EPSILON)*fmax(1.0,available_lateral))
+            return out;
+
+        double required_effective_bank=normal>DBL_MIN?
+            asin(clampd(required_lateral/normal,0.0,1.0)):0.0;
+        double actual_bank=required_effective_bank/effectiveness;
+        sim.roll=copysign(actual_bank*RAD2DEG,side);
+        sim.lift_force=lift*fmax(1.0,sim.mass);
+        sim.drag_force=drag*fmax(1.0,sim.mass);
+        sim.g_force=gravity>DBL_MIN?normal/gravity:sim.g_force;
+
+        /*
+         * Flight-path dynamics for an unpowered banked vehicle on a spherical
+         * planet.  The same lift vector supplies both horizontal curvature and
+         * vertical FPA control.
+         */
+        double vertical_lift=normal*cos(actual_bank);
+        double gamma_rate=(vertical_lift-gravity*cos(gamma))/speed+
+            speed*cos(gamma)/local_radius;
+        double next_gamma=gamma+gamma_rate*dt;
+        double mid_gamma=.5*(gamma+next_gamma);
+        double next_altitude=altitude+speed*sin(mid_gamma)*dt;
+        if(!isfinite(next_gamma)||!isfinite(next_altitude)||next_altitude<0.0||
+           next_gamma<-60.0*DEG2RAD||next_gamma>20.0*DEG2RAD)return out;
+
+        double next_travelled=travelled+ground_ds;
+        double angle=plan->cone_start_angle-side*(next_travelled/radius);
+        HACPoint2 next_local=hac_point(
+            plan->cone_center.e+radius*cos(angle),
+            plan->cone_center.n+radius*sin(angle));
+        GeoPoint next_point=local_point(origin,next_local.e,next_local.n,
+            p->radius,next_altitude);
+        double potential_drop=rotating_specific_energy(latitude,altitude,0.0,p)-
+            rotating_specific_energy(next_point.latitude,next_altitude,0.0,p);
+        double air_ds=speed*dt;
+        double next_speed=NAN,segment_work=NAN;
+        if(!terminal_quadratic_drag_energy_step(speed,drag,air_ds,
+                potential_drop,&next_speed,&segment_work))
+            return out;
+
+        work+=segment_work;
+        drag_distance_integral+=drag*ground_ds;
+        aoa_distance_integral+=aoa*ground_ds;
+        max_aoa=fmax(max_aoa,aoa);
+        elapsed+=dt;
+        travelled=next_travelled;
+        speed=next_speed;
+        altitude=next_altitude;
+        gamma=next_gamma;
+        latitude=next_point.latitude;
+        longitude=next_point.longitude;
+    }
+
+    sim.mean_altitude=altitude;
+    sim.true_air_speed=speed;
+    sim.horizontal_speed=speed*fabs(cos(gamma));
+    sim.surface_speed=speed;
+    sim.flight_path_angle=gamma*RAD2DEG;
+    sim.vertical_speed=speed*sin(gamma);
+    sim.ut=initial->ut+elapsed;
+    sim.latitude=latitude;sim.longitude=longitude;
+    sim.angle_of_attack=aoa;sim.angle_of_attack_rate=aoa_limiter.rate;
+    sim.has_angle_of_attack_rate=true;
+    sim.radar_altitude=fmax(0.0,altitude-site->altitude);
+    sim.speed_of_sound=planet_atmospheric_speed_of_sound(p,altitude);
+    sim.mach=sim.speed_of_sound>DBL_MIN?speed/sim.speed_of_sound:NAN;
+    sim.atmospheric_density=planet_atmospheric_density(p,altitude);
+    sim.dynamic_pressure=.5*sim.atmospheric_density*speed*speed;
+    GeoPoint end_point={latitude,longitude,altitude};
+    runway_coordinates(end_point,origin,site->runway_heading,p->radius,
+        &sim.runway_along_track,&sim.runway_cross_track);
+    sim.range_to_site=great_circle_distance(end_point,origin,p->radius);
+
+    out.valid=true;
+    out.end=sim;
+    out.work=work;
+    out.mean_drag=arc_length>DBL_MIN?
+        drag_distance_integral/arc_length:NAN;
+    out.mean_aoa=arc_length>DBL_MIN?
+        aoa_distance_integral/arc_length:NAN;
+    out.max_aoa=max_aoa;
+    return out;
+}
+
 /* Price the exact fixed-HAC candidate for admission only.  The analytic
    fixed HAC remains at its configured, frozen radius; the energy ledger uses
    the atmosphere/Mach-dependent drag work over the already-frozen lead, the
@@ -12,6 +252,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
         double arc_angle,double*radius_out,
         double*margin_out,double*loss_out,double*available_out,
         double*required_out,FixedHacEnergyAudit*audit,
+        const HACTransitionPlan*plan,const GuidanceMachine*vertical_profile,
         double fixed_profile_slope,double fixed_target_aoa){
     if(audit)*audit=(FixedHacEnergyAudit){0};
     if(radius_out)*radius_out=INFINITY;
@@ -19,7 +260,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
     if(loss_out)*loss_out=NAN;
     if(available_out)*available_out=NAN;
     if(required_out)*required_out=NAN;
-    if(!g||!t||!p||!v||!s||!site||!drag_reference||!(requested_radius>=3000.0)||!(arc_angle>0.0)||
+    if(!g||!t||!p||!v||!s||!site||!drag_reference||!(requested_radius>0.0)||!(arc_angle>0.0)||
        !isfinite(lead_length)||lead_length<0.0)
         return false;
     /* Non-rehearsal production paths have their own candidate energy
@@ -64,7 +305,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
        only when the frozen curvature needs more lateral lift.  Certifying a
        constant 10 deg path priced drag that the executable controller never
        commanded and rejected otherwise flyable candidates. */
-    double target_aoa=terminal_hac_energy_aoa(v);
+    double target_aoa=terminal_hac_energy_aoa(t,v);
     bool target_aoa_overridden=isfinite(fixed_target_aoa);
     if(target_aoa_overridden)
         target_aoa=clampd(fixed_target_aoa,0.0,v->maximum_angle_of_attack);
@@ -114,7 +355,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
             isfinite(best_ratio)?aero.lift_to_drag*best_ratio:NAN;
         if(isfinite(best_ld)&&best_ld>DBL_MIN&&isfinite(best_aoa)){
             double glide_slope=atan(1.0/best_ld)*RAD2DEG;
-            if(!isfinite(fixed_profile_slope)&&profile_slope>glide_slope){
+            if(profile_slope>glide_slope){
                 profile_slope=clampd(glide_slope,1.0,75.0);
                 target_aoa=best_aoa;
             }
@@ -136,19 +377,40 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
        p0 and final projections re-anchored an absolute live D/m average at
        their lower speed, artificially multiplying future drag a second time. */
     double drag_anchor=terminal_drag_projection_anchor(g,drag_reference,p,aero,v);
-    double arc_work=terminal_projected_drag_work_state_anchored(g,t,p,aero,v,s,target_aoa,
-        vertical_path,profile_slope,&arc_end_speed,&arc_end_altitude,drag_anchor);
+    FixedHacArcIntegration integrated_arc={0};
+    bool use_integrated_arc=plan&&vertical_profile&&
+        vertical_profile->fixed_hac_reference_valid&&lead_length<=DBL_MIN;
+    double arc_work=NAN;
+    Telemetry arc_end_state={0};
+    if(use_integrated_arc){
+        integrated_arc=terminal_fixed_hac_integrate_arc(g,t,p,aero,v,s,site,
+            plan,vertical_profile,requested_radius,arc_angle,drag_anchor);
+        if(integrated_arc.valid){
+            arc_work=integrated_arc.work;
+            arc_end_state=integrated_arc.end;
+            arc_end_speed=arc_end_state.true_air_speed;
+            arc_end_altitude=arc_end_state.mean_altitude;
+            target_aoa=integrated_arc.mean_aoa;
+        }
+    }
+    if(!isfinite(arc_work)){
+        arc_work=terminal_projected_drag_work_state_anchored(g,t,p,aero,v,s,
+            target_aoa,vertical_path,profile_slope,&arc_end_speed,
+            &arc_end_altitude,drag_anchor);
+    }
     double end_speed=arc_end_speed,end_altitude=arc_end_altitude;
     double final_work=0.0;
     if(isfinite(arc_work)&&arc_work>=0.0&&final_to_gate>DBL_MIN&&
        isfinite(arc_end_speed)&&isfinite(arc_end_altitude)){
-        Telemetry after_arc=*t;
+        Telemetry after_arc=integrated_arc.valid?arc_end_state:*t;
         after_arc.mean_altitude=arc_end_altitude;
         after_arc.true_air_speed=arc_end_speed;
-        after_arc.horizontal_speed=arc_end_speed*cos(slope*DEG2RAD);
-        after_arc.vertical_speed=-arc_end_speed*sin(slope*DEG2RAD);
-        after_arc.flight_path_angle=-slope;
-        after_arc.angle_of_attack=target_aoa;
+        if(!integrated_arc.valid){
+            after_arc.horizontal_speed=arc_end_speed*cos(slope*DEG2RAD);
+            after_arc.vertical_speed=-arc_end_speed*sin(slope*DEG2RAD);
+            after_arc.flight_path_angle=-slope;
+            after_arc.angle_of_attack=target_aoa;
+        }
         after_arc.roll=0.0;
         after_arc.lift_force=0.0;
         after_arc.drag_force=0.0;
@@ -157,7 +419,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
         after_arc.atmospheric_density=planet_atmospheric_density(p,arc_end_altitude);
         after_arc.dynamic_pressure=.5*after_arc.atmospheric_density*arc_end_speed*arc_end_speed;
         double final_target_aoa=terminal_fpa_force_aoa(&after_arc,p,aero,v,-slope);
-        if(!isfinite(final_target_aoa))final_target_aoa=terminal_hac_energy_aoa(v);
+        if(!isfinite(final_target_aoa))final_target_aoa=terminal_hac_energy_aoa(&after_arc,v);
         final_target_aoa=clampd(final_target_aoa,0.0,v->maximum_angle_of_attack);
         final_work=terminal_projected_drag_work_state_anchored(g,&after_arc,p,aero,v,s,
             final_target_aoa,final_to_gate,slope,&end_speed,&end_altitude,drag_anchor);
@@ -177,6 +439,10 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
         audit->valid=work_valid&&energy.valid;
         audit->drag_anchor=drag_anchor;
         audit->arc_end_altitude=arc_end_altitude;audit->arc_end_speed=arc_end_speed;
+        audit->arc_mean_aoa=integrated_arc.valid?integrated_arc.mean_aoa:target_aoa;
+        audit->arc_max_aoa=integrated_arc.valid?integrated_arc.max_aoa:target_aoa;
+        audit->arc_min_lateral_margin=integrated_arc.valid?
+            integrated_arc.minimum_lateral_margin:NAN;
         audit->radius=requested_radius;
         audit->lead_length=lead_length;
         audit->arc_length=requested_arc_length;
@@ -322,37 +588,34 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
        t->mean_altitude>s->mm305_max_altitude)return false;
 
     TaemHandoffContract contract=taem_handoff_contract(s);
-    double positive=norm_deg(cfg->site.runway_heading+90.0);
-    double negative=norm_deg(cfg->site.runway_heading-90.0);
+    const double perpendicular=90.0; /* decision-literal: mathematical-numerical-requirement | analytic HAC inlet tangent */
+    double positive=norm_deg(cfg->site.runway_heading+perpendicular);
+    double negative=norm_deg(cfg->site.runway_heading-perpendicular);
     double positive_error=fabs(norm_signed_deg(positive-course));
     double negative_error=fabs(norm_signed_deg(negative-course));
     double capture_course=positive_error<=negative_error?positive:negative;
     double course_error=fmin(positive_error,negative_error);
-    double station=-s->final_approach_distance;
-    double position_error=hypot(t->runway_along_track-station,
-        t->runway_cross_track);
-    double position_limit=fmax(1000.0,contract.horizontal_radius_m);
+    double relative=norm_signed_deg(capture_course-cfg->site.runway_heading);
+    double angular_resolution=sqrt(DBL_EPSILON)*RAD2DEG;
+    if(fabs(relative)<=angular_resolution)return false;
+    double side=relative>0.0?1.0:-1.0;
 
-    /* The focused MM305 diagnostic starts at the original 8 km fixture
-       station, while the executable final-alignment station may be moved
-       inward to 3.2 km.  Permit that finite bridge only when all three
-       command-path diagnostic gates are explicitly enabled.  This does not
-       alter normal MM304 acceptance or the measured-authority gate: it only
-       lets the forced diagnostic reach the fixed, runway-anchored HAC so its
-       lead and analytic arc can be inspected. */
-    const char*force_debug_env=getenv("KSP_LANDER_HAC_DEBUG_FORCE_CAPTURE");
-    const char*diagnostics_env=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
-    const char*command_trace_env=getenv("KSP_LANDER_HAC_COMMAND_TRACE");
-    bool command_path_diagnostic=force_debug_env&&
-        strcmp(force_debug_env,"1")==0&&diagnostics_env&&
-        strcmp(diagnostics_env,"1")==0&&command_trace_env&&
-        strcmp(command_trace_env,"1")==0;
-    if(command_path_diagnostic)
-        position_limit=fmax(position_limit,0.5*s->hac_radius);
+    /* This is an MM305/p0 detector, so compare against the actual analytic HAC
+       inlet.  The old implementation compared against the Final station at
+       (-finalApproachDistance,0), which made a true p0 state look tens of
+       kilometres away and sent the HAC-only test into generic topology search. */
+    HACPoint2 entry={0},center={0},exit={0};
+    if(!hac_fixed_alignment_geometry(&entry,&center,&exit,&cfg->site,s,
+            s->hac_radius,capture_course,side))return false;
+    double runway=cfg->site.runway_heading*DEG2RAD;
+    double inlet_along=entry.e*sin(runway)+entry.n*cos(runway);
+    double inlet_cross=entry.e*cos(runway)-entry.n*sin(runway);
+    double position_error=hypot(t->runway_along_track-inlet_along,
+        t->runway_cross_track-inlet_cross);
+    double position_limit=fmax(1000.0,contract.horizontal_radius_m);
 
     if(course_error>contract.perpendicular_heading_half_width_deg||
        position_error>position_limit)return false;
     if(capture_course_out)*capture_course_out=capture_course;
     return true;
 }
-

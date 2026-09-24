@@ -1,10 +1,11 @@
 static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,double current_n,
         double future_e,double future_n,double start_course,double future_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side,
-        double start_air_speed,double end_air_speed,double speed_loss_accel,
+        double final_distance,double start_air_speed,double end_air_speed,double speed_loss_accel,
         double max_lateral_accel,double preferred_fixed_path,
         double min_fixed_path,double max_fixed_path,double entry_course){
-    if(!out||!site||!s||!(hac_radius>0.0)||!(max_lateral_accel>0.0)||
+    if(!out||!site||!s||!(hac_radius>0.0)||!(final_distance>0.0)||
+       !(max_lateral_accel>0.0)||
        !isfinite(current_e)||!isfinite(current_n)||
        !isfinite(future_e)||!isfinite(future_n)||
        !isfinite(start_course)||!isfinite(future_course)||!isfinite(entry_course)||
@@ -26,8 +27,8 @@ static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,dou
        makes geometry, energy accounting and final-intercept ownership refer to
        the same physical station. */
     HACPoint2 exit=hac_point(
-        -vh_e*s->final_approach_distance,
-        -vh_n*s->final_approach_distance);
+        -vh_e*final_distance,
+        -vh_n*final_distance);
     HACPoint2 center=hac_point(
         exit.e+side*hac_radius*rh_e,
         exit.n+side*hac_radius*rh_n);
@@ -90,7 +91,7 @@ static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,dou
            acceleration.  Evaluate a small family of start/end handle lengths
            and keep the bridge with the smallest normalized violation.  Every
            qualification below is unchanged; only the curve shape is chosen. */
-        static const double handle_scales[]={1.0/3.0,0.5,0.75,1.0,1.25};
+        static const double handle_scales[]={1.0/3.0,0.5,0.75,1.0,1.25,1.75,2.5};
         const size_t handle_count=sizeof(handle_scales)/sizeof(handle_scales[0]);
         double fit_position_limit=fmax(1.0,s->mm304_handoff_radius);
         double fit_course_limit=fmax(1.0,s->mm304_perpendicular_heading_half_width);
@@ -98,7 +99,9 @@ static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,dou
         bool have_lead=false,have_standard=false;
         double best_score=INFINITY;
         HACTransitionPlan best={0},standard={0};
-        for(size_t a=0;a<handle_count;a++)for(size_t b=0;b<handle_count;b++){
+        bool exact_lead=false;
+        for(size_t a=0;a<handle_count&&!exact_lead;a++){
+            for(size_t b=0;b<handle_count;b++){
             HACTransitionPlan trial_plan=candidate;
             double h1=lead_chord*handle_scales[a],h2=lead_chord*handle_scales[b];
             trial_plan.lead_p1=hac_point(current_e+vs_e*h1,current_n+vs_n*h1);
@@ -108,8 +111,8 @@ static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,dou
             trial_plan.lead_length=hac_bezier_length_between(&lead,0.0,1.0,32);
             if(!(trial_plan.lead_length>0.0)||!isfinite(trial_plan.lead_length))
                 continue;
-            /* hac_handoff_geometry_valid() bounds the bridge to 1.25 chords. */
-            if(trial_plan.lead_length>lead_chord*1.25)continue;
+            /* hac_handoff_geometry_valid() bounds the bridge to 2.5 chords. */
+            if(trial_plan.lead_length>lead_chord*2.5)continue;
 
             /* The lead must also agree with the finite-response state used to
                design it.  Evaluate where the response-projected travel distance
@@ -167,6 +170,11 @@ static bool hac_transition_plan_entry(HACTransitionPlan*out,double current_e,dou
             if(!have_lead||score<best_score-1e-9){
                 have_lead=true;best_score=score;best=trial_plan;
             }
+            /* All terms in score are normalized nonnegative violations.  Zero is
+               therefore a proven global optimum; scanning the remaining handle
+               pairs cannot improve the selected curve. */
+            if(best_score<=0.0){exact_lead=true;break;}
+        }
         }
         if(!have_lead)return false;
         /* Only a fully qualified alternative replaces the standard bridge; a
@@ -243,6 +251,147 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     return norm_deg(bearing-atan2(side*radius,along)*RAD2DEG);
 }
 
+/*
+ * Stock-KSP adaptation of the Shuttle TAEM acquisition topology.
+ *
+ * The Shuttle did not join the HAC with one arbitrary cubic.  It first flew a
+ * circular acquisition turn, then a straight common tangent into the HAC.
+ * Here the acquisition radius is supplied by the live KSP force envelope
+ * (V_horizontal^2 / available lateral acceleration); the geometry below adds
+ * no Shuttle-specific radius or bank constants.
+ */
+bool hac_shuttle_acquisition_plan(HACTransitionPlan*out,
+        double current_e,double current_n,double start_course,
+        const LandingSite*site,const GuidanceSettings*s,
+        double hac_radius,double hac_side,double acquisition_radius,
+        double final_distance){
+    if(out)memset(out,0,sizeof(*out));
+    if(!out||!site||!s||!isfinite(current_e)||!isfinite(current_n)||
+       !isfinite(start_course)||!(hac_radius>DBL_MIN)||
+       !(acquisition_radius>DBL_MIN)||fabs(hac_side)!=1.0||
+       !(final_distance>0.0))return false;
+
+    double runway=site->runway_heading*DEG2RAD;
+    double vh_e=sin(runway),vh_n=cos(runway);
+    double rh_e=cos(runway),rh_n=-sin(runway);
+    HACPoint2 exit=hac_point(-vh_e*final_distance,-vh_n*final_distance);
+    HACPoint2 hac_center=hac_point(
+        exit.e+hac_side*hac_radius*rh_e,
+        exit.n+hac_side*hac_radius*rh_n);
+    double hac_exit_angle=atan2(exit.n-hac_center.n,exit.e-hac_center.e);
+
+    double h0=start_course*DEG2RAD;
+    double start_right_e=cos(h0),start_right_n=-sin(h0);
+    HACTransitionPlan best={0};
+    double best_total=INFINITY;
+    bool have=false;
+
+    for(int side_index=0;side_index<2;side_index++){
+        double acquisition_side=side_index==0?hac_side:-hac_side;
+        HACPoint2 acquisition_center=hac_point(
+            current_e+acquisition_side*acquisition_radius*start_right_e,
+            current_n+acquisition_side*acquisition_radius*start_right_n);
+        double de=hac_center.e-acquisition_center.e;
+        double dn=hac_center.n-acquisition_center.n;
+        double center_distance=hypot(de,dn);
+        double signed_delta=hac_side*hac_radius-
+            acquisition_side*acquisition_radius;
+        if(!(center_distance>fabs(signed_delta)+
+             sqrt(DBL_EPSILON)*fmax(1.0,center_distance)))continue;
+
+        double bearing=atan2(de,dn);
+        double sine=clampd(-signed_delta/center_distance,-1.0,1.0);
+        double base=asin(sine);
+        double offsets[2]={base,LANDER_PI-base};
+
+        for(int solution=0;solution<2;solution++){
+            double tangent_heading=bearing+offsets[solution];
+            double ve=sin(tangent_heading),vn=cos(tangent_heading);
+            double re=vn,rn=-ve;
+            HACPoint2 acquisition_tangent=hac_point(
+                acquisition_center.e-acquisition_side*acquisition_radius*re,
+                acquisition_center.n-acquisition_side*acquisition_radius*rn);
+            HACPoint2 hac_tangent=hac_point(
+                hac_center.e-hac_side*hac_radius*re,
+                hac_center.n-hac_side*hac_radius*rn);
+            double line_e=hac_tangent.e-acquisition_tangent.e;
+            double line_n=hac_tangent.n-acquisition_tangent.n;
+            double tangent_length=hypot(line_e,line_n);
+            if(!(tangent_length>sqrt(DBL_EPSILON)))continue;
+            double forward=line_e*ve+line_n*vn;
+            double cross=line_e*vn-line_n*ve;
+            double geometric_tolerance=sqrt(DBL_EPSILON)*
+                fmax(1.0,tangent_length);
+            if(!(forward>0.0)||fabs(cross)>geometric_tolerance)continue;
+
+            double acquisition_start_angle=atan2(
+                current_n-acquisition_center.n,
+                current_e-acquisition_center.e);
+            double acquisition_end_angle=atan2(
+                acquisition_tangent.n-acquisition_center.n,
+                acquisition_tangent.e-acquisition_center.e);
+            double acquisition_angle=fmod(-acquisition_side*
+                (acquisition_end_angle-acquisition_start_angle),
+                2.0*LANDER_PI);
+            if(acquisition_angle<0.0)acquisition_angle+=2.0*LANDER_PI;
+
+            double hac_start_angle=atan2(
+                hac_tangent.n-hac_center.n,
+                hac_tangent.e-hac_center.e);
+            double hac_angle=fmod(-hac_side*
+                (hac_exit_angle-hac_start_angle),2.0*LANDER_PI);
+            if(hac_angle<0.0)hac_angle+=2.0*LANDER_PI;
+
+            /*
+             * The ordinary TAEM acquisition and heading-alignment turns are
+             * partial turns, not deliberate extra energy-management circuits.
+             * When both tangent solutions exist, the minimum total physical
+             * path picks the no-extra-circuit solution without a tuned angle.
+             */
+            double acquisition_length=acquisition_radius*acquisition_angle;
+            double hac_length=hac_radius*hac_angle;
+            double total=acquisition_length+tangent_length+hac_length;
+            if(!isfinite(total)||!(total>0.0)||total>=best_total)continue;
+
+            HACTransitionPlan candidate={0};
+            candidate.valid=true;
+            candidate.heading_cone=true;
+            candidate.lead_curve=false;
+            candidate.lead_acquisition=true;
+            candidate.lead_start=hac_point(current_e,current_n);
+            candidate.acquisition_center=acquisition_center;
+            candidate.acquisition_tangent=acquisition_tangent;
+            candidate.acquisition_radius=acquisition_radius;
+            candidate.acquisition_side=acquisition_side;
+            candidate.acquisition_start_angle=acquisition_start_angle;
+            candidate.acquisition_end_angle=acquisition_end_angle;
+            candidate.acquisition_arc_length=acquisition_length;
+            candidate.acquisition_tangent_length=tangent_length;
+            candidate.lead_length=acquisition_length+tangent_length;
+            candidate.lead_start_course=norm_deg(start_course);
+            candidate.lead_end_course=norm_deg(tangent_heading*RAD2DEG);
+            candidate.lead_p1=acquisition_tangent;
+            candidate.lead_p2=acquisition_tangent;
+            candidate.p0=hac_tangent;
+            candidate.p3=exit;
+            candidate.cone_center=hac_center;
+            candidate.cone_start_angle=hac_start_angle;
+            candidate.cone_end_angle=hac_start_angle-hac_side*hac_angle;
+            candidate.cone_arc_length=hac_length;
+            candidate.length=hac_length;
+            candidate.end_angle=candidate.cone_end_angle;
+            candidate.arc_remaining=0.0;
+            best=candidate;
+            best_total=total;
+            have=true;
+        }
+    }
+
+    if(!have)return false;
+    *out=best;
+    return true;
+}
+
 /* Two acquisition geometries are qualified with identical checks:
      1. entry where the circle tangent equals the response-projected course
         (flyable only when the aircraft already points along a tangent), and
@@ -256,19 +405,19 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
        bool hac_transition_plan(HACTransitionPlan*out,double current_e,double current_n,
         double future_e,double future_n,double start_course,double future_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side,
-        double start_air_speed,double end_air_speed,double speed_loss_accel,
+        double final_distance,double start_air_speed,double end_air_speed,double speed_loss_accel,
         double max_lateral_accel,double preferred_fixed_path,
         double min_fixed_path,double max_fixed_path){
     HACTransitionPlan projected={0},tangent={0};
     bool have_projected=hac_transition_plan_entry(&projected,current_e,current_n,
         future_e,future_n,start_course,future_course,site,s,hac_radius,side,
-        start_air_speed,end_air_speed,speed_loss_accel,max_lateral_accel,
+        final_distance,start_air_speed,end_air_speed,speed_loss_accel,max_lateral_accel,
         preferred_fixed_path,min_fixed_path,max_fixed_path,future_course);
     bool have_tangent=false;
     if(out&&site&&s&&hac_radius>0.0&&fabs(side)==1.0){
         double runway=site->runway_heading*DEG2RAD;
-        HACPoint2 exit=hac_point(-sin(runway)*s->final_approach_distance,
-            -cos(runway)*s->final_approach_distance);
+        HACPoint2 exit=hac_point(-sin(runway)*final_distance,
+            -cos(runway)*final_distance);
         HACPoint2 center=hac_point(exit.e+side*hac_radius*cos(runway),
             exit.n-side*hac_radius*sin(runway));
         double tangent_course=hac_tangent_entry_course(future_e,future_n,
@@ -277,19 +426,20 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
            fabs(norm_signed_deg(tangent_course-future_course))>1e-6)
             have_tangent=hac_transition_plan_entry(&tangent,current_e,current_n,
                 future_e,future_n,start_course,future_course,site,s,hac_radius,side,
-                start_air_speed,end_air_speed,speed_loss_accel,max_lateral_accel,
+                final_distance,start_air_speed,end_air_speed,speed_loss_accel,max_lateral_accel,
                 preferred_fixed_path,min_fixed_path,max_fixed_path,tangent_course);
     }
+    /*
+     * Shuttle TAEM acquisition owns the true tangent to the HAC.  Do not scan
+     * arbitrary entry headings: those can manufacture very long acquisition
+     * paths that are locally smooth but have no physical targeting meaning.
+     */
     if(!have_projected&&!have_tangent)return false;
-    if(have_projected&&have_tangent){
-        bool projected_geometry=projected.degraded_control||projected.degraded_rate||
-            projected.degraded_end;
-        bool tangent_geometry=tangent.degraded_control||tangent.degraded_rate||
-            tangent.degraded_end;
-        bool use_tangent=!tangent_geometry&&(projected_geometry||
-             tangent.violation_score<projected.violation_score-1e-9);
-        *out=use_tangent?tangent:projected;
-    }else *out=have_projected?projected:tangent;
+    if(have_tangent){
+        *out=tangent;
+    }else{
+        *out=projected;
+    }
     return true;
 }
 
@@ -341,19 +491,7 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     return clampd(bias,0.0,12.0);
 }
 
-/* ShuttleSim MM305 fixtures exercise the production candidate contract at
- * the configured runway-anchored HAC radius and the explicit 3.5 km
- * runway-alignment station. The sustainable radius is an admission diagnostic
- * only; this selector never changes the committed circle. */
-       bool hac_mm305_dynamic_fixture_requested(void){
-    const char*simulator=getenv("KSP_LANDER_SIMULATOR");
-    const char*fixture=getenv("KSP_LANDER_FORCE_REENTRY_TEST");
-    const char*identity=getenv("KSP_LANDER_MM305_FIXED_HAC");
-    return simulator&&strcmp(simulator,"1")==0&&fixture&&
-        strcmp(fixture,"1")==0&&identity&&strcmp(identity,"1")==0;
-}
-
-       bool hac_fixed_alignment_geometry(HACPoint2*entry_out,
+bool hac_fixed_alignment_geometry(HACPoint2*entry_out,
         HACPoint2*center_out,HACPoint2*exit_out,const LandingSite*site,
         const GuidanceSettings*s,double hac_radius,double capture_course,
         double side){
@@ -366,22 +504,10 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     double vh_e=sin(runway),vh_n=cos(runway);
     double rh_e=cos(runway),rh_n=-sin(runway);
     double rf_e=cos(capture),rf_n=-sin(capture);
-    HACPoint2 runway_station=hac_point(-vh_e*s->final_approach_distance,
+    /* The HAC always exits at the configured final-approach station.
+       Simulation and live flight use the same geometry. */
+    HACPoint2 exit=hac_point(-vh_e*s->final_approach_distance,
         -vh_n*s->final_approach_distance);
-    HACPoint2 exit;
-    if((hac_variant_b_requested()||hac_mm305_dynamic_fixture_requested())&&side>0.0){
-        /* MM305 ShuttleSim fixtures use an exit 3.5 km behind the runway
-           threshold; the selected dynamic circle's upper tip remains on
-           runway latitude. The upstream staging distance is not part of the
-           committed path. */
-        double exit_along=-3500.0;
-        exit=hac_point(exit_along*vh_e,exit_along*vh_n);
-    }else{
-        /* The production/default HAC exits exactly at the configured final-
-           approach station.  The circle center moves to the turn side of that
-           fixed exit; never translate the exit by one radius along the runway. */
-        exit=runway_station;
-    }
     HACPoint2 center=hac_point(exit.e+side*hac_radius*rh_e,
         exit.n+side*hac_radius*rh_n);
     HACPoint2 entry=hac_point(center.e-side*hac_radius*rf_e,
@@ -390,14 +516,29 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     return true;
 }
 
-/* Build the mission-fixed MM305 HAC from the runway outer-final station and
-   the shuttle's inlet vector.  The exit is frozen at that station; the center
-   is one radius to the selected turn side and the tangent entry follows from
-   the inlet course.  For RW09/side +1 this puts the center south of the runway
-   and makes the exit the circle's exact northern tip.  A finite Hermite lead
-   is the only acquisition geometry permitted when the live MM305 state is not
-   already tangent to the frozen circle. */
-       bool hac_fixed_alignment_plan(HACTransitionPlan*out,
+bool hac_fixed_alignment_tangent_course(double current_e,double current_n,
+        const LandingSite*site,const GuidanceSettings*s,double hac_radius,
+        double side,double*course_out){
+    if(course_out)*course_out=NAN;
+    if(!course_out||!site||!s||!isfinite(current_e)||!isfinite(current_n))
+        return false;
+    HACPoint2 entry={0},center={0},exit={0};
+    double seed_course=norm_deg(site->runway_heading+side*90.0); /* decision-literal: mathematical-numerical-requirement | perpendicular inlet tangent for selected HAC side */
+    if(!hac_fixed_alignment_geometry(&entry,&center,&exit,site,s,hac_radius,
+            seed_course,side))return false;
+    double course=hac_tangent_entry_course(current_e,current_n,center,
+        hac_radius,side);
+    if(!isfinite(course))return false;
+    *course_out=course;
+    return true;
+}
+
+/* Build the MM305 HAC from the selected runway-final station and inlet vector.
+   The exit is frozen with the committed terminal contract; the center is one
+   radius to the selected turn side and the tangent entry follows from the inlet
+   course. The selected side preserves the long heading-alignment arc; a finite
+   Hermite lead is used only when the live state is not already tangent to it. */
+bool hac_fixed_alignment_plan(HACTransitionPlan*out,
         double current_e,double current_n,double start_course,double capture_course,
         const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side){
     if(!out||!site||!s||!(hac_radius>0.0)||fabs(side)!=1.0||
@@ -414,11 +555,9 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     if(!hac_fixed_alignment_geometry(&entry,&center,&exit,site,s,hac_radius,
             capture_course,side))return false;
 
-    /* Preserve the selected bank/course-rate side all the way to the runway
-       tangent.  A southbound RW09 inlet is side +1, so heading increases
-       180 -> 190 -> ... until the anchored circle reaches runway heading.
-       This may be the long partial arc; it is still one finite HAC, never a
-       resized circle or an added circuit. */
+    /* Preserve the selected bank/course-rate side from the actual inlet tangent
+       to the runway tangent. The inlet course is supplied by upstream geometry;
+       no runway end, hemisphere, or fixture heading is assumed here. */
     double arc_angle_deg=norm_deg(side*(site->runway_heading-capture_course));
     double angular_epsilon=sqrt(DBL_EPSILON)*RAD2DEG;
     if(arc_angle_deg<=angular_epsilon)
@@ -447,15 +586,21 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     double lead_chord=hypot(entry.e-current_e,entry.n-current_n);
     double position_tolerance=fmax(1.0,hac_radius*1e-6);
     double course_error=fabs(norm_signed_deg(start_course-capture_course));
-    /* At p0 there is no chord to build a lead from, so a small residual
-       course error (sampling/frame rounding at the fixture handoff) is left
-       to the arc tracking law rather than rejecting the circle outright. */
-    /* A chord of a few metres (handoff sampling, one guidance tick short of
-       p0) cannot carry a meaningful lead: the Bezier through it degenerates to
-       sub-metre radii and fails authority at any speed.  Within a small
-       fraction of R the arc tracking law absorbs the offset directly. */
-    double capture_tolerance=fmax(position_tolerance,fmin(hac_radius*.02,250.0));
-    bool already_tangent=lead_chord<=capture_tolerance&&course_error<=2.0;
+    TaemHandoffContract handoff=taem_handoff_contract(s);
+    /*
+     * MM304 releases ownership into an explicit capture set, not an exact
+     * mathematical point.  If the delivered state is already inside that set,
+     * forcing a Hermite return to p0 can create an arbitrarily tight S-curve
+     * even though the frozen HAC circle is directly trackable.  Start the
+     * circle from the live state and let its Frenet law absorb the bounded
+     * radial/course residual that MM304 has already certified.
+     */
+    double capture_tolerance=fmax(position_tolerance,
+        handoff.horizontal_radius_m);
+    double capture_course_tolerance=fmax(2.0,
+        handoff.perpendicular_heading_half_width_deg);
+    bool already_tangent=lead_chord<=capture_tolerance&&
+        course_error<=capture_course_tolerance;
     if(!already_tangent){
         if(lead_chord<=position_tolerance)return false;
         /* Fixed chord/3 handles put a tight kink near u=0 whenever the entry
@@ -463,7 +608,7 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
            large (the lead-authority rejects peaked at u<0.1 in >80% of runs).
            Choose the start/end handle pair that minimizes peak curvature; the
            authority certificate downstream still judges the chosen curve. */
-        static const double handle_scales[]={1.0/3.0,0.5,0.75,1.0,1.25};
+        static const double handle_scales[]={1.0/3.0,0.5,0.75,1.0,1.25,1.75,2.5};
         const size_t handle_count=sizeof(handle_scales)/sizeof(handle_scales[0]);
         double best_peak=INFINITY;
         HACPoint2 best_p1={0},best_p2={0};
@@ -476,7 +621,7 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
                 entry.n-cos(capture_course*DEG2RAD)*h2);
             HACTransitionPlan trial=hac_lead_bezier_from_plan(&candidate);
             if(!hac_bezier_regular(&trial))continue;
-            if(hac_bezier_length_between(&trial,0.0,1.0,32)>lead_chord*1.25)continue;
+            if(hac_bezier_length_between(&trial,0.0,1.0,32)>lead_chord*2.5)continue;
             double peak=0.0;
             for(int k=0;k<=64;k++){
                 double kappa=fabs(hac_bezier_signed_curvature(&trial,(double)k/64.0));
@@ -510,4 +655,3 @@ static double hac_tangent_entry_course(double e,double n,HACPoint2 center,
     *out=candidate;
     return true;
 }
-

@@ -814,25 +814,55 @@
     }
   }
 
-  function drawRunwayAxis(site, width, height, color) {
-    if (!site || !finite(site.latitude) || !finite(site.longitude) || !finite(site.runwayHeading)) return;
-    const heading = n(site.runwayHeading);
-    const back = destinationPoint(site, heading + 180, 18000);
-    const forward = destinationPoint(site, heading, 32000);
-    drawPath([back, site, forward], width, height, color, 1, [7, 6], 1, .54);
-    const center = mapPoint(site, width, height);
-    const angle = (heading - 90) * Math.PI / 180;
-    for (const x of wrappedMapXs(center.x, width, 24)) {
-      mapCtx.save();
-      mapCtx.translate(x, center.y);
-      mapCtx.rotate(angle);
-      mapCtx.fillStyle = "rgba(7,10,12,.88)";
-      mapCtx.strokeStyle = color;
-      mapCtx.lineWidth = 1;
-      mapCtx.fillRect(-10, -2.5, 20, 5);
-      mapCtx.strokeRect(-10, -2.5, 20, 5);
-      mapCtx.restore();
+  function runwayGeometry(site, options = {}) {
+    return window.ShuttleRunwayGeometry?.build(site, destinationPoint, {
+      sectionStep: 50,
+      guidanceBack: 18000,
+      guidanceForward: 32000,
+      ...options,
+    }) || null;
+  }
+
+  function drawPhysicalRunway(site, width, height) {
+    const runway = runwayGeometry(site);
+    if (!runway) return;
+
+    const polygons = trajectorySegments(runway.outline, width, height);
+    mapCtx.save();
+    mapCtx.fillStyle = "rgba(36,39,41,.96)";
+    mapCtx.strokeStyle = "rgba(238,242,244,.90)";
+    mapCtx.lineJoin = "round";
+    mapCtx.lineWidth = 1.05;
+    for (const polygon of polygons) {
+      if (polygon.length < 4) continue;
+      mapCtx.beginPath();
+      mapCtx.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) mapCtx.lineTo(polygon[i].x, polygon[i].y);
+      mapCtx.closePath();
+      mapCtx.fill();
+      mapCtx.stroke();
     }
+    mapCtx.restore();
+
+    const threshold = mapPoint(runway.threshold, width, height);
+    const farEnd = mapPoint(runway.end, width, height);
+    const span = width * mapView.zoom;
+    while (farEnd.x - threshold.x > span / 2) farEnd.x -= span;
+    while (farEnd.x - threshold.x < -span / 2) farEnd.x += span;
+    const runwayPixels = Math.hypot(farEnd.x - threshold.x, farEnd.y - threshold.y);
+    if (runwayPixels < 26) return;
+
+    const markingWidth = runwayPixels > 220 ? 1.35 : .9;
+    for (let i = 0; i + 1 < runway.markings.length; i += 2) {
+      drawPath([runway.markings[i], runway.markings[i + 1]], width, height,
+        "rgba(255,255,255,.94)", markingWidth, [], 0, .94);
+    }
+  }
+
+  function drawRunwayAxis(site, width, height, color) {
+    const runway = runwayGeometry(site);
+    if (!runway) return;
+    drawPath(runway.guidanceAxis, width, height, color, 1, [7, 6], 1, .54);
   }
 
 
@@ -1215,6 +1245,8 @@
       drawRangeRings(site, width, height, c.orange);
       drawRunwayCorridor(site, width, height, c.orange);
       drawRunwayAxis(site, width, height, c.orange);
+
+      drawPhysicalRunway(site, width, height);
       if (finite(t.latitude) && finite(t.longitude) && finite(site.latitude) && finite(site.longitude)) {
         drawPath([t, site], width, height, c.cyan, .8, [3, 6], 0, .24);
       }
@@ -1424,8 +1456,9 @@
         const simState = String(sim.state || "idle").toUpperCase();
         const simMode = String(sim.mode || sim.sourceMode || "simulator").toUpperCase();
         const runId = sim.runId || "UNNAMED RUN";
-        const elapsed = finite(sim.simElapsedSeconds) ? "T+ " + n(sim.simElapsedSeconds).toFixed(1) + " s" :
-          (finite(t.ut) ? "UT " + n(t.ut).toFixed(1) + " s" : "T+ —");
+        const elapsed = finite(sim.simElapsedSeconds)
+          ? "T+ " + (n(sim.simElapsedSeconds) >= 60 ? `${duration(sim.simElapsedSeconds)} (${n(sim.simElapsedSeconds).toFixed(1)}s)` : `${n(sim.simElapsedSeconds).toFixed(1)} s`)
+          : (finite(t.ut) ? "UT " + n(t.ut).toFixed(1) + " s" : "T+ —");
         const effective = finite(sim.effectiveRate) ?
           n(sim.effectiveRate).toFixed(n(sim.effectiveRate) >= 100 ? 0 : 1) + "×" :
           (sim.rateMode ? String(sim.rateMode).toUpperCase() : "MAX");
@@ -1722,7 +1755,7 @@
         const overlay = $("scene3d-status").parentElement;
         overlay?.classList.remove("alert");
         $("scene3d-status").textContent = "3D LOADING";
-        scene3dLoading = import("/scene3d.js?v=20260915-orbit-3")
+        scene3dLoading = import("/scene3d.js?v=20260924-ksc-runway-1")
           .then((module) => module.createTelemetry3D({
             canvas: $("scene3d-canvas"),
             statusEl: $("scene3d-status"),
@@ -2063,6 +2096,27 @@
     return Math.abs(n(value)) >= 1000 ? (n(value) / 1000).toFixed(1) + "k" : n(value).toFixed(0) + "m";
   };
 
+  const formatDurationLong = (value) => {
+    if (!finite(value)) return "—";
+    const total = Math.max(0, n(value));
+    if (total < 60) return `${total.toFixed(1)}s`;
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = (total % 60).toFixed(total >= 3600 ? 0 : 1);
+    if (h > 0) return `${h}h ${m}m ${String(Math.floor(s)).padStart(2, "0")}s`;
+    return `${m}m ${String(s).padStart(4, "0")}s`;
+  };
+
+  const runDateHeader = (run) => {
+    if (run.date) return run.date;
+    if (finite(run.startedAt)) {
+      try {
+        return new Date(n(run.startedAt) * 1000).toISOString().split("T")[0];
+      } catch (_) {}
+    }
+    return "Undated Runs";
+  };
+
   function renderRunHistory(runs) {
     const list = $("sim-history-list");
     $("sim-history-count").textContent = String(runs.length) + " RUNS";
@@ -2074,42 +2128,94 @@
       list.appendChild(empty);
       return;
     }
-    for (const run of runs) {
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = "sim-run-row";
-      if (archiveReplay.active && archiveReplay.run?.runId === run.runId) row.classList.add("active");
-      const replayAvailable = !!run.hasReplay;
-      row.disabled = !replayAvailable;
-      const dot = document.createElement("span");
-      dot.className = "sim-run-dot " + (run.success ? "success" : run.state === "failed" ? "failed" : "");
-      const main = document.createElement("span");
-      main.className = "sim-run-main";
-      const name = document.createElement("span");
-      name.className = "sim-run-name";
-      name.textContent = run.runId || "unnamed";
-      const meta = document.createElement("span");
-      meta.className = "sim-run-meta";
-      const scenario = String(run.scenario || "").split("/").pop();
-      const parts = [run.terminalPhase || run.state || "unknown", scenario];
-      if (finite(run.simElapsedSeconds)) parts.push(n(run.simElapsedSeconds).toFixed(1) + "s sim");
 
-      meta.textContent = parts.filter(Boolean).join(" · ");
-      main.append(name, meta);
-      const final = document.createElement("span");
-      final.className = "sim-run-final";
-      const f = run.final || {};
-      final.textContent = "ALT " + runDistance(f.altitude) + " · A " + runDistance(f.runwayAlongTrack) + " · X " + runDistance(f.runwayCrossTrack);
-      row.append(dot, main, final);
-      if (replayAvailable) {
-        row.addEventListener("click", () => startArchiveReplay(run.runId, row).catch((error) => {
-          $("sim-replay-position").textContent = "Unable to load run";
-          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
-          if (!archiveReplay.active) setReplayControlsActive(false);
-          setReplayPlaying(false);
-        }));
+    // Ensure latest runs are sorted to top
+    const sortedRuns = [...runs].sort((a, b) => {
+      const ta = finite(a.startedAt) ? n(a.startedAt) : 0;
+      const tb = finite(b.startedAt) ? n(b.startedAt) : 0;
+      if (tb !== ta) return tb - ta;
+      return String(b.runId || "").localeCompare(String(a.runId || ""));
+    });
+
+    // Group runs by date (latest dates first)
+    const groups = [];
+    let currentGroup = null;
+    for (const run of sortedRuns) {
+      const dateKey = runDateHeader(run);
+      if (!currentGroup || currentGroup.date !== dateKey) {
+        currentGroup = { date: dateKey, runs: [] };
+        groups.push(currentGroup);
       }
-      list.appendChild(row);
+      currentGroup.runs.push(run);
+    }
+
+    for (const group of groups) {
+      const groupHeader = document.createElement("div");
+      groupHeader.className = "sim-history-date-header";
+      const titleSpan = document.createElement("span");
+      titleSpan.textContent = group.date;
+      const countSpan = document.createElement("span");
+      countSpan.className = "muted";
+      countSpan.textContent = `${group.runs.length} RUN${group.runs.length === 1 ? "" : "S"}`;
+      groupHeader.append(titleSpan, countSpan);
+      list.appendChild(groupHeader);
+
+      for (const run of group.runs) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "sim-run-row";
+        if (archiveReplay.active && archiveReplay.run?.runId === run.runId) row.classList.add("active");
+        const replayAvailable = !!run.hasReplay;
+        row.disabled = !replayAvailable;
+        const dot = document.createElement("span");
+        dot.className = "sim-run-dot " + (run.success ? "success" : run.state === "failed" ? "failed" : "");
+        const main = document.createElement("span");
+        main.className = "sim-run-main";
+
+        const head = document.createElement("span");
+        head.className = "sim-run-head";
+        const name = document.createElement("span");
+        name.className = "sim-run-name";
+        name.textContent = run.runId || "unnamed";
+        head.appendChild(name);
+
+        if (run.time) {
+          const timeSpan = document.createElement("span");
+          timeSpan.className = "sim-run-time";
+          timeSpan.textContent = run.time;
+          head.appendChild(timeSpan);
+        }
+        main.appendChild(head);
+
+        const meta = document.createElement("span");
+        meta.className = "sim-run-meta";
+        const scenario = String(run.scenario || "").split("/").pop();
+        const parts = [run.terminalPhase || run.state || "unknown", scenario];
+        if (finite(run.simElapsedSeconds)) {
+          parts.push(formatDurationLong(run.simElapsedSeconds) + " sim");
+        }
+        if (finite(run.wallSeconds)) {
+          parts.push(formatDurationLong(run.wallSeconds) + " real");
+        }
+
+        meta.textContent = parts.filter(Boolean).join(" · ");
+        main.appendChild(meta);
+
+        const final = document.createElement("span");
+        final.className = "sim-run-final";
+        const f = run.final || {};
+        final.textContent = "ALT " + runDistance(f.altitude) + " · A " + runDistance(f.runwayAlongTrack) + " · X " + runDistance(f.runwayCrossTrack);
+        row.append(dot, main, final);
+        if (replayAvailable) {
+          row.addEventListener("click", () => startArchiveReplay(run.runId, row).catch((error) => {
+            $("sim-replay-position").textContent = "Unable to load run";
+            $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
+            if (!archiveReplay.active) setReplayControlsActive(false);
+            setReplayPlaying(false);
+          }));
+        }
+        list.appendChild(row);
+      }
     }
   }
 

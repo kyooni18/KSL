@@ -76,8 +76,11 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     }
     if(g->entry_topology.valid)return entry_topology_guidance(g,t,course,p,aero,cfg,dt);
     const TaemInterfaceTarget*q=&g->taem_interface_target;
-    double taem_velocity=q->valid&&isfinite(q->speed)&&q->speed>0.0?
-        q->speed:s->taem_force_handoff_speed;
+    /* q is the later HAC-acquisition tangent.  Entry longitudinal guidance ends
+       at the high-energy MM305 interface, not at that downstream p0 state. */
+    double taem_velocity=entry_taem_speed_target(v,s,p);
+    if(!isfinite(taem_velocity)||taem_velocity<=0.0)
+        taem_velocity=s->taem_force_handoff_speed;
     if(!g->entry_drag_ratio_valid){
         g->entry_drag_velocity_ratio=clampd(t->true_air_speed/fmax(taem_velocity,1.0)*1.05,1.20,4.50);
         g->entry_drag_ratio_valid=true;
@@ -87,19 +90,8 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     double drag_taem_range=entry_taem_range_target(p,s);
     double drag_taem_latitude=cfg->site.latitude;
     double drag_taem_altitude=s->taem_interface_altitude;
-    if(q->valid&&isfinite(t->runway_along_track)&&isfinite(t->runway_cross_track)){
-        double da=q->along_track-t->runway_along_track;
-        double dc=q->cross_track-t->runway_cross_track;
-        drag_range=hypot(da,dc);
-        drag_taem_range=0.0;
-        drag_taem_altitude=q->altitude;
-        double rh=cfg->site.runway_heading*DEG2RAD;
-        double e=q->along_track*sin(rh)+q->cross_track*cos(rh);
-        double n=q->along_track*cos(rh)-q->cross_track*sin(rh);
-        GeoPoint origin={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
-        GeoPoint gate=local_point(origin,e,n,p->radius,q->altitude);
-        if(isfinite(gate.latitude))drag_taem_latitude=gate.latitude;
-    }
+    /* Do not replace this longitudinal endpoint with q.  The HAC tangent is a
+       look-ahead objective owned by MM305 Path Acquisition after handoff. */
 
     EntryPhase phase=g->entry_exec.initialized?g->entry_exec.phase:ENTRY_PHASE_PREENTRY;
     EntryDragReferenceConfig drag_cfg=entry_drag_reference_default_config();
@@ -125,16 +117,48 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
        the Entry profile. The executive advances through its longitudinal phases,
        then accepts ownership transfer only through entry_exec_accept_taem_handoff. */
     TaemInterfaceCapture capture=entry_dynamic_interface_capture(g,t,course,p,aero,cfg);
-    bool handoff_geometry_ready=capture.valid&&capture.ready;
-    if(!g->diagnostic_shadow&&(t->ut-g->taem_interface_diagnostic_ut>=5.0||capture.ready)){
+    bool mm305_ready=mm305_acquisition_ready(t,p,cfg);
+    bool handoff_geometry_ready=mm305_ready;
+
+    /*
+     * Once the orbiter is in the MM305 energy/altitude band and is closing on
+     * KSC, preserve that inbound vector while the Entry executive finishes the
+     * ownership transaction.  Do not start steering toward the later HAC tangent
+     * during these last MM304 samples; the acquisition turn belongs to MM305.
+     */
+    double transition_sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double transition_mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(transition_sound)&&transition_sound>DBL_MIN?
+            t->true_air_speed/transition_sound:NAN);
+    double transition_mach_min=s->mm305_target_mach-s->mm305_mach_half_width;
+    double transition_mach_max=s->mm305_target_mach+s->mm305_mach_half_width;
+    double transition_range=entry_taem_range_target(p,s);
+    double transition_minimum_range=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    double transition_closure=isfinite(t->course_to_site_error)?
+        cos(t->course_to_site_error*DEG2RAD):NAN;
+    bool pre_mm305_inbound=g->taem_interface_target.valid&&
+        !g->entry_exec.entry_complete&&
+        isfinite(transition_mach)&&transition_mach>=transition_mach_min&&
+        transition_mach<=transition_mach_max&&
+        t->mean_altitude>=s->mm305_min_altitude&&
+        t->mean_altitude<=s->mm305_max_altitude&&t->vertical_speed<0.0&&
+        isfinite(transition_range)&&
+        t->range_to_site>=transition_minimum_range&&
+        isfinite(transition_closure)&&transition_closure>0.0;
+    if(!g->diagnostic_shadow&&
+       (t->ut-g->taem_interface_diagnostic_ut>=5.0||mm305_ready)){
         const TaemInterfaceTarget*q=&g->taem_interface_target;
         char veto_reason[160];
         taem_capture_veto_reasons(capture.veto,veto_reason,sizeof(veto_reason));
-        fprintf(stderr,"TAEM interface: UT %.2f live h %.0f V %.1f range %.0f course %.1f FPA %.1f target valid %d energy %d along %.0f cross %.0f h %.0f V %.1f course %.1f FPA %.1f lead %.0f capture valid %d veto %u reasons %s da %.0f dc %.0f dh %.0f dcourse %.1f energy %.0f turn %.0f ready %d\n",
+        fprintf(stderr,
+            "TAEM interface: UT %.2f live h %.0f V %.1f range %.0f course %.1f FPA %.1f target valid %d energy %d along %.0f cross %.0f h %.0f V %.1f course %.1f FPA %.1f lead %.0f acquisitionReady %d inletCapture valid %d veto %u reasons %s da %.0f dc %.0f dh %.0f dcourse %.1f energy %.0f turn %.0f ready %d\n",
             t->ut,t->mean_altitude,t->true_air_speed,t->range_to_site,course,t->flight_path_angle,
-            q->valid,q->energy_qualified,q->along_track,q->cross_track,q->altitude,q->speed,q->course,q->flight_path_angle,q->acquisition_lead,
-            capture.valid,capture.veto,veto_reason,capture.along,capture.cross,capture.altitude_error,capture.course_error,
-            capture.energy_margin,capture.turn_margin,capture.ready);
+            q->valid,q->energy_qualified,q->along_track,q->cross_track,q->altitude,q->speed,
+            q->course,q->flight_path_angle,q->acquisition_lead,mm305_ready?1:0,
+            capture.valid,capture.veto,veto_reason,capture.along,capture.cross,
+            capture.altitude_error,capture.course_error,capture.energy_margin,
+            capture.turn_margin,capture.ready);
         g->taem_interface_diagnostic_ut=t->ut;
     }
     bool checkpoint_restart=!g->entry_exec.initialized&&g->entry_continuation_bootstrap;
@@ -148,7 +172,7 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     if(handoff_geometry_ready&&g->entry_exec.phase==ENTRY_PHASE_TRANSITION&&
        !entry_exec_accept_taem_handoff(&g->entry_exec,&obs))
         return entry_program_contract_hold(g,t,cfg,dt,
-            "MM304 handoff was rejected by the Entry executive; the fixed interface contract remains unsatisfied.");
+            "MM304 handoff was rejected by the Entry executive; the high-energy MM305 acquisition contract remains unsatisfied.");
     if(g->entry_exec.phase!=drag_in.phase){
         drag_in.phase=g->entry_exec.phase;
         drag=entry_drag_reference_compute(&drag_in,&drag_cfg);
@@ -210,6 +234,28 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
         "MM304 lateral authority allocation is invalid; retaining the bounded current MM304 command.");
 
     /*
+     * Detect the no-turn path before the reversal scheduler.  If the selected
+     * HAC inlet is already ahead on its tangent and the measured course is
+     * inside the MM304 heading contract, manufacturing a final reversal would
+     * turn the orbiter away from an inlet it is already flying toward.
+     */
+    TaemHandoffContract direct_handoff=taem_handoff_contract(s);
+    double direct_rel=q->valid&&isfinite(q->course)?
+        norm_signed_deg(q->course-cfg->site.runway_heading)*DEG2RAD:NAN;
+    double direct_da=q->valid?q->along_track-t->runway_along_track:NAN;
+    double direct_dc=q->valid?q->cross_track-t->runway_cross_track:NAN;
+    double direct_forward=isfinite(direct_rel)&&isfinite(direct_da)&&
+        isfinite(direct_dc)?
+        direct_da*cos(direct_rel)+direct_dc*sin(direct_rel):NAN;
+    double direct_course_error=q->valid&&isfinite(q->course)&&isfinite(course)?
+        fabs(norm_signed_deg(q->course-course)):INFINITY;
+    bool direct_inlet_candidate=!pre_mm305_inbound&&q->valid&&
+        isfinite(direct_forward)&&
+        direct_forward>direct_handoff.horizontal_radius_m&&
+        direct_course_error<=
+            direct_handoff.perpendicular_heading_half_width_deg;
+
+    /*
      * Admit the final MM304 turn from a physical signed envelope rather than
      * speed/heading/corridor thresholds. The envelope projects the measured
      * roll transient with the configured actuator limits, derives minimum turn
@@ -217,7 +263,7 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
      * endpoint geometry, and consumes the explicit MM304 capture-radius
      * contract plus measured trajectory uncertainty.
      */
-    if(!g->entry_reversal_scheduled&&!g->entry_final_reversal_pending&&
+    if(!direct_inlet_candidate&&!g->entry_reversal_scheduled&&!g->entry_final_reversal_pending&&
        !g->entry_final_reversal_completed&&q->valid&&isfinite(q->course)&&
        isfinite(course)&&isfinite(t->runway_along_track)&&
        isfinite(t->runway_cross_track)){
@@ -226,7 +272,7 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
         double lift_accel=live_lift_accel(t,aero,v);
         double authority_confidence=clampd(
             fmax(t->aerodynamic_confidence,t->physics_authority_confidence[1]),0.0,1.0);
-        double usable_bank=fmin(limits.maximum_bank_deg,magnitude.bank_magnitude_deg);
+        double usable_bank=limits.maximum_bank_deg;
         EntryLateralTurnInput turn_input={
             .horizontal_speed_mps=horizontal_speed,
             .current_course_deg=norm_signed_deg(course-cfg->site.runway_heading),
@@ -276,10 +322,28 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
        crossrange contract is physically complete, schedule that measured sign
        change directly; the normal reversal executor still owns roll-through and
        promotion to the final fixed-point turn. */
-    (void)entry_program_schedule_live_setup_reversal(g,t,p,cfg,
-        magnitude.bank_magnitude_deg);
-    (void)entry_program_release_nonfinal_reversal_now(g,t,p,cfg);
-    bool reversal_executed=entry_program_execute_planned_reversal(g,t,p,cfg);
+    bool reversal_executed=false;
+    if(!direct_inlet_candidate){
+        (void)entry_program_schedule_live_setup_reversal(g,t,p,cfg,
+            magnitude.bank_magnitude_deg);
+        (void)entry_program_release_nonfinal_reversal_now(g,t,p,cfg);
+        reversal_executed=entry_program_execute_planned_reversal(g,t,p,cfg);
+    }
+    if(!g->entry_final_reversal_pending&&!g->entry_final_reversal_completed&&
+       q->valid&&isfinite(q->course)&&isfinite(course)){
+        double target_relative=norm_signed_deg(q->course-cfg->site.runway_heading);
+        if(isfinite(target_relative)&&fabs(target_relative)>=30.0){
+            double final_side=target_relative>=0.0?1.0:-1.0;
+            double owned_side=g->s_turn_sign>=0.0?1.0:-1.0;
+            if(owned_side*final_side>0.0&&g->entry_control_reversals>0){
+                if(t->runway_along_track>=q->along_track-1000.0||
+                   entry_program_final_reversal_geometry_ready(g,t,cfg,final_side)){
+                    g->entry_final_reversal_completed=true;
+                    g->entry_reversal_scheduled=false;
+                }
+            }
+        }
+    }
     bool tangent_capture_mode=g->entry_final_reversal_pending||g->entry_final_reversal_completed;
     if(tangent_capture_mode)entry_program_tangent_reversal_captured(g,t,v);
     bool final_setup_blocked=!tangent_capture_mode&&g->entry_reversal_scheduled&&
@@ -298,6 +362,8 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     bool post_shaping_parallel_stage=!tangent_capture_mode&&
         entry_program_post_shaping_parallel_stage(g,t,course,p,aero,cfg,&parallel_stage_bank);
     double geometry_bank=tangent_capture_mode?0.0:entry_taem_gate_acquisition_bank(g,t,p,aero,cfg);
+
+    bool direct_inlet_acquisition=direct_inlet_candidate&&!tangent_capture_mode;
     EntryControlPlan longitudinal_demand={0};
     longitudinal_demand.valid=true;
     longitudinal_demand.target_bank=(g->s_turn_sign>=0.0?1.0:-1.0)*magnitude.bank_magnitude_deg;
@@ -322,8 +388,9 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
        lane even before the fixed-point 90 deg turn is geometrically flyable.
        finalaoa5 reached the -8 km station at ~1.6 km/s because this lane kept the
        old ~20 deg high-L/D incidence. The mission explicitly permits ~35 deg here. */
-    bool final_s_turn_armed=tangent_capture_mode||post_shaping_parallel_stage||
-        entry_program_terminal_side_final_s_turn_armed(g,t,cfg,course);
+    bool final_s_turn_armed=!pre_mm305_inbound&&
+        (tangent_capture_mode||post_shaping_parallel_stage||
+         entry_program_terminal_side_final_s_turn_armed(g,t,cfg,course));
     double final_s_turn_drag_aoa=entry_program_final_s_turn_drag_aoa(g,t,p,aero,cfg,&drag,
         final_s_turn_armed);
     if(isfinite(final_s_turn_drag_aoa))
@@ -512,6 +579,26 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     bool geometry_saturated=!post_shaping_parallel_stage&&
         fabs(geometry_bank)>control_bank_magnitude+1.0;
     bool missing_reversal=lateral_requirement*g->s_turn_sign<-1.0&&!g->entry_reversal_scheduled;
+    /* Azimuth-error deadband: when the bearing to the alignment station
+       leaves the committed side by more than a range-scaled corridor, the
+       planner's reversal milestone is overdue; command the reversal. */
+    if(!tangent_capture_mode&&!post_shaping_parallel_stage&&g->has_s_turn_leg_started&&
+       !g->entry_reversal_scheduled&&g->taem_interface_target.valid&&
+       isfinite(t->runway_along_track)&&isfinite(t->runway_cross_track)){
+        double to_along=g->taem_interface_target.along_track-t->runway_along_track;
+        double to_cross=g->taem_interface_target.cross_track-t->runway_cross_track;
+        double live=isfinite(t->ground_track_heading)?t->ground_track_heading:t->heading;
+        double range_km=hypot(to_along,to_cross)/1000.0;
+        if(isfinite(live)&&isfinite(range_km)){
+            double bearing=norm_deg(cfg->site.runway_heading+atan2(to_cross,to_along)*RAD2DEG);
+            double delta_az=norm_signed_deg(bearing-live);
+            double deadband=fmin(17.5,fmax(8.0,8.0+0.05*range_km));
+            if(delta_az*g->s_turn_sign< -deadband){
+                request_side(g,-g->s_turn_sign,t->ut);
+                missing_reversal=false;
+            }
+        }
+    }
     bool blocked_final=g->entry_reversal_scheduled&&g->entry_reversal_is_final&&
         t->ut>=g->entry_reversal_ut&&!entry_program_final_reversal_geometry_ready(g,t,cfg,g->entry_reversal_sign);
     /* A same-side geometry demand above the instantaneous vertical bank budget is
@@ -588,6 +675,13 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
                        let the vertical allocator erase the bank needed to satisfy it;
                        q/g/stall/dynamic-bank limits are already in the bank command. */
                     nominal.target_bank=tangent_geometry_bank;
+                    double path_dist=NAN;
+                    double path_fpa=entry_program_taem_path_fpa(g,t,cfg,&path_dist);
+                    if(isfinite(path_fpa)&&isfinite(t->flight_path_angle)&&
+                       t->flight_path_angle<path_fpa-2.0){
+                        double pullup_bank=fmax(20.0,45.0-2.5*(path_fpa-t->flight_path_angle));
+                        nominal.target_bank=clampd(nominal.target_bank,-pullup_bank,pullup_bank);
+                    }
                 }else{
                     double vertical_ceiling=entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
                     if(isfinite(vertical_ceiling)&&fabs(nominal.target_bank)>vertical_ceiling)
@@ -623,6 +717,92 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     if(g->entry_lateral_infeasible)
         supervision_warning="MM304 lateral/vertical budgets conflict with current lift or an uncommitted reversal; tangent delivery is unproven and requires replanning.";
     double bank=nominal.target_bank,aoa=nominal.target_aoa;
+
+    if(pre_mm305_inbound){
+        /* Preserve the KSC-closing vector until the TAEM range gate.  Incidence is
+           selected from the stock-KSP polar's live best-L/D solution; q/g/stall
+           protections below remain authoritative. */
+        double desired_site_course=norm_deg(course+t->course_to_site_error);
+        ControlAuthorityEnvelope inbound_authority=
+            decision_control_authority_envelope(g,t,p,cfg);
+        double actuator_response=inbound_authority.valid&&
+            isfinite(inbound_authority.control_response_time_s)?
+            fmax(inbound_authority.control_response_time_s,dt):fmax(dt,1e-3);
+        double range_to_gate=fmax(0.0,t->range_to_site-transition_range);
+        double time_to_gate=range_to_gate/fmax(t->horizontal_speed,DBL_MIN);
+        /* Course convergence is due at the TAEM boundary, not at the end of one
+           actuator transient.  Use the physically available flight time so a
+           degree of bearing error cannot manufacture a maximum-bank S-turn. */
+        double inbound_response=fmax(actuator_response,time_to_gate);
+        double inbound_limit=dynamic_bank_limit(t,v);
+        double inbound_lift=live_lift_accel(t,aero,v);
+        double inbound_effectiveness=isfinite(t->bank_effectiveness)&&
+            t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
+        bank=taem_course_rate_bank_command(
+            fmax(t->horizontal_speed,DBL_MIN),inbound_lift,inbound_effectiveness,
+            inbound_limit,course,desired_site_course,inbound_response);
+        bank=clampd(bank,-inbound_limit,inbound_limit);
+        double efficient_aoa=aerodynamic_best_glide_aoa(transition_mach,v);
+        if(isfinite(efficient_aoa))
+            aoa=clampd(efficient_aoa,0.0,v->maximum_angle_of_attack);
+        nominal.target_heading=desired_site_course;
+    }else if(direct_inlet_acquisition){
+        /*
+         * Direct inlet acquisition uses the same stock-KSP force model as HAC
+         * admission.  Drag owns arrival speed; FPA and bank reserve the lift
+         * needed to remain on the inlet glide.  This replaces the generic entry
+         * alpha floor only for this already-aligned MM304 terminal segment.
+         */
+        double direct_distance=hypot(direct_da,direct_dc);
+        double height_to_inlet=fmax(0.0,t->mean_altitude-q->altitude);
+        double geometric_slope=atan2(height_to_inlet,
+            fmax(direct_distance,DBL_MIN))*RAD2DEG;
+        double current_descent=isfinite(t->flight_path_angle)?
+            fmax(0.0,-t->flight_path_angle):0.0;
+        double reference_slope=fmax(geometric_slope,current_descent);
+
+        double desired_heading=norm_deg(cfg->site.runway_heading+
+            atan2(direct_dc,direct_da)*RAD2DEG);
+        double direct_limit=dynamic_bank_limit(t,v);
+        double direct_lift=live_lift_accel(t,aero,v);
+        double direct_effectiveness=isfinite(t->bank_effectiveness)&&
+            t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
+        double direct_bank=taem_course_rate_bank_command(
+            fmax(t->horizontal_speed,DBL_MIN),direct_lift,
+            direct_effectiveness,direct_limit,course,desired_heading,
+            fmax(q->response_time,dt));
+        direct_bank=clampd(direct_bank,-direct_limit,direct_limit);
+
+        double drag_aoa=fixed_hac_lead_drag_aoa(t,p,aero,v,q->speed,
+            direct_distance,reference_slope);
+        Telemetry banked=*t;
+        banked.roll=direct_bank;
+        double vertical_aoa=terminal_fpa_force_aoa(&banked,p,aero,v,
+            -reference_slope);
+        double lift_limit_aoa=v->maximum_angle_of_attack;
+        if(t->mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
+           v->terminal_maximum_lift_angle_of_attack>0.0)
+            lift_limit_aoa=fmin(lift_limit_aoa,
+                v->terminal_maximum_lift_angle_of_attack);
+        double maximum_lift=terminal_projected_lift_accel_at_aoa(
+            t,aero,v,lift_limit_aoa);
+        double effectiveness=isfinite(t->bank_effectiveness)&&
+            t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
+        double effective_bank=fmin(fabs(direct_bank)*effectiveness,
+            nextafter(90.0,0.0))*DEG2RAD;
+        double lateral_request=isfinite(maximum_lift)?
+            maximum_lift*sin(effective_bank):0.0;
+        double lateral_aoa=terminal_required_aoa_for_lateral_limit(
+            t,aero,v,lateral_request,direct_bank,lift_limit_aoa);
+
+        double direct_aoa=fmax(
+            isfinite(drag_aoa)?drag_aoa:0.0,
+            fmax(isfinite(vertical_aoa)?vertical_aoa:0.0,
+                 isfinite(lateral_aoa)?lateral_aoa:0.0));
+        bank=direct_bank;
+        aoa=clampd(direct_aoa,0.0,lift_limit_aoa);
+        nominal.target_heading=desired_heading;
+    }
     /* Below ~Mach 4, after the committed shaping reversal, TAEM energy reserve
        is an explicit mission requirement. The ordinary low-q belly-first floor
        was re-clamping the executable command to ~18 deg even when the terminal
@@ -638,9 +818,11 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
         t->dynamic_pressure>=fmax(250.0,v->maximum_dynamic_pressure*.008)&&t->dynamic_pressure<v->maximum_dynamic_pressure*.85&&
         t->g_force<v->maximum_g_load*.85&&
         (!t->stall_fraction_is_measured||t->stall_fraction<.10);
-    double protective_aoa=terminal_energy_preservation?
-        fmax(15.0,entry_terminal_turn_aoa_floor(t->true_air_speed,t->dynamic_pressure,v)):
-        entry_low_q_protective_aoa_floor(t->dynamic_pressure,v);
+    double protective_aoa=(direct_inlet_acquisition||pre_mm305_inbound)?0.0:
+        (terminal_energy_preservation?
+            fmax(15.0,entry_terminal_turn_aoa_floor(
+                t->true_air_speed,t->dynamic_pressure,v)):
+            entry_low_q_protective_aoa_floor(t->dynamic_pressure,v));
     if(terminal_energy_preservation&&!isfinite(final_s_turn_drag_aoa))
         aoa=fmin(aoa,protective_aoa);
     if(alpha_emergency_override)aoa=fmin(aoa,alpha.target_aoa);
@@ -719,7 +901,8 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     /* Bounded entry-pipeline trace for ShuttleSim energy/authority diagnosis. */
     static double entry_trace_last_ut=-INFINITY;
     const char*entry_trace=getenv("KSP_LANDER_ENTRY_TRACE");
-    if(entry_trace&&strcmp(entry_trace,"1")==0&&!g->diagnostic_shadow&&
+    if(entry_trace&&strcmp(entry_trace,"1")==0&&
+       (!g->diagnostic_shadow||(getenv("KSP_LANDER_TRACE_ENTRY_WITNESS")&&strcmp(getenv("KSP_LANDER_TRACE_ENTRY_WITNESS"),"1")==0))&&
        (t->ut<entry_trace_last_ut||t->ut-entry_trace_last_ut>=5.0)){
         double trace_distance=NAN;
         double trace_fpa=entry_program_taem_path_fpa(g,t,cfg,&trace_distance);

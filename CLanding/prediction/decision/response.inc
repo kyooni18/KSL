@@ -115,6 +115,9 @@ double decision_pitch_capture_time(const Telemetry*t,double target_aoa){
              isfinite(t->available_pitch_torque)&&t->available_pitch_torque>0.0&&
              isfinite(t->pitch_moment_of_inertia)&&t->pitch_moment_of_inertia>0.0){
         accel_limit=t->available_pitch_torque/t->pitch_moment_of_inertia*RAD2DEG;
+    }else{
+        accel_limit=1.8;
+        rate_limit=4.5;
     }
 
     if(!(accel_limit>DBL_MIN)||!isfinite(accel_limit))return INFINITY;

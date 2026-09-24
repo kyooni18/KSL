@@ -69,7 +69,7 @@ static bool terminal_variant_b_project_staging_state(const Telemetry*initial,
         speed=sqrt(next_v2);
         altitude=next_altitude;
 
-        double target=terminal_hac_energy_aoa(v);
+        double target=terminal_hac_energy_aoa(&sim,v);
         double requested_rate=clampd((target-aoa)/step,
             -limits.rate_deg_s,limits.rate_deg_s);
         double rate_delta=clampd(requested_rate-aoa_rate,

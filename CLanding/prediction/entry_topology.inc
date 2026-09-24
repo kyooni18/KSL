@@ -63,7 +63,7 @@ static bool entry_topology_terminal_endpoint_fit(const GuidanceSettings*s,const 
         double lift_accel,double bank_effectiveness,double bank_limit_deg,double station,
         double runway_course,double target_course,double target_speed,double final_sign,
         double*endpoint_error_out,double*radius_out){
-    (void)s;(void)p;(void)speed;(void)target_speed;
+    (void)p;(void)speed;(void)target_speed;
     if(endpoint_error_out)*endpoint_error_out=INFINITY;
     if(radius_out)*radius_out=INFINITY;
     if(!v||!isfinite(along)||!isfinite(cross)||!isfinite(course)||
@@ -103,7 +103,9 @@ static bool entry_topology_terminal_endpoint_fit(const GuidanceSettings*s,const 
 
     if(endpoint_error_out)*endpoint_error_out=endpoint_error;
     if(radius_out)*radius_out=radius;
-    return endpoint_error<=1000.0; /* decision-literal-ok: explicit MM304 1 km mission contract */
+    TaemHandoffContract contract=taem_handoff_contract(s);
+    return isfinite(contract.horizontal_radius_m)&&
+        endpoint_error<=contract.horizontal_radius_m;
 }
 
 
@@ -254,9 +256,12 @@ static EntryTopologyPlan entry_topology_trial(VehicleState initial,const Telemet
        published by live guidance.  Search offsets never replace its geometry. */
     double target_course=requested_course;
     double selected_outbound_offset=norm_signed_deg(target_course-runway_course);
-    if(fabs(selected_outbound_offset)>DBL_EPSILON&&
-       (-side)*selected_outbound_offset<=0.0)
-        return best;
+    /* A perpendicular inlet course does not identify the physical HAC turn,
+       and it does not identify MM304's first energy-management bank sign.
+       The target publisher permits both HAC turns for the same tangent course,
+       while live MM304 may start on the opposite side and reverse into the
+       final turn. Let propagated endpoint-fit and strict capture checks below
+       decide whether a side is physically executable. */
     VehicleState state=initial;
     GuidanceMachine reference;if(base)reference=*base;else guidance_machine_init(&reference);
     reference.diagnostic_shadow=true;
@@ -827,10 +832,15 @@ static EntryTopologyPlan predictor_plan_entry_topology_for_inlet(VehicleState st
     if(!(max_bank>0.0))return best;
     double alpha_floor=entry_thermal_protection_aoa_floor(
         &cfg->vehicle);
+    /*
+     * The final MM304 S-turn explicitly owns the extended 35 deg incidence
+     * envelope.  Do not clip the topology search back to the ordinary vehicle
+     * AoA limit; entry_topology_trial() already enables this extension only
+     * after the shaping reversal, only before heading lock, and only inside
+     * q/g protection.
+     */
     double alpha_ceiling=entry_final_s_turn_aoa_ceiling(
         &cfg->vehicle);
-    alpha_ceiling=fmin(alpha_ceiling,
-        cfg->vehicle.maximum_angle_of_attack);
     if(alpha_ceiling<alpha_floor)alpha_ceiling=alpha_floor;
     double first_aoa_seed=base&&isfinite(base->entry_s_turn_plan.target_aoa)?
         clampd(base->entry_s_turn_plan.target_aoa,alpha_floor,alpha_ceiling):
@@ -1074,22 +1084,42 @@ EntryTopologyPlan predictor_plan_entry_topology(VehicleState state,
        !(t->horizontal_speed>DBL_EPSILON))
         return best;
 
+    /*
+     * The live MM304 target is stored in the runway frame selected by
+     * terminal_guidance_selected(). Prediction workers and offline shadows,
+     * however, snapshot telemetry/configuration in the configured primary
+     * runway frame. Normalize that boundary here before interpreting the
+     * target's along/cross coordinates. Otherwise an RW27 inlet is solved as
+     * though it belonged to RW09, producing a tens-of-kilometres false miss.
+     */
+    LandingConfiguration selected_cfg=*cfg;
+    Telemetry selected_t=*t;
+    const LandingConfiguration*topology_cfg=cfg;
+    const Telemetry*topology_t=t;
+    if(cfg->site.allow_reciprocal_runway&&base->runway_end_preview_valid&&
+       base->runway_end_index==1){
+        selected_cfg.site=runway_reciprocal_site(&cfg->site,p->radius);
+        telemetry_reframe_runway(&selected_t,&selected_cfg.site,p->radius);
+        topology_cfg=&selected_cfg;
+        topology_t=&selected_t;
+    }
+
     GuidanceMachine primary_base=*base;
     EntryTopologyPlan primary=predictor_plan_entry_topology_for_inlet(
-        state,t,&primary_base,p,env,cal,cfg);
+        state,topology_t,&primary_base,p,env,cal,topology_cfg);
     best=primary;
 
     TaemInterfaceTarget reciprocal_inlet={0};
-    if(entry_topology_reciprocal_inlet(&base->taem_interface_target,t,p,cfg,
-            &reciprocal_inlet)){
+    if(entry_topology_reciprocal_inlet(&base->taem_interface_target,topology_t,p,
+            topology_cfg,&reciprocal_inlet)){
         GuidanceMachine reciprocal_base=*base;
         reciprocal_base.taem_interface_target=reciprocal_inlet;
         double relative=norm_signed_deg(reciprocal_inlet.course-
-            cfg->site.runway_heading);
+            topology_cfg->site.runway_heading);
         reciprocal_base.entry_target_side=relative>=0.0?1.0:-1.0;
         reciprocal_base.entry_target_side_latched=true;
         EntryTopologyPlan reciprocal=predictor_plan_entry_topology_for_inlet(
-            state,t,&reciprocal_base,p,env,cal,cfg);
+            state,topology_t,&reciprocal_base,p,env,cal,topology_cfg);
         if(getenv("KSP_LANDER_TRACE_TOPOLOGY_BRANCHES"))
             fprintf(stderr,
                 "Entry topology outlet comparison: current=%.2f valid=%d flags=0x%x residual=%.3f position=%.1f reciprocal=%.2f valid=%d flags=0x%x residual=%.3f position=%.1f selected=%.2f\n",

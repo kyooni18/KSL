@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Translation-unit private helpers. */
+/* Translation-unit private helpers; Entry source slices are compiled below. */
 static EntryAlphaPhase entry_alpha_phase_for_exec(EntryPhase phase);
 static void entry_supervision_models(const Telemetry*t,AerodynamicModel aero,
         AerodynamicEnvelope*env,TrajectoryCalibrationModel*cal);
@@ -86,9 +86,10 @@ static double entry_authority_refresh_child_duration(const GuidanceMachine*g,
         const GuidanceSettings*s);
 static bool entry_taem_pose_setup_point(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,const LandingConfiguration*cfg,double*setup_along,double*setup_cross,double*final_side);
-static void entry_taem_turnability_target(const GuidanceMachine*g,const Telemetry*t,
-        double reference_course,AerodynamicModel aero,const LandingConfiguration*cfg,
-        double ordinary_target,double*target_speed,double*target_course);
+static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,const LandingConfiguration*cfg,double reference_course,
+        double hac_radius,double*target_along,double*target_cross,
+        double*target_course,double*target_side);
 static bool entry_taem_alignment_station_missed(const GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,double*point_bearing);
 static double entry_taem_tangent_capture_heading(const GuidanceMachine*g,const Telemetry*t,

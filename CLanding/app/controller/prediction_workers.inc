@@ -5,10 +5,6 @@ static AsyncPredictionIdentity terminal_prediction_identity(const GuidanceMachin
     id.taem_phase=(int)g->taem_exec.phase;
     id.taem_transition_count=g->taem_exec.transition_count;
     id.control_plan_sequence=g->control_plan_sequence;
-    if(g->taem_s_turn_plan.valid){
-        id.plan_id=g->taem_s_turn_plan.plan_id;
-        id.plan_version=g->taem_s_turn_plan.plan_version;
-    }
     id.terminal_candidate_valid=g->terminal_candidate.valid;
     id.terminal_candidate_selected_ut=g->terminal_candidate.valid?g->terminal_candidate.selected_ut:NAN;
     id.terminal_path_kind=(int)g->terminal_path_kind;

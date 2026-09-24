@@ -17,64 +17,20 @@ TaemHandoffContract taem_handoff_contract(const GuidanceSettings *s) {
     return out;
 }
 
-void mm304_handoff_station(double *along_m,double *cross_m) {
-    if(along_m)*along_m=-8000.0; /* decision-literal-ok: fixed MM304 handoff contract */
-    if(cross_m)*cross_m=0.0;
+void mm304_handoff_station(const GuidanceSettings *settings,double *along_m,double *cross_m) {
+    if(along_m)*along_m=settings?settings->mm304_handoff_along_track:NAN;
+    if(cross_m)*cross_m=settings?settings->mm304_handoff_cross_track:NAN;
 }
 
 double entry_s_turn_effective_minimum_leg(double true_air_speed,double taem_speed,const GuidanceSettings *settings) {
-    double configured=settings?fmax(8.0,settings->s_turn_minimum_leg_duration):24.0;
-    taem_speed=fmax(250.0,taem_speed);
-    /* One reversal includes a long roll-through interval in which little useful
-       lateral work is produced.  Require progressively longer established legs
-       at high energy so MM304 makes a few large S-turns rather than dithering.
-       Near TAEM retain enough agility for the final acquisition correction. */
-    double hot=clampd((true_air_speed-taem_speed)/fmax(650.0,taem_speed),0.0,1.0);
-    double dynamic=38.0+14.0*hot;
-    return fmax(configured,dynamic);
-}
-
-double entry_s_turn_fpa_delivery_debt(double flight_path_angle,const TaemInterfaceTarget *target){
-    if(!target||!target->valid||!isfinite(target->flight_path_angle)||!isfinite(flight_path_angle))
-        return 0.0;
-    double latest_delivery_fpa=clampd(target->flight_path_angle+
-        TAEM_INTERFACE_FPA_DEBT_LIMIT_DEG,-24.0,-2.5);
-    double fpa_debt=fmax(0.0,flight_path_angle-latest_delivery_fpa);
-    return clampd(fpa_debt/fmax(4.0,TAEM_INTERFACE_FPA_DEBT_LIMIT_DEG),0.0,1.0);
-}
-
-double entry_s_turn_reversal_corridor(double base_corridor,double range_to_site,
-        double terminal_join_range,double altitude_debt,double fpa_delivery_debt){
-    if(!isfinite(base_corridor)||!isfinite(range_to_site)||!isfinite(terminal_join_range))
-        return base_corridor;
-    terminal_join_range=fmax(terminal_join_range,1.0);
-    altitude_debt=clampd(altitude_debt,0.0,1.0);
-    fpa_delivery_debt=clampd(fpa_delivery_debt,0.0,1.0);
-    double maneuver_margin=clampd((range_to_site-terminal_join_range)/
-        fmax(terminal_join_range*1.5,1.0),0.0,1.0);
-    double range_pressure=clampd((terminal_join_range*1.5-range_to_site)/
-        terminal_join_range,0.0,1.0);
-
-    /* Preserve the established altitude-debt corridor exactly: far from TAEM it
-       tops out near 22 deg, then widens toward 60 deg only as terminal range is
-       consumed. Preflight and target-less prediction therefore remain unchanged. */
-    double altitude_ceiling=22.0+38.0*range_pressure;
-    double altitude_weight=altitude_debt*fmax(maneuver_margin,range_pressure);
-    double corridor=fmax(base_corridor,base_corridor+(altitude_ceiling-base_corridor)*
-        clampd(altitude_weight,0.0,1.0));
-
-    /* A published TAEM inlet adds distinct evidence: if MM304 is too shallow to
-       meet the inlet's bounded FPA debt, another ordinary roll-through restores
-       vertical lift exactly when sustained bank is needed. Permit a wider lateral
-       excursion (up to 48 deg) in proportion to that measured debt. No reversal
-       count is encoded; the actuator-aware terminal deadline can still force a roll. */
-    if(fpa_delivery_debt>0.0){
-        double fpa_ceiling=28.0+20.0*fpa_delivery_debt;
-        double fpa_weight=fpa_delivery_debt*fmax(maneuver_margin,range_pressure);
-        corridor=fmax(corridor,base_corridor+(fpa_ceiling-base_corridor)*
-            clampd(fpa_weight,0.0,1.0));
-    }
-    return corridor;
+    /*
+     * The dwell is an executive anti-chatter requirement only.  Vehicle-response
+     * time is computed from the bounded roll plant at each call site; do not hide
+     * another speed-fitted flight law inside this guard.
+     */
+    (void)true_air_speed;
+    (void)taem_speed;
+    return settings?fmax(0.0,settings->s_turn_minimum_leg_duration):0.0;
 }
 
 Vector3 v3(double x,double y,double z) { Vector3 r = {x,y,z}; return r; }
@@ -146,22 +102,6 @@ void telemetry_reframe_runway(Telemetry *t,const LandingSite *site,double radius
         &t->runway_along_track,&t->runway_cross_track);
 }
 
-double runway_end_acquisition_score(const Telemetry *t,const LandingSite *site,
-        const GuidanceSettings *s,double radius) {
-    if(!t||!site||!s)return INFINITY;
-    GeoPoint current={t->latitude,t->longitude,t->mean_altitude};
-    GeoPoint threshold={site->latitude,site->longitude,site->altitude};
-    double along=0.0,cross=0.0;
-    runway_coordinates(current,threshold,site->runway_heading,radius,&along,&cross);
-    double reserve=fmax(s->hac_radius*2.0,s->taem_interface_range*.65);
-    double acquisition_along=-s->final_approach_distance-reserve;
-    double geometric=hypot(along-acquisition_along,cross);
-    double course=isfinite(t->ground_track_heading)?t->ground_track_heading:t->heading;
-    double course_error=fabs(norm_signed_deg(site->runway_heading-course));
-    double turn_distance=fmax(0.0,t->horizontal_speed)*(course_error/3.0)*.55;
-    double past_threshold=fmax(0.0,along+s->final_approach_distance*.25);
-    return geometric+turn_distance+past_threshold*2.5;
-}
 void local_offsets(GeoPoint origin,GeoPoint p,double radius,double *east,double *north) {
     /* Use exact spherical distance+bearing instead of the old equirectangular
        lat/lon approximation; Kerbin is small enough for terminal-scale map error
@@ -661,7 +601,7 @@ bool entry_taem_handoff_geometry_ready(double altitude,double runway_along_track
     double minimum=0.0,maximum=0.0;
     entry_taem_handoff_altitude_bounds(s,&minimum,&maximum);
     double station_along=NAN,station_cross=NAN;
-    mm304_handoff_station(&station_along,&station_cross);
+    mm304_handoff_station(s,&station_along,&station_cross);
     (void)station_cross;
     double station_lead=clampd(fabs(horizontal_speed)*2.0,180.0,2400.0);
     return altitude>=minimum&&altitude<=maximum&&
@@ -691,22 +631,68 @@ double entry_bank_authority_limit(double true_air_speed,double dynamic_pressure,
 
 double entry_taem_range_target(const PlanetModel*p,const GuidanceSettings*s){
     if(!p||!s)return 0;
-    /* Preserve enough range for the largest HAC radius that terminal guidance
-       is itself allowed to select. This is a geometric reserve, not a fixed
-       STS-N calibration: it scales with body radius and the configured HAC
-       envelope, while never reducing an explicitly configured TAEM range. */
-    double max_terminal_radius=fmax(s->hac_radius,
-        fmin(p->radius*.20,fmax(s->hac_radius*8.0,s->taem_interface_range*2.5)));
-    /* Keep the S-turn's eventual target upstream of the HAC footprint.  The
-       previous 0.55 radius reserve let a fast shuttle consume too much KSC
-       downrange before terminal ownership could begin, leaving the vehicle
-       inside the HAC deadline even though it still had a recoverable energy
-       state.  Scale the reserve with the actually permitted terminal radius
-       instead of baking in a KSC/STS-N coordinate. */
-    double capture_floor=fmax(s->final_approach_distance*1.5,max_terminal_radius*.75);
-    return fmax(s->taem_interface_range,capture_floor);
+    (void)p;
+    /*
+     * The high-energy TAEM/MM305 interface is an acquisition boundary, not a
+     * reserve for the largest mathematically searchable HAC.  Expanding it with
+     * body radius made the KSP shuttle enter MM305 tens of kilometres too early
+     * and encouraged the terminal planner to solve energy with enormous circles.
+     * Keep the configured interface range, but never place it inside the nominal
+     * terminal geometry needed for one HAC plus final alignment.
+     */
+    double terminal_reserve=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    return fmax(s->taem_interface_range,terminal_reserve);
 }
 
+bool mm305_acquisition_ready(const Telemetry*t,const PlanetModel*p,
+        const LandingConfiguration*cfg){
+    if(!t||!p||!cfg)return false;
+    const GuidanceSettings*s=&cfg->guidance;
+    const VehicleProfile*v=&cfg->vehicle;
+    if(!isfinite(t->mean_altitude)||!isfinite(t->true_air_speed)||
+       !isfinite(t->vertical_speed)||!isfinite(t->range_to_site)||
+       !isfinite(t->dynamic_pressure)||!isfinite(t->g_force))
+        return false;
+
+    /*
+     * MM305 owns high-energy TAEM path acquisition.  Do not require the orbiter
+     * to reach the later rear-alignment/HAC station before giving it ownership:
+     * that destroys the acquisition segment by definition.  Admission instead
+     * uses the measured energy band, structural state, remaining terminal range,
+     * and whether the current velocity vector is actually closing on KSC.
+     */
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    double mach_min=s->mm305_target_mach-s->mm305_mach_half_width;
+    double mach_max=s->mm305_target_mach+s->mm305_mach_half_width;
+    if(isfinite(s->hac_acquisition_mach)&&s->hac_acquisition_mach>0.0)
+        mach_min=fmin(mach_min,s->hac_acquisition_mach);
+    double min_altitude=s->mm305_min_altitude;
+    if(isfinite(s->hac_acquisition_altitude)&&s->hac_acquisition_altitude>0.0)
+        min_altitude=fmin(min_altitude,s->hac_acquisition_altitude);
+
+    double maximum_range=entry_taem_range_target(p,s);
+    double minimum_range=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    double closure=isfinite(t->course_to_site_error)?
+        cos(t->course_to_site_error*DEG2RAD):NAN;
+
+    bool structural=t->dynamic_pressure<=v->maximum_dynamic_pressure&&
+        t->g_force<=v->maximum_g_load&&
+        (!t->stall_fraction_is_measured||
+         (isfinite(t->stall_fraction)&&t->stall_fraction<1.0));
+    bool acquisition_region=isfinite(maximum_range)&&maximum_range>minimum_range&&
+        t->range_to_site>=minimum_range&&t->range_to_site<=maximum_range&&
+        isfinite(closure)&&closure>0.0;
+
+    return t->mean_altitude>=min_altitude&&
+        t->mean_altitude<=s->mm305_max_altitude&&
+        isfinite(mach)&&mach>=mach_min&&mach<=mach_max&&
+        t->vertical_speed<0.0&&t->true_air_speed>=v->minimum_safe_speed&&
+        acquisition_region&&structural;
+}
 double rotating_specific_energy(double latitude,double altitude,double air_relative_speed,const PlanetModel*p){
     if(!p||!isfinite(latitude)||!isfinite(altitude)||!isfinite(air_relative_speed)||
        !isfinite(p->radius)||!(p->radius>0.0)||
@@ -838,33 +824,144 @@ EntryTerminalDemand entry_terminal_demand(double latitude,double altitude,double
     return d;
 }
 
+typedef struct {
+    double x,y,in_tangent,out_tangent;
+} StockKspCurveKey;
+
+static double stock_ksp_curve_eval(const StockKspCurveKey*keys,size_t count,double x){
+    if(!keys||count==0||!isfinite(x))return NAN;
+    if(x<=keys[0].x)return keys[0].y;
+    if(x>=keys[count-1].x)return keys[count-1].y;
+    for(size_t i=0;i+1<count;i++){
+        const StockKspCurveKey*a=&keys[i],*b=&keys[i+1];
+        if(x>b->x)continue;
+        double h=b->x-a->x;
+        if(!(h>DBL_MIN))return a->y;
+        double u=clampd((x-a->x)/h,0.0,1.0);
+        double u2=u*u,u3=u2*u;
+        double h00=2.0*u3-3.0*u2+1.0;
+        double h10=u3-2.0*u2+u;
+        double h01=-2.0*u3+3.0*u2;
+        double h11=u3-u2;
+        return h00*a->y+h10*h*a->out_tangent+
+            h01*b->y+h11*h*b->in_tangent;
+    }
+    return keys[count-1].y;
+}
+
+static void stock_ksp_lifting_surface_coefficients(double mach,double angle_of_attack,
+        double*cl,double*cd){
+    /*
+     * Exact stock KSP 1.12 Physics.cfg LIFTING_SURFACE_CURVES/Default keys.
+     * KSP evaluates the lift/drag curves with sin(AoA), then multiplies by
+     * the corresponding Mach curve (and later by q, area, and the global
+     * lift/lift-drag multipliers).  Curve interpolation is Unity's cubic
+     * Hermite AnimationCurve interpolation using the stored key tangents.
+     *
+     * Whole-vessel drag cubes and body lift are deliberately not fabricated
+     * here.  VesselPhysicsModel/live force samples remain the primary source
+     * for those effects; this function is the physically faithful stock
+     * lifting-surface cold-start prior.
+     */
+    static const StockKspCurveKey lift_curve[]={
+        {0.0,0.0,0.0,1.965926},
+        {0.258819,0.5114774,1.990092,1.905806},
+        {0.5,0.9026583,0.7074468,-0.7074468},
+        {0.7071068,0.5926583,-2.087948,-1.990095},
+        {1.0,0.0,-2.014386,-2.014386}
+    };
+    static const StockKspCurveKey lift_mach[]={
+        {0.0,1.0,0.0,0.0},
+        {0.3,0.5,-1.671345,-0.8273422},
+        {1.0,0.125,-0.0005291355,-0.02625772},
+        {5.0,0.0625,0.0,0.0},
+        {25.0,0.05,0.0,0.0}
+    };
+    static const StockKspCurveKey drag_curve[]={
+        {0.0,0.01,0.0,0.0},
+        {0.3420201,0.06,0.1750731,0.1750731},
+        {0.5,0.24,2.60928,2.60928},
+        {0.7071068,1.7,3.349777,3.349777},
+        {1.0,2.4,1.387938,0.0}
+    };
+    static const StockKspCurveKey drag_mach[]={
+        {0.0,0.35,0.0,-0.8463008},
+        {0.15,0.125,0.0,0.0},
+        {0.9,0.275,0.541598,0.541598},
+        {1.1,0.75,0.0,0.0},
+        {1.4,0.4,-0.3626955,-0.3626955},
+        {1.6,0.35,-0.1545923,-0.1545923},
+        {2.0,0.3,-0.09013031,-0.09013031},
+        {5.0,0.22,0.0,0.0},
+        {25.0,0.3,0.0006807274,0.0}
+    };
+
+    double signed_aoa=isfinite(angle_of_attack)?angle_of_attack:0.0;
+    double flow=sin(clampd(fabs(signed_aoa),0.0,90.0)*DEG2RAD);
+    double m=fmax(0.0,isfinite(mach)?mach:0.0);
+    double lift=stock_ksp_curve_eval(lift_curve,
+        sizeof(lift_curve)/sizeof(lift_curve[0]),flow)*
+        stock_ksp_curve_eval(lift_mach,
+        sizeof(lift_mach)/sizeof(lift_mach[0]),m);
+    double drag=stock_ksp_curve_eval(drag_curve,
+        sizeof(drag_curve)/sizeof(drag_curve[0]),flow)*
+        stock_ksp_curve_eval(drag_mach,
+        sizeof(drag_mach)/sizeof(drag_mach[0]),m);
+    if(cl)*cl=copysign(fmax(0.0,lift),signed_aoa);
+    if(cd)*cd=fmax(0.0,drag);
+}
+
 void aerodynamic_force_factors_mach(double mach,double angle_of_attack,const VehicleProfile*v,double*lift_factor,double*drag_factor){
-    /* Stock KSP is deliberately modeled with a smooth reference polar. The
-       adaptive Mach envelope carries vehicle-specific behavior; this baseline
-       only supplies a well-conditioned shape before enough flight data exists.
-       Normalize at the configured entry trim so changing the vehicle profile
-       cannot silently change the meaning of L/D and ballistic coefficient. */
-    double a=fabs(angle_of_attack),sign=angle_of_attack<0?-1:1;
-    double reference=clampd(v?fabs(v->entry_angle_of_attack):18.0,4.0,35.0);
-    double bounded=clampd(a,0,45);
-    double base_drag=.125+.00066*bounded*bounded;
-    double reference_drag=.125+.00066*reference*reference;
-    double base_lift=sin(2.0*bounded*DEG2RAD);
-    double reference_lift=sin(2.0*reference*DEG2RAD);
-    /* Keep only the broad stock transonic drag rise. Per-Mach calibration is
-       learned by AerodynamicEnvelope instead of embedding an editor sweep. */
-    double transonic=exp(-pow((fmax(0,mach)-1.0)/.38,2));
-    double df=base_drag/fmax(reference_drag,.02)*(1.0+.22*transonic);
-    double lf=base_lift/fmax(reference_lift,.05)*(1.0-.05*transonic);
-    /* Flight-log inversion on STS-N shows that the quadratic incidence term
-       already captures the hypersonic projected-area growth. The previous
-       extra high-AoA multiplier drove df to about 4.9 at 28 deg, while the
-       measured force history requires roughly 1.9 at the same total flow
-       incidence. Keep the smooth base polar and let the Mach envelope learn
-       the remaining vehicle-specific differences. */
-    if(a>45){double x=(a-45)/15.0;df*=1+.35*x*x;lf*=exp(-.05*(a-45));}
-    if(lift_factor)*lift_factor=clampd(lf,0,3.2)*sign;
-    if(drag_factor)*drag_factor=clampd(df,.02,3.2);
+    /*
+     * VehicleProfile L/D and ballistic coefficient are defined at the existing
+     * Mach-5 entry-trim reference.  Preserve that contract while using stock
+     * KSP's real lifting-surface curves for variation with AoA and Mach.
+     * Live/persisted whole-vessel force samples supersede this prior whenever
+     * VesselPhysicsModel has support at the requested state.
+     */
+    double reference_aoa=v&&isfinite(v->entry_angle_of_attack)?
+        fabs(v->entry_angle_of_attack):0.0;
+    double raw_lift=0.0,raw_drag=0.0,ref_lift=0.0,ref_drag=0.0;
+    stock_ksp_lifting_surface_coefficients(mach,angle_of_attack,
+        &raw_lift,&raw_drag);
+    stock_ksp_lifting_surface_coefficients(5.0,reference_aoa,
+        &ref_lift,&ref_drag); /* Physics.cfg Mach-5 anchor / baseline contract. */
+
+    double lf=fabs(ref_lift)>DBL_MIN?raw_lift/fabs(ref_lift):raw_lift;
+    double df=ref_drag>DBL_MIN?raw_drag/ref_drag:raw_drag;
+    if(lift_factor)*lift_factor=isfinite(lf)?lf:0.0;
+    if(drag_factor)*drag_factor=isfinite(df)&&df>DBL_MIN?df:DBL_MIN;
+}
+
+
+double aerodynamic_best_glide_aoa(double mach,const VehicleProfile*v){
+    if(!v||!isfinite(mach)||!(v->maximum_angle_of_attack>0.0))return 0.0;
+    double hi=v->maximum_angle_of_attack;
+    if(mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
+       v->terminal_maximum_lift_angle_of_attack>0.0)
+        hi=fmin(hi,v->terminal_maximum_lift_angle_of_attack);
+    double lo=0.0;
+    const double phi=(sqrt(5.0)-1.0)*0.5; /* golden-section ratio */
+    double x1=hi-phi*(hi-lo),x2=lo+phi*(hi-lo);
+    double l1=0.0,d1=0.0,l2=0.0,d2=0.0;
+    aerodynamic_force_factors_mach(mach,x1,v,&l1,&d1);
+    aerodynamic_force_factors_mach(mach,x2,v,&l2,&d2);
+    double f1=(d1>DBL_MIN&&isfinite(l1)&&isfinite(d1))?fabs(l1)/d1:0.0;
+    double f2=(d2>DBL_MIN&&isfinite(l2)&&isfinite(d2))?fabs(l2)/d2:0.0;
+    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,hi);
+    unsigned guard=0;
+    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
+        if(f1<f2){
+            lo=x1;x1=x2;f1=f2;x2=lo+phi*(hi-lo);
+            aerodynamic_force_factors_mach(mach,x2,v,&l2,&d2);
+            f2=(d2>DBL_MIN&&isfinite(l2)&&isfinite(d2))?fabs(l2)/d2:0.0;
+        }else{
+            hi=x2;x2=x1;f2=f1;x1=hi-phi*(hi-lo);
+            aerodynamic_force_factors_mach(mach,x1,v,&l1,&d1);
+            f1=(d1>DBL_MIN&&isfinite(l1)&&isfinite(d1))?fabs(l1)/d1:0.0;
+        }
+    }
+    return clampd(.5*(lo+hi),0.0,v->maximum_angle_of_attack);
 }
 
 void aerodynamic_force_factors(double angle_of_attack,const VehicleProfile*v,double*lift_factor,double*drag_factor){

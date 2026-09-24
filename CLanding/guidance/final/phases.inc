@@ -1,3 +1,10 @@
+static double final_lift_aoa_limit(const Telemetry *t, const VehicleProfile *v) {
+    double limit = v->maximum_angle_of_attack;
+    if (t->mach < 1.0 && v->terminal_maximum_lift_angle_of_attack > 0.0)
+        limit = fmin(limit, v->terminal_maximum_lift_angle_of_attack);
+    return limit;
+}
+
 static double terminal_approach_drag_aoa(const Telemetry*t,const VehicleProfile*v,
         double measured_loss,double required_loss,double nominal_aoa){
     double current_df=1.0;
@@ -78,9 +85,11 @@ static double terminal_approach_drag_aoa(const Telemetry*t,const VehicleProfile*
         t->drag_force/t->mass:0.0;
     double measured_loss=g->terminal_energy_loss_accel_ema>.05?
         fmax(live_loss*1.02,g->terminal_energy_loss_accel_ema):fmax(.05,live_loss*1.15);
-    double predicted_gate_v2=t->true_air_speed*t->true_air_speed+
-        2.0*planet_surface_gravity(p)*height_to_gate-2.0*measured_loss*air_path;
-    double predicted_gate_speed=sqrt(fmax(0.0,predicted_gate_v2));
+    double predicted_gate_speed=NAN,predicted_drag_work=NAN;
+    if(!terminal_quadratic_drag_energy_step(t->true_air_speed,measured_loss,air_path,
+            planet_surface_gravity(p)*height_to_gate,&predicted_gate_speed,&predicted_drag_work))
+        predicted_gate_speed=0.0;
+    (void)predicted_drag_work;
     double predicted_deficit=fmax(0.0,gate_speed-predicted_gate_speed);
     double predicted_excess=fmax(0.0,predicted_gate_speed-gate_speed);
     if(g->terminal_glide_mode){
@@ -94,8 +103,10 @@ static double terminal_approach_drag_aoa(const Telemetry*t,const VehicleProfile*
         balance=clampd((altE-speedE)/fmax(planet_surface_gravity(p)*500,1),-4.0,4.0);
     }
     bool low_energy=total>planet_surface_gravity(p)*120||speed_shortfall>2.0||predicted_deficit>4.0;
+    double runway_intercept_slope=atan2(fmax(0.0,t->radar_altitude),fmax(dist,1.0))*RAD2DEG;
+    double maximum_slope=clampd(runway_intercept_slope,8.0,35.0);
     double effective_slope=clampd(slope+fmax(speed_shortfall*.30,predicted_deficit*.22)-
-        fmin(4.0,predicted_excess*.055),8.0,35.0);
+        fmin(4.0,predicted_excess*.055),8.0,maximum_slope);
     if(path>0)path*=altitude_weight;
     if(balance>0)balance*=altitude_weight;
     if(low_energy){path=fmin(path,0.0);balance=fmin(balance,0.0);}
@@ -130,20 +141,27 @@ static double terminal_approach_drag_aoa(const Telemetry*t,const VehicleProfile*
 static GuidanceResult preflare_guidance(GuidanceMachine*g,const Telemetry*t,double course,const LandingConfiguration*cfg,const Trajectory*ref,double dt){
     const VehicleProfile*v=&cfg->vehicle;const LandingSite*site=&cfg->site;const GuidanceSettings*s=&cfg->guidance;
     double trigger=fmax(g->preflare_trigger_altitude,fmax(250.0,s->flare_altitude*4.0));
-    double inner_gate=fmax(120.0,s->flare_altitude*2.0);
-    double progress=clampd((trigger-t->radar_altitude)/fmax(trigger-inner_gate,1.0),0,1);
-    double outer_sink=-t->horizontal_speed*tan(terminal_outer_glide_slope(g,s)*DEG2RAD);
-    double final_sink=g->terminal_preflare_plan_valid?g->preflare_target_sink:-clampd(t->horizontal_speed*tan(4.5*DEG2RAD),6,14);
-    double desired=outer_sink+(final_sink-outer_sink)*(progress*progress*(3-2*progress));
-    double se=desired-t->vertical_speed,corr=robust_pid_update(&g->flare_sink_pid,se,dt,-3.0,4.0);
-    double target_aoa=g->terminal_preflare_plan_valid?g->preflare_target_aoa:clampd(v->entry_angle_of_attack+3,4,v->maximum_angle_of_attack-2);
+    double desired=g->terminal_preflare_plan_valid?g->preflare_target_sink:
+        -clampd(t->horizontal_speed*tan(4.5*DEG2RAD),6,14);
+    double target_aoa=g->terminal_preflare_plan_valid?g->preflare_target_aoa:
+        clampd(v->entry_angle_of_attack+3,4,v->maximum_angle_of_attack-2);
     double minimum=g->terminal_preflare_plan_valid?g->preflare_minimum_speed:v->minimum_safe_speed;
+
+    /* Execute the maneuver terminal_preflare_plan() actually certified.  The old
+       altitude interpolation kept changing the sink target after initiation,
+       causing a full pull-up/level-off/dive oscillation and spending the entire
+       kinetic reserve.  The certified AoA is the maximum command for recovery;
+       once the target sink is reached, only unload it to avoid overshoot. */
+    double sink_error=desired-t->vertical_speed;
+    double unload=0.0;
+    if(sink_error<0.0)
+        unload=clampd((-sink_error)*0.30,0.0,target_aoa);
+    double commanded_aoa=fmax(0.0,target_aoa-unload);
     if(t->true_air_speed<minimum){
         double relief=clampd((minimum-t->true_air_speed)*.55,0,8.0);
-        target_aoa=fmax(4.0,target_aoa-relief);
-        corr=fmin(corr,0.0);
+        commanded_aoa=fmax(0.0,commanded_aoa-relief);
     }
-    double gamma=atan2(desired,fmax(t->horizontal_speed,1))*RAD2DEG;
+
     double look=clampd(t->true_air_speed*4.5,320,1500),inter=clampd(atan2(-t->runway_cross_track,look)*RAD2DEG,-14,14);
     double target_course=norm_deg(site->runway_heading+inter),ce=norm_signed_deg(target_course-course);
     double bank=clampd(ce*.55,-8.0,8.0);
@@ -151,15 +169,17 @@ static GuidanceResult preflare_guidance(GuidanceMachine*g,const Telemetry*t,doub
         terminal_final_speed_target(g,v,s,fmax(0.0,-t->runway_along_track)):
         (g->terminal_preflare_plan_valid?g->preflare_reference_speed:
         fmax(v->final_approach_speed,v->minimum_safe_speed*1.08));
-    /* Preflare preserves the pull-up energy reserve using pitch/AoA only. */
     terminal_speedbrake_closed(g);
+    robust_pid_reset(&g->flare_sink_pid);
     robust_pid_reset(&g->speed_pid);
     GuidanceCommand c=atmospheric(t,target_course,bank,v,0.0,false,PROFILE_APPROACH);
-    aerodynamic_pitch_target(&c,t,v,gamma+target_aoa+corr);
+    c.has_target_aoa=true;
+    c.target_aoa=commanded_aoa;
+    c.target_pitch=t->flight_path_angle+commanded_aoa;
     c.gear=t->gear||g->gear_command_latched;
     char status[320];
-    snprintf(status,sizeof(status),"Preflare: %.0f / %.0f m, sink %.1f / %.1f m/s, AoA %.1f / %.1f deg, speed %.1f / %.1f m/s.",t->radar_altitude,trigger,t->vertical_speed,desired,t->angle_of_attack,c.target_aoa,t->true_air_speed,target);
-    GuidanceResult r=result_make(PHASE_FINAL,c,status,t->true_air_speed<g->preflare_minimum_speed?"Preflare speed margin is low; pitch-up is being limited by the energy floor.":NULL);
+    snprintf(status,sizeof(status),"Preflare recovery: %.0f / %.0f m, sink %.1f / %.1f m/s, AoA %.1f / %.1f deg, speed %.1f / %.1f m/s.",t->radar_altitude,trigger,t->vertical_speed,desired,t->angle_of_attack,c.target_aoa,t->true_air_speed,target);
+    GuidanceResult r=result_make(PHASE_FINAL,c,status,t->true_air_speed<minimum?"Preflare speed margin is low; incidence is being unloaded to preserve the aerodynamic floor.":NULL);
     trajectory_copy(&r.reference,ref);return stabilized(g,r,t,v,s,dt);
 }
 
@@ -183,7 +203,11 @@ static GuidanceResult inner_final_guidance(GuidanceMachine*g,const Telemetry*t,d
     double gamma=atan2(desired,fmax(t->horizontal_speed,1))*RAD2DEG;
     terminal_speedbrake_closed(g);
     GuidanceCommand c=atmospheric(t,target_course,roll,v,0.0,false,PROFILE_APPROACH);
-    aerodynamic_pitch_target(&c,t,v,gamma+clampd(base+2.0+corr,3.0,v->maximum_angle_of_attack-2.0));
+    double aoa_limit=final_lift_aoa_limit(t,v);
+    c.has_target_aoa=true;
+    c.target_aoa=clampd(gamma+clampd(base+2.0+corr,3.0,aoa_limit)-
+        t->flight_path_angle,0.0,aoa_limit);
+    c.target_pitch=t->flight_path_angle+c.target_aoa;
     c.gear=true;
     char status[256];snprintf(status,sizeof(status),"Inner final: %.0f m, sink %.1f / %.1f m/s, speed %.1f / %.1f m/s, cross %+.0f m.",t->radar_altitude,t->vertical_speed,desired,t->true_air_speed,target,t->runway_cross_track);
     GuidanceResult r=result_make(PHASE_FINAL,c,status,t->vertical_speed<desired-5?"Inner-final sink rate remains high for the available flare height.":NULL);trajectory_copy(&r.reference,ref);return stabilized(g,r,t,v,s,dt);
@@ -219,7 +243,11 @@ static GuidanceResult flare_guidance(GuidanceMachine*g,const Telemetry*t,double 
     double roll=clampd(ce*.6,-banklim,banklim);
     terminal_speedbrake_closed(g);
     GuidanceCommand c=atmospheric(t,tc,roll,v,0.0,false,PROFILE_FLARE);
-    aerodynamic_pitch_target(&c,t,v,clampd(gamma+flare+corr,0,15));
+    double aoa_limit=final_lift_aoa_limit(t,v);
+    c.has_target_aoa=true;
+    c.target_aoa=clampd(gamma+clampd(flare+corr,0,aoa_limit)-
+        t->flight_path_angle,0.0,aoa_limit);
+    c.target_pitch=t->flight_path_angle+c.target_aoa;
     c.gear=true;
     char status[256];
     snprintf(status,sizeof(status),
@@ -329,4 +357,3 @@ static bool terminal_airborne_corridor_valid(const GuidanceMachine*g,const Telem
      */
     return terminal_preflare_alignment_valid(g,t,course,cfg);
 }
-

@@ -12,21 +12,22 @@ Create a scenario containing exact KSP inertial position, inertial velocity, UT,
 
 ## 2. Atmosphere
 
-Normalize KSP telemetry to:
+Normal ShuttleSim flight physics uses the stock Kerbin atmosphere model embedded
+in `world.c`: the stock pressure and temperature FloatCurves, latitude bias,
+latitude/Sun multiplier, Kerbin rotation, and Kerbin orbital/Sun phase. Density
+and speed of sound are derived from the same thermodynamic constants used by the
+stock body definition. This is position- and UT-dependent; it is not an
+altitude-only median fit.
 
-```csv
-altitude_m,density_kg_m3,pressure_pa,temperature_k,speed_of_sound_mps
-```
+Do not pass `--atmosphere` for stock-Kerbin parity runs. That option is retained
+only for deliberate custom/experimental atmosphere tables. An altitude-only CSV
+cannot reproduce KSP's latitude/day-night temperature field and must not be used
+as the default parity model.
 
-Then:
-
-```sh
-python3 tools/fit_atmosphere_from_telemetry.py atmosphere-normalized.csv data/kerbin_atmosphere_fitted.csv
-```
-
-Use the fitted file with `--atmosphere`.
-
-If KSP exposes a direct atmosphere curve/export, prefer that over deriving the curve from a single flight.
+Telemetry-derived atmosphere tables remain useful as an independent validation
+oracle: compare stock-model pressure, temperature, density, and speed of sound
+against held-out KSP flights, but do not fit the production atmosphere to the
+held-out flight.
 
 ## 3. Aerodynamics
 
@@ -50,19 +51,27 @@ The fitter emits a complete Mach x AoA grid. Validate high-AoA coverage through 
 
 ## 4. Attitude response
 
-Normalize:
+The simulator uses a q-dependent, second-order closed-loop attitude plant with
+independently measured KSP angular-rate and angular-acceleration limits. The
+plant therefore consumes real time during AoA changes and bank reversals instead
+of teleporting the lift vector to Guidance demand.
 
-```csv
-time_s,cmd_aoa_deg,aoa_deg,cmd_bank_deg,bank_deg
-```
-
-The current helper estimates observed rate/acceleration limits:
+The fitter estimates measured rate/acceleration limits, forward-fits the
+high-q closed-loop natural frequency/damping, then fits the low-q authority
+transition against command-vs-actual telemetry using the same q-scaling law as
+the C simulator:
 
 ```sh
-python3 tools/fit_attitude_from_telemetry.py attitude-normalized.csv data/stsn_attitude_fitted.ini
+python3 tools/fit_attitude_from_telemetry.py attitude-normalized.csv data/stsn_attitude_fitted.ini \
+  --physics-dt 0.02
 ```
 
-Natural frequency and damping remain seed values until step-response fitting is added. Rate/acceleration limits alone are not enough to claim attitude parity.
+Do not hand-pick the full-authority q thresholds. They are plant parameters and
+must come from recorded KSP response. Fit only on training flights and reserve
+separate flights for command-replay validation.
+The fitter uses a 20 ms fixed plant step and zero-order-holds each recorded
+attitude demand until the next recorded update. It may interpolate observed q
+inside a sparse logging interval, but it never interpolates control commands.
 
 ## 5. Open-loop validation
 
@@ -72,15 +81,20 @@ Export actual KSP attitude history:
 time_s,aoa_deg,bank_deg,gear_down
 ```
 
-Run:
+Run the held-out replay at KSP's 50 Hz physics cadence. A smaller step is
+useful for numerical-convergence diagnostics, but parity runs should preserve
+KSP's 20 ms fixed-update cadence rather than using timestep error to retune the
+plant:
 
 ```sh
 ./build/shuttlesim \
   --scenario scenarios/real-86km.ini \
-  --atmosphere data/kerbin_atmosphere_fitted.csv \
-  --aero data/stsn_aero_fitted.csv \
+  --aero data/fitted/stsn_aero_ksp_robust.csv \
+  --aero-book data/fitted/stsn_force_book.csv \
+  --attitude data/fitted/stsn_attitude_ksp.ini \
   --attitude-replay actual-attitude.csv \
   --replay-mode actual \
+  --dt 0.02 \
   --rate max \
   --record sim.jsonl
 ```

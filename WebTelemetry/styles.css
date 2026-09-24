@@ -411,6 +411,28 @@ body.replay-mode .simulation-status{border-style:dashed}
 .sim-history-head button{width:32px;min-height:28px;padding:0;font-size:15px}
 .sim-history-list{overflow:auto;min-height:80px;max-height:430px;overscroll-behavior:contain}
 .sim-history-empty{padding:18px;color:var(--muted);font-size:10px;text-align:center}
+.sim-history-date-header{
+  position:-webkit-sticky;
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:5px 10px;
+  background:rgba(18,22,26,.97);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:9px;
+  font-weight:700;
+  color:var(--cyan);
+  letter-spacing:.08em;
+}
+.sim-history-date-header .muted{
+  font-weight:400;
+  color:var(--muted);
+}
 .sim-run-row{
   width:100%;
   display:grid;
@@ -432,7 +454,14 @@ body.replay-mode .simulation-status{border-style:dashed}
 .sim-run-dot.success{background:var(--green)}
 .sim-run-dot.failed{background:var(--orange)}
 .sim-run-main{min-width:0}
-.sim-run-name{display:block;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-run-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:8px;
+}
+.sim-run-name{display:inline-block;font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim-run-time{flex:0 0 auto;font-size:8.5px;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
 .sim-run-meta{display:block;margin-top:2px;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sim-run-final{font-size:9px;font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
 body.replay-mode .playback-shell{border-color:rgba(102,216,239,.24)}

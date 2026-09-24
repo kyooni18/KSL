@@ -53,7 +53,19 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
     double effective_bank=fmin(bank*effectiveness,nextafter(90.0,0.0));
     double live_lift=live_lift_accel(t,aero,v);
     if(!(live_lift>0.0))return false;
-    double max_lateral=live_lift*fabs(sin(effective_bank*DEG2RAD));
+    /* Turn capability is the lift available at a turning alpha, not the lift
+       of whatever (possibly unloaded) alpha is being flown right now. */
+    double turn_lift=live_lift;
+    {
+        double now_lf=0.0,turn_lf=0.0;
+        double incidence=hypot(t->angle_of_attack,t->sideslip);
+        double turn_aoa=fmin(10.0,v->maximum_angle_of_attack);
+        aerodynamic_force_factors_mach(t->mach,incidence,v,&now_lf,NULL);
+        aerodynamic_force_factors_mach(t->mach,turn_aoa,v,&turn_lf,NULL);
+        if(fabs(now_lf)>1e-3&&fabs(turn_lf)>fabs(now_lf))
+            turn_lift=live_lift*clampd(fabs(turn_lf)/fabs(now_lf),1.0,2.0);
+    }
+    double max_lateral=turn_lift*fabs(sin(effective_bank*DEG2RAD));
     if(!(max_lateral>0.0))return false;
 
     double transition_drag=terminal_expected_speed_loss_accel(g,t,p,aero,v);
@@ -65,14 +77,27 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
         circle_design_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
 
     /* Lift authority scales approximately with V^2 for the same aerodynamic
-       state, so scale the demonstrated live turn radius to the terminal design
-       speed.  Course-rate authority supplies an independent lower radius. */
+       state.  Scale the demonstrated live turn radius to the speed at which the
+       HAC turn is actually flown (between HAC acquisition and final alignment),
+       not down to the unrepresentative final touchdown flare speed. */
+    double sound_at_hac=planet_atmospheric_speed_of_sound(p,s->hac_acquisition_altitude);
+    double hac_speed=isfinite(sound_at_hac)&&sound_at_hac>DBL_MIN?
+        s->hac_acquisition_mach*sound_at_hac:280.0;
+    hac_speed=fmax(circle_design_speed,fmin(t->true_air_speed,hac_speed));
+    double hac_scale=clampd(hac_speed/t->true_air_speed,0.0,1.0);
+    double hac_turn=min_turn*hac_scale*hac_scale;
     double design_scale=circle_design_speed/t->true_air_speed;
     double design_turn=min_turn*design_scale*design_scale;
     double design_rate_cap=hac_course_rate_cap_for_speed(circle_design_speed);
     if(!(design_rate_cap>0.0))return false;
     double tracking_radius=circle_design_speed/(design_rate_cap*DEG2RAD);
-    double min_radius=fmax(design_turn,tracking_radius);
+    double min_radius=fmax(hac_turn,fmax(design_turn,tracking_radius));
+    /*
+     * No additional fixed-bank radius floor is needed here.  min_turn above
+     * already comes from the measured/KSP-calibrated lift force and the live
+     * structural/dynamic bank envelope; tracking_radius independently enforces
+     * course-rate authority at the design speed.
+     */
 
     /*
      * A useful circle cannot have a radius larger than the remaining terminal
@@ -82,7 +107,6 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
     double max_radius=fmin(p->radius,fmax(min_radius,energy_total_path));
     if(!(max_radius>=min_radius))return false;
 
-    double configured_final_distance=s->final_approach_distance;
     double height=fmax(0.0,t->mean_altitude-
         (cfg->site.altitude+g->terminal_test_preflare_altitude));
     double preferred_total_path=energy_total_path;
@@ -92,7 +116,22 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
         height/tan(minimum_path_slope*DEG2RAD));
     if(max_total_path<min_total_path)return false;
 
-    const int radius_samples=13;
+    /* The MM305 -> Final station is part of the terminal solution, not a fixed
+       geometric input.  It must lie beyond the preflare gate and leave at least
+       one guidance-frame of runway-line travel after ownership transfer.  The TAEM
+       interface range is the outer local-planning bound. */
+    double guidance_frame=1.0/fmax(s->guidance_rate,DBL_MIN);
+    double handoff_response_distance=fmax(1.0,circle_design_speed*guidance_frame);
+    double minimum_final_distance=gate_ground_distance+handoff_response_distance;
+    double maximum_final_distance=fmin(s->taem_interface_range,
+        fmax(minimum_final_distance,max_total_path));
+    if(!(maximum_final_distance>=minimum_final_distance)||
+       !isfinite(maximum_final_distance))return false;
+    double configured_final_distance=clampd(s->final_approach_distance,
+        minimum_final_distance,maximum_final_distance);
+
+    const int final_distance_samples=(int)fmax(3.0,ceil(sqrt((double)DBL_MANT_DIG))); /* decision-literal: discretization-convergence-parameter | final-handoff search resolution follows floating-point precision */
+    const int radius_samples=(int)fmax(5.0,ceil(sqrt((double)DBL_MANT_DIG)*2.0)); /* decision-literal: discretization-convergence-parameter | HAC radius search resolution follows floating-point precision */
     HACTransitionPlan best_transition={0},fallback_transition={0};
     double best_radius=0.0,best_side=1.0,best_slope=0.0,best_response=0.0,
         best_final_distance=configured_final_distance;
@@ -105,7 +144,14 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
     double fallback_execution_time=INFINITY;
     bool fallback_geometry_bad=false,fallback_energy_bad=false;
 
-    for(int ri=0;ri<radius_samples;ri++){
+    for(int fi=0;fi<final_distance_samples;fi++){
+        double candidate_final_distance=configured_final_distance;
+        if(fi>0){
+            double fu=(double)(fi-1)/(double)fmax(1,final_distance_samples-2);
+            candidate_final_distance=minimum_final_distance+
+                (maximum_final_distance-minimum_final_distance)*fu;
+        }
+        for(int ri=0;ri<radius_samples;ri++){
         double u=(double)ri/(double)(radius_samples-1);
         /* Quadratic spacing is only numerical resolution: it places more
            samples near the authority-limited radius without changing decisions. */
@@ -146,14 +192,16 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
             double max_path=preferred_path+fmax(1000.0,radius*.60);
             if(!hac_transition_plan(&transition,current_e,current_n,
                     future_e,future_n,course,future_course,&cfg->site,s,
-                    radius,side,projected_join_speed,circle_design_speed,
+                    radius,side,candidate_final_distance,projected_join_speed,circle_design_speed,
                     transition_drag,max_lateral,preferred_path,min_path,max_path))
                 continue;
 
             double runway=cfg->site.runway_heading*DEG2RAD;
             double exit_along=transition.p3.e*sin(runway)+
                 transition.p3.n*cos(runway);
-            double candidate_final_distance=fmax(0.0,-exit_along);
+            double planned_exit_error=fabs((-exit_along)-candidate_final_distance);
+            if(planned_exit_error>sqrt(DBL_EPSILON)*fmax(1.0,candidate_final_distance))
+                continue;
             double line_to_gate=candidate_final_distance-gate_ground_distance;
             double endpoint_violation=line_to_gate>=0.0?0.0:
                 (gate_ground_distance-candidate_final_distance)/
@@ -162,6 +210,11 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
                 transition.arc_remaining;
             double path_to_gate=fixed_path+fmax(0.0,line_to_gate);
             if(!(path_to_gate>0.0))continue;
+            /* HAC is an alignment maneuver, not an energy-dump racetrack.  Do not
+               manufacture extra revolutions to make a scalar path-length target fit.
+               Excess energy remains owned by MM305 acquisition and is dissipated on
+               the continuously replanned lead before a compact terminal path is
+               committed.  The exact HAC/lead below is therefore flown at most once. */
             double geometric_slope=atan2(height,path_to_gate)*RAD2DEG;
             double path_violation=terminal_normalized_band_violation(
                 path_to_gate,min_total_path,max_total_path);
@@ -219,21 +272,27 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
                 slope_violation>0.0||execution_violation>0.0;
 
             if(violation<=sqrt(DBL_EPSILON)){
-                double path_scale_cmp=fmax(1.0,fmax(fabs(path_error),
-                    fabs(best_path_error)));
-                bool path_better=!best_transition.valid||
-                    path_error<best_path_error-sqrt(DBL_EPSILON)*path_scale_cmp;
-                bool path_same=fabs(path_error-best_path_error)<=
-                    sqrt(DBL_EPSILON)*path_scale_cmp;
+                /* Every hard constraint already passes.  Prefer the path that the
+                   shuttle can actually deliver sooner; using energy-path matching as
+                   the primary objective made a larger circle win even though a
+                   shorter equally feasible alignment maneuver existed. */
                 double execution_scale=fmax(1.0,fmax(fabs(execution_time),
                     fabs(best_execution_time)));
-                bool execution_better=execution_time<
+                bool execution_better=!best_transition.valid||execution_time<
                     best_execution_time-sqrt(DBL_EPSILON)*execution_scale;
-                bool execution_same=fabs(execution_time-best_execution_time)<=
-                    sqrt(DBL_EPSILON)*execution_scale;
-                bool better=path_better||
-                    (path_same&&(execution_better||
-                    (execution_same&&control_use<best_control_use)));
+                bool execution_same=best_transition.valid&&
+                    fabs(execution_time-best_execution_time)<=
+                        sqrt(DBL_EPSILON)*execution_scale;
+                double path_scale_cmp=fmax(1.0,fmax(fabs(path_error),
+                    fabs(best_path_error)));
+                bool path_better=path_error<best_path_error-
+                    sqrt(DBL_EPSILON)*path_scale_cmp;
+                bool path_same=fabs(path_error-best_path_error)<=
+                    sqrt(DBL_EPSILON)*path_scale_cmp;
+                bool better=execution_better||
+                    (execution_same&&(control_use<best_control_use||
+                     (fabs(control_use-best_control_use)<=sqrt(DBL_EPSILON)&&path_better)))||
+                    (execution_same&&path_same&&control_use<best_control_use);
                 if(better){
                     best_transition=transition;
                     best_transition.violation_score=0.0;
@@ -249,35 +308,40 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
                 bool violation_better=!fallback_transition.valid||
                     violation<fallback_violation-
                         sqrt(DBL_EPSILON)*violation_scale;
-                bool violation_same=fabs(violation-fallback_violation)<=
-                    sqrt(DBL_EPSILON)*violation_scale;
+                double execution_scale=fmax(1.0,fmax(fabs(execution_time),
+                    fabs(fallback_execution_time)));
+                bool execution_better=!fallback_transition.valid||execution_time<
+                    fallback_execution_time-sqrt(DBL_EPSILON)*execution_scale;
+                bool execution_same=fallback_transition.valid&&
+                    fabs(execution_time-fallback_execution_time)<=
+                        sqrt(DBL_EPSILON)*execution_scale;
                 double path_scale_cmp=fmax(1.0,fmax(fabs(path_error),
                     fabs(fallback_path_error)));
                 bool path_better=path_error<fallback_path_error-
                     sqrt(DBL_EPSILON)*path_scale_cmp;
-                bool path_same=fabs(path_error-fallback_path_error)<=
-                    sqrt(DBL_EPSILON)*path_scale_cmp;
-                double execution_scale=fmax(1.0,fmax(fabs(execution_time),
-                    fabs(fallback_execution_time)));
-                bool execution_better=execution_time<
-                    fallback_execution_time-sqrt(DBL_EPSILON)*execution_scale;
-                bool execution_same=fabs(execution_time-fallback_execution_time)<=
-                    sqrt(DBL_EPSILON)*execution_scale;
-                /* The commit gate rejects geometry-degraded candidates outright
-                   but can fly an energy-only (too high / path length) fallback
-                   and dissipate the excess.  A single blended violation score
-                   let a slightly unflyable join outrank a flyable-but-high one,
-                   so the selector kept choosing candidates the gate always
-                   refused and never committed.  Rank flyability first. */
+                bool path_same=fallback_transition.valid&&
+                    fabs(path_error-fallback_path_error)<=
+                        sqrt(DBL_EPSILON)*path_scale_cmp;
+                /* Flyability is the hard class.  Within a flyable class, an
+                   energy-degraded candidate is only a preview path: MM305 will shed
+                   energy on the lead before commit.  Do not make that preview larger
+                   just to reduce its present energy mismatch.  Prefer the candidate
+                   that can be acquired sooner, then the one using less authority;
+                   use energy/path violation only as a final tie-break. */
                 bool geometry_class_better=fallback_transition.valid&&
                     fallback_geometry_bad&&!geometry_bad;
                 bool geometry_class_worse=fallback_transition.valid&&
                     !fallback_geometry_bad&&geometry_bad;
+                bool energy_class_better=fallback_transition.valid&&
+                    fallback_energy_bad&&!energy_bad;
+                bool energy_class_worse=fallback_transition.valid&&
+                    !fallback_energy_bad&&energy_bad;
                 bool better=geometry_class_better||(!geometry_class_worse&&
-                    (violation_better||
-                    (violation_same&&(path_better||
-                    (path_same&&(execution_better||
-                    (execution_same&&control_use<fallback_control_use)))))));
+                    (energy_class_better||(!energy_class_worse&&
+                     (execution_better||
+                      (execution_same&&(control_use<fallback_control_use||
+                       (fabs(control_use-fallback_control_use)<=sqrt(DBL_EPSILON)&&
+                        (path_better||(path_same&&violation_better)))))))));
                 if(better){
                     fallback_transition=transition;
                     fallback_transition.degraded=true;
@@ -305,6 +369,7 @@ static bool terminal_test_start_spiral(GuidanceMachine*g,const Telemetry*t,doubl
                 }
             }
         }
+    }
     }
 
     bool use_fallback=!best_transition.valid&&fallback_transition.valid;
@@ -394,31 +459,31 @@ static double terminal_candidate_constraint_violation(const TerminalCandidate*c)
 }
 
 /*
- * Geometry executability is a hard prerequisite because a path outside
- * lateral/rate authority cannot be flown. Within the same executable class,
- * order candidates by the selector's dimensionless worst normalized physical
- * constraint violation. A return value <0 means b is better than a.
+ * Geometry/control executability is the hard prerequisite.  Energy readiness is
+ * the next class boundary because it authorizes commit, but an energy-degraded
+ * preview must not grow into a giant HAC merely to reduce a scalar path mismatch.
+ * Within the same geometry/reachability/energy class, return equality here so the
+ * caller ranks by real acquisition execution time and then delivery time.
  */
 static int terminal_candidate_constraint_order(const TerminalCandidate*a,
         const TerminalCandidate*b){
-    /* Geometry/control executability is the hard class boundary.  A candidate
-       whose forecast origin is easier to reach may not displace a path that is
-       actually within lateral/rate authority with one that is not.  The old
-       ordering checked execution reachability first, which let a degraded HAC
-       replace a geometry-clean spline late in MM305. */
     bool a_executable=terminal_candidate_geometry_regular(a);
     bool b_executable=terminal_candidate_geometry_regular(b);
     if(a_executable!=b_executable)return b_executable?-1:1;
     bool a_reachable=!a->execution_evaluated||a->execution_margin>=0.0;
     bool b_reachable=!b->execution_evaluated||b->execution_margin>=0.0;
     if(a_reachable!=b_reachable)return b_reachable?-1:1;
+    if(a_executable&&b_executable){
+        if(a->energy_degraded!=b->energy_degraded)
+            return b->energy_degraded?1:-1;
+        return 0;
+    }
 
     double av=terminal_candidate_constraint_violation(a);
     double bv=terminal_candidate_constraint_violation(b);
     if(isfinite(bv)&&!isfinite(av))return -1;
     if(!isfinite(bv)&&isfinite(av))return 1;
     if(!isfinite(av)&&!isfinite(bv))return 0;
-
     double scale=fmax(1.0,fmax(fabs(av),fabs(bv)));
     double tolerance=sqrt(DBL_EPSILON)*scale;
     if(bv<av-tolerance)return -1;
@@ -428,7 +493,6 @@ static int terminal_candidate_constraint_order(const TerminalCandidate*a,
 
 static int terminal_candidate_execution_order(const TerminalCandidate*a,
         const TerminalCandidate*b){
-    if(!a||!b)return 0;
     if(isfinite(a->execution_time)||isfinite(b->execution_time)){
         if(!isfinite(b->execution_time))return 1;
         if(!isfinite(a->execution_time))return -1;
@@ -516,7 +580,10 @@ static bool terminal_candidate_refresh_allowed(const GuidanceMachine*g,
 
        void terminal_publish_candidate(GuidanceMachine*g){
     const TerminalCandidate*c=&g->terminal_candidate;
+    if(!c->valid||!isfinite(c->final_distance)||!(c->final_distance>0.0))return;
     g->terminal_path_kind=c->kind;
+    g->terminal_final_handoff_latched=true;
+    g->terminal_final_handoff_distance=c->final_distance;
     g->hac_radius=c->radius;g->hac_side=c->side;g->hac_side_selected=true;
     g->hac_plan_degraded=c->degraded;
     g->hac_plan_geometry_degraded=c->geometry_degraded;
@@ -911,7 +978,7 @@ static bool terminal_spline_candidate_from_future(const GuidanceMachine*g,const 
         future->latitude,future->mean_altitude,future->true_air_speed,
         cfg->site.latitude,gate_altitude,gate_speed,p);
     double spline_energy_aoa=clampd(fmax(3.0,future->angle_of_attack),3.0,
-        terminal_hac_energy_aoa(v));
+        terminal_hac_energy_aoa(future,v));
     TaemSpeedEnvelope gate_speed_envelope=
         decision_taem_speed_envelope(v,p,gate_altitude);
     if(!isfinite(available_energy)||!gate_speed_envelope.valid)return false;
@@ -937,9 +1004,9 @@ static bool terminal_spline_candidate_from_future(const GuidanceMachine*g,const 
     if(!isfinite(minimum_curve)||!isfinite(maximum_curve)||
        maximum_curve<minimum_curve)return false;
 
-    /* Search a compact geometric control domain.  Excess energy is handled by
-       the physically propagated MM305 S-turn phase; it may not enlarge this
-       terminal spline. */
+    /* Search a compact geometric control domain. Excess energy may not enlarge
+       the terminal spline; MM304 must withhold handoff until an executable MM305
+       acquisition/terminal path exists. */
     double handle_span=fmin(maximum_curve,fmax(chord,minimum_curve));
     if(!(handle_span>0.0)||!isfinite(handle_span))return false;
 
@@ -1186,9 +1253,108 @@ static bool terminal_spline_candidate_from_future(const GuidanceMachine*g,const 
     return true;
 }
 
+/* Rebuild a future-selected HAC as the path the live shuttle will actually fly.
+   The future search is useful for choosing a compact radius after speed has decayed,
+   but its original join starts at that future state.  Treating the live-to-future
+   displacement as a scalar execution cost leaves no acquisition course to command.
+   Refit the same HAC radius/side/final station from the measured vector, with the
+   propagated state as an explicit response-fit constraint. */
+static bool terminal_hac_candidate_from_future_live_path(
+        const GuidanceMachine*g,const Telemetry*live,double live_course,
+        const Telemetry*future,double future_course,const GuidanceMachine*selected,
+        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,
+        TerminalCandidate*out){
+    if(!g||!live||!future||!selected||!p||!cfg||!out||
+       !(selected->hac_radius>0.0)||fabs(selected->hac_side)!=1.0||
+       !(selected->terminal_test_final_approach_distance>0.0))
+        return false;
 
-                                                                                
-                                                                                  
+    const GuidanceSettings*s=&cfg->guidance;
+    const VehicleProfile*v=&cfg->vehicle;
+    GeoPoint origin={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
+    GeoPoint live_point={live->latitude,live->longitude,live->mean_altitude};
+    GeoPoint future_point={future->latitude,future->longitude,future->mean_altitude};
+    double live_e=0.0,live_n=0.0,future_e=0.0,future_n=0.0;
+    local_offsets(origin,live_point,p->radius,&live_e,&live_n);
+    local_offsets(origin,future_point,p->radius,&future_e,&future_n);
+
+    ControlAuthorityEnvelope live_authority=
+        decision_control_authority_envelope(g,live,p,cfg);
+    ControlAuthorityEnvelope future_authority=
+        decision_control_authority_envelope(g,future,p,cfg);
+    if(!live_authority.valid||!future_authority.valid||
+       !live_authority.controllable||!future_authority.controllable)
+        return false;
+    double max_lateral=fmin(live_authority.maximum_lateral_accel_mps2,
+        future_authority.maximum_lateral_accel_mps2);
+    if(!(max_lateral>0.0)||!isfinite(max_lateral))return false;
+
+    double minimum_slope=0.0,maximum_slope=0.0;
+    terminal_path_slope_bounds(live,v,s,&minimum_slope,&maximum_slope);
+    if(!(minimum_slope>0.0)||maximum_slope<minimum_slope)return false;
+    double selected_slope=clampd(selected->terminal_test_glide_slope,
+        minimum_slope,maximum_slope);
+    double slope_tangent=tan(selected_slope*DEG2RAD);
+    double min_tangent=tan(maximum_slope*DEG2RAD);
+    double max_tangent=tan(minimum_slope*DEG2RAD);
+    if(!(slope_tangent>0.0)||!(min_tangent>0.0)||!(max_tangent>0.0))
+        return false;
+
+    double gate_height=fmax(0.0,g->terminal_test_preflare_altitude);
+    double gate_altitude=cfg->site.altitude+gate_height;
+    double gate_ground=gate_height/slope_tangent;
+    double final_to_gate=fmax(0.0,
+        selected->terminal_test_final_approach_distance-gate_ground);
+    double height=fmax(0.0,live->mean_altitude-gate_altitude);
+    double minimum_fixed=fmax(0.0,height/min_tangent-final_to_gate);
+    double maximum_fixed=fmax(0.0,height/max_tangent-final_to_gate);
+    if(!isfinite(minimum_fixed)||!isfinite(maximum_fixed)||
+       maximum_fixed<minimum_fixed)return false;
+    double preferred=fmax(0.0,height/slope_tangent-final_to_gate);
+    preferred=clampd(preferred,minimum_fixed,maximum_fixed);
+
+    double speed_loss=terminal_expected_speed_loss_accel(g,live,p,aero,v);
+    if(!isfinite(speed_loss)||speed_loss<0.0)return false;
+
+    HACTransitionPlan join={0};
+    if(!hac_transition_plan(&join,live_e,live_n,future_e,future_n,
+            live_course,future_course,&cfg->site,s,selected->hac_radius,
+            selected->hac_side,selected->terminal_test_final_approach_distance,
+            live->true_air_speed,future->true_air_speed,speed_loss,max_lateral,
+            preferred,minimum_fixed,maximum_fixed))
+        return false;
+
+    double path_to_gate=join.lead_length+join.cone_arc_length+final_to_gate;
+    if(!(path_to_gate>0.0)||!isfinite(path_to_gate))return false;
+    double actual_slope=atan2(height,path_to_gate)*RAD2DEG;
+    if(!isfinite(actual_slope)||actual_slope<minimum_slope||
+       actual_slope>maximum_slope)return false;
+
+    TerminalCandidate candidate={.valid=true,
+        .degraded=join.degraded,
+        .geometry_degraded=join.degraded,
+        .energy_degraded=false,.shell_degraded=false,
+        .kind=TERMINAL_PATH_HAC,.join=join,
+        .radius=selected->hac_radius,.side=selected->hac_side,
+        .slope=actual_slope,
+        .final_distance=selected->terminal_test_final_approach_distance,
+        .response=fmax(selected->hac_transition_response_time,
+            live_authority.control_response_time_s),
+        .energy_aoa=clampd(fmax(3.0,live->angle_of_attack),3.0,
+            terminal_hac_energy_aoa(live,v)),
+        .altitude=live->mean_altitude,.speed=live->true_air_speed,
+        .course=live_course,.selected_ut=live->ut,.arrival_ut=live->ut,
+        .quality_score=join.violation_score};
+    terminal_candidate_execution_cost(&candidate,g,live,live_course,p,aero,cfg);
+    GuidanceMachine energy_probe=*g;
+    energy_probe.diagnostic_shadow=true;
+    candidate.energy_degraded=!terminal_candidate_live_energy_ready(
+        &energy_probe,live,p,aero,cfg,&candidate);
+    candidate.degraded=candidate.geometry_degraded||candidate.energy_degraded;
+    candidate.quality_score=terminal_candidate_delivery_time(&candidate);
+    *out=candidate;
+    return true;
+}
 
 /* Ranking must use the same live forecast, vertical and energy contract that
    will authorize ownership.  Probe a copy so search never publishes a path or
@@ -1249,54 +1415,43 @@ static bool terminal_candidate_from_future(const GuidanceMachine*g,const Telemet
     trial.terminal_energy_loss_accel_ema=energy_ema;
     trial.terminal_speed_loss_accel_ema=speed_ema;
     if(terminal_test_start_spiral(&trial,future,future_course,p,aero,cfg)){
-        TerminalCandidate hac={.valid=true,.degraded=trial.hac_plan_degraded,
-            .geometry_degraded=trial.hac_plan_geometry_degraded,
-            .energy_degraded=trial.hac_plan_energy_degraded,.shell_degraded=false,
-            .kind=TERMINAL_PATH_HAC,.radius=trial.hac_radius,.side=trial.hac_side,
-            .slope=trial.terminal_test_glide_slope,
-            .final_distance=trial.terminal_test_final_approach_distance,
-            .response=trial.hac_transition_response_time,.altitude=future->mean_altitude,
-            .energy_aoa=clampd(fmax(3.0,future->angle_of_attack),3.0,
-                terminal_hac_energy_aoa(&cfg->vehicle)),
-            .speed=future->true_air_speed,.course=future_course,.selected_ut=live->ut,
-            .arrival_ut=future->ut};
-        hac.join=(HACTransitionPlan){.valid=true,.degraded=hac.degraded,
-            .violation_score=trial.hac_plan_violation_score,
-            .heading_cone=trial.hac_transition_heading_cone,
-            .lead_start={trial.hac_transition_lead_start_e,trial.hac_transition_lead_start_n},
-            .p0={trial.hac_transition_p0_e,trial.hac_transition_p0_n},
-            .p1={trial.hac_transition_p1_e,trial.hac_transition_p1_n},
-            .p2={trial.hac_transition_p2_e,trial.hac_transition_p2_n},
-            .p3={trial.hac_transition_p3_e,trial.hac_transition_p3_n},
-            .cone_center={trial.hac_transition_cone_center_e,trial.hac_transition_cone_center_n},
-            .cone_start_angle=trial.hac_transition_cone_start_angle,
-            .cone_end_angle=trial.hac_transition_cone_end_angle,
-            .cone_arc_length=trial.hac_transition_cone_arc_length,
-            .lead_length=trial.hac_transition_lead_length,.length=trial.hac_transition_length,
-            .end_angle=trial.hac_transition_end_angle,.arc_remaining=trial.hac_remaining,
-            .exit_speed=trial.hac_transition_exit_speed};
-        terminal_candidate_execution_cost(&hac,g,live,
-            isfinite(live->ground_track_heading)?live->ground_track_heading:live->heading,
-            p,aero,cfg);
-        hac.quality_score=terminal_candidate_delivery_time(&hac);
-        bool hac_ready=terminal_candidate_probe_commit_ready(g,&hac,live,p,aero,cfg);
-        bool best_ready=terminal_candidate_probe_commit_ready(g,&best,live,p,aero,cfg);
-        bool hac_geometry_ok=terminal_candidate_geometry_regular(&hac);
-        bool best_geometry_ok=terminal_candidate_geometry_regular(&best);
-        /* Commit readiness is meaningful only inside the same geometry/control
-           class.  A ready-but-unflyable HAC must never displace a regular spline;
-           that late override was undoing the geometry-first candidate comparator. */
-        if(hac_geometry_ok&&!best_geometry_ok)
-            best=hac;
-        else if(hac_geometry_ok==best_geometry_ok&&
-                ((hac_ready&&!best_ready)||
-                 (hac_ready==best_ready&&terminal_candidate_better(&best,&hac))))
-            best=hac;
-        if(getenv("KSP_LANDER_HAC_DIAGNOSTICS")&&strcmp(getenv("KSP_LANDER_HAC_DIAGNOSTICS"),"1")==0){
-            fprintf(stderr,"terminal topology HAC: UT %.1f geom=%d energy=%d degraded=%d q %.2f exec %.1fs/%.0fm/%.1fdeg chosen=%s\n",
-                live->ut,hac.geometry_degraded,hac.energy_degraded,hac.degraded,hac.quality_score,
-                hac.execution_time,hac.execution_distance,hac.execution_course_error,
-                best.kind==TERMINAL_PATH_HAC?"hac":"none");
+        TerminalCandidate hac={0};
+        double live_course=isfinite(live->ground_track_heading)?
+            live->ground_track_heading:live->heading;
+        bool hac_path_ok=isfinite(live_course)&&
+            terminal_hac_candidate_from_future_live_path(g,live,live_course,
+                future,future_course,&trial,p,aero,cfg,&hac);
+        if(hac_path_ok){
+            bool hac_ready=terminal_candidate_probe_commit_ready(g,&hac,live,p,aero,cfg);
+            bool best_ready=terminal_candidate_probe_commit_ready(g,&best,live,p,aero,cfg);
+            bool hac_geometry_ok=terminal_candidate_geometry_regular(&hac);
+            bool best_geometry_ok=terminal_candidate_geometry_regular(&best);
+            /* The future forecast chooses the compact terminal geometry, but only
+               the refitted live-origin acquisition is eligible for selection.  This
+               prevents a detached future HAC from becoming the path controller. */
+            if(hac_geometry_ok&&!best_geometry_ok)
+                best=hac;
+            else if(hac_geometry_ok==best_geometry_ok&&
+                    ((hac_ready&&!best_ready)||
+                     (hac_ready==best_ready&&terminal_candidate_better(&best,&hac))))
+                best=hac;
+            if(getenv("KSP_LANDER_HAC_DIAGNOSTICS")&&
+               strcmp(getenv("KSP_LANDER_HAC_DIAGNOSTICS"),"1")==0){
+                fprintf(stderr,
+                    "terminal topology HAC: UT %.1f liveAcq=1 geom=%d energy=%d degraded=%d R=%.0f lead=%.0f arc=%.0f q %.2f exec %.1fs/%.0fm/%.1fdeg chosen=%s\n",
+                    live->ut,hac.geometry_degraded,hac.energy_degraded,hac.degraded,
+                    hac.radius,hac.join.lead_length,hac.join.cone_arc_length,
+                    hac.quality_score,hac.execution_time,hac.execution_distance,
+                    hac.execution_course_error,
+                    best.kind==TERMINAL_PATH_HAC?"hac":"none");
+            }
+        }else if(getenv("KSP_LANDER_HAC_DIAGNOSTICS")&&
+                 strcmp(getenv("KSP_LANDER_HAC_DIAGNOSTICS"),"1")==0){
+            fprintf(stderr,
+                "terminal topology HAC: UT %.1f liveAcq=0 futureR=%.0f futureLead=%.0f futureArc=%.0f chosen=%s\n",
+                live->ut,trial.hac_radius,trial.hac_transition_lead_length,
+                trial.hac_transition_cone_arc_length,
+                best.kind==TERMINAL_PATH_SPLINE?"spline":"none");
         }
     }
     if(!best.valid)return false;
@@ -1304,32 +1459,46 @@ static bool terminal_candidate_from_future(const GuidanceMachine*g,const Telemet
     return true;
 }
 
-/* A candidate is built from a response-propagated future state.  That state is
-   only useful when the live vehicle can reach its forecast origin inside the
-   same horizon used to construct it.  The commit gate performs this check
-   again, but admitting an unreachable candidate into the retained preview
-   lets refinement hysteresis preserve a path whose arrival timestamp is
-   already impossible.  Use the shared bounded-curvature path and the live
-   horizontal speed here so preview selection and commitment share one
-   reachability contract. */
+/* A future origin from terminal_project_planning_state() is already the result
+   of propagating the commanded bank, roll response, FPA feedback, atmospheric
+   density, lift and drag for exactly `horizon` seconds.  Re-solving that state as
+   a brand-new point-capture problem double-charges turn response and rejects the
+   later, slower states where a compact HAC actually becomes flyable.  Validate
+   the propagated state itself instead: its clock must match the forecast, its
+   displacement must fit inside the available travel, and an unpowered vehicle may
+   not gain rotating-frame specific mechanical energy. */
 static bool terminal_future_origin_reachable(const GuidanceMachine*g,
         const Telemetry*live,double course,const Telemetry*future,
         double future_course,double horizon,const PlanetModel*p,
         const LandingConfiguration*cfg){
-    if(!g||!live||!future||!p||!cfg||!isfinite(course)||
-       !isfinite(future_course)||!isfinite(horizon)||horizon<0.0||
-       !(live->horizontal_speed>0.0)||
+    (void)g;(void)course;(void)future_course;(void)cfg;
+    if(!live||!future||!p||!isfinite(horizon)||horizon<0.0||
+       !(live->horizontal_speed>0.0)||!(future->horizontal_speed>=0.0)||
+       !isfinite(future->ut)||!isfinite(live->ut)||
        !isfinite(future->runway_along_track)||
-       !isfinite(future->runway_cross_track))return false;
-    double minimum_turn_radius=0.0;
-    double path=decision_target_path_length(g,live,course,
-        future->runway_along_track,future->runway_cross_track,
-        future_course,NAN,p,cfg,&minimum_turn_radius);
-    if(!isfinite(path)||!isfinite(minimum_turn_radius)||
-       !(minimum_turn_radius>0.0))return false;
-    double required_time=path/live->horizontal_speed;
-    double tolerance=sqrt(DBL_EPSILON)*fmax(1.0,horizon);
-    return isfinite(required_time)&&required_time<=horizon+tolerance;
+       !isfinite(future->runway_cross_track)||
+       !isfinite(live->runway_along_track)||!isfinite(live->runway_cross_track))
+        return false;
+    double time_error=fabs((future->ut-live->ut)-horizon);
+    double time_tolerance=sqrt(DBL_EPSILON)*
+        fmax(1.0,fmax(fabs(horizon),fabs(future->ut-live->ut)));
+    if(time_error>time_tolerance)return false;
+
+    double displacement=hypot(future->runway_along_track-live->runway_along_track,
+        future->runway_cross_track-live->runway_cross_track);
+    double speed_bound=fmax(live->horizontal_speed,future->horizontal_speed);
+    double travel_bound=speed_bound*horizon;
+    double spatial_tolerance=sqrt(DBL_EPSILON)*fmax(1.0,travel_bound);
+    if(displacement>travel_bound+spatial_tolerance)return false;
+
+    double live_energy=rotating_specific_energy(live->latitude,live->mean_altitude,
+        live->true_air_speed,p);
+    double future_energy=rotating_specific_energy(future->latitude,future->mean_altitude,
+        future->true_air_speed,p);
+    if(!isfinite(live_energy)||!isfinite(future_energy))return false;
+    double energy_tolerance=sqrt(DBL_EPSILON)*
+        fmax(1.0,fmax(fabs(live_energy),fabs(future_energy)));
+    return future_energy<=live_energy+energy_tolerance;
 }
 
                                                                                    
@@ -1370,6 +1539,10 @@ static bool terminal_future_origin_reachable(const GuidanceMachine*g,
      * add path.  Height, minimum-speed, or runway-remaining deficits cannot be
      * repaired by inventing another HAC.
      */
+    /* Overflying the threshold high is not exhausted margin: with ample
+       height MM305 turns back and acquires a HAC behind the runway. */
+    bool height_to_turn_back=cfg&&t->mean_altitude-cfg->site.altitude>6000.0;
+    if(height_to_turn_back)return envelope.speed.margin<0.0;
     return envelope.vertical_recovery.margin<0.0||
         envelope.speed.margin<0.0||
         envelope.runway_remaining.margin<0.0;
@@ -1432,13 +1605,27 @@ static bool terminal_candidate_live_energy_ready(GuidanceMachine*g,const Telemet
     GeoPoint current_point={t->latitude,t->longitude,t->mean_altitude};
     double current_e=0.0,current_n=0.0;
     local_offsets(origin,current_point,p->radius,&current_e,&current_n);
-    /* A future-origin HAC carries a response lead beginning at its forecast
-       state, not at the live vehicle. Charge the upstream forecast leg here so
-       a positive candidate margin cannot hide the distance still required to
-       reach that origin. Live-origin spline candidates contribute zero. */
-    double upstream=fmax(0.0,hypot(c->join.lead_start.e-current_e,
-        c->join.lead_start.n-current_n));
-    double fixed_path=upstream+fmax(0.0,c->join.lead_length)+fmax(0.0,c->join.length)+
+    /*
+     * A future-origin candidate still owes the path to its forecast lead start.
+     * A live-origin candidate, however, is already being flown by MM305. Charge
+     * only the unflown remainder of its stored acquisition/response lead; adding
+     * both the distance back to the historical origin and the full original lead
+     * double-counts energy every frame and makes an executable HAC become less
+     * feasible as the vehicle follows it.
+     */
+    bool live_origin=isfinite(c->selected_ut)&&isfinite(c->arrival_ut)&&
+        fabs(c->selected_ut-c->arrival_ut)<=1e-6;
+    double upstream=live_origin?0.0:fmax(0.0,
+        hypot(c->join.lead_start.e-current_e,
+              c->join.lead_start.n-current_n));
+    double lead_remaining=fmax(0.0,c->join.lead_length);
+    if(live_origin&&c->join.valid&&c->join.lead_length>DBL_MIN){
+        double station=hac_lead_nearest_distance(&c->join,current_e,current_n);
+        if(isfinite(station))
+            lead_remaining=fmax(0.0,c->join.lead_length-
+                clampd(station,0.0,c->join.lead_length));
+    }
+    double fixed_path=upstream+lead_remaining+fmax(0.0,c->join.length)+
         fmax(0.0,c->join.arc_remaining);
     double path_to_gate=fixed_path+fmax(0.0,c->final_distance-gate_ground);
     if(!(path_to_gate>0.0)||!isfinite(path_to_gate))return false;
@@ -1447,7 +1634,7 @@ static bool terminal_candidate_live_energy_ready(GuidanceMachine*g,const Telemet
         t->true_air_speed,cfg->site.latitude,gate_altitude,gate_speed,p);
     double target_aoa=isfinite(c->energy_aoa)&&c->energy_aoa>0.0?
         clampd(c->energy_aoa,0.0,cfg->vehicle.maximum_angle_of_attack):
-        terminal_hac_energy_aoa(&cfg->vehicle);
+        terminal_hac_energy_aoa(t,&cfg->vehicle);
     double transition_aoa=NAN;
     double transition_path=0.0;
     if(t->flight_path_angle< -c->slope){
@@ -1550,15 +1737,31 @@ static bool terminal_live_origin_hac_candidate(const GuidanceMachine*g,
         .response=trial.hac_transition_response_time,
         .altitude=t->mean_altitude,
         .energy_aoa=clampd(fmax(3.0,t->angle_of_attack),3.0,
-            terminal_hac_energy_aoa(&cfg->vehicle)),
+            terminal_hac_energy_aoa(t,&cfg->vehicle)),
         .speed=t->true_air_speed,.course=course,
         .selected_ut=t->ut,.arrival_ut=t->ut};
     candidate.join=(HACTransitionPlan){.valid=true,
         .degraded=candidate.degraded,
         .violation_score=trial.hac_plan_violation_score,
         .heading_cone=trial.hac_transition_heading_cone,
+        .lead_curve=trial.hac_transition_lead_curve,
+        .lead_acquisition=trial.hac_transition_lead_acquisition,
         .lead_start={trial.hac_transition_lead_start_e,
             trial.hac_transition_lead_start_n},
+        .lead_p1={trial.hac_transition_lead_p1_e,
+            trial.hac_transition_lead_p1_n},
+        .lead_p2={trial.hac_transition_lead_p2_e,
+            trial.hac_transition_lead_p2_n},
+        .acquisition_center={trial.hac_transition_acquisition_center_e,
+            trial.hac_transition_acquisition_center_n},
+        .acquisition_tangent={trial.hac_transition_acquisition_tangent_e,
+            trial.hac_transition_acquisition_tangent_n},
+        .acquisition_radius=trial.hac_transition_acquisition_radius,
+        .acquisition_side=trial.hac_transition_acquisition_side,
+        .acquisition_start_angle=trial.hac_transition_acquisition_start_angle,
+        .acquisition_end_angle=trial.hac_transition_acquisition_end_angle,
+        .acquisition_arc_length=trial.hac_transition_acquisition_arc_length,
+        .acquisition_tangent_length=trial.hac_transition_acquisition_tangent_length,
         .p0={trial.hac_transition_p0_e,trial.hac_transition_p0_n},
         .p1={trial.hac_transition_p1_e,trial.hac_transition_p1_n},
         .p2={trial.hac_transition_p2_e,trial.hac_transition_p2_n},
@@ -1571,12 +1774,15 @@ static bool terminal_live_origin_hac_candidate(const GuidanceMachine*g,
         .length=trial.hac_transition_length,
         .end_angle=trial.hac_transition_end_angle,
         .arc_remaining=trial.hac_remaining,
-        .exit_speed=trial.hac_transition_exit_speed};
+        .exit_speed=trial.hac_transition_exit_speed,
+        .lead_start_course=trial.hac_transition_lead_start_course,
+        .lead_end_course=trial.hac_transition_lead_end_course};
     terminal_candidate_execution_cost(&candidate,g,t,course,p,aero,cfg);
     candidate.quality_score=terminal_candidate_delivery_time(&candidate);
     *out=candidate;
     return true;
 }
+
 
 static bool terminal_candidate_vertical_response_ready_from_arrival(
         const GuidanceMachine*g,const Telemetry*arrival,double arrival_course,

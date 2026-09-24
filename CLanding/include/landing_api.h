@@ -28,6 +28,7 @@ bool entry_taem_handoff_geometry_ready(double altitude,double runway_along_track
 bool entry_s_turn_bank_authority_available(double dynamic_pressure,double true_air_speed,double stall_fraction,double g_force,const VehicleProfile *vehicle);
 double entry_bank_authority_limit(double true_air_speed,double dynamic_pressure,double g_force,const VehicleProfile *vehicle,double maximum_bank);
 double entry_taem_range_target(const PlanetModel *planet,const GuidanceSettings *settings);
+bool mm305_acquisition_ready(const Telemetry *telemetry,const PlanetModel *planet,const LandingConfiguration *configuration);
 double rotating_specific_energy(double latitude,double altitude,double air_relative_speed,const PlanetModel *planet);
 double entry_remaining_specific_energy(double latitude,double altitude,double air_relative_speed,double target_latitude,double target_altitude,double target_speed,const PlanetModel *planet);
 double entry_altitude_target_for_speed(double reference_altitude,double reference_speed,double true_air_speed,double target_altitude,double target_speed);
@@ -52,7 +53,6 @@ double taem_course_rate_bank_command(double horizontal_speed,double lift_accel,d
     double bank_limit,double current_course,double desired_course,double response_time);
 LandingSite runway_reciprocal_site(const LandingSite *primary,double radius);
 void telemetry_reframe_runway(Telemetry *telemetry,const LandingSite *site,double radius);
-double runway_end_acquisition_score(const Telemetry *telemetry,const LandingSite *site,const GuidanceSettings *settings,double radius);
 double bank_for_point_capture(double speed,double lift_accel,double bank_effectiveness,double course_error,double distance,double maximum_bank);
 HACGuidance hac_guidance_compute(GeoPoint current,double true_air_speed,double course,const LandingSite *site,const GuidanceSettings *settings,double radius,double side,double gravity);
 double hac_guidance_score(GeoPoint current,double true_air_speed,double course,const LandingSite *site,const GuidanceSettings *settings,double radius,double side,double gravity);
@@ -79,8 +79,6 @@ double jerk_update(JerkLimiter *j,double target,double max_rate,double max_accel
 double burn_fraction(double elapsed,double remaining,double max_accel,double ramp); double burn_estimated_duration(double dv,double max_accel,double ramp);
 FlightControlRegime flight_control_regime(double mach,double true_air_speed,double dynamic_pressure,double minimum_safe_speed);
 double entry_s_turn_effective_minimum_leg(double true_air_speed,double taem_speed,const GuidanceSettings *settings);
-double entry_s_turn_fpa_delivery_debt(double flight_path_angle,const TaemInterfaceTarget *target);
-double entry_s_turn_reversal_corridor(double base_corridor,double range_to_site,double terminal_join_range,double altitude_debt,double fpa_delivery_debt);
 void speedbrake_controller_reset(SpeedbrakeController *c,bool deployed);
 bool speedbrake_controller_update(SpeedbrakeController *c,double dynamic_pressure,double target_dynamic_pressure,double specific_energy_error,double energy_scale,double maximum_dynamic_pressure,bool inhibit,double dt);
 
@@ -99,11 +97,13 @@ double planet_atmospheric_pressure(const PlanetModel *p,double altitude);
 double planet_atmospheric_speed_of_sound(const PlanetModel *p,double altitude);
 void aerodynamic_force_factors(double angle_of_attack,const VehicleProfile *vehicle,double *lift_factor,double *drag_factor);
 void aerodynamic_force_factors_mach(double mach,double angle_of_attack,const VehicleProfile *vehicle,double *lift_factor,double *drag_factor);
+double aerodynamic_best_glide_aoa(double mach,const VehicleProfile *vehicle);
 GeoPoint predictor_geo_point(Vector3 position,const PlanetModel *planet,double ut); Vector3 predictor_inertial_position(GeoPoint point,const PlanetModel *planet,double ut);
 VehicleState predictor_propagate_vacuum(VehicleState state,double target_ut,const PlanetModel *planet,double max_step);
 double predictor_postburn_periapsis(VehicleState state,const PlanetModel *planet);
 double predictor_directed_taem_range_error(double range,double closest_distance,double target_range);
 double entry_taem_speed_target(const VehicleProfile *vehicle,const GuidanceSettings *settings,const PlanetModel *planet);
+double hac_acquisition_speed_target(const VehicleProfile *vehicle,const GuidanceSettings *settings,const PlanetModel *planet);
 void entry_publish_taem_tangent_target(GuidanceMachine *guidance,const Telemetry *telemetry,double course,const PlanetModel *planet,AerodynamicModel aero,const LandingConfiguration *cfg);
 bool entry_taem_shaping_crossrange_ready(const TaemInterfaceTarget *target,const Telemetry *telemetry,const PlanetModel *planet,const LandingConfiguration *cfg,double next_sign,double *built_cross,double *required_cross);
 EntryPrediction predictor_simulate_entry(VehicleState state,const PlanetModel *planet,AerodynamicModel aero,const AerodynamicEnvelope *env,const TrajectoryCalibrationModel *cal,const VehicleProfile *vehicle,const LandingSite *site,const GuidanceSettings *settings,double max_bank,double initial_bank,double initial_bank_sign,double initial_leg_elapsed,double max_duration,bool include_trajectory);

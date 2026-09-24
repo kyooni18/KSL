@@ -4,29 +4,23 @@
 #include <stdbool.h>
 
 /* MM305 is the single terminal-area owner after the one-way MM304 handoff.
-   These are internal TAEM planning substates, not peer guidance phases: optional
-   energy-management S-turn, terminal-path acquisition, runway alignment, and
-   final-intercept delivery.  HAC/circle/spline geometry remains a private path
-   primitive selected by the terminal path provider. */
+   Its executive owns only terminal-path acquisition, runway alignment, and
+   final-intercept delivery. Energy dissipation/S-turn logic belongs to Entry/MM304;
+   HAC/circle/spline geometry remains private to the terminal path provider. */
 typedef enum {
-    TAEM_PHASE_S_TURN = 0,
-    TAEM_PHASE_PATH_ACQUISITION = 1,
-    TAEM_PHASE_RUNWAY_ALIGNMENT = 2,
-    TAEM_PHASE_FINAL_INTERCEPT = 3
+    TAEM_PHASE_PATH_ACQUISITION = 0,
+    TAEM_PHASE_RUNWAY_ALIGNMENT = 1,
+    TAEM_PHASE_FINAL_INTERCEPT = 2
 } TaemPhase;
 
 typedef enum {
     TAEM_TRANSITION_NONE = 0,
     TAEM_TRANSITION_MM304_HANDOFF,
     TAEM_TRANSITION_RESTART_CLASSIFICATION,
-    TAEM_TRANSITION_EXCESS_ENERGY_S_TURN,
-    TAEM_TRANSITION_S_TURN_SURPLUS_EXHAUSTED,
     TAEM_TRANSITION_TERMINAL_PATH_CAPTURE,
     TAEM_TRANSITION_FINAL_INTERCEPT_GATE,
     TAEM_TRANSITION_FINAL_APPROACH_DELIVERY,
-    TAEM_TRANSITION_S_TURN_TERMINAL_FEASIBLE,
-    TAEM_TRANSITION_TERMINAL_PATH_REPLAN,
-    TAEM_TRANSITION_S_TURN_ENERGY_INVALID
+    TAEM_TRANSITION_TERMINAL_PATH_REPLAN
 } TaemTransitionReason;
 
 typedef enum {
@@ -127,27 +121,14 @@ typedef struct {
    executive. resume_mm305 is used only while reconstructing a checkpoint that
    was already inside TAEM.
 
-   energy_excess is a signed, provider-defined surplus metric. Positive values
-   mean the current terminal solution cannot absorb the remaining energy/range
-   without adding path length; zero is the physical balance point and negative
-   values mean continued dissipation would overspend terminal energy. TAEM S-turn
-   entry therefore requires BOTH positive surplus and a valid indication that the
-   current terminal-path envelope is not feasible. A nominal feasible candidate
-   ends the S-turn immediately regardless of the remaining coarse surplus.
-
    Geometry remains outside this executive. The unified TAEM path provider
    supplies generic path-selected/path-captured/final-intercept readiness while
-   circle, spline, and HAC-like details stay private.  Path loss after ownership
+   circle, spline, and HAC-like details stay private. Path loss after ownership
    is an internal TAEM replan, never permission to reacquire MM304. Final-approach
    delivery is additionally fail-closed by terminal_contract. */
 typedef struct {
     bool mm304_complete;
     bool resume_mm305;
-
-    bool energy_valid;
-    double energy_excess;
-    bool terminal_feasibility_valid;
-    bool nominal_terminal_path_feasible;
 
     bool terminal_path_selected;
     bool terminal_path_captured;
@@ -160,9 +141,6 @@ typedef struct {
     TaemRecoveryReason off_nominal_recovery_reason;
 } TaemExecInputs;
 
-typedef struct {
-    bool s_turn_enabled;
-} TaemExecProfile;
 
 typedef struct {
     bool initialized;
@@ -221,12 +199,10 @@ typedef struct {
 void taem_exec_reset(TaemExecutive *exec);
 bool taem_exec_initialize(TaemExecutive *exec,
                           const TaemExecObservation *observation,
-                          const TaemExecInputs *inputs,
-                          const TaemExecProfile *profile);
+                          const TaemExecInputs *inputs);
 bool taem_exec_update(TaemExecutive *exec,
                       const TaemExecObservation *observation,
-                      const TaemExecInputs *inputs,
-                      const TaemExecProfile *profile);
+                      const TaemExecInputs *inputs);
 TaemExecTelemetry taem_exec_telemetry(const TaemExecutive *exec);
 bool taem_exec_owns_vehicle(const TaemExecutive *exec);
 TaemTerminalEvaluation taem_exec_evaluate_terminal_contract(

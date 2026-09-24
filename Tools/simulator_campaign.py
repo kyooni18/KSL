@@ -8,6 +8,7 @@ replay artifacts.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import math
 import os
@@ -31,6 +32,33 @@ from headless_flight import BackendProcess, load_configuration
 TERMINAL_PHASES = {"Complete", "Abort", "Fault"}
 
 
+def _downsample_trajectory(points: Any, limit: int = 120) -> list[Any]:
+    if not isinstance(points, list) or len(points) <= limit:
+        return points if isinstance(points, list) else []
+    scale = (len(points) - 1) / float(limit - 1)
+    indices = sorted({min(len(points) - 1, int(round(i * scale))) for i in range(limit)})
+    return [points[i] for i in indices]
+
+
+def _lean_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    lean = dict(snapshot)
+    # Strip actualTrajectory: completely redundant with simulator-telemetry and discarded by replay
+    lean["actualTrajectory"] = []
+    # Downsample trajectory arrays to max 120 points
+    for key in ("predictedTrajectory", "plannedTrajectory", "projectedTAEMTrajectory",
+                "referenceTrajectory", "orbitalTrajectory"):
+        if key in lean and isinstance(lean[key], list):
+            lean[key] = _downsample_trajectory(lean[key], 120)
+    # Plan trajectory is huge (1000 items, 113KB) and redundant with plannedTrajectory
+    plan = lean.get("plan")
+    if isinstance(plan, dict):
+        plan_copy = dict(plan)
+        if "trajectory" in plan_copy:
+            plan_copy["trajectory"] = _downsample_trajectory(plan_copy["trajectory"], 60)
+        lean["plan"] = plan_copy
+    return lean
+
+
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
@@ -47,6 +75,7 @@ class SnapshotRecorder:
         self.manifest = manifest
         self.count = 0
         self.last_sim_ut: float | None = None
+        self.last_recorded_sim_ut: float | None = None
         self.last_phase = ""
 
     def close(self) -> None:
@@ -63,15 +92,25 @@ class SnapshotRecorder:
         if self.last_sim_ut is None and sim_ut is not None:
             self.last_sim_ut = sim_ut
         phase = str(snapshot.get("phase") or "")
-        wrapped = {
-            "wallTime": now,
-            "runId": self.manifest["runId"],
-            "snapshotIndex": self.count,
-            "snapshot": snapshot,
-        }
-        self.handle.write(json.dumps(wrapped, separators=(",", ":"), allow_nan=False) + "\n")
-        self.count += 1
-        self.last_phase = phase
+
+        should_record = True
+        if (self.last_recorded_sim_ut is not None and sim_ut is not None and
+                abs(sim_ut - self.last_recorded_sim_ut) < 0.5 and
+                phase == self.last_phase):
+            should_record = False
+
+        if should_record:
+            lean = _lean_snapshot(snapshot)
+            wrapped = {
+                "wallTime": now,
+                "runId": self.manifest["runId"],
+                "snapshotIndex": self.count,
+                "snapshot": lean,
+            }
+            self.handle.write(json.dumps(wrapped, separators=(",", ":"), allow_nan=False) + "\n")
+            self.count += 1
+            self.last_recorded_sim_ut = sim_ut
+            self.last_phase = phase
 
         mirror = dict(snapshot)
         mirror["generatedAt"] = now
@@ -207,11 +246,21 @@ def main() -> int:
     ap.add_argument("--max-sim-time", type=float, default=2600.0)
     ap.add_argument("--wall-timeout", type=float, default=120.0)
     ap.add_argument("--publish-hz", type=float, default=30.0)
-    ap.add_argument("--preroll-seconds", type=float, default=30.0,
-                    help="Advance ShuttleSim through the prescribed deorbit burn before Guidance connects.")
+    ap.add_argument("--preroll-seconds", type=float, default=None,
+                    help=("Seconds to advance ShuttleSim before Guidance connects. "
+                          "Defaults to 30 s for reentry/full runs and 0 s for "
+                          "HAC/MM305/final-test fixtures."))
     ap.add_argument("--no-build", action="store_true")
-    ap.add_argument("--engage", choices=("reentry", "full", "hac", "hac-upstream"), default="reentry")
+    ap.add_argument("--engage", choices=("reentry", "full", "hac", "hac-upstream", "final-test"), default="reentry")
     args = ap.parse_args()
+
+    if args.preroll_seconds is None:
+        preroll_seconds = (0.0 if args.engage in ("hac", "hac-upstream", "final-test")
+                           else 30.0)
+    else:
+        preroll_seconds = args.preroll_seconds
+    if not math.isfinite(preroll_seconds) or preroll_seconds < 0.0:
+        ap.error("--preroll-seconds must be a finite non-negative value")
 
     if not args.no_build:
         build(ROOT)
@@ -246,7 +295,7 @@ def main() -> int:
         "lockstep": True,
         "physicsDt": 0.02,
         "guidanceRateHz": guidance_rate,
-        "prerollSeconds": args.preroll_seconds,
+        "prerollSeconds": preroll_seconds,
         "simulatorTelemetry": str(sim_record),
         "guidanceSnapshots": str(run_dir / "guidance-snapshots.jsonl"),
         "runDirectory": str(run_dir),
@@ -314,7 +363,7 @@ def main() -> int:
                     continue
                 last_packet = packet
                 sim_time = float(packet.get("sim_time", 0.0))
-                if sim_time + 1e-9 >= args.preroll_seconds:
+                if sim_time + 1e-9 >= preroll_seconds:
                     break
                 preroll_cmd.sendto(b'{"type":"step","step":true}', ("127.0.0.1", 8795))
             manifest["prerollFinal"] = {
@@ -335,6 +384,10 @@ def main() -> int:
         # restart predictor does not certify this synthetic long-horizon state.
         # This environment variable is never set by live-KSP launchers.
         os.environ["KSP_LANDER_FORCE_REENTRY_TEST"] = "1"
+        if args.engage == "final-test":
+            os.environ["KSP_LANDER_FINAL_APPROACH_TEST"] = "1"
+        else:
+            os.environ.pop("KSP_LANDER_FINAL_APPROACH_TEST", None)
         # Only explicitly named MM305 fixtures may enter the fixed, dynamic
         # runway-anchored HAC path.  The generic simulator flag alone must not
         # alter unrelated ShuttleSim scenarios or native/offline tests.
@@ -363,7 +416,7 @@ def main() -> int:
         # HAC fixtures must engage at the exact initial lockstep barrier. The
         # resend path delivers that state after the backend binds its socket;
         # an unconditional wake raced engagement against the first physics step.
-        if args.engage not in ("hac", "hac-upstream"):
+        if args.engage not in ("hac", "hac-upstream", "final-test"):
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as wake:
                 wake.sendto(b'{"type":"step","step":true}', ("127.0.0.1", 8795))
 
@@ -375,7 +428,7 @@ def main() -> int:
         if connected.get("connectionStatus") != "connected":
             raise RuntimeError(str(connected.get("lastError") or "simulator Guidance connect failed"))
 
-        if args.engage in ("hac", "hac-upstream"):
+        if args.engage in ("hac", "hac-upstream", "final-test"):
             expected_ut = float(manifest["prerollFinal"]["ut"])
             def fixture_ready(snapshot: dict[str, Any]) -> bool:
                 tel = snapshot.get("telemetry") or {}
@@ -397,6 +450,16 @@ def main() -> int:
             backend.send("engage", timeout=30.0)
         elif args.engage in ("hac", "hac-upstream"):
             backend.send("engageHACTest", timeout=30.0)
+        elif args.engage == "final-test":
+            previous_sequence = int((backend.latest_snapshot or {}).get("logSequence") or 0)
+            backend.send("engageFinalTest", timeout=30.0)
+            try:
+                backend.read_until(
+                    lambda snapshot: int(snapshot.get("logSequence") or 0) > previous_sequence,
+                    3.0,
+                )
+            except TimeoutError:
+                pass
         else:
             # Reentry-only qualification runs the production shadow executive
             # synchronously before the request is acknowledged. Keep the
@@ -555,14 +618,48 @@ def main() -> int:
         backend_stderr.close()
         os.environ.clear()
         os.environ.update(old_env)
-        if manifest.get("invalidReason") == "no-simulated-time":
+        for log_file in (run_dir / "simulator.log", run_dir / "guidance.log"):
+            if log_file.is_file() and log_file.stat().st_size == 0:
+                log_file.unlink(missing_ok=True)
+        if manifest.get("invalidReason") == "no-simulated-time" or manifest.get("simElapsedSeconds") is None:
             try:
                 current = json.loads(run_meta.read_text(encoding="utf-8")) if run_meta.is_file() else {}
                 if current.get("runId") == run_id:
                     run_meta.unlink(missing_ok=True)
             except (OSError, json.JSONDecodeError):
                 pass
-            shutil.rmtree(run_dir, ignore_errors=True)
+            if args.engage != "final-test":
+                shutil.rmtree(run_dir, ignore_errors=True)
+        else:
+            for artifact_name in ("guidance-snapshots.jsonl", "simulator-telemetry.jsonl"):
+                p = run_dir / artifact_name
+                if p.is_file():
+                    gz_p = p.with_name(p.name + ".gz")
+                    try:
+                        with p.open("rb") as f_in, gzip.open(gz_p, "wb", compresslevel=6) as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                        if gz_p.is_file() and gz_p.stat().st_size > 0:
+                            p.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+            if (run_dir / "manifest.json").is_file():
+                try:
+                    m = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+                    if (run_dir / "guidance-snapshots.jsonl.gz").is_file():
+                        m["guidanceSnapshots"] = "guidance-snapshots.jsonl.gz"
+                    if (run_dir / "simulator-telemetry.jsonl.gz").is_file():
+                        m["simulatorTelemetry"] = "simulator-telemetry.jsonl.gz"
+                    atomic_json(run_dir / "manifest.json", m)
+                    if run_meta.is_file():
+                        cur = json.loads(run_meta.read_text(encoding="utf-8"))
+                        if cur.get("runId") == run_id:
+                            if (run_dir / "guidance-snapshots.jsonl.gz").is_file():
+                                cur["guidanceSnapshots"] = str(run_dir / "guidance-snapshots.jsonl.gz")
+                            if (run_dir / "simulator-telemetry.jsonl.gz").is_file():
+                                cur["simulatorTelemetry"] = str(run_dir / "simulator-telemetry.jsonl.gz")
+                            atomic_json(run_meta, cur)
+                except Exception:
+                    pass
     return exit_code
 
 

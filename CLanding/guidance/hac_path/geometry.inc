@@ -140,6 +140,119 @@ static HACPoint2 hac_bezier_second_derivative(const HACTransitionPlan*p,double u
     }
     return clampd(u,0,1);
 }
+bool hac_lead_sample_distance(const HACTransitionPlan*p,double distance,
+        HACPoint2*point,double*course,double*curvature){
+    if(point)*point=hac_point(NAN,NAN);
+    if(course)*course=NAN;
+    if(curvature)*curvature=NAN;
+    if(!p||!p->valid||!isfinite(distance)||distance<0.0||
+       !isfinite(p->lead_length)||p->lead_length<0.0)return false;
+
+    double s=clampd(distance,0.0,p->lead_length);
+    if(p->lead_acquisition){
+        if(!(p->acquisition_radius>DBL_MIN)||
+           !isfinite(p->acquisition_arc_length)||
+           !isfinite(p->acquisition_tangent_length)||
+           p->acquisition_arc_length<0.0||p->acquisition_tangent_length<0.0||
+           fabs(p->acquisition_side)!=1.0)return false;
+        if(s<=p->acquisition_arc_length+sqrt(DBL_EPSILON)){
+            double theta=p->acquisition_start_angle-
+                p->acquisition_side*s/p->acquisition_radius;
+            HACPoint2 q=hac_point(
+                p->acquisition_center.e+p->acquisition_radius*cos(theta),
+                p->acquisition_center.n+p->acquisition_radius*sin(theta));
+            if(point)*point=q;
+            if(course)*course=norm_deg(atan2(
+                p->acquisition_side*sin(theta),
+                -p->acquisition_side*cos(theta))*RAD2DEG);
+            if(curvature)*curvature=p->acquisition_side/p->acquisition_radius;
+            return true;
+        }
+        double line_s=clampd(s-p->acquisition_arc_length,0.0,
+            p->acquisition_tangent_length);
+        double h=p->lead_end_course*DEG2RAD;
+        HACPoint2 q=hac_point(
+            p->acquisition_tangent.e+sin(h)*line_s,
+            p->acquisition_tangent.n+cos(h)*line_s);
+        if(point)*point=q;
+        if(course)*course=norm_deg(p->lead_end_course);
+        if(curvature)*curvature=0.0;
+        return true;
+    }
+
+    if(p->lead_curve){
+        HACTransitionPlan lead=hac_lead_bezier_from_plan(p);
+        if(!(lead.length>DBL_MIN))return false;
+        double u=hac_bezier_advance_distance(&lead,0.0,s);
+        HACPoint2 q=hac_bezier_point(&lead,u);
+        HACPoint2 d=hac_bezier_derivative(&lead,u);
+        if(point)*point=q;
+        if(course)*course=norm_deg(atan2(d.e,d.n)*RAD2DEG);
+        if(curvature)*curvature=hac_bezier_signed_curvature(&lead,u);
+        return true;
+    }
+
+    double h=p->lead_end_course*DEG2RAD;
+    double line_length=fmax(p->lead_length,DBL_MIN);
+    double f=clampd(s/line_length,0.0,1.0);
+    HACPoint2 q=hac_point(
+        p->lead_start.e+(p->p0.e-p->lead_start.e)*f,
+        p->lead_start.n+(p->p0.n-p->lead_start.n)*f);
+    if(point)*point=q;
+    if(course)*course=norm_deg(atan2(p->p0.e-p->lead_start.e,
+        p->p0.n-p->lead_start.n)*RAD2DEG);
+    if(curvature)*curvature=0.0;
+    (void)h;
+    return true;
+}
+
+double hac_lead_nearest_distance(const HACTransitionPlan*p,double e,double n){
+    if(!p||!p->valid||!isfinite(e)||!isfinite(n)||
+       !isfinite(p->lead_length)||p->lead_length<=0.0)return 0.0;
+    if(p->lead_acquisition){
+        double best_s=0.0,best_d=INFINITY;
+        if(p->acquisition_radius>DBL_MIN&&
+           isfinite(p->acquisition_arc_length)){
+            double raw=atan2(n-p->acquisition_center.n,
+                e-p->acquisition_center.e);
+            double progress=fmod(-p->acquisition_side*
+                (raw-p->acquisition_start_angle),2.0*LANDER_PI);
+            if(progress<0.0)progress+=2.0*LANDER_PI;
+            double s_arc=clampd(progress*p->acquisition_radius,0.0,
+                p->acquisition_arc_length);
+            HACPoint2 q={0};double c=0.0,k=0.0;
+            if(hac_lead_sample_distance(p,s_arc,&q,&c,&k)){
+                double d=hypot(e-q.e,n-q.n);
+                if(d<best_d){best_d=d;best_s=s_arc;}
+            }
+        }
+        if(p->acquisition_tangent_length>DBL_MIN){
+            double h=p->lead_end_course*DEG2RAD;
+            double de=e-p->acquisition_tangent.e;
+            double dn=n-p->acquisition_tangent.n;
+            double along=clampd(de*sin(h)+dn*cos(h),0.0,
+                p->acquisition_tangent_length);
+            double s_line=p->acquisition_arc_length+along;
+            HACPoint2 q={0};double c=0.0,k=0.0;
+            if(hac_lead_sample_distance(p,s_line,&q,&c,&k)){
+                double d=hypot(e-q.e,n-q.n);
+                if(d<best_d){best_d=d;best_s=s_line;}
+            }
+        }
+        return clampd(best_s,0.0,p->lead_length);
+    }
+    if(p->lead_curve){
+        HACTransitionPlan lead=hac_lead_bezier_from_plan(p);
+        return hac_bezier_nearest_u(&lead,e,n)*p->lead_length;
+    }
+    double de=p->p0.e-p->lead_start.e,dn=p->p0.n-p->lead_start.n;
+    double l2=de*de+dn*dn;
+    if(!(l2>DBL_MIN))return 0.0;
+    double f=clampd(((e-p->lead_start.e)*de+(n-p->lead_start.n)*dn)/l2,
+        0.0,1.0);
+    return f*p->lead_length;
+}
+
        double hac_bezier_nearest_u(const HACTransitionPlan*p,double e,double n){
     if(!p||!p->valid)return 1.0;
     enum{SAMPLES=48};

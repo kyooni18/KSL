@@ -8,24 +8,24 @@
    authority as possible without spending the kinetic reserve needed later. */
 static double terminal_drag_budget_aoa(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double allowed_drag,double preferred_aoa){
-    /* An empty drag-work feasible set is not a valid zero-incidence solution. */
     if(!t||!v||!isfinite(allowed_drag)||allowed_drag<=0.0)return NAN;
-    double incidence=fmax(.25,hypot(t->angle_of_attack,t->sideslip));
-    double current_df=1.0;
-    aerodynamic_force_factors_mach(t->mach,incidence,v,NULL,&current_df);
-    double measured=live_drag_accel(t,aero,v);
-    if(!(measured>.005)||!isfinite(measured))return clampd(preferred_aoa,0.0,
-        fmin(v->maximum_angle_of_attack-1.0,terminal_hac_energy_aoa(v)));
-    double upper=clampd(fmax(preferred_aoa,terminal_hac_energy_aoa(v)),
-        0.0,fmax(0.0,v->maximum_angle_of_attack-1.0));
-    double best=NAN;
-    for(double aoa=0.0;aoa<=upper+.01;aoa+=.25){
-        double df=1.0;
-        aerodynamic_force_factors_mach(t->mach,aoa,v,NULL,&df);
-        double projected=measured*fmax(.02,df)/fmax(.02,current_df);
-        if(projected<=allowed_drag*1.02)best=aoa;
+    double upper=clampd(fmax(preferred_aoa,terminal_hac_energy_aoa(t,v)),
+        0.0,v->maximum_angle_of_attack);
+    double zero_drag=fixed_hac_projected_drag_accel(t,aero,v,0.0);
+    double upper_drag=fixed_hac_projected_drag_accel(t,aero,v,upper);
+    if(!isfinite(zero_drag)||!isfinite(upper_drag))return NAN;
+    if(zero_drag>allowed_drag)return NAN;
+    if(upper_drag<=allowed_drag)return upper;
+    double lo=0.0,hi=upper;
+    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,upper);
+    unsigned guard=0;
+    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
+        double mid=.5*(lo+hi);
+        double drag=fixed_hac_projected_drag_accel(t,aero,v,mid);
+        if(!isfinite(drag))return NAN;
+        if(drag<=allowed_drag)lo=mid;else hi=mid;
     }
-    return isfinite(best)?clampd(best,0.0,upper):NAN;
+    return clampd(lo,0.0,upper);
 }
 
 /* A drag-work budget may unload a shallow approach, but it cannot own normal
@@ -48,54 +48,61 @@ static double terminal_drag_budget_aoa(const Telemetry*t,AerodynamicModel aero,
    downstream load/attitude protections. */
        double terminal_fpa_force_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double reference_fpa){
-    double speed=fmax(1.0,t->true_air_speed);
-    double response=clampd(speed/35.0,8.0,25.0);
-    /* The FPA transition is coupled to the same pitch plant that limits AoA
-       delivery.  A speed-only 8--25 s surrogate made the forecast assume that
-       lift could arrive gradually while the command path was already asking
-       the real actuator to reach its full incidence envelope in about 5 s.
-       Use the measured/shared attitude reachability model when it is valid;
-       retain the speed-scaled value only as the no-response-data fallback. */
-    double attitude_response=decision_pitch_capture_time(t,
-        v?v->maximum_angle_of_attack:NAN);
-    if(isfinite(attitude_response)&&attitude_response>0.0)
-        response=clampd(attitude_response,1.0,25.0);
-    double gamma=t->flight_path_angle*DEG2RAD;
-    double gamma_rate=clampd((reference_fpa-t->flight_path_angle)/response,-2.5,2.5)*DEG2RAD;
-    double radius=fmax(1.0,p->radius+t->mean_altitude);
-    double gravity=p->gravitational_parameter/(radius*radius);
-    double curvature=t->horizontal_speed*t->horizontal_speed/radius;
-    double normal=(gravity-curvature)*cos(gamma)+speed*gamma_rate;
-    if(normal<=0.0)return 0.0;
-    double bank=clampd(norm_signed_deg(t->roll),-80.0,80.0)*DEG2RAD;
-    double required_lift=normal/fmax(.20,cos(bank));
-    double incidence=hypot(t->angle_of_attack,t->sideslip),current_lf=0.0;
-    aerodynamic_force_factors_mach(t->mach,fmax(.5,incidence),v,&current_lf,NULL);
-    double modeled_gain=fmax(0.0,t->dynamic_pressure)/fmax(20.0,aero.ballistic_coefficient)*
-        fmax(.01,aero.lift_to_drag);
-    double measured=t->mass>1.0&&isfinite(t->lift_force)?t->lift_force/t->mass:0.0;
-    double gain=incidence>=.75&&measured>.02?
-        measured/fmax(.015,fabs(current_lf)):modeled_gain;
-    /* This is a force-derived vertical-compensation request, not a nominal
-       trim command.  The former 20 deg ceiling was an unmeasured incremental
-       AoA limit: when the committed HAC bank removed vertical lift, it left
-       the FPA allocator unable to use the already-qualified 28 deg vehicle
-       envelope.  Let the measured polar search reach the configured maximum;
-       stabilized() remains the sole executable AoA rate/acceleration limit. */
-    double upper=clampd(v->maximum_angle_of_attack,0.0,45.0);
-    /* The smooth reference polar has no stall, but the vehicle does: past
-       subsonic CL-max extra incidence buys drag, not lift.  An unreachable
-       request must saturate at CL-max, not at the post-stall envelope edge
-       where the vehicle bleeds speed and q and the FPA deficit only grows. */
+    if(!t||!p||!v||!isfinite(reference_fpa)||!(t->true_air_speed>DBL_MIN))
+        return NAN;
+    double upper=v->maximum_angle_of_attack;
     if(t->mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
        v->terminal_maximum_lift_angle_of_attack>0.0)
         upper=fmin(upper,v->terminal_maximum_lift_angle_of_attack);
-    if(!isfinite(gain)||gain<=.005)return upper;
+    upper=fmax(0.0,upper);
+
+    double radius=p->radius+t->mean_altitude;
+    if(!(radius>DBL_MIN)||!(p->gravitational_parameter>0.0))return NAN;
+    double speed=t->true_air_speed;
+    double gravity=p->gravitational_parameter/(radius*radius);
+    double curvature=t->horizontal_speed*t->horizontal_speed/radius;
+    double gamma=t->flight_path_angle*DEG2RAD;
+    double bank=norm_signed_deg(t->roll)*DEG2RAD;
+    double vertical_lift_factor=cos(bank);
+    double base=(gravity-curvature)*cos(gamma);
+
+    double lift0=terminal_projected_lift_accel_at_aoa(t,aero,v,0.0);
+    double lift1=terminal_projected_lift_accel_at_aoa(t,aero,v,upper);
+    if(!isfinite(lift0)||!isfinite(lift1))return NAN;
+    double rate0=(lift0*vertical_lift_factor-base)/speed;
+    double rate1=(lift1*vertical_lift_factor-base)/speed;
+
+    double error=(reference_fpa-t->flight_path_angle)*DEG2RAD;
+    double response=decision_pitch_capture_time(t,upper);
+    double desired_rate;
+    if(isfinite(response)&&response>DBL_MIN)
+        desired_rate=error/response;
+    else
+        desired_rate=error>=0.0?fmax(rate0,rate1):fmin(rate0,rate1);
+
+    double minimum_rate=fmin(rate0,rate1),maximum_rate=fmax(rate0,rate1);
+    desired_rate=clampd(desired_rate,minimum_rate,maximum_rate);
+    if(fabs(rate1-rate0)<=DBL_EPSILON)
+        return fabs(desired_rate-rate0)<=sqrt(DBL_EPSILON)?0.0:upper;
+
+    bool increasing=rate1>rate0;
+    if((increasing&&desired_rate<=rate0)||(!increasing&&desired_rate>=rate0))
+        return 0.0;
+    if((increasing&&desired_rate>=rate1)||(!increasing&&desired_rate<=rate1))
+        return upper;
+
     double lo=0.0,hi=upper;
-    for(int i=0;i<16;i++){
-        double mid=.5*(lo+hi),lf=0.0;
-        aerodynamic_force_factors_mach(t->mach,mid,v,&lf,NULL);
-        if(gain*fabs(lf)<required_lift)lo=mid;else hi=mid;
+    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,upper);
+    unsigned guard=0;
+    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
+        double mid=.5*(lo+hi);
+        double lift=terminal_projected_lift_accel_at_aoa(t,aero,v,mid);
+        if(!isfinite(lift))return NAN;
+        double rate=(lift*vertical_lift_factor-base)/speed;
+        if((increasing&&rate<desired_rate)||(!increasing&&rate>desired_rate))
+            lo=mid;
+        else
+            hi=mid;
     }
     return clampd(.5*(lo+hi),0.0,upper);
 }
@@ -108,84 +115,79 @@ static double terminal_drag_budget_aoa(const Telemetry*t,AerodynamicModel aero,
    capture; recomputing it from the changing AoA would make the lead chase its
    own authority estimate and produce the same late-brake spiral this path was
    designed to avoid. */
-       double fixed_hac_lead_target_speed(const Telemetry*t,
+       double fixed_hac_lead_target_speed(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double hac_radius){
-    if(!t||!v||!(hac_radius>0.0)||!(t->true_air_speed>1.0))return NAN;
-    double speed=guidance_lateral_speed(t);
-    double current_incidence=fmax(.5,hypot(t->angle_of_attack,t->sideslip));
-    double current_lf=0.0,max_lf=0.0;
-    aerodynamic_force_factors_mach(t->mach,current_incidence,v,&current_lf,NULL);
-    aerodynamic_force_factors_mach(t->mach,v->maximum_angle_of_attack,v,&max_lf,NULL);
-    double measured_lift=live_lift_accel(t,aero,v);
-    double projected_lift=measured_lift>.005?
-        measured_lift*fabs(max_lf)/fmax(.05,fabs(current_lf)):0.0;
-    double modeled_lift=fmax(0.0,t->dynamic_pressure)/
-        fmax(20.0,aero.ballistic_coefficient)*fmax(0.0,aero.lift_to_drag)*fabs(max_lf);
-    double maximum_lift=fmax(projected_lift,modeled_lift);
-    double gravity=9.80665;
-    double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
-    double effectiveness=clampd(isfinite(t->bank_effectiveness)&&
-        t->bank_effectiveness>0.0?t->bank_effectiveness:1.0,.35,1.8);
+    if(!t||!p||!v||!(hac_radius>0.0)||!(t->true_air_speed>DBL_MIN))
+        return NAN;
+    double lateral_speed=guidance_lateral_speed(t);
+    if(!(lateral_speed>DBL_MIN))return NAN;
+    double lift_aoa=v->maximum_angle_of_attack;
+    if(t->mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
+       v->terminal_maximum_lift_angle_of_attack>0.0)
+        lift_aoa=fmin(lift_aoa,v->terminal_maximum_lift_angle_of_attack);
+    double maximum_lift=terminal_projected_lift_accel_at_aoa(t,aero,v,lift_aoa);
+    double local_radius=p->radius+t->mean_altitude;
+    if(!isfinite(maximum_lift)||!(maximum_lift>0.0)||!(local_radius>DBL_MIN))
+        return NAN;
+    double gravity=p->gravitational_parameter/(local_radius*local_radius);
     double normal_limit=fmax(0.0,v->maximum_g_load)*gravity;
-    double effective_bank=clampd(bank_limit*effectiveness,0.0,
-        nextafter(89.0,0.0))*DEG2RAD;
-    double available=fmin(maximum_lift,normal_limit)*sin(effective_bank);
-    if(!(available>0.0)||!isfinite(available))return speed;
-    /* Leave a measured margin so the forced diagnostic does not wait until
-       the circle's exact authority boundary before it starts turning. */
-    double unclamped=sqrt(available*hac_radius)*.90;
-    double target=unclamped;
-    double floor_speed=fmax(v->minimum_safe_speed*1.35,
-        v->final_approach_speed*1.55);
-    double selected=clampd(target,floor_speed,speed);
+    double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
+    double effectiveness=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
+        t->bank_effectiveness:1.0;
+    double effective_bank=fmin(fabs(bank_limit*effectiveness),
+        nextafter(90.0,0.0))*DEG2RAD;
+    double available_lateral=fmin(maximum_lift,normal_limit)*sin(effective_bank);
+    if(!(available_lateral>0.0)||!isfinite(available_lateral))return NAN;
+
+    double maximum_lateral_speed=sqrt(available_lateral*hac_radius);
+    double lateral_fraction=lateral_speed/t->true_air_speed;
+    if(!(lateral_fraction>DBL_MIN))return NAN;
+    double target_tas=maximum_lateral_speed/lateral_fraction;
+    double floor_speed=fmax(v->minimum_safe_speed,v->final_approach_speed);
+    double selected=clampd(target_tas,floor_speed,t->true_air_speed);
     const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
     static int target_diag_count=0;
     if(diag&&strcmp(diag,"1")==0&&target_diag_count++<12)
-        fprintf(stderr,"HAC_LEAD_TARGET speed=%.6f hspeed=%.6f aoa=%.6f q=%.6f currentLf=%.9f maxLf=%.9f measuredLift=%.9f projectedLift=%.9f modeledLift=%.9f maxLift=%.9f normalLimit=%.9f bank=%.6f effectiveness=%.6f availableLat=%.9f unclamped=%.6f floor=%.6f selected=%.6f\n",
-            t->true_air_speed,guidance_lateral_speed(t),t->angle_of_attack,
-            t->dynamic_pressure,current_lf,max_lf,measured_lift,projected_lift,
-            modeled_lift,maximum_lift,normal_limit,effective_bank*RAD2DEG,
-            effectiveness,available,unclamped,floor_speed,selected);
+        fprintf(stderr,"HAC_LEAD_TARGET tas=%.6f lateral=%.6f liftAoA=%.6f maxLift=%.9f normalLimit=%.9f bank=%.6f effectiveness=%.6f availableLat=%.9f maxLateralSpeed=%.6f targetTas=%.6f floor=%.6f selected=%.6f\n",
+            t->true_air_speed,lateral_speed,lift_aoa,maximum_lift,normal_limit,
+            effective_bank*RAD2DEG,effectiveness,available_lateral,
+            maximum_lateral_speed,target_tas,floor_speed,selected);
     return selected;
 }
 
-       double fixed_hac_lead_drag_aoa(const Telemetry*t,AerodynamicModel aero,
-        const VehicleProfile*v,double target_speed,double remaining_distance,
-        double reference_slope_deg){
-    if(!t||!v||!(remaining_distance>100.0)||!(target_speed>0.0)||
-       !(t->true_air_speed>target_speed+1.0))return NAN;
-    double speed=guidance_lateral_speed(t);
-    double gravity=9.80665;
+       double fixed_hac_lead_drag_aoa(const Telemetry*t,const PlanetModel*p,
+        AerodynamicModel aero,const VehicleProfile*v,double target_speed,
+        double remaining_distance,double reference_slope_deg){
+    if(!t||!p||!v||!(remaining_distance>DBL_MIN)||!(target_speed>0.0)||
+       !(t->true_air_speed>target_speed)||!isfinite(reference_slope_deg)||
+       fabs(reference_slope_deg)>=90.0)
+        return NAN;
+    double radius=p->radius+t->mean_altitude;
+    if(!(radius>DBL_MIN))return NAN;
+    double gravity=p->gravitational_parameter/(radius*radius);
+    double speed=t->true_air_speed;
     double required=(speed*speed-target_speed*target_speed)/
-        (2.0*fmax(100.0,remaining_distance));
-    /* A descending velocity vector receives the gravity component along its
-       path.  Include it in the drag request so the speed target is not
-       optimistic by the exact vertical slope the fixed reference commands. */
-    required+=gravity*sin(clampd(reference_slope_deg,0.0,75.0)*DEG2RAD);
+        (2.0*remaining_distance);
+    required+=gravity*sin(reference_slope_deg*DEG2RAD);
     if(!(required>0.0)||!isfinite(required))return NAN;
-    double current_incidence=fmax(.25,hypot(t->angle_of_attack,t->sideslip));
-    double current_df=1.0;
-    aerodynamic_force_factors_mach(t->mach,current_incidence,v,NULL,&current_df);
-    double measured=live_drag_accel(t,aero,v);
-    if(!(measured>.005)||!isfinite(measured))return NAN;
-    /* Keep returning the polar-derived floor even when the live vehicle is
-       already supplying the requested drag.  Returning NAN in that case
-       handed ownership back to the terminal unload law for one frame, which
-       could drop the command far below the incidence that was already
-       dissipating the latched lead speed target.  Solving the same projected
-       polar continuously makes the drag request a stable lower bound rather
-       than an on/off override; the terminal allocator may still command more
-       AoA, and stabilized() remains the only executable slew/acceleration
-       limit. */
-    double upper=clampd(v->maximum_angle_of_attack,0.0,45.0);
-    for(double aoa=0.0;aoa<=upper+.001;aoa+=.25){
-        double df=1.0;
-        aerodynamic_force_factors_mach(t->mach,aoa,v,NULL,&df);
-        double projected=measured*fmax(.02,df)/fmax(.02,current_df);
-        if(projected>=required)
-            return aoa;
+
+    double upper=v->maximum_angle_of_attack;
+    double drag0=fixed_hac_projected_drag_accel(t,aero,v,0.0);
+    double drag1=fixed_hac_projected_drag_accel(t,aero,v,upper);
+    if(!isfinite(drag0)||!isfinite(drag1))return NAN;
+    if(drag0>=required)return 0.0;
+    if(drag1<=required)return upper;
+
+    double lo=0.0,hi=upper;
+    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,upper);
+    unsigned guard=0;
+    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
+        double mid=.5*(lo+hi);
+        double drag=fixed_hac_projected_drag_accel(t,aero,v,mid);
+        if(!isfinite(drag))return NAN;
+        if(drag<required)lo=mid;else hi=mid;
     }
-    return upper;
+    return clampd(.5*(lo+hi),0.0,upper);
 }
 
 /* Use the same measured/modelled drag projection as the fixed-HAC path
@@ -219,48 +221,47 @@ static double terminal_drag_budget_aoa(const Telemetry*t,AerodynamicModel aero,
 
 static double terminal_preview_recovery_aoa(double preferred_aoa,double budget_aoa,
         double reference_fpa,double actual_fpa){
-    double limited=isfinite(budget_aoa)?fmin(preferred_aoa,budget_aoa):0.0;
-    if(!isfinite(reference_fpa)||!isfinite(actual_fpa))return preferred_aoa;
-    double error=fmax(reference_fpa,-35.0)-actual_fpa;
-    double blend=clampd((error+3.0)/6.0,0.0,1.0);
-    blend=blend*blend*(3.0-2.0*blend);
-    return limited+(preferred_aoa-limited)*blend;
+    if(!isfinite(reference_fpa)||!isfinite(actual_fpa)||!isfinite(budget_aoa))
+        return preferred_aoa;
+    if(actual_fpa<reference_fpa)
+        return preferred_aoa;
+    return fmin(preferred_aoa,budget_aoa);
 }
 
        double terminal_required_aoa_for_lateral_limit(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double lateral_accel,double bank_deg,double maximum_aoa){
-    double eff=clampd(t->bank_effectiveness,.35,1.8);
-    double bank_component=fabs(sin(clampd(fabs(bank_deg)*eff,0.0,89.0)*DEG2RAD));
-    /* Low-curvature HAC candidates still need their modeled lift evaluated.
-       The old .35 m/s^2 deadband returned zero AoA here; at a slow projected
-       p0 that converted a valid nonzero-incidence state into zero modeled lift
-       and made the strict authority gate reject every candidate.  Keep the
-       bank guard, but let the normal required-vs-available gate decide even
-       when the requested lateral acceleration is small. */
-    if(bank_component<.08)return 0.0;
-    double required_lift=fabs(lateral_accel)/bank_component*1.06;
-    double current_incidence=fmax(1.0,fabs(t->angle_of_attack));
-    double current_lf=0;
-    aerodynamic_force_factors_mach(t->mach,current_incidence,v,&current_lf,NULL);
-    double measured=t->mass>1&&isfinite(t->lift_force)&&t->lift_force>0?
-        t->lift_force/t->mass:0.0;
+    if(!t||!v||!isfinite(lateral_accel)||!isfinite(bank_deg))return NAN;
     maximum_aoa=clampd(maximum_aoa,0.0,v->maximum_angle_of_attack);
-    for(double aoa=0.0;aoa<=maximum_aoa+.01;aoa+=.5){
-        double lf=0;
-        aerodynamic_force_factors_mach(t->mach,aoa,v,&lf,NULL);
-        double scaled_measured=measured>.005?
-            measured*fabs(lf)/fmax(.05,fabs(current_lf)):0.0;
-        double modeled=fmax(0.0,t->dynamic_pressure)/fmax(20.0,aero.ballistic_coefficient)*
-            fmax(0.0,aero.lift_to_drag)*fabs(lf);
-        if(fmax(scaled_measured,modeled)>=required_lift)return aoa;
+    double required_lateral=fabs(lateral_accel);
+    if(required_lateral<=DBL_EPSILON)return 0.0;
+    double effectiveness=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
+        t->bank_effectiveness:1.0;
+    double effective_bank=fmin(fabs(bank_deg*effectiveness),
+        nextafter(90.0,0.0))*DEG2RAD;
+    double bank_component=fabs(sin(effective_bank));
+    if(bank_component<=DBL_MIN)return maximum_aoa;
+    double required_lift=required_lateral/bank_component;
+    double lift0=terminal_projected_lift_accel_at_aoa(t,aero,v,0.0);
+    double lift1=terminal_projected_lift_accel_at_aoa(t,aero,v,maximum_aoa);
+    if(!isfinite(lift0)||!isfinite(lift1))return NAN;
+    if(lift0>=required_lift)return 0.0;
+    if(lift1<=required_lift)return maximum_aoa;
+    double lo=0.0,hi=maximum_aoa;
+    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,maximum_aoa);
+    unsigned guard=0;
+    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
+        double mid=.5*(lo+hi);
+        double lift=terminal_projected_lift_accel_at_aoa(t,aero,v,mid);
+        if(!isfinite(lift))return NAN;
+        if(lift<required_lift)lo=mid;else hi=mid;
     }
-    return maximum_aoa;
+    return clampd(.5*(lo+hi),0.0,maximum_aoa);
 }
 
 static double terminal_required_aoa_for_lateral(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double lateral_accel,double bank_deg){
     return terminal_required_aoa_for_lateral_limit(t,aero,v,lateral_accel,
-        bank_deg,terminal_hac_energy_aoa(v));
+        bank_deg,terminal_hac_energy_aoa(t,v));
 }
 
 static double terminal_atmosphere_vertical_resolution(const PlanetModel*p,
@@ -507,7 +508,15 @@ static double terminal_integrated_energy_path(const GuidanceMachine*g,const Tele
     double cool_lo=fmax(taem,final*.90);
     double hot_lo=clampd(taem-4.0,5.0,cool_lo);
     double lo=cool_lo+(hot_lo-cool_lo)*hot;
-    double hi=clampd(fmax(final+12.0,taem+12.0),lo+4.0,35.0);
+    /* No slope shallower than the vehicle's live best glide is sustainable:
+       pricing a 12-20 deg path for an L/D ~1.5-2.5 orbiter overstates reach
+       by 2-3x and the executed path bleeds speed into departure. */
+    double ld=t&&isfinite(t->estimated_lift_to_drag)&&t->estimated_lift_to_drag>0.0?
+        t->estimated_lift_to_drag:(v?v->estimated_lift_to_drag:NAN);
+    /* The HAC is flown at glide alpha, so bound it by the achievable glide
+       ratio rather than the (possibly high-drag) current one. */
+    if(isfinite(ld)&&ld>0.0)lo=fmax(lo,clampd(atan(1.0/fmax(ld,2.0))*RAD2DEG,5.0,45.0));
+    double hi=clampd(fmax(fmax(final+12.0,taem+12.0),lo+8.0),lo+4.0,50.0);
     if(minimum)*minimum=lo;
     if(maximum)*maximum=hi;
 }
@@ -566,7 +575,7 @@ static double terminal_test_energy_selected_slope(const GuidanceMachine*g,const 
     terminal_path_slope_bounds(t,v,&cfg->guidance,&minimum_slope,&maximum_slope);
     double min_total=gate_height/fmax(tan(maximum_slope*DEG2RAD),DBL_MIN);
     double max_total=gate_height/fmax(tan(minimum_slope*DEG2RAD),DBL_MIN);
-    double baseline_aoa=clampd(fmax(3.0,t->angle_of_attack),3.0,terminal_hac_energy_aoa(v));
+    double baseline_aoa=clampd(fmax(3.0,t->angle_of_attack),3.0,terminal_hac_energy_aoa(t,v));
     double nominal_slope=clampd(
         atan2(gate_height,fmax(.5*(min_total+max_total),DBL_MIN))*RAD2DEG,
         minimum_slope,maximum_slope);
@@ -588,7 +597,7 @@ static double terminal_test_projected_turn_radius(const Telemetry*t,const Planet
         AerodynamicModel aero,const VehicleProfile*v,double bank_deg){
     double current_lf=0,target_lf=0;
     double current_incidence=fmax(1.0,fabs(t->angle_of_attack));
-    double target_incidence=terminal_hac_energy_aoa(v);
+    double target_incidence=terminal_hac_energy_aoa(t,v);
     aerodynamic_force_factors_mach(t->mach,current_incidence,v,&current_lf,NULL);
     aerodynamic_force_factors_mach(t->mach,target_incidence,v,&target_lf,NULL);
     double measured=t->mass>1&&isfinite(t->lift_force)&&t->lift_force>0?t->lift_force/t->mass:0;
@@ -630,7 +639,7 @@ static bool hac_handoff_geometry_valid(const HACTransitionPlan*join,double e,dou
     if(!isfinite(start_error)||start_error>=.01||!isfinite(lead_chord))return false;
     if(join->lead_curve){
         if(!(join->lead_length>=lead_chord-0.05)||
-           !(join->lead_length<=lead_chord*1.25+0.05)||
+           !(join->lead_length<=lead_chord*2.5+0.05)||
            !isfinite(join->lead_start_course)||
            !isfinite(join->lead_end_course))return false;
     }else{
@@ -735,4 +744,3 @@ static void terminal_candidate_execution_cost(TerminalCandidate*c,
     c->execution_margin=horizon-time;
     if(!(c->execution_margin>=0.0)){c->degraded=true;c->energy_degraded=true;}
 }
-

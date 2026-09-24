@@ -216,6 +216,13 @@ TargetCaptureEnvelope decision_target_capture_envelope(
     const PlanetModel *planet,
     const LandingConfiguration *configuration);
 
+double decision_runway_end_path_score(
+    const GuidanceMachine *guidance,
+    const Telemetry *telemetry,
+    const PlanetModel *planet,
+    const LandingConfiguration *configuration,
+    const LandingSite *site);
+
 double decision_target_path_length(
     const GuidanceMachine *guidance,
     const Telemetry *telemetry,

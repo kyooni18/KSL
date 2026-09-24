@@ -304,6 +304,11 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             out.taem_altitude=geo.altitude;out.taem_desired_altitude=cfg->guidance.taem_interface_altitude;
             out.taem_along_track=synthetic.runway_along_track;out.taem_cross_track=synthetic.runway_cross_track;
             out.taem_course=synthetic.ground_track_heading;
+            if(shadow.taem_interface_target.valid){
+                TaemInterfaceCapture captured=entry_taem_interface_capture(
+                    &shadow.taem_interface_target,&synthetic,synthetic.ground_track_heading,p,cfg);
+                if(captured.valid)out.taem_interface_error=hypot(captured.along,captured.cross);
+            }
             out.taem_energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
                 cfg->guidance.taem_interface_altitude,entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
         }
@@ -366,23 +371,15 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                         shadow.entry_final_reversal_pending,shadow.entry_final_reversal_completed,
                         shadow.entry_lateral_infeasible,passed,energy_lost);
             }else{
-                /* No dynamic target is fail-closed. Retain the fixed shell only as a
-                   last-resort miss detector for incomplete shadow state. */
-                bool geometry_ready=entry_taem_handoff_geometry_ready(geo.altitude,
-                    synthetic.runway_along_track,synthetic.vertical_speed,
-                    synthetic.horizontal_speed,&cfg->guidance);
-                if(!geometry_ready){
-                    double handoff_low=0.0,handoff_high=0.0;
-                    entry_taem_handoff_altitude_bounds(&cfg->guidance,&handoff_low,&handoff_high);
-                    double station_lead=clampd(synthetic.horizontal_speed*2.0,180.0,2400.0);
-                    double station_along=NAN,station_cross=NAN;
-                    mm304_handoff_station(&station_along,&station_cross);
-                    (void)station_cross;
-                    out.taem_ownership_boundary_missed=
-                        synthetic.runway_along_track>=station_along-station_lead||
-                        geo.altitude<handoff_low;
-                    (void)handoff_high;
-                }
+                /* No published dynamic inlet means MM304 has nothing valid to hand to
+                   MM305.  Keep searching while altitude remains recoverable, but once
+                   the MM305 engagement floor or minimum-safe speed is crossed the
+                   ownership transfer is physically lost. */
+                double handoff_low=0.0,handoff_high=0.0;
+                entry_taem_handoff_altitude_bounds(&cfg->guidance,&handoff_low,&handoff_high);
+                out.taem_ownership_boundary_missed=
+                    geo.altitude<handoff_low||at.speed<cfg->vehicle.minimum_safe_speed;
+                (void)handoff_high;
             }
         }
         bool policy_feasible=shadow.taem_exec.terminal_evaluation.valid&&shadow.taem_exec.terminal_evaluation.feasible;
@@ -528,16 +525,17 @@ bool deorbit_plan_preburn_state_compatible(const DeorbitPlan*plan,double live_ma
     return true;
 }
 static double deorbit_alignment_position_error(const EntryPrediction*p,const GuidanceSettings*s){
-    if(!p||!s||!isfinite(p->taem_along_track)||!isfinite(p->taem_cross_track))return INFINITY;
-    double target_along=NAN,target_cross=NAN;
-    mm304_handoff_station(&target_along,&target_cross);
-    return hypot(p->taem_along_track-target_along,p->taem_cross_track-target_cross);
+    (void)s;
+    if(!p||!isfinite(p->taem_interface_error)||p->taem_interface_error<0.0)return INFINITY;
+    return p->taem_interface_error;
 }
 
 static double deorbit_alignment_course_error(const EntryPrediction*p,const LandingSite*site){
     if(!p||!site||!isfinite(p->taem_course))return INFINITY;
     double runway_offset=fabs(norm_signed_deg(p->taem_course-site->runway_heading));
-    return fabs(runway_offset-90.0);
+    double perpendicular_error=fabs(runway_offset-90.0);
+    double aligned_error=fmin(runway_offset,fabs(runway_offset-180.0));
+    return fmin(perpendicular_error,aligned_error);
 }
 
 static double deorbit_alignment_contract_utilization(const EntryPrediction*p,
@@ -674,6 +672,7 @@ typedef struct {
     bool executable_witness_boundary_missed;
     bool executable_witness_aborted;
     double executable_witness_taem_error;
+    double executable_witness_range_error;
     double executable_witness_energy_margin;
     double executable_witness_alignment_error;
     double executable_witness_closest_distance;

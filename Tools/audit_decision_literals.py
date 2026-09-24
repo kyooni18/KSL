@@ -30,7 +30,7 @@ ROOTS = (
     "ShuttleSim/rl",
     "Experimental",
 )
-EXTENSIONS = {".c", ".h", ".py"}
+EXTENSIONS = {".c", ".h", ".inc", ".py"}
 SKIP_PARTS = {
     "build", "__pycache__", "runs", "FlightLogs", "ThirdParty",
     "node_modules", ".git",

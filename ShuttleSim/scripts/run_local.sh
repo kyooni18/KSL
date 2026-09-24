@@ -16,17 +16,17 @@ echo "  command:       udp://127.0.0.1:8795"
 echo "  guidance:      udp://127.0.0.1:8796"
 echo "  telemetry web: udp://127.0.0.1:8797"
 echo "  scenario:      $SCENARIO"
+echo "  atmosphere:    stock Kerbin spatial model"
 echo "  record:        $RECORD"
 echo "  rate:          $RATE"
 echo "Resume with: $SIM/scripts/simctl.py resume"
 
 exec "$BUILD/shuttlesim" \
   --scenario "$SCENARIO" \
-  --atmosphere "$SIM/data/fitted/kerbin_atmosphere_ksp.csv" \
   --aero "$SIM/data/fitted/stsn_aero_ksp_robust.csv" \
   --aero-book "$SIM/data/fitted/stsn_force_book.csv" \
   --attitude "$SIM/data/fitted/stsn_attitude_ksp.ini" \
-  --dt 0.02 \
+  --dt "${SIM_DT:-0.02}" \
   --rate "$RATE" \
   --telemetry-hz "${SIM_TELEMETRY_HZ:-20}" \
   --max-sim-time "${SIM_MAX_TIME:-2400}" \

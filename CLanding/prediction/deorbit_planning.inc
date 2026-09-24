@@ -159,11 +159,15 @@ static bool better(const Candidate*a,const Candidate*b,bool hasb){
     if(a->handoff_range_error<b->handoff_range_error)return true;
     if(a->handoff_range_error>b->handoff_range_error)return false;
 
-    /* Keep enough positive unpowered reach for a controlled approach, then
-       minimize predicted wings-level runway overshoot before refining the
-       configured entry-angle, course, and range objectives. */
-    if(a->energy_excess<b->energy_excess)return true;
-    if(a->energy_excess>b->energy_excess)return false;
+    /* Keep enough positive unpowered reach for a controlled approach (~60 km
+       wings-level runway overshoot buffer), then minimize deviation from that
+       buffer before refining the configured entry-angle, course, and range
+       objectives. */
+    const double target_reach_buffer=60000.0;
+    double buf_a=a->energy_margin.valid?fabs(a->energy_margin.impact_along_track-target_reach_buffer):INFINITY;
+    double buf_b=b->energy_margin.valid?fabs(b->energy_margin.impact_along_track-target_reach_buffer):INFINITY;
+    if(buf_a<buf_b)return true;
+    if(buf_a>buf_b)return false;
     if(a->entry_fpa_error<b->entry_fpa_error)return true;
     if(a->entry_fpa_error>b->entry_fpa_error)return false;
     if(a->entry_course_error<b->entry_course_error)return true;
@@ -321,6 +325,7 @@ static bool robust_better(const Candidate*a,const RobustAssessment*ra,const Cand
     if(ra->unsafe!=rb->unsafe)return ra->unsafe<rb->unsafe;
     if(ra->passed!=rb->passed)return ra->passed>rb->passed;
     if(ra->recovery_passed!=rb->recovery_passed)return ra->recovery_passed>rb->recovery_passed;
+    if(a->tier!=b->tier)return a->tier>b->tier;
     /* Once candidates are in the same qualified stress class, let the
        configured entry-angle/periapsis targets in Candidate.score decide the
        trajectory. Independent "shallower is always better" tie-breaks defeat
@@ -558,6 +563,8 @@ static void deorbit_record_execution_witness(Candidate*c,
         witness->taem_interface_error:
         (isfinite(witness->taem_range_error)?
             fabs(witness->taem_range_error):INFINITY);
+    c->executable_witness_range_error=isfinite(witness->taem_range_error)?
+        witness->taem_range_error:NAN;
     c->executable_witness_alignment_error=
         deorbit_alignment_contract_utilization(witness,site,s);
     c->executable_witness_closest_distance=
@@ -716,6 +723,9 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     memset(&selected,0,sizeof(selected));
     trajectory_init(&selected.pred.trajectory);
     double nominal_start=nominal.burn_ut-nominal.duration*.5;
+    fprintf(stderr, "DEORBIT_AFTER_BISECTION: start=%.2f burn=%.2f tier=%d dv=%.2f entry=%.1fkm marginImpact=%+.1fkm\n",
+        nominal_start, nominal.burn_ut, nominal.tier, nominal.dv,
+        nominal.pred.entry_range/1000.0, nominal.energy_margin.impact_along_track/1000.0);
     RobustAssessment selected_robust=assess_candidate_robustness(
         &nominal,state,p,aero,env,cal,site,v,s,thrust,false);
     candidate_move(&selected,&nominal);
@@ -768,6 +778,9 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         robust_time_step*=.5; /* numerical interval refinement */
         robust_dv_step*=.5;
     }
+    fprintf(stderr, "DEORBIT_AFTER_ROBUST: start=%.2f burn=%.2f tier=%d dv=%.2f entry=%.1fkm marginImpact=%+.1fkm\n",
+        selected.burn_ut-selected.duration*.5, selected.burn_ut, selected.tier, selected.dv,
+        selected.pred.entry_range/1000.0, selected.energy_margin.impact_along_track/1000.0);
 
     if(getenv("KSP_LANDER_TRACE_STRESS")){
         RobustAssessment traced=assess_candidate_robustness(
@@ -784,13 +797,12 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     deorbit_evaluate_candidate_witness(&selected,p,aero,env,cal,site,v,s,
         authority_source);
     double selected_start=selected.burn_ut-selected.duration*.5;
-    double selected_interface_error=selected.executable_witness_taem_error;
     double comparison_start_a=selected_start;
-    double comparison_error_a=selected_interface_error;
+    double comparison_range_a=selected.executable_witness_range_error;
+    double alternate_range_error=NAN;
     bool witness_selection_changed=false;
     double witness_resolution=fmax(s->deorbit_timing_uncertainty,
         sqrt(DBL_EPSILON)*fmax(1.0,fmax(fabs(selected_start),fabs(nominal_start))));
-    double alternate_interface_error=INFINITY;
     bool alternate_measured=false;
     if(isfinite(nominal_start)&&
        fabs(nominal_start-selected_start)>witness_resolution){
@@ -800,56 +812,84 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
                 p,aero,env,cal,site,v,s,thrust,&rejection)){
             deorbit_evaluate_candidate_witness(&alternate,p,aero,env,cal,
                 site,v,s,authority_source);
-            alternate_interface_error=alternate.executable_witness_taem_error;
+            alternate_range_error=alternate.executable_witness_range_error;
             alternate_measured=true;
             if(better(&alternate,&selected,true)){
                 candidate_clear(&selected);
                 candidate_move(&selected,&alternate);
                 selected_start=selected.burn_ut-selected.duration*.5;
-                selected_interface_error=selected.executable_witness_taem_error;
                 witness_selection_changed=true;
             }else candidate_clear(&alternate);
         }
     }
 
-    if(alternate_measured&&isfinite(comparison_error_a)&&
-       isfinite(alternate_interface_error)&&
-       fabs(comparison_error_a-alternate_interface_error)>
-           sqrt(DBL_EPSILON)*fmax(1.0,
-               fmax(comparison_error_a,alternate_interface_error))){
-        double measured_start_a=comparison_start_a;
-        double measured_error_a=comparison_error_a;
-        double measured_start_b=nominal_start;
-        double measured_error_b=alternate_interface_error;
-        double slope=(measured_error_b-measured_error_a)/
-            (measured_start_b-measured_start_a);
-        double best_start=measured_error_a<=measured_error_b?
-            measured_start_a:measured_start_b;
-        double best_error=fmin(measured_error_a,measured_error_b);
-        if(isfinite(slope)&&fabs(slope)>DBL_EPSILON){
-            double proposal=best_start-best_error/slope;
-            double phase_start=state.ut+lead;
-            double phase_end=phase_start+search_horizon;
-            proposal=clampd(proposal,best_start-coarse_step,
-                best_start+coarse_step);
+    /* Without a distinct natural alternate, seed the secant with one probe
+       half a coarse sample toward the residual (short -> later burn). */
+    if(!alternate_measured&&isfinite(comparison_range_a)&&
+       fabs(comparison_range_a)>s->target_deorbit_capture_radius*.25){
+        double seed=comparison_start_a+
+            (comparison_range_a<0.0?.5:-.5)*coarse_step;
+        seed=clampd(seed,state.ut+lead,state.ut+lead+search_horizon);
+        Candidate probe;
+        DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
+        if(fabs(seed-comparison_start_a)>witness_resolution&&
+           deorbit_evaluate_start(&probe,state,seed,0.0,
+                p,aero,env,cal,site,v,s,thrust,&rejection)){
+            deorbit_evaluate_candidate_witness(&probe,p,aero,env,cal,
+                site,v,s,authority_source);
+            alternate_range_error=probe.executable_witness_range_error;
+            alternate_measured=isfinite(alternate_range_error);
+            nominal_start=seed;
+            if(getenv("KSP_LANDER_TRACE_DEORBIT_CANDIDATES"))
+                fprintf(stderr,"DEORBIT_WITNESS_SEED start=%.1f rangeA=%.0f "
+                    "seed=%.1f rangeB=%.0f capture=%d\n",comparison_start_a,
+                    comparison_range_a,seed,alternate_range_error,
+                    probe.executable_witness_capture);
+            if(better(&probe,&selected,true)){
+                candidate_clear(&selected);
+                candidate_move(&selected,&probe);
+                witness_selection_changed=true;
+            }else candidate_clear(&probe);
+        }
+    }
+
+    /* Secant on the signed witness TAEM range residual, a few bounded
+       steps from the two measured natural candidates. Each probe moves at
+       most one coarse sample and is accepted only through better(). */
+    if(alternate_measured&&isfinite(comparison_range_a)&&
+       isfinite(alternate_range_error)){
+        double xa=comparison_start_a,ya=comparison_range_a;
+        double xb=nominal_start,yb=alternate_range_error;
+        double phase_start=state.ut+lead;
+        double phase_end=phase_start+search_horizon;
+        for(int iter=0;iter<4;++iter){
+            double slope=(yb-ya)/(xb-xa);
+            if(!isfinite(slope)||fabs(slope)<=DBL_EPSILON)break;
+            if(fabs(ya)<fabs(yb)){double t=xa;xa=xb;xb=t;t=ya;ya=yb;yb=t;}
+            double proposal=xb-yb/slope;
+            proposal=clampd(proposal,xb-coarse_step,xb+coarse_step);
             proposal=clampd(proposal,phase_start,phase_end);
-            if(isfinite(proposal)&&
-               fabs(proposal-best_start)>witness_resolution&&
-               fabs(proposal-selected_start)>witness_resolution&&
-               fabs(proposal-nominal_start)>witness_resolution){
-                Candidate probe;
-                DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-                if(deorbit_evaluate_start(&probe,state,proposal,0.0,
-                        p,aero,env,cal,site,v,s,thrust,&rejection)){
-                    deorbit_evaluate_candidate_witness(&probe,p,aero,env,cal,
-                        site,v,s,authority_source);
-                    if(better(&probe,&selected,true)){
-                        candidate_clear(&selected);
-                        candidate_move(&selected,&probe);
-                        witness_selection_changed=true;
-                    }else candidate_clear(&probe);
-                }
-            }
+            if(!isfinite(proposal)||fabs(proposal-xb)<=witness_resolution||
+               fabs(proposal-xa)<=witness_resolution)break;
+            Candidate probe;
+            DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
+            if(!deorbit_evaluate_start(&probe,state,proposal,0.0,
+                    p,aero,env,cal,site,v,s,thrust,&rejection))break;
+            deorbit_evaluate_candidate_witness(&probe,p,aero,env,cal,
+                site,v,s,authority_source);
+            double yp=probe.executable_witness_range_error;
+            if(getenv("KSP_LANDER_TRACE_DEORBIT_CANDIDATES"))
+                fprintf(stderr,"DEORBIT_WITNESS_SECANT iter=%d start=%.1f "
+                    "range=%.0f capture=%d\n",iter,proposal,yp,
+                    probe.executable_witness_capture);
+            if(better(&probe,&selected,true)){
+                candidate_clear(&selected);
+                candidate_move(&selected,&probe);
+                witness_selection_changed=true;
+            }else candidate_clear(&probe);
+            if(!isfinite(yp))break;
+            xa=xb;ya=yb;xb=proposal;yb=yp;
+            if(fabs(yp)<=s->target_deorbit_capture_radius*.25)break;
         }
     }
 

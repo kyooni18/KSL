@@ -23,6 +23,13 @@ static void reset_controllers(GuidanceMachine*g){
     g->terminal_path_kind=TERMINAL_PATH_NONE;
     g->terminal_prediction_valid=false;
     g->terminal_path_committed=false;
+    g->runway_end_preview_valid=false;
+    g->runway_end_committed=false;
+    g->runway_end_index=0;
+    g->runway_end_primary_path=NAN;
+    g->runway_end_reciprocal_path=NAN;
+    g->terminal_final_handoff_latched=false;
+    g->terminal_final_handoff_distance=NAN;
     g->terminal_mix=0.0;
     g->terminal_reference_path_lateral_acceleration=0.0;
     g->terminal_reference_path_bank=0.0;
@@ -57,6 +64,7 @@ static void reset_controllers(GuidanceMachine*g){
     g->hac_transition_active=false;
     g->hac_transition_heading_cone=false;
     g->hac_transition_lead_curve=false;
+    g->hac_transition_lead_acquisition=false;
     g->fixed_alignment_hac_latched=false;
     g->hac_transition_lead_rebase_attempted=false;
     g->hac_energy_audit_active=false;
@@ -281,8 +289,6 @@ static void reset_controllers(GuidanceMachine*g){
 
     entry_exec_reset(&g->entry_exec);
     memset(&g->entry_lateral,0,sizeof(g->entry_lateral));
-    memset(&g->taem_s_turn_lateral,0,sizeof(g->taem_s_turn_lateral));
-    memset(&g->taem_s_turn_plan,0,sizeof(g->taem_s_turn_plan));
     taem_exec_reset(&g->taem_exec);
 
     g->entry_alpha_has_target=false;
@@ -608,6 +614,23 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     bool meaningful=loaded&&magnitude>=threshold;
     double actual=norm_signed_deg(t->roll);
     bool captured=meaningful&&planned_sign*actual>0.0&&fabs(actual)>=threshold;
+    {   /* KSP_LANDER_SETUP_REVERSAL_TRACE: why the S-turn leg is (not) captured. */
+        static int enabled=-1;static _Thread_local int last=-1;
+        if(enabled<0){const char*e=getenv("KSP_LANDER_SETUP_REVERSAL_TRACE");enabled=e&&*e&&strcmp(e,"0");}
+        int code=!loaded?1:!meaningful?2:!(planned_sign*actual>0.0&&fabs(actual)>=threshold)?3:
+            planned_sign!=g->s_turn_sign?4:0;
+        if(enabled&&code!=last){last=code;
+            static const char*names[]={"captured","unloaded","small_cmd","roll_not_captured","cmd_side_mismatch"};
+            fprintf(stderr,"LEG_CAPTURE_TRACE shadow=%d ut=%.1f V=%.0f reason=%s cmd=%.1f roll=%.1f thr=%.1f side=%+.0f sched=%d sut=%.1f\n",
+                g->diagnostic_shadow,t->ut,t->surface_speed,names[code],bank,actual,threshold,g->s_turn_sign,
+                g->entry_reversal_scheduled,g->entry_reversal_ut);}
+    }
+    /* A near-zero bank command (energy trim near the corridor centre) is not
+       loss of capture: the owned side is still physically held. Resetting here
+       made the scheduled reversal permanently not-due until the command grew
+       again at V~220 m/s. Only an unloaded vehicle or an off-side roll restarts. */
+    if(!captured&&g->has_s_turn_leg_started&&loaded&&magnitude<threshold&&
+       g->s_turn_sign*actual>0.0)return;
     if(!captured){
         g->has_s_turn_leg_started=false;
         g->s_turn_leg_started_ut=0.0;

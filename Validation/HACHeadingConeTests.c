@@ -77,6 +77,25 @@ int main(void){
         variant_b.cone_start_angle,1.0)-180.0))<1e-8);
     assert(fabs(norm_signed_deg(heading_for_angle(
         variant_b.cone_end_angle,1.0)-90.0))<1e-8);
+
+    /* A start south-west of RW09 reaches the west tangent northbound.  The
+       fixed runway-anchored circle then needs only its 90-degree exit arc. */
+    GuidanceSettings fixture_settings=cfg.guidance;
+    fixture_settings.final_approach_distance=3500.0;
+    double tangent_course=NAN;
+    assert(hac_fixed_alignment_tangent_course(-15500.0,-72000.0,
+        &cfg.site,&fixture_settings,fixed_radius,1.0,&tangent_course));
+    assert(fabs(norm_signed_deg(tangent_course))<1e-8);
+    HACTransitionPlan short_entry={0};
+    assert(hac_fixed_alignment_plan(&short_entry,-15500.0,-72000.0,
+        tangent_course,tangent_course,&cfg.site,&fixture_settings,
+        fixed_radius,1.0));
+    assert(short_entry.valid&&short_entry.heading_cone&&short_entry.lead_curve);
+    assert(fabs(short_entry.p0.e+15500.0)<1e-8);
+    assert(fabs(short_entry.p0.n+fixed_radius)<1e-8);
+    assert(fabs(short_entry.p3.e+3500.0)<1e-8);
+    assert(fabs(short_entry.p3.n)<1e-8);
+    assert(fabs(short_entry.cone_arc_length-fixed_radius*LANDER_PI*.5)<1e-6);
     unsetenv("KSP_LANDER_HAC_VARIANT_B");
 
     /* The focused fixture is not at the anchored circle tangent.  Acquisition

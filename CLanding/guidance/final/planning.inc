@@ -103,17 +103,25 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     }
 
     double sink=fmax(0.0,-t->vertical_speed);
-    double target_sink=fmax(0.0,-s->touchdown_sink_rate);
+    /* Preflare delivers the vehicle to Inner Final, not directly to touchdown.
+       Use the same shallow inner-final entry sink that the controller already
+       uses when no stored plan is available; the touchdown sink belongs to the
+       later flare phase. */
+    double target_sink=clampd(t->horizontal_speed*tan(8.0*DEG2RAD),6.0,14.0);
     RunwayCaptureEnvelope recovery=decision_runway_capture_envelope(
         g,t,cfg->site.runway_heading,p,cfg);
     if(!recovery.valid){plan.reject_reason="capture-envelope-invalid";return plan;}
-    double target_aoa=recovery.maximum_lift_aoa_deg;
+    /* Preflare is an energy/height trade, not a minimum-height maximum-lift
+       maneuver.  Search the certified incidence envelope and use the lowest
+       AoA that can capture the inner-final sink while preserving the
+       aerodynamic speed floor.  Extra altitude is therefore spent on a gentler
+       pull-up instead of being thrown away and then paid for as induced drag. */
+    double minimum_speed=v->minimum_safe_speed;
+    if(isfinite(t->calibrated_stall_speed)&&t->calibrated_stall_speed>0.0)
+        minimum_speed=fmax(minimum_speed,t->calibrated_stall_speed);
 
-    /* Only the drag ratio is used below; the lift factor legitimately
-       vanishes at zero AoA and must not reject the plan. */
-    double current_lf=0.0,target_lf=0.0,current_df=0.0,target_df=0.0;
+    double current_lf=0.0,current_df=0.0;
     aerodynamic_force_factors_mach(t->mach,t->angle_of_attack,v,&current_lf,&current_df);
-    aerodynamic_force_factors_mach(t->mach,target_aoa,v,&target_lf,&target_df);
     if(!(current_df>DBL_EPSILON)){
         plan.reject_reason="aero-force-factors-invalid";
         return plan;
@@ -126,63 +134,126 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
         return plan;
     }
 
-    double modeled_up=recovery.vertical_recovery_accel_mps2;
-    if(!(modeled_up>0.0)||!isfinite(modeled_up)){
-        plan.reject_reason="vertical-recovery-accel-invalid";
+    double vertical_projection=cos(t->flight_path_angle*DEG2RAD);
+    double target_aoa=NAN,modeled_up=NAN,response_time=NAN;
+    double required_height=NAN,trigger=NAN;
+    double predicted_speed=NAN,best_trigger=INFINITY;
+    VerticalRecoveryEnvelope vertical={0};
+
+    /* Keep a maximum-authority fallback solely to publish a physical gate when
+       no energy-feasible candidate exists.  Callers use that gate to distinguish
+       "recoverable while still above preflare" from a truly exhausted state. */
+    double fallback_trigger=NAN,fallback_required_height=NAN,fallback_pull_time=NAN;
+    double fallback_target_drag=NAN,fallback_air_path=NAN,fallback_modeled_up=NAN;
+    double fallback_response_time=NAN,fallback_predicted_speed=NAN;
+
+    double maximum_aoa=clampd(recovery.maximum_lift_aoa_deg,0.0,v->maximum_angle_of_attack);
+    for(double candidate=maximum_aoa;candidate>=0.5;candidate-=0.5){
+        double target_df=0.0;
+        aerodynamic_force_factors_mach(t->mach,candidate,v,NULL,&target_df);
+        if(!(target_df>=0.0)||!isfinite(target_df))continue;
+
+        double projected_lift=terminal_projected_lift_accel_at_aoa(t,aero,v,candidate);
+        if(isfinite(recovery.maximum_normal_accel_mps2)&&recovery.maximum_normal_accel_mps2>0.0)
+            projected_lift=fmin(projected_lift,recovery.maximum_normal_accel_mps2);
+        double candidate_up=fmax(0.0,projected_lift*vertical_projection-gravity);
+        if(!(candidate_up>0.0)||!isfinite(candidate_up))continue;
+
+        double candidate_response=decision_final_approach_response_time(g,t,s,candidate);
+        if(!isfinite(candidate_response))continue;
+        double response_down=fmax(0.0,
+            0.5*(recovery.response_down_accel_mps2-candidate_up));
+        VerticalRecoveryEnvelope candidate_vertical=decision_vertical_recovery_envelope(
+            t->radar_altitude-s->flare_altitude,sink,target_sink,candidate_response,
+            response_down,candidate_up);
+        if(!candidate_vertical.valid)continue;
+
+        double candidate_required=candidate_vertical.required_height_m;
+        double candidate_trigger=s->flare_altitude+candidate_required;
+        double candidate_pull=candidate_vertical.recovery_time_s;
+        double candidate_drag=measured_drag*(target_df/current_df);
+        double candidate_air_path=fmax(0.0,t->true_air_speed*candidate_pull);
+        double response_path=fmax(0.0,t->true_air_speed*candidate_response);
+        double response_speed=NAN,response_work=NAN,candidate_speed=NAN,candidate_work=NAN;
+        if(!terminal_quadratic_drag_energy_step(t->true_air_speed,measured_drag,
+                response_path,gravity*candidate_vertical.response_height_m,
+                &response_speed,&response_work)||
+           !terminal_quadratic_drag_energy_step(response_speed,candidate_drag,
+                fmax(0.0,response_speed*(candidate_pull-candidate_response)),
+                gravity*candidate_vertical.braking_height_m,&candidate_speed,&candidate_work))
+            continue;
+        candidate_work+=response_work;
+
+        if(candidate>=maximum_aoa-0.25){
+            fallback_trigger=candidate_trigger;
+            fallback_required_height=candidate_required;
+            fallback_pull_time=candidate_pull;
+            fallback_target_drag=candidate_drag;
+            fallback_air_path=candidate_air_path;
+            fallback_modeled_up=candidate_up;
+            fallback_response_time=candidate_response;
+            fallback_predicted_speed=candidate_speed;
+        }
+
+        if(candidate_vertical.height.margin<0.0||candidate_speed<minimum_speed)continue;
+
+        /* Height and aerodynamic energy are independent boundaries.  Outer Final
+           is intentionally a steep energy-dissipation glide; do not force a
+           preflare merely because speed has fallen to the later 115 m/s nominal
+           reference.  Start only early enough that the certified pull-up still
+           exits above the aerodynamic safety floor. */
+        double candidate_reference=minimum_speed;
+        double net_kinetic_loss_rate=fmax(0.0,
+            measured_drag*t->true_air_speed-gravity*sink);
+        double energy_trigger=s->flare_altitude;
+        if(candidate_speed>candidate_reference&&
+           net_kinetic_loss_rate>DBL_EPSILON&&sink>0.5){
+            double excess=.5*(candidate_speed*candidate_speed-
+                candidate_reference*candidate_reference);
+            double delay=excess/net_kinetic_loss_rate;
+            energy_trigger=fmax(s->flare_altitude,t->radar_altitude-sink*delay);
+        }
+        candidate_trigger=fmax(candidate_trigger,energy_trigger);
+
+        /* Account for the energy shed while waiting for the selected trigger so
+           the plan's kinetic margin describes the state at recovery initiation,
+           not the current sample.  The plan is recomputed every guidance tick. */
+        double delay_to_trigger=sink>0.5?
+            fmax(0.0,(t->radar_altitude-candidate_trigger)/sink):0.0;
+        double adjusted_v2=candidate_speed*candidate_speed-
+            2.0*net_kinetic_loss_rate*delay_to_trigger;
+        if(!isfinite(adjusted_v2)||adjusted_v2<minimum_speed*minimum_speed)continue;
+        double adjusted_speed=sqrt(fmax(0.0,adjusted_v2));
+
+        /* Pick the candidate that permits the latest safe initiation.  This
+           balances lift authority against induced drag instead of blindly
+           preferring either minimum AoA or maximum lift. */
+        if(candidate_trigger>=best_trigger-1e-6)continue;
+        best_trigger=candidate_trigger;
+        target_aoa=candidate;
+        modeled_up=candidate_up;
+        response_time=candidate_response;
+        vertical=candidate_vertical;
+        required_height=candidate_required;
+        trigger=candidate_trigger;
+        predicted_speed=adjusted_speed;
+    }
+
+    if(!isfinite(target_aoa)){
+        plan.trigger_altitude=fallback_trigger;
+        plan.minimum_speed=minimum_speed;
+        if(getenv("KSP_LANDER_FINAL_APPROACH_TEST")) fprintf(stderr,
+            "FINAL_TEST_PREFLARE speedGate predictedSpeed=%.6f minimumSpeed=%.6f currentSpeed=%.6f aoa=%.6f maxAoA=%.6f stallMeasured=%d stallFraction=%.6f trigger=%.6f requiredHeight=%.6f pullTime=%.6f targetDrag=%.6f airPath=%.6f modeledUp=%.6f responseTime=%.6f targetAoA=%.6f sink=%.6f targetSink=%.6f\n",
+            fallback_predicted_speed,minimum_speed,t->true_air_speed,t->angle_of_attack,
+            v->maximum_angle_of_attack,t->stall_fraction_is_measured?1:0,t->stall_fraction,
+            fallback_trigger,fallback_required_height,fallback_pull_time,fallback_target_drag,
+            fallback_air_path,fallback_modeled_up,fallback_response_time,maximum_aoa,sink,target_sink);
+        plan.reject_reason="preflare-speed-aoa-or-stall-gate";
         return plan;
     }
 
-    /*
-     * Pitch response uses the same state/rate/authority reachability model as
-     * the native low-level controller. No terminal-only delay, fixed AoA-rate
-     * fallback, or phase-specific rescue timing participates in feasibility.
-     */
-    /* Delivery forecasts are evaluated before final owns the machine too.
-       They must use the same executable final response as the live pull-up. */
-    double response_time=decision_final_approach_response_time(g,t,s,target_aoa);
-    if(!isfinite(response_time)){plan.reject_reason="response-time-invalid";return plan;}
-    /* The response interval is the AoA slew to target_aoa, so lift ramps from
-       its current value to the recovery value rather than holding the current
-       (possibly pushed-over) lift for the whole interval. The mean vertical
-       deficit over that linear ramp is half of (current deficit - recovery). */
-    double response_down=fmax(0.0,0.5*(recovery.response_down_accel_mps2-modeled_up));
-    VerticalRecoveryEnvelope vertical=decision_vertical_recovery_envelope(
-        t->radar_altitude-s->flare_altitude,sink,target_sink,response_time,
-        response_down,modeled_up);
-    if(!vertical.valid){plan.reject_reason="vertical-envelope-invalid";return plan;}
     plan.height=vertical.height;
-    double required_height=vertical.required_height_m;
-    double trigger=s->flare_altitude+required_height;
-
-    double pull_time=vertical.recovery_time_s;
-    double target_drag=measured_drag*(target_df/current_df);
-    double air_path=fmax(0.0,t->true_air_speed*pull_time);
-    /* The pull-up is two segments: during the control response the vehicle
-       still flies the live AoA (measured drag), and only the braking segment
-       is flown at the maximum-lift AoA.  Charging max-lift drag over the whole
-       response interval collapses the forecast far below the real outcome. */
-    double response_path=fmax(0.0,t->true_air_speed*response_time);
-    double predicted_speed=NAN,predicted_drag_work=NAN,response_speed=NAN,response_work=NAN;
-    if(!terminal_quadratic_drag_energy_step(t->true_air_speed,measured_drag,
-            response_path,gravity*vertical.response_height_m,&response_speed,&response_work)||
-       !terminal_quadratic_drag_energy_step(response_speed,target_drag,
-            fmax(0.0,response_speed*(pull_time-response_time)),
-            gravity*vertical.braking_height_m,&predicted_speed,&predicted_drag_work)){
-        plan.reject_reason="preflare-speed-projection-invalid";
-        return plan;
-    }
-    predicted_drag_work+=response_work;
     double predicted_v2=predicted_speed*predicted_speed;
-
-    /*
-     * Preflare speed constraints belong to the certified vehicle envelope and
-     * measured stall boundary. Preview/planning hints must not raise the live
-     * execution contract; doing so creates a circular dependency where a tuned
-     * nominal gate becomes evidence for its own feasibility.
-     */
-    double minimum_speed=v->minimum_safe_speed;
-    if(isfinite(t->calibrated_stall_speed)&&t->calibrated_stall_speed>0.0)
-        minimum_speed=fmax(minimum_speed,t->calibrated_stall_speed);
 
     double preflare_ground=trigger/fmax(tan(slope*DEG2RAD),1e-3);
     double reference_speed=g->terminal_glide_mode?
@@ -190,18 +261,10 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
         fmax(v->final_approach_speed,minimum_speed);
 
     double margin_v2=predicted_v2-minimum_speed*minimum_speed;
-    if(!isfinite(trigger)||!(predicted_v2>=minimum_speed*minimum_speed)||
+    if(!isfinite(trigger)||!isfinite(predicted_v2)||
        t->true_air_speed<minimum_speed||
        t->angle_of_attack>v->maximum_angle_of_attack||
        (t->stall_fraction_is_measured&&t->stall_fraction>=1.0)){
-        if(getenv("KSP_LANDER_FINAL_APPROACH_TEST")) fprintf(stderr,
-            "FINAL_TEST_PREFLARE speedGate predictedSpeed=%.6f minimumSpeed=%.6f currentSpeed=%.6f aoa=%.6f maxAoA=%.6f stallMeasured=%d stallFraction=%.6f trigger=%.6f requiredHeight=%.6f pullTime=%.6f targetDrag=%.6f airPath=%.6f modeledUp=%.6f responseTime=%.6f targetAoA=%.6f sink=%.6f targetSink=%.6f\n",
-            predicted_v2>=0.0?sqrt(predicted_v2):NAN,minimum_speed,t->true_air_speed,
-            t->angle_of_attack,v->maximum_angle_of_attack,t->stall_fraction_is_measured?1:0,
-            t->stall_fraction,trigger,required_height,pull_time,target_drag,air_path,modeled_up,
-            response_time,target_aoa,sink,target_sink);
-        /* Publish the gate so callers can tell whether the pull-up is still
-           ahead of the vehicle. */
         plan.trigger_altitude=trigger;
         plan.minimum_speed=minimum_speed;
         plan.reject_reason="preflare-speed-aoa-or-stall-gate";
@@ -267,7 +330,12 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     if(!(ground_to_preflare>0.0))return false;
 
     double time_to_preflare=ground_to_preflare/t->horizontal_speed;
-    double lateral_time=fmax(envelope.lateral_capture_time_s,
+    /* A state whose current velocity vector already intersects the runway has no
+       remaining lateral-capture maneuver to reserve.  The old envelope response
+       time is still useful when alignment is incomplete, but charging it here for
+       an already aligned post-HAC state can consume the entire energy-trigger lead. */
+    bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
+    double lateral_time=runway_aligned?0.0:fmax(envelope.lateral_capture_time_s,
         envelope.heading_capture_time_s);
     DecisionMargin capture_time=decision_margin(time_to_preflare,lateral_time);
 
@@ -321,8 +389,12 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
 
     double response_available=ground_to_gate/t->horizontal_speed;
     if(!isfinite(plan->response_time))return contract;
-    double response_required=fmax(plan->response_time,
-        fmax(envelope.lateral_capture_time_s,envelope.heading_capture_time_s));
+    /* plan->response_time is the pull-up actuator response after the preflare
+       trigger and is already charged by terminal_preflare_plan().  TAEM delivery
+       only needs reserve for unfinished runway-vector capture before that trigger. */
+    bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
+    double response_required=runway_aligned?0.0:
+        fmax(envelope.lateral_capture_time_s,envelope.heading_capture_time_s);
 
     double gravity=planet_surface_gravity(p);
     if(!(gravity>0.0))return contract;
@@ -335,27 +407,41 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
         t->drag_force/t->mass:NAN;
     if(!isfinite(live_loss))return contract;
 
-    double predicted_gate_v2=t->true_air_speed*t->true_air_speed+
-        2.0*gravity*height_to_gate-2.0*live_loss*air_path;
-    if(!isfinite(predicted_gate_v2))return contract;
+    /* Drag acceleration scales with V^2; extending the instantaneous value as
+       a constant acceleration to the gate can drive predicted V^2 negative and
+       reject an otherwise feasible unpowered path.  Use the same closed-form
+       quadratic-drag energy step as preflare planning. */
+    double predicted_gate_speed=NAN,predicted_drag_work=NAN;
+    if(!terminal_quadratic_drag_energy_step(t->true_air_speed,live_loss,air_path,
+            gravity*height_to_gate,&predicted_gate_speed,&predicted_drag_work))
+        return contract;
+    (void)predicted_drag_work;
+    double predicted_gate_v2=predicted_gate_speed*predicted_gate_speed;
 
-    double low_energy_margin=.5*(predicted_gate_v2-minimum_speed*minimum_speed);
+    /* The preflare plan already models the pull-up response, induced drag and
+       height exchange.  Judge terminal energy at the end of that planned
+       recovery rather than at its high-speed entry boundary. */
+    double planned_exit_v2=minimum_speed*minimum_speed+
+        2.0*plan->predicted_kinetic_margin;
+    if(!isfinite(planned_exit_v2)||planned_exit_v2<0.0)return contract;
+    double low_energy_margin=plan->predicted_kinetic_margin;
     double gate_energy=.5*gate_speed*gate_speed;
-    double predicted_energy=.5*predicted_gate_v2;
-    /*
-     * High terminal energy must be dissipated by the selected unpowered path.
-     * With airbrakes forbidden, any predicted excess at the preflare gate is a
-     * negative feasibility margin and must cause replanning rather than an
-     * actuator-dependent delivery.
-     */
-    double high_energy_margin=gate_energy-predicted_energy;
+    double planned_exit_energy=.5*planned_exit_v2;
+    double high_energy_margin=gate_energy-planned_exit_energy;
+    /* The trigger is solved analytically to the reference-energy boundary; do
+       not reject an exact solution because of sub-millijoule floating-point
+       roundoff.  This tolerance is numerical only, not a flight-energy allowance. */
+    double energy_roundoff=1e-9*fmax(gate_energy,1.0);
+    if(high_energy_margin<0.0&&high_energy_margin>=-energy_roundoff)
+        high_energy_margin=0.0;
     if(getenv("KSP_LANDER_FINAL_APPROACH_TEST")&&g->terminal_final_test_mode&&!g->terminal_glide_mode){
         static bool final_energy_diag_printed=false;
         if(!final_energy_diag_printed){
             fprintf(stderr,
-                "FINAL_TEST_ENERGY predictedGateSpeed=%.6f minimumSpeed=%.6f referenceGateSpeed=%.6f lowMargin=%.6f highMargin=%.6f liveDragAccel=%.6f airPath=%.6f heightToGate=%.6f groundToGate=%.6f\n",
-                predicted_gate_v2>=0.0?sqrt(predicted_gate_v2):NAN,minimum_speed,gate_speed,
-                low_energy_margin,high_energy_margin,live_loss,air_path,height_to_gate,ground_to_gate);
+                "FINAL_TEST_ENERGY preTriggerSpeed=%.6f plannedExitSpeed=%.6f minimumSpeed=%.6f referenceGateSpeed=%.6f lowMargin=%.6f highMargin=%.6f liveDragAccel=%.6f airPath=%.6f heightToGate=%.6f groundToGate=%.6f\n",
+                predicted_gate_v2>=0.0?sqrt(predicted_gate_v2):NAN,sqrt(planned_exit_v2),
+                minimum_speed,gate_speed,low_energy_margin,high_energy_margin,live_loss,
+                air_path,height_to_gate,ground_to_gate);
             final_energy_diag_printed=true;
         }
     }
@@ -395,7 +481,7 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     return contract;
 }
 
-       bool terminal_final_conditioning_reachable(const GuidanceMachine*g,
+bool terminal_final_conditioning_reachable(const GuidanceMachine*g,
         const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg,EnergyPathEnvelope*energy_out,double*end_speed_out,
         double*slope_out){
@@ -434,16 +520,20 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     if(!isfinite(slope)||slope>35.0)return false;
     slope=fmax(0.0,slope);
 
+    /* Certify the same force-derived incidence that the conditioning controller
+       can actually command.  The old zero-AoA projection admitted a low-drag
+       path, then execution used the normal Final drag trim and spent the energy
+       reserve before preflare. */
+    double conditioning_aoa=terminal_fpa_force_aoa(t,p,aero,v,-slope);
     double end_speed=NAN,end_altitude=NAN;
-    double work=terminal_projected_drag_work_state(g,t,p,aero,v,s,0.0,ground,
+    double work=terminal_projected_drag_work_state(g,t,p,aero,v,s,conditioning_aoa,ground,
         slope,&end_speed,&end_altitude);
     double gate_altitude=cfg->site.altitude+s->flare_altitude;
     double minimum_speed=fmax(v->minimum_safe_speed,1.0);
     double available=entry_remaining_specific_energy(t->latitude,t->mean_altitude,
         t->true_air_speed,cfg->site.latitude,gate_altitude,minimum_speed,p);
     if(!isfinite(work)||work<0.0||!isfinite(available)||available<0.0||
-       !isfinite(end_speed)||end_speed<minimum_speed)
-        return false;
+       !isfinite(end_speed)||end_speed<minimum_speed)return false;
     EnergyPathEnvelope energy=decision_energy_path_envelope(t,p,available,work,ground);
     if(energy_out)*energy_out=energy;
     if(end_speed_out)*end_speed_out=end_speed;
@@ -548,7 +638,7 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
 }
 
 
-static bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
+bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
         const LandingConfiguration*cfg){
     (void)g;
     const LandingSite*site=&cfg->site;
@@ -611,4 +701,3 @@ static bool terminal_update_ground_latch(GuidanceMachine*g,const Telemetry*t,con
     }
     return false;
 }
-

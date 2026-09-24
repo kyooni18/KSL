@@ -27,9 +27,15 @@
     double lead_distance=hypot(c->join.lead_start.e-current_e,
         c->join.lead_start.n-current_n);
     double origin_tolerance=fmax(5.0,t->horizontal_speed*0.1);
+    /*
+     * selected_ut == arrival_ut is the durable identity of a live-origin path.
+     * After MM305 starts flying that path, the vehicle is expected to move away
+     * from lead_start. Requiring it to remain near the historical origin turns
+     * the retained path into a fictitious point-reacquisition problem with zero
+     * arrival horizon and permanently blocks commit.
+     */
     bool live_origin=isfinite(c->selected_ut)&&isfinite(c->arrival_ut)&&
-        fabs(c->selected_ut-c->arrival_ut)<=1e-6&&
-        lead_distance<=origin_tolerance;
+        fabs(c->selected_ut-c->arrival_ut)<=1e-6;
     if(!live_origin&&lead_distance>origin_tolerance){
         forecast_path=decision_target_path_length(g,t,live_course,
             lead_along,lead_cross,c->course,NAN,p,cfg,&minimum_turn_radius);
@@ -111,7 +117,10 @@
 
        GuidanceSettings terminal_path_settings(const GuidanceMachine*g,const GuidanceSettings*s){
     GuidanceSettings r=*s;
-    if(g->terminal_glide_mode&&g->terminal_test_final_approach_distance>0)
+    if(g->terminal_final_handoff_latched&&isfinite(g->terminal_final_handoff_distance)&&
+       g->terminal_final_handoff_distance>0.0)
+        r.final_approach_distance=g->terminal_final_handoff_distance;
+    else if(g->terminal_glide_mode&&g->terminal_test_final_approach_distance>0)
         r.final_approach_distance=g->terminal_test_final_approach_distance;
     if(g->terminal_glide_mode&&g->terminal_test_glide_slope>0){
         r.final_glide_slope=g->terminal_test_glide_slope;
@@ -197,18 +206,24 @@ static double terminal_taem_drag_aoa_ceiling(const Telemetry*t,const VehicleProf
 
        double terminal_projected_lift_accel_at_aoa(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double aoa){
-    double current_incidence=fmax(1.0,hypot(t->angle_of_attack,t->sideslip));
-    double current_lf=0,target_lf=0;
-    aerodynamic_force_factors_mach(t->mach,current_incidence,v,&current_lf,NULL);
-    aerodynamic_force_factors_mach(t->mach,clampd(aoa,0.0,v->maximum_angle_of_attack),v,
-        &target_lf,NULL);
-    double measured=t->mass>1&&isfinite(t->lift_force)&&t->lift_force>0?
-        t->lift_force/t->mass:0.0;
-    double scaled_measured=measured>.005?
-        measured*fabs(target_lf)/fmax(.05,fabs(current_lf)):0.0;
-    double modeled=fmax(0.0,t->dynamic_pressure)/fmax(20.0,aero.ballistic_coefficient)*
-        fmax(0.0,aero.lift_to_drag)*fabs(target_lf);
-    return fmax(scaled_measured,modeled);
+    if(!t||!v||!isfinite(aoa))return NAN;
+    double target=clampd(aoa,0.0,v->maximum_angle_of_attack);
+    double lf=0.0;
+    aerodynamic_force_factors_mach(t->mach,target,v,&lf,NULL);
+    double modeled=NAN;
+    if(isfinite(t->dynamic_pressure)&&t->dynamic_pressure>=0.0&&
+       isfinite(aero.ballistic_coefficient)&&aero.ballistic_coefficient>DBL_MIN&&
+       isfinite(aero.lift_to_drag)&&aero.lift_to_drag>=0.0)
+        modeled=t->dynamic_pressure/aero.ballistic_coefficient*
+            aero.lift_to_drag*fabs(lf);
+
+    double incidence=hypot(t->angle_of_attack,t->sideslip);
+    double measured=t->mass>DBL_MIN&&isfinite(t->lift_force)&&t->lift_force>=0.0?
+        t->lift_force/t->mass:NAN;
+    double same_incidence=sqrt(DBL_EPSILON)*fmax(1.0,fabs(incidence));
+    if(isfinite(measured)&&fabs(target-incidence)<=same_incidence)
+        return measured;
+    return isfinite(modeled)&&modeled>=0.0?modeled:NAN;
 }
 
 /* A fixed analytic arc shares the lift vector with the vertical FPA response.
@@ -264,24 +279,30 @@ static bool terminal_lateral_incidence_priority(const GuidanceMachine*g,bool ene
 }
 
        double taem_bank_demand(const Telemetry*t,const HACGuidance*h,double hac_radius,double side,AerodynamicModel aero,const VehicleProfile*v){
-    double eff=clampd(t->bank_effectiveness,.35,1.8);
-    double lim=fmin(60.0,dynamic_bank_limit(t,v));
+    double eff=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
+        t->bank_effectiveness:1.0;
+    double lim=fmin(fabs(v->maximum_bank_angle),dynamic_bank_limit(t,v));
     double lateral=h?h->lateral_acceleration:0.0;
-    if(!isfinite(lateral)||hac_radius<=1.0)return 0.0;
+    if(!isfinite(lateral)||hac_radius<=DBL_MIN||!(lim>0.0))return 0.0;
     (void)side;
+
+    /*
+     * Solve L sin(phi_eff) = a_lat directly.  Prefer the force actually
+     * measured from stock KSP; if the telemetry force sample is unavailable,
+     * project lift at the same Mach/q from the calibrated aerodynamic model.
+     * Do not substitute an Earth-gravity coordinated-turn approximation.
+     */
     double lift=live_lift_accel(t,aero,v);
-    double bank=0.0;
-    if(lift>.005){
-        double limit_angle=clampd(lim*eff,0,89)*DEG2RAD;
-        bank=asin(clampd(fabs(lateral)/lift,0,sin(limit_angle)))/eff*RAD2DEG;
-    }else{
-        /* At MM305 capture the sim/live feed may not yet carry a calibrated
-           lift sample.  Do not convert that missing measurement into wings-level
-           flight: the HAC is a geometric arc, so start with the kinematic bank
-           needed for its requested lateral acceleration and let measured lift
-           refine the demand on later frames. */
-        bank=atan2(fabs(lateral),9.80665)*RAD2DEG;
-    }
+    if(!(lift>DBL_MIN)||!isfinite(lift))
+        lift=terminal_projected_lift_accel_at_aoa(t,aero,v,
+            terminal_hac_energy_aoa(t,v));
+    if(!(lift>DBL_MIN)||!isfinite(lift))return 0.0;
+
+    double effective_limit=fmin(lim*eff,nextafter(90.0,0.0))*DEG2RAD;
+    double available=fabs(lift*sin(effective_limit));
+    double commanded=fmin(fabs(lateral),available);
+    double effective_bank=asin(clampd(commanded/lift,0.0,1.0));
+    double bank=effective_bank/fmax(eff,DBL_MIN)*RAD2DEG;
     return clampd(copysign(bank,lateral),-lim,lim);
 }
 
@@ -306,7 +327,8 @@ static bool terminal_lateral_incidence_priority(const GuidanceMachine*g,bool ene
     }
     GuidanceSettings path_settings=terminal_path_settings(path_owner,s);
     const GuidanceSettings*hs=&path_settings;
-    double radius=fmax(3000.0,path_owner->hac_radius);
+    double radius=path_owner->hac_radius>DBL_MIN?
+        path_owner->hac_radius:s->hac_radius;
     RunwayCaptureEnvelope vertical_envelope=decision_runway_capture_envelope(g,t,course,p,cfg);
     /* An invalid envelope usually means no pull-up margin at the current
        speed (e.g. CL-max in a banked glide).  Latching the bound to the live
@@ -733,7 +755,7 @@ static bool terminal_lateral_incidence_priority(const GuidanceMachine*g,bool ene
        path_owner->fixed_hac_lead_speed_target_valid&&
        isfinite(path_owner->fixed_hac_lead_target_speed)){
         double lead_remaining=fixed_hac_lead_remaining(path_owner);
-        double requested_lead_aoa=fixed_hac_lead_drag_aoa(t,aero,v,
+        double requested_lead_aoa=fixed_hac_lead_drag_aoa(t,p,aero,v,
             path_owner->fixed_hac_lead_target_speed,lead_remaining,
             hac_slope);
         if(isfinite(requested_lead_aoa)&&c.has_target_aoa&&
@@ -1001,4 +1023,3 @@ static bool terminal_lateral_incidence_priority(const GuidanceMachine*g,bool ene
     }
     return r;
 }
-

@@ -232,47 +232,57 @@ static HACGuidance hac_circle_path_guidance(const Telemetry*t,const LandingSite*
         double speed=fmax(1.0,guidance_lateral_speed(t));
         if(g->hac_transition_lead_length>1.0&&g->hac_transition_lead_progress<.995){
             HACTransitionPlan lead={0};
-            lead.valid=true;lead.p0=(HACPoint2){g->hac_transition_lead_start_e,
+            lead.valid=true;
+            lead.lead_curve=g->hac_transition_lead_curve;
+            lead.lead_acquisition=g->hac_transition_lead_acquisition;
+            lead.lead_start=(HACPoint2){g->hac_transition_lead_start_e,
                 g->hac_transition_lead_start_n};
-            lead.p1=(HACPoint2){g->hac_transition_lead_p1_e,g->hac_transition_lead_p1_n};
-            lead.p2=(HACPoint2){g->hac_transition_lead_p2_e,g->hac_transition_lead_p2_n};
-            lead.p3=p.p0;lead.length=g->hac_transition_lead_length;
-            double u=g->hac_transition_lead_curve?hac_bezier_nearest_u(&lead,e,n):
-                clampd(((e-lead.p0.e)*(lead.p3.e-lead.p0.e)+(n-lead.p0.n)*(lead.p3.n-lead.p0.n))/
-                    fmax(1.0,pow(hypot(lead.p3.e-lead.p0.e,lead.p3.n-lead.p0.n),2.0)),0.0,1.0);
-            if(u<1.0){
-                HACPoint2 point=g->hac_transition_lead_curve?hac_bezier_point(&lead,u):
-                    hac_point(lead.p0.e+(lead.p3.e-lead.p0.e)*u,
-                        lead.p0.n+(lead.p3.n-lead.p0.n)*u);
-                HACPoint2 d=g->hac_transition_lead_curve?hac_bezier_derivative(&lead,u):
-                    hac_point(lead.p3.e-lead.p0.e,lead.p3.n-lead.p0.n);
-                double derivative=fmax(hypot(d.e,d.n),1.0);
-                double tangent=norm_deg(atan2(d.e,d.n)*RAD2DEG);
-                double cross_track=((e-point.e)*d.n-(n-point.n)*d.e)/derivative;
+            lead.lead_p1=(HACPoint2){g->hac_transition_lead_p1_e,
+                g->hac_transition_lead_p1_n};
+            lead.lead_p2=(HACPoint2){g->hac_transition_lead_p2_e,
+                g->hac_transition_lead_p2_n};
+            lead.p0=p.p0;lead.p3=p.p0;
+            lead.lead_length=g->hac_transition_lead_length;
+            lead.lead_start_course=g->hac_transition_lead_start_course;
+            lead.lead_end_course=g->hac_transition_lead_end_course;
+            lead.acquisition_center=(HACPoint2){g->hac_transition_acquisition_center_e,
+                g->hac_transition_acquisition_center_n};
+            lead.acquisition_tangent=(HACPoint2){g->hac_transition_acquisition_tangent_e,
+                g->hac_transition_acquisition_tangent_n};
+            lead.acquisition_radius=g->hac_transition_acquisition_radius;
+            lead.acquisition_side=g->hac_transition_acquisition_side;
+            lead.acquisition_start_angle=g->hac_transition_acquisition_start_angle;
+            lead.acquisition_end_angle=g->hac_transition_acquisition_end_angle;
+            lead.acquisition_arc_length=g->hac_transition_acquisition_arc_length;
+            lead.acquisition_tangent_length=g->hac_transition_acquisition_tangent_length;
+
+            double station=hac_lead_nearest_distance(&lead,e,n);
+            if(station<lead.lead_length){
+                HACPoint2 point={0};double tangent=NAN,station_curvature=NAN;
+                if(!hac_lead_sample_distance(&lead,station,&point,&tangent,
+                        &station_curvature))return out;
+                double h=tangent*DEG2RAD;
+                double cross_track=(e-point.e)*cos(h)+(n-point.n)*(-sin(h));
                 double course_error=norm_signed_deg(tangent-course);
-                double preview_u=g->hac_transition_lead_curve?
-                    hac_bezier_advance_distance(&lead,u,speed*clampd(g->hac_transition_response_time*.65,1.3,4.2)):u;
-                double curvature=g->hac_transition_lead_curve?
-                    hac_bezier_signed_curvature(&lead,preview_u):0.0;
-                double effective_radius=1.0/fmax(fabs(curvature),1.0/(hac_radius*2.5));
+                double preview_distance=fmin(lead.lead_length,station+
+                    speed*clampd(g->hac_transition_response_time*.65,1.3,4.2));
+                HACPoint2 preview_point={0};double preview_course=NAN,curvature=NAN;
+                if(!hac_lead_sample_distance(&lead,preview_distance,&preview_point,
+                        &preview_course,&curvature))return out;
+                double effective_radius=1.0/fmax(fabs(curvature),
+                    1.0/(hac_radius*2.5));
                 double tracking_time=hac_path_tracking_time(speed,effective_radius);
                 double lateral=hac_frenet_lateral(speed,curvature,
                     clampd(cross_track,-fmax(1200.0,hac_radius*.25),
                         fmax(1200.0,hac_radius*.25)),
                     course_error,tracking_time);
-                double lateral_limit=speed*hac_join_rate_cap(t,u)*DEG2RAD;
+                double progress=clampd(station/fmax(lead.lead_length,DBL_MIN),0.0,1.0);
+                double lateral_limit=speed*hac_join_rate_cap(t,progress)*DEG2RAD;
                 lateral=clampd(lateral,-lateral_limit,lateral_limit);
-                /* The lead is a finite C1 acquisition reference, not yet the
-                   committed HAC arc.  For the west-shifted RW09 +1 geometry
-                   the current MM305 tangent and circle-entry tangent are both
-                   southbound on the same meridian.  Keep the lead's signed
-                   curvature independent of the committed side; the analytic
-                   cone resumes the selected +1 handedness exactly at p0. */
                 out.heading=tangent;
                 out.course_error=course_error;
                 out.arc_remaining=g->hac_remaining+g->hac_transition_length+
-                    (g->hac_transition_lead_curve?hac_bezier_length_between(&lead,u,1.0,16):
-                        (1.0-u)*g->hac_transition_lead_length);
+                    fmax(0.0,lead.lead_length-station);
                 out.radial_error=cross_track;
                 out.lateral_acceleration=lateral;
                 out.bank=clampd(atan2(lateral,fmax(gravity,.01))*RAD2DEG,-70,70);
@@ -365,12 +375,6 @@ static HACGuidance hac_prefinal_path_guidance(const Telemetry*t,const LandingSit
         const Telemetry*t,const LandingSite*site,const GuidanceSettings*s,double planet_radius,
         double side,double gravity,double course,double hac_radius){
     HACPhaseGuidance out;memset(&out,0,sizeof(out));
-    if(phase==TAEM_PHASE_S_TURN){
-        /* TAEMEXEC deliberately does not prescribe an S-turn direction/path.
-           Until that provider supplies its geometric objective, HACGUIDE must not
-           manufacture one or reuse an MM304 reversal. */
-        return out;
-    }
     out.valid=true;
     if(phase==TAEM_PHASE_PATH_ACQUISITION){
         out.guidance=hac_path_guidance(g,t,site,s,planet_radius,side,gravity,course,hac_radius);

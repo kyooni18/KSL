@@ -164,6 +164,19 @@ double entry_taem_speed_target(const VehicleProfile*v,const GuidanceSettings*s,c
     if(!envelope.feasible)return envelope.minimum_speed_mps;
     return clampd(nominal,envelope.minimum_speed_mps,envelope.maximum_speed_mps);
 }
+
+double hac_acquisition_speed_target(const VehicleProfile*v,const GuidanceSettings*s,
+        const PlanetModel*p){
+    if(!v||!s||!p)return NAN;
+    double altitude=s->hac_acquisition_altitude;
+    TaemSpeedEnvelope envelope=decision_taem_speed_envelope(v,p,altitude);
+    if(!envelope.valid)return fmax(v->minimum_safe_speed,v->final_approach_speed);
+    double sound=planet_atmospheric_speed_of_sound(p,altitude);
+    double nominal=isfinite(sound)&&sound>DBL_MIN?
+        sound*s->hac_acquisition_mach:envelope.maximum_speed_mps;
+    if(!envelope.feasible)return envelope.minimum_speed_mps;
+    return clampd(nominal,envelope.minimum_speed_mps,envelope.maximum_speed_mps);
+}
 static int predictor_speedbrake_state(PredictorGuidance*g,GeoPoint geo,const AtmosState*a,const PlanetModel*p,const TrajectoryCalibrationModel*c,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*s,double mass,bool reached_taem,double dt){
     if(!reached_taem){speedbrake_controller_reset(&g->speedbrake,false);return 0;}
     bool predicted_gear=geo.altitude-site->altitude<=s->gear_deployment_altitude;
@@ -301,12 +314,10 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
         mag=bank_for_turn_radius(a,c,minimum_radius*radius_scale,env);
     }
     if(g->sign==0)predictor_change_sign(g,he>=0?1:-1);
-    double effective_min_leg=entry_s_turn_effective_minimum_leg(a->speed,entry_taem_speed_target(v,set,p),set);
-    /* The longer dwell governs creation of new S-turn topology. A reversal that
-       was already committed remains an executable event and keeps the original
-       configured actuator dwell; otherwise a model update could move the goal
-       posts after the aircraft has already committed to the roll-through. */
-    double executable_min_leg=g->replay_event?set->s_turn_minimum_leg_duration:effective_min_leg;
+    double effective_min_leg=entry_s_turn_effective_minimum_leg(a->speed,0.0,set);
+    /* Dwell prevents chatter.  Roll establishment itself is priced separately
+       from the bounded rate/acceleration plant below. */
+    double executable_min_leg=effective_min_leg;
     if(g->established&&g->leg_elapsed>=set->s_turn_minimum_leg_duration)g->configured_leg_dwell_satisfied=true;
     bool configured_minleg=g->configured_leg_dwell_satisfied;
     bool minleg=g->established&&g->leg_elapsed>=executable_min_leg;
@@ -321,18 +332,25 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
        full sign reversal has had time to establish. This starts the roll soon
        enough that the new bank, rather than wings-level roll-through, reaches
        the terminal region. */
-    FlightControlRegime reversal_regime=flight_control_regime(a->mach,a->speed,a->q,v->minimum_safe_speed);
-    double reversal_rate=fmax(.5,set->entry_roll_rate*fmax(.42,reversal_regime.command_rate_scale));
-    double reversal_accel=fmax(.3,set->entry_roll_acceleration*fmax(.30,reversal_regime.command_accel_scale));
-    double reversal_span=fabs(g->actual_bank)+fmax(4.0,mag);
-    double reversal_time=reversal_span/reversal_rate+reversal_rate/reversal_accel;
+    double reversal_target=-g->sign*fabs(mag);
+    double reversal_error=norm_signed_deg(reversal_target-g->actual_bank);
+    double reversal_time=decision_axis_capture_time(reversal_error,g->actual_bank_rate,
+        fabs(set->entry_roll_acceleration),fabs(set->entry_roll_rate));
+    if(!isfinite(reversal_time))reversal_time=effective_min_leg;
     double range_after_roll=fmax(0,range-a->speed*reversal_time);
     double terminal_join_range=entry_taem_range_target(p,set);
     double corridor_fraction=clampd((range_after_roll-terminal_join_range)/
         fmax(set->target_entry_range-terminal_join_range,1),0,1);
     corridor_fraction=corridor_fraction*corridor_fraction*(3.0-2.0*corridor_fraction);
     double mission_entry_range=fmax(set->target_entry_range,terminal_join_range+1000.0);
-    double near_corridor=atan2(2.0*set->hac_radius,fmax(mission_entry_range,1))*RAD2DEG;
+    double mission_entry_altitude=entry_guidance_start_altitude(p,set);
+    double desired_range_altitude=entry_altitude_target_for_range(mission_entry_altitude,
+        mission_entry_range,range,set->taem_interface_altitude,terminal_join_range);
+    double predicted_fpa=atan2(vdot(air,up),fmax(DBL_MIN,vmag(hv)))*RAD2DEG;
+    double physical_terminal_radius=predictor_terminal_hac_radius(a,p,c,v,set,shared_bank_limit);
+    if(!isfinite(physical_terminal_radius))physical_terminal_radius=set->hac_radius;
+    double near_corridor=atan2(2.0*physical_terminal_radius,
+        fmax(mission_entry_range,DBL_MIN))*RAD2DEG;
     double far_corridor=fmax(near_corridor,set->hac_look_ahead_angle);
     double heading_corridor=near_corridor+(far_corridor-near_corridor)*corridor_fraction;
     /* Timed S-turn reversals are only useful after the current bank has created
@@ -342,14 +360,6 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
        vertical lift and build real crossrange instead of alternating around
        the site bearing every few tens of seconds. The extra corridor tapers to
        zero as TAEM range is consumed. */
-    double mission_entry_altitude=entry_guidance_start_altitude(p,set);
-    double desired_range_altitude=entry_altitude_target_for_range(mission_entry_altitude,
-        mission_entry_range,range,set->taem_interface_altitude,terminal_join_range);
-    double altitude_debt=fmax(0.0,geo.altitude-desired_range_altitude);
-    double debt_scale=fmax(4500.0,(mission_entry_altitude-set->taem_interface_altitude)*.18);
-    double altitude_debt_fraction=clampd(altitude_debt/debt_scale,0.0,1.0);
-    double predicted_fpa=atan2(vdot(air,up),fmax(1.0,vmag(hv)))*RAD2DEG;
-    double fpa_delivery_debt=entry_s_turn_fpa_delivery_debt(predicted_fpa,delivery_target);
     double interface_distance=INFINITY;
     if(delivery_target){
         double ih=site->runway_heading*DEG2RAD;
@@ -359,8 +369,15 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
         GeoPoint interface_geo=local_point(origin,ie,in,p->radius,delivery_target->altitude);
         interface_distance=great_circle_distance(geo,interface_geo,p->radius);
     }
-    heading_corridor=entry_s_turn_reversal_corridor(heading_corridor,range,
-        terminal_join_range,altitude_debt_fraction,fpa_delivery_debt);
+    /* Lateral heading capture: without a drag deficit the predictor used to fly
+       wings-level and could never reverse (mag<4), so large course errors grew
+       unbounded. Mirror live guidance by holding a broad capture turn whenever
+       the course error leaves the corridor. Authority is still capped by env. */
+    if(!forced_policy&&isfinite(minimum_radius)&&fabs(he)>heading_corridor){
+        double excess=clampd((fabs(he)-heading_corridor)/30.0,0.0,1.0);
+        double radius_scale=6.0-(6.0-1.5)*excess;
+        mag=fmax(mag,bank_for_turn_radius(a,c,minimum_radius*radius_scale,env));
+    }
     /* With an explicit MM304 tangent state the last reversal is scheduled against
        distance to that gate, not radial distance to KSC.  The old KSC-range deadline
        could fire repeatedly while the vehicle was still hundreds of kilometres from
@@ -371,11 +388,11 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     double terminal_reversal_metric;
     if(delivery_target){
         terminal_reversal_reserve=fmax(delivery_target->acquisition_lead,
-            a->speed*(reversal_time+1.35*effective_min_leg));
+            a->speed*(reversal_time+effective_min_leg));
         terminal_reversal_metric=fmax(0.0,interface_distance-a->speed*reversal_time);
     }else{
         terminal_reversal_reserve=terminal_join_range+
-            a->speed*(reversal_time+1.35*effective_min_leg);
+            a->speed*(reversal_time+effective_min_leg);
         terminal_reversal_metric=range_after_roll;
     }
     /* A high/FPA-indebted trajectory should keep the established energy-management
@@ -388,29 +405,37 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     }else{
         remaining_taem_energy=entry_energy_to_taem(geo.latitude,geo.altitude,a->speed,p,v,site,set);
     }
-    double terminal_removable_energy=fmax(.03,a->drag_accel)*terminal_reversal_reserve*1.35;
-    bool terminal_energy_ready=isfinite(remaining_taem_energy)&&remaining_taem_energy<=terminal_removable_energy;
-    bool terminal_altitude_ready=altitude_debt<=600.0||
+    double terminal_removable_energy=fmax(0.0,a->drag_accel)*terminal_reversal_reserve;
+    bool terminal_energy_ready=isfinite(remaining_taem_energy)&&
+        remaining_taem_energy<=terminal_removable_energy;
+    bool terminal_altitude_ready=geo.altitude<=desired_range_altitude||
         a->speed<=set->taem_force_handoff_speed;
     bool terminal_reversal_deadline=terminal_reversal_metric<=terminal_reversal_reserve;
     bool terminal_roll_has_delivery_time=true;
-    if(g->enforce_terminal_delivery_budget&&delivery_target&&fpa_delivery_debt>1e-9){
-        /* Compare the remaining speed clock with the actual work a reversal would
-           consume. Gravity partly offsets drag on a descending trajectory, so use
-           the along-path net deceleration rather than drag alone. Then estimate the
-           vertical-speed change still required to reach the latest legal TAEM FPA
-           using the sink authority of the *currently established* bank. */
-        double net_deceleration=fmax(.5,a->drag_accel+grav*sin(predicted_fpa*DEG2RAD));
-        double handoff_eta=a->speed>set->taem_force_handoff_speed?
-            (a->speed-set->taem_force_handoff_speed)/net_deceleration:0.0;
-        double latest_delivery_fpa=clampd(delivery_target->flight_path_angle+
-            TAEM_INTERFACE_FPA_DEBT_LIMIT_DEG,-24.0,-2.5);
+    if(g->enforce_terminal_delivery_budget&&delivery_target&&
+       predicted_fpa>delivery_target->flight_path_angle){
+        /*
+         * Price the actual vertical-velocity change needed at the frozen MM305
+         * inlet.  No fitted FPA corridor is involved: the current bank determines
+         * vertical lift, local Kerbin gravity determines downward acceleration, and
+         * the same bounded roll time prices the reversal.
+         */
+        double net_deceleration=a->drag_accel+
+            grav*sin(predicted_fpa*DEG2RAD);
+        double handoff_eta=0.0;
+        if(a->speed>set->taem_force_handoff_speed){
+            handoff_eta=net_deceleration>DBL_MIN?
+                (a->speed-set->taem_force_handoff_speed)/net_deceleration:INFINITY;
+        }
         double required_sink_delta=a->speed*fmax(0.0,
-            sin(predicted_fpa*DEG2RAD)-sin(latest_delivery_fpa*DEG2RAD));
-        double hold_bank=clampd(fabs(g->actual_bank),0.0,89.0)*DEG2RAD;
+            sin(predicted_fpa*DEG2RAD)-
+            sin(delivery_target->flight_path_angle*DEG2RAD));
+        double hold_bank=fmin(fabs(g->actual_bank),nextafter(90.0,0.0))*DEG2RAD;
         double sink_authority=grav-a->lift_accel*cos(hold_bank);
-        double fpa_recovery_eta=sink_authority>.25?required_sink_delta/sink_authority:INFINITY;
-        terminal_roll_has_delivery_time=handoff_eta>reversal_time+fpa_recovery_eta;
+        double fpa_recovery_eta=sink_authority>DBL_MIN?
+            required_sink_delta/sink_authority:INFINITY;
+        terminal_roll_has_delivery_time=
+            handoff_eta>reversal_time+fpa_recovery_eta;
     }
     bool terminal_deadline_roll_ready=terminal_reversal_deadline&&terminal_roll_has_delivery_time;
     double terminal_final_sign=fabs(g->sign)>.1?-g->sign:(he>=0.0?1.0:-1.0);
@@ -449,9 +474,32 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
        the opposite-side arc can actually reach the precomputed tangent without a
        second bank reversal. The same rule now also protects an ordinary corridor
        reversal that would switch onto the selected terminal side too early. */
+    /* Divergence bound: the setup/terminal holds may delay a corridor reversal,
+       but never indefinitely.  Without a bound the held leg kept turning until
+       the witness flew perpendicular to the runway (course error ~85 deg) and
+       reached TAEM 60+ km abeam.  Past twice the corridor (min 30 deg) the
+       course error itself is the binding constraint. */
+    double divergence_limit=fmax(30.0,2.0*heading_corridor);
+    bool course_diverged=g->sign*he<-divergence_limit;
+    bool held=false;
     if(delivery_target&&measured_reversal_due&&!shaping_ready&&!shaping_endpoint_ready)
-        measured_reversal_due=false;
-    if(delivery_target&&terminal_reversal_deadline&&!terminal_arc_ready)measured_reversal_due=false;
+        {measured_reversal_due=false;held=true;}
+    if(delivery_target&&terminal_reversal_deadline&&!terminal_arc_ready)
+        {measured_reversal_due=false;held=true;}
+    if(held&&course_diverged&&!g->final_heading_lock){
+        measured_reversal_due=true;
+        if(getenv("KSP_LANDER_SETUP_REVERSAL_TRACE"))
+            fprintf(stderr,"PREDICTOR_DIVERGENCE_REVERSAL ut=%.1f range=%.0f he=%.1f corridor=%.1f sign=%.0f\n",
+                s.ut,range,he,heading_corridor,g->sign);
+    }
+    if(course_diverged&&getenv("KSP_LANDER_SETUP_REVERSAL_TRACE")){
+        static double last_trace_ut=-1e9;
+        if(fabs(s.ut-last_trace_ut)>=30.0){
+            last_trace_ut=s.ut;
+            fprintf(stderr,"PREDICTOR_DIVERGED ut=%.1f range=%.0f he=%.1f sign=%.0f held=%d lock=%d replay=%d mag=%.1f minleg=%d\n",
+                s.ut,range,he,g->sign,held,g->final_heading_lock,g->replay_event,mag,minleg);
+        }
+    }
     bool event_due=g->replay_event&&s.ut>=g->replay_event_ut;
     bool replay_arc_ready=!delivery_target||
         predictor_terminal_arc_ready(geo,course,p,site,delivery_target,g->replay_event_sign);
@@ -504,7 +552,7 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     /* Vertical debt is paid with bank/path geometry. The predictor must mirror
        live guidance and never buy sink by exposing the orbiter at low incidence. */
     aoa=fmax(aoa,protective_aoa);
-    if(!forced_policy&&a->mach>4&&qr<.45&&geo.altitude<=desired_range_altitude+300.0)
+    if(!forced_policy&&a->mach>4&&qr<.45&&geo.altitude<=desired_range_altitude)
         aoa=fmax(aoa,v->maximum_angle_of_attack-1.0);
     if(qr>.92){aoa=fmin(aoa+1.0,v->maximum_angle_of_attack);mag=fmin(v->maximum_bank_angle,mag+5);}
     if(gr>.92){aoa-=clampd((gr-.9)*18,2,7);mag*=.6;}
@@ -676,8 +724,11 @@ static double predictor_hac_candidate_residual(const PredictorGuidance*g,
         geo.latitude,geo.altitude,a->speed,site->latitude,desired,
         minimum_speed,p);
 
-    double radius_residual=fabs(h.radial_error)/fmax(hac_radius,DBL_MIN);
-    double course_residual=fabs(h.course_error)/180.0;
+    double radial_limit=fmax(500.0,fmin(5000.0,hac_radius*.30));
+    double radius_residual=fabs(h.radial_error)<=radial_limit?0.0:
+        (fabs(h.radial_error)-radial_limit)/fmax(hac_radius,DBL_MIN);
+    double course_residual=fabs(h.course_error)<=45.0?0.0:
+        (fabs(h.course_error)-45.0)/180.0;
     double speed_residual=a->speed>=minimum_speed?0.0:
         (minimum_speed-a->speed)/fmax(minimum_speed,DBL_MIN);
     double energy_scale=fmax(
@@ -934,6 +985,9 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                 capture_state.runway_along_track=ownership_along;capture_state.runway_cross_track=ownership_cross;
                 capture_state.dynamic_pressure=at.q;capture_state.g_force=at.non_gravity/fmax(.1,planet_surface_gravity(p));
                 capture_state.bank_effectiveness=cal0->bank_effectiveness;
+                capture_state.mach=at.mach;capture_state.atmospheric_density=at.density;capture_state.speed_of_sound=at.speed_of_sound;
+                capture_state.angle_of_attack=g.actual_aoa;capture_state.roll=g.actual_bank;capture_state.roll_rate=g.actual_bank_rate;
+                capture_state.mass=state.mass;capture_state.lift_force=fabs(at.lift_accel)*state.mass;capture_state.drag_force=fabs(at.drag_accel)*state.mass;
                 double capture_course=surface_course(state.position,state.velocity,planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
                 TaemInterfaceCapture capture=entry_taem_interface_capture(
                     &g.interface_target,&capture_state,capture_course,p,&interface_cfg);
@@ -949,15 +1003,22 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                 ownership_boundary_missed=capture.valid&&!capture.ready&&
                     (capture.along<0.0||capture.energy_margin<0.0||
                      at.speed<v->minimum_safe_speed);
+                if(ownership_boundary_missed&&getenv("KSP_LANDER_SETUP_REVERSAL_TRACE"))
+                    fprintf(stderr,"OWNERSHIP_MISS_TRACE along %.1f cross %.1f h %.0f V %.1f veto 0x%x "
+                        "courseErr %.1f altErr %.0f energyMargin %.0f turnMargin %.1f reqT %.1f availT %.1f minSafeV %.1f\n",
+                        capture.along,capture.cross,geo.altitude,at.speed,capture.veto,capture.course_error,
+                        capture.altitude_error,capture.energy_margin,capture.turn_margin,
+                        capture.required_time_s,capture.available_time_s,v->minimum_safe_speed);
             }else{
-                ownership_ready=entry_taem_handoff_geometry_ready(geo.altitude,ownership_along,vs,hs,set);
-                if(!ownership_ready){
-                    double handoff_low=0.0,handoff_high=0.0;
-                    entry_taem_handoff_altitude_bounds(set,&handoff_low,&handoff_high);
-                    ownership_boundary_missed=
-                        ownership_along>=-set->final_approach_distance||
-                        geo.altitude<handoff_low;
-                }
+                ownership_ready=false;
+                double handoff_low=0.0,handoff_high=0.0;
+                entry_taem_handoff_altitude_bounds(set,&handoff_low,&handoff_high);
+                ownership_boundary_missed=geo.altitude<handoff_low||
+                    at.speed<v->minimum_safe_speed;
+                if(ownership_boundary_missed&&getenv("KSP_LANDER_SETUP_REVERSAL_TRACE"))
+                    fprintf(stderr,"OWNERSHIP_MISS_TRACE noTarget along %.1f cross %.1f h %.0f V %.1f vs %.1f "
+                        "handoff %.0f..%.0f\n",ownership_along,ownership_cross,geo.altitude,at.speed,vs,
+                        handoff_low,handoff_high);
             }
         }
         if(out.entered_atmosphere&&!out.reached_taem){

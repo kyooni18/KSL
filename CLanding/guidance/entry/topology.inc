@@ -133,21 +133,21 @@ static GuidanceResult entry_topology_guidance(GuidanceMachine*g,const Telemetry*
     else entry_update_s_turn_leg_capture(g,t,bank,v);
 
     TaemInterfaceCapture capture=entry_dynamic_interface_capture(g,t,course,p,aero,cfg);
-    bool handoff_locked=turning&&capture.ready&&fabs(norm_signed_deg(t->roll))<=18.0;
-    g->entry_topology_capture_good_duration=handoff_locked?g->entry_topology_capture_good_duration+fmax(0.0,dt):0.0;
-    double rh=cfg->site.runway_heading*DEG2RAD;
-    GeoPoint origin={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
-    GeoPoint gate=local_point(origin,q->along_track*sin(rh)+q->cross_track*cos(rh),
-        q->along_track*cos(rh)-q->cross_track*sin(rh),p->radius,q->altitude);
+    bool mm305_ready=q->valid&&mm305_acquisition_ready(t,p,cfg);
+    bool handoff_locked=mm305_ready&&fabs(norm_signed_deg(t->roll))<=18.0;
+    g->entry_topology_capture_good_duration=handoff_locked?
+        g->entry_topology_capture_good_duration+fmax(0.0,dt):0.0;
     EntryDragReferenceConfig drag_cfg=entry_drag_reference_default_config();
     drag_cfg.entry_velocity_ratio=4.5;
+    double interface_speed=entry_taem_speed_target(v,s,p);
     EntryDragReferenceInput drag_in={.phase=g->entry_exec.initialized?g->entry_exec.phase:ENTRY_PHASE_PREENTRY,
         .relative_velocity=t->true_air_speed,.latitude=t->latitude,.altitude=t->mean_altitude,
         .measured_drag_accel=live_drag_accel(t,aero,v),.modeled_drag_accel=live_drag_accel(t,aero,v),
         .aero_confidence=clampd(aero.confidence,0.0,1.0),.has_incidence=true,
         .angle_of_attack=t->angle_of_attack,.sideslip=t->sideslip,
-        .range_to_site=hypot(q->along_track-t->runway_along_track,q->cross_track-t->runway_cross_track),
-        .taem_range=0.0,.taem_latitude=gate.latitude,.taem_altitude=q->altitude,.taem_velocity=q->speed,
+        .range_to_site=fmax(0.0,t->range_to_site),
+        .taem_range=entry_taem_range_target(p,s),.taem_latitude=cfg->site.latitude,
+        .taem_altitude=s->taem_interface_altitude,.taem_velocity=interface_speed,
         .planet=p,.vehicle=v};
     EntryDragReferenceOutput drag=entry_drag_reference_compute(&drag_in,&drag_cfg);
     /* A propagated topology owns reversal geometry, but live longitudinal energy
@@ -163,7 +163,7 @@ static GuidanceResult entry_topology_guidance(GuidanceMachine*g,const Telemetry*
         aoa=clampd(aoa,0.0,entry_final_s_turn_aoa_ceiling(v));
     }
     EntryExecProfile profile=entry_drag_reference_exec_profile(&drag_in,&drag_cfg,&drag);
-    bool handoff_qualified=capture.ready&&g->entry_topology_capture_good_duration>=.75;
+    bool handoff_qualified=mm305_ready&&g->entry_topology_capture_good_duration>=.75;
     EntryExecObservation obs={.ut=t->ut,.relative_velocity=t->true_air_speed,.altitude=t->mean_altitude,
         .dynamic_pressure=fmax(0.0,t->dynamic_pressure),.checkpoint_restart=false};
     bool executive_ok=entry_exec_update(&g->entry_exec,&obs,&profile);

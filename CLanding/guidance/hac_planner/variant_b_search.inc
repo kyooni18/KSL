@@ -1,3 +1,55 @@
+/* A direct p0 capture is a discrete-guidance sampling question, not a
+   hand-tuned 500 m / 5 deg box.  During one guidance frame the vehicle can
+   travel V*dt and rotate its velocity vector by a_lat/V*dt.  Use the same
+   KSP-calibrated HAC authority that certifies the circle. */
+static bool terminal_variant_b_p0_capture_ready(const GuidanceMachine*g,
+        const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,
+        const LandingConfiguration*cfg,const HACTransitionPlan*plan,double radius,
+        double current_e,double current_n){
+    if(!g||!t||!p||!cfg||!plan||!plan->valid||!(radius>0.0)||
+       !(cfg->guidance.guidance_rate>DBL_MIN))
+        return false;
+    double required=NAN,available=NAN,minimum=INFINITY;
+    if(!terminal_fixed_hac_authority(g,t,p,aero,&cfg->vehicle,&cfg->guidance,
+            radius,&required,&available,&minimum)||
+       !(available>0.0))
+        return false;
+    double dt=1.0/cfg->guidance.guidance_rate;
+    double speed=guidance_lateral_speed(t);
+    if(!(speed>DBL_MIN)||!isfinite(course))return false;
+    double position_limit=speed*dt+0.5*available*dt*dt;
+    double course_limit=available/speed*dt*RAD2DEG;
+    double distance=hypot(current_e-plan->p0.e,current_n-plan->p0.n);
+    double course_error=fabs(norm_signed_deg(course-plan->lead_end_course));
+    double position_eps=sqrt(DBL_EPSILON)*fmax(1.0,position_limit);
+    double course_eps=sqrt(DBL_EPSILON)*fmax(1.0,course_limit);
+    return isfinite(distance)&&isfinite(course_error)&&
+        distance<=position_limit+position_eps&&
+        course_error<=course_limit+course_eps;
+}
+
+/* Bound prospective HAC geometry by the distance the current stock-KSP
+   vehicle can actually glide before reaching its real operational speed floor.
+   The integration uses the atmosphere table and calibrated drag model. */
+static double terminal_variant_b_reachable_ground_range(const GuidanceMachine*g,
+        const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg){
+    if(!g||!t||!p||!cfg||!(p->radius>0.0))return NAN;
+    double floor_speed=fmax(cfg->vehicle.minimum_safe_speed,
+        cfg->vehicle.final_approach_speed);
+    double lo=0.0,hi=LANDER_PI*p->radius;
+    for(unsigned i=0;i<(unsigned)(2*DBL_MANT_DIG);i++){
+        double mid=0.5*(lo+hi);
+        UnpoweredPathProjection projection=decision_unpowered_path_projection(
+            g,t,p,cfg,cfg->site.altitude,mid);
+        bool reachable=projection.valid&&
+            isfinite(projection.terminal_speed_mps)&&
+            projection.terminal_speed_mps>=floor_speed;
+        if(reachable)lo=mid;else hi=mid;
+        if(hi-lo<=sqrt(DBL_EPSILON)*fmax(1.0,hi))break;
+    }
+    return lo;
+}
+
 /* Search the actual dynamic capture tuple before Variant-B reaches the old
    nominal p0.  The candidate's radius, runway-anchored p0, C1 lead and
    analytic arc are evaluated together.  This is deliberately a pre-capture
@@ -43,65 +95,84 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
     const unsigned long long evaluation_id=audit_enabled?++next_evaluation_id:0;
     const GuidanceSettings*s=&cfg->guidance;
     const VehicleProfile*v=&cfg->vehicle;
+    double relative_capture=norm_signed_deg(cfg->site.runway_heading-capture_course);
+    double angular_epsilon=sqrt(DBL_EPSILON)*RAD2DEG;
+    if(fabs(relative_capture)<=angular_epsilon)return false;
+    /*
+     * HAC side is the signed turn from inlet course to runway course.  The
+     * transition geometry defines arc angle as side*(runway-entry), so RW09
+     * from a northbound 0 deg inlet is side +1 (a 90 deg turn), not -1.
+     */
+    double hac_side=relative_capture>0.0?1.0:-1.0;
+    /*
+     * Prospective radius domain:
+     *   lower -- best-case physical turn radius at the densest reachable
+     *            atmosphere (the runway/site altitude);
+     *   upper -- any p0 farther away than the vehicle's best-glide reachable
+     *            ground range cannot be an executable unpowered lead.
+     * The configured HAC radius remains a preference/sample, not a bound.
+     */
+    TaemSpeedEnvelope site_speed=decision_taem_speed_envelope(v,p,cfg->site.altitude);
+    double numerical_radius=sqrt(DBL_EPSILON)*
+        fmax(1.0,fabs(s->final_approach_distance));
+    double lower=site_speed.valid&&isfinite(site_speed.minimum_turn_radius_m)?
+        fmax(numerical_radius,site_speed.minimum_turn_radius_m):numerical_radius;
+
+    HACPoint2 unit_entry={0},unit_center={0},unit_exit={0};
+    if(!hac_fixed_alignment_geometry(&unit_entry,&unit_center,&unit_exit,
+            &cfg->site,s,1.0,capture_course,hac_side))
+        return false;
+    double basis_e=unit_entry.e-unit_exit.e;
+    double basis_n=unit_entry.n-unit_exit.n;
+    double basis_norm=hypot(basis_e,basis_n);
+    if(!(basis_norm>DBL_MIN))return false;
+    double reachable_range=terminal_variant_b_reachable_ground_range(g,t,p,cfg);
+    if(!isfinite(reachable_range)||!(reachable_range>0.0))return false;
+    double current_to_exit=hypot(current_e-unit_exit.e,current_n-unit_exit.n);
+    double upper=(reachable_range+current_to_exit)/basis_norm;
+    if(!isfinite(lower)||!isfinite(upper)||lower>upper)return false;
+
     double authority_required=NAN,authority_available=NAN,minimum_radius=INFINITY;
-    (void)terminal_fixed_hac_authority(t,p,aero,v,s,3000.0,
+    (void)terminal_fixed_hac_authority(g,t,p,aero,v,s,
+        fmax(lower,terminal_hac_radius_live(t,p,aero,v,s)),
         &authority_required,&authority_available,&minimum_radius);
     if(authority_min_out)*authority_min_out=minimum_radius;
-    if(!isfinite(minimum_radius)||!(authority_available>0.0))return false;
 
-    const double minimum_hac_radius=3000.0;
-    /* This is a prospective search.  The current speed may require a
-       50-km instantaneous turn radius, but the finite lead exists precisely
-       to reach a lower-speed entry state.  Enforce authority on the predicted
-       circle-entry speed below; do not discard every useful future radius
-       because of the present upstream velocity. */
-    double lower=minimum_hac_radius;
-    double upper=fmax(minimum_hac_radius,
-        fmin(p->radius*.20,fmax(s->hac_radius*8.0,s->taem_interface_range*2.5)));
-    if(!isfinite(lower)||!isfinite(upper)||lower>upper)return false;
-    double current_speed=fmax(1.0,guidance_lateral_speed(t));
-    HACPoint2 nominal_p0={0},nominal_center={0},nominal_exit={0};
-    double nominal_distance=INFINITY;
-    if(hac_fixed_alignment_geometry(&nominal_p0,&nominal_center,&nominal_exit,
-            &cfg->site,s,s->hac_radius,capture_course,1.0))
-        nominal_distance=hypot(nominal_p0.e-current_e,
-            nominal_p0.n-current_n);
-    /* A dynamic circle may move its tangent p0 away from the nominal circle.
-       Bound that displacement by the existing TAEM interface envelope rather
-       than allowing an unbounded search (the earlier bug selected a 75 km
-       circle with a 109 km p0). */
-    double maximum_candidate_distance=fmax(12000.0,
-        nominal_distance+fmax(10000.0,s->taem_interface_range*.75));
-    /* The nominal configured radius is not a physical lower bound for a
-       dynamic candidate.  It made a smaller, reachable candidate look
-       invalid merely because its target speed differed from the old 12 km
-       rehearsal.  Retain only the existing vehicle/staging safety floor; the
-       candidate's own target-speed and normal admission checks remain final. */
+    double current_speed=fmax(DBL_MIN,guidance_lateral_speed(t));
+    /*
+     * Geometry must use the same force-book authority that certifies the lead.
+     * The generic decision envelope can be optimistic during a low-incidence
+     * high-energy state; mixing the two produced acquisition circles that were
+     * guaranteed to fail terminal_fixed_hac_authority() on their first sample.
+     */
+    if(!isfinite(authority_available)||!(authority_available>DBL_MIN)||
+       !isfinite(minimum_radius)||!(minimum_radius>DBL_MIN))
+        return false;
 
-    /* Include the live comfort-radius preference and, when the vehicle is
-       already close to an analytic tangent, the radius implied by that
-       measured p0.  The latter prevents an ideal handoff from being rounded
-       away by the ~1 km prospective scan. */
+    /*
+     * Shuttle TAEM acquisition steers on heading error to the selected HAC
+     * tangent.  Keep the force/drag inputs outside the radius sweep, but derive
+     * response bank and response-projected state from each candidate tangent.
+     * The strict finite lead propagator remains authoritative afterward.
+     */
+    double live_drag=terminal_expected_energy_loss_accel(g,t,aero,v);
+    if(!isfinite(live_drag)||live_drag<0.0)live_drag=0.0;
+    double bank_effectiveness=isfinite(t->bank_effectiveness)&&
+        t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
+    double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
+
+
     double preferred=terminal_hac_radius_live(t,p,aero,v,s);
     double inferred_radius=NAN;
-    HACPoint2 unit_entry={0},unit_center={0},unit_exit={0};
-    if(hac_fixed_alignment_geometry(&unit_entry,&unit_center,&unit_exit,
-            &cfg->site,s,1.0,capture_course,1.0)){
-        double basis_e=unit_entry.e-unit_exit.e;
-        double basis_n=unit_entry.n-unit_exit.n;
-        double basis2=basis_e*basis_e+basis_n*basis_n;
-        if(basis2>DBL_MIN){
-            double rel_e=current_e-unit_exit.e;
-            double rel_n=current_n-unit_exit.n;
-            double projected=(rel_e*basis_e+rel_n*basis_n)/basis2;
-            double implied_e=unit_exit.e+projected*basis_e;
-            double implied_n=unit_exit.n+projected*basis_n;
-            double residual=hypot(current_e-implied_e,current_n-implied_n);
-            if(isfinite(projected)&&projected>=lower&&projected<=upper&&
-               residual<=750.0&&
-               fabs(norm_signed_deg(course-capture_course))<=10.0)
-                inferred_radius=projected;
-        }
+    double basis2=basis_e*basis_e+basis_n*basis_n;
+    if(basis2>DBL_MIN){
+        double rel_e=current_e-unit_exit.e;
+        double rel_n=current_n-unit_exit.n;
+        double projected=(rel_e*basis_e+rel_n*basis_n)/basis2;
+        /* Projection is only a numerical sample.  The complete lead,
+           authority and energy certificates below decide whether it is real. */
+        if(isfinite(projected)&&projected>=lower&&projected<=upper)
+            inferred_radius=projected;
     }
     double samples[128];size_t count=0;
     samples[count++]=lower;
@@ -120,18 +191,13 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
     GuidanceMachine fallback_profile={0};
     double fallback_radius=NAN,fallback_energy=0.0,fallback_speed=NAN;
     bool have_fallback=false;
-    /* Geometry, lead reachability and authority remain useful even when no
-       candidate passes the full energy certificate.  Keep the closest failing
-       tuple as a frozen forced fallback.  A normally feasible tuple always
-       wins; the fallback exists so MM305 still flies the best available HAC
-       instead of aborting solely because the feasible set is empty. */
+    /* Keep failing tuples only as diagnostics explaining the nearest violated
+       certificate.  They are never executable HAC state. */
     HACTransitionPlan provisional_plan={0};
     GuidanceMachine provisional_profile={0};
     double provisional_radius=NAN,provisional_speed=NAN;
     bool have_provisional=false;
-    /* If no tuple reaches the energy certificate at all, retain the
-       lead-reachable circle with the smallest normalized authority violation.
-       This is strictly lower priority than every authority-valid tuple. */
+    /* Retain the least authority-violating tuple for diagnostics only. */
     HACTransitionPlan authority_fallback_plan={0};
     GuidanceMachine authority_fallback_profile={0};
     double authority_fallback_radius=NAN,authority_fallback_speed=NAN,
@@ -162,53 +228,116 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
         best_energy_required=NAN,best_energy_loss=NAN,
         best_energy_lead=NAN,best_energy_arc=NAN,
         best_energy_closure=NAN;
-    double tangent_e=sin(capture_course*DEG2RAD);
-    double tangent_n=cos(capture_course*DEG2RAD);
-    double right_e=cos(capture_course*DEG2RAD);
-    double right_n=-sin(capture_course*DEG2RAD);
     for(size_t i=0;i<count;i++){
         double radius=clampd(samples[i],lower,upper);
         HACTransitionPlan candidate={0};
-        if(!hac_fixed_alignment_plan(&candidate,current_e,current_n,course,
-                capture_course,&cfg->site,s,radius,1.0))continue;
-        geometry_count++;
-        double dx=current_e-candidate.p0.e,dy=current_n-candidate.p0.n;
-        double along_to_p0=dx*tangent_e+dy*tangent_n;
-        double cross_to_p0=dx*right_e+dy*right_n;
-        double distance_to_p0=hypot(dx,dy);
-        double p0_course_error=fabs(norm_signed_deg(course-capture_course));
-        bool at_capture_window=distance_to_p0<=500.0&&
-            fabs(cross_to_p0)<=350.0&&p0_course_error<=5.0;
-        bool p0_still_ahead=along_to_p0< -fmax(1000.0,current_speed*2.0);
-        if((!at_capture_window&&!p0_still_ahead)||
-           distance_to_p0>maximum_candidate_distance){window_rejected++;continue;}
-        /* An ideal MM305 handoff may already be inside the measured p0
-           capture set.  Do not manufacture a tiny Bezier lead and do not
-           reject it for lacking 1 km of staging distance: certify the live
-           state directly as p0, then let the same authority/energy gates
-           decide whether this radius may be committed. */
+
+        /*
+         * Use the same finite C1 live-state -> HAC inlet bridge that production
+         * MM305 commits.  A constant-radius acquisition circle sized at the live
+         * 500+ m/s state is not a valid model of a descending shuttle: speed and
+         * available lift change continuously along the lead.  Geometry stays
+         * independent of that changing authority; terminal_fixed_hac_lead_reachable()
+         * below propagates the real KSP force/drag model along the entire bridge
+         * and rejects any sample that cannot actually fly it.
+         */
+        HACTransitionPlan direct_candidate={0};
+        bool have_direct_candidate=false;
+        bool at_capture_window=false;
+        double acquisition_course=NAN;
+        if(hac_fixed_alignment_tangent_course(current_e,current_n,&cfg->site,s,
+                radius,hac_side,&acquisition_course)){
+            double acquisition_error=norm_signed_deg(acquisition_course-course);
+            double response_bank=fabs(acquisition_error)>
+                    sqrt(DBL_EPSILON)*RAD2DEG?
+                copysign(bank_limit,acquisition_error):0.0;
+            double response_time=hac_response_lead_time(t,s,response_bank);
+            if(!isfinite(response_time)||response_time<0.0)response_time=0.0;
+            double response_e=current_e,response_n=current_n,response_course=course;
+            hac_projected_local_state(t,&cfg->site,p->radius,course,response_time,
+                response_bank,s->taem_roll_rate,s->entry_roll_acceleration,
+                live_lift_accel(t,aero,v),bank_effectiveness,live_drag,
+                &response_e,&response_n,&response_course);
+            double response_distance=hypot(response_e-current_e,response_n-current_n);
+            double response_v2=t->true_air_speed*t->true_air_speed-
+                2.0*live_drag*fmax(0.0,response_distance);
+            double response_speed=sqrt(fmax(
+                v->minimum_safe_speed*v->minimum_safe_speed,response_v2));
+            double preferred_path=fmax(response_distance+radius,DBL_MIN);
+            have_direct_candidate=hac_transition_plan(&direct_candidate,
+                current_e,current_n,response_e,response_n,course,response_course,
+                &cfg->site,s,radius,hac_side,s->final_approach_distance,
+                current_speed,response_speed,live_drag,
+                authority_available,
+                preferred_path,0.0,reachable_range);
+            if(have_direct_candidate)
+                at_capture_window=terminal_variant_b_p0_capture_ready(g,t,course,p,aero,
+                    cfg,&direct_candidate,radius,current_e,current_n);
+        }
+
         if(at_capture_window){
+            candidate=direct_candidate;
             candidate.lead_start=hac_point(current_e,current_n);
             candidate.lead_p1=candidate.lead_start;
-            candidate.lead_p2=candidate.p0;
-            candidate.lead_curve=false;
-            candidate.lead_length=0.0;
+        }else{
+            /*
+             * The acquisition must be allowed to tighten as drag reduces speed.
+             * A circle frozen at the instantaneous V^2/a radius over-predicts the
+             * distance badly at 500+ m/s. Prefer the C1 finite lead: its curvature
+             * varies continuously, and terminal_fixed_hac_lead_reachable() below
+             * propagates speed/lift/altitude along every segment and rejects any
+             * point whose local curvature outruns the live KSP force envelope.
+             * Keep the exact circle+tangent topology only as a geometry fallback.
+             */
+            if(!hac_fixed_alignment_plan(&candidate,current_e,current_n,course,
+                    capture_course,&cfg->site,s,radius,hac_side)){
+                double acquisition_radius=minimum_radius;
+                if(!(acquisition_radius>DBL_MIN)||!isfinite(acquisition_radius)||
+                   !hac_shuttle_acquisition_plan(&candidate,current_e,current_n,course,
+                        &cfg->site,s,radius,hac_side,acquisition_radius,
+                        s->final_approach_distance))
+                    continue;
+            }
+        }
+
+        double candidate_total=candidate.lead_length+candidate.cone_arc_length;
+        if(candidate_total>reachable_range){
+            static int acquisition_range_diag_count=0;
+            if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow&&
+               acquisition_range_diag_count++<8)
+                fprintf(stderr,"HAC_LEAD_RANGE_REJECT ut=%.3f hacR=%.1f lead=%.1f hacArc=%.1f total=%.1f reachable=%.1f\n",
+                    t->ut,radius,candidate.lead_length,candidate.cone_arc_length,
+                    candidate_total,reachable_range);
+            continue;
+        }
+        geometry_count++;
+
+        double distance_to_p0=hypot(current_e-candidate.p0.e,
+            current_n-candidate.p0.n);
+        double p0_course_error=fabs(norm_signed_deg(
+            course-candidate.lead_end_course));
+
+        /* A finite certified lead is itself the acquisition course.  Direct-p0
+           candidates alone require the discrete capture set. */
+        if(!candidate.lead_curve&&!candidate.lead_acquisition&&!at_capture_window){
+            window_rejected++;
+            continue;
         }
         largest_test_radius=fmax(largest_test_radius,radius);
         double arc_angle=candidate.cone_arc_length/fmax(radius,1.0);
         GuidanceMachine candidate_profile={0};
         double candidate_response_time=NAN;
         if(!fixed_hac_candidate_vertical_profile(&candidate_profile,g,t,&candidate,
-                v,s,&cfg->site,1.0,&candidate_response_time)){
+                v,s,&cfg->site,hac_side,&candidate_response_time)){
             if(audit_enabled)fprintf(stderr,"HAC_PROFILE_OUTER_REJECT R=%.3f lead=%.3f arc=%.3f valid=%d\n",radius,candidate.lead_length,candidate.cone_arc_length,candidate.valid?1:0);
             lead_rejected+=12;
             continue;
         }
-        /* A dynamic radius must also make the frozen vertical trajectory
-           executable.  The middle descent may be steeper than the outer-final
-           tangent, but both response segments must remain inside the live -35
-           deg FPA envelope and the profile must actually recover to the final
-           tangent at HAC exit. */
+        /* Static angle boxes do not certify an unpowered vertical path.  The
+           shared profile checker enforces geometric regularity; the finite
+           lead propagator below proves the actual KSP lift/drag response. */
+        bool vertical_profile_executable=
+            fixed_hac_vertical_profile_executable(&candidate_profile,s);
         double final_profile_slope=candidate_profile.terminal_glide_mode&&
             candidate_profile.terminal_test_glide_slope>0.0?
             candidate_profile.terminal_test_glide_slope:s->final_glide_slope;
@@ -217,13 +346,6 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
         double settled_profile_slope=
             candidate_profile.fixed_hac_reference_settled_slope_deg;
         double exit_profile_slope=fixed_hac_reference_slope(&candidate_profile,0.0);
-        bool vertical_profile_executable=isfinite(initial_profile_slope)&&
-            isfinite(settled_profile_slope)&&isfinite(final_profile_slope)&&
-            isfinite(exit_profile_slope)&&
-            initial_profile_slope<=35.0+1e-6&&
-            settled_profile_slope<=35.0+1e-6&&
-            final_profile_slope<=35.0+1e-6&&
-            fabs(exit_profile_slope-final_profile_slope)<=0.5;
         if(!vertical_profile_executable){
             if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow)
                 fprintf(stderr,
@@ -293,12 +415,12 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
                 predicted.mean_altitude>cfg->site.altitude&&
                 predicted.mean_altitude<=s->mm305_max_altitude&&
                 isfinite(predicted.true_air_speed)&&
-                predicted.true_air_speed>v->minimum_safe_speed*1.20&&
+                predicted.true_air_speed>=delivered_entry_floor&&
                 isfinite(predicted.dynamic_pressure)&&
-                predicted.dynamic_pressure<=v->maximum_dynamic_pressure*1.05;
-            bool p0_vertical_valid=isfinite(predicted.flight_path_angle)&&
-                predicted.flight_path_angle<-1.0&&
-                predicted.flight_path_angle>-35.0;
+                predicted.dynamic_pressure<=v->maximum_dynamic_pressure;
+            /* Vertical feasibility was propagated through the actual profile
+               above; only a finite delivered FPA is required here. */
+            bool p0_vertical_valid=isfinite(predicted.flight_path_angle);
             if(!p0_dynamic_valid||!p0_vertical_valid){
                 lead_rejected++;
                 if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow&&
@@ -350,7 +472,7 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
                     &candidate_profile,candidate.cone_arc_length);
                 double profile_aoa=terminal_fpa_force_aoa(&predicted,p,aero,v,
                     -candidate_profile_slope);
-                if(!isfinite(profile_aoa))profile_aoa=terminal_hac_energy_aoa(v);
+                if(!isfinite(profile_aoa))profile_aoa=terminal_hac_energy_aoa(&predicted,v);
                 double candidate_aoa=fmax(profile_aoa,
                     isfinite(lateral_aoa)?lateral_aoa:0.0);
                 authority_state.angle_of_attack=clampd(candidate_aoa,0.0,
@@ -358,7 +480,7 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
             }
             double predicted_required=NAN,predicted_available=NAN,
                 predicted_min_radius=INFINITY;
-            bool candidate_authority=terminal_fixed_hac_authority(&authority_state,p,
+            bool candidate_authority=terminal_fixed_hac_authority(g,&authority_state,p,
                 aero,v,s,radius,&predicted_required,&predicted_available,
                 &predicted_min_radius);
             if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow&&
@@ -429,7 +551,7 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
                 best_authority_distance=distance_to_p0;
             }
             if(!isfinite(predicted.angle_of_attack)||predicted.angle_of_attack<=0.0)
-                predicted.angle_of_attack=terminal_hac_energy_aoa(v);
+                predicted.angle_of_attack=terminal_hac_energy_aoa(&predicted,v);
             double sustainable=0.0,margin=NAN,loss=NAN,
                 energy_available=NAN,energy_required=NAN;
             FixedHacEnergyAudit audit={0};
@@ -440,6 +562,7 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
                 &sustainable,&margin,&loss,
                 &energy_available,&energy_required,
                 audit_enabled?&audit:NULL,
+                &candidate,&candidate_profile,
                 candidate_profile.fixed_hac_reference_slope_deg,NAN);
             if(audit_enabled){
                 double live_specific_energy=rotating_specific_energy(t->latitude,
@@ -665,4 +788,3 @@ static bool terminal_variant_b_find_dynamic_plan(const GuidanceMachine*g,
     }
     return false;
 }
-

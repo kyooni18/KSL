@@ -64,7 +64,6 @@ static bool append_vehicle_log(LandingController*c,const char*event,bool force_e
 }
 
 static const EntryControlPlan*current_entry_control_plan(const LandingController*c){
-    if(c->guidance.taem_s_turn_plan.valid)return &c->guidance.taem_s_turn_plan;
     if(c->guidance.entry_s_turn_plan.valid)return &c->guidance.entry_s_turn_plan;
     return NULL;
 }

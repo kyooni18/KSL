@@ -249,6 +249,17 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     telemetry_init(t);
     memset(state, 0, sizeof(*state));
 
+    /*
+     * ShuttleSim publishes the instantaneous whole-vehicle force state, but it
+     * does not publish passive-calibration products.  telemetry_init() uses
+     * zero-filled storage for generic transport compatibility; zero is a real
+     * AoA, though, and terminal guidance treats a finite calibrated best-glide
+     * value as authoritative.  Preserve the distinction between "0 deg" and
+     * "not measured" here instead of silently commanding wings-level flight.
+     */
+    t->calibrated_best_glide_angle_of_attack = NAN;
+    t->calibrated_stall_speed = NAN;
+
     int position = object_value(&doc, 0, "position");
     int velocity = object_value(&doc, 0, "velocity");
     int attitude = object_value(&doc, 0, "attitude");

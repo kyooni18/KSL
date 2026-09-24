@@ -284,7 +284,7 @@ void landing_controller_engage_hac_test(LandingController*c){
     trajectory_clear(&c->trajectory_calibrator.forecast);trajectory_init(&c->trajectory_calibrator.forecast);
     c->latest_telemetry=t;c->latest_state=state;c->has_latest=true;
     landing_snapshot_set_sample(&c->snapshot,&t,&c->latest_state);c->snapshot.plan=NULL;c->snapshot.phase=PHASE_TAEM;c->snapshot.automation_engaged=true;c->snapshot.paused=false;
-    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s MM305 terminal guidance owns the vehicle; high-energy S-turn staging remains available before path capture.",status);
+    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s MM305 terminal guidance owns the vehicle; path acquisition remains uncommitted until the live geometry, energy, and authority gates pass.",status);
     set_error(c,NULL);set_warning(c,"HAC/MM305 test mode is active. This is a terminal-guidance test, not a validated reentry continuation.");
     /* Do not publish the configured nominal circle as if it were the selected
        HAC.  MM305 selects radius only after the coupled lead, p0 authority,
@@ -307,6 +307,13 @@ void landing_controller_engage_final_test(LandingController*c){
     if(c->glide.active){set_warning(c,"Stop calibration before starting the final-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     LandingConfiguration cfg=effective_config(c);char err[768]={0};Telemetry t;VehicleState state;
     if(!read_live_sample(c,&cfg,&t,&state,err,sizeof(err))){set_error(c,err);c->snapshot.phase=PHASE_FAULT;publish(c);pthread_mutex_unlock(&c->mutex);return;}
+    /* Admission must use the same Mach-interpolated model and confidence as
+       the first live guidance tick, so both energy checks price the same
+       aerodynamic uncertainty. */
+    c->aerodynamics=envelope_at_controller(&c->envelope,t.mach);
+    t.estimated_lift_to_drag=c->aerodynamics.lift_to_drag;
+    t.estimated_ballistic_coefficient=c->aerodynamics.ballistic_coefficient;
+    t.aerodynamic_confidence=c->aerodynamics.confidence;
     const PlanetModel*p=krpc_session_planet(c->session);
     if(planet_atmospheric_density(p,t.mean_altitude)<=DBL_EPSILON){set_warning(c,"Final-only landing test requires an atmospheric flight state.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     if(!strcasecmp(t.vessel_situation,"landed")||!strcasecmp(t.vessel_situation,"splashed")||!strcasecmp(t.vessel_situation,"pre-launch")){

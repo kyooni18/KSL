@@ -264,7 +264,17 @@ static double entry_program_vertical_bank_ceiling(const GuidanceMachine*g,const 
     if(!isfinite(desired_fpa)||!isfinite(t->flight_path_angle)||
        !isfinite(distance)||distance<=DBL_MIN)return bank_limit;
 
-    double lift=live_lift_accel(t,aero,&cfg->vehicle);
+    /*
+     * Bank feasibility must use the lift the vehicle can command now, not only
+     * the lift produced by its current AoA.  Using live lift here created a
+     * deadlock: a shallow/high-energy shuttle at 18 deg AoA was declared unable
+     * to bank, so the controller never commanded the extra incidence that would
+     * have made the turn supportable.
+     */
+    ControlAuthorityEnvelope authority=
+        decision_control_authority_envelope(g,t,p,cfg);
+    double lift=authority.valid?
+        authority.maximum_normal_accel_mps2:live_lift_accel(t,aero,&cfg->vehicle);
     if(!isfinite(lift)||lift<=DBL_MIN)return 0.0;
 
     double radius=p->radius+fmax(0.0,t->mean_altitude);
@@ -280,21 +290,34 @@ static double entry_program_vertical_bank_ceiling(const GuidanceMachine*g,const 
         2.0*horizontal*rotation*sin(course*DEG2RAD);
     double equilibrium=gravity-fmax(0.0,inertial_horizontal_sq)/radius;
 
-    ControlAuthorityEnvelope authority=
-        decision_control_authority_envelope(g,t,p,cfg);
+
     const TaemInterfaceTarget*q=&g->taem_interface_target;
-    double travel_time=horizontal>DBL_MIN?distance/horizontal:INFINITY;
     double response=fmax(fmax(0.0,q->response_time),
         authority.valid?authority.control_response_time_s:0.0);
-    if(isfinite(travel_time))response=fmax(response,travel_time);
+    response=clampd(response,2.0,12.0);
     if(!(response>DBL_MIN)||!isfinite(response))return bank_limit;
 
     double gamma=t->flight_path_angle*DEG2RAD;
     double cos_gamma=cos(gamma);
     if(fabs(cos_gamma)<=DBL_EPSILON)return bank_limit;
 
+    /* In thin air / hypersonic entry, available aerodynamic lift cannot support
+       level flight (lift < equilibrium * cos_gamma). The vehicle is descending
+       along an entry arc where dynamic pressure builds with depth; it must not be
+       forced wings-level (bank=0) while high above the TAEM altitude. */
+    if(lift<equilibrium*cos_gamma&&t->mean_altitude>q->altitude&&
+       t->flight_path_angle>=desired_fpa-3.0)
+        return bank_limit;
+
+    /*
+     * If MM304 is already steeper than the geometric inlet slope, do not spend
+     * all available lift trying to erase that FPA error inside one actuator
+     * response time.  Preserve the measured glide first; the altitude budget can
+     * still reduce bank as the actual interface height is approached.
+     */
+    double vertical_reference_fpa=fmin(desired_fpa,t->flight_path_angle);
     double fpa_accel=t->true_air_speed*
-        (desired_fpa-t->flight_path_angle)*DEG2RAD/response;
+        (vertical_reference_fpa-t->flight_path_angle)*DEG2RAD/response;
     double altitude_accel=2.0*(q->altitude-t->mean_altitude-
         t->vertical_speed*response)/(response*response);
     double radial_lift=(equilibrium+altitude_accel+
@@ -308,7 +331,12 @@ static double entry_program_vertical_bank_ceiling(const GuidanceMachine*g,const 
         nextafter(90.0,0.0))*DEG2RAD;
     double minimum_vertical=lift*cos(max_effective);
     if(required_vertical<=minimum_vertical)return bank_limit;
-    if(required_vertical>=lift)return 0.0;
+    if(required_vertical>=lift){
+        /* If above target altitude and not plunging in a steep dive, preserve bank authority. */
+        if(t->mean_altitude>q->altitude&&t->flight_path_angle>=desired_fpa-2.5)
+            return bank_limit;
+        return 0.0;
+    }
 
     double effective=acos(clampd(required_vertical/lift,0.0,1.0))*RAD2DEG;
     return clampd(effective/effectiveness,0.0,bank_limit);
@@ -326,9 +354,10 @@ static bool entry_program_altitude_capture(GuidanceMachine*g,const Telemetry*t,
 
     double demanded_magnitude=
         entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
-    if(!isfinite(demanded_magnitude))return false;
+    if(!isfinite(demanded_magnitude)||demanded_magnitude<=5.0)return false;
 
     double original=*bank;
+    if(fabs(original)>=demanded_magnitude-1.0)return false;
     double sign=fabs(original)>sqrt(DBL_EPSILON)?
         (original>=0.0?1.0:-1.0):(g->s_turn_sign>=0.0?1.0:-1.0);
     *bank=sign*demanded_magnitude;
@@ -365,6 +394,7 @@ static bool entry_program_shape_vertical_capture_plan(GuidanceMachine*g,const Te
      * interface target, do not add drag merely because an old plan requested a
      * higher AoA.  Use the measured best-glide incidence when available, but
      * never below the configured thermal-protection floor.
+     * Only apply relief during gentle glides; in steep descents, full AoA lift is needed.
      */
     double path_distance=NAN;
     double path_fpa=entry_program_taem_path_fpa(g,t,cfg,&path_distance);
@@ -372,7 +402,8 @@ static bool entry_program_shape_vertical_capture_plan(GuidanceMachine*g,const Te
         decision_control_authority_envelope(g,t,p,cfg);
     if(authority.valid&&authority.survivable&&isfinite(path_fpa)&&
        isfinite(path_distance)&&path_distance>DBL_MIN&&
-       isfinite(t->flight_path_angle)&&t->flight_path_angle<path_fpa){
+       isfinite(t->flight_path_angle)&&t->flight_path_angle<path_fpa&&
+       t->flight_path_angle>=-6.0&&t->vertical_speed>=-50.0){
         double thermal=entry_thermal_protection_aoa_floor(v);
         double best_glide=isfinite(t->calibrated_best_glide_angle_of_attack)&&
             t->calibrated_best_glide_angle_of_attack>0.0?
@@ -381,6 +412,23 @@ static bool entry_program_shape_vertical_capture_plan(GuidanceMachine*g,const Te
             thermal,v->maximum_angle_of_attack);
         if(aoa>relief_target+sqrt(DBL_EPSILON)){
             aoa=relief_target;
+            changed=true;
+        }
+    }
+
+    /*
+     * Execute the same lift allocation used by the bank ceiling.  Preserve the
+     * current glide angle when it is already steeper than the geometric path
+     * rather than demanding an energy-expensive pull-up, but add enough AoA to
+     * support the selected bank whenever the measured polar can do so.
+     */
+    if(isfinite(path_fpa)&&isfinite(t->flight_path_angle)&&isfinite(bank)){
+        double support_fpa=fmin(path_fpa,t->flight_path_angle);
+        Telemetry banked=*t;
+        banked.roll=bank;
+        double support_aoa=terminal_fpa_force_aoa(&banked,p,aero,v,support_fpa);
+        if(isfinite(support_aoa)&&support_aoa>aoa+sqrt(DBL_EPSILON)){
+            aoa=clampd(support_aoa,0.0,v->maximum_angle_of_attack);
             changed=true;
         }
     }

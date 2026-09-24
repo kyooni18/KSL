@@ -30,9 +30,17 @@ static void derive_initial_orbit(Simulation *sim){
     if(s->has_cartesian_state){sim->state.position_i_m=s->position_i_m;sim->state.velocity_i_mps=s->velocity_i_mps;return;}
     Vec3 p=world_lla_to_inertial(w,deg2rad(s->latitude_deg),deg2rad(s->longitude_deg),s->altitude_m,s->ut0);
     LocalFrame lf=world_local_frame_i(w,p,s->ut0); double hdg=deg2rad(s->heading_deg);
-    Vec3 dir=v3_normalized(v3_add(v3_scale(lf.north,cos(hdg)),v3_scale(lf.east,sin(hdg))));
-    double vc=sqrt(w->mu_m3_s2/v3_norm(p));
-    sim->state.position_i_m=p; sim->state.velocity_i_mps=v3_scale(dir,vc);
+    Vec3 horizontal_dir=v3_normalized(v3_add(v3_scale(lf.north,cos(hdg)),v3_scale(lf.east,sin(hdg))));
+    sim->state.position_i_m=p;
+    if(s->has_surface_flight_state&&isfinite(s->surface_speed_mps)&&s->surface_speed_mps>0.0){
+        double fpa=deg2rad(s->flight_path_angle_deg);
+        Vec3 air=v3_add(v3_scale(horizontal_dir,s->surface_speed_mps*cos(fpa)),
+                       v3_scale(lf.up,s->surface_speed_mps*sin(fpa)));
+        sim->state.velocity_i_mps=v3_add(air,world_atmosphere_velocity_i(w,p));
+    }else{
+        double vc=sqrt(w->mu_m3_s2/v3_norm(p));
+        sim->state.velocity_i_mps=v3_scale(horizontal_dir,vc);
+    }
 }
 void sim_init(Simulation *sim,const Scenario *scenario){
     memset(sim,0,sizeof(*sim));
@@ -166,21 +174,39 @@ void sim_step(Simulation *sim,double dt){
             }
         }
     }
-    attitude_step(&s->attitude,dt);
     if(s->on_ground){ground_step(sim,dt);s->ut+=dt;s->sim_elapsed_s+=dt;return;}
-    Vec3 p=s->position_i_m,v=s->velocity_i_mps;double ut=s->ut;AeroForces tmp;
-    Vec3 a1=flight_accel(sim,p,v,ut,&tmp);Vec3 k1p=v,k1v=a1;
-    Vec3 p2=v3_add(p,v3_scale(k1p,dt*0.5));Vec3 v2=v3_add(v,v3_scale(k1v,dt*0.5));
-    Vec3 a2=flight_accel(sim,p2,v2,ut+dt*0.5,NULL);Vec3 k2p=v2,k2v=a2;
-    Vec3 p3=v3_add(p,v3_scale(k2p,dt*0.5));Vec3 v3v=v3_add(v,v3_scale(k2v,dt*0.5));
-    Vec3 a3=flight_accel(sim,p3,v3v,ut+dt*0.5,NULL);Vec3 k3p=v3v,k3v=a3;
-    Vec3 p4=v3_add(p,v3_scale(k3p,dt));Vec3 v4=v3_add(v,v3_scale(k3v,dt));
-    Vec3 a4=flight_accel(sim,p4,v4,ut+dt,NULL);Vec3 k4p=v4,k4v=a4;
-    s->position_i_m=v3_add(p,v3_scale(v3_add(v3_add(k1p,v3_scale(k2p,2)),v3_add(v3_scale(k3p,2),k4p)),dt/6.0));
-    s->velocity_i_mps=v3_add(v,v3_scale(v3_add(v3_add(k1v,v3_scale(k2v,2)),v3_add(v3_scale(k3v,2),k4v)),dt/6.0));
-    if(sim->deorbit_burn_remaining_s>0){sim->deorbit_burn_remaining_s=fmax(0,sim->deorbit_burn_remaining_s-dt);}
-    s->ut+=dt;s->sim_elapsed_s+=dt;
-    s->aero=aero_compute(&sim->world,&sim->aero,s->position_i_m,s->velocity_i_mps,s->ut,s->mass_kg,s->attitude.aoa_rad,s->attitude.bank_rad);
+
+    /* KSP 1.12 runs vessel rigid bodies through Unity/PhysX on a fixed physics
+       tick.  Forces are evaluated from the state at the start of that tick;
+       PhysX first advances velocity from the accumulated acceleration/impulse
+       and then advances position with that updated velocity.  Do not RK4 the
+       force field here: doing so samples atmosphere/aerodynamics at states KSP
+       never evaluates inside one FixedUpdate and can systematically change
+       entry energy over thousands of ticks. */
+    Vec3 p=s->position_i_m,v=s->velocity_i_mps;
+    double ut=s->ut;
+    AtmosphereSample attitude_atm=world_atmosphere_sample_state(&sim->world,p,ut);
+    Vec3 attitude_vair=v3_sub(v,world_atmosphere_velocity_i(&sim->world,p));
+    double attitude_speed=v3_norm(attitude_vair);
+    double attitude_q=0.5*attitude_atm.density_kg_m3*attitude_speed*attitude_speed;
+
+    AeroForces applied_aero;
+    Vec3 accel=flight_accel(sim,p,v,ut,&applied_aero);
+    s->velocity_i_mps=v3_add(v,v3_scale(accel,dt));
+    s->position_i_m=v3_add(p,v3_scale(s->velocity_i_mps,dt));
+
+    /* Rotation/control response advances on the same fixed tick.  The lift and
+       drag applied above intentionally used the pre-step attitude, matching the
+       force-then-integrate ordering of the rigid-body physics update. */
+    attitude_step(&s->attitude,attitude_q,dt);
+
+    if(sim->deorbit_burn_remaining_s>0){
+        sim->deorbit_burn_remaining_s=fmax(0.0,sim->deorbit_burn_remaining_s-dt);
+    }
+    s->ut+=dt;
+    s->sim_elapsed_s+=dt;
+    s->aero=aero_compute(&sim->world,&sim->aero,s->position_i_m,s->velocity_i_mps,
+                         s->ut,s->mass_kg,s->attitude.aoa_rad,s->attitude.bank_rad);
     Vec3 vair=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
     s->body_q_i=attitude_body_quat(s->position_i_m,vair,s->attitude.aoa_rad,s->attitude.bank_rad);
 
@@ -204,7 +230,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
     double stop_resolution=sqrt(DBL_EPSILON)*fmax(1.0,v3_norm(s->velocity_i_mps));
     bool stopped=s->on_ground&&surface_speed<=stop_resolution;
     double fpa=atan2(vu,fmax(horizontal,1e-9));
-    AtmosphereSample atm=world_atmosphere_sample(&sim->world,l.altitude_m);
+    AtmosphereSample atm=world_atmosphere_sample_state(&sim->world,s->position_i_m,s->ut);
     double along,cross,vertical;runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
     snprintf(out,n,"{\"schema\":1,\"type\":\"telemetry\",\"source\":\"sim\",\"scenario\":\"%s\",\"ut\":%.6f,\"sim_time\":%.6f,\"sim_rate\":%.2f,"
              "\"world\":{\"radius_m\":%.9g,\"mu_m3_s2\":%.12g,\"rotation_rate_rad_s\":%.12g,\"atmosphere_top_m\":%.9g,\"rotation_phase_rad_at_ut0\":%.12g},"

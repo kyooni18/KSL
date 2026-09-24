@@ -379,6 +379,13 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     fragment:{module:lineModule,entryPoint:"fs",targets:[{format}]},
     primitive:{topology:"line-strip"},depthStencil:{format:"depth32float",depthWriteEnabled:false,depthCompare:"less-equal"},multisample:{count:MSAA_SAMPLES}
   });
+
+  const lineListPipeline=device.createRenderPipeline({
+    label:"runway-marking-line-pipeline",layout:linePipelineLayout,
+    vertex:{module:lineModule,entryPoint:"vs",buffers:[{arrayStride:12,attributes:[{shaderLocation:0,offset:0,format:"float32x3"}]}]},
+    fragment:{module:lineModule,entryPoint:"fs",targets:[{format}]},
+    primitive:{topology:"line-list"},depthStencil:{format:"depth32float",depthWriteEnabled:false,depthCompare:"less-equal"},multisample:{count:MSAA_SAMPLES}
+  });
   const plumePipeline=device.createRenderPipeline({
     label:"orbital-engine-plume-pipeline",layout:linePipelineLayout,
     vertex:{module:lineModule,entryPoint:"vs",buffers:[{arrayStride:12,attributes:[{shaderLocation:0,offset:0,format:"float32x3"}]}]},
@@ -401,6 +408,9 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   }
   const planetState=solidState(kerbin.texture);
   const sunState=solidState(whiteTexture);
+
+  const runwaySurfaceState=solidState(whiteTexture);
+  let runwaySurfaceGpu=null,runwaySurfaceGeometryKey=null;
   const textureCache=new Map();
   async function materialTexture(url){
     if(!url)return whiteTexture;
@@ -429,7 +439,9 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     apoapsis:lineState([.40,.84,.94,1]),
     periapsis:lineState([1,.61,.32,1]),
     plume:lineState([1,.42,.08,.72]),
-    runway:lineState([1,.72,.30,1]),
+    runway:lineState([.92,.95,.98,1]),
+    runwayAxis:lineState([1,.72,.30,.72]),
+    runwayMarkings:lineState([1,1,1,.98]),
     corridor:lineState([1,.52,.22,1]),
   };
 
@@ -504,18 +516,54 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   }
 
   function runwayGeometry(site){
-    if(!site||!finite(site.latitude)||!finite(site.longitude)||!finite(site.runwayHeading))return{axis:[],corridor:[]};
-    const heading=num(site.runwayHeading),altitude=num(site.altitude,70)+8;
-    const center={latitude:num(site.latitude),longitude:num(site.longitude),altitude};
-    const back=destinationPoint(center,heading+180,32000,altitude);
-    const forward=destinationPoint(center,heading,8000,altitude);
-    const farCenter=destinationPoint(center,heading+180,30000,altitude);
-    const nearCenter=destinationPoint(center,heading+180,700,altitude);
+    const runway=window.ShuttleRunwayGeometry?.build(site,destinationPoint,{
+      surfaceAltitudeOffset:2,
+      markingAltitudeOffset:1.5,
+      sectionStep:50,
+      guidanceBack:18000,
+      guidanceForward:32000,
+    });
+    if(!runway)return null;
+
+    const heading=runway.heading,altitude=num(site?.altitude,70)+5;
+    const threshold={...runway.threshold,altitude};
+    const farCenter=destinationPoint(threshold,heading+180,30000,altitude);
+    const nearCenter=destinationPoint(threshold,heading+180,700,altitude);
     const offset=(base,lateral)=>destinationPoint(base,heading+(lateral>=0?90:-90),Math.abs(lateral),altitude);
     return{
-      axis:[back,center,forward],
-      corridor:[offset(farCenter,-4500),offset(nearCenter,-350),offset(nearCenter,350),offset(farCenter,4500),offset(farCenter,-4500)],
+      ...runway,
+      corridor:[
+        offset(farCenter,-4500),
+        offset(nearCenter,-350),
+        offset(nearCenter,350),
+        offset(farCenter,4500),
+        offset(farCenter,-4500),
+      ],
     };
+  }
+
+  function runwaySurfaceMesh(runway){
+    const mesh=builder();
+    if(!runway||!Array.isArray(runway.sections)||runway.sections.length<2)return mesh;
+    for(const section of runway.sections){
+      const left=planetPoint(section.left),right=planetPoint(section.right);
+      const leftNormal=vUnit(left),rightNormal=vUnit(right);
+      const v=runway.length>0?section.distance/runway.length:0;
+      mesh.vertices.push(...left,...leftNormal,0,v,...right,...rightNormal,1,v);
+    }
+    for(let i=0;i<runway.sections.length-1;i++){
+      const a=i*2,b=a+2;
+      mesh.indices.push(a,a+1,b,a+1,b+1,b);
+    }
+    return mesh;
+  }
+
+  function updateRunwaySurface(runway,key){
+    if(!runway||runwaySurfaceGeometryKey===key)return;
+    runwaySurfaceGpu?.vertex?.destroy();
+    runwaySurfaceGpu?.index?.destroy();
+    runwaySurfaceGpu=createGpuMesh(device,runwaySurfaceMesh(runway),"ksc-runway");
+    runwaySurfaceGeometryKey=key;
   }
 
 
@@ -664,9 +712,16 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     updateLine(lines.periapsis,orbitMode?poiSpike(periapsis,poiSize):[],vp,false,`pe:${orbitEpoch}:${num(periapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`,true);
 
     const runway=runwayGeometry(snapshot?.site);
-    const runwayKey=`runway:${num(snapshot?.site?.latitude,-99).toFixed(5)}:${num(snapshot?.site?.longitude,-99).toFixed(5)}:${num(snapshot?.site?.runwayHeading,-1).toFixed(1)}`;
-    updateLine(lines.runway,orbitMode?[]:runway.axis,vp,true,`${runwayKey}:${orbitMode?"hidden":"live"}`);
-    updateLine(lines.corridor,orbitMode?[]:runway.corridor,vp,true,`${runwayKey}:corridor:${orbitMode?"hidden":"live"}`);
+    const runwayKey=`runway:${num(snapshot?.site?.latitude,-99).toFixed(5)}:${num(snapshot?.site?.longitude,-99).toFixed(5)}:${num(snapshot?.site?.runwayHeading,-1).toFixed(1)}:${num(snapshot?.site?.runwayLength,2500).toFixed(0)}:${num(snapshot?.site?.runwayWidth,70).toFixed(0)}`;
+    if(runway)updateRunwaySurface(runway,runwayKey);
+    updateLine(lines.runwayAxis,orbitMode?[]:(runway?.guidanceAxis||[]),vp,true,`${runwayKey}:axis:${orbitMode?"hidden":"live"}`);
+    updateLine(lines.runway,orbitMode?[]:(runway?.outline||[]),vp,false,`${runwayKey}:outline:${orbitMode?"hidden":"live"}`);
+    updateLine(lines.runwayMarkings,orbitMode?[]:(runway?.markings||[]),vp,false,`${runwayKey}:markings:${orbitMode?"hidden":"live"}`);
+    updateLine(lines.corridor,orbitMode?[]:(runway?.corridor||[]),vp,true,`${runwayKey}:corridor:${orbitMode?"hidden":"live"}`);
+    if(!orbitMode&&runwaySurfaceGpu?.indexCount){
+      const runwayModel=matIdentity();
+      writeSolid(runwaySurfaceState,matMul(vp,runwayModel),runwayModel,[.16,.17,.18,1],[1,1],[0,0],false,lightDir);
+    }
 
     const currentThrust=finite(t.currentThrust)?Math.max(0,num(t.currentThrust)):finite(t.thrust)?Math.max(0,num(t.thrust)):0;
     const availableThrust=finite(t.availableThrust)?Math.max(0,num(t.availableThrust)):0,throttle=finite(t.throttle)?Math.max(0,Math.min(1,num(t.throttle))):0;
@@ -682,6 +737,8 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     pass.setPipeline(solidPipeline);
     pass.setVertexBuffer(0,planetMesh.vertex);pass.setIndexBuffer(planetMesh.index,"uint32");pass.setBindGroup(0,planetState.bind);pass.drawIndexed(planetMesh.indexCount);
     pass.setVertexBuffer(0,sunMesh.vertex);pass.setIndexBuffer(sunMesh.index,"uint32");pass.setBindGroup(0,sunState.bind);pass.drawIndexed(sunMesh.indexCount);
+
+    if(!orbitMode&&runwaySurfaceGpu?.indexCount){pass.setVertexBuffer(0,runwaySurfaceGpu.vertex);pass.setIndexBuffer(runwaySurfaceGpu.index,"uint32");pass.setBindGroup(0,runwaySurfaceState.bind);pass.drawIndexed(runwaySurfaceGpu.indexCount);}
     if(hasPose){
       pass.setVertexBuffer(0,craft.gpu.vertex);pass.setIndexBuffer(craft.gpu.index,"uint32");
       for(const group of craftGroups){if(group.translucent||num(group.indexCount)<=0)continue;pass.setBindGroup(0,group.state.bind);pass.drawIndexed(num(group.indexCount),1,num(group.firstIndex));}
@@ -689,7 +746,8 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
       for(const group of craftGroups){if(!group.translucent||num(group.indexCount)<=0)continue;pass.setBindGroup(0,group.state.bind);pass.drawIndexed(num(group.indexCount),1,num(group.firstIndex));}
     }
     pass.setPipeline(linePipeline);
-    for(const state of [lines.corridor,lines.runway,lines.orbit,lines.burn,lines.apoapsis,lines.periapsis,lines.planned,lines.reference,lines.projected,lines.predicted,lines.actual])if(state.count>1){pass.setVertexBuffer(0,state.buffer);pass.setBindGroup(0,state.bind);pass.draw(state.count);}
+    for(const state of [lines.corridor,lines.runwayAxis,lines.runway,lines.orbit,lines.burn,lines.apoapsis,lines.periapsis,lines.planned,lines.reference,lines.projected,lines.predicted,lines.actual])if(state.count>1){pass.setVertexBuffer(0,state.buffer);pass.setBindGroup(0,state.bind);pass.draw(state.count);}
+    if(lines.runwayMarkings.count>1){pass.setPipeline(lineListPipeline);pass.setVertexBuffer(0,lines.runwayMarkings.buffer);pass.setBindGroup(0,lines.runwayMarkings.bind);pass.draw(lines.runwayMarkings.count);}
     if(lines.plume.count>1){pass.setPipeline(plumePipeline);pass.setVertexBuffer(0,lines.plume.buffer);pass.setBindGroup(0,lines.plume.bind);pass.draw(lines.plume.count);}
     pass.end();device.queue.submit([encoder.finish()]);
 

@@ -7,7 +7,56 @@
 #include <string.h>
 
 /* Translation-unit private helpers. */
-static bool terminal_fixed_hac_authority(const Telemetry*t,const PlanetModel*p,
+static double terminal_fixed_hac_projected_lift(const GuidanceMachine*g,
+        const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v,
+        double aoa){
+    const TrajectoryCalibrationModel*cal=g&&g->entry_predictor_models_valid?
+        &g->entry_predictor_calibration:NULL;
+    if(cal&&cal->physics&&t&&v&&t->mass>1.0&&t->dynamic_pressure>0.0){
+        bool observed=false;double confidence=0.0,uncertainty=0.0;
+        Vector3 force=vessel_physics_force_best_estimate_config(cal->physics,
+            t->dynamic_pressure,t->mach,aoa,t->sideslip,t->mass,t->gear,
+            t->brakes,t->has_airbrakes?(t->airbrakes?1:0):0,aero,cal,v,
+            &confidence,&observed,&uncertainty);
+        if(isfinite(force.y))return fmax(0.0,force.y);
+    }
+    return terminal_projected_lift_accel_at_aoa(t,aero,v,aoa);
+}
+
+static double terminal_fixed_hac_projected_drag(const GuidanceMachine*g,
+        const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v,
+        double aoa,double fallback_anchor){
+    const TrajectoryCalibrationModel*cal=g&&g->entry_predictor_models_valid?
+        &g->entry_predictor_calibration:NULL;
+    if(cal&&cal->physics&&t&&v&&t->mass>1.0&&t->dynamic_pressure>=0.0){
+        bool observed=false;double confidence=0.0,uncertainty=0.0;
+        Vector3 force=vessel_physics_force_best_estimate_config(cal->physics,
+            t->dynamic_pressure,t->mach,aoa,t->sideslip,t->mass,t->gear,
+            t->brakes,t->has_airbrakes?(t->airbrakes?1:0):0,aero,cal,v,
+            &confidence,&observed,&uncertainty);
+        if(isfinite(force.x)&&force.x>=0.0)return force.x;
+    }
+
+    /*
+     * Cold-start fallback only: preserve one correction measured at the real
+     * source state, then let stock-KSP Mach/AoA/atmosphere curves evolve it.
+     * Re-anchoring each predicted point would silently fit the future to a
+     * measurement that does not exist there.
+     */
+    if(!t||!v||!(aero.ballistic_coefficient>DBL_MIN)||
+       !isfinite(t->atmospheric_density)||t->atmospheric_density<0.0||
+       !isfinite(t->true_air_speed)||t->true_air_speed<0.0||
+       !isfinite(fallback_anchor)||fallback_anchor<0.0)return NAN;
+    double df=1.0;
+    aerodynamic_force_factors_mach(t->mach,
+        clampd(aoa,0.0,v->maximum_angle_of_attack),v,NULL,&df);
+    if(!isfinite(df)||df<0.0)return NAN;
+    return .5*t->atmospheric_density*t->true_air_speed*t->true_air_speed/
+        aero.ballistic_coefficient*df*fallback_anchor;
+}
+
+static bool terminal_fixed_hac_authority(const GuidanceMachine*g,
+        const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,const GuidanceSettings*s,
         double hac_radius,
         double*required_lateral_out,double*available_lateral_out,
@@ -32,6 +81,7 @@ static bool terminal_fixed_hac_energy_radius_impl(const GuidanceMachine*g,
         double arc_angle,double*radius_out,
         double*margin_out,double*loss_out,double*available_out,
         double*required_out,FixedHacEnergyAudit*audit,
+        const HACTransitionPlan*plan,const GuidanceMachine*vertical_profile,
         double fixed_profile_slope,double fixed_target_aoa);
 static void terminal_variant_b_store_tuple(GuidanceMachine*g,
         const HACTransitionPlan*p);
@@ -61,7 +111,8 @@ static HACGuidance terminal_variant_b_latched_lead_guidance(
         const HACTransitionPlan*p,const Telemetry*t,double gravity,double course,
         double hac_radius,double current_e,double current_n);
 
-static bool terminal_fixed_hac_authority(const Telemetry*t,const PlanetModel*p,
+static bool terminal_fixed_hac_authority(const GuidanceMachine*g,
+        const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,const GuidanceSettings*s,
         double hac_radius,
         double*required_lateral_out,double*available_lateral_out,
@@ -72,30 +123,15 @@ static bool terminal_fixed_hac_authority(const Telemetry*t,const PlanetModel*p,
     if(!t||!p||!v||!s||!(hac_radius>0.0))return false;
     double speed=guidance_lateral_speed(t);
     double gravity=planet_surface_gravity(p);
-    double lift=live_lift_accel(t,aero,v);
-    /* The fixed-HAC command law raises incidence up to the vehicle AoA limit
-       for lateral force (terminal_required_aoa_for_lateral_limit), so the
-       authority gate must evaluate the lift reachable inside that envelope,
-       not the lift at whatever incidence the handoff state happens to fly.
-       The drag cost of that incidence is charged by the energy gate. */
-    if(isfinite(lift)&&lift>.005){
-        double current_lf=0.0;
-        aerodynamic_force_factors_mach(t->mach,
-            fmax(1.0,fabs(t->angle_of_attack)),v,&current_lf,NULL);
-        double best_lf=fabs(current_lf);
-        for(double aoa=0.0;aoa<=v->maximum_angle_of_attack+.01;aoa+=.5){
-            double lf=0.0;
-            aerodynamic_force_factors_mach(t->mach,aoa,v,&lf,NULL);
-            if(isfinite(lf))best_lf=fmax(best_lf,fabs(lf));
-        }
-        lift*=best_lf/fmax(.05,fabs(current_lf));
-    }
+    /* Project the force-book cell at this q, Mach and incidence. */
+    double lift=terminal_fixed_hac_projected_lift(g,t,aero,v,
+        v->maximum_angle_of_attack);
     double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
-    double effectiveness=clampd(isfinite(t->bank_effectiveness)&&
-        t->bank_effectiveness>0.0?t->bank_effectiveness:1.0,.35,1.8);
+    double effectiveness=isfinite(t->bank_effectiveness)&&
+        t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
     double normal_limit=v->maximum_g_load*gravity;
     double effective_bank=clampd(bank_limit*effectiveness,0.0,
-        nextafter(89.0,0.0))*DEG2RAD;
+        nextafter(90.0,0.0))*DEG2RAD;
     double available_normal=fmin(fmax(0.0,lift),fmax(0.0,normal_limit));
     double available_lateral=available_normal*sin(effective_bank);
     double required_lateral=speed*speed/hac_radius;
@@ -112,8 +148,11 @@ static bool terminal_fixed_hac_authority(const Telemetry*t,const PlanetModel*p,
 
 
 /* HAC planning remains one translation unit so the current selector and its
- * static helpers keep exact behavior. Production planning, Variant-B search,
- * diagnostics, and rehearsal control are separated by ownership below. */
+ * static helpers keep exact behavior. Shared targets/selection geometry are
+ * separated from path search, diagnostics, and control by responsibility. */
+#include "hac_planner/selection_geometry.inc"
+#include "hac_planner/energy_targets.inc"
+#include "hac_planner/lead_dynamics.inc"
 #include "hac_planner/vertical_profile.inc"
 #include "hac_planner/energy_pricing.inc"
 #include "hac_planner/dynamic_selector.inc"

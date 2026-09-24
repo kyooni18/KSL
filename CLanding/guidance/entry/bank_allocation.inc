@@ -434,35 +434,62 @@ bool entry_taem_shaping_crossrange_ready(const TaemInterfaceTarget*q,const Telem
    schedule the opposite sign directly from that same physical contract. This is
    not a time/altitude shortcut: the configured leg dwell, measured crossrange,
    fixed TAEM point/course, and live bank envelope all have to be executable now. */
+/* KSP_LANDER_SETUP_REVERSAL_TRACE=1 prints why the live setup reversal was
+   refused, including inside planner shadow witnesses (tagged shadow=1).
+   Lines are emitted only when the refusal reason changes per thread. */
+static void entry_setup_reversal_trace(const GuidanceMachine*g,const Telemetry*t,
+        const char*reason,double a,double b){
+    static _Thread_local const char*last=NULL;
+    static int enabled=-1;
+    if(enabled<0){const char*e=getenv("KSP_LANDER_SETUP_REVERSAL_TRACE");enabled=e&&*e&&strcmp(e,"0");}
+    if(!enabled||reason==last)return;
+    last=reason;
+    fprintf(stderr,"SETUP_REVERSAL_TRACE shadow=%d ut=%.1f V=%.0f reason=%s a=%.1f b=%.1f sched=%d final=%d sut=%.1f side=%+.0f\n",
+        g?g->diagnostic_shadow:0,t?t->ut:NAN,t?t->surface_speed:NAN,reason,a,b,
+        g?g->entry_reversal_scheduled:0,g?g->entry_reversal_is_final:0,
+        g?g->entry_reversal_ut:NAN,g?g->s_turn_sign:NAN);
+}
+
 static bool entry_program_schedule_live_setup_reversal(GuidanceMachine*g,
         const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg,
         double reversal_bank_magnitude){
-    if(!g||!t||!p||!cfg||g->entry_reversal_scheduled||
-       g->entry_control_reversals!=0||g->entry_final_reversal_pending||
-       g->entry_final_reversal_completed||!g->has_s_turn_leg_started||
-       !isfinite(g->s_turn_leg_started_ut)||!g->taem_interface_target.valid)
-        return false;
+    /* A later nonfinal shaped reversal does not own the setup: the measured
+       crossrange proof may pull it earlier (commit only accepts same-sign,
+       earlier events). A scheduled final turn is never displaced. */
+#define SETUP_REFUSE(r,a,b) do{entry_setup_reversal_trace(g,t,r,a,b);return false;}while(0)
+    if(!g||!t||!p||!cfg)return false;
+    if(g->entry_reversal_scheduled&&(g->entry_reversal_is_final||
+        !(g->entry_reversal_ut>t->ut+1e-6)))
+        SETUP_REFUSE("scheduled_owns",g->entry_reversal_ut,t->ut);
+    if(g->entry_control_reversals!=0)SETUP_REFUSE("already_reversed",g->entry_control_reversals,0);
+    if(g->entry_final_reversal_pending||g->entry_final_reversal_completed)
+        SETUP_REFUSE("final_reversal_state",g->entry_final_reversal_pending,g->entry_final_reversal_completed);
+    if(!g->has_s_turn_leg_started||!isfinite(g->s_turn_leg_started_ut))
+        SETUP_REFUSE("no_leg",0,0);
+    if(!g->taem_interface_target.valid)SETUP_REFUSE("no_target",0,0);
 
     const TaemInterfaceTarget*q=&g->taem_interface_target;
     double relative=norm_signed_deg(q->course-cfg->site.runway_heading);
-    if(!isfinite(relative)||fabs(relative)<30.0)return false;
+    if(!isfinite(relative)||fabs(relative)<30.0)SETUP_REFUSE("course_aligned",relative,30.0);
     double final_side=relative>=0.0?1.0:-1.0;
     double owned_side=g->s_turn_sign>=0.0?1.0:-1.0;
-    if(owned_side*final_side>=0.0)return false;
+    if(owned_side*final_side>=0.0)SETUP_REFUSE("same_side",owned_side,final_side);
 
     double minimum_dwell=fmax(cfg->guidance.s_turn_minimum_leg_duration,8.0);
-    if(t->ut-g->s_turn_leg_started_ut<minimum_dwell)return false;
+    if(t->ut-g->s_turn_leg_started_ut<minimum_dwell)
+        SETUP_REFUSE("dwell",t->ut-g->s_turn_leg_started_ut,minimum_dwell);
 
     double built=NAN,required=NAN;
     if(!entry_taem_shaping_crossrange_ready(q,t,p,cfg,final_side,&built,&required))
-        return false;
+        SETUP_REFUSE("crossrange",built,required);
     double distance=hypot(q->along_track-t->runway_along_track,
         q->cross_track-t->runway_cross_track);
     TaemHandoffContract handoff=taem_handoff_contract(&cfg->guidance);
-    if(!isfinite(distance)||distance<=handoff.horizontal_radius_m)return false;
+    if(!isfinite(distance)||distance<=handoff.horizontal_radius_m)
+        SETUP_REFUSE("inside_handoff",distance,handoff.horizontal_radius_m);
 
     double dynamic_limit=dynamic_bank_limit(t,&cfg->vehicle);
-    if(!isfinite(dynamic_limit)||dynamic_limit<=0.0)return false;
+    if(!isfinite(dynamic_limit)||dynamic_limit<=0.0)SETUP_REFUSE("bank_limit",dynamic_limit,0);
     double bank=fmin(dynamic_limit,fmax(4.0,fabs(reversal_bank_magnitude)));
 
     EntryControlPlan event=g->entry_s_turn_plan;
@@ -482,12 +509,15 @@ static bool entry_program_schedule_live_setup_reversal(GuidanceMachine*g,
     event.planned_reversal_sign=final_side;
     event.predicted_reversals=fmax(event.predicted_reversals,1u);
     entry_program_commit_planned_reversal(g,&event,t->ut,false);
-    if(!g->entry_reversal_scheduled)return false;
+    if(!g->entry_reversal_scheduled||!(fabs(g->entry_reversal_ut-t->ut)<1e-6))
+        SETUP_REFUSE("commit_rejected",g->entry_reversal_ut,t->ut);
+    entry_setup_reversal_trace(g,t,"scheduled",built,required);
 
     if(!g->diagnostic_shadow)fprintf(stderr,
         "MM304 live setup reversal scheduled: UT %.2f built %.0f/%.0f m distance %.0f m sign %+.0f bank %.1f.\n",
         t->ut,built,required,distance,final_side,bank);
     return true;
+#undef SETUP_REFUSE
 }
 
 static bool entry_program_supervised_reversal_ready(const GuidanceMachine*g,const Telemetry*t,

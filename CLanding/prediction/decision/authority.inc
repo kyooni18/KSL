@@ -24,31 +24,8 @@ static double lift_factor(double mach, double aoa, const VehicleProfile *v) {
     return fabs(lift);
 }
 
-static double lift_to_drag_factor(double mach,double aoa,const VehicleProfile*v){
-    double lf=0.0,df=0.0;
-    aerodynamic_force_factors_mach(mach,aoa,v,&lf,&df);
-    if(!(df>DBL_MIN)||!isfinite(lf)||!isfinite(df))return 0.0;
-    return fabs(lf)/df;
-}
-
 static double best_glide_aoa(double mach,const VehicleProfile*v){
-    if(!v||!(v->maximum_angle_of_attack>0.0)||!isfinite(mach))return 0.0;
-    double lo=0.0,hi=v->maximum_angle_of_attack;
-    const double phi=(sqrt(5.0)-1.0)*0.5; /* decision-literal-ok: golden-section ratio */
-    double x1=hi-phi*(hi-lo),x2=lo+phi*(hi-lo);
-    double f1=lift_to_drag_factor(mach,x1,v),f2=lift_to_drag_factor(mach,x2,v);
-    double resolution=sqrt(DBL_EPSILON)*fmax(1.0,hi);
-    unsigned guard=0;
-    while(hi-lo>resolution&&guard++<(unsigned)(4*DBL_MANT_DIG)){
-        if(f1<f2){
-            lo=x1;x1=x2;f1=f2;x2=lo+phi*(hi-lo);
-            f2=lift_to_drag_factor(mach,x2,v);
-        }else{
-            hi=x2;x2=x1;f2=f1;x1=hi-phi*(hi-lo);
-            f1=lift_to_drag_factor(mach,x1,v);
-        }
-    }
-    return .5*(lo+hi); /* decision-literal-ok: interval midpoint */
+    return aerodynamic_best_glide_aoa(mach,v);
 }
 
 static double maximum_lift_aoa(const Telemetry *t, const VehicleProfile *v) {

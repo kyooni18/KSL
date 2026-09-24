@@ -2,6 +2,7 @@
 """Coherent HAC fixture generation and independent certificate reconstruction."""
 from __future__ import annotations
 import argparse
+import gzip
 import hashlib
 import json
 import math
@@ -149,7 +150,11 @@ def summarize(run: Path) -> dict[str, Any]:
     leg_by_key = {(r['evalId'],r['candidateId']):r for r in legs}
     audit_by_key = {(r['id'],r['candidateId']):r for r in audits}
     manifest = json.loads((run/'manifest.json').read_text())
-    with (run/'simulator-telemetry.jsonl').open() as f:
+    sim_path = run / 'simulator-telemetry.jsonl'
+    if not sim_path.exists():
+        sim_path = run / 'simulator-telemetry.jsonl.gz'
+    open_fn = gzip.open if str(sim_path).endswith('.gz') else sim_path.open
+    with open_fn(str(sim_path) if str(sim_path).endswith('.gz') else sim_path, 'rt', encoding='utf-8') as f:
         initial = json.loads(next(f))
     initial.pop('sim_rate', None)
     initial.pop('scenario', None)  # provenance label, not a physical state

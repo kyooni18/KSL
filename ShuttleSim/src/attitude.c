@@ -9,58 +9,60 @@ void attitude_seed(AttitudeModel *a){
     a->pitch_wn=1.4; a->pitch_zeta=0.9; a->roll_wn=1.8; a->roll_zeta=0.85;
     a->max_pitch_rate_rad_s=deg2rad(8.0); a->max_roll_rate_rad_s=deg2rad(18.0);
     a->max_pitch_accel_rad_s2=deg2rad(5.0); a->max_roll_accel_rad_s2=deg2rad(15.0);
+    a->pitch_full_authority_q_pa=15.0; a->roll_full_authority_q_pa=10.0;
 }
 void attitude_set_command(AttitudeModel *a,double aoa,double bank){
     a->requested_aoa_rad=aoa;
     a->requested_bank_rad=wrap_pi(bank);
 }
-static void __attribute__((unused)) command_slew(double requested,double *command,double vmax,double dt,bool wrap){
-    if(!command||!isfinite(requested)||!isfinite(dt)||!(dt>0.0)||
-       !isfinite(vmax)||!(vmax>0.0))return;
-    double error=requested-*command;
-    if(wrap)error=wrap_pi(error);
-    *command+=clampd(error,-vmax*dt,vmax*dt);
-    if(wrap)*command=wrap_pi(*command);
-}
-static void __attribute__((unused)) axis_step(double target,double *x,double *v,double vmax,double dt,bool wrap){
-    if (!isfinite(dt) || !(dt > 0.0) || !isfinite(vmax) || vmax < 0.0) {
-        *v = 0.0;
+static void axis_step(double target,double *x,double *v,double wn,double zeta,
+        double vmax,double amax,double authority,double dt,bool wrap){
+    if(!x||!v||!isfinite(target)||!isfinite(*x)||!isfinite(*v)||
+       !isfinite(wn)||!(wn>0.0)||!isfinite(zeta)||zeta<0.0||
+       !isfinite(vmax)||!(vmax>0.0)||!isfinite(amax)||!(amax>0.0)||
+       !isfinite(authority)||authority<0.0||authority>1.0||
+       !isfinite(dt)||!(dt>0.0)){
+        if(v)*v=0.0;
         return;
     }
-    double err = target - *x;
-    if (wrap) err = wrap_pi(err);
-    double rate = fabs(vmax);
-    double step = clampd(err, -rate * dt, rate * dt);
-    *x += step;
-    if (wrap) *x = wrap_pi(*x);
-    *v = step / dt;
-    /* The target is followed exactly as soon as the bounded move reaches it.
-       There is no second-order servo, acceleration lag, or overshoot model in
-       the simulator; only the configured vehicle-followable rate remains. */
-    if (fabs(err) <= rate * dt) {
-        *x = target;
-        *v = 0.0;
+    double err=target-*x;
+    if(wrap)err=wrap_pi(err);
+
+    /* KSP target-vs-actual telemetry identifies a damped second-order closed-loop
+       response.  The physical axis is also bounded by independently measured
+       rate and angular-acceleration envelopes, so reversals consume real time
+       instead of teleporting the lift vector. */
+    if(authority<=1e-12){
+        *v=0.0;
+        return;
     }
+    /* Aerodynamic control moment is proportional to q.  The identified
+       high-q closed-loop response is therefore reduced below the measured
+       full-authority pressure: acceleration scales linearly, while response
+       frequency and attainable rate scale with sqrt(authority). */
+    double root=sqrt(authority);
+    double effective_wn=wn*root;
+    double effective_vmax=vmax*root;
+    double effective_amax=amax*authority;
+    double accel=effective_wn*effective_wn*err-2.0*zeta*effective_wn*(*v);
+    accel=clampd(accel,-effective_amax,effective_amax);
+    *v=clampd(*v+accel*dt,-effective_vmax,effective_vmax);
+    *x+=(*v)*dt;
+    if(wrap)*x=wrap_pi(*x);
 }
-void attitude_step(AttitudeModel *a,double dt){
-    /* ShuttleSim is a guidance-trajectory validator, not an FCS/actuator
-       simulator.  The guidance backend already rate-limits the commanded
-       attitude with stabilized(); the sim should therefore treat that command
-       as perfectly followed so path errors come from trajectory law, energy,
-       and aerodynamics rather than an extra hidden attitude lag model. */
-    double previous_aoa=a->aoa_rad;
-    double previous_bank=a->bank_rad;
+void attitude_step(AttitudeModel *a,double dynamic_pressure_pa,double dt){
+    if(!a)return;
     a->cmd_aoa_rad=a->requested_aoa_rad;
     a->cmd_bank_rad=wrap_pi(a->requested_bank_rad);
-    a->aoa_rad=a->cmd_aoa_rad;
-    a->bank_rad=a->cmd_bank_rad;
-    if(isfinite(dt)&&dt>0.0){
-        a->aoa_rate_rad_s=(a->aoa_rad-previous_aoa)/dt;
-        a->bank_rate_rad_s=wrap_pi(a->bank_rad-previous_bank)/dt;
-    }else{
-        a->aoa_rate_rad_s=0.0;
-        a->bank_rate_rad_s=0.0;
-    }
+    double q=fmax(0.0,isfinite(dynamic_pressure_pa)?dynamic_pressure_pa:0.0);
+    double pitch_authority=clampd(q/fmax(a->pitch_full_authority_q_pa,1e-9),0.0,1.0);
+    double roll_authority=clampd(q/fmax(a->roll_full_authority_q_pa,1e-9),0.0,1.0);
+    axis_step(a->cmd_aoa_rad,&a->aoa_rad,&a->aoa_rate_rad_s,
+              a->pitch_wn,a->pitch_zeta,a->max_pitch_rate_rad_s,
+              a->max_pitch_accel_rad_s2,pitch_authority,dt,false);
+    axis_step(a->cmd_bank_rad,&a->bank_rad,&a->bank_rate_rad_s,
+              a->roll_wn,a->roll_zeta,a->max_roll_rate_rad_s,
+              a->max_roll_accel_rad_s2,roll_authority,dt,true);
 }
 Quat attitude_body_quat(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 flight=v3_normalized(vair), radial=v3_normalized(p);
@@ -101,6 +103,8 @@ bool attitude_load_ini(AttitudeModel *a,const char *path){
         else if(!strcmp(k,"max_roll_rate_deg_s"))a->max_roll_rate_rad_s=deg2rad(x);
         else if(!strcmp(k,"max_pitch_accel_deg_s2"))a->max_pitch_accel_rad_s2=deg2rad(x);
         else if(!strcmp(k,"max_roll_accel_deg_s2"))a->max_roll_accel_rad_s2=deg2rad(x);
+        else if(!strcmp(k,"pitch_full_authority_q_pa"))a->pitch_full_authority_q_pa=x;
+        else if(!strcmp(k,"roll_full_authority_q_pa"))a->roll_full_authority_q_pa=x;
     }
     fclose(f);return true;
 }

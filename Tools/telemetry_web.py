@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import argparse
 import copy
+import datetime
+import gzip
 import json
 import math
 import mimetypes
 import os
+import re
 import socket
 from pathlib import Path
 import sys
@@ -1340,9 +1343,55 @@ def _downsample_replay_points(points: Any, limit: int = 120) -> list[dict[str, A
     return [copy.deepcopy(clean[i]) for i in indices]
 
 
+def _open_jsonl_file(path: Path):
+    if str(path).endswith(".gz"):
+        return gzip.open(path, "rt", encoding="utf-8")
+    return path.open("r", encoding="utf-8")
+
+
+def _extract_run_timestamp(run_id: str, manifest: dict[str, Any], path: Path | None = None) -> float:
+    st = manifest.get("startedAt")
+    if isinstance(st, (int, float)) and st > 0:
+        return float(st)
+    if isinstance(st, str) and st:
+        try:
+            return datetime.datetime.fromisoformat(st.replace("Z", "+00:00")).timestamp()
+        except Exception:
+            pass
+
+    m = re.search(r"(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?", run_id)
+    if m:
+        y, mo, d, h, mi, s = map(int, m.groups())
+        return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc).timestamp()
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})T(\d{2})[-:](\d{2})[-:](\d{2})Z?", run_id)
+    if m:
+        y, mo, d, h, mi, s = map(int, m.groups())
+        return datetime.datetime(y, mo, d, h, mi, s, tzinfo=datetime.timezone.utc).timestamp()
+    m = re.search(r"(\d{4})(\d{2})(\d{2})", run_id)
+    if m:
+        y, mo, d = map(int, m.groups())
+        return datetime.datetime(y, mo, d, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", run_id)
+    if m:
+        y, mo, d = map(int, m.groups())
+        return datetime.datetime(y, mo, d, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+
+    fin = manifest.get("finishedAt")
+    if isinstance(fin, (int, float)) and fin > 0:
+        wall = optional_number(manifest.get("wallSeconds")) or optional_number(manifest.get("simElapsedSeconds")) or 0.0
+        return float(fin) - wall
+
+    if path is not None:
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            pass
+    return 0.0
+
+
 def _first_simulator_packet(path: Path) -> dict[str, Any] | None:
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        with _open_jsonl_file(path) as handle:
             for line in handle:
                 try:
                     value = json.loads(line)
@@ -1355,35 +1404,69 @@ def _first_simulator_packet(path: Path) -> dict[str, Any] | None:
     return None
 
 
+_LAST_PACKET_CACHE: dict[tuple[str, float, int], dict[str, Any] | None] = {}
+
+
 def _last_simulator_packet(path: Path) -> dict[str, Any] | None:
     try:
-        with path.open("rb") as handle:
-            handle.seek(0, 2)
-            position = handle.tell()
-            carry = b""
-            while position > 0:
-                size = min(65536, position)
-                position -= size
-                handle.seek(position)
-                data = handle.read(size) + carry
-                lines = data.splitlines()
-                if position > 0 and lines:
-                    carry = lines.pop(0)
-                else:
-                    carry = b""
-                for raw in reversed(lines):
-                    if not raw.strip():
-                        continue
-                    try:
-                        value = json.loads(raw.decode("utf-8"))
-                    except (UnicodeDecodeError, json.JSONDecodeError):
-                        continue
-                    if (isinstance(value, dict) and value.get("source") == "sim" and
-                            value.get("type") == "telemetry"):
-                        return value
+        st = path.stat()
+        cache_key = (str(path.resolve()), st.st_mtime, st.st_size)
+        if cache_key in _LAST_PACKET_CACHE:
+            return _LAST_PACKET_CACHE[cache_key]
     except OSError:
         return None
-    return None
+
+    result = None
+    if str(path).endswith(".gz"):
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as handle:
+                last_line = None
+                for line in handle:
+                    if '"telemetry"' in line:
+                        last_line = line
+                if last_line:
+                    try:
+                        value = json.loads(last_line)
+                        if isinstance(value, dict) and value.get("source") == "sim" and value.get("type") == "telemetry":
+                            result = value
+                    except json.JSONDecodeError:
+                        pass
+        except OSError:
+            result = None
+    else:
+        try:
+            with path.open("rb") as handle:
+                handle.seek(0, 2)
+                position = handle.tell()
+                carry = b""
+                found = False
+                while position > 0 and not found:
+                    size = min(65536, position)
+                    position -= size
+                    handle.seek(position)
+                    data = handle.read(size) + carry
+                    lines = data.splitlines()
+                    if position > 0 and lines:
+                        carry = lines.pop(0)
+                    else:
+                        carry = b""
+                    for raw in reversed(lines):
+                        if not raw.strip():
+                            continue
+                        try:
+                            value = json.loads(raw.decode("utf-8"))
+                        except (UnicodeDecodeError, json.JSONDecodeError):
+                            continue
+                        if (isinstance(value, dict) and value.get("source") == "sim" and
+                                value.get("type") == "telemetry"):
+                            result = value
+                            found = True
+                            break
+        except OSError:
+            result = None
+
+    _LAST_PACKET_CACHE[cache_key] = result
+    return result
 
 
 def _simulator_elapsed_seconds(manifest: dict[str, Any], simulator_file: Path) -> float | None:
@@ -1398,14 +1481,25 @@ def _simulator_elapsed_seconds(manifest: dict[str, Any], simulator_file: Path) -
 def _legacy_run_manifest(root: Path, run_id: str) -> tuple[Path, dict[str, Any]] | None:
     runs_root = root / "ShuttleSim" / "runs"
     guidance_path = runs_root / f"{run_id}-guidance.jsonl"
+    if not guidance_path.is_file():
+        gz = runs_root / f"{run_id}-guidance.jsonl.gz"
+        if gz.is_file():
+            guidance_path = gz
     simulator_path = runs_root / f"{run_id}-sim.jsonl"
+    if not simulator_path.is_file():
+        gz = runs_root / f"{run_id}-sim.jsonl.gz"
+        if gz.is_file():
+            simulator_path = gz
     exact_path = runs_root / f"{run_id}.jsonl"
+    if not exact_path.is_file():
+        gz = runs_root / f"{run_id}.jsonl.gz"
+        if gz.is_file():
+            exact_path = gz
     if not simulator_path.is_file() and exact_path.is_file() and _first_simulator_packet(exact_path):
         simulator_path = exact_path
     if not guidance_path.is_file() and not simulator_path.is_file():
         return None
 
-    timestamps = [path.stat().st_mtime for path in (guidance_path, simulator_path) if path.is_file()]
     first_packet = _first_simulator_packet(simulator_path) if simulator_path.is_file() else None
     manifest: dict[str, Any] = {
         "schema": 1,
@@ -1413,11 +1507,9 @@ def _legacy_run_manifest(root: Path, run_id: str) -> tuple[Path, dict[str, Any]]
         "state": "finished",
         "mode": "legacy-replay",
         "scenario": first_packet.get("scenario") if first_packet else None,
-        "startedAt": min(timestamps) if timestamps else None,
-        "finishedAt": max(timestamps) if timestamps else None,
-        "guidanceSnapshots": str(guidance_path) if guidance_path.is_file() else None,
-        "simulatorTelemetry": str(simulator_path) if simulator_path.is_file() else None,
-        "runDirectory": str(runs_root),
+        "guidanceSnapshots": str(guidance_path.resolve()) if guidance_path.is_file() else None,
+        "simulatorTelemetry": str(simulator_path.resolve()) if simulator_path.is_file() else None,
+        "runDirectory": str(runs_root.resolve()),
     }
     return runs_root, manifest
 
@@ -1442,19 +1534,23 @@ def _legacy_run_ids(root: Path) -> set[str]:
     runs_root = root / "ShuttleSim" / "runs"
     ids: set[str] = set()
     try:
-        paths = list(runs_root.glob("*.jsonl"))
+        paths = list(runs_root.glob("*.jsonl")) + list(runs_root.glob("*.jsonl.gz"))
     except OSError:
         return ids
     for path in paths:
         name = path.name
         if name.endswith("-guidance.jsonl"):
             ids.add(name[:-len("-guidance.jsonl")])
+        elif name.endswith("-guidance.jsonl.gz"):
+            ids.add(name[:-len("-guidance.jsonl.gz")])
         elif name.endswith("-sim.jsonl"):
             ids.add(name[:-len("-sim.jsonl")])
+        elif name.endswith("-sim.jsonl.gz"):
+            ids.add(name[:-len("-sim.jsonl.gz")])
         elif _first_simulator_packet(path):
-            ids.add(path.stem)
+            stem = path.name[:-len(".jsonl.gz")] if path.name.endswith(".jsonl.gz") else path.stem
+            ids.add(stem)
     return ids
-
 
 
 def _simulation_run_summary(run_dir: Path, manifest: dict[str, Any]) -> dict[str, Any]:
@@ -1482,14 +1578,28 @@ def _simulation_run_summary(run_dir: Path, manifest: dict[str, Any]) -> dict[str
         simulator_bytes = 0
     replay_bytes = guidance_bytes + simulator_bytes
     has_replay = replay_bytes > 0
+
+    started_at = _extract_run_timestamp(run_id, manifest, run_dir if run_dir.is_dir() else simulator_file)
+    finished_at = optional_number(manifest.get("finishedAt"))
+    wall_seconds = optional_number(manifest.get("wallSeconds"))
+    if wall_seconds is None and finished_at is not None and started_at > 0 and finished_at >= started_at:
+        wall_seconds = finished_at - started_at
+
+    started_dt = datetime.datetime.fromtimestamp(started_at, tz=datetime.timezone.utc) if started_at > 0 else None
+    date_str = started_dt.strftime("%Y-%m-%d") if started_dt else None
+    time_str = started_dt.strftime("%H:%M:%S UTC") if started_dt else None
+
     return {
         "runId": run_id,
         "state": manifest.get("state"),
         "mode": manifest.get("mode"),
         "scenario": manifest.get("scenario"),
-        "startedAt": manifest.get("startedAt"),
-        "finishedAt": manifest.get("finishedAt"),
-        "wallSeconds": manifest.get("wallSeconds"),
+        "startedAt": started_at if started_at > 0 else None,
+        "startedAtISO": started_dt.isoformat() if started_dt else None,
+        "date": date_str,
+        "time": time_str,
+        "finishedAt": finished_at,
+        "wallSeconds": wall_seconds,
         "simElapsedSeconds": sim_elapsed,
         "terminalPhase": terminal or None,
         "final": final,
@@ -1532,10 +1642,10 @@ def list_simulation_runs(root: Path) -> list[dict[str, Any]]:
 
     result = [
         row for row in result
-        if row.get("hasReplay") and optional_number(row.get("simElapsedSeconds")) is not None
-        and number(row.get("simElapsedSeconds")) >= 1.0
+        if row.get("runId")
     ]
-    result.sort(key=lambda row: number(row.get("startedAt"), 0.0), reverse=True)
+    # Sort latest date/time first (descending)
+    result.sort(key=lambda row: (number(row.get("startedAt"), 0.0), str(row.get("runId"))), reverse=True)
     return result
 
 
@@ -1657,8 +1767,28 @@ def compact_replay_snapshot(snapshot: dict[str, Any], run: dict[str, Any],
 def _simulation_run_artifact(run_dir: Path, value: Any, fallback_name: str) -> Path:
     if isinstance(value, str) and value:
         path = Path(value).expanduser()
-        return path if path.is_absolute() else run_dir / path
-    return run_dir / fallback_name
+        if path.is_file():
+            target = path
+        elif path.is_absolute():
+            target = path
+        elif (run_dir / path).is_file():
+            target = run_dir / path
+        elif (run_dir / path.name).is_file():
+            target = run_dir / path.name
+        else:
+            target = run_dir / path
+    else:
+        target = run_dir / fallback_name
+    if not target.is_file():
+        if target.name.endswith(".gz"):
+            alt = target.with_name(target.name[:-3])
+            if alt.is_file():
+                return alt
+        else:
+            alt = target.with_name(target.name + ".gz")
+            if alt.is_file():
+                return alt
+    return target
 
 
 def load_simulator_replay_frames(run_dir: Path, run: dict[str, Any],
@@ -1678,7 +1808,7 @@ def load_simulator_replay_frames(run_dir: Path, run: dict[str, Any],
     base_ut = optional_number(base.get("ut"))
     final_ut = optional_number(final.get("ut"))
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        with _open_jsonl_file(path) as handle:
             for line in handle:
                 try:
                     packet = json.loads(line)
@@ -1837,7 +1967,7 @@ def load_simulation_replay(root: Path, run_id: str, max_frames: int = 600) -> di
     max_frames = max(20, min(2000, max_frames))
     candidate = manifest.get("guidanceSnapshots")
     replay_path = _simulation_run_artifact(run_dir, candidate, "guidance-snapshots.jsonl")
-    frames = load_replay_frames(replay_path)
+    frames = load_replay_frames(replay_path, max_frames=max_frames)
     simulator_frames = load_simulator_replay_frames(run_dir, manifest, max_frames)
     if not frames:
         return {"run": manifest, "frames": [], "simulatorFrames": simulator_frames}
@@ -2064,24 +2194,35 @@ def simulator_collector_loop(store: "SnapshotStore", root: Path, stop: threading
             sock.close()
 
 
-def load_replay_frames(path: Path) -> list[dict[str, Any]]:
-    frames: list[dict[str, Any]] = []
+def load_replay_frames(path: Path, max_frames: int | None = None) -> list[dict[str, Any]]:
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        raw_lines: list[str] = []
+        with _open_jsonl_file(path) as handle:
             for line in handle:
-                try:
-                    value = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if not isinstance(value, dict):
-                    continue
-                if value.get("source") == "sim" and value.get("type") == "telemetry":
-                    continue
-                snapshot = value.get("snapshot") if isinstance(value.get("snapshot"), dict) else value
-                if isinstance(snapshot, dict):
-                    frames.append(snapshot)
+                if line.strip():
+                    raw_lines.append(line)
     except OSError:
         return []
+
+    if max_frames is not None and len(raw_lines) > max_frames:
+        scale = (len(raw_lines) - 1) / float(max_frames - 1)
+        indices = sorted({min(len(raw_lines) - 1, int(round(i * scale))) for i in range(max_frames)})
+        raw_lines = [raw_lines[i] for i in indices]
+
+    frames: list[dict[str, Any]] = []
+    for line in raw_lines:
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(value, dict):
+            continue
+        if value.get("source") == "sim" and value.get("type") == "telemetry":
+            continue
+        snapshot = value.get("snapshot") if isinstance(value.get("snapshot"), dict) else value
+        if isinstance(snapshot, dict):
+            snapshot.pop("actualTrajectory", None)
+            frames.append(snapshot)
     return frames
 
 
@@ -2694,6 +2835,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             "/index.html": "index.html",
             "/app.js": "app.js",
             "/scene3d.js": "scene3d.js",
+            "/runway-geometry.js": "runway-geometry.js",
             "/styles.css": "styles.css",
         }
         name = static_map.get(path)

@@ -19,11 +19,11 @@ ShuttleSim owns:
 
 - simulation clock and fast-forward pacing
 - Kerbin-centered inertial state propagation
-- rotating Kerbin and co-rotating atmosphere
-- gravity
-- atmosphere lookup table
-- STS-N Mach/AoA aerodynamic lookup table
-- finite attitude response to AoA/bank commands
+- rotating Kerbin and stock position/UT-dependent atmosphere
+- inverse-square Kerbin gravity
+- KSP-calibrated STS-N Mach/AoA/q aerodynamic force model
+- finite, q-dependent attitude response to AoA/bank commands
+- 20 ms KSP parity physics cadence by default
 - 86 km orbital initial state and deorbit burn/impulse
 - spherical runway-relative coordinates
 - touchdown and simple rollout physics
@@ -83,6 +83,9 @@ Without Guidance connected, the scenario's initial attitude command is held. For
 ```
 
 Fast-forward never multiplies the physics timestep. It runs more fixed steps per wall-clock second.
+
+Normal runs use a 0.02 s physics step to match KSP's fixed-update cadence. Use a smaller `--dt` only as a numerical-convergence diagnostic; do not retune the plant against the smaller step.
+The free-flight translational update mirrors the PhysX fixed-tick ordering (force/acceleration -> velocity -> position) rather than using a higher-order continuum integrator that KSP itself does not use.
 
 ## Open-loop KSP replay
 

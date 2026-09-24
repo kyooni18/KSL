@@ -25,16 +25,16 @@ Guidance is no longer a single source file.
 - `guidance.c` is the public dispatcher.
 - `guidance_core.c` owns shared guidance state/control machinery.
 - `guidance_entry.c` owns MM304 entry orchestration. Its `entry/*.inc` slices separate reference construction, bank allocation, S-turn planning, topology, and handoff-contract logic.
-- `guidance_taem.c` owns MM305/TAEM orchestration. Its `taem/*.inc` slices separate state, S-turn, energy, candidate selection, preview, and control logic.
+- `guidance_taem.c` owns MM305/TAEM orchestration. Its `taem/*.inc` slices separate state initialization, executive bridging, rehearsal setup, energy logic, candidate selection, preview, and control; MM305 deliberately has no S-turn slice or state.
 - `guidance_hac_path.c` owns analytic HAC path geometry and tracking. Its `hac_path/*.inc` slices separate geometry primitives, transition construction, vertical profile, tracking, and reference generation.
-- `guidance_hac_planner.c` owns HAC feasibility/certification and Variant-B planning. Its `hac_planner/*.inc` slices separate vertical profile, energy pricing, dynamic selection, Variant-B search, diagnostic preview, latched lead, and control.
+- `guidance_hac_planner.c` owns HAC feasibility/certification and Variant-B planning. Its `hac_planner/*.inc` slices separate selection geometry, shared aerodynamic targets, vertical profile, energy pricing, dynamic selection, Variant-B search, diagnostic preview, latched lead, and control.
 - `guidance_final.c` owns outer final, preflare, flare, touchdown, rollout, and recovery. Its `final/*.inc` slices separate planning/gates, flight phases, sequencing, and recovery/invalidation.
 - `guidance_terminal.c` owns terminal phase/ownership orchestration.
 - `guidance_internal.h` is private implementation plumbing and is not a supported API.
 
 The `.inc` slices are intentional private source modules. Entry, TAEM, HAC path/planning, Final, Predictor, and Controller keep cohesive implementation slices behind owner translation units so existing static relationships, floating-point evaluation order, and validated behavior do not change merely because the source was reorganized. Promote a slice to an independent `.c` unit only when it has a small explicit interface rather than by exporting implementation details.
 
-Important behavioral invariants remain unchanged: MM304 hands ownership one-way to MM305/TAEM; TAEM does not reinterpret its S-turn as an Entry S-turn; HAC uses the current runway-anchored analytic planner/certification path; and final/flare/rollout continue through the established public guidance state machine.
+Important behavioral invariants remain unchanged: MM304 hands ownership one-way to MM305/TAEM only after the terminal acquisition state is executable; MM305 has no S-turn or generic energy-dump phase; HAC uses the current runway-anchored analytic planner/certification path; and final/flare/rollout continue through the established public guidance state machine.
 
 See `ARCHITECTURE.md` for the flight-logic ownership and invariants that refactors must preserve.
 

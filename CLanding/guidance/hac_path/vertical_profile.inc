@@ -2,9 +2,20 @@
     g->hac_transition_active=p&&p->valid;
     g->hac_transition_heading_cone=g->hac_transition_active&&p->heading_cone;
     g->hac_transition_lead_curve=g->hac_transition_active&&p->lead_curve;
+    g->hac_transition_lead_acquisition=g->hac_transition_active&&p->lead_acquisition;
     g->hac_transition_progress=0;g->hac_transition_lead_progress=0;
-    if(!g->hac_transition_active){g->hac_transition_length=0;g->hac_transition_lead_length=0;g->hac_transition_exit_speed=0;g->hac_transition_heading_cone=false;g->hac_transition_lead_curve=false;return;}
+    if(!g->hac_transition_active){g->hac_transition_length=0;g->hac_transition_lead_length=0;g->hac_transition_exit_speed=0;g->hac_transition_heading_cone=false;g->hac_transition_lead_curve=false;g->hac_transition_lead_acquisition=false;return;}
     g->hac_transition_lead_start_e=p->lead_start.e;g->hac_transition_lead_start_n=p->lead_start.n;
+    g->hac_transition_acquisition_center_e=p->acquisition_center.e;
+    g->hac_transition_acquisition_center_n=p->acquisition_center.n;
+    g->hac_transition_acquisition_tangent_e=p->acquisition_tangent.e;
+    g->hac_transition_acquisition_tangent_n=p->acquisition_tangent.n;
+    g->hac_transition_acquisition_radius=p->acquisition_radius;
+    g->hac_transition_acquisition_side=p->acquisition_side;
+    g->hac_transition_acquisition_start_angle=p->acquisition_start_angle;
+    g->hac_transition_acquisition_end_angle=p->acquisition_end_angle;
+    g->hac_transition_acquisition_arc_length=p->acquisition_arc_length;
+    g->hac_transition_acquisition_tangent_length=p->acquisition_tangent_length;
     g->hac_transition_lead_p1_e=p->lead_p1.e;g->hac_transition_lead_p1_n=p->lead_p1.n;
     g->hac_transition_lead_p2_e=p->lead_p2.e;g->hac_transition_lead_p2_n=p->lead_p2.n;
     g->hac_transition_lead_length=p->lead_length;

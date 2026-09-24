@@ -2,7 +2,7 @@
 #define SHUTTLESIM_WORLD_H
 #include "types.h"
 
-#define ATM_TABLE_MAX 512
+#define ATM_TABLE_MAX 2048
 
 typedef struct {
     double altitude_m;
@@ -20,6 +20,9 @@ typedef struct {
     double rotation_rate_rad_s;
     double atmosphere_top_m;
     double rotation_phase_rad_at_ut0;
+    double orbital_rate_rad_s;
+    double solar_phase_rad_at_ut0;
+    bool stock_spatial_atmosphere;
     AtmosphereTable atmosphere;
 } KerbinWorld;
 
@@ -42,6 +45,7 @@ LLA world_lla(const KerbinWorld *w, Vec3 position_i, double ut);
 Vec3 world_lla_to_inertial(const KerbinWorld *w, double lat_rad, double lon_rad, double altitude_m, double ut);
 LocalFrame world_local_frame_i(const KerbinWorld *w, Vec3 position_i, double ut);
 AtmosphereSample world_atmosphere_sample(const KerbinWorld *w, double altitude_m);
+AtmosphereSample world_atmosphere_sample_state(const KerbinWorld *w, Vec3 position_i, double ut);
 void runway_seed_ksp09(Runway *r);
 bool runway_contains(const Runway *r, double along_m, double cross_m);
 void runway_coordinates(const KerbinWorld *w, const Runway *r, Vec3 position_i, double ut,

@@ -5,7 +5,7 @@
 
 #define AERO_MACH_MAX 40
 #define AERO_ALPHA_MAX 40
-#define AERO_BOOK_MAX 1024
+#define AERO_BOOK_MAX 2048
 
 typedef struct {
     double q_pa;

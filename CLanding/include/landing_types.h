@@ -14,11 +14,11 @@
 #define LANDER_PI 3.14159265358979323846264338327950288
 #define DEG2RAD (LANDER_PI / 180.0)
 #define RAD2DEG (180.0 / LANDER_PI)
-/* Live kRPC uses ~500 m atmosphere samples, while ShuttleSim's fitted
-   atmosphere table is 250 m and extends beyond the 70 km boundary.  144 slots
-   silently truncated the simulator table near 37.75 km, so every predictor
-   lookup above that altitude reused dense lower-atmosphere air. */
-#define LANDER_ATMOSPHERE_SAMPLE_MAX 512
+/* Keep the full ShuttleSim fitted atmosphere in the shared PlanetModel.  The
+   current Kerbin table is sampled every 100 m through the explicit 70 km vacuum
+   boundary (701 data rows); truncating it changes the density/drag model used by
+   guidance prediction relative to the simulator. */
+#define LANDER_ATMOSPHERE_SAMPLE_MAX 1024
 #define TAEM_INTERFACE_FPA_DEBT_LIMIT_DEG 6.0
 
 typedef struct { double x, y, z; } Vector3;
@@ -68,8 +68,12 @@ typedef struct {
     double deorbit_maximum_throttle, deorbit_throttle_ramp_duration, taem_interface_altitude, taem_interface_range;
     double taem_force_handoff_speed;
     double mm304_handoff_radius, mm304_perpendicular_heading_half_width;
+    double mm304_handoff_along_track, mm304_handoff_cross_track;
+    /* MM305 begins at the high-energy TAEM acquisition interface.
+       HAC acquisition is a later downstream event inside MM305 ownership. */
     double mm305_min_altitude, mm305_max_altitude;
     double mm305_target_mach, mm305_mach_half_width;
+    double hac_acquisition_altitude, hac_acquisition_mach;
     double deorbit_timing_uncertainty, deorbit_thrust_uncertainty_fraction, deorbit_delta_v_uncertainty;
     double deorbit_mass_uncertainty_fraction, deorbit_position_uncertainty, deorbit_velocity_uncertainty;
     double deorbit_pointing_uncertainty, deorbit_atmosphere_uncertainty_fraction, deorbit_robust_minimum_pass_fraction;

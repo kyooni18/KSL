@@ -4,7 +4,7 @@
 #include <string.h>
 
 static bool phase_valid(TaemPhase phase) {
-    return phase >= TAEM_PHASE_S_TURN && phase <= TAEM_PHASE_FINAL_INTERCEPT;
+    return phase >= TAEM_PHASE_PATH_ACQUISITION && phase <= TAEM_PHASE_FINAL_INTERCEPT;
 }
 
 static bool recovery_reason_valid(TaemRecoveryReason reason) {
@@ -17,13 +17,9 @@ static bool observation_valid(const TaemExecObservation *observation) {
            observation->relative_velocity >= 0.0;
 }
 
-static bool profile_valid(const TaemExecProfile *profile) {
-    return profile != NULL;
-}
 
 static bool inputs_valid(const TaemExecInputs *inputs) {
     if (!inputs) return false;
-    if (inputs->energy_valid && !isfinite(inputs->energy_excess)) return false;
     if (inputs->off_nominal_recovery_active &&
         !recovery_reason_valid(inputs->off_nominal_recovery_reason))
         return false;
@@ -129,18 +125,6 @@ static void update_terminal_contract(TaemExecutive *exec,
         taem_exec_evaluate_terminal_contract(&inputs->terminal_contract);
 }
 
-static bool nominal_terminal_path_feasible(const TaemExecInputs *inputs) {
-    return inputs->terminal_feasibility_valid && inputs->nominal_terminal_path_feasible;
-}
-
-static bool high_energy_s_turn_required(const TaemExecInputs *inputs,
-                                        const TaemExecProfile *profile) {
-    return profile->s_turn_enabled &&
-           inputs->energy_valid &&
-           inputs->terminal_feasibility_valid &&
-           !inputs->nominal_terminal_path_feasible &&
-           inputs->energy_excess > 0.0;
-}
 
 static void record_transition(TaemExecutive *exec,
                               TaemPhase from,
@@ -178,7 +162,6 @@ static void update_recovery(TaemExecutive *exec,
 }
 
 static TaemPhase restart_phase(const TaemExecInputs *inputs,
-                               const TaemExecProfile *profile,
                                const TaemTerminalEvaluation *terminal) {
     if ((inputs->final_intercept_ready || inputs->final_approach_ready) &&
         terminal && terminal->feasible)
@@ -189,16 +172,13 @@ static TaemPhase restart_phase(const TaemExecInputs *inputs,
        Entry rollback. */
     if (inputs->terminal_path_captured || inputs->final_intercept_ready || inputs->final_approach_ready)
         return TAEM_PHASE_RUNWAY_ALIGNMENT;
-    if (high_energy_s_turn_required(inputs, profile))
-        return TAEM_PHASE_S_TURN;
     return TAEM_PHASE_PATH_ACQUISITION;
 }
 
 void taem_exec_reset(TaemExecutive *exec) {
     if (!exec) return;
     memset(exec, 0, sizeof(*exec));
-    /* Path Acquisition is the nominal MM305 entry state; S-turn is opt-in only when
-       excessive energy and terminal infeasibility are both established. */
+    /* Path Acquisition is the only nominal MM305 entry state. */
     exec->phase = TAEM_PHASE_PATH_ACQUISITION;
     exec->last_transition_from = TAEM_PHASE_PATH_ACQUISITION;
     exec->last_transition_to = TAEM_PHASE_PATH_ACQUISITION;
@@ -218,10 +198,8 @@ void taem_exec_reset(TaemExecutive *exec) {
 
 bool taem_exec_initialize(TaemExecutive *exec,
                           const TaemExecObservation *observation,
-                          const TaemExecInputs *inputs,
-                          const TaemExecProfile *profile) {
-    if (!exec || !observation_valid(observation) ||
-        !inputs_valid(inputs) || !profile_valid(profile))
+                          const TaemExecInputs *inputs) {
+    if (!exec || !observation_valid(observation) || !inputs_valid(inputs))
         return false;
 
     bool normal_handoff = inputs->mm304_complete;
@@ -237,7 +215,7 @@ bool taem_exec_initialize(TaemExecutive *exec,
     update_terminal_contract(&next, inputs);
 
     if (restart_handoff) {
-        next.phase = restart_phase(inputs, profile, &next.terminal_evaluation);
+        next.phase = restart_phase(inputs, &next.terminal_evaluation);
         /* A checkpoint must obey the same recovery hold as a normal update.
            Classify the phase, but defer delivery until recovery has cleared
            and the live terminal contract is evaluated again. */
@@ -245,9 +223,6 @@ bool taem_exec_initialize(TaemExecutive *exec,
                              next.terminal_evaluation.feasible &&
                              !inputs->off_nominal_recovery_active;
         next.last_transition_reason = TAEM_TRANSITION_RESTART_CLASSIFICATION;
-    } else if (high_energy_s_turn_required(inputs, profile)) {
-        next.phase = TAEM_PHASE_S_TURN;
-        next.last_transition_reason = TAEM_TRANSITION_EXCESS_ENERGY_S_TURN;
     } else {
         next.phase = TAEM_PHASE_PATH_ACQUISITION;
         next.last_transition_reason = TAEM_TRANSITION_MM304_HANDOFF;
@@ -265,13 +240,11 @@ bool taem_exec_initialize(TaemExecutive *exec,
 
 bool taem_exec_update(TaemExecutive *exec,
                       const TaemExecObservation *observation,
-                      const TaemExecInputs *inputs,
-                      const TaemExecProfile *profile) {
-    if (!exec || !observation_valid(observation) ||
-        !inputs_valid(inputs) || !profile_valid(profile))
+                      const TaemExecInputs *inputs) {
+    if (!exec || !observation_valid(observation) || !inputs_valid(inputs))
         return false;
     if (!exec->initialized)
-        return taem_exec_initialize(exec, observation, inputs, profile);
+        return taem_exec_initialize(exec, observation, inputs);
     if (!exec->ownership_latched || !phase_valid(exec->phase)) return false;
 
     /* MM305 ownership is latched. A stale/recomputed Entry-complete flag cannot
@@ -283,40 +256,15 @@ bool taem_exec_update(TaemExecutive *exec,
 
     TaemPhase from = exec->phase;
     switch (exec->phase) {
-        case TAEM_PHASE_S_TURN:
-            if (!inputs->energy_valid) {
-                /* Missing/out-of-domain energy cannot authorize continued
-                   dissipation. Keep MM305 ownership and acquire a terminal path. */
-                record_transition(exec, from, TAEM_PHASE_PATH_ACQUISITION,
-                                  TAEM_TRANSITION_S_TURN_ENERGY_INVALID,
-                                  observation, false);
-            } else if (inputs->energy_excess <= 0.0) {
-                record_transition(exec, from, TAEM_PHASE_PATH_ACQUISITION,
-                                  TAEM_TRANSITION_S_TURN_SURPLUS_EXHAUSTED,
-                                  observation, false);
-            } else if (nominal_terminal_path_feasible(inputs)) {
-                /* A qualified terminal path can already absorb the remaining
-                   energy. Extra S-turn distance now consumes alignment energy
-                   rather than buying feasibility, so exit immediately. */
-                record_transition(exec, from, TAEM_PHASE_PATH_ACQUISITION,
-                                  TAEM_TRANSITION_S_TURN_TERMINAL_FEASIBLE,
-                                  observation, false);
-            }
-            break;
         case TAEM_PHASE_PATH_ACQUISITION:
-            if (high_energy_s_turn_required(inputs, profile)) {
-                record_transition(exec, from, TAEM_PHASE_S_TURN,
-                                  TAEM_TRANSITION_EXCESS_ENERGY_S_TURN, observation, false);
-            } else if (inputs->terminal_path_selected && inputs->terminal_path_captured) {
+            if (inputs->terminal_path_selected && inputs->terminal_path_captured) {
                 record_transition(exec, from, TAEM_PHASE_RUNWAY_ALIGNMENT,
                                   TAEM_TRANSITION_TERMINAL_PATH_CAPTURE, observation, false);
             }
             break;
         case TAEM_PHASE_RUNWAY_ALIGNMENT:
             if (!inputs->terminal_path_selected || !inputs->terminal_path_captured) {
-                TaemPhase replanned = high_energy_s_turn_required(inputs, profile)
-                    ? TAEM_PHASE_S_TURN : TAEM_PHASE_PATH_ACQUISITION;
-                record_transition(exec, from, replanned,
+                record_transition(exec, from, TAEM_PHASE_PATH_ACQUISITION,
                                   TAEM_TRANSITION_TERMINAL_PATH_REPLAN, observation, false);
             } else if (inputs->final_intercept_ready && exec->terminal_evaluation.feasible) {
                 record_transition(exec, from, TAEM_PHASE_FINAL_INTERCEPT,
@@ -326,9 +274,7 @@ bool taem_exec_update(TaemExecutive *exec,
         case TAEM_PHASE_FINAL_INTERCEPT:
             if (!inputs->final_approach_ready &&
                 (!inputs->terminal_path_selected || !inputs->terminal_path_captured)) {
-                TaemPhase replanned = high_energy_s_turn_required(inputs, profile)
-                    ? TAEM_PHASE_S_TURN : TAEM_PHASE_PATH_ACQUISITION;
-                record_transition(exec, from, replanned,
+                record_transition(exec, from, TAEM_PHASE_PATH_ACQUISITION,
                                   TAEM_TRANSITION_TERMINAL_PATH_REPLAN, observation, false);
             } else if (inputs->final_approach_ready && exec->terminal_evaluation.feasible) {
                 record_transition(exec, from, TAEM_PHASE_FINAL_INTERCEPT,
@@ -386,7 +332,6 @@ bool taem_exec_owns_vehicle(const TaemExecutive *exec) {
 
 const char *taem_phase_string(TaemPhase phase) {
     switch (phase) {
-        case TAEM_PHASE_S_TURN: return "S-turn";
         case TAEM_PHASE_PATH_ACQUISITION: return "Path Acquisition";
         case TAEM_PHASE_RUNWAY_ALIGNMENT: return "Runway Alignment";
         case TAEM_PHASE_FINAL_INTERCEPT: return "Final Intercept";
@@ -399,14 +344,10 @@ const char *taem_transition_reason_string(TaemTransitionReason reason) {
         case TAEM_TRANSITION_NONE: return "None";
         case TAEM_TRANSITION_MM304_HANDOFF: return "MM304 qualified handoff";
         case TAEM_TRANSITION_RESTART_CLASSIFICATION: return "Checkpoint/restart classification";
-        case TAEM_TRANSITION_EXCESS_ENERGY_S_TURN: return "Excess energy requires TAEM S-turn";
-        case TAEM_TRANSITION_S_TURN_SURPLUS_EXHAUSTED: return "TAEM S-turn surplus exhausted";
         case TAEM_TRANSITION_TERMINAL_PATH_CAPTURE: return "Terminal path captured";
         case TAEM_TRANSITION_FINAL_INTERCEPT_GATE: return "Runway alignment/final intercept gate";
         case TAEM_TRANSITION_FINAL_APPROACH_DELIVERY: return "Final-approach delivery";
-        case TAEM_TRANSITION_S_TURN_TERMINAL_FEASIBLE: return "Terminal path feasible; preserve alignment energy";
         case TAEM_TRANSITION_TERMINAL_PATH_REPLAN: return "Terminal path lost/stale; replan inside TAEM";
-        case TAEM_TRANSITION_S_TURN_ENERGY_INVALID: return "Entry energy proxy no longer valid; acquire terminal path";
         default: return "Unknown TAEM transition";
     }
 }

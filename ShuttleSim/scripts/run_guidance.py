@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, math, os, pathlib, queue, re, shutil, subprocess, sys, threading, time
+import argparse, gzip, io, json, math, os, pathlib, queue, re, shutil, subprocess, sys, threading, time
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
@@ -8,6 +8,41 @@ _clanding_raw = pathlib.Path(os.environ.get("KSP_CLANDING_ROOT", "CLanding")).ex
 CLANDING = _clanding_raw if _clanding_raw.is_absolute() else (ROOT / _clanding_raw)
 CLANDING = CLANDING.resolve()
 MIRROR = ROOT / "Runtime" / "WebTelemetry" / "controller-snapshot.json"
+WEB_RUN = ROOT / "Runtime" / "WebTelemetry" / "simulator-run.json"
+
+def publish_web_run(doc):
+    """Mirror run status for Tools/telemetry_web.py (same schema as simulator_campaign.py)."""
+    try:
+        WEB_RUN.parent.mkdir(parents=True, exist_ok=True)
+        tmp = WEB_RUN.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dict(doc, schema=1), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(tmp, WEB_RUN)
+    except OSError:
+        pass
+
+
+def _downsample_trajectory(points, limit=120):
+    if not isinstance(points, list) or len(points) <= limit:
+        return points if isinstance(points, list) else []
+    scale = (len(points) - 1) / float(limit - 1)
+    indices = sorted({min(len(points) - 1, int(round(i * scale))) for i in range(limit)})
+    return [points[i] for i in indices]
+
+
+def _lean_snapshot(snapshot):
+    lean = dict(snapshot)
+    lean["actualTrajectory"] = []
+    for key in ("predictedTrajectory", "plannedTrajectory", "projectedTAEMTrajectory",
+                "referenceTrajectory", "orbitalTrajectory"):
+        if key in lean and isinstance(lean[key], list):
+            lean[key] = _downsample_trajectory(lean[key], 120)
+    plan = lean.get("plan")
+    if isinstance(plan, dict):
+        plan_copy = dict(plan)
+        if "trajectory" in plan_copy:
+            plan_copy["trajectory"] = _downsample_trajectory(plan_copy["trajectory"], 60)
+        lean["plan"] = plan_copy
+    return lean
 
 def fixed_hac_geometry_evidence(text: str) -> dict:
     """Validate committed analytic geometry; this is not a flight-tracking test."""
@@ -48,11 +83,14 @@ def fixed_hac_geometry_evidence(text: str) -> dict:
 
 class Backend:
     def __init__(self, proc: subprocess.Popen[str], log_path: pathlib.Path, mirror: bool = True,
-                 replay_path: pathlib.Path | None = None, compact_log: bool = False):
+                 replay_path: pathlib.Path | None = None, compact_log: bool = False,
+                 lean_snapshots: bool = True):
         self.proc=proc; self.q: queue.Queue[dict]=queue.Queue(); self.latest=None; self.mirror=mirror
         self.compact_log=compact_log
+        self.lean_snapshots=lean_snapshots
         self.log=log_path.open("w",encoding="utf-8")
         self.replay_log=replay_path.open("w",encoding="utf-8") if replay_path else None
+        self.last_replay_ut=None
         self.thread=threading.Thread(target=self._read,daemon=True); self.thread.start()
     def _read(self):
         assert self.proc.stdout
@@ -76,8 +114,15 @@ class Backend:
                     last_recorded_ut=ut
                     last_phase=phase
                     if self.replay_log:
-                        self.replay_log.write(json.dumps(snap,separators=(",",":"))+"\n")
-                        self.replay_log.flush()
+                        record_replay = True
+                        if (not changed_phase and self.last_replay_ut is not None and ut is not None
+                                and abs(ut - self.last_replay_ut) < 0.5):
+                            record_replay = False
+                        if record_replay:
+                            rec_snap = _lean_snapshot(snap) if self.lean_snapshots else snap
+                            self.replay_log.write(json.dumps(rec_snap,separators=(",",":"))+"\n")
+                            self.replay_log.flush()
+                            self.last_replay_ut = ut
                     if self.mirror:
                         mirror=dict(snap); mirror["generatedAt"]=time.time()
                         mirror.setdefault("server",{})
@@ -151,6 +196,87 @@ def stop_process(proc, timeout=3.0):
         proc.wait(timeout=2)
 
 
+# Tracks the in-flight run so an exception or signal can still finalize it
+# (manifest state, simulator-run.json, archive into runs/) instead of leaving
+# the telemetry server showing a phantom "running" run forever.
+_ACTIVE={}
+
+
+def _recorded_sim_time(sim_log):
+    best=0.0
+    try:
+        with open(sim_log,encoding="utf-8") as f:
+            for line in f:
+                try:t=json.loads(line).get("sim_time")
+                except ValueError:continue
+                if isinstance(t,(int,float)) and math.isfinite(t):best=max(best,float(t))
+    except OSError:
+        pass
+    return best
+
+
+def _finalize_interrupted(reason):
+    run=_ACTIVE
+    if not run or run.get("done"):
+        return
+    run["done"]=True
+    for proc in (run.get("sim_proc"),run.get("be_proc")):
+        try:stop_process(proc)
+        except Exception:pass
+    manifest=run.get("manifest"); manifest_path=run.get("manifest_path"); run_dir=run.get("run_dir")
+    if manifest is None or manifest_path is None or run_dir is None:
+        return
+    _close_out_run(manifest,manifest_path,run_dir,run.get("final_run_dir"),reason)
+
+
+def _pid_alive(pid):
+    try:os.kill(int(pid),0)
+    except (OSError,TypeError,ValueError):return False
+    return True
+
+
+def recover_orphaned_runs(pending_root,runs_root):
+    """Close out staged runs whose runner died (e.g. SIGKILL) so they reach history."""
+    if not pending_root.is_dir():
+        return
+    for run_dir in sorted(pending_root.iterdir()):
+        manifest_path=run_dir/"manifest.json"
+        try:manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError,ValueError):continue
+        if manifest.get("state")!="running" or _pid_alive(manifest.get("runnerPid")):
+            continue
+        # Orphaned simulator children keep the lockstep ports busy; stop them.
+        subprocess.run(["pkill","-f","--",f"--record {run_dir}/"],check=False)
+        _close_out_run(manifest,manifest_path,run_dir,runs_root/run_dir.name,"runner process died")
+    current=None
+    try:current=json.loads(WEB_RUN.read_text(encoding="utf-8"))
+    except (OSError,ValueError):pass
+    if current and current.get("state")=="running" and not _pid_alive(current.get("runnerPid")):
+        final=runs_root/str(current.get("runId"))
+        publish_web_run(dict(current,state="failed",runDirectory=str(final) if final.is_dir() else current.get("runDirectory")))
+
+
+def _close_out_run(manifest,manifest_path,run_dir,final_dir,reason):
+    finished_at=time.time()
+    elapsed=_recorded_sim_time(run_dir/"simulator-telemetry.jsonl")
+    if manifest.get("finishedAt") is not None:
+        finished_at=manifest["finishedAt"]
+    manifest.update({
+        "state":"failed","finishedAt":finished_at,
+        "wallSeconds":finished_at-(manifest.get("startedAt") or finished_at),
+        "simElapsedSeconds":elapsed if elapsed>=1.0 else None,
+        "success":False,
+        "final":dict(manifest.get("final") or {},abortReason=f"runner interrupted: {reason}"),
+    })
+    try:
+        manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+        if final_dir is not None and not final_dir.exists():
+            run_dir.replace(final_dir); run_dir=final_dir
+    except OSError:
+        pass
+    publish_web_run(dict(manifest,runDirectory=str(run_dir) if run_dir.is_dir() else None))
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--scenario",default=str(SIM/"scenarios/ksp86km-postburn.ini"))
@@ -161,8 +287,8 @@ def main():
     ap.add_argument("--label",default="guidance")
     ap.add_argument("--command-port",type=int,default=18895)
     ap.add_argument("--telemetry-port",type=int,default=18896)
-    ap.add_argument("--web-telemetry-port",type=int,default=18897)
-    ap.add_argument("--web",action="store_true",help="start Telemetry Web in simulator mode")
+    ap.add_argument("--web-telemetry-port",type=int,default=8797)
+    ap.add_argument("--web",action="store_true",help="deprecated no-op; the persistent Telemetry Web service is used")
     ap.add_argument("--configuration",default=str(ROOT/"Configuration/default.json"))
     ap.add_argument("--dt",type=float,default=0.02)
     ap.add_argument("--atmosphere",default=str(SIM/"data/fitted/kerbin_atmosphere_ksp.csv"))
@@ -178,13 +304,15 @@ def main():
     ap.add_argument("--quiet-progress",action="store_true")
     ap.add_argument("--compact-guidance-log",action="store_true",
                     help="omit heavy trajectory arrays from scratch Guidance logs")
-    ap.add_argument("--archive-replay",action="store_true",
-                    help="write a Telemetry Web replay manifest + exact Guidance snapshots")
+    ap.add_argument("--archive-replay",action=argparse.BooleanOptionalAction,default=True,
+                    help="write a Telemetry Web replay manifest + exact Guidance snapshots (default on, so every advanced run appears in sim run history)")
     args=ap.parse_args()
+    args.scenario=str(pathlib.Path(args.scenario).resolve())
 
     stamp=time.strftime("%Y%m%dT%H%M%SZ",time.gmtime())
     run_id=f"{args.label}-{stamp}"
     runs_root=SIM/"runs"; runs_root.mkdir(parents=True,exist_ok=True)
+    recover_orphaned_runs(SIM/".pending-runs",runs_root)
     final_run_dir=None
     if args.archive_replay:
         # Do not publish an attempt into the replay catalog until physics has
@@ -202,7 +330,13 @@ def main():
         sim_err=run_dir/"simulator.stderr.log"
         manifest_path=run_dir/"manifest.json"
     else:
-        run_dir=runs_root
+        # Stage flat logs outside runs/ too; they are published only once
+        # physics has advanced (sim_time > 0).
+        pending_root=SIM/".pending-runs"; pending_root.mkdir(parents=True,exist_ok=True)
+        run_dir=pending_root/run_id
+        if run_dir.exists():
+            shutil.rmtree(run_dir)
+        run_dir.mkdir(parents=True,exist_ok=True)
         sim_log=run_dir/f"{run_id}-sim.jsonl"
         guidance_log=run_dir/f"{run_id}-guidance.jsonl"
         guidance_replay=None
@@ -216,7 +350,7 @@ def main():
             "runId":run_id,"state":"running","mode":"closed-loop",
             "scenario":str(pathlib.Path(args.scenario)),
             "config":str(pathlib.Path(args.configuration)),
-            "startedAt":started_at,"finishedAt":None,"wallSeconds":None,
+            "startedAt":started_at,"finishedAt":None,"wallSeconds":None,"runnerPid":os.getpid(),
             "terminalPhase":None,"final":{},
             "guidanceSnapshots":"guidance-snapshots.jsonl",
             "simulatorTelemetry":"simulator-telemetry.jsonl",
@@ -225,7 +359,8 @@ def main():
             "simulatorStderr":"simulator.stderr.log",
             "rateMode":"max","physicsDt":args.dt,"telemetryHz":args.telemetry_hz,
         }
-        manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+        manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8"); publish_web_run(dict(manifest,runDirectory=str(run_dir)))
+        _ACTIVE.update(manifest=manifest,manifest_path=manifest_path,run_dir=run_dir,final_run_dir=final_run_dir)
 
     if not args.skip_build:
         subprocess.run(["make","-C",str(CLANDING),"-j","4"],check=True,stdout=subprocess.DEVNULL)
@@ -250,6 +385,7 @@ def main():
     be_err=backend_err.open("w",encoding="utf-8")
     be_proc=subprocess.Popen([str(CLANDING/"build/landing_backend")],cwd=ROOT,env=env,
         stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=be_err,text=True,bufsize=1)
+    _ACTIVE["be_proc"]=be_proc
     backend=Backend(be_proc,guidance_log,mirror=not args.no_mirror,replay_path=guidance_replay,
                     compact_log=args.compact_guidance_log)
     backend.wait(lambda o:o.get("type")=="ready",10)
@@ -259,9 +395,9 @@ def main():
     backend.wait(lambda o:o.get("type")=="response" and o.get("id")=="connect",10)
 
     web_proc=None
-    if args.web:
-        web_proc=subprocess.Popen([sys.executable,str(ROOT/"Tools/telemetry_web.py"),"--mode","simulator"],
-            cwd=ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    # Never spawn a separate Telemetry Web server: the persistent service
+    # (Tools/telemetry_web_service.sh) receives simulator UDP on 8797 and
+    # lists this run from ShuttleSim/runs.
 
     sim_stderr=sim_err.open("w",encoding="utf-8")
     sim_cmd=[
@@ -278,6 +414,7 @@ def main():
     if args.aero_book.lower()!="none":
         sim_cmd[7:7]=["--aero-book",args.aero_book]
     sim_proc=subprocess.Popen(sim_cmd,cwd=ROOT,stdout=subprocess.DEVNULL,stderr=sim_stderr,text=True)
+    _ACTIVE["sim_proc"]=sim_proc
 
     # Wait for the first real simulator telemetry snapshot.
     first=backend.wait(lambda o:o.get("type")=="snapshot" and
@@ -315,7 +452,7 @@ def main():
                     "final":{"abortReason":f"createPlan exceeded {args.plan_timeout:.0f}s wall-clock budget"},
                     "success":False,
                 })
-                manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+                manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8"); publish_web_run(dict(manifest,runDirectory=str(run_dir)))
             raise
         planned=backend.latest if isinstance(backend.latest,dict) else {}
         if str(planned.get("phase") or "") in ("Fault","Abort"):
@@ -323,6 +460,7 @@ def main():
         plan=planned.get("plan") if isinstance(planned.get("plan"),dict) else {}
         engage_rejected=plan.get("executionQualified") is False
         if engage_rejected:
+            print("plan rejected:",json.dumps({k:v for k,v in plan.items() if not isinstance(v,(list,dict))}),flush=True)
             # A preview-only plan cannot advance lockstep because production
             # engage correctly refuses it. End the run at the planning result
             # instead of leaving ShuttleSim parked forever on its first frame.
@@ -330,14 +468,16 @@ def main():
     if not engage_rejected:
         backend.send(args.engage,"engage")
         backend.wait(lambda o:o.get("type")=="response" and o.get("id")=="engage",30)
-    if args.engage=="engageFinalTest" and not engage_rejected:
-        # Controller methods publish their admission result before main.c emits
-        # the matching response, so the reader's latest snapshot is authoritative
-        # once the response has been observed. Waiting for another changed snapshot
-        # deadlocks lockstep runs that were rejected during admission.
+    if args.engage in ("engageFinalTest", "engageHACTest") and not engage_rejected:
+        # Admission is published before the response; rejected lockstep runs
+        # cannot advance and must be closed out from the latest snapshot.
         admitted=backend.latest if isinstance(backend.latest,dict) else {}
-        engage_rejected=str(admitted.get("phase") or "") in ("Idle","Fault")
+        engage_rejected=(str(admitted.get("phase") or "") in ("Idle","Fault") or
+                         admitted.get("automationEngaged") is not True)
         if engage_rejected:
+            print("engagement rejected:",admitted.get("statusMessage") or
+                  admitted.get("warningMessage") or admitted.get("lastError") or
+                  admitted.get("phase"),flush=True)
             sim_proc.terminate()
 
     last_print=0.0
@@ -414,7 +554,7 @@ def main():
     rollout_max_lateral_accel=0.0
     rollout_max_abs_cross=0.0
     rollout_max_heading_error=0.0
-    with sim_log.open(encoding="utf-8") as records:
+    with (sim_log.open(encoding="utf-8") if sim_log.is_file() else io.StringIO()) as records:
         for line in records:
             sample=json.loads(line)
             sample_time=sample.get("sim_time")
@@ -485,10 +625,11 @@ def main():
     final_ground=(final_sim or {}).get("ground") or {}
     rollout_valid=rollout_seen and final_ground.get("on_ground") is True
     touchdown_speed=simulator_summary.get("touchdown_speed_mps")
-    touchdown_speed_ok=(args.engage!="engageFinalTest" or
+    strict_touchdown=args.engage in ("engageFinalTest","engageHACTest")
+    touchdown_speed_ok=(not strict_touchdown or
         (isinstance(touchdown_speed,(int,float)) and 60.0<=touchdown_speed<=70.0))
     touchdown_sink=simulator_summary.get("touchdown_sink_mps")
-    touchdown_sink_ok=(args.engage!="engageFinalTest" or
+    touchdown_sink_ok=(not strict_touchdown or
         (isinstance(touchdown_sink,(int,float)) and 0.0<=touchdown_sink<=3.0))
     rollout_controls_ok=(args.engage!="engageFinalTest" or
         (rollout_brakes_seen and rollout_airbrakes_seen))
@@ -522,36 +663,74 @@ def main():
     final["observedPhases"]=sorted(observed_phases)
     final["touchdownRunwayTelemetry"]=touchdown_runway
 
-    sim_elapsed_seconds=max_recorded_sim_time if max_recorded_sim_time>=1.0 else None
+    sim_elapsed_seconds=max_recorded_sim_time
     if manifest_path:
         finished_at=time.time()
         manifest.update({
-            "state":"complete" if success else ("aborted" if terminal_phase.lower()=="abort" else "finished"),
+            "state":"complete" if success else ("rejected" if engage_rejected else ("aborted" if terminal_phase.lower()=="abort" else "finished")),
             "finishedAt":finished_at,
             "wallSeconds":finished_at-started_at,
             "simElapsedSeconds":sim_elapsed_seconds,
-            "terminalPhase":terminal_phase or None,
+            "terminalPhase":terminal_phase or ("Rejected" if engage_rejected else None),
             "final":final,
             "success":success,
         })
         manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+    _ACTIVE["done"]=True
 
-    discarded_zero_second_run=bool(args.archive_replay and sim_elapsed_seconds is None)
+    discarded_zero_second_run=False
+    _dbg=os.environ.get("KSP_LANDER_KEEP_BACKEND_STDERR")
+    if _dbg and backend_err.exists(): shutil.copyfile(backend_err,_dbg)
     if args.archive_replay:
-        if discarded_zero_second_run:
-            shutil.rmtree(run_dir,ignore_errors=True)
-        else:
-            assert final_run_dir is not None
-            if final_run_dir.exists():
-                raise RuntimeError(f"refusing to overwrite existing run archive: {final_run_dir}")
-            run_dir.replace(final_run_dir)
-            run_dir=final_run_dir
-            sim_log=run_dir/"simulator-telemetry.jsonl"
-            guidance_log=run_dir/"guidance-events.jsonl"
-            guidance_replay=run_dir/"guidance-snapshots.jsonl"
-            backend_err=run_dir/"backend.stderr.log"
-            sim_err=run_dir/"simulator.stderr.log"
-            manifest_path=run_dir/"manifest.json"
+        assert final_run_dir is not None
+        if final_run_dir.exists():
+            raise RuntimeError(f"refusing to overwrite existing run archive: {final_run_dir}")
+        run_dir.replace(final_run_dir)
+        run_dir=final_run_dir
+        sim_log=run_dir/"simulator-telemetry.jsonl"
+        guidance_log=run_dir/"guidance-events.jsonl"
+        guidance_replay=run_dir/"guidance-snapshots.jsonl"
+        backend_err=run_dir/"backend.stderr.log"
+        sim_err=run_dir/"simulator.stderr.log"
+        manifest_path=run_dir/"manifest.json"
+        if manifest_path:
+            publish_web_run(dict(manifest,runDirectory=str(run_dir)))
+    else:
+        staged=run_dir
+        moved=[]
+        for p in (sim_log, guidance_log, backend_err, sim_err):
+            if p and p.is_file():
+                dest=runs_root/p.name
+                p.replace(dest)
+                moved.append(dest)
+            else:
+                moved.append(runs_root/p.name if p else None)
+        sim_log, guidance_log, backend_err, sim_err = moved
+        run_dir=runs_root
+        shutil.rmtree(staged,ignore_errors=True)
+
+    if sim_err and sim_err.is_file() and sim_err.stat().st_size == 0:
+        sim_err.unlink(missing_ok=True)
+    for p in (sim_log, guidance_log, guidance_replay):
+        if p and p.is_file():
+            gz_p = p.with_name(p.name + ".gz")
+            try:
+                with p.open("rb") as f_in, gzip.open(gz_p, "wb", compresslevel=6) as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+                if gz_p.is_file() and gz_p.stat().st_size > 0:
+                    p.unlink(missing_ok=True)
+            except Exception:
+                pass
+    if manifest_path and manifest_path.is_file():
+        try:
+            m = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if (run_dir / "guidance-snapshots.jsonl.gz").is_file():
+                m["guidanceSnapshots"] = "guidance-snapshots.jsonl.gz"
+            if (run_dir / "simulator-telemetry.jsonl.gz").is_file():
+                m["simulatorTelemetry"] = "simulator-telemetry.jsonl.gz"
+            manifest_path.write_text(json.dumps(m, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        except Exception:
+            pass
 
     output={
         "success":success,"simulatorSummary":simulator_summary,
@@ -576,5 +755,17 @@ def main():
     print(json.dumps(output))
     return 0 if success else 2
 
+def _on_signal(signum,frame):
+    raise KeyboardInterrupt(f"signal {signum}")
+
+
 if __name__=="__main__":
-    raise SystemExit(main())
+    import signal
+    for _sig in (signal.SIGTERM,signal.SIGHUP):
+        signal.signal(_sig,_on_signal)
+    try:
+        raise SystemExit(main())
+    except BaseException as exc:
+        if not isinstance(exc,SystemExit):
+            _finalize_interrupted(f"{type(exc).__name__}: {exc}"[:300])
+        raise

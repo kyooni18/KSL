@@ -61,8 +61,8 @@ bool aero_load_csv(AeroTable *a,const char *path){
 
 bool aero_load_book_csv(AeroTable *a,const char *path){
     FILE *f=fopen(path,"r"); if(!f)return false;
-    char line[512]; size_t n=0;
-    while(fgets(line,sizeof(line),f)&&n<AERO_BOOK_MAX){
+    char line[512]; size_t n=0; bool overflow=false;
+    while(fgets(line,sizeof(line),f)){
         if(line[0]=='#'||strstr(line,"q_pa"))continue;
         AeroBookPoint p={0};
         int got=sscanf(line,"%lf,%lf,%lf,%lf,%lf,%lf",
@@ -70,10 +70,12 @@ bool aero_load_book_csv(AeroTable *a,const char *path){
         if(got>=5&&p.q_pa>0&&isfinite(p.q_pa)&&isfinite(p.mach)&&
            isfinite(p.alpha_deg)&&isfinite(p.lift_per_q_m2)&&isfinite(p.drag_per_q_m2)){
             if(got<6)p.support=1.0;
-            a->book[n++]=p;
+            if(n<AERO_BOOK_MAX)a->book[n++]=p; else overflow=true;
         }
     }
-    fclose(f); a->book_count=n; a->book_enabled=n>0; return n>0;
+    fclose(f);
+    if(overflow){a->book_count=0;a->book_enabled=false;return false;}
+    a->book_count=n; a->book_enabled=n>0; return n>0;
 }
 
 static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alpha,
@@ -81,35 +83,39 @@ static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alph
     if(coverage_out)*coverage_out=0.0;
     if(!a->book_enabled||a->book_count==0||q<1.0)return false;
     const double log2v=0.69314718055994530942;
-    double sw=0,sl=0,sd=0,coverage=0; size_t used=0;
+    double best_d2=INFINITY,second_d2=INFINITY;
+    const AeroBookPoint *best=NULL,*second=NULL;
     for(size_t i=0;i<a->book_count;i++){
         const AeroBookPoint *p=&a->book[i];
-        double q_oct=fabs(log(q/p->q_pa))/log2v;
-        double mach_delta=fabs(mach-p->mach);
-        double alpha_delta=fabs(alpha-p->alpha_deg);
-        if(q_oct>1.0||mach_delta>0.5||alpha_delta>10.0)continue;
-        /* Weight at the actual book-cell scale (half octave, 0.25 Mach, 5 deg),
-           while retaining the wider support gates.  The force book is sparse and
-           those gates are support limits, not permission for full-strength
-           extrapolation.  Fade continuously through the outer quarter of each
-           gate so crossing (for example) alpha_delta=10 deg cannot jump from a
-           distant KSP sample to the fallback polar in one physics step. */
-        double dq=q_oct/0.5;
-        double dm=mach_delta/0.25;
-        double da=alpha_delta/5.0;
+        /* State-space distance for local force-book interpolation.  These are
+           interpolation hyperparameters, not physical constants; production
+           changes must be selected by cross-validation among training flights. */
+        double dq=(log(q/p->q_pa)/log2v)/1.0;
+        double dm=(mach-p->mach)/0.5;
+        double da=(alpha-p->alpha_deg)/3.0;
         double d2=dq*dq+dm*dm+da*da;
-        double support=pow(fmax(1.0,p->support),0.25);
-        double w=support/(0.02+d2);
-        double q_edge=clampd((1.0-q_oct)/0.25,0.0,1.0);
-        double mach_edge=clampd((0.5-mach_delta)/0.125,0.0,1.0);
-        double alpha_edge=clampd((10.0-alpha_delta)/2.5,0.0,1.0);
-        double point_coverage=fmin(q_edge,fmin(mach_edge,alpha_edge));
-        coverage=fmax(coverage,point_coverage);
-        sw+=w; sl+=w*p->lift_per_q_m2; sd+=w*p->drag_per_q_m2; used++;
+        if(d2<best_d2){
+            second_d2=best_d2;second=best;best_d2=d2;best=p;
+        }else if(d2<second_d2){
+            second_d2=d2;second=p;
+        }
     }
-    if(used<1||sw<=0)return false;
-    *lift_per_q=sl/sw; *drag_per_q=sd/sw;
-    if(coverage_out)*coverage_out=clampd(coverage,0.0,1.0);
+    if(!best)return false;
+    if(!second){second=best;second_d2=best_d2;}
+    double w0=pow(fmax(1.0,best->support),0.25)/(0.02+best_d2);
+    double w1=pow(fmax(1.0,second->support),0.25)/(0.02+second_d2);
+    double sw=w0+w1;
+    if(!(sw>0.0)||!isfinite(sw))return false;
+    *lift_per_q=(w0*best->lift_per_q_m2+w1*second->lift_per_q_m2)/sw;
+    *drag_per_q=(w0*best->drag_per_q_m2+w1*second->drag_per_q_m2)/sw;
+
+    /* The direct KSP book owns only its calibrated neighborhood.  Fade to the
+       smooth polar outside that neighborhood rather than extrapolating sparse
+       measurements indefinitely.  Do not tune this coverage gate on held-out
+       parity flights. */
+    double nearest=sqrt(best_d2);
+    double coverage=clampd((1.5-nearest)/0.75,0.0,1.0);
+    if(coverage_out)*coverage_out=coverage;
     return true;
 }
 
@@ -123,7 +129,7 @@ void aero_coefficients(const AeroTable *a,double mach,double alpha,double *cl,do
 }
 AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,double ut,double mass,double aoa,double bank){
     (void)mass; AeroForces out; memset(&out,0,sizeof(out));
-    LLA l=world_lla(w,p,ut); AtmosphereSample atm=world_atmosphere_sample(w,l.altitude_m);
+    AtmosphereSample atm=world_atmosphere_sample_state(w,p,ut);
     Vec3 vair=v3_sub(v,world_atmosphere_velocity_i(w,p)); double speed=v3_norm(vair);
     out.airspeed_mps=speed; if(speed<1e-6||atm.density_kg_m3<=0)return out;
     out.mach=(atm.speed_of_sound_mps>1)?speed/atm.speed_of_sound_mps:0;

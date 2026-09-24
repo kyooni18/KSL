@@ -21,7 +21,7 @@ static void usage(const char *p){
       "  --aero FILE              Override fallback STS-N Mach/AoA aero CSV\n"
       "  --aero-book FILE         Direct KSP force/q data book (log(q), Mach, AoA)\n"
       "  --attitude FILE          Override vehicle attitude-response INI\n"
-      "  --dt SEC                 Physics step, default 0.02\n"
+      "  --dt SEC                 Physics step, default 0.02 (KSP fixed-update cadence)\n"
       "  --rate max|N             Wall-clock pacing; N=sim seconds / real second\n"
       "  --telemetry-hz N         JSONL publication rate in simulated time, default 10\n"
       "  --max-sim-time SEC       Stop limit, default 2400\n"

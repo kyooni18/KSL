@@ -8,11 +8,11 @@
         double course,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg){
     const VehicleProfile*v=&cfg->vehicle;const GuidanceSettings*s=&cfg->guidance;
-    /* Production/live guidance and the explicit MM305 fixture both keep the
-       configured fixed-HAC radius. The energy-sustainable radius is only a
-       planning/admission measure, never a replacement circle. A separately
-       staged upstream-variant tuple remains immutable when explicitly loaded. */
-    double frozen_radius=fmax(3000.0,s->hac_radius);
+    /* A published MM304 inlet owns the HAC radius that generated its geometry.
+       Re-prove that exact circle at MM305; never replace it with the configured
+       nominal radius after ownership transfer. Rehearsal/debug paths without a
+       published inlet may still start from the configured nominal radius. */
+    double frozen_radius=s->hac_radius;
     double required_lateral=NAN,available_lateral=NAN,minimum_radius=INFINITY;
     double energy_sustainable_radius=INFINITY,energy_margin=NAN;
     double energy_loss=NAN,energy_available=NAN,energy_required=NAN;
@@ -21,95 +21,90 @@
     bool energy_authority=true;
     bool dynamic_radius_selected=false;
     bool dynamic_search_fallback=false;
-    bool dynamic_forced_candidate=false;
     bool fixture_admission_latched=g->terminal_fixed_hac_fixture_latched&&
         !g->fixed_alignment_hac_latched;
     bool fixed_geometry=!fixture_admission_latched&&
         entry_taem_tangent_target_geometry(&g->taem_interface_target,cfg);
     bool force_debug_requested=terminal_hac_debug_force_requested();
     double debug_capture_course=NAN;
-    bool explicit_mm305_fixture=hac_mm305_dynamic_fixture_requested();
     bool debug_fixture=!fixed_geometry&&g->terminal_test_capture_active&&
-        (explicit_mm305_fixture||
-         terminal_hac_debug_fixture_state(t,course,cfg,&debug_capture_course));
-    if(explicit_mm305_fixture&&debug_fixture)
-        debug_capture_course=norm_deg(cfg->site.runway_heading+90.0);
+        terminal_hac_debug_fixture_state(t,course,cfg,&debug_capture_course);
     bool upstream_variant_capture=hac_variant_b_requested()&&
         g->terminal_test_upstream_staging&&
         g->terminal_test_upstream_capture_ready;
-    bool upstream_forced_candidate=upstream_variant_capture&&
-        !g->terminal_test_upstream_plan_valid&&
-        g->terminal_test_upstream_provisional_plan_valid&&
-        isfinite(g->terminal_test_upstream_planned_radius)&&
-        g->terminal_test_upstream_planned_radius>=3000.0;
-    dynamic_forced_candidate=upstream_forced_candidate;
     bool upstream_planned=upstream_variant_capture&&
-        (g->terminal_test_upstream_plan_valid||upstream_forced_candidate)&&
+        g->terminal_test_upstream_plan_valid&&
+        !g->terminal_test_upstream_provisional_plan_valid&&
         isfinite(g->terminal_test_upstream_planned_radius)&&
-        g->terminal_test_upstream_planned_radius>=3000.0;
-    /* Variant-B has already selected and flown a frozen best tuple to the p0
-       capture window.  If the live p0 recheck degrades while getting there,
-       keep that same tuple as the explicit best-available fallback instead of
-       aborting after the staging segment has already been spent. */
-    bool upstream_forced_commit_allowed=upstream_variant_capture&&upstream_planned;
+        g->terminal_test_upstream_planned_radius>0.0;
+    /* Acquisition is one-way only for a tuple whose live authority/energy
+       contract remains valid. A failed recheck is a failed capture, not a
+       reason to promote a previously rejected candidate. */
+    bool upstream_forced_commit_allowed=false;
     double upstream_positive_capture=norm_deg(cfg->site.runway_heading+90.0);
     double upstream_negative_capture=norm_deg(cfg->site.runway_heading-90.0);
-    double upstream_capture_course=fabs(norm_signed_deg(upstream_positive_capture-course))<=
-        fabs(norm_signed_deg(upstream_negative_capture-course))?
-        upstream_positive_capture:upstream_negative_capture;
+    double upstream_capture_course=isfinite(g->terminal_test_upstream_staging_course)?
+        norm_deg(g->terminal_test_upstream_staging_course):
+        (fabs(norm_signed_deg(upstream_positive_capture-course))<=
+            fabs(norm_signed_deg(upstream_negative_capture-course))?
+            upstream_positive_capture:upstream_negative_capture);
+    GuidanceSettings geometry_settings=*s;
+    if(g->terminal_test_final_approach_distance>0.0)
+        geometry_settings.final_approach_distance=
+            g->terminal_test_final_approach_distance;
+    if(debug_fixture){
+        GeoPoint origin={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
+        GeoPoint current={t->latitude,t->longitude,t->mean_altitude};
+        double e=0.0,n=0.0,tangent_course=NAN;
+        local_offsets(origin,current,p->radius,&e,&n);
+        if(hac_fixed_alignment_tangent_course(e,n,&cfg->site,
+                &geometry_settings,frozen_radius,1.0,&tangent_course))
+            debug_capture_course=tangent_course;
+        else
+            return false;
+    }
     double capture_course=fixed_geometry?g->taem_interface_target.course:
         upstream_variant_capture?upstream_capture_course:
         debug_capture_course;
     bool fixed_path_geometry=fixed_geometry||debug_fixture||
         upstream_variant_capture;
-    GuidanceSettings geometry_settings=*s;
-    if(g->terminal_test_final_approach_distance>0.0)
-        geometry_settings.final_approach_distance=
-            g->terminal_test_final_approach_distance;
-    if(hac_mm305_dynamic_fixture_requested())
-        geometry_settings.final_approach_distance=3500.0;
-    bool dynamic_fixed_fixture=fixed_path_geometry&&
-        hac_mm305_dynamic_fixture_requested()&&!upstream_planned;
+    bool dynamic_fixed_fixture=fixed_path_geometry&&!upstream_planned;
     if(fixed_path_geometry){
         if(upstream_planned){
             frozen_radius=g->terminal_test_upstream_planned_radius;
-        }else if(dynamic_fixed_fixture){
-            frozen_radius=fmax(3000.0,s->hac_radius);
+        }else if(fixed_geometry){
+            if(!isfinite(g->taem_interface_target.hac_radius)||
+               !(g->taem_interface_target.hac_radius>0.0))return false;
+            frozen_radius=g->taem_interface_target.hac_radius;
             dynamic_radius_selected=false;
-            const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
-            static double last_fixed_radius_diag_ut=-INFINITY;
-            if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow&&
-               t->ut-last_fixed_radius_diag_ut>=5.0){
-                fprintf(stderr,"MM305 fixed-HAC fixture radius: configured=%.1f; dynamic resizing disabled; energy radius is admission-only.\n",
-                    frozen_radius);
-                last_fixed_radius_diag_ut=t->ut;
-            }
+        }else if(dynamic_fixed_fixture){
+            frozen_radius=s->hac_radius;
+            dynamic_radius_selected=false;
         }else if(upstream_variant_capture){
             double dynamic_radius=terminal_hac_radius_live(t,p,aero,v,s);
             /* The simulator fixture is the only fixed-HAC path allowed to
                select this radius prospectively. Normal authority and energy
                certificates still decide whether it may be committed. */
-            if(!isfinite(dynamic_radius)||dynamic_radius<3000.0)return false;
+            if(!isfinite(dynamic_radius)||dynamic_radius<=0.0)return false;
             frozen_radius=dynamic_radius;
             dynamic_radius_selected=true;
         }
     }
-    bool fixed_authority=fixed_path_geometry&&terminal_fixed_hac_authority(t,p,aero,v,s,
+    bool fixed_authority=fixed_path_geometry&&terminal_fixed_hac_authority(g,t,p,aero,v,s,
         frozen_radius,
         &required_lateral,&available_lateral,&minimum_radius);
     if(fixed_path_geometry&&dynamic_radius_selected){
         const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
         if(diag&&strcmp(diag,"1")==0&&!g->diagnostic_shadow){
-            fprintf(stderr,"MM305 dynamic HAC radius: source=%s selectedR=%.1f geometryFloor=3000.0 configuredNominal=%.1f normalCandidate=%d forceDiagnostic=%d.\n",
+            fprintf(stderr,"MM305 dynamic HAC radius: source=%s selectedR=%.1f configuredNominal=%.1f normalCandidate=%d forceDiagnostic=%d.\n",
                 upstream_planned?"candidate-local":
-                    dynamic_forced_candidate?"best-failing-candidate":
                     dynamic_search_fallback?"diagnostic-fallback":"candidate-search",
                 frozen_radius,s->hac_radius,upstream_planned?1:0,
                 force_debug_requested?1:0);
         }
     }
     bool force_debug=fixed_path_geometry&&force_debug_requested;
-    bool force_fallback=fixed_path_geometry&&dynamic_forced_candidate;
+    bool force_fallback=false;
     /* Variant B has already flown its upstream staging segment to the planned
        p0 window, so live circle authority is meaningful there.  Production
        fixed-HAC acquisition still owns a finite lead; qualify its delivered
@@ -195,18 +190,18 @@
     g->hac_plan_violation_score=0.0;
     g->hac_commit_blend=0.0;
     g->entry_control_plan_valid=false;
-    g->taem_s_turn_plan.valid=false;
 
     if(fixed_path_geometry){
         const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
         double relative=norm_signed_deg(capture_course-cfg->site.runway_heading);
-        /* Match the geometry search: an explicit MM305 fixture and Variant-B
-           both freeze side +1 as the right-turn convention.  A loaded Variant-B
-           tuple was itself generated with side +1, so recomputing -1 here would
-           silently change the analytic arc at ownership commit. */
-        double side=(explicit_mm305_fixture||upstream_variant_capture)?1.0:
+        /* The published inlet point, not the perpendicular course by itself,
+           identifies the committed short/long HAC turn side. */
+        double published_side=fixed_geometry?
+            entry_taem_tangent_target_hac_side(&g->taem_interface_target,cfg):0.0;
+        double side=fabs(published_side)==1.0?published_side:
             (fabs(relative)>sqrt(DBL_EPSILON)*RAD2DEG?
-                (relative>=0.0?1.0:-1.0):terminal_default_hac_side(t,&cfg->site,course));
+                (relative>=0.0?1.0:-1.0):
+                terminal_default_hac_side(t,&cfg->site,course));
         double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
         double turn_radius=terminal_hac_radius_live(t,p,aero,v,s);
         if(!isfinite(turn_radius)){
@@ -218,8 +213,8 @@
             turn_radius=isfinite(sustained)?sustained+response_allowance:s->hac_radius;
         }
         (void)turn_radius;
-        /* The published/reference circle is the latched dynamic geometry;
-           controller saturation is handled in the command law, not by
+        /* The published/reference circle is now immutable across the ownership
+           boundary; controller saturation is handled in the command law, not by
            silently resizing the circle after this point. */
         g->hac_radius=frozen_radius;
 
@@ -287,18 +282,19 @@
            admitted only when its delivered p0 state satisfies authority. */
         double response_time=NAN;
         double energy_profile_slope=NAN;
+        GuidanceMachine authority_profile={0};
+        bool authority_profile_valid=false;
         if(!upstream_variant_capture){
             Telemetry authority_state=*t;
             bool authority_lead_reachable=fixed_plan.lead_length<=1.0;
             double authority_lead_target_speed=fixed_hac_lead_target_speed(
-                t,aero,v,frozen_radius);
+                t,p,aero,v,frozen_radius);
             double authority_lead_work=0.0;
             double authority_lead_course_error=0.0;
             double authority_lead_lateral_margin=INFINITY;
             double authority_lead_slope=fabs(isfinite(t->flight_path_angle)?
                 t->flight_path_angle:8.0);
-            GuidanceMachine authority_profile={0};
-            bool authority_profile_valid=fixed_hac_candidate_vertical_profile(
+            authority_profile_valid=fixed_hac_candidate_vertical_profile(
                 &authority_profile,g,t,&fixed_plan,v,s,&cfg->site,side,
                 &response_time);
             bool authority_profile_executable=authority_profile_valid&&
@@ -323,7 +319,7 @@
 
             fixed_authority=false;
             if(fixed_plan.lead_length<=1.0){
-                fixed_authority=terminal_fixed_hac_authority(&authority_state,p,
+                fixed_authority=terminal_fixed_hac_authority(g,&authority_state,p,
                     aero,v,s,frozen_radius,&required_lateral,&available_lateral,
                     &minimum_radius);
             }else if(authority_profile_valid&&
@@ -337,7 +333,7 @@
                         &predicted,&lead_work,&course_error,&lateral_margin)){
                     double predicted_required=NAN,predicted_available=NAN,
                         predicted_minimum=INFINITY;
-                    if(terminal_fixed_hac_authority(&predicted,p,aero,v,s,
+                    if(terminal_fixed_hac_authority(g,&predicted,p,aero,v,s,
                             frozen_radius,&predicted_required,&predicted_available,
                             &predicted_minimum)){
                         authority_state=predicted;
@@ -424,7 +420,9 @@
             &energy_sustainable_radius,&energy_margin,&energy_loss,
             &energy_available,&energy_required,
             admission_audit_requested?&admission_audit:NULL,
-            energy_profile_slope,NAN);
+            &fixed_plan,authority_profile_valid?&authority_profile:NULL,
+            /* A predicted p0 state needs a slope rebased to the remaining path. */
+            audit_predicted_valid?NAN:energy_profile_slope,NAN);
         if(admission_audit_requested){
             fprintf(stderr,
                 "MM305_HAC_ENERGY_AUDIT R=%.1f available=%.6f modeledWork=%.6f nominalMargin=%.6f uncertainty=%.6f required=%.6f margin=%.6f path=%.6f arcWork=%.6f finalWork=%.6f dragAnchor=%.9f profileSlope=%.6f targetAoA=%.6f altUnc=%.6f speedUnc=%.6f rangeUnc=%.6f physicsRaw=%.9f physicsUsed=%.9f physicsUnc=%.6f uncRecon=%.6f uncResidual=%.6f closure=%.6f arcClosure=%.6f finalClosure=%.6f\n",
@@ -548,7 +546,7 @@
                 g->taem_exec.terminal_evaluation.valid?1:0,
                 taem_terminal_block_reason_string(g->taem_exec.terminal_evaluation.block_reason));
         g->fixed_hac_lead_target_speed=fixed_hac_lead_target_speed(
-            t,aero,v,g->hac_radius);
+            t,p,aero,v,g->hac_radius);
         if(upstream_planned&&g->terminal_test_upstream_speed_target_valid&&
            isfinite(g->terminal_test_upstream_speed_target)&&
            g->terminal_test_upstream_speed_target>0.0)
@@ -564,6 +562,8 @@
            test-state initializer to have populated it earlier. */
         g->terminal_test_final_approach_distance=
             geometry_settings.final_approach_distance;
+        g->terminal_final_handoff_latched=true;
+        g->terminal_final_handoff_distance=geometry_settings.final_approach_distance;
         g->terminal_path_kind=TERMINAL_PATH_HAC;
         g->terminal_path_committed=true;
         g->terminal_test_capture_active=false;
@@ -598,8 +598,7 @@
             double runway_station_e=-sin(runway)*geometry_settings.final_approach_distance;
             double runway_station_n=-cos(runway)*geometry_settings.final_approach_distance;
             fprintf(stderr,"MM305 fixed-HAC geometry: variant=%s runwayStation=(%.3f,%.3f) center=(%.3f,%.3f) upper=(%.3f,%.3f) exit=(%.3f,%.3f) exitAlong=%.3f exitCross=%.3f entry=(%.3f,%.3f) lead=%.3f arc=%.3f.\n",
-                hac_variant_b_requested()?"B":
-                    hac_mm305_dynamic_fixture_requested()?"MM305-dynamic":"default",
+                hac_variant_b_requested()?"B":"default",
                 runway_station_e,runway_station_n,
                 fixed_plan.cone_center.e,fixed_plan.cone_center.n,upper_e,upper_n,
                 fixed_plan.p3.e,fixed_plan.p3.n,exit_along,exit_cross,
@@ -622,17 +621,9 @@
     }
 
     g->phase=PHASE_TAEM;
-    (void)taem_exec_enter(g,t,s,p,aero,cfg,false);
-    if(g->terminal_path_committed&&g->terminal_path_kind==TERMINAL_PATH_HAC&&
-       g->hac_transition_heading_cone&&g->hac_transition_active&&
-       taem_exec_owns_vehicle(&g->taem_exec)){
-        g->taem_exec.phase=TAEM_PHASE_RUNWAY_ALIGNMENT;
-        g->taem_exec.last_transition_from=TAEM_PHASE_PATH_ACQUISITION;
-        g->taem_exec.last_transition_to=TAEM_PHASE_RUNWAY_ALIGNMENT;
-        g->taem_exec.last_transition_reason=TAEM_TRANSITION_TERMINAL_PATH_CAPTURE;
-        g->taem_exec.last_transition_ut=t->ut;
-        g->taem_exec.last_transition_velocity=t->true_air_speed;
-    }
+    if(!taem_exec_enter(g,t,s,p,aero,cfg,false))return false;
+    taem_exec_sync(g,t,s,p,aero,cfg);
+    if(!taem_exec_owns_vehicle(&g->taem_exec))return false;
     /* Preserve the Entry limiter state across the ownership handoff. The
        S-turn tail is already blending toward terminal incidence, so clearing
        the pitch/heading jerk state here recreates a visible command step. */
@@ -657,8 +648,19 @@ static void terminal_variant_b_store_tuple(GuidanceMachine*g,
     g->terminal_test_upstream_cone_end_angle=p->cone_end_angle;
     g->terminal_test_upstream_cone_arc_length=p->cone_arc_length;
     g->terminal_test_upstream_lead_curve=p->lead_curve;
+    g->terminal_test_upstream_lead_acquisition=p->lead_acquisition;
     g->terminal_test_upstream_lead_start_e=p->lead_start.e;
     g->terminal_test_upstream_lead_start_n=p->lead_start.n;
+    g->terminal_test_upstream_acquisition_center_e=p->acquisition_center.e;
+    g->terminal_test_upstream_acquisition_center_n=p->acquisition_center.n;
+    g->terminal_test_upstream_acquisition_tangent_e=p->acquisition_tangent.e;
+    g->terminal_test_upstream_acquisition_tangent_n=p->acquisition_tangent.n;
+    g->terminal_test_upstream_acquisition_radius=p->acquisition_radius;
+    g->terminal_test_upstream_acquisition_side=p->acquisition_side;
+    g->terminal_test_upstream_acquisition_start_angle=p->acquisition_start_angle;
+    g->terminal_test_upstream_acquisition_end_angle=p->acquisition_end_angle;
+    g->terminal_test_upstream_acquisition_arc_length=p->acquisition_arc_length;
+    g->terminal_test_upstream_acquisition_tangent_length=p->acquisition_tangent_length;
     g->terminal_test_upstream_lead_p1_e=p->lead_p1.e;
     g->terminal_test_upstream_lead_p1_n=p->lead_p1.n;
     g->terminal_test_upstream_lead_p2_e=p->lead_p2.e;
@@ -672,7 +674,7 @@ static bool terminal_variant_b_load_tuple(const GuidanceMachine*g,
         HACTransitionPlan*out){
     if(out)memset(out,0,sizeof(*out));
     if(!g||!out||!g->terminal_test_upstream_tuple_valid||
-       !(g->terminal_test_upstream_planned_radius>=3000.0))return false;
+       !(g->terminal_test_upstream_planned_radius>0.0))return false;
     out->valid=true;
     out->heading_cone=true;
     out->p0=(HACPoint2){g->terminal_test_upstream_p0_e,
@@ -685,8 +687,21 @@ static bool terminal_variant_b_load_tuple(const GuidanceMachine*g,
     out->cone_end_angle=g->terminal_test_upstream_cone_end_angle;
     out->cone_arc_length=g->terminal_test_upstream_cone_arc_length;
     out->lead_curve=g->terminal_test_upstream_lead_curve;
+    out->lead_acquisition=g->terminal_test_upstream_lead_acquisition;
     out->lead_start=(HACPoint2){g->terminal_test_upstream_lead_start_e,
         g->terminal_test_upstream_lead_start_n};
+    out->acquisition_center=(HACPoint2){
+        g->terminal_test_upstream_acquisition_center_e,
+        g->terminal_test_upstream_acquisition_center_n};
+    out->acquisition_tangent=(HACPoint2){
+        g->terminal_test_upstream_acquisition_tangent_e,
+        g->terminal_test_upstream_acquisition_tangent_n};
+    out->acquisition_radius=g->terminal_test_upstream_acquisition_radius;
+    out->acquisition_side=g->terminal_test_upstream_acquisition_side;
+    out->acquisition_start_angle=g->terminal_test_upstream_acquisition_start_angle;
+    out->acquisition_end_angle=g->terminal_test_upstream_acquisition_end_angle;
+    out->acquisition_arc_length=g->terminal_test_upstream_acquisition_arc_length;
+    out->acquisition_tangent_length=g->terminal_test_upstream_acquisition_tangent_length;
     out->lead_p1=(HACPoint2){g->terminal_test_upstream_lead_p1_e,
         g->terminal_test_upstream_lead_p1_n};
     out->lead_p2=(HACPoint2){g->terminal_test_upstream_lead_p2_e,
@@ -754,4 +769,3 @@ static bool terminal_variant_b_load_vertical_profile(const GuidanceMachine*g,
         isfinite(out->hac_transition_cone_arc_length)&&
         out->hac_transition_cone_arc_length>0.0;
 }
-

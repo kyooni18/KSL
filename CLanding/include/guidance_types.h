@@ -45,7 +45,7 @@ typedef struct {
 } TaemHandoffContract;
 
 TaemHandoffContract taem_handoff_contract(const GuidanceSettings *settings);
-void mm304_handoff_station(double *along_m,double *cross_m);
+void mm304_handoff_station(const GuidanceSettings *settings,double *along_m,double *cross_m);
 
 typedef struct {
     bool valid, ready;
@@ -150,8 +150,17 @@ typedef struct { double e,n; } HACPoint2;
 typedef struct {
     bool valid, degraded;
     bool degraded_path, degraded_control, degraded_rate, degraded_end, degraded_arc;
-    bool heading_cone, lead_curve;
+    bool heading_cone, lead_curve, lead_acquisition;
     HACPoint2 lead_start, lead_p1, lead_p2;
+    /*
+     * TAEM acquisition is not a cubic interpolation.  A high-energy vehicle
+     * first flies a finite circular acquisition turn, then the common tangent
+     * into the HAC.  These fields describe that exact ground-plane geometry.
+     */
+    HACPoint2 acquisition_center, acquisition_tangent;
+    double acquisition_radius, acquisition_side;
+    double acquisition_start_angle, acquisition_end_angle;
+    double acquisition_arc_length, acquisition_tangent_length;
     HACPoint2 p0,p1,p2,p3;
     HACPoint2 cone_center;
     double lead_length, length, end_angle, arc_remaining, exit_speed, peak_lateral, opposite_lateral,
@@ -195,7 +204,7 @@ typedef struct {
     bool diagnostic_shadow; /* Prediction rollouts must not masquerade as live decisions. */
     double s_turn_sign; double s_turn_leg_started_ut; bool has_s_turn_leg_started;
     double s_turn_reversal_requested_ut; bool has_s_turn_reversal_requested;
-    EntryExecutive entry_exec; EntryLateralState entry_lateral; EntryLateralState taem_s_turn_lateral; TaemExecutive taem_exec;
+    EntryExecutive entry_exec; EntryLateralState entry_lateral; TaemExecutive taem_exec;
     bool entry_alpha_has_target, entry_alpha_has_modulation, entry_drag_ratio_valid;
     double entry_alpha_target, entry_alpha_modulation, entry_drag_velocity_ratio;
     bool entry_bank_authority_acquired;
@@ -209,7 +218,6 @@ typedef struct {
     EntryControlPlan entry_s_turn_plan;
     EntryTopologyPlan entry_topology;
     double entry_topology_capture_good_duration;
-    EntryControlPlan taem_s_turn_plan;
     bool entry_predictor_models_valid;
     AerodynamicEnvelope entry_predictor_envelope;
     TrajectoryCalibrationModel entry_predictor_calibration;
@@ -219,6 +227,18 @@ typedef struct {
     double taem_interface_diagnostic_ut;
     TerminalPathKind terminal_path_kind;
     bool terminal_prediction_valid, terminal_path_committed;
+    /*
+     * Reciprocal runway direction is a guidance/planning decision.  preview is
+     * reversible while terminal geometry is disposable; committed is latched
+     * with terminal_path_committed and may change only after path invalidation.
+     */
+    bool runway_end_preview_valid, runway_end_committed;
+    int runway_end_index; /* 0 = configured end, 1 = reciprocal end */
+    double runway_end_primary_path, runway_end_reciprocal_path;
+    /* The MM305 -> Final ownership boundary is selected with the committed
+       terminal path. It is immutable until that path is explicitly invalidated. */
+    bool terminal_final_handoff_latched;
+    double terminal_final_handoff_distance;
     bool hac_plan_degraded, hac_plan_geometry_degraded, hac_plan_energy_degraded;
     double hac_plan_violation_score, hac_commit_blend;
     double terminal_prediction_ut, terminal_reference_fpa, terminal_reference_heading;
@@ -264,8 +284,13 @@ typedef struct {
     double terminal_test_upstream_cone_start_angle;
     double terminal_test_upstream_cone_end_angle;
     double terminal_test_upstream_cone_arc_length;
-    bool terminal_test_upstream_lead_curve;
+    bool terminal_test_upstream_lead_curve, terminal_test_upstream_lead_acquisition;
     double terminal_test_upstream_lead_start_e, terminal_test_upstream_lead_start_n;
+    double terminal_test_upstream_acquisition_center_e, terminal_test_upstream_acquisition_center_n;
+    double terminal_test_upstream_acquisition_tangent_e, terminal_test_upstream_acquisition_tangent_n;
+    double terminal_test_upstream_acquisition_radius, terminal_test_upstream_acquisition_side;
+    double terminal_test_upstream_acquisition_start_angle, terminal_test_upstream_acquisition_end_angle;
+    double terminal_test_upstream_acquisition_arc_length, terminal_test_upstream_acquisition_tangent_length;
     double terminal_test_upstream_lead_p1_e, terminal_test_upstream_lead_p1_n;
     double terminal_test_upstream_lead_p2_e, terminal_test_upstream_lead_p2_n;
     double terminal_test_upstream_lead_start_course;
@@ -303,7 +328,7 @@ typedef struct {
     double terminal_reentry_after_ut, hac_circuit_slope;
     unsigned hac_circuit_count;
     bool hac_transition_active;
-    bool hac_transition_heading_cone, hac_transition_lead_curve;
+    bool hac_transition_heading_cone, hac_transition_lead_curve, hac_transition_lead_acquisition;
     bool fixed_alignment_hac_latched, hac_transition_lead_rebase_attempted;
     bool fixed_hac_reference_valid;
     bool terminal_test_spiral_active;
@@ -317,6 +342,11 @@ typedef struct {
     double hac_transition_cone_center_e, hac_transition_cone_center_n;
     double hac_transition_cone_start_angle, hac_transition_cone_end_angle, hac_transition_cone_arc_length;
     double hac_transition_lead_start_e, hac_transition_lead_start_n;
+    double hac_transition_acquisition_center_e, hac_transition_acquisition_center_n;
+    double hac_transition_acquisition_tangent_e, hac_transition_acquisition_tangent_n;
+    double hac_transition_acquisition_radius, hac_transition_acquisition_side;
+    double hac_transition_acquisition_start_angle, hac_transition_acquisition_end_angle;
+    double hac_transition_acquisition_arc_length, hac_transition_acquisition_tangent_length;
     double hac_transition_lead_p1_e, hac_transition_lead_p1_n, hac_transition_lead_p2_e, hac_transition_lead_p2_n;
     double hac_transition_lead_start_course, hac_transition_lead_end_course;
     double hac_transition_lead_length, hac_transition_lead_progress;
@@ -355,6 +385,16 @@ typedef struct {
     double terminal_previous_aoa, terminal_previous_vertical_speed, terminal_response_sample_ut;
     double terminal_previous_specific_energy, terminal_previous_speed, terminal_energy_sample_ut;
     double terminal_energy_loss_accel_ema, terminal_speed_loss_accel_ema;
+    /* Post-capture landing law: learned lift/drag reference areas (per q per
+       unit aerodynamic factor).  Kept per machine so predictor copies of the
+       guidance never share or pollute the live estimate. */
+    double terminal_lift_area_ema, terminal_drag_area_ema, terminal_aoa_trim;
+    double terminal_vs_prev, terminal_vs_prev_ut, terminal_vs_rate_ema;
+    /* Observed lift/q and drag/q (m^2) in 1 deg incidence bins 0..20 deg. */
+    double terminal_lift_q[21], terminal_drag_q[21];
+    unsigned char terminal_aero_seen[21];
+    double terminal_aero_mach[21];
+    double terminal_apull_ema; /* Mach at which each bin was last observed */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;
     double preflare_minimum_speed, preflare_reference_speed, preflare_predicted_height_loss;

@@ -129,6 +129,40 @@ static bool decision_target_path_geometry(
     return true;
 }
 
+double decision_runway_end_path_score(
+        const GuidanceMachine *g,const Telemetry *t,const PlanetModel *p,
+        const LandingConfiguration *cfg,const LandingSite *site) {
+    if(!g||!t||!p||!cfg||!site)return INFINITY;
+
+    LandingConfiguration candidate=*cfg;
+    candidate.site=*site;
+    Telemetry framed=*t;
+    telemetry_reframe_runway(&framed,site,p->radius);
+
+    double course=isfinite(framed.ground_track_heading)?
+        framed.ground_track_heading:framed.heading;
+    if(!isfinite(course))return INFINITY;
+
+    /*
+     * Runway choice is a reachability problem, not a hand-tuned preference.
+     * Score the shortest curvature-bounded path to the final-alignment point
+     * with the required runway course. decision_target_path_length derives the
+     * turn radius from live KSP force/control authority and solves the Dubins
+     * geometry exactly.  A runway end with no current physical path is +inf.
+     *
+     * Excess energy is intentionally not hidden in this selector: HAC/TAEM
+     * remains responsible for adding path length.  Runway selection only asks
+     * which landing direction has the physically shorter reachable terminal
+     * connection.
+     */
+    double minimum_turn_radius=INFINITY;
+    double path=decision_target_path_length(g,&framed,course,
+        -candidate.guidance.final_approach_distance,0.0,
+        candidate.site.runway_heading,NAN,p,&candidate,
+        &minimum_turn_radius);
+    return isfinite(path)?path:INFINITY;
+}
+
 double decision_target_path_length(
         const GuidanceMachine *g,const Telemetry *t,double course_deg,
         double target_along_m,double target_cross_m,double target_course_deg,

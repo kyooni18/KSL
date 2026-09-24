@@ -303,6 +303,7 @@ static double observed_signed_roll_rate(const Telemetry *t) {
        immediately search a fresh path if there is no safe S-turn margin. */
     g->terminal_candidate.valid=false;g->terminal_path_kind=TERMINAL_PATH_NONE;g->terminal_prediction_valid=false;g->terminal_mix=0;
     g->terminal_prediction_ut=-INFINITY;g->terminal_path_committed=false;
+    g->terminal_final_handoff_latched=false;g->terminal_final_handoff_distance=NAN;
     g->hac_plan_degraded=false;g->hac_plan_geometry_degraded=false;
     g->hac_plan_energy_degraded=false;g->hac_plan_violation_score=0;g->hac_commit_blend=0;
     g->hac_side_selected=false;g->hac_captured=false;g->hac_completed=false;g->hac_progress_valid=false;
@@ -352,11 +353,10 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         const LandingConfiguration*cfg,double dt){
     const VehicleProfile*v=&cfg->vehicle;const GuidanceSettings*s=&cfg->guidance;
     if(taem_exec_owns_vehicle(&g->taem_exec)){
-        /* Unified MM305 ownership is one-way.  A circle/spline/HAC-like path may
+        /* Unified MM305 ownership is one-way. A circle/spline/HAC-like path may
            become stale, but that invalidates geometry only; it never hands the
-           aircraft back to MM304.  Preserve measured energy, drop the frozen path,
-           let TAEMEXEC choose S-turn vs path acquisition, and keep a bounded
-           terminal command while the path provider replans. */
+           aircraft back to MM304. Drop the frozen path and remain in MM305 Path
+           Acquisition while the path provider replans. */
         terminal_invalidate_frozen_path_preserve_energy(g);
         g->terminal_region_entered=true;g->terminal_glide_mode=true;
         g->attitude_recovery=false;g->control_bad_duration=0;g->control_good_duration=0;g->recovery_duration=0;
@@ -364,8 +364,6 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         robust_pid_reset(&g->taem_altitude_pid);robust_pid_reset(&g->speed_pid);
         taem_exec_sync(g,t,s,p,aero,cfg);
         g->phase=PHASE_TAEM;
-        if(g->taem_exec.phase==TAEM_PHASE_S_TURN)
-            return taem_s_turn_guidance(g,t,course,p,aero,cfg,dt);
         terminal_predict(g,t,course,p,aero,cfg,dt);
         GuidanceCommand c=atmospheric(t,t->ground_track_heading,0.0,v,0.0,false,PROFILE_TAEM);
         c.heading_control_enabled=false;c.has_target_aoa=true;

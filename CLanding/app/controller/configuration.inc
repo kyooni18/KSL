@@ -1,32 +1,3 @@
-static LandingSite controller_active_runway_site(const LandingController*c,double radius){
-    LandingSite site=c->configuration.site;
-    if(c->runway_end_initialized&&c->runway_end_index==1)
-        site=runway_reciprocal_site(&site,radius);
-    return site;
-}
-
-static void controller_select_runway_end(LandingController*c,LandingConfiguration*cfg,
-        Telemetry*t,const PlanetModel*p){
-    if(!c||!cfg||!t||!p)return;
-    bool timeline_reset=!c->has_latest||
-        (isfinite(c->latest_telemetry.ut)&&t->ut<c->latest_telemetry.ut-1.0);
-    if(timeline_reset)c->runway_end_initialized=false;
-    LandingSite primary=c->configuration.site;
-    LandingSite reciprocal=runway_reciprocal_site(&primary,p->radius);
-    if(!c->runway_end_initialized){
-        c->runway_end_primary_score=runway_end_acquisition_score(t,&primary,&cfg->guidance,p->radius);
-        c->runway_end_reciprocal_score=runway_end_acquisition_score(t,&reciprocal,&cfg->guidance,p->radius);
-        c->runway_end_index=primary.allow_reciprocal_runway&&
-            c->runway_end_reciprocal_score<c->runway_end_primary_score?1:0;
-        c->runway_end_initialized=true;
-        fprintf(stderr,"Runway end selected: heading %.1f deg, primary cost %.0f m, reciprocal cost %.0f m, reciprocal %s.\n",
-            c->runway_end_index==1?reciprocal.runway_heading:primary.runway_heading,
-            c->runway_end_primary_score,c->runway_end_reciprocal_score,
-            primary.allow_reciprocal_runway?"allowed":"locked out");
-    }
-    cfg->site=c->runway_end_index==1?reciprocal:primary;
-    telemetry_reframe_runway(t,&cfg->site,p->radius);
-}
 static LandingConfiguration effective_config(const LandingController*c){
     LandingConfiguration r=c->configuration;
     if(r.calibration.auto_apply_in_flight){
@@ -37,10 +8,6 @@ static LandingConfiguration effective_config(const LandingController*c){
         r.vehicle.minimum_safe_speed=c->adaptive_profile.minimum_safe_speed;
         r.vehicle.final_approach_speed=c->adaptive_profile.final_approach_speed;
         r.vehicle.touchdown_speed=c->adaptive_profile.touchdown_speed;
-    }
-    if(c->runway_end_initialized&&c->session){
-        const PlanetModel*p=krpc_session_planet(c->session);
-        if(p)r.site=controller_active_runway_site(c,p->radius);
     }
     landing_configuration_normalize(&r);return r;
 }
@@ -114,7 +81,6 @@ static bool entry_forecast_matches_guidance(const LandingController*c){
 static bool read_live_sample(LandingController *c,LandingConfiguration *cfg,Telemetry *t,VehicleState *state,char *error,size_t error_size){
     if(!krpc_read_telemetry(c->session,cfg,t,state,error,error_size))return false;
     const PlanetModel*p=krpc_session_planet(c->session);
-    controller_select_runway_end(c,cfg,t,p);
     vessel_physics_observe(&c->physics,t,state,p);
     c->trajectory_calibration.physics=&c->physics;
     c->latest_telemetry=*t;c->latest_state=*state;c->has_latest=true;
