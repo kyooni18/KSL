@@ -185,6 +185,9 @@ int main(void) {
      * altitude/FPA contracts while changing only the path between them. */
     TaemRoute shaped_route = route;
     shaped_route.profile_midpoint_offset_m = 1200.0;
+    shaped_route.profile_local_offset_m = -500.0;
+    shaped_route.profile_local_start_fraction = 0.12;
+    shaped_route.profile_local_end_fraction = 0.42;
     shaped_route.profile_initial_sag_m = -120.0;
     shaped_route.profile_initial_sag_length_m = 3000.0;
     size_t shaped_start_cursor = 0;
@@ -203,6 +206,19 @@ int main(void) {
     assert(fabs(shaped_exit.altitude_m - exit_reference.altitude_m) < 1e-6);
     assert(fabs(shaped_exit.flight_path_angle_deg -
                 exit_reference.flight_path_angle_deg) < 1e-6);
+    size_t middle_cursor = (size_t)(0.27 * shaped_route.count);
+    size_t base_middle_cursor = middle_cursor;
+    TaemPathReference local_middle, base_middle;
+    size_t local_middle_index = SIZE_MAX, base_middle_index = SIZE_MAX;
+    TaemRoute base_profile = shaped_route;
+    base_profile.profile_local_offset_m = 0.0;
+    assert(taem_route_reference(&shaped_route, &tangent_start, &middle_cursor,
+        &local_middle, &local_middle_index));
+    assert(taem_route_reference(&base_profile, &tangent_start, &base_middle_cursor,
+        &base_middle, &base_middle_index));
+    assert(local_middle_index == base_middle_index);
+    assert(local_middle.altitude_m < base_middle.altitude_m);
+    assert(local_middle.altitude_m >= base_middle.altitude_m - 500.0);
 
     /* Geometry alone cannot qualify a candidate: native replay must satisfy
      * all constraints through HAC exit before the existing Final-tail gate. */

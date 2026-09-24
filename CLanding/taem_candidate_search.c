@@ -39,13 +39,12 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         fmax(geometry->airspeed_mps * geometry->airspeed_mps, 1.0);
     const double curvature_fractions[] = {0.25, 0.35, 0.50, 0.70, 1.00};
     const double bow_fractions[] = {-0.625, -0.60, -0.575};
-    const double initial_sag_fractions[] =
-        {-0.125, 0.0, 0.125};
+    const double initial_sag_fractions[] = {0.0, 0.125};
     const double local_profile_supports[][2] = {
-        {0.08, 0.40}, {0.12, 0.42}, {0.16, 0.44}
+        {0.16, 0.46}, {0.20, 0.50}, {0.24, 0.54}
     };
     const double local_bow_offsets_m[] = {
-        -750.0, -625.0, -500.0, -375.0, -250.0
+        -1000.0, -875.0, -750.0, -625.0, -500.0
     };
     TaemFixedHacCandidate best_survivor;
     memset(&best_survivor, 0, sizeof(best_survivor));
