@@ -20,9 +20,9 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Live pull response to touchdown is bracketed by 7 s (short/fast) and 10 s
-   (downrange/slow); 8.5 s targets the runway near 75 m/s. */
-static double terminal_pull_response_seconds(void){return 8.5;}
+/* Live pull response to touchdown needs about ten seconds; shorter lead
+   crossed the threshold too high and entered flare downrange. */
+static double terminal_pull_response_seconds(void){return 10.0;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
     return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
 }
@@ -301,7 +301,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         /* Aim the outer glide at a real touchdown point on the runway instead of
            switching from an energy gate to a fixed steep slope.  This keeps the
            reference geometric and continuous from final capture through preflare. */
-        double touchdown_along=clampd(.05*site->runway_length,100.0,160.0);
+        double touchdown_along=clampd(.02*site->runway_length,50.0,100.0);
         double touchdown_distance=fmax(120.0,touchdown_along-along);
         double gref=terminal_geometry_fpa(height,touchdown_distance,H_FLOAT);
         double gdot_ff=0.0,kg=KP("KP_KG",.3);
