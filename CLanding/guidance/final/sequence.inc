@@ -22,9 +22,21 @@ static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const Vehi
 
 /* Live pull response measured about seven seconds.  Lead by the height lost
    through that response, using the worse of measured and geometric sink. */
+static double terminal_pull_response_seconds(void){return 7.0;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
-    const double response_seconds=7.0;
-    return response_seconds*fmax(glide_sink,fmax(0.0,measured_sink));
+    return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
+}
+
+static double terminal_geometry_fpa(double height,double distance,double float_height){
+    return clampd(-atan2(fmax(0.0,height-float_height),fmax(120.0,distance)),
+        -25.0*DEG2RAD,-4.0*DEG2RAD);
+}
+
+static double terminal_sink_profile_fpa(double height,double speed,double float_height,
+        double float_sink,double arrest_accel,double height_rate){
+    double profile_height=fmax(0.0,height-float_height);
+    double sink=float_sink+fmin(sqrt(2.0*arrest_accel*profile_height),height_rate*profile_height);
+    return -asin(fmin(.95,sink/speed));
 }
 
 static void terminal_learn_aero(GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v){
@@ -291,8 +303,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            reference geometric and continuous from final capture through preflare. */
         double touchdown_along=clampd(.05*site->runway_length,100.0,160.0);
         double touchdown_distance=fmax(120.0,touchdown_along-along);
-        double gref=-atan2(fmax(0.0,height-H_FLOAT),touchdown_distance);
-        gref=clampd(gref,-25.0*DEG2RAD,-4.0*DEG2RAD);
+        double gref=terminal_geometry_fpa(height,touchdown_distance,H_FLOAT);
         double gdot_ff=0.0,kg=KP("KP_KG",.3);
         double lift_req=-1.0;
         if(getenv("KP_PD")){double lf=0,df=0;aerodynamic_force_factors_mach(t->mach,t->angle_of_attack,v,&lf,&df);
@@ -309,10 +320,15 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            seven seconds to reduce sink from 32 m/s to below 8 m/s. */
         double glide_sink=fmax(S_FLOAT,-V*sin(gref));
         double response_height=terminal_pull_lead_height(glide_sink,-vs_lead);
-        double hf=fmax(0.0,height-H_FLOAT-response_height),kx=KP("KP_FK",.14);
-        double sd=S_FLOAT+fmin(sqrt(2.0*a_arr*hf),kx*hf);
-        double g_prof=-asin(fmin(.95,sd/V));
-        if(g_prof>gref)g->terminal_pull_latch=true;
+        double hf=fmax(0.0,height-H_FLOAT),kx=KP("KP_FK",.14);
+        double g_prof=terminal_sink_profile_fpa(height,V,H_FLOAT,S_FLOAT,a_arr,kx);
+        double future_height=fmax(0.0,height-response_height);
+        double future_along=along+Vh*terminal_pull_response_seconds();
+        double future_distance=fmax(120.0,touchdown_along-future_along);
+        double future_gref=terminal_geometry_fpa(future_height,future_distance,H_FLOAT);
+        double future_gprof=terminal_sink_profile_fpa(
+            future_height,V,H_FLOAT,S_FLOAT,a_arr,kx);
+        if(future_gprof>future_gref)g->terminal_pull_latch=true;
         bool onprof=g->terminal_pull_latch;
         if(onprof){gref=fmax(gref,g_prof);kg=KP("KP_KGF",.55);}
         double sink=-t->vertical_speed;
