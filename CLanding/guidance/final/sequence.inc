@@ -402,7 +402,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         fprintf(stderr,"FINALDBG %p st=%d alt=%.1f site=%.1f h=%.1f x=%.0f V=%.1f vs=%.1f vsd=%.1f k=%.3f harr=%.1f varr=%.1f az=%.2f lr=%.2f aoa=%.1f cmd=%.1f\n",
             (void*)g,(int)st,t->mean_altitude,site->altitude,height,along,V,t->vertical_speed,vs_des,kf,h_arrest,v_arr,az,g->terminal_lift_ratio,t->angle_of_attack,aoa);
 
-    double inter=clampd(atan2(-t->runway_cross_track,fmax(600.0,V*6.0))*RAD2DEG,-20.0,20.0);
+    double inter=clampd(atan2(-t->runway_cross_track,fmax(400.0,V*6.0))*RAD2DEG,-20.0,20.0);
     double target_course=norm_deg(site->runway_heading+inter);
 
     if(height<KP("KP_GEAR",90.0))g->gear_command_latched=true;
