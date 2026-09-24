@@ -20,9 +20,9 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Live pull response measured about ten seconds to reach flare sink.  Lead by
-   the height lost through that response, using measured or geometric sink. */
-static double terminal_pull_response_seconds(void){return 10.0;}
+/* Live pull response to touchdown is bracketed by 7 s (short/fast) and 10 s
+   (downrange/slow); 8.5 s targets the runway near 75 m/s. */
+static double terminal_pull_response_seconds(void){return 8.5;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
     return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
 }
