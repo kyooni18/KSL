@@ -437,7 +437,15 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     else if(along<0.0&&flaring&&V<v_td*1.1)warn="Energy is low for the runway threshold.";
     GuidanceResult r=result_make(phase,c,status,warn);
     trajectory_copy(&r.reference,ref);
-    return stabilized(g,r,t,v,s,dt);
+    r=stabilized(g,r,t,v,s,dt);
+    const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
+    if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
+        fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f\n",
+            t->ut,along,t->runway_cross_track,course,t->ground_track_heading,
+            site->runway_heading,track_err*RAD2DEG,cross_rate,omega,lat,
+            banklim,bank,target_course,r.command.target_roll,t->roll,
+            t->roll_rate);
+    return r;
 }
 
        GuidanceResult terminal_approach_sequence(GuidanceMachine*g,const Telemetry*t,double course,
