@@ -368,9 +368,28 @@ void guidance_abort(GuidanceMachine*g){g->aborted=true;g->paused=false;g->automa
 void guidance_reset_plan(GuidanceMachine*g){g->delivered_delta_v=0;g->has_burn_command_started=false;g->has_burn_progress_watch=false;g->burn_active_elapsed=0;g->burn_progress_watch_ut=0;g->burn_progress_watch_delta_v=0;g->deorbit_burn_completed=false;g->atmospheric_interface_crossed=false;g->has_previous_ut=false;g->hac_side_selected=false;g->final_approach_captured=false;g->has_s_turn_leg_started=false;g->has_s_turn_reversal_requested=false;g->airbrakes_deployed=false;reset_controllers(g);reset_taem_handoff_state(g);reset_entry_s_turn_program(g);speedbrake_controller_reset(&g->speedbrake_controller,false);if(g->automation_engaged)g->phase=PHASE_COAST;}
 double guidance_entry_leg_elapsed(const GuidanceMachine*g,double ut){return g->phase==PHASE_ENTRY_ENERGY&&g->has_s_turn_leg_started?fmax(0,ut-g->s_turn_leg_started_ut):0;}
 
-       double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v){
+double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v){
     return entry_bank_authority_limit(t->true_air_speed,t->dynamic_pressure,t->g_force,
         v,v->maximum_bank_angle);
+}
+
+double terminal_lateral_bank_limit(const Telemetry*t,const VehicleProfile*v){
+    double limit=dynamic_bank_limit(t,v);
+    if(limit>0.0||!t||!v||!isfinite(t->radar_altitude)||t->radar_altitude>300.0||
+       !isfinite(t->true_air_speed)||!isfinite(t->dynamic_pressure)||
+       !isfinite(t->g_force)||t->dynamic_pressure<=DBL_MIN||
+       t->dynamic_pressure>v->maximum_dynamic_pressure||t->g_force>v->maximum_g_load||
+       !(v->minimum_safe_speed>v->touchdown_speed)||!(v->touchdown_speed>0.0))
+        return limit;
+
+    /* Entry protects stall margin by removing bank below minimum-safe speed.
+       Final still needs a small lateral correction on the way to the lower
+       touchdown target. Fade that authority smoothly with speed, while keeping
+       the same measured pressure and load-factor guards. */
+    double floor=0.70*v->touchdown_speed;
+    double u=clampd((t->true_air_speed-floor)/(v->minimum_safe_speed-floor),0.0,1.0);
+    double fade=u*u*(3.0-2.0*u);
+    return fmin(fmin(12.0,v->maximum_bank_angle)*fade,v->maximum_bank_angle);
 }
 
                                                                                           
@@ -494,7 +513,8 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
         r.command.target_pitch=t->flight_path_angle+target_aoa;
     }
 
-    double bank_limit=dynamic_bank_limit(t,v);
+    double bank_limit=(r.phase==PHASE_FINAL||r.phase==PHASE_FLARE)?
+        terminal_lateral_bank_limit(t,v):dynamic_bank_limit(t,v);
     r.command.target_roll=clampd(norm_signed_deg(r.command.target_roll),
         -bank_limit,bank_limit);
     r.command.target_heading=norm_deg(r.command.target_heading);
@@ -703,4 +723,3 @@ EntryControlPlan guidance_terminal_control_plan(const GuidanceMachine*g,EntryCon
 
                                                                                      
                                                         
-

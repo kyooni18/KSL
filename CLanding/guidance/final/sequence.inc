@@ -269,7 +269,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double omega=clampd(2.2/align_time,.06,.18);
     double lat=-2.0*.95*omega*cross_rate-
         omega*omega*clampd(t->runway_cross_track,-400.0,400.0);
-    double banklim=fmin(fmin(30.0,dynamic_bank_limit(t,v)),3.0+27.0*lateral_scale);
+    double banklim=fmin(fmin(30.0,terminal_lateral_bank_limit(t,v)),3.0+27.0*lateral_scale);
     double bank=clampd(atan(lat/g0)*RAD2DEG,-banklim,banklim);
     double lift_div=fmax(.5,cos(gamma)*cos(bank*DEG2RAD));
 

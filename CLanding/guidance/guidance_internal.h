@@ -101,6 +101,7 @@ void control_plan_assign_lineage(GuidanceMachine*g,EntryControlPlan*plan,
 void guidance_set_engaged(GuidanceMachine*g,bool e);
 void guidance_abort(GuidanceMachine*g);
 double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v);
+double terminal_lateral_bank_limit(const Telemetry*t,const VehicleProfile*v);
 double entry_survivability_recovery_aoa(const GuidanceMachine*g,
         const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg,
         const ControlAuthorityEnvelope*authority);
