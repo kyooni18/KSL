@@ -265,7 +265,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     /* Capture the centerline before the threshold instead of merely converging
        toward it at touchdown.  The second-order law remains state based, but its
        bandwidth is set by time remaining to a pre-threshold alignment station. */
-    const double align_station=-1800.0;
+    const double align_station=-2800.0;
     double align_remaining=fmax(0.0,align_station-along);
     double align_time=fmax(6.0,align_remaining/Vh);
     double omega=clampd(2.2/align_time,.06,.18);
