@@ -20,11 +20,11 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* k17 took about seven seconds to turn the flare AoA command into a useful
-   sink-rate reduction.  Lead by the height the shuttle actually loses during
-   that response, using the worse of measured and geometric sink. */
+/* k17 measured about seven seconds for useful sink reduction; k20 still carried
+   roughly 10 m/s sink through the last 8 seconds.  Use a 10 s lead so the
+   one-way pull has room to settle before reaching the runway. */
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
-    const double response_seconds=7.0;
+    const double response_seconds=10.0;
     return response_seconds*fmax(glide_sink,fmax(0.0,measured_sink));
 }
 
