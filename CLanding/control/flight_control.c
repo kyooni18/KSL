@@ -249,6 +249,14 @@ static double fc_capped_pd_command(double angle_error,
     return fc_clamp(accel/available,-1.0,1.0);
 }
 
+static double fc_pitch_accel_for_profile(double reported,double cap,
+        ControlProfile profile){
+    double used=reported>DBL_EPSILON&&reported<cap?reported:cap;
+    /* Live final telemetry overstates pitch authority; use a slightly lower
+       acceleration scale in flare so persistent AoA error requests more input. */
+    return profile==PROFILE_FLARE?fmin(used,28.0):used;
+}
+
 bool flight_control_step(FlightControlState *state,
                          const Telemetry *telemetry,
                          const GuidanceCommand *command,
@@ -451,8 +459,8 @@ bool flight_control_step(FlightControlState *state,
         atof(getenv("KSP_LANDER_PITCH_WN")):1.05;
     const double pitch_zeta=getenv("KSP_LANDER_PITCH_ZETA")?
         atof(getenv("KSP_LANDER_PITCH_ZETA")):1.15;
-    double pitch_auth_used=pitch_authority>DBL_EPSILON&&pitch_authority<pitch_accel_max?
-        pitch_authority:pitch_accel_max;
+    double pitch_auth_used=fc_pitch_accel_for_profile(
+        pitch_authority,pitch_accel_max,profile);
     double pitch_command=fc_capped_pd_command(pitch_error,effective_pitch_rate,
         state->target_pitch_rate,pitch_auth_used,pitch_wn,pitch_zeta,pitch_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
