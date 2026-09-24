@@ -106,7 +106,7 @@ static void send_command(int fd,int port,const GuidanceCommand*c,const Telemetry
     char b[640];
     snprintf(b,sizeof(b),"{\"type\":\"attitude_command\",\"aoa_deg\":%.8g,\"bank_deg\":%.8g,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.8g,\"throttle\":0,\"step\":true}",
              aoa,bank,c->gear?"true":"false",c->brakes?"true":"false",
-             c->airbrakes?"true":"false",clampd(c->wheel_steering,-1.0,1.0));
+             c->airbrakes?"true":"false",ss_clampd(c->wheel_steering,-1.0,1.0));
     send_json(fd,port,b);
 }
 static void send_resume(int fd,int port){send_json(fd,port,"{\"type\":\"resume\"}");}

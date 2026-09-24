@@ -2,6 +2,7 @@
 #define KSP_LANDER_GUIDANCE_TYPES_H
 
 #include "landing_types.h"
+#include "taem_route.h"
 
 typedef struct { double kp, ki, kd, integral_limit, derivative_tc, integral, previous_error, filtered_derivative; bool has_previous; } RobustPID;
 typedef struct { double value; bool has_value; } SlewLimiter;
@@ -222,6 +223,13 @@ typedef struct {
     AerodynamicEnvelope entry_predictor_envelope;
     TrajectoryCalibrationModel entry_predictor_calibration;
     TerminalCandidate terminal_candidate;
+    /* The committed native MM305 route is a compact deterministic descriptor;
+       it has value semantics and is regenerated from its frozen geometry when
+       queried, so predictor/preview copies remain independent and inexpensive. */
+    TaemRoute mm305_route;
+    size_t mm305_route_cursor;
+    bool mm305_route_committed, mm305_hac_exit_reached;
+    uint64_t mm305_model_snapshot_id;
     TaemInterfaceTarget taem_interface_target;
     bool taem_interface_captured, taem_safety_handoff;
     double taem_interface_diagnostic_ut;
@@ -389,12 +397,20 @@ typedef struct {
        unit aerodynamic factor).  Kept per machine so predictor copies of the
        guidance never share or pollute the live estimate. */
     double terminal_lift_area_ema, terminal_drag_area_ema, terminal_aoa_trim;
+    double terminal_speedbrake_cda; /* learned speedbrake drag area, m^2 (0 = unknown) */
     double terminal_vs_prev, terminal_vs_prev_ut, terminal_vs_rate_ema;
     /* Observed lift/q and drag/q (m^2) in 1 deg incidence bins 0..20 deg. */
     double terminal_lift_q[21], terminal_drag_q[21];
     unsigned char terminal_aero_seen[21];
     double terminal_aero_mach[21];
-    double terminal_apull_ema; /* Mach at which each bin was last observed */
+    double terminal_apull_ema,terminal_v1g_ema;
+    double terminal_lift_k_hi,terminal_drag_k_hi;
+    double terminal_aoa_cmd_last,terminal_aoa_cmd_ut;
+    bool terminal_pull_latch;
+    double terminal_flare_k; /* Exponential flare rate fixed at pull start, 1/s. */
+    double terminal_flare_ut, terminal_flare_aoa0; /* Pull-up start time and incidence. */
+    bool terminal_flare_captured;
+    double terminal_lift_ratio; /* Pull-up ramp done; holding the sink profile. */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;
     double preflare_minimum_speed, preflare_reference_speed, preflare_predicted_height_loss;

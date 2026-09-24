@@ -268,7 +268,12 @@ def main() -> int:
     config = load_configuration(args.config, auto_warp=False)
     guidance = config.setdefault("guidance", {})
     guidance_rate = max(2.0, min(30.0, float(guidance.get("guidanceRate", 10.0))))
+    scenario_name = Path(args.scenario).stem.lower()
+    mission = "MM305" if (args.engage in ("hac", "hac-upstream") or
+                            (scenario_name.startswith("mm305-") and args.engage != "final-test")) else None
     base_run_id = args.run_id or time.strftime("sim-%Y%m%dT%H%M%SZ", time.gmtime())
+    if mission and base_run_id.lower() != "mm305" and not base_run_id.lower().startswith("mm305-"):
+        base_run_id = f"mm305-{base_run_id}"
     run_id = base_run_id
     run_dir = ROOT / "ShuttleSim/runs" / run_id
     suffix = 2
@@ -286,6 +291,7 @@ def main() -> int:
     manifest: dict[str, Any] = {
         "schema": 1,
         "runId": run_id,
+        **({"mission": mission, "tags": [mission]} if mission else {}),
         "state": "starting",
         "mode": "closed-loop",
         "scenario": str(args.scenario),

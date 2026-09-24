@@ -4,25 +4,59 @@
 #include <float.h>
 #include <stdlib.h>
 #include "shuttlesim/sim.h"
+#include "shuttlesim/flight_physics.h"
 #include "shuttlesim/math3.h"
 #include "shuttlesim/quat.h"
 
-static Vec3 flight_accel(const Simulation *sim,Vec3 p,Vec3 v,double ut,AeroForces *af){
-    Vec3 g=world_gravity_accel(&sim->world,p);
-    AeroForces a=aero_compute(&sim->world,&sim->aero,p,v,ut,sim->state.mass_kg,sim->state.attitude.aoa_rad,sim->state.attitude.bank_rad);
-    if(af)*af=a;
-    Vec3 out=v3_add(g,v3_scale(a.force_i,1.0/sim->state.mass_kg));
-    if(sim->deorbit_burn_remaining_s>0 && sim->deorbit_burn_accel_mps2>0){
-        Vec3 retro=v3_scale(v3_normalized(v),-sim->deorbit_burn_accel_mps2);
-        out=v3_add(out,retro);
+typedef struct {
+    Vec3 origin_i, forward_i, right_i, normal_i;
+} RunwayPlane;
+
+static RunwayPlane runway_plane_at(const Simulation *sim,double ut){
+    const Runway *r=&sim->runway;const KerbinWorld *w=&sim->world;
+    RunwayPlane p;
+    p.origin_i=world_lla_to_inertial(w,r->lat_rad,r->lon_rad,r->elevation_m,ut);
+    LocalFrame lf=world_local_frame_i(w,p.origin_i,ut);
+    p.forward_i=v3_normalized(v3_add(v3_scale(lf.north,cos(r->heading_rad)),
+                                     v3_scale(lf.east,sin(r->heading_rad))));
+    p.normal_i=lf.up;
+    p.right_i=v3_normalized(v3_cross(p.normal_i,p.forward_i));
+    return p;
+}
+
+static void runway_plane_coords(const RunwayPlane *p,Vec3 point,
+                                double *along,double *cross,double *height){
+    Vec3 d=v3_sub(point,p->origin_i);
+    if(along)*along=v3_dot(d,p->forward_i);
+    if(cross)*cross=v3_dot(d,p->right_i);
+    if(height)*height=v3_dot(d,p->normal_i);
+}
+
+static Vec3 primary_contact_b(const SimState *s){
+    return s->gear_down?ss_v3(-3.0,0.0,5.5):ss_v3(-3.0,0.0,2.0);
+}
+
+static bool runway_contact_crossing(const Simulation *sim,
+                                    RunwayPlane prev_plane,RunwayPlane cur_plane,
+                                    Vec3 prev_point,Vec3 cur_point,
+                                    double *toi,double *along,double *cross,
+                                    double *cur_height){
+    double a0,c0,h0,a1,c1,h1;
+    runway_plane_coords(&prev_plane,prev_point,&a0,&c0,&h0);
+    runway_plane_coords(&cur_plane,cur_point,&a1,&c1,&h1);
+    if(cur_height)*cur_height=h1;
+    if(h0>0.0&&h1<=0.0){
+        double d=h0-h1;if(!(d>DBL_EPSILON))return false;
+        double t=ss_clampd(h0/d,0.0,1.0);
+        double a=a0+(a1-a0)*t,c=c0+(c1-c0)*t;
+        if(!runway_contains(&sim->runway,a,c))return false;
+        if(toi)*toi=t;if(along)*along=a;if(cross)*cross=c;return true;
     }
-    double engine_thrust=sim->scenario.orbital_engine_available_thrust_n*
-        sim->commanded_throttle;
-    if(engine_thrust>0.0&&sim->state.mass_kg>0.0){
-        Vec3 retro=v3_scale(v3_normalized(v),-engine_thrust/sim->state.mass_kg);
-        out=v3_add(out,retro);
+    if(h0<=0.0&&h1<=0.0&&
+       runway_contains(&sim->runway,a0,c0)&&runway_contains(&sim->runway,a1,c1)){
+        if(toi)*toi=0.0;if(along)*along=a1;if(cross)*cross=c1;return true;
     }
-    return out;
+    return false;
 }
 
 static void derive_initial_orbit(Simulation *sim){
@@ -140,16 +174,39 @@ static void ground_step(Simulation *sim,double dt){
     if(speed>0.0)surface=v3_scale(surface,ns/speed);else surface=v3_scale(surface,0.0);
     s->velocity_i_mps=v3_add(surface,atmosphere);
     s->position_i_m=v3_add(s->position_i_m,v3_scale(s->velocity_i_mps,dt));
-    double along,cross,vert;runway_coordinates(w,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vert);
-    bool runway=runway_contains(&sim->runway,along,cross);
-    double ground=runway?sim->runway.elevation_m:0.0;
-    double r=w->radius_m+ground;
-    s->position_i_m=v3_scale(v3_normalized(s->position_i_m),r);
-    /* Preserve the ground-relative speed while transporting it to the new
-       tangent plane.  At ns == 0 this leaves the vehicle exactly co-rotating
-       with the surface instead of manufacturing a small residual velocity. */
-    Vec3 new_up=v3_normalized(s->position_i_m);
-    surface=v3_sub(surface,v3_scale(new_up,v3_dot(surface,new_up)));
+    /* Constrain the actual body contact point, not the CG, to the runway.
+       The KSC runway is a finite flat collider; using a constant radial
+       altitude makes it curve by metres over its length and sinks the CG
+       into the deck at touchdown. */
+    RunwayPlane plane=runway_plane_at(sim,s->ut+dt);
+    Vec3 primary_b=primary_contact_b(s),tail_b=ss_v3(-18.0,0.0,1.48);
+    Vec3 primary=v3_add(s->position_i_m,quat_rotate(s->body_q_i,primary_b));
+    Vec3 tail=v3_add(s->position_i_m,quat_rotate(s->body_q_i,tail_b));
+    double pa,pc,ph,ta,tc,th;
+    runway_plane_coords(&plane,primary,&pa,&pc,&ph);
+    runway_plane_coords(&plane,tail,&ta,&tc,&th);
+    bool primary_runway=runway_contains(&sim->runway,pa,pc);
+    bool tail_runway=runway_contains(&sim->runway,ta,tc);
+    Vec3 support_normal;
+    double support_gap;
+    if(primary_runway||tail_runway){
+        if(primary_runway&&(!tail_runway||ph<=th)){support_gap=ph;support_normal=plane.normal_i;}
+        else {support_gap=th;support_normal=plane.normal_i;}
+    }else{
+        double primary_gap=v3_norm(primary)-w->radius_m;
+        double tail_gap=v3_norm(tail)-w->radius_m;
+        Vec3 support_point=primary_gap<=tail_gap?primary:tail;
+        support_gap=fmin(primary_gap,tail_gap);
+        support_normal=v3_normalized(support_point);
+    }
+    if(support_gap>0.5){
+        s->on_ground=false;
+        return;
+    }
+    s->position_i_m=v3_sub(s->position_i_m,v3_scale(support_normal,support_gap));
+    /* Preserve ground-relative speed while transporting it to the corrected
+       contact plane. */
+    surface=v3_sub(surface,v3_scale(support_normal,v3_dot(surface,support_normal)));
     double tangent_speed=v3_norm(surface);
     if(ns<=0.0)surface=v3_scale(surface,0.0);
     else if(tangent_speed>0.0)surface=v3_scale(surface,ns/tangent_speed);
@@ -176,49 +233,140 @@ void sim_step(Simulation *sim,double dt){
     }
     if(s->on_ground){ground_step(sim,dt);s->ut+=dt;s->sim_elapsed_s+=dt;return;}
 
-    /* KSP 1.12 runs vessel rigid bodies through Unity/PhysX on a fixed physics
-       tick.  Forces are evaluated from the state at the start of that tick;
-       PhysX first advances velocity from the accumulated acceleration/impulse
-       and then advances position with that updated velocity.  Do not RK4 the
-       force field here: doing so samples atmosphere/aerodynamics at states KSP
-       never evaluates inside one FixedUpdate and can systematically change
-       entry energy over thousands of ticks. */
-    Vec3 p=s->position_i_m,v=s->velocity_i_mps;
-    double ut=s->ut;
-    AtmosphereSample attitude_atm=world_atmosphere_sample_state(&sim->world,p,ut);
-    Vec3 attitude_vair=v3_sub(v,world_atmosphere_velocity_i(&sim->world,p));
-    double attitude_speed=v3_norm(attitude_vair);
-    double attitude_q=0.5*attitude_atm.density_kg_m3*attitude_speed*attitude_speed;
+    Vec3 previous_position_i=s->position_i_m;
+    Quat previous_body_q=s->body_q_i;
+    double previous_ut=s->ut;
 
-    AeroForces applied_aero;
-    Vec3 accel=flight_accel(sim,p,v,ut,&applied_aero);
-    s->velocity_i_mps=v3_add(v,v3_scale(accel,dt));
-    s->position_i_m=v3_add(p,v3_scale(s->velocity_i_mps,dt));
-
-    /* Rotation/control response advances on the same fixed tick.  The lift and
-       drag applied above intentionally used the pre-step attitude, matching the
-       force-then-integrate ordering of the rigid-body physics update. */
-    attitude_step(&s->attitude,attitude_q,dt);
+    /* The shared plant preserves KSP's force-at-tick-start, velocity, position,
+       then attitude ordering. In particular, do not RK4 this force field. */
+    double engine_thrust=sim->scenario.orbital_engine_available_thrust_n*
+        sim->commanded_throttle;
+    FlightAirborneState airborne={
+        .position_i_m=s->position_i_m,
+        .velocity_i_mps=s->velocity_i_mps,
+        .attitude=s->attitude,
+        .body_q_i=s->body_q_i,
+        .aero=s->aero
+    };
+    FlightAirborneStepInput step_input={
+        .mass_kg=s->mass_kg,
+        .ut=s->ut,
+        .dt_s=dt,
+        .burn_accel_mps2=(sim->deorbit_burn_remaining_s>0)
+            ? sim->deorbit_burn_accel_mps2 : 0.0,
+        .engine_thrust_n=engine_thrust
+    };
+    flight_physics_airborne_step(&sim->world,&sim->aero,&step_input,&airborne);
+    s->position_i_m=airborne.position_i_m;
+    s->velocity_i_mps=airborne.velocity_i_mps;
+    s->attitude=airborne.attitude;
+    s->body_q_i=airborne.body_q_i;
+    s->aero=airborne.aero;
+    if(s->gear_down&&s->aero.airspeed_mps>1.0){
+        /* Extended landing gear: parasite drag along the air-relative velocity. */
+        const double gear_cda_m2=5.0;
+        Vec3 vair=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
+        double dv=s->aero.dynamic_pressure_pa*gear_cda_m2/s->mass_kg*dt;
+        double va=v3_norm(vair);
+        if(va>1e-6)s->velocity_i_mps=v3_sub(s->velocity_i_mps,v3_scale(vair,fmin(dv,va)/va));
+    }
+    if(s->airbrakes&&s->aero.airspeed_mps>1.0){
+        /* Deployed speedbrake: parasite drag along the air-relative velocity. */
+        Vec3 vair=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
+        double dv=s->aero.dynamic_pressure_pa*sim->ground_airbrake_cda_m2/s->mass_kg*dt;
+        double va=v3_norm(vair);
+        if(va>1e-6)s->velocity_i_mps=v3_sub(s->velocity_i_mps,v3_scale(vair,fmin(dv,va)/va));
+        s->aero.drag_n+=s->aero.dynamic_pressure_pa*sim->ground_airbrake_cda_m2;
+    }
 
     if(sim->deorbit_burn_remaining_s>0){
         sim->deorbit_burn_remaining_s=fmax(0.0,sim->deorbit_burn_remaining_s-dt);
     }
     s->ut+=dt;
     s->sim_elapsed_s+=dt;
-    s->aero=aero_compute(&sim->world,&sim->aero,s->position_i_m,s->velocity_i_mps,
-                         s->ut,s->mass_kg,s->attitude.aoa_rad,s->attitude.bank_rad);
-    Vec3 vair=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
-    s->body_q_i=attitude_body_quat(s->position_i_m,vair,s->attitude.aoa_rad,s->attitude.bank_rad);
+    /* Continuous collision against the finite flat KSC runway top surface.
+       Evaluate body contact points at both ends of the fixed tick so entering
+       the runway footprint below deck height does not behave like a 70 m wall. */
+    RunwayPlane prev_plane=runway_plane_at(sim,previous_ut);
+    RunwayPlane cur_plane=runway_plane_at(sim,s->ut);
+    Vec3 primary_b=primary_contact_b(s),tail_b=ss_v3(-18.0,0.0,1.48);
+    Vec3 prev_primary=v3_add(previous_position_i,quat_rotate(previous_body_q,primary_b));
+    Vec3 cur_primary=v3_add(s->position_i_m,quat_rotate(s->body_q_i,primary_b));
+    Vec3 prev_tail=v3_add(previous_position_i,quat_rotate(previous_body_q,tail_b));
+    Vec3 cur_tail=v3_add(s->position_i_m,quat_rotate(s->body_q_i,tail_b));
 
-    LLA l=world_lla(&sim->world,s->position_i_m,s->ut);double along,cross,vertical;
-    runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
-    bool near_runway=runway_contains(&sim->runway,along,cross);
-    double ground=near_runway?sim->runway.elevation_m:0.0;
-    if(l.altitude_m<=ground){
-        LocalFrame lf=world_local_frame_i(&sim->world,s->position_i_m,s->ut);Vec3 surf=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
-        double vv=v3_dot(surf,lf.up);Vec3 horiz=v3_sub(surf,v3_scale(lf.up,vv));
-        if(!s->touchdown_seen){s->touchdown_seen=true;s->on_runway_at_touchdown=near_runway;s->touchdown_sink_mps=-vv;s->touchdown_speed_mps=v3_norm(horiz);s->touchdown_along_m=along;s->touchdown_cross_m=cross;}
-        s->on_ground=true;s->position_i_m=v3_scale(v3_normalized(s->position_i_m),sim->world.radius_m+ground);s->velocity_i_mps=v3_add(horiz,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
+    double pt=DBL_MAX,pa=0.0,pc=0.0,ph=0.0;
+    double tt=DBL_MAX,ta=0.0,tc=0.0,th=0.0;
+    bool primary_runway=runway_contact_crossing(sim,prev_plane,cur_plane,
+                                                prev_primary,cur_primary,
+                                                &pt,&pa,&pc,&ph);
+    bool tail_runway=runway_contact_crossing(sim,prev_plane,cur_plane,
+                                             prev_tail,cur_tail,
+                                             &tt,&ta,&tc,&th);
+
+    bool collision=false,on_runway=false,hit_primary=false;
+    double hit_gap=0.0,hit_along=0.0,hit_cross=0.0;
+    Vec3 hit_normal=cur_plane.normal_i;
+    if(primary_runway||tail_runway){
+        hit_primary=primary_runway&&(!tail_runway||pt<=tt);
+        collision=true;on_runway=true;
+        hit_gap=hit_primary?ph:th;
+        hit_along=hit_primary?pa:ta;
+        hit_cross=hit_primary?pc:tc;
+    }else{
+        double pg0=v3_norm(prev_primary)-sim->world.radius_m;
+        double pg1=v3_norm(cur_primary)-sim->world.radius_m;
+        double tg0=v3_norm(prev_tail)-sim->world.radius_m;
+        double tg1=v3_norm(cur_tail)-sim->world.radius_m;
+        double ptoi=DBL_MAX,ttoi=DBL_MAX;
+        bool primary_terrain=false,tail_terrain=false;
+        if(pg0>0.0&&pg1<=0.0){primary_terrain=true;ptoi=pg0/(pg0-pg1);}
+        else if(pg0<=0.0&&pg1<=0.0){primary_terrain=true;ptoi=0.0;}
+        if(tg0>0.0&&tg1<=0.0){tail_terrain=true;ttoi=tg0/(tg0-tg1);}
+        else if(tg0<=0.0&&tg1<=0.0){tail_terrain=true;ttoi=0.0;}
+        if(primary_terrain||tail_terrain){
+            hit_primary=primary_terrain&&(!tail_terrain||ptoi<=ttoi);
+            double toi=hit_primary?ptoi:ttoi;
+            Vec3 p0=hit_primary?prev_primary:prev_tail;
+            Vec3 p1=hit_primary?cur_primary:cur_tail;
+            Vec3 impact=v3_add(p0,v3_scale(v3_sub(p1,p0),toi));
+            collision=true;
+            hit_gap=hit_primary?pg1:tg1;
+            hit_normal=v3_normalized(p1);
+            double vertical_unused=0.0;
+            ss_runway_coordinates(&sim->world,&sim->runway,impact,
+                                  previous_ut+toi*dt,
+                                  &hit_along,&hit_cross,&vertical_unused);
+        }
+    }
+
+    if(collision){
+        Vec3 surf=v3_sub(s->velocity_i_mps,
+                         world_atmosphere_velocity_i(&sim->world,s->position_i_m));
+        double vv=v3_dot(surf,hit_normal);
+        Vec3 horiz=v3_sub(surf,v3_scale(hit_normal,vv));
+        if(!s->touchdown_seen){
+            s->touchdown_seen=true;
+            s->on_runway_at_touchdown=on_runway;
+            s->touchdown_sink_mps=fmax(0.0,-vv);
+            s->touchdown_speed_mps=v3_norm(horiz);
+            s->touchdown_along_m=hit_along;
+            s->touchdown_cross_m=hit_cross;
+            s->touchdown_gear=s->gear_down&&hit_primary;
+            s->tail_strike=!hit_primary;
+            Vec3 fwd=quat_rotate(s->body_q_i,ss_v3(1,0,0));
+            s->touchdown_pitch_deg=rad2deg(asin(ss_clampd(v3_dot(fwd,hit_normal),
+                                                         -1.0,1.0)));
+        }
+        if(hit_gap<0.0)
+            s->position_i_m=v3_sub(s->position_i_m,
+                                   v3_scale(hit_normal,hit_gap));
+        Vec3 atmosphere=world_atmosphere_velocity_i(&sim->world,s->position_i_m);
+        Vec3 relative=v3_sub(s->velocity_i_mps,atmosphere);
+        double vn=v3_dot(relative,hit_normal);
+        if(vn<0.0)relative=v3_sub(relative,v3_scale(hit_normal,vn));
+        s->velocity_i_mps=v3_add(relative,atmosphere);
+        s->on_ground=true;
     }
 }
 
@@ -231,7 +379,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
     bool stopped=s->on_ground&&surface_speed<=stop_resolution;
     double fpa=atan2(vu,fmax(horizontal,1e-9));
     AtmosphereSample atm=world_atmosphere_sample_state(&sim->world,s->position_i_m,s->ut);
-    double along,cross,vertical;runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
+    double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
     snprintf(out,n,"{\"schema\":1,\"type\":\"telemetry\",\"source\":\"sim\",\"scenario\":\"%s\",\"ut\":%.6f,\"sim_time\":%.6f,\"sim_rate\":%.2f,"
              "\"world\":{\"radius_m\":%.9g,\"mu_m3_s2\":%.12g,\"rotation_rate_rad_s\":%.12g,\"atmosphere_top_m\":%.9g,\"rotation_phase_rad_at_ut0\":%.12g},"
              "\"position\":{\"x\":%.6f,\"y\":%.6f,\"z\":%.6f,\"lat_deg\":%.9f,\"lon_deg\":%.9f,\"altitude_m\":%.3f},"
@@ -266,7 +414,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              s->touchdown_seen?"true":"false",s->on_runway_at_touchdown?"true":"false");
 }
 void sim_build_summary_json(const Simulation *sim,char *out,size_t n){
-    const SimState *s=&sim->state;LLA l=world_lla(&sim->world,s->position_i_m,s->ut);double along,cross,vertical;runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
-    snprintf(out,n,"{\"scenario\":\"%s\",\"sim_time_s\":%.3f,\"final_altitude_m\":%.3f,\"touchdown\":%s,\"on_runway\":%s,\"touchdown_sink_mps\":%.3f,\"touchdown_speed_mps\":%.3f,\"touchdown_along_m\":%.3f,\"touchdown_cross_m\":%.3f,\"final_along_m\":%.3f,\"final_cross_m\":%.3f}",
-             sim->scenario.name,s->sim_elapsed_s,l.altitude_m,s->touchdown_seen?"true":"false",s->on_runway_at_touchdown?"true":"false",s->touchdown_sink_mps,s->touchdown_speed_mps,s->touchdown_along_m,s->touchdown_cross_m,along,cross);
+    const SimState *s=&sim->state;LLA l=world_lla(&sim->world,s->position_i_m,s->ut);double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
+    snprintf(out,n,"{\"scenario\":\"%s\",\"sim_time_s\":%.3f,\"final_altitude_m\":%.3f,\"touchdown\":%s,\"on_runway\":%s,\"touchdown_sink_mps\":%.3f,\"touchdown_speed_mps\":%.3f,\"touchdown_along_m\":%.3f,\"touchdown_cross_m\":%.3f,\"touchdown_gear\":%s,\"tail_strike\":%s,\"touchdown_pitch_deg\":%.3f,\"final_along_m\":%.3f,\"final_cross_m\":%.3f}",
+             sim->scenario.name,s->sim_elapsed_s,l.altitude_m,s->touchdown_seen?"true":"false",s->on_runway_at_touchdown?"true":"false",s->touchdown_sink_mps,s->touchdown_speed_mps,s->touchdown_along_m,s->touchdown_cross_m,s->touchdown_gear?"true":"false",s->tail_strike?"true":"false",s->touchdown_pitch_deg,along,cross);
 }

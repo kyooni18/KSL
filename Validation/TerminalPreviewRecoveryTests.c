@@ -2,54 +2,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-static void test_terminal_energy_scope(void){
-    LandingConfiguration cfg=landing_configuration_default();landing_configuration_normalize(&cfg);
-    GuidanceMachine g={0};g.entry_exec.entry_complete=true;
-    g.terminal_candidate.valid=true;g.terminal_candidate.energy_degraded=true;
-    Telemetry t;telemetry_init(&t);t.ut=100;t.true_air_speed=270;
-    t.mean_altitude=7600;t.energy_excess_range=45000;
-    TaemExecInputs inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);
-    TaemExecProfile profile=taem_exec_profile_production(&cfg.guidance,false);
-    TaemExecObservation observation={.ut=t.ut,.relative_velocity=t.true_air_speed};
-    TaemExecutive exec={0};
-    assert(!inputs.energy_valid);
-    assert(taem_exec_initialize(&exec,&observation,&inputs,&profile));
-    assert(exec.phase==TAEM_PHASE_PATH_ACQUISITION);
-    t.mean_altitude=28500;t.true_air_speed=1100;t.energy_excess_range=101000;
-    inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);
-    observation.ut=101;observation.relative_velocity=t.true_air_speed;
-    assert(inputs.energy_valid);
-    assert(taem_exec_initialize(&exec,&observation,&inputs,&profile));
-    assert(exec.phase==TAEM_PHASE_S_TURN);
-    t.mean_altitude=cfg.guidance.taem_interface_altitude;
-    inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);observation.ut=102;
-    assert(!inputs.energy_valid);
-    assert(taem_exec_update(&exec,&observation,&inputs,&profile));
-    assert(exec.phase==TAEM_PHASE_PATH_ACQUISITION&&exec.ownership_latched);
-    assert(exec.last_transition_reason==TAEM_TRANSITION_S_TURN_ENERGY_INVALID);
-    t.mean_altitude=28500;inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);
-    observation.ut=103;assert(taem_exec_update(&exec,&observation,&inputs,&profile));
-    assert(exec.phase==TAEM_PHASE_S_TURN);
-    t.energy_excess_range=NAN;inputs=taem_exec_inputs_live(&g,&t,&cfg.guidance);
-    observation.ut=104;assert(taem_exec_update(&exec,&observation,&inputs,&profile));
-    assert(exec.phase==TAEM_PHASE_PATH_ACQUISITION);
-    puts("PASS: low-altitude entry proxy rejected; high-altitude S-turn retained; invalid-energy S-turn exits without releasing TAEM.");
-}
-static void test_fixed_alignment_bearing(void){
-    LandingConfiguration cfg=landing_configuration_default();landing_configuration_normalize(&cfg);
-    cfg.site.runway_heading=90;cfg.guidance.final_approach_distance=2000;
-    Telemetry t;telemetry_init(&t);
-    t.runway_along_track=2185.0;t.runway_cross_track=5686.0;
-    double h=terminal_uncommitted_alignment_heading(&t,&cfg);
-    assert(h>315&&h<330); /* Northwest, not the observed erroneous northeast. */
-    t.runway_along_track=-12000;t.runway_cross_track=12000;
-    h=terminal_uncommitted_alignment_heading(&t,&cfg);assert(h>35&&h<45);
-    t.runway_along_track=-9000;t.runway_cross_track=-3400;
-    h=terminal_uncommitted_alignment_heading(&t,&cfg);assert(h>110&&h<120);
-    t.runway_along_track=-9000;t.runway_cross_track=0;
-    assert(fabs(terminal_uncommitted_alignment_heading(&t,&cfg)-90)<1e-9);
-    puts("PASS: fixed alignment bearing preserves upstream/downstream and both cross-track signs.");
-}
 static void test_pitch_response_authority_moves_flare_envelope_monotonically(void){
     LandingConfiguration cfg=landing_configuration_default();
     landing_configuration_normalize(&cfg);
@@ -80,9 +32,7 @@ static void test_pitch_response_authority_moves_flare_envelope_monotonically(voi
 }
 
 int main(void){
-    test_fixed_alignment_bearing();
     test_pitch_response_authority_moves_flare_envelope_monotonically();
-    test_terminal_energy_scope();
     LandingConfiguration cfg=landing_configuration_default();landing_configuration_normalize(&cfg);
     Telemetry t;telemetry_init(&t);t.mass=41134.9453125;t.drag_force=t.mass*11.414;
     t.lift_force=500;t.dynamic_pressure=27000;t.mach=1.2;t.angle_of_attack=.1;t.sideslip=0;

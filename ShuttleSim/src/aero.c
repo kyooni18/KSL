@@ -114,7 +114,7 @@ static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alph
        measurements indefinitely.  Do not tune this coverage gate on held-out
        parity flights. */
     double nearest=sqrt(best_d2);
-    double coverage=clampd((1.5-nearest)/0.75,0.0,1.0);
+    double coverage=ss_clampd((1.5-nearest)/0.75,0.0,1.0);
     if(coverage_out)*coverage_out=coverage;
     return true;
 }
@@ -122,7 +122,7 @@ static bool aero_book_lookup(const AeroTable *a,double q,double mach,double alph
 void aero_coefficients(const AeroTable *a,double mach,double alpha,double *cl,double *cd){
     size_t i=lower_index(a->mach,a->mach_count,mach), j=lower_index(a->alpha_deg,a->alpha_count,alpha);
     double m0=a->mach[i],m1=a->mach[i+1],a0=a->alpha_deg[j],a1=a->alpha_deg[j+1];
-    double tm=clampd((mach-m0)/(m1-m0),0,1), ta=clampd((alpha-a0)/(a1-a0),0,1);
+    double tm=ss_clampd((mach-m0)/(m1-m0),0,1), ta=ss_clampd((alpha-a0)/(a1-a0),0,1);
     double cl0=a->cl[i][j]*(1-ta)+a->cl[i][j+1]*ta, cl1=a->cl[i+1][j]*(1-ta)+a->cl[i+1][j+1]*ta;
     double cd0=a->cd[i][j]*(1-ta)+a->cd[i][j+1]*ta, cd1=a->cd[i+1][j]*(1-ta)+a->cd[i+1][j+1]*ta;
     *cl=cl0*(1-tm)+cl1*tm; *cd=cd0*(1-tm)+cd1*tm;
@@ -150,7 +150,7 @@ AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,do
     out.drag_n=out.dynamic_pressure_pa*drag_per_q;
     Vec3 fwd=v3_normalized(vair), up=v3_normalized(p);
     Vec3 right=v3_normalized(v3_cross(fwd,up));
-    if(v3_norm(right)<1e-8) right=v3(0,1,0);
+    if(v3_norm(right)<1e-8) right=ss_v3(0,1,0);
     Vec3 lift0=v3_normalized(v3_cross(right,fwd));
     if(v3_dot(lift0,up)<0) lift0=v3_scale(lift0,-1);
     Vec3 lift=v3_rotate_axis(lift0,fwd,bank);

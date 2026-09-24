@@ -447,10 +447,9 @@ static void test_exact_terminal_shadow_reuses_mm305_policy_and_reports_uncertain
     GuidanceMachine g;guidance_machine_init(&g);g.automation_engaged=true;g.deorbit_burn_completed=true;
     g.atmospheric_interface_crossed=true;g.terminal_region_entered=true;g.terminal_glide_mode=true;g.phase=PHASE_TAEM;
     TaemExecObservation observation={.ut=state.ut,.relative_velocity=600,.checkpoint_restart=false};
-    TaemExecInputs inputs;memset(&inputs,0,sizeof(inputs));inputs.mm304_complete=true;inputs.energy_valid=true;inputs.energy_excess=10;
-    inputs.terminal_feasibility_valid=true;inputs.nominal_terminal_path_feasible=true;inputs.terminal_contract=shadow_terminal_contract();
-    TaemExecProfile profile={.s_turn_enabled=true};
-    assert(taem_exec_initialize(&g.taem_exec,&observation,&inputs,&profile));
+    TaemExecInputs inputs;memset(&inputs,0,sizeof(inputs));inputs.mm304_complete=true;
+    inputs.terminal_contract=shadow_terminal_contract();
+    assert(taem_exec_initialize(&g.taem_exec,&observation,&inputs));
     assert(taem_exec_owns_vehicle(&g.taem_exec));
 
     EntryPrediction pr=predictor_simulate_terminal_shadow_ensemble(state,&t,&g,NULL,&p,aero,&env,&cal,&cfg,60,true);

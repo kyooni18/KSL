@@ -6,13 +6,12 @@ CLanding is organized around explicit subsystem ownership. The public compatibil
 
 `guidance/guidance.c` is the public update wrapper. Guidance implementation is divided by flight responsibility rather than accumulated history:
 
-- `guidance_core.c`: shared guidance state, stabilization, command construction, and common primitives.
+- `guidance_common.c`: stage-neutral response, runway-frame, and shared TAEM/Final guidance primitives.
+- `guidance_core.c`: shared guidance state, stabilization, command construction, and common state-machine primitives.
 - `guidance_entry.c`: MM304/Entry ownership. Its internal slices separate reference generation, bank allocation, S-turn planning, topology control, and contract enforcement.
-- `guidance_taem.c`: MM305/TAEM ownership. Its internal slices separate state initialization, executive bridging, rehearsal setup, energy logic, candidate planning, preview, and committed control. MM305 has no S-turn state.
-- `guidance_hac_path.c`: analytic HAC geometry, transitions, tracking, and vertical-profile support.
-- `guidance_hac_planner.c`: HAC selection geometry, aerodynamic targets, vertical profile, energy pricing, dynamic selection, Variant-B search/control, diagnostic preview, and finite-lead ownership.
+- `guidance_taem.c`: MM305/TAEM live ownership boundary. New MM305 planning, native replay, fixed-HAC construction, reachability, and tracking live in the explicit `taem_*` / `terminal_*` modules rather than legacy HAC planner/path slices.
 - `guidance_final.c`: final-approach planning, phases, recovery, and sequence control.
-- `guidance_terminal.c`: terminal ownership transitions and orchestration.
+- `guidance_terminal.c`: Entry→MM305 and MM305→Final ownership transitions and orchestration.
 - `guidance_internal.h`: private interfaces shared only by guidance modules.
 
 The `.inc` files under these owners are implementation slices, not independent translation units. They deliberately preserve existing static-symbol relationships and numerical behavior while keeping each responsibility navigable. Promote a slice to its own `.c` file only when its interface is intentionally stable.

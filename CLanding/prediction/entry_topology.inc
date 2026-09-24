@@ -478,7 +478,7 @@ static EntryTopologyPlan entry_topology_trial(VehicleState initial,const Telemet
             synthetic.angle_of_attack=response.actual_aoa;synthetic.pitch=synthetic.flight_path_angle+response.actual_aoa;
             GuidanceCommand command=guidance_entry_reference_step(&reference,&synthetic,v,settings,
                 requested_bank,requested_aoa,dt/5.0);
-            attitude_step(&response,norm_signed_deg(command.target_roll),command.target_aoa,&a,v,settings,dt/5.0,cal->physics);
+            predictor_attitude_step(&response,norm_signed_deg(command.target_roll),command.target_aoa,&a,v,settings,dt/5.0,cal->physics);
         }
         ctx.bank=response.actual_bank;ctx.aoa=response.actual_aoa;ctx.ut=state.ut;
         peak_q=fmax(peak_q,a.q);peak_g=fmax(peak_g,a.non_gravity/fmax(.1,gravity0));

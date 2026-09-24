@@ -3,7 +3,7 @@
 
 CC ?= clang
 CFLAGS ?= -O2 -std=c17 -Wall -Wextra -Werror -pthread
-CPPFLAGS ?= -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence
+CPPFLAGS ?= -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include
 LDFLAGS ?= -pthread
 LDLIBS ?= -lm -lsqlite3
 
@@ -24,10 +24,17 @@ UPSTREAM_CNANO_WARNING_FLAGS := -Wno-error=unused-parameter -Wno-error=unused-fu
 
 VPATH := app:guidance:prediction:control:vehicle:calibration:transport:telemetry:persistence:include
 
+FLIGHT_PHYSICS_SOURCES := ../ShuttleSim/src/math3.c ../ShuttleSim/src/quat.c \
+	../ShuttleSim/src/world.c ../ShuttleSim/src/aero.c ../ShuttleSim/src/attitude.c \
+	../ShuttleSim/src/flight_physics.c
+FLIGHT_PHYSICS_OBJECTS := $(patsubst ../ShuttleSim/src/%.c,$(BUILD)/flight_physics/%.o,$(FLIGHT_PHYSICS_SOURCES))
+
 APP_SOURCES := controller.c main.c
 GUIDANCE_SOURCES := entry_alpha.c entry_drag_reference.c entry_lateral.c entry_exec.c taem_exec.c \
-	guidance_hac_path.c guidance_core.c guidance_entry.c guidance_taem.c guidance_final.c \
-	guidance_hac_planner.c guidance_terminal.c guidance.c
+	guidance_common.c guidance_core.c guidance_entry.c guidance_taem.c guidance_final.c \
+	guidance_terminal.c guidance.c taem_frames_energy.c taem_geometry.c terminal_model.c \
+	terminal_propagator.c taem_reachability.c taem_tracker.c taem_planner.c terminal_solver.c \
+	taem_candidate_search.c
 PREDICTION_SOURCES := predictor.c decision_envelope.c async_prediction_policy.c
 CONTROL_SOURCES := flight_control.c
 VEHICLE_SOURCES := vessel_physics.c aero_certification.c math.c models.c
@@ -38,7 +45,7 @@ PERSISTENCE_SOURCES := physics_store.c
 SOURCES := $(APP_SOURCES) $(GUIDANCE_SOURCES) $(PREDICTION_SOURCES) $(CONTROL_SOURCES) \
 	$(VEHICLE_SOURCES) $(CALIBRATION_SOURCES) $(TRANSPORT_SOURCES) $(TELEMETRY_SOURCES) \
 	$(PERSISTENCE_SOURCES)
-OBJECTS := $(SOURCES:%.c=$(BUILD)/%.o)
+OBJECTS := $(SOURCES:%.c=$(BUILD)/%.o) $(FLIGHT_PHYSICS_OBJECTS)
 DEPFILES := $(OBJECTS:.o=.d)
 
 CNANO_SOURCE_NAMES := decoder encoder error krpc krpc.pb memory utils communication
@@ -47,7 +54,7 @@ NANOPB_SOURCE_NAMES := pb_common pb_encode pb_decode
 NANOPB_OBJECTS := $(NANOPB_SOURCE_NAMES:%=$(BUILD)/nanopb/%.o)
 CNANO_HEADERS := $(CNANO_COMPAT)/pb.h $(CNANO_COMPAT)/pb_common.h $(CNANO_COMPAT)/pb_encode.h $(CNANO_COMPAT)/pb_decode.h
 
-.PHONY: all clean debug test qualification architecture-test taem-interface-test vessel-physics-test backend-protocol-test
+.PHONY: all clean debug test qualification architecture-test taem-interface-test dynamic-taem-interface-test taem-frames-energy-test taem-native-stack-test vessel-physics-test backend-protocol-test
 .SECONDARY: $(CNANO_HEADERS)
 
 all: $(TARGET)
@@ -59,6 +66,9 @@ $(TARGET): $(OBJECTS) $(CNANO_OBJECTS) $(NANOPB_OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(BUILD)/%.o: %.c $(CNANO_HEADERS) | $(BUILD)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD)/flight_physics/%.o: ../ShuttleSim/src/%.c $(CNANO_HEADERS) | $(BUILD)/flight_physics
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
 -include $(DEPFILES)
@@ -82,6 +92,8 @@ $(BUILD)/cnano:
 	mkdir -p $@
 $(BUILD)/nanopb:
 	mkdir -p $@
+$(BUILD)/flight_physics:
+	mkdir -p $@
 
 clean:
 	rm -rf $(BUILD)
@@ -103,6 +115,27 @@ taem-interface-test: $(TARGET)
 		-o $(BUILD)/taem_interface_capture_energy_tests
 	$(BUILD)/taem_interface_capture_energy_tests
 
+taem-frames-energy-test: | $(BUILD)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TAEMFramesEnergyTests.c taem_frames_energy.c \
+		$(LDFLAGS) -lm -o $(BUILD)/taem_frames_energy_tests
+	$(BUILD)/taem_frames_energy_tests
+
+taem-native-stack-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TAEMNativeStackTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_native_stack_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_native_stack_tests)"
+
+dynamic-taem-interface-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/DynamicTaemInterfaceTests.c \
+		$(filter-out $(BUILD)/guidance_entry.o $(BUILD)/guidance_core.o $(BUILD)/guidance_taem.o $(BUILD)/guidance_final.o $(BUILD)/guidance_common.o $(BUILD)/guidance_terminal.o $(BUILD)/guidance.o $(BUILD)/main.o,$(OBJECTS)) \
+		$(CNANO_OBJECTS) $(NANOPB_OBJECTS) $(LDFLAGS) $(LDLIBS) \
+		-o $(BUILD)/dynamic_taem_interface_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/dynamic_taem_interface_tests)"
+
 vessel-physics-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/VesselPhysicsTests.c \
@@ -113,6 +146,6 @@ vessel-physics-test: $(TARGET)
 backend-protocol-test: $(TARGET)
 	cd $(REPO_ROOT) && python3 Validation/BackendProtocolTests.py "$(abspath $(TARGET))"
 
-test: architecture-test taem-interface-test vessel-physics-test backend-protocol-test
+test: architecture-test taem-interface-test dynamic-taem-interface-test taem-frames-energy-test taem-native-stack-test vessel-physics-test backend-protocol-test
 
 qualification: test

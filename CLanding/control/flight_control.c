@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "flight_control.h"
 
 #include <float.h>
@@ -141,6 +142,8 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->roll_trim = 0.0;
     state->has_terminal_pitch_authority = false;
     state->has_terminal_roll_authority = false;
+    state->has_last_target_pitch = false;
+    state->target_pitch_rate = 0.0;
     state->has_last_target_roll = false;
     state->target_roll_rate = 0.0;
     state->rcs_transonic_cutoff = false;
@@ -175,7 +178,7 @@ const char *flight_control_revision(void) {
 }
 
 
-static double fc_bounded_axis_command(double angle_error,
+static __attribute__((unused)) double fc_bounded_axis_command(double angle_error,
         double measured_rate,double target_rate,double authority,
         bool stopping_authority_known,double drift_accel,double hold_seconds) {
     double available=fabs(fc_finite(authority,0.0));
@@ -228,6 +231,24 @@ static double fc_bounded_axis_command(double angle_error,
     return fc_clamp((desired_accel-fc_finite(drift_accel,0.0))/available,-1.0,1.0);
 }
 
+static double fc_capped_pd_command(double angle_error,
+        double measured_rate,double target_rate,double authority,
+        double natural_frequency,double damping,double lag_seconds,
+        double previous_input){
+    double available=fabs(fc_finite(authority,0.0));
+    if(!(available>DBL_EPSILON))return 0.0;
+    double lag=fmax(0.0,fc_finite(lag_seconds,0.0));
+    double applied=fc_clamp(fc_finite(previous_input,0.0),-1.0,1.0)*available;
+    double relative_rate=measured_rate-target_rate;
+    double rate_ahead=measured_rate+applied*lag;
+    double error_ahead=angle_error-relative_rate*lag-.5*applied*lag*lag;
+    double relative_rate_ahead=rate_ahead-target_rate;
+    double wn=fmax(0.0,fc_finite(natural_frequency,0.0));
+    double zeta=fmax(0.0,fc_finite(damping,0.0));
+    double accel=wn*wn*error_ahead-2.0*zeta*wn*relative_rate_ahead;
+    return fc_clamp(accel/available,-1.0,1.0);
+}
+
 bool flight_control_step(FlightControlState *state,
                          const Telemetry *telemetry,
                          const GuidanceCommand *command,
@@ -241,7 +262,8 @@ bool flight_control_step(FlightControlState *state,
     output->wheel_steering = fc_clamp(fc_finite(command->wheel_steering, 0.0), -1.0, 1.0);
     output->gear = command->gear;
     output->brakes = command->brakes;
-    output->airbrakes = profile == PROFILE_ROLLOUT && command->airbrakes;
+    output->airbrakes = (profile == PROFILE_ROLLOUT || profile == PROFILE_APPROACH ||
+                         profile == PROFILE_FLARE) && command->airbrakes;
     output->diagnostics.profile = profile;
 
     if (profile == PROFILE_ROLLOUT) {
@@ -317,14 +339,21 @@ bool flight_control_step(FlightControlState *state,
         fabs(state->roll_rate)>DBL_EPSILON;
 
     /*
-     * Pitch and roll authority must be identified in the coordinates actually
-     * controlled below. Body p/q remain diagnostics; they are not substituted
-     * for d(bank)/dt or d(AoA)/dt.
+     * Pitch is controlled in AoA, so use its filtered coordinate rate.  Roll
+     * damping benefits from the native body roll rate when it is live: it is the
+     * actuator-rate state and arrives earlier than the filtered Euler bank rate.
      */
-    double observed_pitch_rate=state->aoa_rate;
-    double observed_roll_rate=state->roll_rate;
+    double observed_pitch_rate=
+        telemetry->has_angle_of_attack_rate&&isfinite(telemetry->angle_of_attack_rate)?
+            telemetry->angle_of_attack_rate:state->aoa_rate;
+    bool live_body_roll=body_roll_rate_valid&&
+        !(fabs(telemetry->body_roll_rate)<=DBL_EPSILON&&
+          isfinite(telemetry->roll_rate)&&fabs(telemetry->roll_rate)>DBL_EPSILON);
+    double observed_roll_rate=live_body_roll?telemetry->body_roll_rate:
+        (isfinite(telemetry->roll_rate)?telemetry->roll_rate:state->roll_rate);
     double observed_yaw_rate=
-        body_yaw_rate_valid?telemetry->body_yaw_rate:state->heading_rate;
+        body_yaw_rate_valid?telemetry->body_yaw_rate:
+        (isfinite(telemetry->heading_rate)?telemetry->heading_rate:state->heading_rate);
 
     if (sample_valid) {
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_PITCH],
@@ -343,6 +372,17 @@ bool flight_control_step(FlightControlState *state,
         ? command->target_aoa
         : fc_finite(command->target_pitch, 0.0) - flight_path_angle;
     double pitch_error = target_pitch_state - aoa;
+    if (state->has_last_target_pitch) {
+        double raw_target_rate = (target_pitch_state - state->last_target_pitch_state) / control_dt;
+        raw_target_rate = fc_clamp(raw_target_rate, -6.0, 6.0);
+        state->target_pitch_rate += fc_clamp(control_dt / 0.25, 0.0, 1.0) *
+            (raw_target_rate - state->target_pitch_rate);
+    } else {
+        state->target_pitch_rate = 0.0;
+    }
+    state->last_target_pitch_state = target_pitch_state;
+    state->has_last_target_pitch = true;
+
     double roll_target = fc_signed_angle(fc_finite(command->target_roll, 0.0));
     double roll_error = fc_signed_angle(roll_target - roll);
 
@@ -364,6 +404,11 @@ bool flight_control_step(FlightControlState *state,
 
     double pitch_authority = raw_pitch_authority;
     double roll_authority = raw_roll_authority;
+    /* The identified roll authority can be wildly off live (3e5 deg/s^2 seen
+       against ~100 observed); bound it by the observed full-input response so
+       the proportional law keeps real gain. */
+    const double roll_accel_max=getenv("KSP_LANDER_ROLL_ACCEL")?atof(getenv("KSP_LANDER_ROLL_ACCEL")):100.0;
+    if(!(roll_authority>DBL_EPSILON)||roll_authority>roll_accel_max)roll_authority=roll_accel_max;
     bool pitch_guard_known=fc_axis_control_authority_known(
         &state->authority[FLIGHT_CONTROL_AXIS_PITCH]);
     bool roll_guard_known=fc_axis_control_authority_known(
@@ -381,41 +426,84 @@ bool flight_control_step(FlightControlState *state,
         fmax(0.0,state->authority[FLIGHT_CONTROL_AXIS_YAW].aero_per_q)*q/
         yaw_authority,0.0,1.0); /* decision-literal-ok: normalized fraction domain */
 
-    double effective_pitch_rate = state->aoa_rate;
-    double effective_roll_rate = state->roll_rate;
+    double effective_pitch_rate=observed_pitch_rate;
+    double effective_roll_rate=observed_roll_rate;
 
-    /* No hidden trim/integral policy. Disturbance acceleration learned by the
-       authority observer is compensated directly in the plant inversion. */
-    state->pitch_trim = 0.0;
-    state->terminal_pitch_integral = 0.0;
     state->roll_trim = 0.0;
     state->terminal_pitch_authority = pitch_authority;
     state->terminal_roll_authority = roll_authority;
     state->has_terminal_pitch_authority = true;
     state->has_terminal_roll_authority = true;
 
-    double pitch_command = fc_bounded_axis_command(
-        pitch_error,effective_pitch_rate,0.0,pitch_authority,
-        pitch_guard_known,state->authority[FLIGHT_CONTROL_AXIS_PITCH].drift_accel,
-        control_dt);
+    /* Capped lag-aware PD in the controlled coordinate.  Do not subtract the
+       observer's zero-input acceleration here: AoA/bank acceleration includes
+       flight-path and kinematic motion, so treating it as actuator bias can cancel
+       nearly the entire control command. */
+    /* Keep the stable proportional dynamics through both Approach and Flare.
+       The remaining live error is a persistent aerodynamic trim bias, not a need
+       for globally higher bandwidth.  A slow bounded trim below the final-approach
+       altitude supplies the sustained pull without a phase-boundary gain jump. */
+    const double pitch_accel_max=getenv("KSP_LANDER_PITCH_ACCEL")?
+        atof(getenv("KSP_LANDER_PITCH_ACCEL")):40.0;
+    const double pitch_lag_s=getenv("KSP_LANDER_PITCH_LAG")?
+        atof(getenv("KSP_LANDER_PITCH_LAG")):0.12;
+    const double pitch_wn=getenv("KSP_LANDER_PITCH_WN")?
+        atof(getenv("KSP_LANDER_PITCH_WN")):1.05;
+    const double pitch_zeta=getenv("KSP_LANDER_PITCH_ZETA")?
+        atof(getenv("KSP_LANDER_PITCH_ZETA")):1.15;
+    double pitch_auth_used=pitch_authority>DBL_EPSILON&&pitch_authority<pitch_accel_max?
+        pitch_authority:pitch_accel_max;
+    double pitch_command=fc_capped_pd_command(pitch_error,effective_pitch_rate,
+        state->target_pitch_rate,pitch_auth_used,pitch_wn,pitch_zeta,pitch_lag_s,
+        state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
 
-    double commanded_roll_rate = state->target_roll_rate;
-    double relative_rate = effective_roll_rate-commanded_roll_rate;
-    double roll_command = fc_bounded_axis_command(
-        roll_error,effective_roll_rate,commanded_roll_rate,roll_authority,
-        roll_guard_known,state->authority[FLIGHT_CONTROL_AXIS_ROLL].drift_accel,
-        control_dt);
+    bool final_pitch_trim=(profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
+        command->has_target_aoa&&isfinite(command->target_aoa)&&
+        isfinite(telemetry->radar_altitude)&&telemetry->radar_altitude<700.0;
+    if(final_pitch_trim){
+        const double ki=getenv("KSP_LANDER_PITCH_TRIM_KI")?
+            atof(getenv("KSP_LANDER_PITCH_TRIM_KI")):0.004;
+        if(fabs(pitch_error)>0.35)
+            state->pitch_trim=fc_clamp(state->pitch_trim+ki*pitch_error*control_dt,
+                -0.15,0.28);
+        else
+            state->pitch_trim*=fmax(0.0,1.0-0.5*control_dt);
+    }else{
+        state->pitch_trim*=fmax(0.0,1.0-control_dt);
+    }
+    state->terminal_pitch_integral=state->pitch_trim;
+    pitch_command=fc_clamp(pitch_command+state->pitch_trim,-1.0,1.0);
+    (void)pitch_guard_known;
+
+    double commanded_roll_rate=state->target_roll_rate;
+    double relative_rate=effective_roll_rate-commanded_roll_rate;
+    /* Bank targets move slowly in Final.  Use the earlier body-rate signal and
+       a deliberately overdamped, low-bandwidth response so a centerline correction
+       cannot turn into a left-right roll limit cycle. */
+    const double roll_lag_s=getenv("KSP_LANDER_ROLL_LAG")?atof(getenv("KSP_LANDER_ROLL_LAG")):0.12;
+    const double roll_wn=getenv("KSP_LANDER_ROLL_WN")?atof(getenv("KSP_LANDER_ROLL_WN")):0.65;
+    const double roll_zeta=getenv("KSP_LANDER_ROLL_ZETA")?atof(getenv("KSP_LANDER_ROLL_ZETA")):1.15;
+    double roll_command=fc_capped_pd_command(roll_error,effective_roll_rate,
+        commanded_roll_rate,roll_authority,roll_wn,roll_zeta,roll_lag_s,
+        state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
+    (void)roll_guard_known;
 
     double heading_error = 0.0;
-    double yaw_error = -sideslip;
+    /* Live KSP: positive yaw drives sideslip negative, so the error that a
+       positive yaw input closes is +sideslip; heading rate is its rate. */
+    double yaw_error = sideslip;
     if (command->heading_control_enabled) {
         heading_error =
             fc_signed_angle(fc_finite(command->target_heading, 0.0)-heading);
         yaw_error = heading_error;
     }
-    double yaw_command = fc_bounded_axis_command(
-        yaw_error,state->heading_rate,0.0,yaw_authority,true,
-        state->authority[FLIGHT_CONTROL_AXIS_YAW].drift_accel,control_dt);
+    const double yaw_accel_max=getenv("KSP_LANDER_YAW_ACCEL")?atof(getenv("KSP_LANDER_YAW_ACCEL")):30.0;
+    const double yaw_wn=getenv("KSP_LANDER_YAW_WN")?atof(getenv("KSP_LANDER_YAW_WN")):1.0;
+    if(!(yaw_authority>DBL_EPSILON)||yaw_authority>yaw_accel_max)yaw_authority=yaw_accel_max;
+    double yaw_rate=command->heading_control_enabled&&isfinite(telemetry->heading_rate)?
+        telemetry->heading_rate:observed_yaw_rate;
+    double yaw_command=fc_capped_pd_command(yaw_error,yaw_rate,0.0,yaw_authority,
+        yaw_wn,1.0,.20,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
 
     /* Mission constraint: RCS is not used during atmospheric guidance. */
     double rcs_assist = 0.0;

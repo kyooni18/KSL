@@ -225,7 +225,7 @@ static double entry_required_average_drag(GeoPoint geo,double speed,double range
     return entry_energy_to_taem(geo.latitude,geo.altitude,speed,p,v,site,s)/usable;
 }
 static void predictor_change_sign(PredictorGuidance*g,double sign){sign=sign>=0?1:-1;if(g->sign==sign)return;if(g->sign!=0)g->reversals++;g->sign=sign;g->leg_elapsed=0;g->established=false;g->configured_leg_dwell_satisfied=false;}
-static void attitude_step(PredictorGuidance*g,double target_bank,double target_aoa,const AtmosState*a,const VehicleProfile*v,const GuidanceSettings*set,double dt,const VesselPhysicsModel *physics){
+static void predictor_attitude_step(PredictorGuidance*g,double target_bank,double target_aoa,const AtmosState*a,const VehicleProfile*v,const GuidanceSettings*set,double dt,const VesselPhysicsModel *physics){
     bool measured_roll=physics&&physics->authority_confidence[1]>0&&isfinite(physics->authority[1])&&physics->authority[1]>1e-6;
     bool measured_pitch=physics&&physics->authority_confidence[0]>0&&isfinite(physics->authority[0])&&physics->authority[0]>1e-6;
     if(measured_roll)
@@ -1128,7 +1128,7 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                 target_aoa=aoa;
             }
         }
-        attitude_step(&g,bank,target_aoa,&at,v,set,dt,cal0->physics);
+        predictor_attitude_step(&g,bank,target_aoa,&at,v,set,dt,cal0->physics);
         if(out.entered_atmosphere&&!out.reached_taem)out.maximum_abs_angle_of_attack=fmax(out.maximum_abs_angle_of_attack,fabs(g.actual_aoa));
         ctx.bank=g.actual_bank;ctx.aoa=g.actual_aoa;ctx.ut=state.ut;
         ctx.airbrakes=predictor_speedbrake_state(&g,geo,&at,p,cal0,v,site,set,state.mass,out.reached_taem,dt);

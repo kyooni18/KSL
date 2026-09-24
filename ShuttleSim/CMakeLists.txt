@@ -1,25 +1,48 @@
 cmake_minimum_required(VERSION 3.16)
 project(ShuttleSim C)
+include(CTest)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
-add_executable(shuttlesim
-    src/main.c
+add_library(flight_physics STATIC
     src/math3.c
     src/quat.c
     src/world.c
     src/aero.c
     src/attitude.c
+    src/flight_physics.c
+)
+target_include_directories(flight_physics PUBLIC include)
+target_compile_options(flight_physics PRIVATE -Wall -Wextra -Wpedantic)
+if(UNIX)
+    target_link_libraries(flight_physics PUBLIC m)
+endif()
+
+add_executable(shuttlesim
+    src/main.c
     src/scenario.c
     src/replay.c
     src/protocol.c
     src/sim.c
 )
 target_include_directories(shuttlesim PRIVATE include)
+target_link_libraries(shuttlesim PRIVATE flight_physics)
 if(UNIX)
-    target_link_libraries(shuttlesim m)
+    target_link_libraries(shuttlesim PRIVATE m)
 endif()
 target_compile_options(shuttlesim PRIVATE -Wall -Wextra -Wpedantic)
+
+if(BUILD_TESTING)
+    add_executable(flight_physics_parity tests/flight_physics_parity.c)
+    target_link_libraries(flight_physics_parity flight_physics)
+    target_compile_options(flight_physics_parity PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME flight_physics_parity COMMAND flight_physics_parity)
+
+    add_executable(runway_collision tests/runway_collision.c src/sim.c)
+    target_link_libraries(runway_collision flight_physics)
+    target_compile_options(runway_collision PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME runway_collision COMMAND runway_collision)
+endif()
 
 
 set(CLANDING_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../CLanding" CACHE PATH
@@ -53,29 +76,24 @@ option(SHUTTLESIM_OFFLINE_API "Build simulator-only in-process physics API" OFF)
 if(SHUTTLESIM_OFFLINE_API)
     add_library(shuttlesim_offline SHARED
         rl/physics.c
-        src/math3.c
-        src/quat.c
-        src/world.c
-        src/aero.c
-        src/attitude.c
         src/scenario.c
         src/sim.c
     )
-    target_include_directories(shuttlesim_offline PRIVATE include "${CLANDING_ROOT}" "${CLANDING_ROOT}/include")
+    target_include_directories(shuttlesim_offline PRIVATE "${CLANDING_ROOT}" "${CLANDING_ROOT}/include")
+    target_link_libraries(shuttlesim_offline PRIVATE flight_physics)
     target_compile_options(shuttlesim_offline PRIVATE -Wall -Wextra -Wpedantic)
     if(UNIX)
-        target_link_libraries(shuttlesim_offline m)
+        target_link_libraries(shuttlesim_offline PRIVATE m)
     endif()
 endif()
 
 if(SHUTTLESIM_OFFLINE_API)
     resolve_clanding_source(CLANDING_SIM_TELEMETRY sim_telemetry.c)
-    resolve_clanding_source(CLANDING_GUIDANCE_HAC_PATH guidance_hac_path.c)
+    resolve_clanding_source(CLANDING_GUIDANCE_COMMON guidance_common.c)
     resolve_clanding_source(CLANDING_GUIDANCE_CORE guidance_core.c)
     resolve_clanding_source(CLANDING_GUIDANCE_ENTRY guidance_entry.c)
     resolve_clanding_source(CLANDING_GUIDANCE_TAEM guidance_taem.c)
     resolve_clanding_source(CLANDING_GUIDANCE_FINAL guidance_final.c)
-    resolve_clanding_source(CLANDING_GUIDANCE_HAC_PLANNER guidance_hac_planner.c)
     resolve_clanding_source(CLANDING_GUIDANCE_TERMINAL guidance_terminal.c)
     resolve_clanding_source(CLANDING_GUIDANCE guidance.c)
     resolve_clanding_source(CLANDING_PREDICTOR predictor.c)
@@ -89,6 +107,15 @@ if(SHUTTLESIM_OFFLINE_API)
     resolve_clanding_source(CLANDING_ENTRY_EXEC entry_exec.c)
     resolve_clanding_source(CLANDING_ENTRY_LATERAL entry_lateral.c)
     resolve_clanding_source(CLANDING_TAEM_EXEC taem_exec.c)
+    resolve_clanding_source(CLANDING_TAEM_FRAMES_ENERGY taem_frames_energy.c)
+    resolve_clanding_source(CLANDING_TAEM_GEOMETRY taem_geometry.c)
+    resolve_clanding_source(CLANDING_TAEM_REACHABILITY taem_reachability.c)
+    resolve_clanding_source(CLANDING_TAEM_TRACKER taem_tracker.c)
+    resolve_clanding_source(CLANDING_TAEM_PLANNER taem_planner.c)
+    resolve_clanding_source(CLANDING_TAEM_CANDIDATE_SEARCH taem_candidate_search.c)
+    resolve_clanding_source(CLANDING_TERMINAL_MODEL terminal_model.c)
+    resolve_clanding_source(CLANDING_TERMINAL_PROPAGATOR terminal_propagator.c)
+    resolve_clanding_source(CLANDING_TERMINAL_SOLVER terminal_solver.c)
     resolve_clanding_source(CLANDING_TRAJECTORY_CALIBRATION trajectory_calibration.c)
     resolve_clanding_source(CLANDING_VESSEL_PHYSICS vessel_physics.c)
     resolve_clanding_source(CLANDING_CALIBRATION calibration.c)
@@ -97,12 +124,11 @@ if(SHUTTLESIM_OFFLINE_API)
     add_library(shuttlesim_expert SHARED
         rl/expert.c
         ${CLANDING_SIM_TELEMETRY}
-        ${CLANDING_GUIDANCE_HAC_PATH}
+        ${CLANDING_GUIDANCE_COMMON}
         ${CLANDING_GUIDANCE_CORE}
         ${CLANDING_GUIDANCE_ENTRY}
         ${CLANDING_GUIDANCE_TAEM}
         ${CLANDING_GUIDANCE_FINAL}
-        ${CLANDING_GUIDANCE_HAC_PLANNER}
         ${CLANDING_GUIDANCE_TERMINAL}
         ${CLANDING_GUIDANCE}
         ${CLANDING_PREDICTOR}
@@ -116,6 +142,15 @@ if(SHUTTLESIM_OFFLINE_API)
         ${CLANDING_ENTRY_EXEC}
         ${CLANDING_ENTRY_LATERAL}
         ${CLANDING_TAEM_EXEC}
+        ${CLANDING_TAEM_FRAMES_ENERGY}
+        ${CLANDING_TAEM_GEOMETRY}
+        ${CLANDING_TAEM_REACHABILITY}
+        ${CLANDING_TAEM_TRACKER}
+        ${CLANDING_TAEM_PLANNER}
+        ${CLANDING_TAEM_CANDIDATE_SEARCH}
+        ${CLANDING_TERMINAL_MODEL}
+        ${CLANDING_TERMINAL_PROPAGATOR}
+        ${CLANDING_TERMINAL_SOLVER}
         ${CLANDING_TRAJECTORY_CALIBRATION}
         ${CLANDING_VESSEL_PHYSICS}
         ${CLANDING_CALIBRATION}

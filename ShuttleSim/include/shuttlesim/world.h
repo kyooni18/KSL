@@ -48,6 +48,6 @@ AtmosphereSample world_atmosphere_sample(const KerbinWorld *w, double altitude_m
 AtmosphereSample world_atmosphere_sample_state(const KerbinWorld *w, Vec3 position_i, double ut);
 void runway_seed_ksp09(Runway *r);
 bool runway_contains(const Runway *r, double along_m, double cross_m);
-void runway_coordinates(const KerbinWorld *w, const Runway *r, Vec3 position_i, double ut,
+void ss_runway_coordinates(const KerbinWorld *w, const Runway *r, Vec3 position_i, double ut,
                          double *along_m, double *cross_m, double *vertical_m);
 #endif

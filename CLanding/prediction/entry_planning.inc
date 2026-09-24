@@ -437,7 +437,7 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             (geo.altitude>25000?.8:(geo.altitude>8000?.45:.25)):
             1.0/clampd(cfg->guidance.guidance_rate,2.0,30.0);
         dt=fmin(dt,maxdur-elapsed);
-        attitude_step(&response,target_bank,target_aoa,&at,&cfg->vehicle,&cfg->guidance,dt,cal0->physics);
+        predictor_attitude_step(&response,target_bank,target_aoa,&at,&cfg->vehicle,&cfg->guidance,dt,cal0->physics);
         ctx.bank=response.actual_bank;ctx.aoa=response.actual_aoa;ctx.ut=state.ut;ctx.mass=state.mass;
         state=rk4_aero(state,dt,&ctx);elapsed+=dt;
         guidance_result_clear(&r);

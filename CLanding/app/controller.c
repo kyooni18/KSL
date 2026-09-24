@@ -3,6 +3,7 @@
 #include "planner_log.h"
 #include "async_prediction_policy.h"
 #include "decision_envelope.h"
+#include "terminal_model.h"
 
 #include <errno.h>
 #include <float.h>
@@ -32,6 +33,9 @@ struct LandingController {
     LandingConfiguration configuration;
     KRPCSession *session;
     GuidanceMachine guidance;
+    TerminalModel terminal_model;
+    bool terminal_model_valid;
+    uint64_t terminal_model_capture_sequence;
     VesselPhysicsModel physics;
     AdaptiveFlightCalibrator adaptive;
     GlideCalibrationMachine glide;

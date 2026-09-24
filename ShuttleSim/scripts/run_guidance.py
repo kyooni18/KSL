@@ -277,6 +277,17 @@ def _close_out_run(manifest,manifest_path,run_dir,final_dir,reason):
     publish_web_run(dict(manifest,runDirectory=str(run_dir) if run_dir.is_dir() else None))
 
 
+def _mm305_run_label(label: str, scenario: str, engage: str) -> tuple[str, str | None]:
+    """Give direct MM305 replays a stable prefix and catalog mission tag."""
+    scenario_name = pathlib.Path(scenario).stem.lower()
+    is_mm305 = (engage.lower() == "engagehactest" or
+                (scenario_name.startswith("mm305-") and engage.lower() != "engagefinaltest"))
+    if not is_mm305:
+        return label, None
+    normalized = label if label.lower() == "mm305" or label.lower().startswith("mm305-") else f"mm305-{label}"
+    return normalized, "MM305"
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--scenario",default=str(SIM/"scenarios/ksp86km-postburn.ini"))
@@ -310,7 +321,8 @@ def main():
     args.scenario=str(pathlib.Path(args.scenario).resolve())
 
     stamp=time.strftime("%Y%m%dT%H%M%SZ",time.gmtime())
-    run_id=f"{args.label}-{stamp}"
+    run_label, mission = _mm305_run_label(args.label, args.scenario, args.engage)
+    run_id=f"{run_label}-{stamp}"
     runs_root=SIM/"runs"; runs_root.mkdir(parents=True,exist_ok=True)
     recover_orphaned_runs(SIM/".pending-runs",runs_root)
     final_run_dir=None
@@ -348,6 +360,7 @@ def main():
     if manifest_path:
         manifest={
             "runId":run_id,"state":"running","mode":"closed-loop",
+            **({"mission":mission,"tags":[mission]} if mission else {}),
             "scenario":str(pathlib.Path(args.scenario)),
             "config":str(pathlib.Path(args.configuration)),
             "startedAt":started_at,"finishedAt":None,"wallSeconds":None,"runnerPid":os.getpid(),

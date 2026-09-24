@@ -82,7 +82,7 @@ static double kerbin_pressure_pa(double altitude_m){
 }
 
 static double kerbin_temperature_k(const KerbinWorld *w,double altitude_m,double lat_rad,double lon_rad,double ut){
-    double h=clampd(altitude_m,0.0,70000.0);
+    double h=ss_clampd(altitude_m,0.0,70000.0);
     double lat_deg=fabs(rad2deg(lat_rad));
     double hour_angle=lon_rad+(w->rotation_rate_rad_s-w->orbital_rate_rad_s)*ut-w->solar_phase_rad_at_ut0;
     double sun_dot_normalized=0.5*cos(hour_angle-PI/4.0)+0.5;
@@ -175,31 +175,31 @@ bool world_load_atmosphere_csv(KerbinWorld *w, const char *path) {
 }
 
 Vec3 world_gravity_accel(const KerbinWorld *w, Vec3 r) {
-    double rn=v3_norm(r); if(rn<1.0) return v3(0,0,0);
+    double rn=v3_norm(r); if(rn<1.0) return ss_v3(0,0,0);
     return v3_scale(r,-w->mu_m3_s2/(rn*rn*rn));
 }
 
-static Vec3 rotz(Vec3 v,double a){ double c=cos(a),s=sin(a); return v3(c*v.x-s*v.y,s*v.x+c*v.y,v.z); }
+static Vec3 rotz(Vec3 v,double a){ double c=cos(a),s=sin(a); return ss_v3(c*v.x-s*v.y,s*v.x+c*v.y,v.z); }
 Vec3 world_fixed_to_inertial(const KerbinWorld *w, Vec3 fixed, double ut) { return rotz(fixed,w->rotation_phase_rad_at_ut0+w->rotation_rate_rad_s*ut); }
 Vec3 world_inertial_to_fixed(const KerbinWorld *w, Vec3 inertial, double ut) { return rotz(inertial,-(w->rotation_phase_rad_at_ut0+w->rotation_rate_rad_s*ut)); }
-Vec3 world_atmosphere_velocity_i(const KerbinWorld *w, Vec3 p) { return v3(-w->rotation_rate_rad_s*p.y,w->rotation_rate_rad_s*p.x,0); }
+Vec3 world_atmosphere_velocity_i(const KerbinWorld *w, Vec3 p) { return ss_v3(-w->rotation_rate_rad_s*p.y,w->rotation_rate_rad_s*p.x,0); }
 
 LLA world_lla(const KerbinWorld *w, Vec3 p_i, double ut) {
     Vec3 p=world_inertial_to_fixed(w,p_i,ut); double rn=v3_norm(p);
-    LLA out={asin(clampd(p.z/rn,-1,1)),atan2(p.y,p.x),rn-w->radius_m}; return out;
+    LLA out={asin(ss_clampd(p.z/rn,-1,1)),atan2(p.y,p.x),rn-w->radius_m}; return out;
 }
 Vec3 world_lla_to_inertial(const KerbinWorld *w, double lat, double lon, double alt, double ut) {
     double r=w->radius_m+alt, cl=cos(lat);
-    Vec3 f=v3(r*cl*cos(lon),r*cl*sin(lon),r*sin(lat));
+    Vec3 f=ss_v3(r*cl*cos(lon),r*cl*sin(lon),r*sin(lat));
     return world_fixed_to_inertial(w,f,ut);
 }
 LocalFrame world_local_frame_i(const KerbinWorld *w, Vec3 p_i, double ut) {
     (void)w;
     (void)ut;
     Vec3 up=v3_normalized(p_i);
-    Vec3 z=v3(0,0,1);
+    Vec3 z=ss_v3(0,0,1);
     Vec3 east=v3_normalized(v3_cross(z,up));
-    if(v3_norm(east)<1e-8) east=v3(0,1,0);
+    if(v3_norm(east)<1e-8) east=ss_v3(0,1,0);
     Vec3 north=v3_normalized(v3_cross(up,east));
     LocalFrame f={north,east,up}; return f;
 }
@@ -251,17 +251,17 @@ bool runway_contains(const Runway *r, double along_m, double cross_m) {
            fabs(cross_m)<=r->width_m*0.5;
 }
 
-void runway_coordinates(const KerbinWorld *w, const Runway *r, Vec3 p_i, double ut,double *along,double *cross,double *vertical) {
+void ss_runway_coordinates(const KerbinWorld *w, const Runway *r, Vec3 p_i, double ut,double *along,double *cross,double *vertical) {
     LLA p = world_lla(w, p_i, ut);
     double lat1 = r->lat_rad, lon1 = r->lon_rad;
     double lat2 = p.lat_rad, lon2 = p.lon_rad;
     double dlon = wrap_pi(lon2 - lon1);
     double cos_delta = sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(dlon);
-    double delta = acos(clampd(cos_delta, -1.0, 1.0));
+    double delta = acos(ss_clampd(cos_delta, -1.0, 1.0));
     double bearing = atan2(sin(dlon)*cos(lat2),
                            cos(lat1)*sin(lat2) - sin(lat1)*cos(lat2)*cos(dlon));
     double rel = wrap_pi(bearing - r->heading_rad);
-    double xt = asin(clampd(sin(delta)*sin(rel), -1.0, 1.0));
+    double xt = asin(ss_clampd(sin(delta)*sin(rel), -1.0, 1.0));
     double at = atan2(sin(delta)*cos(rel), cos(delta));
     if(along) *along = at * w->radius_m;
     if(cross) *cross = xt * w->radius_m;

@@ -149,6 +149,8 @@ typedef struct {
     bool has_terminal_pitch_authority;
     bool has_terminal_roll_authority;
 
+    double last_target_pitch_state, target_pitch_rate;
+    bool has_last_target_pitch;
     double last_target_roll;
     double target_roll_rate;
     bool has_last_target_roll;

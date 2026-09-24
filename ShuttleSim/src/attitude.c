@@ -45,8 +45,8 @@ static void axis_step(double target,double *x,double *v,double wn,double zeta,
     double effective_vmax=vmax*root;
     double effective_amax=amax*authority;
     double accel=effective_wn*effective_wn*err-2.0*zeta*effective_wn*(*v);
-    accel=clampd(accel,-effective_amax,effective_amax);
-    *v=clampd(*v+accel*dt,-effective_vmax,effective_vmax);
+    accel=ss_clampd(accel,-effective_amax,effective_amax);
+    *v=ss_clampd(*v+accel*dt,-effective_vmax,effective_vmax);
     *x+=(*v)*dt;
     if(wrap)*x=wrap_pi(*x);
 }
@@ -55,8 +55,8 @@ void attitude_step(AttitudeModel *a,double dynamic_pressure_pa,double dt){
     a->cmd_aoa_rad=a->requested_aoa_rad;
     a->cmd_bank_rad=wrap_pi(a->requested_bank_rad);
     double q=fmax(0.0,isfinite(dynamic_pressure_pa)?dynamic_pressure_pa:0.0);
-    double pitch_authority=clampd(q/fmax(a->pitch_full_authority_q_pa,1e-9),0.0,1.0);
-    double roll_authority=clampd(q/fmax(a->roll_full_authority_q_pa,1e-9),0.0,1.0);
+    double pitch_authority=ss_clampd(q/fmax(a->pitch_full_authority_q_pa,1e-9),0.0,1.0);
+    double roll_authority=ss_clampd(q/fmax(a->roll_full_authority_q_pa,1e-9),0.0,1.0);
     axis_step(a->cmd_aoa_rad,&a->aoa_rad,&a->aoa_rate_rad_s,
               a->pitch_wn,a->pitch_zeta,a->max_pitch_rate_rad_s,
               a->max_pitch_accel_rad_s2,pitch_authority,dt,false);
@@ -66,7 +66,7 @@ void attitude_step(AttitudeModel *a,double dynamic_pressure_pa,double dt){
 }
 Quat attitude_body_quat(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 flight=v3_normalized(vair), radial=v3_normalized(p);
-    Vec3 right=v3_normalized(v3_cross(flight,radial)); if(v3_norm(right)<1e-8)right=v3(0,1,0);
+    Vec3 right=v3_normalized(v3_cross(flight,radial)); if(v3_norm(right)<1e-8)right=ss_v3(0,1,0);
     Vec3 normal=v3_normalized(v3_cross(right,flight));
     Vec3 body_fwd=v3_normalized(v3_add(v3_scale(flight,cos(aoa)),v3_scale(normal,sin(aoa))));
     Vec3 body_up=v3_normalized(v3_add(v3_scale(normal,cos(aoa)),v3_scale(flight,-sin(aoa))));

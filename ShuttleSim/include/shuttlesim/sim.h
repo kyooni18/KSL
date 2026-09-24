@@ -29,6 +29,9 @@ typedef struct {
     double touchdown_speed_mps;
     double touchdown_along_m;
     double touchdown_cross_m;
+    bool touchdown_gear;
+    bool tail_strike;
+    double touchdown_pitch_deg;
     AeroForces aero;
 } SimState;
 

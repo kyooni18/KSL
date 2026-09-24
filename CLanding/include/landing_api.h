@@ -3,6 +3,8 @@
 
 #include "vehicle_types.h"
 
+typedef struct TerminalModel TerminalModel;
+
 void vessel_physics_init(VesselPhysicsModel *m);
 void vessel_physics_import_sample(VesselPhysicsModel *m,const VesselAeroSample *sample);
 void vessel_physics_observe(VesselPhysicsModel *m, Telemetry *t, const VehicleState *s, const PlanetModel *p);
@@ -138,6 +140,10 @@ void guidance_initialize_reentry_continuation(GuidanceMachine *g,const Telemetry
 bool guidance_begin_hac_test(GuidanceMachine *g,const Telemetry *t,double course,const PlanetModel *planet,AerodynamicModel aero,const LandingConfiguration *cfg,char *message,size_t message_size);
 bool guidance_begin_final_test(GuidanceMachine *g,const Telemetry *t,double course,const PlanetModel *planet,AerodynamicModel aero,const LandingConfiguration *cfg,char *message,size_t message_size);
 GuidanceResult guidance_update(GuidanceMachine *g,const Telemetry *t,const VehicleState *state,const DeorbitPlan *plan,const PlanetModel *planet,AerodynamicModel aero,const LandingConfiguration *cfg);
+GuidanceResult guidance_update_with_terminal_model(GuidanceMachine *g,
+    const Telemetry *t,const VehicleState *state,const DeorbitPlan *plan,
+    const PlanetModel *planet,AerodynamicModel aero,
+    const LandingConfiguration *cfg,const TerminalModel *terminal_model);
 EntryControlPlan guidance_terminal_control_plan(const GuidanceMachine *g,EntryControlPlan plan);
 void guidance_result_clear(GuidanceResult *r); void reference_trajectory(Trajectory *out,const LandingSite *site,const GuidanceSettings *settings,double radius,double hac_side);
 

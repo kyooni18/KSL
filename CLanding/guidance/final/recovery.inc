@@ -307,6 +307,9 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     g->hac_plan_degraded=false;g->hac_plan_geometry_degraded=false;
     g->hac_plan_energy_degraded=false;g->hac_plan_violation_score=0;g->hac_commit_blend=0;
     g->hac_side_selected=false;g->hac_captured=false;g->hac_completed=false;g->hac_progress_valid=false;
+    g->mm305_route=(TaemRoute){0};g->mm305_route_cursor=0;
+    g->mm305_route_committed=false;g->mm305_hac_exit_reached=false;
+    g->mm305_model_snapshot_id=0;
     g->hac_transition_active=false;g->hac_transition_heading_cone=false;g->hac_transition_lead_curve=false;g->hac_transition_progress=0;g->hac_transition_lead_progress=0;
     g->hac_transition_lead_rebase_attempted=false;
     g->fixed_hac_reference_valid=false;
@@ -398,4 +401,3 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     snprintf(r.warning,sizeof(r.warning),"Previous advisory terminal preview discarded before TAEM ownership; an explicit MM304 recovery frame is permitted.");
     return r;
 }
-

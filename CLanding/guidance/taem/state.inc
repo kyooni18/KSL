@@ -197,18 +197,3 @@
     return anchor;
 }
 
-static double terminal_expected_speed_loss_accel(const GuidanceMachine*g,const Telemetry*t,
-        const PlanetModel*p,AerodynamicModel aero,const VehicleProfile*v){
-    (void)g;
-    /* Aerodynamic energy loss is not speed loss. During the recorded F14
-       -32 degree glide, D/m was about 5.2 m/s2 while TAS stayed near 200 m/s:
-       descending potential energy paid the drag work. The former 0.85*D/m
-       floor predicted 133 m/s twenty seconds later; live KSP retained 198.
-       Keep signed acceleration rather than inventing deceleration in a dive. */
-    double radius=fmax(p->radius+t->mean_altitude,1.0);
-    double latitude=t->latitude*DEG2RAD;
-    double gravity=p->gravitational_parameter/(radius*radius)-
-        p->rotational_speed*p->rotational_speed*radius*cos(latitude)*cos(latitude);
-    return clampd(live_drag_accel(t,aero,v)+gravity*sin(t->flight_path_angle*DEG2RAD),-40.0,40.0);
-}
-

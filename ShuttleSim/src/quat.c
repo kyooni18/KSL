@@ -22,7 +22,7 @@ Quat quat_axis_angle(Vec3 axis, double angle_rad) {
     Quat q={cos(h),axis.x*s,axis.y*s,axis.z*s}; return quat_normalized(q);
 }
 Vec3 quat_rotate(Quat q, Vec3 v) {
-    q=quat_normalized(q); Vec3 u=v3(q.x,q.y,q.z);
+    q=quat_normalized(q); Vec3 u=ss_v3(q.x,q.y,q.z);
     Vec3 t=v3_scale(v3_cross(u,v),2.0);
     return v3_add(v, v3_add(v3_scale(t,q.w), v3_cross(u,t)));
 }

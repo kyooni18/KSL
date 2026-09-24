@@ -888,6 +888,17 @@ def read_simulator_run(root: Path) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
+def _run_mission(run: dict[str, Any], run_id: str | None = None) -> str | None:
+    mission = run.get("mission")
+    if isinstance(mission, str) and mission:
+        return mission
+    scenario_name = Path(str(run.get("scenario") or "")).stem.lower()
+    identity = (run_id or str(run.get("runId") or "")).lower()
+    if identity.startswith("mm305-") or scenario_name.startswith("mm305-"):
+        return "MM305"
+    return None
+
+
 def simulation_status(run: dict[str, Any] | None, snapshot: dict[str, Any] | None,
                       mode: str, *, replay_index: int | None = None,
                       replay_count: int | None = None, replay_speed: float | None = None) -> dict[str, Any]:
@@ -914,6 +925,8 @@ def simulation_status(run: dict[str, Any] | None, snapshot: dict[str, Any] | Non
         "active": mode in ("simulator", "replay"),
         "sourceMode": mode,
         "runId": run.get("runId"),
+        "mission": _run_mission(run),
+        "tags": run.get("tags") or (["MM305"] if _run_mission(run) == "MM305" else []),
         "state": state,
         "mode": run.get("mode") or ("replay" if mode == "replay" else "closed-loop"),
         "scenario": run.get("scenario"),
@@ -1591,6 +1604,8 @@ def _simulation_run_summary(run_dir: Path, manifest: dict[str, Any]) -> dict[str
 
     return {
         "runId": run_id,
+        "mission": _run_mission(manifest, run_id),
+        "tags": manifest.get("tags") or (["MM305"] if _run_mission(manifest, run_id) == "MM305" else []),
         "state": manifest.get("state"),
         "mode": manifest.get("mode"),
         "scenario": manifest.get("scenario"),

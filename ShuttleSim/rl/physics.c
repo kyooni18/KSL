@@ -192,9 +192,9 @@ int offline_set_deorbit_orbit(void *handle, double apoapsis_altitude_m,
   double ci = cos(deg2rad(inclination_deg));
   double si = sin(deg2rad(inclination_deg));
   double co = cos(raan), so = sin(raan), cw = cos(argument), sw = sin(argument);
-  Vec3 periapsis_axis = v3(co * cw - so * sw * ci,
+  Vec3 periapsis_axis = ss_v3(co * cw - so * sw * ci,
                            so * cw + co * sw * ci, sw * si);
-  Vec3 transverse_axis = v3(-co * sw - so * cw * ci,
+  Vec3 transverse_axis = ss_v3(-co * sw - so * cw * ci,
                             -so * sw + co * cw * ci, cw * si);
   /* The burn is at apoapsis: true anomaly pi, so position and velocity are
    * opposite the perifocal axes.  The argument of periapsis is allowed to

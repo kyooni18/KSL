@@ -7,13 +7,16 @@
 #include <string.h>
 
 
-GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
+GuidanceResult guidance_update_with_terminal_model(GuidanceMachine*g,
+        const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,
+        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,
+        const TerminalModel *terminal_model){
     /* Keep the public update in the configured runway frame. Terminal guidance
        owns reciprocal-runway preview, selection, reframing, and commitment in
        terminal_guidance_selected(). Pre-framing here makes a selected RW27
        appear as a new primary runway on the next preview and aliases the stored
        runway_end_index, causing the MM304/MM305 inlet to flip ends every cycle. */
-    GuidanceResult r=guidance_update_impl(g,t,state,plan,p,aero,cfg);
+    GuidanceResult r=guidance_update_impl(g,t,state,plan,p,aero,cfg,terminal_model);
     if(plan&&r.phase==PHASE_DEORBIT_BURN&&g->has_burn_command_started&&!g->deorbit_burn_completed&&r.command.target_throttle<=0){
         bool has_peri=plan->predicted_post_burn_periapsis_altitude>10000&&plan->predicted_post_burn_periapsis_altitude<p->atmosphere_depth&&isfinite(t->periapsis_altitude)&&t->periapsis_altitude>-p->radius*.5;
         double target=plan->delta_v+(has_peri?8:0),remaining=target-g->delivered_delta_v;
@@ -39,6 +42,12 @@ GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,const Vehicle
     r.command.terminal_pitch_tuning=g->terminal_region_entered&&
         (g->hac_side_selected||(g->terminal_glide_mode&&g->terminal_test_capture_active));
     return r;
+}
+
+GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,
+        const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,
+        AerodynamicModel aero,const LandingConfiguration*cfg){
+    return guidance_update_with_terminal_model(g,t,state,plan,p,aero,cfg,NULL);
 }
 
 bool guidance_install_entry_topology(GuidanceMachine*g,const EntryTopologyPlan*top,double ut){

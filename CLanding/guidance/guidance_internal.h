@@ -66,20 +66,10 @@ double hac_course_rate_cap(const Telemetry*t);
 double guidance_lateral_speed(const Telemetry*t);
 void taem_capture_veto_reasons(unsigned veto,char *buf,size_t n);
 double hac_join_rate_cap(const Telemetry*t,double progress);
-HACPoint2 hac_point(double e,double n);
-HACPoint2 hac_bezier_point(const HACTransitionPlan*p,double u);
-HACPoint2 hac_bezier_derivative(const HACTransitionPlan*p,double u);
-double hac_bezier_signed_curvature(const HACTransitionPlan*p,double u);
-bool hac_bezier_regular(const HACTransitionPlan*p);
-double hac_bezier_length_between(const HACTransitionPlan*p,double from,double to,int segments);
-double hac_transition_nearest_u(const GuidanceMachine*g,double e,double n);
-double hac_bezier_nearest_u(const HACTransitionPlan*p,double e,double n);
-HACTransitionPlan hac_lead_bezier_from_plan(const HACTransitionPlan*p);
-double hac_bezier_advance_distance(const HACTransitionPlan*p,double u,double distance);
-bool hac_lead_sample_distance(const HACTransitionPlan*p,double distance,
-        HACPoint2*point,double*course,double*curvature);
-double hac_lead_nearest_distance(const HACTransitionPlan*p,double e,double n);
-double fixed_hac_lead_remaining(const GuidanceMachine*g);
+bool hac_fixed_alignment_geometry(HACPoint2*entry_out,
+        HACPoint2*center_out,HACPoint2*exit_out,const LandingSite*site,
+        const GuidanceSettings*s,double hac_radius,double capture_course,
+        double side);
 double hac_path_tracking_time(double speed,double curvature_radius);
 double hac_frenet_lateral(double speed,double curvature,double cross_track,
         double course_error_deg,double tracking_time);
@@ -99,60 +89,8 @@ void hac_projected_local_state(const Telemetry*t,const LandingSite*site,double p
         double*out_e,double*out_n,double*out_course);
 double terminal_normalized_upper_violation(double value,double limit);
 double terminal_normalized_band_violation(double value,double minimum,double maximum);
-bool hac_shuttle_acquisition_plan(HACTransitionPlan*out,
-        double current_e,double current_n,double start_course,
-        const LandingSite*site,const GuidanceSettings*s,
-        double hac_radius,double hac_side,double acquisition_radius,
-        double final_distance);
-bool hac_transition_plan(HACTransitionPlan*out,double current_e,double current_n,
-        double future_e,double future_n,double start_course,double future_course,
-        const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side,
-        double final_distance,double start_air_speed,double end_air_speed,double speed_loss_accel,
-        double max_lateral_accel,double preferred_fixed_path,
-        double min_fixed_path,double max_fixed_path);
-bool hac_variant_b_requested(void);
-bool hac_upstream_runway_staging_requested(void);
-double hac_upstream_aoa_bias_deg(void);
-double hac_lead_aoa_bias_deg(void);
-bool hac_fixed_alignment_geometry(HACPoint2*entry_out,
-        HACPoint2*center_out,HACPoint2*exit_out,const LandingSite*site,
-        const GuidanceSettings*s,double hac_radius,double capture_course,
-        double side);
-bool hac_fixed_alignment_tangent_course(double current_e,double current_n,
-        const LandingSite*site,const GuidanceSettings*s,double hac_radius,
-        double side,double*course_out);
-bool hac_fixed_alignment_plan(HACTransitionPlan*out,
-        double current_e,double current_n,double start_course,double capture_course,
-        const LandingSite*site,const GuidanceSettings*s,double hac_radius,double side);
-void hac_transition_store(GuidanceMachine*g,const HACTransitionPlan*p,double response_time);
-bool fixed_hac_vertical_profile_latch(GuidanceMachine*g,
-        double start_altitude,double start_flight_path_angle,
-        double start_horizontal_speed,double response_time,
-        double lead_length,double arc_length,
-        const LandingSite*site,const GuidanceSettings*s);
-double fixed_hac_total_path_length(const GuidanceMachine*g);
-double fixed_hac_reference_slope(const GuidanceMachine*g,
-        double remaining);
-double fixed_hac_reference_altitude(const GuidanceMachine*g,
-        double remaining);
-bool hac_fixed_lead_rebase_from_vector(GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,
-        const LandingConfiguration*cfg,double current_e,double current_n);
-HACGuidance hac_guidance_radius(const Telemetry*t,const LandingSite*site,const GuidanceSettings*s,double radius,double side,double gravity,double course,double hac_radius);
 HACGuidance terminal_runway_line_path_guidance(const Telemetry*t,
         const LandingSite*site,const GuidanceSettings*s,double gravity,double course);
-HACGuidance hac_heading_cone_path_guidance(const GuidanceMachine*g,
-        const Telemetry*t,const LandingSite*site,const GuidanceSettings*s,
-        double planet_radius,double gravity,double course);
-HACGuidance hac_path_guidance(const GuidanceMachine*g,const Telemetry*t,
-        const LandingSite*site,const GuidanceSettings*s,double planet_radius,
-        double side,double gravity,double course,double hac_radius);
-HACPhaseGuidance hac_phase_guidance(TaemPhase phase,const GuidanceMachine*g,
-        const Telemetry*t,const LandingSite*site,const GuidanceSettings*s,double planet_radius,
-        double side,double gravity,double course,double hac_radius);
-void reference_trajectory_radius(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double radius,double side,double hac_radius);
-void reference_trajectory_fixed_hac(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double planet_radius,const GuidanceMachine*g);
-void reference_trajectory_terminal_candidate(Trajectory*out,const LandingSite*site,const GuidanceSettings*s,double planet_radius,const TerminalCandidate*c,double live_altitude);
 GuidanceResult result_make(GuidancePhase phase,GuidanceCommand c,const char*status,const char*warning);
 void guidance_result_clear(GuidanceResult*r);
 void reset_limiters(GuidanceMachine*g);
@@ -212,7 +150,6 @@ bool taem_exec_sync_with_contract(GuidanceMachine*g,const Telemetry*t,const Guid
 void taem_exec_sync(GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg);
 double terminal_default_hac_side(const Telemetry*t,const LandingSite*site,double course);
-double terminal_hac_energy_aoa(const Telemetry*t,const VehicleProfile*v);
 double terminal_fpa_force_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double reference_fpa);
 double fixed_hac_lead_target_speed(const Telemetry*t,const PlanetModel*p,
@@ -264,6 +201,10 @@ double terminal_projected_lift_accel_at_aoa(const Telemetry*t,AerodynamicModel a
         const VehicleProfile*v,double aoa);
 double taem_bank_demand(const Telemetry*t,const HACGuidance*h,double hac_radius,double side,AerodynamicModel aero,const VehicleProfile*v);
 GuidanceResult taem_guidance(GuidanceMachine*g,const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,const Trajectory*ref,double dt);
+GuidanceResult taem_guidance_native(GuidanceMachine*g,const Telemetry*t,
+        const VehicleState*state,double course,const PlanetModel*p,
+        AerodynamicModel aero,const LandingConfiguration*cfg,
+        const TerminalModel*model,double dt);
 double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s);
 void terminal_store_preflare_plan(GuidanceMachine*g,const TerminalPreflarePlan*p);
 void terminal_set_stage(GuidanceMachine*g,TerminalVerticalStage stage,double ut);
@@ -297,17 +238,11 @@ void terminal_invalidate_frozen_path_preserve_energy(GuidanceMachine*g);
 GuidanceResult terminal_return_to_entry(GuidanceMachine*g,const Telemetry*t,
         const VehicleState*state,double course,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg,double dt);
-bool terminal_hac_debug_force_requested(void);
-bool terminal_hac_debug_fixture_state(const Telemetry*t,double course,
-        const LandingConfiguration*cfg,double*capture_course_out);
-bool terminal_force_acquisition_with_aero(GuidanceMachine*g,const Telemetry*t,
-        double course,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg);
-GuidanceResult terminal_variant_b_upstream_guidance(GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg,double dt,bool*capture_ready);
 
 extern double terminal_energy_commit_tolerance;
-GuidanceResult guidance_update_impl(GuidanceMachine*g,const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg);
+GuidanceResult guidance_update_impl(GuidanceMachine*g,const Telemetry*t,
+        const VehicleState*state,const DeorbitPlan*plan,const PlanetModel*p,
+        AerodynamicModel aero,const LandingConfiguration*cfg,
+        const TerminalModel*terminal_model);
 
 #endif

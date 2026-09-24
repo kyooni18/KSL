@@ -5,6 +5,7 @@
 #include "landing.h"
 #include "decision_envelope.h"
 #include "sim_telemetry.h"
+#include "terminal_model.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -91,10 +92,26 @@ typedef struct {
   TrajectoryCalibrationModel calibration;
   DeorbitPlan plan;
   GuidanceMachine g;
+  TerminalModel terminal_model;
   bool initialized, have_prev;
   Telemetry previous;
   char result[8192];
 } OfflineExpert;
+
+static const char *terminal_source_path(const char *environment_name,
+        const char *atmosphere_path,const char *filename,char *buffer,
+        size_t buffer_size) {
+  const char *configured=getenv(environment_name);
+  if(configured&&configured[0])return configured;
+  if(!atmosphere_path||!atmosphere_path[0])return filename;
+  const char *slash=strrchr(atmosphere_path,'/');
+  size_t directory_length=slash?(size_t)(slash-atmosphere_path):0;
+  if(directory_length+1+strlen(filename)+1>buffer_size)return filename;
+  if(directory_length)memcpy(buffer,atmosphere_path,directory_length);
+  buffer[directory_length]='/';
+  strcpy(buffer+directory_length+1,filename);
+  return buffer;
+}
 
 void *expert_create(const char *config, const char *atmosphere) {
   OfflineExpert *e = calloc(1, sizeof(*e));
@@ -107,6 +124,22 @@ void *expert_create(const char *config, const char *atmosphere) {
   char error[256];
   if (!shuttle_sim_load_planet(atmosphere, &e->planet, error, sizeof(error))) {
     fprintf(stderr, "expert: %s\n", error);
+    free(e);
+    return NULL;
+  }
+  char aero_path[1024],book_path[1024],attitude_path[1024],reason[256];
+  TerminalModelSourceFiles model_files={
+    .atmosphere_csv=atmosphere,
+    .aero_csv=terminal_source_path("KSP_LANDER_TERMINAL_AERO",atmosphere,
+        "stsn_aero_ksp_robust.csv",aero_path,sizeof(aero_path)),
+    .aero_book_csv=terminal_source_path("KSP_LANDER_TERMINAL_AERO_BOOK",atmosphere,
+        "stsn_force_book.csv",book_path,sizeof(book_path)),
+    .attitude_ini=terminal_source_path("KSP_LANDER_TERMINAL_ATTITUDE",atmosphere,
+        "stsn_attitude_ksp.ini",attitude_path,sizeof(attitude_path))
+  };
+  if(!terminal_model_capture(&e->terminal_model,&model_files,&e->cfg,1,
+      reason,sizeof(reason))){
+    fprintf(stderr,"expert: native MM305 model unavailable: %s\n",reason);
     free(e);
     return NULL;
   }
@@ -154,7 +187,8 @@ const char *expert_command(void *handle, const char *packet) {
       &e->planet, &e->cfg.vehicle, &e->cfg.site, &e->cfg.guidance);
   t.energy_excess_range = -demand.projected_taem_range_error;
   GuidanceResult r =
-      guidance_update(&e->g, &t, &s, &e->plan, &e->planet, e->aero, &e->cfg);
+      guidance_update_with_terminal_model(&e->g,&t,&s,&e->plan,&e->planet,
+          e->aero,&e->cfg,&e->terminal_model);
   double aoa = r.command.has_target_aoa
                    ? r.command.target_aoa
                    : r.command.target_pitch - t.flight_path_angle;

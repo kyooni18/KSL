@@ -1777,8 +1777,7 @@ static void test_latched_taem_path_recovery_never_returns_to_entry(void) {
     assert(!g.terminal_path_committed);
     assert(g.phase == PHASE_TAEM);
     assert(r.phase == PHASE_TAEM);
-    assert(g.taem_exec.phase == TAEM_PHASE_PATH_ACQUISITION ||
-           g.taem_exec.phase == TAEM_PHASE_S_TURN);
+    assert(g.taem_exec.phase == TAEM_PHASE_PATH_ACQUISITION);
     assert(strstr(r.status, "TAEM") != NULL);
     guidance_result_clear(&r);
 }
