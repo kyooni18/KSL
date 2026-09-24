@@ -20,10 +20,10 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Seven-second measured pull response plus the time needed for the commanded
-   AoA slew to reach its lift target. */
+/* Live pull response measured about seven seconds.  Lead by the height lost
+   through that response, using the worse of measured and geometric sink. */
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
-    const double response_seconds=10.0;
+    const double response_seconds=7.0;
     return response_seconds*fmax(glide_sink,fmax(0.0,measured_sink));
 }
 
