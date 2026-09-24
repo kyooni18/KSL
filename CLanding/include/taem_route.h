@@ -19,7 +19,8 @@ typedef struct {
     double total_length_m;
 } TaemFixedHacGeometry;
 
-#define TAEM_ROUTE_MAX_POINTS 1024
+#define TAEM_ROUTE_MAX_POINTS 2048
+#define TAEM_ROUTE_LEAD_LUT_POINTS 129
 
 typedef struct {
     double along_m;
@@ -43,10 +44,21 @@ typedef struct {
     double p1_along_m, p1_cross_m;
     double p2_along_m, p2_cross_m;
     double p3_along_m, p3_cross_m;
+    double lead_length_m;
+    float lead_arc_fraction_lut[TAEM_ROUTE_LEAD_LUT_POINTS];
     double initial_course_deg, runway_heading_deg;
     double profile_start_altitude_m, profile_start_fpa_deg;
     double profile_final_altitude_m, profile_final_slope_deg;
     double profile_total_length_m;
+    /* Mid-route altitude bow; zero at both endpoints with zero endpoint slope. */
+    double profile_midpoint_offset_m;
+    /* Localized interior bow for independently shaping the lead descent. */
+    double profile_local_offset_m;
+    double profile_local_start_fraction;
+    double profile_local_end_fraction;
+    /* Localized initial descent sag; also returns to zero with zero slope. */
+    double profile_initial_sag_m;
+    double profile_initial_sag_length_m;
 } TaemRoute;
 
 #endif

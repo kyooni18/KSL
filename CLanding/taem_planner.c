@@ -15,6 +15,9 @@ static double clamp(double x, double lo, double hi) { return fmax(lo, fmin(hi, x
 
 static void vertical_profile(const TerminalModel *m, double start_altitude,
         double start_fpa_deg, double total_length, double distance_from_start,
+        double midpoint_offset, double local_offset,
+        double local_start_fraction, double local_end_fraction,
+        double initial_sag, double initial_sag_length,
         double *altitude, double *fpa_deg) {
     double x = clamp(distance_from_start / total_length, 0.0, 1.0);
     double x2 = x * x, x3 = x2 * x;
@@ -26,13 +29,37 @@ static void vertical_profile(const TerminalModel *m, double start_altitude,
     double h10 = x3 - 2.0*x2 + x;
     double h01 = -2.0*x3 + 3.0*x2;
     double h11 = x3 - x2;
+    /* The smooth bow changes only the interior profile. Its value and first
+     * derivative are zero at both ends, so live FPA and the HAC-exit contract
+     * remain anchored to the supplied start and final slopes. */
+    double bow = 16.0 * x2 * (1.0 - x) * (1.0 - x);
+    double bow_derivative_x = 32.0 * x * (1.0 - x) * (1.0 - 2.0*x);
+    double initial_u = initial_sag_length > 0.0 ?
+        clamp(distance_from_start / initial_sag_length, 0.0, 1.0) : 0.0;
+    double initial_bow = 16.0 * initial_u * initial_u *
+        (1.0 - initial_u) * (1.0 - initial_u);
+    double initial_slope = initial_sag_length > 0.0 ?
+        initial_sag * 32.0 * initial_u * (1.0 - initial_u) *
+            (1.0 - 2.0 * initial_u) / initial_sag_length : 0.0;
+    double local_span = local_end_fraction - local_start_fraction;
+    double local_u = local_span > 1e-6 ?
+        clamp((x - local_start_fraction) / local_span, 0.0, 1.0) : 0.0;
+    double local_bow = 16.0 * local_u * local_u *
+        (1.0 - local_u) * (1.0 - local_u);
+    double local_slope = local_span > 1e-6 ?
+        local_offset * 32.0 * local_u * (1.0 - local_u) *
+            (1.0 - 2.0 * local_u) / (local_span * total_length) : 0.0;
     double height = h00*h0 + h10*total_length*slope0 +
-                    h01*h1 + h11*total_length*slope1;
+                    h01*h1 + h11*total_length*slope1 +
+                    midpoint_offset * bow + local_offset * local_bow +
+                    initial_sag * initial_bow;
     double derivative_x = (6.0*x2 - 6.0*x)*h0 +
         (3.0*x2 - 4.0*x + 1.0)*total_length*slope0 +
         (-6.0*x2 + 6.0*x)*h1 + (3.0*x2 - 2.0*x)*total_length*slope1;
+    derivative_x += midpoint_offset * bow_derivative_x;
     if (altitude) *altitude = height;
-    if (fpa_deg) *fpa_deg = degrees(atan(derivative_x / total_length));
+    if (fpa_deg) *fpa_deg = degrees(atan(
+        derivative_x / total_length + initial_slope + local_slope));
 }
 static Point cubic(Point p0, Point p1, Point p2, Point p3, double t) {
     double q = 1.0 - t;
@@ -77,13 +104,55 @@ static double cubic_peak_curvature(Point p0, Point p1, Point p2, Point p3) {
     return peak;
 }
 
+static bool cubic_arc_lookup(TaemRoute *route) {
+    Point p0 = {route->p0_along_m, route->p0_cross_m};
+    Point p1 = {route->p1_along_m, route->p1_cross_m};
+    Point p2 = {route->p2_along_m, route->p2_cross_m};
+    Point p3 = {route->p3_along_m, route->p3_cross_m};
+    Point previous = cubic(p0, p1, p2, p3, 0.0);
+    double cumulative[TAEM_ROUTE_LEAD_LUT_POINTS] = {0.0};
+    const size_t intervals = TAEM_ROUTE_LEAD_LUT_POINTS - 1;
+    for (size_t i = 1; i <= intervals; ++i) {
+        Point current = cubic(p0, p1, p2, p3, (double)i / intervals);
+        cumulative[i] = cumulative[i - 1] + distance(previous, current);
+        previous = current;
+    }
+    route->lead_length_m = cumulative[intervals];
+    if (!(route->lead_length_m > 0.0) || !isfinite(route->lead_length_m))
+        return false;
+    for (size_t i = 0; i <= intervals; ++i)
+        route->lead_arc_fraction_lut[i] =
+            (float)(cumulative[i] / route->lead_length_m);
+    route->lead_arc_fraction_lut[0] = 0.0f;
+    route->lead_arc_fraction_lut[intervals] = 1.0f;
+    return true;
+}
+
+static double cubic_t_at_arc_fraction(const TaemRoute *route, double fraction) {
+    const size_t intervals = TAEM_ROUTE_LEAD_LUT_POINTS - 1;
+    fraction = clamp(fraction, 0.0, 1.0);
+    size_t low = 0, high = intervals;
+    while (low + 1 < high) {
+        size_t middle = low + (high - low) / 2;
+        if ((double)route->lead_arc_fraction_lut[middle] < fraction)
+            low = middle;
+        else
+            high = middle;
+    }
+    double a = route->lead_arc_fraction_lut[low];
+    double b = route->lead_arc_fraction_lut[high];
+    double part = b > a ? (fraction - a) / (b - a) : 0.0;
+    return ((double)low + clamp(part, 0.0, 1.0)) / intervals;
+}
+
 static Point route_position(const TaemRoute *route, size_t index) {
     Point p0 = {route->p0_along_m, route->p0_cross_m};
     Point p1 = {route->p1_along_m, route->p1_cross_m};
     Point p2 = {route->p2_along_m, route->p2_cross_m};
     Point p3 = {route->p3_along_m, route->p3_cross_m};
     if (index <= route->lead_count) {
-        double t = (double)index / (double)route->lead_count;
+        double t = cubic_t_at_arc_fraction(route,
+            (double)index / (double)route->lead_count);
         return cubic(p0, p1, p2, p3, t);
     }
     size_t arc_index = index - route->lead_count;
@@ -97,21 +166,18 @@ static Point route_position(const TaemRoute *route, size_t index) {
 }
 
 static double route_station(const TaemRoute *route, size_t index) {
-    double station = 0.0;
-    Point previous = route_position(route, 0);
-    for (size_t i = 1; i <= index; ++i) {
-        Point current = route_position(route, i);
-        station += distance(previous, current);
-        previous = current;
-    }
-    return station;
+    if (index <= route->lead_count)
+        return route->lead_length_m * (double)index /
+               (double)route->lead_count;
+    return route->lead_length_m + route->hac.arc_length_m *
+        (double)(index - route->lead_count) / (double)route->arc_count;
 }
 
 static bool route_finish(const TerminalModel *m, const TaemGeometryState *start,
                          TaemRoute *route) {
     if (route->count < 3 || route->lead_count < 2 || route->arc_count < 3)
         return false;
-    route->length_m = route_station(route, route->count - 1);
+    route->length_m = route->lead_length_m + route->hac.arc_length_m;
     if (!(route->length_m > 0.0) || !isfinite(route->length_m)) return false;
     /* The live MM305 tracker owns only the route through the HAC exit. Keep
      * that endpoint above runway elevation at the configured Final glide
@@ -123,6 +189,12 @@ static bool route_finish(const TerminalModel *m, const TaemGeometryState *start,
     route->profile_final_altitude_m = m->site.altitude +
         route->hac.final_length_m * tan(radians(m->guidance.final_glide_slope));
     route->profile_final_slope_deg = m->guidance.final_glide_slope;
+    route->profile_midpoint_offset_m = 0.0;
+    route->profile_local_offset_m = 0.0;
+    route->profile_local_start_fraction = 0.08;
+    route->profile_local_end_fraction = 0.40;
+    route->profile_initial_sag_m = 0.0;
+    route->profile_initial_sag_length_m = 0.0;
     route->valid = true;
     return true;
 }
@@ -180,19 +252,25 @@ bool taem_route_build_fixed_hac(const TerminalModel *m,
                 p0.y + handle * initial_tangent.y};
     Point p2 = {p3.x - handle * final_tangent.x,
                 p3.y - handle * final_tangent.y};
-    double lead_count_d = ceil(direct / spacing);
-    size_t lead_count = (size_t)fmax(2.0, fmin(lead_count_d, 500.0));
-    size_t arc_count = (size_t)fmax(3.0, ceil(route->hac.arc_length_m / spacing));
-    if (lead_count + arc_count + 1 > TAEM_ROUTE_MAX_POINTS) goto capacity_failure;
-    route->lead_count = lead_count;
-    route->arc_count = arc_count;
-    route->count = lead_count + arc_count + 1;
     route->p0_along_m = p0.x; route->p0_cross_m = p0.y;
     route->p1_along_m = p1.x; route->p1_cross_m = p1.y;
     route->p2_along_m = p2.x; route->p2_cross_m = p2.y;
     route->p3_along_m = p3.x; route->p3_cross_m = p3.y;
     route->initial_course_deg = start->course_deg;
     route->runway_heading_deg = m->site.runway_heading;
+    if (!cubic_arc_lookup(route)) {
+        if (reason && reason_size)
+            snprintf(reason, reason_size, "finite lead arc-length lookup failed");
+        return false;
+    }
+    size_t lead_count = (size_t)fmax(2.0,
+        ceil(route->lead_length_m / spacing));
+    size_t arc_count = (size_t)fmax(3.0,
+        ceil(route->hac.arc_length_m / spacing));
+    if (lead_count + arc_count + 1 > TAEM_ROUTE_MAX_POINTS) goto capacity_failure;
+    route->lead_count = lead_count;
+    route->arc_count = arc_count;
+    route->count = lead_count + arc_count + 1;
 
     if (!route_finish(m, start, route)) {
         if (reason && reason_size) snprintf(reason, reason_size, "route sampling produced invalid geometry");
@@ -248,7 +326,11 @@ bool taem_route_reference(const TaemRoute *route, const TaemGeometryState *state
         .site.altitude = route->profile_final_altitude_m,
         .guidance.taem_glide_slope = route->profile_final_slope_deg
     }, route->profile_start_altitude_m, route->profile_start_fpa_deg,
-        route->profile_total_length_m, station, &altitude, &fpa);
+        route->profile_total_length_m, station,
+        route->profile_midpoint_offset_m, route->profile_local_offset_m,
+        route->profile_local_start_fraction, route->profile_local_end_fraction,
+        route->profile_initial_sag_m,
+        route->profile_initial_sag_length_m, &altitude, &fpa);
     *reference = (TaemPathReference){
         .runway_along_m = center.x,
         .runway_cross_m = center.y,

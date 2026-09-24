@@ -32,6 +32,9 @@ typedef struct {
     double failure_available_lateral_accel_mps2;
     double failure_required_vertical_lift_mps2;
     double failure_delivered_vertical_lift_mps2;
+    double failure_target_altitude_m;
+    double failure_target_flight_path_angle_deg;
+    size_t failure_route_index;
     double energy_start_j_kg;
     double energy_end_j_kg;
     double drag_work_j_kg;

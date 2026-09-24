@@ -1,6 +1,8 @@
 #include "terminal_solver.h"
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "taem_frames_energy.h"
@@ -57,6 +59,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
     bool reached_gate = false;
     double elapsed = 0.0;
     size_t max_steps = (size_t)ceil(max_elapsed / dt);
+    const char *diagnostics = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
     for (size_t step = 0; step < max_steps; ++step) {
         TaemPathReference reference;
         size_t reference_index = cursor;
@@ -66,6 +69,15 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
             out.reason = "route reference lookup failed";
             break;
         }
+        if (diagnostics && strcmp(diagnostics, "1") == 0 && step < 8)
+            fprintf(stderr,
+                "TAEM replay step: bow=%+.0f k=%zu idx=%zu along=%.0f refAlong=%.0f cross=%.0f course=%.1f refCourse=%.1f alt=%.0f refAlt=%.0f gamma=%.2f refGamma=%.2f\n",
+                route->profile_midpoint_offset_m, step, reference_index,
+                geometry.runway_along_m, reference.runway_along_m,
+                geometry.runway_cross_m, geometry.course_deg,
+                reference.course_deg, geometry.altitude_above_runway_m,
+                reference.altitude_m, geometry.flight_path_angle_deg,
+                reference.flight_path_angle_deg);
         TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
                                                        &reference, dt);
         if (!demand.valid) {
@@ -73,6 +85,10 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
             out.reason = "tracker could not produce a bounded command";
             break;
         }
+        out.failure_target_altitude_m = reference.altitude_m;
+        out.failure_target_flight_path_angle_deg =
+            reference.flight_path_angle_deg;
+        out.failure_route_index = reference_index;
         out.failure_cross_track_m = demand.cross_track_error_m;
         out.failure_course_error_deg = demand.course_error_deg;
         out.failure_required_lateral_accel_mps2 = demand.required_lateral_accel_mps2;
@@ -85,7 +101,8 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
                 demand.available_lateral_accel_mps2);
         out.maximum_vertical_authority_shortfall_mps2 = fmax(
             out.maximum_vertical_authority_shortfall_mps2,
-            demand.required_vertical_lift_mps2 - demand.delivered_vertical_lift_mps2);
+            fabs(demand.required_vertical_lift_mps2 -
+                 demand.delivered_vertical_lift_mps2));
         out.maximum_cross_track_m = fmax(out.maximum_cross_track_m,
                                          fabs(demand.cross_track_error_m));
         out.maximum_course_error_deg = fmax(out.maximum_course_error_deg,

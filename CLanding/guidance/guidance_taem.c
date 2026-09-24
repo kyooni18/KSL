@@ -246,28 +246,18 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
 
     if (!g->mm305_route_committed) {
         TaemFixedHacSearch search=taem_fixed_hac_search(model,&current,
-            500.0,0.25,1800.0);
+            200.0,0.25,1800.0);
         int selected=search.selected_candidate;
         if (selected<0 || selected>=2 ||
             search.candidates[selected].status!=TAEM_PLAN_UNQUALIFIED ||
             !search.candidates[selected].route_built ||
             !search.candidates[selected].replay.path_constraints_ok) {
-            char diagnostic[1024];
+            char diagnostic[384];
             snprintf(diagnostic,sizeof(diagnostic),
-                "MM305 fixed-HAC search rejected both sides: left=%s (lat %.1f/%.1f m/s2, vert short %.1f, demand %.1f/delivered %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m, FPA %.1f deg); right=%s (lat %.1f/%.1f m/s2, vert short %.1f, demand %.1f/delivered %.1f m/s2, t=%.1f s, h=%.0f m, i=%zu, cross=%.0f m, course=%.1f deg, altErr=%.0f m, FPA %.1f deg)",
+                "MM305 route rejected: L %s lat %.1f/%.1f; R %s lat %.1f/%.1f vert %.1f (%.1f/%.1f) at %.1fs h%.0f i%zu; bow%+.0f local%+.0f@%.2f-%.2f sag%+.0f target h%.0f/FPA%.1f",
                 search.candidates[0].reason?search.candidates[0].reason:"unknown",
                 search.candidates[0].required_lateral_accel_mps2,
                 search.candidates[0].available_lateral_accel_mps2,
-                search.candidates[0].replay.maximum_vertical_authority_shortfall_mps2,
-                search.candidates[0].replay.failure_required_vertical_lift_mps2,
-                search.candidates[0].replay.failure_delivered_vertical_lift_mps2,
-                search.candidates[0].replay.elapsed_s,
-                search.candidates[0].replay.final_geometry.altitude_above_runway_m,
-                search.candidates[0].replay.final_route_index,
-                search.candidates[0].replay.maximum_cross_track_m,
-                search.candidates[0].replay.maximum_course_error_deg,
-                search.candidates[0].replay.maximum_altitude_error_m,
-                search.candidates[0].replay.final_geometry.flight_path_angle_deg,
                 search.candidates[1].reason?search.candidates[1].reason:"unknown",
                 search.candidates[1].required_lateral_accel_mps2,
                 search.candidates[1].available_lateral_accel_mps2,
@@ -276,11 +266,14 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 search.candidates[1].replay.failure_delivered_vertical_lift_mps2,
                 search.candidates[1].replay.elapsed_s,
                 search.candidates[1].replay.final_geometry.altitude_above_runway_m,
-                search.candidates[1].replay.final_route_index,
-                search.candidates[1].replay.maximum_cross_track_m,
-                search.candidates[1].replay.maximum_course_error_deg,
-                search.candidates[1].replay.maximum_altitude_error_m,
-                search.candidates[1].replay.final_geometry.flight_path_angle_deg);
+                search.candidates[1].replay.failure_route_index,
+                search.candidates[1].route.profile_midpoint_offset_m,
+                search.candidates[1].route.profile_local_offset_m,
+                search.candidates[1].route.profile_local_start_fraction,
+                search.candidates[1].route.profile_local_end_fraction,
+                search.candidates[1].route.profile_initial_sag_m,
+                search.candidates[1].replay.failure_target_altitude_m,
+                search.candidates[1].replay.failure_target_flight_path_angle_deg);
             return terminal_abort(g,diagnostic);
         }
 

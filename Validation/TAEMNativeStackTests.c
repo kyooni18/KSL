@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +54,25 @@ static TerminalDynamicState load_fixture_state(const TerminalModel *model) {
     return state;
 }
 
+static double first_lead_sample_distance(const TaemRoute *route) {
+    const size_t intervals = TAEM_ROUTE_LEAD_LUT_POINTS - 1;
+    const double target = 1.0 / (double)route->lead_count;
+    size_t upper = 1;
+    while (upper < intervals &&
+           route->lead_arc_fraction_lut[upper] < target) ++upper;
+    size_t lower = upper - 1;
+    double a = route->lead_arc_fraction_lut[lower];
+    double b = route->lead_arc_fraction_lut[upper];
+    double part = b > a ? (target - a) / (b - a) : 0.0;
+    double t = ((double)lower + part) / (double)intervals;
+    double q = 1.0 - t;
+    double x = q*q*q*route->p0_along_m + 3.0*q*q*t*route->p1_along_m +
+        3.0*q*t*t*route->p2_along_m + t*t*t*route->p3_along_m;
+    double y = q*q*q*route->p0_cross_m + 3.0*q*q*t*route->p1_cross_m +
+        3.0*q*t*t*route->p2_cross_m + t*t*t*route->p3_cross_m;
+    return hypot(x - route->p0_along_m, y - route->p0_cross_m);
+}
+
 int main(void) {
     LandingConfiguration configuration = landing_configuration_default();
     TerminalModelSourceFiles files = {
@@ -95,6 +115,9 @@ int main(void) {
     assert(taem_route_build_fixed_hac(&model, &tangent_start, 1.0, 500.0,
         maximum_curvature, &route, reason, sizeof(reason)));
     assert(route.valid && route.count > 3 && route.count <= TAEM_ROUTE_MAX_POINTS);
+    assert(route.lead_arc_fraction_lut[0] == 0.0f);
+    assert(route.lead_arc_fraction_lut[TAEM_ROUTE_LEAD_LUT_POINTS - 1] == 1.0f);
+    assert(first_lead_sample_distance(&route) <= 550.0);
 
     /* The subsonic terminal lift cap is shared by the MM305 reachability
      * estimate and tracker search; never ask the native tracker to use a
@@ -157,6 +180,29 @@ int main(void) {
     assert(fabs(exit_reference.flight_path_angle_deg +
                 model.guidance.final_glide_slope) < 1e-6);
     assert(exit_reference.altitude_m > model.site.altitude);
+
+    /* Interior profile candidates preserve the live start and HAC-exit
+     * altitude/FPA contracts while changing only the path between them. */
+    TaemRoute shaped_route = route;
+    shaped_route.profile_midpoint_offset_m = 1200.0;
+    shaped_route.profile_initial_sag_m = -120.0;
+    shaped_route.profile_initial_sag_length_m = 3000.0;
+    size_t shaped_start_cursor = 0;
+    TaemPathReference shaped_start;
+    size_t shaped_start_index = SIZE_MAX;
+    assert(taem_route_reference(&shaped_route, &tangent_start,
+        &shaped_start_cursor, &shaped_start, &shaped_start_index));
+    assert(shaped_start_index == 0);
+    assert(fabs(shaped_start.altitude_m - route.profile_start_altitude_m) < 1e-6);
+    assert(fabs(shaped_start.flight_path_angle_deg -
+                route.profile_start_fpa_deg) < 1e-6);
+    size_t shaped_exit_cursor = shaped_route.count - 1;
+    TaemPathReference shaped_exit;
+    assert(taem_route_reference(&shaped_route, &at_exit, &shaped_exit_cursor,
+        &shaped_exit, NULL));
+    assert(fabs(shaped_exit.altitude_m - exit_reference.altitude_m) < 1e-6);
+    assert(fabs(shaped_exit.flight_path_angle_deg -
+                exit_reference.flight_path_angle_deg) < 1e-6);
 
     /* Geometry alone cannot qualify a candidate: native replay must satisfy
      * all constraints through HAC exit before the existing Final-tail gate. */
