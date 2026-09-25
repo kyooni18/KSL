@@ -456,6 +456,14 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     else g->heading_limiter.rate=0.0;
     g->heading_limiter.value=heading_reference;
     g->heading_limiter.has_value=true;
+    /* While the committed MM305 route bypasses the limiters their internal
+       rate state goes stale; leave them unseeded so the first limited tick
+       (normally Final) starts from the measured attitude and rate instead of
+       resuming a stale jerk state and overshooting by tens of degrees. */
+    if(mm305_native_window){
+        g->roll_limiter.has_value=false;
+        g->pitch_limiter.has_value=false;
+    }
 
     g->throttle_limiter.value=r.command.target_throttle;
     g->throttle_limiter.has_value=true;
