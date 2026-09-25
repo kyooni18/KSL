@@ -163,8 +163,9 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     g->terminal_vs_prev=t->vertical_speed;
     g->terminal_vs_prev_ut=t->ut;
 
-    /* Lateral alignment is a damped cross-track/track-rate capture aimed at a
-       pre-threshold station.  Low altitude progressively limits bank. */
+    /* Lateral alignment: an authority-aware cross-track capture (below).  The
+       capture rate is no faster than the pre-threshold alignment station
+       allows; low altitude progressively limits bank. */
     double lateral_scale=clampd(height/60.0,0.0,1.0);
     double track_error=norm_signed_deg(course-site->runway_heading)*DEG2RAD;
     double cross_rate=Vh*sin(track_error);
@@ -193,7 +194,6 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double predicted_rate=cross_rate+present_accel*roll_lag;
     double lateral_accel=clampd(.5*(desired_rate-predicted_rate),
         -g0*tan(bank_limit*DEG2RAD),g0*tan(bank_limit*DEG2RAD));
-    (void)align_remaining;
     double bank=clampd(atan(lateral_accel/g0)*RAD2DEG,-bank_limit,bank_limit);
     /* Flight-path normal acceleration resolves lift through bank only.
      * Gravity already has its cos(gamma) projection in the gamma equation. */
@@ -272,9 +272,6 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);
 
-    /* Predictive preflare: latch when the height still needed to arrest the
-       present sink at the available pull, plus the sink flown during the
-       physical pull-up response, reaches the wheel height. */
     /* Preflare latch: the height a constant design pull needs to take the
        present sink down to the shallow-glide sink, plus the height lost while
        the incidence swings to the pull.  That swing is sized from the lift
