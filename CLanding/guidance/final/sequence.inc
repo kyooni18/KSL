@@ -198,14 +198,9 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             ARREST_ACCEL/(root_limit+1e-3):SINK_HEIGHT_RATE;
         sink_rate_ff=profile_rate*sink/(V*fmax(.3,cos(reference_fpa)));
     }
-    /* Lead the path loop with motion the vehicle has actually achieved.  The
-       lift-force reconstruction was over-optimistic in k93: it predicted roughly
-       twice the observed FPA recovery and unloaded the flare while sink was still
-       excessive.  Vertical-speed acceleration is already filtered above and gives
-       a conservative direct observation of the real pull response. */
-    double observed_gamma_rate=clampd(g->terminal_vs_rate_ema/
-        (V*fmax(.3,cos(gamma))),-6.0*DEG2RAD,6.0*DEG2RAD);
-    double lead_gamma=gamma+1.5*observed_gamma_rate;
+    double measured_gamma_rate=isfinite(t->lift_force)?
+        (t->lift_force*cos(bank*DEG2RAD)/fmax(t->mass,1.0)-g0*cos(gamma))/V:0.0;
+    double lead_gamma=gamma+1.5*measured_gamma_rate;
     double vertical_accel=clampd(V*(sink_rate_ff+.3*(reference_fpa-lead_gamma)),
         -.3*g0,1.5*g0);
     double lift_required=t->mass*(vertical_accel+g0*cos(gamma))/lift_div/
