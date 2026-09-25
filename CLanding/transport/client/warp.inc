@@ -187,11 +187,11 @@ bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
                             char *error, size_t error_size) {
     if (!client || !client->connected || !isfinite(ut)) return false;
 
-    /* SpaceCenter.WarpTo is intentionally not used on the serial protocol:
-       it withholds its RPC response until the target UT, so a serial timeout
-       leaves the server-side warp coroutine alive without a request channel
-       available to stop it. This controller uses short, deadline-bounded RPCs
-       and chooses a rail factor from a finite-response stopping margin. */
+    /* SpaceCenter.WarpTo is intentionally avoided: it withholds its RPC
+       response until the target UT, leaving no request channel available to
+       stop a server-side warp coroutine after a timeout. This controller uses
+       short, deadline-bounded RPCs and chooses a rail factor from a
+       finite-response stopping margin. */
     int timeout_ms = krpc_cnano_transport_timeout_ms(client->connection);
     if (timeout_ms <= 0) {
         set_error(error, error_size,

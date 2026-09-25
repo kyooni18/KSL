@@ -19,6 +19,7 @@
 
 #define CNANO_ENGINE_LIMIT 32
 #define CNANO_ATMOSPHERE_SAMPLES 71
+#define CNANO_MAIN_WHEEL_LIMIT 2
 #define CNANO_MEDIUM_PERIOD 0.25
 #define CNANO_SLOW_PERIOD 1.0
 
@@ -58,6 +59,10 @@ struct KrpcCNanoClient {
     CommandableEngine engines[CNANO_ENGINE_LIMIT];
     size_t engine_count;
     double commandable_thrust;
+
+    krpc_SpaceCenter_PartField_t main_wheel_grounded_fields[CNANO_MAIN_WHEEL_LIMIT];
+    size_t main_wheel_grounded_field_count;
+    double last_radar_altitude;
 
     bool cached_gear;
     bool cached_brakes;

@@ -4,11 +4,10 @@
 /*
  * Project-owned communication shim for kRPC C-Nano 0.6.0.
  *
- * C-Nano's wire protocol remains the kRPC serial-port protocol. This shim
- * replaces only the byte I/O backend so production can use a real serial or
- * pseudo-terminal endpoint and offline tests can use a deterministic fake.
- * It is deliberately not an adapter for the ordinary kRPC RPC/stream TCP
- * ports.
+ * This shim lets the same C-Nano client use ordinary kRPC RPC over TCP for
+ * live KSP, multiplexed serial I/O for ShuttleSim, and deterministic fake I/O
+ * in offline tests. The live path does not require a Python protocol adapter.
+ * C-Nano has no Streams or Events; telemetry uses synchronous RPC polling.
  *
  * Include this header before any kRPC C-Nano header. C-Nano core translation
  * units are also built with this file pre-included so the custom connection

@@ -79,6 +79,7 @@ enum {
     PROC_CONTROL_YAW=405,
     PROC_CONTROL_THROTTLE=399,
     PROC_VESSEL_ROTATION=639,
+    PROC_PART_FIELD_BOOL_VALUE=1064,
     PROC_FLIGHT_SPEED_OF_SOUND=500,
     PROC_FLIGHT_STATIC_PRESSURE=492,
     PROC_FLIGHT_G_FORCE=463,
@@ -355,9 +356,66 @@ static void inventory_engines(KrpcCNanoClient *client) {
     KRPC_FREE_LIST(engines);
 }
 
+static void inventory_main_wheels(KrpcCNanoClient *client) {
+    client->main_wheel_grounded_field_count = 0;
+    krpc_SpaceCenter_Parts_t parts = KRPC_NULL;
+    krpc_list_object_t all = KRPC_NULL_LIST;
+    krpc_error_t e = krpc_SpaceCenter_Vessel_Parts(client->connection, &parts, client->vessel);
+    client->total_rpc_calls++; client->total_wire_requests++;
+    if (e != KRPC_OK || parts == KRPC_NULL) return;
+    e = krpc_SpaceCenter_Parts_All(client->connection, &all, parts);
+    client->total_rpc_calls++; client->total_wire_requests++;
+    if (e != KRPC_OK) return;
+
+    for (size_t i = 0; i < all.size &&
+            client->main_wheel_grounded_field_count < CNANO_MAIN_WHEEL_LIMIT; ++i) {
+        krpc_SpaceCenter_Part_t part = (krpc_SpaceCenter_Part_t)all.items[i];
+        char *title = NULL;
+        e = krpc_SpaceCenter_Part_Title(client->connection, &title, part);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        bool is_main = e == KRPC_OK && title && strcmp(title, "OV-100 Main Gear") == 0;
+        if (title) krpc_free(title);
+        if (!is_main) continue;
+
+        krpc_list_object_t modules = KRPC_NULL_LIST;
+        e = krpc_SpaceCenter_Part_Modules(client->connection, &modules, part);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK) continue;
+        for (size_t j = 0; j < modules.size &&
+                client->main_wheel_grounded_field_count < CNANO_MAIN_WHEEL_LIMIT; ++j) {
+            krpc_SpaceCenter_Module_t module = (krpc_SpaceCenter_Module_t)modules.items[j];
+            char *name = NULL;
+            krpc_error_t ne = krpc_SpaceCenter_Module_Name(client->connection, &name, module);
+            client->total_rpc_calls++; client->total_wire_requests++;
+            bool wheel_base = ne == KRPC_OK && name && strcmp(name, "ModuleWheelBase") == 0;
+            if (name) krpc_free(name);
+            if (!wheel_base) continue;
+
+            krpc_list_object_t fields = KRPC_NULL_LIST;
+            krpc_error_t fe = krpc_SpaceCenter_Module_FieldList(client->connection, &fields, module);
+            client->total_rpc_calls++; client->total_wire_requests++;
+            if (fe != KRPC_OK) continue;
+            for (size_t k = 0; k < fields.size &&
+                    client->main_wheel_grounded_field_count < CNANO_MAIN_WHEEL_LIMIT; ++k) {
+                krpc_SpaceCenter_PartField_t field = (krpc_SpaceCenter_PartField_t)fields.items[k];
+                char *field_name = NULL;
+                krpc_error_t fne = krpc_SpaceCenter_PartField_Name(client->connection, &field_name, field);
+                client->total_rpc_calls++; client->total_wire_requests++;
+                if (fne == KRPC_OK && field_name && strcmp(field_name, "isGrounded") == 0)
+                    client->main_wheel_grounded_fields[client->main_wheel_grounded_field_count++] = field;
+                if (field_name) krpc_free(field_name);
+            }
+            KRPC_FREE_LIST(fields);
+        }
+        KRPC_FREE_LIST(modules);
+    }
+    KRPC_FREE_LIST(all);
+}
+
 static KrpcCNanoClient *allocate_client(char *error,size_t error_size){
     KrpcCNanoClient *client=calloc(1,sizeof(*client));
     if(!client){set_error(error,error_size,"Out of memory creating C-Nano client");return NULL;}
+    client->last_radar_altitude=NAN;
     client->last_medium_ut=-DBL_MAX;client->last_slow_ut=-DBL_MAX;
     client->pitch_rate_filter.tc=.32;client->roll_rate_filter.tc=.28;
     client->heading_rate_filter.tc=.38;client->angle_of_attack_rate_filter.tc=.32;client->course_rate_filter.tc=.30;
@@ -417,7 +475,7 @@ static KrpcCNanoClient *finish_client_open(KrpcCNanoClient *client,
     double met=NAN,now_ut=client->planet.epoch_ut;
     krpc_error_t met_error=krpc_SpaceCenter_Vessel_MET(client->connection,&met,client->vessel);client->total_rpc_calls++;client->total_wire_requests++;
     if(met_error==KRPC_OK&&isfinite(met)&&met>=0.0&&isfinite(now_ut))snprintf(client->flight_key,sizeof(client->flight_key),"launch-ut:%.3f",now_ut-met);
-    inventory_engines(client);reset_rate_filters(client);return client;
+    inventory_engines(client);inventory_main_wheels(client);reset_rate_filters(client);return client;
 }
 
 KrpcCNanoClient *krpc_cnano_client_open_transport(const LandingConfiguration *configuration,
@@ -436,9 +494,12 @@ KrpcCNanoClient *krpc_cnano_client_open(const LandingConfiguration *configuratio
     KrpcCNanoClient *client=allocate_client(error,error_size);if(!client)return NULL;
     const char *rpc_host=getenv("KSP_LANDER_RPC_HOST");
     const char *rpc_port_text=getenv("KSP_LANDER_RPC_PORT");
-    if((rpc_host&&*rpc_host)||(rpc_port_text&&*rpc_port_text)){
-        if(!rpc_host||!*rpc_host)rpc_host="127.0.0.1";
-        char *end=NULL;long rpc_port=rpc_port_text&&*rpc_port_text?strtol(rpc_port_text,&end,10):50000;
+    if((rpc_host&&*rpc_host)||(rpc_port_text&&*rpc_port_text)||configuration->connection.rpc_host[0]){
+        if(!rpc_host||!*rpc_host)rpc_host=configuration->connection.rpc_host[0]?
+            configuration->connection.rpc_host:"127.0.0.1";
+        char *end=NULL;long rpc_port=rpc_port_text&&*rpc_port_text?
+            strtol(rpc_port_text,&end,10):(configuration->connection.rpc_port>0?
+                configuration->connection.rpc_port:50000);
         if(rpc_port<1||rpc_port>65535||(rpc_port_text&&*rpc_port_text&&(!end||*end))){
             set_error(error,error_size,"Invalid kRPC RPC port: %s",rpc_port_text?rpc_port_text:"");free(client);return NULL;
         }
@@ -492,4 +553,3 @@ static const char *situation_name(krpc_SpaceCenter_VesselSituation_t situation) 
         default: return "unknown";
     }
 }
-

@@ -151,7 +151,10 @@ static void open_sim_physics_store(KRPCSession *session,const LandingConfigurati
 static void sim_load_force_book(KRPCSession *s){
     char root[1024];project_root(root,sizeof(root));char path[1400];
     snprintf(path,sizeof(path),"%s/ShuttleSim/data/fitted/stsn_force_book.csv",root);
-    FILE*f=fopen(path,"r");if(!f)return;
+    const char*configured=getenv("KSP_LANDER_TERMINAL_AERO_BOOK");
+    if(configured&&strcmp(configured,"none")==0)return;
+    const char*source=configured&&*configured?configured:path;
+    FILE*f=fopen(source,"r");if(!f)return;
     VesselAeroSample candidates[256];unsigned n=0;char line[512];
     while(fgets(line,sizeof(line),f)&&n<256){
         if(strstr(line,"q_pa"))continue;
@@ -178,21 +181,33 @@ static void sim_load_force_book(KRPCSession *s){
     for(unsigned i=0;i<s->physics_history_count;i++)s->physics_history[i]=candidates[i];
     snprintf(s->physics_structure_id,sizeof(s->physics_structure_id),"model:STS-N:shuttlesim-force-book");
     snprintf(s->physics_environment_id,sizeof(s->physics_environment_id),"Kerbin:ShuttleSim-calibrated");
-    snprintf(s->physics_storage,sizeof(s->physics_storage),"%s",path);
+    snprintf(s->physics_storage,sizeof(s->physics_storage),"%s",source);
 }
 
 static bool sim_session_open(KRPCSession *s,const LandingConfiguration *cfg,char *error,size_t error_size){
     s->simulator=true;s->sim_rx_fd=-1;s->sim_tx_fd=-1;s->sim_need_packet=true;
     char root[1024], atmosphere[1400];project_root(root,sizeof(root));
     snprintf(atmosphere,sizeof(atmosphere),"%s/ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",root);
-    if(!shuttle_sim_load_planet(atmosphere,&s->sim_planet,error,error_size))return false;
+    const char*configured=getenv("KSP_LANDER_TERMINAL_ATMOSPHERE");
+    if(!shuttle_sim_load_planet(configured&&*configured?configured:atmosphere,
+            &s->sim_planet,error,error_size))return false;
     snprintf(s->sim_vessel,sizeof(s->sim_vessel),"STS-N");
-    int rx_port=8796,tx_port=8795;
-    const char*e=getenv("KSP_LANDER_SIM_TELEMETRY_PORT");if(e&&*e)rx_port=atoi(e);
-    e=getenv("KSP_LANDER_SIM_COMMAND_PORT");if(e&&*e)tx_port=atoi(e);
+    int ports[]={8796,8795};
+    const char*names[]={"KSP_LANDER_SIM_TELEMETRY_PORT","KSP_LANDER_SIM_COMMAND_PORT"};
+    for(size_t i=0;i<sizeof(ports)/sizeof(ports[0]);i++){
+        const char*value=getenv(names[i]);
+        if(value&&*value){
+            char*end=NULL;errno=0;long parsed=strtol(value,&end,10);
+            if(errno||end==value||*end||parsed<1||parsed>UINT16_MAX){
+                set_error(error,error_size,"Invalid ShuttleSim UDP port in %s",names[i]);return false;
+            }
+            ports[i]=(int)parsed;
+        }
+    }
+    int rx_port=ports[0],tx_port=ports[1];
+    if(rx_port==tx_port){set_error(error,error_size,"ShuttleSim command and telemetry ports must differ");return false;}
     s->sim_rx_fd=socket(AF_INET,SOCK_DGRAM,0);s->sim_tx_fd=socket(AF_INET,SOCK_DGRAM,0);
     if(s->sim_rx_fd<0||s->sim_tx_fd<0){set_error(error,error_size,"Could not create ShuttleSim UDP sockets");return false;}
-    int one=1;setsockopt(s->sim_rx_fd,SOL_SOCKET,SO_REUSEADDR,&one,sizeof(one));
     struct sockaddr_in rx={0};rx.sin_family=AF_INET;rx.sin_addr.s_addr=htonl(INADDR_LOOPBACK);rx.sin_port=htons((unsigned short)rx_port);
     if(bind(s->sim_rx_fd,(struct sockaddr*)&rx,sizeof(rx))<0){set_error(error,error_size,"Could not bind ShuttleSim telemetry UDP %d: %s",rx_port,strerror(errno));return false;}
     struct timeval tv={.tv_sec=10,.tv_usec=0};setsockopt(s->sim_rx_fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
@@ -305,6 +320,7 @@ bool krpc_read_telemetry(KRPCSession *s,const LandingConfiguration *cfg,Telemetr
     if(!s){set_error(error,error_size,"Flight session is closed");return false;}
     if(s->simulator){
         if(!sim_read_telemetry(s,t,state,error,error_size))return false;
+        shuttle_sim_prepare_guidance_telemetry(t,cfg,&s->sim_planet);
         s->last_telemetry=*t;s->has_last_telemetry=true;s->last_state=*state;s->has_last_state=true;return true;
     }
     if(!s->client){set_error(error,error_size,"Native C-Nano session is closed");return false;}

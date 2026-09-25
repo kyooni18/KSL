@@ -98,6 +98,9 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     float mass=0.0f,cp=0.0f,cr=0.0f,cy=0.0f,throttle=0.0f,autopilot_error=180.0f;
     krpc_tuple_double_double_double_t position={0},velocity={0},angular={0};
     krpc_tuple_double_double_double_double_t rotation={0};
+    bool main_gear_grounded[CNANO_MAIN_WHEEL_LIMIT]={false,false};
+    bool sample_main_gear=client->main_wheel_grounded_field_count>0&&
+        isfinite(client->last_radar_altitude)&&client->last_radar_altitude<=100.0;
     ClientBatch fast={0};
 #define FAST(expr) do{if(!(expr)){set_error(error,error_size,"Could not construct fast C-Nano telemetry batch");return false;}}while(0)
     FAST(batch_add(&fast,PROC_UT,BATCH_DOUBLE,&ut,true));
@@ -123,11 +126,22 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     if (client->has_autopilot_engaged && client->cached_autopilot_engaged)
         FAST(batch_add_object(&fast,PROC_AUTOPILOT_ERROR,client->autopilot,BATCH_FLOAT,&autopilot_error,true));
     FAST(batch_add_two_objects(&fast,PROC_VESSEL_ROTATION,client->vessel,client->body_nonrotating,BATCH_TUPLE4,&rotation,true));
+    if(sample_main_gear){
+        for(size_t i=0;i<client->main_wheel_grounded_field_count;i++)
+            FAST(batch_add_object(&fast,PROC_PART_FIELD_BOOL_VALUE,client->main_wheel_grounded_fields[i],
+                BATCH_BOOL,&main_gear_grounded[i],true));
+    }
 #undef FAST
     if(!batch_run(client,&fast,"fast telemetry",error,error_size))return false;
 
     t->ut=ut;t->radar_altitude=radar;t->true_air_speed=true_air_speed;t->heading=heading;t->pitch=pitch;t->roll=roll;
     t->angle_of_attack=aoa;t->sideslip=beta;t->dynamic_pressure=q;t->mass=mass;
+    if(sample_main_gear){
+        t->has_main_gear_grounded=true;
+        for(size_t i=0;i<client->main_wheel_grounded_field_count;i++)
+            t->main_gear_grounded=t->main_gear_grounded||main_gear_grounded[i];
+    }
+    client->last_radar_altitude=radar;
     t->has_controls=true;t->control_pitch=cp;t->control_roll=cr;t->control_yaw=cy;t->throttle=throttle;
     t->autopilot_error=fabs((double)autopilot_error);
     Vector3 pos = tuple_to_canonical(position);
@@ -241,7 +255,9 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     t->stall_fraction = vessel_physics_conservative_stall_fraction(
         t->true_air_speed, t->angle_of_attack, t->dynamic_pressure, &configuration->vehicle);
     t->stall_fraction_is_measured = false;
-    t->physics_sample_valid = t->has_force_vectors && t->dynamic_pressure > 1.0 && t->mass > 1.0;
+    t->physics_sample_valid = t->has_force_vectors && isfinite(t->dynamic_pressure) &&
+        t->dynamic_pressure >= 0.0 && isfinite(t->mass) && t->mass > 0.0 &&
+        isfinite(t->lift_force) && isfinite(t->drag_force);
 
     GeoPoint current = {t->latitude, t->longitude, t->mean_altitude};
     GeoPoint site = {configuration->site.latitude, configuration->site.longitude, configuration->site.altitude};
@@ -258,4 +274,3 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     client->last_read_seconds=monotonic_seconds()-started;
     return true;
 }
-
