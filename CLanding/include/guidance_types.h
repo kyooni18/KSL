@@ -200,6 +200,9 @@ typedef struct {
     double terminal_aero_mach[21];
     double terminal_aoa_cmd_last,terminal_aoa_cmd_ut;
     bool terminal_pull_latch;
+    bool terminal_aim_valid;
+    double terminal_aim_along;   /* energy-placed outer-glide aim point, runway along-track m */
+    double terminal_aim_ut;
     double terminal_lift_ratio; /* Pull-up ramp done; holding the sink profile. */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;

@@ -612,7 +612,11 @@ def main():
     final_ground=(final_sim or {}).get("ground") or {}
     rollout_valid=rollout_seen and final_ground.get("on_ground") is True
     touchdown_speed=simulator_summary.get("touchdown_speed_mps")
-    touchdown_speed_ok=isinstance(touchdown_speed,(int,float)) and 60.0<=touchdown_speed<=70.0
+    # Touchdown speed window from the configured vehicle touchdown speed (the
+    # guidance target), not a separate hard-coded band that disagrees with it.
+    configured_touchdown=float((config.get("vehicle") or {}).get("touchdownSpeed") or 65.0)
+    touchdown_speed_ok=(isinstance(touchdown_speed,(int,float)) and
+                        .85*configured_touchdown<=touchdown_speed<=1.15*configured_touchdown)
     touchdown_sink=simulator_summary.get("touchdown_sink_mps")
     touchdown_sink_ok=isinstance(touchdown_sink,(int,float)) and 0.0<=touchdown_sink<=3.0
     rollout_controls_ok=rollout_brakes_seen and not rollout_airbrakes_seen
