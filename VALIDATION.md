@@ -22,9 +22,18 @@ native C guidance stack without opening KSP, a serial device, or a kRPC server.
 - `python3 Validation/BackendProtocolTests.py` verifies the UI-to-C NDJSON
   protocol and the serial C-Nano configuration schema without connecting.
 
-For memory/undefined-behavior checks, the full qualification gate also passes
-when the backend is rebuilt with AddressSanitizer and
-UndefinedBehaviorSanitizer.
+For memory/undefined-behavior checks, `make test` passes under gcc
+AddressSanitizer + UndefinedBehaviorSanitizer (verified 2026-09-25 on Linux):
+
+```
+make -C CLanding CC=gcc BUILD=build-asan \
+  CFLAGS="-O1 -g -std=c17 -pthread -fsanitize=address,undefined -fno-omit-frame-pointer -w" \
+  LDFLAGS="-pthread -fsanitize=address,undefined" test   # ASAN_OPTIONS=detect_leaks=0
+```
+
+`-Werror` is off there because gcc's `-Wmisleading-indentation` and
+`-Wformat-truncation` fire on the dense one-line controller code; the default
+clang build keeps `-Werror`. Leak detection was not part of that check.
 
 Live KSP tests are a separate acceptance stage. `run_headless.command --live`
 and the optional independent safety guard must only be used deliberately with a
