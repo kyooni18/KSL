@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -44,19 +45,20 @@ bool protocol_parse_command(const char *json,SimCommand *cmd){
 }
 bool protocol_open(Protocol *p,int command_port,const char *host,int telemetry_port,int web_telemetry_port){
     memset(p,0,sizeof(*p)); p->command_fd=-1;p->telemetry_fd=-1;
+    if(command_port<0||command_port>65535||telemetry_port<0||telemetry_port>65535||
+       web_telemetry_port<0||web_telemetry_port>65535)return false;
     if(command_port<=0&&telemetry_port<=0&&web_telemetry_port<=0)return true;
     if(command_port>0){
-        p->command_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->command_fd<0)return false;
-        int one=1; setsockopt(p->command_fd,SOL_SOCKET,SO_REUSEADDR,&one,sizeof(one));
+        p->command_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->command_fd<0){fprintf(stderr,"ShuttleSim protocol: command UDP socket failed: %s\n",strerror(errno));return false;}
         struct sockaddr_in a; memset(&a,0,sizeof(a)); a.sin_family=AF_INET;a.sin_addr.s_addr=htonl(INADDR_LOOPBACK);a.sin_port=htons((unsigned short)command_port);
-        if(bind(p->command_fd,(struct sockaddr*)&a,sizeof(a))<0){protocol_close(p);return false;}
+        if(bind(p->command_fd,(struct sockaddr*)&a,sizeof(a))<0){int saved=errno;fprintf(stderr,"ShuttleSim protocol: command UDP bind 127.0.0.1:%d failed: %s\n",command_port,strerror(saved));protocol_close(p);errno=saved;return false;}
         fcntl(p->command_fd,F_SETFL,fcntl(p->command_fd,F_GETFL,0)|O_NONBLOCK);
     }
     if(telemetry_port>0){
-        p->telemetry_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->telemetry_fd<0){protocol_close(p);return false;}
+        p->telemetry_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->telemetry_fd<0){int saved=errno;fprintf(stderr,"ShuttleSim protocol: telemetry UDP socket failed: %s\n",strerror(saved));protocol_close(p);errno=saved;return false;}
         snprintf(p->telemetry_host,sizeof(p->telemetry_host),"%s",host?host:"127.0.0.1"); p->telemetry_port=telemetry_port;
     } else if(web_telemetry_port>0) {
-        p->telemetry_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->telemetry_fd<0){protocol_close(p);return false;}
+        p->telemetry_fd=socket(AF_INET,SOCK_DGRAM,0); if(p->telemetry_fd<0){int saved=errno;fprintf(stderr,"ShuttleSim protocol: telemetry UDP socket failed: %s\n",strerror(saved));protocol_close(p);errno=saved;return false;}
         snprintf(p->telemetry_host,sizeof(p->telemetry_host),"%s",host?host:"127.0.0.1");
     }
     p->web_telemetry_port=web_telemetry_port;

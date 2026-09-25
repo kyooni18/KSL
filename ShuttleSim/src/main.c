@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <time.h>
 #include <math.h>
+#include <errno.h>
+#include <stdint.h>
 #include "shuttlesim/sim.h"
 #include "shuttlesim/scenario.h"
 #include "shuttlesim/protocol.h"
@@ -39,6 +41,14 @@ static void usage(const char *p){
       "  --start-paused           Bind I/O but do not advance until resume command\n"
       "  --lockstep               Wait for a command with step=true after each telemetry frame\n",p);
 }
+static double parse_number(const char *text){
+    char *end=NULL;errno=0;double value=strtod(text,&end);
+    return !errno&&end!=text&&*end=='\0'&&isfinite(value)?value:NAN;
+}
+static int parse_port(const char *text){
+    char *end=NULL;errno=0;long value=strtol(text,&end,10);
+    return !errno&&end!=text&&*end=='\0'&&value>=0&&value<=UINT16_MAX?(int)value:-1;
+}
 int main(int argc,char **argv){
     const char *scenario_path=NULL,*atm_path=NULL,*aero_path=NULL,*aero_book_path=NULL,*attitude_path=NULL,*record_path=NULL,*thost="127.0.0.1",*replay_path=NULL,*replay_mode="command";
     double dt=0.02,rate=0.0,telemetry_hz=10.0,max_time=2400.0,fixed_aoa=0,fixed_bank=0;
@@ -50,18 +60,18 @@ int main(int argc,char **argv){
         else if(!strcmp(argv[i],"--aero")&&i+1<argc)aero_path=argv[++i];
         else if(!strcmp(argv[i],"--aero-book")&&i+1<argc)aero_book_path=argv[++i];
         else if(!strcmp(argv[i],"--attitude")&&i+1<argc)attitude_path=argv[++i];
-        else if(!strcmp(argv[i],"--dt")&&i+1<argc)dt=strtod(argv[++i],NULL);
-        else if(!strcmp(argv[i],"--rate")&&i+1<argc){const char *r=argv[++i];rate=!strcmp(r,"max")?0.0:strtod(r,NULL);}
-        else if(!strcmp(argv[i],"--telemetry-hz")&&i+1<argc)telemetry_hz=strtod(argv[++i],NULL);
-        else if(!strcmp(argv[i],"--max-sim-time")&&i+1<argc)max_time=strtod(argv[++i],NULL);
-        else if(!strcmp(argv[i],"--fixed-aoa")&&i+1<argc){fixed_aoa=strtod(argv[++i],NULL);has_fixed_aoa=true;}
-        else if(!strcmp(argv[i],"--fixed-bank")&&i+1<argc){fixed_bank=strtod(argv[++i],NULL);has_fixed_bank=true;}
+        else if(!strcmp(argv[i],"--dt")&&i+1<argc)dt=parse_number(argv[++i]);
+        else if(!strcmp(argv[i],"--rate")&&i+1<argc){const char *r=argv[++i];rate=!strcmp(r,"max")?0.0:parse_number(r);}
+        else if(!strcmp(argv[i],"--telemetry-hz")&&i+1<argc)telemetry_hz=parse_number(argv[++i]);
+        else if(!strcmp(argv[i],"--max-sim-time")&&i+1<argc)max_time=parse_number(argv[++i]);
+        else if(!strcmp(argv[i],"--fixed-aoa")&&i+1<argc){fixed_aoa=parse_number(argv[++i]);has_fixed_aoa=true;}
+        else if(!strcmp(argv[i],"--fixed-bank")&&i+1<argc){fixed_bank=parse_number(argv[++i]);has_fixed_bank=true;}
         else if(!strcmp(argv[i],"--attitude-replay")&&i+1<argc)replay_path=argv[++i];
         else if(!strcmp(argv[i],"--replay-mode")&&i+1<argc)replay_mode=argv[++i];
-        else if(!strcmp(argv[i],"--command-port")&&i+1<argc)command_port=atoi(argv[++i]);
+        else if(!strcmp(argv[i],"--command-port")&&i+1<argc)command_port=parse_port(argv[++i]);
         else if(!strcmp(argv[i],"--telemetry-host")&&i+1<argc)thost=argv[++i];
-        else if(!strcmp(argv[i],"--telemetry-port")&&i+1<argc)telemetry_port=atoi(argv[++i]);
-        else if(!strcmp(argv[i],"--web-telemetry-port")&&i+1<argc)web_telemetry_port=atoi(argv[++i]);
+        else if(!strcmp(argv[i],"--telemetry-port")&&i+1<argc)telemetry_port=parse_port(argv[++i]);
+        else if(!strcmp(argv[i],"--web-telemetry-port")&&i+1<argc)web_telemetry_port=parse_port(argv[++i]);
         else if(!strcmp(argv[i],"--record")&&i+1<argc)record_path=argv[++i];
         else if(!strcmp(argv[i],"--quiet"))quiet=true;
         else if(!strcmp(argv[i],"--gear-down"))start_gear=true;
@@ -69,7 +79,15 @@ int main(int argc,char **argv){
         else if(!strcmp(argv[i],"--lockstep"))lockstep=true;
         else {fprintf(stderr,"Unknown/incomplete option: %s\n",argv[i]);usage(argv[0]);return 2;}
     }
-    if(dt<=0||dt>1||telemetry_hz<=0||max_time<=0||rate<0){fprintf(stderr,"Invalid numeric option.\n");return 2;}
+    if(!isfinite(dt)||!isfinite(telemetry_hz)||!isfinite(max_time)||!isfinite(rate)||
+       !isfinite(fixed_aoa)||!isfinite(fixed_bank)||dt<=0||dt>1||telemetry_hz<=0||max_time<=0||rate<0||
+       command_port<0||telemetry_port<0||web_telemetry_port<0){
+        fprintf(stderr,"Invalid numeric option.\n");return 2;
+    }
+    if(((lockstep||start_paused)&&command_port==0)||
+       (command_port>0&&(command_port==telemetry_port||command_port==web_telemetry_port))){
+        fprintf(stderr,"Interactive simulation requires a distinct command endpoint.\n");return 2;
+    }
     Scenario scenario;scenario_seed_86km(&scenario);
     if(scenario_path&&!scenario_load(scenario_path,&scenario)){fprintf(stderr,"Failed to load scenario: %s\n",scenario_path);return 3;}
     Simulation sim;sim_init(&sim,&scenario);sim.physics_dt_s=dt;sim.state.gear_down=start_gear;sim.paused=start_paused;
@@ -87,7 +105,12 @@ int main(int argc,char **argv){
     AttitudeReplay replay={0};
     if(replay_path&&!replay_load_csv(&replay,replay_path)){fprintf(stderr,"Failed to load attitude replay: %s\n",replay_path);return 3;}
     if(strcmp(replay_mode,"command")&&strcmp(replay_mode,"actual")){fprintf(stderr,"--replay-mode must be command or actual\n");replay_free(&replay);return 2;}
-    Protocol proto;if(!protocol_open(&proto,command_port,thost,telemetry_port,web_telemetry_port)){fprintf(stderr,"Warning: UDP protocol unavailable; continuing stdout-only.\n");memset(&proto,0,sizeof(proto));proto.command_fd=proto.telemetry_fd=-1;}
+    Protocol proto;
+    if(!protocol_open(&proto,command_port,thost,telemetry_port,web_telemetry_port)){
+        fprintf(stderr,"Failed to open requested UDP endpoints; refusing an uncontrolled run.\n");
+        replay_free(&replay);
+        return 3;
+    }
     FILE *record=NULL;
     if(record_path){record=fopen(record_path,"w");if(!record){fprintf(stderr,"Failed to open record file: %s\n",record_path);protocol_close(&proto);replay_free(&replay);return 3;}}
     double wall0=monotonic_s(),next_pub=0.0,pub_period=1.0/telemetry_hz;char json[4096];
@@ -165,6 +188,14 @@ int main(int argc,char **argv){
             if(v3_norm(surf)<0.5)break;
         }
     }
+    /* The stop condition can occur between telemetry periods. Preserve the
+     * actual terminal state, not the preceding still-moving sample. No further
+     * lockstep acknowledgement is needed after physics has finished. */
+    double final_wall=monotonic_s()-wall0;
+    sim_build_telemetry_json(&sim,final_wall>0.0?sim.state.sim_elapsed_s/final_wall:0.0,json,sizeof(json));
+    if(!quiet){puts(json);fflush(stdout);}
+    if(record){fprintf(record,"%s\n",json);fflush(record);}
+    protocol_send_telemetry(&proto,json,strlen(json));
     sim_build_summary_json(&sim,json,sizeof(json));fprintf(stderr,"SHUTTLESIM_SUMMARY %s\n",json);
     if(record) fclose(record);
     protocol_close(&proto);
