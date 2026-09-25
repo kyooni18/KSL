@@ -42,9 +42,11 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     const double initial_sag_fractions[] = {0.0};
     const double local_profile_supports[][3] = {
         {0.12, 0.17, 0.42}, {0.12, 0.19, 0.50},
-        {0.12, 0.21, 0.60}
+        {0.12, 0.21, 0.60}, {0.12, 0.23, 0.75}
     };
-    const double local_bow_offsets_m[] = {-1250.0, -1000.0, -750.0, -500.0};
+    const double local_bow_offsets_m[] = {
+        -900.0, -800.0, -700.0, -500.0, -450.0, -400.0, -350.0, -300.0
+    };
     TaemFixedHacCandidate best_survivor;
     memset(&best_survivor, 0, sizeof(best_survivor));
     best_survivor.quality_score = INFINITY;

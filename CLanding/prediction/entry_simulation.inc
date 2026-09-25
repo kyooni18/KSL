@@ -846,21 +846,10 @@ static double post_taem_bank(PredictorGuidance*g,VehicleState state,GeoPoint geo
     }
 
     g->hac_previous_angle=h.angle;
-    double lead=clampd(horizontal*2.0,180.0,2400.0),station=-set->final_approach_distance;
+    double station=-set->final_approach_distance;
     double min_turn=turn_radius_for_bank(a,c,fmin(55.0,bank_limit(a,p,v,maxbank)));
     bool approach=terminal_approach_valid(geo,range,along,cross,course,a->speed,horizontal,vertical,fpa,site,v,set);
-    if(fresh_hac&&along>=station-lead&&along<=station+fmax(200,hac_radius*.012)&&
-       g->hac_remaining>LANDER_PI*hac_radius)g->hac_remaining-=2*LANDER_PI*hac_radius;
-    if(!g->hac_completed&&!approach&&g->hac_remaining<=lead+fmax(200,hac_radius*.012)&&
-       along>=station-lead&&along<=station+fmax(200,hac_radius*.012)&&
-       fabs(cross)<fmax(250,fmin(1000,hac_radius*.10))&&fabs(norm_signed_deg(course-site->runway_heading))<12){
-        double arc=0,slope=0;
-        if(hac_high_pass_circuit(geo.altitude,a->speed,hac_radius,g->hac_remaining,min_turn,a->drag_accel,
-            p,site,v,set,&arc,&slope)){
-            g->hac_remaining=arc;g->hac_circuit_slope=slope;g->hac_progress_valid=true;
-        }
-    }
-    double slope=g->hac_circuit_slope>0?g->hac_circuit_slope:set->taem_glide_slope;
+    double slope=set->taem_glide_slope;
     double desired_altitude=site->altitude+set->final_approach_distance*tan(set->final_glide_slope*DEG2RAD)+
         (g->hac_remaining+fabs(h.radial_error)*.65)*tan(slope*DEG2RAD);
     double path=fmax(set->final_approach_distance,g->hac_remaining+set->final_approach_distance);
@@ -1121,8 +1110,6 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                 if(g.hac_return_to_entry){hac_set=false;g.hac_return_to_entry=false;}
                 if(g.hac_failed||(!g.final_captured&&g.hac_remaining < -fmax(200,g.hac_radius*.012)))break;
                 target_aoa=clampd(scheduled_aoa(geo.altitude,p,v),4,14);
-                if(g.hac_circuit_slope>0&&!g.final_captured)
-                    target_aoa=clampd(-g.hac_circuit_slope+7.0-fpa,3.0,14.0);
             }else{
                 bank=entry_bank(&g,state,geo,&at,p,local,cal0,v,site,set,maxbank,dt,&aoa);
                 target_aoa=aoa;

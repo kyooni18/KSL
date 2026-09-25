@@ -35,8 +35,6 @@ GuidanceSettings terminal_path_settings(const GuidanceMachine *g,
         r.final_glide_slope = g->terminal_test_glide_slope;
         r.taem_glide_slope = g->terminal_test_glide_slope;
     }
-    if (g && g->hac_circuit_slope > 0.0)
-        r.taem_glide_slope = g->hac_circuit_slope;
     return r;
 }
 

@@ -61,10 +61,6 @@ double hac_guidance_score(GeoPoint current,double true_air_speed,double course,c
 HACGuidance hac_guidance_compute_radius(GeoPoint current,double true_air_speed,double course,const LandingSite *site,const GuidanceSettings *settings,double planet_radius,double side,double gravity,double hac_radius);
 double hac_guidance_score_radius(GeoPoint current,double true_air_speed,double course,const LandingSite *site,const GuidanceSettings *settings,double planet_radius,double side,double gravity,double hac_radius);
 bool hac_entry_capture_geometry_ready(const HACGuidance *guidance,double hac_radius);
-bool hac_high_pass_circuit(double altitude, double speed, double hac_radius, double remaining,
-    double minimum_turn_radius, double drag_accel, const PlanetModel *planet,
-    const LandingSite *site, const VehicleProfile *vehicle, const GuidanceSettings *settings,
-    double *new_remaining, double *glide_slope);
 bool taem_alignment_maneuver_geometry(double altitude, double radius,
     double minimum_turn_radius, double alignment_turn_deg, const LandingSite *site,
     const GuidanceSettings *settings, double *remaining_path, double *glide_slope,

@@ -474,42 +474,6 @@ double hac_guidance_score(GeoPoint current,double true_air_speed,double course,c
 }
 
 
-/* A high pass is an explicit new circuit, never a modulo wrap of exhausted
-   arc. Budget a complete frozen-circle return using both height and energy;
-   reject a huge high-speed HAC that cannot be flown with the height left. */
-bool hac_high_pass_circuit(double altitude,double speed,double radius,double remaining,
-        double minimum_turn_radius,double drag,const PlanetModel*p,const LandingSite*site,
-        const VehicleProfile*v,const GuidanceSettings*s,double*out_remaining,double*out_slope){
-    if(!p||!site||!v||!s||
-       !isfinite(altitude)||!isfinite(speed)||!isfinite(radius)||!isfinite(remaining)||
-       !isfinite(minimum_turn_radius)||!isfinite(drag)||
-       !(radius>0.0)||!(minimum_turn_radius>0.0)||drag<0.0||
-       speed<v->minimum_safe_speed||minimum_turn_radius>radius)
-        return false;
-
-    double arc=2.0*LANDER_PI*radius+remaining;
-    if(!(arc>0.0))return false;
-
-    double final_alt=site->altitude+
-        s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
-    double height=altitude-final_alt;
-    if(!(height>0.0))return false;
-
-    double slope=atan2(height,arc)*RAD2DEG;
-    if(!(slope>0.0)&&!(slope<90.0))return false; /* decision-literal: mathematical-numerical-requirement | a finite descending path angle lies strictly between zero and ninety degrees */
-
-    double target=fmax(v->final_approach_speed,v->minimum_safe_speed);
-    double energy=entry_remaining_specific_energy(site->latitude,altitude,speed,
-        site->latitude,final_alt,target,p);
-    double air_path=hypot(arc,height);
-    double loss=drag*air_path;
-    if(!isfinite(energy)||energy<loss)return false;
-
-    if(out_remaining)*out_remaining=arc;
-    if(out_slope)*out_slope=slope;
-    return true;
-}
-
 bool taem_alignment_maneuver_geometry(double altitude,double radius,
         double minimum_turn_radius,double alignment_turn_deg,const LandingSite*site,
         const GuidanceSettings*s,double*out_remaining,double*out_slope,

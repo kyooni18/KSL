@@ -251,11 +251,11 @@ def main() -> int:
                           "Defaults to 30 s for reentry/full runs and 0 s for "
                           "HAC/MM305/final-test fixtures."))
     ap.add_argument("--no-build", action="store_true")
-    ap.add_argument("--engage", choices=("reentry", "full", "hac", "hac-upstream", "final-test"), default="reentry")
+    ap.add_argument("--engage", choices=("reentry", "full", "hac", "final-test"), default="reentry")
     args = ap.parse_args()
 
     if args.preroll_seconds is None:
-        preroll_seconds = (0.0 if args.engage in ("hac", "hac-upstream", "final-test")
+        preroll_seconds = (0.0 if args.engage in ("hac", "final-test")
                            else 30.0)
     else:
         preroll_seconds = args.preroll_seconds
@@ -269,7 +269,7 @@ def main() -> int:
     guidance = config.setdefault("guidance", {})
     guidance_rate = max(2.0, min(30.0, float(guidance.get("guidanceRate", 10.0))))
     scenario_name = Path(args.scenario).stem.lower()
-    mission = "MM305" if (args.engage in ("hac", "hac-upstream") or
+    mission = "MM305" if (args.engage == "hac" or
                             (scenario_name.startswith("mm305-") and args.engage != "final-test")) else None
     base_run_id = args.run_id or time.strftime("sim-%Y%m%dT%H%M%SZ", time.gmtime())
     if mission and base_run_id.lower() != "mm305" and not base_run_id.lower().startswith("mm305-"):
@@ -408,9 +408,6 @@ def main() -> int:
             os.environ.pop("KSP_LANDER_MM305_FIXED_HAC", None)
         os.environ["KSP_LANDER_ROOT"] = str(ROOT)
         os.environ["KSP_LANDER_SIM_PUBLISH_HZ"] = f"{args.publish_hz:g}"
-        if args.engage == "hac-upstream":
-            os.environ["KSP_LANDER_HAC_VARIANT_B"] = "1"
-
         recorder = SnapshotRecorder(run_dir, mirror, manifest)
         # BackendProcess inherits stderr; redirecting it requires launching a small
         # wrapper only for logs, so keep stderr in the campaign console for now.
@@ -422,7 +419,7 @@ def main() -> int:
         # HAC fixtures must engage at the exact initial lockstep barrier. The
         # resend path delivers that state after the backend binds its socket;
         # an unconditional wake raced engagement against the first physics step.
-        if args.engage not in ("hac", "hac-upstream", "final-test"):
+        if args.engage not in ("hac", "final-test"):
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as wake:
                 wake.sendto(b'{"type":"step","step":true}', ("127.0.0.1", 8795))
 
@@ -434,7 +431,7 @@ def main() -> int:
         if connected.get("connectionStatus") != "connected":
             raise RuntimeError(str(connected.get("lastError") or "simulator Guidance connect failed"))
 
-        if args.engage in ("hac", "hac-upstream", "final-test"):
+        if args.engage in ("hac", "final-test"):
             expected_ut = float(manifest["prerollFinal"]["ut"])
             def fixture_ready(snapshot: dict[str, Any]) -> bool:
                 tel = snapshot.get("telemetry") or {}
@@ -454,7 +451,7 @@ def main() -> int:
         if args.engage == "full":
             backend.send("createPlan", timeout=180.0)
             backend.send("engage", timeout=30.0)
-        elif args.engage in ("hac", "hac-upstream"):
+        elif args.engage == "hac":
             backend.send("engageHACTest", timeout=30.0)
         elif args.engage == "final-test":
             previous_sequence = int((backend.latest_snapshot or {}).get("logSequence") or 0)
@@ -561,11 +558,6 @@ def main() -> int:
         if sim_elapsed is None:
             manifest["invalidReason"] = "no-simulated-time"
         manifest["terminalPhase"] = phase
-        guidance_state = terminal.get("guidanceState") or {}
-        if isinstance(guidance_state, dict):
-            manifest["variantBPathCommitted"] = bool(
-                guidance_state.get("terminalPathCommitted")
-            )
         if horizon_packet is not None:
             manifest["maxSimTimeReached"] = True
             manifest["final"] = simulator_packet_final(horizon_packet)
@@ -583,10 +575,7 @@ def main() -> int:
         atomic_json(run_dir / "manifest.json", manifest)
         print(json.dumps(manifest, indent=2, allow_nan=False))
         if horizon_packet is not None:
-            exit_code = 0 if args.engage == "hac" or (
-                args.engage == "hac-upstream" and
-                manifest.get("variantBPathCommitted") is True
-            ) else 2
+            exit_code = 0 if args.engage == "hac" else 2
         else:
             exit_code = 0 if phase == "Complete" else 2
         if sim_elapsed is None:
