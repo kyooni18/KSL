@@ -361,6 +361,11 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
         out.veto|=16u;
     if(!(t->vertical_speed<0.0))
         out.veto|=32u;
+    /* Closure: MM305 can turn a vehicle onto the HAC, but a vehicle flying
+       away from the site at the TAEM window has not finished the MM304
+       heading problem, and the energy test above assumed a straight path. */
+    if(isfinite(t->course_to_site_error)&&fabs(t->course_to_site_error)>90.0)
+        out.veto|=128u;
     if(t->dynamic_pressure>v->maximum_dynamic_pressure||
        t->g_force>v->maximum_g_load||
        (t->stall_fraction_is_measured&&t->stall_fraction>=1.0))

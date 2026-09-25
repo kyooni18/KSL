@@ -202,6 +202,14 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_route_committed=false;
         g->mm305_hac_exit_reached=false;
         g->mm305_model_snapshot_id=0;
+        g->mm305_planning_needed=false;
+        g->mm305_plan_request_ut=NAN;
+        g->mm305_last_plan_attempt_ut=-INFINITY;
+        g->mm305_last_route_ut=-INFINITY;
+        g->mm305_plan_failures=0;
+        g->mm305_replans=0;
+        g->mm305_lift_scale=1.0;
+        g->mm305_drag_scale=1.0;
         g->hac_side_selected=false;
         g->hac_captured=false;
         g->hac_completed=false;

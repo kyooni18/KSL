@@ -26,6 +26,14 @@ static void reset_controllers(GuidanceMachine*g){
     g->mm305_route_committed=false;
     g->mm305_hac_exit_reached=false;
     g->mm305_model_snapshot_id=0;
+    g->mm305_planning_needed=false;
+    g->mm305_plan_request_ut=NAN;
+    g->mm305_last_plan_attempt_ut=-INFINITY;
+    g->mm305_last_route_ut=-INFINITY;
+    g->mm305_plan_failures=0;
+    g->mm305_replans=0;
+    g->mm305_lift_scale=1.0;
+    g->mm305_drag_scale=1.0;
     g->runway_end_preview_valid=false;
     g->runway_end_committed=false;
     g->runway_end_index=0;
@@ -160,12 +168,14 @@ static void reset_controllers(GuidanceMachine*g){
 
     entry_exec_reset(&g->entry_exec);
     memset(&g->entry_lateral,0,sizeof(g->entry_lateral));
+    memset(&g->entry_energy,0,sizeof(g->entry_energy));
     taem_exec_reset(&g->taem_exec);
 
     g->entry_alpha_has_target=false;
     g->entry_alpha_has_modulation=false;
     g->entry_alpha_target=0.0;
     g->entry_alpha_modulation=0.0;
+    g->entry_alpha_drag_boost=0.0;
     g->entry_drag_ratio_valid=false;
     g->entry_drag_velocity_ratio=0.0;
     g->entry_bank_authority_acquired=false;

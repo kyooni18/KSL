@@ -415,6 +415,19 @@ def main():
                 write_json(manifest_path,manifest); publish_web_run(dict(manifest,runDirectory=str(run_dir)))
             raise
         planned=backend.latest if isinstance(backend.latest,dict) else {}
+        if str(planned.get("phase") or "") not in ("Fault","Abort"):
+            # The createPlan response can arrive before the throttled snapshot
+            # that carries the finished plan; judging qualification from the
+            # still-"Planning" snapshot rejected qualified plans.
+            try:
+                settled=backend.wait(lambda o:o.get("type")=="snapshot" and
+                    isinstance(o.get("snapshot"),dict) and
+                    str(o["snapshot"].get("phase") or "")!="Planning" and
+                    isinstance(o["snapshot"].get("plan"),dict) and
+                    "executionQualified" in o["snapshot"]["plan"],15)
+                planned=settled["snapshot"]
+            except TimeoutError:
+                pass
         if str(planned.get("phase") or "") in ("Fault","Abort"):
             raise RuntimeError(f"deorbit planning failed: {planned.get('statusMessage') or planned.get('lastError') or planned.get('warningMessage')}")
         plan=planned.get("plan") if isinstance(planned.get("plan"),dict) else {}

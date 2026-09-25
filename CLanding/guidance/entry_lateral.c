@@ -114,6 +114,9 @@ static double choose_bank_sign(const EntryLateralState *state,
         const EntryLateralInput *input) {
     if (state && state->initialized && fabs(state->bank_sign) > DBL_EPSILON)
         return unit_sign(state->bank_sign);
+    if (input->has_azimuth_error && isfinite(input->azimuth_error_deg) &&
+        fabs(input->azimuth_error_deg) > DBL_EPSILON)
+        return unit_sign(input->azimuth_error_deg);
     if (isfinite(input->measured_bank_deg) &&
         fabs(input->measured_bank_deg) > DBL_EPSILON)
         return unit_sign(input->measured_bank_deg);
@@ -227,14 +230,49 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     state->bank_sign = choose_bank_sign(state, input);
 
     double magnitude = 0.0;
-    bool authority_valid = bank_magnitude(input, limits, &magnitude);
+    bool authority_valid;
+    if (input->has_bank_magnitude) {
+        authority_valid = isfinite(input->bank_magnitude_deg) &&
+            isfinite(input->lift_accel) && input->lift_accel > 0.0;
+        magnitude = authority_valid ? clamp_value(input->bank_magnitude_deg, 0.0,
+            fabs(limits->maximum_bank_deg)) : 0.0;
+    } else {
+        authority_valid = bank_magnitude(input, limits, &magnitude);
+    }
     if (!authority_valid) {
         magnitude = 0.0;
         output.degraded_authority = true;
     }
 
     bool reversal_requested = false;
-    if (authority_valid && magnitude > DBL_EPSILON &&
+    if (input->has_azimuth_error && isfinite(input->azimuth_error_deg)) {
+        /* Heading control: steer lift toward the target azimuth. Large azimuth
+           errors get a minimum turning bank so lateral control is never lost to
+           a lift-up energy demand. */
+        double error = input->azimuth_error_deg;
+        double deadband = fmax(0.0, finite_or(input->azimuth_deadband_deg, 0.0));
+        double floor_bank = fmax(0.0, finite_or(input->minimum_turn_bank_deg, 0.0));
+        if (authority_valid && fabs(error) > 3.0 * deadband && magnitude < floor_bank)
+            magnitude = fmin(floor_bank, fabs(limits->maximum_bank_deg));
+        output.corridor_metric = deadband > 0.0 ? error / deadband : NAN;
+        output.course_corridor_deg = deadband;
+        double demanded_sign = unit_sign(error);
+        bool captured_or_small = state->leg_captured || magnitude < 5.0;
+        if (authority_valid && fabs(error) > deadband &&
+            demanded_sign * state->bank_sign < 0.0) {
+            state->reversal_armed = true;
+            if (captured_or_small) {
+                state->bank_sign = demanded_sign;
+                state->leg_captured = false;
+                state->leg_captured_ut = input->ut;
+                state->last_reversal_ut = input->ut;
+                state->reversal_armed = false;
+                reversal_requested = true;
+            }
+        } else {
+            state->reversal_armed = false;
+        }
+    } else if (authority_valid && magnitude > DBL_EPSILON &&
         input->has_crossrange_error && isfinite(input->crossrange_error_m)) {
         /*
          * Predict only as far as the airframe physically needs to exchange one
@@ -297,7 +335,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
      */
     if (!state->leg_captured && magnitude > DBL_EPSILON &&
         isfinite(input->measured_bank_deg) &&
-        state->bank_sign * input->measured_bank_deg >= magnitude) {
+        state->bank_sign * input->measured_bank_deg >= 0.9 * magnitude) {
         state->leg_captured = true;
         state->leg_captured_ut = input->ut;
     }

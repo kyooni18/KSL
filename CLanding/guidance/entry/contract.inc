@@ -115,14 +115,44 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         return entry_program_contract_hold(g,t,cfg,dt,
             "MM304 executive rejected an otherwise admissible MM305 handoff state.");
 
+    /* Energy/range control: drag reference re-solved from the range still
+       required, tracked with a damped law against *measured* drag and lift. */
+    double transition_velocity=entry_alpha_transition_velocity(s,taem_velocity);
+    double energy_bank_limit=dynamic_bank_limit(t,v);
+    EntryEnergyConfig energy_cfg=entry_energy_default_config();
+    EntryEnergyInput energy_in={
+        .ut=t->ut,
+        .relative_velocity=t->true_air_speed,
+        .altitude=t->mean_altitude,
+        .latitude=t->latitude,
+        .flight_path_angle_deg=t->flight_path_angle,
+        .vertical_speed=t->vertical_speed,
+        .measured_drag_accel=isfinite(measured_drag)?measured_drag:
+            live_drag_accel(t,aero,v),
+        .measured_lift_accel=live_lift_accel(t,aero,v),
+        .dynamic_pressure=fmax(0.0,t->dynamic_pressure),
+        .range_to_go=fmax(0.0,t->range_to_site)-entry_taem_range_target(p,s),
+        .taem_velocity=taem_velocity,
+        .taem_altitude=s->taem_interface_altitude,
+        .taem_latitude=cfg->site.latitude,
+        .transition_velocity=fmax(transition_velocity,taem_velocity*1.05),
+        .maximum_bank_deg=energy_bank_limit,
+        .integrator_hold=g->entry_lateral.initialized&&!g->entry_lateral.leg_captured,
+        .planet=p,
+        .vehicle=v
+    };
+    EntryEnergyOutput energy=entry_energy_update(&g->entry_energy,&energy_in,&energy_cfg);
+    if(!energy.valid)
+        return entry_program_contract_hold(g,t,cfg,dt,
+            "MM304 energy controller state is invalid; Entry ownership is retained.");
+
     EntryAlphaSchedule alpha_schedule;
-    entry_alpha_schedule_default(&alpha_schedule,v,
-        entry_alpha_transition_velocity(s,taem_velocity));
+    entry_alpha_schedule_default(&alpha_schedule,v,transition_velocity);
     EntryAlphaInput alpha_in={
         .relative_velocity=t->true_air_speed,
         .phase=entry_alpha_phase_for_exec(g->entry_exec.phase),
-        .reference_drag_accel=drag.reference_drag_accel,
-        .measured_drag_accel=drag.observed_drag_accel,
+        .reference_drag_accel=energy.reference_drag_accel,
+        .measured_drag_accel=energy_in.measured_drag_accel,
         .current_aoa=t->angle_of_attack,
         .current_aoa_rate=controlled_aoa_rate(t),
         .has_previous_target=g->entry_alpha_has_target,
@@ -200,6 +230,21 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .required_vertical_lift_accel=drag.required_vertical_lift_accel
     };
 
+    lateral.has_bank_magnitude=true;
+    lateral.bank_magnitude_deg=energy.bank_magnitude_deg;
+    lateral.has_azimuth_error=isfinite(t->course_to_site_error);
+    lateral.azimuth_error_deg=lateral.has_azimuth_error?t->course_to_site_error:0.0;
+    {
+        /* Velocity-dependent heading corridor: wide while energy is high,
+           narrowing toward the TAEM interface so MM305 inherits a closing
+           course (Shuttle reversal deadband idea, Kerbin-scaled). */
+        double span=fmax(1.0,transition_velocity*1.6-taem_velocity);
+        double x=clampd((t->true_air_speed-taem_velocity)/span,0.0,1.0);
+        lateral.azimuth_deadband_deg=4.0+6.0*x;
+        double off_nose=fabs(lateral.azimuth_error_deg);
+        lateral.minimum_turn_bank_deg=20.0+25.0*clampd((off_nose-45.0)/45.0,0.0,1.0);
+    }
+
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;
     EntryLateralOutput lateral_out=entry_lateral_update(&g->entry_lateral,&lateral,&limits);
     if(!lateral_out.valid)
@@ -211,15 +256,27 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         g->entry_continuation_bootstrap=false;
         if(!g->diagnostic_shadow)
             fprintf(stderr,
-                "MM304 feedback reversal: UT %.2f side %+.0f -> %+.0f cross %.0f projected %.0f corridor %.0f response %.2fs.\n",
-                t->ut,previous_side,side,lateral.crossrange_error_m,
-                lateral_out.projected_crossrange_error_m,lateral_out.crossrange_corridor_m,
-                lateral_out.reversal_response_time_s);
+                "MM304 feedback reversal: UT %.2f side %+.0f -> %+.0f azimuth error %+.1f deg deadband %.1f deg V %.0f m/s.\n",
+                t->ut,previous_side,side,lateral.azimuth_error_deg,
+                lateral.azimuth_deadband_deg,t->true_air_speed);
     }
     g->s_turn_sign=side;
 
     double bank=clampd(lateral_out.target_bank_deg,-limits.maximum_bank_deg,limits.maximum_bank_deg);
-    double aoa=clampd(alpha.target_aoa,0.0,v->maximum_angle_of_attack);
+    /* When bank alone cannot produce the demanded drag (bank at its limit),
+       incidence is the remaining drag lever: ramp toward maximum AoA while
+       q/load protection is clear, and ramp back as soon as bank has authority. */
+    {
+        double headroom=fmax(0.0,v->maximum_angle_of_attack-alpha.target_aoa);
+        bool need_drag=energy.saturated_bank_limit&&!energy.protection_active&&
+            energy.reference_drag_accel>energy_in.measured_drag_accel;
+        double rate=1.0*fmax(0.0,dt);
+        g->entry_alpha_drag_boost=need_drag?
+            fmin(headroom,g->entry_alpha_drag_boost+rate):
+            fmax(0.0,g->entry_alpha_drag_boost-rate);
+        g->entry_alpha_drag_boost=fmin(g->entry_alpha_drag_boost,headroom);
+    }
+    double aoa=clampd(alpha.target_aoa+g->entry_alpha_drag_boost,0.0,v->maximum_angle_of_attack);
     double heading=isfinite(course)?norm_deg(course):norm_deg(t->heading);
 
     g->entry_feedback=(EntryGuidanceFeedback){
@@ -228,14 +285,14 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .reversal_requested=lateral_out.reversal_requested,
         .ut=t->ut,
         .confidence=fmin(drag.confidence,lateral.authority_confidence),
-        .measured_drag_accel=drag.observed_drag_accel,
-        .reference_drag_accel=drag.reference_drag_accel,
-        .drag_error_accel=drag.drag_error_accel,
-        .predicted_achievable_range=drag.predicted_range_to_taem,
-        .required_range_to_go=drag.available_range_to_taem,
-        .energy_margin=drag.predicted_range_error,
-        .range_error_scale=drag.range_error_scale,
-        .required_vertical_lift_accel=drag.required_vertical_lift_accel,
+        .measured_drag_accel=energy_in.measured_drag_accel,
+        .reference_drag_accel=energy.reference_drag_accel,
+        .drag_error_accel=energy.reference_drag_accel-energy_in.measured_drag_accel,
+        .predicted_achievable_range=energy.predicted_range_m,
+        .required_range_to_go=energy.required_range_m,
+        .energy_margin=energy.range_error_m,
+        .range_error_scale=fmax(1000.0,fabs(energy.required_range_m)),
+        .required_vertical_lift_accel=energy.vertical_lift_command,
         .crossrange_error=lateral.has_crossrange_error?lateral.crossrange_error_m:NAN,
         .crossrange_rate=lateral.has_crossrange_rate?lateral.crossrange_error_rate_mps:NAN,
         .projected_crossrange_error=lateral_out.projected_crossrange_error_m,
@@ -256,7 +313,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     g->entry_control_heading=heading;
     g->entry_control_turn_radius=live_turn_radius(t,aero,v,bank);
     g->entry_control_cost=NAN;
-    g->entry_control_taem_range_error=drag.predicted_range_error;
+    g->entry_control_taem_range_error=energy.range_error_m;
     g->entry_control_taem_speed=taem_velocity;
     g->entry_control_taem_energy_error=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
@@ -276,15 +333,15 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     char status[448];
     snprintf(status,sizeof(status),
         "MM304 %s closed loop: D %.2f/ref %.2f (err %+.2f) m/s2, range %.1f/%.1f km (margin %+.1f km), bank %+.1f deg, cross %+.1f km, AoA %.1f deg, MM305 %s.",
-        entry_phase_string(g->entry_exec.phase),drag.observed_drag_accel,
-        drag.reference_drag_accel,drag.drag_error_accel,
-        drag.predicted_range_to_taem/1000.0,drag.available_range_to_taem/1000.0,
-        drag.predicted_range_error/1000.0,bank,
+        entry_phase_string(g->entry_exec.phase),energy_in.measured_drag_accel,
+        energy.reference_drag_accel,energy.reference_drag_accel-energy_in.measured_drag_accel,
+        energy.predicted_range_m/1000.0,energy.required_range_m/1000.0,
+        energy.range_error_m/1000.0,bank,
         lateral.has_crossrange_error?lateral.crossrange_error_m/1000.0:NAN,
         aoa,handoff_ready?"admissible":"not yet admissible");
 
     const char*warning=NULL;
-    if(drag.degraded||alpha.degraded||lateral_out.degraded_authority)
+    if(energy.degraded||alpha.degraded||lateral_out.degraded_authority)
         warning="MM304 is using degraded aerodynamic feedback; commands remain inside measured/configured authority and no fallback trajectory is active.";
 
     static _Thread_local double entry_trace_last_ut=-INFINITY;
@@ -292,16 +349,17 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     if(entry_trace&&strcmp(entry_trace,"1")==0&&
        (t->ut<entry_trace_last_ut||t->ut-entry_trace_last_ut>=5.0)){
         fprintf(stderr,
-            "ENTRY_TRACE ut=%.3f h=%.1f V=%.2f q=%.2f fpa=%.2f D=%.3f Dref=%.3f dD=%+.3f Rach=%.1f Rreq=%.1f margin=%+.1f along=%+.1f xtk=%+.1f xerr=%+.1f xproj=%+.1f Benergy=%.2f Bcmd=%+.2f roll=%+.2f aoa=%.2f admissionE=%+.0f Eavail=%.0f Edrag=%.0f Eunc=%.0f path=%.0f reversal=%u handoff=%d veto=%u\n",
+            "ENTRY_TRACE ut=%.3f h=%.1f V=%.2f q=%.2f fpa=%.2f D=%.3f Dref=%.3f dD=%+.3f Rach=%.1f Rreq=%.1f margin=%+.1f along=%+.1f xtk=%+.1f azerr=%+.1f hdotref=%+.1f Benergy=%.2f Bcmd=%+.2f roll=%+.2f aoa=%.2f admissionE=%+.0f Eavail=%.0f Edrag=%.0f Eunc=%.0f path=%.0f reversal=%u handoff=%d veto=%u eh=%+.0f D0=%.2f sat=%d%d%d\n",
             t->ut,t->mean_altitude,t->true_air_speed,t->dynamic_pressure,
-            t->flight_path_angle,drag.observed_drag_accel,drag.reference_drag_accel,
-            drag.drag_error_accel,drag.predicted_range_to_taem,drag.available_range_to_taem,
-            drag.predicted_range_error,t->runway_along_track,t->runway_cross_track,
-            lateral.crossrange_error_m,lateral_out.projected_crossrange_error_m,
+            t->flight_path_angle,energy_in.measured_drag_accel,energy.reference_drag_accel,
+            energy.reference_drag_accel-energy_in.measured_drag_accel,energy.predicted_range_m,
+            energy.required_range_m,energy.range_error_m,t->runway_along_track,t->runway_cross_track,
+            lateral.azimuth_error_deg,energy.hdot_reference,
             lateral_out.bank_magnitude_deg,bank,norm_signed_deg(t->roll),aoa,
             admission.energy_margin,admission.energy_available,admission.energy_drag_work,
             admission.energy_uncertainty,admission.path_length_m,g->entry_control_reversals,
-            handoff_ready?1:0,admission.veto);
+            handoff_ready?1:0,admission.veto,energy.altitude_error_m,energy.profile_drag_accel,
+            energy.saturated_lift_up?1:0,energy.saturated_bank_limit?1:0,energy.protection_active?1:0);
         entry_trace_last_ut=t->ut;
     }
 

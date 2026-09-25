@@ -34,7 +34,7 @@ FLIGHT_PHYSICS_SOURCES := ../ShuttleSim/src/math3.c ../ShuttleSim/src/quat.c \
 FLIGHT_PHYSICS_OBJECTS := $(patsubst ../ShuttleSim/src/%.c,$(BUILD)/flight_physics/%.o,$(FLIGHT_PHYSICS_SOURCES))
 
 APP_SOURCES := controller.c main.c
-GUIDANCE_SOURCES := entry_alpha.c entry_drag_reference.c entry_lateral.c entry_exec.c taem_exec.c \
+GUIDANCE_SOURCES := entry_alpha.c entry_drag_reference.c entry_energy_control.c entry_lateral.c entry_exec.c taem_exec.c \
 	guidance_common.c guidance_core.c guidance_entry.c guidance_taem.c guidance_final.c \
 	guidance_terminal.c guidance.c taem_frames_energy.c taem_geometry.c terminal_model.c \
 	terminal_propagator.c taem_reachability.c taem_tracker.c taem_planner.c terminal_solver.c \
