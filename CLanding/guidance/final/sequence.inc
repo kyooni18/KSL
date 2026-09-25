@@ -322,7 +322,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            seven seconds to reduce sink from 32 m/s to below 8 m/s. */
         double glide_sink=fmax(S_FLOAT,-V*sin(gref));
         double response_height=terminal_pull_lead_height(glide_sink,-vs_lead);
-        double hf=fmax(0.0,height-H_FLOAT),kx=KP("KP_FK",.09);
+        double hf=fmax(0.0,height-H_FLOAT),kx=KP("KP_FK",.14);
         double g_prof=terminal_sink_profile_fpa(height,V,H_FLOAT,S_FLOAT,a_arr,kx);
         double future_height=fmax(0.0,height-response_height);
         double future_along=along+Vh*terminal_pull_response_seconds();
