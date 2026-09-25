@@ -113,6 +113,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double ARREST_ACCEL=.35*g0;
     const double SINK_HEIGHT_RATE=.14;
     const double TOUCHDOWN_PITCH=8.0;
+    const double TOUCHDOWN_ATTITUDE_START=20.0;
 
     double height=t->mean_altitude-site->altitude;
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&terminal_runway_contact_position(t,cfg))
@@ -208,11 +209,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         g->terminal_lift_ratio;
     double aoa=clampd(terminal_aoa_for_lift(g,t,v,fmax(0.0,lift_required),aoa_max),
         0.0,aoa_max);
-    /* Carry a clear mains-first body attitude through wheel capture.  The STS-N
-       main-gear/body-flap geometry leaves a large tail-strike margin at eight
-       degrees, while giving the nose gear visibly more clearance than 5 deg.
-       Start this at the 15 m touchdown-flare boundary. */
-    if(flaring&&height<=15.0){
+    /* Carry the proven 8 deg mains-first attitude, but begin it early enough
+       for the existing 1.5 deg/s flare slew limiter to establish that attitude
+       before contact.  Live k108 entered the old 15 m floor too late and struck
+       with only about 1.3 deg body pitch. */
+    if(flaring&&height<=TOUCHDOWN_ATTITUDE_START){
         double touchdown_aoa=clampd(TOUCHDOWN_PITCH-t->flight_path_angle,0.0,aoa_max);
         aoa=fmax(aoa,touchdown_aoa);
     }
