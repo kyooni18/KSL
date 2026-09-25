@@ -116,7 +116,8 @@ terminal capture, final approach, preflare/flare, touchdown, and rollout.
 Guidance emits `GuidanceCommand` targets. For atmospheric profiles,
 `flight_control.c` closes the actuator loop using AoA/pitch state, physical body
 rates, adaptive control-authority estimates, rate/impulse guards, bank shaping,
-sideslip/yaw coordination, trim/integral logic, and RCS blending. SAS is kept
+sideslip/yaw coordination, and trim/integral logic. RCS is not used in
+atmospheric flight (mission constraint in `flight_control.c`). SAS is kept
 off for direct atmospheric control. Orbital pointing may use the kRPC
 AutoPilot before the atmospheric direct-control regime.
 

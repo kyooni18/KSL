@@ -12,6 +12,11 @@ const char *speed_mode_string(NavballSpeedMode s){static const char *v[]={"uncha
 const char *profile_string(ControlProfile p){static const char *v[]={"orbital","entry","taem","approach","flare","rollout","recovery"};return (unsigned)p<7?v[p]:v[0];}
 const char *cal_state_string(CalibrationRunState s){static const char *v[]={"Idle","Settling","Sampling","Complete","Stopped","Aborted"};return (unsigned)s<6?v[s]:v[0];}
 
+/* Built-in defaults.  These are the unit-test baseline; flights (live and
+   ShuttleSim) load Configuration/default.json, which currently differs in the
+   terminal geometry (final approach 3.2 km vs 8 km, final glide 28 vs 20 deg,
+   TAEM glide 24 vs 12 deg).  The TAEM native-stack fixture is built around the
+   values below; moving the tests onto the JSON configuration is open work. */
 LandingConfiguration landing_configuration_default(void){
     LandingConfiguration c;memset(&c,0,sizeof(c));
     copystr(c.connection.rpc_host,sizeof(c.connection.rpc_host),"127.0.0.1");c.connection.rpc_port=50000;
