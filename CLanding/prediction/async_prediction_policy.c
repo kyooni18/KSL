@@ -21,12 +21,6 @@ bool async_prediction_request_due(double latest_ut,double last_request_ut,double
         since_completion+1e-9>=async_prediction_cooldown_seconds(configured_interval,previous_solve_wall_seconds);
 }
 
-static bool same_optional_time(bool valid_a,double a,bool valid_b,double b){
-    if(valid_a!=valid_b)return false;
-    if(!valid_a)return true;
-    if(!isfinite(a)||!isfinite(b))return false;
-    return fabs(a-b)<=1e-6;
-}
 
 bool async_prediction_identity_equal(const AsyncPredictionIdentity *a,const AsyncPredictionIdentity *b){
     if(!a||!b)return false;
@@ -39,9 +33,7 @@ bool async_prediction_identity_equal(const AsyncPredictionIdentity *a,const Asyn
         a->terminal_path_committed==b->terminal_path_committed&&
         a->hac_side_selected==b->hac_side_selected&&
         a->hac_captured==b->hac_captured&&
-        a->final_approach_captured==b->final_approach_captured&&
-        same_optional_time(a->terminal_candidate_valid,a->terminal_candidate_selected_ut,
-            b->terminal_candidate_valid,b->terminal_candidate_selected_ut);
+        a->final_approach_captured==b->final_approach_captured;
 }
 
 bool async_prediction_result_fresh(const AsyncPredictionIdentity *request_identity,const AsyncPredictionIdentity *current_identity,double request_ut,double latest_ut,double configured_interval){

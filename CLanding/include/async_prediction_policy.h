@@ -11,8 +11,6 @@ typedef struct {
     uint64_t control_plan_sequence;
     uint64_t plan_id;
     uint64_t plan_version;
-    bool terminal_candidate_valid;
-    double terminal_candidate_selected_ut;
     int terminal_path_kind;
     bool terminal_path_committed;
     bool hac_side_selected;

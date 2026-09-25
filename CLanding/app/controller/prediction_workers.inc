@@ -1,3 +1,9 @@
+static double entry_supervision_horizon(const GuidanceSettings *settings){
+    if(!settings||!isfinite(settings->prediction_interval)||
+       settings->prediction_interval<=0.0)return 0.0;
+    return settings->prediction_interval;
+}
+
 static AsyncPredictionIdentity terminal_prediction_identity(const GuidanceMachine *g){
     AsyncPredictionIdentity id={0};
     if(!g)return id;
@@ -5,8 +11,6 @@ static AsyncPredictionIdentity terminal_prediction_identity(const GuidanceMachin
     id.taem_phase=(int)g->taem_exec.phase;
     id.taem_transition_count=g->taem_exec.transition_count;
     id.control_plan_sequence=g->control_plan_sequence;
-    id.terminal_candidate_valid=g->terminal_candidate.valid;
-    id.terminal_candidate_selected_ut=g->terminal_candidate.valid?g->terminal_candidate.selected_ut:NAN;
     id.terminal_path_kind=(int)g->terminal_path_kind;
     id.terminal_path_committed=g->terminal_path_committed;
     id.hac_side_selected=g->hac_side_selected;
@@ -55,6 +59,7 @@ static void *terminal_prediction_worker(void *arg){
         AerodynamicEnvelope envelope={0};
         VesselPhysicsModel physics={0};
         TrajectoryCalibrationModel calibration={0};
+        TerminalModel terminal_model={0};bool terminal_model_valid=false;
         GuidanceMachine guidance={0},entry_request={0};
         bool entry_job=false,entry_planning_job=false;uint64_t generation=0;
         DeorbitPlan plan;memset(&plan,0,sizeof(plan));trajectory_init(&plan.trajectory);
@@ -94,6 +99,7 @@ static void *terminal_prediction_worker(void *arg){
                 physics=c->physics;
                 calibration=c->trajectory_calibration;
                 calibration.physics=&physics;
+                if(c->terminal_model_valid){terminal_model=c->terminal_model;terminal_model_valid=true;}
                 guidance=c->guidance;
                 entry_request=guidance;
                 entry_request.previous_ut=telemetry.ut;
@@ -123,74 +129,49 @@ static void *terminal_prediction_worker(void *arg){
                 request_ut,entry_job,entry_planning_job,telemetry.mean_altitude,
                 telemetry.true_air_speed,(unsigned long long)entry_request.control_plan_sequence);
         EntryPrediction pr;
-        bool had_entry_topology=guidance.entry_topology.valid;
         if(entry_job){
-            /* Search and replay own only this immutable snapshot, outside the
-               controller mutex. Live guidance keeps running fresh safety laws. */
+            /* Forecasting owns no control state. Recompute one command from this
+               immutable measured snapshot, then replay the same closed-loop law for
+               one prediction interval. */
             guidance.entry_planning_deferred=false;
-            if(!isfinite(guidance.entry_s_turn_plan.cost)||
-               (guidance.entry_lateral_infeasible&&!guidance.entry_reversal_scheduled))
-                guidance.entry_control_plan_valid=false; /* initial fallback needs a real topology now */
             guidance.diagnostic_shadow=true;
             GuidanceResult proposal=guidance_update(&guidance,&telemetry,&state,
                 has_plan?&plan:NULL,&planet,aero,&cfg);
             guidance_result_clear(&proposal);
-            bool topology_search_needed=entry_topology_search_needed(&guidance);
-            if(topology_search_needed){
-                /* First let the bounded entry planner try the live state. If it
-                   cannot propagate a reversal, search the complete two-event
-                   route against the same published interface before accepting
-                   a provisional same-side bank command. */
-                double worker_course=isfinite(telemetry.ground_track_heading)?
-                    telemetry.ground_track_heading:telemetry.heading;
-                entry_publish_taem_tangent_target(&guidance,&telemetry,worker_course,&planet,aero,&cfg);
-                EntryTopologyPlan topology=predictor_plan_entry_topology(state,&telemetry,&guidance,&planet,
-                    &envelope,&calibration,&cfg);
-                if(topology.valid&&guidance_install_entry_topology(&guidance,&topology,telemetry.ut)){
-                    GuidanceResult topology_proposal=guidance_update(&guidance,&telemetry,&state,
-                        has_plan?&plan:NULL,&planet,aero,&cfg);
-                    guidance_result_clear(&topology_proposal);
-                }
-            }
+            double proposal_finished=monotonic_seconds();
+            if(getenv("KSP_LANDER_ENTRY_WORKER_TRACE"))
+                fprintf(stderr,"ENTRY_WORKER stage proposal wall=%.3f\n",
+                    proposal_finished-solve_started);
+
             guidance.entry_planning_deferred=true;
-            pr=predictor_simulate_entry_guidance_shadow(state,&telemetry,&guidance,
-                has_plan?&plan:NULL,&planet,aero,&envelope,&calibration,&cfg,500,true);
+            double supervision_horizon=entry_supervision_horizon(&cfg.guidance);
+            const TerminalModel*supervision_terminal_model=
+                terminal_model_valid?&terminal_model:NULL;
+            pr=predictor_simulate_entry_guidance_shadow_with_terminal_model(state,&telemetry,&guidance,
+                has_plan?&plan:NULL,&planet,aero,&envelope,&calibration,&cfg,
+                supervision_terminal_model,supervision_horizon,false);
+            if(getenv("KSP_LANDER_ENTRY_WORKER_TRACE"))
+                fprintf(stderr,"ENTRY_WORKER stage supervision wall=%.3f horizon=%.3f terminal=%d\n",
+                    monotonic_seconds()-proposal_finished,supervision_horizon,
+                    supervision_terminal_model?1:0);
+
             guidance.entry_s_turn_plan.terminal_ready=pr.reached_taem&&
-                pr.taem_dynamic_interface_captured&&pr.taem_terminal_candidate_geometry_clean&&
-                pr.shadow_terminal_policy_feasible;
-            guidance.entry_committed_infeasible=pr.shadow_guidance_used&&
-                pr.taem_ownership_boundary_missed&&pr.final_state.ut<=
-                guidance.entry_s_turn_plan.planned_ut+guidance.entry_s_turn_plan.segment_duration;
+                pr.taem_dynamic_interface_captured&&pr.shadow_terminal_policy_feasible;
+            guidance.entry_committed_infeasible=pr.taem_ownership_boundary_missed;
             guidance.entry_supervision_valid=pr.shadow_guidance_used&&!pr.shadow_aborted&&
                 pr.peak_dynamic_pressure<=cfg.vehicle.maximum_dynamic_pressure&&
-                pr.peak_g_load<=cfg.vehicle.maximum_g_load&&
-                !(pr.taem_ownership_boundary_missed&&pr.final_state.ut<=
-                  guidance.entry_s_turn_plan.planned_ut+guidance.entry_s_turn_plan.segment_duration);
-            guidance.entry_s_turn_plan.terminal_ready&=guidance.entry_supervision_valid;
-            guidance.entry_s_turn_plan.closest_distance=pr.closest_distance;
-            guidance.entry_s_turn_plan.taem_range_error=pr.reached_taem?pr.taem_range_error:NAN;
-            guidance.entry_s_turn_plan.taem_speed=pr.reached_taem?pr.taem_speed:NAN;
-            guidance.entry_s_turn_plan.taem_energy_error=pr.reached_taem?pr.taem_energy_error:NAN;
-            guidance.entry_s_turn_plan.predicted_reversals=pr.s_turn_reversals;
+                pr.peak_g_load<=cfg.vehicle.maximum_g_load;
+            guidance.entry_supervision_ut=request_ut;
             guidance.entry_supervision_boundary_missed=pr.taem_ownership_boundary_missed;
             guidance.entry_supervision_mode=guidance.entry_supervision_valid?
                 ENTRY_SUPERVISION_PASS_THROUGH:ENTRY_SUPERVISION_INFEASIBLE;
-            /* A new complete topology must survive the executable policy,
-             * not merely the fast candidate propagator. Existing committed
-             * plans retain their deadline; only first installation is gated. */
-            if(guidance.entry_topology.valid&&!had_entry_topology&&
-               (!pr.reached_taem||!pr.taem_dynamic_interface_captured||pr.shadow_aborted)){
-                guidance.entry_s_turn_plan.valid=false;
-                fprintf(stderr,"Entry topology withheld: executable shadow reached %d captured %d aborted %d missed %d.\n",
-                    pr.reached_taem,pr.taem_dynamic_interface_captured,pr.shadow_aborted,pr.taem_ownership_boundary_missed);
-            }
         }else pr=predictor_simulate_terminal_shadow_ensemble(state,&telemetry,&guidance,
-            has_plan?&plan:NULL,&planet,aero,&envelope,&calibration,&cfg,600,true);
+            has_plan?&plan:NULL,&planet,aero,&envelope,&calibration,&cfg,
+            terminal_model_valid?&terminal_model:NULL,600,true);
         double solve_finished=monotonic_seconds();
         if(getenv("KSP_LANDER_ENTRY_WORKER_TRACE"))
-            fprintf(stderr,"ENTRY_WORKER finish ut=%.3f wall=%.3f topology=%d capture_ut=%.3f reached=%d captured=%d aborted=%d final_ut=%.3f\n",
-                request_ut,solve_finished-solve_started,guidance.entry_topology.valid,
-                guidance.entry_topology.capture_ut,pr.reached_taem,
+            fprintf(stderr,"ENTRY_WORKER finish ut=%.3f wall=%.3f reached=%d captured=%d aborted=%d final_ut=%.3f\n",
+                request_ut,solve_finished-solve_started,pr.reached_taem,
                 pr.taem_dynamic_interface_captured,pr.shadow_aborted,pr.final_state.ut);
         deorbit_plan_clear(&plan);
 
@@ -223,15 +204,12 @@ static void *terminal_prediction_worker(void *arg){
             memcmp(&c->guidance.taem_interface_target,&entry_request.taem_interface_target,
                 sizeof(c->guidance.taem_interface_target))==0;
         if(entry_result_current){
-            bool tangent_forecast=entry_request.entry_final_reversal_pending||
-                entry_request.entry_final_reversal_completed;
-            bool adopted=!tangent_forecast&&guidance_accept_entry_plan(&c->guidance,&entry_request,&guidance,
+            bool adopted=guidance_accept_entry_plan(&c->guidance,&entry_request,&guidance,
                 &c->latest_telemetry,&cfg);
             if(getenv("KSP_LANDER_ENTRY_WORKER_TRACE"))
-                fprintf(stderr,"ENTRY_WORKER adoption request_ut=%.3f live_ut=%.3f adopted=%d topology=%d final_pending=%d\n",
-                    request_ut,c->latest_telemetry.ut,adopted,c->guidance.entry_topology.valid,
-                    c->guidance.entry_final_reversal_pending);
-            if((adopted||tangent_forecast)&&request_ut>c->cached_prediction_ut){
+                fprintf(stderr,"ENTRY_WORKER adoption request_ut=%.3f live_ut=%.3f adopted=%d\n",
+                    request_ut,c->latest_telemetry.ut,adopted);
+            if(adopted&&request_ut>c->cached_prediction_ut){
                 terminal_prediction_commit(c,&pr,request_ut,sign);
                 const EntryControlPlan*live_plan=current_entry_control_plan(c);
                 c->forecast_entry_plan_identity_valid=live_plan&&live_plan->valid&&live_plan->plan_id!=0;
@@ -253,8 +231,12 @@ static void start_prediction_worker(LandingController *c){
         c->last_terminal_prediction_request_ut=c->last_terminal_prediction_completion_ut=-1e300;
         c->last_terminal_prediction_completion_wall=-1e300;
         c->last_terminal_prediction_solve_wall=0.0;
-        if(pthread_create(&c->prediction_thread,NULL,terminal_prediction_worker,c)==0)
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
+        if(pthread_create(&c->prediction_thread,&attr,terminal_prediction_worker,c)==0)
             c->prediction_thread_started=true;
+        pthread_attr_destroy(&attr);
     }
     pthread_mutex_unlock(&c->mutex);
 }
