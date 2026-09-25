@@ -410,17 +410,6 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             if (!guidance_mm305_accept_plan(g,&result,cfg))
                 g->mm305_planning_needed=false;
         }
-    } else if (g->mm305_async_planning && !g->mm305_planning_needed &&
-               t->ut-g->mm305_last_plan_attempt_ut>=replan_interval_s) {
-        /* Periodic replan from the measured state with the live force scale:
-           the only energy lever left once bank and AoA are spent on path
-           tracking is the route itself.  Not on the last HAC segment. */
-        double remaining=taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor);
-        if (isfinite(remaining) && remaining>fmax(8000.0,0.35*g->mm305_route.hac.arc_length_m)) {
-            g->mm305_planning_needed=true;
-            g->mm305_last_plan_attempt_ut=t->ut;
-            g->mm305_plan_request_ut=t->ut;
-        }
     }
 
     int end=g->mm305_route_committed&&g->runway_end_index==1?1:
@@ -470,6 +459,24 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             g->mm305_planning_needed=true;
             g->mm305_last_plan_attempt_ut=t->ut;
             g->mm305_plan_request_ut=t->ut;
+        }
+        /* Replan only when tracking degrades.  Periodic replanning adopted a
+           different route every interval (the energy lever picks new lengths)
+           and each switch kicked the tracker, producing bank/incidence spikes
+           worse than the error it removed. */
+        if (g->mm305_route_committed && g->mm305_async_planning &&
+            !g->mm305_planning_needed &&
+            t->ut-g->mm305_last_plan_attempt_ut>=replan_interval_s &&
+            (fabs(demand.cross_track_error_m)>1000.0 ||
+             fabs(demand.course_error_deg)>20.0 ||
+             (isfinite(reference.flight_path_angle_deg) &&
+              fabs(geometry.flight_path_angle_deg-reference.flight_path_angle_deg)>6.0))) {
+            double remaining=taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor);
+            if (isfinite(remaining) && remaining>fmax(8000.0,0.35*g->mm305_route.hac.arc_length_m)) {
+                g->mm305_planning_needed=true;
+                g->mm305_last_plan_attempt_ut=t->ut;
+                g->mm305_plan_request_ut=t->ut;
+            }
         }
         double exit_distance=hypot(geometry.runway_along_m-g->mm305_route.hac.exit.x,
             geometry.runway_cross_m-g->mm305_route.hac.exit.y);
