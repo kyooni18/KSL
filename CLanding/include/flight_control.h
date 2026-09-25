@@ -158,9 +158,11 @@ typedef struct {
     bool rcs_transonic_cutoff;
     ControlProfile last_profile;
     bool has_last_profile;
-    /* Latched on the first real main-wheel contact. Pitch authority is
-       permanently neutral after this point for the remainder of the flight. */
+    /* Latched on the first real main-wheel contact. Pitch is guided through
+       derotation until nose gear contact, then permanently released. */
     bool main_gear_contact_latched;
+    bool nose_gear_contact_latched;
+    double main_gear_contact_ut;
 } FlightControlState;
 
 void flight_control_init(FlightControlState *state, double nominal_dt);

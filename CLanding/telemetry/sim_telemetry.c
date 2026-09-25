@@ -426,6 +426,10 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     bool on_ground = bool_value(&doc, ground, "on_ground", false);
     snprintf(t->vessel_situation, sizeof(t->vessel_situation), "%s",
              on_ground ? "landed" : "flying");
+    t->has_main_gear_grounded = true;
+    t->main_gear_grounded = on_ground;
+    t->has_nose_gear_grounded = true;
+    t->nose_gear_grounded = on_ground && (t->pitch <= 0.5);
 
     t->runway_along_track = number_value(&doc, runway, "along_m", 0.0);
     t->runway_cross_track = number_value(&doc, runway, "cross_m", 0.0);

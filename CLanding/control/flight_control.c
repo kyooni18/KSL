@@ -308,6 +308,50 @@ static double fc_pitch_accel_for_profile(double reported,double cap,
     return fmin(used,flare_cap);
 }
 
+static void fc_schedule_bandwidth(double q, double mach, ControlProfile profile,
+                                  double base_pitch_wn, double base_roll_wn,
+                                  double *pitch_wn_out, double *roll_wn_out,
+                                  double *roll_scale_out) {
+    /* Dynamic pressure factor:
+       Low q (< 1 kPa) reduces bandwidth demand to prevent actuator saturation.
+       Nominal q (8 kPa to 35 kPa) gives full baseline response.
+       Very high q (> 35 kPa) eases off slightly to prevent aero surface chatter. */
+    double f_q = 0.70 + 0.30 * fc_clamp(q / 8000.0, 0.0, 1.0);
+    if (q > 35000.0) {
+        f_q *= fmax(0.85, 1.0 - 0.15 * ((q - 35000.0) / 15000.0));
+    }
+
+    /* Mach scheduling:
+       Supersonic (Mach 1.2 to 5.0) pitch boost compensates for aft center-of-pressure shift
+       and higher aerodynamic stiffness against trim.
+       Hypersonic roll bandwidth is moderated to reduce inertial/kinematic cross-coupling. */
+    double pitch_mach = 1.0;
+    if (mach > 1.2 && mach < 5.0) {
+        pitch_mach = 1.20;
+    } else if (mach >= 5.0) {
+        pitch_mach = 1.05;
+    }
+
+    double roll_mach = 1.0;
+    if (mach > 2.5) {
+        roll_mach = 0.85;
+    }
+
+    /* Approach and Flare boost for sharp flare response */
+    double pitch_profile = 1.0;
+    if (profile == PROFILE_APPROACH || profile == PROFILE_FLARE) {
+        pitch_profile = 1.10;
+    }
+
+    double p_wn = base_pitch_wn * f_q * pitch_mach * pitch_profile;
+    double r_wn = base_roll_wn * f_q * roll_mach;
+    double r_scale = f_q * roll_mach;
+
+    if (pitch_wn_out) *pitch_wn_out = p_wn;
+    if (roll_wn_out) *roll_wn_out = r_wn;
+    if (roll_scale_out) *roll_scale_out = r_scale;
+}
+
 bool flight_control_step(FlightControlState *state,
                          const Telemetry *telemetry,
                          const GuidanceCommand *command,
@@ -340,8 +384,19 @@ bool flight_control_step(FlightControlState *state,
     if (state->has_sample && isfinite(telemetry->ut) && telemetry->ut < state->last_ut) {
         flight_control_reset_transients(state);
     }
-    if (telemetry->has_main_gear_grounded && telemetry->main_gear_grounded)
-        state->main_gear_contact_latched = true;
+    if (telemetry->has_main_gear_grounded && telemetry->main_gear_grounded) {
+        if (!state->main_gear_contact_latched) {
+            state->main_gear_contact_latched = true;
+            state->main_gear_contact_ut = telemetry->ut;
+        }
+    }
+    if (state->main_gear_contact_latched) {
+        bool nose_contact = (telemetry->has_nose_gear_grounded && telemetry->nose_gear_grounded) ||
+                            (telemetry->pitch <= 0.5);
+        if (nose_contact) {
+            state->nose_gear_contact_latched = true;
+        }
+    }
     if (!(measured_dt > 0.0) && state->has_sample && isfinite(telemetry->ut))
         measured_dt = telemetry->ut - state->last_ut;
     double control_dt = measured_dt > 0.0 ? measured_dt : state->nominal_dt;
@@ -434,7 +489,6 @@ bool flight_control_step(FlightControlState *state,
             measured_dt,0.0);
     }
 
-
     /* Airborne pitch guidance is an AoA loop.  Once the mains are down, control
        actual body pitch instead: ground/suspension motion makes AoA the wrong
        state and was causing the rollout pitch controller to chase wheel bounce. */
@@ -512,85 +566,126 @@ bool flight_control_step(FlightControlState *state,
        observer's zero-input acceleration here: AoA/bank acceleration includes
        flight-path and kinematic motion, so treating it as actuator bias can cancel
        nearly the entire control command. */
-    /* Keep the stable proportional dynamics through both Approach and Flare.
-       The remaining live error is a persistent aerodynamic trim bias, not a need
-       for globally higher bandwidth.  A slow bounded trim below the final-approach
-       altitude supplies the sustained pull without a phase-boundary gain jump. */
     const double pitch_accel_max=tuning->pitch_accel_max;
     const double pitch_lag_s=tuning->pitch_lag_s;
     const double pitch_wn=tuning->pitch_wn;
     const double pitch_zeta=tuning->pitch_zeta;
-    double pitch_auth_used=fc_pitch_accel_for_profile(
-        pitch_authority,pitch_accel_max,profile,telemetry->radar_altitude);
-    double pitch_wn_used=rollout_pitch_hold?0.55:pitch_wn;
-    double pitch_zeta_used=rollout_pitch_hold?1.45:pitch_zeta;
-    double pitch_command=fc_capped_pd_command(pitch_error,effective_pitch_rate,
-        state->target_pitch_rate,pitch_auth_used,pitch_wn_used,pitch_zeta_used,pitch_lag_s,
-        state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
-
-    bool final_pitch_trim=!state->main_gear_contact_latched&&
-        (profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
-        isfinite(telemetry->radar_altitude)&&telemetry->radar_altitude<700.0;
-    if(final_pitch_trim){
-        const double ki=tuning->pitch_trim_ki;
-        if(fabs(pitch_error)>0.35)
-            state->pitch_trim=fc_clamp(state->pitch_trim+ki*pitch_error*control_dt,
-                -0.15,0.42);
-        else
-            state->pitch_trim*=fmax(0.0,1.0-0.5*control_dt);
-    }else{
-        state->pitch_trim*=fmax(0.0,1.0-control_dt);
-    }
-    state->terminal_pitch_integral=state->pitch_trim;
-    pitch_command=fc_clamp(pitch_command+state->pitch_trim,-1.0,1.0);
-    if (rollout_profile) {
-        if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.30,0.30);
-        else pitch_command=0.0;
-    }
-    if (state->main_gear_contact_latched) {
-        /* Exact post-mains contract: the first real rear/main-wheel contact
-           permanently releases pitch for this flight.  Do not hold attitude,
-           derotate, trim, or resume AoA control if the gear bounces. */
-        state->pitch_trim=0.0;
-        state->terminal_pitch_integral=0.0;
-        state->has_last_target_pitch=false;
-        state->target_pitch_rate=0.0;
-        state->last_control[FLIGHT_CONTROL_AXIS_PITCH]=0.0;
-        pitch_command=0.0;
-    }
-    (void)pitch_guard_known;
-
-    double commanded_roll_rate=state->target_roll_rate;
-    double relative_rate=effective_roll_rate-commanded_roll_rate;
-    /* Bank targets move slowly in Final.  Use the earlier body-rate signal and
-       a deliberately overdamped, low-bandwidth response so a centerline correction
-       cannot turn into a left-right roll limit cycle. */
     const double roll_lag_s=tuning->roll_lag_s;
     const double roll_wn=tuning->roll_wn;
     const double roll_zeta=tuning->roll_zeta;
-    double roll_command=fc_capped_pd_command(roll_error,effective_roll_rate,
-        commanded_roll_rate,roll_authority,roll_wn,roll_zeta,roll_lag_s,
+
+    double pitch_auth_used=fc_pitch_accel_for_profile(
+        pitch_authority,pitch_accel_max,profile,telemetry->radar_altitude);
+
+    double pitch_wn_used = pitch_wn;
+    double roll_wn_used = roll_wn;
+    double roll_bandwidth_scale = 1.0;
+    if (rollout_pitch_hold) {
+        pitch_wn_used = 0.55;
+    } else {
+        fc_schedule_bandwidth(q, telemetry->mach, profile, pitch_wn, roll_wn,
+                              &pitch_wn_used, &roll_wn_used, &roll_bandwidth_scale);
+    }
+    double pitch_zeta_used = rollout_pitch_hold ? 1.45 : pitch_zeta;
+    double pitch_command = fc_capped_pd_command(pitch_error, effective_pitch_rate,
+        state->target_pitch_rate, pitch_auth_used, pitch_wn_used, pitch_zeta_used, pitch_lag_s,
+        state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
+
+    /* Regime-wide pitch trim integrator with anti-windup:
+       Direct-control plants have natural aerodynamic trim (e.g. 6 deg AoA) that creates
+       persistent steady-state offsets when holding high AoA across Entry/TAEM or Approach.
+       The integrator runs in active atmospheric flight before main gear contact. */
+    bool trim_active = !state->main_gear_contact_latched &&
+                       fc_atmospheric_profile(profile) &&
+                       q > 100.0;
+    if (trim_active) {
+        bool in_approach = (profile == PROFILE_APPROACH || profile == PROFILE_FLARE) &&
+                           isfinite(telemetry->radar_altitude) && telemetry->radar_altitude < 700.0;
+        double ki = in_approach ? tuning->pitch_trim_ki : 0.008;
+
+        /* Anti-windup: freeze integration when actuator is saturated in the error direction */
+        bool saturated_high = (pitch_command >= 1.0 && pitch_error > 0.0);
+        bool saturated_low = (pitch_command <= -1.0 && pitch_error < 0.0);
+
+        if (!saturated_high && !saturated_low) {
+            if (fabs(pitch_error) > 0.20) {
+                state->pitch_trim += ki * pitch_error * control_dt;
+            }
+        }
+        double trim_min = in_approach ? -0.18 : -0.35;
+        double trim_max = in_approach ? 0.42 : 0.50;
+        state->pitch_trim = fc_clamp(state->pitch_trim, trim_min, trim_max);
+    } else {
+        state->pitch_trim *= fmax(0.0, 1.0 - control_dt);
+    }
+    state->terminal_pitch_integral = state->pitch_trim;
+    pitch_command = fc_clamp(pitch_command + state->pitch_trim, -1.0, 1.0);
+
+    if (state->nose_gear_contact_latched) {
+        /* Permanent release: both main and nose gear are on the deck. */
+        state->pitch_trim = 0.0;
+        state->terminal_pitch_integral = 0.0;
+        state->has_last_target_pitch = false;
+        state->target_pitch_rate = 0.0;
+        state->last_control[FLIGHT_CONTROL_AXIS_PITCH] = 0.0;
+        pitch_command = 0.0;
+    } else if (state->main_gear_contact_latched) {
+        /* Main gear contact established, nose in air: active derotation.
+           Trim is zeroed to prevent integrator bias during ground contact,
+           while derotation pitch target is tracked with limited authority. */
+        state->pitch_trim = 0.0;
+        state->terminal_pitch_integral = 0.0;
+        if (rollout_pitch_hold) {
+            pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
+        } else {
+            pitch_command = 0.0;
+        }
+    } else if (rollout_profile) {
+        if (rollout_pitch_hold) pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
+        else pitch_command = 0.0;
+    }
+    (void)pitch_guard_known;
+
+    double commanded_roll_rate = state->target_roll_rate;
+    double relative_rate = effective_roll_rate - commanded_roll_rate;
+    double roll_command = fc_capped_pd_command(roll_error, effective_roll_rate,
+        commanded_roll_rate, roll_authority, roll_wn_used, roll_zeta, roll_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
     (void)roll_guard_known;
 
     double heading_error = 0.0;
     /* Positive yaw closes positive sideslip in the validated atmospheric model. */
     double yaw_error = sideslip;
+    double target_yaw_rate = 0.0;
+    double u_coord = 0.0;
+
     if (command->heading_control_enabled) {
         heading_error =
-            fc_signed_angle(fc_finite(command->target_heading, 0.0)-heading);
-        /* The pre-a397723 sign is the one validated live: k109 stayed within
-           roughly 89.9-90.4 deg.  Inverting this error drove k110 monotonically
-           right to about 105 deg and off the runway. */
+            fc_signed_angle(fc_finite(command->target_heading, 0.0) - heading);
         yaw_error = heading_error;
+    } else if (fc_atmospheric_profile(profile) && q > 200.0 && telemetry->true_air_speed > 30.0) {
+        /* Turn-coordination feed-forward:
+           In banked turns, coordinated steady turn rate is r_coord = (g / V) * sin(bank).
+           Kinematic cross-coupling from roll rate at angle of attack: r_ARI = roll_rate * sin(AoA). */
+        double rad_roll = roll * DEG2RAD;
+        double rad_aoa = aoa * DEG2RAD;
+        double speed = fmax(telemetry->true_air_speed, 30.0);
+        double r_coord = (9.80665 / speed) * sin(rad_roll) * RAD2DEG;
+        double r_ari = observed_roll_rate * sin(rad_aoa);
+        target_yaw_rate = fc_clamp(r_coord + r_ari, -15.0, 15.0);
+
+        /* Rudder aerodynamic coordination feed-forward */
+        u_coord = 0.08 * fc_clamp(q / 3000.0, 0.0, 1.0) * sin(rad_roll);
     }
-    const double yaw_accel_max=tuning->yaw_accel_max;
-    const double yaw_wn=tuning->yaw_wn;
-    if(!(yaw_authority>DBL_EPSILON)||yaw_authority>yaw_accel_max)yaw_authority=yaw_accel_max;
-    double yaw_rate=command->heading_control_enabled&&isfinite(telemetry->heading_rate)?
-        telemetry->heading_rate:observed_yaw_rate;
-    double yaw_command=fc_capped_pd_command(yaw_error,yaw_rate,0.0,yaw_authority,
-        yaw_wn,1.0,.20,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
+
+    const double yaw_accel_max = tuning->yaw_accel_max;
+    const double yaw_wn = tuning->yaw_wn;
+    if (!(yaw_authority > DBL_EPSILON) || yaw_authority > yaw_accel_max) yaw_authority = yaw_accel_max;
+    double yaw_rate = command->heading_control_enabled && isfinite(telemetry->heading_rate)
+        ? telemetry->heading_rate : observed_yaw_rate;
+    double yaw_command = fc_capped_pd_command(yaw_error, yaw_rate, target_yaw_rate, yaw_authority,
+        yaw_wn, 1.0, 0.20, state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
+    yaw_command = fc_clamp(yaw_command + u_coord, -1.0, 1.0);
 
     /* Mission constraint: RCS is not used during atmospheric guidance. */
     double rcs_assist = 0.0;
@@ -632,9 +727,9 @@ bool flight_control_step(FlightControlState *state,
     d->body_yaw_rate = body_yaw_rate_valid ? telemetry->body_yaw_rate : 0.0;
     d->body_yaw_rate_available = body_yaw_rate_valid;
     d->flight_path_angle = flight_path_angle;
-    d->pitch_trim = 0.0;
-    d->steady_pitch_trim = 0.0;
-    d->terminal_pitch_integral = 0.0;
+    d->pitch_trim = state->pitch_trim;
+    d->steady_pitch_trim = state->pitch_trim;
+    d->terminal_pitch_integral = state->terminal_pitch_integral;
     d->roll_trim = 0.0;
     d->pitch_authority = pitch_authority;
     d->pitch_raw_authority = raw_pitch_authority;
@@ -651,7 +746,7 @@ bool flight_control_step(FlightControlState *state,
     d->roll_command_limit = 1.0; /* decision-literal-ok: normalized actuator command domain */
     d->roll_hold_seconds = control_dt;
     d->roll_rate_impulse_budget = roll_authority*control_dt;
-    d->roll_bandwidth_scale = 1.0;
+    d->roll_bandwidth_scale = roll_bandwidth_scale;
     d->yaw_authority = yaw_authority;
     d->yaw_aero_fraction = yaw_aero_fraction;
     d->beta_yaw_gain = state->beta.yaw_gain;

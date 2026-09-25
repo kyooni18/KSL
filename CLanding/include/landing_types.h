@@ -209,6 +209,7 @@ typedef struct {
     /* Live kRPC wheel-contact telemetry. `main_gear_grounded` is true when
        either rear/main gear reports ModuleWheelBase.isGrounded. */
     bool has_main_gear_grounded, main_gear_grounded;
+    bool has_nose_gear_grounded, nose_gear_grounded;
     char vessel_situation[64];
     double range_to_site, bearing_to_site, heading_error, runway_along_track, runway_cross_track, flight_path_angle;
     double estimated_lift_to_drag, estimated_ballistic_coefficient, aerodynamic_confidence;
