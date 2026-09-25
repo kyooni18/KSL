@@ -48,35 +48,6 @@ double predictor_directed_taem_range_error(double range,double closest_distance,
 }
 
 
-static double entry_topology_shadow_refresh_interval(const Telemetry*t,
-        const GuidanceMachine*g,const PlanetModel*p,
-        const LandingConfiguration*cfg);
-
-bool entry_topology_search_needed(const GuidanceMachine*g){
-    /* A geometry-only MM304 inlet is an acquisition preview, not a route that
-       can be certified or installed. In the upper atmosphere its instantaneous
-       turn radius can be tens of thousands of kilometres, which makes the full
-       two-event topology grid enormously expensive while every candidate is
-       guaranteed to remain non-owning. Keep flying the provisional MM304 law
-       and defer the propagated topology solve until the published inlet has a
-       structurally valid unpowered energy projection. */
-    if(!g||!g->taem_interface_target.valid||
-       !g->taem_interface_target.energy_qualified||
-       g->entry_topology.valid||g->entry_control_reversals||
-       (g->entry_reversal_scheduled&&g->entry_reversal_is_final)||
-       g->entry_final_reversal_pending||g->entry_final_reversal_completed)
-        return false;
-    bool fast_reversal_available=g->entry_reversal_scheduled||
-        (g->entry_s_turn_plan.valid&&
-         g->entry_s_turn_plan.has_planned_reversal&&
-         isfinite(g->entry_s_turn_plan.planned_reversal_ut));
-    /* A fast reversal is only a complete route when its own propagated plan is
-       terminal-ready. Otherwise the existing two-event topology planner may
-       replace an ordinary shaping reversal, never a committed final event. */
-    return !fast_reversal_available||!g->entry_s_turn_plan.terminal_ready;
-}
-
-
 static Vector3 burn_direction(Vector3 pos,Vector3 vel,double radial_error_deg,double normal_error_deg){
     Vector3 retro=vnorm(vscale(vel,-1),vnorm(vscale(pos,-1),v3(-1,0,0)));
     Vector3 normal=vnorm(vcross(pos,vel),v3(0,0,1));
@@ -168,12 +139,22 @@ double entry_taem_speed_target(const VehicleProfile*v,const GuidanceSettings*s,c
 double hac_acquisition_speed_target(const VehicleProfile*v,const GuidanceSettings*s,
         const PlanetModel*p){
     if(!v||!s||!p)return NAN;
-    double altitude=s->hac_acquisition_altitude;
+    /* MM304 should deliver MM305 with lateral-authority margin, not merely at
+       the first/high-energy point that satisfies the broad admission band.  Target
+       the configured low-energy edge of that band; this remains a native MM305-
+       admissible state and leaves room for the finite lead to tighten as the vehicle
+       decelerates. */
+    double altitude=fmax(s->hac_acquisition_altitude,s->mm305_min_altitude);
     TaemSpeedEnvelope envelope=decision_taem_speed_envelope(v,p,altitude);
     if(!envelope.valid)return fmax(v->minimum_safe_speed,v->final_approach_speed);
     double sound=planet_atmospheric_speed_of_sound(p,altitude);
+    double lower_mach=fmax(0.0,s->mm305_target_mach-s->mm305_mach_half_width);
+    /* Stay one topology capture-tolerance inside the lower boundary so the
+       wings-level settling interval does not immediately fall out of MM305's band. */
+    double target_mach=lower_mach/(1.0-.01);
+    target_mach=fmin(target_mach,s->mm305_target_mach);
     double nominal=isfinite(sound)&&sound>DBL_MIN?
-        sound*s->hac_acquisition_mach:envelope.maximum_speed_mps;
+        sound*target_mach:envelope.minimum_speed_mps;
     if(!envelope.feasible)return envelope.minimum_speed_mps;
     return clampd(nominal,envelope.minimum_speed_mps,envelope.maximum_speed_mps);
 }
@@ -243,7 +224,23 @@ static void predictor_attitude_step(PredictorGuidance*g,double target_bank,doubl
         g->actual_aoa_rate=clampd(g->actual_aoa_rate+ar_delta,-max_ar*1.25,max_ar*1.25);g->actual_aoa=clampd(g->actual_aoa+g->actual_aoa_rate*dt,-v->maximum_angle_of_attack*1.5,v->maximum_angle_of_attack*1.5);
     }
 }
-static double predictor_terminal_hac_radius(const AtmosState*a,const PlanetModel*p,const TrajectoryCalibrationModel*c,const VehicleProfile*v,const GuidanceSettings*set,double maxbank);
+static double predictor_entry_terminal_turn_reserve_radius(const AtmosState*a,
+        const PlanetModel*p,const TrajectoryCalibrationModel*c,
+        const VehicleProfile*v,const GuidanceSettings*set,double bank_limit_deg){
+    double reserve=set->hac_radius;
+    if(!a||!p||!c||!v||!set||!(a->speed>DBL_MIN)||!(bank_limit_deg>0.0))
+        return reserve;
+    double live_radius=turn_radius_for_bank(a,c,bank_limit_deg);
+    double design_speed=fmax(entry_taem_speed_target(v,set,p),
+        fmax(v->minimum_safe_speed,v->final_approach_speed));
+    if(isfinite(live_radius)&&live_radius>0.0&&isfinite(design_speed)&&design_speed>0.0){
+        double scale=design_speed/a->speed;
+        double authority_radius=live_radius*scale*scale;
+        if(isfinite(authority_radius)&&authority_radius>0.0)
+            reserve=fmax(reserve,authority_radius);
+    }
+    return reserve;
+}
 static double predictor_interface_heading(const PredictorGuidance*g,GeoPoint geo,const PlanetModel*p,
         const LandingSite*site,const GuidanceSettings*set,double fallback_bearing){
     if(!g||!g->has_interface_target||!g->interface_target.valid)return fallback_bearing;
@@ -284,7 +281,6 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     if(g->entry_speed<=0&&a->speed>100)g->entry_speed=a->speed;
     const TaemInterfaceTarget*delivery_target=g->has_interface_target&&g->interface_target.valid?
         &g->interface_target:NULL;
-    LandingConfiguration shaping_cfg={.site=*site,.vehicle=*v,.guidance=*set};
     double required_drag=entry_required_average_drag(geo,a->speed,range,p,v,site,set,delivery_target);
     double drag_ratio=required_drag>1e-6?a->drag_accel/required_drag:1.0;
     double drag_deficit=clampd(1.0-drag_ratio,0,1);
@@ -347,8 +343,11 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     double desired_range_altitude=entry_altitude_target_for_range(mission_entry_altitude,
         mission_entry_range,range,set->taem_interface_altitude,terminal_join_range);
     double predicted_fpa=atan2(vdot(air,up),fmax(DBL_MIN,vmag(hv)))*RAD2DEG;
-    double physical_terminal_radius=predictor_terminal_hac_radius(a,p,c,v,set,shared_bank_limit);
-    if(!isfinite(physical_terminal_radius))physical_terminal_radius=set->hac_radius;
+    /* MM304 only needs a conservative width for reversal timing.  Reserve one
+       physically supportable terminal turn without selecting or tracking a HAC;
+       native MM305 owns that search after the handoff. */
+    double physical_terminal_radius=predictor_entry_terminal_turn_reserve_radius(
+        a,p,c,v,set,shared_bank_limit);
     double near_corridor=atan2(2.0*physical_terminal_radius,
         fmax(mission_entry_range,DBL_MIN))*RAD2DEG;
     double far_corridor=fmax(near_corridor,set->hac_look_ahead_angle);
@@ -449,27 +448,18 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
        fraction of the setup-side crossrange that live guidance requires, so replay and
        execution diverged by tens of seconds. Apply the same chord-aware setup contract
        here before exporting or replaying that event. */
-    Telemetry reversal_geometry={0};
-    runway_coordinates(geo,target,site->runway_heading,p->radius,
-        &reversal_geometry.runway_along_track,&reversal_geometry.runway_cross_track);
     double candidate_sign=fabs(g->sign)>.1?-g->sign:0.0;
-    bool shaping_ready=!delivery_target||entry_taem_shaping_crossrange_ready(delivery_target,
-        &reversal_geometry,p,&shaping_cfg,candidate_sign,NULL,NULL);
     bool shaping_endpoint_ready=!delivery_target||predictor_terminal_arc_ready(geo,course,p,site,
         delivery_target,candidate_sign);
-    /* Mirror live MM304's setup-leg release exactly.  A fixed perpendicular inlet
-       starts on the opposite setup side; once that measured side has built the
-       configured crossrange proof and the ordinary actuator dwell is satisfied,
-       the next sign is the inlet/final side.  The predictor previously required
-       an unrelated heading-corridor or terminal-energy deadline as well, so the
-       deorbit execution witness could fly the setup leg hundreds of kilometres
-       after live guidance would have reversed. */
+    /* Legacy fixed-tangent crossrange shaping is retired. If an old replay still
+       carries a delivery target, only the target arc's physical reachability may
+       delay a reversal; the live MM304 controller itself is measured-state only. */
     double target_relative=delivery_target?
         norm_signed_deg(delivery_target->course-site->runway_heading):NAN;
     double final_side=isfinite(target_relative)&&fabs(target_relative)>1e-6?
         (target_relative>=0.0?1.0:-1.0):0.0;
     bool live_setup_reversal_due=delivery_target&&candidate_sign!=0.0&&
-        final_side!=0.0&&candidate_sign*final_side>0.0&&shaping_ready;
+        final_side!=0.0&&candidate_sign*final_side>0.0&&shaping_endpoint_ready;
     /* Once the terminal deadline is active, keep building the current S-turn until
        the opposite-side arc can actually reach the precomputed tangent without a
        second bank reversal. The same rule now also protects an ordinary corridor
@@ -482,7 +472,7 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     double divergence_limit=fmax(30.0,2.0*heading_corridor);
     bool course_diverged=g->sign*he<-divergence_limit;
     bool held=false;
-    if(delivery_target&&measured_reversal_due&&!shaping_ready&&!shaping_endpoint_ready)
+    if(delivery_target&&measured_reversal_due&&!shaping_endpoint_ready)
         {measured_reversal_due=false;held=true;}
     if(delivery_target&&terminal_reversal_deadline&&!terminal_arc_ready)
         {measured_reversal_due=false;held=true;}
@@ -503,13 +493,9 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     bool event_due=g->replay_event&&s.ut>=g->replay_event_ut;
     bool replay_arc_ready=!delivery_target||
         predictor_terminal_arc_ready(geo,course,p,site,delivery_target,g->replay_event_sign);
-    bool replay_shaping_ready=!delivery_target||entry_taem_shaping_crossrange_ready(delivery_target,
-        &reversal_geometry,p,&shaping_cfg,g->replay_event_sign,NULL,NULL);
-    /* Final events require the actual tangent arc. Nonfinal committed events use the
-       same live OR-contract: sufficient setup crossrange or a directly reachable
-       endpoint may release the sign change. */
-    bool replay_geometry_ready=g->replay_event_final?replay_arc_ready:
-        (replay_shaping_ready||replay_arc_ready);
+    /* A replay event is executable only when its own arc is physically reachable.
+       No retired fixed-tangent setup-crossrange proof participates. */
+    bool replay_geometry_ready=replay_arc_ready;
     bool replay_due=event_due&&replay_geometry_ready;
     bool deadline_action=delivery_target?terminal_reversal_due:terminal_deadline_roll_ready;
     bool reverse_due=g->replay_event?replay_due:
@@ -519,10 +505,9 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     if(!g->final_heading_lock&&mag>=4&&reversal_dwell_ready&&reverse_due){
         double old_sign=g->sign;
         bool tangent_final_available=delivery_target!=NULL;
-        bool fallback_final_available=isfinite(predictor_terminal_hac_radius(a,p,c,v,set,maxbank));
         bool final_reversal=g->replay_event?
-            (g->replay_event_final&&(tangent_final_available||fallback_final_available)):
-            (terminal_reversal_due&&(tangent_final_available||fallback_final_available));
+            (g->replay_event_final&&tangent_final_available):
+            (terminal_reversal_due&&tangent_final_available);
         double event_sign;
         if(g->replay_event)event_sign=g->replay_event_sign;
         else if(final_reversal&&tangent_final_available){
@@ -569,18 +554,6 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
         targetbank=taem_course_rate_bank_command(a->speed,a->lift_accel,c->bank_effectiveness,
             env,course,bearing,response);
         if(targetbank*g->sign<0.0&&fabs(targetbank)>18.0)targetbank=-g->sign*18.0;
-    }else if(g->final_heading_lock){
-        /* Legacy no-interface recovery only. Nominal MM304 always has a tangent
-           target and therefore never previews or owns a HAC here. */
-        double hac_radius=predictor_terminal_hac_radius(a,p,c,v,set,maxbank);
-        if(isfinite(hac_radius)){
-            double side=g->sign>=0?1:-1;
-            HACGuidance h=hac_guidance_compute_radius(geo,a->speed,course,site,set,p->radius,side,grav,hac_radius);
-            double lateral=h.lateral_acceleration,eff=clampd(c->bank_effectiveness,.35,1.8);
-            double ratio=fabs(lateral)/fmax(a->lift_accel,.01);
-            targetbank=copysign(asin(clampd(ratio,0,sin(clampd(env*eff,0,89)*DEG2RAD)))/eff*RAD2DEG,lateral);
-            targetbank=clampd(targetbank,-env,env);
-        }else targetbank=g->sign*fmin(env,command_mag);
     }else targetbank=g->sign*fmin(env,command_mag);
     double limited=norm_signed_deg(jerk_angle_update(&g->limiter,targetbank,set->entry_roll_rate*rs,set->entry_roll_acceleration*as,dt));
     double predicted_g_force=a->non_gravity/fmax(planet_surface_gravity(p),.1);
@@ -652,267 +625,10 @@ static double predictor_step_size(const AtmosState*a,const PlanetModel*p,
     return fmax(numerical_floor,fmin(dt,base));
 }
 
-static bool predictor_terminal_hac_radius_bounds(const AtmosState*a,
-        const PlanetModel*p,const TrajectoryCalibrationModel*c,
-        const VehicleProfile*v,const GuidanceSettings*set,double maxbank,
-        double*minimum_out,double*maximum_out){
-    if(!a||!p||!c||!v||!set||!(a->speed>0.0))return false;
-
-    double usable_bank=bank_limit(a,p,v,maxbank);
-    if(!(usable_bank>0.0))return false;
-    double live_turn=turn_radius_for_bank(a,c,usable_bank);
-    if(!isfinite(live_turn)||!(live_turn>0.0))return false;
-
-    double design_speed=entry_taem_speed_target(v,set,p);
-    double minimum_speed=fmax(v->minimum_safe_speed,v->final_approach_speed);
-    design_speed=fmax(design_speed,minimum_speed);
-    if(!(design_speed>0.0))return false;
-
-    /*
-     * At unchanged aerodynamic state turn radius scales with V^2.  This is the
-     * only scaling needed here; the actual candidate must still pass the full
-     * maneuver-feasibility test below.
-     */
-    double scale=design_speed/a->speed;
-    double minimum_radius=live_turn*scale*scale;
-    double maximum_radius=p->radius; /* geometric limit of the local body */
-    if(!isfinite(minimum_radius)||!(minimum_radius>0.0)||
-       !isfinite(maximum_radius)||maximum_radius<minimum_radius)
-        return false;
-
-    if(minimum_out)*minimum_out=minimum_radius;
-    if(maximum_out)*maximum_out=maximum_radius;
-    return true;
-}
-
-static double predictor_terminal_hac_radius(const AtmosState*a,
-        const PlanetModel*p,const TrajectoryCalibrationModel*c,
-        const VehicleProfile*v,const GuidanceSettings*set,double maxbank){
-    double minimum_radius=0.0,maximum_radius=0.0;
-    if(!predictor_terminal_hac_radius_bounds(
-            a,p,c,v,set,maxbank,&minimum_radius,&maximum_radius))
-        return INFINITY;
-    /*
-     * Legacy callers need one representative radius only to keep a continuous
-     * path law alive.  The nominal configured radius is an objective, not a
-     * feasibility threshold; clamp it only to the physical authority interval.
-     */
-    return clampd(set->hac_radius,minimum_radius,maximum_radius);
-}
-
-static double predictor_hac_candidate_residual(const PredictorGuidance*g,
-        GeoPoint geo,const AtmosState*a,double course,const PlanetModel*p,
-        const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,
-        double hac_side,double hac_radius,double minimum_turn_radius,
-        double*path_out){
-    HACGuidance h=hac_guidance_compute_radius(
-        geo,a->speed,course,site,set,p->radius,hac_side,
-        planet_surface_gravity(p),hac_radius);
-    double path=0.0,slope=0.0;
-    double offset=fabs(norm_signed_deg(course-site->runway_heading));
-    bool maneuver=taem_alignment_maneuver_feasible(
-        geo.altitude,a->speed,hac_radius,minimum_turn_radius,
-        a->drag_accel,offset,p,site,v,set,&path,&slope);
-    if(path_out)*path_out=path;
-
-    double minimum_speed=fmax(v->minimum_safe_speed,v->final_approach_speed);
-    double target_speed=entry_taem_speed_target(v,set,p);
-    double remaining=g->hac_progress_valid?g->hac_remaining:h.arc_remaining;
-    double desired=h.desired_altitude+
-        (remaining-h.arc_remaining)*tan(set->taem_glide_slope*DEG2RAD);
-    double minimum_energy=entry_remaining_specific_energy(
-        geo.latitude,geo.altitude,a->speed,site->latitude,desired,
-        minimum_speed,p);
-
-    double radial_limit=fmax(500.0,fmin(5000.0,hac_radius*.30));
-    double radius_residual=fabs(h.radial_error)<=radial_limit?0.0:
-        (fabs(h.radial_error)-radial_limit)/fmax(hac_radius,DBL_MIN);
-    double course_residual=fabs(h.course_error)<=45.0?0.0:
-        (fabs(h.course_error)-45.0)/180.0;
-    double speed_residual=a->speed>=minimum_speed?0.0:
-        (minimum_speed-a->speed)/fmax(minimum_speed,DBL_MIN);
-    double energy_scale=fmax(
-        planet_surface_gravity(p)*fmax(geo.altitude-site->altitude,0.0),
-        .5*fmax(a->speed*a->speed,DBL_MIN));
-    double energy_residual=isfinite(minimum_energy)?
-        fmax(0.0,-minimum_energy)/fmax(energy_scale,DBL_MIN):INFINITY;
-    double maneuver_residual=maneuver?0.0:1.0;
-
-    (void)target_speed;(void)slope;
-    return fmax(radius_residual,
-        fmax(course_residual,
-            fmax(speed_residual,
-                fmax(energy_residual,maneuver_residual))));
-}
-
-static bool predictor_hac_ready(const PredictorGuidance*g,VehicleState state,
-        GeoPoint geo,const AtmosState*a,const PlanetModel*p,
-        const TrajectoryCalibrationModel*c,const VehicleProfile*v,
-        const LandingSite*site,const GuidanceSettings*set,double maxbank,
-        double hac_side,double*radius_out,double*score_out){
-    GeoPoint sp={site->latitude,site->longitude,site->altitude};
-    double course=surface_course(state.position,state.velocity,
-        planet_rotation_vector(p),p->north_axis,initial_bearing(geo,sp));
-
-    double minimum_radius=0.0,maximum_radius=0.0;
-    if(!predictor_terminal_hac_radius_bounds(
-            a,p,c,v,set,maxbank,&minimum_radius,&maximum_radius))
-        return false;
-    if(radius_out)*radius_out=INFINITY;
-    if(score_out)*score_out=INFINITY;
-
-    double minimum_speed=fmax(v->minimum_safe_speed,v->final_approach_speed);
-    if(a->speed<minimum_speed)return false;
-
-    double usable_bank=bank_limit(a,p,v,maxbank);
-    double minimum_turn=turn_radius_for_bank(a,c,usable_bank);
-    if(!isfinite(minimum_turn))return false;
-
-    bool found=false;
-    double best_radius=INFINITY,best_delivery=INFINITY;
-    const int samples=25; /* numerical resolution only */
-    double log_min=log(minimum_radius);
-    double log_max=log(maximum_radius);
-
-    for(int i=0;i<samples;i++){
-        double f=(double)i/(double)(samples-1);
-        double hac_radius=exp(log_min+(log_max-log_min)*f);
-        double path=0.0;
-        double residual=predictor_hac_candidate_residual(
-            g,geo,a,course,p,v,site,set,hac_side,hac_radius,
-            minimum_turn,&path);
-        bool ready=isfinite(residual)&&residual<=sqrt(DBL_EPSILON);
-        double delivery=isfinite(path)&&a->speed>DBL_MIN?
-            path/a->speed:INFINITY;
-        if(ready&&(!found||delivery<best_delivery)){
-            found=true;
-            best_radius=hac_radius;
-            best_delivery=delivery;
-        }
-
-        if(getenv("KSP_LANDER_TRACE_TAEM")&&i==samples-1){
-            fprintf(stderr,
-                "taem-hac feasibility: alt=%.0f speed=%.0f R=[%.0f,%.0f]km side=%+.0f best=%s residual=%.4f\n",
-                geo.altitude,a->speed,minimum_radius/1000.0,
-                maximum_radius/1000.0,hac_side,
-                found?"yes":"no",residual);
-        }
-    }
-
-    if(found){
-        if(radius_out)*radius_out=best_radius;
-        if(score_out)*score_out=best_delivery;
-    }
-    return found;
-}
-
-static double predictor_hac_soft_cost(const PredictorGuidance*g,
-        VehicleState state,GeoPoint geo,const AtmosState*a,
-        const PlanetModel*p,const TrajectoryCalibrationModel*c,
-        const VehicleProfile*v,const LandingSite*site,
-        const GuidanceSettings*set,double maxbank,double hac_side,
-        double hac_radius){
-    GeoPoint sp={site->latitude,site->longitude,site->altitude};
-    double course=surface_course(state.position,state.velocity,
-        planet_rotation_vector(p),p->north_axis,initial_bearing(geo,sp));
-    double usable_bank=bank_limit(a,p,v,maxbank);
-    double minimum_turn=turn_radius_for_bank(a,c,usable_bank);
-    if(!isfinite(minimum_turn))return INFINITY;
-    return predictor_hac_candidate_residual(
-        g,geo,a,course,p,v,site,set,hac_side,hac_radius,
-        minimum_turn,NULL);
-}
-
-static double post_taem_bank(PredictorGuidance*g,VehicleState state,GeoPoint geo,const AtmosState*a,const PlanetModel*p,const TrajectoryCalibrationModel*c,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double hac_side,double dt){
-    GeoPoint sp={site->latitude,site->longitude,site->altitude};
-    double course=surface_course(state.position,state.velocity,planet_rotation_vector(p),p->north_axis,initial_bearing(geo,sp));
-    double along=0,cross=0;runway_coordinates(geo,sp,site->runway_heading,p->radius,&along,&cross);
-    Vector3 up=vnorm(state.position,v3(0,1,0));
-    double vertical=vdot(a->air_velocity,up),horizontal=vmag(vproject_plane(a->air_velocity,up));
-    double fpa=atan2(vertical,fmax(horizontal,.1))*RAD2DEG,range=great_circle_distance(geo,sp,p->radius);
-    double gravity=planet_surface_gravity(p);
-    double hac_radius=g->hac_radius>0?g->hac_radius:set->hac_radius;
-    HACGuidance h=hac_guidance_compute_radius(geo,a->speed,course,site,set,p->radius,hac_side,gravity,hac_radius);
-
-    bool fresh_hac=!g->hac_progress_valid;
-    if(fresh_hac){
-        g->hac_remaining=h.arc_remaining;
-        g->hac_previous_angle=h.angle;
-        g->hac_progress_valid=fabs(h.radial_error)<=fmax(250,fmin(1500.0,hac_radius*.10))&&fabs(h.course_error)<24;
-    }else if(!g->hac_completed){
-        double progress=-hac_side*norm_signed_deg((h.angle-g->hac_previous_angle)*RAD2DEG)*DEG2RAD;
-        g->hac_remaining-=progress*hac_radius;
-        g->hac_previous_angle=h.angle;
-    }
-
-    g->hac_previous_angle=h.angle;
-    double station=-set->final_approach_distance;
-    double min_turn=turn_radius_for_bank(a,c,fmin(55.0,bank_limit(a,p,v,maxbank)));
-    bool approach=terminal_approach_valid(geo,range,along,cross,course,a->speed,horizontal,vertical,fpa,site,v,set);
-    double slope=set->taem_glide_slope;
-    double desired_altitude=site->altitude+set->final_approach_distance*tan(set->final_glide_slope*DEG2RAD)+
-        (g->hac_remaining+fabs(h.radial_error)*.65)*tan(slope*DEG2RAD);
-    double path=fmax(set->final_approach_distance,g->hac_remaining+set->final_approach_distance);
-    double target_speed=fmax(v->final_approach_speed*1.12,v->minimum_safe_speed*1.08);
-    double energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,a->speed,site->latitude,site->altitude,target_speed,p);
-    double removable=fmax(.03,a->drag_accel)*path*1.25;
-    bool energy_ok=fabs(geo.altitude-desired_altitude)<=8000&&a->speed>=v->minimum_safe_speed&&isfinite(energy_error)&&energy_error>=-.04*target_speed*target_speed&&energy_error<=removable;
-    bool hac_captured=min_turn*1.15<=hac_radius&&energy_ok&&fabs(h.radial_error)<=fmax(250,fmin(1500.0,hac_radius*.10))&&fabs(h.course_error)<24;
-    double exit_window=fmax(200,hac_radius*.012);
-    bool lost=!isfinite(min_turn)||min_turn*1.15>hac_radius||
-        fabs(h.radial_error)>fmax(750.0,fmin(5000.0,hac_radius*.25))||fabs(h.course_error)>60;
-    g->hac_lost_duration=lost?g->hac_lost_duration+dt:fmax(0,g->hac_lost_duration-dt*2);
-    bool missed=!approach&&along>station+exit_window&&fabs(norm_signed_deg(course-site->runway_heading))<45&&
-        (!g->hac_progress_valid||g->hac_remaining<=exit_window);
-    if(!g->final_captured&&(g->hac_lost_duration>=5||missed)){
-        /* Terrain is unavailable in the reduced model: site-relative height
-           approximates the live radar-height guard. Arrival metrics remain
-           historical; only the active guidance ownership is reset. */
-        if(geo.altitude>=fmax(12000.0,set->taem_interface_altitude*.5)&&
-           geo.altitude-site->altitude>=8000&&a->speed>=v->minimum_safe_speed*2){
-            g->hac_return_to_entry=true;g->terminal_reentry_after_ut=state.ut+15;
-            g->hac_progress_valid=false;g->hac_completed=false;g->hac_remaining=0;g->hac_radius=0;
-            g->hac_circuit_slope=0;g->hac_lost_duration=0;g->final_heading_lock=false;
-            g->replay_event=false;g->force_control=false;g->established=false;
-            if(fabs(g->actual_bank)>=4)g->sign=g->actual_bank>=0?1:-1;
-            return norm_signed_deg(jerk_angle_update(&g->limiter,0,set->entry_roll_rate,set->entry_roll_acceleration,dt));
-        }
-        if(missed)g->hac_failed=true;
-    }
-    if(!g->hac_completed&&g->hac_progress_valid&&g->hac_remaining<=exit_window){
-        if(g->hac_remaining>=-exit_window&&hac_captured&&approach&&along<0){g->hac_completed=true;g->hac_remaining=0;}
-        /* Preserve signed overshoot; never recycle the exit window. */
-    }
-
-    if(g->hac_completed&&approach&&along<0)g->final_captured=true;
-
-    double raw,rate,acc,floor;
-    if(g->final_captured){
-        double dist=fmax(0,-along),look=clampd(a->speed*5.5,450,2800);
-        double inter=clampd(atan2(-cross,look)*RAD2DEG,-28,28),target=norm_deg(site->runway_heading+inter);
-        double err=norm_signed_deg(target-course),lat=2*horizontal*horizontal/fmax(look,1)*sin(err*DEG2RAD);
-        double frac=clampd(dist/fmax(set->final_approach_distance,1),0,1),lim=fmin(30,bank_limit(a,p,v,maxbank));
-        lim=fmin(lim,8+22*sqrt(frac));
-        double radar=fmax(0,geo.altitude-site->altitude);
-        if(radar<set->flare_altitude*4)lim=fmin(lim,6+10*clampd(radar/fmax(set->flare_altitude*4,1),0,1));
-        raw=clampd(atan(lat/fmax(gravity,.1))*RAD2DEG,-lim,lim);
-        rate=set->approach_roll_rate;acc=fmax(1.4,set->entry_roll_acceleration*.55);floor=.60;
-    }else{
-        double lateral=h.lateral_acceleration;
-        double eff=clampd(c->bank_effectiveness,.35,1.8);
-        double ratio=fabs(lateral)/fmax(a->lift_accel,.01);
-        raw=copysign(asin(clampd(ratio,0,sin(clampd(fmin(maxbank,75)*eff,0,89)*DEG2RAD)))/eff*RAD2DEG,lateral);
-        raw=clampd(raw,-maxbank,maxbank);
-        rate=set->taem_roll_rate;acc=fmax(2,set->entry_roll_acceleration*.85);floor=.50;
-    }
-    FlightControlRegime regime=flight_control_regime(a->mach,a->speed,a->q,v->minimum_safe_speed);
-    rate*=fmax(floor,regime.command_rate_scale);acc*=fmax(floor*.72,regime.command_accel_scale);
-    return norm_signed_deg(jerk_angle_update(&g->limiter,raw,rate,acc,dt));
-}
 
 void entry_prediction_clear(EntryPrediction*p){if(!p)return;trajectory_clear(&p->trajectory);memset(p,0,sizeof(*p));}
 static EntryPrediction predictor_simulate_entry_core(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env0,const TrajectoryCalibrationModel*cal0,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double initial_sign,double initial_leg,bool initial_final_heading_lock,double maxdur,bool include,bool force_control,double forced_bank,double forced_aoa,double forced_duration,double control_horizon_duration,bool stop_at_taem,bool enforce_terminal_delivery_budget,const EntryControlPlan*replay,const TaemInterfaceTarget*interface_target){
-    EntryPrediction out;memset(&out,0,sizeof(out));trajectory_init(&out.trajectory);out.closest_distance=DBL_MAX;out.taem_distance=DBL_MAX;out.taem_hac_capture_score=DBL_MAX;out.best_terminal_capture_cost=DBL_MAX;out.taem_altitude=NAN;out.taem_desired_altitude=NAN;out.minimum_entry_speed=DBL_MAX;out.minimum_bank_control_margin=INFINITY;out.minimum_aoa_control_margin=INFINITY;
+    EntryPrediction out;memset(&out,0,sizeof(out));trajectory_init(&out.trajectory);out.closest_distance=DBL_MAX;out.taem_distance=DBL_MAX;out.taem_altitude=NAN;out.taem_desired_altitude=NAN;out.minimum_entry_speed=DBL_MAX;out.minimum_bank_control_margin=INFINITY;out.minimum_aoa_control_margin=INFINITY;
     AerodynamicEnvelope uniform;if(!env0){for(int i=0;i<4;i++)uniform.regimes[i]=aero;env0=&uniform;}
     TrajectoryCalibrationModel dc={
         .density_scale=1,.drag_scale=1,.lift_scale=1,.bank_effectiveness=1,.speed_of_sound=340,
@@ -932,7 +648,7 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
         g.replay_event_sign=replay->planned_reversal_sign;
         g.replay_event_final=replay->planned_reversal_is_final;
     }
-    GeoPoint target={site->latitude,site->longitude,site->altitude};double entry_alt=entry_guidance_start_altitude(p,set),elapsed=0,lastsample=-DBL_MAX,hac_side=1;bool hac_set=false;
+    GeoPoint target={site->latitude,site->longitude,site->altitude};double entry_alt=entry_guidance_start_altitude(p,set),elapsed=0,lastsample=-DBL_MAX;
     double mm304_gate_altitude=fmin(50000.0,entry_alt-5000.0);
     bool initial_gear=cal0->physics?cal0->physics->gear:false,initial_brakes=cal0->physics?cal0->physics->brakes:false;
     int initial_airbrakes=cal0->physics&&cal0->physics->airbrakes>=0?cal0->physics->airbrakes:0;
@@ -1023,45 +739,29 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
             }
         }
         out.peak_dynamic_pressure=fmax(out.peak_dynamic_pressure,at.q);out.peak_g_load=fmax(out.peak_g_load,at.non_gravity/fmax(planet_surface_gravity(p),.1));
-        double terminal_radius=INFINITY;
-        bool terminal_ready=false;
-        if(out.entered_atmosphere&&!hac_set&&state.ut>=g.terminal_reentry_after_ut){
-            double grav=planet_surface_gravity(p),candidate_radius=predictor_terminal_hac_radius(&at,p,cal0,v,set,maxbank);
-            if(isfinite(candidate_radius)){
-                double course=surface_course(state.position,state.velocity,planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
-                double positive_radius=INFINITY,negative_radius=INFINITY;
-                double ps=INFINITY,ns=INFINITY;
-                bool positive_ready=predictor_hac_ready(&g,state,geo,&at,p,cal0,v,site,set,maxbank,1,&positive_radius,&ps);
-                bool negative_ready=predictor_hac_ready(&g,state,geo,&at,p,cal0,v,site,set,maxbank,-1,&negative_radius,&ns);
-                terminal_ready=positive_ready||negative_ready;
-                /* Match live acquisition: compare scores only among feasible
-                   circles. The geometrically closer side may fail energy. */
-                hac_side=terminal_ready?((positive_ready&&(!negative_ready||ps<=ns))?1:-1):(ps<=ns?1:-1);
-                terminal_radius=hac_side>0?positive_radius:negative_radius;
-                hac_set=terminal_ready;
-                double positive_soft=predictor_hac_soft_cost(&g,state,geo,&at,p,cal0,v,site,set,maxbank,1,candidate_radius);
-                double negative_soft=predictor_hac_soft_cost(&g,state,geo,&at,p,cal0,v,site,set,maxbank,-1,candidate_radius);
-                double soft=fmin(positive_soft,negative_soft);
-                if(isfinite(soft))out.best_terminal_capture_cost=fmin(out.best_terminal_capture_cost,soft);
-                if(terminal_ready&&!stop_at_taem){
-                    g.hac_radius=terminal_radius;
-                    HACGuidance h=hac_guidance_compute_radius(geo,at.speed,course,site,set,p->radius,hac_side,grav,terminal_radius);
-                    if(!out.reached_taem){
-                    double target_speed=entry_taem_speed_target(v,set,p);
-                    out.reached_taem=true;out.taem_distance=range;out.taem_range_error=h.radial_error;out.taem_speed=at.speed;out.taem_flight_path_angle=fpa;
-                    out.taem_altitude=geo.altitude;out.taem_desired_altitude=set->taem_interface_altitude;
-                    runway_coordinates(geo,target,site->runway_heading,p->radius,&out.taem_along_track,&out.taem_cross_track);
-                    out.taem_course=course;
-                    /* Entry owns energy management only down to the TAEM
-                       interface. The previous residual still targeted final-
-                       approach speed here, so a perfectly valid 500-700 m/s
-                       TAEM handoff was scored as huge excess energy and MPC
-                       kept dragging the shuttle long after it should have
-                       handed control to HAC. TAEM/HAC owns the subsequent
-                       deceleration toward final approach. */
-                    out.taem_hac_capture_score=hac_side>0?ps:ns;out.taem_energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,at.speed,site->latitude,h.desired_altitude,target_speed,p);
-                    }
-                }
+        /* The reduced predictor is an Entry search model only.  Record the first
+           configuration-defined MM304/MM305 interface opportunity, but never run a
+           second HAC planner or terminal controller here.  Production MM304 shadow
+           guidance certifies the actual ownership transfer, and native MM305 owns
+           all path search/replay after that transfer. */
+        if(!stop_at_taem&&!out.reached_taem&&out.entered_atmosphere){
+            double handoff_low=0.0,handoff_high=0.0;
+            entry_taem_handoff_altitude_bounds(set,&handoff_low,&handoff_high);
+            if(at.speed<=set->taem_force_handoff_speed&&
+               geo.altitude>=handoff_low&&geo.altitude<=handoff_high){
+                double course=surface_course(state.position,state.velocity,
+                    planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
+                double target_speed=entry_taem_speed_target(v,set,p);
+                out.reached_taem=true;out.taem_distance=range;
+                out.taem_range_error=range-entry_taem_range_target(p,set);
+                out.taem_speed=at.speed;out.taem_flight_path_angle=fpa;
+                out.taem_altitude=geo.altitude;out.taem_desired_altitude=set->taem_interface_altitude;
+                runway_coordinates(geo,target,site->runway_heading,p->radius,
+                    &out.taem_along_track,&out.taem_cross_track);
+                out.taem_course=course;
+                out.taem_energy_error=entry_remaining_specific_energy(
+                    geo.latitude,geo.altitude,at.speed,site->latitude,
+                    set->taem_interface_altitude,target_speed,p);
             }
         }
         if(ownership_ready&&!out.reached_taem){
@@ -1083,7 +783,7 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                fabs(out.trajectory.points[out.trajectory.count-1].ut-state.ut)>1e-6)){
                 GuidancePhase stop_phase=out.reached_taem?PHASE_TAEM:PHASE_ENTRY_ENERGY;
                 TrajectoryPoint tp={state.ut,geo.latitude,geo.longitude,geo.altitude,at.speed,stop_phase,TRAJ_PLANNED};
-                trajectory_append(&out.trajectory,tp);lastsample=state.ut;
+                trajectory_append(&out.trajectory,tp);
             }
             /* A forced Entry-plan forecast is an executable shadow, not permission
                to invent another Entry segment after live MM304 crosses its one-way
@@ -1091,11 +791,11 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
                supervision cannot discover a later synthetic recovery. */
             break;
         }
-        GuidancePhase phase=geo.altitude>entry_alt?PHASE_COAST:g.final_captured?PHASE_FINAL:(g.hac_progress_valid||hac_set)?PHASE_TAEM:PHASE_ENTRY_ENERGY;
+        GuidancePhase phase=geo.altitude>entry_alt?PHASE_COAST:PHASE_ENTRY_ENERGY;
         if(include&&state.ut-lastsample>=6){TrajectoryPoint tp={state.ut,geo.latitude,geo.longitude,geo.altitude,at.speed,phase,TRAJ_PLANNED};trajectory_append(&out.trajectory,tp);lastsample=state.ut;}
         if(geo.altitude<=fmax(site->altitude,0)&&vs<0)break;if(out.reached_taem&&range<500&&geo.altitude<1000)break;if(vmag(state.position)<p->radius*.8||!isfinite(vmag(state.position)))break;
         double frac=clampd(geo.altitude/fmax(1,p->atmosphere_depth),0,1),base_dt=geo.altitude>p->atmosphere_depth?8:clampd(.25+frac*1.55,.25,1.8);
-        double dt=predictor_step_size(&at,p,v,set,geo.altitude,vs,entry_alt,out.entered_atmosphere,out.reached_taem,g.limiter.rate,base_dt),aoa=NAN;AerodynamicModel local=aero_at(env0,at.mach);
+        double dt=predictor_step_size(&at,p,v,set,geo.altitude,vs,entry_alt,out.entered_atmosphere,false,g.limiter.rate,base_dt),aoa=NAN;AerodynamicModel local=aero_at(env0,at.mach);
         double bank=0,target_aoa=0;
         if(!out.entered_atmosphere){
             /* Match live Entry Interface: wings level and maximum entry AoA,
@@ -1105,24 +805,15 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
             bank=norm_signed_deg(jerk_angle_update(&g.limiter,0,rate,acc,dt));
             target_aoa=v->maximum_angle_of_attack;
         }else{
-            if(out.reached_taem&&hac_set){
-                bank=post_taem_bank(&g,state,geo,&at,p,cal0,v,site,set,maxbank,hac_side,dt);
-                if(g.hac_return_to_entry){hac_set=false;g.hac_return_to_entry=false;}
-                if(g.hac_failed||(!g.final_captured&&g.hac_remaining < -fmax(200,g.hac_radius*.012)))break;
-                target_aoa=clampd(scheduled_aoa(geo.altitude,p,v),4,14);
-            }else{
-                bank=entry_bank(&g,state,geo,&at,p,local,cal0,v,site,set,maxbank,dt,&aoa);
-                target_aoa=aoa;
-            }
+            bank=entry_bank(&g,state,geo,&at,p,local,cal0,v,site,set,maxbank,dt,&aoa);
+            target_aoa=aoa;
         }
         predictor_attitude_step(&g,bank,target_aoa,&at,v,set,dt,cal0->physics);
         if(out.entered_atmosphere&&!out.reached_taem)out.maximum_abs_angle_of_attack=fmax(out.maximum_abs_angle_of_attack,fabs(g.actual_aoa));
         ctx.bank=g.actual_bank;ctx.aoa=g.actual_aoa;ctx.ut=state.ut;
-        ctx.airbrakes=predictor_speedbrake_state(&g,geo,&at,p,cal0,v,site,set,state.mass,out.reached_taem,dt);
-        /* Wheel brakes belong only to rollout; gear follows the same terminal
-           altitude gate as live guidance so direct-force lookup does not use
-           clean-airframe cells after predicted deployment. */
-        ctx.brakes=false;ctx.gear=out.reached_taem&&geo.altitude-site->altitude<=set->gear_deployment_altitude;
+        ctx.airbrakes=predictor_speedbrake_state(&g,geo,&at,p,cal0,v,site,set,state.mass,false,dt);
+        /* Reduced Entry search never takes ownership of terminal gear/brake state. */
+        ctx.brakes=false;ctx.gear=false;
         out.s_turn_max_bank=fmax(out.s_turn_max_bank,fabs(g.actual_bank));out.s_turn_reversals=g.reversals;
         if(at.q>1){if(at.direct_aero)out.physics_observed_seconds+=dt;else out.physics_fallback_seconds+=dt;}
         state=rk4_aero(state,dt,&ctx);elapsed+=dt;
@@ -1155,4 +846,3 @@ static double predictor_normalized_upper_violation(double value,double limit){
     if(!isfinite(value)||!isfinite(limit)||!(limit>0.0))return INFINITY;
     return fmax(0.0,value/limit-1.0);
 }
-

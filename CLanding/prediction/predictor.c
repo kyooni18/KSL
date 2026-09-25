@@ -1,6 +1,7 @@
 #include "landing.h"
 #include "decision_envelope.h"
 #include "async_prediction_policy.h"
+#include "taem_candidate_search.h"
 
 #include <float.h>
 #include <math.h>
@@ -8,18 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ENTRY_TOPOLOGY_DELAY_SAMPLE_COUNT 7
-
 typedef struct {
     double density; Vector3 air_velocity;
     double speed,speed_of_sound,mach,q,drag_accel,lift_accel,non_gravity;
     Vector3 specific_force;double physics_confidence,physics_uncertainty;bool direct_aero;
 } AtmosState;
 typedef struct {
-    double sign,leg_elapsed; bool established,entry_loaded,final_captured,configured_leg_dwell_satisfied;
-    bool hac_progress_valid,hac_completed; double hac_previous_angle,hac_remaining,hac_radius,hac_circuit_slope;
-    bool hac_return_to_entry, hac_failed;
-    double hac_lost_duration, terminal_reentry_after_ut;
+    double sign,leg_elapsed; bool established,entry_loaded,configured_leg_dwell_satisfied;
     unsigned reversals; JerkLimiter limiter;
     bool has_first_reversal, first_reversal_final, final_heading_lock;
     double first_reversal_ut, first_reversal_range, first_reversal_sign;
@@ -42,4 +38,3 @@ typedef struct {
 #include "entry_simulation.inc"
 #include "entry_planning.inc"
 #include "deorbit_planning.inc"
-#include "entry_topology.inc"
