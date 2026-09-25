@@ -10,10 +10,10 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Live pull response is very sensitive near the runway.  A 10.5 s lead
-   moved flare capture about 180 m earlier than the 10.0 s case and caused a
-   pre-threshold ground strike, so use only a small 0.1 s earlier correction. */
-static double terminal_pull_response_seconds(void){return 10.1;}
+/* Ten seconds is the repeatable live pull-response lead.  Moving this latch
+   earlier by even 0.1 s caused pre-threshold terrain contact; touchdown position
+   is controlled by the runway aim point below rather than by advancing the latch. */
+static double terminal_pull_response_seconds(void){return 10.0;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
     return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
 }
@@ -109,7 +109,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double g0=planet_surface_gravity(p);
     const double H_FLOAT=3.5;
     const double S_FLOAT=.5;
-    const double TOUCHDOWN_ALONG=-150.0;
+    const double TOUCHDOWN_ALONG=75.0;
     const double ARREST_ACCEL=.35*g0;
     const double SINK_HEIGHT_RATE=.14;
     const double TOUCHDOWN_PITCH=5.0;
@@ -211,8 +211,9 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     /* Keep a positive body attitude through wheel capture. The two main-gear
        origins are about 11.6 m aft of the nose gear on STS-N, so a five-degree
        touchdown attitude leaves a clear nose-gear height margin without changing
-       the vertical sink schedule. Apply it before the existing flare slew limiter. */
-    if(flaring&&height<=12.0){
+       the vertical sink schedule. Start this at the 15 m touchdown-flare boundary
+       so the visible pull is not delayed below the phase transition. */
+    if(flaring&&height<=15.0){
         double touchdown_aoa=clampd(TOUCHDOWN_PITCH-t->flight_path_angle,0.0,aoa_max);
         aoa=fmax(aoa,touchdown_aoa);
     }
