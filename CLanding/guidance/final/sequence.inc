@@ -200,13 +200,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     }
     double measured_gamma_rate=isfinite(t->lift_force)?
         (t->lift_force*cos(bank*DEG2RAD)/fmax(t->mass,1.0)-g0*cos(gamma))/V:0.0;
-    /* Do not project the force-derived pull response beyond the useful time
-       remaining before wheel contact.  k93 carried a fixed 1.5 s lead almost to
-       the runway and unloaded while sink was still high.  Keep that proven lead
-       everywhere else, but shorten it smoothly in the last seconds of flare. */
-    double gamma_lead_seconds=flaring?
-        clampd(.5*height/fmax(S_FLOAT,sink),.4,1.5):1.5;
-    double lead_gamma=gamma+gamma_lead_seconds*measured_gamma_rate;
+    double lead_gamma=gamma+1.5*measured_gamma_rate;
     double vertical_accel=clampd(V*(sink_rate_ff+.3*(reference_fpa-lead_gamma)),
         -.3*g0,1.5*g0);
     double lift_required=t->mass*(vertical_accel+g0*cos(gamma))/lift_div/
