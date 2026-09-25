@@ -515,13 +515,18 @@ bool flight_control_step(FlightControlState *state,
     if (command->heading_control_enabled) {
         heading_error =
             fc_signed_angle(fc_finite(command->target_heading, 0.0)-heading);
-        yaw_error = heading_error;
+        /* Live rollout steering has the opposite direct-yaw sign from the
+           airborne coordinate: positive yaw input decreased runway heading in
+           k108.  Transform both error and rate so the PD law sees a positive-gain
+           coordinate without changing airborne heading control. */
+        yaw_error = rollout_profile ? -heading_error : heading_error;
     }
     const double yaw_accel_max=getenv("KSP_LANDER_YAW_ACCEL")?atof(getenv("KSP_LANDER_YAW_ACCEL")):30.0;
     const double yaw_wn=getenv("KSP_LANDER_YAW_WN")?atof(getenv("KSP_LANDER_YAW_WN")):1.0;
     if(!(yaw_authority>DBL_EPSILON)||yaw_authority>yaw_accel_max)yaw_authority=yaw_accel_max;
     double yaw_rate=command->heading_control_enabled&&isfinite(telemetry->heading_rate)?
         telemetry->heading_rate:observed_yaw_rate;
+    if(rollout_heading_hold)yaw_rate=-yaw_rate;
     double yaw_command=fc_capped_pd_command(yaw_error,yaw_rate,0.0,yaw_authority,
         yaw_wn,1.0,.20,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
 
