@@ -147,9 +147,15 @@ entry-lateral-feedback-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_lateral_feedback_tests
 	$(BUILD)/entry_lateral_feedback_tests
 
+entry-energy-law-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/EntryEnergyLawTests.c $(BUILD)/entry_energy_control.o $(BUILD)/math.o \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_energy_law_tests
+	$(BUILD)/entry_energy_law_tests
+
 backend-protocol-test: $(TARGET)
 	cd $(REPO_ROOT) && python3 Validation/BackendProtocolTests.py "$(abspath $(TARGET))"
 
-test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test backend-protocol-test
+test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test
 
 qualification: test
