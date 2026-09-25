@@ -286,7 +286,7 @@ const char *expert_command(void *handle, const char *packet) {
       t.heading_error, r.has_warning ? "true" : "false", t.course_rate,
       e->g.hac_radius, e->g.hac_remaining, e->g.hac_captured ? "true" : "false",
       e->g.entry_reversal_scheduled ? "true" : "false",
-      e->g.hac_plan_violation_score,
+      0.0,
       capture.valid ? "true" : "false", capture.ready ? "true" : "false",
       capture.veto, capture.along, capture.cross, capture.course_error,
       capture.altitude_error, capture.energy_margin, capture.turn_margin,
@@ -315,40 +315,41 @@ const char *expert_command(void *handle, const char *packet) {
   DIAG_NUMBER("entry_target_side", e->g.entry_target_side);
   DIAG_BOOL("target_valid", e->g.taem_interface_target.valid);
   DIAG_BOOL("path_committed", e->g.terminal_path_committed);
-  DIAG_BOOL("candidate_valid", e->g.terminal_candidate.valid);
-  DIAG_NUMBER("candidate_kind", e->g.terminal_candidate.kind);
-  DIAG_BOOL("candidate_degraded", e->g.terminal_candidate.degraded);
-  DIAG_BOOL("candidate_geometry_degraded", e->g.terminal_candidate.geometry_degraded);
-  DIAG_BOOL("candidate_energy_degraded", e->g.terminal_candidate.energy_degraded);
-  DIAG_NUMBER("candidate_radius_m", e->g.terminal_candidate.radius);
-  DIAG_NUMBER("candidate_slope_deg", e->g.terminal_candidate.slope);
-  DIAG_NUMBER("candidate_altitude_m", e->g.terminal_candidate.altitude);
-  DIAG_NUMBER("candidate_speed_mps", e->g.terminal_candidate.speed);
-  DIAG_NUMBER("candidate_course_deg", e->g.terminal_candidate.course);
-  DIAG_NUMBER("candidate_response_s", e->g.terminal_candidate.response);
-  DIAG_NUMBER("candidate_arrival_ut", e->g.terminal_candidate.arrival_ut);
-  DIAG_NUMBER("candidate_lead_length_m", e->g.terminal_candidate.join.lead_length);
-  DIAG_NUMBER("candidate_join_length_m", e->g.terminal_candidate.join.length);
-  DIAG_NUMBER("candidate_arc_remaining_m", e->g.terminal_candidate.join.arc_remaining);
-  DIAG_NUMBER("candidate_final_distance_m", e->g.terminal_candidate.final_distance);
-  DIAG_NUMBER("candidate_violation", e->g.terminal_candidate.join.violation_score);
-  DIAG_NUMBER("candidate_peak_lateral_mps2", e->g.terminal_candidate.join.peak_lateral);
-  DIAG_NUMBER("candidate_peak_rate_ratio", e->g.terminal_candidate.join.peak_course_rate_ratio);
+  bool native_route=e->g.mm305_route_committed&&e->g.mm305_route.valid;
+  DIAG_BOOL("candidate_valid", native_route);
+  DIAG_NUMBER("candidate_kind", native_route?TERMINAL_PATH_HAC:TERMINAL_PATH_NONE);
+  DIAG_BOOL("candidate_degraded", false);
+  DIAG_BOOL("candidate_geometry_degraded", false);
+  DIAG_BOOL("candidate_energy_degraded", false);
+  DIAG_NUMBER("candidate_radius_m", native_route?e->g.mm305_route.hac.radius_m:0.0);
+  DIAG_NUMBER("candidate_slope_deg", native_route?e->g.mm305_route.profile_final_slope_deg:0.0);
+  DIAG_NUMBER("candidate_altitude_m", native_route?e->g.mm305_route.profile_final_altitude_m:0.0);
+  DIAG_NUMBER("candidate_speed_mps", native_route?t.true_air_speed:0.0);
+  DIAG_NUMBER("candidate_course_deg", native_route?e->g.mm305_route.runway_heading_deg:0.0);
+  DIAG_NUMBER("candidate_response_s", 0.0);
+  DIAG_NUMBER("candidate_arrival_ut", NAN);
+  DIAG_NUMBER("candidate_lead_length_m", native_route?e->g.mm305_route.lead_length_m:0.0);
+  DIAG_NUMBER("candidate_join_length_m", native_route?e->g.mm305_route.length_m:0.0);
+  DIAG_NUMBER("candidate_arc_remaining_m", native_route?e->g.hac_remaining:0.0);
+  DIAG_NUMBER("candidate_final_distance_m", native_route?e->g.mm305_route.hac.final_length_m:0.0);
+  DIAG_NUMBER("candidate_violation", 0.0);
+  DIAG_NUMBER("candidate_peak_lateral_mps2", 0.0);
+  DIAG_NUMBER("candidate_peak_rate_ratio", 0.0);
   DIAG_NUMBER("path_kind", e->g.terminal_path_kind);
-  DIAG_NUMBER("reference_heading_deg", e->g.terminal_reference_heading);
-  DIAG_NUMBER("reference_bank_deg", e->g.terminal_reference_bank);
-  DIAG_NUMBER("reference_aoa_deg", e->g.terminal_reference_aoa);
-  DIAG_NUMBER("reference_path_lateral_accel_mps2", e->g.terminal_reference_path_lateral_acceleration);
-  DIAG_NUMBER("reference_path_bank_deg", e->g.terminal_reference_path_bank);
-  DIAG_NUMBER("reference_path_course_error_deg", e->g.terminal_reference_path_course_error);
-  DIAG_NUMBER("reference_path_arc_remaining_m", e->g.terminal_reference_path_arc_remaining);
-  DIAG_BOOL("reference_path_transition_active", e->g.terminal_reference_path_transition_active);
-  DIAG_NUMBER("candidate_live_energy_margin_j_kg", e->g.terminal_candidate_live_energy_margin);
-  DIAG_BOOL("candidate_live_energy_valid", e->g.terminal_candidate_live_energy_valid);
-  DIAG_BOOL("hac_transition_active", e->g.hac_transition_active);
+  DIAG_NUMBER("reference_heading_deg", native_route?e->g.mm305_route.runway_heading_deg:0.0);
+  DIAG_NUMBER("reference_bank_deg", 0.0);
+  DIAG_NUMBER("reference_aoa_deg", native_route?t.angle_of_attack:0.0);
+  DIAG_NUMBER("reference_path_lateral_accel_mps2", 0.0);
+  DIAG_NUMBER("reference_path_bank_deg", 0.0);
+  DIAG_NUMBER("reference_path_course_error_deg", 0.0);
+  DIAG_NUMBER("reference_path_arc_remaining_m", native_route?e->g.hac_remaining:0.0);
+  DIAG_BOOL("reference_path_transition_active", false);
+  DIAG_NUMBER("candidate_live_energy_margin_j_kg", 0.0);
+  DIAG_BOOL("candidate_live_energy_valid", false);
+  DIAG_BOOL("hac_transition_active", false);
   DIAG_BOOL("hac_captured", e->g.hac_captured);
   DIAG_NUMBER("hac_side", e->g.hac_side);
-  DIAG_NUMBER("terminal_mix", e->g.terminal_mix);
+  DIAG_NUMBER("terminal_mix", native_route?1.0:0.0);
   DIAG_NUMBER("target_along_m", e->g.taem_interface_target.along_track);
   DIAG_NUMBER("target_cross_m", e->g.taem_interface_target.cross_track);
   DIAG_NUMBER("target_course_deg", e->g.taem_interface_target.course);
