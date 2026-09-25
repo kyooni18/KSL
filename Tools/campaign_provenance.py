@@ -39,6 +39,9 @@ RUNTIME_SOURCE_RELATIVE_PATHS = (
     "Tools/ksp_test_guard.py",
     "Tools/postflight_acceptance.py",
     "Tools/postflight_75km_acceptance.py",
+    "ShuttleSim/scripts/run_guidance.py",
+    "ShuttleSim/scripts/backend_mailbox.py",
+    "ShuttleSim/scripts/run_artifacts.py",
 )
 
 
@@ -82,12 +85,15 @@ def runtime_source_hashes(root: Path) -> dict[str, str]:
 def production_source_hashes(root: Path) -> dict[str, str]:
     root = root.resolve()
     source_root = clanding_source_root(root)
+    roots = (source_root, root / "ShuttleSim" / "src", root / "ShuttleSim" / "include")
     paths = [
-        path for path in source_root.rglob("*")
+        path for source in roots for path in source.rglob("*")
         if path.is_file()
-        and "build" not in path.relative_to(source_root).parts
-        and (path.suffix in {".c", ".h"} or path.name == "Makefile")
+        and not any(part.startswith(".") or part == "build"
+                    for part in path.relative_to(source).parts)
+        and (path.suffix in {".c", ".h", ".inc"} or path.name == "Makefile")
     ]
+    paths.append(root / "ShuttleSim" / "CMakeLists.txt")
     hashes = {
         str(path.relative_to(root)): sha256_file(path)
         for path in sorted(paths, key=lambda item: item.name)

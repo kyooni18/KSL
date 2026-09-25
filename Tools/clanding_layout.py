@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve the canonical modular CLanding tree, or an explicitly selected legacy tree."""
+"""Resolve sources in the selected modular CLanding tree, excluding build products."""
 
 from __future__ import annotations
 
@@ -26,7 +26,8 @@ def source_file(repo_root: Path, name: str) -> Path:
 
     matches = [
         path for path in root.rglob(name)
-        if path.is_file() and "build" not in path.relative_to(root).parts
+        if path.is_file() and not any(part.startswith(".") or part == "build"
+                                     for part in path.relative_to(root).parts)
     ]
     if len(matches) == 1:
         return matches[0]
