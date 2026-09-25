@@ -259,21 +259,25 @@ static GuidanceResult flare_guidance(GuidanceMachine*g,const Telemetry*t,double 
     trajectory_copy(&r.reference,ref);
     return stabilized(g,r,t,v,s,dt);
 }
-                                                                             
+typedef struct { double steering, lateral_rate; } RolloutSteeringDemand;
 
-       GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,const LandingConfiguration*cfg,const Trajectory*ref){
+static RolloutSteeringDemand runway_rollout_steering(const Telemetry*t,
+        const LandingConfiguration*cfg){
     double heading_error=norm_signed_deg(cfg->site.runway_heading-t->heading);
     double course_error=norm_signed_deg(t->ground_track_heading-cfg->site.runway_heading);
     double lateral_rate=t->surface_speed*sin(course_error*DEG2RAD);
     if(!isfinite(lateral_rate))lateral_rate=0.0;
-    /* During rollout, position-only steering can keep commanding toward the
-       centerline after the vehicle already has enough lateral velocity to cross it.
-       Damp measured ground-track cross-rate while it is trustworthy, then fade the
-       derivative term out near walking speed where course becomes noisy. */
     double rate_weight=clampd((t->surface_speed-8.0)/35.0,0.0,1.0);
     double authority=clampd(55.0/fmax(t->surface_speed,15.0),.25,1.0);
-    double steer=clampd((heading_error*.03-t->runway_cross_track*.0011-
-        lateral_rate*.012*rate_weight)*authority,-1.0,1.0);
+    double steer=clampd((heading_error*.06-t->runway_cross_track*.0022-
+        lateral_rate*.024*rate_weight)*authority,-.25,.25);
+    return (RolloutSteeringDemand){.steering=steer,.lateral_rate=lateral_rate};
+}
+
+GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
+        const LandingConfiguration*cfg,const Trajectory*ref){
+    RolloutSteeringDemand steering=runway_rollout_steering(t,cfg);
+    double steer=steering.steering,lateral_rate=steering.lateral_rate;
     GuidanceCommand c;guidance_command_init(&c);
     c.gear=true;
     c.brakes=t->surface_speed<fmax(120.0,cfg->vehicle.touchdown_speed*1.35);
