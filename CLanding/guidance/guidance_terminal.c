@@ -164,6 +164,18 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         cfg->site.runway_length>0.0 && t->runway_along_track>cfg->site.runway_length)
         return terminal_abort(g,"Long landing: the vehicle passed the runway end still airborne.");
 
+    /* Below runway elevation off the runway surface is ground impact short,
+       long or wide of the runway, not a control departure. */
+    if (g->final_approach_captured && !reported_landed &&
+        isfinite(t->radar_altitude) && t->radar_altitude<0.0 &&
+        !terminal_runway_contact_position(t,cfg)) {
+        char reason[256];
+        snprintf(reason,sizeof(reason),"Ground impact off the runway surface "
+            "(runway along %.0f m, cross %.0f m, sink %.1f m/s).",
+            t->runway_along_track,t->runway_cross_track,-t->vertical_speed);
+        return terminal_abort(g,reason);
+    }
+
     bool recovery_was_active=g->attitude_recovery;
     if (control_recovery_needed(g,t,s,v,dt)) {
         if (!recovery_was_active && (g->terminal_path_committed || g->hac_side_selected))
