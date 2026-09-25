@@ -17,16 +17,28 @@ static pb_istream_t krpc_pb_istream_from_connection(krpc_connection_t connection
 
 krpc_error_t krpc_connect(krpc_connection_t connection, const char *client_name) {
   {
-    // Send connection request message
-    krpc_schema_MultiplexedRequest request = krpc_schema_MultiplexedRequest_init_default;
-    request.has_connection_request = true;
-    request.connection_request.type = krpc_schema_ConnectionRequest_Type_RPC;
-    request.connection_request.client_name.funcs.encode = &krpc_encode_callback_cstring;
-    request.connection_request.client_name.arg = (void *)client_name;
+    // Send connection request message. Standard TCP uses the bare request;
+    // serial C-Nano keeps the multiplexed envelope.
     pb_ostream_t stream = krpc_pb_ostream_from_connection(connection);
-    if (!pb_encode_delimited(&stream, krpc_schema_MultiplexedRequest_fields, &request)) {
-      krpc_close(connection);
-      KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode connection request", &stream);
+    if (krpc_cnano_transport_uses_standard_rpc(connection)) {
+      krpc_schema_ConnectionRequest request = krpc_schema_ConnectionRequest_init_default;
+      request.type = krpc_schema_ConnectionRequest_Type_RPC;
+      request.client_name.funcs.encode = &krpc_encode_callback_cstring;
+      request.client_name.arg = (void *)client_name;
+      if (!pb_encode_delimited(&stream, krpc_schema_ConnectionRequest_fields, &request)) {
+        krpc_close(connection);
+        KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode TCP connection request", &stream);
+      }
+    } else {
+      krpc_schema_MultiplexedRequest request = krpc_schema_MultiplexedRequest_init_default;
+      request.has_connection_request = true;
+      request.connection_request.type = krpc_schema_ConnectionRequest_Type_RPC;
+      request.connection_request.client_name.funcs.encode = &krpc_encode_callback_cstring;
+      request.connection_request.client_name.arg = (void *)client_name;
+      if (!pb_encode_delimited(&stream, krpc_schema_MultiplexedRequest_fields, &request)) {
+        krpc_close(connection);
+        KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode connection request", &stream);
+      }
     }
   }
 
@@ -112,33 +124,46 @@ krpc_error_t krpc_invoke(krpc_connection_t connection, krpc_schema_ProcedureResu
   {
     pb_ostream_t ostream = krpc_pb_ostream_from_connection(connection);
 
-    // Create request message containing the procedure call
-    krpc_schema_MultiplexedRequest m_request = krpc_schema_MultiplexedRequest_init_default;
-    m_request.has_request = true;
-    m_request.request.calls[0] = *call;
-    m_request.request.calls_count = 1;
-
-    // Send request message
-    if (!pb_encode_delimited(&ostream, krpc_schema_MultiplexedRequest_fields, &m_request))
-      KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode request message", &ostream);
+    // Create request message containing the procedure call.
+    if (krpc_cnano_transport_uses_standard_rpc(connection)) {
+      krpc_schema_Request request = krpc_schema_Request_init_default;
+      request.calls[0] = *call;
+      request.calls_count = 1;
+      if (!pb_encode_delimited(&ostream, krpc_schema_Request_fields, &request))
+        KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode TCP request message", &ostream);
+    } else {
+      krpc_schema_MultiplexedRequest m_request = krpc_schema_MultiplexedRequest_init_default;
+      m_request.has_request = true;
+      m_request.request.calls[0] = *call;
+      m_request.request.calls_count = 1;
+      if (!pb_encode_delimited(&ostream, krpc_schema_MultiplexedRequest_fields, &m_request))
+        KRPC_RETURN_STREAM_ERROR(ENCODING_FAILED, "failed to encode request message", &ostream);
+    }
   }
 
   {
     pb_istream_t istream = krpc_pb_istream_from_connection(connection);
 
-    // Receive response message
-    krpc_schema_MultiplexedResponse m_response = krpc_schema_MultiplexedResponse_init_default;
-
-    m_response.response.results[0] = *result;
+    // Receive response message.
+    krpc_schema_Response response_message = krpc_schema_Response_init_default;
+    response_message.results[0] = *result;
 
     krpc_error_t rpc_error = KRPC_OK;
-    m_response.response.error.funcs.decode = &krpc_decode_callback_error;
-    m_response.response.error.arg = &rpc_error;
-    m_response.response.results[0].error.funcs.decode = &krpc_decode_callback_error;
-    m_response.response.results[0].error.arg = &rpc_error;
+    response_message.error.funcs.decode = &krpc_decode_callback_error;
+    response_message.error.arg = &rpc_error;
+    response_message.results[0].error.funcs.decode = &krpc_decode_callback_error;
+    response_message.results[0].error.arg = &rpc_error;
 
-    if (!pb_decode_delimited(&istream, krpc_schema_MultiplexedResponse_fields, &m_response))
-      KRPC_RETURN_STREAM_ERROR(DECODING_FAILED, "failed to decode response message", &istream);
+    if (krpc_cnano_transport_uses_standard_rpc(connection)) {
+      if (!pb_decode_delimited(&istream, krpc_schema_Response_fields, &response_message))
+        KRPC_RETURN_STREAM_ERROR(DECODING_FAILED, "failed to decode TCP response message", &istream);
+    } else {
+      krpc_schema_MultiplexedResponse m_response = krpc_schema_MultiplexedResponse_init_default;
+      m_response.response = response_message;
+      if (!pb_decode_delimited(&istream, krpc_schema_MultiplexedResponse_fields, &m_response))
+        KRPC_RETURN_STREAM_ERROR(DECODING_FAILED, "failed to decode response message", &istream);
+      response_message = m_response.response;
+    }
 
     if (rpc_error != KRPC_OK) {
 #ifdef KRPC_ERROR_MESSAGES
@@ -149,10 +174,9 @@ krpc_error_t krpc_invoke(krpc_connection_t connection, krpc_schema_ProcedureResu
     }
 
     // Extract the procedure result message from the response
-    krpc_schema_Response *response = &m_response.response;
-    if (response->results_count != 1)
+    if (response_message.results_count != 1)
       KRPC_RETURN_ERROR(NO_RESULTS, "response message does not contain a single result");
-    *result = response->results[0];
+    *result = response_message.results[0];
   }
   return KRPC_OK;
 }

@@ -33,6 +33,7 @@ typedef struct {
 struct KrpcCNanoClient {
     KrpcCNanoTransport transport;
     KrpcCNanoPosixSerial serial;
+    KrpcCNanoPosixTcp tcp;
     krpc_connection_t connection;
     bool connected;
 

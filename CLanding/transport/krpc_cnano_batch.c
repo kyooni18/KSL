@@ -43,13 +43,21 @@ krpc_error_t krpc_cnano_invoke_batch(krpc_connection_t connection,
     if(!connection||!calls||!results||count==0||count>KRPC_CNANO_BATCH_MAX)
         return KRPC_ERROR_ENCODING_FAILED;
 
-    krpc_schema_MultiplexedRequest request=krpc_schema_MultiplexedRequest_init_default;
-    request.has_request=true;request.request.calls_count=(pb_size_t)count;
-    for(size_t i=0;i<count;i++)request.request.calls[i]=calls[i];
     pb_ostream_t ostream={0};
     ostream.callback=&batch_write_callback;ostream.state=(void *)(intptr_t)connection;ostream.max_size=SIZE_MAX;
-    if(!pb_encode_delimited(&ostream,krpc_schema_MultiplexedRequest_fields,&request))
-        return KRPC_ERROR_ENCODING_FAILED;
+    if(krpc_cnano_transport_uses_standard_rpc(connection)){
+        krpc_schema_Request request=krpc_schema_Request_init_default;
+        request.calls_count=(pb_size_t)count;
+        for(size_t i=0;i<count;i++)request.calls[i]=calls[i];
+        if(!pb_encode_delimited(&ostream,krpc_schema_Request_fields,&request))
+            return KRPC_ERROR_ENCODING_FAILED;
+    }else{
+        krpc_schema_MultiplexedRequest request=krpc_schema_MultiplexedRequest_init_default;
+        request.has_request=true;request.request.calls_count=(pb_size_t)count;
+        for(size_t i=0;i<count;i++)request.request.calls[i]=calls[i];
+        if(!pb_encode_delimited(&ostream,krpc_schema_MultiplexedRequest_fields,&request))
+            return KRPC_ERROR_ENCODING_FAILED;
+    }
 
     if(!krpc_cnano_transport_begin_deadline(connection))
         return KRPC_ERROR_IO;
@@ -59,37 +67,46 @@ krpc_error_t krpc_cnano_invoke_batch(krpc_connection_t connection,
 } while(0)
 
     for(;;){
-        krpc_schema_MultiplexedResponse response=krpc_schema_MultiplexedResponse_init_default;
+        krpc_schema_Response rpc_response=krpc_schema_Response_init_default;
         BatchErrorState response_error={0};
         BatchErrorState item_errors[KRPC_CNANO_BATCH_MAX];
         memset(item_errors,0,sizeof(item_errors));
-        response.response.error.funcs.decode=&batch_error_decoder;
-        response.response.error.arg=&response_error;
+        rpc_response.error.funcs.decode=&batch_error_decoder;
+        rpc_response.error.arg=&response_error;
         for(size_t i=0;i<count;i++){
-            response.response.results[i]=results[i].message;
-            response.response.results[i].error.funcs.decode=&batch_error_decoder;
-            response.response.results[i].error.arg=&item_errors[i];
+            rpc_response.results[i]=results[i].message;
+            rpc_response.results[i].error.funcs.decode=&batch_error_decoder;
+            rpc_response.results[i].error.arg=&item_errors[i];
         }
         pb_istream_t istream={0};
         istream.callback=&batch_read_callback;istream.state=(void *)(intptr_t)connection;istream.bytes_left=SIZE_MAX;
-        if(!pb_decode_delimited(&istream,krpc_schema_MultiplexedResponse_fields,&response))
-            BATCH_RESPONSE_RETURN(KRPC_ERROR_DECODING_FAILED);
-
-        /* The serial kRPC connection is multiplexed. A stream update or stale
-         * empty RPC response may precede the response to the request just
-         * written. Do not resend: direct-control writes are not idempotent.
-         * Continue consuming protocol-valid unrelated frames until the
-         * transport's configured response deadline expires. */
-        if(!response.has_response){
-            if(response.has_stream_update)continue;
-            BATCH_RESPONSE_RETURN(KRPC_ERROR_NO_RESULTS);
+        if(krpc_cnano_transport_uses_standard_rpc(connection)){
+            if(!pb_decode_delimited(&istream,krpc_schema_Response_fields,&rpc_response))
+                BATCH_RESPONSE_RETURN(KRPC_ERROR_DECODING_FAILED);
+        }else{
+            krpc_schema_MultiplexedResponse response=krpc_schema_MultiplexedResponse_init_default;
+            response.response=rpc_response;
+            if(!pb_decode_delimited(&istream,krpc_schema_MultiplexedResponse_fields,&response))
+                BATCH_RESPONSE_RETURN(KRPC_ERROR_DECODING_FAILED);
+            /* The serial kRPC connection is multiplexed. A stream update or stale
+             * empty RPC response may precede the response to the request just
+             * written. Do not resend: direct-control writes are not idempotent. */
+            if(!response.has_response){
+                if(response.has_stream_update)continue;
+                BATCH_RESPONSE_RETURN(KRPC_ERROR_NO_RESULTS);
+            }
+            rpc_response=response.response;
         }
         if(response_error.failed)BATCH_RESPONSE_RETURN(KRPC_ERROR_RPC_FAILED);
-        if(response.response.results_count==0)continue;
-        if(response.response.results_count!=(pb_size_t)count)
+        if(rpc_response.results_count==0){
+            if(krpc_cnano_transport_uses_standard_rpc(connection))
+                BATCH_RESPONSE_RETURN(KRPC_ERROR_NO_RESULTS);
+            continue;
+        }
+        if(rpc_response.results_count!=(pb_size_t)count)
             BATCH_RESPONSE_RETURN(KRPC_ERROR_NO_RESULTS);
         for(size_t i=0;i<count;i++){
-            results[i].message=response.response.results[i];
+            results[i].message=rpc_response.results[i];
             if(result_failed)result_failed[i]=item_errors[i].failed;
         }
         BATCH_RESPONSE_RETURN(KRPC_OK);

@@ -256,6 +256,11 @@ int krpc_cnano_transport_timeout_ms(krpc_connection_t connection) {
     return connection != NULL ? connection->timeout_ms : 0;
 }
 
+bool krpc_cnano_transport_uses_standard_rpc(krpc_connection_t connection) {
+    return connection != NULL && connection->ops != NULL &&
+           connection->ops->protocol == KRPC_CNANO_PROTOCOL_TCP_RPC;
+}
+
 bool krpc_cnano_transport_begin_deadline(krpc_connection_t connection) {
     if (!connection) return false;
     connection->deadline_active = false;
@@ -276,7 +281,9 @@ void krpc_cnano_transport_end_deadline(krpc_connection_t connection) {
 #ifndef _WIN32
 #include <errno.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <poll.h>
+#include <sys/socket.h>
 #include <termios.h>
 #include <unistd.h>
 #ifdef __APPLE__
@@ -442,6 +449,133 @@ static KrpcCNanoTransportStatus serial_write(void *context, const uint8_t *buffe
     }
 }
 
+static KrpcCNanoTransportStatus tcp_open(void *context) {
+    KrpcCNanoPosixTcp *tcp = context;
+    if (!tcp || !tcp->host[0] || tcp->port <= 0 || tcp->port > 65535 || tcp->timeout_ms <= 0)
+        return KRPC_CNANO_TRANSPORT_INVALID;
+    if (tcp->fd >= 0) close(tcp->fd);
+    tcp->fd = -1;
+
+    char port[16];
+    snprintf(port, sizeof(port), "%d", tcp->port);
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    struct addrinfo *addresses = NULL;
+    if (getaddrinfo(tcp->host, port, &hints, &addresses) != 0)
+        return KRPC_CNANO_TRANSPORT_IO_ERROR;
+
+    KrpcCNanoTransportStatus status = KRPC_CNANO_TRANSPORT_IO_ERROR;
+    for (struct addrinfo *address = addresses; address; address = address->ai_next) {
+        int fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+        if (fd < 0) continue;
+        int flags = fcntl(fd, F_GETFL, 0);
+        if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
+            close(fd);
+            continue;
+        }
+        int result = connect(fd, address->ai_addr, address->ai_addrlen);
+        if (result != 0 && errno != EINPROGRESS) {
+            close(fd);
+            continue;
+        }
+        if (result != 0) {
+            status = serial_wait(fd, POLLOUT, tcp->timeout_ms);
+            if (status != KRPC_CNANO_TRANSPORT_OK) {
+                close(fd);
+                continue;
+            }
+            int socket_error = 0;
+            socklen_t socket_error_size = sizeof(socket_error);
+            if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &socket_error, &socket_error_size) != 0 ||
+                socket_error != 0) {
+                close(fd);
+                status = KRPC_CNANO_TRANSPORT_IO_ERROR;
+                continue;
+            }
+        }
+        tcp->fd = fd;
+        status = KRPC_CNANO_TRANSPORT_OK;
+        break;
+    }
+    freeaddrinfo(addresses);
+    return status;
+}
+
+static KrpcCNanoTransportStatus tcp_close(void *context) {
+    KrpcCNanoPosixTcp *tcp = context;
+    if (!tcp) return KRPC_CNANO_TRANSPORT_INVALID;
+    if (tcp->fd >= 0) {
+        int fd = tcp->fd;
+        tcp->fd = -1;
+        if (close(fd) != 0) return KRPC_CNANO_TRANSPORT_IO_ERROR;
+    }
+    return KRPC_CNANO_TRANSPORT_OK;
+}
+
+static KrpcCNanoTransportStatus tcp_read(void *context, uint8_t *buffer,
+                                         size_t requested, size_t *transferred,
+                                         int timeout_ms) {
+    KrpcCNanoPosixTcp *tcp = context;
+    if (transferred) *transferred = 0;
+    if (!tcp || tcp->fd < 0 || (!buffer && requested) || !transferred)
+        return KRPC_CNANO_TRANSPORT_CLOSED;
+    if (requested == 0) return KRPC_CNANO_TRANSPORT_OK;
+    KrpcCNanoTransportStatus wait = serial_wait(tcp->fd, POLLIN, timeout_ms);
+    if (wait != KRPC_CNANO_TRANSPORT_OK) return wait;
+    for (;;) {
+        ssize_t n = recv(tcp->fd, buffer, requested, 0);
+        if (n > 0) { *transferred = (size_t)n; return KRPC_CNANO_TRANSPORT_OK; }
+        if (n == 0) return KRPC_CNANO_TRANSPORT_EOF;
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return KRPC_CNANO_TRANSPORT_TIMEOUT;
+        return KRPC_CNANO_TRANSPORT_IO_ERROR;
+    }
+}
+
+static KrpcCNanoTransportStatus tcp_write(void *context, const uint8_t *buffer,
+                                          size_t requested, size_t *transferred,
+                                          int timeout_ms) {
+    KrpcCNanoPosixTcp *tcp = context;
+    if (transferred) *transferred = 0;
+    if (!tcp || tcp->fd < 0 || (!buffer && requested) || !transferred)
+        return KRPC_CNANO_TRANSPORT_CLOSED;
+    if (requested == 0) return KRPC_CNANO_TRANSPORT_OK;
+    KrpcCNanoTransportStatus wait = serial_wait(tcp->fd, POLLOUT, timeout_ms);
+    if (wait != KRPC_CNANO_TRANSPORT_OK) return wait;
+    for (;;) {
+        ssize_t n = send(tcp->fd, buffer, requested, 0);
+        if (n > 0) { *transferred = (size_t)n; return KRPC_CNANO_TRANSPORT_OK; }
+        if (n == 0) return KRPC_CNANO_TRANSPORT_ZERO_PROGRESS;
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return KRPC_CNANO_TRANSPORT_TIMEOUT;
+        return KRPC_CNANO_TRANSPORT_IO_ERROR;
+    }
+}
+
+static const KrpcCNanoTransportOps k_posix_tcp_ops = {
+    .open = tcp_open,
+    .close = tcp_close,
+    .read = tcp_read,
+    .write = tcp_write,
+    .protocol = KRPC_CNANO_PROTOCOL_TCP_RPC,
+};
+
+void krpc_cnano_posix_tcp_init(KrpcCNanoPosixTcp *tcp, const char *host,
+                               int port, int timeout_ms) {
+    if (!tcp) return;
+    memset(tcp, 0, sizeof(*tcp));
+    tcp->fd = -1;
+    tcp->timeout_ms = timeout_ms;
+    tcp->port = port;
+    if (host) snprintf(tcp->host, sizeof(tcp->host), "%s", host);
+}
+
+const KrpcCNanoTransportOps *krpc_cnano_posix_tcp_ops(void) {
+    return &k_posix_tcp_ops;
+}
+
 static const KrpcCNanoTransportOps k_posix_serial_ops = {
     .open = serial_open,
     .close = serial_close,
@@ -471,4 +605,8 @@ void krpc_cnano_posix_serial_init(KrpcCNanoPosixSerial *serial, const char *path
     (void)serial; (void)path; (void)timeout_ms; (void)baud_rate; (void)configure_termios;
 }
 const KrpcCNanoTransportOps *krpc_cnano_posix_serial_ops(void) { return NULL; }
+void krpc_cnano_posix_tcp_init(KrpcCNanoPosixTcp *tcp, const char *host, int port, int timeout_ms) {
+    (void)tcp; (void)host; (void)port; (void)timeout_ms;
+}
+const KrpcCNanoTransportOps *krpc_cnano_posix_tcp_ops(void) { return NULL; }
 #endif

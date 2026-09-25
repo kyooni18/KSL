@@ -434,9 +434,24 @@ KrpcCNanoClient *krpc_cnano_client_open(const LandingConfiguration *configuratio
     if(!configuration){set_error(error,error_size,"C-Nano configuration is missing");return NULL;}
 #ifndef _WIN32
     KrpcCNanoClient *client=allocate_client(error,error_size);if(!client)return NULL;
+    const char *rpc_host=getenv("KSP_LANDER_RPC_HOST");
+    const char *rpc_port_text=getenv("KSP_LANDER_RPC_PORT");
+    if((rpc_host&&*rpc_host)||(rpc_port_text&&*rpc_port_text)){
+        if(!rpc_host||!*rpc_host)rpc_host="127.0.0.1";
+        char *end=NULL;long rpc_port=rpc_port_text&&*rpc_port_text?strtol(rpc_port_text,&end,10):50000;
+        if(rpc_port<1||rpc_port>65535||(rpc_port_text&&*rpc_port_text&&(!end||*end))){
+            set_error(error,error_size,"Invalid kRPC RPC port: %s",rpc_port_text?rpc_port_text:"");free(client);return NULL;
+        }
+        krpc_cnano_posix_tcp_init(&client->tcp,rpc_host,(int)rpc_port,configuration->connection.timeout_ms);
+        KrpcCNanoTransportConfig config=krpc_cnano_transport_config(
+            &client->transport,krpc_cnano_posix_tcp_ops(),&client->tcp,
+            configuration->connection.timeout_ms);
+        char name[sizeof(client->transport_name)];snprintf(name,sizeof(name),"tcp:%s:%ld",rpc_host,rpc_port);
+        return finish_client_open(client,configuration,&config,name,error,error_size);
+    }
     const char *path=configuration->connection.serial_port;
     const char *override=getenv("KSP_LANDER_SERIAL_PORT");if(override&&*override)path=override;
-    if(!path||!*path){set_error(error,error_size,"No kRPC serial-protocol endpoint is configured (connection.serialPort)");free(client);return NULL;}
+    if(!path||!*path){set_error(error,error_size,"No kRPC endpoint is configured");free(client);return NULL;}
     krpc_cnano_posix_serial_init(&client->serial,path,configuration->connection.timeout_ms,configuration->connection.baud_rate,true);
     KrpcCNanoTransportConfig config=krpc_cnano_transport_config(
         &client->transport,krpc_cnano_posix_serial_ops(),&client->serial,

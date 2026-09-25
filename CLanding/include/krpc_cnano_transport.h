@@ -35,6 +35,11 @@ typedef enum {
     KRPC_CNANO_TRANSPORT_ZERO_PROGRESS
 } KrpcCNanoTransportStatus;
 
+typedef enum {
+    KRPC_CNANO_PROTOCOL_MULTIPLEXED = 0,
+    KRPC_CNANO_PROTOCOL_TCP_RPC
+} KrpcCNanoTransportProtocol;
+
 typedef struct KrpcCNanoTransport KrpcCNanoTransport;
 typedef struct KrpcCNanoTransportConfig KrpcCNanoTransportConfig;
 typedef struct KrpcCNanoTransportOps KrpcCNanoTransportOps;
@@ -57,6 +62,7 @@ struct KrpcCNanoTransportOps {
     KrpcCNanoTransportCloseFn close;
     KrpcCNanoTransportReadFn read;
     KrpcCNanoTransportWriteFn write;
+    KrpcCNanoTransportProtocol protocol;
 };
 
 struct KrpcCNanoTransport {
@@ -87,6 +93,13 @@ typedef struct {
     char path[KRPC_CNANO_SERIAL_PATH_CAPACITY];
 } KrpcCNanoPosixSerial;
 
+typedef struct {
+    int fd;
+    int timeout_ms;
+    int port;
+    char host[256];
+} KrpcCNanoPosixTcp;
+
 #include <krpc_cnano/communication.h>
 
 KrpcCNanoTransportConfig krpc_cnano_transport_config(
@@ -102,6 +115,7 @@ size_t krpc_cnano_transport_bytes_read(krpc_connection_t connection);
 size_t krpc_cnano_transport_bytes_written(krpc_connection_t connection);
 void krpc_cnano_transport_reset_counters(krpc_connection_t connection);
 int krpc_cnano_transport_timeout_ms(krpc_connection_t connection);
+bool krpc_cnano_transport_uses_standard_rpc(krpc_connection_t connection);
 bool krpc_cnano_transport_begin_deadline(krpc_connection_t connection);
 void krpc_cnano_transport_end_deadline(krpc_connection_t connection);
 
@@ -111,5 +125,7 @@ void krpc_cnano_posix_serial_init(KrpcCNanoPosixSerial *serial,
                                   int baud_rate,
                                   bool configure_termios);
 const KrpcCNanoTransportOps *krpc_cnano_posix_serial_ops(void);
+void krpc_cnano_posix_tcp_init(KrpcCNanoPosixTcp *tcp, const char *host, int port, int timeout_ms);
+const KrpcCNanoTransportOps *krpc_cnano_posix_tcp_ops(void);
 
 #endif
