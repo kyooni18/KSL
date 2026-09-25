@@ -11,20 +11,28 @@ static const double reachability_pi = 3.14159265358979323846264338327950288;
 static double radians(double degrees) { return degrees * reachability_pi / 180.0; }
 static double degrees(double radians_value) { return radians_value * 180.0 / reachability_pi; }
 
-bool taem_fixed_hac_geometry(const TerminalModel *m, double radius, double side,
-        TaemFixedHacGeometry *out) {
+bool taem_hac_geometry_sweep(const TerminalModel *m, double radius, double side,
+        double sweep_abs_rad, TaemFixedHacGeometry *out) {
     if (!m || !out || !(radius >= 3000.0) || !isfinite(radius) ||
         (side != -1.0 && side != 1.0) ||
+        !(sweep_abs_rad > 0.0) || !isfinite(sweep_abs_rad) ||
+        sweep_abs_rad > 1.5 * reachability_pi * (1.0 + 1e-9) ||
         !(m->guidance.final_approach_distance > 0.0)) return false;
 
     /* Coordinates use runway-forward and runway-right axes. Course is
-     * clockwise from north and positive relative course points to the right. */
+     * clockwise from north and positive relative course points to the right.
+     * The circle, radius and Final exit remain fixed; only the capture point
+     * moves around that circle. */
     double final_distance = m->guidance.final_approach_distance;
     TaemPoint2 exit = {-final_distance, 0.0};
     TaemPoint2 center = {exit.x, side * radius};
     double end_angle = atan2(exit.y - center.y, exit.x - center.x);
-    double sweep_sign = -side;
-    double sweep = sweep_sign * 1.5 * reachability_pi;
+    /* The exit must be flown in the runway-forward (+x) direction.  At the
+     * exit the radius vector points from the center toward the centerline,
+     * so a center on the right (side > 0) requires increasing polar angle
+     * and a center on the left decreasing angle: the sweep sign is +side. */
+    double sweep_sign = side;
+    double sweep = sweep_sign * sweep_abs_rad;
     double start_angle = end_angle - sweep;
     TaemPoint2 entry = {center.x + radius * cos(start_angle),
                         center.y + radius * sin(start_angle)};
@@ -45,6 +53,12 @@ bool taem_fixed_hac_geometry(const TerminalModel *m, double radius, double side,
         .total_length_m = fabs(sweep) * radius + final_distance
     };
     return true;
+}
+
+bool taem_fixed_hac_geometry(const TerminalModel *m, double radius, double side,
+        TaemFixedHacGeometry *out) {
+    return taem_hac_geometry_sweep(m, radius, side,
+        1.5 * reachability_pi, out);
 }
 
 bool taem_fixed_hac_turn_reachability(const TerminalModel *m,
