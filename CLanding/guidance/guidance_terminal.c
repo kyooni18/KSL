@@ -3,7 +3,6 @@
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* Translation-unit private helpers. */
@@ -72,7 +71,6 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
         return result;
     }
     (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&contract,false,false);
-    evaluation=g->taem_exec.terminal_evaluation;
     if(!g->final_approach_captured&&t->runway_along_track<0.0&&
        g->taem_exec.phase==TAEM_PHASE_FINAL_INTERCEPT){
         (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&contract,true,true);
@@ -121,16 +119,11 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
 
     bool reported_landed=!strcasecmp(t->vessel_situation,"landed");
     if (g->final_approach_captured &&
-        (g->phase==PHASE_ROLLOUT || g->phase==PHASE_COMPLETE || reported_landed)) {
+        (g->phase==PHASE_ROLLOUT || g->phase==PHASE_COMPLETE || g->ground_contact_latched)) {
         if (reported_landed && !terminal_runway_contact_position(t,cfg))
             return terminal_abort(g,"Touchdown occurred outside the runway 09 contact envelope.");
         if (reported_landed && !t->gear)
             return terminal_abort(g,"Touchdown occurred without confirmed landing-gear deployment.");
-        if (reported_landed) {
-            g->ground_contact_latched=true;
-            g->gear_command_latched=true;
-            terminal_set_stage(g,TERMINAL_GROUND,t->ut);
-        }
         Trajectory reference; trajectory_init(&reference);
         GuidanceResult result=touchdown(g,t,cfg,&reference);
         trajectory_clear(&reference);
@@ -168,9 +161,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     if (!g->terminal_region_entered && !g->final_approach_captured) {
         g->phase=PHASE_ENTRY_ENERGY;
         GuidanceResult entry=entry_program_guidance(g,t,state,course,p,aero,cfg,dt);
-        bool strict_handoff=mm305_acquisition_ready(t,p,cfg)&&
-            g->entry_exec.entry_complete;
-        g->taem_interface_captured=strict_handoff;
+        /* MM304 hands off into the measured MM305 admissible state set.  Recheck
+           the same state-set evaluator here as an invariant; never reintroduce
+           the retired fixed Entry inlet as a second ownership gate. */
+        TaemInterfaceCapture admission=entry_mm305_admission_envelope(
+            g,t,course,p,cfg);
+        bool strict_handoff=g->entry_exec.entry_complete&&
+            admission.valid&&admission.ready;
         if (!strict_handoff) {
             double low=0.0,high=0.0;
             entry_taem_handoff_altitude_bounds(s,&low,&high);
@@ -187,6 +184,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             return entry;
         }
 
+        g->taem_interface_captured=true; /* measured MM305 admissible state-set capture */
         double loss=g->terminal_energy_loss_accel_ema;
         double speed_loss=g->terminal_speed_loss_accel_ema;
         bool rehearsal=g->terminal_rehearsal_mode;
@@ -210,16 +208,20 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->hac_progress_valid=false;
         g->hac_remaining=0.0;
         g->hac_radius=s->hac_radius;
-        g->hac_side=terminal_default_hac_side(t,&cfg->site,course);
-        g->terminal_reference_heading=course;
-        g->terminal_reference_bank=0.0;
-        g->terminal_reference_fpa=t->flight_path_angle;
-        g->terminal_reference_aoa=clampd(t->angle_of_attack,0.0,
-            v->maximum_angle_of_attack);
+        g->hac_side=0.0;
         g->phase=PHASE_TAEM;
         if (!taem_exec_enter(g,t,s,p,aero,cfg,false))
             return terminal_abort(g,
                 "MM304 ownership handoff was qualified, but the TAEM executive could not enter Path Acquisition.");
+        if (g->diagnostic_shadow && g->diagnostic_stop_at_taem) {
+            g->phase=PHASE_TAEM;
+            entry.phase=PHASE_TAEM;
+            entry.has_warning=false;
+            entry.warning[0]='\0';
+            snprintf(entry.status,sizeof(entry.status),
+                "MM304 diagnostic shadow captured the MM305 ownership boundary.");
+            return entry;
+        }
         guidance_result_clear(&entry);
     }
 
@@ -254,8 +256,12 @@ static GuidanceResult terminal_guidance_selected(GuidanceMachine*g,
      * chooses the end by testing the live pose against both configured outlets.
      */
     bool handoff_end_selected=false;
+    /* Keep the MM304 runway frame authoritative until its handoff target is
+       acquired.  Reframing here changes the live along/cross coordinates and
+       makes the declared -8 km station appear farther away. */
     if(cfg->site.allow_reciprocal_runway&&!g->runway_end_committed&&
-       !g->terminal_region_entered){
+       !g->terminal_region_entered&&
+       (g->taem_interface_captured||g->entry_exec.entry_complete)){
         LandingSite primary=cfg->site;
         LandingSite reciprocal=runway_reciprocal_site(&primary,p->radius);
         double primary_path=decision_runway_end_path_score(g,t,p,cfg,&primary);

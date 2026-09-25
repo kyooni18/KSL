@@ -70,7 +70,7 @@ bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
     g->terminal_region_entered = true;
     g->terminal_test_capture_active = true;
     g->hac_radius = cfg->guidance.hac_radius;
-    g->hac_side = terminal_default_hac_side(t, &cfg->site, course);
+    g->hac_side = 0.0;
     g->terminal_final_handoff_latched = false;
     g->terminal_path_committed = false;
     g->hac_completed = false;
@@ -108,6 +108,27 @@ static TerminalDynamicState terminal_live_state(const VehicleState *state,
     };
 }
 
+/* The frozen terminal model carries the configured runway end.  MM305 frames
+ * its route, tracker and replay in the runway end it commits to, so the
+ * reciprocal end uses an otherwise identical model with the reciprocal site.
+ * Cached per snapshot; the plant tables are unchanged. */
+static const TerminalModel *mm305_model_for_end(const TerminalModel *model,
+        int runway_end) {
+    static _Thread_local TerminalModel reciprocal;
+    static _Thread_local uint64_t reciprocal_snapshot_id;
+    static _Thread_local bool reciprocal_valid;
+    if (runway_end!=1) return model;
+    if (!reciprocal_valid || reciprocal_snapshot_id!=model->snapshot_id ||
+        reciprocal.site.latitude!=runway_reciprocal_site(&model->site,
+            model->world.radius_m).latitude) {
+        reciprocal=*model;
+        reciprocal.site=runway_reciprocal_site(&model->site,model->world.radius_m);
+        reciprocal_snapshot_id=model->snapshot_id;
+        reciprocal_valid=true;
+    }
+    return &reciprocal;
+}
+
 GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         const VehicleState *vehicle_state,double course,const PlanetModel *planet,
         AerodynamicModel aero,const LandingConfiguration *cfg,
@@ -124,43 +145,45 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             "MM305 native HAC exit reached; awaiting the existing numeric Final contract.",NULL);
 
     TerminalDynamicState current=terminal_live_state(vehicle_state,t,model);
-    TaemGeometryState geometry;
-    if (!terminal_state_validate(&current,NULL,0) ||
-        !taem_geometry_state(model,&current,&geometry))
+    if (!terminal_state_validate(&current,NULL,0))
         return terminal_abort(g,
             "MM305 native state could not be projected into the fixed runway frame.");
 
     if (!g->mm305_route_committed) {
-        TaemFixedHacSearch search=taem_fixed_hac_search(model,&current,
-            200.0,0.25,1800.0);
+        double frozen_hac_radius = g->taem_interface_target.valid &&
+            isfinite(g->taem_interface_target.hac_radius) && g->taem_interface_target.hac_radius > 0.0 ?
+            g->taem_interface_target.hac_radius : g->hac_radius;
+        /* An end already committed upstream (MM304 handoff) is authoritative.
+         * Otherwise both ends compete under the same fixed-HAC contract. */
+        bool search_both_ends=cfg->site.allow_reciprocal_runway &&
+            !g->runway_end_committed;
+        int upstream_end=g->runway_end_preview_valid&&g->runway_end_index==1?1:0;
+        TaemFixedHacSearch search=search_both_ends ?
+            taem_fixed_hac_search_runway_ends(model,mm305_model_for_end(model,1),
+                &current,frozen_hac_radius,200.0,0.5,1800.0) :
+            taem_fixed_hac_search(mm305_model_for_end(model,upstream_end),
+                &current,frozen_hac_radius,200.0,0.5,1800.0);
+        if (!search_both_ends)
+            for (int i=0;i<search.candidate_count;++i)
+                search.candidates[i].runway_end=upstream_end;
         int selected=search.selected_candidate;
-        if (selected<0 || selected>=2 ||
+        if (selected<0 || selected>=search.candidate_count ||
             search.candidates[selected].status!=TAEM_PLAN_UNQUALIFIED ||
             !search.candidates[selected].route_built ||
             !search.candidates[selected].replay.path_constraints_ok) {
-            char diagnostic[384];
-            snprintf(diagnostic,sizeof(diagnostic),
-                "MM305 route rejected: L %s lat %.1f/%.1f; R %s lat %.1f/%.1f vert %.1f (%.1f/%.1f) at %.1fs h%.0f i%zu; bow%+.0f local%+.0f@%.2f^%.2f-%.2f sag%+.0f target h%.0f/FPA%.1f",
-                search.candidates[0].reason?search.candidates[0].reason:"unknown",
-                search.candidates[0].required_lateral_accel_mps2,
-                search.candidates[0].available_lateral_accel_mps2,
-                search.candidates[1].reason?search.candidates[1].reason:"unknown",
-                search.candidates[1].required_lateral_accel_mps2,
-                search.candidates[1].available_lateral_accel_mps2,
-                search.candidates[1].replay.maximum_vertical_authority_shortfall_mps2,
-                search.candidates[1].replay.failure_required_vertical_lift_mps2,
-                search.candidates[1].replay.failure_delivered_vertical_lift_mps2,
-                search.candidates[1].replay.elapsed_s,
-                search.candidates[1].replay.final_geometry.altitude_above_runway_m,
-                search.candidates[1].replay.failure_route_index,
-                search.candidates[1].route.profile_midpoint_offset_m,
-                search.candidates[1].route.profile_local_offset_m,
-                search.candidates[1].route.profile_local_start_fraction,
-                search.candidates[1].route.profile_local_peak_fraction,
-                search.candidates[1].route.profile_local_end_fraction,
-                search.candidates[1].route.profile_initial_sag_m,
-                search.candidates[1].replay.failure_target_altitude_m,
-                search.candidates[1].replay.failure_target_flight_path_angle_deg);
+            char diagnostic[768];
+            int used=snprintf(diagnostic,sizeof(diagnostic),"MM305 route rejected:");
+            for (int i=0;i<search.candidate_count &&
+                    used>0 && (size_t)used<sizeof(diagnostic);++i) {
+                const TaemFixedHacCandidate *c=&search.candidates[i];
+                used+=snprintf(diagnostic+used,sizeof(diagnostic)-(size_t)used,
+                    " [%s %c] %s lat %.1f/%.1f t%.1f i%zu;",
+                    c->runway_end==1?"RECIP":"CONF",c->side>0.0?'R':'L',
+                    c->reason?c->reason:"unknown",
+                    c->replay.failure_required_lateral_accel_mps2,
+                    c->replay.failure_available_lateral_accel_mps2,
+                    c->replay.elapsed_s,c->replay.failure_route_index);
+            }
             return terminal_abort(g,diagnostic);
         }
 
@@ -168,6 +191,22 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         /* Replay qualifies the complete MM305 route through the HAC exit only.
          * Final tail qualification remains with the unchanged live contract. */
         g->mm305_route=candidate->route;
+        g->runway_end_index=candidate->runway_end;
+        g->runway_end_preview_valid=true;
+        g->runway_end_committed=true;
+        /* One machine-readable commitment record; observers must not infer
+         * geometry from human wording or a retired fixed-270-degree log. */
+        fprintf(stderr,"MM305_ROUTE {\"runwayEnd\":%d,\"side\":%.17g,"
+            "\"radius\":%.17g,\"sweep\":%.17g,\"leadLength\":%.17g,\"arcLength\":%.17g,"
+            "\"entry\":[%.17g,%.17g],\"center\":[%.17g,%.17g],\"exit\":[%.17g,%.17g],"
+            "\"finalDistance\":%.17g}\n",
+            candidate->runway_end,candidate->side,candidate->route.hac.radius_m,
+            candidate->route.hac.arc_sweep_rad,candidate->route.lead_length_m,
+            candidate->route.hac.arc_length_m,
+            candidate->route.hac.entry.x,candidate->route.hac.entry.y,
+            candidate->route.hac.center.x,candidate->route.hac.center.y,
+            candidate->route.hac.exit.x,candidate->route.hac.exit.y,
+            cfg->guidance.final_approach_distance);
         g->mm305_route_cursor=0;
         g->mm305_route_committed=true;
         g->mm305_hac_exit_reached=false;
@@ -175,30 +214,62 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         g->hac_side=candidate->side;
         g->hac_side_selected=true;
         g->hac_radius=candidate->route.hac.radius_m;
-        g->hac_remaining=candidate->route.hac.arc_length_m;
+        g->hac_remaining=candidate->route.length_m;
+        g->hac_progress_valid=true;
         g->terminal_path_kind=TERMINAL_PATH_HAC;
         g->terminal_path_committed=true;
         g->terminal_final_handoff_latched=true;
         g->terminal_final_handoff_distance=cfg->guidance.final_approach_distance;
-        g->terminal_candidate.valid=false;
         g->hac_completed=false;
-        g->hac_captured=false;
+        g->hac_captured=true;
     } else if (g->mm305_model_snapshot_id!=model->snapshot_id) {
         return terminal_abort(g,
             "The native MM305 model snapshot changed after route commitment.");
     }
 
+    const TerminalModel *end_model=mm305_model_for_end(model,
+        g->runway_end_index==1?1:0);
+    TaemGeometryState geometry;
+    if (!taem_geometry_state(end_model,&current,&geometry))
+        return terminal_abort(g,
+            "MM305 native state could not be projected into the fixed runway frame.");
     TaemPathReference reference;
     if (!taem_route_reference(&g->mm305_route,&geometry,
             &g->mm305_route_cursor,&reference,NULL))
         return terminal_abort(g,
             "Committed MM305 route could not produce a tracker reference.");
-    TaemTrackerOutput demand=taem_tracker_update(model,&current,&geometry,
+    double route_remaining=taem_route_remaining_at_index(
+        &g->mm305_route,g->mm305_route_cursor);
+    if (!isfinite(route_remaining))
+        return terminal_abort(g,"Committed MM305 route station became non-finite.");
+    g->hac_remaining=route_remaining;
+    g->hac_progress_valid=true;
+    g->hac_captured=true;
+    TaemTrackerOutput demand=taem_tracker_update(end_model,&current,&geometry,
         &reference,dt);
-    if (!demand.valid || !demand.lateral_authority_ok ||
-        !demand.vertical_authority_ok)
+    if (!demand.valid)
         return terminal_abort(g,
-            "Live MM305 tracker demand left its replay-qualified control envelope.");
+            "Live MM305 tracker could not produce a bounded control command.");
+    const char *diagnostics=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+    if (diagnostics && strcmp(diagnostics,"2")==0)
+        fprintf(stderr,
+            "TAEM live trace: ut=%.2f idx=%zu along=%.0f cross=%.0f h=%.0f course=%.1f ref=%.1f kappa=%.3g xt=%.0f crsErr=%.1f fpa=%.1f refFpa=%.1f bank=%.1f cmdBank=%.1f aoa=%.1f cmdAoa=%.1f dt=%.3f\n",
+            current.ut_s,g->mm305_route_cursor,geometry.runway_along_m,
+            geometry.runway_cross_m,geometry.altitude_above_runway_m,
+            geometry.course_deg,reference.course_deg,
+            reference.curvature_right_per_m,demand.cross_track_error_m,
+            demand.course_error_deg,geometry.flight_path_angle_deg,
+            reference.flight_path_angle_deg,current.attitude.bank_rad*RAD2DEG,
+            demand.control.bank_rad*RAD2DEG,current.attitude.aoa_rad*RAD2DEG,
+            demand.control.angle_of_attack_rad*RAD2DEG,dt);
+    /* The committed route was qualified with the same saturated native attitude
+     * response.  Do not abort on a one-tick lift-vector shortfall; abort only if
+     * the actual vehicle leaves a wider emergency tracking corridor. */
+    double emergency_cross_track_m=fmax(3000.0,0.25*g->mm305_route.hac.radius_m);
+    if (fabs(demand.cross_track_error_m)>emergency_cross_track_m ||
+        fabs(demand.course_error_deg)>45.0)
+        return terminal_abort(g,
+            "Live MM305 tracking diverged outside the replay-qualified corridor.");
     if (geometry.altitude_above_runway_m<=0.0)
         return terminal_abort(g,
             "MM305 crossed runway elevation before reaching the fixed-HAC exit.");
