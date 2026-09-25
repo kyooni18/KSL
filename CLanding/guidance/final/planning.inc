@@ -1,32 +1,6 @@
-       double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s){
+double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s){
     return g->terminal_glide_mode&&g->terminal_test_glide_slope>0?g->terminal_test_glide_slope:s->final_glide_slope;
 }
-
-static double terminal_preflare_altitude(const GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s){
-    double slope=terminal_outer_glide_slope(g,s);
-    double nominal_sink=t->horizontal_speed*tan(slope*DEG2RAD);
-    double sink=fmax(nominal_sink,fmax(0,-t->vertical_speed));
-    if(g->terminal_glide_mode){
-        double minimum=fmax(g->terminal_test_preflare_altitude,fmax(450.0,s->flare_altitude*8.0));
-        return clampd(fmax(minimum,sink*7.0),minimum,900.0);
-    }
-    return clampd(sink*7.0,fmax(180.0,s->flare_altitude*3.0),700.0);
-}
-
-                
-                  
-                              
-                            
-                      
-                       
-                         
-                           
-                                 
-                                    
-                           
-                         
-                          
-                       
 
 static double terminal_final_distance(const GuidanceMachine*g,const GuidanceSettings*s){
     if(g->terminal_glide_mode&&g->terminal_test_final_approach_distance>0)
@@ -457,7 +431,9 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
        !isfinite(current_specific)||!isfinite(fpa_margin))return contract;
 
     contract.valid=true;
-    contract.path_committed=g->terminal_path_committed&&!g->hac_transition_active;
+    contract.path_committed=g->terminal_final_test_mode||
+        (g->terminal_path_committed&&g->mm305_route_committed&&
+         g->mm305_hac_exit_reached);
     contract.range_to_go=distance;
     contract.range_margin=(response_available-response_required)*t->horizontal_speed;
     contract.dynamic_pressure=t->dynamic_pressure;
@@ -606,8 +582,6 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
     g->hac_progress_valid=false;
     g->hac_side_selected=false;
     g->hac_radius=0.0;
-    g->hac_transition_active=false;
-    g->fixed_alignment_hac_latched=false;
     if(!taem_exec_enter(g,t,&cfg->guidance,p,aero,cfg,true)){
         guidance_machine_init(g);
         if(message&&message_size)snprintf(message,message_size,"Final-only test could not reconstruct TAEM final-intercept ownership.");
@@ -704,16 +678,7 @@ bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t
 }
 
 
-static void terminal_update_gear_latch(GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s){
-    if(g->gear_command_latched)return;
-    if(t->gear||t->radar_altitude<=s->gear_deployment_altitude){g->gear_command_latched=true;return;}
-    if(!g->terminal_preflare_plan_valid)return;
-    double sink=fmax(.5,-t->vertical_speed);
-    double seconds=(t->radar_altitude-g->preflare_trigger_altitude)/sink;
-    if(seconds<=12.0&&g->preflare_predicted_kinetic_margin>=0)g->gear_command_latched=true;
-}
-
-       bool terminal_runway_contact_position(const Telemetry*t,const LandingConfiguration*cfg){
+bool terminal_runway_contact_position(const Telemetry*t,const LandingConfiguration*cfg){
     const LandingSite*site=&cfg->site;
     return t->runway_along_track>=-40.0&&t->runway_along_track<site->runway_length+80.0&&
         fabs(t->runway_cross_track)<fmax(site->runway_width*.75,45.0);
@@ -728,9 +693,10 @@ static bool terminal_update_ground_latch(GuidanceMachine*g,const Telemetry*t,con
     bool near_contact=flare_stage&&t->gear&&over_runway&&
         t->radar_altitude<.6&&t->vertical_speed>-3.0&&fabs(t->vertical_speed)<3.0&&
         t->surface_speed<fmax(190.0,v->final_approach_speed*1.65);
-    if(near_contact)g->ground_contact_duration+=fmax(0,dt);
+    bool contact_evidence=landed_on_runway||near_contact;
+    if(contact_evidence)g->ground_contact_duration+=fmax(0,dt);
     else g->ground_contact_duration=fmax(0,g->ground_contact_duration-fmax(0,dt)*2.0);
-    if(landed_on_runway||g->ground_contact_duration>=.25){
+    if(g->ground_contact_duration>=.25){
         g->ground_contact_latched=true;g->gear_command_latched=true;
         terminal_set_stage(g,TERMINAL_GROUND,t->ut);
         return true;

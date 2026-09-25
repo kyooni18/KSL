@@ -110,10 +110,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double H_FLOAT=3.5;
     const double S_FLOAT=.5;
     const double TOUCHDOWN_ALONG=75.0;
-    const double ARREST_ACCEL=.35*g0;
-    const double SINK_HEIGHT_RATE=.14;
+    const double ARREST_ACCEL=.37*g0;
+    const double SINK_HEIGHT_RATE=.07;
     const double TOUCHDOWN_PITCH=8.0;
-    const double TOUCHDOWN_ATTITUDE_START=20.0;
+    const double TOUCHDOWN_ATTITUDE_START=26.0;
+    const double TOUCHDOWN_ATTITUDE_FULL=5.0;
 
     double height=t->mean_altitude-site->altitude;
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&terminal_runway_contact_position(t,cfg))
@@ -160,7 +161,9 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double bank_limit=fmin(fmin(30.0,terminal_lateral_bank_limit(t,v)),
         3.0+27.0*lateral_scale);
     double bank=clampd(atan(lateral_accel/g0)*RAD2DEG,-bank_limit,bank_limit);
-    double lift_div=fmax(.5,cos(gamma)*cos(bank*DEG2RAD));
+    /* Flight-path normal acceleration resolves lift through bank only.
+     * Gravity already has its cos(gamma) projection in the gamma equation. */
+    double lift_div=cos(bank*DEG2RAD);
 
     /* Learn the lift scale in flight and target a geometric runway intercept.
        Pull capture is one-way: after it begins, the sink profile can only
@@ -203,18 +206,22 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double measured_gamma_rate=isfinite(t->lift_force)?
         (t->lift_force*cos(bank*DEG2RAD)/fmax(t->mass,1.0)-g0*cos(gamma))/V:0.0;
     double lead_gamma=gamma+1.5*measured_gamma_rate;
-    double vertical_accel=clampd(V*(sink_rate_ff+.3*(reference_fpa-lead_gamma)),
+    double vertical_accel=clampd(V*(sink_rate_ff+.5*(reference_fpa-lead_gamma)),
         -.3*g0,1.5*g0);
     double lift_required=t->mass*(vertical_accel+g0*cos(gamma))/lift_div/
         g->terminal_lift_ratio;
     double aoa=clampd(terminal_aoa_for_lift(g,t,v,fmax(0.0,lift_required),aoa_max),
         0.0,aoa_max);
-    /* Carry the proven 8 deg mains-first attitude, but begin it early enough
-       for the existing 1.5 deg/s flare slew limiter to establish that attitude
-       before contact.  Live k108 entered the old 15 m floor too late and struck
-       with only about 1.3 deg body pitch. */
+    /* Establish the mains-first attitude before contact without a low-altitude
+       pitch step.  The smoothstep begins gently at 26 m main-wheel height and
+       reaches the full 8 deg only near 5 m, so the incidence floor assists sink
+       arrest without exciting the live pitch loop. */
     if(flaring&&height<=TOUCHDOWN_ATTITUDE_START){
-        double touchdown_aoa=clampd(TOUCHDOWN_PITCH-t->flight_path_angle,0.0,aoa_max);
+        double u=clampd((TOUCHDOWN_ATTITUDE_START-height)/
+            (TOUCHDOWN_ATTITUDE_START-TOUCHDOWN_ATTITUDE_FULL),0.0,1.0);
+        u=u*u*(3.0-2.0*u);
+        double attitude_floor=TOUCHDOWN_PITCH*u;
+        double touchdown_aoa=clampd(attitude_floor-t->flight_path_angle,0.0,aoa_max);
         aoa=fmax(aoa,touchdown_aoa);
     }
 
@@ -230,7 +237,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        is slower to avoid chasing force-response noise. */
     if(g->terminal_aoa_cmd_ut>0.0&&t->ut>g->terminal_aoa_cmd_ut&&
        t->ut<g->terminal_aoa_cmd_ut+2.0){
-        double rate=flaring?1.5:6.0;
+        double rate=flaring?3.0:6.0;
         double allowance=rate*(t->ut-g->terminal_aoa_cmd_ut);
         aoa=clampd(aoa,g->terminal_aoa_cmd_last-allowance,
             g->terminal_aoa_cmd_last+allowance);
@@ -242,10 +249,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         -20.0,20.0);
     double target_course=norm_deg(site->runway_heading+intercept);
     if(height<90.0)g->gear_command_latched=true;
-    if(t->has_airbrakes&&!flaring&&height>60.0){
-        if(V>100.0)g->airbrakes_deployed=true;
-        else if(V<95.0)g->airbrakes_deployed=false;
-    }else g->airbrakes_deployed=false;
+    terminal_speedbrake_closed(g); /* Unpowered landing contract: no airbrakes. */
 
     GuidanceCommand c=atmospheric(t,target_course,bank,v,0.0,
         g->airbrakes_deployed,flaring?PROFILE_FLARE:PROFILE_APPROACH);

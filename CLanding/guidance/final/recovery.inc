@@ -47,16 +47,10 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     double roll_error = norm_signed_deg(previous_roll_target - norm_signed_deg(t->roll));
     double reference_roll_rate = g->roll_limiter.has_value && isfinite(g->roll_limiter.rate) ?
         g->roll_limiter.rate : 0;
-    /* Once the fixed-HAC limiter has already arrived at its bank reference,
-       its stored rate is a command-history value, not unobserved airframe
-       motion. ShuttleSim publishes zero bank rate when that direct command is
-       reached; subtracting the stale reference rate then manufactures a
-       limit-cycle signal and enters attitude recovery in the middle of the
-       analytic arc. Keep the independent measured-rate and departure gates,
-       but only compare against the reference rate while an angular error still
-       exists. */
-    bool fixed_hac_bank_captured=g->fixed_alignment_hac_latched&&
-        g->hac_transition_heading_cone&&fabs(roll_error)<=1.5;
+    /* On the committed native MM305 route, a captured bank reference is a
+       command-history value rather than measured airframe motion. */
+    bool fixed_hac_bank_captured=g->mm305_route_committed&&
+        g->mm305_route.valid&&!g->mm305_hac_exit_reached&&fabs(roll_error)<=1.5;
     double relative_roll_rate=fixed_hac_bank_captured?
         signed_roll_rate:signed_roll_rate-reference_roll_rate;
 
@@ -297,33 +291,32 @@ static double observed_signed_roll_rate(const Telemetry *t) {
 }
 
        void terminal_invalidate_frozen_path(GuidanceMachine*g){
-    /* Recovery or a deliberate return to Entry moves the aircraft away from
-       the state used to freeze the join.  Never resume that stale geometry.
-       Keep terminal mode itself intact here so a low-altitude recovery can
-       immediately search a fresh path if there is no safe S-turn margin. */
-    g->terminal_candidate.valid=false;g->terminal_path_kind=TERMINAL_PATH_NONE;g->terminal_prediction_valid=false;g->terminal_mix=0;
+    /* A deliberate recovery invalidates the committed MM305 geometry.  Keep
+       terminal mode and learned energy observations available for the replacement
+       search, but never resume a stale native route. */
+    g->terminal_path_kind=TERMINAL_PATH_NONE;
     g->terminal_path_committed=false;
-    g->terminal_final_handoff_latched=false;g->terminal_final_handoff_distance=NAN;
-    g->hac_plan_degraded=false;g->hac_plan_geometry_degraded=false;
-    g->hac_plan_energy_degraded=false;g->hac_plan_violation_score=0;g->hac_commit_blend=0;
-    g->hac_side_selected=false;g->hac_captured=false;g->hac_completed=false;g->hac_progress_valid=false;
-    g->mm305_route=(TaemRoute){0};g->mm305_route_cursor=0;
-    g->mm305_route_committed=false;g->mm305_hac_exit_reached=false;
+    g->terminal_final_handoff_latched=false;
+    g->terminal_final_handoff_distance=NAN;
+    g->hac_side_selected=false;
+    g->hac_captured=false;
+    g->hac_completed=false;
+    g->hac_progress_valid=false;
+    g->mm305_route=(TaemRoute){0};
+    g->mm305_route_cursor=0;
+    g->mm305_route_committed=false;
+    g->mm305_hac_exit_reached=false;
     g->mm305_model_snapshot_id=0;
-    g->hac_transition_active=false;g->hac_transition_heading_cone=false;g->hac_transition_lead_curve=false;g->hac_transition_progress=0;g->hac_transition_lead_progress=0;
-    g->hac_transition_lead_rebase_attempted=false;
-    g->hac_transition_cone_arc_length=0.0;
-    g->hac_remaining=0;g->hac_radius=0;g->hac_capture_lost_duration=0;
-    g->hac_transition_handoff_lateral_valid=false;
-    g->hac_transition_handoff_lateral_acceleration=0.0;
-    g->hac_transition_handoff_blend=0.0;
-    g->hac_transition_handoff_aoa_valid=false;
-    g->hac_transition_handoff_aoa=0.0;
-    g->terminal_energy_mismatch_duration=0;
-    g->hac_circuit_count=0;g->hac_circuit_slope=0;
+    g->hac_remaining=0.0;
+    g->hac_radius=0.0;
+    g->hac_capture_lost_duration=0.0;
+    g->terminal_energy_mismatch_duration=0.0;
     g->terminal_test_capture_active=g->terminal_glide_mode;
-    g->terminal_energy_sample_valid=false;g->terminal_energy_loss_accel_ema=0;g->terminal_speed_loss_accel_ema=0;
-    g->terminal_preflare_plan_valid=false;g->final_invalid_duration=0;
+    g->terminal_energy_sample_valid=false;
+    g->terminal_energy_loss_accel_ema=0.0;
+    g->terminal_speed_loss_accel_ema=0.0;
+    g->terminal_preflare_plan_valid=false;
+    g->final_invalid_duration=0.0;
 }
 
        void terminal_invalidate_frozen_path_preserve_energy(GuidanceMachine*g){
