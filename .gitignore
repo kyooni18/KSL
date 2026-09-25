@@ -92,3 +92,13 @@ env/
 /ShuttleSim/scenarios/mm305-heading-sweep-*/
 /ShuttleSim/scenarios/mm305-position-grid-*/
 /ShuttleSim/scenarios/mm305-hac-repro-*.ini
+
+# Transient simulator/debug outputs
+/ShuttleSim/.pending-runs/
+/FlightLogs-archive-*/
+/.tmp-*
+/.yeet_snapshot_*
+/1
+/ShuttleSim/1
+/*.plist
+**/.build-*/
