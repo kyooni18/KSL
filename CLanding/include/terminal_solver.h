@@ -48,6 +48,24 @@ typedef struct {
 /* Full-horizon deterministic replay against the shared native airborne tick.
  * A successful route solve ends at the HAC exit / Final gate. It does not by
  * itself certify the downstream Final tail, so status remains UNQUALIFIED. */
+typedef struct {
+    bool valid;            /* profile written into the route */
+    double aoa_deg;        /* constant incidence that meets the exit altitude */
+    double exit_speed_mps;
+    double exit_fpa_deg;
+    const char *reason;
+} TerminalProfileResult;
+
+/* Generates a dynamically feasible vertical reference for a lateral route:
+ * the vehicle is propagated natively along the route (lateral tracker bank)
+ * at constant AoA, bisected so it arrives at the route's exit altitude.  On
+ * success the altitude/FPA table is written into route (profile_tabulated).
+ * Fails when no AoA brackets the exit altitude: the route is too long for the
+ * available energy, or too short to dissipate it. */
+TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *model,
+        const TerminalDynamicState *initial, TaemRoute *route, double dt_s,
+        double maximum_elapsed_s);
+
 TerminalSolverResult terminal_solver_replay(const TerminalModel *model,
         const TerminalDynamicState *initial, const TaemRoute *route,
         double dt_s, double maximum_elapsed_s);

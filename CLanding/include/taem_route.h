@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <math.h>
 
 typedef struct { double x, y; } TaemPoint2;
 
@@ -21,6 +22,7 @@ typedef struct {
 
 #define TAEM_ROUTE_MAX_POINTS 2048
 #define TAEM_ROUTE_LEAD_LUT_POINTS 129
+#define TAEM_ROUTE_PROFILE_LUT_POINTS 257
 
 typedef struct {
     double along_m;
@@ -59,6 +61,31 @@ typedef struct {
     /* Localized initial descent sag; also returns to zero with zero slope. */
     double profile_initial_sag_m;
     double profile_initial_sag_length_m;
+    /* Dynamically generated vertical reference: altitude (MSL) and FPA at
+     * uniform stations over [0, profile_total_length_m], produced by native
+     * propagation of the vehicle along this route.  When set it replaces the
+     * analytic profile above. */
+    bool profile_tabulated;
+    double profile_generation_aoa_deg;
+    float profile_altitude_lut[TAEM_ROUTE_PROFILE_LUT_POINTS];
+    float profile_fpa_lut[TAEM_ROUTE_PROFILE_LUT_POINTS];
 } TaemRoute;
 
+
+static inline double taem_route_station_at_index(const TaemRoute *route, size_t index) {
+    if (!route || !route->valid || route->count < 2 ||
+        route->lead_count == 0 || route->arc_count == 0)
+        return NAN;
+    if (index >= route->count) index = route->count - 1;
+    if (index <= route->lead_count)
+        return route->lead_length_m * (double)index / (double)route->lead_count;
+    return route->lead_length_m + route->hac.arc_length_m *
+        (double)(index - route->lead_count) / (double)route->arc_count;
+}
+
+static inline double taem_route_remaining_at_index(const TaemRoute *route, size_t index) {
+    double station = taem_route_station_at_index(route, index);
+    if (!isfinite(station) || !isfinite(route->length_m)) return NAN;
+    return fmax(0.0, route->length_m - station);
+}
 #endif

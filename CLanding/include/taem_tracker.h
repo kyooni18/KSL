@@ -13,6 +13,10 @@ typedef struct {
     double curvature_right_per_m;
     double altitude_m;
     double flight_path_angle_deg;
+    /* d(flight-path angle)/d(horizontal route station), radians per metre. */
+    double vertical_curvature_per_m;
+    /* Continuous projection onto the owned route, not accumulated flight distance. */
+    double station_m;
 } TaemPathReference;
 
 typedef struct {
@@ -34,5 +38,10 @@ typedef struct {
 TaemTrackerOutput taem_tracker_update(const TerminalModel *model,
         const TerminalDynamicState *state, const TaemGeometryState *geometry,
         const TaemPathReference *reference, double dt_s);
+
+/* The lateral acceleration the tracker demands at this state/reference
+ * (curvature feed-forward plus heading and cross-track feedback). */
+double taem_tracker_lateral_demand(const TerminalModel *model,
+        const TaemGeometryState *geometry, const TaemPathReference *reference);
 
 #endif

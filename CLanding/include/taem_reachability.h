@@ -18,6 +18,8 @@ typedef struct {
     double roll_settling_distance_m;
 } TaemReachability;
 
+bool taem_hac_geometry_sweep(const TerminalModel *model, double radius_m,
+        double side, double sweep_abs_rad, TaemFixedHacGeometry *geometry);
 bool taem_fixed_hac_geometry(const TerminalModel *model, double radius_m,
         double side, TaemFixedHacGeometry *geometry);
 bool taem_fixed_hac_turn_reachability(const TerminalModel *model,
