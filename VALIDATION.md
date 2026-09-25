@@ -16,9 +16,17 @@ native C guidance stack without opening KSP, a serial device, or a kRPC server.
 - Closed-loop evidence comes from ShuttleSim (`ShuttleSim/scripts/run_guidance.py`).
   Use `--terminal-atmosphere/--terminal-aero/--terminal-aero-book/--terminal-attitude`
   to give guidance a different model from the plant; without them guidance has
-  perfect knowledge of the plant, which is not evidence of robustness.
-  ShuttleSim's attitude plant is an ideal AoA/bank servo: the atmospheric FCS
-  is not exercised offline.
+  perfect knowledge of the plant's aerodynamics, which is not evidence of
+  robustness. The simulator's attitude-servo parameters are no longer
+  published to guidance (live KSP has none); `KSP_LANDER_SIM_PUBLISH_SERVO=1`
+  restores them for A/B comparison.
+- By default ShuttleSim's attitude plant is an ideal AoA/bank servo and the
+  atmospheric FCS is bypassed. `run_guidance.py --direct-control` instead runs
+  the backend's `flight_control_step` against a surface-moment attitude plant
+  (stick inputs, q-scaled control/restoring moments, sideslip). Its moment
+  coefficients are a generic lifting-body model, not a KSP identification, so
+  it checks that the FCS closes its loops, not that its gains are right for
+  the KSP vehicle.
 - `python3 Validation/BackendProtocolTests.py` verifies the UI-to-C NDJSON
   protocol and the serial C-Nano configuration schema without connecting.
 

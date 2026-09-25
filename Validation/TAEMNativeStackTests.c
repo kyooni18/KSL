@@ -11,6 +11,7 @@
 #include "taem_geometry.h"
 #include "taem_reachability.h"
 #include "terminal_solver.h"
+#include "mm305_planning.h"
 #include "shuttlesim/math3.h"
 
 static double fixture_value(const char *path, const char *key) {
@@ -357,6 +358,44 @@ int main(void) {
     for (size_t i = 0; i < 2; ++i)
         assert(strcmp(faster_search.candidates[i].reason,
             "fixed HAC circle exceeds live turn authority") != 0);
+    /* Re-entrant MM305 planning: the pure planner reports rejection with a
+     * diagnostic, acceptance of a rejection counts a failure and clears the
+     * request, and acceptance of a found route commits it (a second acceptance
+     * counts as a replan). */
+    Mm305PlanRequest plan_request = {
+        .valid = true, .request_ut = state.ut_s, .model_snapshot_id = model.snapshot_id,
+        .state = state, .hac_radius_m = model.guidance.hac_radius,
+        .search_both_ends = false, .upstream_end = 0,
+        .lift_scale = 1.0, .drag_scale = 1.0
+    };
+    Mm305PlanResult rejected = mm305_plan(&model, &plan_request);
+    assert(rejected.valid && !rejected.found);
+    assert(strncmp(rejected.diagnostic, "MM305 route rejected", 20) == 0);
+    LandingConfiguration plan_cfg = landing_configuration_default();
+    GuidanceMachine planner_g = {0};
+    planner_g.phase = PHASE_TAEM;
+    planner_g.mm305_planning_needed = true;
+    assert(!guidance_mm305_accept_plan(&planner_g, &rejected, &plan_cfg));
+    assert(planner_g.mm305_plan_failures == 1 && !planner_g.mm305_planning_needed);
+    assert(!planner_g.mm305_route_committed);
+    Mm305PlanResult found = rejected;
+    found.found = true;
+    memset(&found.candidate, 0, sizeof(found.candidate));
+    found.candidate.route = route;
+    found.candidate.side = route.side;
+    found.candidate.runway_end = 0;
+    found.candidate.route_built = true;
+    planner_g.mm305_planning_needed = true;
+    assert(guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
+    assert(planner_g.mm305_route_committed && planner_g.mm305_route_cursor == 0);
+    assert(planner_g.mm305_replans == 0 && planner_g.runway_end_committed);
+    assert(planner_g.mm305_model_snapshot_id == model.snapshot_id);
+    assert(guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
+    assert(planner_g.mm305_replans == 1);
+    /* A plan arriving after the HAC exit must not be adopted. */
+    planner_g.mm305_hac_exit_reached = true;
+    assert(!guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
+
     puts("TAEM native model, route descriptor, Final interface, and replay gate tests passed.");
     return 0;
 }
