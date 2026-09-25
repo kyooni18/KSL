@@ -266,72 +266,7 @@ typedef struct {
     double burn_progress_watch_ut, burn_progress_watch_delta_v;
     bool has_burn_command_started, has_burn_progress_watch, deorbit_burn_completed, atmospheric_interface_crossed, has_previous_ut;
     double previous_ut; bool final_approach_captured, airbrakes_deployed;
-    bool hac_progress_valid, hac_captured, hac_completed, terminal_region_entered, terminal_glide_mode, terminal_final_test_mode, terminal_rehearsal_mode, terminal_test_capture_active, terminal_fixed_hac_fixture_latched;
-    bool terminal_test_upstream_staging, terminal_test_upstream_capture_ready,
-        terminal_test_upstream_energy_rejected,
-        terminal_test_upstream_plan_valid,
-        terminal_test_upstream_provisional_plan_valid,
-        terminal_test_upstream_forced_plan_valid,
-        terminal_test_upstream_forced_geometry_degraded,
-        terminal_test_upstream_forced_energy_degraded,
-        terminal_test_upstream_staging_line_active;
-    double terminal_test_upstream_forced_violation_score;
-    double terminal_test_upstream_staging_y;
-    double terminal_test_upstream_staging_course;
-    double terminal_test_upstream_staging_epoch_ut;
-    double terminal_test_upstream_planned_radius;
-    bool terminal_test_upstream_speed_target_valid;
-    double terminal_test_upstream_speed_target;
-    /* Prospective Variant-B geometry is immutable once selected.  Keep the
-       complete lead/arc tuple here so upstream staging cannot silently
-       rebuild a different C1 lead from each later telemetry frame. */
-    bool terminal_test_upstream_tuple_valid;
-    double terminal_test_upstream_p0_e, terminal_test_upstream_p0_n;
-    double terminal_test_upstream_p3_e, terminal_test_upstream_p3_n;
-    double terminal_test_upstream_center_e, terminal_test_upstream_center_n;
-    double terminal_test_upstream_cone_start_angle;
-    double terminal_test_upstream_cone_end_angle;
-    double terminal_test_upstream_cone_arc_length;
-    bool terminal_test_upstream_lead_curve, terminal_test_upstream_lead_acquisition;
-    double terminal_test_upstream_lead_start_e, terminal_test_upstream_lead_start_n;
-    double terminal_test_upstream_acquisition_center_e, terminal_test_upstream_acquisition_center_n;
-    double terminal_test_upstream_acquisition_tangent_e, terminal_test_upstream_acquisition_tangent_n;
-    double terminal_test_upstream_acquisition_radius, terminal_test_upstream_acquisition_side;
-    double terminal_test_upstream_acquisition_start_angle, terminal_test_upstream_acquisition_end_angle;
-    double terminal_test_upstream_acquisition_arc_length, terminal_test_upstream_acquisition_tangent_length;
-    double terminal_test_upstream_lead_p1_e, terminal_test_upstream_lead_p1_n;
-    double terminal_test_upstream_lead_p2_e, terminal_test_upstream_lead_p2_n;
-    double terminal_test_upstream_lead_start_course;
-    double terminal_test_upstream_lead_end_course;
-    double terminal_test_upstream_lead_length;
-    /* Variant-B freezes the vertical profile with its selected lead/circle.
-       Live staging must execute the same profile the planner certified. */
-    bool terminal_test_upstream_vertical_profile_valid;
-    double terminal_test_upstream_profile_start_altitude;
-    double terminal_test_upstream_profile_final_altitude;
-    double terminal_test_upstream_profile_slope_deg;
-    double terminal_test_upstream_profile_initial_slope_deg;
-    double terminal_test_upstream_profile_settled_slope_deg;
-    double terminal_test_upstream_profile_final_slope_deg;
-    double terminal_test_upstream_profile_transition_distance;
-    double terminal_test_upstream_profile_exit_transition_distance;
-    double terminal_test_upstream_avoidable_aoa_energy_loss;
-    double terminal_test_upstream_last_avoidable_aoa_loss;
-    double terminal_test_upstream_last_plan_ut;
-    double terminal_test_upstream_last_log_ut;
-    /* A future HAC preview is advisory only.  It is deliberately separate
-       from the live tuple: the forecast lead is never executable geometry and
-       never satisfies the production admission gate. */
-    bool terminal_test_upstream_future_ref_valid;
-    double terminal_test_upstream_future_ref_ut;
-    double terminal_test_upstream_future_ref_stage_time;
-    double terminal_test_upstream_future_ref_stage_distance;
-    double terminal_test_upstream_future_ref_radius;
-    double terminal_test_upstream_future_ref_p0_e;
-    double terminal_test_upstream_future_ref_p0_n;
-    double terminal_test_upstream_future_ref_speed;
-    double terminal_test_upstream_future_ref_altitude;
-    double terminal_test_upstream_future_ref_margin;
+    bool hac_progress_valid, hac_captured, hac_completed, terminal_region_entered, terminal_glide_mode, terminal_final_test_mode, terminal_rehearsal_mode, terminal_test_capture_active;
     double hac_capture_lost_duration, terminal_energy_mismatch_duration;
     double terminal_reentry_after_ut, hac_circuit_slope;
     unsigned hac_circuit_count;
