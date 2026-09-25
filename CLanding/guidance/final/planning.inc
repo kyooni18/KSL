@@ -608,7 +608,6 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
     g->hac_radius=0.0;
     g->hac_transition_active=false;
     g->fixed_alignment_hac_latched=false;
-    g->fixed_hac_reference_valid=false;
     if(!taem_exec_enter(g,t,&cfg->guidance,p,aero,cfg,true)){
         guidance_machine_init(g);
         if(message&&message_size)snprintf(message,message_size,"Final-only test could not reconstruct TAEM final-intercept ownership.");

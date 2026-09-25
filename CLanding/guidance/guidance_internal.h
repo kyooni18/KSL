@@ -153,8 +153,6 @@ void taem_exec_sync(GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s
 double terminal_default_hac_side(const Telemetry*t,const LandingSite*site,double course);
 double terminal_fpa_force_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double reference_fpa);
-double fixed_hac_lead_target_speed(const Telemetry*t,const PlanetModel*p,
-        AerodynamicModel aero,const VehicleProfile*v,double hac_radius);
 double fixed_hac_lead_drag_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double target_speed,
         double remaining_distance,double reference_slope_deg);

@@ -59,54 +59,6 @@
     return clampd(.5*(lo+hi),0.0,upper);
 }
 
-/* The fixed circle's normal gate is intentionally strict.  When a diagnostic
-   force-captures a circle that is too tight for the current speed, however,
-   the finite vector lead is still a real piece of executable trajectory. Use
-   that already-committed distance to remove as much excess kinetic energy as
-   the measured polar can reach before p0.  The returned speed is latched at
-   capture; recomputing it from the changing AoA would make the lead chase its
-   own authority estimate and produce the same late-brake spiral this path was
-   designed to avoid. */
-       double fixed_hac_lead_target_speed(const Telemetry*t,const PlanetModel*p,
-        AerodynamicModel aero,const VehicleProfile*v,double hac_radius){
-    if(!t||!p||!v||!(hac_radius>0.0)||!(t->true_air_speed>DBL_MIN))
-        return NAN;
-    double lateral_speed=guidance_lateral_speed(t);
-    if(!(lateral_speed>DBL_MIN))return NAN;
-    double lift_aoa=v->maximum_angle_of_attack;
-    if(t->mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
-       v->terminal_maximum_lift_angle_of_attack>0.0)
-        lift_aoa=fmin(lift_aoa,v->terminal_maximum_lift_angle_of_attack);
-    double maximum_lift=terminal_projected_lift_accel_at_aoa(t,aero,v,lift_aoa);
-    double local_radius=p->radius+t->mean_altitude;
-    if(!isfinite(maximum_lift)||!(maximum_lift>0.0)||!(local_radius>DBL_MIN))
-        return NAN;
-    double gravity=p->gravitational_parameter/(local_radius*local_radius);
-    double normal_limit=fmax(0.0,v->maximum_g_load)*gravity;
-    double bank_limit=fmin(v->maximum_bank_angle,dynamic_bank_limit(t,v));
-    double effectiveness=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
-        t->bank_effectiveness:1.0;
-    double effective_bank=fmin(fabs(bank_limit*effectiveness),
-        nextafter(90.0,0.0))*DEG2RAD;
-    double available_lateral=fmin(maximum_lift,normal_limit)*sin(effective_bank);
-    if(!(available_lateral>0.0)||!isfinite(available_lateral))return NAN;
-
-    double maximum_lateral_speed=sqrt(available_lateral*hac_radius);
-    double lateral_fraction=lateral_speed/t->true_air_speed;
-    if(!(lateral_fraction>DBL_MIN))return NAN;
-    double target_tas=maximum_lateral_speed/lateral_fraction;
-    double floor_speed=fmax(v->minimum_safe_speed,v->final_approach_speed);
-    double selected=clampd(target_tas,floor_speed,t->true_air_speed);
-    const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
-    static int target_diag_count=0;
-    if(diag&&strcmp(diag,"1")==0&&target_diag_count++<12)
-        fprintf(stderr,"HAC_LEAD_TARGET tas=%.6f lateral=%.6f liftAoA=%.6f maxLift=%.9f normalLimit=%.9f bank=%.6f effectiveness=%.6f availableLat=%.9f maxLateralSpeed=%.6f targetTas=%.6f floor=%.6f selected=%.6f\n",
-            t->true_air_speed,lateral_speed,lift_aoa,maximum_lift,normal_limit,
-            effective_bank*RAD2DEG,effectiveness,available_lateral,
-            maximum_lateral_speed,target_tas,floor_speed,selected);
-    return selected;
-}
-
        double fixed_hac_lead_drag_aoa(const Telemetry*t,const PlanetModel*p,
         AerodynamicModel aero,const VehicleProfile*v,double target_speed,
         double remaining_distance,double reference_slope_deg){

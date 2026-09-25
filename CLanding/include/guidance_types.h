@@ -273,13 +273,7 @@ typedef struct {
     bool hac_transition_active;
     bool hac_transition_heading_cone, hac_transition_lead_curve, hac_transition_lead_acquisition;
     bool fixed_alignment_hac_latched, hac_transition_lead_rebase_attempted;
-    bool fixed_hac_reference_valid;
-    bool terminal_test_spiral_active;
     double hac_previous_angle, hac_remaining, hac_radius, minimum_turn_radius, terminal_test_glide_slope, terminal_test_final_approach_distance, final_invalid_duration;
-    double fixed_hac_reference_start_altitude, fixed_hac_reference_final_altitude, fixed_hac_reference_slope_deg;
-    double fixed_hac_reference_initial_slope_deg, fixed_hac_reference_settled_slope_deg;
-    double fixed_hac_reference_final_slope_deg;
-    double fixed_hac_reference_transition_distance, fixed_hac_reference_exit_transition_distance;
     double hac_transition_p0_e, hac_transition_p0_n, hac_transition_p1_e, hac_transition_p1_n;
     double hac_transition_p2_e, hac_transition_p2_n, hac_transition_p3_e, hac_transition_p3_n;
     double hac_transition_cone_center_e, hac_transition_cone_center_n;
@@ -297,11 +291,6 @@ typedef struct {
     double hac_transition_handoff_lateral_acceleration, hac_transition_handoff_blend;
     bool hac_transition_handoff_aoa_valid;
     double hac_transition_handoff_aoa;
-    /* A fixed-HAC lead may also be the only finite distance available to
-       shed excess MM305 speed before the analytic circle.  This is a latched
-       execution target, not a change to the circle or to the path budget. */
-    bool fixed_hac_lead_speed_target_valid;
-    double fixed_hac_lead_target_speed;
     double hac_transition_length, hac_transition_end_angle, hac_transition_exit_speed, hac_transition_response_time, hac_transition_progress;
     /* Diagnostic-only closure ledger for a committed fixed-HAC lead.  These
        fields never participate in selection, admission, or control. */

@@ -312,15 +312,6 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     g->mm305_model_snapshot_id=0;
     g->hac_transition_active=false;g->hac_transition_heading_cone=false;g->hac_transition_lead_curve=false;g->hac_transition_progress=0;g->hac_transition_lead_progress=0;
     g->hac_transition_lead_rebase_attempted=false;
-    g->fixed_hac_reference_valid=false;
-    g->fixed_hac_reference_start_altitude=0.0;
-    g->fixed_hac_reference_final_altitude=0.0;
-    g->fixed_hac_reference_slope_deg=0.0;
-    g->fixed_hac_reference_initial_slope_deg=0.0;
-    g->fixed_hac_reference_settled_slope_deg=0.0;
-    g->fixed_hac_reference_final_slope_deg=0.0;
-    g->fixed_hac_reference_transition_distance=0.0;
-    g->fixed_hac_reference_exit_transition_distance=0.0;
     g->hac_transition_cone_arc_length=0.0;
     g->hac_remaining=0;g->hac_radius=0;g->hac_capture_lost_duration=0;
     g->hac_transition_handoff_lateral_valid=false;
@@ -328,10 +319,8 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     g->hac_transition_handoff_blend=0.0;
     g->hac_transition_handoff_aoa_valid=false;
     g->hac_transition_handoff_aoa=0.0;
-    g->fixed_hac_lead_speed_target_valid=false;
-    g->fixed_hac_lead_target_speed=0.0;
     g->terminal_energy_mismatch_duration=0;
-    g->hac_circuit_count=0;g->hac_circuit_slope=0;g->terminal_test_spiral_active=false;
+    g->hac_circuit_count=0;g->hac_circuit_slope=0;
     g->terminal_test_capture_active=g->terminal_glide_mode;
     g->terminal_energy_sample_valid=false;g->terminal_energy_loss_accel_ema=0;g->terminal_speed_loss_accel_ema=0;
     g->terminal_preflare_plan_valid=false;g->final_invalid_duration=0;

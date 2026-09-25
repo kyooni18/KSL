@@ -21,17 +21,6 @@
     g->hac_transition_handoff_blend=0.0;
     g->hac_transition_handoff_aoa_valid=false;
     g->hac_transition_handoff_aoa=0.0;
-    g->fixed_hac_lead_speed_target_valid=false;
-    g->fixed_hac_lead_target_speed=0.0;
-    g->fixed_hac_reference_valid=false;
-    g->fixed_hac_reference_start_altitude=0.0;
-    g->fixed_hac_reference_final_altitude=0.0;
-    g->fixed_hac_reference_slope_deg=0.0;
-    g->fixed_hac_reference_initial_slope_deg=0.0;
-    g->fixed_hac_reference_settled_slope_deg=0.0;
-    g->fixed_hac_reference_final_slope_deg=0.0;
-    g->fixed_hac_reference_transition_distance=0.0;
-    g->fixed_hac_reference_exit_transition_distance=0.0;
     g->hac_plan_degraded=false;
     g->hac_plan_geometry_degraded=false;
     g->hac_plan_energy_degraded=false;
@@ -196,4 +185,3 @@
             g->terminal_energy_loss_accel_ema);
     return anchor;
 }
-
