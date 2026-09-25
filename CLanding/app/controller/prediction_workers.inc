@@ -152,8 +152,11 @@ static void *terminal_prediction_worker(void *arg){
                 calibration.physics=&physics;
                 if(c->terminal_model_valid){terminal_model=c->terminal_model;terminal_model_valid=true;}
                 guidance=c->guidance;
-                /* A shadow copy never waits on the worker it is running on. */
-                guidance.mm305_async_planning=false;
+                /* A shadow forecast never plans MM305 routes: it flies the
+                   committed route or the acquisition law.  (Planning inside
+                   every ensemble member made each forecast cost minutes.) */
+                guidance.mm305_async_planning=true;
+                guidance.mm305_planning_needed=false;
                 entry_request=guidance;
                 entry_request.previous_ut=telemetry.ut;
                 entry_job=guidance.phase==PHASE_ENTRY_ENERGY;

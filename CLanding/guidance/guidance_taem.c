@@ -187,23 +187,34 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     mm305_scale_model(scaled,clampd(request->lift_scale,0.5,2.0),
         clampd(request->drag_scale,0.5,2.0));
     mm305_reciprocal_model(scaled,reciprocal);
-    TaemFixedHacSearch search=request->search_both_ends ?
-        taem_fixed_hac_search_runway_ends(scaled,reciprocal,&request->state,
-            request->hac_radius_m,200.0,0.5,1800.0) :
-        taem_fixed_hac_search(request->upstream_end==1?reciprocal:scaled,
-            &request->state,request->hac_radius_m,200.0,0.5,1800.0);
-    if (!request->search_both_ends)
-        for (int i=0;i<search.candidate_count;++i)
-            search.candidates[i].runway_end=request->upstream_end;
+    /* HAC size is the route's energy lever: a larger HAC flies a longer path
+       and sheds more energy, a smaller one less.  Try the configured radius
+       first, then larger and smaller ones, and take the first radius with a
+       qualified route. */
+    const double radius_factors[]={1.0,1.35,0.8,1.7,0.65};
+    TaemFixedHacSearch search;
+    memset(&search,0,sizeof(search));
     int best=-1;
-    for (int i=0;i<search.candidate_count;++i) {
-        const TaemFixedHacCandidate *c=&search.candidates[i];
-        if (!mm305_candidate_ok(c)) continue;
-        if (request->restrict_side && c->side*request->side<=0.0) continue;
-        if (best<0 || (i==search.selected_candidate) ||
-            (search.selected_candidate<0 && c->quality_score<search.candidates[best].quality_score))
-            best=i;
-        if (i==search.selected_candidate) break;
+    for (size_t r=0;r<sizeof(radius_factors)/sizeof(radius_factors[0])&&best<0;++r) {
+        double radius=request->hac_radius_m*radius_factors[r];
+        if (!(radius>=2000.0)) continue;
+        search=request->search_both_ends ?
+            taem_fixed_hac_search_runway_ends(scaled,reciprocal,&request->state,
+                radius,200.0,0.5,1800.0) :
+            taem_fixed_hac_search(request->upstream_end==1?reciprocal:scaled,
+                &request->state,radius,200.0,0.5,1800.0);
+        if (!request->search_both_ends)
+            for (int i=0;i<search.candidate_count;++i)
+                search.candidates[i].runway_end=request->upstream_end;
+        for (int i=0;i<search.candidate_count;++i) {
+            const TaemFixedHacCandidate *c=&search.candidates[i];
+            if (!mm305_candidate_ok(c)) continue;
+            if (request->restrict_side && c->side*request->side<=0.0) continue;
+            if (best<0 || (i==search.selected_candidate) ||
+                (search.selected_candidate<0 && c->quality_score<search.candidates[best].quality_score))
+                best=i;
+            if (i==search.selected_candidate) break;
+        }
     }
     out.valid=true;
     if (best>=0) {
