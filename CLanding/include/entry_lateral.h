@@ -37,6 +37,11 @@ typedef struct {
     double course_to_site_error_deg;
     bool has_crossrange_error;
     double crossrange_error_m;
+    bool has_crossrange_rate;
+    double crossrange_error_rate_mps;
+    bool has_crossrange_accel;
+    double crossrange_error_accel_mps2;
+    double crossrange_uncertainty_m;
     EntryLateralLongitudinalDemand longitudinal;
 } EntryLateralInput;
 
@@ -53,7 +58,7 @@ typedef struct {
 
 typedef struct {
     bool valid;
-    bool reversal_requested; /* always false: reversal belongs to Entry executive */
+    bool reversal_requested; /* physical crossrange feedback requests a bank-sign change */
     bool leg_captured;
     bool reversal_armed;
     bool degraded_authority;
@@ -64,7 +69,9 @@ typedef struct {
     double target_bank_rate_deg_s;
     double corridor_metric;       /* NAN: no corridor policy in this allocator */
     double course_corridor_deg;   /* NAN */
-    double crossrange_corridor_m; /* NAN */
+    double crossrange_corridor_m; /* physical roll-response + navigation uncertainty */
+    double projected_crossrange_error_m;
+    double reversal_response_time_s;
     double expected_course_rate_deg_s;
 } EntryLateralOutput;
 

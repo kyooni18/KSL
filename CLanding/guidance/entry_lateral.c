@@ -119,7 +119,10 @@ static double choose_bank_sign(const EntryLateralState *state,
         return unit_sign(input->measured_bank_deg);
     if (input->has_crossrange_error && isfinite(input->crossrange_error_m) &&
         fabs(input->crossrange_error_m) > DBL_EPSILON)
-        return -unit_sign(input->crossrange_error_m);
+        /* Positive runway cross-track lies to the right of runway heading and
+           positive bank produces positive course rate.  target-current crossrange
+           therefore has the same sign as the corrective bank. */
+        return unit_sign(input->crossrange_error_m);
     if (isfinite(input->course_to_site_error_deg) &&
         fabs(input->course_to_site_error_deg) > DBL_EPSILON)
         return unit_sign(input->course_to_site_error_deg);
@@ -193,6 +196,9 @@ static void update_bank_command(EntryLateralState *state, double target,
     state->command_bank_deg = clamp_value(next, -bank_limit, bank_limit);
 }
 
+static double rest_to_rest_roll_time(double span_deg,
+        double rate_limit_deg_s, double accel_limit_deg_s2);
+
 EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         const EntryLateralInput *input, const EntryLateralLimits *limits) {
     EntryLateralOutput output;
@@ -200,6 +206,8 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     output.corridor_metric = NAN;
     output.course_corridor_deg = NAN;
     output.crossrange_corridor_m = NAN;
+    output.projected_crossrange_error_m = NAN;
+    output.reversal_response_time_s = NAN;
 
     if (!state || !input || !limits_valid(limits) ||
         !isfinite(input->ut) || !isfinite(input->relative_speed) ||
@@ -225,6 +233,60 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         output.degraded_authority = true;
     }
 
+    bool reversal_requested = false;
+    if (authority_valid && magnitude > DBL_EPSILON &&
+        input->has_crossrange_error && isfinite(input->crossrange_error_m)) {
+        /*
+         * Predict only as far as the airframe physically needs to exchange one
+         * bank side for the other.  This is feedback look-ahead, not a trajectory
+         * schedule: the projection is rebuilt from measured crossrange and its
+         * measured/derived rates every guidance tick.
+         */
+        double opposite_target = -state->bank_sign * magnitude;
+        double roll_span = fabs(opposite_target - finite_or(input->measured_bank_deg, 0.0));
+        double response_time = rest_to_rest_roll_time(roll_span,
+            fabs(limits->maximum_roll_rate_deg_s),
+            fabs(limits->maximum_roll_accel_deg_s2));
+        double projected = input->crossrange_error_m;
+        if (input->has_crossrange_rate && isfinite(input->crossrange_error_rate_mps))
+            projected += input->crossrange_error_rate_mps * response_time;
+        if (input->has_crossrange_accel && isfinite(input->crossrange_error_accel_mps2))
+            projected += 0.5 * input->crossrange_error_accel_mps2 * response_time * response_time;
+
+        double uncertainty = isfinite(input->crossrange_uncertainty_m) ?
+            fmax(0.0, input->crossrange_uncertainty_m) : 0.0;
+        double numerical_resolution = sqrt(DBL_EPSILON) * fmax(1.0,
+            fmax(fabs(input->crossrange_error_m), fabs(projected)));
+        double corridor = uncertainty + numerical_resolution;
+        output.reversal_response_time_s = response_time;
+        output.projected_crossrange_error_m = projected;
+        output.crossrange_corridor_m = corridor;
+        output.corridor_metric = projected / fmax(corridor, numerical_resolution);
+
+        if (fabs(projected) > corridor) {
+            double demanded_sign = unit_sign(projected);
+            if (demanded_sign * state->bank_sign < 0.0) {
+                state->reversal_armed = true;
+                /* No fixed dwell is needed.  A side may change only after the
+                   current commanded leg has actually been captured, while the
+                   predicted crossrange at the end of the measured roll response
+                   lies outside the uncertainty corridor on the opposite side. */
+                if (state->leg_captured) {
+                    state->bank_sign = demanded_sign;
+                    state->leg_captured = false;
+                    state->leg_captured_ut = input->ut;
+                    state->last_reversal_ut = input->ut;
+                    state->reversal_armed = false;
+                    reversal_requested = true;
+                }
+            } else {
+                state->reversal_armed = false;
+            }
+        } else {
+            state->reversal_armed = false;
+        }
+    }
+
     double raw_target = state->bank_sign * magnitude;
     update_bank_command(state, raw_target, limits, input->dt);
 
@@ -248,9 +310,9 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         sin(effective_bank * ENTRY_LATERAL_DEG2RAD);
 
     output.valid = true;
-    output.reversal_requested = false;
+    output.reversal_requested = reversal_requested;
     output.leg_captured = state->leg_captured;
-    output.reversal_armed = false;
+    output.reversal_armed = state->reversal_armed;
     output.bank_sign = state->bank_sign;
     output.bank_magnitude_deg = magnitude;
     output.raw_target_bank_deg = raw_target;
