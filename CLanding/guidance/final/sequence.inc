@@ -106,8 +106,8 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const VehicleProfile*v=&cfg->vehicle;
     const LandingSite*site=&cfg->site;
     const double g0=planet_surface_gravity(p);
-    const double H_FLOAT=5.0;
-    const double S_FLOAT=1.5;
+    const double H_FLOAT=3.5;
+    const double S_FLOAT=.5;
     const double TOUCHDOWN_ALONG=-150.0;
     const double ARREST_ACCEL=.35*g0;
     const double SINK_HEIGHT_RATE=.14;
