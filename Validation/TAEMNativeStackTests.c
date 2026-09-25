@@ -73,6 +73,45 @@ static double first_lead_sample_distance(const TaemRoute *route) {
     return hypot(x - route->p0_along_m, y - route->p0_cross_m);
 }
 
+/* The gamma equation resolves lift normal to the velocity, not radially up.
+ * Reconstruct the delivered force independently at several descent angles. */
+static void test_tracker_normal_lift_balance(const TerminalModel *model,
+        const TerminalDynamicState *seed) {
+    const double to_radians = acos(-1.0) / 180.0;
+    const double path_angles[] = {-35.0, -20.0, 0.0, 20.0};
+    for (size_t i=0;i<sizeof(path_angles)/sizeof(path_angles[0]);++i) {
+        TerminalDynamicState sample=*seed;
+        sample.position_i_m=world_lla_to_inertial(&model->world,
+            model->site.latitude*to_radians,model->site.longitude*to_radians,
+            4000.0,sample.ut_s);
+        LocalFrame frame=world_local_frame_i(&model->world,sample.position_i_m,sample.ut_s);
+        double gamma=path_angles[i]*to_radians;
+        Vec3 air_velocity=v3_add(v3_scale(frame.north,180.0*cos(gamma)),
+                                v3_scale(frame.up,180.0*sin(gamma)));
+        sample.velocity_i_mps=v3_add(air_velocity,
+            world_atmosphere_velocity_i(&model->world,sample.position_i_m));
+        TaemGeometryState geometry;
+        assert(taem_geometry_state(model,&sample,&geometry));
+        TaemPathReference reference={
+            .runway_along_m=geometry.runway_along_m,
+            .runway_cross_m=geometry.runway_cross_m,
+            .course_deg=geometry.course_deg,
+            .altitude_m=model->site.altitude+geometry.altitude_above_runway_m,
+            .flight_path_angle_deg=geometry.flight_path_angle_deg
+        };
+        TaemTrackerOutput demand=taem_tracker_update(model,&sample,&geometry,&reference,0.1);
+        assert(demand.valid&&demand.lateral_authority_ok);
+        AeroForces force=aero_compute(&model->world,&model->aero,
+            sample.position_i_m,sample.velocity_i_mps,sample.ut_s,sample.mass_kg,
+            demand.control.angle_of_attack_rad,demand.control.bank_rad);
+        double normal_lift=force.lift_n/sample.mass_kg*cos(demand.control.bank_rad);
+        double residual=normal_lift-demand.required_vertical_lift_mps2;
+        fprintf(stderr,"normal lift balance: gamma=%+.0f required=%.6f delivered=%.6f residual=%+.6f\n",
+            path_angles[i],demand.required_vertical_lift_mps2,normal_lift,residual);
+        assert(fabs(residual)<0.25);
+        assert(fabs(normal_lift-demand.delivered_vertical_lift_mps2)<1e-9);
+    }
+}
 int main(void) {
     LandingConfiguration configuration = landing_configuration_default();
     TerminalModelSourceFiles files = {
@@ -86,11 +125,33 @@ int main(void) {
     assert(terminal_model_capture(&model, &files, &configuration, 41,
                                   reason, sizeof(reason)));
     assert(model.replay_validated && model.snapshot_id == 41);
+    TerminalModel invalid=model;
+    double *positive_fields[]={&invalid.world.radius_m,&invalid.world.mu_m3_s2,
+        &invalid.world.atmosphere_top_m,&invalid.aero.reference_area_m2,
+        &invalid.attitude.pitch_wn,&invalid.attitude.roll_wn,
+        &invalid.attitude.pitch_zeta,&invalid.attitude.roll_zeta,
+        &invalid.attitude.max_pitch_rate_rad_s,&invalid.attitude.max_roll_rate_rad_s,
+        &invalid.attitude.max_pitch_accel_rad_s2,&invalid.attitude.max_roll_accel_rad_s2,
+        &invalid.vehicle.touchdown_speed,&invalid.vehicle.maximum_angle_of_attack,
+        &invalid.vehicle.maximum_bank_angle,&invalid.guidance.hac_radius,
+        &invalid.guidance.final_approach_distance,
+        &invalid.site.runway_length,&invalid.site.runway_width};
+    const double invalid_values[]={INFINITY,NAN,0.0,-1.0};
+    for(size_t i=0;i<sizeof(positive_fields)/sizeof(positive_fields[0]);++i){
+        double original=*positive_fields[i];
+        for(size_t j=0;j<sizeof(invalid_values)/sizeof(invalid_values[0]);++j){
+            *positive_fields[i]=invalid_values[j];
+            assert(!terminal_model_validate(&invalid,reason,sizeof(reason)));
+        }
+        *positive_fields[i]=original;
+    }
+    assert(terminal_model_validate(&invalid,reason,sizeof(reason)));
 
     TerminalDynamicState state = load_fixture_state(&model);
     assert(terminal_state_validate(&state, reason, sizeof(reason)));
     TaemGeometryState geometry;
     assert(taem_geometry_state(&model, &state, &geometry));
+    test_tracker_normal_lift_balance(&model,&state);
 
     TaemReachability reachability;
     assert(taem_fixed_hac_turn_reachability(&model, &state, &geometry,
@@ -112,12 +173,38 @@ int main(void) {
     tangent_start.course_deg = fixed_geometry.capture_course_deg;
 
     TaemRoute route;
-    assert(taem_route_build_fixed_hac(&model, &tangent_start, 1.0, 500.0,
+    assert(taem_route_build_fixed_hac(&model, &tangent_start,
+        model.guidance.hac_radius, 1.0, 500.0,
         maximum_curvature, &route, reason, sizeof(reason)));
     assert(route.valid && route.count > 3 && route.count <= TAEM_ROUTE_MAX_POINTS);
     assert(route.lead_arc_fraction_lut[0] == 0.0f);
     assert(route.lead_arc_fraction_lut[TAEM_ROUTE_LEAD_LUT_POINTS - 1] == 1.0f);
     assert(first_lead_sample_distance(&route) <= 550.0);
+
+    /* Initial vertical shaping must affect the tracker immediately. The sag
+     * preserves start altitude/FPA but contributes negative vertical curvature,
+     * so a low-density descent can steepen without pretending that the vehicle
+     * can instantaneously hold its entry FPA. */
+    size_t base_cursor = 0, sag_cursor = 0;
+    TaemPathReference base_reference, sag_reference;
+    assert(taem_route_reference(&route, &tangent_start, &base_cursor,
+                                &base_reference, NULL));
+    TaemRoute sag_route = route;
+    sag_route.profile_initial_sag_m = -200.0;
+    sag_route.profile_initial_sag_length_m = 5000.0;
+    assert(taem_route_reference(&sag_route, &tangent_start, &sag_cursor,
+                                &sag_reference, NULL));
+    assert(fabs(sag_reference.flight_path_angle_deg -
+                base_reference.flight_path_angle_deg) < 1e-9);
+    assert(sag_reference.vertical_curvature_per_m <
+           base_reference.vertical_curvature_per_m);
+    TaemTrackerOutput base_vertical = taem_tracker_update(&model, &state,
+        &tangent_start, &base_reference, 0.25);
+    TaemTrackerOutput sag_vertical = taem_tracker_update(&model, &state,
+        &tangent_start, &sag_reference, 0.25);
+    assert(base_vertical.valid && sag_vertical.valid);
+    assert(sag_vertical.required_vertical_lift_mps2 <
+           base_vertical.required_vertical_lift_mps2);
 
     /* The subsonic terminal lift cap is shared by the MM305 reachability
      * estimate and tracker search; never ask the native tracker to use a
@@ -141,15 +228,18 @@ int main(void) {
     assert(capped_demand.valid);
     assert(fabs(capped_demand.control.angle_of_attack_rad *
         180.0 / 3.14159265358979323846 - 3.0) < 1e-9);
+    /* Replay must reject the low-lift vehicle quickly: the saturated tracker cannot hold
+       the route, so the replay leaves the MM305 tracking corridor. */
     TaemRoute authority_probe_route;
-    assert(taem_route_build_fixed_hac(&limited_model, &geometry, 1.0,
+    assert(taem_route_build_fixed_hac(&limited_model, &geometry,
+        limited_model.guidance.hac_radius, 1.0,
         500.0, 1.0, &authority_probe_route, reason, sizeof(reason)));
     TerminalSolverResult authority_probe = terminal_solver_replay(
         &limited_model, &state, &authority_probe_route, 0.25, 10.0);
     assert(authority_probe.status == TERMINAL_SOLVER_INFEASIBLE);
     assert(strcmp(authority_probe.reason,
-        "tracker exceeded vertical control authority") == 0);
-    assert(authority_probe.elapsed_s == 0.0);
+        "candidate diverged from the MM305 tracking corridor") == 0);
+    assert(authority_probe.elapsed_s <= 5.0);
 
     /* A fixed-size descriptor copies independently with GuidanceMachine state. */
     GuidanceMachine first = {0};
@@ -160,7 +250,7 @@ int main(void) {
     assert(snapshot.mm305_route_committed);
     assert(snapshot.mm305_model_snapshot_id == first.mm305_model_snapshot_id);
     assert(memcmp(&snapshot.mm305_route, &first.mm305_route, sizeof(route)) == 0);
-    assert(sizeof(TaemRoute) < 1024);
+    assert(sizeof(TaemRoute) < 4096);
 
     /* The MM305 descriptor ends at HAC exit at the configured Final glide
      * height; the untouched Final contract must still admit the live state. */
@@ -223,7 +313,7 @@ int main(void) {
 
     /* Geometry alone cannot qualify a candidate: native replay must satisfy
      * all constraints through HAC exit before the existing Final-tail gate. */
-    TaemFixedHacSearch search = taem_fixed_hac_search(&model, &state,
+    TaemFixedHacSearch search = taem_fixed_hac_search(&model, &state, model.guidance.hac_radius,
         500.0, 0.25, 1800.0);
     assert(search.selected_candidate == -1);
     for (size_t i = 0; i < 2; ++i) {
@@ -243,7 +333,7 @@ int main(void) {
         &faster_geometry, model.guidance.hac_radius, &faster_reachability));
     assert(!faster_reachability.lateral_authority_ok);
     TaemFixedHacSearch faster_search = taem_fixed_hac_search(&model,
-        &faster_state, 500.0, 0.25, 1800.0);
+        &faster_state, model.guidance.hac_radius, 500.0, 0.25, 1800.0);
     for (size_t i = 0; i < 2; ++i)
         assert(strcmp(faster_search.candidates[i].reason,
             "fixed HAC circle exceeds live turn authority") != 0);

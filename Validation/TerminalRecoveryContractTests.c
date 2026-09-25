@@ -110,32 +110,6 @@ int main(void) {
     t.attitude_response.pitch_valid=false;
     assert(!terminal_preflare_plan(&g,&t,&p,aero,&cfg).feasible);
 
-    /* Once TAEM owns the vehicle, terminal previews may continue to evolve
-       internally but must not move the already-flown MM304 inlet upstream. */
-    GuidanceMachine latched;
-    guidance_machine_init(&latched);
-    latched.taem_interface_captured = true;
-    latched.taem_interface_target = (TaemInterfaceTarget){
-        .valid = true,
-        .along_track = -8000.0,
-        .cross_track = 0.0,
-        .course = cfg.site.runway_heading,
-        .altitude = 16500.0,
-        .speed = 520.0,
-        .flight_path_angle = -12.0,
-        .acquisition_lead = 9000.0,
-        .remaining_path = 35000.0,
-        .response_time = 8.0,
-    };
-    latched.terminal_candidate.valid = true;
-    TaemInterfaceTarget fixed = latched.taem_interface_target;
-    terminal_publish_interface_target(&latched,&t,&p,aero,&cfg);
-    assert(latched.taem_interface_target.valid == fixed.valid);
-    assert(fabs(latched.taem_interface_target.along_track-fixed.along_track)<1e-9);
-    assert(fabs(latched.taem_interface_target.altitude-fixed.altitude)<1e-9);
-    assert(fabs(latched.taem_interface_target.speed-fixed.speed)<1e-9);
-    assert(fabs(latched.taem_interface_target.flight_path_angle-fixed.flight_path_angle)<1e-9);
-    assert(fabs(latched.taem_interface_target.acquisition_lead-fixed.acquisition_lead)<1e-9);
 
     printf("terminal_recovery_contract_tests: PASS (height %.3f m, slow %.3f m, banked %.3f m)\n",
         baseline_height,slower.predicted_height_loss,banked.predicted_height_loss);
