@@ -112,7 +112,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double TOUCHDOWN_ALONG=75.0;
     const double ARREST_ACCEL=.35*g0;
     const double SINK_HEIGHT_RATE=.14;
-    const double TOUCHDOWN_PITCH=5.0;
+    const double TOUCHDOWN_PITCH=8.0;
 
     double height=t->mean_altitude-site->altitude;
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&terminal_runway_contact_position(t,cfg))
@@ -208,11 +208,10 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         g->terminal_lift_ratio;
     double aoa=clampd(terminal_aoa_for_lift(g,t,v,fmax(0.0,lift_required),aoa_max),
         0.0,aoa_max);
-    /* Keep a positive body attitude through wheel capture. The two main-gear
-       origins are about 11.6 m aft of the nose gear on STS-N, so a five-degree
-       touchdown attitude leaves a clear nose-gear height margin without changing
-       the vertical sink schedule. Start this at the 15 m touchdown-flare boundary
-       so the visible pull is not delayed below the phase transition. */
+    /* Carry a clear mains-first body attitude through wheel capture.  The STS-N
+       main-gear/body-flap geometry leaves a large tail-strike margin at eight
+       degrees, while giving the nose gear visibly more clearance than 5 deg.
+       Start this at the 15 m touchdown-flare boundary. */
     if(flaring&&height<=15.0){
         double touchdown_aoa=clampd(TOUCHDOWN_PITCH-t->flight_path_angle,0.0,aoa_max);
         aoa=fmax(aoa,touchdown_aoa);
@@ -253,6 +252,13 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     c.target_aoa=aoa;
     c.target_pitch=t->flight_path_angle+aoa;
     c.gear=t->gear||g->gear_command_latched;
+    /* KSP can still report `flying` for a short interval after the mains touch.
+       Carry runway-heading yaw hold through the terminal flare so first-main
+       contact cannot create a yaw-control gap before the coarse landed latch. */
+    if(flaring&&height<=15.0){
+        c.heading_control_enabled=true;
+        c.target_heading=site->runway_heading;
+    }
     GuidancePhase phase=g->terminal_vertical_stage==TERMINAL_TOUCHDOWN_FLARE?
         PHASE_FLARE:PHASE_FINAL;
     g->phase=phase;

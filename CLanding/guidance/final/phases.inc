@@ -280,7 +280,7 @@ static RolloutSteeringDemand runway_rollout_steering(const Telemetry*t,
 static bool terminal_rollout_pitch_target(const Telemetry*t,
         const LandingConfiguration*cfg,double*target_pitch){
     const double RELEASE_SPEED=25.0;
-    const double TOUCHDOWN_PITCH=5.0;
+    const double TOUCHDOWN_PITCH=8.0;
     if(!t||!cfg||!target_pitch||t->surface_speed<=RELEASE_SPEED)return false;
     /* Hold the mains-first attitude while still fast, then derotate smoothly as
        aerodynamic speed falls.  The target reaches zero continuously at the
