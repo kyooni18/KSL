@@ -10,9 +10,10 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Live pull response to touchdown needs about ten seconds; shorter lead
-   crossed the threshold too high and entered flare downrange. */
-static double terminal_pull_response_seconds(void){return 10.0;}
+/* Live pull response to touchdown needs a little over ten seconds.  The
+   10.0 s live case still reached first main-wheel contact at about -1.6 m/s;
+   10.5 s adds only the measured half-second of missing sink-arrest lead. */
+static double terminal_pull_response_seconds(void){return 10.5;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
     return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
 }
