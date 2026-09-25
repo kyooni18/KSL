@@ -1,0 +1,5437 @@
+{
+  "schema": 1,
+  "generator": "Tools/generate_mm305_condition_matrix.py",
+  "base": "ShuttleSim/scenarios/mm305-hac-staging-ideal-seed-10km-180mps.ini",
+  "speed_definition": "total_air_speed_mps",
+  "heading_definition": "air_relative_local_course_deg",
+  "side": 1,
+  "fpa_deg": -6.0,
+  "headings_deg": [
+    0.0,
+    90.0,
+    180.0,
+    270.0
+  ],
+  "heading_default_policy": "KSC-facing runway-perpendicular: south->0deg, north->180deg",
+  "altitudes_m": [
+    20000.0,
+    30000.0
+  ],
+  "airspeeds_mps": [
+    400.0,
+    800.0,
+    1300.0
+  ],
+  "east_offsets_m": [
+    -30000.0,
+    0.0,
+    30000.0
+  ],
+  "north_offsets_m": [
+    -30000.0,
+    0.0,
+    30000.0
+  ],
+  "cases": [
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -144.30119280418472,
+        111.34482625960958,
+        399.2461008681258
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -158.1188841435689,
+        97.95169984271465,
+        397.5956455928166
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -171.5681945596235,
+        84.33049217728139,
+        395.0180935316802
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -149.49879848234227,
+        104.2567961363512,
+        399.2473421707164
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -162.66978419044838,
+        90.19345487308505,
+        397.59539048123264
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -175.46057680426412,
+        75.91931276033365,
+        395.01417572955876
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -154.3750597879416,
+        96.89605510526516,
+        399.2461008681257
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -166.83735610979537,
+        82.22781543479032,
+        397.5956455928166
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v400-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -178.9102847562173,
+        67.36755379083152,
+        395.01809353168017
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -161.777498709464,
+        94.10737652064071,
+        798.4922017362516
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -189.29689249711862,
+        67.20053074725776,
+        795.1912911856332
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -216.37551984469965,
+        40.13762642505742,
+        790.0361870633604
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -166.10810779037558,
+        86.20989573963377,
+        798.4946843414328
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -192.32668600524016,
+        57.9696493432602,
+        795.1907809624653
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -218.09575678250138,
+        29.593915828191427,
+        790.0283514591175
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -170.1058942597884,
+        78.05217576958341,
+        798.4922017362514
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -194.90070200927403,
+        48.61009358220764,
+        795.1912911856332
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v800-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -219.24036182069784,
+        19.054091209789235,
+        790.0361870633603
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -183.6228810910631,
+        72.5605643469296,
+        1297.5498278214088
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -228.26940293905582,
+        28.761569377936667,
+        1292.185848176654
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -272.38467645104487,
+        -15.103455765222549,
+        1283.8088039779607
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -186.8697444254173,
+        63.651270243736946,
+        1297.5538620548282
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -229.39781327372992,
+        17.68989243097913,
+        1292.1850190640057
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -271.38973175529793,
+        -28.312830336986366,
+        1283.7960711210658
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -189.76943734959693,
+        54.49732659998122,
+        1297.5498278214084
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -229.97988438362233,
+        6.587941266479277,
+        1292.185848176654
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a20000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a20000-v1300-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -269.65295815129855,
+        -41.33773701651363,
+        1283.8088039779605
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -146.65476080289045,
+        113.09658499486387,
+        399.22723474791866
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -160.2429726793625,
+        99.9047376113801,
+        397.5956375721534
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -173.46955751921382,
+        86.48754752730346,
+        395.06602629806594
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -151.8538006756125,
+        106.00842752775264,
+        399.22843054122313
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -164.81515326102348,
+        92.16792681506749,
+        397.59539048123264
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -177.40340973760004,
+        78.11878330362475,
+        395.0623039743957
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -156.7357906867734,
+        98.65266504988816,
+        399.22723474791866
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -169.01120115632608,
+        84.22577262342864,
+        397.5956375721534
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v400-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -180.90455387561968,
+        69.60837342060543,
+        395.06602629806594
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -164.33480475364726,
+        95.63144596221977,
+        798.4544694958373
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -191.39745928741544,
+        69.12963488561365,
+        795.1912751443068
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -218.02842050966382,
+        42.47229342086696,
+        790.1320525961319
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -168.6702830780887,
+        87.73642251464511,
+        798.4568610824463
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -194.47205507581526,
+        59.94412128524263,
+        795.1907809624653
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -219.83359590795902,
+        32.01612307679113,
+        790.1246079487914
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -172.67665854299176,
+        79.58689028144863,
+        798.4544694958373
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -197.1003465435843,
+        50.62950951268522,
+        795.1912751443068
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v800-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -221.07820724405403,
+        21.557229416651168,
+        790.1320525961319
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -186.43485969209328,
+        73.80002217141464,
+        1297.4885129307356
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e-30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -230.34056754748164,
+        30.660756478405602,
+        1292.1858221094985
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e-30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -273.7269992477263,
+        -12.546774212178661,
+        1283.9645854687144
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e0-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -189.6908860811839,
+        64.89641624826066,
+        1297.492399258975
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -231.54318234430502,
+        19.664364372961558,
+        1292.1850190640057
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e0-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -272.8713286209078,
+        -25.612202206750894,
+        1283.9524879167861
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e30000-n-30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -192.60274336326472,
+        55.75467182089921,
+        1297.4885129307356
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e30000-n0.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -232.21177827765706,
+        8.634180624255947,
+        1292.1858221094985
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h0-a30000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h0-a30000-v1300-e30000-n30000.ini",
+      "heading_deg": 0.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -271.29527395459695,
+        -38.50670058829169,
+        1283.9645854687144
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -435.9159599413975,
+        382.47089497408797,
+        1.8104474997471747
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -436.05654377145663,
+        382.56791274858574,
+        -0.2081814741199719
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -435.83171923522025,
+        382.4332891679196,
+        -2.2263250191629336
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -453.8872369378113,
+        360.96069004964784,
+        1.8125607262622425
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -454.0368964372583,
+        361.045714185729,
+        -0.20842504043883803
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -453.8095014656984,
+        360.9165271907335,
+        -2.228923674502186
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -470.7988758837017,
+        338.6076314859911,
+        1.8104474997471747
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -470.9560535403714,
+        338.67966113186753,
+        -0.20818147411997193
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v400-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -470.72716798344663,
+        338.556408117769,
+        -2.2263250191629336
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -745.0070329838895,
+        636.3595139495976,
+        3.6208949994943493
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -745.1722117528942,
+        636.432956559,
+        -0.4163629482399438
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -744.9025691958931,
+        636.3432204063339,
+        -4.452650038325867
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -774.8849847013136,
+        599.617683566227,
+        3.625121452524485
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -775.06091049886,
+        599.6741679685481,
+        -0.41685008087767605
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -774.79360610537,
+        599.5883446889911,
+        -4.457847349004372
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -802.9535264513086,
+        561.4753285310353,
+        3.6208949994943493
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -803.1380968704261,
+        561.513784976362,
+        -0.41636294823994385
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v800-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -802.8741282751566,
+        561.4317998636643,
+        -4.452650038325867
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -1131.3708742870047,
+        953.7202876689844,
+        5.883954374178318
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -1131.566796729691,
+        953.7642613220177,
+        -0.6765897908899088
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -1131.2411316467344,
+        953.7306344543515,
+        -7.2355563122795346
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -1176.1321694056915,
+        897.9389254619509,
+        5.8908223603522885
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -1176.3409280758622,
+        897.959735197072,
+        -0.6773813814262237
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -1176.0237369049594,
+        897.9281165618131,
+        -7.244001942132106
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -1218.1468396608172,
+        840.0599498373404,
+        5.883954374178318
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -1218.3656510329943,
+        840.0564397819801,
+        -0.6765897908899089
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a20000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a20000-v1300-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -1218.057828639794,
+        840.0260395460333,
+        -7.2355563122795346
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -438.2611345139262,
+        384.21256405140844,
+        1.7785401611582583
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -438.39859821794994,
+        384.307936535336,
+        -0.2081891319982827
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -438.1773165204788,
+        384.1745204336519,
+        -2.1944482067507276
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -456.03599830796065,
+        362.9364130949267,
+        1.7805509477373167
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -456.18226550783345,
+        363.02018612771144,
+        -0.20842504043883803
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -455.9584765418645,
+        362.8920133015461,
+        -2.196929211733882
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -472.7796547875988,
+        340.83942615153876,
+        1.778540161158258
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -472.933245365653,
+        340.91064288376566,
+        -0.2081891319982827
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v400-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -472.7079762304392,
+        340.78819238881636,
+        -2.194448206750727
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -747.5475521757188,
+        637.863404075309,
+        3.5570803223165166
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -747.7087103645904,
+        637.9360327335255,
+        -0.4163782639965654
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -747.4439385121938,
+        637.8462392335638,
+        -4.388896413501455
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -777.0346783427849,
+        601.5923936489933,
+        3.5611018954746334
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -777.2062795694352,
+        601.6486399105305,
+        -0.41685008087767605
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -776.943729516488,
+        601.5625830726339,
+        -4.393858423467764
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -804.7643867446426,
+        563.9604124847499,
+        3.557080322316516
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -804.9444349622381,
+        563.9992500333593,
+        -0.4163782639965654
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v800-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -804.6850519536931,
+        563.9168673530729,
+        -4.388896413501454
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -1134.1555742529595,
+        954.9269541051844,
+        5.78025552376434
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e-30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -1134.3463505478908,
+        954.9711529812623,
+        -0.6766146789944188
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e-30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -1134.0272160018374,
+        954.9358877334536,
+        -7.131956671939865
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e0-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -1178.2830283863154,
+        899.9123693415763,
+        5.786790580146279
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -1178.4862971464372,
+        899.9342071390544,
+        -0.6773813814262237
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e0-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -1178.1752957347671,
+        899.9007952864933,
+        -7.140019938135117
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e30000-n-30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -1219.7453016909471,
+        842.8616454012637,
+        5.780255523764339
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e30000-n0.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -1219.9584219579694,
+        842.8600089703511,
+        -0.6766146789944188
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h90-a30000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h90-a30000-v1300-e30000-n30000.ini",
+      "heading_deg": 90.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -1219.6563966077601,
+        842.8277110583937,
+        -7.131956671939864
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -168.82842077713883,
+        87.15282242816428,
+        -395.62520586863144
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -155.2984913369633,
+        100.73348035698106,
+        -398.0120085410566
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -141.40612933778579,
+        114.07893376976496,
+        -399.47074357000616
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -172.85566212635553,
+        78.8783180825201,
+        -395.62222071819195
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -159.9839954171435,
+        93.11170761794861,
+        -398.0122405621103
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -146.73841286020794,
+        107.12747574070913,
+        -399.47202307856315
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -176.4525952457776,
+        70.4494978713657,
+        -395.6252058686314
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -164.29871868284238,
+        85.26890708542804,
+        -398.0120085410566
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v400-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -151.76208059358768,
+        99.88977644507177,
+        -399.4707435700061
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -210.83195465537221,
+        45.72336885775013,
+        -791.2504117372629
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -183.65610688390746,
+        72.7640917757906,
+        -796.0240170821132
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -156.05138940102424,
+        99.63450961002457,
+        -798.9414871400123
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -212.8218350784021,
+        35.45293963197156,
+        -791.2444414363839
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -186.95510845863043,
+        63.80615483298731,
+        -796.0244811242206
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -160.65142889438903,
+        92.01024178894238,
+        -798.9440461571263
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -214.26096517546037,
+        25.159061301784476,
+        -791.2504117372628
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -189.82342715536808,
+        54.692276883483096,
+        -796.0240170821132
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v800-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -164.94395349543862,
+        84.09853651826975,
+        -798.9414871400122
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -263.33637200316394,
+        -6.063448105267554,
+        -1285.7819190730522
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -219.10312631758768,
+        37.802356049302546,
+        -1293.5390277584338
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -174.3579644800723,
+        81.57897941034905,
+        -1298.27991660252
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        -262.7795512684604,
+        -18.828783431214106,
+        -1285.772217334124
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        -220.6689997604891,
+        27.17421385178568,
+        -1293.5397818268584
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        -178.04269893711535,
+        73.11369934923394,
+        -1298.2840750053301
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        -261.52142758756384,
+        -31.45398441019205,
+        -1285.7819190730518
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        -221.7293127460252,
+        16.47148913105191,
+        -1293.5390277584338
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a20000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a20000-v1300-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        -181.42129462275233,
+        64.3594866097672,
+        -1298.2799166025197
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -170.73151093327894,
+        89.31249318758836,
+        -395.6701544256022
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -157.4246086904857,
+        102.68878096178042,
+        -398.01201583615006
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -143.761845776329,
+        115.83283135027924,
+        -399.4549227115674
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -174.79818267338402,
+        81.07813278167646,
+        -395.6673286457485
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -162.1293644877186,
+        95.08617955993104,
+        -398.0122405621103
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -149.09353007920404,
+        108.87897741904312,
+        -399.4561623978635
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -178.44412429186505,
+        72.68882149720665,
+        -395.6701544256022
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -166.47014063962638,
+        87.26502983550787,
+        -398.01201583615006
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v400-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -154.12049266239237,
+        101.64441382161993,
+        -399.4549227115674
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -212.48830501442427,
+        48.06326234766874,
+        -791.3403088512044
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -185.76073130966188,
+        74.69772158641432,
+        -796.0240316723001
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -158.61299702389417,
+        101.16286106681852,
+        -798.9098454231348
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -214.5590470736317,
+        37.875833022492714,
+        -791.334657291497
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -189.10047752920553,
+        65.78062677496973,
+        -796.0244811242206
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -163.21383659116705,
+        93.53651130762788,
+        -798.912324795727
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -216.09332575317507,
+        27.65920317608561,
+        -791.3403088512044
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -192.0182255101849,
+        56.70802393684369,
+        -796.0240316723001
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v800-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -167.5100848175994,
+        85.62931021868016,
+        -798.9098454231348
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        -264.6842976158559,
+        -3.498276202230784,
+        -1285.9280018832071
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e-30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -221.1808845836321,
+        39.708897367206674,
+        -1293.5390514674878
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e-30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -177.17693608335065,
+        82.82539821249262,
+        -1298.2284988125941
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e0-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        -264.2601275739413,
+        -16.127041676486968,
+        -1285.9188180986828
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        -222.8143688310642,
+        29.14868579376811,
+        -1293.5397818268584
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e0-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        -180.86421973112078,
+        74.35842866835878,
+        -1298.2325277930563
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e30000-n-30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        -263.15482757981255,
+        -28.62781972531569,
+        -1285.9280018832071
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e30000-n0.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        -223.95333159838304,
+        18.51176656351346,
+        -1293.5390514674878
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h180-a30000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h180-a30000-v1300-e30000-n30000.ini",
+      "heading_deg": 180.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        -184.24707501160822,
+        65.6104307150054,
+        -1298.2284988125941
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        122.78634636007398,
+        -183.97324628631418,
+        1.8104474997470772
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        122.63916829092452,
+        -183.88273254889006,
+        -0.20818147412006935
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        122.857395337811,
+        -184.02386322087332,
+        -2.226325019163031
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        131.53277632911355,
+        -177.82557583077656,
+        1.812560726262145
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        131.38311682966648,
+        -177.7405516946954,
+        -0.20842504043893548
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        131.61051180122635,
+        -177.86973868969076,
+        -2.2289236745022833
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        139.97122084998253,
+        -171.26207850936026,
+        1.8104474997470772
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        139.81997874773367,
+        -171.18293861164918,
+        -0.20818147412006938
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v400-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        140.05480263364174,
+        -171.2990778818658,
+        -2.226325019163031
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        372.3975796190534,
+        -496.5287685712068,
+        3.6208949994941544
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        372.21921237186814,
+        -496.46833403595167,
+        -0.4163629482401387
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        372.4756599501693,
+        -496.571084371252,
+        -4.452650038326062
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        395.95504183253604,
+        -477.9548481946217,
+        3.62512145252429
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        395.77911603498956,
+        -477.8983637923007,
+        -0.41685008087787095
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        396.04642042847956,
+        -477.9841870718574,
+        -4.457847349004567
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        418.5866670160599,
+        -458.26409145966744,
+        3.6208949994941544
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        418.41396770578405,
+        -458.2114145106714,
+        -0.41636294824013875
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v800-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        418.6898129590202,
+        -458.2791721356054,
+        -4.452650038326062
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28898.80003287113,
+      "runway_local_north_m": -26321.248425297716,
+      "runway_local_up_m": 18696.556334449902,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440998.3117630608,
+        434970.998744623,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        684.4116211927776,
+        -887.2231714273225,
+        5.883954374178002
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28932.780819296706,
+      "runway_local_north_m": 3612.4604281108013,
+      "runway_local_up_m": 19244.011083003006,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        441411.9090676511,
+        435368.8055556097,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        684.1942674730476,
+        -887.2003358947785,
+        -0.6765897908902254
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28899.29736168774,
+      "runway_local_north_m": 33537.745897904395,
+      "runway_local_up_m": 18347.375412502784,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        440796.240608294,
+        434751.43765779544,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        684.4984907156173,
+        -887.2551108092252,
+        -7.235556312279851
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1032.3683992952483,
+      "runway_local_north_m": -26352.01400793019,
+      "runway_local_up_m": 19368.86346693981,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419464.683406765,
+        455770.75006491324,
+        -26877.551222699683
+      ],
+      "velocity_i_mps": [
+        726.482873711814,
+        -853.1164386494281,
+        5.890822360351972
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1033.3269946104283,
+      "runway_local_north_m": 3616.6444811365063,
+      "runway_local_up_m": 19918.59031277292,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419854.1731283331,
+        456193.95142026915,
+        3090.630078938584
+      ],
+      "velocity_i_mps": [
+        726.2741150416434,
+        -853.0956289143071,
+        -0.6773813814265404
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1031.870489976658,
+      "runway_local_north_m": 33576.85012038186,
+      "runway_local_up_m": 19019.27496709657,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        419262.3763864885,
+        455550.9326976299,
+        33051.58793573818
+      ],
+      "velocity_i_mps": [
+        726.5913062125462,
+        -853.1272475495657,
+        -7.244001942132422
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30961.12959815566,
+      "runway_local_north_m": -26321.33307026666,
+      "runway_local_up_m": 18596.789054827437,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396952.96490621474,
+        475507.754278445,
+        -26846.21524974112
+      ],
+      "velocity_i_mps": [
+        766.8559747236566,
+        -817.0166076475514,
+        5.883954374178002
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 30997.019708568612,
+      "runway_local_north_m": 3612.3756843408737,
+      "runway_local_up_m": 19144.127351033374,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        397315.1507256024,
+        475952.87720693345,
+        3087.0183565192483
+      ],
+      "velocity_i_mps": [
+        766.6564539033468,
+        -816.997009384449,
+        -0.6765897908902255
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a20000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a20000-v1300-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 20000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30960.632269339058,
+      "runway_local_north_m": 33537.66125293545,
+      "runway_local_up_m": 18247.608132880316,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        396750.89375144796,
+        475288.19319161744,
+        33013.053782934956
+      ],
+      "velocity_i_mps": [
+        766.9835758657432,
+        -817.0042899527797,
+        -7.235556312279851
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        120.87486277775687,
+        -181.80348586895627,
+        1.7785401611581608
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        120.73101684810175,
+        -181.71441796217553,
+        -0.20818913199838016
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        120.94591322493596,
+        -181.8541415560692,
+        -2.194448206750825
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        129.38401495896417,
+        -175.84985278549766,
+        1.7805509477372192
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        129.23774775909138,
+        -175.76607975271298,
+        -0.20842504043893548
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        129.4615367250604,
+        -175.89425257887825,
+        -2.196929211733979
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        137.5997398089604,
+        -169.497939604444,
+        1.7785401611581606
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        137.45190356970062,
+        -169.4198404248292,
+        -0.20818913199838016
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v400-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v400-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 400.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        137.6829296924272,
+        -169.535405146591,
+        -2.1944482067508244
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        370.7244424076474,
+        -494.1686957654205,
+        3.5570803223163217
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        370.55051976751304,
+        -494.10867626149764,
+        -0.4163782639967603
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        370.8025209786358,
+        -494.21108474587834,
+        -4.38889641350165
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        393.8053481910647,
+        -475.9801381118555,
+        3.5611018954744385
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        393.6337469644144,
+        -475.9238918503183,
+        -0.41685008087787095
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        393.89629701736186,
+        -476.0099486882149,
+        -4.393858423467958
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        415.99440244847585,
+        -456.7143190272157,
+        3.557080322316321
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        415.8258629084691,
+        -456.66171658383047,
+        -0.4163782639967603
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v800-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v800-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 800.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        416.0967598920397,
+        -456.7303277177417,
+        -4.388896413501649
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e-30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e-30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": -28884.292358247898,
+      "runway_local_north_m": -26264.97930406229,
+      "runway_local_up_m": 28719.19243027752,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447787.2197381405,
+        442344.26518114004,
+        -26798.449592160563
+      ],
+      "velocity_i_mps": [
+        683.0364169450104,
+        -884.6252081360008,
+        5.780255523764024
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e-30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e-30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": -28917.197400734316,
+      "runway_local_north_m": 3670.860261735594,
+      "runway_local_up_m": 29255.289877521034,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        448192.32295114367,
+        442734.45918880973,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        682.8248984167772,
+        -884.6014991356501,
+        -0.6766146789947355
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e-30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e-30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": -30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": -28884.789723569258,
+      "runway_local_north_m": 33598.40877968979,
+      "runway_local_up_m": 28369.985877806812,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        447585.1337509783,
+        442124.6879781239,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        683.1232806707606,
+        -884.6572637331398,
+        -7.1319566719401815
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e0-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e0-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 1049.0540747575287,
+      "runway_local_north_m": -26294.716406383675,
+      "runway_local_up_m": 29380.146854106482,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426244.2899697019,
+        463137.15417607495,
+        -26828.747453269527
+      ],
+      "velocity_i_mps": [
+        724.3320147311903,
+        -851.1429947698027,
+        5.786790580145963
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 1049.9935590396071,
+      "runway_local_north_m": 3674.977456638708,
+      "runway_local_up_m": 29918.40628555958,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426626.014630403,
+        463551.9183786606,
+        3140.4789511795293
+      ],
+      "velocity_i_mps": [
+        724.128745971068,
+        -851.1211569723247,
+        -0.6773813814265404
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e0-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e0-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 0.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 1048.5561471235796,
+      "runway_local_north_m": 33636.35218296767,
+      "runway_local_up_m": 29030.545494780035,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        426041.97550763673,
+        462917.3287228914,
+        33102.59617632451
+      ],
+      "velocity_i_mps": [
+        724.4397473827387,
+        -851.1545688248857,
+        -7.140019938135433
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e30000-n-30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e30000-n-30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": -30000.0,
+      "runway_local_east_m": 30980.031101982215,
+      "runway_local_north_m": -26265.063955244324,
+      "runway_local_up_m": 28619.417827552697,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403738.6398716253,
+        482883.9961875589,
+        -26798.449592160556
+      ],
+      "velocity_i_mps": [
+        763.98773074787,
+        -815.7347933056802,
+        5.780255523764023
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e30000-n0",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e30000-n0.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 0.0,
+      "runway_local_east_m": 31014.807622615426,
+      "runway_local_north_m": 3670.7755148483984,
+      "runway_local_up_m": 29155.40247136548,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        404093.94252619497,
+        483320.0237101566,
+        3136.9243615274913
+      ],
+      "velocity_i_mps": [
+        763.7933120819296,
+        -815.7140617825819,
+        -0.6766146789947355
+      ]
+    },
+    {
+      "name": "mm305-hac-matrix-h270-a30000-v1300-e30000-n30000",
+      "scenario": "ShuttleSim/scenarios/mm304-regression-matrix/mm305-hac-repro-h270-a30000-v1300-e30000-n30000.ini",
+      "heading_deg": 270.0,
+      "heading_mode": "explicit",
+      "altitude_m": 30000.0,
+      "airspeed_mps": 1300.0,
+      "fpa_deg": -6.0,
+      "east_offset_m": 30000.0,
+      "north_offset_m": 30000.0,
+      "runway_local_east_m": 30979.533736660804,
+      "runway_local_north_m": 33598.324128507746,
+      "runway_local_up_m": 28270.21127508219,
+      "ut0": 66564.2698140202,
+      "position_i_m": [
+        403536.5538844632,
+        482664.4189845429,
+        33065.21322122966
+      ],
+      "velocity_i_mps": [
+        764.1140476415552,
+        -815.7239809316801,
+        -7.131956671940181
+      ]
+    }
+  ]
+}
