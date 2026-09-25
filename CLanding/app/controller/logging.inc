@@ -248,29 +248,14 @@ static void dynamic_prediction(LandingController*c,Telemetry*t,const VehicleStat
     double initial_aoa_rate=t->has_angle_of_attack_rate&&isfinite(t->angle_of_attack_rate)?
         t->angle_of_attack_rate:0.0;
     double leg_elapsed=guidance_entry_leg_elapsed(&c->guidance,t->ut);
-    /* The live MM304 program owns bank/AoA/reversal state. Prediction is a
-       read-only consumer of that already-selected command and must not mutate
-       executable plan timing or synthesize an independent control policy. */
-    double commit_remaining=c->guidance.entry_control_plan_valid?
-        fmax(0,c->guidance.entry_control_segment_until_ut-t->ut):0;
-    EntryControlPlan control_plan={0};
-    bool solve_entry_control=c->guidance.automation_engaged&&c->guidance.phase==PHASE_ENTRY_ENERGY;
-    if(solve_entry_control&&c->guidance.entry_control_plan_valid)
-        control_plan=guidance_control_plan_snapshot(&c->guidance,t->ut,commit_remaining);
-
-    /* Forecast the exact guidance-owned plan. The predictor evaluates the
-       resulting trajectory for telemetry; executable MM304 changes come from
-       entry_program_guidance() or a worker result that passes plan adoption checks. */
-    EntryControlPlan forecast_plan=guidance_terminal_control_plan(&c->guidance,control_plan);
-    if(solve_entry_control&&forecast_plan.valid&&commit_remaining>0)
-        forecast_plan.segment_duration=commit_remaining;
-    bool forecast_has_entry_plan=solve_entry_control&&forecast_plan.valid&&c->guidance.entry_s_turn_plan.valid;
-    c->forecast_entry_plan_identity_valid=forecast_has_entry_plan;
-    c->forecast_entry_plan_id=forecast_has_entry_plan?c->guidance.entry_s_turn_plan.plan_id:0;
-    c->forecast_entry_plan_version=forecast_has_entry_plan?c->guidance.entry_s_turn_plan.plan_version:0;
-    EntryPrediction pr=solve_entry_control&&forecast_plan.valid?
-        predictor_simulate_entry_control_plan_to_interface(*state,p,prediction_aero,&prediction_envelope,&c->trajectory_calibration,&cfg->vehicle,&cfg->site,&cfg->guidance,c->guidance.taem_interface_target.valid?&c->guidance.taem_interface_target:NULL,true,t->roll,initial_roll_rate,t->angle_of_attack,initial_aoa_rate,sign,leg_elapsed,&forecast_plan,2500,true):
-        predictor_simulate_entry_with_attitude(*state,p,prediction_aero,&prediction_envelope,&c->trajectory_calibration,&cfg->vehicle,&cfg->site,&cfg->guidance,cfg->vehicle.maximum_bank_angle,t->roll,initial_roll_rate,t->angle_of_attack,initial_aoa_rate,sign,leg_elapsed,(burn_cutoff_predict||postburn_verify)?4500:2500,true);
+    c->forecast_entry_plan_identity_valid=false;
+    c->forecast_entry_plan_id=0;
+    c->forecast_entry_plan_version=0;
+    EntryPrediction pr=predictor_simulate_entry_with_attitude(*state,p,prediction_aero,
+        &prediction_envelope,&c->trajectory_calibration,&cfg->vehicle,&cfg->site,
+        &cfg->guidance,cfg->vehicle.maximum_bank_angle,t->roll,initial_roll_rate,
+        t->angle_of_attack,initial_aoa_rate,sign,leg_elapsed,
+        (burn_cutoff_predict||postburn_verify)?4500:2500,true);
     trajectory_clear(&c->dynamic_trajectory);c->dynamic_trajectory=pr.trajectory;pr.trajectory=(Trajectory){0};c->log_raw_plan_trajectory_dirty=true;
     double filter_dt=c->has_prediction_cache&&c->cached_prediction_ut>-1e200&&t->ut>c->cached_prediction_ut?t->ut-c->cached_prediction_ut:0;
     double entry_alt=p->atmosphere_depth-cfg->guidance.entry_interface_altitude_margin,remaining=clampd((t->mean_altitude-cfg->guidance.taem_interface_altitude)/fmax(entry_alt-cfg->guidance.taem_interface_altitude,1),0,1);
