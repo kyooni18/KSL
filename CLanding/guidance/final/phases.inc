@@ -272,9 +272,7 @@ static GuidanceResult flare_guidance(GuidanceMachine*g,const Telemetry*t,double 
        derivative term out near walking speed where course becomes noisy. */
     double rate_weight=clampd((t->surface_speed-8.0)/35.0,0.0,1.0);
     double authority=clampd(55.0/fmax(t->surface_speed,15.0),.25,1.0);
-    /* Live runway rollouts showed positive wheel steering increasing negative
-       cross-track drift; reverse the runway-frame correction into KSP's axis. */
-    double steer=-clampd((heading_error*.03-t->runway_cross_track*.0011-
+    double steer=clampd((heading_error*.03-t->runway_cross_track*.0011-
         lateral_rate*.012*rate_weight)*authority,-1.0,1.0);
     GuidanceCommand c;guidance_command_init(&c);
     c.gear=true;
