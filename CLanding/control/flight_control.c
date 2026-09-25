@@ -253,14 +253,11 @@ static double fc_pitch_accel_for_profile(double reported,double cap,
         ControlProfile profile,double radar_altitude){
     double used=reported>DBL_EPSILON&&reported<cap?reported:cap;
     if(profile!=PROFILE_FLARE)return used;
-    /* The live preflare can carry several degrees of persistent AoA lag while
-       the identified pitch authority is much larger than the response the airframe
-       actually delivers.  Cap that optimistic authority throughout preflare so the
-       existing overdamped PD closes the error earlier; retain the proven 16 deg/s2
-       low-altitude cap near wheel contact to avoid reintroducing pitch wobble. */
+    /* Increase sustained flare input only near wheel contact, where the
+       measured AoA lag otherwise persists through touchdown. */
     double height=fmax(0.0,fc_finite(radar_altitude,120.0));
     double blend=fc_clamp((120.0-height)/80.0,0.0,1.0);
-    double flare_cap=20.0+(16.0-20.0)*blend;
+    double flare_cap=cap+(16.0-cap)*blend;
     return fmin(used,flare_cap);
 }
 
