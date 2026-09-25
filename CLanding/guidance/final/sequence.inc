@@ -10,10 +10,10 @@
 
 static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
 
-/* Live pull response to touchdown needs a little over ten seconds.  The
-   10.0 s live case still reached first main-wheel contact at about -1.6 m/s;
-   10.5 s adds only the measured half-second of missing sink-arrest lead. */
-static double terminal_pull_response_seconds(void){return 10.5;}
+/* Live pull response is very sensitive near the runway.  A 10.5 s lead
+   moved flare capture about 180 m earlier than the 10.0 s case and caused a
+   pre-threshold ground strike, so use only a small 0.1 s earlier correction. */
+static double terminal_pull_response_seconds(void){return 10.1;}
 static double terminal_pull_lead_height(double glide_sink,double measured_sink){
     return terminal_pull_response_seconds()*fmax(glide_sink,fmax(0.0,measured_sink));
 }
