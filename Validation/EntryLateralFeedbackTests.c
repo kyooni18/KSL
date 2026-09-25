@@ -141,6 +141,33 @@ static void azimuth_turn_bank_floor(void){
     assert(out.bank_magnitude_deg>=30.0-1e-9);
 }
 
+/* Mirror property: flipping the target side (azimuth error, crossrange and
+   measured bank) must flip the commanded bank exactly, from any state, for
+   any flight direction.  This is the check that the old eastbound/crossrange
+   assumption failed. */
+static void mirror_symmetry(void){
+    EntryLateralLimits l=limits();
+    const double errors[]={-40.0,-12.0,-6.0,-2.0,2.0,6.0,12.0,40.0};
+    const double banks[]={-50.0,-10.0,0.0,10.0,50.0};
+    for(size_t i=0;i<sizeof(errors)/sizeof(errors[0]);++i)
+        for(size_t j=0;j<sizeof(banks)/sizeof(banks[0]);++j){
+            EntryLateralState a={0},b={0};
+            EntryLateralInput ia=azimuth_input(errors[i],5.0),ib=azimuth_input(-errors[i],5.0);
+            ia.measured_bank_deg=banks[j];ib.measured_bank_deg=-banks[j];
+            ia.has_crossrange_error=ib.has_crossrange_error=true;
+            ia.crossrange_error_m=3000.0*errors[i];ib.crossrange_error_m=-3000.0*errors[i];
+            for(int k=0;k<50;++k){
+                ia.ut=ib.ut=100.0+.1*k;
+                EntryLateralOutput oa=entry_lateral_update(&a,&ia,&l);
+                EntryLateralOutput ob=entry_lateral_update(&b,&ib,&l);
+                assert(oa.valid&&ob.valid);
+                assert(fabs(oa.target_bank_deg+ob.target_bank_deg)<1e-9);
+                assert(oa.bank_sign==-ob.bank_sign);
+                ia.measured_bank_deg=oa.target_bank_deg;ib.measured_bank_deg=ob.target_bank_deg;
+            }
+        }
+}
+
 int main(void){
     initial_side_follows_crossrange_sign();
     predicts_crossing_over_physical_roll_response();
@@ -148,6 +175,7 @@ int main(void){
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
     azimuth_turn_bank_floor();
+    mirror_symmetry();
     puts("Entry lateral feedback tests passed.");
     return 0;
 }

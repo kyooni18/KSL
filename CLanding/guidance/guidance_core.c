@@ -253,7 +253,9 @@ double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v){
 
 double terminal_lateral_bank_limit(const Telemetry*t,const VehicleProfile*v){
     double limit=dynamic_bank_limit(t,v);
-    if(limit>0.0||!t||!v||!isfinite(t->radar_altitude)||t->radar_altitude>300.0||
+    /* Applies at any height once in Final: a vehicle below minimum-safe speed
+       while still high needs lateral authority most, not least. */
+    if(limit>0.0||!t||!v||!isfinite(t->radar_altitude)||
        !isfinite(t->true_air_speed)||!isfinite(t->dynamic_pressure)||
        !isfinite(t->g_force)||t->dynamic_pressure<=DBL_MIN||
        t->dynamic_pressure>v->maximum_dynamic_pressure||t->g_force>v->maximum_g_load||

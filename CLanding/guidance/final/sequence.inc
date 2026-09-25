@@ -172,10 +172,28 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double align_remaining=fmax(0.0,ALIGN_STATION-along);
     double align_time=fmax(6.0,align_remaining/Vh);
     double omega=clampd(2.2/align_time,.06,.18);
-    double lateral_accel=-2.0*.95*omega*cross_rate-
-        omega*omega*clampd(t->runway_cross_track,-400.0,400.0);
     double bank_limit=fmin(fmin(30.0,terminal_lateral_bank_limit(t,v)),
         3.0+27.0*lateral_scale);
+    /* Authority-aware capture.  Command the cross-track rate the vehicle can
+       still stop with the bank it will have later in the approach (bank
+       authority fades with speed and height), then close on that rate.  A
+       fixed-gain capture overshoots when it spends high-speed bank and the
+       low-speed limit cannot take the overshoot back out. */
+    double later_bank=fmin(bank_limit,10.0);
+    double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
+    double y=clampd(t->runway_cross_track,-2000.0,2000.0);
+    double rate_gain=fmin(omega,sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
+    double desired_rate=-y*rate_gain;
+    /* The roll command is slew-limited (approach roll rate/accel), so close on
+       the cross-track rate predicted one roll-response time ahead, using the
+       lateral acceleration the present bank already produces. */
+    double roll_rate_limit=fmax(1.0,fabs(s->approach_roll_rate));
+    double roll_lag=clampd(1.0+10.0/roll_rate_limit,1.5,5.0);
+    double present_accel=g0*tan(clampd(norm_signed_deg(t->roll),-60.0,60.0)*DEG2RAD);
+    double predicted_rate=cross_rate+present_accel*roll_lag;
+    double lateral_accel=clampd(.5*(desired_rate-predicted_rate),
+        -g0*tan(bank_limit*DEG2RAD),g0*tan(bank_limit*DEG2RAD));
+    (void)align_remaining;
     double bank=clampd(atan(lateral_accel/g0)*RAD2DEG,-bank_limit,bank_limit);
     /* Flight-path normal acceleration resolves lift through bank only.
      * Gravity already has its cos(gamma) projection in the gamma equation. */
@@ -298,8 +316,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            metres; being re-solved, it is itself the closed loop. */
         double room=fmax(5.0,height-SGS_HEIGHT-sink_now*.5*response);
         double decel=fmax(0.0,(sink_now*sink_now-SGS_SINK*SGS_SINK)/(2.0*room));
-        arc_accel=1.1*decel;
-        double reference_sink=fmax(SGS_SINK,sink_now-1.5*decel);
+        /* Pull only when the arc actually needs close to the design pull;
+           otherwise hold the present sink.  Spreading a gentle pull over a
+           high latch flies shallower than a low-L/D vehicle's equilibrium
+           glide and bleeds the speed the final arrest needs. */
+        arc_accel=decel>=.9*arrest_accel?1.1*decel:0.0;
+        double reference_sink=arc_accel>0.0?fmax(SGS_SINK,sink_now-1.5*decel):sink_now;
         reference_fpa=fmax(glide_fpa,-asin(fmin(.95,reference_sink/V)));
         sink_rate_ff=decel/(V*fmax(.3,cos(reference_fpa)));
     }else if(flaring){

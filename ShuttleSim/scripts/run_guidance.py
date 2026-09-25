@@ -206,6 +206,9 @@ def main():
     ap.add_argument("--engage",default="engageReentry",
                     choices=["engage","engageReentry","engageHACTest","engageFinalTest"],
                     help="backend engage method; engage runs createPlan + production deorbit/entry/landing guidance")
+    ap.add_argument("--direct-control",action="store_true",
+                    help="run the backend's atmospheric FCS against ShuttleSim's surface-moment "
+                         "attitude plant (stick inputs) instead of the ideal AoA/bank servo")
     ap.add_argument("--backend-build-dir",type=pathlib.Path,default=CLANDING/"build")
     ap.add_argument("--sim-build-dir",type=pathlib.Path,default=SIM/"build")
     ap.add_argument("--skip-build",action="store_true")
@@ -318,6 +321,10 @@ def main():
     })
     # A phase-specific CLI action must select its matching backend mode, not
     # depend on an inherited operator shell variable.
+    if args.direct_control:
+        env["KSP_LANDER_SIM_DIRECT"]="1"
+    else:
+        env.pop("KSP_LANDER_SIM_DIRECT",None)
     env.pop("KSP_LANDER_FINAL_TEST_LIVE",None)
     env.pop("KSP_LANDER_FINAL_APPROACH_TEST",None)
     if args.engage=="engageFinalTest":

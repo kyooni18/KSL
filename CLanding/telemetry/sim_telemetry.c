@@ -4,6 +4,7 @@
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -340,7 +341,7 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     t->heading = number_value(&doc, attitude, "heading_deg", 0.0);
     t->ground_track_heading = t->heading;
     t->pitch = t->flight_path_angle + t->angle_of_attack;
-    t->sideslip = 0.0;
+    t->sideslip = number_value(&doc, attitude, "sideslip_deg", 0.0);
 
     double published_aoa_rate =
         number_value(&doc, attitude, "aoa_rate_deg_s", NAN);
@@ -382,6 +383,15 @@ bool shuttle_sim_decode_telemetry(const char *packet,
         response->roll_damping_ratio,
         response->maximum_roll_rate_deg_s,
         response->maximum_roll_accel_deg_s2);
+    /* Live KSP telemetry carries no attitude-servo model; guidance and the
+       FCS must work from their own estimates.  Handing them the simulator's
+       servo parameters is perfect knowledge of the plant, so it is withheld
+       unless explicitly requested for an A/B comparison. */
+    const char *publish_servo = getenv("KSP_LANDER_SIM_PUBLISH_SERVO");
+    if (!publish_servo || strcmp(publish_servo, "1") != 0) {
+        response->pitch_valid = false;
+        response->roll_valid = false;
+    }
 
     /* Production Telemetry stores quaternion components as x,y,z,w.  The
        simulator's JSON is w,x,y,z, so normalize the representation here. */
