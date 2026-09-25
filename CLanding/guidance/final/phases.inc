@@ -277,6 +277,21 @@ static RolloutSteeringDemand runway_rollout_steering(const Telemetry*t,
     return (RolloutSteeringDemand){.steering=steer,.lateral_rate=lateral_rate};
 }
 
+static bool terminal_rollout_pitch_target(const Telemetry*t,
+        const LandingConfiguration*cfg,double*target_pitch){
+    const double RELEASE_SPEED=25.0;
+    const double TOUCHDOWN_PITCH=5.0;
+    if(!t||!cfg||!target_pitch||t->surface_speed<=RELEASE_SPEED)return false;
+    /* Hold the mains-first attitude while still fast, then derotate smoothly as
+       aerodynamic speed falls.  The target reaches zero continuously at the
+       release speed so handing pitch back to KSP does not create a step. */
+    double derotate_start=fmax(50.0,cfg->vehicle.touchdown_speed*.80);
+    double blend=clampd((t->surface_speed-RELEASE_SPEED)/
+        fmax(1.0,derotate_start-RELEASE_SPEED),0.0,1.0);
+    *target_pitch=TOUCHDOWN_PITCH*blend;
+    return true;
+}
+
 GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,const Trajectory*ref){
     RolloutSteeringDemand steering=runway_rollout_steering(t,cfg);
@@ -288,9 +303,10 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
     c.wheel_steering=steer;
     c.heading_control_enabled=true;
     c.target_heading=cfg->site.runway_heading;
-    if(t->surface_speed>25.0){
+    double rollout_pitch=0.0;
+    if(terminal_rollout_pitch_target(t,cfg,&rollout_pitch)){
         c.has_target_aoa=true;
-        c.target_aoa=2.0;
+        c.target_aoa=clampd(rollout_pitch-t->flight_path_angle,0.0,12.0);
     }
     c.navball_speed_mode=SPEED_SURFACE;
     c.control_profile=PROFILE_ROLLOUT;
