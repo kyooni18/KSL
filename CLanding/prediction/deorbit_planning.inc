@@ -422,7 +422,6 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
 
     while(high_peri>target){
         low=high;
-        low_peri=high_peri;
         if(high>=speed){
             if(reject)*reject=DEORBIT_REJECT_TARGET_FINITE_BRACKET;
             return false;
@@ -817,7 +816,6 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             if(better(&alternate,&selected,true)){
                 candidate_clear(&selected);
                 candidate_move(&selected,&alternate);
-                selected_start=selected.burn_ut-selected.duration*.5;
                 witness_selection_changed=true;
             }else candidate_clear(&alternate);
         }
@@ -865,7 +863,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         for(int iter=0;iter<4;++iter){
             double slope=(yb-ya)/(xb-xa);
             if(!isfinite(slope)||fabs(slope)<=DBL_EPSILON)break;
-            if(fabs(ya)<fabs(yb)){double t=xa;xa=xb;xb=t;t=ya;ya=yb;yb=t;}
+            if(fabs(ya)<fabs(yb)){double t=xa;xa=xb;xb=t;yb=ya;}
             double proposal=xb-yb/slope;
             proposal=clampd(proposal,xb-coarse_step,xb+coarse_step);
             proposal=clampd(proposal,phase_start,phase_end);

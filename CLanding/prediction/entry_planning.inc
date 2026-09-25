@@ -1,25 +1,4 @@
 
-EntryPrediction predictor_simulate_entry_control_plan_to_interface(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*s,const TaemInterfaceTarget*interface_target,bool enforce_terminal_delivery_budget,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double current_sign,double current_leg_elapsed,const EntryControlPlan*plan,double maxdur,bool include){
-    if(!plan||!plan->valid)
-        return predictor_simulate_entry_with_attitude(state,p,aero,env,cal,v,site,s,v->maximum_bank_angle,initial_bank,initial_bank_rate,initial_aoa,initial_aoa_rate,current_sign,current_leg_elapsed,maxdur,include);
-    double horizon=plan->segment_duration>0.0?
-        plan->segment_duration:s->s_turn_minimum_leg_duration;
-    if(maxdur>0.0)horizon=fmin(horizon,maxdur);
-    double sign=fabs(plan->target_bank)>=1?(plan->target_bank>=0?1:-1):current_sign;
-    /* The live controller commits only the current control segment.  Holding
-       that bank/AoA for the entire 2500 s display rollout made every small
-       replan move the whole predicted vertical profile, producing the visible
-       upward/downward jumps in the HUD.  Apply the retained command only for
-       its committed horizon, then let the predictor resume its own S-turn
-       policy (including any latched reversal event) for the remaining path. */
-    return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,s,v->maximum_bank_angle,initial_bank,initial_bank_rate,initial_aoa,initial_aoa_rate,sign,current_leg_elapsed,plan->final_heading_lock,maxdur,include,true,plan->target_bank,plan->target_aoa,horizon,horizon,true,enforce_terminal_delivery_budget,plan,interface_target);
-}
-
-EntryPrediction predictor_simulate_entry_control_plan(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*s,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double current_sign,double current_leg_elapsed,const EntryControlPlan*plan,double maxdur,bool include){
-    return predictor_simulate_entry_control_plan_to_interface(state,p,aero,env,cal,v,site,s,NULL,false,
-        initial_bank,initial_bank_rate,initial_aoa,initial_aoa_rate,current_sign,current_leg_elapsed,plan,maxdur,include);
-}
-
 typedef struct {
     bool terminal_prediction_valid;
     bool terminal_policy_feasible;
@@ -79,10 +58,7 @@ static Telemetry guidance_shadow_telemetry(const Telemetry*base,VehicleState sta
         t.trajectory_calibration_confidence=ctx->c->confidence;t.trajectory_altitude_residual=ctx->c->altitude_residual;
         t.trajectory_speed_residual=ctx->c->speed_residual;t.trajectory_range_residual=ctx->c->range_residual;
     }
-    double entry_ref=base&&base->true_air_speed>0?base->true_air_speed:at.speed;
-    EntryTerminalDemand demand=entry_terminal_demand(t.latitude,t.mean_altitude,t.range_to_site,t.horizontal_speed,
-        t.course_to_site_error,t.vertical_speed,t.true_air_speed,entry_ref,p,&cfg->vehicle,&cfg->site,&cfg->guidance);
-    t.energy_excess_range=-demand.projected_taem_range_error;
+    t.energy_excess_range=NAN;
     return t;
 }
 
@@ -99,10 +75,12 @@ static bool terminal_shadow_survives(const EntryPrediction*pr,const TerminalShad
 static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState state,const Telemetry*telemetry,
         const GuidanceMachine*guidance,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env0,const TrajectoryCalibrationModel*cal0,const LandingConfiguration*cfg,
-        double maxdur,bool include,bool require_terminal_start,bool stop_at_taem,TerminalShadowOutcome*outcome){
+        double maxdur,bool include_trajectory,
+        bool require_terminal_start,bool stop_at_taem,
+        const TerminalModel*terminal_model,TerminalShadowOutcome*outcome){
     EntryPrediction out;memset(&out,0,sizeof(out));trajectory_init(&out.trajectory);
-    out.closest_distance=DBL_MAX;out.taem_distance=DBL_MAX;out.taem_hac_capture_score=DBL_MAX;
-    out.best_terminal_capture_cost=DBL_MAX;out.taem_altitude=NAN;out.taem_desired_altitude=NAN;
+    out.closest_distance=DBL_MAX;out.taem_distance=DBL_MAX;
+    out.taem_altitude=NAN;out.taem_desired_altitude=NAN;
     out.minimum_entry_speed=DBL_MAX;out.minimum_bank_control_margin=INFINITY;out.minimum_aoa_control_margin=INFINITY;
     if(outcome)memset(outcome,0,sizeof(*outcome));
     if(!telemetry||!guidance||!p||!cfg||!guidance->automation_engaged)return out;
@@ -114,11 +92,10 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     if(!cal0)cal0=&dc;
     GuidanceMachine shadow=*guidance;
     shadow.diagnostic_shadow=true;
-    /* The full-flight shadow runs on the prediction worker, not the control
-       thread. Let it execute the same rolling MM304 replans after each segment
-       expires; freezing the worker's deferred mode made the forecast hold one
-       stale high-altitude command all the way to the 15 km recovery floor. */
-    shadow.entry_planning_deferred=false;
+    shadow.diagnostic_stop_at_taem=stop_at_taem;
+    /* Prediction is advisory only. Replaying it must never invoke a second
+       MM304 planner or mutate the executable Entry policy. */
+    shadow.entry_planning_deferred=true;
     shadow.has_previous_ut=true;shadow.previous_ut=state.ut-.1;
     guidance_set_entry_predictor_models(&shadow,env0,cal0);
     PredictorGuidance response;memset(&response,0,sizeof(response));
@@ -133,11 +110,11 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     AeroContext ctx={.p=p,.e=env0,.c=cal0,.v=&cfg->vehicle,.bank=response.actual_bank,.aoa=response.actual_aoa,
         .ut=state.ut,.mass=state.mass,.gear=initial_gear,.brakes=initial_brakes,.airbrakes=initial_airbrakes};
     GeoPoint target={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
-    double elapsed=0,lastsample=-DBL_MAX,last_entry_topology_search_ut=-DBL_MAX;
+    double elapsed=0,lastsample=-DBL_MAX;
     out.taem_interface_error=INFINITY;
     out.taem_interface_energy_margin=INFINITY;
     const char*entry_witness_trace_env=getenv("KSP_LANDER_TRACE_ENTRY_WITNESS");
-    bool entry_witness_trace=include&&entry_witness_trace_env&&
+    bool entry_witness_trace=entry_witness_trace_env&&
         strcmp(entry_witness_trace_env,"1")==0;
     bool entry_witness_phase_traced=false;
     double entry_alt=p->atmosphere_depth-cfg->guidance.entry_interface_altitude_margin;
@@ -154,9 +131,6 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     out.taem_ownership_boundary_missed=stop_at_taem&&initial_degraded_safety_handoff;
     out.taem_dynamic_interface_captured=shadow.taem_interface_captured;
     out.taem_dynamic_interface_target_valid=shadow.taem_interface_target.valid;
-    out.taem_terminal_candidate_valid=shadow.terminal_candidate.valid;
-    out.taem_terminal_candidate_geometry_clean=shadow.terminal_candidate.valid&&
-        !shadow.terminal_candidate.geometry_degraded;
     if(out.entered_atmosphere){
         GeoPoint initial_geo=predictor_geo_point(state.position,p,state.ut);
         GeoPoint initial_target={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
@@ -204,197 +178,77 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                 cfg->guidance.taem_interface_altitude,entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
         }
         unsigned previous_reversals=shadow.entry_control_reversals;
-        bool previous_final=shadow.entry_final_reversal_pending||shadow.entry_final_reversal_completed;
-        GuidanceResult r=guidance_update(&shadow,&synthetic,&state,plan,p,aero,cfg);
-        bool entry_worker_request=r.phase==PHASE_ENTRY_ENERGY&&
-            (shadow.entry_planning_needed||shadow.entry_final_reversal_pending||
-             shadow.entry_final_reversal_completed);
+        GuidanceResult r=guidance_update_with_terminal_model(&shadow,&synthetic,&state,plan,p,aero,cfg,terminal_model);
         if(entry_witness_trace&&!entry_witness_phase_traced&&r.phase==PHASE_ENTRY_ENERGY){
-            bool fast_reversal_available=shadow.entry_reversal_scheduled||
-                (shadow.entry_s_turn_plan.valid&&shadow.entry_s_turn_plan.has_planned_reversal&&
-                 isfinite(shadow.entry_s_turn_plan.planned_reversal_ut));
-            fprintf(stderr,"ENTRY_WITNESS first-entry ut=%.2f h=%.0f V=%.0f target=%d plan=%d terminalReady=%d planning=%d fastReversal=%d scheduled=%d final=%d topology=%d searchNeeded=%d\n",
-                state.ut,geo.altitude,at.speed,shadow.taem_interface_target.valid?1:0,
-                shadow.entry_s_turn_plan.valid?1:0,shadow.entry_s_turn_plan.terminal_ready?1:0,
-                shadow.entry_planning_needed?1:0,fast_reversal_available?1:0,
-                shadow.entry_reversal_scheduled?1:0,shadow.entry_reversal_is_final?1:0,
-                shadow.entry_topology.valid?1:0,entry_topology_search_needed(&shadow)?1:0);
+            fprintf(stderr,
+                "ENTRY_WITNESS first-entry ut=%.2f h=%.0f V=%.0f margin=%+.0f D=%.3f Dref=%.3f bank=%+.1f cross=%+.0f planning=%d\n",
+                state.ut,geo.altitude,at.speed,shadow.entry_feedback.energy_margin,
+                shadow.entry_feedback.measured_drag_accel,
+                shadow.entry_feedback.reference_drag_accel,
+                shadow.entry_feedback.commanded_bank_deg,
+                shadow.entry_feedback.crossrange_error,
+                shadow.entry_planning_needed?1:0);
             entry_witness_phase_traced=true;
         }
-        double entry_worker_interval=entry_topology_shadow_refresh_interval(
-            &synthetic,&shadow,p,cfg);
-        if(entry_worker_request&&entry_topology_search_needed(&shadow)&&
-           state.ut-last_entry_topology_search_ut+1e-9>=entry_worker_interval){
-            last_entry_topology_search_ut=state.ut;
-            double worker_course=isfinite(synthetic.ground_track_heading)?
-                synthetic.ground_track_heading:synthetic.heading;
+        out.taem_dynamic_interface_target_valid=false;
+        if(!out.has_first_s_turn_reversal&&shadow.entry_control_reversals!=previous_reversals){
+            out.has_first_s_turn_reversal=true;
+            out.first_s_turn_reversal_ut=state.ut;
+            out.first_s_turn_reversal_range=range;
+            out.first_s_turn_reversal_sign=shadow.s_turn_sign;
+            out.first_s_turn_reversal_is_final=false;
             if(entry_witness_trace)
-                fprintf(stderr,"ENTRY_WITNESS topology-request ut=%.2f h=%.0f V=%.0f target-before=%d ready=%d reversal=%d\n",
-                    state.ut,geo.altitude,at.speed,shadow.taem_interface_target.valid?1:0,
-                    shadow.entry_s_turn_plan.terminal_ready?1:0,
-                    shadow.entry_reversal_scheduled?1:0);
-            entry_publish_taem_tangent_target(&shadow,&synthetic,worker_course,p,aero,cfg);
-            if(entry_witness_trace){
-                ControlAuthorityEnvelope authority=decision_control_authority_envelope(
-                    &shadow,&synthetic,p,cfg);
-                TaemSpeedEnvelope inlet_envelope=decision_taem_speed_envelope(
-                    &cfg->vehicle,p,cfg->guidance.taem_interface_altitude);
-                fprintf(stderr,"ENTRY_WITNESS topology-target ut=%.2f valid=%d terminalRegion=%d hs=%.1f q=%.1f authority=%d response=%.2f latAccel=%.4g inletEnvelope=%d minTurn=%.4g along=%.1f cross=%.1f course=%.2f altitude=%.1f speed=%.1f energy=%d\n",
-                    state.ut,shadow.taem_interface_target.valid?1:0,
-                    shadow.terminal_region_entered?1:0,synthetic.horizontal_speed,
-                    synthetic.dynamic_pressure,authority.valid?1:0,
-                    authority.control_response_time_s,authority.maximum_lateral_accel_mps2,
-                    inlet_envelope.valid?1:0,inlet_envelope.minimum_turn_radius_m,
-                    shadow.taem_interface_target.along_track,shadow.taem_interface_target.cross_track,
-                    shadow.taem_interface_target.course,shadow.taem_interface_target.altitude,
-                    shadow.taem_interface_target.speed,shadow.taem_interface_target.energy_qualified?1:0);
-            }
-            EntryTopologyPlan topology=predictor_plan_entry_topology(state,&synthetic,&shadow,p,
-                env0,cal0,cfg);
-            if(entry_witness_trace)
-                fprintf(stderr,"ENTRY_WITNESS topology-result ut=%.2f valid=%d flags=0x%x along=%.1f cross=%.1f altitude=%.1f speed=%.1f course=%.2f cost=%.1f\n",
-                    state.ut,topology.valid?1:0,topology.failure_flags,topology.capture_along,
-                    topology.capture_cross,topology.capture_altitude,topology.capture_speed,
-                    topology.capture_course,topology.cost);
-            if(topology.valid&&guidance_install_entry_topology(&shadow,&topology,state.ut)){
-                guidance_result_clear(&r);
-                r=guidance_update(&shadow,&synthetic,&state,plan,p,aero,cfg);
-            }
-        }
-        out.taem_dynamic_interface_target_valid=shadow.taem_interface_target.valid;
-        bool current_final=shadow.entry_final_reversal_pending||shadow.entry_final_reversal_completed;
-        if(!out.has_first_s_turn_reversal&&
-           (shadow.entry_control_reversals!=previous_reversals||(!previous_final&&current_final))){
-            out.has_first_s_turn_reversal=true;out.first_s_turn_reversal_ut=state.ut;
-            out.first_s_turn_reversal_range=range;out.first_s_turn_reversal_sign=shadow.s_turn_sign;
-            out.first_s_turn_reversal_is_final=current_final;
-            if(shadow.diagnostic_shadow)
-                fprintf(stderr,"DEBUG_ENTRY_REVERSAL ut=%.1f V=%.1f h=%.0f live=(%.0f,%.0f,%.1f) side=%.0f final=%d target=(%.0f,%.0f,%.1f)\n",
-                    state.ut,at.speed,geo.altitude,synthetic.runway_along_track,synthetic.runway_cross_track,
-                    synthetic.ground_track_heading,shadow.s_turn_sign,current_final,
-                    shadow.taem_interface_target.along_track,shadow.taem_interface_target.cross_track,
-                    shadow.taem_interface_target.course);
+                fprintf(stderr,
+                    "ENTRY_WITNESS reversal ut=%.2f V=%.1f h=%.0f cross=%.0f side=%+.0f count=%u\n",
+                    state.ut,at.speed,geo.altitude,synthetic.runway_cross_track,
+                    shadow.s_turn_sign,shadow.entry_control_reversals);
         }
         out.s_turn_reversals=shadow.entry_control_reversals-guidance->entry_control_reversals;
         bool terminal_owned_now=taem_exec_owns_vehicle(&shadow.taem_exec);
         bool noninterface_terminal_ownership=terminal_owned_now&&!shadow.taem_interface_captured;
-        if(entry_witness_trace&&noninterface_terminal_ownership)
-            fprintf(stderr,"ENTRY_WITNESS degraded-ownership ut=%.2f h=%.0f V=%.0f range=%.1fkm along=%.1fkm cross=%.1fkm course=%.1f target=%d topo=%d planReady=%d planning=%d terminalBlock=%d safetyHandoff=%d\n",
-                state.ut,geo.altitude,at.speed,range/1000.0,
-                synthetic.runway_along_track/1000.0,synthetic.runway_cross_track/1000.0,
-                synthetic.ground_track_heading,shadow.taem_interface_target.valid?1:0,
-                shadow.entry_topology.valid?1:0,shadow.entry_s_turn_plan.terminal_ready?1:0,
-                shadow.entry_planning_needed?1:0,shadow.taem_exec.recovery_reason,
-                shadow.taem_safety_handoff?1:0);
-        /* TAEM recovery ownership is useful live, but a stop-at-TAEM shadow is
-           qualifying the MM304 fixed-interface contract. Any ownership transfer
-           that did not capture that interface is a miss, not "TAEM reached". */
         if(stop_at_taem&&noninterface_terminal_ownership)
             out.taem_ownership_boundary_missed=true;
-        if(!out.reached_taem&&terminal_owned_now&&!(stop_at_taem&&noninterface_terminal_ownership)){
-            out.reached_taem=true;out.taem_distance=range;
+        if(!out.reached_taem&&terminal_owned_now&&!noninterface_terminal_ownership){
+            out.reached_taem=true;
+            out.taem_distance=range;
             out.taem_dynamic_interface_captured=shadow.taem_interface_captured;
-            out.taem_dynamic_interface_target_valid=shadow.taem_interface_target.valid;
-            out.taem_terminal_candidate_valid=shadow.terminal_candidate.valid;
-            out.taem_terminal_candidate_geometry_clean=shadow.terminal_candidate.valid&&
-                !shadow.terminal_candidate.geometry_degraded;
+            out.taem_dynamic_interface_target_valid=false;
+            out.taem_interface_error=0.0;
+            out.taem_interface_energy_margin=shadow.entry_feedback.energy_margin;
             out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
-            out.taem_speed=at.speed;out.taem_flight_path_angle=synthetic.flight_path_angle;
-            out.taem_altitude=geo.altitude;out.taem_desired_altitude=cfg->guidance.taem_interface_altitude;
-            out.taem_along_track=synthetic.runway_along_track;out.taem_cross_track=synthetic.runway_cross_track;
+            out.taem_speed=at.speed;
+            out.taem_flight_path_angle=synthetic.flight_path_angle;
+            out.taem_altitude=geo.altitude;
+            out.taem_desired_altitude=cfg->guidance.taem_interface_altitude;
+            out.taem_along_track=synthetic.runway_along_track;
+            out.taem_cross_track=synthetic.runway_cross_track;
             out.taem_course=synthetic.ground_track_heading;
-            if(shadow.taem_interface_target.valid){
-                TaemInterfaceCapture captured=entry_taem_interface_capture(
-                    &shadow.taem_interface_target,&synthetic,synthetic.ground_track_heading,p,cfg);
-                if(captured.valid)out.taem_interface_error=hypot(captured.along,captured.cross);
-            }
-            out.taem_energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
-                cfg->guidance.taem_interface_altitude,entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
-        }
-        if(stop_at_taem&&out.entered_atmosphere&&!out.reached_taem&&
-           at.speed<=cfg->guidance.taem_force_handoff_speed){
-            /* The ownership boundary is the dynamic MM304 tangent state, not the
-               historical 20 km runway-along shell.  Crossing the speed ceiling is
-               only eligibility; keep flying the S-turn until the tangent tube is
-               captured or its state has been physically passed/lost. */
-            if(shadow.taem_interface_target.valid){
-                TaemInterfaceCapture capture=entry_taem_interface_capture(
-                    &shadow.taem_interface_target,&synthetic,synthetic.ground_track_heading,
-                    p,cfg);
-                if(capture.valid){
-                    double interface_error=hypot(capture.along,capture.cross);
-                    if(isfinite(interface_error)&&
-                       interface_error<out.taem_interface_error){
-                        out.taem_interface_error=interface_error;
-                        out.taem_interface_energy_margin=capture.energy_margin;
-                        out.taem_along_track=synthetic.runway_along_track;
-                        out.taem_cross_track=synthetic.runway_cross_track;
-                        out.taem_course=synthetic.ground_track_heading;
-                        out.taem_altitude=geo.altitude;
-                        out.taem_desired_altitude=shadow.taem_interface_target.altitude;
-                        out.taem_speed=at.speed;
-                    }
-                }
-                double low_speed=fmax(cfg->vehicle.minimum_safe_speed*1.6,
-                    shadow.taem_interface_target.speed*.72);
-                double pass_lead=fmax(0.0,shadow.taem_interface_target.acquisition_lead);
-                double pass_downstream=fmax(1500.0,fmin(4000.0,pass_lead*.35));
-                double pass_cross=fmax(3000.0,fmin(9000.0,pass_lead*.50));
-                bool passed=capture.valid&&capture.along<-pass_downstream&&
-                    fabs(capture.cross)<=pass_cross;
-                bool energy_lost=capture.valid&&at.speed<low_speed&&capture.energy_margin<0.0;
-                TaemSpeedEnvelope speed_envelope=
-                    decision_taem_speed_envelope(&cfg->vehicle,p,geo.altitude);
-                bool near_alignment=capture.valid&&speed_envelope.valid&&
-                    hypot(capture.along,capture.cross)<=12000.0&&
-                    geo.altitude>=cfg->site.altitude+15000.0&&
-                    at.speed>=speed_envelope.minimum_speed_mps&&
-                    at.speed<=speed_envelope.maximum_speed_mps;
-                /* Near the fixed station, a slow state is still recoverable if
-                   it can continue turning toward the explicit heading/position
-                   contract. Do not terminate the shadow before that contract is
-                   either met or the vehicle leaves the 15 km recovery shell. */
-                out.taem_ownership_boundary_missed=passed||(energy_lost&&!near_alignment);
-                if(out.taem_ownership_boundary_missed)
-                    fprintf(stderr,"DEBUG_TAEM_MISS ut=%.1f V=%.1f h=%.0f fpa=%.1f live=(%.0f,%.0f,%.1f) target=(%.0f,%.0f,%.1f,%.0f,%.1f,%.1f) cap=(along %.0f cross %.0f course %.1f h %.0f E %.0f turn %.0f veto %u) prog=(side %.0f bank %.1f roll %.1f sched %d final %d rsign %.0f rut %.1f pending %d done %d infeasible %d) passed=%d energy=%d\n",
-                        state.ut,at.speed,geo.altitude,synthetic.flight_path_angle,
-                        synthetic.runway_along_track,synthetic.runway_cross_track,synthetic.ground_track_heading,
-                        shadow.taem_interface_target.along_track,shadow.taem_interface_target.cross_track,
-                        shadow.taem_interface_target.course,shadow.taem_interface_target.altitude,
-                        shadow.taem_interface_target.speed,shadow.taem_interface_target.flight_path_angle,
-                        capture.along,capture.cross,capture.course_error,capture.altitude_error,
-                        capture.energy_margin,capture.turn_margin,capture.veto,
-                        shadow.s_turn_sign,shadow.entry_control_bank,synthetic.roll,
-                        shadow.entry_reversal_scheduled,shadow.entry_reversal_is_final,
-                        shadow.entry_reversal_sign,shadow.entry_reversal_ut,
-                        shadow.entry_final_reversal_pending,shadow.entry_final_reversal_completed,
-                        shadow.entry_lateral_infeasible,passed,energy_lost);
-            }else{
-                /* No published dynamic inlet means MM304 has nothing valid to hand to
-                   MM305.  Keep searching while altitude remains recoverable, but once
-                   the MM305 engagement floor or minimum-safe speed is crossed the
-                   ownership transfer is physically lost. */
-                double handoff_low=0.0,handoff_high=0.0;
-                entry_taem_handoff_altitude_bounds(&cfg->guidance,&handoff_low,&handoff_high);
-                out.taem_ownership_boundary_missed=
-                    geo.altitude<handoff_low||at.speed<cfg->vehicle.minimum_safe_speed;
-                (void)handoff_high;
-            }
+            out.taem_energy_error=entry_remaining_specific_energy(
+                geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
+                cfg->guidance.taem_interface_altitude,
+                entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
         }
         bool policy_feasible=shadow.taem_exec.terminal_evaluation.valid&&shadow.taem_exec.terminal_evaluation.feasible;
-        out.shadow_terminal_prediction_valid=shadow.terminal_prediction_valid;
+        out.shadow_terminal_prediction_valid=shadow.mm305_route_committed&&shadow.mm305_route.valid;
         out.shadow_terminal_policy_feasible=policy_feasible;
         out.shadow_terminal_path_committed=shadow.terminal_path_committed;
         out.shadow_final_approach_captured=shadow.final_approach_captured;
         out.shadow_aborted=shadow.aborted||r.phase==PHASE_ABORT;
+        if(out.shadow_aborted&&entry_witness_trace){
+            fprintf(stderr,
+                "ENTRY_WITNESS shadow-abort ut=%.2f phase=%d h=%.0f V=%.1f mach=%.2f range=%.0f along=%.0f cross=%.0f course=%.1f status=\"%s\" warning=\"%s\" margin=%+.0f entryComplete=%d taemOwn=%d route=%d routeValid=%d evalValid=%d evalFeasible=%d\n",
+                state.ut,(int)r.phase,geo.altitude,at.speed,synthetic.mach,range,
+                synthetic.runway_along_track,synthetic.runway_cross_track,
+                synthetic.ground_track_heading,r.status,r.has_warning?r.warning:"",
+                shadow.entry_feedback.energy_margin,shadow.entry_exec.entry_complete?1:0,
+                taem_exec_owns_vehicle(&shadow.taem_exec)?1:0,
+                shadow.mm305_route_committed?1:0,shadow.mm305_route.valid?1:0,
+                shadow.taem_exec.terminal_evaluation.valid?1:0,
+                shadow.taem_exec.terminal_evaluation.feasible?1:0);
+        }
         bool terminal_public_phase=out.reached_taem&&r.phase==PHASE_TAEM;
-        if(include&&(state.ut-lastsample>=2.0||terminal_public_phase)){
-            /* A degraded safety takeover means MM304 missed the fixed TAEM
-               interface. For stop-at-TAEM qualification/presentation, do not
-               serialize recovery ownership as a successful TAEM trajectory point. */
-            GuidancePhase published_phase=(stop_at_taem&&noninterface_terminal_ownership)?
-                PHASE_ENTRY_ENERGY:r.phase;
-            TrajectoryPoint tp={state.ut,geo.latitude,geo.longitude,geo.altitude,at.speed,published_phase,TRAJ_PLANNED};
+        if(include_trajectory&&(state.ut-lastsample>=2.0||terminal_public_phase)){
+            TrajectoryPoint tp={state.ut,geo.latitude,geo.longitude,geo.altitude,at.speed,r.phase,TRAJ_PLANNED};
             trajectory_append(&out.trajectory,tp);lastsample=state.ut;
         }
         /* The ownership latch can become true inside the Entry guidance call that
@@ -462,30 +316,50 @@ EntryPrediction predictor_simulate_entry_guidance_shadow(VehicleState state,cons
     if(!plan)return empty;
     TerminalShadowOutcome outcome;
     EntryPrediction out=predictor_simulate_guidance_shadow_core(state,telemetry,guidance,plan,p,aero,env,cal,cfg,
-        maxdur,include,false,true,&outcome);
+        maxdur,include,false,true,NULL,&outcome);
     out.uncertainty_scenarios=out.shadow_guidance_used?1u:0u;
     return out;
 }
 
+EntryPrediction predictor_simulate_entry_guidance_shadow_with_terminal_model(
+        VehicleState state,const Telemetry*telemetry,const GuidanceMachine*guidance,
+        const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,
+        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
+        const LandingConfiguration*cfg,const TerminalModel*terminal_model,
+        double maxdur,bool include){
+    EntryPrediction empty;memset(&empty,0,sizeof(empty));trajectory_init(&empty.trajectory);
+    if(!plan)return empty;
+    TerminalShadowOutcome outcome;
+    /* The prediction worker owns planning. This replay certifies exactly the
+       selected/provisional executable segment: it neither performs a private
+       topology search nor rolls that segment into a different future plan. */
+    EntryPrediction out=predictor_simulate_guidance_shadow_core(state,telemetry,guidance,
+        plan,p,aero,env,cal,cfg,maxdur,include,false,true,terminal_model,&outcome);
+    out.uncertainty_scenarios=out.shadow_guidance_used?1u:0u;
+    return out;
+}
 
 EntryPrediction predictor_simulate_terminal_shadow(VehicleState state,const Telemetry*telemetry,
         const GuidanceMachine*guidance,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const LandingConfiguration*cfg,
-        double maxdur,bool include){
+        const TerminalModel*terminal_model,double maxdur,bool include){
     TerminalShadowOutcome outcome;
     EntryPrediction out=predictor_simulate_guidance_shadow_core(state,telemetry,guidance,plan,p,aero,env,cal,cfg,
-        maxdur,include,true,false,&outcome);
+        maxdur,include,true,false,terminal_model,&outcome);
     out.uncertainty_scenarios=out.shadow_guidance_used?1u:0u;
-    out.terminal_survivability_stress_score=out.shadow_guidance_used&&terminal_shadow_survives(&out,&outcome,&cfg->vehicle)?1.0:0.0;
+    out.terminal_survivability_stress_score=out.shadow_guidance_used&&
+        terminal_shadow_survives(&out,&outcome,&cfg->vehicle)?1.0:0.0;
     return out;
 }
 
 EntryPrediction predictor_simulate_terminal_shadow_ensemble(VehicleState state,const Telemetry*telemetry,
         const GuidanceMachine*guidance,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const LandingConfiguration*cfg,
-        double maxdur,bool include){
+        const TerminalModel*terminal_model,double maxdur,bool include){
     TerminalShadowOutcome nominal_outcome;
-    EntryPrediction nominal=predictor_simulate_guidance_shadow_core(state,telemetry,guidance,plan,p,aero,env,cal,cfg,maxdur,include,true,false,&nominal_outcome);
+    EntryPrediction nominal=predictor_simulate_guidance_shadow_core(
+        state,telemetry,guidance,plan,p,aero,env,cal,cfg,maxdur,include,true,false,
+        terminal_model,&nominal_outcome);
     if(!nominal.shadow_guidance_used)return nominal;
     AeroContext base_ctx={.p=p,.e=env,.c=cal,.v=&cfg->vehicle,.bank=telemetry->roll,.aoa=telemetry->angle_of_attack,
         .ut=state.ut,.mass=state.mass,.gear=telemetry->gear,.brakes=telemetry->brakes,.airbrakes=telemetry->has_airbrakes&&telemetry->airbrakes};
@@ -503,7 +377,9 @@ EntryPrediction predictor_simulate_terminal_shadow_ensemble(VehicleState state,c
         stress.stress_lift_scale=clampd(1.0-signed_sigma,.60,1.40);
         stress.density_scale=clampd(fmax(.1,stress.density_scale)*(1.0+.20*signed_sigma),.70,1.30);
         TerminalShadowOutcome scenario_outcome;
-        EntryPrediction scenario=predictor_simulate_guidance_shadow_core(state,telemetry,guidance,plan,p,aero,env,&stress,cfg,fmin(maxdur,360.0),false,true,false,&scenario_outcome);
+        EntryPrediction scenario=predictor_simulate_guidance_shadow_core(
+            state,telemetry,guidance,plan,p,aero,env,&stress,cfg,fmin(maxdur,360.0),
+            false,true,false,terminal_model,&scenario_outcome);
         if(terminal_shadow_survives(&scenario,&scenario_outcome,&cfg->vehicle))stress_score+=.25;
         scenarios++;entry_prediction_clear(&scenario);
     }
