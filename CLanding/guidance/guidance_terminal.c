@@ -268,17 +268,6 @@ static GuidanceResult terminal_guidance_selected(GuidanceMachine*g,
         }
     }
 
-    double preview_period=fmax(cfg->guidance.prediction_interval,DBL_EPSILON);
-    bool preview_due=!g->runway_end_preview_valid||
-        !isfinite(g->terminal_prediction_ut)||
-        t->ut-g->terminal_prediction_ut>=preview_period;
-    if(!handoff_end_selected&&cfg->site.allow_reciprocal_runway&&
-       !g->runway_end_committed&&!g->terminal_planning_deferred&&preview_due){
-        GuidanceMachine request=*g,proposal=request;
-        if(guidance_plan_terminal_preview(&proposal,t,p,aero,cfg))
-            (void)guidance_accept_terminal_preview(g,&request,&proposal,t,cfg);
-    }
-
     LandingConfiguration selected=*cfg;
     Telemetry framed=*t;
     if(cfg->site.allow_reciprocal_runway&&g->runway_end_preview_valid&&

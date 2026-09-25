@@ -246,69 +246,8 @@ static void *terminal_prediction_worker(void *arg){
 }
 
 
-/* Short terminal candidate searches have their own native scheduling lane.
-   A several-second full-flight advisory shadow must not delay the current
-   terminal preview, and neither computation may run inside the control mutex. */
-static void *terminal_preview_worker(void*context){
-    LandingController*c=context;
-    double next_wall=0.0;
-    for(;;){
-        GuidanceMachine request={0};Telemetry telemetry={0};PlanetModel planet={0};
-        LandingConfiguration cfg={0};AerodynamicModel aero={0};
-        VesselPhysicsModel physics={0};uint64_t generation=0;bool run=false;
-        pthread_mutex_lock(&c->mutex);
-        if(c->stop_terminal_preview_thread){pthread_mutex_unlock(&c->mutex);break;}
-        GuidanceMachine*g=&c->guidance;
-        cfg=effective_config(c);
-        double refresh=cfg.guidance.prediction_interval;
-        double poll_period=1.0/cfg.guidance.guidance_rate;
-        if(c->session&&c->has_latest&&guidance_terminal_preview_allowed(g)&&
-           g->automation_engaged&&!g->paused&&!g->aborted&&
-           !g->attitude_recovery&&!g->terminal_path_committed&&!g->final_approach_captured&&
-           !(g->hac_side_selected&&!g->terminal_test_capture_active)&&
-           (g->phase==PHASE_ENTRY_ENERGY||taem_exec_owns_vehicle(&g->taem_exec))&&
-           c->latest_telemetry.ut>=g->terminal_reentry_after_ut&&
-           c->latest_telemetry.vertical_speed<0.0&&
-           monotonic_seconds()>=next_wall&&
-           (!isfinite(g->terminal_prediction_ut)||
-            c->latest_telemetry.ut-g->terminal_prediction_ut>=refresh)){
-            request=*g;telemetry=c->latest_telemetry;planet=*krpc_session_planet(c->session);
-            aero=c->aerodynamics;physics=c->physics;
-            generation=c->prediction_generation;run=true;
-        }
-        pthread_mutex_unlock(&c->mutex);
-        if(!run){sleep_seconds(poll_period);continue;}
-        GuidanceMachine proposal=request;
-        if(proposal.entry_predictor_models_valid)
-            proposal.entry_predictor_calibration.physics=&physics;
-        double started=monotonic_seconds();
-        bool planned=guidance_plan_terminal_preview(&proposal,&telemetry,&planet,aero,&cfg);
-        double elapsed=monotonic_seconds()-started;
-        pthread_mutex_lock(&c->mutex);
-        if(planned&&!c->stop_terminal_preview_thread&&c->session&&c->has_latest&&
-           generation==c->prediction_generation)
-            (void)guidance_accept_terminal_preview(&c->guidance,&request,&proposal,
-                &c->latest_telemetry,&cfg);
-        pthread_mutex_unlock(&c->mutex);
-        next_wall=monotonic_seconds()+clampd(elapsed*.25,.05,.50);
-    }
-    return NULL;
-}
-
 static void start_prediction_worker(LandingController *c){
     pthread_mutex_lock(&c->mutex);
-    /* ShuttleSim lockstep advances only after each applied guidance command.
-       A wall-clock terminal-preview worker is therefore the wrong scheduler:
-       at fast simulation rates hundreds of simulated seconds can elapse before
-       a background proposal wins CPU time. Keep terminal planning synchronous
-       with guidance_update() in simulator sessions. Live KSP retains the
-       asynchronous worker so expensive searches stay off the control thread. */
-    bool simulator=c->session&&krpc_session_is_simulator(c->session);
-    if(!simulator&&!c->terminal_preview_thread_started){
-        c->stop_terminal_preview_thread=false;
-        if(pthread_create(&c->terminal_preview_thread,NULL,terminal_preview_worker,c)==0)
-            c->terminal_preview_thread_started=true;
-    }
     if(!c->prediction_thread_started){
         c->stop_prediction_thread=false;
         c->last_terminal_prediction_request_ut=c->last_terminal_prediction_completion_ut=-1e300;
@@ -323,24 +262,18 @@ static void start_prediction_worker(LandingController *c){
 static void stop_prediction_worker(LandingController *c){
     pthread_mutex_lock(&c->mutex);
     bool join=c->prediction_thread_started;
-    bool join_preview=c->terminal_preview_thread_started;
     c->stop_prediction_thread=true;
-    c->stop_terminal_preview_thread=true;
     /* The primary control thread is already joined before this function runs.
        Release KSP control now; never leave the last flight command applied while
        waiting several seconds for an advisory shadow prediction to finish. */
     if(c->session)krpc_safe(c->session);
     pthread_mutex_unlock(&c->mutex);
-    if(join_preview)pthread_join(c->terminal_preview_thread,NULL);
     if(join)pthread_join(c->prediction_thread,NULL);
     pthread_mutex_lock(&c->mutex);
     c->prediction_thread_started=false;
     c->stop_prediction_thread=false;
-    c->terminal_preview_thread_started=false;
-    c->stop_terminal_preview_thread=false;
     c->last_terminal_prediction_request_ut=c->last_terminal_prediction_completion_ut=-1e300;
     c->last_terminal_prediction_completion_wall=-1e300;
     c->last_terminal_prediction_solve_wall=0.0;
     pthread_mutex_unlock(&c->mutex);
 }
-

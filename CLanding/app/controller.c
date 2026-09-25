@@ -25,8 +25,6 @@ struct LandingController {
     pthread_t prediction_thread;
     bool prediction_thread_started;
     bool stop_prediction_thread;
-    pthread_t terminal_preview_thread;
-    bool terminal_preview_thread_started, stop_terminal_preview_thread;
     uint64_t prediction_generation;
     double last_terminal_prediction_request_ut, last_terminal_prediction_completion_ut;
     double last_terminal_prediction_completion_wall, last_terminal_prediction_solve_wall;

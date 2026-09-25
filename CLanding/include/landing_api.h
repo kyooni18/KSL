@@ -122,11 +122,6 @@ bool deorbit_recovery_qualified(const EntryPrediction *p,const LandingSite *site
 bool deorbit_live_cutoff_capture_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);
 bool deorbit_runway_capture_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);
 
-bool guidance_terminal_preview_allowed(const GuidanceMachine *g);
-bool guidance_plan_terminal_preview(GuidanceMachine *g,const Telemetry *t,const PlanetModel *p,
-    AerodynamicModel aero,const LandingConfiguration *cfg);
-bool guidance_accept_terminal_preview(GuidanceMachine *g,const GuidanceMachine *request,
-    const GuidanceMachine *result,const Telemetry *t,const LandingConfiguration *cfg);
 bool guidance_accept_entry_plan(GuidanceMachine *g,const GuidanceMachine *request,
     const GuidanceMachine *result,const Telemetry *t,const LandingConfiguration *cfg);
 void guidance_update_entry_reversal(GuidanceMachine *machine,const EntryControlPlan *plan,double ut);

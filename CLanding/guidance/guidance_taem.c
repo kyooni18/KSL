@@ -21,23 +21,6 @@ double terminal_test_speed_floor(const VehicleProfile *v) {
     return v ? fmax(65.0, v->touchdown_speed * .88) : 65.0;
 }
 
-GuidanceSettings terminal_path_settings(const GuidanceMachine *g,
-        const GuidanceSettings *s) {
-    GuidanceSettings r = *s;
-    if (g && g->terminal_final_handoff_latched &&
-        isfinite(g->terminal_final_handoff_distance) &&
-        g->terminal_final_handoff_distance > 0.0)
-        r.final_approach_distance = g->terminal_final_handoff_distance;
-    else if (g && g->terminal_glide_mode &&
-             g->terminal_test_final_approach_distance > 0.0)
-        r.final_approach_distance = g->terminal_test_final_approach_distance;
-    if (g && g->terminal_glide_mode && g->terminal_test_glide_slope > 0.0) {
-        r.final_glide_slope = g->terminal_test_glide_slope;
-        r.taem_glide_slope = g->terminal_test_glide_slope;
-    }
-    return r;
-}
-
 double terminal_projected_lift_accel_at_aoa(const Telemetry *t,
         AerodynamicModel aero, const VehicleProfile *v, double aoa) {
     if (!t || !v || !isfinite(aoa)) return NAN;
@@ -59,25 +42,6 @@ double terminal_projected_lift_accel_at_aoa(const Telemetry *t,
     if (isfinite(measured) && fabs(target - incidence) <= same_incidence)
         return measured;
     return isfinite(modeled) && modeled >= 0.0 ? modeled : NAN;
-}
-
-bool guidance_terminal_preview_allowed(const GuidanceMachine *g) {
-    (void)g;
-    return false;
-}
-
-bool guidance_plan_terminal_preview(GuidanceMachine *g, const Telemetry *t,
-        const PlanetModel *p, AerodynamicModel aero,
-        const LandingConfiguration *cfg) {
-    (void)g; (void)t; (void)p; (void)aero; (void)cfg;
-    return false;
-}
-
-bool guidance_accept_terminal_preview(GuidanceMachine *g,
-        const GuidanceMachine *request, const GuidanceMachine *result,
-        const Telemetry *t, const LandingConfiguration *cfg) {
-    (void)g; (void)request; (void)result; (void)t; (void)cfg;
-    return false;
 }
 
 bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
@@ -124,82 +88,6 @@ bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
         snprintf(message, message_size,
             "MM305 checkpoint accepted; HAC selection and Final delivery remain subject to the live guidance gates.");
     return true;
-}
-
-void terminal_publish_candidate(GuidanceMachine *g) {
-    if (g) g->terminal_candidate.valid = false;
-}
-
-bool terminal_prediction_ready(const GuidanceMachine *g, const Telemetry *t,
-        double course, const PlanetModel *p,
-        const LandingConfiguration *cfg) {
-    (void)g; (void)t; (void)course; (void)p; (void)cfg;
-    return false;
-}
-
-bool terminal_candidate_operationally_usable(const GuidanceMachine *g,
-        const TerminalCandidate *c, const Telemetry *t, double course,
-        const PlanetModel *p, const LandingConfiguration *cfg) {
-    (void)g; (void)c; (void)t; (void)course; (void)p; (void)cfg;
-    return false;
-}
-
-bool terminal_capture_margin_exhausted(const GuidanceMachine *g,
-        const Telemetry *t, double course, const PlanetModel *p,
-        AerodynamicModel aero, const LandingConfiguration *cfg) {
-    (void)g; (void)t; (void)course; (void)p; (void)aero; (void)cfg;
-    return false;
-}
-
-bool terminal_candidate_vertical_response_ready_live(const GuidanceMachine *g,
-        const Telemetry *t, double course, const PlanetModel *p,
-        AerodynamicModel aero, const LandingConfiguration *cfg,
-        const TerminalCandidate *c) {
-    (void)g; (void)t; (void)course; (void)p; (void)aero; (void)cfg; (void)c;
-    return false;
-}
-
-void terminal_predict(GuidanceMachine *g, const Telemetry *t, double course,
-        const PlanetModel *p, AerodynamicModel aero,
-        const LandingConfiguration *cfg, double dt) {
-    (void)t; (void)course; (void)p; (void)aero; (void)cfg; (void)dt;
-    if (g) g->terminal_candidate.valid = false;
-}
-
-bool terminal_candidate_commit_ready(GuidanceMachine *g, const Telemetry *t,
-        const PlanetModel *p, AerodynamicModel aero,
-        const LandingConfiguration *cfg) {
-    (void)g; (void)t; (void)p; (void)aero; (void)cfg;
-    return false;
-}
-
-HACGuidance terminal_test_update_spiral(GuidanceMachine *g, const Telemetry *t,
-        double course, const PlanetModel *p, AerodynamicModel aero,
-        const LandingConfiguration *cfg, double dt) {
-    (void)g; (void)t; (void)p; (void)aero; (void)cfg; (void)dt;
-    HACGuidance out;
-    memset(&out, 0, sizeof(out));
-    out.heading = norm_deg(course);
-    return out;
-}
-
-double taem_bank_demand(const Telemetry *t, const HACGuidance *h,
-        double hac_radius, double side, AerodynamicModel aero,
-        const VehicleProfile *v) {
-    (void)t; (void)h; (void)hac_radius; (void)side; (void)aero; (void)v;
-    return 0.0;
-}
-
-GuidanceResult taem_guidance(GuidanceMachine *g, const Telemetry *t,
-        double course, const PlanetModel *p, AerodynamicModel aero,
-        const LandingConfiguration *cfg, const Trajectory *ref, double dt) {
-    (void)g; (void)t; (void)course; (void)p; (void)aero; (void)cfg;
-    (void)ref; (void)dt;
-    GuidanceCommand command;
-    guidance_command_init(&command);
-    return result_make(PHASE_TAEM, command,
-        "MM305 guidance is disabled pending replacement.",
-        "MM305 planning and control algorithms have been removed.");
 }
 
 static TerminalDynamicState terminal_live_state(const VehicleState *state,

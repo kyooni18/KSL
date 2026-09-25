@@ -176,30 +176,9 @@ double terminal_projected_drag_work(const GuidanceMachine*g,const Telemetry*t,
         double slope_deg);
 void terminal_path_slope_bounds(const Telemetry*t,const VehicleProfile*v,
         const GuidanceSettings*s,double*minimum,double*maximum);
-void terminal_publish_candidate(GuidanceMachine*g);
-bool terminal_prediction_ready(const GuidanceMachine*g,const Telemetry*t,
-        double course,const PlanetModel*p,const LandingConfiguration*cfg);
-bool terminal_candidate_operationally_usable(const GuidanceMachine*g,
-        const TerminalCandidate*c,const Telemetry*t,double course,
-        const PlanetModel*p,const LandingConfiguration*cfg);
-bool terminal_capture_margin_exhausted(const GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,
-        AerodynamicModel aero,const LandingConfiguration*cfg);
-bool terminal_candidate_vertical_response_ready_live(const GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg,const TerminalCandidate*c);
-void terminal_predict(GuidanceMachine*g,const Telemetry*t,double course,
-        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double dt);
-bool terminal_candidate_commit_ready(GuidanceMachine*g,const Telemetry*t,
-        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg);
-HACGuidance terminal_test_update_spiral(GuidanceMachine*g,const Telemetry*t,double course,
-        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double dt);
 double terminal_test_speed_floor(const VehicleProfile*v);
-GuidanceSettings terminal_path_settings(const GuidanceMachine*g,const GuidanceSettings*s);
 double terminal_projected_lift_accel_at_aoa(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double aoa);
-double taem_bank_demand(const Telemetry*t,const HACGuidance*h,double hac_radius,double side,AerodynamicModel aero,const VehicleProfile*v);
-GuidanceResult taem_guidance(GuidanceMachine*g,const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,const Trajectory*ref,double dt);
 GuidanceResult taem_guidance_native(GuidanceMachine*g,const Telemetry*t,
         const VehicleState*state,double course,const PlanetModel*p,
         AerodynamicModel aero,const LandingConfiguration*cfg,

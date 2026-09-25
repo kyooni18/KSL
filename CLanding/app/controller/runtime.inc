@@ -64,8 +64,6 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     c->trajectory_calibration.physics=&c->physics;
     t.estimated_lift_to_drag=c->aerodynamics.lift_to_drag;t.estimated_ballistic_coefficient=c->aerodynamics.ballistic_coefficient;t.aerodynamic_confidence=c->aerodynamics.confidence;t.calibrated_best_glide_angle_of_attack=cal_snap.best_glide_angle_of_attack;t.calibrated_stall_speed=cal_snap.estimated_stall_speed;t.trajectory_density_scale=c->trajectory_calibration.density_scale;t.trajectory_drag_scale=c->trajectory_calibration.drag_scale;t.trajectory_lift_scale=c->trajectory_calibration.lift_scale;t.bank_effectiveness=c->trajectory_calibration.bank_effectiveness;t.trajectory_calibration_confidence=c->trajectory_calibration.confidence;t.trajectory_altitude_residual=c->trajectory_calibration.altitude_residual;t.trajectory_speed_residual=c->trajectory_calibration.speed_residual;t.trajectory_range_residual=c->trajectory_calibration.range_residual;t.predicted_miss_distance=c->has_plan?c->plan.predicted_closest_distance:0;t.predicted_taem_distance=c->has_plan?c->plan.predicted_taem_distance:0;t.predicted_taem_range_error=c->has_plan?c->plan.predicted_taem_range_error:0;const PlanetModel*planet=krpc_session_planet(c->session);double entry_ref=c->guidance.entry_reference_speed>0?c->guidance.entry_reference_speed:t.true_air_speed;EntryTerminalDemand local_demand=entry_terminal_demand(t.latitude,t.mean_altitude,t.range_to_site,t.horizontal_speed,t.course_to_site_error,t.vertical_speed,t.true_air_speed,entry_ref,planet,&cfg.vehicle,&cfg.site,&cfg.guidance);/* Preserve the historical sign: positive means excess downrange capability, negative means projected TAEM shortfall. */t.energy_excess_range=-local_demand.projected_taem_range_error;
     c->guidance.entry_planning_deferred=true;
-    c->guidance.terminal_planning_deferred=
-        !krpc_session_is_simulator(c->session)&&c->terminal_preview_thread_started;
     guidance_set_entry_predictor_models(&c->guidance,&c->envelope,&c->trajectory_calibration);
     if(c->has_plan&&!c->glide.active&&c->guidance.automation_engaged&&!c->guidance.has_burn_command_started&&!c->guidance.deorbit_burn_completed&&
        !deorbit_plan_preburn_state_compatible(&c->plan,t.mass,t.available_thrust,&cfg.guidance)){
@@ -217,4 +215,3 @@ static void start_thread(LandingController*c){
     pthread_mutex_unlock(&c->mutex);
     start_prediction_worker(c);
 }
-

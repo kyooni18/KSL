@@ -215,7 +215,6 @@ typedef struct {
 
     /* Live control defers expensive searches to the prediction worker. */
     bool entry_planning_deferred, entry_planning_needed, entry_lateral_infeasible, entry_committed_infeasible;
-    bool terminal_planning_deferred; /* Live controller offloads only terminal candidate search. */
     EntryControlPlan entry_s_turn_plan;
     EntryTopologyPlan entry_topology;
     double entry_topology_capture_good_duration;
@@ -249,7 +248,7 @@ typedef struct {
     double terminal_final_handoff_distance;
     bool hac_plan_degraded, hac_plan_geometry_degraded, hac_plan_energy_degraded;
     double hac_plan_violation_score, hac_commit_blend;
-    double terminal_prediction_ut, terminal_reference_fpa, terminal_reference_heading;
+    double terminal_reference_fpa, terminal_reference_heading;
     double terminal_reference_bank, terminal_reference_aoa, terminal_mix;
     /* The path provider's actual preview demand, kept separate from the
        high-level reference so diagnostics can distinguish a neutral lead

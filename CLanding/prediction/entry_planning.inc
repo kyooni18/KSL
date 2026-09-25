@@ -114,7 +114,6 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     if(!cal0)cal0=&dc;
     GuidanceMachine shadow=*guidance;
     shadow.diagnostic_shadow=true;
-    shadow.terminal_planning_deferred=false; /* Replay the identical terminal search without a wall-clock worker. */
     /* The full-flight shadow runs on the prediction worker, not the control
        thread. Let it execute the same rolling MM304 replans after each segment
        expires; freezing the worker's deferred mode made the forecast hold one
@@ -734,4 +733,3 @@ static int execution_witness_geometry_compare(const Candidate*a,const Candidate*
     if(a->executable_witness_closest_distance>b->executable_witness_closest_distance)return 1;
     return 0;
 }
-

@@ -302,7 +302,7 @@ static double observed_signed_roll_rate(const Telemetry *t) {
        Keep terminal mode itself intact here so a low-altitude recovery can
        immediately search a fresh path if there is no safe S-turn margin. */
     g->terminal_candidate.valid=false;g->terminal_path_kind=TERMINAL_PATH_NONE;g->terminal_prediction_valid=false;g->terminal_mix=0;
-    g->terminal_prediction_ut=-INFINITY;g->terminal_path_committed=false;
+    g->terminal_path_committed=false;
     g->terminal_final_handoff_latched=false;g->terminal_final_handoff_distance=NAN;
     g->hac_plan_degraded=false;g->hac_plan_geometry_degraded=false;
     g->hac_plan_energy_degraded=false;g->hac_plan_violation_score=0;g->hac_commit_blend=0;
@@ -356,7 +356,6 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         robust_pid_reset(&g->taem_altitude_pid);robust_pid_reset(&g->speed_pid);
         taem_exec_sync(g,t,s,p,aero,cfg);
         g->phase=PHASE_TAEM;
-        terminal_predict(g,t,course,p,aero,cfg,dt);
         GuidanceCommand c=atmospheric(t,t->ground_track_heading,0.0,v,0.0,false,PROFILE_TAEM);
         c.heading_control_enabled=false;c.has_target_aoa=true;
         c.target_aoa=clampd(v->entry_angle_of_attack,10.0,fmin(18.0,v->maximum_angle_of_attack));

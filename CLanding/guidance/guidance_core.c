@@ -43,7 +43,6 @@ static void reset_controllers(GuidanceMachine*g){
     g->hac_plan_energy_degraded=false;
     g->hac_plan_violation_score=0.0;
     g->hac_commit_blend=0.0;
-    g->terminal_prediction_ut=-INFINITY;
 
     robust_pid_reset(&g->entry_energy_pid);
     robust_pid_reset(&g->taem_altitude_pid);
@@ -205,7 +204,6 @@ static void reset_controllers(GuidanceMachine*g){
     g->entry_planning_needed=false;
     g->entry_lateral_infeasible=false;
     g->entry_committed_infeasible=false;
-    g->terminal_planning_deferred=false;
     g->entry_supervision_boundary_missed=false;
 
     entry_exec_reset(&g->entry_exec);
