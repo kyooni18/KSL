@@ -286,6 +286,8 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
     c.brakes=t->surface_speed<fmax(120.0,cfg->vehicle.touchdown_speed*1.35);
     c.airbrakes=true;
     c.wheel_steering=steer;
+    c.heading_control_enabled=true;
+    c.target_heading=cfg->site.runway_heading;
     if(t->surface_speed>25.0){
         c.has_target_aoa=true;
         c.target_aoa=2.0;
