@@ -153,9 +153,32 @@ entry-energy-law-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_energy_law_tests
 	$(BUILD)/entry_energy_law_tests
 
+$(BUILD)/sim.o: ../ShuttleSim/src/sim.c | $(BUILD)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/scenario.o: ../ShuttleSim/src/scenario.c | $(BUILD)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 backend-protocol-test: $(TARGET)
 	cd $(REPO_ROOT) && python3 Validation/BackendProtocolTests.py "$(abspath $(TARGET))"
 
-test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test
+mm305-feasibility-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/MM305FeasibilityPropertyTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/mm305_feasibility_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/mm305_feasibility_tests)"
+
+touchdown-quality-test: $(TARGET) $(BUILD)/sim.o $(BUILD)/scenario.o
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TouchdownQualityTests.c \
+		$(BUILD)/sim.o $(BUILD)/scenario.o \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/touchdown_quality_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/touchdown_quality_tests)"
+
+contract-tests: mm305-feasibility-test touchdown-quality-test
+
+test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test touchdown-quality-test
 
 qualification: test
