@@ -61,16 +61,15 @@ TaemInterfaceCapture entry_taem_interface_capture(const TaemInterfaceTarget *tar
 
 typedef struct {
     Trajectory trajectory; double taem_distance, taem_range_error, closest_distance; bool entered_atmosphere, reached_taem, taem_ownership_boundary_missed;
-    bool taem_dynamic_interface_captured, taem_dynamic_interface_target_valid, taem_terminal_candidate_valid;
-    bool taem_terminal_candidate_geometry_clean;
+    bool taem_dynamic_interface_captured, taem_dynamic_interface_target_valid;
     double entry_range, entry_flight_path_angle, entry_speed, entry_course_error, taem_speed, taem_flight_path_angle;
     double taem_altitude, taem_desired_altitude, taem_along_track, taem_cross_track, taem_course;
     bool mm304_gate_recorded;
     double mm304_gate_range, mm304_gate_along_track, mm304_gate_cross_track;
     double mm304_gate_course, mm304_gate_altitude, mm304_gate_speed, mm304_gate_flight_path_angle;
-    double taem_hac_capture_score, taem_energy_error, taem_interface_error;
-    double taem_interface_energy_margin, peak_dynamic_pressure, peak_g_load;
-    double best_terminal_capture_cost;
+    double taem_energy_error, taem_interface_error;
+    double taem_interface_energy_margin;
+    double peak_dynamic_pressure, peak_g_load;
     double minimum_entry_speed, maximum_abs_angle_of_attack;
     double minimum_bank_control_margin, minimum_aoa_control_margin;
     bool control_horizon_recorded; double control_horizon_speed, control_horizon_altitude, control_horizon_range, control_horizon_specific_energy, control_horizon_alignment_distance;
@@ -84,6 +83,8 @@ typedef struct {
     unsigned uncertainty_scenarios;
 } EntryPrediction;
 
+
+
 typedef struct {
     bool valid, terminal_ready;
     uint64_t plan_id, plan_version, parent_plan_id, parent_plan_version;
@@ -94,52 +95,10 @@ typedef struct {
     unsigned predicted_reversals;
 } EntryControlPlan;
 
-/* One physically propagated Entry -> reversal -> perpendicular HAC inlet.
- * The first side, energy profile, deadline and inlet are selected together. */
-typedef enum {
-    ENTRY_TOPOLOGY_FAILURE_NONE=0,
-    ENTRY_TOPOLOGY_FAILURE_REVERSAL_SETUP=1u<<0,
-    ENTRY_TOPOLOGY_FAILURE_TERMINAL_TURN=1u<<1,
-    ENTRY_TOPOLOGY_FAILURE_HEADING_LOCK=1u<<2,
-    ENTRY_TOPOLOGY_FAILURE_NONFINITE_STATE=1u<<3,
-    ENTRY_TOPOLOGY_FAILURE_ALTITUDE_FLOOR=1u<<4,
-    ENTRY_TOPOLOGY_FAILURE_SPEED_FLOOR=1u<<5,
-    ENTRY_TOPOLOGY_FAILURE_DYNAMIC_PRESSURE=1u<<6,
-    ENTRY_TOPOLOGY_FAILURE_G_LOAD=1u<<7,
-    ENTRY_TOPOLOGY_FAILURE_POSITION=1u<<8,
-    ENTRY_TOPOLOGY_FAILURE_COURSE=1u<<9,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_BANK=1u<<10,
-    ENTRY_TOPOLOGY_FAILURE_SPEED_PATH=1u<<11,
-    ENTRY_TOPOLOGY_FAILURE_MANEUVER_PATH=1u<<12,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_SPEED=1u<<13,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_SPATIAL=1u<<14,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_COURSE=1u<<15,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_ALTITUDE=1u<<16,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_ENERGY=1u<<17,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_FPA=1u<<18,
-    ENTRY_TOPOLOGY_FAILURE_CAPTURE_STRUCTURAL=1u<<19
-} EntryTopologyFailureFlags;
-
-typedef struct {
-    bool valid;
-    unsigned failure_flags;
-    double planned_ut, first_sign, first_bank, turn_bank, outbound_course_offset, first_aoa, turn_aoa;
-    double aoa_switch_speed, reversal_ut, terminal_turn_ut, capture_ut;
-    double reversal_along, reversal_cross, reversal_altitude, reversal_speed, reversal_course;
-    double reversal_turn_radius, reversal_geometry_error;
-    double terminal_turn_along, terminal_turn_cross, terminal_turn_altitude, terminal_turn_speed, terminal_turn_course;
-    double terminal_turn_radius, terminal_turn_geometry_error;
-    double capture_along, capture_cross, capture_altitude, capture_speed;
-    double capture_course, capture_course_error, capture_bank, capture_heading_debt, capture_endpoint_error;
-    double heading_lock_ut, heading_lock_along, heading_lock_cross, heading_lock_altitude, heading_lock_speed, heading_lock_course, heading_lock_bank;
-    double position_error, glide_reserve, terminal_energy_margin, minimum_alignment_altitude, cost;
-    unsigned capture_veto;
-    double capture_turn_margin;
-    TaemInterfaceTarget inlet;
-} EntryTopologyPlan;
-
 typedef enum {
     ENTRY_SUPERVISION_PASS_THROUGH = 0,
+    ENTRY_SUPERVISION_BOUNDED_CORRECTION = 1,
+    ENTRY_SUPERVISION_CONSERVATIVE_FALLBACK = 2,
     ENTRY_SUPERVISION_INFEASIBLE = 3
 } EntrySupervisionMode;
 
@@ -148,61 +107,18 @@ typedef struct {
 } GuidanceResult;
 
 typedef struct { double e,n; } HACPoint2;
-typedef struct {
-    bool valid, degraded;
-    bool degraded_path, degraded_control, degraded_rate, degraded_end, degraded_arc;
-    bool heading_cone, lead_curve, lead_acquisition;
-    HACPoint2 lead_start, lead_p1, lead_p2;
-    /*
-     * TAEM acquisition is not a cubic interpolation.  A high-energy vehicle
-     * first flies a finite circular acquisition turn, then the common tangent
-     * into the HAC.  These fields describe that exact ground-plane geometry.
-     */
-    HACPoint2 acquisition_center, acquisition_tangent;
-    double acquisition_radius, acquisition_side;
-    double acquisition_start_angle, acquisition_end_angle;
-    double acquisition_arc_length, acquisition_tangent_length;
-    HACPoint2 p0,p1,p2,p3;
-    HACPoint2 cone_center;
-    double lead_length, length, end_angle, arc_remaining, exit_speed, peak_lateral, opposite_lateral,
-        peak_course_rate_ratio,
-        violation_score,
-        debug_min_control_ratio,debug_min_rate_ratio,debug_min_peak_lateral,
-        debug_min_control_length,debug_min_control_arc,debug_min_control_advance;
-    double cone_start_angle, cone_end_angle, cone_arc_length;
-    double lead_start_course, lead_end_course;
-    int reject_arc, reject_opposite, reject_control, reject_rate, reject_end, reject_path;
-} HACTransitionPlan;
 
 typedef enum {
     TERMINAL_PATH_NONE = 0,
-    TERMINAL_PATH_SPLINE = 1,
+    /* Value 2 is retained for telemetry compatibility with earlier logs. */
     TERMINAL_PATH_HAC = 2
 } TerminalPathKind;
 
-typedef struct {
-    bool valid, degraded;
-    /* Keep geometry feasibility separate from the preferred TAEM altitude
-       shell.  A regular, dynamically qualified HAC a little above/below the
-       nominal shell is still a valid path and must not be treated like an
-       unflyable join. */
-    bool geometry_degraded, energy_degraded, shell_degraded;
-    TerminalPathKind kind;
-    HACTransitionPlan join;
-    double radius, side, slope, final_distance, response, energy_aoa;
-    double altitude, speed, course, selected_ut, arrival_ut, quality_score;
-    /* Physical acquisition cost from the live state to this candidate's
-       response lead.  A path that is elegant downstream but already behind
-       the vehicle must not outrank a path the shuttle can begin executing. */
-    double execution_distance, execution_time, execution_course_error;
-    double execution_radial_closure, execution_horizon, execution_margin;
-    double tracking_error, tracking_course_error, tracking_endpoint_error, tracking_margin;
-    bool execution_evaluated, tracking_evaluated;
-} TerminalCandidate;
 
 typedef struct {
     GuidancePhase phase; bool automation_engaged, paused, aborted;
     bool diagnostic_shadow; /* Prediction rollouts must not masquerade as live decisions. */
+    bool diagnostic_stop_at_taem; /* Boundary-only entry supervision stops before MM305 route search. */
     double s_turn_sign; double s_turn_leg_started_ut; bool has_s_turn_leg_started;
     double s_turn_reversal_requested_ut; bool has_s_turn_reversal_requested;
     EntryExecutive entry_exec; EntryLateralState entry_lateral; TaemExecutive taem_exec;
@@ -216,12 +132,9 @@ typedef struct {
     /* Live control defers expensive searches to the prediction worker. */
     bool entry_planning_deferred, entry_planning_needed, entry_lateral_infeasible, entry_committed_infeasible;
     EntryControlPlan entry_s_turn_plan;
-    EntryTopologyPlan entry_topology;
-    double entry_topology_capture_good_duration;
     bool entry_predictor_models_valid;
     AerodynamicEnvelope entry_predictor_envelope;
     TrajectoryCalibrationModel entry_predictor_calibration;
-    TerminalCandidate terminal_candidate;
     /* The committed native MM305 route is a compact deterministic descriptor;
        it has value semantics and is regenerated from its frozen geometry when
        queried, so predictor/preview copies remain independent and inexpensive. */
@@ -233,7 +146,7 @@ typedef struct {
     bool taem_interface_captured, taem_safety_handoff;
     double taem_interface_diagnostic_ut;
     TerminalPathKind terminal_path_kind;
-    bool terminal_prediction_valid, terminal_path_committed;
+    bool terminal_path_committed;
     /*
      * Reciprocal runway direction is a guidance/planning decision.  preview is
      * reversible while terminal geometry is disposable; committed is latched
@@ -246,66 +159,14 @@ typedef struct {
        terminal path. It is immutable until that path is explicitly invalidated. */
     bool terminal_final_handoff_latched;
     double terminal_final_handoff_distance;
-    bool hac_plan_degraded, hac_plan_geometry_degraded, hac_plan_energy_degraded;
-    double hac_plan_violation_score, hac_commit_blend;
-    double terminal_reference_fpa, terminal_reference_heading;
-    double terminal_reference_bank, terminal_reference_aoa, terminal_mix;
-    /* The path provider's actual preview demand, kept separate from the
-       high-level reference so diagnostics can distinguish a neutral lead
-       segment from a neutral vehicle command. */
-    double terminal_reference_path_lateral_acceleration;
-    double terminal_reference_path_bank;
-    double terminal_reference_path_course_error;
-    double terminal_reference_path_arc_remaining;
-    bool terminal_reference_path_transition_active;
-    double terminal_candidate_live_energy_margin;
-    bool terminal_candidate_live_energy_valid;
-    double terminal_prediction_altitude, terminal_prediction_speed, terminal_prediction_time;
     double hac_side; bool hac_side_selected; double delivered_delta_v, burn_command_started_ut, burn_active_elapsed;
     double burn_progress_watch_ut, burn_progress_watch_delta_v;
     bool has_burn_command_started, has_burn_progress_watch, deorbit_burn_completed, atmospheric_interface_crossed, has_previous_ut;
     double previous_ut; bool final_approach_captured, airbrakes_deployed;
     bool hac_progress_valid, hac_captured, hac_completed, terminal_region_entered, terminal_glide_mode, terminal_final_test_mode, terminal_rehearsal_mode, terminal_test_capture_active;
     double hac_capture_lost_duration, terminal_energy_mismatch_duration;
-    double terminal_reentry_after_ut, hac_circuit_slope;
-    unsigned hac_circuit_count;
-    bool hac_transition_active;
-    bool hac_transition_heading_cone, hac_transition_lead_curve, hac_transition_lead_acquisition;
-    bool fixed_alignment_hac_latched, hac_transition_lead_rebase_attempted;
-    double hac_previous_angle, hac_remaining, hac_radius, minimum_turn_radius, terminal_test_glide_slope, terminal_test_final_approach_distance, final_invalid_duration;
-    double hac_transition_p0_e, hac_transition_p0_n, hac_transition_p1_e, hac_transition_p1_n;
-    double hac_transition_p2_e, hac_transition_p2_n, hac_transition_p3_e, hac_transition_p3_n;
-    double hac_transition_cone_center_e, hac_transition_cone_center_n;
-    double hac_transition_cone_start_angle, hac_transition_cone_end_angle, hac_transition_cone_arc_length;
-    double hac_transition_lead_start_e, hac_transition_lead_start_n;
-    double hac_transition_acquisition_center_e, hac_transition_acquisition_center_n;
-    double hac_transition_acquisition_tangent_e, hac_transition_acquisition_tangent_n;
-    double hac_transition_acquisition_radius, hac_transition_acquisition_side;
-    double hac_transition_acquisition_start_angle, hac_transition_acquisition_end_angle;
-    double hac_transition_acquisition_arc_length, hac_transition_acquisition_tangent_length;
-    double hac_transition_lead_p1_e, hac_transition_lead_p1_n, hac_transition_lead_p2_e, hac_transition_lead_p2_n;
-    double hac_transition_lead_start_course, hac_transition_lead_end_course;
-    double hac_transition_lead_length, hac_transition_lead_progress;
-    bool hac_transition_handoff_lateral_valid;
-    double hac_transition_handoff_lateral_acceleration, hac_transition_handoff_blend;
-    bool hac_transition_handoff_aoa_valid;
-    double hac_transition_handoff_aoa;
-    double hac_transition_length, hac_transition_end_angle, hac_transition_exit_speed, hac_transition_response_time, hac_transition_progress;
-    /* Diagnostic-only closure ledger for a committed fixed-HAC lead.  These
-       fields never participate in selection, admission, or control. */
-    bool hac_energy_audit_active, hac_energy_audit_logged;
-    bool hac_energy_audit_was_lead;
-    unsigned hac_energy_audit_rebase_count;
-    double hac_energy_audit_start_ut, hac_energy_audit_last_ut;
-    double hac_energy_audit_start_e, hac_energy_audit_start_n;
-    double hac_energy_audit_p0_e, hac_energy_audit_p0_n;
-    double hac_energy_audit_start_specific_energy;
-    double hac_energy_audit_actual_drag_work, hac_energy_audit_actual_distance;
-    double hac_energy_audit_forecast_loss, hac_energy_audit_forecast_available;
-    double hac_energy_audit_forecast_required, hac_energy_audit_forecast_margin;
-    double hac_energy_audit_forecast_lead_length, hac_energy_audit_forecast_p0_speed;
-    double hac_energy_audit_forecast_p0_altitude, hac_energy_audit_forecast_p0_fpa;
-    double hac_energy_audit_forecast_p0_aoa;
+    double terminal_reentry_after_ut;
+    double hac_remaining, hac_radius, minimum_turn_radius, terminal_test_glide_slope, terminal_test_final_approach_distance, final_invalid_duration;
     double terminal_test_revolution_remaining;
     double terminal_test_preflare_altitude, terminal_test_preflare_target_speed, terminal_test_preflare_min_speed;
     TerminalVerticalStage terminal_vertical_stage;
@@ -347,13 +208,14 @@ typedef struct {
     double entry_control_turn_radius, entry_control_segment_until_ut;
     double entry_control_cost, entry_control_taem_range_error, entry_control_taem_speed, entry_control_taem_energy_error;
     bool entry_reversal_scheduled, entry_reversal_is_final, entry_final_reversal_pending, entry_final_reversal_completed;
-    bool entry_topology_heading_locked, entry_continuation_bootstrap;
+    bool entry_continuation_bootstrap;
     /* The MM304 inlet side is a mission-geometry choice.  It must not change
        merely because the energy-management S-turn changes ownership side. */
     bool entry_target_side_latched;
     double entry_target_side;
     double entry_reversal_ut, entry_reversal_range, entry_reversal_sign, entry_reversal_bank;
     unsigned entry_control_reversals;
+    EntryGuidanceFeedback entry_feedback;
     /* Per-tick Entry allocation evidence.  These values expose the physical
        demand before it is sent to the controller; they do not alter the
        executable command or grant any extra authority. */
@@ -366,5 +228,11 @@ typedef struct {
     JerkLimiter pitch_limiter, roll_limiter, heading_limiter; SlewLimiter throttle_limiter;
     GuidancePhase last_stabilized_phase; bool has_last_stabilized_phase;
 } GuidanceMachine;
+TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
+    const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,
+    const PlanetModel *planet,const LandingConfiguration *configuration);
+TaemInterfaceCapture entry_mm305_admission_envelope(
+    const GuidanceMachine *guidance,const Telemetry *telemetry,double course,
+    const PlanetModel *planet,const LandingConfiguration *configuration);
 
 #endif

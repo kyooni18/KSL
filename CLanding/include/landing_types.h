@@ -46,6 +46,8 @@ typedef enum { TRAJ_PLANNED, TRAJ_ACTUAL, TRAJ_REFERENCE } TrajectoryKind;
 
 typedef struct {
     char serial_port[256];
+    char rpc_host[256];
+    int rpc_port;
     int baud_rate, timeout_ms;
     char client_name[128];
 } ConnectionConfiguration;
@@ -202,7 +204,11 @@ typedef struct {
     bool has_rpc_budget;
     unsigned rpc_read_calls, rpc_read_wire_requests, rpc_apply_calls, rpc_apply_wire_requests;
     unsigned rpc_total_calls, rpc_total_wire_requests;
-    bool gear, brakes, has_airbrakes, airbrakes; char vessel_situation[64];
+    bool gear, brakes, has_airbrakes, airbrakes;
+    /* Live kRPC wheel-contact telemetry. `main_gear_grounded` is true when
+       either rear/main gear reports ModuleWheelBase.isGrounded. */
+    bool has_main_gear_grounded, main_gear_grounded;
+    char vessel_situation[64];
     double range_to_site, bearing_to_site, heading_error, runway_along_track, runway_cross_track, flight_path_angle;
     double estimated_lift_to_drag, estimated_ballistic_coefficient, aerodynamic_confidence;
     double calibrated_best_glide_angle_of_attack, calibrated_stall_speed;
@@ -213,6 +219,19 @@ typedef struct {
     double trajectory_calibration_confidence, trajectory_altitude_residual, trajectory_speed_residual, trajectory_range_residual;
     double energy_excess_range;
 } Telemetry;
+
+/* Authoritative live MM304 feedback state.  Prediction may estimate these
+   quantities, but only the guidance cycle initialized from measured telemetry
+   publishes this record. Distances are metres; accelerations are m/s^2. */
+typedef struct {
+    bool valid, lateral_valid, reversal_requested;
+    double ut, confidence;
+    double measured_drag_accel, reference_drag_accel, drag_error_accel;
+    double predicted_achievable_range, required_range_to_go, energy_margin, range_error_scale;
+    double required_vertical_lift_accel;
+    double crossrange_error, crossrange_rate, projected_crossrange_error, crossrange_corridor;
+    double energy_bank_magnitude_deg, commanded_bank_deg, bank_sign;
+} EntryGuidanceFeedback;
 
 typedef struct {
     double target_pitch, target_heading, target_roll, target_throttle, wheel_steering;
@@ -266,6 +285,7 @@ typedef struct {
     double guidance_entry_plan_taem_range_error, guidance_entry_plan_taem_speed, guidance_entry_plan_taem_energy_error;
     double guidance_entry_reversal_time_remaining, guidance_entry_reversal_range, guidance_entry_reversal_sign;
     unsigned guidance_entry_plan_predicted_reversals;
+    EntryGuidanceFeedback guidance_entry_feedback;
     EntryExecTelemetry guidance_entry_exec;
     TaemExecTelemetry guidance_taem_exec;
     bool guidance_hac_captured, guidance_hac_completed, guidance_hac_progress_valid;
