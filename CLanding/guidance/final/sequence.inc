@@ -303,7 +303,10 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            reference geometric and continuous from final capture through preflare. */
         /* Live gear contact trails this reference point; bias upstream so
            the low-sink corridor reaches the runway with rollout distance left. */
-        double touchdown_along=-100.0;
+        /* k67 reached first wheel contact at +162 m and needed about 2.4 km
+           of rollout. Move the geometric aim upstream to leave a full stop
+           margin inside the 2.5 km runway. */
+        double touchdown_along=-300.0;
         double touchdown_distance=fmax(120.0,touchdown_along-along);
         double gref=terminal_geometry_fpa(height,touchdown_distance,H_FLOAT);
         double gdot_ff=0.0,kg=KP("KP_KG",.3);
