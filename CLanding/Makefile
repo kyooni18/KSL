@@ -54,7 +54,7 @@ NANOPB_SOURCE_NAMES := pb_common pb_encode pb_decode
 NANOPB_OBJECTS := $(NANOPB_SOURCE_NAMES:%=$(BUILD)/nanopb/%.o)
 CNANO_HEADERS := $(CNANO_COMPAT)/pb.h $(CNANO_COMPAT)/pb_common.h $(CNANO_COMPAT)/pb_encode.h $(CNANO_COMPAT)/pb_decode.h
 
-.PHONY: all clean debug test qualification architecture-test taem-interface-test dynamic-taem-interface-test taem-frames-energy-test taem-native-stack-test vessel-physics-test backend-protocol-test
+.PHONY: all clean debug test qualification architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test backend-protocol-test
 .SECONDARY: $(CNANO_HEADERS)
 
 all: $(TARGET)
@@ -107,13 +107,15 @@ architecture-test: $(TARGET)
 		-o $(BUILD)/shuttle_architecture_contract_tests
 	$(BUILD)/shuttle_architecture_contract_tests
 
-taem-interface-test: $(TARGET)
+mm305-admission-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
-		$(VALIDATION_ROOT)/TaemInterfaceCaptureEnergyTests.c \
+		$(VALIDATION_ROOT)/MM305AdmissionTests.c \
 		$(BUILD)/decision_envelope.o $(BUILD)/math.o $(BUILD)/models.o $(BUILD)/json.o \
+		$(BUILD)/taem_planner.o $(BUILD)/taem_geometry.o $(BUILD)/taem_frames_energy.o $(BUILD)/taem_reachability.o \
+		$(BUILD)/flight_physics/math3.o $(BUILD)/flight_physics/world.o $(BUILD)/flight_physics/aero.o \
 		$(BUILD)/entry_exec.o $(BUILD)/taem_exec.o $(LDFLAGS) $(LDLIBS) \
-		-o $(BUILD)/taem_interface_capture_energy_tests
-	$(BUILD)/taem_interface_capture_energy_tests
+		-o $(BUILD)/mm305_admission_tests
+	$(BUILD)/mm305_admission_tests
 
 taem-frames-energy-test: | $(BUILD)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
@@ -128,14 +130,6 @@ taem-native-stack-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_native_stack_tests
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_native_stack_tests)"
 
-dynamic-taem-interface-test: $(TARGET)
-	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
-		$(VALIDATION_ROOT)/DynamicTaemInterfaceTests.c \
-		$(filter-out $(BUILD)/guidance_entry.o $(BUILD)/guidance_core.o $(BUILD)/guidance_taem.o $(BUILD)/guidance_final.o $(BUILD)/guidance_common.o $(BUILD)/guidance_terminal.o $(BUILD)/guidance.o $(BUILD)/main.o,$(OBJECTS)) \
-		$(CNANO_OBJECTS) $(NANOPB_OBJECTS) $(LDFLAGS) $(LDLIBS) \
-		-o $(BUILD)/dynamic_taem_interface_tests
-	cd $(REPO_ROOT) && "$(abspath $(BUILD)/dynamic_taem_interface_tests)"
-
 vessel-physics-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/VesselPhysicsTests.c \
@@ -143,9 +137,15 @@ vessel-physics-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/vessel_physics_tests
 	$(BUILD)/vessel_physics_tests
 
+entry-lateral-feedback-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/EntryLateralFeedbackTests.c $(BUILD)/entry_lateral.o \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_lateral_feedback_tests
+	$(BUILD)/entry_lateral_feedback_tests
+
 backend-protocol-test: $(TARGET)
 	cd $(REPO_ROOT) && python3 Validation/BackendProtocolTests.py "$(abspath $(TARGET))"
 
-test: architecture-test taem-interface-test dynamic-taem-interface-test taem-frames-energy-test taem-native-stack-test vessel-physics-test backend-protocol-test
+test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test backend-protocol-test
 
 qualification: test
