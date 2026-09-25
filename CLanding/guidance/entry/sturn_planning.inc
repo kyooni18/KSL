@@ -1,207 +1,8 @@
-static EntryControlPlan entry_program_plan_s_turn(GuidanceMachine*g,const Telemetry*t,
-        const VehicleState*state,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg,double nominal_bank_magnitude,double geometry_bank_magnitude,double nominal_aoa){
-    EntryControlPlan plan={0};plan.cost=INFINITY;
-    if(!g||!t||!state||!p||!cfg)return plan;
-    const VehicleProfile*v=&cfg->vehicle;const GuidanceSettings*s=&cfg->guidance;
-    if(!(v->maximum_bank_angle>0.0)||!(v->maximum_angle_of_attack>0.0)||
-       !isfinite(nominal_bank_magnitude)||!isfinite(nominal_aoa))return plan;
-
-    AerodynamicEnvelope fallback_env;TrajectoryCalibrationModel fallback_cal;
-    const AerodynamicEnvelope*env=&g->entry_predictor_envelope;
-    const TrajectoryCalibrationModel*cal=&g->entry_predictor_calibration;
-    if(!g->entry_predictor_models_valid){
-        entry_supervision_models(t,aero,&fallback_env,&fallback_cal);
-        env=&fallback_env;cal=&fallback_cal;
-    }
-
-    double roll_rate=controlled_roll_rate(t);
-    double aoa_rate=controlled_aoa_rate(t);
-    double leg_elapsed=g->has_s_turn_leg_started?fmax(0.0,t->ut-g->s_turn_leg_started_ut):0.0;
-    double selected_sign=g->s_turn_sign>=0.0?1.0:-1.0;
-    double live_bank_limit=dynamic_bank_limit(t,v);
-    if(!isfinite(live_bank_limit)||live_bank_limit<0.0)return plan;
-
-    /*
-     * MM304 already owns side, bank magnitude and alpha before this planner is
-     * entered.  Do not run a second free-bank/free-alpha search merely to create
-     * a provisional segment: build the executable segment directly from the live
-     * DRAGREF/ENTRYLATERAL/@ALPHA demand, then let the propagated guidance shadow
-     * and asynchronous two-event topology search decide future reversals.
-     */
-    double seeded_bank=clampd(fabs(nominal_bank_magnitude),0.0,live_bank_limit);
-    double seeded_aoa=clampd(fmax(nominal_aoa,entry_thermal_protection_aoa_floor(v)),
-        0.0,v->maximum_angle_of_attack);
-    double measured_bank=isfinite(t->roll)?norm_signed_deg(t->roll):0.0;
-    double minimum_leg=entry_s_turn_effective_minimum_leg(t->true_air_speed,0.0,s);
-    double roll_response=roll_capture_time(t,selected_sign*seeded_bank,
-        s->entry_roll_rate,s->entry_roll_acceleration);
-    if(!isfinite(roll_response))roll_response=minimum_leg;
-
-    plan.valid=true;
-    plan.terminal_ready=false;
-    plan.planned_ut=t->ut;
-    plan.target_bank=selected_sign*seeded_bank;
-    plan.target_aoa=seeded_aoa;
-    plan.target_heading=isfinite(t->ground_track_heading)?
-        norm_deg(t->ground_track_heading):norm_deg(t->heading);
-    plan.bank_cap=fabs(plan.target_bank);
-    plan.target_turn_radius=live_turn_radius(t,aero,v,plan.target_bank);
-    plan.segment_duration=fmin(1200.0,fmax(minimum_leg,roll_response));
-    plan.has_planned_reversal=false;
-    plan.planned_reversal_is_final=false;
-    plan.final_heading_lock=false;
-    plan.planned_reversal_ut=NAN;
-    plan.planned_reversal_range=NAN;
-    plan.planned_reversal_sign=0.0;
-
-    (void)entry_program_shape_vertical_capture_plan(g,t,p,aero,cfg,&plan);
-    entry_program_apply_geometry_bank_demand(g,t,p,aero,cfg,geometry_bank_magnitude,&plan);
-
-    /*
-     * Reforecast the exact executable segment once.  This propagation may propose
-     * the next shaping reversal, but it cannot certify terminal ownership; the
-     * worker's full evolving-policy shadow remains the acceptance authority.
-     */
-    plan.segment_duration=fmax(minimum_leg,plan.segment_duration);
-    GuidanceMachine event_contract=*g;
-    if(g->entry_committed_infeasible){
-        event_contract.entry_reversal_scheduled=false;
-        event_contract.entry_reversal_is_final=false;
-    }
-    entry_program_commit_planned_reversal(&event_contract,&plan,t->ut,false);
-    const TaemInterfaceTarget*interface_target=
-        g->taem_interface_target.valid?&g->taem_interface_target:NULL;
-    EntryPrediction shaped=predictor_simulate_entry_control_plan_to_interface(*state,p,aero,env,cal,v,
-        &cfg->site,s,interface_target,true,measured_bank,roll_rate,t->angle_of_attack,aoa_rate,
-        g->s_turn_sign,leg_elapsed,&plan,1200.0,false);
-    double capture_hint=fmax(s->hac_radius*8.0,s->taem_interface_range*2.5);
-    if(shaped.entered_atmosphere&&isfinite(shaped.closest_distance)){
-        plan.terminal_ready=false;
-        plan.taem_range_error=shaped.reached_taem?shaped.taem_range_error:
-            shaped.closest_distance-capture_hint;
-        plan.taem_speed=shaped.reached_taem?shaped.taem_speed:NAN;
-        plan.taem_energy_error=shaped.reached_taem?shaped.taem_energy_error:NAN;
-        plan.closest_distance=shaped.closest_distance;
-        plan.predicted_reversals=shaped.s_turn_reversals;
-        if(shaped.has_first_s_turn_reversal){
-            double shaped_sign=fabs(plan.target_bank)>=1.0?
-                (plan.target_bank>=0.0?1.0:-1.0):(g->s_turn_sign>=0.0?1.0:-1.0);
-            plan.has_planned_reversal=true;
-            plan.planned_reversal_ut=shaped.first_s_turn_reversal_ut;
-            plan.planned_reversal_range=shaped.first_s_turn_reversal_range;
-            plan.planned_reversal_sign=fabs(shaped.first_s_turn_reversal_sign)>.1?
-                shaped.first_s_turn_reversal_sign:-shaped_sign;
-            plan.planned_reversal_is_final=false;
-            plan.final_heading_lock=false;
-        }
-    }
-    entry_prediction_clear(&shaped);
-    return plan;
-}
-
-static bool entry_supervision_replan_due(const GuidanceMachine*g,const Telemetry*t,const GuidanceSettings*s){
-    if(!g||!t||!s||!g->entry_s_turn_plan.valid||
-       !isfinite(g->entry_supervision_ut)||!isfinite(g->entry_s_turn_plan.planned_ut))return false;
-    /* Keep a future handoff-window miss observable even while the current segment
-       remains safe. A miss reached inside the executable segment is an immediate
-       invalidation. A farther-out warning is timed from the persistent executable
-       plan, not from the supervisor refresh timestamp: entry_supervision_ut is
-       refreshed every prediction_interval and therefore cannot be the dwell clock. */
-    if(g->entry_supervision_boundary_missed){
-        /* A proven miss invalidates an established plan promptly, but a replacement
-           that is rejected again in the same tick must not spawn another child every
-           control frame. Use the same age-based dwell as ordinary infeasible
-           supervision so a fresh child gets one bounded execution window. */
-        if(!g->entry_supervision_valid&&g->entry_supervision_mode==ENTRY_SUPERVISION_INFEASIBLE)
-            return t->ut-g->entry_s_turn_plan.planned_ut>=
-                fmax(5.0,s->prediction_interval*2.0);
-        if(g->entry_supervision_valid)
-            return t->ut-g->entry_s_turn_plan.planned_ut>=
-                fmax(s->s_turn_minimum_leg_duration,s->prediction_interval);
-        return false;
-    }
-    if(g->entry_supervision_valid||g->entry_supervision_mode!=ENTRY_SUPERVISION_INFEASIBLE)return false;
-    return t->ut-g->entry_s_turn_plan.planned_ut>=fmax(5.0,s->prediction_interval*2.0);
-}
-
 /* A segment can be committed while thin-air/stall guards correctly deny usable
    bank authority. Once that physical authority first becomes available, the
    pre-leg segment may be reshaped immediately, but the child must not postpone
    the parent's already-scheduled ordinary refresh. Latch the acquisition so
    transient stall chatter cannot turn this into another level-triggered loop. */
-static bool entry_bank_authority_replan_due(GuidanceMachine*g,const Telemetry*t,
-        const VehicleProfile*v){
-    if(!g||!t||!v)return false;
-    bool available=entry_s_turn_bank_authority_available(t->dynamic_pressure,
-        t->true_air_speed,t->stall_fraction,t->g_force,v);
-    if(!available||g->entry_bank_authority_acquired)return false;
-    g->entry_bank_authority_acquired=true;
-    if(!g->entry_s_turn_plan.valid||!g->entry_control_plan_valid||g->has_s_turn_leg_started)
-        return false;
-    double parent_end=g->entry_s_turn_plan.planned_ut+g->entry_s_turn_plan.segment_duration;
-    /* If the parent is already about to refresh, let normal expiry own the next
-       solve rather than manufacturing a nearly-zero-lived child. */
-    if(isfinite(parent_end)&&parent_end-t->ut<=1.0)return false;
-    return true;
-}
-
-static double entry_bank_authority_child_duration(const EntryControlPlan*parent,
-        double child_ut,double proposed_duration){
-    double duration=fmax(0.0,proposed_duration);
-    if(!parent||!parent->valid||!isfinite(parent->planned_ut)||
-       !isfinite(parent->segment_duration)||!isfinite(child_ut))return duration;
-    double parent_end=parent->planned_ut+parent->segment_duration;
-    if(!isfinite(parent_end))return duration;
-    return fmin(duration,fmax(0.0,parent_end-child_ut));
-}
-
-/* Bank authority grows quickly after the first useful-q edge. A persistent segment
-   solved near that edge can become badly under-banked tens of seconds before its
-   ordinary expiry even though the live vehicle has substantially more authority.
-   Re-use the existing vertical-capture law as the demand oracle and only refresh
-   when the newly executable same-side bank exceeds the committed demand by a
-   material margin. The age gate makes this self-quenching rather than per-frame. */
-static bool entry_vertical_capture_growth_replan_due(GuidanceMachine*g,const Telemetry*t,
-        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
-    if(!g||!t||!p||!cfg||!g->entry_s_turn_plan.valid||!g->entry_control_plan_valid)
-        return false;
-    const GuidanceSettings*s=&cfg->guidance;
-    double age=t->ut-g->entry_s_turn_plan.planned_ut;
-    double parent_end=g->entry_s_turn_plan.planned_ut+g->entry_s_turn_plan.segment_duration;
-    ControlAuthorityEnvelope authority=
-        decision_control_authority_envelope(g,t,p,cfg);
-    double refresh_period=fmax(fmax(0.0,s->prediction_interval),
-        authority.valid?authority.control_response_time_s:0.0);
-    if(!isfinite(age)||age+sqrt(DBL_EPSILON)<refresh_period||
-       !isfinite(parent_end)||parent_end<=t->ut)
-        return false;
-    if(!entry_program_bank_capture_available(g,t,p,cfg))return false;
-
-    double demanded_bank=g->entry_s_turn_plan.target_bank;
-    double demanded_aoa=g->entry_s_turn_plan.target_aoa;
-    GuidanceMachine probe=*g;
-    if(!entry_program_altitude_capture(&probe,t,p,aero,cfg,
-        &demanded_bank,&demanded_aoa))return false;
-    double committed=fabs(g->entry_s_turn_plan.target_bank);
-    double demanded=fabs(demanded_bank);
-    double resolution=sqrt(DBL_EPSILON)*
-        fmax(1.0,fmax(committed,demanded));
-    return demanded>committed+resolution;
-}
-
-
-static double entry_authority_refresh_child_duration(const GuidanceMachine*g,
-        const EntryControlPlan*parent,double child_ut,double proposed_duration,
-        const GuidanceSettings*s){
-    double duration=entry_bank_authority_child_duration(parent,child_ut,proposed_duration);
-    if(!g||!s||!g->entry_reversal_scheduled||!g->has_s_turn_leg_started||
-       g->has_s_turn_reversal_requested||!isfinite(g->entry_reversal_ut))return duration;
-    double executable_reversal=fmax(g->entry_reversal_ut,
-        g->s_turn_leg_started_ut+s->s_turn_minimum_leg_duration);
-    if(executable_reversal<=child_ut+1e-6)return duration;
-    return fmin(duration,fmax(0.0,executable_reversal-child_ut));
-}
 
 
 /* The MM304 outlet is a pose constraint, not merely a waypoint. Before the final
@@ -271,9 +72,13 @@ bool entry_taem_tangent_target_geometry(const TaemInterfaceTarget*q,
     if(!isfinite(perpendicular_error)||
        perpendicular_error>contract.perpendicular_heading_half_width_deg)return false;
 
-    /* A perpendicular inlet course can belong to either the short or long
-       runway-anchored HAC. The point identifies which physical turn was selected. */
-    return fabs(entry_taem_tangent_target_hac_side(q,cfg))==1.0;
+    /* The target is the fixed MM304 handoff station, while HAC-entry geometry
+       remains a downstream MM305 responsibility. */
+    double along=NAN,cross=NAN;
+    mm304_handoff_station(&cfg->guidance,&along,&cross);
+    return isfinite(along)&&isfinite(cross)&&
+        hypot(q->along_track-along,q->cross_track-cross)<=
+            contract.horizontal_radius_m;
 }
 
 static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*t,
@@ -301,7 +106,6 @@ static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*
        !(authority.maximum_lateral_accel_mps2>DBL_MIN)||
        !(t->horizontal_speed>DBL_MIN))return false;
     const double perpendicular=90.0; /* decision-literal: mathematical-numerical-requirement | perpendicular HAC inlet tangent */
-    double runway=cfg->site.runway_heading*DEG2RAD;
     bool have=false;
     double best_score=INFINITY,best_along=NAN,best_cross=NAN,best_course=NAN,best_side=NAN;
     double retained_course=g->taem_interface_target.valid&&
@@ -322,9 +126,31 @@ static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*
             HACPoint2 entry={0},center={0},exit={0};
             if(!hac_fixed_alignment_geometry(&entry,&center,&exit,&cfg->site,
                     &cfg->guidance,hac_radius,course,side))continue;
-            double along=entry.e*sin(runway)+entry.n*cos(runway);
-            double cross=entry.e*cos(runway)-entry.n*sin(runway);
+            /* MM304 owns the vehicle only until the declared handoff set.
+               The HAC entry computed above is a downstream MM305 pose and is
+               not the MM304/MM305 interface point. */
+            double along=NAN,cross=NAN;
+            mm304_handoff_station(&cfg->guidance,&along,&cross);
             if(!isfinite(along)||!isfinite(cross))continue;
+
+            /* A terminal tangent is a delivery course, not an arbitrary heading
+               that happens to be 90 degrees from the runway.  Reject a candidate
+               whose course points away from the current station: a Dubins path
+               can otherwise win by adding a large loop, turning an otherwise
+               recoverable closure into an energetically destructive excursion. */
+            double da_station=along-t->runway_along_track;
+            double dc_station=cross-t->runway_cross_track;
+            double station_range=hypot(da_station,dc_station);
+            if(!(station_range>DBL_MIN))continue;
+            double station_bearing=norm_deg(cfg->site.runway_heading+
+                atan2(dc_station,da_station)*RAD2DEG);
+            double closure_error=norm_signed_deg(course-station_bearing);
+            const char*candidate_diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
+            if(candidate_diag&&strcmp(candidate_diag,"1")==0)
+                fprintf(stderr,"MM304 candidate course: UT %.2f course %.1f candidate %.1f stationBearing %.1f closureErr %.1f range %.0f side %+.0f\n",
+                    t->ut,reference_course,course,station_bearing,closure_error,
+                    station_range,side);
+            if(fabs(closure_error)>90.0)continue;
 
             /*
              * Evaluate the complete bounded-curvature connection to the candidate
@@ -336,6 +162,10 @@ static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*
                 along,cross,course,authority.maximum_lateral_accel_mps2,
                 p,cfg,&candidate_minimum_radius);
             if(!isfinite(score)||!isfinite(candidate_minimum_radius))continue;
+            if(candidate_diag&&strcmp(candidate_diag,"1")==0)
+                fprintf(stderr,"MM304 candidate: UT %.2f course %.1f side %+.0f range %.0f score %.0f Rmin %.0f target %.0f,%.0f -> %.0f,%.0f\n",
+                    t->ut,reference_course,side,hypot(along-t->runway_along_track,cross-t->runway_cross_track),
+                    score,candidate_minimum_radius,along,cross,along,cross);
 
             bool retained=isfinite(retained_course)&&fabs(retained_side)==1.0&&
                 fabs(norm_signed_deg(course-retained_course))<=
@@ -361,6 +191,7 @@ static bool entry_taem_hac_inlet_target(const GuidanceMachine*g,const Telemetry*
 void entry_publish_taem_tangent_target(GuidanceMachine*g,const Telemetry*t,
         double course,const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
     if(!g||!t||!p||!cfg||g->terminal_region_entered)return;
+    (void)aero; /* Target geometry is qualified by the shared live-state envelopes. */
     /* Keep a geometry-only candidate refreshable.  Its fixed inlet remains the
        same, but ETA and energy qualification are state-dependent; freezing the
        first high-altitude projection preserved a billion-metre turn radius all
@@ -387,12 +218,13 @@ void entry_publish_taem_tangent_target(GuidanceMachine*g,const Telemetry*t,
     double final_altitude=cfg->site.altitude+
         s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
 
-    /* The published tangent is not the MM304->MM305 ownership surface.  It is
-       the later Phase-1/Phase-2 acquisition target that MM305 flies toward after
-       entering TAEM at the high-energy interface. */
-    double target_altitude=s->hac_acquisition_altitude;
-    if(!isfinite(target_altitude)||target_altitude<=final_altitude||
-       target_altitude>=s->taem_interface_altitude)return;
+    /* The published tangent is the later Phase-1/Phase-2 acquisition target
+     * that MM305 flies toward after entering TAEM at the high-energy interface.
+     * Clamp only the ownership floor; the test/configuration may intentionally
+     * place the interface altitude below that floor. */
+    double target_altitude=fmax(s->hac_acquisition_altitude,
+        s->mm305_min_altitude);
+    if(!isfinite(target_altitude)||target_altitude<=final_altitude)return;
     TaemSpeedEnvelope speed_envelope=
         decision_taem_speed_envelope(v,p,target_altitude);
     if(!speed_envelope.valid||!speed_envelope.feasible)return;
@@ -401,44 +233,15 @@ void entry_publish_taem_tangent_target(GuidanceMachine*g,const Telemetry*t,
     if(!isfinite(target_sound)||target_sound<=DBL_MIN||
        !isfinite(target_speed)||target_speed<=0.0)return;
 
-    /*
-     * Size the candidate HAC from the stock-KSP lift polar at the intended
-     * MM305 state.  The previous envelope treated the profile reference L/D as
-     * maximum lift and produced a ~30 km radius for STS-N at 16.5 km even while
-     * the measured/modelled airframe had materially more turn authority.
-     */
-    double planning_ld=isfinite(aero.lift_to_drag)&&aero.lift_to_drag>0.0?
-        aero.lift_to_drag:v->estimated_lift_to_drag;
-    double planning_beta=isfinite(aero.ballistic_coefficient)&&
-        aero.ballistic_coefficient>DBL_MIN?
-        aero.ballistic_coefficient:v->estimated_ballistic_coefficient;
-    double target_mach=target_speed/target_sound;
-    double lift_aoa=v->maximum_angle_of_attack;
-    if(target_mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
-       v->terminal_maximum_lift_angle_of_attack>0.0)
-        lift_aoa=fmin(lift_aoa,v->terminal_maximum_lift_angle_of_attack);
-    double lift_factor=0.0;
-    aerodynamic_force_factors_mach(target_mach,lift_aoa,v,&lift_factor,NULL);
-    double target_q=.5*speed_envelope.density_kg_m3*target_speed*target_speed;
-    double target_lift=target_q/planning_beta*planning_ld*fabs(lift_factor);
-    double target_radius=p->radius+target_altitude;
-    double target_gravity=p->gravitational_parameter/(target_radius*target_radius);
-    double normal_limit=v->maximum_g_load*target_gravity;
-    double target_bank=fmin(fabs(v->maximum_bank_angle),nextafter(90.0,0.0));
-    double target_lateral=fmin(target_lift,normal_limit)*
-        sin(target_bank*DEG2RAD);
-    double modeled_minimum_radius=target_lateral>DBL_MIN?
-        target_speed*target_speed/target_lateral:INFINITY;
-    if(!isfinite(modeled_minimum_radius)||!(modeled_minimum_radius>0.0))
-        modeled_minimum_radius=speed_envelope.minimum_turn_radius_m;
-
-    /*
-     * The configured HAC radius is a nominal design radius, not a substitute
-     * for force-based authority.  Ensure the planned terminal radius is at least
-     * the modeled minimum turn radius physically executable by the vehicle.
-     */
-    double terminal_radius=fmax(s->hac_radius,modeled_minimum_radius);
-    if(!isfinite(terminal_radius)||!(terminal_radius>0.0))return;
+    /* The HAC radius is geometric mission intent.  Do not freeze the MM304
+       handoff state's instantaneous minimum-turn radius into MM305 geometry: the
+       native finite lead is allowed to decelerate and build density before joining
+       the HAC, and full native replay proves whether that join is physically
+       executable.  Inflating this radius at Mach ~2-3 produced 50-70 km HACs and
+       hundreds of kilometres of unnecessary arc, causing the observed KSC
+       overshoot. */
+    double terminal_radius=s->hac_radius;
+    if(!isfinite(terminal_radius)||!(terminal_radius>=3000.0))return;
     double target_along=NAN,target_cross=NAN,target_course=NAN,target_side=NAN;
     if(!entry_taem_hac_inlet_target(g,t,p,cfg,reference_course,
             terminal_radius,&target_along,&target_cross,&target_course,
@@ -583,9 +386,11 @@ static bool entry_taem_alignment_station_missed(const GuidanceMachine*g,const Te
     const TaemInterfaceTarget*q=&g->taem_interface_target;
     double rel=norm_signed_deg(q->course-cfg->site.runway_heading)*DEG2RAD;
     double tangent_along=cos(rel),tangent_cross=sin(rel);
+    double normal_along=-tangent_cross,normal_cross=tangent_along;
     double from_along=t->runway_along_track-q->along_track;
     double from_cross=t->runway_cross_track-q->cross_track;
     double progress=from_along*tangent_along+from_cross*tangent_cross;
+    double line_dist=fabs(from_along*normal_along+from_cross*normal_cross);
     double distance=hypot(from_along,from_cross);
     double to_along=-from_along,to_cross=-from_cross;
     double bearing=norm_deg(cfg->site.runway_heading+atan2(to_cross,to_along)*RAD2DEG);
@@ -596,10 +401,11 @@ static bool entry_taem_alignment_station_missed(const GuidanceMachine*g,const Te
 
     double live=isfinite(t->ground_track_heading)?
         norm_deg(t->ground_track_heading):norm_deg(t->heading);
-    if(!isfinite(live))return isfinite(progress)&&progress>0.0;
+    if(!isfinite(live))return false;
     double live_rel=norm_signed_deg(live-cfg->site.runway_heading)*DEG2RAD;
     double forward_to_point=to_along*cos(live_rel)+to_cross*sin(live_rel);
-    bool passed_tangent=isfinite(progress)&&progress>0.0;
+    bool passed_tangent=line_dist<=fmax(5000.0,contract.horizontal_radius_m*2.0)&&
+        isfinite(progress)&&progress>contract.horizontal_radius_m;
     bool point_behind_velocity=isfinite(forward_to_point)&&forward_to_point<0.0;
     return passed_tangent||point_behind_velocity;
 }
@@ -662,9 +468,11 @@ static double entry_taem_minimum_bank_for_capture(const GuidanceMachine*g,
         decision_control_authority_envelope(g,t,p,cfg);
     if(!authority.valid||!authority.controllable)return 0.0;
 
-    double available_time=isfinite(q->arrival_ut)?
-        fmax(0.0,q->arrival_ut-t->ut):
-        authority.control_response_time_s+distance/t->horizontal_speed;
+    double available_time=isfinite(q->arrival_ut)&&q->arrival_ut>t->ut?
+        q->arrival_ut-t->ut:
+        (isfinite(q->remaining_path)&&q->remaining_path>0.0?
+            authority.control_response_time_s+q->remaining_path/t->horizontal_speed:
+            authority.control_response_time_s+distance/t->horizontal_speed);
     if(!isfinite(available_time))return 0.0;
 
     double lift=live_lift_accel(t,aero,&cfg->vehicle);
@@ -701,8 +509,6 @@ static double entry_taem_minimum_bank_for_capture(const GuidanceMachine*g,
 
 static double entry_taem_gate_required_bank(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
-    if(!g||!t||!p||!cfg||!g->taem_interface_target.valid||
-       !isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track))return 0.0;
     const TaemInterfaceTarget*q=&g->taem_interface_target;
     double course=isfinite(t->ground_track_heading)?
         norm_deg(t->ground_track_heading):norm_deg(t->heading);
@@ -712,9 +518,21 @@ static double entry_taem_gate_required_bank(const GuidanceMachine*g,const Teleme
         entry_taem_interface_capture(q,t,course,p,cfg);
     if(handoff.valid&&handoff.ready)return 0.0;
 
+    /* The MM304 turn side is a geometric property of the current station
+       bearing, not the downstream HAC side.  The two can legitimately be
+       opposite: an orbiter may have to turn right to reach a HAC whose entry
+       side is left.  Using the latched HAC side here produced a geometrically
+       valid but unreachable setup point behind the vehicle, followed by a
+       wings-level excursion. */
+    /* The fixed station is normally on the runway-parallel centerline.  A
+       small course perturbation must not reinterpret that zero crossrange as
+       a request to flip the already-owned S-turn side: that would manufacture
+       a second turn from measurement noise or a few degrees of heading error.
+       When there is a real lateral offset, its sign is the physical turn
+       demand; for a centered station retain the latched topology side and let
+       the heading-lock/terminal capture law resolve the residual course error. */
     double side=g->s_turn_sign>=0.0?1.0:-1.0;
-    double target_along=q->along_track,target_cross=q->cross_track;
-    double target_course=q->course,final_side=0.0;
+    double target_along,target_cross,target_course,final_side=0.0;
     double setup_along=NAN,setup_cross=NAN;
     bool have_setup=entry_taem_pose_setup_point(g,t,p,cfg,
         &setup_along,&setup_cross,&final_side);
@@ -724,28 +542,49 @@ static double entry_taem_gate_required_bank(const GuidanceMachine*g,const Teleme
         target_along=setup_along;
         target_cross=setup_cross;
         target_course=course;
+    }else{
+        /* Before MM305 admission, retain the published inlet tangent. The
+           geometric side is selected below from the measured crossrange sign;
+           the simulator's positive-roll frame is opposite that sign. */
+        target_along=q->along_track;
+        target_cross=q->cross_track;
+        double to_along=target_along-t->runway_along_track;
+        double to_cross=target_cross-t->runway_cross_track;
+        target_course=norm_deg(cfg->site.runway_heading+
+            atan2(to_cross,to_along)*RAD2DEG);
+        double course_error=norm_signed_deg(target_course-course);
+        if(fabs(course_error)>sqrt(DBL_EPSILON))
+            side=course_error>=0.0?1.0:-1.0;
     }
     return entry_taem_minimum_bank_for_capture(g,t,p,aero,cfg,
         target_along,target_cross,target_course,side);
 }
-
 static double entry_taem_gate_acquisition_bank(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
     if(!g||!t||!p||!cfg||!g->taem_interface_target.valid)return 0.0;
     double bank=entry_taem_gate_required_bank(g,t,p,aero,cfg);
-    double side=g->s_turn_sign>=0.0?1.0:-1.0;
-    if(bank*side>0.0)return bank;
+    /* Preserve the signed physical demand even when it opposes the currently
+     * latched S-turn side; the reversal supervisor must see that demand and
+     * schedule a real turn.  Collapsing it to zero here is what made large
+     * crossrange states fly straight away from the handoff station. */
+    if(isfinite(bank)&&fabs(bank)>sqrt(DBL_EPSILON))return bank;
 
+    double side=g->s_turn_sign>=0.0?1.0:-1.0;
     double recovery_bearing=NAN;
     bool missed=entry_taem_alignment_station_missed(g,t,cfg,&recovery_bearing);
-    (void)recovery_bearing;
     bool blocked=entry_program_terminal_geometry_blocked(g,t,cfg);
     if(!missed&&!blocked)return 0.0;
-
+    const char *diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
+    if(diag&&strcmp(diag,"1")==0)
+        fprintf(stderr,"MM304 gate bank: UT %.2f side %+.0f bank %.3f missed %d blocked %d station %.0f/%.0f target %.0f/%.0f roll %.1f\n",
+                t->ut,side,bank,missed?1:0,blocked?1:0,
+                t->runway_along_track,t->runway_cross_track,
+                g->taem_interface_target.along_track,
+                g->taem_interface_target.cross_track,norm_signed_deg(t->roll));
     /* Missed-point recovery and an overdue blocked endpoint are topological
-       requirements, not invitations to invent a tuned bank floor. Request the
-       full live envelope; the coupled maximin allocator decides what portion is
-       executable after vertical and energy margins are included. */
+     * requirements, not invitations to invent a tuned bank floor. Request the
+     * full live envelope; the coupled maximin allocator decides what portion is
+     * executable after vertical and energy margins are included. */
     return side*dynamic_bank_limit(t,&cfg->vehicle);
 }
 
@@ -754,63 +593,6 @@ static double entry_taem_gate_acquisition_bank(const GuidanceMachine*g,const Tel
    crossrange and carry it downstream on a runway-parallel leg until the measured
    endpoint arc becomes feasible. This prevents the shaping reversal and the final
    inlet turn from collapsing into one long maximum-bank maneuver. */
-static bool entry_program_post_shaping_parallel_stage(const GuidanceMachine*g,
-        const Telemetry*t,double course,const PlanetModel*p,AerodynamicModel aero,
-        const LandingConfiguration*cfg,double*bank_out){
-    if(bank_out)*bank_out=0.0;
-    if(!g||!t||!p||!cfg||!g->taem_interface_target.valid||
-       g->entry_control_reversals==0||g->entry_final_reversal_pending||
-       g->entry_final_reversal_completed||!isfinite(course)||
-       !isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track))return false;
-    const TaemInterfaceTarget*q=&g->taem_interface_target;
-    double target_relative=norm_signed_deg(q->course-cfg->site.runway_heading);
-    if(!isfinite(target_relative)||fabs(target_relative)<30.0)return false;
-    double final_side=target_relative>=0.0?1.0:-1.0;
-    double owned_side=g->s_turn_sign>=0.0?1.0:-1.0;
-    if(owned_side*final_side<=0.0||t->runway_along_track>=q->along_track-1000.0)return false;
-    if(entry_program_final_reversal_geometry_ready(g,t,cfg,final_side))return false;
-
-    /* After the first shaping reversal, the runway-parallel segment is a
-       deceleration lane, not proof that the final 90 deg arc is already flyable.
-       Requiring crossrange equal to the entire current upstream chord made this
-       state unreachable at entry speed, so MM304 simply held maximum bank until
-       the safety handoff. Preserve a HAC-sized lateral offset instead; the strict
-       endpoint test above still owns release into the final perpendicular turn. */
-    double setup_side=-final_side;
-    double built_cross=setup_side*(t->runway_cross_track-q->cross_track);
-    if(!isfinite(built_cross)||built_cross<-500.0)return false;
-
-    /* The setup proof was consumed when the first shaping reversal executed. Do
-       not require the crossrange to remain frozen afterward: a real final turn
-       must spend that offset while bending back toward the fixed station. The old
-       runway-parallel hold drove commanded bank to zero for tens of seconds in
-       finalaoa7, leaving course near 90 deg all the way to the safety boundary.
-
-       Lead the fixed tangent line directly with a bounded intercept heading. This
-       is a decelerating spiral/conic lead, not permission to hand off early: the
-       <=1 km point/course/energy/HAC capture contract remains unchanged. */
-    double desired=entry_taem_tangent_capture_heading(g,t,cfg);
-    double turn_error=norm_signed_deg(desired-course);
-    double bank=0.0;
-    if(isfinite(desired)&&final_side*turn_error>0.75){
-        double limit=dynamic_bank_limit(t,&cfg->vehicle);
-        /* finalaoa13 proved that artificially capping this lead at 60 deg made
-           coordination worse: beta grew past 50 deg and tripped the genuine yaw
-           departure guard. The 70 deg vehicle envelope in finalaoa12 remained
-           controllable, so let the measured q/g/vertical guards own the limit. */
-        double vertical=entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
-        if(isfinite(vertical))limit=fmin(limit,fmax(0.0,vertical));
-        if(limit>0.25)
-            bank=taem_course_rate_bank_command(t->horizontal_speed,
-                live_lift_accel(t,aero,&cfg->vehicle),
-                t->bank_effectiveness>0?t->bank_effectiveness:1.0,limit,
-                course,desired,q->response_time);
-        if(bank*final_side<0.0)bank=0.0;
-    }
-    if(bank_out)*bank_out=bank;
-    return true;
-}
-
 static bool entry_program_tangent_reversal_captured(GuidanceMachine*g,const Telemetry*t,
         const VehicleProfile*v){
     if(!g||!t||!v||!g->entry_final_reversal_pending)return g&&g->entry_final_reversal_completed;
@@ -838,101 +620,7 @@ TaemInterfaceCapture entry_dynamic_interface_capture(const GuidanceMachine*g,
     TaemInterfaceCapture out={0};
     if(!g||!t||!p||!cfg)return out;
     (void)aero;
-    const GuidanceSettings*s=&cfg->guidance;
-    const VehicleProfile*v=&cfg->vehicle;
     const TaemInterfaceTarget*q=&g->taem_interface_target;
-
-    /*
-     * MM304 -> MM305 is the TAEM acquisition boundary, not HAC capture.  The
-     * published q remains mandatory as a valid downstream target, but ownership
-     * no longer requires the vehicle to be inside q's 1 km p0 tube or already
-     * tangent to the HAC.  MM305 PATH_ACQUISITION owns that convergence.
-     */
-    if(!entry_taem_tangent_target_geometry(q,cfg)||
-       !isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track)||
-       !isfinite(t->true_air_speed)||!isfinite(t->horizontal_speed)||
-       !isfinite(t->vertical_speed)||!isfinite(t->mean_altitude)||
-       !isfinite(course)||!isfinite(t->dynamic_pressure)||!isfinite(t->g_force)||
-       (t->stall_fraction_is_measured&&!isfinite(t->stall_fraction)))
-        return out;
-
-    ControlAuthorityEnvelope control=decision_control_authority_envelope(g,t,p,cfg);
-    if(!control.valid||!control.controllable||
-       !(control.maximum_lateral_accel_mps2>DBL_MIN)||
-       !(t->horizontal_speed>DBL_MIN))
-        return out;
-
-    double qh=norm_signed_deg(q->course-cfg->site.runway_heading)*DEG2RAD;
-    double da=q->along_track-t->runway_along_track;
-    double dc=q->cross_track-t->runway_cross_track;
-    out.along=da*cos(qh)+dc*sin(qh);
-    out.cross=-da*sin(qh)+dc*cos(qh);
-    out.course_error=norm_signed_deg(q->course-course);
-    out.altitude_error=t->mean_altitude-s->taem_interface_altitude;
-
-    double minimum_turn_radius=t->horizontal_speed*t->horizontal_speed/
-        control.maximum_lateral_accel_mps2;
-    double path_length=decision_target_path_length(g,t,course,
-        q->along_track,q->cross_track,q->course,
-        control.maximum_lateral_accel_mps2,p,cfg,NULL);
-    out.minimum_turn_radius_m=minimum_turn_radius;
-    out.path_length_m=isfinite(path_length)?path_length:hypot(da,dc);
-    out.required_time_s=isfinite(out.path_length_m)?
-        control.control_response_time_s+out.path_length_m/t->horizontal_speed:NAN;
-    out.available_time_s=isfinite(q->arrival_ut)?q->arrival_ut-t->ut:NAN;
-    out.turn_margin=isfinite(out.required_time_s)&&isfinite(out.available_time_s)?
-        (out.available_time_s-out.required_time_s)*t->horizontal_speed:NAN;
-
-    double final_altitude=cfg->site.altitude+
-        s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
-    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
-    out.energy_margin=entry_remaining_specific_energy(t->latitude,
-        t->mean_altitude,t->true_air_speed,cfg->site.latitude,
-        final_altitude,final_speed,p);
-    out.energy_available=out.energy_margin;
-
-    out.valid=isfinite(out.along)&&isfinite(out.cross)&&
-        isfinite(out.minimum_turn_radius_m)&&isfinite(out.energy_margin);
-    if(!out.valid)return out;
-
-    /* NASA Shuttle TAEM begins as an acquisition region: enter while the orbiter
-       is still energetic, within the terminal-area range, descending, and moving
-       toward the landing site.  No arbitrary heading target is imposed here. */
-    double acquisition_range=hypot(t->runway_along_track,t->runway_cross_track);
-    double range_limit=entry_taem_range_target(p,s);
-    if(!isfinite(acquisition_range)||!isfinite(range_limit)||
-       acquisition_range>range_limit)
-        out.veto|=2u;
-
-    double runway=cfg->site.runway_heading*DEG2RAD;
-    double de=-t->runway_along_track*sin(runway)-
-        t->runway_cross_track*cos(runway);
-    double dn=-t->runway_along_track*cos(runway)+
-        t->runway_cross_track*sin(runway);
-    double site_course=norm_deg(atan2(de,dn)*RAD2DEG);
-    double closing_error=norm_signed_deg(site_course-course);
-    if(!isfinite(closing_error)||cos(closing_error*DEG2RAD)<=0.0)
-        out.veto|=4u;
-
-    if(t->true_air_speed<v->minimum_safe_speed)out.veto|=1u;
-    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
-    double live_mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
-        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
-    double mach_min=s->mm305_target_mach-s->mm305_mach_half_width;
-    double mach_max=s->mm305_target_mach+s->mm305_mach_half_width;
-    if(!isfinite(live_mach)||live_mach<mach_min||live_mach>mach_max)
-        out.veto|=1u;
-    if(t->mean_altitude<s->mm305_min_altitude||
-       t->mean_altitude>s->mm305_max_altitude)
-        out.veto|=8u;
-    if(!(t->vertical_speed<0.0))out.veto|=32u;
-    if(!(out.energy_margin>0.0))out.veto|=16u;
-    if(t->dynamic_pressure>v->maximum_dynamic_pressure||
-       t->g_force>v->maximum_g_load||
-       (t->stall_fraction_is_measured&&t->stall_fraction>=1.0))
-        out.veto|=64u;
-
-    out.ready=out.veto==0u;
-    return out;
+    if(!entry_taem_tangent_target_geometry(q,cfg))return out;
+    return entry_mm305_acquisition_capture(g,q,t,course,p,cfg);
 }
-

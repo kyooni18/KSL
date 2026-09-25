@@ -56,16 +56,17 @@ static void entry_program_apply_geometry_bank_demand(const GuidanceMachine*g,
     double vertical_ceiling=entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
     if(!isfinite(vertical_ceiling))vertical_ceiling=dynamic_limit;
     vertical_ceiling=clampd(vertical_ceiling,0.0,dynamic_limit);
-
-    /*
-     * The vertical envelope is an authority limit, not just an input to the
-     * later maximin score.  Letting the geometry demand remain above it lets
-     * the high-bank sample win the allocation even though its vertical lift
-     * margin is already negative; the next tick then has to erase the turn
-     * after the vehicle has spent the altitude reserve.  Bound the demand
-     * before solving the lateral/vertical allocation so the command pipeline
-     * preserves the same contract it reports as Bvert.
-     */
+    /* A zero vertical ceiling means the current flight condition cannot support
+       additional bank while preserving the predicted descent corridor. Do not
+       turn a geometric demand into permission to violate that lift constraint;
+       the measured envelope is reevaluated as q and available lift grow. */
+    /* The vertical envelope is an authority limit, not just an input to the
+       later maximin score. Letting the geometry demand remain above it lets
+       the high-bank sample win the allocation even though its vertical lift
+       margin is already negative; the next tick then has to erase the turn
+       after the vehicle has spent the altitude reserve. Bound the demand
+       before solving the lateral/vertical allocation so the command pipeline
+       preserves the same contract it reports as Bvert. */
     demand=fmin(demand,vertical_ceiling);
     double current=fmin(fabs(plan->target_bank),demand);
     double resolution=sqrt(DBL_EPSILON)*fmax(1.0,demand);
@@ -78,8 +79,8 @@ static void entry_program_apply_geometry_bank_demand(const GuidanceMachine*g,
     double direct_range=hypot(q->along_track-t->runway_along_track,
         q->cross_track-t->runway_cross_track);
     double available_time=NAN;
-    if(isfinite(q->arrival_ut))
-        available_time=fmax(0.0,q->arrival_ut-t->ut);
+    if(isfinite(q->arrival_ut)&&q->arrival_ut>t->ut)
+        available_time=q->arrival_ut-t->ut;
     else if(isfinite(q->remaining_path)&&q->remaining_path>=0.0)
         available_time=q->remaining_path/t->horizontal_speed;
     else if(isfinite(direct_range))
@@ -107,7 +108,20 @@ static void entry_program_apply_geometry_bank_demand(const GuidanceMachine*g,
     EntryBankAllocationSample high_sample=entry_program_bank_allocation_sample(
         g,t,p,cfg,q,course,available_time,lift,drag,effectiveness,max_effective,
         required_vertical,available_energy,high);
-    if(!high_sample.valid)return;
+    if(!high_sample.valid){
+        /* Keep a physically bounded lateral demand when the shadow capture
+           envelope is temporarily unavailable. Returning zero here turns a
+           real station error into wings-level flight and makes the station
+           recede faster than the MM305 range gate can recover. */
+        double fallback_bank=fmin(demand,vertical_ceiling);
+        if(fallback_bank>current+resolution){
+            double sign=g->s_turn_sign>=0.0?1.0:-1.0;
+            plan->target_bank=sign*fallback_bank;
+            plan->bank_cap=fmax(plan->bank_cap,fallback_bank);
+            plan->target_turn_radius=live_turn_radius(t,aero,v,plan->target_bank);
+        }
+        return;
+    }
 
     EntryBankAllocationSample low_sample=entry_program_bank_allocation_sample(
         g,t,p,cfg,q,course,available_time,lift,drag,effectiveness,max_effective,
@@ -140,25 +154,11 @@ static void entry_program_apply_geometry_bank_demand(const GuidanceMachine*g,
         }
     }
     (void)best;
-
     if(best_bank<=current+resolution)return;
-    double sign=g->s_turn_sign>=0.0?1.0:-1.0;
+    double sign=geometry_bank>=0.0?1.0:-1.0;
     plan->target_bank=sign*best_bank;
     plan->bank_cap=fmax(plan->bank_cap,best_bank);
     plan->target_turn_radius=live_turn_radius(t,aero,v,plan->target_bank);
-}
-
-static bool entry_program_longitudinal_bank_replan_due(const GuidanceMachine*g,
-        const EntryControlPlan*demand,double ut,const GuidanceSettings*s,
-        const EntryLateralLimits*limits){
-    if(!g||!demand||!s||!limits||!g->entry_s_turn_plan.valid||!demand->valid||
-       !isfinite(g->entry_s_turn_plan.planned_ut)||!isfinite(demand->target_bank)||
-       !isfinite(g->entry_s_turn_plan.target_bank))return false;
-    double minimum_age=fmax(1.0,s->prediction_interval*2.0);
-    if(ut-g->entry_s_turn_plan.planned_ut<minimum_age)return false;
-    double bank_delta=fabs(fabs(demand->target_bank)-fabs(g->entry_s_turn_plan.target_bank));
-    double threshold=fmax(5.0,fabs(limits->maximum_bank_deg)*.10);
-    return bank_delta>=threshold;
 }
 
 
@@ -183,34 +183,6 @@ static bool entry_program_planned_reversal_due(const GuidanceMachine*g,const Tel
  * the final fixed-point/perpendicular turn still has its separate physical
  * reachability gate in entry_program_execute_planned_reversal().
  */
-static bool entry_program_release_nonfinal_reversal_now(GuidanceMachine*g,
-        const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg){
-    if(!g||!t||!p||!cfg||!g->entry_reversal_scheduled||
-       g->entry_reversal_is_final||!g->has_s_turn_leg_started||
-       g->entry_final_reversal_pending||g->entry_final_reversal_completed||
-       !g->taem_interface_target.valid||
-       g->entry_reversal_sign*g->s_turn_sign>=0.0||
-       !isfinite(g->s_turn_leg_started_ut)||
-       t->ut-g->s_turn_leg_started_ut<
-           fmax(cfg->guidance.s_turn_minimum_leg_duration,8.0))return false;
-
-    double built=NAN,required=NAN;
-    if(!entry_taem_shaping_crossrange_ready(&g->taem_interface_target,t,p,cfg,
-        g->entry_reversal_sign,&built,&required))return false;
-    double distance=hypot(g->taem_interface_target.along_track-
-        t->runway_along_track,g->taem_interface_target.cross_track-
-        t->runway_cross_track);
-    TaemHandoffContract handoff=taem_handoff_contract(&cfg->guidance);
-    if(!isfinite(distance)||distance<=handoff.horizontal_radius_m)return false;
-
-    g->entry_reversal_ut=t->ut;
-    g->entry_reversal_range=distance;
-    if(!g->diagnostic_shadow)fprintf(stderr,
-        "MM304 setup reversal released by live crossrange: UT %.2f built %.0f/%.0f m distance %.0f m sign %+.0f.\n",
-        t->ut,built,required,distance,g->entry_reversal_sign);
-    return true;
-}
-
 static bool entry_program_terminal_course_endpoint_ready(const GuidanceMachine*g,
         const Telemetry*t,const LandingConfiguration*cfg,double final_sign,
         double target_course,double*endpoint_error_out,double*radius_out){
@@ -437,59 +409,39 @@ bool entry_taem_shaping_crossrange_ready(const TaemInterfaceTarget*q,const Telem
 /* KSP_LANDER_SETUP_REVERSAL_TRACE=1 prints why the live setup reversal was
    refused, including inside planner shadow witnesses (tagged shadow=1).
    Lines are emitted only when the refusal reason changes per thread. */
-static void entry_setup_reversal_trace(const GuidanceMachine*g,const Telemetry*t,
-        const char*reason,double a,double b){
-    static _Thread_local const char*last=NULL;
-    static int enabled=-1;
-    if(enabled<0){const char*e=getenv("KSP_LANDER_SETUP_REVERSAL_TRACE");enabled=e&&*e&&strcmp(e,"0");}
-    if(!enabled||reason==last)return;
-    last=reason;
-    fprintf(stderr,"SETUP_REVERSAL_TRACE shadow=%d ut=%.1f V=%.0f reason=%s a=%.1f b=%.1f sched=%d final=%d sut=%.1f side=%+.0f\n",
-        g?g->diagnostic_shadow:0,t?t->ut:NAN,t?t->surface_speed:NAN,reason,a,b,
-        g?g->entry_reversal_scheduled:0,g?g->entry_reversal_is_final:0,
-        g?g->entry_reversal_ut:NAN,g?g->s_turn_sign:NAN);
-}
-
 static bool entry_program_schedule_live_setup_reversal(GuidanceMachine*g,
         const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg,
         double reversal_bank_magnitude){
-    /* A later nonfinal shaped reversal does not own the setup: the measured
-       crossrange proof may pull it earlier (commit only accepts same-sign,
-       earlier events). A scheduled final turn is never displaced. */
-#define SETUP_REFUSE(r,a,b) do{entry_setup_reversal_trace(g,t,r,a,b);return false;}while(0)
     if(!g||!t||!p||!cfg)return false;
-    if(g->entry_reversal_scheduled&&(g->entry_reversal_is_final||
-        !(g->entry_reversal_ut>t->ut+1e-6)))
-        SETUP_REFUSE("scheduled_owns",g->entry_reversal_ut,t->ut);
-    if(g->entry_control_reversals!=0)SETUP_REFUSE("already_reversed",g->entry_control_reversals,0);
-    if(g->entry_final_reversal_pending||g->entry_final_reversal_completed)
-        SETUP_REFUSE("final_reversal_state",g->entry_final_reversal_pending,g->entry_final_reversal_completed);
-    if(!g->has_s_turn_leg_started||!isfinite(g->s_turn_leg_started_ut))
-        SETUP_REFUSE("no_leg",0,0);
-    if(!g->taem_interface_target.valid)SETUP_REFUSE("no_target",0,0);
+    if(g->entry_reversal_scheduled&&
+       (g->entry_reversal_is_final||!(g->entry_reversal_ut>t->ut+1e-6)))
+        return false;
+    if(g->entry_control_reversals!=0||
+       g->entry_final_reversal_pending||g->entry_final_reversal_completed||
+       !g->has_s_turn_leg_started||!isfinite(g->s_turn_leg_started_ut)||
+       !g->taem_interface_target.valid)
+        return false;
 
     const TaemInterfaceTarget*q=&g->taem_interface_target;
     double relative=norm_signed_deg(q->course-cfg->site.runway_heading);
-    if(!isfinite(relative)||fabs(relative)<30.0)SETUP_REFUSE("course_aligned",relative,30.0);
+    if(!isfinite(relative)||fabs(relative)<30.0)return false;
     double final_side=relative>=0.0?1.0:-1.0;
     double owned_side=g->s_turn_sign>=0.0?1.0:-1.0;
-    if(owned_side*final_side>=0.0)SETUP_REFUSE("same_side",owned_side,final_side);
+    if(owned_side*final_side>=0.0)return false;
 
     double minimum_dwell=fmax(cfg->guidance.s_turn_minimum_leg_duration,8.0);
-    if(t->ut-g->s_turn_leg_started_ut<minimum_dwell)
-        SETUP_REFUSE("dwell",t->ut-g->s_turn_leg_started_ut,minimum_dwell);
+    if(t->ut-g->s_turn_leg_started_ut<minimum_dwell)return false;
 
     double built=NAN,required=NAN;
     if(!entry_taem_shaping_crossrange_ready(q,t,p,cfg,final_side,&built,&required))
-        SETUP_REFUSE("crossrange",built,required);
+        return false;
     double distance=hypot(q->along_track-t->runway_along_track,
         q->cross_track-t->runway_cross_track);
     TaemHandoffContract handoff=taem_handoff_contract(&cfg->guidance);
-    if(!isfinite(distance)||distance<=handoff.horizontal_radius_m)
-        SETUP_REFUSE("inside_handoff",distance,handoff.horizontal_radius_m);
+    if(!isfinite(distance)||distance<=handoff.horizontal_radius_m)return false;
 
     double dynamic_limit=dynamic_bank_limit(t,&cfg->vehicle);
-    if(!isfinite(dynamic_limit)||dynamic_limit<=0.0)SETUP_REFUSE("bank_limit",dynamic_limit,0);
+    if(!isfinite(dynamic_limit)||dynamic_limit<=0.0)return false;
     double bank=fmin(dynamic_limit,fmax(4.0,fabs(reversal_bank_magnitude)));
 
     EntryControlPlan event=g->entry_s_turn_plan;
@@ -509,15 +461,17 @@ static bool entry_program_schedule_live_setup_reversal(GuidanceMachine*g,
     event.planned_reversal_sign=final_side;
     event.predicted_reversals=fmax(event.predicted_reversals,1u);
     entry_program_commit_planned_reversal(g,&event,t->ut,false);
-    if(!g->entry_reversal_scheduled||!(fabs(g->entry_reversal_ut-t->ut)<1e-6))
-        SETUP_REFUSE("commit_rejected",g->entry_reversal_ut,t->ut);
-    entry_setup_reversal_trace(g,t,"scheduled",built,required);
+    if(!g->entry_reversal_scheduled||
+       g->entry_reversal_is_final||
+       g->entry_reversal_sign*final_side<=0.0||
+       fabs(g->entry_reversal_ut-t->ut)>=1e-6)
+        return false;
 
+    g->entry_s_turn_plan=event;
     if(!g->diagnostic_shadow)fprintf(stderr,
         "MM304 live setup reversal scheduled: UT %.2f built %.0f/%.0f m distance %.0f m sign %+.0f bank %.1f.\n",
         t->ut,built,required,distance,final_side,bank);
     return true;
-#undef SETUP_REFUSE
 }
 
 static bool entry_program_supervised_reversal_ready(const GuidanceMachine*g,const Telemetry*t,
@@ -563,23 +517,19 @@ static bool entry_program_execute_planned_reversal(GuidanceMachine*g,const Telem
         entry_program_supervised_reversal_ready(g,t,s);
     bool terminal_feasible=rollout_ready||geometry_ready||supervised_ready;
 
-    /*
-     * A planner may propose a shaping sign change without knowing that the
-     * measured state has become terminally reachable. Promote that event to the
-     * final fixed-station turn only from current physics (or a fresh executable
-     * shadow proof), never from reversal count or a course-error band.
-     */
-    bool terminal_side_event=!planned_final&&terminal_feasible;
+    /* A topology with no terminal-turn timestamp is the new acquisition-only
+       MM304 route: its scheduled event is strictly the S-turn shaping reversal.
+       Do not promote that reversal into the deleted MM304-owned HAC tangent turn. */
+    bool acquisition_topology=g->entry_topology.valid&&
+        !isfinite(g->entry_topology.terminal_turn_ut);
+    bool terminal_side_event=!acquisition_topology&&!planned_final&&terminal_feasible;
     if(planned_final&&!g->diagnostic_shadow&&!terminal_feasible)return false;
 
-    /*
-     * A same-side event is not a physical S-turn reversal. It has meaning only
-     * when it is the terminal turn; otherwise leave ownership unchanged and let
-     * the planner replace the invalid event instead of inventing a pseudo-turn.
-     */
+    /* A same-side event is meaningful only for the legacy terminal-event path.
+       Acquisition-only topology must execute a genuine bank-side reversal. */
     if(!planned_final&&!genuine_side_change&&!terminal_side_event)return false;
 
-    if(!g->diagnostic_shadow&&terminal_feasible){
+    if(!g->diagnostic_shadow&&(planned_final||terminal_side_event)&&terminal_feasible){
         fprintf(stderr,
             "MM304 terminal turn admitted by reachability: UT %.2f sign %+.0f endpoint=%d response=%d lead %.2fs error %.0f m shadow=%d.\n",
             t->ut,next_sign,geometry_ready?1:0,rollout_ready?1:0,
@@ -641,12 +591,6 @@ static bool entry_program_execute_planned_reversal(GuidanceMachine*g,const Telem
    Keep anti-procrastination active for those replans: normal commit logic may
    still pull the same-side reversal earlier. Only an invalid supervisory
    trajectory may discard the committed milestone and install a later one. */
-static bool entry_program_replan_may_discard_reversal(bool plan_safety_replan,
-        bool supervision_replan,bool supervision_valid,bool terminal_geometry_blocked){
-    (void)plan_safety_replan;
-    return !terminal_geometry_blocked&&supervision_replan&&!supervision_valid;
-}
-
 /* Routine model checkpoints may resize bank/AoA, but they cannot silently postpone
    an already accepted reversal. A materially infeasible-plan replan may replace it. */
        void entry_program_commit_planned_reversal(GuidanceMachine*g,EntryControlPlan*plan,
@@ -711,108 +655,45 @@ static bool entry_interface_target_plan_identity_equal(
 bool guidance_accept_entry_plan(GuidanceMachine*g,const GuidanceMachine*request,
         const GuidanceMachine*result,const Telemetry*t,const LandingConfiguration*cfg){
     if(!g||!request||!result||!t||!cfg)return false;
-    bool replaceable_ordinary_reversal=g->entry_reversal_scheduled&&
-        request->entry_reversal_scheduled&&!g->entry_reversal_is_final&&
-        !request->entry_reversal_is_final&&g->entry_control_reversals==0&&
-        request->entry_control_reversals==0&&!g->entry_final_reversal_pending&&
-        !g->entry_final_reversal_completed&&
-        result->entry_topology.first_sign*g->s_turn_sign>0.0;
-    bool topology_install=!g->entry_topology.valid&&!request->entry_topology.valid&&
-        result->entry_topology.valid&&g->entry_control_reversals==0&&
-        request->entry_control_reversals==0&&
-        (!g->entry_reversal_scheduled||replaceable_ordinary_reversal);
-    if(!result->entry_s_turn_plan.valid||
-       result->phase!=request->phase||result->entry_final_reversal_pending||
-       result->entry_final_reversal_completed||
+    if(result->phase!=request->phase||
        !g->automation_engaged||g->paused||g->aborted||g->phase!=PHASE_ENTRY_ENERGY||
-       g->entry_final_reversal_pending||g->entry_final_reversal_completed||
        g->control_plan_sequence!=request->control_plan_sequence||
-       g->s_turn_sign!=request->s_turn_sign||
-       (!topology_install&&result->s_turn_sign!=request->s_turn_sign)||
        g->entry_control_reversals!=request->entry_control_reversals||
-       g->entry_reversal_scheduled!=request->entry_reversal_scheduled||
-       (g->entry_reversal_scheduled&&(g->entry_reversal_ut!=request->entry_reversal_ut||
-        g->entry_reversal_sign!=request->entry_reversal_sign||
-        g->entry_reversal_is_final!=request->entry_reversal_is_final))||
+       g->entry_final_reversal_pending!=request->entry_final_reversal_pending||
+       g->entry_final_reversal_completed!=request->entry_final_reversal_completed||
        !entry_interface_target_plan_identity_equal(&g->taem_interface_target,
            &request->taem_interface_target))
         return false;
+
     double age=t->ut-request->previous_ut;
-    const EntryControlPlan*p=&result->entry_s_turn_plan;
-    bool retained_event=g->entry_reversal_scheduled&&p->has_planned_reversal&&
-        p->planned_reversal_ut==g->entry_reversal_ut&&
-        p->planned_reversal_sign==g->entry_reversal_sign&&
-        p->planned_reversal_is_final==g->entry_reversal_is_final;
-    if(p->has_planned_reversal&&(!isfinite(p->planned_reversal_ut)||
-       !isfinite(p->planned_reversal_sign)||fabs(p->planned_reversal_sign)<.1))return false;
-    bool first_final_event=!g->entry_reversal_scheduled&&p->has_planned_reversal&&
-        p->planned_reversal_is_final;
-    bool strip_unproven_final=first_final_event&&!topology_install&&
-        (!p->terminal_ready||!result->entry_supervision_valid||result->entry_supervision_boundary_missed);
-    /* An unproven terminal reversal must not become executable, but rejecting the
-       entire propagated result also throws away a useful current-leg bank/AoA plan
-       and leaves MM304 stuck on the expired five-second bootstrap. Accept the
-       propagated current segment while stripping only the unproven reversal. */
-    /* The full Entry shadow can legitimately take several seconds. A fixed 3 s age
-       gate rejected every high-altitude MM304 proposal even though the live phase,
-       side, plan lineage and fixed TAEM target were unchanged. Freshness is already
-       bounded below by the request/live identity checks and below by the executable
-       segment/reversal deadlines; reject only negative/non-finite age here. */
-    if(!isfinite(age)||age<0.0||
-       !isfinite(p->planned_ut)||!isfinite(p->segment_duration)||
-       !isfinite(p->target_bank)||!isfinite(p->target_aoa)||
-       p->planned_ut>t->ut||p->segment_duration<=0.0||
-       t->ut>=p->planned_ut+p->segment_duration||
-       (p->has_planned_reversal&&p->planned_reversal_ut<=t->ut&&!retained_event))return false;
-    if(g->entry_reversal_scheduled&&!topology_install&&!request->entry_committed_infeasible&&
-       (!p->has_planned_reversal||p->planned_reversal_ut!=g->entry_reversal_ut||
-        p->planned_reversal_sign!=g->entry_reversal_sign||
-        p->planned_reversal_is_final!=g->entry_reversal_is_final))return false;
-    if(topology_install&&(!result->entry_topology.inlet.valid||
-       result->entry_topology.reversal_ut<=t->ut||
-       !isfinite(result->entry_topology.glide_reserve)||result->entry_topology.glide_reserve<0.0))return false;
-    EntryControlPlan accepted=*p;
-    accepted.plan_id=0;accepted.plan_version=0;
-    if(strip_unproven_final){
-        accepted.has_planned_reversal=false;
-        accepted.planned_reversal_is_final=false;
-        accepted.final_heading_lock=false;
-        accepted.planned_reversal_ut=NAN;
-        accepted.planned_reversal_range=NAN;
-        accepted.planned_reversal_sign=0.0;
-        accepted.terminal_ready=false;
-        accepted.predicted_reversals=g->entry_control_reversals;
-    }
-    control_plan_assign_lineage(g,&accepted,&g->entry_s_turn_plan);
-    if(topology_install){
-        g->entry_topology=result->entry_topology;
-        g->taem_interface_target=result->entry_topology.inlet;
-        g->entry_topology_capture_good_duration=0.0;
-        g->entry_topology_heading_locked=false;
-        request_side(g,result->entry_topology.first_sign,t->ut);
-    }
-    /* No failed candidate or long-horizon miss revokes a durable event. An overdue
-       terminal event blocked only by measured final-arc geometry is especially
-       durable: keep the event so live guidance can continue building that geometry. */
-    bool replace_committed=(topology_install&&g->entry_reversal_scheduled)||
-        (request->entry_committed_infeasible&&
-         !entry_program_terminal_geometry_blocked(g,t,cfg));
-    entry_program_commit_planned_reversal(g,&accepted,t->ut,replace_committed);
-    g->entry_s_turn_plan=accepted;
+    if(!isfinite(age)||age<0.0)return false;
+
+    /*
+     * Async prediction is advisory.  It may update feasibility and predicted
+     * terminal-state evidence, but it must never install bank/AoA commands,
+     * change s_turn_sign, schedule a reversal, or replace the live MM304 inlet.
+     * Every executable command is recomputed from current telemetry in
+     * entry_program_guidance().
+     */
+    if(result->entry_topology.valid)
+        (void)guidance_install_entry_topology(g,&result->entry_topology,t->ut);
+
     g->entry_supervision_ut=request->previous_ut;
     g->entry_supervision_valid=result->entry_supervision_valid;
     g->entry_supervision_mode=result->entry_supervision_mode;
     g->entry_committed_infeasible=result->entry_committed_infeasible;
     g->entry_supervision_boundary_missed=result->entry_supervision_boundary_missed;
+
+    if(result->entry_s_turn_plan.valid){
+        g->entry_s_turn_plan.terminal_ready=result->entry_s_turn_plan.terminal_ready;
+        g->entry_s_turn_plan.closest_distance=result->entry_s_turn_plan.closest_distance;
+        g->entry_s_turn_plan.taem_range_error=result->entry_s_turn_plan.taem_range_error;
+        g->entry_s_turn_plan.taem_speed=result->entry_s_turn_plan.taem_speed;
+        g->entry_s_turn_plan.taem_energy_error=result->entry_s_turn_plan.taem_energy_error;
+        g->entry_s_turn_plan.predicted_reversals=result->entry_s_turn_plan.predicted_reversals;
+        g->entry_s_turn_plan.cost=result->entry_s_turn_plan.cost;
+    }
     g->entry_planning_needed=false;
-    if(topology_install&&!g->diagnostic_shadow)fprintf(stderr,
-        "Entry topology ADOPTED: age %.2fs plan %llu/%llu remaining %.1fs first side %+.0f bank %.1f/%.1f reversal UT %.2f in %.1fs inlet %.0f %.0f course %.1f h %.0f V %.1f reserve %.0f\n",
-        age,(unsigned long long)accepted.plan_id,(unsigned long long)accepted.plan_version,
-        accepted.planned_ut+accepted.segment_duration-t->ut,g->entry_topology.first_sign,
-        g->entry_topology.first_bank,g->entry_topology.turn_bank,g->entry_reversal_ut,
-        g->entry_reversal_ut-t->ut,g->taem_interface_target.along_track,g->taem_interface_target.cross_track,
-        g->taem_interface_target.course,g->taem_interface_target.altitude,g->taem_interface_target.speed,
-        g->entry_topology.glide_reserve);
     return true;
 }
 
@@ -866,17 +747,29 @@ static void entry_program_seed_initial_side(GuidanceMachine*g,const Telemetry*t,
         double dc=g->taem_interface_target.cross_track-t->runway_cross_track;
         double point_course=norm_deg(cfg->site.runway_heading+
             atan2(dc,da)*RAD2DEG);
-        double point_turn=fabs(norm_signed_deg(point_course-course));
-        double inlet_turn=fabs(norm_signed_deg(
-            g->taem_interface_target.course-course));
+        double point_turn_signed=norm_signed_deg(point_course-course);
         bool perpendicular=fabs(fabs(final_turn)-90.0)<=
             handoff.perpendicular_heading_half_width_deg;
         bool upstream=isfinite(da)&&da>0.0;
+        double setup_side=-target_side;
+        double setup_cross=setup_side*
+            (t->runway_cross_track-g->taem_interface_target.cross_track);
+        double required_cross=entry_taem_shaping_parallel_cross_requirement(cfg);
+        /* A perpendicular fixed-pose inlet needs real crossrange on the setup
+           side before the final-side turn.  Use the same measured contract that
+           later releases the setup reversal; point-bearing sign alone is
+           degenerate on the runway tangent and can erase the entire first leg. */
         bool setup_required=!inside_handoff&&perpendicular&&upstream&&
-            isfinite(point_turn)&&isfinite(inlet_turn)&&point_turn<inlet_turn;
+            fabs(target_side)>DBL_EPSILON&&isfinite(setup_cross)&&
+            isfinite(required_cross)&&setup_cross<required_cross;
         if(setup_required&&fabs(target_side)>DBL_EPSILON){
             /* A fixed-pose perpendicular inlet needs the opposite setup leg. */
             sign=-target_side;
+        }else if(fabs(point_turn_signed)>sqrt(DBL_EPSILON)){
+            /* The immediate MM304 objective is the fixed station.  Its signed
+             * bearing, rather than the final 180-degree HAC course, determines
+             * the first turn direction. */
+            sign=point_turn_signed>=0.0?1.0:-1.0;
         }else{
             double geometry_sign=entry_lateral_geometry_turn_sign(
                 relative_course,
@@ -885,9 +778,9 @@ static void entry_program_seed_initial_side(GuidanceMachine*g,const Telemetry*t,
                 g->taem_interface_target.cross_track,
                 target_course);
             if(fabs(geometry_sign)>DBL_EPSILON)sign=geometry_sign;
-            if(inside_handoff&&fabs(target_side)>DBL_EPSILON)
-                sign=target_side;
         }
+        if(inside_handoff&&fabs(target_side)>DBL_EPSILON)
+            sign=target_side;
     }
     g->s_turn_sign=sign;
     g->entry_target_side=target_side;

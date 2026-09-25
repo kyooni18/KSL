@@ -9,38 +9,6 @@ static EntryAlphaPhase entry_alpha_phase_for_exec(EntryPhase phase){
     }
 }
 
-static void entry_supervision_models(const Telemetry*t,AerodynamicModel aero,
-        AerodynamicEnvelope*env,TrajectoryCalibrationModel*cal){
-    for(int i=0;i<4;i++)env->regimes[i]=aero;
-    memset(cal,0,sizeof(*cal));
-    cal->density_scale=t->trajectory_density_scale>0?t->trajectory_density_scale:1.0;
-    cal->drag_scale=t->trajectory_drag_scale>0?t->trajectory_drag_scale:1.0;
-    cal->lift_scale=t->trajectory_lift_scale>0?t->trajectory_lift_scale:1.0;
-    cal->bank_effectiveness=t->bank_effectiveness>0?t->bank_effectiveness:1.0;
-    cal->speed_of_sound=t->speed_of_sound>0?t->speed_of_sound:340.0;
-    cal->speed_of_sound_scale=1.0;
-    cal->stress_drag_scale=1.0;cal->stress_lift_scale=1.0;
-    cal->altitude_residual=t->trajectory_altitude_residual;
-    cal->speed_residual=t->trajectory_speed_residual;
-    cal->range_residual=t->trajectory_range_residual;
-    cal->confidence=clampd(t->trajectory_calibration_confidence,0.0,1.0);
-}
-
-
-/* MM304 vertical capture may start before the stricter S-turn leg-authority gate.
-   The existing dynamic bank limiter is already continuous from its 75 Pa knee,
-   so use that envelope instead of holding wings-level until the 360 Pa leg gate.
-   A synthetic low-q stall proxy must not veto this capture; only an independent
-   measured stall observable may do so. Speed, q/g headroom, dynamic bank limits,
-   thermal AoA protection, and later actuator/control-margin supervision remain
-   authoritative. */
-static bool entry_program_bank_capture_available(const GuidanceMachine*g,
-        const Telemetry*t,const PlanetModel*p,const LandingConfiguration*cfg){
-    ControlAuthorityEnvelope authority=
-        decision_control_authority_envelope(g,t,p,cfg);
-    return authority.valid&&authority.controllable;
-}
-
 /* MM304 still owns the vertical state before TAEM. DRAGREF can make its
    longitudinal range residual small while the vehicle remains physically too high.
    Preserve the Shuttle-derived speed/range altitude corridor as an independent
@@ -90,33 +58,6 @@ static double entry_program_taem_path_fpa(const GuidanceMachine*g,const Telemetr
                                                                                 
                                                                             
                                                               
-
-static bool entry_program_terminal_side_final_s_turn_armed(const GuidanceMachine*g,
-        const Telemetry*t,const LandingConfiguration*cfg,double course){
-    if(!g||!t||!cfg||!g->taem_interface_target.valid||
-       !g->entry_reversal_scheduled||
-       g->entry_final_reversal_pending||g->entry_final_reversal_completed||
-       !isfinite(g->entry_reversal_sign)||!isfinite(course))return false;
-
-    if(g->entry_control_reversals==0){
-        double lead=g->entry_reversal_ut-t->ut;
-        double lead_limit=fmax(60.0,cfg->guidance.s_turn_minimum_leg_duration*2.5);
-        if(!isfinite(lead)||lead<0.0||lead>lead_limit)return false;
-    }
-
-    const TaemInterfaceTarget*q=&g->taem_interface_target;
-    if(!isfinite(q->course))return false;
-    double target_relative=norm_signed_deg(q->course-cfg->site.runway_heading);
-    double course_debt=norm_signed_deg(q->course-course);
-    if(!isfinite(target_relative)||!isfinite(course_debt))return false;
-
-    double resolution=sqrt(DBL_EPSILON)*RAD2DEG;
-    if(fabs(target_relative)<=resolution||fabs(course_debt)<=resolution)
-        return false;
-    double final_side=target_relative>=0.0?1.0:-1.0;
-    return g->entry_reversal_sign*final_side>0.0&&
-        final_side*course_debt>0.0;
-}
 
 static double entry_program_final_s_turn_drag_aoa(const GuidanceMachine*g,
         const Telemetry*t,const PlanetModel*p,AerodynamicModel aero,
@@ -172,8 +113,12 @@ static double entry_program_final_s_turn_drag_aoa(const GuidanceMachine*g,
        predicts a nominal undershoot.  Convert that range debt through the
        observed drag deficit so finalaoa-style cases can use the explicitly
        permitted final-S-turn AoA extension. */
-    double live_range_excess=isfinite(t->energy_excess_range)?
-        fmax(0.0,t->energy_excess_range):0.0;
+    /* Use the same achievable-range margin that owns MM304 longitudinal
+       guidance.  Do not mix in Telemetry.energy_excess_range: that field was
+       historically produced by a separate terminal-demand approximation and
+       can disagree in both magnitude and timing with DRAGREF. */
+    double live_range_excess=isfinite(drag->predicted_range_error)?
+        fmax(0.0,drag->predicted_range_error):0.0;
     double drag_deficit=isfinite(drag->drag_error_accel)?
         fmax(0.0,drag->drag_error_accel):0.0;
     if(live_range_excess>0.0&&drag_deficit>0.0){
@@ -322,18 +267,26 @@ static double entry_program_vertical_bank_ceiling(const GuidanceMachine*g,const 
         t->vertical_speed*response)/(response*response);
     double radial_lift=(equilibrium+altitude_accel+
         live_drag_accel(t,aero,&cfg->vehicle)*sin(gamma))/cos_gamma;
-    double required_vertical=fmax(0.0,
-        fmax(radial_lift,equilibrium*cos_gamma+fpa_accel));
-
     double effectiveness=isfinite(t->bank_effectiveness)&&
         t->bank_effectiveness>0.0?t->bank_effectiveness:1.0;
     double max_effective=fmin(bank_limit*effectiveness,
         nextafter(90.0,0.0))*DEG2RAD;
     double minimum_vertical=lift*cos(max_effective);
+    double required_vertical=fmax(0.0,
+        fmax(radial_lift,equilibrium*cos_gamma+fpa_accel));
     if(required_vertical<=minimum_vertical)return bank_limit;
     if(required_vertical>=lift){
-        /* If above target altitude and not plunging in a steep dive, preserve bank authority. */
-        if(t->mean_altitude>q->altitude&&t->flight_path_angle>=desired_fpa-2.5)
+        /* If MM304 is already descending more steeply than the downstream
+         * tangent, the required vertical acceleration is not a wings-level
+         * constraint: banking is how the vehicle trades lift for the planned
+         * descent while acquiring the fixed station.  The previous branch
+         * returned zero bank for every state below the tangent altitude,
+         * which made the high-energy +crossrange case fly straight past the
+         * recoverable handoff. */
+        if(t->mean_altitude>q->altitude&&
+           t->flight_path_angle>=desired_fpa-2.5)
+            return bank_limit;
+        if(desired_fpa<t->flight_path_angle-1.0)
             return bank_limit;
         return 0.0;
     }
@@ -348,24 +301,15 @@ static bool entry_program_altitude_capture(GuidanceMachine*g,const Telemetry*t,
     if(!g||!t||!p||!cfg||!bank||!aoa||!g->taem_interface_target.valid)
         return false;
 
-    ControlAuthorityEnvelope authority=
-        decision_control_authority_envelope(g,t,p,cfg);
-    if(!authority.valid||!authority.controllable)return false;
-
-    double demanded_magnitude=
-        entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
-    if(!isfinite(demanded_magnitude)||demanded_magnitude<=5.0)return false;
-
-    double original=*bank;
-    if(fabs(original)>=demanded_magnitude-1.0)return false;
-    double sign=fabs(original)>sqrt(DBL_EPSILON)?
-        (original>=0.0?1.0:-1.0):(g->s_turn_sign>=0.0?1.0:-1.0);
-    *bank=sign*demanded_magnitude;
+    /* This is a feasibility ceiling, never a new bank demand. In particular,
+       a zero-degree ceiling is a valid wings-level constraint, not a reason
+       to skip the limiter. The planner owns any increase in bank magnitude. */
+    double ceiling=entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
+    if(!isfinite(ceiling)||ceiling<0.0||!isfinite(*bank)||fabs(*bank)<=ceiling)
+        return false;
+    *bank=copysign(ceiling,*bank);
     *aoa=fmax(*aoa,entry_thermal_protection_aoa_floor(&cfg->vehicle));
-
-    double resolution=sqrt(DBL_EPSILON)*
-        fmax(1.0,fmax(fabs(original),fabs(*bank)));
-    return fabs(*bank-original)>resolution;
+    return true;
 }
 
 
@@ -379,15 +323,6 @@ static bool entry_program_shape_vertical_capture_plan(GuidanceMachine*g,const Te
     const VehicleProfile*v=&cfg->vehicle;
     double bank=plan->target_bank,aoa=plan->target_aoa;
     bool changed=entry_program_altitude_capture(g,t,p,aero,cfg,&bank,&aoa);
-    double ceiling=entry_program_vertical_bank_ceiling(g,t,p,aero,cfg);
-    double ceiling_resolution=sqrt(DBL_EPSILON)*
-        fmax(1.0,fmax(fabs(bank),fabs(ceiling)));
-    if(isfinite(ceiling)&&fabs(bank)>ceiling+ceiling_resolution){
-        double sign=fabs(bank)>ceiling_resolution?
-            (bank>=0.0?1.0:-1.0):(g->s_turn_sign>=0.0?1.0:-1.0);
-        bank=sign*ceiling;
-        changed=true;
-    }
 
     /*
      * If the vehicle is already steeper than the geometric path to the owned
