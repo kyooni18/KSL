@@ -39,7 +39,13 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         fmax(geometry->airspeed_mps * geometry->airspeed_mps, 1.0);
     const double curvature_fractions[] = {0.25, 0.35, 0.50, 0.70, 1.00};
     const double bow_fractions[] = {-0.625, -0.60};
-    const double initial_sag_fractions[] = {0.0};
+    /* Let replay test an early descent that can build density before the
+     * subsonic lift cap becomes binding.  These bounded offsets remain inside
+     * the route profile; the native solver still rejects any profile that
+     * exceeds lift authority or reaches runway elevation before HAC exit. */
+    const double initial_sag_fractions[] = {
+        0.0, -0.10, -0.15, -0.20, -0.25, -0.35, -0.50, -1.0, -1.5, -2.0
+    };
     const double local_profile_supports[][3] = {
         {0.12, 0.17, 0.42}, {0.12, 0.19, 0.50},
         {0.12, 0.21, 0.60}, {0.12, 0.23, 0.75}
@@ -96,12 +102,12 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 TaemFixedHacCandidate trial = route_candidate;
                 trial.route.profile_midpoint_offset_m =
                     bow_limit * bow_fractions[bow];
-                trial.route.profile_initial_sag_m =
-                    fmin(300.0, fmax(100.0,
-                        geometry->ground_speed_mps * 0.45)) *
+                double initial_sag_limit=fmin(600.0, fmax(150.0,
+                    geometry->ground_speed_mps));
+                trial.route.profile_initial_sag_m=initial_sag_limit *
                     initial_sag_fractions[sag];
-                trial.route.profile_initial_sag_length_m =
-                    fmax(2500.0, geometry->ground_speed_mps * 12.0);
+                trial.route.profile_initial_sag_length_m=
+                    fmax(4000.0,geometry->ground_speed_mps * 20.0);
                 trial.route.profile_local_offset_m = local_bow_offsets_m[local];
                 trial.route.profile_local_start_fraction =
                     local_profile_supports[support][0];
