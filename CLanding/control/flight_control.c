@@ -490,7 +490,11 @@ bool flight_control_step(FlightControlState *state,
     state->terminal_pitch_integral=state->pitch_trim;
     pitch_command=fc_clamp(pitch_command+state->pitch_trim,-1.0,1.0);
     if (rollout_profile) {
-        if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.15,0.15);
+        /* Ground contact adds a strong nose-down moment.  The previous +0.15
+           cap saturated continuously in k110 while pitch collapsed from +6 to
+           -5 deg.  Pre-contact Final already demonstrated smooth +0.3..0.37
+           authority, so retain that proven range while preventing a hard push-over. */
+        if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.10,0.35);
         else pitch_command=0.0;
     }
     (void)pitch_guard_known;
@@ -515,18 +519,13 @@ bool flight_control_step(FlightControlState *state,
     if (command->heading_control_enabled) {
         heading_error =
             fc_signed_angle(fc_finite(command->target_heading, 0.0)-heading);
-        /* Live rollout steering has the opposite direct-yaw sign from the
-           airborne coordinate: positive yaw input decreased runway heading in
-           k108.  Transform both error and rate so the PD law sees a positive-gain
-           coordinate without changing airborne heading control. */
-        yaw_error = rollout_profile ? -heading_error : heading_error;
+        yaw_error = heading_error;
     }
     const double yaw_accel_max=getenv("KSP_LANDER_YAW_ACCEL")?atof(getenv("KSP_LANDER_YAW_ACCEL")):30.0;
     const double yaw_wn=getenv("KSP_LANDER_YAW_WN")?atof(getenv("KSP_LANDER_YAW_WN")):1.0;
     if(!(yaw_authority>DBL_EPSILON)||yaw_authority>yaw_accel_max)yaw_authority=yaw_accel_max;
     double yaw_rate=command->heading_control_enabled&&isfinite(telemetry->heading_rate)?
         telemetry->heading_rate:observed_yaw_rate;
-    if(rollout_heading_hold)yaw_rate=-yaw_rate;
     double yaw_command=fc_capped_pd_command(yaw_error,yaw_rate,0.0,yaw_authority,
         yaw_wn,1.0,.20,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
 
