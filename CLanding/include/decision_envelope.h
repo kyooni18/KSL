@@ -200,6 +200,10 @@ HandoffSetEnvelope decision_mm304_handoff_set_envelope(
     double center_cross_m,
     const PlanetModel *planet,
     const LandingConfiguration *configuration);
+bool decision_mm304_course_contract_ready(
+    double course_deg,
+    double target_course_deg,
+    const LandingConfiguration *configuration);
 
 TaemSpeedEnvelope decision_taem_speed_envelope(
     const VehicleProfile *vehicle,

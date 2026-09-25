@@ -278,38 +278,19 @@ RunwayCaptureEnvelope decision_runway_capture_envelope(
     double runway_forward = site->runway_length - t->runway_along_track;
     double direct_ground_range = hypot(fmax(0.0, runway_forward),
         t->runway_cross_track);
-    /* A committed fixed HAC is not flying the direct runway chord.  Use the
-       remaining finite lead, frozen arc and configured outer-final leg for the
-       time/vertical envelope; otherwise the direct chord can report no time
-       left while the vehicle is intentionally spending that time on the HAC.
-       The fixed geometry itself remains owned by guidance and is never
-       replaced or resized here. */
-    bool fixed_hac=g&&g->fixed_alignment_hac_latched&&
-        g->hac_transition_heading_cone&&!g->hac_completed&&
-        !g->final_approach_captured;
+    /* While native MM305 owns a committed fixed-HAC route, use its monotone
+       analytic station for time/vertical reserve.  This keeps prediction tied to
+       exactly the geometry the tracker is flying and removes the legacy lead/cone
+       transition caches from the decision path. */
+    bool fixed_hac=g&&g->mm305_route_committed&&g->mm305_route.valid&&
+        !g->mm305_hac_exit_reached&&!g->final_approach_captured;
     double committed_path=0.0;
     if(fixed_hac){
-        double lead_remaining=0.0;
-        double arc_remaining=0.0;
-        if(g->hac_transition_active){
-            if(isfinite(g->hac_transition_lead_length)&&g->hac_transition_lead_length>0.0)
-                lead_remaining=fmax(0.0,(1.0-clampd(g->hac_transition_lead_progress,0.0,1.0))*
-                    g->hac_transition_lead_length);
-            if(g->hac_transition_heading_cone&&
-               isfinite(g->hac_transition_cone_arc_length)&&g->hac_transition_cone_arc_length>0.0)
-                arc_remaining=fmax(0.0,(1.0-clampd(g->hac_transition_progress,0.0,1.0))*
-                    g->hac_transition_cone_arc_length);
-            else if(isfinite(g->hac_transition_length))
-                arc_remaining=fmax(0.0,(1.0-clampd(g->hac_transition_progress,0.0,1.0))*
-                    g->hac_transition_length);
-        }else{
-            arc_remaining=fmax(0.0,g->hac_remaining);
-        }
-        /* Acquisition and the frozen circle are disjoint path segments.  Do not
-           add hac_remaining while the stored transition is active: it is legacy
-           circle state, not a third copy of the committed route. */
-        committed_path=lead_remaining+arc_remaining+
-            fmax(0.0,cfg->guidance.final_approach_distance);
+        double route_remaining=taem_route_remaining_at_index(
+            &g->mm305_route,g->mm305_route_cursor);
+        if(isfinite(route_remaining))
+            committed_path=route_remaining+
+                fmax(0.0,cfg->guidance.final_approach_distance);
     }
     double ground_range=fixed_hac&&isfinite(committed_path)&&committed_path>0.0?
         committed_path:direct_ground_range;

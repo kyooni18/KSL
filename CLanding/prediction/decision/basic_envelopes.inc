@@ -51,6 +51,24 @@ VerticalRecoveryEnvelope decision_vertical_recovery_envelope(
     return out;
 }
 
+bool decision_mm304_course_contract_ready(
+        double course_deg,double target_course_deg,
+        const LandingConfiguration *cfg){
+    if(!cfg||!isfinite(course_deg)||!isfinite(target_course_deg)||
+       !isfinite(cfg->site.runway_heading))return false;
+    TaemHandoffContract handoff=taem_handoff_contract(&cfg->guidance);
+    if(!(handoff.perpendicular_heading_half_width_deg>=0.0))return false;
+    double tolerance=handoff.perpendicular_heading_half_width_deg;
+    double resolution=sqrt(DBL_EPSILON)*180.0;
+    double actual_relative=fabs(norm_signed_deg(course_deg-cfg->site.runway_heading));
+    double target_relative=fabs(norm_signed_deg(target_course_deg-cfg->site.runway_heading));
+    double target_error=fabs(norm_signed_deg(target_course_deg-course_deg));
+    return isfinite(actual_relative)&&isfinite(target_relative)&&isfinite(target_error)&&
+        fabs(actual_relative-90.0)<=tolerance+resolution&&
+        fabs(target_relative-90.0)<=tolerance+resolution&&
+        target_error<=tolerance+resolution;
+}
+
 HandoffSetEnvelope decision_mm304_handoff_set_envelope(
         const GuidanceMachine *g,const Telemetry *t,double course_deg,
         double center_along_m,double center_cross_m,const PlanetModel *p,
