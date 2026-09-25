@@ -98,10 +98,24 @@ static bool mm305_planning_job(LandingController *c){
     return true;
 }
 
+/* MM305 route planning has its own thread: it must never queue behind an
+   advisory forecast (a terminal shadow ensemble can take many seconds, and in
+   simulator lockstep the whole simulation waits on the route). */
+static void *mm305_planner_worker(void *arg){
+    LandingController *c=arg;
+    for(;;){
+        pthread_mutex_lock(&c->mutex);
+        bool stop=c->stop_prediction_thread;
+        pthread_mutex_unlock(&c->mutex);
+        if(stop)break;
+        if(!mm305_planning_job(c))sleep_seconds(.005);
+    }
+    return NULL;
+}
+
 static void *terminal_prediction_worker(void *arg){
     LandingController *c=arg;
     for(;;){
-        if(mm305_planning_job(c))continue;
         VehicleState state={0};
         Telemetry telemetry;telemetry_init(&telemetry);
         LandingConfiguration cfg={0};
@@ -292,6 +306,9 @@ static void start_prediction_worker(LandingController *c){
         pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
         if(pthread_create(&c->prediction_thread,&attr,terminal_prediction_worker,c)==0)
             c->prediction_thread_started=true;
+        if(c->prediction_thread_started&&
+           pthread_create(&c->mm305_planner_thread,&attr,mm305_planner_worker,c)==0)
+            c->mm305_planner_started=true;
         pthread_attr_destroy(&attr);
     }
     pthread_mutex_unlock(&c->mutex);
@@ -305,9 +322,12 @@ static void stop_prediction_worker(LandingController *c){
        Release KSP control now; never leave the last flight command applied while
        waiting several seconds for an advisory shadow prediction to finish. */
     if(c->session)krpc_safe(c->session);
+    bool join_planner=c->mm305_planner_started;
     pthread_mutex_unlock(&c->mutex);
     if(join)pthread_join(c->prediction_thread,NULL);
+    if(join_planner)pthread_join(c->mm305_planner_thread,NULL);
     pthread_mutex_lock(&c->mutex);
+    c->mm305_planner_started=false;
     c->prediction_thread_started=false;
     c->stop_prediction_thread=false;
     c->last_terminal_prediction_request_ut=c->last_terminal_prediction_completion_ut=-1e300;
