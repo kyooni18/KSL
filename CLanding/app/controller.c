@@ -4,6 +4,7 @@
 #include "async_prediction_policy.h"
 #include "decision_envelope.h"
 #include "terminal_model.h"
+#include "taem_planner.h"
 
 #include <errno.h>
 #include <float.h>
@@ -86,6 +87,11 @@ struct LandingController {
     uint64_t tick_sequence, log_sequence, vehicle_record_sequence;
     SnapshotCallback callback;
     void *callback_context;
+    bool sim_publication_valid, publication_event_pending;
+    double sim_last_publish_wall, sim_last_publish_ut;
+    GuidancePhase sim_last_publish_phase;
+    ConnectionStatus sim_last_publish_connection;
+    bool sim_last_publish_engaged, sim_last_publish_paused;
     FILE *flight_log;
     PlannerLog *planner_log;
     VehicleLogEncoder vehicle_log_encoder;

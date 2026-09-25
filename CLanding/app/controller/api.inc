@@ -30,7 +30,7 @@ LandingController *landing_controller_create(const LandingConfiguration*cfg,Snap
 void landing_controller_destroy(LandingController*c){if(!c)return;landing_controller_shutdown(c);pthread_mutex_lock(&c->mutex);clear_snapshot_dynamic(&c->snapshot);trajectory_clear(&c->dynamic_trajectory);trajectory_clear(&c->stabilized_trajectory);trajectory_calibrator_clear(&c->trajectory_calibrator);if(c->has_plan)deorbit_plan_clear(&c->plan);pthread_mutex_unlock(&c->mutex);pthread_mutex_destroy(&c->mutex);free(c);}
 LandingConfiguration landing_controller_configuration(LandingController*c){pthread_mutex_lock(&c->mutex);LandingConfiguration r=c->configuration;pthread_mutex_unlock(&c->mutex);return r;}
 void landing_controller_update_configuration(LandingController*c,const LandingConfiguration*cfg){pthread_mutex_lock(&c->mutex);c->prediction_generation++;LandingConfiguration before=c->configuration,next=*cfg;VehicleProfile before_vehicle=before.vehicle;landing_configuration_normalize(&next);bool changed=!configuration_equal(&before,&next),planning_changed=!planning_configuration_equal(&before,&next);if(!changed){pthread_mutex_unlock(&c->mutex);return;}c->configuration=next;if(c->session&&!c->guidance.terminal_region_entered)(void)controller_capture_terminal_model(c,&c->configuration);if(!vehicle_profile_equal(&before_vehicle,&c->configuration.vehicle)&&!c->glide.active){reset_models(c,&c->configuration.vehicle);if(c->session){krpc_session_seed_physics(c->session,&c->physics);apply_certified_aero_prior(c);}}if(c->has_plan&&planning_changed){c->plan_stale=true;set_warning(c,"Planning-relevant configuration changed after planning. Create a new deorbit plan before engagement.");}append_configuration_log(c);log_state_event(c,planning_changed?"event=configuration-changed; replan_required=true":"event=configuration-changed; replan_required=false",true);publish(c);pthread_mutex_unlock(&c->mutex);}
-void landing_controller_connect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,false);reset_snapshot(c,getenv("KSP_LANDER_SIMULATOR")?"Opening ShuttleSim lockstep backend…":"Opening native kRPC C-Nano serial link…");c->snapshot.connection_status=CONN_CONNECTING;publish(c);LandingConfiguration cfg=c->configuration;pthread_mutex_unlock(&c->mutex);char err[768];KRPCSession*s=krpc_session_open(&cfg,err,sizeof(err));pthread_mutex_lock(&c->mutex);if(!s){c->snapshot.connection_status=CONN_FAILED;c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Native kRPC C-Nano connection failed.");set_error(c,err);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->session=s;start_log(c);reset_models(c,&c->configuration.vehicle);krpc_session_seed_physics(s,&c->physics);apply_certified_aero_prior(c);(void)controller_capture_terminal_model(c,&c->configuration);guidance_machine_init(&c->guidance);glide_calibration_init(&c->glide);c->has_prediction_cache=false;c->time_warp_issued=false;c->snapshot.connection_status=CONN_CONNECTED;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s connected to %s around %s with %u certified aerodynamic cells.",krpc_session_is_simulator(s)?"ShuttleSim lockstep":"Native kRPC C-Nano",krpc_session_vessel(s),krpc_session_planet(s)->name,c->physics.count);set_error(c,NULL);c->snapshot.adaptive_vehicle_profile=c->adaptive_profile;publish(c);pthread_mutex_unlock(&c->mutex);start_thread(c);}
+void landing_controller_connect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,false);reset_snapshot(c,getenv("KSP_LANDER_SIMULATOR")?"Opening ShuttleSim lockstep backend…":"Opening native kRPC C-Nano link…");c->snapshot.connection_status=CONN_CONNECTING;publish(c);LandingConfiguration cfg=c->configuration;pthread_mutex_unlock(&c->mutex);char err[768];KRPCSession*s=krpc_session_open(&cfg,err,sizeof(err));pthread_mutex_lock(&c->mutex);if(!s){c->snapshot.connection_status=CONN_FAILED;c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Native kRPC C-Nano connection failed.");set_error(c,err);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->session=s;start_log(c);reset_models(c,&c->configuration.vehicle);krpc_session_seed_physics(s,&c->physics);apply_certified_aero_prior(c);(void)controller_capture_terminal_model(c,&c->configuration);guidance_machine_init(&c->guidance);glide_calibration_init(&c->glide);c->has_prediction_cache=false;c->time_warp_issued=false;c->snapshot.connection_status=CONN_CONNECTED;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s connected to %s around %s with %u certified aerodynamic cells.",krpc_session_is_simulator(s)?"ShuttleSim lockstep":"Native kRPC C-Nano",krpc_session_vessel(s),krpc_session_planet(s)->name,c->physics.count);set_error(c,NULL);c->snapshot.adaptive_vehicle_profile=c->adaptive_profile;publish(c);pthread_mutex_unlock(&c->mutex);start_thread(c);}
 void landing_controller_disconnect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,true);pthread_mutex_unlock(&c->mutex);}
 
 void landing_controller_create_plan(LandingController*c){pthread_mutex_lock(&c->mutex);if(!c->session){pthread_mutex_unlock(&c->mutex);return;}if(c->glide.active){set_warning(c,"Stop the glide calibration before creating a deorbit plan.");log_state_event(c,"event=planning-blocked; reason=calibration-active",false);publish(c);pthread_mutex_unlock(&c->mutex);return;}LandingConfiguration cfg=effective_config(c);char err[768];Telemetry t;VehicleState s;if(!read_live_sample(c,&cfg,&t,&s,err,sizeof(err))){c->snapshot.phase=PHASE_FAULT;set_error(c,err);log_state_event(c,"event=planning-failed; reason=telemetry-read",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->latest_telemetry=t;c->latest_state=s;c->has_latest=true;landing_snapshot_set_sample(&c->snapshot,&t,&s);c->snapshot.phase=PHASE_PLANNING;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Searching upcoming orbital landing opportunities and stress-testing burn execution…");set_error(c,NULL);publish(c);const PlanetModel*planet=krpc_session_planet(c->session);if(t.apoapsis_altitude<=planet->atmosphere_depth||t.periapsis_altitude<=planet->atmosphere_depth){c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Planning rejected.");set_error(c,"Initial apoapsis and periapsis must both be outside the active planet atmosphere.");log_state_event(c,"event=planning-failed; reason=orbit-inside-atmosphere",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}DeorbitPlan p;if(!deorbit_plan_create_with_telemetry(&p,s,t.orbit_period,krpc_session_planet(c->session),c->planning_aerodynamics,&c->envelope,&c->trajectory_calibration,&cfg.site,&cfg.vehicle,&cfg.guidance,t.available_thrust,&t)){c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"No usable deorbit solution was found.");set_error(c,"The current orbit, landing site, thrust or calibrated aerodynamic profile did not produce atmospheric capture across the searched future opportunities.");log_state_event(c,"event=planning-failed; reason=no-executable-deorbit-solution",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}if(c->has_plan)deorbit_plan_clear(&c->plan);c->plan=p;c->has_plan=true;c->plan_stale=false;c->time_warp_issued=false;c->log_plan_trajectory_dirty=true;trajectory_clear(&c->dynamic_trajectory);trajectory_copy(&c->dynamic_trajectory,&p.trajectory);trajectory_clear(&c->stabilized_trajectory);trajectory_copy(&c->stabilized_trajectory,&p.trajectory);guidance_reset_plan(&c->guidance);t.predicted_miss_distance=p.predicted_closest_distance;t.predicted_entry_range=p.predicted_entry_range;t.predicted_entry_flight_path_angle=p.predicted_entry_flight_path_angle;trajectory_calibrator_set_forecast(&c->trajectory_calibrator,&p.trajectory);landing_snapshot_set_sample(&c->snapshot,&t,&c->latest_state);c->snapshot.phase=PHASE_IDLE;if(p.target_capture_achieved)snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Robust plan ready. %u/%u strict stress cases pass (%.0f%%).",p.robustness_passed,p.robustness_scenarios,p.robustness_pass_fraction*100);else if(p.execution_qualified)snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Guarded recovery plan ready. %u/%u recovery cases pass (%.0f%%); strict corridor was not met.",p.recovery_passed,p.robustness_scenarios,p.recovery_pass_fraction*100);else snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Preview plan found, but no execution-qualified corridor was found.");set_warning(c,p.target_capture_achieved?NULL:p.execution_qualified?"This plan is executable under the broader guarded recovery envelope. Review its miss, entry angle, periapsis and recovery stress margin before engaging.":"Engagement is disabled for this preview plan. Replan for a later opportunity or revise the vehicle/site model.");set_error(c,NULL);reference_trajectory(&c->snapshot.reference_trajectory,&cfg.site,&cfg.guidance,krpc_session_planet(c->session)->radius,1);c->log_reference_trajectory_dirty=true;char plan_reason[256];snprintf(plan_reason,sizeof(plan_reason),"event=plan-created; execution-qualified=%s; strict-capture=%s; degraded=%s; robustness-pass=%.6g",p.execution_qualified?"true":"false",p.target_capture_achieved?"true":"false",p.execution_degraded?"true":"false",p.robustness_pass_fraction);log_state_event(c,plan_reason,true);publish(c);pthread_mutex_unlock(&c->mutex);}
@@ -99,25 +99,9 @@ void landing_controller_engage_reentry(LandingController*c){
     guidance_initialize_reentry_continuation(&qualification_guidance,&t,p,&cfg,
         initial_s_turn_sign,false,&c->envelope,&c->trajectory_calibration);
 
-    /* Keep synchronous re-entry qualification on the same MM304 contract as
-       the worker.  The topology solver consumes the published target when it
-       is available; otherwise it has to fall back to a generic perpendicular
-       outlet that may not match the worker's turnability-selected target.
-       Simulator continuation is already an executable closed loop, so do not
-       spend the engagement call replaying a second full entry shadow. */
-    double qualification_course=isfinite(t.ground_track_heading)?
-        t.ground_track_heading:t.heading;
-    entry_publish_taem_tangent_target(&qualification_guidance,&t,
-        qualification_course,p,c->planning_aerodynamics,&cfg);
-
-    EntryTopologyPlan topology={0};
-    if(!simulator_fast_qualification){
-        topology=predictor_plan_entry_topology(state,&t,
-            &qualification_guidance,p,&c->envelope,&c->trajectory_calibration,&cfg);
-        if(topology.valid)
-            (void)guidance_install_entry_topology(
-                &qualification_guidance,&topology,t.ut);
-    }
+    /* Qualification starts from the measured state and replays the same
+       closed-loop MM304 law.  No tangent target or precomputed topology is
+       installed at engagement. */
 
     DeorbitPlan qualification_plan;
     memset(&qualification_plan,0,sizeof(qualification_plan));
@@ -159,9 +143,8 @@ void landing_controller_engage_reentry(LandingController*c){
         double vertical_time=(-t.vertical_speed)>DBL_EPSILON?
             height/(-t.vertical_speed):
             (gravity>DBL_EPSILON?sqrt(2.0*height/gravity):0.0);
-        /* Normal MM305 is a partial Heading Alignment Cone, never a full
-           revolution.  270 degrees is the maximum admitted normal cone; an
-           explicit high-pass circuit is a separate contingency. */
+        /* Native MM305 uses one 270-degree runway-anchored HAC plus its
+           finite lead; there is no legacy extra-circuit contingency. */
         double terminal_path=1.5*LANDER_PI*cfg.guidance.hac_radius+
             cfg.guidance.final_approach_distance;
         double terminal_time=terminal_path/
@@ -181,21 +164,13 @@ void landing_controller_engage_reentry(LandingController*c){
     if(!recovery){
         char msg[768];
         snprintf(msg,sizeof(msg),
-            "Reentry rejected: entered=%s, TAEM=%s, closest=%.1f km, range error=%.1f km, q=%.1f kPa, g=%.2f; topology=%s flags=0x%x bank=%.1f/%.1f AoA=%.1f/%.1f termUT=%.1f s geom=%.1f km capUT=%.1f s pos=%.1f km course=%.1f deg.",
+            "Reentry rejected by closed-loop shadow: entered=%s, MM305=%s, closest=%.1f km, range error=%+.1f km, q=%.1f kPa, g=%.2f.",
             prediction.entered_atmosphere?"true":"false",
             prediction.reached_taem?"true":"false",
             prediction.closest_distance/1000.0,
             prediction.taem_range_error/1000.0,
             prediction.peak_dynamic_pressure/1000.0,
-            prediction.peak_g_load,
-            topology.valid?"valid":"invalid",topology.failure_flags,
-            topology.first_bank,topology.turn_bank,
-            topology.first_aoa,topology.turn_aoa,
-            topology.terminal_turn_ut-state.ut,
-            topology.terminal_turn_geometry_error/1000.0,
-            topology.capture_ut-state.ut,
-            topology.position_error/1000.0,
-            topology.capture_course_error);
+            prediction.peak_g_load);
         entry_prediction_clear(&prediction);
         set_warning(c,msg);publish(c);pthread_mutex_unlock(&c->mutex);return;
     }
@@ -241,9 +216,6 @@ void landing_controller_engage_reentry(LandingController*c){
 
     guidance_initialize_reentry_continuation(&c->guidance,&t,p,&cfg,
         initial_s_turn_sign,false,&c->envelope,&c->trajectory_calibration);
-    if(topology.valid)
-        (void)guidance_install_entry_topology(&c->guidance,&topology,t.ut);
-
     trajectory_copy(&plan.trajectory,&prediction.trajectory);
     snprintf(plan.note,sizeof(plan.note),
         "Reentry continuation qualified by production shadow executive from live state.");

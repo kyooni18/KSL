@@ -62,7 +62,7 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     c->prediction_lineage_discontinuity=false;
     bool was_cal=c->glide.active,sampling=false,finished=false;double progress=0,target_aoa=0;GuidanceResult glide=glide_calibration_update(&c->glide,&t,&cfg.vehicle,&c->configuration.calibration,&sampling,&finished,&progress,&target_aoa);bool nominal_learning=!c->guidance.aborted&&!c->guidance.attitude_recovery&&c->snapshot.phase!=PHASE_ABORT&&c->snapshot.phase!=PHASE_FAULT&&c->snapshot.phase!=PHASE_ATTITUDE_RECOVERY;CalibrationSnapshot cal_snap;AerodynamicModel shadow_current,shadow_planning;AerodynamicEnvelope shadow_envelope;adaptive_calibrator_update(&c->adaptive,&t,&c->configuration.calibration,&c->configuration.vehicle,&c->last_command,dt,nominal_learning,c->glide.active,sampling,c->glide.state,progress,target_aoa,c->glide.state==CAL_IDLE?NULL:glide.status,glide.has_warning?glide.warning:NULL,&shadow_current,&shadow_planning,&shadow_envelope,&c->adaptive_profile,&cal_snap);(void)shadow_current;(void)shadow_planning;(void)shadow_envelope;if(!c->glide.active)snprintf(cal_snap.status,sizeof(cal_snap.status),"Shadow flight-test reconstruction: certified prior-flight aerodynamics remain frozen for this session.");c->aerodynamics=envelope_at_controller(&c->envelope,t.mach);c->trajectory_calibration=trajectory_calibrator_update(&c->trajectory_calibrator,&t,&state,krpc_session_planet(c->session),&cfg.site,&c->envelope,&cfg.vehicle,&c->last_command,&c->configuration.calibration,nominal_learning,dt);
     c->trajectory_calibration.physics=&c->physics;
-    t.estimated_lift_to_drag=c->aerodynamics.lift_to_drag;t.estimated_ballistic_coefficient=c->aerodynamics.ballistic_coefficient;t.aerodynamic_confidence=c->aerodynamics.confidence;t.calibrated_best_glide_angle_of_attack=cal_snap.best_glide_angle_of_attack;t.calibrated_stall_speed=cal_snap.estimated_stall_speed;t.trajectory_density_scale=c->trajectory_calibration.density_scale;t.trajectory_drag_scale=c->trajectory_calibration.drag_scale;t.trajectory_lift_scale=c->trajectory_calibration.lift_scale;t.bank_effectiveness=c->trajectory_calibration.bank_effectiveness;t.trajectory_calibration_confidence=c->trajectory_calibration.confidence;t.trajectory_altitude_residual=c->trajectory_calibration.altitude_residual;t.trajectory_speed_residual=c->trajectory_calibration.speed_residual;t.trajectory_range_residual=c->trajectory_calibration.range_residual;t.predicted_miss_distance=c->has_plan?c->plan.predicted_closest_distance:0;t.predicted_taem_distance=c->has_plan?c->plan.predicted_taem_distance:0;t.predicted_taem_range_error=c->has_plan?c->plan.predicted_taem_range_error:0;const PlanetModel*planet=krpc_session_planet(c->session);double entry_ref=c->guidance.entry_reference_speed>0?c->guidance.entry_reference_speed:t.true_air_speed;EntryTerminalDemand local_demand=entry_terminal_demand(t.latitude,t.mean_altitude,t.range_to_site,t.horizontal_speed,t.course_to_site_error,t.vertical_speed,t.true_air_speed,entry_ref,planet,&cfg.vehicle,&cfg.site,&cfg.guidance);/* Preserve the historical sign: positive means excess downrange capability, negative means projected TAEM shortfall. */t.energy_excess_range=-local_demand.projected_taem_range_error;
+    t.estimated_lift_to_drag=c->aerodynamics.lift_to_drag;t.estimated_ballistic_coefficient=c->aerodynamics.ballistic_coefficient;t.aerodynamic_confidence=c->aerodynamics.confidence;t.calibrated_best_glide_angle_of_attack=cal_snap.best_glide_angle_of_attack;t.calibrated_stall_speed=cal_snap.estimated_stall_speed;t.trajectory_density_scale=c->trajectory_calibration.density_scale;t.trajectory_drag_scale=c->trajectory_calibration.drag_scale;t.trajectory_lift_scale=c->trajectory_calibration.lift_scale;t.bank_effectiveness=c->trajectory_calibration.bank_effectiveness;t.trajectory_calibration_confidence=c->trajectory_calibration.confidence;t.trajectory_altitude_residual=c->trajectory_calibration.altitude_residual;t.trajectory_speed_residual=c->trajectory_calibration.speed_residual;t.trajectory_range_residual=c->trajectory_calibration.range_residual;t.predicted_miss_distance=c->has_plan?c->plan.predicted_closest_distance:0;t.predicted_taem_distance=c->has_plan?c->plan.predicted_taem_distance:0;t.predicted_taem_range_error=c->has_plan?c->plan.predicted_taem_range_error:0;const PlanetModel*planet=krpc_session_planet(c->session);t.energy_excess_range=NAN;
     c->guidance.entry_planning_deferred=true;
     guidance_set_entry_predictor_models(&c->guidance,&c->envelope,&c->trajectory_calibration);
     if(c->has_plan&&!c->glide.active&&c->guidance.automation_engaged&&!c->guidance.has_burn_command_started&&!c->guidance.deorbit_burn_completed&&
@@ -79,7 +79,7 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
         log_state_event(c,drift_reason,true);
         guidance_abort(&c->guidance);
     }
-    actual_trajectory_update(c,&t);dynamic_prediction(c,&t,&state,&cfg);c->latest_telemetry=t;c->latest_state=state;c->has_latest=true;bool using_glide=c->glide.active;GuidanceResult r=using_glide?glide:guidance_update_with_terminal_model(&c->guidance,&t,&state,c->has_plan?&c->plan:NULL,planet,c->aerodynamics,&cfg,c->terminal_model_valid?&c->terminal_model:NULL);if(using_glide)glide.reference=(Trajectory){0};t.has_guidance_compute=true;t.guidance_compute_ms=(monotonic_seconds()-compute)*1000;command_computed=monotonic_seconds();if(should_time_warp(c,&r,&t)){if(!perform_time_warp(c,&t,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}guidance_result_clear(&r);guidance_result_clear(&glide);return;}GuidanceCommand cmd=r.command;c->last_command=cmd;const char*hud_status=using_glide?glide.status:r.status;const char*hud_warning=(using_glide?glide.has_warning:r.has_warning)?(using_glide?glide.warning:r.warning):"";if(cmd.autopilot_engaged&&!cmd.use_inertial_direction){t.has_command_pitch_error=t.has_command_roll_error=t.has_command_heading_error=true;t.command_pitch_error=cmd.has_target_aoa?cmd.target_aoa-t.angle_of_attack:cmd.target_pitch-t.pitch;t.command_roll_error=norm_signed_deg(cmd.target_roll-t.roll);t.command_heading_error=norm_signed_deg(cmd.target_heading-t.heading);}if(using_glide){apply_attempted=true;if(!apply_command_logged(c,&cmd,cfg.vehicle.airbrake_action_group,PHASE_CALIBRATION,hud_status,hud_warning,NULL,&applied,&apply_started,&apply_finished,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}apply_succeeded=true;t.has_apply_latency=true;t.apply_latency_ms=(apply_finished-apply_started)*1000;}else if(was_cal&&finished)krpc_safe(c->session);else if(r.phase==PHASE_ABORT)krpc_safe(c->session);else if(c->guidance.automation_engaged&&!c->guidance.paused){apply_attempted=true;if(!apply_command_logged(c,&cmd,cfg.vehicle.airbrake_action_group,r.phase,hud_status,hud_warning,&r.reference,&applied,&apply_started,&apply_finished,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}apply_succeeded=true;t.has_apply_latency=true;t.apply_latency_ms=(apply_finished-apply_started)*1000;}if(apply_attempted&&apply_succeeded){KRPCTransportBudget apply_budget=krpc_session_transport_budget(c->session);t.has_rpc_budget=true;t.rpc_apply_calls=apply_budget.apply_calls;t.rpc_apply_wire_requests=apply_budget.apply_wire_requests;t.rpc_total_calls=apply_budget.total_calls;t.rpc_total_wire_requests=apply_budget.total_wire_requests;}t.has_control_loop=true;t.control_loop_ms=(monotonic_seconds()-wall_start)*1000;c->latest_telemetry=t;
+    actual_trajectory_update(c,&t);dynamic_prediction(c,&t,&state,&cfg);c->latest_telemetry=t;c->latest_state=state;c->has_latest=true;bool using_glide=c->glide.active;GuidanceResult r=using_glide?glide:guidance_update_with_terminal_model(&c->guidance,&t,&state,c->has_plan?&c->plan:NULL,planet,c->aerodynamics,&cfg,c->terminal_model_valid?&c->terminal_model:NULL);if(using_glide)glide.reference=(Trajectory){0};if(!using_glide&&r.phase==PHASE_ENTRY_ENERGY&&c->guidance.entry_feedback.valid&&isfinite(c->guidance.entry_feedback.energy_margin))t.energy_excess_range=c->guidance.entry_feedback.energy_margin;t.has_guidance_compute=true;t.guidance_compute_ms=(monotonic_seconds()-compute)*1000;command_computed=monotonic_seconds();if(should_time_warp(c,&r,&t)){if(!perform_time_warp(c,&t,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}guidance_result_clear(&r);guidance_result_clear(&glide);return;}GuidanceCommand cmd=r.command;c->last_command=cmd;const char*hud_status=using_glide?glide.status:r.status;const char*hud_warning=(using_glide?glide.has_warning:r.has_warning)?(using_glide?glide.warning:r.warning):"";if(cmd.autopilot_engaged&&!cmd.use_inertial_direction){t.has_command_pitch_error=t.has_command_roll_error=t.has_command_heading_error=true;t.command_pitch_error=cmd.has_target_aoa?cmd.target_aoa-t.angle_of_attack:cmd.target_pitch-t.pitch;t.command_roll_error=norm_signed_deg(cmd.target_roll-t.roll);t.command_heading_error=norm_signed_deg(cmd.target_heading-t.heading);}if(using_glide){apply_attempted=true;if(!apply_command_logged(c,&cmd,cfg.vehicle.airbrake_action_group,PHASE_CALIBRATION,hud_status,hud_warning,NULL,&applied,&apply_started,&apply_finished,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}apply_succeeded=true;t.has_apply_latency=true;t.apply_latency_ms=(apply_finished-apply_started)*1000;}else if(was_cal&&finished)krpc_safe(c->session);else if(r.phase==PHASE_ABORT)krpc_safe(c->session);else if(c->guidance.automation_engaged&&!c->guidance.paused){apply_attempted=true;if(!apply_command_logged(c,&cmd,cfg.vehicle.airbrake_action_group,r.phase,hud_status,hud_warning,&r.reference,&applied,&apply_started,&apply_finished,err,sizeof(err))){guidance_result_clear(&r);guidance_result_clear(&glide);goto failure;}apply_succeeded=true;t.has_apply_latency=true;t.apply_latency_ms=(apply_finished-apply_started)*1000;}if(apply_attempted&&apply_succeeded){KRPCTransportBudget apply_budget=krpc_session_transport_budget(c->session);t.has_rpc_budget=true;t.rpc_apply_calls=apply_budget.apply_calls;t.rpc_apply_wire_requests=apply_budget.apply_wire_requests;t.rpc_total_calls=apply_budget.total_calls;t.rpc_total_wire_requests=apply_budget.total_wire_requests;}t.has_control_loop=true;t.control_loop_ms=(monotonic_seconds()-wall_start)*1000;c->latest_telemetry=t;
     /* dynamic_prediction() intentionally runs before guidance_update() because MM304
        consumes its prediction telemetry. If guidance accepted a different executable
        plan on this tick, do not block the next control cycle with a second atmospheric
@@ -94,40 +94,101 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
             trajectory_clear(&c->dynamic_trajectory);trajectory_clear(&c->stabilized_trajectory);
         }
     }
-    c->snapshot.guidance_terminal_prediction_valid=c->guidance.terminal_prediction_valid;
-    c->snapshot.guidance_terminal_candidate_valid=c->guidance.terminal_candidate.valid;
+    bool native_mm305_route=c->guidance.mm305_route_committed&&c->guidance.mm305_route.valid;
+    double native_route_remaining=native_mm305_route?
+        taem_route_remaining_at_index(&c->guidance.mm305_route,c->guidance.mm305_route_cursor):0.0;
+    c->snapshot.guidance_terminal_prediction_valid=native_mm305_route;
+    c->snapshot.guidance_terminal_candidate_valid=native_mm305_route;
     c->snapshot.guidance_terminal_committed=c->guidance.terminal_path_committed;
-    c->snapshot.guidance_terminal_candidate_radius=c->guidance.terminal_candidate.radius;
-    c->snapshot.guidance_terminal_candidate_altitude=c->guidance.terminal_candidate.altitude;
-    c->snapshot.guidance_terminal_candidate_speed=c->guidance.terminal_candidate.speed;
-    c->snapshot.guidance_terminal_candidate_kind=c->guidance.terminal_candidate.kind;
-    c->snapshot.guidance_terminal_candidate_geometry_degraded=c->guidance.terminal_candidate.geometry_degraded;
-    c->snapshot.guidance_terminal_candidate_energy_degraded=c->guidance.terminal_candidate.energy_degraded;
-    c->snapshot.guidance_terminal_candidate_shell_degraded=c->guidance.terminal_candidate.shell_degraded;
-    c->snapshot.guidance_terminal_candidate_side=c->guidance.terminal_candidate.side;
-    c->snapshot.guidance_terminal_candidate_slope=c->guidance.terminal_candidate.slope;
-    c->snapshot.guidance_terminal_candidate_curve_length=c->guidance.terminal_candidate.join.length;
-    c->snapshot.guidance_terminal_candidate_lead_length=c->guidance.terminal_candidate.join.lead_length;
-    c->snapshot.guidance_terminal_candidate_arc_remaining=c->guidance.terminal_candidate.join.arc_remaining;
-    c->snapshot.guidance_terminal_candidate_final_distance=c->guidance.terminal_candidate.final_distance;
-    c->snapshot.guidance_terminal_candidate_quality=c->guidance.terminal_candidate.quality_score;
-    c->snapshot.guidance_terminal_candidate_arrival_ut=c->guidance.terminal_candidate.arrival_ut;
-    c->snapshot.guidance_terminal_candidate_course=c->guidance.terminal_candidate.course;
-    c->snapshot.guidance_terminal_candidate_peak_lateral=c->guidance.terminal_candidate.join.peak_lateral;
-    c->snapshot.guidance_terminal_candidate_peak_rate_ratio=c->guidance.terminal_candidate.join.peak_course_rate_ratio;
-    c->snapshot.guidance_terminal_candidate_exit_speed=c->guidance.terminal_candidate.join.exit_speed;
-    c->snapshot.guidance_terminal_candidate_tracking_error=c->guidance.terminal_candidate.tracking_error;
-    c->snapshot.guidance_terminal_candidate_tracking_course_error=c->guidance.terminal_candidate.tracking_course_error;
-    c->snapshot.guidance_terminal_candidate_tracking_endpoint_error=c->guidance.terminal_candidate.tracking_endpoint_error;
-    c->snapshot.guidance_terminal_candidate_tracking_margin=c->guidance.terminal_candidate.tracking_margin;
-    c->snapshot.guidance_terminal_candidate_tracking_evaluated=c->guidance.terminal_candidate.tracking_evaluated;
-    c->snapshot.guidance_terminal_candidate_path_degraded=c->guidance.taem_safety_handoff||c->guidance.terminal_candidate.join.degraded_path;
-    c->snapshot.guidance_terminal_candidate_control_degraded=c->guidance.terminal_candidate.join.degraded_control;
-    c->snapshot.guidance_terminal_candidate_rate_degraded=c->guidance.terminal_candidate.join.degraded_rate;
-    c->snapshot.guidance_terminal_candidate_end_degraded=c->guidance.terminal_candidate.join.degraded_end;
-    c->snapshot.guidance_terminal_reference_fpa=c->guidance.terminal_reference_fpa;
-    c->snapshot.guidance_terminal_mix=c->guidance.terminal_mix;
-    c->snapshot.tick_sequence=c->tick_sequence;c->snapshot.log_sequence=++c->log_sequence;c->snapshot.wall_monotonic_seconds=wall_start;c->snapshot.simulation_dt=dt;c->snapshot.has_vehicle_state=true;c->snapshot.vehicle_state=state;c->snapshot.has_attitude_quaternion=t.has_attitude_quaternion;if(t.has_attitude_quaternion)memcpy(c->snapshot.attitude_quaternion,t.attitude_quaternion,sizeof(t.attitude_quaternion));snprintf(c->snapshot.attitude_reference_frame,sizeof(c->snapshot.attitude_reference_frame),"%s",t.attitude_reference_frame);c->snapshot.command_computed_wall_seconds=command_computed;c->snapshot.command_apply_attempted=apply_attempted;c->snapshot.command_apply_started_wall_seconds=apply_started;c->snapshot.command_apply_finished_wall_seconds=apply_finished;c->snapshot.command_applied=apply_succeeded&&applied.applied;c->snapshot.applied_command=applied;c->snapshot.guidance_has_burn_started=c->guidance.has_burn_command_started;c->snapshot.guidance_burn_completed=c->guidance.deorbit_burn_completed;c->snapshot.guidance_atmosphere_crossed=c->guidance.atmospheric_interface_crossed;c->snapshot.guidance_final_captured=c->guidance.final_approach_captured;c->snapshot.guidance_airbrakes_deployed=c->guidance.airbrakes_deployed;c->snapshot.guidance_hac_side_selected=c->guidance.hac_side_selected;c->snapshot.guidance_delivered_delta_v=c->guidance.delivered_delta_v;c->snapshot.guidance_burn_active_elapsed=c->guidance.burn_active_elapsed;c->snapshot.guidance_s_turn_sign=c->guidance.s_turn_sign;c->snapshot.guidance_hac_side=c->guidance.hac_side;c->snapshot.guidance_entry_leg_elapsed=guidance_entry_leg_elapsed(&c->guidance,t.ut);c->snapshot.guidance_entry_exec=entry_exec_telemetry(&c->guidance.entry_exec);c->snapshot.guidance_taem_exec=taem_exec_telemetry(&c->guidance.taem_exec);c->snapshot.guidance_hac_captured=c->guidance.hac_captured;c->snapshot.guidance_hac_completed=c->guidance.hac_completed;c->snapshot.guidance_hac_progress_valid=c->guidance.hac_progress_valid;c->snapshot.guidance_hac_transition_active=c->guidance.hac_transition_active;c->snapshot.guidance_hac_remaining=c->guidance.hac_remaining;c->snapshot.guidance_hac_radius=c->guidance.hac_radius;c->snapshot.guidance_hac_circuit_count=c->guidance.hac_circuit_count;c->snapshot.guidance_hac_circuit_slope=c->guidance.hac_circuit_slope;c->snapshot.guidance_terminal_reentry_after_ut=c->guidance.terminal_reentry_after_ut;c->snapshot.guidance_minimum_turn_radius=c->guidance.minimum_turn_radius;c->snapshot.guidance_hac_transition_progress=c->guidance.hac_transition_progress;c->snapshot.guidance_hac_transition_points[0]=c->guidance.hac_transition_p0_e;c->snapshot.guidance_hac_transition_points[1]=c->guidance.hac_transition_p0_n;c->snapshot.guidance_hac_transition_points[2]=c->guidance.hac_transition_p1_e;c->snapshot.guidance_hac_transition_points[3]=c->guidance.hac_transition_p1_n;c->snapshot.guidance_hac_transition_points[4]=c->guidance.hac_transition_p2_e;c->snapshot.guidance_hac_transition_points[5]=c->guidance.hac_transition_p2_n;c->snapshot.guidance_hac_transition_points[6]=c->guidance.hac_transition_p3_e;c->snapshot.guidance_hac_transition_points[7]=c->guidance.hac_transition_p3_n;c->snapshot.guidance_hac_transition_heading_cone=c->guidance.hac_transition_heading_cone;c->snapshot.guidance_hac_transition_lead_curve=c->guidance.hac_transition_lead_curve;c->snapshot.guidance_hac_transition_lead_points[0]=c->guidance.hac_transition_lead_start_e;c->snapshot.guidance_hac_transition_lead_points[1]=c->guidance.hac_transition_lead_start_n;c->snapshot.guidance_hac_transition_lead_points[2]=c->guidance.hac_transition_lead_p1_e;c->snapshot.guidance_hac_transition_lead_points[3]=c->guidance.hac_transition_lead_p1_n;c->snapshot.guidance_hac_transition_lead_points[4]=c->guidance.hac_transition_lead_p2_e;c->snapshot.guidance_hac_transition_lead_points[5]=c->guidance.hac_transition_lead_p2_n;c->snapshot.guidance_hac_transition_cone_center[0]=c->guidance.hac_transition_cone_center_e;c->snapshot.guidance_hac_transition_cone_center[1]=c->guidance.hac_transition_cone_center_n;c->snapshot.guidance_hac_transition_cone_start_angle=c->guidance.hac_transition_cone_start_angle;c->snapshot.guidance_hac_transition_cone_end_angle=c->guidance.hac_transition_cone_end_angle;c->snapshot.guidance_hac_transition_cone_arc_length=c->guidance.hac_transition_cone_arc_length;double lift_accel=t.mass>1&&isfinite(t.lift_force)&&t.lift_force>0?t.lift_force/t.mass:0;double bank_for_rate=clampd(norm_signed_deg(cmd.target_roll)*clampd(t.bank_effectiveness,.35,1.8),-89,89);c->snapshot.guidance_commanded_course_rate_estimate=t.true_air_speed>1&&lift_accel>0?lift_accel*sin(bank_for_rate*DEG2RAD)/t.true_air_speed*RAD2DEG:0;
+    c->snapshot.guidance_terminal_candidate_radius=native_mm305_route?c->guidance.mm305_route.hac.radius_m:0.0;
+    c->snapshot.guidance_terminal_candidate_altitude=native_mm305_route?c->guidance.mm305_route.profile_final_altitude_m:0.0;
+    c->snapshot.guidance_terminal_candidate_speed=native_mm305_route?t.true_air_speed:0.0;
+    c->snapshot.guidance_terminal_candidate_kind=native_mm305_route?TERMINAL_PATH_HAC:TERMINAL_PATH_NONE;
+    c->snapshot.guidance_terminal_candidate_geometry_degraded=false;
+    c->snapshot.guidance_terminal_candidate_energy_degraded=false;
+    c->snapshot.guidance_terminal_candidate_shell_degraded=false;
+    c->snapshot.guidance_terminal_candidate_side=native_mm305_route?c->guidance.mm305_route.side:0.0;
+    c->snapshot.guidance_terminal_candidate_slope=native_mm305_route?c->guidance.mm305_route.profile_final_slope_deg:0.0;
+    c->snapshot.guidance_terminal_candidate_curve_length=native_mm305_route?c->guidance.mm305_route.length_m:0.0;
+    c->snapshot.guidance_terminal_candidate_lead_length=native_mm305_route?c->guidance.mm305_route.lead_length_m:0.0;
+    c->snapshot.guidance_terminal_candidate_arc_remaining=isfinite(native_route_remaining)?native_route_remaining:0.0;
+    c->snapshot.guidance_terminal_candidate_final_distance=native_mm305_route?c->guidance.mm305_route.hac.final_length_m:0.0;
+    c->snapshot.guidance_terminal_candidate_quality=0.0;
+    c->snapshot.guidance_terminal_candidate_arrival_ut=NAN;
+    c->snapshot.guidance_terminal_candidate_course=native_mm305_route?c->guidance.mm305_route.runway_heading_deg:0.0;
+    c->snapshot.guidance_terminal_candidate_peak_lateral=0.0;
+    c->snapshot.guidance_terminal_candidate_peak_rate_ratio=0.0;
+    c->snapshot.guidance_terminal_candidate_exit_speed=0.0;
+    c->snapshot.guidance_terminal_candidate_tracking_error=0.0;
+    c->snapshot.guidance_terminal_candidate_tracking_course_error=0.0;
+    c->snapshot.guidance_terminal_candidate_tracking_endpoint_error=0.0;
+    c->snapshot.guidance_terminal_candidate_tracking_margin=0.0;
+    c->snapshot.guidance_terminal_candidate_tracking_evaluated=false;
+    c->snapshot.guidance_terminal_candidate_path_degraded=c->guidance.taem_safety_handoff;
+    c->snapshot.guidance_terminal_candidate_control_degraded=false;
+    c->snapshot.guidance_terminal_candidate_rate_degraded=false;
+    c->snapshot.guidance_terminal_candidate_end_degraded=false;
+    double native_route_station=native_mm305_route?
+        taem_route_station_at_index(&c->guidance.mm305_route,c->guidance.mm305_route_cursor):0.0;
+    double native_route_progress=native_mm305_route&&isfinite(native_route_station)&&
+        c->guidance.mm305_route.length_m>1.0?
+        clampd(native_route_station/c->guidance.mm305_route.length_m,0.0,1.0):0.0;
+    c->snapshot.guidance_terminal_reference_fpa=native_mm305_route?
+        c->guidance.mm305_route.profile_final_slope_deg:0.0;
+    c->snapshot.guidance_terminal_mix=native_mm305_route?1.0:0.0;
+    c->snapshot.tick_sequence=c->tick_sequence;
+    c->snapshot.log_sequence=++c->log_sequence;
+    c->snapshot.wall_monotonic_seconds=wall_start;
+    c->snapshot.simulation_dt=dt;
+    c->snapshot.has_vehicle_state=true;
+    c->snapshot.vehicle_state=state;
+    c->snapshot.has_attitude_quaternion=t.has_attitude_quaternion;
+    if(t.has_attitude_quaternion)
+        memcpy(c->snapshot.attitude_quaternion,t.attitude_quaternion,sizeof(t.attitude_quaternion));
+    snprintf(c->snapshot.attitude_reference_frame,sizeof(c->snapshot.attitude_reference_frame),"%s",t.attitude_reference_frame);
+    c->snapshot.command_computed_wall_seconds=command_computed;
+    c->snapshot.command_apply_attempted=apply_attempted;
+    c->snapshot.command_apply_started_wall_seconds=apply_started;
+    c->snapshot.command_apply_finished_wall_seconds=apply_finished;
+    c->snapshot.command_applied=apply_succeeded&&applied.applied;
+    c->snapshot.applied_command=applied;
+    c->snapshot.guidance_has_burn_started=c->guidance.has_burn_command_started;
+    c->snapshot.guidance_burn_completed=c->guidance.deorbit_burn_completed;
+    c->snapshot.guidance_atmosphere_crossed=c->guidance.atmospheric_interface_crossed;
+    c->snapshot.guidance_final_captured=c->guidance.final_approach_captured;
+    c->snapshot.guidance_airbrakes_deployed=c->guidance.airbrakes_deployed;
+    c->snapshot.guidance_hac_side_selected=c->guidance.hac_side_selected;
+    c->snapshot.guidance_delivered_delta_v=c->guidance.delivered_delta_v;
+    c->snapshot.guidance_burn_active_elapsed=c->guidance.burn_active_elapsed;
+    c->snapshot.guidance_s_turn_sign=c->guidance.s_turn_sign;
+    c->snapshot.guidance_hac_side=c->guidance.hac_side;
+    c->snapshot.guidance_entry_leg_elapsed=guidance_entry_leg_elapsed(&c->guidance,t.ut);
+    c->snapshot.guidance_entry_exec=entry_exec_telemetry(&c->guidance.entry_exec);
+    c->snapshot.guidance_taem_exec=taem_exec_telemetry(&c->guidance.taem_exec);
+    c->snapshot.guidance_hac_captured=c->guidance.hac_captured;
+    c->snapshot.guidance_hac_completed=c->guidance.hac_completed;
+    c->snapshot.guidance_hac_progress_valid=c->guidance.hac_progress_valid;
+    c->snapshot.guidance_hac_transition_active=false;
+    c->snapshot.guidance_hac_remaining=c->guidance.hac_remaining;
+    c->snapshot.guidance_hac_radius=c->guidance.hac_radius;
+    c->snapshot.guidance_hac_circuit_count=0;
+    c->snapshot.guidance_hac_circuit_slope=0.0;
+    c->snapshot.guidance_terminal_reentry_after_ut=c->guidance.terminal_reentry_after_ut;
+    c->snapshot.guidance_minimum_turn_radius=c->guidance.minimum_turn_radius;
+    c->snapshot.guidance_hac_transition_progress=native_route_progress;
+    for(size_t i=0;i<8;i++)c->snapshot.guidance_hac_transition_points[i]=0.0;
+    c->snapshot.guidance_hac_transition_heading_cone=false;
+    c->snapshot.guidance_hac_transition_lead_curve=false;
+    for(size_t i=0;i<6;i++)c->snapshot.guidance_hac_transition_lead_points[i]=0.0;
+    c->snapshot.guidance_hac_transition_cone_center[0]=0.0;
+    c->snapshot.guidance_hac_transition_cone_center[1]=0.0;
+    c->snapshot.guidance_hac_transition_cone_start_angle=0.0;
+    c->snapshot.guidance_hac_transition_cone_end_angle=0.0;
+    c->snapshot.guidance_hac_transition_cone_arc_length=0.0;
+    double lift_accel=t.mass>1&&isfinite(t.lift_force)&&t.lift_force>0?t.lift_force/t.mass:0;
+    double bank_for_rate=clampd(norm_signed_deg(cmd.target_roll)*clampd(t.bank_effectiveness,.35,1.8),-89,89);
+    c->snapshot.guidance_commanded_course_rate_estimate=t.true_air_speed>1&&lift_accel>0?
+        lift_accel*sin(bank_for_rate*DEG2RAD)/t.true_air_speed*RAD2DEG:0;
     c->snapshot.guidance_entry_plan_valid=c->guidance.entry_s_turn_plan.valid;
     c->snapshot.guidance_entry_plan_terminal_ready=c->guidance.entry_s_turn_plan.valid&&c->guidance.entry_s_turn_plan.terminal_ready;
     c->snapshot.guidance_entry_plan_ut=c->guidance.entry_s_turn_plan.planned_ut;
@@ -141,6 +202,7 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     c->snapshot.guidance_entry_plan_taem_speed=c->guidance.entry_s_turn_plan.taem_speed;
     c->snapshot.guidance_entry_plan_taem_energy_error=c->guidance.entry_s_turn_plan.taem_energy_error;
     c->snapshot.guidance_entry_plan_predicted_reversals=c->guidance.entry_s_turn_plan.predicted_reversals;
+    c->snapshot.guidance_entry_feedback=c->guidance.entry_feedback;
     c->snapshot.guidance_entry_reversal_scheduled=c->guidance.entry_reversal_scheduled;
     c->snapshot.guidance_entry_reversal_is_final=c->guidance.entry_reversal_is_final;
     c->snapshot.guidance_entry_reversal_time_remaining=c->guidance.entry_reversal_scheduled?c->guidance.entry_reversal_ut-t.ut:0.0;
@@ -159,6 +221,12 @@ static void *control_thread(void*arg){
         if(c->stop_thread){pthread_mutex_unlock(&c->mutex);break;}
         tick_locked(c);
         double hz=clampd(c->configuration.guidance.guidance_rate,2,30);
+        bool final_gear_contact_window=c->guidance.automation_engaged&&c->has_latest&&
+            isfinite(c->latest_telemetry.radar_altitude)&&
+            c->latest_telemetry.radar_altitude<=100.0&&
+            (c->guidance.phase==PHASE_FINAL||c->guidance.phase==PHASE_FLARE||
+             c->guidance.phase==PHASE_TOUCHDOWN||c->guidance.phase==PHASE_ROLLOUT);
+        if(final_gear_contact_window)hz=30.0;
         bool fast_sim=c->session&&krpc_session_is_simulator(c->session)&&
             c->guidance.automation_engaged&&!c->guidance.paused;
         /* ShuttleSim can advance hundreds of simulated seconds per wall second,
@@ -210,7 +278,11 @@ static void start_thread(LandingController*c){
     pthread_mutex_lock(&c->mutex);
     if(!c->thread_started){
         c->stop_thread=false;
-        if(pthread_create(&c->thread,NULL,control_thread,c)==0)c->thread_started=true;
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
+        if(pthread_create(&c->thread,&attr,control_thread,c)==0)c->thread_started=true;
+        pthread_attr_destroy(&attr);
     }
     pthread_mutex_unlock(&c->mutex);
     start_prediction_worker(c);
