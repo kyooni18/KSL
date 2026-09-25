@@ -269,10 +269,11 @@ static RolloutSteeringDemand runway_rollout_steering(const Telemetry*t,
     if(!isfinite(lateral_rate))lateral_rate=0.0;
     double rate_weight=clampd((t->surface_speed-8.0)/35.0,0.0,1.0);
     double authority=clampd(55.0/fmax(t->surface_speed,15.0),.25,1.0);
-    /* Live KSP steering is opposite runway heading/cross-track error: k71's
-       positive command saturated while the measured track kept turning left. */
-    double steer=-clampd((heading_error*.06-t->runway_cross_track*.0022-
-        lateral_rate*.024*rate_weight)*authority,-.25,.25);
+    /* The k72 sign reversal nudged track toward center, but the correction
+       stayed too weak to arrest drift before the runway edge. */
+    double correction=(heading_error*.09-t->runway_cross_track*.0033-
+        lateral_rate*.036*rate_weight)*authority;
+    double steer=-clampd(correction,-.40,.40);
     return (RolloutSteeringDemand){.steering=steer,.lateral_rate=lateral_rate};
 }
 
