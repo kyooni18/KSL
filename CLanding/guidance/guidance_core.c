@@ -18,11 +18,14 @@ void guidance_result_clear(GuidanceResult*r){trajectory_clear(&r->reference);mem
 static void reset_controllers(GuidanceMachine*g){
     if(!g)return;
 
-    g->terminal_candidate.valid=false;
     g->taem_interface_target.valid=false;
     g->terminal_path_kind=TERMINAL_PATH_NONE;
-    g->terminal_prediction_valid=false;
     g->terminal_path_committed=false;
+    g->mm305_route=(TaemRoute){0};
+    g->mm305_route_cursor=0;
+    g->mm305_route_committed=false;
+    g->mm305_hac_exit_reached=false;
+    g->mm305_model_snapshot_id=0;
     g->runway_end_preview_valid=false;
     g->runway_end_committed=false;
     g->runway_end_index=0;
@@ -30,19 +33,6 @@ static void reset_controllers(GuidanceMachine*g){
     g->runway_end_reciprocal_path=NAN;
     g->terminal_final_handoff_latched=false;
     g->terminal_final_handoff_distance=NAN;
-    g->terminal_mix=0.0;
-    g->terminal_reference_path_lateral_acceleration=0.0;
-    g->terminal_reference_path_bank=0.0;
-    g->terminal_reference_path_course_error=0.0;
-    g->terminal_reference_path_arc_remaining=0.0;
-    g->terminal_reference_path_transition_active=false;
-    g->terminal_candidate_live_energy_margin=NAN;
-    g->terminal_candidate_live_energy_valid=false;
-    g->hac_plan_degraded=false;
-    g->hac_plan_geometry_degraded=false;
-    g->hac_plan_energy_degraded=false;
-    g->hac_plan_violation_score=0.0;
-    g->hac_commit_blend=0.0;
 
     robust_pid_reset(&g->entry_energy_pid);
     robust_pid_reset(&g->taem_altitude_pid);
@@ -58,56 +48,18 @@ static void reset_controllers(GuidanceMachine*g){
     g->hac_progress_valid=false;
     g->hac_captured=false;
     g->hac_completed=false;
+    g->hac_remaining=0.0;
     g->hac_radius=0.0;
     g->minimum_turn_radius=0.0;
-    g->hac_transition_active=false;
-    g->hac_transition_heading_cone=false;
-    g->hac_transition_lead_curve=false;
-    g->hac_transition_lead_acquisition=false;
-    g->fixed_alignment_hac_latched=false;
-    g->hac_transition_lead_rebase_attempted=false;
-    g->hac_energy_audit_active=false;
-    g->hac_energy_audit_logged=false;
-    g->hac_energy_audit_was_lead=false;
-    g->hac_energy_audit_rebase_count=0;
-    g->hac_transition_p0_e=g->hac_transition_p0_n=0.0;
-    g->hac_transition_p1_e=g->hac_transition_p1_n=0.0;
-    g->hac_transition_p2_e=g->hac_transition_p2_n=0.0;
-    g->hac_transition_p3_e=g->hac_transition_p3_n=0.0;
-    g->hac_transition_cone_center_e=g->hac_transition_cone_center_n=0.0;
-    g->hac_transition_cone_start_angle=g->hac_transition_cone_end_angle=0.0;
-    g->hac_transition_cone_arc_length=0.0;
-    g->hac_transition_lead_start_e=g->hac_transition_lead_start_n=0.0;
-    g->hac_transition_length=0.0;
-    g->hac_transition_lead_length=0.0;
-    g->hac_transition_lead_progress=0.0;
-    g->hac_transition_handoff_lateral_valid=false;
-    g->hac_transition_handoff_lateral_acceleration=0.0;
-    g->hac_transition_handoff_blend=0.0;
-    g->hac_transition_handoff_aoa_valid=false;
-    g->hac_transition_handoff_aoa=0.0;
-    g->hac_transition_response_time=0.0;
-    g->hac_transition_progress=0.0;
-    g->hac_transition_end_angle=0.0;
-    g->hac_transition_exit_speed=0.0;
-    g->hac_previous_angle=0.0;
-    g->hac_remaining=0.0;
 
     g->terminal_region_entered=false;
     g->hac_capture_lost_duration=0.0;
     g->terminal_energy_mismatch_duration=0.0;
     g->terminal_reentry_after_ut=0.0;
-    g->hac_circuit_slope=0.0;
-    g->hac_circuit_count=0;
 
     g->terminal_glide_mode=false;
     g->terminal_rehearsal_mode=false;
     g->terminal_test_capture_active=false;
-    g->hac_transition_handoff_lateral_valid=false;
-    g->hac_transition_handoff_lateral_acceleration=0.0;
-    g->hac_transition_handoff_blend=0.0;
-    g->hac_transition_handoff_aoa_valid=false;
-    g->hac_transition_handoff_aoa=0.0;
     g->terminal_test_glide_slope=0.0;
     g->terminal_test_final_approach_distance=0.0;
     g->terminal_test_revolution_remaining=0.0;
@@ -185,7 +137,6 @@ static void reset_controllers(GuidanceMachine*g){
     g->entry_reversal_is_final=false;
     g->entry_final_reversal_pending=false;
     g->entry_final_reversal_completed=false;
-    g->entry_topology_heading_locked=false;
     g->entry_continuation_bootstrap=false;
     g->entry_target_side_latched=false;
     g->entry_target_side=0.0;
@@ -194,6 +145,7 @@ static void reset_controllers(GuidanceMachine*g){
     g->entry_reversal_sign=0.0;
     g->entry_reversal_bank=0.0;
     g->entry_control_reversals=0u;
+    memset(&g->entry_feedback,0,sizeof(g->entry_feedback));
     g->entry_lateral_bank_magnitude=0.0;
     g->entry_geometry_bank=0.0;
     g->entry_vertical_bank_magnitude=0.0;
@@ -224,9 +176,6 @@ static void reset_controllers(GuidanceMachine*g){
 static void reset_entry_s_turn_program(GuidanceMachine*g){
     if(!g)return;
     memset(&g->entry_s_turn_plan,0,sizeof(g->entry_s_turn_plan));
-    memset(&g->entry_topology,0,sizeof(g->entry_topology));
-    g->entry_topology_capture_good_duration=0.0;
-    g->entry_topology_heading_locked=false;
     g->entry_bank_authority_acquired=false;
     g->entry_supervision_ut=-INFINITY;
     g->entry_target_side_latched=false;
@@ -444,6 +393,13 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     bool pitch_reference_is_aoa=r.command.has_target_aoa;
     GuidanceAttitudeLimits pitch_limits=stabilized_attitude_limits(
         t,s,r.phase,true);
+    /* A committed MM305 route was replay-qualified by applying the native
+     * tracker's commands directly to the vehicle's attitude dynamics, which
+     * already bound rate and acceleration.  A second guidance-side limiter in
+     * the loop adds lag the qualified route never had and drives a lateral
+     * limit cycle, so the committed route bypasses it (state stays seeded). */
+    bool mm305_native_window=r.phase==PHASE_TAEM&&g->mm305_route_committed&&
+        g->mm305_route.valid&&!g->mm305_hac_exit_reached;
     seed_stabilized_limiter(&g->pitch_limiter,
         pitch_reference_is_aoa
             ? clampd(t->angle_of_attack,0.0,aoa_ceiling)
@@ -452,6 +408,7 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
             pitch_limits.rate_deg_s),false);
     double limited_pitch=jerk_update(&g->pitch_limiter,pitch_reference,
         pitch_limits.rate_deg_s,pitch_limits.accel_deg_s2,dt);
+    if(mm305_native_window&&isfinite(pitch_reference))limited_pitch=pitch_reference;
     if(!isfinite(limited_pitch))
         limited_pitch=clampd(t->angle_of_attack,0.0,aoa_ceiling);
     if(pitch_reference_is_aoa)
@@ -467,49 +424,13 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     double roll_reference=norm_signed_deg(r.command.target_roll);
     GuidanceAttitudeLimits roll_limits=stabilized_attitude_limits(
         t,s,r.phase,false);
-    /*
-     * A fixed HAC is the one committed path whose lateral curvature is known
-     * before the vehicle reaches the analytic arc.  The ordinary TAEM roll
-     * envelope (6 deg/s and 0.85 * entry acceleration in the fixture) is
-     * intentionally gentle for ordinary path acquisition, but it leaves the
-     * shuttle several seconds behind the 12 km circle after a vector lead.
-     *
-     * Release only this committed path toward the runtime-measured response
-     * envelope.  During the finite lead the release is smooth and follows the
-     * lead progress; it changes no bank sign or lead curvature.  Once the
-     * analytic arc is active, the measured response is the bounded command
-     * authority needed to keep the shuttle on the circle.  If no coherent
-     * runtime response is available, retain the normal conservative limits.
-     */
-    bool fixed_hac_roll_window=r.phase==PHASE_TAEM&&
-        g->fixed_alignment_hac_latched&&g->hac_transition_heading_cone&&
-        g->hac_transition_active&&!g->hac_completed;
-    if(fixed_hac_roll_window&&t->attitude_response.roll_valid){
-        double measured_rate=fabs(t->attitude_response.maximum_roll_rate_deg_s);
-        double measured_accel=fabs(t->attitude_response.maximum_roll_accel_deg_s2);
-        if(isfinite(measured_rate)&&measured_rate>0.0&&
-           isfinite(measured_accel)&&measured_accel>0.0){
-            double release=1.0;
-            if(g->hac_transition_lead_length>1.0&&
-               g->hac_transition_lead_progress<.995){
-                double u=clampd((g->hac_transition_lead_progress-.45)/.55,
-                    0.0,1.0);
-                release=u*u*(3.0-2.0*u);
-            }
-            roll_limits.rate_deg_s=fmax(roll_limits.rate_deg_s,
-                roll_limits.rate_deg_s+
-                release*fmax(0.0,measured_rate-roll_limits.rate_deg_s));
-            roll_limits.accel_deg_s2=fmax(roll_limits.accel_deg_s2,
-                roll_limits.accel_deg_s2+
-                release*fmax(0.0,measured_accel-roll_limits.accel_deg_s2));
-        }
-    }
     seed_stabilized_limiter(&g->roll_limiter,
         norm_signed_deg(t->roll),
         clampd(controlled_roll_rate(t),-roll_limits.rate_deg_s,
             roll_limits.rate_deg_s),true);
     double limited_roll=jerk_angle_update(&g->roll_limiter,roll_reference,
         roll_limits.rate_deg_s,roll_limits.accel_deg_s2,dt);
+    if(mm305_native_window&&isfinite(roll_reference))limited_roll=roll_reference;
     if(!isfinite(limited_roll))
         limited_roll=norm_signed_deg(t->roll);
     r.command.target_roll=clampd(norm_signed_deg(limited_roll),
@@ -616,29 +537,3 @@ void guidance_update_entry_reversal(GuidanceMachine*g,const EntryControlPlan*pla
         g->entry_reversal_bank=fabs(plan->target_bank);
     }
 }
-                                                                                              
-                                                                                                               
-                                                                                                                                                    
-                                                                                                                                                 
-
-EntryControlPlan guidance_terminal_control_plan(const GuidanceMachine*g,EntryControlPlan plan){
-    if(!g||!plan.valid||!g->terminal_prediction_valid)return plan;
-    /*
-     * Ownership is discrete.  A terminal preview is advisory while MM304 owns
-     * the vehicle and therefore cannot dilute Entry commands.  After the strict
-     * handoff, MM305 may blend from the inherited command over the measured
-     * candidate response time tracked in terminal_mix.
-     */
-    if(!g->terminal_region_entered)return plan;
-    double mix=clampd(g->terminal_mix,0.0,1.0);
-    plan.target_heading=norm_deg(plan.target_heading+mix*
-        norm_signed_deg(g->terminal_reference_heading-plan.target_heading));
-    plan.target_bank+=(g->terminal_reference_bank-plan.target_bank)*mix;
-    plan.target_aoa+=(g->terminal_reference_aoa-plan.target_aoa)*mix;
-    plan.has_planned_reversal=false;
-    plan.final_heading_lock=false;
-    return plan;
-}
-
-                                                                                     
-                                                        

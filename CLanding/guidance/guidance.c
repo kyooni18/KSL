@@ -50,35 +50,6 @@ GuidanceResult guidance_update(GuidanceMachine*g,const Telemetry*t,
     return guidance_update_with_terminal_model(g,t,state,plan,p,aero,cfg,NULL);
 }
 
-bool guidance_install_entry_topology(GuidanceMachine*g,const EntryTopologyPlan*top,double ut){
-    if(!g||!top||!top->valid||!top->inlet.valid||!isfinite(ut)||top->reversal_ut<=ut||
-       top->capture_ut<=top->reversal_ut||g->entry_topology.valid||g->entry_control_reversals||
-       g->entry_final_reversal_pending||g->entry_final_reversal_completed)return false;
-    bool replaceable_ordinary_reversal=g->entry_reversal_scheduled&&
-        !g->entry_reversal_is_final&&top->first_sign*g->s_turn_sign>0.0;
-    if(g->entry_reversal_scheduled&&!replaceable_ordinary_reversal)return false;
-    /* The propagated topology may contain a shaping S-turn reversal followed by a
-       distinct terminal 90 deg turn. Install the first event as nonfinal; the live
-       topology executor owns the later measured-radius terminal-turn release and
-       keeps both events tied to the same fixed TAEM inlet contract. */
-    bool separate_terminal_turn=isfinite(top->terminal_turn_ut)&&top->terminal_turn_ut>top->reversal_ut+1.0;
-    g->entry_topology=*top;g->taem_interface_target=top->inlet;
-    g->entry_topology_capture_good_duration=0.0;
-    g->entry_topology_heading_locked=false;
-    request_side(g,top->first_sign,ut);
-    EntryControlPlan plan={.valid=true,.planned_ut=top->planned_ut,.target_bank=top->first_sign*top->first_bank,
-        .target_aoa=top->first_aoa,.target_heading=top->inlet.course,.bank_cap=fmax(top->first_bank,top->turn_bank),
-        .target_turn_radius=INFINITY,.segment_duration=top->capture_ut+30.0-top->planned_ut,
-        .cost=top->cost,.taem_range_error=top->position_error,.taem_speed=top->capture_speed,.taem_energy_error=NAN,
-        .has_planned_reversal=true,.planned_reversal_is_final=!separate_terminal_turn,.planned_reversal_ut=top->reversal_ut,
-        .planned_reversal_range=hypot(top->reversal_along,top->reversal_cross),
-        .planned_reversal_sign=-top->first_sign,.predicted_reversals=1};
-    control_plan_assign_lineage(g,&plan,&g->entry_s_turn_plan);
-    g->entry_s_turn_plan=plan;g->entry_control_plan_valid=true;
-    entry_program_commit_planned_reversal(g,&plan,ut,replaceable_ordinary_reversal);
-    g->entry_planning_needed=false;g->entry_committed_infeasible=false;
-    return true;
-}
 
 GuidanceCommand guidance_entry_reference_step(GuidanceMachine*g,const Telemetry*t,
         const VehicleProfile*v,const GuidanceSettings*s,double bank,double aoa,double dt){

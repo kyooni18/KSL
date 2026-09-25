@@ -24,30 +24,6 @@ double guidance_lateral_speed(const Telemetry *t) {
     return 1.0;
 }
 
-static void append_veto_reason(char *buf, size_t n, bool *first, const char *text) {
-    if (!buf || n == 0 || !first || !text) return;
-    size_t used = strlen(buf);
-    if (used >= n - 1) return;
-    int written = snprintf(buf + used, n - used, "%s%s", *first ? "" : "|", text);
-    if (written > 0) *first = false;
-}
-
-void taem_capture_veto_reasons(unsigned veto, char *buf, size_t n) {
-    if (!buf || n == 0) return;
-    buf[0] = '\0';
-    if (veto == 0u) { snprintf(buf, n, "none"); return; }
-    bool first = true;
-    if (veto & 1u) append_veto_reason(buf, n, &first, "speed");
-    if (veto & 2u) append_veto_reason(buf, n, &first, "spatial");
-    if (veto & 4u) append_veto_reason(buf, n, &first, "course");
-    if (veto & 8u) append_veto_reason(buf, n, &first, "altitude");
-    if (veto & 16u) append_veto_reason(buf, n, &first, "maneuver-energy");
-    if (veto & 32u) append_veto_reason(buf, n, &first, "fpa");
-    if (veto & 64u) append_veto_reason(buf, n, &first, "structural");
-    if (veto & 128u) append_veto_reason(buf, n, &first, "hac-radius");
-    if (veto & 256u) append_veto_reason(buf, n, &first, "minimum-altitude");
-    if (buf[0] == '\0') snprintf(buf, n, "unknown");
-}
 
 double controlled_roll_rate(const Telemetry *t) {
     return t && isfinite(t->roll_rate) ? t->roll_rate : 0.0;
@@ -167,20 +143,6 @@ bool hac_fixed_alignment_geometry(HACPoint2 *entry_out, HACPoint2 *center_out,
     return true;
 }
 
-double terminal_default_hac_side(const Telemetry *t, const LandingSite *site,
-        double course) {
-    if (!site) return 1.0;
-    double reference = isfinite(course) ? course :
-        (t && isfinite(t->ground_track_heading) ? t->ground_track_heading :
-         (t && isfinite(t->heading) ? t->heading : site->runway_heading));
-    double turn_delta = norm_signed_deg(site->runway_heading - reference);
-    double resolution = sqrt(DBL_EPSILON) * RAD2DEG;
-    if (turn_delta < -resolution) return 1.0;
-    if (turn_delta > resolution) return -1.0;
-    if (t && isfinite(t->runway_cross_track) && fabs(t->runway_cross_track) > sqrt(DBL_EPSILON))
-        return t->runway_cross_track >= 0.0 ? 1.0 : -1.0;
-    return 1.0;
-}
 
 HACGuidance terminal_runway_line_path_guidance(const Telemetry *t,
         const LandingSite *site, const GuidanceSettings *s, double gravity,
