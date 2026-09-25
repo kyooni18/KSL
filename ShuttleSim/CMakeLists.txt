@@ -42,11 +42,19 @@ if(BUILD_TESTING)
     target_link_libraries(runway_collision flight_physics)
     target_compile_options(runway_collision PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME runway_collision COMMAND runway_collision)
+
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME guidance_runner
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_guidance_runner.py)
+    add_test(NAME simulator_execution
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sim_execution.py)
+    set_tests_properties(simulator_execution PROPERTIES
+        ENVIRONMENT "SHUTTLESIM_BINARY=$<TARGET_FILE:shuttlesim>")
 endif()
 
 
 set(CLANDING_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../CLanding" CACHE PATH
-    "CLanding source root (canonical CLanding or explicit Legacy/CLanding)")
+    "Root of the modular CLanding source tree")
 
 function(resolve_clanding_source out_var filename)
     set(candidates
@@ -158,7 +166,8 @@ if(SHUTTLESIM_OFFLINE_API)
     )
     target_include_directories(shuttlesim_expert PRIVATE "${CLANDING_ROOT}" "${CLANDING_ROOT}/include")
     target_compile_options(shuttlesim_expert PRIVATE -Wall -Wextra -Wpedantic)
+    target_link_libraries(shuttlesim_expert PRIVATE flight_physics)
     if(UNIX)
-        target_link_libraries(shuttlesim_expert m)
+        target_link_libraries(shuttlesim_expert PRIVATE m)
     endif()
 endif()

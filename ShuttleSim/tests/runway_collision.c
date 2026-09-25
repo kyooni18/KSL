@@ -21,7 +21,21 @@ static void seed(Scenario *sc){
     sc->heading_deg=90;sc->has_surface_flight_state=true;sc->surface_speed_mps=70;sc->flight_path_angle_deg=-4;
     sc->mass_kg=70000;sc->initial_aoa_deg=4;sc->initial_bank_deg=0;
 }
+static bool initial_state_is_preserved(void){
+    Scenario sc={.has_cartesian_state=true,.mass_kg=40000,
+        .position_i_m={605000,12,-23},.velocity_i_mps={-10,210,70}};
+    Simulation sim;sim_init(&sim,&sc);
+    if(v3_norm(v3_sub(sim.state.position_i_m,sc.position_i_m))!=0.0||
+       v3_norm(v3_sub(sim.state.velocity_i_mps,sc.velocity_i_mps))!=0.0)return false;
+    sc=(Scenario){.has_surface_flight_state=true,.surface_speed_mps=0,
+        .altitude_m=5000,.mass_kg=40000};
+    sim_init(&sim,&sc);
+    Vec3 atmosphere=world_atmosphere_velocity_i(&sim.world,sim.state.position_i_m);
+    return v3_norm(v3_sub(sim.state.velocity_i_mps,atmosphere))==0.0;
+}
+
 int main(void){
+    if(!initial_state_is_preserved()){fputs("Authored initial state changed\n",stderr);return 4;}
     Scenario sc;seed(&sc);Simulation sim;sim_init(&sim,&sc);sim.state.gear_down=true;
     for(int i=0;i<300&&!sim.state.touchdown_seen;i++)sim_step(&sim,0.02);
     Plane p=plane_at(&sim,sim.state.ut);

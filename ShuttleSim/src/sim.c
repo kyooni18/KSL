@@ -66,7 +66,7 @@ static void derive_initial_orbit(Simulation *sim){
     LocalFrame lf=world_local_frame_i(w,p,s->ut0); double hdg=deg2rad(s->heading_deg);
     Vec3 horizontal_dir=v3_normalized(v3_add(v3_scale(lf.north,cos(hdg)),v3_scale(lf.east,sin(hdg))));
     sim->state.position_i_m=p;
-    if(s->has_surface_flight_state&&isfinite(s->surface_speed_mps)&&s->surface_speed_mps>0.0){
+    if(s->has_surface_flight_state){
         double fpa=deg2rad(s->flight_path_angle_deg);
         Vec3 air=v3_add(v3_scale(horizontal_dir,s->surface_speed_mps*cos(fpa)),
                        v3_scale(lf.up,s->surface_speed_mps*sin(fpa)));
@@ -76,6 +76,7 @@ static void derive_initial_orbit(Simulation *sim){
         sim->state.velocity_i_mps=v3_scale(horizontal_dir,vc);
     }
 }
+
 void sim_init(Simulation *sim,const Scenario *scenario){
     memset(sim,0,sizeof(*sim));
     world_seed_kerbin(&sim->world);
@@ -102,7 +103,10 @@ void sim_init(Simulation *sim,const Scenario *scenario){
         sim->state.attitude.requested_aoa_rad=deg2rad(scenario->initial_aoa_deg);
     sim->state.attitude.bank_rad=sim->state.attitude.cmd_bank_rad=
         sim->state.attitude.requested_bank_rad=deg2rad(scenario->initial_bank_deg);
-    derive_initial_orbit(sim);sim_apply_deorbit_initial(sim);
+    derive_initial_orbit(sim);
+    /* The scenario is authoritative. In particular, Cartesian checkpoints
+     * must retain their recorded velocity instead of being redirected to KSC. */
+    sim_apply_deorbit_initial(sim);
     Vec3 vair=v3_sub(sim->state.velocity_i_mps,world_atmosphere_velocity_i(&sim->world,sim->state.position_i_m));
     sim->state.body_q_i=attitude_body_quat(sim->state.position_i_m,vair,sim->state.attitude.aoa_rad,sim->state.attitude.bank_rad);
 }
