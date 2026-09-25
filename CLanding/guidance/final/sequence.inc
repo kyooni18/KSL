@@ -111,6 +111,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double TOUCHDOWN_ALONG=-150.0;
     const double ARREST_ACCEL=.35*g0;
     const double SINK_HEIGHT_RATE=.14;
+    const double TOUCHDOWN_PITCH=5.0;
 
     double height=t->mean_altitude-site->altitude;
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&terminal_runway_contact_position(t,cfg))
@@ -202,6 +203,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         g->terminal_lift_ratio;
     double aoa=clampd(terminal_aoa_for_lift(g,t,v,fmax(0.0,lift_required),aoa_max),
         0.0,aoa_max);
+    /* Keep a positive body attitude through wheel capture. The two main-gear
+       origins are about 11.6 m aft of the nose gear on STS-N, so a five-degree
+       touchdown attitude leaves a clear nose-gear height margin without changing
+       the vertical sink schedule. Apply it before the existing flare slew limiter. */
+    if(flaring&&height<=12.0){
+        double touchdown_aoa=clampd(TOUCHDOWN_PITCH-t->flight_path_angle,0.0,aoa_max);
+        aoa=fmax(aoa,touchdown_aoa);
+    }
 
     if(stage==TERMINAL_TOUCHDOWN_FLARE||(flaring&&height<=15.0))
         stage=TERMINAL_TOUCHDOWN_FLARE;
