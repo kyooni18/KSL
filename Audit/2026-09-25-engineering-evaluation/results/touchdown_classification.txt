@@ -1,0 +1,18 @@
+# First ground contact per landing attempt (RW09 frame; RW27 routes land at along<0 past RW27 end). along_m cross_m on_runway sink_mps(pre-contact) airspeed_mps
+mm305-sw305C-mm305-E30-20260925T150419Z-fv6o85xl no-contact(aborted-before-landing)
+mm305-sw305C-mm305-E60-20260925T150419Z-_1crr24u 4162 -336 False -20.9 69.0
+mm305-sw305C-mm305-E90-20260925T150419Z-v1h9wzuy -1658 437 False -17.4 71.3
+mm305-sw305C-mm305-N30-20260925T150419Z-afs5ue3g no-contact(aborted-before-landing)
+mm305-sw305C-mm305-N60-20260925T150522Z-2w9n2o8v -1696 -179 False -17.8 69.6
+mm305-sw305C-mm305-N90-20260925T150545Z-0lickcu0 -934 -321 False -18.7 69.3
+mm305-sw305C-mm305-S30-20260925T150550Z-s7bkqkyi no-contact(aborted-before-landing)
+mm305-sw305C-mm305-S60-20260925T150623Z-in6w6t7g 4675 90 False -13.6 71.9
+mm305-sw305C-mm305-S90-20260925T150653Z-6kum1l3v -1822 -136 False -19.9 69.6
+mm305-sw305C-mm305-W30-20260925T150704Z-0yx7z41g no-contact(aborted-before-landing)
+mm305-sw305C-mm305-W60-20260925T150725Z-1nt6qivj no-contact(aborted-before-landing)
+mm305-sw305C-mm305-W90-20260925T150755Z-k2mqthr2 -1609 310 False -13.1 71.9
+final-finA-ideal-20260925T150204Z-_dhmr4v9 -191 -0 False -37.2 70.0
+final-finB-ideal-20260925T150017Z-2kvqfw1o 1450 -0 True -25.6 69.3
+final-finC-ideal-20260925T150204Z-fyrwgixl 5136 0 False -19.9 70.5
+mm305-mismatchBmodelC-E90-20260925T151446Z-qf_szqvl no-contact(aborted-before-landing)
+mm305-mismatchBmodelC-S60-20260925T151446Z-3dgc60s5 no-contact(aborted-before-landing)
