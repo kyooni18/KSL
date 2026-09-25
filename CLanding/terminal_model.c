@@ -15,12 +15,13 @@ static uint64_t digest_file(const char *path, bool optional, bool *ok) {
     uint64_t h = UINT64_C(1469598103934665603);
     unsigned char block[4096];
     size_t n;
-    while ((n = fread(block, 1, sizeof(block), f)) != 0) {
+    do {
+        n = fread(block, 1, sizeof(block), f);
         for (size_t i = 0; i < n; ++i) {
             h ^= block[i];
             h *= UINT64_C(1099511628211);
         }
-    }
+    } while (n == sizeof(block));
     bool read_ok = !ferror(f);
     if (fclose(f) != 0) read_ok = false;
     if (read_ok) *ok = true;
@@ -78,14 +79,17 @@ bool terminal_model_capture(TerminalModel *m,
     return true;
 }
 
+static bool positive_finite(double value) {
+    return isfinite(value) && value > 0.0;
+}
 bool terminal_model_validate(const TerminalModel *m, char *reason,
                              size_t n) {
     if (reason && n) reason[0] = '\0';
     if (!m) return reject(reason, n, "missing terminal model");
     if (m->schema_version != 1 || !m->snapshot_id)
         return reject(reason, n, "terminal model snapshot identity is invalid");
-    if (!(m->world.radius_m > 0.0) || !(m->world.mu_m3_s2 > 0.0) ||
-        !(m->world.atmosphere_top_m > 0.0) || m->world.atmosphere.count < 2 ||
+    if (!positive_finite(m->world.radius_m) || !positive_finite(m->world.mu_m3_s2) ||
+        !positive_finite(m->world.atmosphere_top_m) || m->world.atmosphere.count < 2 ||
         m->world.atmosphere.count > ATM_TABLE_MAX)
         return reject(reason, n, "terminal world snapshot is incomplete");
     if (!isfinite(m->world.rotation_rate_rad_s) ||
@@ -104,7 +108,7 @@ bool terminal_model_validate(const TerminalModel *m, char *reason,
     if (m->aero.mach_count < 2 || m->aero.alpha_count < 2 ||
         m->aero.mach_count > AERO_MACH_MAX ||
         m->aero.alpha_count > AERO_ALPHA_MAX ||
-        !(m->aero.reference_area_m2 > 0.0))
+        !positive_finite(m->aero.reference_area_m2))
         return reject(reason, n, "terminal aerodynamic snapshot is incomplete");
     for (size_t i = 0; i < m->aero.mach_count; ++i) {
         if (!isfinite(m->aero.mach[i]) || (i && m->aero.mach[i] <= m->aero.mach[i - 1]))
@@ -121,22 +125,22 @@ bool terminal_model_validate(const TerminalModel *m, char *reason,
                 return reject(reason, n, "terminal aerodynamic coefficient table is invalid");
         }
     }
-    if (!(m->attitude.pitch_wn > 0.0) || !(m->attitude.roll_wn > 0.0) ||
-        !(m->attitude.pitch_zeta > 0.0) || !(m->attitude.roll_zeta > 0.0) ||
-        !(m->attitude.max_pitch_rate_rad_s > 0.0) ||
-        !(m->attitude.max_roll_rate_rad_s > 0.0) ||
-        !(m->attitude.max_pitch_accel_rad_s2 > 0.0) ||
-        !(m->attitude.max_roll_accel_rad_s2 > 0.0))
+    if (!positive_finite(m->attitude.pitch_wn) || !positive_finite(m->attitude.roll_wn) ||
+        !positive_finite(m->attitude.pitch_zeta) || !positive_finite(m->attitude.roll_zeta) ||
+        !positive_finite(m->attitude.max_pitch_rate_rad_s) ||
+        !positive_finite(m->attitude.max_roll_rate_rad_s) ||
+        !positive_finite(m->attitude.max_pitch_accel_rad_s2) ||
+        !positive_finite(m->attitude.max_roll_accel_rad_s2))
         return reject(reason, n, "terminal attitude response snapshot is incomplete");
-    if (!(m->vehicle.touchdown_speed > 0.0) ||
-        !(m->vehicle.maximum_angle_of_attack > 0.0) ||
-        !(m->vehicle.maximum_bank_angle > 0.0) ||
-        !(m->guidance.hac_radius > 0.0) ||
-        !(m->guidance.final_approach_distance > 0.0))
+    if (!positive_finite(m->vehicle.touchdown_speed) ||
+        !positive_finite(m->vehicle.maximum_angle_of_attack) ||
+        !positive_finite(m->vehicle.maximum_bank_angle) ||
+        !positive_finite(m->guidance.hac_radius) ||
+        !positive_finite(m->guidance.final_approach_distance))
         return reject(reason, n, "terminal vehicle or runway policy is invalid");
     if (!isfinite(m->site.latitude) || !isfinite(m->site.longitude) ||
         !isfinite(m->site.altitude) || !isfinite(m->site.runway_heading) ||
-        !(m->site.runway_length > 0.0) || !(m->site.runway_width > 0.0))
+        !positive_finite(m->site.runway_length) || !positive_finite(m->site.runway_width))
         return reject(reason, n, "terminal runway snapshot is invalid");
     return true;
 }
