@@ -7,11 +7,13 @@ Python bridge, its `krpc==0.5.4` environment, installer, and protocol-v3 runtime
 have been removed. The UI-to-C NDJSON protocol is independent of kRPC and is
 still kept as the operator/backend boundary.
 
-Production transport is the kRPC serial-port protocol through
-`CLanding/krpc_cnano_transport.c`. It accepts a POSIX serial or pseudo-terminal
-path from `connection.serialPort`; it must not be pointed at the ordinary kRPC
-RPC or stream TCP ports. C-Nano 0.6.0 has no Streams or Events, so the native
-client polls telemetry synchronously.
+The live production transport is ordinary kRPC RPC over TCP, implemented by
+the native C backend through `CLanding/krpc_cnano_transport.c`. The live profile
+sets `connection.rpcHost` and `connection.rpcPort` (normally 127.0.0.1:50000).
+The same C-Nano encoder and decoder are used in-process; no Python serial-to-TCP
+adapter is needed. ShuttleSim retains its serial/pseudo-terminal transport for
+the local simulator interface. C-Nano 0.6.0 has no Streams or Events, so the
+native client polls telemetry synchronously.
 
 ## Dependency provenance
 
@@ -39,8 +41,8 @@ three tiers:
 | Orbit state | 3 | 1 | every 1.0 s |
 | Direct atmospheric axes | 3 steady-state | 1 | every applied control tick |
 
-A steady 10 Hz atmospheric run therefore targets about 25 serial request/
-response transactions per second: 10 fast reads, 4 medium reads, 1 slow read,
+A steady 10 Hz atmospheric run therefore targets about 25 request/response
+transactions per second: 10 fast reads, 4 medium reads, 1 slow read,
 and 10 batched direct-control writes. Gear, brakes, airbrakes, speed mode,
 throttle, wheel steering, RCS, SAS and AutoPilot state are cached or
 change-driven, so unchanged state does not add steady-state transactions.
@@ -117,10 +119,9 @@ serial RPC timeouts.
 
 ## Remaining acceptance stage
 
-No live KSP flight or real serial-protocol connection has been performed as
-part of this migration. The remaining runtime acceptance work is to configure
-the kRPC server's serial-port protocol, connect the native client to that link,
-measure real request/response latency against the 10 Hz budget, and only then
-resume controlled flight testing. Historical logs and documents may still
-mention the Python bridge because they are forensic evidence from earlier
-flights; they are not part of the current runtime.
+No live KSP flight has been qualified as part of this migration. The remaining
+runtime acceptance work is to connect the native client to the configured kRPC
+RPC endpoint, measure request/response latency against the 10 Hz budget, and
+then resume controlled flight testing. Historical logs may still mention
+serial and Python adapters as forensic evidence; they are not part of the live
+runtime.
