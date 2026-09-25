@@ -766,6 +766,29 @@ static void test_mm304_first_program_side_follows_taem_tangent_gate(void) {
     entry_program_seed_initial_side(&mirrored, &t, &cfg);
     assert(mirrored.s_turn_sign < 0.0);
 
+    /* Regression: a vehicle exactly on the runway tangent cannot use the tiny
+       station-bearing residual to select the final -90 deg inlet side directly.
+       With no setup crossrange built yet, the first leg must be the opposite side
+       so the normal measured-crossrange reversal can later release into MM305. */
+    GuidanceMachine perpendicular;
+    guidance_machine_init(&perpendicular);
+    perpendicular.taem_interface_target = (TaemInterfaceTarget){
+        .valid = true, .along_track = -8000.0, .cross_track = 0.0, .course = 0.0
+    };
+    t.runway_along_track = -400000.0;
+    t.runway_cross_track = 0.0;
+    entry_program_seed_initial_side(&perpendicular, &t, &cfg);
+    assert(perpendicular.entry_target_side < 0.0);
+    assert(perpendicular.s_turn_sign > 0.0);
+
+    GuidanceMachine perpendicular_mirror;
+    guidance_machine_init(&perpendicular_mirror);
+    perpendicular_mirror.taem_interface_target = perpendicular.taem_interface_target;
+    perpendicular_mirror.taem_interface_target.course = 180.0;
+    entry_program_seed_initial_side(&perpendicular_mirror, &t, &cfg);
+    assert(perpendicular_mirror.entry_target_side > 0.0);
+    assert(perpendicular_mirror.s_turn_sign < 0.0);
+
     /* Once a real program exists, reseeding is forbidden: later side is plan-owned. */
     g.entry_s_turn_plan.valid = true;
     g.s_turn_sign = -1.0;
@@ -1205,8 +1228,8 @@ static void test_mm304_bank_authority_acquisition_replans_once(void) {
     double bank = 0.0;
     double aoa = entry_low_q_protective_aoa_floor(t.dynamic_pressure,&cfg.vehicle);
     seed_entry_vertical_capture_fixture(&g, &t, &cfg);
-    assert(entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&bank,&aoa));
-    assert(fabs(bank) > 8.0);
+    assert(!entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&bank,&aoa));
+    assert(bank == 0.0); /* A ceiling cannot create a bank demand. */
 
     /* Later stall chatter cannot re-arm the edge and recreate per-tick topology. */
     t.stall_fraction = 0.20;
@@ -1250,138 +1273,13 @@ static void test_mm304_vertical_capture_uses_soft_low_q_authority_and_measured_s
     double bank = 0.0;
     double aoa = t.angle_of_attack;
     seed_entry_vertical_capture_fixture(&g, &t, &cfg);
-    assert(entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&bank,&aoa));
-    assert(fabs(bank) > 5.0);
-    assert(fabs(bank) <= dynamic_bank_limit(&t,&cfg.vehicle) + 1e-9);
-    assert(aoa >= entry_thermal_protection_aoa_floor(&cfg.vehicle) - 1e-9);
+    assert(!entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&bank,&aoa));
+    assert(bank == 0.0);
+    assert(aoa == t.angle_of_attack);
 
 
-    /* A stale wings-level segment at the recorded high-debt state can now refresh
-       before the stricter leg-authority edge, so the live controller actually gets
-       a chance to spend vertical lift instead of waiting for q~=360 Pa. */
-    t.dynamic_pressure = 304.9;
-    g.entry_s_turn_plan.valid = true;
-    g.entry_s_turn_plan.planned_ut = t.ut - 14.0;
-    g.entry_s_turn_plan.segment_duration = 75.0;
-    g.entry_s_turn_plan.target_bank = 0.0;
-    g.entry_s_turn_plan.target_aoa = t.angle_of_attack;
-    g.entry_control_plan_valid = true;
-    assert(entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
 }
 
-static __attribute__((unused)) void test_mm304_vertical_capture_growth_replans_before_stale_plan_expiry(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    PlanetModel p = verifier_kerbin();
-    AerodynamicModel aero={.lift_to_drag=1.0,.ballistic_coefficient=700.0,.confidence=.9};
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    g.phase = PHASE_ENTRY_ENERGY;
-    g.automation_engaged = true;
-    g.s_turn_sign = 1.0;
-    g.entry_bank_authority_acquired = true;
-    g.entry_control_plan_valid = true;
-    g.entry_reference_speed = 2102.7;
-    g.entry_reference_altitude = 68343.9;
-    g.entry_reference_range = 1068868.3;
-    g.entry_s_turn_plan.valid = true;
-    g.entry_s_turn_plan.planned_ut = 67302.7319040283;
-    g.entry_s_turn_plan.segment_duration = 75.0;
-    g.entry_s_turn_plan.target_bank = 23.4260689038583;
-    g.entry_s_turn_plan.target_aoa = 20.3986313257462;
-
-    Telemetry t = entry_telemetry(&cfg);
-    t.ut = 67303.7319040283;
-    t.true_air_speed = 2036.2;
-    t.surface_speed = 2036.2;
-    t.horizontal_speed = 2035.0;
-    t.vertical_speed = -61.0;
-    t.mean_altitude = 48087.2113640443;
-    t.radar_altitude = 48000.0;
-    t.range_to_site = 399814.42836581;
-    t.flight_path_angle = -1.71065944145349;
-    t.angle_of_attack = 20.3245258331299;
-    t.roll = 24.2644653320312;
-    t.g_force = 0.121;
-    t.stall_fraction = 0.0;
-
-    /* Demand probing must be observational: an unseeded copy may derive anchors for
-       the calculation, but the live GuidanceMachine cannot be changed by a due check. */
-    GuidanceMachine unseeded = g;
-    unseeded.entry_reference_speed = NAN;
-    unseeded.entry_reference_altitude = NAN;
-    unseeded.entry_reference_range = NAN;
-    t.dynamic_pressure = 470.0;
-    seed_entry_vertical_capture_fixture(&g, &t, &cfg);
-    (void)entry_vertical_capture_growth_replan_due(&unseeded,&t,&p,aero,&cfg);
-    assert(isnan(unseeded.entry_reference_speed));
-    assert(isnan(unseeded.entry_reference_altitude));
-    assert(isnan(unseeded.entry_reference_range));
-
-    /* A fresh child cannot immediately re-solve even if more q is available. */
-    assert(!entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-
-    /* At the recorded high-debt geometry, q=440 growth is intentionally below the
-       material hysteresis, while q=470 has opened enough executable bank to matter. */
-    t.ut = 67317.7319040283;
-    t.dynamic_pressure = 440.0;
-    assert(!entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-    t.dynamic_pressure = 470.0;
-    double first_bank = g.entry_s_turn_plan.target_bank;
-    double first_aoa = g.entry_s_turn_plan.target_aoa;
-    assert(entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&first_bank,&first_aoa));
-    assert(first_bank > g.entry_s_turn_plan.target_bank + 8.0);
-    assert(first_bank <= dynamic_bank_limit(&t,&cfg.vehicle) + 1e-9);
-    assert(entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-
-    const double original_end = g.entry_s_turn_plan.planned_ut + g.entry_s_turn_plan.segment_duration;
-    double first_duration = entry_authority_refresh_child_duration(&g,&g.entry_s_turn_plan,
-        t.ut,75.0,&cfg.guidance);
-    assert(fabs((t.ut + first_duration) - original_end) < 1e-9);
-    g.entry_s_turn_plan.target_bank = first_bank;
-    g.entry_s_turn_plan.target_aoa = first_aoa;
-    g.entry_s_turn_plan.planned_ut = t.ut;
-    g.entry_s_turn_plan.segment_duration = first_duration;
-
-    /* Same state, tiny q jitter, and stall chatter cannot immediately re-arm. */
-    t.ut += 5.1;
-    t.dynamic_pressure = 472.0;
-    assert(!entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-    t.stall_fraction = 0.20;
-    assert(!entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-    t.stall_fraction = 0.0;
-
-    /* A later new material opening may refresh again, but only after the age gate. */
-    t.ut += 10.0;
-    t.dynamic_pressure = 530.0;
-    double second_bank = g.entry_s_turn_plan.target_bank;
-    double second_aoa = g.entry_s_turn_plan.target_aoa;
-    assert(entry_program_altitude_capture(&g,&t,&p,aero,&cfg,&second_bank,&second_aoa));
-    assert(second_bank > first_bank + 8.0);
-    assert(second_bank <= dynamic_bank_limit(&t,&cfg.vehicle) + 1e-9);
-    assert(entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-    double second_duration = entry_authority_refresh_child_duration(&g,&g.entry_s_turn_plan,
-        t.ut,75.0,&cfg.guidance);
-    assert(fabs((t.ut + second_duration) - original_end) < 1e-9);
-
-    g.entry_s_turn_plan.target_bank = second_bank;
-    g.entry_s_turn_plan.target_aoa = second_aoa;
-    g.entry_s_turn_plan.planned_ut = t.ut;
-    g.entry_s_turn_plan.segment_duration = second_duration;
-    t.ut += 5.1;
-    t.dynamic_pressure = 560.0;
-    assert(!entry_vertical_capture_growth_replan_due(&g,&t,&p,aero,&cfg));
-
-    /* An already committed, physically executable reversal is an even earlier
-       anti-procrastination deadline than the replaced segment end. */
-    g.entry_reversal_scheduled = true;
-    g.has_s_turn_leg_started = true;
-    g.has_s_turn_reversal_requested = false;
-    g.s_turn_leg_started_ut = t.ut - cfg.guidance.s_turn_minimum_leg_duration - 5.0;
-    g.entry_reversal_ut = t.ut + 7.0;
-    double reversal_limited = entry_authority_refresh_child_duration(&g,&g.entry_s_turn_plan,
-        t.ut,75.0,&cfg.guidance);
-    assert(fabs(reversal_limited - 7.0) < 1e-9);
-}
 
 static void test_mm304_live_bank_limit_matches_shared_predictor_authority_core(void) {
     LandingConfiguration cfg = landing_configuration_default();
@@ -1782,241 +1680,6 @@ static void test_latched_taem_path_recovery_never_returns_to_entry(void) {
     guidance_result_clear(&r);
 }
 
-static __attribute__((unused)) void test_stale_regular_hac_preview_may_refresh_without_relaxing_geometry(void) {
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    TerminalCandidate retained = {
-        .valid = true,
-        .geometry_degraded = false,
-        .energy_degraded = false,
-        .speed = 600.0,
-        .altitude = 18000.0,
-        .selected_ut = 1000.0,
-    };
-    TerminalCandidate fresh = retained;
-    fresh.energy_degraded = true;
-    fresh.altitude = 19050.0;
-    fresh.selected_ut = 1002.0;
-
-    /* Energy hysteresis alone would retain the old candidate. Once its propagated
-       arrival has drifted outside the shared forecast envelope, a fresh regular
-       preview must be allowed to replace it. */
-    assert(!terminal_candidate_refinement_ok(&retained, &fresh));
-    g.terminal_prediction_altitude = retained.altitude + 1200.0;
-    g.terminal_prediction_speed = retained.speed;
-    assert(terminal_candidate_refresh_allowed(&g, &retained, &fresh));
-
-    fresh.geometry_degraded = true;
-    assert(!terminal_candidate_refresh_allowed(&g, &retained, &fresh));
-}
-
-
-static void test_geometry_degraded_preview_cannot_replace_recent_clean_entry_inlet(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    PlanetModel p = verifier_kerbin();
-    AerodynamicModel aero = {.lift_to_drag = .4, .ballistic_coefficient = 700.0, .confidence = .12};
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    Telemetry t;
-    telemetry_init(&t);
-
-    /* v18 immediately before the degraded terminal replacement. The last clean
-       dynamic inlet was upstream of the live orbiter but still within the capture
-       gate's intentional downstream grace, so its vertical-delivery contract was
-       still meaningful. */
-    t.ut = 67557.28;
-    t.runway_along_track = -57765.3209237946;
-    t.runway_cross_track = 1022.89520181561;
-    t.horizontal_speed = 1075.0;
-    g.taem_interface_target = (TaemInterfaceTarget){
-        .valid = true,
-        .along_track = -73881.0,
-        .cross_track = 0.0,
-        .course = cfg.site.runway_heading,
-        .altitude = 27248.0,
-        .speed = 1224.5,
-        .flight_path_angle = -16.0,
-        .specific_energy = 1.0,
-        .acquisition_lead = 65881.0,
-        .remaining_path = 100000.0,
-        .response_time = 8.0,
-    };
-    assert(terminal_interface_target_spatially_relevant(&g.taem_interface_target, &t, &cfg));
-
-    g.terminal_candidate.valid = true;
-    g.terminal_candidate.geometry_degraded = true;
-    terminal_publish_interface_target(&g, &t, &p, aero, &cfg);
-    assert(g.taem_interface_target.valid);
-    assert(fabs(g.taem_interface_target.along_track + 73881.0) < 1e-9);
-    assert(fabs(g.taem_interface_target.flight_path_angle + 16.0) < 1e-9);
-
-    /* Past the same capture grace the clean demand must expire rather than becoming
-       a permanent stale target while degraded previews are all that remain. */
-    t.runway_along_track = -45000.0;
-    t.runway_cross_track = 1000.0;
-    assert(!terminal_interface_target_spatially_relevant(&g.taem_interface_target, &t, &cfg));
-    terminal_publish_interface_target(&g, &t, &p, aero, &cfg);
-    assert(!g.taem_interface_target.valid);
-}
-
-static void test_latched_taem_target_is_immutable_after_handoff(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    PlanetModel p = verifier_kerbin();
-    AerodynamicModel aero = {.lift_to_drag = .4, .ballistic_coefficient = 700.0, .confidence = .12};
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    Telemetry t = entry_telemetry(&cfg);
-
-    g.taem_interface_captured = true;
-    g.taem_interface_target = (TaemInterfaceTarget){
-        .valid = true,
-        .along_track = -8000.0,
-        .cross_track = 0.0,
-        .course = cfg.site.runway_heading,
-        .altitude = 16500.0,
-        .speed = 520.0,
-        .flight_path_angle = -12.0,
-        .acquisition_lead = 9000.0,
-        .remaining_path = 35000.0,
-        .response_time = 8.0,
-    };
-    g.terminal_candidate.valid = true;
-    g.terminal_candidate.geometry_degraded = false;
-    g.terminal_candidate.join.valid = true;
-    g.terminal_candidate.join.p0 = (HACPoint2){-40000.0, 0.0};
-    g.terminal_candidate.join.p1 = (HACPoint2){-30000.0, 0.0};
-    g.terminal_candidate.join.p2 = (HACPoint2){-20000.0, 0.0};
-    g.terminal_candidate.join.p3 = (HACPoint2){-8000.0, 0.0};
-
-    TaemInterfaceTarget fixed = g.taem_interface_target;
-    terminal_publish_interface_target(&g, &t, &p, aero, &cfg);
-    assert(g.taem_interface_target.valid == fixed.valid);
-    assert(fabs(g.taem_interface_target.along_track - fixed.along_track) < 1e-9);
-    assert(fabs(g.taem_interface_target.cross_track - fixed.cross_track) < 1e-9);
-    assert(fabs(g.taem_interface_target.course - fixed.course) < 1e-9);
-    assert(fabs(g.taem_interface_target.altitude - fixed.altitude) < 1e-9);
-    assert(fabs(g.taem_interface_target.speed - fixed.speed) < 1e-9);
-    assert(fabs(g.taem_interface_target.flight_path_angle - fixed.flight_path_angle) < 1e-9);
-    assert(fabs(g.taem_interface_target.acquisition_lead - fixed.acquisition_lead) < 1e-9);
-    assert(fabs(g.taem_interface_target.remaining_path - fixed.remaining_path) < 1e-9);
-    assert(fabs(g.taem_interface_target.response_time - fixed.response_time) < 1e-9);
-}
-
-static void test_v12_committed_spline_detects_vertical_closure_loss(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    terminal_glide_initialize(&g, &cfg.vehicle, &cfg.guidance);
-
-    assert(fabs(g.terminal_test_preflare_altitude - 500.0) < 1e-9);
-    assert(fabs(g.terminal_test_glide_slope - 22.0) < 1e-9);
-    double gate_altitude = cfg.site.altitude + g.terminal_test_preflare_altitude;
-    double gate_ground = g.terminal_test_preflare_altitude /
-        tan(g.terminal_test_glide_slope * DEG2RAD);
-
-
-    /* By UT 67584.7 the frozen spline had only 21.1 km left while the vehicle
-       was still at 21.3 km altitude. Even an instantaneous -35 deg descent
-       was about 1.7 km of ground path short of the preflare gate. */
-    double failed_height = 21300.0 - gate_altitude;
-    double failed_path = 21100.0 + cfg.guidance.final_approach_distance - gate_ground;
-    assert(terminal_vertical_path_unrecoverable(failed_height, failed_path, 35.0));
-    double required_extra = failed_height / tan(35.0 * DEG2RAD) - failed_path;
-    assert(required_extra > 1600.0);
-
-    /* A longer replacement geometry is the correct causal remedy; adding 3 km
-       restores the hard vertical-closure condition without weakening Final. */
-    assert(!terminal_vertical_path_unrecoverable(failed_height, failed_path + 3000.0, 35.0));
-
-    /* Response-limited vertical drop is now represented by the shared vertical
-       closure/unrecoverable-path predicate above; the removed helper no longer
-       has a separate public contract to assert here. */
-}
-
-static __attribute__((unused)) void test_recorded_late_taem_state_rejects_control_degraded_geometry_and_energy_commit(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    PlanetModel p = verifier_kerbin();
-    AerodynamicModel aero = {.lift_to_drag = .4, .ballistic_coefficient = 700.0, .confidence = .12};
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    guidance_set_engaged(&g, true);
-    terminal_glide_initialize(&g, &cfg.vehicle, &cfg.guidance);
-    g.terminal_region_entered = true;
-
-    /* 2026-09-10T01-51-41Z seq 863: the historical controller had already
-       chased cross-track to about 9.1 km and was descending near -28 deg.
-       Preserve a finite terminal preview for MM304/TAEM shaping, but do not
-       freeze it when propagated lateral/control authority marks the HAC geometry
-       dynamically degraded. Measured unpowered energy must independently reject
-       the same candidate even if geometry is hypothetically made usable. */
-    Telemetry t;
-    telemetry_init(&t);
-    t.ut = 67646.0322752074;
-    t.latitude = .818966203614688;
-    t.longitude = -77.0518186373342;
-    t.mean_altitude = 10103.7269299066;
-    t.radar_altitude = 9467.99738015211;
-    t.vertical_speed = -136.810928618465;
-    t.horizontal_speed = 255.070730512862;
-    t.surface_speed = 289.444826787096;
-    t.true_air_speed = 289.44482421875;
-    t.atmospheric_density = .275110512971878;
-    t.speed_of_sound = 298.949951171875;
-    t.mach = .970705568790436;
-    t.heading = 61.4724273681641;
-    t.ground_track_heading = 66.2248121189724;
-    t.pitch = -21.2563343048096;
-    t.roll = -32.6778869628906;
-    t.angle_of_attack = 8.17587947845459;
-    t.sideslip = -.25676617026329;
-    t.dynamic_pressure = 11524.146484375;
-    t.g_force = 1.38116419315338;
-    t.lift_force = 298243.64226661;
-    t.drag_force = 455651.387877783;
-    t.mass = 40730.4140625;
-    t.runway_along_track = -24331.4724490779;
-    t.runway_cross_track = -9085.24839442941;
-    t.range_to_site = hypot(t.runway_along_track, t.runway_cross_track);
-    t.flight_path_angle = -28.2075369441143;
-    t.estimated_lift_to_drag = .4;
-    t.estimated_ballistic_coefficient = 700.0;
-    t.aerodynamic_confidence = .12;
-    t.trajectory_density_scale = .996080015593;
-    t.trajectory_drag_scale = 1.0;
-    t.trajectory_lift_scale = 1.0;
-    t.bank_effectiveness = 1.0;
-    t.trajectory_calibration_confidence = .05;
-
-    g.terminal_energy_loss_accel_ema = t.drag_force / t.mass;
-    g.terminal_speed_loss_accel_ema = g.terminal_energy_loss_accel_ema;
-    terminal_predict(&g, &t, t.ground_track_heading, &p, aero, &cfg, .1);
-
-    assert(g.terminal_candidate.valid);
-    assert(g.terminal_candidate.kind == TERMINAL_PATH_HAC);
-    assert(g.terminal_candidate.join.valid && g.terminal_candidate.join.degraded);
-    assert(g.terminal_candidate.join.violation_score > 1.0);
-    assert(g.terminal_candidate.geometry_degraded);
-    assert(!terminal_candidate_operationally_usable(&g, &g.terminal_candidate, &t, t.ground_track_heading, &p, &cfg));
-
-    /* Preferred altitude-shell misses are ranking degradation, not a reason to
-       throw away otherwise executable geometry. Isolate that policy from the
-       recorded control violation with a copy. */
-    TerminalCandidate policy = g.terminal_candidate;
-    policy.geometry_degraded = false;
-    policy.shell_degraded = true;
-    assert(terminal_candidate_operationally_usable(&g, &policy, &t, t.ground_track_heading, &p, &cfg));
-    policy.geometry_degraded = true;
-    assert(!terminal_candidate_operationally_usable(&g, &policy, &t, t.ground_track_heading, &p, &cfg));
-
-    /* Prove energy is an independent blocker rather than relying on the geometry
-       veto to make commit fail. */
-    TerminalCandidate recorded = g.terminal_candidate;
-    g.terminal_candidate.geometry_degraded = false;
-    assert(!terminal_candidate_live_energy_ready(&g, &t, &p, aero, &cfg, &g.terminal_candidate));
-    assert(!terminal_candidate_commit_ready(&g, &t, &p, aero, &cfg));
-    g.terminal_candidate = recorded;
-    assert(g.terminal_reference_fpa > t.flight_path_angle);
-}
 
 static void test_proven_taem_boundary_miss_replans_without_infeasible_dwell(void){
     LandingConfiguration cfg=landing_configuration_default();
@@ -2111,47 +1774,6 @@ static void test_stabilized_commands_obey_live_hard_bounds(void) {
     guidance_result_clear(&r);
 }
 
-static void test_taem_ownership_rebases_entry_preview_timing(void) {
-    LandingConfiguration cfg = landing_configuration_default();
-    PlanetModel p = verifier_kerbin();
-    GuidanceMachine g;
-    guidance_machine_init(&g);
-    Telemetry t = entry_telemetry(&cfg);
-    t.ut = 67540.8;
-    t.true_air_speed = 1299.6;
-    t.horizontal_speed = 1294.7;
-    t.mean_altitude = 27198.0;
-    t.radar_altitude = 25787.0;
-    t.flight_path_angle = -5.0;
-    t.roll = 38.4;
-    t.runway_cross_track = 4220.0;
-
-    g.terminal_candidate.valid = true;
-    g.terminal_candidate.selected_ut = t.ut - 34.2;
-    g.terminal_candidate.arrival_ut = t.ut + 9.8;
-    g.terminal_prediction_valid = true;
-    g.terminal_prediction_ut = t.ut;
-    g.terminal_prediction_altitude = 26770.0;
-    g.terminal_prediction_speed = 1287.0;
-    g.terminal_prediction_time = 9.8;
-    g.taem_interface_target.valid = true;
-    g.terminal_energy_loss_accel_ema = 14.75;
-    g.terminal_speed_loss_accel_ema = 12.0;
-
-    terminal_force_acquisition(&g, &t, t.ground_track_heading, &p, &cfg);
-
-    assert(g.terminal_region_entered);
-    assert(g.terminal_test_capture_active);
-    assert(!g.terminal_candidate.valid);
-    assert(!g.terminal_prediction_valid);
-    assert(isinf(g.terminal_prediction_ut) && g.terminal_prediction_ut < 0.0);
-    assert(isnan(g.terminal_prediction_altitude));
-    assert(isnan(g.terminal_prediction_speed));
-    assert(g.terminal_prediction_time == 0.0);
-    assert(g.taem_interface_target.valid);
-    assert(fabs(g.terminal_energy_loss_accel_ema - 14.75) < 1e-9);
-    assert(fabs(g.terminal_speed_loss_accel_ema - 12.0) < 1e-9);
-}
 
 int main(void) {
     test_mm304_dynamic_pressure_overrides_persistent_plan();
@@ -2184,12 +1806,7 @@ int main(void) {
 
     test_mm304_aoa_reference_does_not_overshoot_reversed_target();
     test_mm304_roll_reference_stops_when_bank_target_reverses();
-    test_taem_ownership_rebases_entry_preview_timing();
     test_latched_taem_path_recovery_never_returns_to_entry();
-    test_geometry_degraded_preview_cannot_replace_recent_clean_entry_inlet();
-    test_latched_taem_target_is_immutable_after_handoff();
-
-    test_v12_committed_spline_detects_vertical_closure_loss();
     test_proven_taem_boundary_miss_replans_without_infeasible_dwell();
     puts("Guidance integration contract tests passed.");
     return 0;

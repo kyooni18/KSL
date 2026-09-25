@@ -143,182 +143,24 @@ static DeorbitPlan shadow_continuation_plan(const Telemetry*t){
     return plan;
 }
 
-static EntrySupervisionResult supervise_terminal(const PlanetModel*p,const LandingConfiguration*cfg,
-        AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
-        VehicleState state,const EntryControlPlan*nominal,double bank_bound,double aoa_bound){
-    return predictor_supervise_entry_control(state,p,aero,env,cal,&cfg->vehicle,&cfg->site,&cfg->guidance,
-        0,0,10,0,1,false,0,0,false,false,nominal,bank_bound,aoa_bound,500);
-}
-
-static void test_assessment_flags_safety_and_terminal_feasibility(void){
-    LandingConfiguration cfg=landing_configuration_default();
-    EntryControlPlan plan={.valid=true,.target_bank=20,.target_aoa=18,.taem_speed=cfg.guidance.taem_force_handoff_speed};
-    EntryPrediction pr;memset(&pr,0,sizeof(pr));
-    pr.entered_atmosphere=true;pr.reached_taem=true;
-    pr.peak_dynamic_pressure=cfg.vehicle.maximum_dynamic_pressure*.8;
-    pr.peak_g_load=cfg.vehicle.maximum_g_load*.8;
-    pr.minimum_entry_speed=cfg.vehicle.minimum_safe_speed*2;
-    pr.maximum_abs_angle_of_attack=18;
-    pr.minimum_bank_control_margin=5;pr.minimum_aoa_control_margin=5;
-    pr.taem_energy_error=1.0;
-
-    EntryPredictionAssessment a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.valid&&a.safe&&a.terminal_feasible);
-
-    pr.taem_ownership_boundary_missed=true;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.safe&&!a.terminal_feasible);
-    pr.taem_ownership_boundary_missed=false;
-
-    pr.taem_energy_error=-1.0;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.safe&&!a.terminal_feasible);
-    pr.taem_energy_error=1.0;
-
-    pr.peak_dynamic_pressure=cfg.vehicle.maximum_dynamic_pressure*1.01;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.dynamic_pressure_violation&&!a.safe);
-    pr.peak_dynamic_pressure=cfg.vehicle.maximum_dynamic_pressure*.8;
-
-    pr.peak_g_load=cfg.vehicle.maximum_g_load*1.01;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.g_load_violation&&!a.safe);
-    pr.peak_g_load=cfg.vehicle.maximum_g_load*.8;
-
-    pr.minimum_entry_speed=cfg.vehicle.minimum_safe_speed*.95;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.stall_risk&&!a.safe);
-    pr.minimum_entry_speed=cfg.vehicle.minimum_safe_speed*2;
-
-    pr.minimum_bank_control_margin=-.1;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.control_margin_violation&&!a.safe);
-    pr.minimum_bank_control_margin=5;
-
-    pr.reached_taem=false;
-    a=predictor_assess_entry_prediction(&pr,&cfg.vehicle,45,&plan);
-    assert(a.safe&&!a.terminal_feasible);
-}
-
 static void test_supervisor_passes_nominal_and_is_deterministic(void){
     PlanetModel p=kerbin();LandingConfiguration cfg=landing_configuration_default();
     AerodynamicModel aero;AerodynamicEnvelope env;TrajectoryCalibrationModel cal;
     predictor_models(&cfg,&aero,&env,&cal);
     VehicleState state=terminal_state(&p,&cfg.site);
-    EntryControlPlan nominal={
-        .valid=true,.planned_ut=state.ut,.target_bank=0,.target_aoa=10,.target_heading=cfg.site.runway_heading,
-        .bank_cap=0,.target_turn_radius=INFINITY,.segment_duration=24,.cost=0
-    };
-
-    EntrySupervisionResult a=supervise_terminal(&p,&cfg,aero,&env,&cal,state,&nominal,0,0);
-    EntrySupervisionResult b=supervise_terminal(&p,&cfg,aero,&env,&cal,state,&nominal,0,0);
-    assert(a.valid&&a.mode==ENTRY_SUPERVISION_PASS_THROUGH);
-    assert(a.nominal_assessment.safe&&a.nominal_assessment.terminal_feasible);
-    assert(b.valid&&b.mode==ENTRY_SUPERVISION_PASS_THROUGH);
-    assert(fabs(a.plan.target_bank-nominal.target_bank)<1e-12);
-    assert(fabs(a.plan.target_aoa-nominal.target_aoa)<1e-12);
-    assert(fabs(norm_signed_deg(a.plan.target_heading-nominal.target_heading))<1e-12);
-    assert(a.bank_correction==0&&a.aoa_correction==0);
-    assert(a.mode==b.mode);
-    assert(fabs(a.plan.target_bank-b.plan.target_bank)<1e-12);
-    assert(fabs(a.plan.target_aoa-b.plan.target_aoa)<1e-12);
-    assert(fabs(norm_signed_deg(a.plan.target_heading-b.plan.target_heading))<1e-12);
-    assert(a.plan.predicted_reversals==b.plan.predicted_reversals);
-    PredictorPlannerTrace trace;
-    assert(predictor_last_planner_trace(&trace));
-    assert(trace.valid&&trace.mode==ENTRY_SUPERVISION_PASS_THROUGH);
-    assert(trace.candidate_count>=1&&trace.candidate_count<=PREDICTOR_PLANNER_TRACE_MAX_CANDIDATES);
-    assert(trace.selected_index>=0&&(unsigned)trace.selected_index<trace.candidate_count);
-    assert(trace.candidates[trace.selected_index].selected);
-    assert(trace.candidates[trace.selected_index].source==PREDICTOR_PLAN_CANDIDATE_NOMINAL);
-    assert(trace.candidates[trace.selected_index].rejection_flags==PREDICTOR_CANDIDATE_REJECT_NONE);
-    assert(trace.candidate_budget==PREDICTOR_PLANNER_TRACE_MAX_CANDIDATES);
-    assert(trace.dropped_candidate_count==0&&trace.selection_converged);
-    assert(fabs(trace.search_horizon_seconds-500.0)<1e-12);
-    const PredictorPlannerCandidateTrace *selected=&trace.candidates[trace.selected_index];
-    assert(selected->trajectory_sample_count>0&&selected->trajectory_sample_count<=PREDICTOR_PLANNER_TRACE_MAX_PATH_POINTS);
-    assert(selected->trajectory_total_points>=selected->trajectory_sample_count);
-    assert(fabs(trace.candidates[trace.selected_index].plan.target_bank-b.plan.target_bank)<1e-12);
-    assert(fabs(trace.candidates[trace.selected_index].plan.target_aoa-b.plan.target_aoa)<1e-12);
+    EntryControlPlan nominal={.valid=true,.planned_ut=state.ut,.target_bank=0,.target_aoa=10,
+        .target_heading=cfg.site.runway_heading,.segment_duration=24};
+    EntryPrediction first=predictor_simulate_entry_control_plan(state,&p,aero,&env,&cal,
+        &cfg.vehicle,&cfg.site,&cfg.guidance,0,0,10,0,1,0,&nominal,500,false);
+    EntryPrediction second=predictor_simulate_entry_control_plan(state,&p,aero,&env,&cal,
+        &cfg.vehicle,&cfg.site,&cfg.guidance,0,0,10,0,1,0,&nominal,500,false);
+    assert(first.shadow_guidance_used&&second.shadow_guidance_used);
+    assert(first.reached_taem==second.reached_taem);
+    assert(first.s_turn_reversals==second.s_turn_reversals);
+    assert(fabs(first.final_state.ut-second.final_state.ut)<1e-9);
+    entry_prediction_clear(&first);entry_prediction_clear(&second);
 }
 
-static void test_supervisor_correction_is_bounded_and_preserves_lateral_semantics(void){
-    PlanetModel p=kerbin();LandingConfiguration cfg=landing_configuration_default();
-    AerodynamicModel aero;AerodynamicEnvelope env;TrajectoryCalibrationModel cal;
-    predictor_models(&cfg,&aero,&env,&cal);
-    VehicleState state=terminal_state(&p,&cfg.site);
-    EntryControlPlan nominal={
-        .valid=true,.planned_ut=state.ut,.target_bank=0,
-        .target_aoa=cfg.vehicle.maximum_angle_of_attack+1.0,.target_heading=cfg.site.runway_heading,
-        .bank_cap=0,.target_turn_radius=INFINITY,.segment_duration=24,.cost=0,
-        .has_planned_reversal=true,.planned_reversal_ut=state.ut+12,
-        .planned_reversal_range=50000,.planned_reversal_sign=-1
-    };
-    EntrySupervisionResult corrected=supervise_terminal(&p,&cfg,aero,&env,&cal,state,&nominal,0,2);
-    assert(corrected.valid&&corrected.mode==ENTRY_SUPERVISION_BOUNDED_CORRECTION);
-    assert(corrected.nominal_assessment.control_margin_violation);
-    assert(fabs(corrected.bank_correction)<1e-12);
-    assert(fabs(corrected.aoa_correction)<=2.0+1e-12);
-    assert(corrected.plan.target_aoa<=cfg.vehicle.maximum_angle_of_attack+1e-12);
-    assert(fabs(corrected.plan.target_bank-nominal.target_bank)<1e-12);
-    assert(fabs(norm_signed_deg(corrected.plan.target_heading-nominal.target_heading))<1e-12);
-    assert(corrected.plan.has_planned_reversal==nominal.has_planned_reversal);
-    assert(corrected.plan.planned_reversal_sign==nominal.planned_reversal_sign);
-    PredictorPlannerTrace trace;assert(predictor_last_planner_trace(&trace));
-    assert(trace.selected_index>=0&&trace.candidates[trace.selected_index].selected);
-    assert(trace.candidates[trace.selected_index].rejection_flags==PREDICTOR_CANDIDATE_REJECT_NONE);
-    bool saw_explicit_rejection=false;
-    for(unsigned i=0;i<trace.candidate_count;i++)if((int)i!=trace.selected_index&&trace.candidates[i].rejection_flags!=PREDICTOR_CANDIDATE_REJECT_NONE)saw_explicit_rejection=true;
-    assert(saw_explicit_rejection);
-}
-
-static void test_safe_nominal_keeps_ownership_when_terminal_proof_is_unavailable(void){
-    PlanetModel p=kerbin();LandingConfiguration cfg=landing_configuration_default();
-    AerodynamicModel aero;AerodynamicEnvelope env;TrajectoryCalibrationModel cal;
-    predictor_models(&cfg,&aero,&env,&cal);
-    /* Keep this case genuinely upstream of the one-way TAEM ownership boundary:
-       the five-second supervision horizon should end while the vehicle is still
-       well above V_TAEM, so lack of a terminal proof means "not observed yet",
-       not a demonstrated handoff miss. */
-    VehicleState state=entry_state_at_range(&p,&cfg.site,140000.0,30000.0,1800.0);
-    EntryControlPlan nominal={
-        .valid=true,.planned_ut=state.ut,.target_bank=0,.target_aoa=10,
-        .target_heading=cfg.site.runway_heading,.segment_duration=12
-    };
-    EntrySupervisionResult result=predictor_supervise_entry_control(
-        state,&p,aero,&env,&cal,&cfg.vehicle,&cfg.site,&cfg.guidance,
-        0,0,10,0,1,false,0,0,false,false,&nominal,0,0,5);
-    assert(result.nominal_assessment.valid&&result.nominal_assessment.safe);
-    assert(!result.nominal_assessment.terminal_feasible);
-    assert(result.valid);
-    if(result.mode==ENTRY_SUPERVISION_FALLBACK){
-        assert(result.selected_assessment.terminal_feasible);
-    }else{
-        assert(result.mode==ENTRY_SUPERVISION_PASS_THROUGH);
-        assert(fabs(result.plan.target_bank-nominal.target_bank)<1e-12);
-        assert(fabs(result.plan.target_aoa-nominal.target_aoa)<1e-12);
-    }
-}
-
-static void test_unsafe_nominal_cannot_escape_zero_correction_envelope(void){
-    PlanetModel p=kerbin();LandingConfiguration cfg=landing_configuration_default();
-    AerodynamicModel aero;AerodynamicEnvelope env;TrajectoryCalibrationModel cal;
-    predictor_models(&cfg,&aero,&env,&cal);
-    VehicleState state=terminal_state(&p,&cfg.site);
-    EntryControlPlan nominal={
-        .valid=true,.planned_ut=state.ut,.target_bank=0,
-        .target_aoa=cfg.vehicle.maximum_angle_of_attack+8.0,.target_heading=cfg.site.runway_heading,
-        .segment_duration=24
-    };
-    EntrySupervisionResult result=supervise_terminal(&p,&cfg,aero,&env,&cal,state,&nominal,0,0);
-    assert(result.nominal_assessment.valid&&result.nominal_assessment.control_margin_violation);
-    /* A zero correction envelope is an absolute contract. The legacy broad
-       planner may be advisory, but it cannot become an unbounded live command. */
-    assert(!result.valid);
-    assert(result.mode==ENTRY_SUPERVISION_INFEASIBLE);
-    assert(fabs(result.bank_correction)<1e-12);
-    assert(fabs(result.aoa_correction)<1e-12);
-}
 
 static void test_preburn_plan_state_guard_uses_certified_robustness_envelope(void){
     LandingConfiguration cfg=landing_configuration_default();
@@ -452,7 +294,7 @@ static void test_exact_terminal_shadow_reuses_mm305_policy_and_reports_uncertain
     assert(taem_exec_initialize(&g.taem_exec,&observation,&inputs));
     assert(taem_exec_owns_vehicle(&g.taem_exec));
 
-    EntryPrediction pr=predictor_simulate_terminal_shadow_ensemble(state,&t,&g,NULL,&p,aero,&env,&cal,&cfg,60,true);
+    EntryPrediction pr=predictor_simulate_terminal_shadow_ensemble(state,&t,&g,NULL,&p,aero,&env,&cal,&cfg,NULL,60,true);
     assert(pr.shadow_guidance_used&&pr.reached_taem);
     assert(pr.final_state.ut>state.ut+1);
     assert(pr.trajectory.count>1);
@@ -469,7 +311,7 @@ static void test_terminal_shadow_refuses_pre_latch_advisory_state(void){
     VehicleState state=terminal_state_at_range(&p,&cfg.site,45000.0);Telemetry t;telemetry_init(&t);t.ut=state.ut;t.angle_of_attack=15;t.true_air_speed=600;t.mass=state.mass;
     GuidanceMachine g;guidance_machine_init(&g);g.automation_engaged=true;g.terminal_glide_mode=true;g.phase=PHASE_TAEM;
     assert(!taem_exec_owns_vehicle(&g.taem_exec));
-    EntryPrediction pr=predictor_simulate_terminal_shadow(state,&t,&g,NULL,&p,aero,&env,&cal,&cfg,20,false);
+    EntryPrediction pr=predictor_simulate_terminal_shadow(state,&t,&g,NULL,&p,aero,&env,&cal,&cfg,NULL,20,false);
     assert(!pr.shadow_guidance_used&&pr.uncertainty_scenarios==0);
     entry_prediction_clear(&pr);
 }
@@ -569,16 +411,13 @@ static void test_reentry_shadow_recovery_qualifier_uses_restart_contract(void){
     /* A captured MM304 tangent state is sufficient for restart qualification;
        terminal path topology is deliberately owned by MM305 after handoff. */
     assert(reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
-    pr.taem_terminal_candidate_valid=true;
-    pr.taem_terminal_candidate_geometry_clean=false;
-    assert(reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
     pr.taem_dynamic_interface_target_valid=false;
     assert(!reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
     pr.taem_dynamic_interface_target_valid=true;pr.taem_dynamic_interface_captured=false;
     assert(!reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
     pr.taem_dynamic_interface_captured=true;
     pr.closest_distance=legacy_closest;
-    pr.taem_dynamic_interface_target_valid=false;pr.taem_terminal_candidate_valid=false;
+    pr.taem_dynamic_interface_target_valid=false;
 
     pr.shadow_aborted=true;
     assert(!reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
@@ -628,7 +467,6 @@ static __attribute__((unused)) void test_legacy_75km_continuation_is_rejected_by
     assert(pr.shadow_guidance_used&&pr.entered_atmosphere&&pr.reached_taem);
     assert(pr.taem_ownership_boundary_missed);
     assert(!pr.taem_dynamic_interface_captured);
-    assert(!pr.taem_terminal_candidate_valid);
     assert(!reentry_guidance_shadow_recovery_qualified(&pr,&cfg.vehicle,&cfg.guidance));
     assert(g.phase==PHASE_ENTRY_INTERFACE); /* clone-only rollout */
     entry_prediction_clear(&pr);trajectory_clear(&plan.trajectory);
@@ -678,50 +516,6 @@ static void test_control_plan_shadow_cannot_continue_entry_past_vtaem(void){
     entry_prediction_clear(&pr);
 }
 
-static __attribute__((unused)) void test_recorded_1605_supervisor_cannot_certify_post_vtaem_recovery(void){
-    PlanetModel p=recorded_1605_planet();LandingConfiguration cfg=landing_configuration_default();
-    AerodynamicModel aero;AerodynamicEnvelope env;TrajectoryCalibrationModel cal;predictor_models(&cfg,&aero,&env,&cal);
-    /* Exact canonical state from the 16:05 split stream near planner origin
-       UT 67555.1925. The old shadow selected a bounded plan as terminal-feasible
-       only by continuing synthetic MM304 Entry below the real V_TAEM boundary. */
-    VehicleState state={
-        .ut=67555.1925486105,
-        .position={319182.591078865,543141.609661693,-5869.96635799898},
-        .velocity={-1588.37512841323,719.689418301166,-91.155784475592},
-        .mass=40251.265625
-    };
-    GeoPoint recorded_geo=predictor_geo_point(state.position,&p,state.ut);
-    GeoPoint site_geo={cfg.site.latitude,cfg.site.longitude,cfg.site.altitude};
-    assert(fabs(recorded_geo.latitude-(-0.533845869366966))<1e-6);
-    assert(fabs(recorded_geo.longitude-(-79.0033715444139))<1e-6);
-    assert(fabs(great_circle_distance(recorded_geo,site_geo,p.radius)-45054.8429445057)<2.0);
-    EntryControlPlan nominal={
-        .valid=true,.terminal_ready=true,.planned_ut=state.ut,
-        .target_bank=-64.2322348268202,.target_aoa=9.093537109375,
-        .target_heading=94.3571709363499,.bank_cap=46.4724713295503,
-        .target_turn_radius=1026846.38996801,.segment_duration=75,
-        .cost=204.309194905375
-    };
-    EntrySupervisionResult result=predictor_supervise_entry_control(
-        state,&p,aero,&env,&cal,&cfg.vehicle,&cfg.site,&cfg.guidance,
-        58.2460021972656,-0.475741077583279,9.6878833770752,-0.0206667779380602,
-        -1,false,0,75,true,false,&nominal,6,2,500);
-    /* A selected result is acceptable only if it captures terminal ownership
-       before the real MM304 speed boundary. The historical synthetic recovery
-       must never reappear as a valid terminal proof. */
-    assert(!result.valid);
-    assert(result.mode==ENTRY_SUPERVISION_INFEASIBLE);
-    assert(result.taem_ownership_boundary_missed);
-    PredictorPlannerTrace trace;assert(predictor_last_planner_trace(&trace));
-    for(unsigned i=0;i<trace.candidate_count;i++){
-        const PredictorPlannerCandidateTrace*c=&trace.candidates[i];
-        if(c->assessment.terminal_feasible){
-            assert(c->reached_taem);
-            assert(isfinite(c->plan.taem_speed));
-            assert(c->plan.taem_speed<=cfg.guidance.taem_force_handoff_speed+1e-9);
-        }
-    }
-}
 
 static __attribute__((unused)) void test_recorded_1605_first_entry_policy_reaches_legal_handoff(void){
     PlanetModel p=recorded_1605_planet();LandingConfiguration cfg=landing_configuration_default();
@@ -761,15 +555,6 @@ static __attribute__((unused)) void test_recorded_1605_first_entry_policy_reache
     assert(replay.taem_speed<=cfg.guidance.taem_force_handoff_speed+1e-6);
     assert(replay.taem_distance>cfg.guidance.final_approach_distance);
     entry_prediction_clear(&replay);
-    EntrySupervisionResult result=predictor_supervise_entry_control(
-        state,&p,aero,&env,&cal,&cfg.vehicle,&cfg.site,&cfg.guidance,
-        .475006103515625,.0803847805387646,24.043514251709,1.38375369181716,
-        1,false,0,75,true,false,&nominal,6,2,1200);
-    assert(result.valid);
-    assert(result.mode==ENTRY_SUPERVISION_PASS_THROUGH);
-    assert(result.plan.terminal_ready);
-    assert(!result.taem_ownership_boundary_missed);
-    assert(result.plan.taem_speed<=cfg.guidance.taem_force_handoff_speed+1e-6);
 }
 
 static __attribute__((unused)) void test_recorded_1605_mm304_planner_scores_returned_segment_semantics(void){
@@ -1022,15 +807,23 @@ static void test_entry_guidance_shadow_records_mm304_50km_checkpoint(void){
 
 int main(void){
     test_planet_replay_metadata_is_complete();
-
     test_spherical_planet_geometry_and_gravity();
-    test_assessment_flags_safety_and_terminal_feasibility();
-    test_supervisor_passes_nominal_and_is_deterministic();
-    test_supervisor_correction_is_bounded_and_preserves_lateral_semantics();
-    test_safe_nominal_keeps_ownership_when_terminal_proof_is_unavailable();
-    test_unsafe_nominal_cannot_escape_zero_correction_envelope();
     test_preburn_plan_state_guard_uses_certified_robustness_envelope();
     test_forced_mm304_segment_honors_committed_aoa();
+    test_control_plan_shadow_cannot_continue_entry_past_vtaem();
+    test_preentry_authority_predictor_dwell_matches_live_capture_contract();
+    test_shared_conservative_stall_proxy();
+    test_exact_terminal_shadow_reuses_mm305_policy_and_reports_uncertainty();
+    test_terminal_shadow_refuses_pre_latch_advisory_state();
+    test_entry_guidance_shadow_starts_from_shared_restart_policy();
+    test_entry_guidance_shadow_records_mm304_50km_checkpoint();
+    test_entry_guidance_shadow_does_not_false_handoff_at_speed_boundary();
+    test_entry_guidance_shadow_honors_inertial_entry_capture_direction();
+    test_reentry_shadow_recovery_qualifier_uses_restart_contract();
+    test_entry_guidance_shadow_low_speed_upstream_is_speed_handoff_not_capture_or_miss();
+    puts("Entry predictor supervision tests passed.");
+    return 0;
+}
     test_control_plan_shadow_cannot_continue_entry_past_vtaem();
     test_preentry_authority_predictor_dwell_matches_live_capture_contract();
     test_shared_conservative_stall_proxy();

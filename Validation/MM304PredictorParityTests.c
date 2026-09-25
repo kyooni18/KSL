@@ -69,7 +69,7 @@ static void test_topology_uses_published_mm304_target(void){
         .specific_energy=rotating_specific_energy(cfg.site.latitude,20000.0,820.0,&p),
         .selected_ut=t.ut,.arrival_ut=t.ut+120.0,.acquisition_lead=4305.0,
         .remaining_path=60000.0,.response_time=8.0};
-    EntryTopologyPlan top=predictor_plan_entry_topology(state,&t,&g,&p,&env,&cal,&cfg);
+    EntryTopologyPlan top=predictor_plan_entry_topology(state,&t,&g,&p,&env,&cal,&cfg,NULL);
     if(!isfinite(top.cost)){
         /* This recorded snapshot may be outside the strict MM305 Mach/altitude
            and perpendicular-interface contract.  The parity requirement is

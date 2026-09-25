@@ -34,7 +34,7 @@ EntryPrediction blocked_entry_replay(VehicleState state,const Telemetry*t,const 
     pthread_mutex_unlock(&barrier_mutex);
     EntryPrediction out={0};out.shadow_guidance_used=true;out.final_state=state;
     out.reached_taem=true;out.taem_dynamic_interface_captured=true;
-    out.taem_terminal_candidate_geometry_clean=true;out.shadow_terminal_policy_feasible=true;
+    out.shadow_terminal_policy_feasible=true;
     out.closest_distance=0;out.taem_range_error=0;out.taem_speed=500;out.taem_energy_error=0;
     out.peak_dynamic_pressure=1000;out.peak_g_load=1;return out;
 }
