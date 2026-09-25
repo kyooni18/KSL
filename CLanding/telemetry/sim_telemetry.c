@@ -126,7 +126,7 @@ void shuttle_sim_prepare_guidance_telemetry(
         isfinite(t->drag_force);
     t->physics_confidence = t->physics_sample_valid ? 1.0 : 0.0;
     t->aerodynamic_confidence = aero_finite ? 1.0 : 0.0;
-    t->estimated_lift_to_drag = t->drag_force > 1.0
+    t->estimated_lift_to_drag = t->drag_force > 0.0
         ? t->lift_force / t->drag_force
         : cfg->vehicle.estimated_lift_to_drag;
     t->estimated_ballistic_coefficient =
@@ -453,8 +453,16 @@ bool shuttle_sim_decode_telemetry(const char *packet,
         isfinite(t->lift_force) && isfinite(t->drag_force) ? 1.0 : 0.0;
     t->estimated_lift_to_drag = t->drag_force > 0.0
         ? t->lift_force / t->drag_force : 0.0;
+    /* maximum_g_load is the aerodynamic normal-load factor used by the
+       entry/terminal authority envelopes.  ShuttleSim publishes lift and
+       drag as orthogonal body-axis forces; combining them with hypot() turns
+       ordinary drag into a false normal-load violation (for example, a
+       recoverable 20 km entry was reported as 6 g while its lift load was
+       about 3.2 g).  Preserve the simulator's measured lift and use the
+       normal component for g_force.  Drag remains available separately for
+       energy and trajectory work. */
     t->g_force = t->mass > 0.0
-        ? hypot(t->lift_force, t->drag_force) / (t->mass * 9.80665) : 0.0;
+        ? fabs(t->lift_force) / (t->mass * 9.80665) : 0.0;
     t->stall_fraction = 0.0;
     t->stall_fraction_is_measured = false;
 

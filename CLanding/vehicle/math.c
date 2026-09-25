@@ -3,7 +3,8 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
-
+#include <stdio.h>
+#include <stdlib.h>
 double clampd(double v, double lo, double hi) { return fmin(fmax(v, lo), hi); }
 double norm_deg(double a) { double r = fmod(a, 360.0); return r < 0 ? r + 360.0 : r; }
 double norm_signed_deg(double a) { double r = norm_deg(a); return r > 180.0 ? r - 360.0 : r; }
@@ -657,7 +658,8 @@ bool mm305_acquisition_ready(const Telemetry*t,const PlanetModel*p,
         t->vertical_speed<0.0&&t->true_air_speed>=v->minimum_safe_speed&&
         acquisition_region&&structural;
 }
-double rotating_specific_energy(double latitude,double altitude,double air_relative_speed,const PlanetModel*p){
+double rotating_specific_energy(double latitude,double altitude,
+        double air_relative_speed,const PlanetModel*p){
     if(!p||!isfinite(latitude)||!isfinite(altitude)||!isfinite(air_relative_speed)||
        !isfinite(p->radius)||!(p->radius>0.0)||
        !isfinite(p->gravitational_parameter)||!(p->gravitational_parameter>0.0)||
