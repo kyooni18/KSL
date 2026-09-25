@@ -180,6 +180,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        authority fades with speed and height), then close on that rate.  A
        fixed-gain capture overshoots when it spends high-speed bank and the
        low-speed limit cannot take the overshoot back out. */
+    /* Lateral acceleration is lift times sin(bank).  In the preflare pull
+       lift is 2-3 g, so g*tan(bank) (a 1-g relation) understates it 2-3x and
+       the capture overshoots; use the measured lift. */
+    double lift_accel=isfinite(t->lift_force)&&t->lift_force>0.0&&t->mass>1.0?
+        t->lift_force/t->mass:g0;
+    lift_accel=fmax(.3*g0,lift_accel);
     double later_bank=fmin(bank_limit,10.0);
     double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
     double y=clampd(t->runway_cross_track,-2000.0,2000.0);
@@ -190,11 +196,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        lateral acceleration the present bank already produces. */
     double roll_rate_limit=fmax(1.0,fabs(s->approach_roll_rate));
     double roll_lag=clampd(1.0+10.0/roll_rate_limit,1.5,5.0);
-    double present_accel=g0*tan(clampd(norm_signed_deg(t->roll),-60.0,60.0)*DEG2RAD);
+    double present_accel=lift_accel*sin(clampd(norm_signed_deg(t->roll),-60.0,60.0)*DEG2RAD);
     double predicted_rate=cross_rate+present_accel*roll_lag;
-    double lateral_accel=clampd(.5*(desired_rate-predicted_rate),
-        -g0*tan(bank_limit*DEG2RAD),g0*tan(bank_limit*DEG2RAD));
-    double bank=clampd(atan(lateral_accel/g0)*RAD2DEG,-bank_limit,bank_limit);
+    double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
+    double lateral_accel=clampd(.5*(desired_rate-predicted_rate),-lateral_limit,lateral_limit);
+    double bank=clampd(asin(clampd(lateral_accel/lift_accel,-1.0,1.0))*RAD2DEG,
+        -bank_limit,bank_limit);
     /* Flight-path normal acceleration resolves lift through bank only.
      * Gravity already has its cos(gamma) projection in the gamma equation. */
     double lift_div=cos(bank*DEG2RAD);
