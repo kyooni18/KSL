@@ -1,31 +1,6 @@
-       double terminal_hac_radius_live(const Telemetry*t,const PlanetModel*p,AerodynamicModel aero,const VehicleProfile*v,const GuidanceSettings*s){
-    (void)p;(void)s;
-    if(!t||!v)return INFINITY;
-    /*
-     * Radius is a consequence of stock-KSP lateral force, not a mission magic
-     * number.  live_turn_radius() uses the current calibrated lift model and
-     * the vehicle/dynamic bank envelope; no extra bank cap, safety multiplier,
-     * or absolute radius floor is inserted here.
-     */
-    double usable_bank=dynamic_bank_limit(t,v);
-    double radius=live_turn_radius(t,aero,v,usable_bank);
-    return isfinite(radius)&&radius>0.0?radius:INFINITY;
-}
        void terminal_glide_initialize(GuidanceMachine*g,const VehicleProfile*v,const GuidanceSettings*s){
     g->terminal_glide_mode=true;
     g->terminal_path_kind=TERMINAL_PATH_NONE;
-    g->hac_transition_lead_curve=false;
-    g->hac_transition_lead_acquisition=false;
-    g->hac_transition_handoff_lateral_valid=false;
-    g->hac_transition_handoff_lateral_acceleration=0.0;
-    g->hac_transition_handoff_blend=0.0;
-    g->hac_transition_handoff_aoa_valid=false;
-    g->hac_transition_handoff_aoa=0.0;
-    g->hac_plan_degraded=false;
-    g->hac_plan_geometry_degraded=false;
-    g->hac_plan_energy_degraded=false;
-    g->hac_plan_violation_score=0;
-    g->hac_commit_blend=0;
     g->terminal_energy_sample_valid=false;
     g->terminal_previous_specific_energy=0;
     g->terminal_previous_speed=0;
@@ -95,69 +70,6 @@
     return live;
 }
 
-/* Diagnostic-only live closure for the committed fixed-HAC lead.  This is
- * deliberately kept outside all admission and command decisions: it measures
- * what the simulator actually flew so the forecast ledger can be audited. */
-       void hac_energy_audit_observe(GuidanceMachine*g,const Telemetry*t,
-        const PlanetModel*p,AerodynamicModel aero,const VehicleProfile*v,
-        double dt){
-    if(!g||!t||!p||!v||!g->hac_energy_audit_active||
-       g->hac_energy_audit_logged)return;
-    double step=dt;
-    if(isfinite(g->hac_energy_audit_last_ut)&&isfinite(t->ut))
-        step=t->ut-g->hac_energy_audit_last_ut;
-    if(!isfinite(step)||step<0.0||step>5.0)step=0.0;
-    double drag=terminal_expected_energy_loss_accel(g,t,aero,v);
-    if(isfinite(drag)&&drag>=0.0&&isfinite(t->true_air_speed))
-        g->hac_energy_audit_actual_drag_work+=drag*t->true_air_speed*step;
-    if(isfinite(t->true_air_speed))
-        g->hac_energy_audit_actual_distance+=t->true_air_speed*step;
-    g->hac_energy_audit_last_ut=t->ut;
-}
-
-       void hac_energy_audit_close(GuidanceMachine*g,const Telemetry*t,
-        const PlanetModel*p){
-    if(!g||!t||!p||!g->hac_energy_audit_active||
-       g->hac_energy_audit_logged)return;
-    double end_energy=rotating_specific_energy(t->latitude,t->mean_altitude,
-        t->true_air_speed,p);
-    double realized_loss=isfinite(g->hac_energy_audit_start_specific_energy)&&
-        isfinite(end_energy)?g->hac_energy_audit_start_specific_energy-end_energy:NAN;
-    double mechanical_residual=isfinite(realized_loss)?
-        realized_loss-g->hac_energy_audit_actual_drag_work:NAN;
-    double total_path=g->hac_energy_audit_forecast_lead_length+
-        fmax(0.0,g->hac_transition_cone_arc_length);
-    double forecast_work_per_m=g->hac_energy_audit_forecast_loss;
-    double forecast_work=isfinite(forecast_work_per_m)&&isfinite(total_path)?
-        forecast_work_per_m*total_path:NAN;
-    double forecast_residual=isfinite(forecast_work)&&isfinite(realized_loss)?
-        forecast_work-realized_loss:NAN;
-    const char*diag=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
-    if(diag&&strcmp(diag,"1")==0)
-        fprintf(stderr,"HAC_ENERGY_LIVE_CLOSE startUt=%.6f endUt=%.6f "
-            "leadForecast=%.6f leadActual=%.6f startE=%.6f endE=%.6f "
-            "realizedLoss=%.6f actualDragWork=%.6f mechanicalResidual=%.6f "
-            "forecastLossPerM=%.9f forecastWork=%.6f forecastResidual=%.6f "
-            "forecastAvailable=%.6f forecastRequired=%.6f forecastMargin=%.6f "
-            "p0SpeedForecast=%.6f p0AltForecast=%.6f p0FpaForecast=%.6f "
-            "p0AoaForecast=%.6f actualSpeed=%.6f actualAlt=%.6f actualFpa=%.6f actualAoa=%.6f\n",
-            g->hac_energy_audit_start_ut,t->ut,
-            g->hac_energy_audit_forecast_lead_length,
-            g->hac_energy_audit_actual_distance,
-            g->hac_energy_audit_start_specific_energy,end_energy,
-            realized_loss,g->hac_energy_audit_actual_drag_work,
-            mechanical_residual,forecast_work_per_m,forecast_work,
-            forecast_residual,g->hac_energy_audit_forecast_available,
-            g->hac_energy_audit_forecast_required,
-            g->hac_energy_audit_forecast_margin,
-            g->hac_energy_audit_forecast_p0_speed,
-            g->hac_energy_audit_forecast_p0_altitude,
-            g->hac_energy_audit_forecast_p0_fpa,
-            g->hac_energy_audit_forecast_p0_aoa,t->true_air_speed,
-            t->mean_altitude,t->flight_path_angle,t->angle_of_attack);
-    g->hac_energy_audit_logged=true;
-    g->hac_energy_audit_active=false;
-}
 
 /* A dimensionless polar correction belongs to the measured source state.
    Carry this coefficient, not a live absolute drag acceleration, to p0. */

@@ -11,16 +11,14 @@ static TaemExecInputs taem_exec_inputs_live_with_contract(
     TaemExecInputs inputs={0};
     inputs.mm304_complete=g->entry_exec.entry_complete;
 
-    /* Generic post-HAC final testing owns only the runway line. It must never
-       need a HAC side/radius/capture record to satisfy TAEM path ownership. */
-    inputs.terminal_path_selected=g->terminal_final_test_mode||
-        g->terminal_path_committed||g->hac_side_selected;
-    bool committed_fixed_hac=g->fixed_alignment_hac_latched&&
-        g->terminal_path_committed&&g->hac_transition_heading_cone&&
-        g->hac_transition_active;
-    inputs.terminal_path_captured=g->terminal_final_test_mode||
-        (g->hac_captured&&!g->hac_transition_active)||committed_fixed_hac;
-    inputs.final_intercept_ready=g->terminal_final_test_mode||g->hac_completed;
+    /* Native MM305 owns one value-semantic route from commit through HAC exit.
+       Final-only tests own the runway line directly.  Do not infer ownership from
+       legacy HAC transition/candidate latches. */
+    bool native_route=g->mm305_route_committed&&g->mm305_route.valid;
+    inputs.terminal_path_selected=g->terminal_final_test_mode||native_route;
+    inputs.terminal_path_captured=g->terminal_final_test_mode||native_route;
+    inputs.final_intercept_ready=g->terminal_final_test_mode||
+        (native_route&&g->mm305_hac_exit_reached);
     inputs.final_approach_ready=has_final_approach_override?
         final_approach_override:g->final_approach_captured;
     if(terminal_contract)inputs.terminal_contract=*terminal_contract;
