@@ -5,19 +5,136 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "shuttlesim/world.h"
+
+/* Join stations on the fixed analytic HAC circle, expressed as the remaining
+ * sweep to the Final exit.  The step is fine enough that a state already part
+ * way around the circle finds a join with compatible chord/tangent geometry.
+ * The search is hierarchical: cheap geometry/authority pruning and energy
+ * ranking of every station, then full native replay of only a few survivors,
+ * then vertical-profile refinement of the selected route only. */
+#define TAEM_JOIN_SWEEP_MAX_DEG 270.0
+#define TAEM_JOIN_SWEEP_MIN_DEG 15.0
+#define TAEM_HAC_RADIUS_STEPS 5
+#define TAEM_HAC_RADIUS_RATIO 0.6
+#define TAEM_JOIN_SWEEP_STEP_DEG 7.5
+#define TAEM_JOIN_MAX_STATIONS 120
+#define TAEM_JOIN_MAX_REPLAYS 3
+#define TAEM_JOIN_MAX_PROFILES 8
+#define TAEM_PROFILE_DT_S 0.5
+#define TAEM_MIN_HAC_RADIUS_M 3000.0
+
+typedef struct {
+    double sweep_rad;
+    double score;
+    TaemRoute route;
+} JoinStation;
+
+static int compare_station(const void *a, const void *b) {
+    double x = ((const JoinStation *)a)->score;
+    double y = ((const JoinStation *)b)->score;
+    return (x > y) - (x < y);
+}
+
+static bool diagnostics_enabled(void) {
+    const char *diagnostics = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+    return diagnostics && strcmp(diagnostics, "1") == 0;
+}
+
+static bool replay_reaches_exit(const TerminalSolverResult *replay) {
+    return replay->status == TERMINAL_SOLVER_UNQUALIFIED &&
+           replay->path_constraints_ok;
+}
+
+static double exit_speed_target(const TerminalModel *model) {
+    return isfinite(model->guidance.final_alignment_speed) &&
+        model->guidance.final_alignment_speed > 0.0 ?
+        model->guidance.final_alignment_speed : model->vehicle.final_approach_speed;
+}
+
+/* Tightest HAC worth planning: a steady coordinated turn at the Final
+ * alignment speed and the vehicle bank limit. */
+static double hac_radius_floor(const TerminalModel *model) {
+    double bank = fmin(model->vehicle.maximum_bank_angle, 80.0) *
+                  3.14159265358979323846 / 180.0;
+    double speed = exit_speed_target(model);
+    double radius = model->world.radius_m + model->site.altitude;
+    double gravity = model->world.mu_m3_s2 / (radius * radius);
+    return bank > 0.0 && speed > 0.0 && isfinite(gravity) && gravity > 0.0 ?
+        fmax(TAEM_MIN_HAC_RADIUS_M, speed * speed / (gravity * tan(bank))) : INFINITY;
+}
+
+static double initial_kinetic(const TerminalDynamicState *initial) {
+    double vx = initial->velocity_i_mps.x;
+    double vy = initial->velocity_i_mps.y;
+    double vz = initial->velocity_i_mps.z;
+    return 0.5 * (vx * vx + vy * vy + vz * vz);
+}
+
+static bool better_failure(const TaemFixedHacCandidate *trial,
+                           const TaemFixedHacCandidate *best, bool have_best) {
+    if (!have_best) return true;
+    if (trial->route_built != best->route_built) return trial->route_built;
+    return trial->replay.elapsed_s > best->replay.elapsed_s;
+}
+
+static bool candidate_reaches_target_speed(const TerminalModel *model,
+        const TaemFixedHacCandidate *candidate) {
+    return candidate->status == TAEM_PLAN_UNQUALIFIED &&
+        candidate->replay.final_geometry.airspeed_mps >= exit_speed_target(model);
+}
+
+static bool candidate_preferred(const TerminalModel *model,
+        const TaemFixedHacCandidate *trial, const TaemFixedHacCandidate *best) {
+    if (trial->status != TAEM_PLAN_UNQUALIFIED) return false;
+    if (best->status != TAEM_PLAN_UNQUALIFIED) return true;
+    double target = exit_speed_target(model);
+    double trial_deficit = fmax(0.0, target - trial->replay.final_geometry.airspeed_mps);
+    double best_deficit = fmax(0.0, target - best->replay.final_geometry.airspeed_mps);
+    return trial_deficit < best_deficit ||
+        (trial_deficit == best_deficit && trial->quality_score < best->quality_score);
+}
+/* Replay qualified the route through the HAC exit.  Rank by tracking quality,
+ * energy closure and how far the exit airspeed falls short of the configured
+ * Final alignment speed. */
+static void finish_candidate(const TerminalModel *model,
+        const TerminalDynamicState *initial, TaemFixedHacCandidate *trial) {
+    trial->status = TAEM_PLAN_UNQUALIFIED;
+    trial->reason = "native HAC route reaches its exit; Final tail qualification is pending";
+    double target_speed = exit_speed_target(model);
+    double deficit = fmax(0.0, target_speed -
+        trial->replay.final_geometry.airspeed_mps) / target_speed;
+    double cross_limit = fmax(1200.0, 0.1 * trial->route.hac.radius_m);
+    trial->quality_score = trial->replay.maximum_cross_track_m / cross_limit +
+        trial->replay.maximum_course_error_deg / 20.0 +
+        trial->replay.maximum_altitude_error_m / 2000.0 +
+        fabs(trial->replay.energy_closure_residual_j_kg) /
+            fmax(250.0, 0.02 * fmax(fabs(trial->replay.drag_work_j_kg),
+                                    initial_kinetic(initial))) +
+        4.0 * deficit;
+    if (!isfinite(trial->quality_score)) trial->quality_score = INFINITY;
+}
+
+static void mark_failure(TaemFixedHacCandidate *trial) {
+    trial->status = trial->replay.status == TERMINAL_SOLVER_SEARCH_EXHAUSTED ?
+        TAEM_PLAN_SEARCH_EXHAUSTED : TAEM_PLAN_INFEASIBLE;
+    trial->reason = trial->replay.reason;
+}
+
 static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         const TerminalDynamicState *initial, const TaemGeometryState *geometry,
-        double side, double spacing, double dt, double maximum_elapsed) {
+        double hac_radius, double side, double spacing, double dt,
+        double maximum_elapsed, JoinStation *stations) {
     TaemFixedHacCandidate candidate;
     memset(&candidate, 0, sizeof(candidate));
     candidate.side = side;
     candidate.status = TAEM_PLAN_INFEASIBLE;
     candidate.reason = "fixed-HAC candidate is infeasible";
-    char reason[160];
+
     TaemReachability reachability;
     memset(&reachability, 0, sizeof(reachability));
     if (!taem_fixed_hac_turn_reachability(model, initial, geometry,
-            model->guidance.hac_radius, &reachability) ||
+            hac_radius, &reachability) ||
         !reachability.valid ||
         !(reachability.available_lateral_accel_mps2 > 0.0)) {
         candidate.required_lateral_accel_mps2 = reachability.required_lateral_accel_mps2;
@@ -27,189 +144,286 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     }
     candidate.required_lateral_accel_mps2 = reachability.required_lateral_accel_mps2;
     candidate.available_lateral_accel_mps2 = reachability.available_lateral_accel_mps2;
-    /* Current-state lift bounds the finite lead.  HAC circle authority is
-     * checked during native replay at the evolving capture speed; rejecting
-     * from the initial speed here would discard leads that can slow the
-     * vehicle before the fixed arc.  Keep a small numerical margin, but do not reserve nearly a third of
-     * the available turn authority here.  The solver propagates the complete
-     * route with the live force and response limits, so an over-conservative
-     * geometric prefilter can otherwise discard a candidate that replay
-     * would qualify. */
-    double maximum_lead_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
-        fmax(geometry->airspeed_mps * geometry->airspeed_mps, 1.0);
-    const double curvature_fractions[] = {0.25, 0.35, 0.50, 0.70, 1.00};
-    const double bow_fractions[] = {-0.625, -0.60};
-    /* Let replay test an early descent that can build density before the
-     * subsonic lift cap becomes binding.  These bounded offsets remain inside
-     * the route profile; the native solver still rejects any profile that
-     * exceeds lift authority or reaches runway elevation before HAC exit. */
-    const double initial_sag_fractions[] = {
-        0.0, -0.10, -0.15, -0.20, -0.25, -0.35, -0.50, -1.0, -1.5, -2.0
-    };
-    const double local_profile_supports[][3] = {
-        {0.12, 0.17, 0.42}, {0.12, 0.19, 0.50},
-        {0.12, 0.21, 0.60}, {0.12, 0.23, 0.75}
-    };
-    const double local_bow_offsets_m[] = {
-        -900.0, -800.0, -700.0, -500.0, -450.0, -400.0, -350.0, -300.0
-    };
-    TaemFixedHacCandidate best_survivor;
-    memset(&best_survivor, 0, sizeof(best_survivor));
-    best_survivor.quality_score = INFINITY;
-    TaemFixedHacCandidate best_failure = {0};
-    best_failure.status = TAEM_PLAN_INFEASIBLE;
-    best_failure.reason = "fixed-HAC route geometry could not be constructed";
-    double best_failure_deficit = INFINITY;
-    bool have_failure = false, have_route = false;
-    const char *diagnostics = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
-    double vx = initial->velocity_i_mps.x;
-    double vy = initial->velocity_i_mps.y;
-    double vz = initial->velocity_i_mps.z;
-    double kinetic = 0.5 * (vx * vx + vy * vy + vz * vz);
-    for (size_t curvature = 0;
-         curvature < sizeof(curvature_fractions) / sizeof(curvature_fractions[0]);
-         ++curvature) {
-        TaemFixedHacCandidate route_candidate = candidate;
-        double curvature_limit = maximum_lead_curvature *
-                                 curvature_fractions[curvature];
-        if (!taem_route_build_fixed_hac(model, geometry, side, spacing,
-                curvature_limit, &route_candidate.route, reason, sizeof(reason))) {
-            route_candidate.reason =
-                strcmp(reason,"finite lead turn exceeds available curvature authority")==0 ?
-                    "finite lead exceeds live curvature authority" :
-                (strcmp(reason,"lead-to-HAC distance is too short")==0 ?
-                    "live state is too close to the HAC entry point" :
-                 "fixed-HAC route geometry could not be constructed");
-            if (!have_route && !have_failure) best_failure = route_candidate;
-            continue;
-        }
-        route_candidate.route_built = true;
-        have_route = true;
-        double altitude_drop = route_candidate.route.profile_start_altitude_m -
-                               route_candidate.route.profile_final_altitude_m;
-        double bow_limit = fmin(6000.0, fmax(1000.0, 0.4 * altitude_drop));
-        for (size_t bow = 0;
-             bow < sizeof(bow_fractions) / sizeof(bow_fractions[0]); ++bow) {
-            for (size_t sag = 0;
-                 sag < sizeof(initial_sag_fractions) /
-                       sizeof(initial_sag_fractions[0]); ++sag) {
-              for (size_t support = 0;
-                   support < sizeof(local_profile_supports) /
-                             sizeof(local_profile_supports[0]); ++support) {
-               for (size_t local = 0;
-                    local < sizeof(local_bow_offsets_m) /
-                            sizeof(local_bow_offsets_m[0]); ++local) {
-                TaemFixedHacCandidate trial = route_candidate;
-                trial.route.profile_midpoint_offset_m =
-                    bow_limit * bow_fractions[bow];
-                double initial_sag_limit=fmin(600.0, fmax(150.0,
-                    geometry->ground_speed_mps));
-                trial.route.profile_initial_sag_m=initial_sag_limit *
-                    initial_sag_fractions[sag];
-                trial.route.profile_initial_sag_length_m=
-                    fmax(4000.0,geometry->ground_speed_mps * 20.0);
-                trial.route.profile_local_offset_m = local_bow_offsets_m[local];
-                trial.route.profile_local_start_fraction =
-                    local_profile_supports[support][0];
-                trial.route.profile_local_peak_fraction =
-                    local_profile_supports[support][1];
-                trial.route.profile_local_end_fraction =
-                    local_profile_supports[support][2];
-                trial.replay = terminal_solver_replay(model, initial,
-                    &trial.route, dt, maximum_elapsed);
-                if (diagnostics && strcmp(diagnostics, "1") == 0)
-                    fprintf(stderr,
-                        "TAEM candidate: side=%+.0f curvature=%.2f bow=%+.0f local=%+.0f@%.2f^%.2f-%.2f sag=%+.0f/%.0f lead=%zu length=%.0f status=%d elapsed=%.2f index=%zu reason=%s verticalError=%.2f lateralShort=%.2f vDemand=%.2f vDelivered=%.2f altErr=%.1f currentFPA=%.2f targetAlt=%.1f targetFPA=%.2f\n",
-                        side, curvature_fractions[curvature],
-                        trial.route.profile_midpoint_offset_m,
-                        trial.route.profile_local_offset_m,
-                        trial.route.profile_local_start_fraction,
-                        trial.route.profile_local_peak_fraction,
-                        trial.route.profile_local_end_fraction,
-                        trial.route.profile_initial_sag_m,
-                        trial.route.profile_initial_sag_length_m,
-                        trial.route.lead_count, trial.route.length_m,
-                        (int)trial.replay.status, trial.replay.elapsed_s,
-                        trial.replay.failure_route_index,
-                        trial.replay.reason ? trial.replay.reason : "none",
-                        trial.replay.maximum_vertical_authority_shortfall_mps2,
-                        trial.replay.maximum_lateral_authority_shortfall_mps2,
-                        trial.replay.failure_required_vertical_lift_mps2,
-                        trial.replay.failure_delivered_vertical_lift_mps2,
-                        trial.replay.maximum_altitude_error_m,
-                        trial.replay.final_geometry.flight_path_angle_deg,
-                        trial.replay.failure_target_altitude_m,
-                        trial.replay.failure_target_flight_path_angle_deg);
-                if (trial.replay.status == TERMINAL_SOLVER_UNQUALIFIED &&
-                    trial.replay.path_constraints_ok) {
-                    trial.status = TAEM_PLAN_UNQUALIFIED;
-                    trial.reason = "native HAC route reaches its exit; Final tail qualification is pending";
-                    double cross_limit = fmax(1200.0, 0.1 * trial.route.hac.radius_m);
-                    trial.quality_score = trial.replay.maximum_cross_track_m / cross_limit +
-                        trial.replay.maximum_course_error_deg / 20.0 +
-                        trial.replay.maximum_altitude_error_m / 2000.0 +
-                        fabs(trial.replay.energy_closure_residual_j_kg) /
-                            fmax(250.0, 0.02 * fmax(fabs(trial.replay.drag_work_j_kg),
-                                                   kinetic));
-                    if (!isfinite(trial.quality_score)) trial.quality_score = INFINITY;
-                    if (trial.quality_score < best_survivor.quality_score)
-                        best_survivor = trial;
-                    continue;
-                }
-                trial.status = trial.replay.status == TERMINAL_SOLVER_SEARCH_EXHAUSTED ?
-                    TAEM_PLAN_SEARCH_EXHAUSTED : TAEM_PLAN_INFEASIBLE;
-                trial.reason = trial.replay.reason;
-                /* If all profiles fail, retain the attempt that progressed furthest;
-                 * break ties by the measured tracker authority deficit for diagnostics. */
-                double deficit = trial.replay.maximum_lateral_authority_shortfall_mps2 +
-                                 trial.replay.maximum_vertical_authority_shortfall_mps2;
-                if (!have_failure || trial.replay.elapsed_s > best_failure.replay.elapsed_s ||
-                    (trial.replay.elapsed_s == best_failure.replay.elapsed_s &&
-                     deficit < best_failure_deficit)) {
-                    best_failure = trial;
-                    best_failure_deficit = deficit;
+
+    /* The live curvature authority bounds the roll-settling prefix of the lead
+     * (enforced inside the planner).  Later lead curvature is judged by native
+     * replay at the propagated state.  For cheap pruning only, bound it
+     * optimistically: bank-limited curvature is 0.5*rho*S*CL*sin(bank)/m and
+     * does not depend on speed, so descending to runway density is the most
+     * it can grow.  A lead exceeding that ceiling cannot be flown.  The whole
+     * lead is not ranked against the live thin-air authority again; that
+     * systematically discarded joins that become executable as density builds. */
+    double live_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
+        fmax(geometry->ground_speed_mps * geometry->ground_speed_mps, 1.0);
+    double rho_live = world_atmosphere_sample(&model->world,
+        model->site.altitude + geometry->altitude_above_runway_m).density_kg_m3;
+    double rho_runway = world_atmosphere_sample(&model->world,
+        model->site.altitude).density_kg_m3;
+    double density_gain = rho_live > 0.0 && rho_runway > rho_live ?
+        rho_runway / rho_live : 1.0;
+    double curvature_ceiling = live_curvature * density_gain;
+
+    TaemFixedHacCandidate best_failure = candidate;
+    bool have_failure = false;
+    size_t count = 0;
+    char reason[160];
+    for (double sweep_deg = TAEM_JOIN_SWEEP_MAX_DEG;
+         sweep_deg >= TAEM_JOIN_SWEEP_MIN_DEG - 1e-9;
+         sweep_deg -= TAEM_JOIN_SWEEP_STEP_DEG) {
+        /* Two lead shapes per join: the smoothest lead and the shortest lead
+         * within the optimistic authority ceiling.  The smoothest lead can be
+         * a long loop when the vehicle is close to the circle; the compact
+         * one is what an energy-limited state may need. */
+        /* A third, energy-matched lead is sized so the whole route meets the
+         * TAEM glide-slope length: a state too high for the direct lead
+         * dissipates the excess along a longer lead rather than in a steep
+         * descent near the runway. */
+        double sweep_rad = sweep_deg * 3.14159265358979323846 / 180.0;
+        double energy_lead_length = NAN;
+        for (int variant = 0; variant < 3 && count < TAEM_JOIN_MAX_STATIONS; ++variant) {
+            JoinStation *station = &stations[count];
+            station->sweep_rad = sweep_rad;
+            if (variant == 2 && !isfinite(energy_lead_length)) continue;
+            bool built = variant == 0 ?
+                taem_route_build_hac(model, geometry, hac_radius, side,
+                    station->sweep_rad, spacing, live_curvature,
+                    &station->route, reason, sizeof(reason)) :
+                variant == 1 ?
+                taem_route_build_hac_shortest(model, geometry, hac_radius, side,
+                    station->sweep_rad, spacing, live_curvature, curvature_ceiling,
+                    &station->route, reason, sizeof(reason)) :
+                taem_route_build_hac_length(model, geometry, hac_radius, side,
+                    station->sweep_rad, spacing, live_curvature, curvature_ceiling,
+                    energy_lead_length, &station->route, reason, sizeof(reason));
+            if (!built) {
+                if (!have_failure) {
+                    best_failure.reason =
+                        strcmp(reason, "lead-to-HAC distance is too short") == 0 ?
+                            "live state is too close to every HAC join" :
+                            "finite lead exceeds live curvature authority at every HAC join";
                     have_failure = true;
-               }
-              }
-              }
+                }
+                continue;
             }
+            if (variant > 0 && count > 0 &&
+                fabs(stations[count - 1].sweep_rad - station->sweep_rad) < 1e-9 &&
+                fabs(stations[count - 1].route.length_m - station->route.length_m) < 200.0)
+                continue; /* identical to the previous lead */
+            double peak = taem_route_lead_peak_curvature(&station->route);
+            double hac_curvature = 1.0 / station->route.hac.radius_m;
+            if (!isfinite(peak) || peak > curvature_ceiling) continue;
+            /* Energy: an unpowered route whose altitude drop spread over its
+             * length is much shallower than the configured TAEM glide slope
+             * cannot be held, and one much steeper dives through the energy
+             * Final needs.  Prefer lengths near the glide-slope length. */
+            double drop = station->route.profile_start_altitude_m -
+                          station->route.profile_final_altitude_m;
+            double glide_length = drop > 0.0 ?
+                drop / tan(model->guidance.taem_glide_slope * 3.14159265358979323846 / 180.0) :
+                0.0;
+            if (variant == 0 && glide_length > station->route.length_m + 1000.0)
+                energy_lead_length = glide_length -
+                    (station->route.length_m - station->route.lead_length_m);
+            station->score =
+                0.25 * fmax(0.0, peak - hac_curvature) / hac_curvature +
+                fabs(station->route.length_m - glide_length) /
+                    fmax(glide_length, station->route.hac.radius_m);
+            ++count;
         }
     }
-    if (!have_route) return best_failure;
-    return best_survivor.status == TAEM_PLAN_UNQUALIFIED ?
-        best_survivor : best_failure;
+    if (count == 0) return best_failure;
+    qsort(stations, count, sizeof(stations[0]), compare_station);
+
+    /* Generate a dynamically feasible vertical reference for the most
+     * promising lateral routes by native propagation.  Routes whose energy
+     * cannot be brought to the HAC exit altitude by any incidence are dropped
+     * here without a full replay; survivors are ordered by how well their exit
+     * airspeed meets the Final alignment speed. */
+    double target_speed = exit_speed_target(model);
+    size_t profiled = 0;
+    size_t profile_budget = count < TAEM_JOIN_MAX_PROFILES ? count : TAEM_JOIN_MAX_PROFILES;
+    for (size_t i = 0; i < profile_budget; ++i) {
+        TerminalProfileResult profile = terminal_solver_generate_profile(model,
+            initial, &stations[i].route, TAEM_PROFILE_DT_S, maximum_elapsed);
+        if (diagnostics_enabled())
+            fprintf(stderr,
+                "TAEM profile: side=%+.0f radius=%.0f join_sweep=%.1f length=%.0f valid=%d aoa=%.2f exitV=%.1f exitFpa=%.1f reason=%s\n",
+                side, stations[i].route.hac.radius_m,
+                stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
+                stations[i].route.length_m, profile.valid ? 1 : 0,
+                profile.aoa_deg, profile.exit_speed_mps, profile.exit_fpa_deg,
+                profile.reason);
+        if (!profile.valid) continue;
+        stations[i].score = stations[i].score +
+            fmax(0.0, target_speed - profile.exit_speed_mps) / target_speed * 10.0;
+        if (i != profiled) {
+            JoinStation swap = stations[profiled];
+            stations[profiled] = stations[i];
+            stations[i] = swap;
+        }
+        ++profiled;
+    }
+    if (profiled == 0) {
+        best_failure.reason = "no HAC join has an energy-feasible native vertical profile";
+        return best_failure;
+    }
+    qsort(stations, profiled, sizeof(stations[0]), compare_station);
+    count = profiled;
+
+    have_failure = false;
+    size_t replays = count < TAEM_JOIN_MAX_REPLAYS ? count : TAEM_JOIN_MAX_REPLAYS;
+    for (size_t i = 0; i < replays; ++i) {
+        TaemFixedHacCandidate trial = candidate;
+        trial.route = stations[i].route;
+        trial.route_built = true;
+        trial.replay = terminal_solver_replay(model, initial, &trial.route,
+                                              dt, maximum_elapsed);
+        if (diagnostics_enabled())
+            fprintf(stderr,
+                "TAEM candidate: side=%+.0f join_sweep=%.1f lead=%.0f arc=%.0f leadPeakK=%.3e liveK=%.3e status=%d elapsed=%.2f index=%zu/%zu reason=%s cross=%.1f course=%.1f altErr=%.1f exitV=%.1f latShort=%.2f\n",
+                side, stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
+                trial.route.lead_length_m, trial.route.hac.arc_length_m,
+                taem_route_lead_peak_curvature(&trial.route), live_curvature,
+                (int)trial.replay.status, trial.replay.elapsed_s,
+                trial.replay.failure_route_index, trial.route.count,
+                trial.replay.reason ? trial.replay.reason : "none",
+                trial.replay.maximum_cross_track_m,
+                trial.replay.maximum_course_error_deg,
+                trial.replay.maximum_altitude_error_m,
+                trial.replay.final_geometry.airspeed_mps,
+                trial.replay.maximum_lateral_authority_shortfall_mps2);
+        if (replay_reaches_exit(&trial.replay)) {
+            finish_candidate(model, initial, &trial);
+            if (candidate_reaches_target_speed(model, &trial)) return trial;
+            if (candidate_preferred(model, &trial, &best_failure)) {
+                best_failure = trial;
+                have_failure = true;
+            }
+            continue;
+        }
+        mark_failure(&trial);
+        if (best_failure.status != TAEM_PLAN_UNQUALIFIED &&
+            better_failure(&trial, &best_failure, have_failure)) {
+            best_failure = trial;
+            have_failure = true;
+        }
+    }
+    return best_failure;
 }
 
-TaemFixedHacSearch taem_fixed_hac_search(const TerminalModel *model,
-        const TerminalDynamicState *initial, double spacing, double dt,
+
+static bool search_inputs_valid(const TerminalModel *model,
+        const TerminalDynamicState *initial, double hac_radius, double spacing,
+        double dt, double maximum_elapsed) {
+    return model && model->replay_validated &&
+        terminal_model_validate(model, NULL, 0) &&
+        terminal_state_validate(initial, NULL, 0) && hac_radius >= TAEM_MIN_HAC_RADIUS_M &&
+        isfinite(hac_radius) && spacing >= 100.0 && isfinite(spacing) &&
+        dt > 0.0 && isfinite(dt) && maximum_elapsed > 0.0 &&
+        isfinite(maximum_elapsed);
+}
+
+TaemFixedHacCandidate taem_fixed_hac_evaluate_exact(
+        const TerminalModel *model,const TerminalDynamicState *initial,
+        double hac_radius,double side,double spacing,double dt,
         double maximum_elapsed) {
+    TaemFixedHacCandidate candidate;
+    memset(&candidate,0,sizeof(candidate));
+    candidate.status=TAEM_PLAN_INFEASIBLE;
+    candidate.side=side<0.0?-1.0:1.0;
+    candidate.reason="invalid model, state, or frozen-HAC contract";
+    if(!search_inputs_valid(model,initial,hac_radius,spacing,dt,maximum_elapsed)||
+       !isfinite(side)||fabs(side)<0.5)
+        return candidate;
+
+    TaemGeometryState geometry;
+    if(!taem_geometry_state(model,initial,&geometry)){
+        candidate.reason="initial state cannot be projected into the runway frame";
+        return candidate;
+    }
+    JoinStation *stations=calloc(TAEM_JOIN_MAX_STATIONS,sizeof(*stations));
+    if(!stations){
+        candidate.reason="candidate search could not allocate join stations";
+        return candidate;
+    }
+    candidate=evaluate_side(model,initial,&geometry,hac_radius,
+        side<0.0?-1.0:1.0,spacing,dt,maximum_elapsed,stations);
+    free(stations);
+    return candidate;
+}
+
+
+TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
+        const TerminalModel *reciprocal_model, const TerminalDynamicState *initial,
+        double hac_radius, double spacing, double dt, double maximum_elapsed) {
     TaemFixedHacSearch result;
     memset(&result, 0, sizeof(result));
     result.status = TAEM_PLAN_INFEASIBLE;
     result.selected_candidate = -1;
-    result.reason = "both fixed-HAC candidates are infeasible";
-    if (!model || !model->replay_validated ||
-        !terminal_model_validate(model, NULL, 0) ||
-        !terminal_state_validate(initial, NULL, 0) || !(spacing >= 100.0) ||
-        !(dt > 0.0) || !(maximum_elapsed > 0.0) || !isfinite(spacing) ||
-        !isfinite(dt) || !isfinite(maximum_elapsed)) {
+    result.reason = "every fixed-HAC candidate is infeasible";
+    if (!search_inputs_valid(model, initial, hac_radius, spacing, dt,
+                             maximum_elapsed) ||
+        (reciprocal_model && !search_inputs_valid(reciprocal_model, initial,
+            hac_radius, spacing, dt, maximum_elapsed))) {
         result.reason = "invalid model, state, or candidate-search bound";
         return result;
     }
-    TaemGeometryState geometry;
-    if (!taem_geometry_state(model, initial, &geometry)) {
-        result.reason = "initial state cannot be projected into the runway frame";
+    JoinStation *stations = calloc(TAEM_JOIN_MAX_STATIONS, sizeof(*stations));
+    if (!stations) {
+        result.reason = "candidate search could not allocate join stations";
         return result;
     }
-    result.candidates[0] = evaluate_side(model, initial, &geometry, -1.0,
-                                         spacing, dt, maximum_elapsed);
-    result.candidates[1] = evaluate_side(model, initial, &geometry, 1.0,
-                                         spacing, dt, maximum_elapsed);
+    const TerminalModel *ends[2] = {model, reciprocal_model};
+    int end_count = reciprocal_model ? 2 : 1;
+    for (int end = 0; end < end_count; ++end) {
+        TaemGeometryState geometry;
+        bool projected = taem_geometry_state(ends[end], initial, &geometry);
+        for (int side_index = 0; side_index < 2; ++side_index) {
+            TaemFixedHacCandidate *slot = &result.candidates[end * 2 + side_index];
+            if (!projected) {
+                memset(slot, 0, sizeof(*slot));
+                slot->status = TAEM_PLAN_INFEASIBLE;
+                slot->side = side_index == 0 ? -1.0 : 1.0;
+                slot->reason = "initial state cannot be projected into the runway frame";
+            } else {
+                /* The analytic circle stays the primitive; its radius is a
+                 * bounded search variable.  The handed-over radius is tried
+                 * first.  Only when no route around it is feasible are
+                 * tighter circles tried, down to the steady turn radius at
+                 * the Final alignment speed and the vehicle bank limit: a
+                 * state with little energy near the runway can still fly a
+                 * short HAC where a large circle is beyond its glide range. */
+                double side = side_index == 0 ? -1.0 : 1.0;
+                double floor_radius = hac_radius_floor(ends[end]);
+                double radius = hac_radius;
+                *slot = evaluate_side(ends[end], initial, &geometry, radius,
+                    side, spacing, dt, maximum_elapsed, stations);
+                for (int step = 1; step < TAEM_HAC_RADIUS_STEPS &&
+                        !candidate_reaches_target_speed(ends[end], slot); ++step) {
+                    double next_radius = fmax(floor_radius, radius * TAEM_HAC_RADIUS_RATIO);
+                    if (!(next_radius < radius)) break;
+                    radius = next_radius;
+                    TaemFixedHacCandidate tighter = evaluate_side(ends[end],
+                        initial, &geometry, radius, side, spacing, dt,
+                        maximum_elapsed, stations);
+                    if (candidate_preferred(ends[end], &tighter, slot) ||
+                        (slot->status != TAEM_PLAN_UNQUALIFIED &&
+                         tighter.route_built && !slot->route_built))
+                        *slot = tighter;
+                }
+            }
+            slot->runway_end = end;
+        }
+    }
+    free(stations);
+    result.candidate_count = end_count * 2;
+
     int best = -1;
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < result.candidate_count; ++i) {
         if (result.candidates[i].status == TAEM_PLAN_UNQUALIFIED &&
-            (best < 0 || result.candidates[i].quality_score <
-                         result.candidates[best].quality_score)) best = i;
+            (best < 0 || candidate_preferred(ends[result.candidates[i].runway_end],
+                &result.candidates[i], &result.candidates[best])))
+            best = i;
     }
     if (best >= 0) {
         result.status = TAEM_PLAN_UNQUALIFIED;
@@ -217,10 +431,17 @@ TaemFixedHacSearch taem_fixed_hac_search(const TerminalModel *model,
         result.reason = result.candidates[best].reason;
         return result;
     }
-    if (result.candidates[0].status == TAEM_PLAN_SEARCH_EXHAUSTED ||
-        result.candidates[1].status == TAEM_PLAN_SEARCH_EXHAUSTED) {
-        result.status = TAEM_PLAN_SEARCH_EXHAUSTED;
-        result.reason = "candidate search exhausted before a route reached the HAC exit";
-    }
+    for (int i = 0; i < result.candidate_count; ++i)
+        if (result.candidates[i].status == TAEM_PLAN_SEARCH_EXHAUSTED) {
+            result.status = TAEM_PLAN_SEARCH_EXHAUSTED;
+            result.reason = "candidate search exhausted before a route reached the HAC exit";
+        }
     return result;
+}
+
+TaemFixedHacSearch taem_fixed_hac_search(const TerminalModel *model,
+        const TerminalDynamicState *initial, double hac_radius, double spacing,
+        double dt, double maximum_elapsed) {
+    return taem_fixed_hac_search_runway_ends(model, NULL, initial, hac_radius,
+        spacing, dt, maximum_elapsed);
 }
