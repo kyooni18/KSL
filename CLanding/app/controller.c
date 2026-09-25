@@ -5,6 +5,8 @@
 #include "decision_envelope.h"
 #include "terminal_model.h"
 #include "taem_planner.h"
+#include "sim_telemetry.h"
+#include "mm305_planning.h"
 
 #include <errno.h>
 #include <float.h>
@@ -25,6 +27,8 @@ struct LandingController {
     bool stop_thread;
     pthread_t prediction_thread;
     bool prediction_thread_started;
+    pthread_t mm305_planner_thread;
+    bool mm305_planner_started;
     bool stop_prediction_thread;
     uint64_t prediction_generation;
     double last_terminal_prediction_request_ut, last_terminal_prediction_completion_ut;

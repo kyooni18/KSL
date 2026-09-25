@@ -29,6 +29,9 @@ if str(TOOLS) not in sys.path:
 from clanding_layout import build_artifact as clanding_build_artifact, source_root as clanding_source_root
 from headless_flight import BackendProcess, load_configuration
 
+sys.path.insert(0, str(ROOT / "ShuttleSim" / "scripts"))
+from model_paths import model_file as _model_file  # noqa: E402
+
 TERMINAL_PHASES = {"Complete", "Abort", "Fault"}
 
 
@@ -312,10 +315,10 @@ def main() -> int:
     sim_cmd = [
         str(args.simulator),
         "--scenario", str(args.scenario),
-        "--atmosphere", str(ROOT / "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv"),
-        "--aero", str(ROOT / "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv"),
-        "--aero-book", str(ROOT / "ShuttleSim/data/fitted/stsn_force_book.csv"),
-        "--attitude", str(ROOT / "ShuttleSim/data/fitted/stsn_attitude_ksp.ini"),
+        "--atmosphere", str(_model_file("atmosphere")),
+        "--aero", str(_model_file("aero")),
+        "--aero-book", str(_model_file("aero_book")),
+        "--attitude", str(_model_file("attitude")),
         "--dt", "0.02",
         "--rate", "max",
         "--telemetry-hz", f"{guidance_rate:g}",

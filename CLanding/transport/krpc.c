@@ -150,7 +150,7 @@ static void open_sim_physics_store(KRPCSession *session,const LandingConfigurati
 
 static void sim_load_force_book(KRPCSession *s){
     char root[1024];project_root(root,sizeof(root));char path[1400];
-    snprintf(path,sizeof(path),"%s/ShuttleSim/data/fitted/stsn_force_book.csv",root);
+    if(!shuttle_sim_model_path(root,SHUTTLE_SIM_MODEL_FORCE_BOOK,path,sizeof(path)))return;
     const char*configured=getenv("KSP_LANDER_TERMINAL_AERO_BOOK");
     if(configured&&strcmp(configured,"none")==0)return;
     const char*source=configured&&*configured?configured:path;
@@ -187,7 +187,7 @@ static void sim_load_force_book(KRPCSession *s){
 static bool sim_session_open(KRPCSession *s,const LandingConfiguration *cfg,char *error,size_t error_size){
     s->simulator=true;s->sim_rx_fd=-1;s->sim_tx_fd=-1;s->sim_need_packet=true;
     char root[1024], atmosphere[1400];project_root(root,sizeof(root));
-    snprintf(atmosphere,sizeof(atmosphere),"%s/ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",root);
+    if(!shuttle_sim_model_path(root,SHUTTLE_SIM_MODEL_ATMOSPHERE,atmosphere,sizeof(atmosphere))){set_error(error,error_size,"ShuttleSim atmosphere path is too long");return false;}
     const char*configured=getenv("KSP_LANDER_TERMINAL_ATMOSPHERE");
     if(!shuttle_sim_load_planet(configured&&*configured?configured:atmosphere,
             &s->sim_planet,error,error_size))return false;
@@ -252,7 +252,25 @@ static bool sim_read_telemetry(KRPCSession*s,Telemetry*t,VehicleState*state,char
 }
 
 
+/* Simulator direct-control mode (KSP_LANDER_SIM_DIRECT=1): the backend's own
+   atmospheric FCS closes the attitude loops and ShuttleSim integrates surface
+   moments from its stick inputs, as KSP does.  The AoA/bank targets are still
+   sent: the simulator uses them only below its direct-control dynamic-pressure
+   threshold, where they stand in for RCS/reaction-wheel attitude hold. */
+static bool sim_direct_control(void){
+    const char *v=getenv("KSP_LANDER_SIM_DIRECT");
+    return v&&strcmp(v,"1")==0;
+}
+
+static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command,
+        const FlightControlOutput*fc,bool step,char*error,size_t error_size);
+
 static bool sim_send_guidance(KRPCSession*s,const GuidanceCommand*command,bool step,char*error,size_t error_size){
+    return sim_send_guidance_inputs(s,command,NULL,step,error,error_size);
+}
+
+static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command,
+        const FlightControlOutput*fc,bool step,char*error,size_t error_size){
     double aoa=s->has_last_telemetry?s->last_telemetry.angle_of_attack:0.0;
     double bank=s->has_last_telemetry?s->last_telemetry.roll:0.0;
     double throttle=command&&command->control_profile==PROFILE_ORBITAL?
@@ -260,8 +278,12 @@ static bool sim_send_guidance(KRPCSession*s,const GuidanceCommand*command,bool s
     bool gear=s->has_last_telemetry?s->last_telemetry.gear:false,brakes=s->has_last_telemetry?s->last_telemetry.brakes:false;
     bool airbrakes=false;double wheel_steering=0.0;
     if(command){if(command->has_target_aoa&&isfinite(command->target_aoa))aoa=command->target_aoa;if(isfinite(command->target_roll))bank=command->target_roll;gear=command->gear;brakes=command->brakes;airbrakes=command->airbrakes;wheel_steering=clampd(command->wheel_steering,-1.0,1.0);}
-    char msg[640];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.9f,\"throttle\":%.9f,\"step\":%s}",
-        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",wheel_steering,throttle,step?"true":"false");
+    if(fc)wheel_steering=clampd(fc->wheel_steering,-1.0,1.0);
+    char inputs[160]="";
+    if(fc)snprintf(inputs,sizeof(inputs),",\"pitch_input\":%.9f,\"roll_input\":%.9f,\"yaw_input\":%.9f",
+        clampd(fc->pitch,-1.0,1.0),clampd(fc->roll,-1.0,1.0),clampd(fc->yaw,-1.0,1.0));
+    char msg[800];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.9f,\"throttle\":%.9f%s,\"step\":%s}",
+        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",wheel_steering,throttle,inputs,step?"true":"false");
     ssize_t n=sendto(s->sim_tx_fd,msg,strlen(msg),0,(struct sockaddr*)&s->sim_command_addr,sizeof(s->sim_command_addr));
     if(n<0){set_error(error,error_size,"Could not send ShuttleSim command: %s",strerror(errno));return false;}
     if(step)s->sim_need_packet=true;return true;
@@ -406,6 +428,26 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
                 phase?phase:"",command->target_roll,
                 command->has_target_aoa?command->target_aoa:command->target_pitch,
                 command->target_heading,status?status:"",warning?warning:"");
+        bool direct=sim_direct_control()&&command->control_profile!=PROFILE_ORBITAL&&
+            !(command->control_profile==PROFILE_ENTRY&&command->use_inertial_direction)&&
+            s->has_last_telemetry;
+        if(direct){
+            double dt=1.0/fmax(2.0,s->flight_control.nominal_dt>0?1.0/s->flight_control.nominal_dt:10.0);
+            if(s->has_last_control_ut&&s->last_telemetry.ut>s->last_control_ut)
+                dt=clampd(s->last_telemetry.ut-s->last_control_ut,.01,2.0);
+            FlightControlOutput fc;
+            if(!flight_control_step(&s->flight_control,&s->last_telemetry,command,dt,&fc)||!fc.valid){
+                set_error(error,error_size,"Native atmospheric flight-control law rejected profile %s",
+                    profile_string(command->control_profile));
+                return false;
+            }
+            if(!sim_send_guidance_inputs(s,command,&fc,true,error,error_size))return false;
+            s->last_control_ut=s->last_telemetry.ut;s->has_last_control_ut=true;
+            if(result){fill_direct_result(result,command,&fc);
+                snprintf(result->reference_frame,sizeof(result->reference_frame),"shuttlesim-direct");}
+            snprintf(s->last_control_profile,sizeof(s->last_control_profile),"%s",profile_string(command->control_profile));
+            return true;
+        }
         if(!sim_send_guidance(s,command,true,error,error_size))return false;
         if(result){memset(result,0,sizeof(*result));result->applied=true;result->autopilot_engaged=true;result->gear=command->gear;result->brakes=command->brakes;result->airbrakes=false;
             result->target_pitch=command->target_pitch;result->target_heading=command->target_heading;result->target_roll=command->target_roll;

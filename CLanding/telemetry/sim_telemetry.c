@@ -4,7 +4,9 @@
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static void set_error(char *out, size_t size, const char *message) {
     if (!out || size == 0) return;
@@ -339,7 +341,7 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     t->heading = number_value(&doc, attitude, "heading_deg", 0.0);
     t->ground_track_heading = t->heading;
     t->pitch = t->flight_path_angle + t->angle_of_attack;
-    t->sideslip = 0.0;
+    t->sideslip = number_value(&doc, attitude, "sideslip_deg", 0.0);
 
     double published_aoa_rate =
         number_value(&doc, attitude, "aoa_rate_deg_s", NAN);
@@ -381,6 +383,15 @@ bool shuttle_sim_decode_telemetry(const char *packet,
         response->roll_damping_ratio,
         response->maximum_roll_rate_deg_s,
         response->maximum_roll_accel_deg_s2);
+    /* Live KSP telemetry carries no attitude-servo model; guidance and the
+       FCS must work from their own estimates.  Handing them the simulator's
+       servo parameters is perfect knowledge of the plant, so it is withheld
+       unless explicitly requested for an A/B comparison. */
+    const char *publish_servo = getenv("KSP_LANDER_SIM_PUBLISH_SERVO");
+    if (!publish_servo || strcmp(publish_servo, "1") != 0) {
+        response->pitch_valid = false;
+        response->roll_valid = false;
+    }
 
     /* Production Telemetry stores quaternion components as x,y,z,w.  The
        simulator's JSON is w,x,y,z, so normalize the representation here. */
@@ -499,4 +510,31 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     fill_orbit_fields(planet, state, t);
     if (error && error_size) error[0] = '\0';
     return true;
+}
+
+const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
+                                   char *buffer, size_t buffer_size) {
+    static const char *const fitted[] = {
+        "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
+        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
+        "ShuttleSim/data/fitted/stsn_force_book.csv",
+        "ShuttleSim/data/fitted/stsn_attitude_ksp.ini"};
+    static const char *const reference[] = {
+        "ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
+        "ShuttleSim/reference-model/stsn_aero_reference.csv",
+        "ShuttleSim/reference-model/stsn_force_book_reference.csv",
+        "ShuttleSim/reference-model/stsn_attitude_reference.ini"};
+    if (!buffer || buffer_size == 0 || (int)kind < 0 ||
+        (size_t)kind >= sizeof(fitted) / sizeof(fitted[0]))
+        return NULL;
+    const char *prefix = root && root[0] ? root : NULL;
+    const char *const choices[] = {fitted[kind], reference[kind]};
+    for (size_t i = 0; i < 2; ++i) {
+        int written = prefix ?
+            snprintf(buffer, buffer_size, "%s/%s", prefix, choices[i]) :
+            snprintf(buffer, buffer_size, "%s", choices[i]);
+        if (written < 0 || (size_t)written >= buffer_size) return NULL;
+        if (i == 1 || access(buffer, R_OK) == 0) return buffer;
+    }
+    return NULL;
 }

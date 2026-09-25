@@ -1,7 +1,11 @@
 # Keep plain `make` building the backend, not the validation-overlay helper.
 .DEFAULT_GOAL := all
 
-CC ?= clang
+# make predefines CC=cc, so `CC ?= clang` would never apply; honour an explicit
+# CC from the command line/environment and otherwise use clang as intended.
+ifeq ($(origin CC),default)
+CC := clang
+endif
 CFLAGS ?= -O2 -std=c17 -Wall -Wextra -Werror -pthread
 CPPFLAGS ?= -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include
 LDFLAGS ?= -pthread
@@ -19,7 +23,7 @@ CNANO_COMPAT_ROOT := $(BUILD)/cnano_compat
 CNANO_COMPAT := $(CNANO_COMPAT_ROOT)/krpc_cnano
 CNANO_INCLUDE_FLAGS := -isystem $(CNANO_ROOT)/include -isystem $(CNANO_COMPAT_ROOT) -isystem $(NANOPB_ROOT)
 CNANO_DEFINES := -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512
-PROJECT_CPPFLAGS := $(CPPFLAGS) $(CNANO_INCLUDE_FLAGS) $(CNANO_DEFINES)
+PROJECT_CPPFLAGS := $(CPPFLAGS) -D_DEFAULT_SOURCE $(CNANO_INCLUDE_FLAGS) $(CNANO_DEFINES)
 UPSTREAM_CNANO_WARNING_FLAGS := -Wno-error=unused-parameter -Wno-error=unused-function -Wno-error=missing-field-initializers
 
 VPATH := app:guidance:prediction:control:vehicle:calibration:transport:telemetry:persistence:include
@@ -30,7 +34,7 @@ FLIGHT_PHYSICS_SOURCES := ../ShuttleSim/src/math3.c ../ShuttleSim/src/quat.c \
 FLIGHT_PHYSICS_OBJECTS := $(patsubst ../ShuttleSim/src/%.c,$(BUILD)/flight_physics/%.o,$(FLIGHT_PHYSICS_SOURCES))
 
 APP_SOURCES := controller.c main.c
-GUIDANCE_SOURCES := entry_alpha.c entry_drag_reference.c entry_lateral.c entry_exec.c taem_exec.c \
+GUIDANCE_SOURCES := entry_alpha.c entry_drag_reference.c entry_energy_control.c entry_lateral.c entry_exec.c taem_exec.c \
 	guidance_common.c guidance_core.c guidance_entry.c guidance_taem.c guidance_final.c \
 	guidance_terminal.c guidance.c taem_frames_energy.c taem_geometry.c terminal_model.c \
 	terminal_propagator.c taem_reachability.c taem_tracker.c taem_planner.c terminal_solver.c \

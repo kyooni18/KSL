@@ -3,8 +3,54 @@
 
 #include <float.h>
 #include <math.h>
+#include <stdbool.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <string.h>
+
+/* Inner-loop tuning.  Fixed in production; the named environment variables
+   are honoured only when KSP_LANDER_FCS_TUNING_OVERRIDES=1 (bench/sim tuning),
+   and are read once, never per control tick. */
+typedef struct {
+    double roll_accel_max, pitch_accel_max, pitch_lag_s, pitch_wn, pitch_zeta,
+        pitch_trim_ki, roll_lag_s, roll_wn, roll_zeta, yaw_accel_max, yaw_wn;
+} FlightControlTuning;
+
+static FlightControlTuning fc_tuning_values;
+static pthread_once_t fc_tuning_once = PTHREAD_ONCE_INIT;
+
+static double fc_tuning_override(bool enabled, const char *name, double value) {
+    if (!enabled) return value;
+    const char *text = getenv(name);
+    if (!text) return value;
+    char *end = NULL;
+    double parsed = strtod(text, &end);
+    return end != text && isfinite(parsed) && parsed > 0.0 ? parsed : value;
+}
+
+static void fc_tuning_init(void) {
+    const char *flag = getenv("KSP_LANDER_FCS_TUNING_OVERRIDES");
+    bool on = flag && strcmp(flag, "1") == 0;
+    FlightControlTuning t = {
+        .roll_accel_max = fc_tuning_override(on, "KSP_LANDER_ROLL_ACCEL", 100.0),
+        .pitch_accel_max = fc_tuning_override(on, "KSP_LANDER_PITCH_ACCEL", 40.0),
+        .pitch_lag_s = fc_tuning_override(on, "KSP_LANDER_PITCH_LAG", 0.12),
+        .pitch_wn = fc_tuning_override(on, "KSP_LANDER_PITCH_WN", 1.05),
+        .pitch_zeta = fc_tuning_override(on, "KSP_LANDER_PITCH_ZETA", 1.15),
+        .pitch_trim_ki = fc_tuning_override(on, "KSP_LANDER_PITCH_TRIM_KI", 0.004),
+        .roll_lag_s = fc_tuning_override(on, "KSP_LANDER_ROLL_LAG", 0.12),
+        .roll_wn = fc_tuning_override(on, "KSP_LANDER_ROLL_WN", 0.65),
+        .roll_zeta = fc_tuning_override(on, "KSP_LANDER_ROLL_ZETA", 1.15),
+        .yaw_accel_max = fc_tuning_override(on, "KSP_LANDER_YAW_ACCEL", 30.0),
+        .yaw_wn = fc_tuning_override(on, "KSP_LANDER_YAW_WN", 1.0),
+    };
+    fc_tuning_values = t;
+}
+
+static const FlightControlTuning *fc_tuning(void) {
+    pthread_once(&fc_tuning_once, fc_tuning_init);
+    return &fc_tuning_values;
+}
 
 static double fc_finite(double value, double fallback) {
     return isfinite(value) ? value : fallback;
@@ -433,7 +479,8 @@ bool flight_control_step(FlightControlState *state,
     /* The identified roll authority can be wildly off live (3e5 deg/s^2 seen
        against ~100 observed); bound it by the observed full-input response so
        the proportional law keeps real gain. */
-    const double roll_accel_max=getenv("KSP_LANDER_ROLL_ACCEL")?atof(getenv("KSP_LANDER_ROLL_ACCEL")):100.0;
+    const FlightControlTuning *tuning=fc_tuning();
+    const double roll_accel_max=tuning->roll_accel_max;
     if(!(roll_authority>DBL_EPSILON)||roll_authority>roll_accel_max)roll_authority=roll_accel_max;
     bool pitch_guard_known=fc_axis_control_authority_known(
         &state->authority[FLIGHT_CONTROL_AXIS_PITCH]);
@@ -469,14 +516,10 @@ bool flight_control_step(FlightControlState *state,
        The remaining live error is a persistent aerodynamic trim bias, not a need
        for globally higher bandwidth.  A slow bounded trim below the final-approach
        altitude supplies the sustained pull without a phase-boundary gain jump. */
-    const double pitch_accel_max=getenv("KSP_LANDER_PITCH_ACCEL")?
-        atof(getenv("KSP_LANDER_PITCH_ACCEL")):40.0;
-    const double pitch_lag_s=getenv("KSP_LANDER_PITCH_LAG")?
-        atof(getenv("KSP_LANDER_PITCH_LAG")):0.12;
-    const double pitch_wn=getenv("KSP_LANDER_PITCH_WN")?
-        atof(getenv("KSP_LANDER_PITCH_WN")):1.05;
-    const double pitch_zeta=getenv("KSP_LANDER_PITCH_ZETA")?
-        atof(getenv("KSP_LANDER_PITCH_ZETA")):1.15;
+    const double pitch_accel_max=tuning->pitch_accel_max;
+    const double pitch_lag_s=tuning->pitch_lag_s;
+    const double pitch_wn=tuning->pitch_wn;
+    const double pitch_zeta=tuning->pitch_zeta;
     double pitch_auth_used=fc_pitch_accel_for_profile(
         pitch_authority,pitch_accel_max,profile,telemetry->radar_altitude);
     double pitch_wn_used=rollout_pitch_hold?0.55:pitch_wn;
@@ -489,8 +532,7 @@ bool flight_control_step(FlightControlState *state,
         (profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
         isfinite(telemetry->radar_altitude)&&telemetry->radar_altitude<700.0;
     if(final_pitch_trim){
-        const double ki=getenv("KSP_LANDER_PITCH_TRIM_KI")?
-            atof(getenv("KSP_LANDER_PITCH_TRIM_KI")):0.004;
+        const double ki=tuning->pitch_trim_ki;
         if(fabs(pitch_error)>0.35)
             state->pitch_trim=fc_clamp(state->pitch_trim+ki*pitch_error*control_dt,
                 -0.15,0.42);
@@ -523,9 +565,9 @@ bool flight_control_step(FlightControlState *state,
     /* Bank targets move slowly in Final.  Use the earlier body-rate signal and
        a deliberately overdamped, low-bandwidth response so a centerline correction
        cannot turn into a left-right roll limit cycle. */
-    const double roll_lag_s=getenv("KSP_LANDER_ROLL_LAG")?atof(getenv("KSP_LANDER_ROLL_LAG")):0.12;
-    const double roll_wn=getenv("KSP_LANDER_ROLL_WN")?atof(getenv("KSP_LANDER_ROLL_WN")):0.65;
-    const double roll_zeta=getenv("KSP_LANDER_ROLL_ZETA")?atof(getenv("KSP_LANDER_ROLL_ZETA")):1.15;
+    const double roll_lag_s=tuning->roll_lag_s;
+    const double roll_wn=tuning->roll_wn;
+    const double roll_zeta=tuning->roll_zeta;
     double roll_command=fc_capped_pd_command(roll_error,effective_roll_rate,
         commanded_roll_rate,roll_authority,roll_wn,roll_zeta,roll_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
@@ -542,8 +584,8 @@ bool flight_control_step(FlightControlState *state,
            right to about 105 deg and off the runway. */
         yaw_error = heading_error;
     }
-    const double yaw_accel_max=getenv("KSP_LANDER_YAW_ACCEL")?atof(getenv("KSP_LANDER_YAW_ACCEL")):30.0;
-    const double yaw_wn=getenv("KSP_LANDER_YAW_WN")?atof(getenv("KSP_LANDER_YAW_WN")):1.0;
+    const double yaw_accel_max=tuning->yaw_accel_max;
+    const double yaw_wn=tuning->yaw_wn;
     if(!(yaw_authority>DBL_EPSILON)||yaw_authority>yaw_accel_max)yaw_authority=yaw_accel_max;
     double yaw_rate=command->heading_control_enabled&&isfinite(telemetry->heading_rate)?
         telemetry->heading_rate:observed_yaw_rate;

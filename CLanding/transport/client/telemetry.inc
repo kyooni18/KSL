@@ -258,6 +258,13 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     t->physics_sample_valid = t->has_force_vectors && isfinite(t->dynamic_pressure) &&
         t->dynamic_pressure >= 0.0 && isfinite(t->mass) && t->mass > 0.0 &&
         isfinite(t->lift_force) && isfinite(t->drag_force);
+    /* Structural/authority envelopes treat maximum_g_load as the aerodynamic
+       normal-load factor.  Use the same definition as ShuttleSim and MM305
+       replay (lift / (m * g0)) instead of kRPC's total-acceleration G-force,
+       which also counts drag and would make the same limit mean something
+       different live than offline. */
+    if (t->physics_sample_valid)
+        t->g_force = t->lift_force / (t->mass * 9.80665);
 
     GeoPoint current = {t->latitude, t->longitude, t->mean_altitude};
     GeoPoint site = {configuration->site.latitude, configuration->site.longitude, configuration->site.altitude};

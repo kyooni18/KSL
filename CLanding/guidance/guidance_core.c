@@ -26,6 +26,14 @@ static void reset_controllers(GuidanceMachine*g){
     g->mm305_route_committed=false;
     g->mm305_hac_exit_reached=false;
     g->mm305_model_snapshot_id=0;
+    g->mm305_planning_needed=false;
+    g->mm305_plan_request_ut=NAN;
+    g->mm305_last_plan_attempt_ut=-INFINITY;
+    g->mm305_last_route_ut=-INFINITY;
+    g->mm305_plan_failures=0;
+    g->mm305_replans=0;
+    g->mm305_lift_scale=1.0;
+    g->mm305_drag_scale=1.0;
     g->runway_end_preview_valid=false;
     g->runway_end_committed=false;
     g->runway_end_index=0;
@@ -160,12 +168,14 @@ static void reset_controllers(GuidanceMachine*g){
 
     entry_exec_reset(&g->entry_exec);
     memset(&g->entry_lateral,0,sizeof(g->entry_lateral));
+    memset(&g->entry_energy,0,sizeof(g->entry_energy));
     taem_exec_reset(&g->taem_exec);
 
     g->entry_alpha_has_target=false;
     g->entry_alpha_has_modulation=false;
     g->entry_alpha_target=0.0;
     g->entry_alpha_modulation=0.0;
+    g->entry_alpha_drag_boost=0.0;
     g->entry_drag_ratio_valid=false;
     g->entry_drag_velocity_ratio=0.0;
     g->entry_bank_authority_acquired=false;
@@ -243,7 +253,9 @@ double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v){
 
 double terminal_lateral_bank_limit(const Telemetry*t,const VehicleProfile*v){
     double limit=dynamic_bank_limit(t,v);
-    if(limit>0.0||!t||!v||!isfinite(t->radar_altitude)||t->radar_altitude>300.0||
+    /* Applies at any height once in Final: a vehicle below minimum-safe speed
+       while still high needs lateral authority most, not least. */
+    if(limit>0.0||!t||!v||!isfinite(t->radar_altitude)||
        !isfinite(t->true_air_speed)||!isfinite(t->dynamic_pressure)||
        !isfinite(t->g_force)||t->dynamic_pressure<=DBL_MIN||
        t->dynamic_pressure>v->maximum_dynamic_pressure||t->g_force>v->maximum_g_load||
@@ -444,6 +456,14 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     else g->heading_limiter.rate=0.0;
     g->heading_limiter.value=heading_reference;
     g->heading_limiter.has_value=true;
+    /* While the committed MM305 route bypasses the limiters their internal
+       rate state goes stale; leave them unseeded so the first limited tick
+       (normally Final) starts from the measured attitude and rate instead of
+       resuming a stale jerk state and overshooting by tens of degrees. */
+    if(mm305_native_window){
+        g->roll_limiter.has_value=false;
+        g->pitch_limiter.has_value=false;
+    }
 
     g->throttle_limiter.value=r.command.target_throttle;
     g->throttle_limiter.has_value=true;

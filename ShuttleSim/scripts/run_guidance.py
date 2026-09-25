@@ -4,6 +4,7 @@ import argparse, io, json, math, os, pathlib, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
 from run_geometry import fixed_hac_geometry_evidence
 from run_artifacts import allocate_run, compress_recording, write_json
+from model_paths import model_file
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
@@ -191,14 +192,23 @@ def main():
     ap.add_argument("--web",action="store_true",help="deprecated no-op; the persistent Telemetry Web service is used")
     ap.add_argument("--configuration",default=str(ROOT/"Configuration/default.json"))
     ap.add_argument("--dt",type=float,default=0.02)
-    ap.add_argument("--atmosphere",default=str(SIM/"data/fitted/kerbin_atmosphere_ksp.csv"))
-    ap.add_argument("--aero",default=str(SIM/"data/fitted/stsn_aero_ksp_robust.csv"))
-    ap.add_argument("--aero-book",default=str(SIM/"data/fitted/stsn_force_book.csv"),
+    ap.add_argument("--atmosphere",default=str(model_file("atmosphere")))
+    ap.add_argument("--aero",default=str(model_file("aero")))
+    ap.add_argument("--aero-book",default=str(model_file("aero_book")),
                     help="direct-force data book, or 'none' to disable")
-    ap.add_argument("--attitude",default=str(SIM/"data/fitted/stsn_attitude_ksp.ini"))
+    ap.add_argument("--attitude",default=str(model_file("attitude")))
+    # Guidance-side model files.  By default guidance is given the plant's own
+    # files (perfect knowledge); pass different files to test model error.
+    ap.add_argument("--terminal-atmosphere",default=None,help="guidance atmosphere model (default: --atmosphere)")
+    ap.add_argument("--terminal-aero",default=None,help="MM305 aero table (default: --aero)")
+    ap.add_argument("--terminal-aero-book",default=None,help="guidance force book / certified prior (default: --aero-book)")
+    ap.add_argument("--terminal-attitude",default=None,help="MM305 attitude model (default: --attitude)")
     ap.add_argument("--engage",default="engageReentry",
                     choices=["engage","engageReentry","engageHACTest","engageFinalTest"],
                     help="backend engage method; engage runs createPlan + production deorbit/entry/landing guidance")
+    ap.add_argument("--direct-control",action="store_true",
+                    help="run the backend's atmospheric FCS against ShuttleSim's surface-moment "
+                         "attitude plant (stick inputs) instead of the ideal AoA/bank servo")
     ap.add_argument("--backend-build-dir",type=pathlib.Path,default=CLANDING/"build")
     ap.add_argument("--sim-build-dir",type=pathlib.Path,default=SIM/"build")
     ap.add_argument("--skip-build",action="store_true")
@@ -220,10 +230,13 @@ def main():
         ap.error("time steps, rates, and timeouts must be positive finite values")
     if not args.label or pathlib.Path(args.label).name!=args.label or args.label in (".",".."):
         ap.error("label must be a single nonempty filename component")
-    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude"):
+    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude",
+                 "terminal_atmosphere","terminal_aero","terminal_aero_book","terminal_attitude"):
         value=getattr(args,name)
-        if name=="aero_book" and value.lower()=="none":
-            args.aero_book="none"
+        if value is None:
+            continue
+        if name in ("aero_book","terminal_aero_book") and value.lower()=="none":
+            setattr(args,name,"none")
             continue
         path=pathlib.Path(value).expanduser().resolve()
         if not path.is_file():
@@ -301,13 +314,17 @@ def main():
         "KSP_LANDER_HAC_DIAGNOSTICS":"1",
         "KSP_LANDER_SIM_COMMAND_PORT":str(args.command_port),
         "KSP_LANDER_SIM_TELEMETRY_PORT":str(args.telemetry_port),
-        "KSP_LANDER_TERMINAL_ATMOSPHERE":args.atmosphere,
-        "KSP_LANDER_TERMINAL_AERO":args.aero,
-        "KSP_LANDER_TERMINAL_AERO_BOOK":args.aero_book,
-        "KSP_LANDER_TERMINAL_ATTITUDE":args.attitude,
+        "KSP_LANDER_TERMINAL_ATMOSPHERE":args.terminal_atmosphere or args.atmosphere,
+        "KSP_LANDER_TERMINAL_AERO":args.terminal_aero or args.aero,
+        "KSP_LANDER_TERMINAL_AERO_BOOK":args.terminal_aero_book or args.aero_book,
+        "KSP_LANDER_TERMINAL_ATTITUDE":args.terminal_attitude or args.attitude,
     })
     # A phase-specific CLI action must select its matching backend mode, not
     # depend on an inherited operator shell variable.
+    if args.direct_control:
+        env["KSP_LANDER_SIM_DIRECT"]="1"
+    else:
+        env.pop("KSP_LANDER_SIM_DIRECT",None)
     env.pop("KSP_LANDER_FINAL_TEST_LIVE",None)
     env.pop("KSP_LANDER_FINAL_APPROACH_TEST",None)
     if args.engage=="engageFinalTest":
@@ -326,6 +343,7 @@ def main():
     if manifest_path:
         manifest["backendPid"]=be_proc.pid
         manifest["physicsSources"]={name:getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
+        manifest["guidanceModelSources"]={name:getattr(args,"terminal_"+name) or getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
         write_json(manifest_path,manifest)
     backend=Backend(be_proc,guidance_log,mirror=not args.no_mirror,replay_path=guidance_replay,
                     compact_log=args.compact_guidance_log)
@@ -404,6 +422,19 @@ def main():
                 write_json(manifest_path,manifest); publish_web_run(dict(manifest,runDirectory=str(run_dir)))
             raise
         planned=backend.latest if isinstance(backend.latest,dict) else {}
+        if str(planned.get("phase") or "") not in ("Fault","Abort"):
+            # The createPlan response can arrive before the throttled snapshot
+            # that carries the finished plan; judging qualification from the
+            # still-"Planning" snapshot rejected qualified plans.
+            try:
+                settled=backend.wait(lambda o:o.get("type")=="snapshot" and
+                    isinstance(o.get("snapshot"),dict) and
+                    str(o["snapshot"].get("phase") or "")!="Planning" and
+                    isinstance(o["snapshot"].get("plan"),dict) and
+                    "executionQualified" in o["snapshot"]["plan"],15)
+                planned=settled["snapshot"]
+            except TimeoutError:
+                pass
         if str(planned.get("phase") or "") in ("Fault","Abort"):
             raise RuntimeError(f"deorbit planning failed: {planned.get('statusMessage') or planned.get('lastError') or planned.get('warningMessage')}")
         plan=planned.get("plan") if isinstance(planned.get("plan"),dict) else {}
@@ -588,7 +619,11 @@ def main():
     final_ground=(final_sim or {}).get("ground") or {}
     rollout_valid=rollout_seen and final_ground.get("on_ground") is True
     touchdown_speed=simulator_summary.get("touchdown_speed_mps")
-    touchdown_speed_ok=isinstance(touchdown_speed,(int,float)) and 60.0<=touchdown_speed<=70.0
+    # Touchdown speed window from the configured vehicle touchdown speed (the
+    # guidance target), not a separate hard-coded band that disagrees with it.
+    configured_touchdown=float((config.get("vehicle") or {}).get("touchdownSpeed") or 65.0)
+    touchdown_speed_ok=(isinstance(touchdown_speed,(int,float)) and
+                        .85*configured_touchdown<=touchdown_speed<=1.15*configured_touchdown)
     touchdown_sink=simulator_summary.get("touchdown_sink_mps")
     touchdown_sink_ok=isinstance(touchdown_sink,(int,float)) and 0.0<=touchdown_sink<=3.0
     rollout_controls_ok=rollout_brakes_seen and not rollout_airbrakes_seen

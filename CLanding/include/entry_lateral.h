@@ -43,6 +43,18 @@ typedef struct {
     double crossrange_error_accel_mps2;
     double crossrange_uncertainty_m;
     EntryLateralLongitudinalDemand longitudinal;
+    /* Bank magnitude owned by the energy law (entry_energy_control). When set,
+       it replaces the legacy vertical-lift allocation above. */
+    bool has_bank_magnitude;
+    double bank_magnitude_deg;
+    /* Target-relative azimuth error (bearing to target minus velocity azimuth,
+       deg, positive = target to the right) and its reversal deadband.  This is
+       heading-independent: a right bank always turns toward a target on the
+       right, whatever the flight direction. */
+    bool has_azimuth_error;
+    double azimuth_error_deg;
+    double azimuth_deadband_deg;
+    double minimum_turn_bank_deg; /* bank floor when the target is far off the nose */
 } EntryLateralInput;
 
 typedef struct {

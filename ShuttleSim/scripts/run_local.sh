@@ -21,11 +21,14 @@ echo "  record:        $RECORD"
 echo "  rate:          $RATE"
 echo "Resume with: $SIM/scripts/simctl.py resume"
 
+model_file() {  # fitted KSP model when present, tracked reference model otherwise
+  if [ -f "$SIM/data/fitted/$1" ]; then echo "$SIM/data/fitted/$1"; else echo "$SIM/reference-model/$2"; fi
+}
 exec "$BUILD/shuttlesim" \
   --scenario "$SCENARIO" \
-  --aero "$SIM/data/fitted/stsn_aero_ksp_robust.csv" \
-  --aero-book "$SIM/data/fitted/stsn_force_book.csv" \
-  --attitude "$SIM/data/fitted/stsn_attitude_ksp.ini" \
+  --aero "$(model_file stsn_aero_ksp_robust.csv stsn_aero_reference.csv)" \
+  --aero-book "$(model_file stsn_force_book.csv stsn_force_book_reference.csv)" \
+  --attitude "$(model_file stsn_attitude_ksp.ini stsn_attitude_reference.ini)" \
   --dt "${SIM_DT:-0.02}" \
   --rate "$RATE" \
   --telemetry-hz "${SIM_TELEMETRY_HZ:-20}" \

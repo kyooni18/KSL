@@ -1,5 +1,7 @@
 # KSP Shuttle Landing Guidance System
 
+> **Historical (7 September 2026).** This describes a retired implementation (Python bridge, S-turn MPC, legacy HAC planner). For the current system see `CLanding/ARCHITECTURE.md` and `Audit/2026-09-25-engineering-evaluation/REPORT.md`.
+
 Technical description of the current KSPShuttleLander implementation, including the flight-dynamics model, adaptive aerodynamics, deorbit planning, entry energy management, S-turn guidance, TAEM/HAC capture, final approach, flare, and direct atmospheric control loops. This document describes the implementation present in the codebase on 7 September 2026 rather than an idealized Space Shuttle guidance system.
 
 ## 1. Purpose and system architecture

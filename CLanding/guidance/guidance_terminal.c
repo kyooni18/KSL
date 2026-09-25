@@ -38,6 +38,33 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
         double projected_end_speed=NAN,conditioning_slope=NAN;
         if(!terminal_final_conditioning_reachable(g,t,course,p,aero,cfg,
                 &conditioning_energy,&projected_end_speed,&conditioning_slope)){
+            /* The contract is priced with the guidance prior, and an unpowered
+               vehicle has no abort that ends better than trying.  If the vehicle
+               is on the runway line and geometrically inside Final's steep-glide
+               envelope, hand it to Final's energy laws (moving aim point, speed
+               closure, predictive preflare) instead of aborting. */
+            double height=t->mean_altitude-cfg->site.altitude;
+            double distance=-t->runway_along_track;
+            double track_error=fabs(norm_signed_deg(course-cfg->site.runway_heading));
+            if(distance>500.0&&height>0.0&&fabs(t->runway_cross_track)<400.0&&
+               track_error<20.0&&atan2(height,distance)*RAD2DEG<38.0){
+                g->final_approach_captured=true;
+                g->taem_exec.taem_complete=true;
+                terminal_store_preflare_plan(g,&approach_plan);
+                terminal_set_stage(g,TERMINAL_OUTER_FINAL,t->ut);
+                robust_pid_reset(&g->final_altitude_pid);
+                robust_pid_reset(&g->speed_pid);
+                robust_pid_reset(&g->flare_sink_pid);
+                fprintf(stderr,"Final admitted outside the priced contract: h %.0f m at %.0f m, "
+                    "cross %.0f m, track error %.1f deg (%s).\n",height,distance,
+                    t->runway_cross_track,track_error,
+                    taem_terminal_block_reason_string(evaluation.block_reason));
+                Trajectory ref;
+                trajectory_init(&ref);
+                GuidanceResult result=terminal_approach_sequence(g,t,course,p,aero,cfg,&ref,dt);
+                trajectory_clear(&ref);
+                return result;
+            }
             char reason[320];
             snprintf(reason,sizeof(reason),
                 "Post-HAC final alignment exhausted its physical conditioning envelope: approach=%d preflare=%s terminal=%s.",
@@ -130,14 +157,39 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         return result;
     }
 
+    /* An unpowered vehicle past the runway end in the air has landed long;
+       say so rather than letting a later ground or departure check report a
+       misleading cause. */
+    if (g->final_approach_captured && !reported_landed &&
+        cfg->site.runway_length>0.0 && t->runway_along_track>cfg->site.runway_length)
+        return terminal_abort(g,"Long landing: the vehicle passed the runway end still airborne.");
+
+    /* Below runway elevation off the runway surface is ground impact short,
+       long or wide of the runway, not a control departure. */
+    if (g->final_approach_captured && !reported_landed &&
+        isfinite(t->radar_altitude) && t->radar_altitude<0.0 &&
+        !terminal_runway_contact_position(t,cfg)) {
+        char reason[256];
+        snprintf(reason,sizeof(reason),"Ground impact off the runway surface "
+            "(runway along %.0f m, cross %.0f m, sink %.1f m/s).",
+            t->runway_along_track,t->runway_cross_track,-t->vertical_speed);
+        return terminal_abort(g,reason);
+    }
+
     bool recovery_was_active=g->attitude_recovery;
     if (control_recovery_needed(g,t,s,v,dt)) {
         if (!recovery_was_active && (g->terminal_path_committed || g->hac_side_selected))
             terminal_invalidate_frozen_path(g);
         if (g->recovery_duration>=15.0)
             return terminal_abort(g,"Control departure: attitude recovery exceeded 15 s without stabilizing.");
-        if (t->radar_altitude<fmax(300.0,-t->vertical_speed*8.0))
-            return terminal_abort(g,"Control departure: insufficient height remains to complete attitude recovery.");
+        if (t->radar_altitude<fmax(300.0,-t->vertical_speed*8.0)) {
+            char reason[256];
+            snprintf(reason,sizeof(reason),"Control departure: insufficient height remains to complete "
+                "attitude recovery (radar %.0f m, runway along %.0f m, cross %.0f m, phase %s).",
+                t->radar_altitude,t->runway_along_track,t->runway_cross_track,
+                phase_string(g->phase));
+            return terminal_abort(g,reason);
+        }
         g->phase=PHASE_ATTITUDE_RECOVERY;
         GuidanceCommand command=atmospheric(t,g->recovery_heading,0.0,v,0.0,
             false,PROFILE_RECOVERY);
@@ -202,6 +254,14 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_route_committed=false;
         g->mm305_hac_exit_reached=false;
         g->mm305_model_snapshot_id=0;
+        g->mm305_planning_needed=false;
+        g->mm305_plan_request_ut=NAN;
+        g->mm305_last_plan_attempt_ut=-INFINITY;
+        g->mm305_last_route_ut=-INFINITY;
+        g->mm305_plan_failures=0;
+        g->mm305_replans=0;
+        g->mm305_lift_scale=1.0;
+        g->mm305_drag_scale=1.0;
         g->hac_side_selected=false;
         g->hac_captured=false;
         g->hac_completed=false;

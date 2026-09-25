@@ -6,7 +6,7 @@ The maintained CLanding regression gate is deliberately small and is run with:
 make -C CLanding test
 ```
 
-The maintained tests are `BackendProtocolTests.py`, `ShuttleArchitectureContractTests.c`, `TaemInterfaceCaptureEnergyTests.c`, and `VesselPhysicsTests.c`.
+The maintained tests are `ShuttleArchitectureContractTests.c`, `MM305AdmissionTests.c`, `TAEMFramesEnergyTests.c`, `TAEMNativeStackTests.c`, `VesselPhysicsTests.c`, `EntryLateralFeedbackTests.c`, and `BackendProtocolTests.py`.
 
 Other files in this directory are historical white-box tests, one-off probes, recorded-replay helpers, or validation-campaign tooling. They are not part of the maintained regression contract. In particular, tests that include production `.c` files directly must not be used as a reason to expose or preserve private implementation helpers.
 

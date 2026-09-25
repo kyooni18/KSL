@@ -27,6 +27,8 @@ typedef struct {
     double wheel_steering;
     bool has_throttle;
     double throttle;
+    bool has_inputs;             /* direct-control stick inputs in [-1, 1] */
+    double pitch_input, roll_input, yaw_input;
     bool step;
     bool pause;
     bool resume;

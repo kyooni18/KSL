@@ -121,9 +121,9 @@ typedef struct {
     bool diagnostic_stop_at_taem; /* Boundary-only entry supervision stops before MM305 route search. */
     double s_turn_sign; double s_turn_leg_started_ut; bool has_s_turn_leg_started;
     double s_turn_reversal_requested_ut; bool has_s_turn_reversal_requested;
-    EntryExecutive entry_exec; EntryLateralState entry_lateral; TaemExecutive taem_exec;
+    EntryExecutive entry_exec; EntryLateralState entry_lateral; EntryEnergyState entry_energy; TaemExecutive taem_exec;
     bool entry_alpha_has_target, entry_alpha_has_modulation, entry_drag_ratio_valid;
-    double entry_alpha_target, entry_alpha_modulation, entry_drag_velocity_ratio;
+    double entry_alpha_target, entry_alpha_modulation, entry_alpha_drag_boost, entry_drag_velocity_ratio;
     bool entry_bank_authority_acquired;
     bool entry_supervision_valid, entry_supervision_boundary_missed; EntrySupervisionMode entry_supervision_mode;
 
@@ -142,6 +142,17 @@ typedef struct {
     size_t mm305_route_cursor;
     bool mm305_route_committed, mm305_hac_exit_reached;
     uint64_t mm305_model_snapshot_id;
+    /* MM305 planning is re-entrant: routes are (re)planned from the measured
+       state, asynchronously when the controller provides a worker, and the
+       vehicle flies the acquisition law while no qualified route is held. */
+    bool mm305_async_planning;       /* set by the controller when a worker services requests */
+    bool mm305_planning_needed;      /* request outstanding */
+    double mm305_plan_request_ut;
+    double mm305_last_plan_attempt_ut;
+    double mm305_last_route_ut;      /* when the held route was adopted */
+    unsigned mm305_plan_failures;
+    unsigned mm305_replans;
+    double mm305_lift_scale, mm305_drag_scale; /* measured / model, low-passed */
     TaemInterfaceTarget taem_interface_target;
     bool taem_interface_captured, taem_safety_handoff;
     double taem_interface_diagnostic_ut;
@@ -189,6 +200,9 @@ typedef struct {
     double terminal_aero_mach[21];
     double terminal_aoa_cmd_last,terminal_aoa_cmd_ut;
     bool terminal_pull_latch;
+    bool terminal_aim_valid;
+    double terminal_aim_along;   /* energy-placed outer-glide aim point, runway along-track m */
+    double terminal_aim_ut;
     double terminal_lift_ratio; /* Pull-up ramp done; holding the sink profile. */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;

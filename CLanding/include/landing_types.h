@@ -4,6 +4,7 @@
 #include "json.h"
 #include "entry_exec.h"
 #include "entry_lateral.h"
+#include "entry_energy_state.h"
 #include "taem_exec.h"
 
 #include <stdbool.h>

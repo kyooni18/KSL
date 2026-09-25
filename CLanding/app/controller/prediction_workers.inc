@@ -48,6 +48,71 @@ static void terminal_prediction_commit(LandingController *c,EntryPrediction *pr,
     }
 }
 
+/* MM305 route planning job.  Highest priority on the worker: it is not an
+   advisory forecast but the route the tracker is waiting for.  Returns true
+   when a job ran (successfully or not). */
+static bool mm305_planning_job(LandingController *c){
+    pthread_mutex_lock(&c->mutex);
+    if(c->stop_prediction_thread||!c->session||!c->has_latest||!c->terminal_model_valid||
+       !c->guidance.automation_engaged||c->guidance.paused||c->guidance.aborted||
+       c->guidance.phase!=PHASE_TAEM||!c->guidance.mm305_async_planning||
+       !c->guidance.mm305_planning_needed){
+        pthread_mutex_unlock(&c->mutex);
+        return false;
+    }
+    LandingConfiguration cfg=effective_config(c);
+    TerminalModel *model=malloc(sizeof(*model));
+    if(!model){c->guidance.mm305_planning_needed=false;pthread_mutex_unlock(&c->mutex);return true;}
+    *model=c->terminal_model;
+    Mm305PlanRequest request=guidance_mm305_plan_request(&c->guidance,&c->latest_telemetry,
+        &c->latest_state,&cfg,model);
+    double token=c->guidance.mm305_plan_request_ut;
+    uint64_t generation=c->prediction_generation;
+    if(!request.valid){
+        /* Never leave the lockstep barrier waiting on an impossible request. */
+        c->guidance.mm305_planning_needed=false;
+        c->guidance.mm305_plan_failures++;
+        pthread_mutex_unlock(&c->mutex);
+        free(model);
+        return true;
+    }
+    pthread_mutex_unlock(&c->mutex);
+
+    Mm305PlanResult result=mm305_plan(model,&request);
+    free(model);
+
+    pthread_mutex_lock(&c->mutex);
+    bool current=!c->stop_prediction_thread&&generation==c->prediction_generation&&
+        c->guidance.phase==PHASE_TAEM&&c->guidance.mm305_planning_needed&&
+        c->guidance.mm305_plan_request_ut==token&&
+        c->terminal_model_valid&&c->terminal_model.snapshot_id==result.model_snapshot_id;
+    if(current){
+        bool adopted=guidance_mm305_accept_plan(&c->guidance,&result,&cfg);
+        char event[256];
+        snprintf(event,sizeof(event),"event=mm305-plan; request-ut=%.3f; found=%d; adopted=%d; solve-wall=%.3f; replans=%u",
+            request.request_ut,result.found,adopted,result.solve_wall_s,
+            (unsigned)c->guidance.mm305_replans);
+        log_state_event(c,event,true);
+    }
+    pthread_mutex_unlock(&c->mutex);
+    return true;
+}
+
+/* MM305 route planning has its own thread: it must never queue behind an
+   advisory forecast (a terminal shadow ensemble can take many seconds, and in
+   simulator lockstep the whole simulation waits on the route). */
+static void *mm305_planner_worker(void *arg){
+    LandingController *c=arg;
+    for(;;){
+        pthread_mutex_lock(&c->mutex);
+        bool stop=c->stop_prediction_thread;
+        pthread_mutex_unlock(&c->mutex);
+        if(stop)break;
+        if(!mm305_planning_job(c))sleep_seconds(.005);
+    }
+    return NULL;
+}
+
 static void *terminal_prediction_worker(void *arg){
     LandingController *c=arg;
     for(;;){
@@ -101,6 +166,11 @@ static void *terminal_prediction_worker(void *arg){
                 calibration.physics=&physics;
                 if(c->terminal_model_valid){terminal_model=c->terminal_model;terminal_model_valid=true;}
                 guidance=c->guidance;
+                /* A shadow forecast never plans MM305 routes: it flies the
+                   committed route or the acquisition law.  (Planning inside
+                   every ensemble member made each forecast cost minutes.) */
+                guidance.mm305_async_planning=true;
+                guidance.mm305_planning_needed=false;
                 entry_request=guidance;
                 entry_request.previous_ut=telemetry.ut;
                 entry_job=guidance.phase==PHASE_ENTRY_ENERGY;
@@ -236,6 +306,9 @@ static void start_prediction_worker(LandingController *c){
         pthread_attr_setstacksize(&attr, 8 * 1024 * 1024);
         if(pthread_create(&c->prediction_thread,&attr,terminal_prediction_worker,c)==0)
             c->prediction_thread_started=true;
+        if(c->prediction_thread_started&&
+           pthread_create(&c->mm305_planner_thread,&attr,mm305_planner_worker,c)==0)
+            c->mm305_planner_started=true;
         pthread_attr_destroy(&attr);
     }
     pthread_mutex_unlock(&c->mutex);
@@ -249,9 +322,12 @@ static void stop_prediction_worker(LandingController *c){
        Release KSP control now; never leave the last flight command applied while
        waiting several seconds for an advisory shadow prediction to finish. */
     if(c->session)krpc_safe(c->session);
+    bool join_planner=c->mm305_planner_started;
     pthread_mutex_unlock(&c->mutex);
     if(join)pthread_join(c->prediction_thread,NULL);
+    if(join_planner)pthread_join(c->mm305_planner_thread,NULL);
     pthread_mutex_lock(&c->mutex);
+    c->mm305_planner_started=false;
     c->prediction_thread_started=false;
     c->stop_prediction_thread=false;
     c->last_terminal_prediction_request_ut=c->last_terminal_prediction_completion_ut=-1e300;

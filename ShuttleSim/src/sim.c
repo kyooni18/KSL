@@ -141,6 +141,7 @@ void sim_apply_command(Simulation *sim,const SimCommand *c){
             c->step,c->pause,c->resume);
     }
     if(c->has_attitude) sim_set_attitude(sim,c->aoa_deg,c->bank_deg);
+    if(c->has_inputs) attitude_set_inputs(&sim->state.attitude,c->pitch_input,c->roll_input,c->yaw_input);
     if(c->has_gear) sim->state.gear_down=c->gear_down;
     if(c->has_brakes) sim->state.brakes=c->brakes;
     if(c->has_airbrakes) sim->state.airbrakes=c->airbrakes;
@@ -389,7 +390,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"position\":{\"x\":%.6f,\"y\":%.6f,\"z\":%.6f,\"lat_deg\":%.9f,\"lon_deg\":%.9f,\"altitude_m\":%.3f},"
              "\"velocity\":{\"x_mps\":%.6f,\"y_mps\":%.6f,\"z_mps\":%.6f,\"inertial_mps\":%.3f,\"surface_mps\":%.3f,\"air_mps\":%.3f,\"horizontal_mps\":%.3f,\"vertical_mps\":%.3f,\"flight_path_angle_deg\":%.6f},"
              "\"attitude\":{\"aoa_deg\":%.4f,\"bank_deg\":%.4f,\"heading_deg\":%.4f,\"cmd_aoa_deg\":%.4f,\"cmd_bank_deg\":%.4f,\"requested_aoa_deg\":%.4f,\"requested_bank_deg\":%.4f,"
-             "\"aoa_rate_deg_s\":%.6f,\"bank_rate_deg_s\":%.6f,"
+             "\"aoa_rate_deg_s\":%.6f,\"bank_rate_deg_s\":%.6f,\"sideslip_deg\":%.6f,\"direct_control\":%s,"
              "\"pitch_wn_s_inv\":%.9g,\"pitch_zeta\":%.9g,\"roll_wn_s_inv\":%.9g,\"roll_zeta\":%.9g,"
              "\"max_pitch_rate_deg_s\":%.9g,\"max_roll_rate_deg_s\":%.9g,"
              "\"max_pitch_accel_deg_s2\":%.9g,\"max_roll_accel_deg_s2\":%.9g,"
@@ -403,6 +404,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              s->velocity_i_mps.x,s->velocity_i_mps.y,s->velocity_i_mps.z,v3_norm(s->velocity_i_mps),v3_norm(surf),v3_norm(air),horizontal,vu,rad2deg(fpa),
              rad2deg(s->attitude.aoa_rad),rad2deg(s->attitude.bank_rad),rad2deg(heading),rad2deg(s->attitude.cmd_aoa_rad),rad2deg(s->attitude.cmd_bank_rad),rad2deg(s->attitude.requested_aoa_rad),rad2deg(s->attitude.requested_bank_rad),
              rad2deg(s->attitude.aoa_rate_rad_s),rad2deg(s->attitude.bank_rate_rad_s),
+             rad2deg(s->attitude.sideslip_rad),s->attitude.direct?"true":"false",
              s->attitude.pitch_wn,s->attitude.pitch_zeta,s->attitude.roll_wn,s->attitude.roll_zeta,
              rad2deg(s->attitude.max_pitch_rate_rad_s),rad2deg(s->attitude.max_roll_rate_rad_s),
              rad2deg(s->attitude.max_pitch_accel_rad_s2),rad2deg(s->attitude.max_roll_accel_rad_s2),

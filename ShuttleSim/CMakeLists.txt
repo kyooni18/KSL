@@ -112,6 +112,7 @@ if(SHUTTLESIM_OFFLINE_API)
     resolve_clanding_source(CLANDING_JSON json.c)
     resolve_clanding_source(CLANDING_ENTRY_ALPHA entry_alpha.c)
     resolve_clanding_source(CLANDING_ENTRY_DRAG_REFERENCE entry_drag_reference.c)
+    resolve_clanding_source(CLANDING_ENTRY_ENERGY_CONTROL entry_energy_control.c)
     resolve_clanding_source(CLANDING_ENTRY_EXEC entry_exec.c)
     resolve_clanding_source(CLANDING_ENTRY_LATERAL entry_lateral.c)
     resolve_clanding_source(CLANDING_TAEM_EXEC taem_exec.c)
@@ -147,6 +148,7 @@ if(SHUTTLESIM_OFFLINE_API)
         ${CLANDING_JSON}
         ${CLANDING_ENTRY_ALPHA}
         ${CLANDING_ENTRY_DRAG_REFERENCE}
+        ${CLANDING_ENTRY_ENERGY_CONTROL}
         ${CLANDING_ENTRY_EXEC}
         ${CLANDING_ENTRY_LATERAL}
         ${CLANDING_TAEM_EXEC}
