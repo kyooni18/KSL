@@ -306,7 +306,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         /* k70's -200 m aim hit terrain just short; k67's -100 m aim
            contacted at +162 m and overran by 83 m. Keep most of the stopping
            margin while moving wheel contact onto the runway. */
-        double touchdown_along=-120.0;
+        double touchdown_along=-220.0;
         double touchdown_distance=fmax(120.0,touchdown_along-along);
         double gref=terminal_geometry_fpa(height,touchdown_distance,H_FLOAT);
         double gdot_ff=0.0,kg=KP("KP_KG",.3);
