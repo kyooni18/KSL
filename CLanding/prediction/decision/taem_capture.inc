@@ -169,3 +169,203 @@ TaemInterfaceCapture entry_taem_interface_capture(const TaemInterfaceTarget*q,
     out.ready=out.veto==0;
     return out;
 }
+
+TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine*g,
+        const TaemInterfaceTarget*q,const Telemetry*t,double course,
+        const PlanetModel*p,const LandingConfiguration*cfg){
+    TaemInterfaceCapture out={0};
+    if(!q||!t||!p||!cfg||!q->valid||
+       !isfinite(q->along_track)||!isfinite(q->cross_track)||!isfinite(q->course)||
+       !isfinite(t->latitude)||!isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track)||
+       !isfinite(t->true_air_speed)||!isfinite(t->horizontal_speed)||
+       !isfinite(t->vertical_speed)||!isfinite(t->mean_altitude)||!isfinite(course)||
+       !isfinite(t->dynamic_pressure)||!isfinite(t->g_force)||
+       (t->stall_fraction_is_measured&&!isfinite(t->stall_fraction)))return out;
+    const GuidanceSettings*s=&cfg->guidance;
+    const VehicleProfile*v=&cfg->vehicle;
+    ControlAuthorityEnvelope control=decision_control_authority_envelope(g,t,p,cfg);
+    if(!control.valid||!control.controllable||
+       !(control.maximum_lateral_accel_mps2>DBL_MIN)||
+       !(t->horizontal_speed>DBL_MIN))return out;
+    double qh=norm_signed_deg(q->course-cfg->site.runway_heading)*DEG2RAD;
+    double da=q->along_track-t->runway_along_track;
+    double dc=q->cross_track-t->runway_cross_track;
+    out.along=da*cos(qh)+dc*sin(qh);
+    out.cross=-da*sin(qh)+dc*cos(qh);
+    out.course_error=norm_signed_deg(q->course-course);
+    out.altitude_error=t->mean_altitude-s->taem_interface_altitude;
+    out.minimum_turn_radius_m=t->horizontal_speed*t->horizontal_speed/
+        control.maximum_lateral_accel_mps2;
+    double path_length=decision_target_path_length(g,t,course,
+        q->along_track,q->cross_track,q->course,
+        control.maximum_lateral_accel_mps2,p,cfg,NULL);
+    out.path_length_m=isfinite(path_length)?path_length:hypot(da,dc);
+    out.required_time_s=isfinite(out.path_length_m)?
+        control.control_response_time_s+out.path_length_m/t->horizontal_speed:NAN;
+    out.available_time_s=isfinite(q->arrival_ut)?q->arrival_ut-t->ut:NAN;
+    out.turn_margin=isfinite(out.required_time_s)&&isfinite(out.available_time_s)?
+        (out.available_time_s-out.required_time_s)*t->horizontal_speed:NAN;
+    double final_altitude=cfg->site.altitude+
+        s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
+    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    out.energy_margin=entry_remaining_specific_energy(t->latitude,t->mean_altitude,
+        t->true_air_speed,cfg->site.latitude,final_altitude,final_speed,p);
+    out.energy_available=out.energy_margin;
+    out.valid=isfinite(out.along)&&isfinite(out.cross)&&
+        isfinite(out.minimum_turn_radius_m)&&isfinite(out.energy_margin);
+    if(!out.valid)return out;
+    double range=hypot(t->runway_along_track,t->runway_cross_track);
+    double max_range=entry_taem_range_target(p,s);
+    double min_range=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    if(!isfinite(range)||!isfinite(max_range)||range<min_range||range>max_range)
+        out.veto|=2u;
+    double runway=cfg->site.runway_heading*DEG2RAD;
+    double de=-t->runway_along_track*sin(runway)-t->runway_cross_track*cos(runway);
+    double dn=-t->runway_along_track*cos(runway)+t->runway_cross_track*sin(runway);
+    double site_course=norm_deg(atan2(de,dn)*RAD2DEG);
+    double closing_error=norm_signed_deg(site_course-course);
+    if(!isfinite(closing_error)||cos(closing_error*DEG2RAD)<=0.0)out.veto|=4u;
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    if(t->true_air_speed<v->minimum_safe_speed||
+       !isfinite(mach)||mach<s->mm305_target_mach-s->mm305_mach_half_width||
+       mach>s->mm305_target_mach+s->mm305_mach_half_width)out.veto|=1u;
+    if(t->mean_altitude<s->mm305_min_altitude||
+       t->mean_altitude>s->mm305_max_altitude)out.veto|=8u;
+    if(!(out.energy_margin>0.0))out.veto|=16u;
+    if(!(t->vertical_speed<0.0))out.veto|=32u;
+    if(t->dynamic_pressure>v->maximum_dynamic_pressure||
+       t->g_force>v->maximum_g_load||
+       (t->stall_fraction_is_measured&&t->stall_fraction>=1.0))out.veto|=64u;
+    out.ready=out.veto==0u;
+    return out;
+}
+
+
+TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
+        const Telemetry*t,double course,const PlanetModel*p,
+        const LandingConfiguration*cfg){
+    TaemInterfaceCapture out={0};
+    if(!t||!p||!cfg||
+       !isfinite(t->latitude)||!isfinite(t->runway_along_track)||
+       !isfinite(t->runway_cross_track)||!isfinite(t->true_air_speed)||
+       !isfinite(t->horizontal_speed)||!isfinite(t->vertical_speed)||
+       !isfinite(t->mean_altitude)||!isfinite(course)||
+       !isfinite(t->dynamic_pressure)||!isfinite(t->g_force)||
+       (t->stall_fraction_is_measured&&!isfinite(t->stall_fraction)))
+        return out;
+
+    const GuidanceSettings*s=&cfg->guidance;
+    const VehicleProfile*v=&cfg->vehicle;
+    ControlAuthorityEnvelope control=decision_control_authority_envelope(g,t,p,cfg);
+    /* Admission must stay diagnosable when the measured state violates a
+       survivability limit.  q/g/stall are ownership vetoes below, not reasons
+       to make the evaluator disappear.  Only missing/degenerate physical
+       authority prevents computing the state-set margins at all. */
+    if(!control.valid||
+       !(control.maximum_normal_accel_mps2>0.0)||
+       !(control.maximum_lateral_accel_mps2>DBL_MIN)||
+       !(t->horizontal_speed>DBL_MIN))
+        return out;
+
+    /*
+     * MM304 transfers ownership into a state set, not a waypoint.  Admission is
+     * deliberately a lower-bound test: the exact lead/HAC/final path belongs to
+     * MM305 and is replay-qualified there from the measured handoff state.
+     *
+     * Freezing the instantaneous high-Mach turn radius through the entire TAEM
+     * descent is physically wrong: density rises, speed falls, and available
+     * curvature changes continuously.  It can inflate a 30-50 km terminal
+     * problem into a fictitious several-hundred-kilometre Dubins path and keep
+     * MM304 in control until the vehicle is already below the TAEM envelope.
+     *
+     * The straight runway-frame distance to Final's alignment interface is the
+     * true geometric lower bound.  If the vehicle lacks energy even for this
+     * path, handoff is impossible.  If it passes, native MM305 still has to
+     * construct and replay-qualify a real bounded-control route before commit.
+     */
+    double final_along=-s->final_approach_distance;
+    double final_cross=0.0;
+    double final_course=cfg->site.runway_heading;
+    double da=final_along-t->runway_along_track;
+    double dc=final_cross-t->runway_cross_track;
+    double minimum_path=hypot(da,dc);
+    double minimum_turn_radius=t->horizontal_speed*t->horizontal_speed/
+        control.maximum_lateral_accel_mps2;
+    if(!isfinite(minimum_path)||!isfinite(minimum_turn_radius)||
+       !(minimum_turn_radius>0.0))
+        return out;
+
+    double final_altitude=cfg->site.altitude+
+        s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
+    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    double available_energy=entry_remaining_specific_energy(
+        t->latitude,t->mean_altitude,t->true_air_speed,
+        cfg->site.latitude,final_altitude,final_speed,p);
+    UnpoweredPathProjection projection=decision_unpowered_path_projection(
+        g,t,p,cfg,final_altitude,minimum_path);
+    EnergyPathEnvelope energy={0};
+    if(projection.valid&&isfinite(available_energy))
+        energy=decision_energy_path_envelope(t,p,available_energy,
+            projection.modeled_drag_work,projection.air_path_m);
+
+    out.along=final_along-t->runway_along_track;
+    out.cross=final_cross-t->runway_cross_track;
+    out.course_error=norm_signed_deg(final_course-course);
+    out.altitude_error=t->mean_altitude-
+        clampd(t->mean_altitude,s->mm305_min_altitude,s->mm305_max_altitude);
+    out.minimum_turn_radius_m=minimum_turn_radius;
+    out.path_length_m=minimum_path;
+    out.required_time_s=control.control_response_time_s+
+        minimum_path/t->horizontal_speed;
+    out.available_time_s=projection.valid?projection.travel_time_s:NAN;
+    /* Geometry is already proved by the finite bounded-curvature solution.
+       Keep turn_margin as a signed reachability diagnostic rather than inventing
+       an arrival timestamp. */
+    out.turn_margin=isfinite(minimum_path)?0.0:-INFINITY;
+    /* MM304 admission is a measured-state ownership boundary, not a confidence
+       certification of the predictor.  Require positive nominal physical energy
+       after the lower-bound path loss, but never turn model uncertainty itself
+       into a hard handoff veto.  MM305 immediately replans/replays from the
+       measured state and closed-loop feedback remains responsible for residual
+       model error. Keep the uncertainty term explicit for telemetry and planning. */
+    out.energy_available=energy.valid?energy.available_specific_energy:NAN;
+    out.energy_drag_work=energy.valid?energy.modeled_drag_work:NAN;
+    out.energy_uncertainty=energy.valid?energy.uncertainty_specific_energy:NAN;
+    out.energy_margin=energy.valid?
+        energy.available_specific_energy-energy.modeled_drag_work:NAN;
+    out.valid=isfinite(out.along)&&isfinite(out.cross)&&
+        isfinite(out.minimum_turn_radius_m)&&energy.valid;
+    if(!out.valid)return out;
+
+    double range=hypot(t->runway_along_track,t->runway_cross_track);
+    double maximum_entry_range=entry_taem_range_target(p,s);
+    if(!isfinite(range)||!isfinite(maximum_entry_range)||
+       range>maximum_entry_range)
+        out.veto|=2u;
+
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    if(t->true_air_speed<v->minimum_safe_speed||
+       !isfinite(mach)||
+       mach<s->mm305_target_mach-s->mm305_mach_half_width||
+       mach>s->mm305_target_mach+s->mm305_mach_half_width)
+        out.veto|=1u;
+    if(t->mean_altitude<s->mm305_min_altitude||
+       t->mean_altitude>s->mm305_max_altitude)
+        out.veto|=8u;
+    if(!(out.energy_margin>0.0))
+        out.veto|=16u;
+    if(!(t->vertical_speed<0.0))
+        out.veto|=32u;
+    if(t->dynamic_pressure>v->maximum_dynamic_pressure||
+       t->g_force>v->maximum_g_load||
+       (t->stall_fraction_is_measured&&t->stall_fraction>=1.0))
+        out.veto|=64u;
+
+    out.ready=out.veto==0u;
+    return out;
+}
