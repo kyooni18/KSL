@@ -73,7 +73,17 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
     double best_error = INFINITY;
     double chosen_aoa = 0.0, chosen_bank = 0.0, chosen_vertical = 0.0;
     double available_lateral = 0.0;
-    for (double aoa_deg = 0.0; aoa_deg <= aoa_max + 1e-9; aoa_deg += 0.5) {
+    double refinement_low = 0.0, refinement_high = 0.0;
+    for (int pass = 0; pass < 2; ++pass) {
+      if (pass == 1) {
+          refinement_low = fmax(0.0, chosen_aoa - 0.5);
+          refinement_high = fmin(aoa_max, chosen_aoa + 0.5);
+      }
+      double first_aoa = pass == 0 ? 0.0 : refinement_low;
+      double last_aoa = pass == 0 ? aoa_max : refinement_high;
+      double step_aoa = pass == 0 ? 0.5 : 0.1;
+      for (double aoa_deg = first_aoa;
+           aoa_deg <= last_aoa + 1e-9; aoa_deg += step_aoa) {
         AeroForces forces = aero_compute(&m->world, &m->aero,
             s->position_i_m, s->velocity_i_mps, s->ut_s, s->mass_kg,
             radians(aoa_deg), 0.0);
@@ -94,6 +104,7 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
             chosen_vertical = delivered_vertical;
             available_lateral = lift * sin(radians(bank_max));
         }
+      }
     }
     if (!isfinite(best_error)) return out;
 
