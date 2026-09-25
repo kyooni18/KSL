@@ -278,12 +278,14 @@ bool flight_control_step(FlightControlState *state,
                          profile == PROFILE_FLARE) && command->airbrakes;
     output->diagnostics.profile = profile;
 
-    if (profile == PROFILE_ROLLOUT) {
+    bool rollout_pitch_hold = profile == PROFILE_ROLLOUT &&
+        command->has_target_aoa && isfinite(command->target_aoa);
+    if (profile == PROFILE_ROLLOUT && !rollout_pitch_hold) {
         output->valid = true;
         output->diagnostics.rcs_transonic_cutoff = true;
         return true;
     }
-    if (!fc_atmospheric_profile(profile)) return false;
+    if (!rollout_pitch_hold && !fc_atmospheric_profile(profile)) return false;
 
     double measured_dt = isfinite(sample_dt) && sample_dt > 0.0 ? sample_dt : 0.0;
     if (state->has_sample && isfinite(telemetry->ut) && telemetry->ut < state->last_ut) {
@@ -485,6 +487,7 @@ bool flight_control_step(FlightControlState *state,
     }
     state->terminal_pitch_integral=state->pitch_trim;
     pitch_command=fc_clamp(pitch_command+state->pitch_trim,-1.0,1.0);
+    if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.15,0.15);
     (void)pitch_guard_known;
 
     double commanded_roll_rate=state->target_roll_rate;
@@ -529,8 +532,8 @@ bool flight_control_step(FlightControlState *state,
         fc_clamp(yaw_command,-1.0,1.0);
 
     output->pitch = state->last_control[FLIGHT_CONTROL_AXIS_PITCH];
-    output->roll = state->last_control[FLIGHT_CONTROL_AXIS_ROLL];
-    output->yaw = state->last_control[FLIGHT_CONTROL_AXIS_YAW];
+    output->roll = rollout_pitch_hold?0.0:state->last_control[FLIGHT_CONTROL_AXIS_ROLL];
+    output->yaw = rollout_pitch_hold?0.0:state->last_control[FLIGHT_CONTROL_AXIS_YAW];
     output->rcs_assist = rcs_assist;
     output->rcs_requested = false;
     output->valid = true;
