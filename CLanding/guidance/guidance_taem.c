@@ -188,10 +188,10 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         clampd(request->drag_scale,0.5,2.0));
     mm305_reciprocal_model(scaled,reciprocal);
     /* HAC size is the route's energy lever: a larger HAC flies a longer path
-       and sheds more energy, a smaller one less.  Try the configured radius
-       first, then larger and smaller ones, and take the first radius with a
-       qualified route. */
-    const double radius_factors[]={1.0,1.35,0.8,1.7,0.65};
+       and sheds more energy, a smaller one less.  The candidate search already
+       tightens the radius when the configured one fails; add the larger HAC it
+       never tries, for states with energy to spare. */
+    const double radius_factors[]={1.0,1.5};
     TaemFixedHacSearch search;
     memset(&search,0,sizeof(search));
     int best=-1;
@@ -391,8 +391,12 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     const double replan_interval_s=20.0;
     const double retry_interval_s=10.0;
     if (!g->mm305_route_committed) {
+        /* Back off after failed searches: a failing search is the most
+           expensive one (every radius, end and side is tried). */
+        double backoff=retry_interval_s*pow(2.0,(double)(g->mm305_plan_failures<3?
+            g->mm305_plan_failures:3));
         bool due=!isfinite(g->mm305_last_plan_attempt_ut) ||
-            t->ut-g->mm305_last_plan_attempt_ut>=retry_interval_s;
+            t->ut-g->mm305_last_plan_attempt_ut>=backoff;
         if (due && !g->mm305_planning_needed) {
             g->mm305_planning_needed=true;
             g->mm305_last_plan_attempt_ut=t->ut;
