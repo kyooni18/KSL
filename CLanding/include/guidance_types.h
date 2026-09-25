@@ -319,20 +319,15 @@ typedef struct {
     /* Post-capture landing law: learned lift/drag reference areas (per q per
        unit aerodynamic factor).  Kept per machine so predictor copies of the
        guidance never share or pollute the live estimate. */
-    double terminal_lift_area_ema, terminal_drag_area_ema, terminal_aoa_trim;
+    double terminal_lift_area_ema, terminal_drag_area_ema;
     double terminal_speedbrake_cda; /* learned speedbrake drag area, m^2 (0 = unknown) */
     double terminal_vs_prev, terminal_vs_prev_ut, terminal_vs_rate_ema;
     /* Observed lift/q and drag/q (m^2) in 1 deg incidence bins 0..20 deg. */
     double terminal_lift_q[21], terminal_drag_q[21];
     unsigned char terminal_aero_seen[21];
     double terminal_aero_mach[21];
-    double terminal_apull_ema,terminal_v1g_ema;
-    double terminal_lift_k_hi,terminal_drag_k_hi;
     double terminal_aoa_cmd_last,terminal_aoa_cmd_ut;
     bool terminal_pull_latch;
-    double terminal_flare_k; /* Exponential flare rate fixed at pull start, 1/s. */
-    double terminal_flare_ut, terminal_flare_aoa0; /* Pull-up start time and incidence. */
-    bool terminal_flare_captured;
     double terminal_lift_ratio; /* Pull-up ramp done; holding the sink profile. */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;
