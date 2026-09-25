@@ -19,12 +19,10 @@
     "trajectoryLearningRate": 0.18
   },
   "connection": {
+    "clientName": "Spaceplane Landing Guidance",
     "rpcHost": "127.0.0.1",
     "rpcPort": 50000,
-    "serialPort": "/dev/tty.krpc",
-    "baudRate": 921600,
-    "timeoutMs": 2000,
-    "clientName": "Spaceplane Landing Guidance"
+    "timeoutMs": 2000
   },
   "guidance": {
     "approachRollRate": 3.5,
@@ -35,9 +33,9 @@
     "deorbitPointingUncertainty": 2,
     "deorbitPositionUncertainty": 50,
     "deorbitRobustMinimumPassFraction": 0.75,
+    "deorbitThrottleRampDuration": 12,
     "deorbitThrustUncertaintyFraction": 0.08,
     "deorbitTimingUncertainty": 0.5,
-    "deorbitThrottleRampDuration": 12,
     "deorbitVelocityUncertainty": 0.5,
     "entryInterfaceAltitudeMargin": 500,
     "entryRollAcceleration": 1.8,
@@ -48,24 +46,24 @@
     "flareAltitude": 55,
     "gearDeploymentAltitude": 1500,
     "guidanceRate": 10,
+    "hacAcquisitionAltitude": 10700,
+    "hacAcquisitionMach": 0.95,
     "hacLookAheadAngle": 16,
     "hacRadius": 12000,
     "maximumEntryFlightPathAngle": -3.0,
     "minimumPlanningLeadTime": 90,
-    "predictionInterval": 1.5,
-    "sTurnMinimumLegDuration": 24,
-    "taemGlideSlope": 24,
-    "taemForceHandoffSpeed": 1300,
-    "mm304HandoffRadius": 1000,
-    "mm304PerpendicularHeadingHalfWidth": 30,
     "mm304HandoffAlongTrack": -8000,
     "mm304HandoffCrossTrack": 0,
-    "mm305MinimumAltitude": 22000,
-    "mm305MaximumAltitude": 30000,
-    "mm305TargetMach": 2.5,
+    "mm304HandoffRadius": 1000,
+    "mm304PerpendicularHeadingHalfWidth": 30,
     "mm305MachHalfWidth": 0.35,
-    "hacAcquisitionAltitude": 10700,
-    "hacAcquisitionMach": 0.95,
+    "mm305MaximumAltitude": 30000,
+    "mm305MinimumAltitude": 22000,
+    "mm305TargetMach": 2.5,
+    "predictionInterval": 1.5,
+    "sTurnMinimumLegDuration": 24,
+    "taemForceHandoffSpeed": 1300,
+    "taemGlideSlope": 24,
     "taemInterfaceAltitude": 25000,
     "taemInterfaceRange": 96500,
     "taemRollRate": 6,
@@ -77,17 +75,16 @@
     "useTimeWarp": true
   },
   "site": {
+    "allowReciprocalRunway": true,
     "altitude": 70,
     "latitude": -0.0486111111,
     "longitude": -74.7283333333,
     "name": "KSC Runway 09",
     "runwayHeading": 90,
     "runwayLength": 2500,
-    "runwayWidth": 70,
-    "allowReciprocalRunway": true
+    "runwayWidth": 70
   },
   "vehicle": {
-    "modelId": "STS-N",
     "airbrakeActionGroup": 1,
     "allowPoweredApproach": false,
     "entryAngleOfAttack": 18,
@@ -100,6 +97,7 @@
     "maximumDynamicPressure": 45000,
     "maximumGLoad": 3.5,
     "minimumSafeSpeed": 85,
+    "modelId": "STS-N",
     "touchdownSpeed": 75
   }
 }
