@@ -148,6 +148,7 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->target_roll_rate = 0.0;
     state->rcs_transonic_cutoff = false;
     state->has_last_profile = false;
+    state->main_gear_contact_latched = false;
     memset(state->last_control, 0, sizeof(state->last_control));
     memset(&state->beta, 0, sizeof(state->beta));
     for (int i = 0; i < FLIGHT_CONTROL_AXIS_COUNT; ++i) {
@@ -293,6 +294,8 @@ bool flight_control_step(FlightControlState *state,
     if (state->has_sample && isfinite(telemetry->ut) && telemetry->ut < state->last_ut) {
         flight_control_reset_transients(state);
     }
+    if (telemetry->has_main_gear_grounded && telemetry->main_gear_grounded)
+        state->main_gear_contact_latched = true;
     if (!(measured_dt > 0.0) && state->has_sample && isfinite(telemetry->ut))
         measured_dt = telemetry->ut - state->last_ut;
     double control_dt = measured_dt > 0.0 ? measured_dt : state->nominal_dt;
@@ -362,6 +365,8 @@ bool flight_control_step(FlightControlState *state,
     double observed_pitch_rate=
         telemetry->has_angle_of_attack_rate&&isfinite(telemetry->angle_of_attack_rate)?
             telemetry->angle_of_attack_rate:state->aoa_rate;
+    if(rollout_pitch_hold)
+        observed_pitch_rate=isfinite(telemetry->pitch_rate)?telemetry->pitch_rate:state->pitch_rate;
     bool live_body_roll=body_roll_rate_valid&&
         !(fabs(telemetry->body_roll_rate)<=DBL_EPSILON&&
           isfinite(telemetry->roll_rate)&&fabs(telemetry->roll_rate)>DBL_EPSILON);
@@ -384,10 +389,15 @@ bool flight_control_step(FlightControlState *state,
     }
 
 
-    double target_pitch_state = command->has_target_aoa && isfinite(command->target_aoa)
-        ? command->target_aoa
-        : fc_finite(command->target_pitch, 0.0) - flight_path_angle;
-    double pitch_error = target_pitch_state - aoa;
+    /* Airborne pitch guidance is an AoA loop.  Once the mains are down, control
+       actual body pitch instead: ground/suspension motion makes AoA the wrong
+       state and was causing the rollout pitch controller to chase wheel bounce. */
+    double target_pitch_state = rollout_pitch_hold ? command->target_pitch :
+        (command->has_target_aoa && isfinite(command->target_aoa)
+            ? command->target_aoa
+            : fc_finite(command->target_pitch, 0.0) - flight_path_angle);
+    double measured_pitch_state = rollout_pitch_hold ? pitch : aoa;
+    double pitch_error = target_pitch_state - measured_pitch_state;
     if (state->has_last_target_pitch) {
         double raw_target_rate = (target_pitch_state - state->last_target_pitch_state) / control_dt;
         raw_target_rate = fc_clamp(raw_target_rate, -6.0, 6.0);
@@ -469,19 +479,21 @@ bool flight_control_step(FlightControlState *state,
         atof(getenv("KSP_LANDER_PITCH_ZETA")):1.15;
     double pitch_auth_used=fc_pitch_accel_for_profile(
         pitch_authority,pitch_accel_max,profile,telemetry->radar_altitude);
+    double pitch_wn_used=rollout_pitch_hold?0.55:pitch_wn;
+    double pitch_zeta_used=rollout_pitch_hold?1.45:pitch_zeta;
     double pitch_command=fc_capped_pd_command(pitch_error,effective_pitch_rate,
-        state->target_pitch_rate,pitch_auth_used,pitch_wn,pitch_zeta,pitch_lag_s,
+        state->target_pitch_rate,pitch_auth_used,pitch_wn_used,pitch_zeta_used,pitch_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
 
-    bool final_pitch_trim=(profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
-        command->has_target_aoa&&isfinite(command->target_aoa)&&
+    bool final_pitch_trim=!state->main_gear_contact_latched&&
+        (profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
         isfinite(telemetry->radar_altitude)&&telemetry->radar_altitude<700.0;
     if(final_pitch_trim){
         const double ki=getenv("KSP_LANDER_PITCH_TRIM_KI")?
             atof(getenv("KSP_LANDER_PITCH_TRIM_KI")):0.004;
         if(fabs(pitch_error)>0.35)
             state->pitch_trim=fc_clamp(state->pitch_trim+ki*pitch_error*control_dt,
-                -0.15,0.28);
+                -0.15,0.42);
         else
             state->pitch_trim*=fmax(0.0,1.0-0.5*control_dt);
     }else{
@@ -490,12 +502,19 @@ bool flight_control_step(FlightControlState *state,
     state->terminal_pitch_integral=state->pitch_trim;
     pitch_command=fc_clamp(pitch_command+state->pitch_trim,-1.0,1.0);
     if (rollout_profile) {
-        /* Ground contact adds a strong nose-down moment.  The previous +0.15
-           cap saturated continuously in k110 while pitch collapsed from +6 to
-           -5 deg.  Pre-contact Final already demonstrated smooth +0.3..0.37
-           authority, so retain that proven range while preventing a hard push-over. */
-        if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.10,0.35);
+        if (rollout_pitch_hold) pitch_command=fc_clamp(pitch_command,-0.30,0.30);
         else pitch_command=0.0;
+    }
+    if (state->main_gear_contact_latched) {
+        /* Exact post-mains contract: the first real rear/main-wheel contact
+           permanently releases pitch for this flight.  Do not hold attitude,
+           derotate, trim, or resume AoA control if the gear bounces. */
+        state->pitch_trim=0.0;
+        state->terminal_pitch_integral=0.0;
+        state->has_last_target_pitch=false;
+        state->target_pitch_rate=0.0;
+        state->last_control[FLIGHT_CONTROL_AXIS_PITCH]=0.0;
+        pitch_command=0.0;
     }
     (void)pitch_guard_known;
 
@@ -513,12 +532,14 @@ bool flight_control_step(FlightControlState *state,
     (void)roll_guard_known;
 
     double heading_error = 0.0;
-    /* Live KSP: positive yaw drives sideslip negative, so the error that a
-       positive yaw input closes is +sideslip; heading rate is its rate. */
+    /* Positive yaw closes positive sideslip in the validated atmospheric model. */
     double yaw_error = sideslip;
     if (command->heading_control_enabled) {
         heading_error =
             fc_signed_angle(fc_finite(command->target_heading, 0.0)-heading);
+        /* The pre-a397723 sign is the one validated live: k109 stayed within
+           roughly 89.9-90.4 deg.  Inverting this error drove k110 monotonically
+           right to about 105 deg and off the runway. */
         yaw_error = heading_error;
     }
     const double yaw_accel_max=getenv("KSP_LANDER_YAW_ACCEL")?atof(getenv("KSP_LANDER_YAW_ACCEL")):30.0;
@@ -550,9 +571,9 @@ bool flight_control_step(FlightControlState *state,
 
     FlightControlDiagnostics *d = &output->diagnostics;
     d->target_pitch_state = target_pitch_state;
-    d->measured_pitch_state = aoa;
+    d->target_pitch_state = target_pitch_state;
+    d->measured_pitch_state = measured_pitch_state;
     d->pitch_error = pitch_error;
-    d->effective_pitch_rate = effective_pitch_rate;
     d->body_pitch_rate = body_pitch_rate_valid ? telemetry->body_pitch_rate : 0.0;
     d->body_pitch_rate_available = body_pitch_rate_valid && !body_pitch_rate_stale;
     d->roll_error = roll_error;
