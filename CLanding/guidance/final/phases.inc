@@ -283,6 +283,10 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
     c.brakes=t->surface_speed<fmax(120.0,cfg->vehicle.touchdown_speed*1.35);
     c.airbrakes=true;
     c.wheel_steering=steer;
+    if(t->surface_speed>25.0){
+        c.has_target_aoa=true;
+        c.target_aoa=2.0;
+    }
     c.navball_speed_mode=SPEED_SURFACE;
     c.control_profile=PROFILE_ROLLOUT;
     char status[160];GuidancePhase phase;
