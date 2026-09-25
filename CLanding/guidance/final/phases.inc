@@ -273,7 +273,7 @@ static RolloutSteeringDemand runway_rollout_steering(const Telemetry*t,
        stronger gains preserve enough authority to arrest drift during rollout. */
     double correction=(heading_error*.09-t->runway_cross_track*.0033-
         lateral_rate*.036*rate_weight)*authority;
-    double steer=clampd(correction,-.40,.40);
+    double steer=clampd(-correction,-.40,.40);
     return (RolloutSteeringDemand){.steering=steer,.lateral_rate=lateral_rate};
 }
 
