@@ -8,6 +8,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
+sys.path.insert(0, str(SIM / "scripts"))
+from model_paths import model_file as _model_file  # noqa: E402
 SCHEMA = "shuttlesim-guidance-v2"
 # Explicit experiment coverage only; never used as a flight-feasibility gate.
 DEORBIT_COVERAGE_MAX_ALTITUDE_M = 400000.0
@@ -659,15 +661,15 @@ class Environment:
         self.close()
         self.seed, self.policy_version = seed, policy_version
         rng = random.Random(seed)
-        paths = [self.scenario, SIM / "data/fitted/kerbin_atmosphere_ksp.csv",
-                 SIM / "data/fitted/stsn_aero_ksp_robust.csv", SIM / "data/fitted/stsn_attitude_ksp.ini"]
+        paths = [self.scenario, _model_file("atmosphere"),
+                 _model_file("aero"), _model_file("attitude")]
         self.handle = self.lib.offline_create(*(str(p).encode() for p in paths))
         self.expert_handle = self.teacher.expert_create(
             str(ROOT / "Configuration/default.json").encode(), str(paths[1]).encode())
         if not self.handle or not self.expert_handle:
             self.close()
             raise RuntimeError("model/scenario/config load failed")
-        if not self.lib.offline_load_book(self.handle, str(SIM / "data/fitted/stsn_force_book.csv").encode()):
+        if not self.lib.offline_load_book(self.handle, str(_model_file("aero_book")).encode()):
             self.close()
             raise RuntimeError("force book load failed")
         nominal = json.loads(self.lib.offline_telemetry(self.handle))

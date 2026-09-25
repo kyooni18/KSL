@@ -430,7 +430,9 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         double altitude = v3_norm(state.position_i_m) - m->world.radius_m;
         double local_radius = m->world.radius_m + altitude;
         double gravity = m->world.mu_m3_s2 / (local_radius * local_radius);
-        double load = v3_norm(forces.force_i) / state.mass_kg / fmax(gravity, 1e-9);
+        /* Normal (lift) load factor, matching telemetry g_force everywhere. */
+        (void)gravity;
+        double load = fabs(forces.lift_n) / state.mass_kg / 9.80665;
         out.maximum_load_g = fmax(out.maximum_load_g, load);
         out.maximum_dynamic_pressure_pa = fmax(out.maximum_dynamic_pressure_pa,
                                                forces.dynamic_pressure_pa);

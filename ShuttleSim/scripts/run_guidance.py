@@ -4,6 +4,7 @@ import argparse, io, json, math, os, pathlib, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
 from run_geometry import fixed_hac_geometry_evidence
 from run_artifacts import allocate_run, compress_recording, write_json
+from model_paths import model_file
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
@@ -191,11 +192,17 @@ def main():
     ap.add_argument("--web",action="store_true",help="deprecated no-op; the persistent Telemetry Web service is used")
     ap.add_argument("--configuration",default=str(ROOT/"Configuration/default.json"))
     ap.add_argument("--dt",type=float,default=0.02)
-    ap.add_argument("--atmosphere",default=str(SIM/"data/fitted/kerbin_atmosphere_ksp.csv"))
-    ap.add_argument("--aero",default=str(SIM/"data/fitted/stsn_aero_ksp_robust.csv"))
-    ap.add_argument("--aero-book",default=str(SIM/"data/fitted/stsn_force_book.csv"),
+    ap.add_argument("--atmosphere",default=str(model_file("atmosphere")))
+    ap.add_argument("--aero",default=str(model_file("aero")))
+    ap.add_argument("--aero-book",default=str(model_file("aero_book")),
                     help="direct-force data book, or 'none' to disable")
-    ap.add_argument("--attitude",default=str(SIM/"data/fitted/stsn_attitude_ksp.ini"))
+    ap.add_argument("--attitude",default=str(model_file("attitude")))
+    # Guidance-side model files.  By default guidance is given the plant's own
+    # files (perfect knowledge); pass different files to test model error.
+    ap.add_argument("--terminal-atmosphere",default=None,help="guidance atmosphere model (default: --atmosphere)")
+    ap.add_argument("--terminal-aero",default=None,help="MM305 aero table (default: --aero)")
+    ap.add_argument("--terminal-aero-book",default=None,help="guidance force book / certified prior (default: --aero-book)")
+    ap.add_argument("--terminal-attitude",default=None,help="MM305 attitude model (default: --attitude)")
     ap.add_argument("--engage",default="engageReentry",
                     choices=["engage","engageReentry","engageHACTest","engageFinalTest"],
                     help="backend engage method; engage runs createPlan + production deorbit/entry/landing guidance")
@@ -220,10 +227,13 @@ def main():
         ap.error("time steps, rates, and timeouts must be positive finite values")
     if not args.label or pathlib.Path(args.label).name!=args.label or args.label in (".",".."):
         ap.error("label must be a single nonempty filename component")
-    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude"):
+    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude",
+                 "terminal_atmosphere","terminal_aero","terminal_aero_book","terminal_attitude"):
         value=getattr(args,name)
-        if name=="aero_book" and value.lower()=="none":
-            args.aero_book="none"
+        if value is None:
+            continue
+        if name in ("aero_book","terminal_aero_book") and value.lower()=="none":
+            setattr(args,name,"none")
             continue
         path=pathlib.Path(value).expanduser().resolve()
         if not path.is_file():
@@ -301,10 +311,10 @@ def main():
         "KSP_LANDER_HAC_DIAGNOSTICS":"1",
         "KSP_LANDER_SIM_COMMAND_PORT":str(args.command_port),
         "KSP_LANDER_SIM_TELEMETRY_PORT":str(args.telemetry_port),
-        "KSP_LANDER_TERMINAL_ATMOSPHERE":args.atmosphere,
-        "KSP_LANDER_TERMINAL_AERO":args.aero,
-        "KSP_LANDER_TERMINAL_AERO_BOOK":args.aero_book,
-        "KSP_LANDER_TERMINAL_ATTITUDE":args.attitude,
+        "KSP_LANDER_TERMINAL_ATMOSPHERE":args.terminal_atmosphere or args.atmosphere,
+        "KSP_LANDER_TERMINAL_AERO":args.terminal_aero or args.aero,
+        "KSP_LANDER_TERMINAL_AERO_BOOK":args.terminal_aero_book or args.aero_book,
+        "KSP_LANDER_TERMINAL_ATTITUDE":args.terminal_attitude or args.attitude,
     })
     # A phase-specific CLI action must select its matching backend mode, not
     # depend on an inherited operator shell variable.
@@ -326,6 +336,7 @@ def main():
     if manifest_path:
         manifest["backendPid"]=be_proc.pid
         manifest["physicsSources"]={name:getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
+        manifest["guidanceModelSources"]={name:getattr(args,"terminal_"+name) or getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
         write_json(manifest_path,manifest)
     backend=Backend(be_proc,guidance_log,mirror=not args.no_mirror,replay_path=guidance_replay,
                     compact_log=args.compact_guidance_log)

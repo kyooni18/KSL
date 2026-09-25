@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sim_telemetry.h"
 #include "landing_api.h"
 #include "taem_candidate_search.h"
 #include "taem_geometry.h"
@@ -114,11 +115,15 @@ static void test_tracker_normal_lift_balance(const TerminalModel *model,
 }
 int main(void) {
     LandingConfiguration configuration = landing_configuration_default();
+    char atmosphere[512], aero[512], book[512], attitude[512];
     TerminalModelSourceFiles files = {
-        .atmosphere_csv = "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
-        .aero_csv = "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
-        .aero_book_csv = "ShuttleSim/data/fitted/stsn_force_book.csv",
-        .attitude_ini = "ShuttleSim/data/fitted/stsn_attitude_ksp.ini"
+        .atmosphere_csv = shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_ATMOSPHERE,
+                                                 atmosphere, sizeof(atmosphere)),
+        .aero_csv = shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_AERO, aero, sizeof(aero)),
+        .aero_book_csv = shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_FORCE_BOOK,
+                                                book, sizeof(book)),
+        .attitude_ini = shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_ATTITUDE,
+                                               attitude, sizeof(attitude))
     };
     TerminalModel model;
     char reason[192];
@@ -156,6 +161,21 @@ int main(void) {
     TaemReachability reachability;
     assert(taem_fixed_hac_turn_reachability(&model, &state, &geometry,
         model.guidance.hac_radius, &reachability));
+    /* The recorded fixture altitude was chosen for the KSP-fitted plant. With a
+     * different (e.g. tracked reference) plant, descend the same state along the
+     * local vertical until the model's own lift can turn the frozen HAC, so the
+     * structural checks below remain meaningful for any plant model. */
+    for (int step = 0; step < 40 && reachability.valid &&
+            !reachability.lateral_authority_ok; ++step) {
+        double r = v3_norm(state.position_i_m);
+        state.position_i_m = v3_scale(state.position_i_m, (r - 500.0) / r);
+        assert(taem_geometry_state(&model, &state, &geometry));
+        assert(taem_fixed_hac_turn_reachability(&model, &state, &geometry,
+            model.guidance.hac_radius, &reachability));
+    }
+    fprintf(stderr, "fixture: %.0f m above runway, lateral %.3f/%.3f m/s^2\n",
+        geometry.altitude_above_runway_m, reachability.required_lateral_accel_mps2,
+        reachability.available_lateral_accel_mps2);
     assert(reachability.valid && reachability.lateral_authority_ok);
     double maximum_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
         fmax(geometry.airspeed_mps * geometry.airspeed_mps, 1.0);

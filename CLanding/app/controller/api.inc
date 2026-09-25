@@ -1,21 +1,29 @@
 static const char *terminal_model_path(const char *environment_name,
-        const char *default_path) {
+        ShuttleSimModelFile kind, char *buffer, size_t buffer_size) {
     const char *configured = getenv(environment_name);
-    return configured && configured[0] ? configured : default_path;
+    if (configured && configured[0]) return configured;
+    return shuttle_sim_model_path(NULL, kind, buffer, buffer_size);
 }
 
 static bool controller_capture_terminal_model(LandingController *c,
         const LandingConfiguration *cfg) {
+    char atmosphere[512], aero[512], book[512], attitude[512];
     TerminalModelSourceFiles files = {
         .atmosphere_csv = terminal_model_path("KSP_LANDER_TERMINAL_ATMOSPHERE",
-            "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv"),
+            SHUTTLE_SIM_MODEL_ATMOSPHERE, atmosphere, sizeof(atmosphere)),
         .aero_csv = terminal_model_path("KSP_LANDER_TERMINAL_AERO",
-            "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv"),
+            SHUTTLE_SIM_MODEL_AERO, aero, sizeof(aero)),
         .aero_book_csv = terminal_model_path("KSP_LANDER_TERMINAL_AERO_BOOK",
-            "ShuttleSim/data/fitted/stsn_force_book.csv"),
+            SHUTTLE_SIM_MODEL_FORCE_BOOK, book, sizeof(book)),
         .attitude_ini = terminal_model_path("KSP_LANDER_TERMINAL_ATTITUDE",
-            "ShuttleSim/data/fitted/stsn_attitude_ksp.ini")
+            SHUTTLE_SIM_MODEL_ATTITUDE, attitude, sizeof(attitude))
     };
+    if (!files.atmosphere_csv || !files.aero_csv || !files.aero_book_csv ||
+        !files.attitude_ini) {
+        c->terminal_model_valid = false;
+        fprintf(stderr, "MM305 native model unavailable: model path too long\n");
+        return false;
+    }
     char reason[256];
     uint64_t snapshot_id = ++c->terminal_model_capture_sequence;
     if (!snapshot_id) snapshot_id = ++c->terminal_model_capture_sequence;

@@ -1,7 +1,11 @@
 # Keep plain `make` building the backend, not the validation-overlay helper.
 .DEFAULT_GOAL := all
 
-CC ?= clang
+# make predefines CC=cc, so `CC ?= clang` would never apply; honour an explicit
+# CC from the command line/environment and otherwise use clang as intended.
+ifeq ($(origin CC),default)
+CC := clang
+endif
 CFLAGS ?= -O2 -std=c17 -Wall -Wextra -Werror -pthread
 CPPFLAGS ?= -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include
 LDFLAGS ?= -pthread
@@ -19,7 +23,7 @@ CNANO_COMPAT_ROOT := $(BUILD)/cnano_compat
 CNANO_COMPAT := $(CNANO_COMPAT_ROOT)/krpc_cnano
 CNANO_INCLUDE_FLAGS := -isystem $(CNANO_ROOT)/include -isystem $(CNANO_COMPAT_ROOT) -isystem $(NANOPB_ROOT)
 CNANO_DEFINES := -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512
-PROJECT_CPPFLAGS := $(CPPFLAGS) $(CNANO_INCLUDE_FLAGS) $(CNANO_DEFINES)
+PROJECT_CPPFLAGS := $(CPPFLAGS) -D_DEFAULT_SOURCE $(CNANO_INCLUDE_FLAGS) $(CNANO_DEFINES)
 UPSTREAM_CNANO_WARNING_FLAGS := -Wno-error=unused-parameter -Wno-error=unused-function -Wno-error=missing-field-initializers
 
 VPATH := app:guidance:prediction:control:vehicle:calibration:transport:telemetry:persistence:include

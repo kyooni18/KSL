@@ -5,6 +5,7 @@
 #include "decision_envelope.h"
 #include "terminal_model.h"
 #include "taem_planner.h"
+#include "sim_telemetry.h"
 
 #include <errno.h>
 #include <float.h>

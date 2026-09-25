@@ -117,7 +117,10 @@ int main(int argc,char**argv){
     int tx_port=getenv("SIM_GUIDANCE_TX_PORT")?atoi(getenv("SIM_GUIDANCE_TX_PORT")):8795;
     LandingConfiguration cfg;if(!load_config(config_path,&cfg))
         fprintf(stderr,"guidance-runner: using built-in/default-normalized config (could not fully parse %s)\n",config_path);
-    const char *atmosphere=argc>2?argv[2]:"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv";
+    char default_atmosphere[512];
+    const char *atmosphere=argc>2?argv[2]:shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_ATMOSPHERE,
+        default_atmosphere,sizeof(default_atmosphere));
+    if(!atmosphere){fprintf(stderr,"guidance-runner: atmosphere path too long\n");return 2;}
     PlanetModel planet;char error[256];
     if(!shuttle_sim_load_planet(atmosphere,&planet,error,sizeof(error))){
         fprintf(stderr,"guidance-runner: %s\n",error);return 2;

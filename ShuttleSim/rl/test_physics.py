@@ -101,7 +101,10 @@ class PhysicsTests(unittest.TestCase):
         handle = self.create()
         telemetry = json.loads(self.lib.offline_telemetry(handle))
         rows = []
-        with open("ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv") as stream:
+        import sys
+        sys.path.insert(0, "ShuttleSim/scripts")
+        from model_paths import model_file
+        with open(model_file("atmosphere")) as stream:
             for line in stream:
                 if not line or line.startswith("#") or "altitude" in line:
                     continue

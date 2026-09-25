@@ -6,10 +6,13 @@ ROOT=pathlib.Path(__file__).resolve().parents[2]
 SIM=ROOT/"ShuttleSim"
 BASE=SIM/"campaigns/20260918-one-hour-full/inputs/configs/G057.json"
 SCENARIO=SIM/"scenarios/ksp86km-postburn.ini"
-ATM=SIM/"data/fitted/kerbin_atmosphere_ksp.csv"
-AERO=SIM/"data/fitted/stsn_aero_ksp_robust.csv"
-BOOK=SIM/"data/fitted/stsn_force_book.csv"
-ATT=SIM/"data/fitted/stsn_attitude_ksp.ini"
+import sys
+sys.path.insert(0,str(SIM/"scripts"))
+from model_paths import model_file
+ATM=model_file("atmosphere")
+AERO=model_file("aero")
+BOOK=model_file("aero_book")
+ATT=model_file("attitude")
 RUNNER=SIM/"scripts/run_guidance.py"
 
 spec=importlib.util.spec_from_file_location("campaign",SIM/"scripts/run_campaign.py")

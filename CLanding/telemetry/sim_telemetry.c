@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static void set_error(char *out, size_t size, const char *message) {
     if (!out || size == 0) return;
@@ -499,4 +500,31 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     fill_orbit_fields(planet, state, t);
     if (error && error_size) error[0] = '\0';
     return true;
+}
+
+const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
+                                   char *buffer, size_t buffer_size) {
+    static const char *const fitted[] = {
+        "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
+        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
+        "ShuttleSim/data/fitted/stsn_force_book.csv",
+        "ShuttleSim/data/fitted/stsn_attitude_ksp.ini"};
+    static const char *const reference[] = {
+        "ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
+        "ShuttleSim/reference-model/stsn_aero_reference.csv",
+        "ShuttleSim/reference-model/stsn_force_book_reference.csv",
+        "ShuttleSim/reference-model/stsn_attitude_reference.ini"};
+    if (!buffer || buffer_size == 0 || (int)kind < 0 ||
+        (size_t)kind >= sizeof(fitted) / sizeof(fitted[0]))
+        return NULL;
+    const char *prefix = root && root[0] ? root : NULL;
+    const char *const choices[] = {fitted[kind], reference[kind]};
+    for (size_t i = 0; i < 2; ++i) {
+        int written = prefix ?
+            snprintf(buffer, buffer_size, "%s/%s", prefix, choices[i]) :
+            snprintf(buffer, buffer_size, "%s", choices[i]);
+        if (written < 0 || (size_t)written >= buffer_size) return NULL;
+        if (i == 1 || access(buffer, R_OK) == 0) return buffer;
+    }
+    return NULL;
 }

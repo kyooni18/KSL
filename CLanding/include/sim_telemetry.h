@@ -32,4 +32,20 @@ void shuttle_sim_prepare_guidance_telemetry(
     const LandingConfiguration *configuration,
     const PlanetModel *planet);
 
+/* ShuttleSim model data files.  The KSP-fitted set lives under the git-ignored
+   ShuttleSim/data/fitted/; a tracked, explicitly labelled reference model under
+   ShuttleSim/reference-model/ keeps a clean checkout buildable, testable and
+   simulatable.  The fitted file wins whenever it is readable. */
+typedef enum {
+    SHUTTLE_SIM_MODEL_ATMOSPHERE = 0,
+    SHUTTLE_SIM_MODEL_AERO,
+    SHUTTLE_SIM_MODEL_FORCE_BOOK,
+    SHUTTLE_SIM_MODEL_ATTITUDE
+} ShuttleSimModelFile;
+
+/* Writes "<root>/<relative path>" (or the relative path when root is NULL or
+   empty) into buffer and returns buffer, or NULL on invalid input/overflow. */
+const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
+                                   char *buffer, size_t buffer_size);
+
 #endif
