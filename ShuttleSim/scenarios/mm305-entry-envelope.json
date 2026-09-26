@@ -1,0 +1,20 @@
+{
+  "base": "ShuttleSim/scenarios/mm305-qualified-entry-26km-r60.ini",
+  "description": "Physically consistent MM305 checkpoint near 26 km, Mach 2.6, 60 km before RW09; nearby imperfect handoffs. These are synthetic measured-state surrogates, not recorded MM304 handoffs.",
+  "cases": [
+    {"name": "exact", "use_base": true},
+    {"name": "nominal-quantized", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -8},
+    {"name": "alt-low", "heading": 90, "altitude": 24500, "speed": 790.836, "fpa": -8},
+    {"name": "alt-high", "heading": 90, "altitude": 27500, "speed": 790.836, "fpa": -8},
+    {"name": "speed-slow", "heading": 90, "altitude": 26000, "speed": 750, "fpa": -8},
+    {"name": "speed-fast", "heading": 90, "altitude": 26000, "speed": 830, "fpa": -8},
+    {"name": "heading-left", "heading": 87, "altitude": 26000, "speed": 790.836, "fpa": -8},
+    {"name": "heading-right", "heading": 93, "altitude": 26000, "speed": 790.836, "fpa": -8},
+    {"name": "cross-north", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -8, "north_offset_m": 1200},
+    {"name": "cross-south", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -8, "north_offset_m": -1200},
+    {"name": "range-far", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -8, "east_offset_m": -4000},
+    {"name": "range-near", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -8, "east_offset_m": 4000},
+    {"name": "fpa-shallow", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -6},
+    {"name": "fpa-steep", "heading": 90, "altitude": 26000, "speed": 790.836, "fpa": -10}
+  ]
+}
