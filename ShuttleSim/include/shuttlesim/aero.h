@@ -27,6 +27,10 @@ typedef struct {
     AeroBookPoint book[AERO_BOOK_MAX];
     size_t book_count;
     bool book_enabled;
+    /* Plant dispersion for model-error campaigns: multiplies the looked-up
+       lift / drag.  Zero (the memset default) means 1. */
+    double lift_scale;
+    double drag_scale;
 } AeroTable;
 
 void aero_seed_stsn(AeroTable *a);

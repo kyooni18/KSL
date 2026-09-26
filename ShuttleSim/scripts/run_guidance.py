@@ -197,7 +197,8 @@ def _run_provenance(args):
         "plantDigests":{k:file_digest(v) for k,v in plant.items()},
         "guidanceModelDigests":{k:file_digest(v) for k,v in guidance.items()},
         "certifiedPriorDigest":file_digest(args.certified_prior),
-        "guidanceModelEqualsPlant":all(file_digest(plant[k])==file_digest(guidance[k]) for k in kinds),
+        "guidanceModelEqualsPlant":all(file_digest(plant[k])==file_digest(guidance[k]) for k in kinds)
+            and args.plant_lift_scale==1.0 and args.plant_drag_scale==1.0,
         "configurationPath":args.configuration,
         "configurationDigest":file_digest(args.configuration),
         "scenarioDigest":file_digest(args.scenario),
@@ -207,6 +208,8 @@ def _run_provenance(args):
         "backendDigest":file_digest(args.backend_build_dir/"landing_backend"),
         "simulatorDigest":file_digest(args.sim_build_dir/"shuttlesim"),
         "directControl":bool(args.direct_control),
+        "plantLiftScale":args.plant_lift_scale,
+        "plantDragScale":args.plant_drag_scale,
         "engage":args.engage,
     }
 
@@ -235,6 +238,10 @@ def main():
     ap.add_argument("--terminal-aero",default=None,help="MM305 aero table (default: --aero)")
     ap.add_argument("--terminal-aero-book",default=None,help="guidance force book / certified prior (default: --aero-book)")
     ap.add_argument("--terminal-attitude",default=None,help="MM305 attitude model (default: --attitude)")
+    ap.add_argument("--plant-lift-scale",type=float,default=1.0,
+                    help="model-error campaigns: multiply the plant's lift (guidance model unchanged)")
+    ap.add_argument("--plant-drag-scale",type=float,default=1.0,
+                    help="model-error campaigns: multiply the plant's drag (guidance model unchanged)")
     ap.add_argument("--certified-prior",default=str(model_file("certified_prior")),
                     help="guidance vessel-physics certified aero prior (force/q samples)")
     ap.add_argument("--engage",default="engageReentry",
@@ -410,6 +417,8 @@ def main():
         "--command-port",str(args.command_port),"--telemetry-port",str(args.telemetry_port),"--web-telemetry-port",str(args.web_telemetry_port),
         "--record",str(sim_log),"--lockstep","--quiet"
     ]
+    if args.plant_lift_scale!=1.0 or args.plant_drag_scale!=1.0:
+        sim_cmd+=["--plant-lift-scale",repr(args.plant_lift_scale),"--plant-drag-scale",repr(args.plant_drag_scale)]
     if args.aero_book.lower()!="none":
         sim_cmd[7:7]=["--aero-book",args.aero_book]
     _release_endpoint(port_reservations,"command")

@@ -146,6 +146,8 @@ AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,do
         lift_per_q=fallback_lift_per_q;
         drag_per_q=fallback_drag_per_q;
     }
+    if(a->lift_scale>0.0)lift_per_q*=a->lift_scale;
+    if(a->drag_scale>0.0)drag_per_q*=a->drag_scale;
     out.lift_n=out.dynamic_pressure_pa*lift_per_q;
     out.drag_n=out.dynamic_pressure_pa*drag_per_q;
     Vec3 fwd=v3_normalized(vair), up=v3_normalized(p);
