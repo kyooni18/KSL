@@ -215,11 +215,13 @@ bool krpc_cnano_client_set_speedbrake(KrpcCNanoClient *client, double fraction,
     fraction = round(fraction * 50.0) / 50.0;
     if (client->has_applied_speedbrake &&
         fabs(client->applied_speedbrake_fraction - fraction) < 1e-9) return true;
+    /* The brake amount is the deploy limiter (deployAngle); guidance
+     * slew-limits the fraction, so the fins open and close gradually and the
+     * deploy flag only arms/disarms at (quantized) zero angle. */
     bool deploy = fraction > 0.0;
     float angle = (float)(fraction * client->speedbrake_max_angle_deg);
     for (size_t i = 0; i < client->fin_module_count; ++i) {
-        if (deploy)
-            RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_FloatValue(client->connection, client->fin_modules[i].deploy_angle, angle), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_FloatValue(client->connection, client->fin_modules[i].deploy_angle, angle), error, error_size);
         RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].deploy, deploy), error, error_size);
     }
     client->applied_speedbrake_fraction = fraction;
