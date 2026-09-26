@@ -488,10 +488,10 @@ static void mm305_observe_force_scale(GuidanceMachine *g, const Telemetry *t,
     if (!(g->mm305_lift_scale>0.0)) g->mm305_lift_scale=1.0;
     if (!(g->mm305_drag_scale>0.0)) g->mm305_drag_scale=1.0;
     g->mm305_lift_scale+=a*(lift_ratio-g->mm305_lift_scale);
-    /* The planner models the clean airframe; measured drag with the split
-       rudder open includes the brake, so the drag scale holds meanwhile. */
-    if (!(g->taem_speedbrake_fraction>0.02))
-        g->mm305_drag_scale+=a*(drag_ratio-g->mm305_drag_scale);
+    /* TAEM flies with the split rudder near its nominal setting, so the
+       measured drag (brake included) is what the planner should model; the
+       brake's departures from nominal are the energy control. */
+    g->mm305_drag_scale+=a*(drag_ratio-g->mm305_drag_scale);
 }
 
 /* Acquisition law flown while no qualified route is held: head for the
@@ -754,15 +754,17 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     command.has_target_aoa=true;
     command.target_aoa=demand.control.angle_of_attack_rad*RAD2DEG;
     command.target_pitch=t->flight_path_angle+command.target_aoa;
-    /* Split-rudder speedbrake: the route plan carries the zero-brake airspeed
-       that delivers the Final alignment speed.  Energy above that plan
-       (altitude surplus counted as speed) is bled with a PI on the
-       speed-equivalent excess ratio; a deficit leaves the brake stowed.
-       Asymmetric split-rudder drag disturbs yaw, so the brake is only a weak,
-       slow trim: capped, slew-limited, available until the Final alignment
-       point and faded to stowed over the last stretch so Final and the runway
-       never fly with it open. */
-    const double sb_cap=0.50, sb_slew_per_s=0.05;
+    /* Split-rudder speedbrake is TAEM's energy control, as on the Shuttle:
+       it flies at a nominal setting (drag the planner sees through the
+       identified drag scale) and opens toward the cap when energy is above
+       the route plan or closes toward stowed when below, so TAEM has
+       two-sided authority to deliver the Final alignment point's airspeed.
+       Energy error is the speed-equivalent departure from the planned
+       airspeed (altitude surplus counted as speed).  Asymmetric fin drag
+       disturbs yaw, so the brake is capped at 50%, slew-limited, and faded to
+       stowed over the last stretch before the HAC exit so Final and the
+       runway never fly with it open. */
+    const double sb_cap=0.50, sb_nominal=0.25, sb_slew_per_s=0.05;
     const double sb_stow_remaining_m=500.0, sb_fade_m=2500.0;
     double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
         fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;
@@ -771,9 +773,10 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         taem_route_planned_speed(&g->mm305_route,reference.station_m):NAN;
     double sb_remaining=g->mm305_route_committed?
         taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor):NAN;
-    double sb_limit=isfinite(sb_remaining)?
-        sb_cap*clampd((sb_remaining-sb_stow_remaining_m)/sb_fade_m,0.0,1.0):0.0;
-    double sb_target=0.0;
+    double sb_fade=isfinite(sb_remaining)?
+        clampd((sb_remaining-sb_stow_remaining_m)/sb_fade_m,0.0,1.0):0.0;
+    double sb_limit=sb_cap*sb_fade, sb_base=sb_nominal*sb_fade;
+    double sb_target=sb_base;
     if (isfinite(planned_speed)&&planned_speed>1.0&&isfinite(reference.altitude_m)&&
         sb_limit>0.0) {
         double surplus_height=end_model->site.altitude+
@@ -782,8 +785,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             2.0*9.81*surplus_height));
         double ratio=equivalent/planned_speed-1.0;
         g->taem_speedbrake_integral=clampd(
-            g->taem_speedbrake_integral+0.05*ratio*sb_dt,0.0,sb_limit);
-        sb_target=clampd(1.5*ratio+g->taem_speedbrake_integral,0.0,sb_limit);
+            g->taem_speedbrake_integral+0.05*ratio*sb_dt,-sb_base,sb_limit-sb_base);
+        sb_target=clampd(sb_base+2.5*ratio+g->taem_speedbrake_integral,0.0,sb_limit);
         if (diagnostics && strcmp(diagnostics,"2")==0 && !g->diagnostic_shadow)
             fprintf(stderr,"TAEM speedbrake: V=%.1f Veq=%.1f plan=%.1f dh=%.0f limit=%.2f target=%.2f\n",
                 geometry.airspeed_mps,equivalent,planned_speed,surplus_height,
