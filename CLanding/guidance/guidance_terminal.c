@@ -280,6 +280,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_route_cursor=0;
         g->mm305_route_committed=false;
         g->mm305_hac_exit_reached=false;
+        g->mm305_runway_alignment_active=false;
         g->mm305_model_snapshot_id=0;
         g->mm305_planning_needed=false;
         g->mm305_plan_request_ut=NAN;

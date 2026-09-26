@@ -384,6 +384,7 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
     g->mm305_route_cursor=0;
     g->mm305_route_committed=true;
     g->mm305_hac_exit_reached=false;
+    g->mm305_runway_alignment_active=false;
     g->mm305_model_snapshot_id=result->model_snapshot_id;
     g->mm305_last_route_ut=result->request_ut;
     if (replan) g->mm305_replans++;
@@ -453,6 +454,25 @@ static bool mm305_acquisition_command(const TerminalModel *model,
     return demand->valid;
 }
 
+/* After the circular HAC, fly the runway line while the measured roll and
+ * course settle.  Continuing to sample the exhausted circle keeps asking for
+ * turn bank; handing Final that bank makes a large lateral transient. */
+static TaemPathReference mm305_runway_alignment_reference(
+        const TerminalModel *model, const TaemGeometryState *geometry) {
+    double slope=model->guidance.final_glide_slope;
+    return (TaemPathReference){
+        .runway_along_m=geometry->runway_along_m,
+        .runway_cross_m=0.0,
+        .course_deg=model->site.runway_heading,
+        .curvature_right_per_m=0.0,
+        .altitude_m=model->site.altitude+
+            fmax(0.0,-geometry->runway_along_m)*tan(slope*DEG2RAD),
+        .flight_path_angle_deg=-slope,
+        .vertical_curvature_per_m=0.0,
+        .station_m=0.0
+    };
+}
+
 GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         const VehicleState *vehicle_state,double course,const PlanetModel *planet,
         AerodynamicModel aero,const LandingConfiguration *cfg,
@@ -515,7 +535,43 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     TaemPathReference reference;
     TaemTrackerOutput demand;
     const char *status;
-    if (g->mm305_route_committed) {
+    if (g->mm305_route_committed && g->mm305_runway_alignment_active) {
+        reference=mm305_runway_alignment_reference(end_model,&geometry);
+        demand=taem_tracker_update(end_model,&current,&geometry,&reference,dt);
+        if (!demand.valid)
+            return terminal_abort(g,
+                "MM305 runway alignment could not produce a bounded control command.");
+        double bank=fabs(current.attitude.bank_rad*RAD2DEG);
+        double roll_rate=fabs(current.attitude.bank_rate_rad_s*RAD2DEG);
+        double runway_course=fabs(geometry.heading_error_deg);
+        if (geometry.runway_along_m>-500.0 ||
+            geometry.altitude_above_runway_m<300.0)
+            return terminal_abort(g,
+                "MM305 runway alignment exhausted its remaining approach distance.");
+        if (fabs(geometry.runway_cross_m)<35.0 && runway_course<2.0 &&
+            bank<5.0 && roll_rate<3.0) {
+            fprintf(stderr,
+                "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=runway-aligned\n",
+                (unsigned long long)g->mm305_model_snapshot_id,
+                g->mm305_route.side,g->mm305_route.hac.radius_m,
+                g->mm305_route.hac.arc_sweep_rad*RAD2DEG,
+                g->mm305_route.lead_length_m,g->mm305_route_cursor,
+                g->mm305_route.count,demand.course_error_deg,
+                geometry.heading_error_deg,geometry.runway_along_m,
+                geometry.runway_cross_m,geometry.altitude_above_runway_m,
+                geometry.airspeed_mps,geometry.flight_path_angle_deg,
+                current.attitude.bank_rad*RAD2DEG,
+                current.attitude.aoa_rad*RAD2DEG,
+                demand.control.bank_rad*RAD2DEG,
+                demand.control.angle_of_attack_rad*RAD2DEG);
+            g->mm305_hac_exit_reached=true;
+            g->hac_completed=true;
+            g->hac_remaining=0.0;
+        }
+        status=g->mm305_hac_exit_reached?
+            "MM305 delivered a settled runway-line state to Final." :
+            "MM305 is settling bank and course on the runway line after HAC.";
+    } else if (g->mm305_route_committed) {
         if (!taem_route_reference(&g->mm305_route,&geometry,
                 &g->mm305_route_cursor,&reference,NULL))
             return terminal_abort(g,
@@ -572,7 +628,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         if (g->mm305_route_committed && g->mm305_route_cursor+2>=g->mm305_route.count &&
             exit_distance<=700.0 && fabs(demand.course_error_deg)<=12.0) {
             fprintf(stderr,
-                "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=exit-gate\n",
+                "MM305_HAC_GEOMETRIC_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f\n",
                 (unsigned long long)g->mm305_model_snapshot_id,
                 g->mm305_route.side, g->mm305_route.hac.radius_m,
                 g->mm305_route.hac.arc_sweep_rad * 180.0 / 3.14159265358979323846,
@@ -585,13 +641,12 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 current.attitude.aoa_rad*RAD2DEG,
                 demand.control.bank_rad*RAD2DEG,
                 demand.control.angle_of_attack_rad*RAD2DEG);
-            g->mm305_hac_exit_reached=true;
-            g->hac_completed=true;
+            g->mm305_runway_alignment_active=true;
             g->hac_captured=true;
             g->hac_remaining=0.0;
         }
-        status=g->mm305_hac_exit_reached?
-            "MM305 native tracker reached the fixed-HAC exit." :
+        status=g->mm305_runway_alignment_active?
+            "MM305 native tracker reached the HAC geometry; runway alignment follows." :
             "MM305 native tracker is following the committed fixed-HAC route.";
     }
     if (!g->mm305_route_committed) {

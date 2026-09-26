@@ -145,6 +145,7 @@ typedef struct {
     TaemRoute mm305_route;
     size_t mm305_route_cursor;
     bool mm305_route_committed, mm305_hac_exit_reached;
+    bool mm305_runway_alignment_active;
     uint64_t mm305_model_snapshot_id;
     /* MM305 planning is re-entrant: routes are (re)planned from the measured
        state, asynchronously when the controller provides a worker, and the
