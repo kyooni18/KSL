@@ -66,3 +66,27 @@ backend stderr reside in `ShuttleSim/runs/`):
 - `mm305-align-4500-20-heading95-20260926T113648Z-e5myc7dx`
 
 The four ±5° perturbation runs use the prefix `mm305-align-heading-{355,5,175,185}`.
+
+## Native replay of the alignment segment
+
+Commit `a5152e1` shares the runway-line reference and measured completion
+predicate between live MM305 and native candidate replay. A candidate now has
+to fly the post-HAC line segment inside the same pressure, load, altitude,
+speed, course, cross-track, and energy checks before its exit is ranked. This
+remains a prediction used to choose a route; live MM305 still follows measured
+state. The two focused native-stack/recovery tests pass.
+
+This changed the high-energy 95° upstream case from a 3 km, side −1 route that
+exhausted its alignment distance into a 4.32 km, side +1 route. Replay's aligned
+exit was along −2896 m, cross −21 m, h1519 m, V147.5 m/s; the actual ShuttleSim
+exit was along −2946 m, cross −33 m, h1561 m, V147.4 m/s. The simulated vehicle
+then contacted on the runway at along +1677 m, cross −9 m, 69.9 m/s, and
+0.7 m/s sink. It still overran the runway during rollout, so this is not a
+complete successful landing (`mm305-align-replay-heading95-20260926T114330Z-el5vrnjv`).
+
+The original 0°/180° inlet routes and nominal high-energy route were unchanged
+by replay qualification; their centered-but-long touchdowns remained. The four
+±5° inlet perturbations also retained their previously selected routes and
+their 48–68 m/s touchdown-speed spread. Replay alignment removes one false
+route choice, but it does not yet price the Final tail or resolve runway-end
+topology sensitivity.
