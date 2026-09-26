@@ -47,8 +47,8 @@ typedef struct {
 } TerminalSolverResult;
 
 /* Full-horizon deterministic replay against the shared native airborne tick.
- * A successful route solve ends at the HAC exit / Final gate. It does not by
- * itself certify the downstream Final tail, so status remains UNQUALIFIED. */
+ * A successful route solve flies the HAC and the post-HAC runway-line roll-out.
+ * It does not certify the downstream Final tail, so status stays UNQUALIFIED. */
 typedef struct {
     bool valid;            /* profile written into the route */
     double aoa_deg;        /* constant incidence that meets the exit altitude */

@@ -47,7 +47,7 @@ static bool diagnostics_enabled(void) {
     return diagnostics && strcmp(diagnostics, "1") == 0;
 }
 
-static bool replay_reaches_exit(const TerminalSolverResult *replay) {
+static bool replay_reaches_aligned_exit(const TerminalSolverResult *replay) {
     return replay->status == TERMINAL_SOLVER_UNQUALIFIED &&
            replay->path_constraints_ok;
 }
@@ -100,13 +100,13 @@ static bool candidate_preferred(const TerminalModel *model,
     return trial_deficit < best_deficit ||
         (trial_deficit == best_deficit && trial->quality_score < best->quality_score);
 }
-/* Replay qualified the route through the HAC exit.  Rank by tracking quality,
- * energy closure and how far the exit airspeed falls short of the configured
- * Final alignment speed. */
+/* Replay qualified the HAC and runway-line roll-out. Rank by tracking quality,
+ * energy closure and how far the aligned exit airspeed falls short of the
+ * configured Final alignment speed. */
 static void finish_candidate(const TerminalModel *model,
         const TerminalDynamicState *initial, TaemFixedHacCandidate *trial) {
     trial->status = TAEM_PLAN_UNQUALIFIED;
-    trial->reason = "native HAC route reaches its exit; Final tail qualification is pending";
+    trial->reason = "native HAC and runway alignment reach their exit; Final tail qualification is pending";
     double target_speed = exit_speed_target(model);
     double deficit = fmax(0.0, target_speed -
         trial->replay.final_geometry.airspeed_mps) / target_speed;
@@ -331,7 +331,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.replay.maximum_altitude_error_m,
                 trial.replay.final_geometry.airspeed_mps,
                 trial.replay.maximum_lateral_authority_shortfall_mps2);
-        if (replay_reaches_exit(&trial.replay)) {
+        if (replay_reaches_aligned_exit(&trial.replay)) {
             fprintf(stderr,
                 "MM305_REPLAY_EXIT side=%+.0f radius=%.0f sweep=%.1f lead=%.0f refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f energy=%.1f reason=%s\n",
                 trial.route.side, trial.route.hac.radius_m,

@@ -1,4 +1,5 @@
 #include "terminal_solver.h"
+#include "taem_alignment.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -495,6 +496,78 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         out.final_route_index = reference_index;
     }
 
+    /* The live vehicle continues on the runway line after the geometric
+     * circle endpoint.  Replay the same measured-state law before ranking a
+     * route; endpoint-only scoring preferred banked exits that could not
+     * actually deliver a settled Final state. */
+    if (reached_gate) {
+        reached_gate = false;
+        while (elapsed + dt <= max_elapsed + 1e-9) {
+            if (taem_alignment_exhausted(&geometry)) {
+                out.status = TERMINAL_SOLVER_INFEASIBLE;
+                out.reason = "runway-line alignment exhausted approach distance";
+                break;
+            }
+            if (taem_alignment_ready(m, &state, &geometry)) {
+                reached_gate = true;
+                TaemPathReference reference = taem_alignment_reference(m, &geometry);
+                out.final_route_course_error_deg =
+                    remainder(geometry.course_deg - reference.course_deg, 360.0);
+                out.final_target_altitude_m = reference.altitude_m;
+                out.final_target_flight_path_angle_deg = reference.flight_path_angle_deg;
+                break;
+            }
+            TaemPathReference reference = taem_alignment_reference(m, &geometry);
+            TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
+                                                            &reference, dt);
+            if (!demand.valid) {
+                out.status = TERMINAL_SOLVER_INFEASIBLE;
+                out.reason = "runway-line tracker could not produce a command";
+                break;
+            }
+            AeroForces forces = aero_compute(&m->world, &m->aero,
+                state.position_i_m, state.velocity_i_mps, state.ut_s,
+                state.mass_kg, state.attitude.aoa_rad, state.attitude.bank_rad);
+            double load = fabs(forces.lift_n) / state.mass_kg / 9.80665;
+            out.maximum_load_g = fmax(out.maximum_load_g, load);
+            out.maximum_dynamic_pressure_pa = fmax(out.maximum_dynamic_pressure_pa,
+                                                   forces.dynamic_pressure_pa);
+            out.minimum_speed_mps = fmin(out.minimum_speed_mps, forces.airspeed_mps);
+            if (forces.dynamic_pressure_pa > m->vehicle.maximum_dynamic_pressure ||
+                load > m->vehicle.maximum_g_load * (1.0 + 1e-6)) {
+                out.status = TERMINAL_SOLVER_INFEASIBLE;
+                out.reason = "runway-line alignment exceeded pressure or load limit";
+                break;
+            }
+            out.drag_work_j_kg -= forces.drag_n * forces.airspeed_mps /
+                state.mass_kg * dt;
+            if (terminal_propagator_step(m, &state, &demand.control) != TERMINAL_STEP_OK ||
+                !taem_geometry_state(m, &state, &geometry) ||
+                geometry.altitude_above_runway_m <= 0.0) {
+                out.status = TERMINAL_SOLVER_INFEASIBLE;
+                out.reason = "runway-line alignment propagation failed";
+                break;
+            }
+            elapsed += dt;
+            out.maximum_cross_track_m = fmax(out.maximum_cross_track_m,
+                                             fabs(geometry.runway_cross_m));
+            out.maximum_course_error_deg = fmax(out.maximum_course_error_deg,
+                                                fabs(geometry.heading_error_deg));
+            out.maximum_altitude_error_m = fmax(out.maximum_altitude_error_m,
+                fabs(m->site.altitude + geometry.altitude_above_runway_m -
+                     reference.altitude_m));
+            AeroForces end_forces = aero_compute(&m->world, &m->aero,
+                state.position_i_m, state.velocity_i_mps, state.ut_s,
+                state.mass_kg, state.attitude.aoa_rad, state.attitude.bank_rad);
+            if (state_energy(m, &state, end_forces, &energy))
+                out.energy_end_j_kg = energy.effective_specific_energy_j_kg;
+        }
+        if (!reached_gate && out.status != TERMINAL_SOLVER_INFEASIBLE) {
+            out.status = TERMINAL_SOLVER_SEARCH_EXHAUSTED;
+            out.reason = "runway-line alignment exceeded replay time";
+        }
+    }
+
     out.final_state = state;
     out.final_geometry = geometry;
     out.elapsed_s = elapsed;
@@ -519,7 +592,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         out.path_constraints_ok = path_geometry_ok && speed_ok && energy_closure_ok;
         if (out.path_constraints_ok) {
             out.status = TERMINAL_SOLVER_UNQUALIFIED;
-            out.reason = "HAC exit reached; downstream Final tail is not qualified";
+            out.reason = "runway-aligned MM305 exit reached; downstream Final tail is not qualified";
         } else {
             out.status = TERMINAL_SOLVER_INFEASIBLE;
             out.reason = !path_geometry_ok ? "candidate exceeded path tracking envelope" :

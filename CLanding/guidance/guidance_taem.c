@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "taem_candidate_search.h"
+#include "taem_alignment.h"
 #include "mm305_planning.h"
 
 #include <stdlib.h>
@@ -454,25 +455,6 @@ static bool mm305_acquisition_command(const TerminalModel *model,
     return demand->valid;
 }
 
-/* After the circular HAC, fly the runway line while the measured roll and
- * course settle.  Continuing to sample the exhausted circle keeps asking for
- * turn bank; handing Final that bank makes a large lateral transient. */
-static TaemPathReference mm305_runway_alignment_reference(
-        const TerminalModel *model, const TaemGeometryState *geometry) {
-    double slope=model->guidance.final_glide_slope;
-    return (TaemPathReference){
-        .runway_along_m=geometry->runway_along_m,
-        .runway_cross_m=0.0,
-        .course_deg=model->site.runway_heading,
-        .curvature_right_per_m=0.0,
-        .altitude_m=model->site.altitude+
-            fmax(0.0,-geometry->runway_along_m)*tan(slope*DEG2RAD),
-        .flight_path_angle_deg=-slope,
-        .vertical_curvature_per_m=0.0,
-        .station_m=0.0
-    };
-}
-
 GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         const VehicleState *vehicle_state,double course,const PlanetModel *planet,
         AerodynamicModel aero,const LandingConfiguration *cfg,
@@ -536,20 +518,15 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     TaemTrackerOutput demand;
     const char *status;
     if (g->mm305_route_committed && g->mm305_runway_alignment_active) {
-        reference=mm305_runway_alignment_reference(end_model,&geometry);
+        reference=taem_alignment_reference(end_model,&geometry);
         demand=taem_tracker_update(end_model,&current,&geometry,&reference,dt);
         if (!demand.valid)
             return terminal_abort(g,
                 "MM305 runway alignment could not produce a bounded control command.");
-        double bank=fabs(current.attitude.bank_rad*RAD2DEG);
-        double roll_rate=fabs(current.attitude.bank_rate_rad_s*RAD2DEG);
-        double runway_course=fabs(geometry.heading_error_deg);
-        if (geometry.runway_along_m>-500.0 ||
-            geometry.altitude_above_runway_m<300.0)
+        if (taem_alignment_exhausted(&geometry))
             return terminal_abort(g,
                 "MM305 runway alignment exhausted its remaining approach distance.");
-        if (fabs(geometry.runway_cross_m)<35.0 && runway_course<2.0 &&
-            bank<5.0 && roll_rate<3.0) {
+        if (taem_alignment_ready(end_model,&current,&geometry)) {
             fprintf(stderr,
                 "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=runway-aligned\n",
                 (unsigned long long)g->mm305_model_snapshot_id,
