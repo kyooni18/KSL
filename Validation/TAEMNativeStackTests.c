@@ -227,6 +227,30 @@ int main(void) {
     assert(sag_vertical.required_vertical_lift_mps2 <
            base_vertical.required_vertical_lift_mps2);
 
+    /* A slower roll actuator must soften the lateral correction for the same
+     * cross-track displacement.  The controller must wait for a bank reversal
+     * to take effect before asking for the opposite one. */
+    TaemGeometryState displaced = geometry;
+    displaced.runway_cross_m += 1000.0;
+    TaemPathReference straight = {
+        .runway_along_m = geometry.runway_along_m,
+        .runway_cross_m = geometry.runway_cross_m,
+        .course_deg = geometry.course_deg,
+        .curvature_right_per_m = 0.0,
+        .altitude_m = model.site.altitude + geometry.altitude_above_runway_m,
+        .flight_path_angle_deg = geometry.flight_path_angle_deg
+    };
+    TaemTrackerOutput normal_roll = taem_tracker_update(&model, &state,
+        &displaced, &straight, 0.25);
+    TerminalModel slower_roll = model;
+    slower_roll.attitude.max_roll_rate_rad_s *= 0.5;
+    TaemTrackerOutput slow_roll = taem_tracker_update(&slower_roll, &state,
+        &displaced, &straight, 0.25);
+    assert(normal_roll.valid && slow_roll.valid);
+    assert(slow_roll.response_time_s > normal_roll.response_time_s);
+    assert(fabs(slow_roll.required_lateral_accel_mps2) <
+           fabs(normal_roll.required_lateral_accel_mps2));
+
     /* The subsonic terminal lift cap is shared by the MM305 reachability
      * estimate and tracker search; never ask the native tracker to use a
      * post-stall angle above the configured terminal CL-max incidence. */
