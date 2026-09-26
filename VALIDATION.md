@@ -5,13 +5,13 @@ native C guidance stack without opening KSP, a serial device, or a kRPC server.
 
 - `make -C CLanding clean all` builds the C17 backend with the vendored kRPC
   C-Nano 0.6.0 and nanopb 0.4.9.1 sources plus SQLite.
-- `make -C CLanding test` runs ten targets: architecture/ownership
+- `make -C CLanding test` runs eleven targets: architecture/ownership
   contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM
   native stack (model capture, route descriptor, Final interface, replay gate)
   against the tracked reference plant in `ShuttleSim/reference-model/`, vessel
   physics, MM304 lateral feedback (crossrange and azimuth logic), and the
   backend NDJSON protocol, MM304 energy-law checks, admission/planner feasibility,
-  and Final touchdown quality. Admission/planner and touchdown failures return
+  Final touchdown quality, and reduced-entry forecast/admission parity. Admission/planner and touchdown failures return
   nonzero by default; there are no opt-in strict flags. The current effective
   worktree fails both physical contract gates (see
   `Audit/2026-09-26-closed-loop/ENGINEERING_LOG.md`). A green build alone does not

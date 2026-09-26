@@ -680,51 +680,43 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
         if(out.entered_atmosphere)out.closest_distance=fmin(out.closest_distance,range);
         double ownership_along=0.0,ownership_cross=0.0;
         bool ownership_ready=false,ownership_boundary_missed=false;
-        if(stop_at_taem&&out.entered_atmosphere){
+        if(out.entered_atmosphere){
             runway_coordinates(geo,target,site->runway_heading,p->radius,&ownership_along,&ownership_cross);
-            if(g.has_interface_target){
-                Telemetry capture_state={0};
-                capture_state.latitude=geo.latitude;capture_state.mean_altitude=geo.altitude;
-                capture_state.true_air_speed=at.speed;capture_state.horizontal_speed=hs;
-                capture_state.vertical_speed=vs;capture_state.flight_path_angle=fpa;
-                capture_state.runway_along_track=ownership_along;capture_state.runway_cross_track=ownership_cross;
-                capture_state.dynamic_pressure=at.q;capture_state.g_force=at.non_gravity/fmax(.1,planet_surface_gravity(p));
-                capture_state.bank_effectiveness=cal0->bank_effectiveness;
-                capture_state.mach=at.mach;capture_state.atmospheric_density=at.density;capture_state.speed_of_sound=at.speed_of_sound;
-                capture_state.angle_of_attack=g.actual_aoa;capture_state.roll=g.actual_bank;capture_state.roll_rate=g.actual_bank_rate;
-                capture_state.mass=state.mass;capture_state.lift_force=fabs(at.lift_accel)*state.mass;capture_state.drag_force=fabs(at.drag_accel)*state.mass;
-                double capture_course=surface_course(state.position,state.velocity,planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
-                TaemInterfaceCapture capture=entry_taem_interface_capture(
-                    &g.interface_target,&capture_state,capture_course,p,&interface_cfg);
-                ownership_ready=capture.ready;
-                /*
-                 * The fixed MM304 point is a one-way ownership surface.  Once
-                 * the propagated state has passed it without satisfying the
-                 * mission contract, that forecast is a miss.  Energy or minimum
-                 * safe-speed deficits are independently irreversible in an
-                 * unpowered vehicle.  No downstream/crossrange grace box is
-                 * invented here.
-                 */
-                ownership_boundary_missed=capture.valid&&!capture.ready&&
-                    (capture.along<0.0||capture.energy_margin<0.0||
-                     at.speed<v->minimum_safe_speed);
-                if(ownership_boundary_missed&&getenv("KSP_LANDER_SETUP_REVERSAL_TRACE"))
-                    fprintf(stderr,"OWNERSHIP_MISS_TRACE along %.1f cross %.1f h %.0f V %.1f veto 0x%x "
-                        "courseErr %.1f altErr %.0f energyMargin %.0f turnMargin %.1f reqT %.1f availT %.1f minSafeV %.1f\n",
-                        capture.along,capture.cross,geo.altitude,at.speed,capture.veto,capture.course_error,
-                        capture.altitude_error,capture.energy_margin,capture.turn_margin,
-                        capture.required_time_s,capture.available_time_s,v->minimum_safe_speed);
-            }else{
-                ownership_ready=false;
-                double handoff_low=0.0,handoff_high=0.0;
-                entry_taem_handoff_altitude_bounds(set,&handoff_low,&handoff_high);
-                ownership_boundary_missed=geo.altitude<handoff_low||
-                    at.speed<v->minimum_safe_speed;
-                if(ownership_boundary_missed&&getenv("KSP_LANDER_SETUP_REVERSAL_TRACE"))
-                    fprintf(stderr,"OWNERSHIP_MISS_TRACE noTarget along %.1f cross %.1f h %.0f V %.1f vs %.1f "
-                        "handoff %.0f..%.0f\n",ownership_along,ownership_cross,geo.altitude,at.speed,vs,
-                        handoff_low,handoff_high);
-            }
+            double capture_course=surface_course(state.position,state.velocity,
+                planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
+            AerodynamicModel local=aero_at(env0,at.mach);
+            Telemetry capture_state={0};
+            capture_state.ut=state.ut;
+            capture_state.latitude=geo.latitude;capture_state.longitude=geo.longitude;
+            capture_state.mean_altitude=geo.altitude;
+            capture_state.radar_altitude=geo.altitude-site->altitude;
+            capture_state.true_air_speed=at.speed;capture_state.horizontal_speed=hs;
+            capture_state.vertical_speed=vs;capture_state.flight_path_angle=fpa;
+            capture_state.runway_along_track=ownership_along;capture_state.runway_cross_track=ownership_cross;
+            capture_state.course_to_site_error=norm_signed_deg(initial_bearing(geo,target)-capture_course);
+            capture_state.dynamic_pressure=at.q;
+            capture_state.g_force=fabs(at.lift_accel)/planet_surface_gravity(p);
+            capture_state.bank_effectiveness=cal0->bank_effectiveness;
+            capture_state.mach=at.mach;capture_state.atmospheric_density=at.density;
+            capture_state.speed_of_sound=at.speed_of_sound;
+            capture_state.angle_of_attack=g.actual_aoa;capture_state.roll=g.actual_bank;
+            capture_state.roll_rate=g.actual_bank_rate;
+            capture_state.angle_of_attack_rate=g.actual_aoa_rate;
+            capture_state.has_angle_of_attack_rate=true;
+            capture_state.mass=state.mass;capture_state.lift_force=fabs(at.lift_accel)*state.mass;
+            capture_state.drag_force=fabs(at.drag_accel)*state.mass;
+            capture_state.estimated_lift_to_drag=local.lift_to_drag;
+            capture_state.estimated_ballistic_coefficient=local.ballistic_coefficient;
+            capture_state.aerodynamic_confidence=local.confidence;
+            /* An advisory opportunity uses the live measured-state envelope.
+             * A retired exact interface waypoint and the old altitude/speed
+             * shell must not report a release the executive would reject.
+             * This is not a downstream route certificate or command owner. */
+            TaemInterfaceCapture capture=entry_mm305_admission_envelope(
+                NULL,&capture_state,capture_course,p,&interface_cfg);
+            ownership_ready=capture.valid&&capture.ready;
+            ownership_boundary_missed=!ownership_ready&&
+                geo.altitude<set->mm305_min_altitude&&vs<0.0;
         }
         if(out.entered_atmosphere&&!out.reached_taem){
             out.minimum_entry_speed=fmin(out.minimum_entry_speed,at.speed);
@@ -739,34 +731,12 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
             }
         }
         out.peak_dynamic_pressure=fmax(out.peak_dynamic_pressure,at.q);out.peak_g_load=fmax(out.peak_g_load,at.non_gravity/fmax(planet_surface_gravity(p),.1));
-        /* The reduced predictor is an Entry search model only.  Record the first
-           configuration-defined MM304/MM305 interface opportunity, but never run a
-           second HAC planner or terminal controller here.  Production MM304 shadow
-           guidance certifies the actual ownership transfer, and native MM305 owns
-           all path search/replay after that transfer. */
-        if(!stop_at_taem&&!out.reached_taem&&out.entered_atmosphere){
-            double handoff_low=0.0,handoff_high=0.0;
-            entry_taem_handoff_altitude_bounds(set,&handoff_low,&handoff_high);
-            if(at.speed<=set->taem_force_handoff_speed&&
-               geo.altitude>=handoff_low&&geo.altitude<=handoff_high){
-                double course=surface_course(state.position,state.velocity,
-                    planet_rotation_vector(p),p->north_axis,initial_bearing(geo,target));
-                double target_speed=entry_taem_speed_target(v,set,p);
-                out.reached_taem=true;out.taem_distance=range;
-                out.taem_range_error=range-entry_taem_range_target(p,set);
-                out.taem_speed=at.speed;out.taem_flight_path_angle=fpa;
-                out.taem_altitude=geo.altitude;out.taem_desired_altitude=set->taem_interface_altitude;
-                runway_coordinates(geo,target,site->runway_heading,p->radius,
-                    &out.taem_along_track,&out.taem_cross_track);
-                out.taem_course=course;
-                out.taem_energy_error=entry_remaining_specific_energy(
-                    geo.latitude,geo.altitude,at.speed,site->latitude,
-                    set->taem_interface_altitude,target_speed,p);
-            }
-        }
+        /* Only report an admission opportunity; route qualification remains
+           with the real MM305 planner. The live-guidance shadow separately
+           evaluates executive phase and complete ownership transitions. */
         if(ownership_ready&&!out.reached_taem){
-            double target_speed=g.has_interface_target?g.interface_target.speed:entry_taem_speed_target(v,set,p);
-            double target_altitude=g.has_interface_target?g.interface_target.altitude:set->taem_interface_altitude;
+            double target_speed=entry_taem_speed_target(v,set,p);
+            double target_altitude=set->taem_interface_altitude;
             out.reached_taem=true;out.taem_distance=range;
             out.taem_range_error=range-entry_taem_range_target(p,set);out.taem_speed=at.speed;out.taem_flight_path_angle=fpa;
             out.taem_altitude=geo.altitude;out.taem_desired_altitude=target_altitude;

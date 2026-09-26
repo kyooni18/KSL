@@ -177,8 +177,15 @@ touchdown-quality-test: $(TARGET) $(BUILD)/sim.o $(BUILD)/scenario.o
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/touchdown_quality_tests
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/touchdown_quality_tests)"
 
+entry-forecast-admission-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/EntryForecastAdmissionTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_forecast_admission_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/entry_forecast_admission_tests)"
+
 contract-tests: mm305-feasibility-test touchdown-quality-test
 
-test: architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test touchdown-quality-test
+test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test touchdown-quality-test
 
 qualification: test

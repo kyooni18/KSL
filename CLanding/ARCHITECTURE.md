@@ -67,7 +67,7 @@ The maintained regression gate is intentionally small:
 make -C CLanding test
 ```
 
-It runs ten targets: architecture/ownership contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM native stack (model, route descriptor, Final interface, replay gate), vessel physics, MM304 lateral feedback (including azimuth reversal), the backend protocol, MM304 energy-law tests, admission/planner feasibility, and Final touchdown quality. The last two are hard gates and currently fail; see `Audit/2026-09-26-closed-loop/ENGINEERING_LOG.md`. `qualification` is an alias of `test`. Maintained tests use supported headers and APIs; they do not include production `.c` files.
+It runs eleven targets: architecture/ownership contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM native stack (model, route descriptor, Final interface, replay gate), vessel physics, MM304 lateral feedback (including azimuth reversal), the backend protocol, MM304 energy-law tests, admission/planner feasibility, Final touchdown quality, and reduced-entry forecast/admission parity. Admission/planner and touchdown checks are hard gates and currently fail; see `Audit/2026-09-26-closed-loop/ENGINEERING_LOG.md`. `qualification` is an alias of `test`. Maintained tests use supported headers and APIs; they do not include production `.c` files.
 
 Historical white-box tests and campaign probes under `Validation/` are not part of the maintained gate. They may remain temporarily while an active validation campaign depends on them, but new regression coverage should be black-box or public-contract based rather than exposing file-local helpers.
 

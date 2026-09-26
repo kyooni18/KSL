@@ -60,3 +60,60 @@ downstream certificates; planner profiling/deadlines; TAEM energy supervision;
 touchdown reachability and Final experiments; identified plant validation;
 contact/rollout validation; dispersed end-to-end qualification. These gates
 intentionally remain red until the actual contracts are met.
+
+## Experiment 2: reduced forecast admission parity
+
+After commit `4813ce8`, code inspection found the exact-interface branch in
+`predictor_simulate_entry_core` was unreachable from the sole public caller
+(`stop_at_taem=false`). The active reporting branch instead used only altitude
+and speed. Replaced both divergent checks with the shared measured-state
+admission envelope, populated from modeled state including course-to-site
+error and lift-based load. The forecast remains advisory and reports an
+admission opportunity, not a planner certificate or executive completion.
+
+`EntryForecastAdmissionTests.c` calls the public forecast and live envelope.
+Before: closing matched, receding gave envelope=false/forecast=true (veto 0x80).
+After: closing, receding, range, Mach, altitude and structural-q cases agree.
+Additional reciprocal runway checks pass in the regression run. Before testing
+used the existing pre-edit predictor object (`make -o prediction/entry_simulation.inc`);
+after testing rebuilt it normally. Logs: `forecast-before.log`,
+`forecast-after.log`, `forecast-regression.log`. All nine component suites pass;
+the same two physical contract gates fail. This resolves reduced forecast
+policy inconsistency only. The admission envelope itself still needs downstream
+feasibility and temporal validity.
+
+## Experiment 3: paired Final servo/direct-control baseline
+
+Runner: `ShuttleSim/scripts/run_guidance.py`, scenario
+`final-mm305-ideal-3p5km-185mps-aoa3.ini`, `--engage engageFinalTest`,
+`--backend-build-dir CLanding/build-research --sim-build-dir ShuttleSim/build-research
+--skip-build --no-mirror --quiet-progress --max-sim-time 180`; one run adds
+`--direct-control`. Profile identified, runtime `Configuration/default.json`,
+model=plant (NOT robustness evidence), no speedbrakes. Exact run IDs, effective
+configuration and hashes are retained in `final-{servo,fcs}-result.json`.
+The modified reduced predictor has no ownership of either Final experiment.
+
+| Mode | Main contact sink | Speed | Along | Pitch | Outcome |
+|---|---:|---:|---:|---:|---|
+| Ideal servo | 1.821 m/s | 63.253 m/s | 1523.342 m | 7.680 deg | runner failed |
+| Direct FCS | 4.323 m/s | 66.815 m/s | 1367.378 m | 5.411 deg | runner failed |
+
+This is different from the built-in-config C fixture (6.05 m/s direct sink).
+Configuration and sample cadence differ: do not attribute that difference to
+an FCS improvement. Runtime speed gate is 0.85–1.15 times configured touchdown
+speed, whereas the C fixture uses 60–75 m/s; agreement remains to be established.
+
+The servo result demonstrates reachable low-sink main contact for this modeled
+state/plant. It does not prove live STS-N authority or general Final reachability.
+The direct-vs-servo difference warrants response/command telemetry analysis,
+not a gain change before plant validation.
+
+Both rollout models contain a decisive defect: `stopped=true` with upward
+velocity 8.909 m/s (servo) or 7.093 m/s (direct), main_contact=false and large
+nose load. Maximum gear loads are 44.757 g / 35.172 g. Code latches stop from
+horizontal speed alone and then freezes the state. These are simulation/model
+failures, not successful rollout. The ground-contact integrator, low-speed
+body attitude and dissipative friction need discriminating tests before any
+rollout qualification. The runner additionally appears to assess an earlier
+telemetry sample; final recorded contact=true but rolloutValid=false. That
+classification inconsistency must not be used to obscure the physical defects.
