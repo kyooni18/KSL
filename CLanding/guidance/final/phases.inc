@@ -69,18 +69,14 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
         phase=PHASE_COMPLETE;c.wheel_steering=0;c.brakes=true;reset_limiters(g);
         snprintf(status,sizeof(status),"Landing complete.");
     }else if(!nose_gear_contact){
-        /* Main gear contact established; active derotation until nose-gear contact.
-           Braking is strictly inhibited while the nose is in the air to prevent
-           severe pitch-down moments and nose-gear slamming. */
+        /* Main gear contact established, nose in the air.  Pitch is released
+           (post-mains contract, enforced in the FCS): the nose comes down under
+           the vehicle's own moments.  Braking stays inhibited until nose-gear
+           contact so brake pitch-down moment cannot slam the nose gear. */
         phase=PHASE_TOUCHDOWN;
         c.brakes=false;
-        c.has_target_aoa=true;
-        c.target_aoa=0.0;
-        /* Derotate toward 0 deg pitch at a controlled rate (~1.8 deg/s) */
-        double dt=(g->has_previous_ut&&t->ut>g->previous_ut)?(t->ut-g->previous_ut):0.1;
-        double target_pitch=fmax(0.0,t->pitch-1.8*dt);
-        c.target_pitch=target_pitch;
-        snprintf(status,sizeof(status),"Touchdown derotation: pitch %.1f deg, sink %.1f m/s.",
+        c.has_target_aoa=false;
+        snprintf(status,sizeof(status),"Touchdown: nose lowering, pitch %.1f deg, sink %.1f m/s.",
             t->pitch,t->vertical_speed);
     }else{
         /* Nose gear is firmly on the runway: rollout phase. Full wheel steering

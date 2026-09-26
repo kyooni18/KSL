@@ -621,25 +621,18 @@ bool flight_control_step(FlightControlState *state,
     state->terminal_pitch_integral = state->pitch_trim;
     pitch_command = fc_clamp(pitch_command + state->pitch_trim, -1.0, 1.0);
 
-    if (state->nose_gear_contact_latched) {
-        /* Permanent release: both main and nose gear are on the deck. */
+    if (state->main_gear_contact_latched) {
+        /* Exact post-mains contract: the first real rear/main-wheel contact
+           permanently releases pitch for this flight.  Do not hold attitude,
+           derotate, trim, or resume AoA control if the gear bounces; the nose
+           comes down under the vehicle's own aerodynamic and gear moments.
+           (Nose-gear contact still gates wheel braking in guidance.) */
         state->pitch_trim = 0.0;
         state->terminal_pitch_integral = 0.0;
         state->has_last_target_pitch = false;
         state->target_pitch_rate = 0.0;
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH] = 0.0;
         pitch_command = 0.0;
-    } else if (state->main_gear_contact_latched) {
-        /* Main gear contact established, nose in air: active derotation.
-           Trim is zeroed to prevent integrator bias during ground contact,
-           while derotation pitch target is tracked with limited authority. */
-        state->pitch_trim = 0.0;
-        state->terminal_pitch_integral = 0.0;
-        if (rollout_pitch_hold) {
-            pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
-        } else {
-            pitch_command = 0.0;
-        }
     } else if (rollout_profile) {
         if (rollout_pitch_hold) pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
         else pitch_command = 0.0;
