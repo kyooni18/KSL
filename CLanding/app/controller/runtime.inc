@@ -250,8 +250,11 @@ static void *control_thread(void*arg){
             (request_outstanding||request_due);
         /* MM305 route planning uses the same lockstep rule: the simulator waits
            for the route the live vehicle would have received from the worker. */
-        bool sim_mm305_barrier=fast_sim&&c->guidance.phase==PHASE_TAEM&&
-            c->guidance.mm305_async_planning&&c->guidance.mm305_planning_needed;
+        bool sim_mm305_barrier=fast_sim&&c->guidance.mm305_async_planning&&
+            ((c->guidance.phase==PHASE_TAEM&&c->guidance.mm305_planning_needed)||
+             (c->guidance.phase==PHASE_ENTRY_ENERGY&&c->guidance.mm305_admission_needed));
+        /* The MM304 -> MM305 qualification route is waited for the same way:
+           the live vehicle keeps MM304 ownership while it is being solved. */
         double barrier_ut=c->has_latest?c->latest_telemetry.ut:-INFINITY;
         uint64_t barrier_generation=c->prediction_generation;
         pthread_mutex_unlock(&c->mutex);
@@ -277,12 +280,13 @@ static void *control_thread(void*arg){
             for(;;){
                 sleep_seconds(.001);
                 pthread_mutex_lock(&c->mutex);
+                bool pending=(c->guidance.phase==PHASE_TAEM&&c->guidance.mm305_planning_needed)||
+                    (c->guidance.phase==PHASE_ENTRY_ENERGY&&c->guidance.mm305_admission_needed);
                 bool done=c->stop_thread||!c->session||!c->guidance.automation_engaged||
-                    c->guidance.paused||c->guidance.phase!=PHASE_TAEM||
-                    !c->guidance.mm305_planning_needed||
+                    c->guidance.paused||!pending||
                     c->prediction_generation!=barrier_generation;
                 pthread_mutex_unlock(&c->mutex);
-                if(done||monotonic_seconds()-started>60.0)break;
+                if(done||monotonic_seconds()-started>180.0)break;
             }
         }else if(!fast_sim){
             sleep_seconds(fmax(0,1.0/hz-(monotonic_seconds()-start)));

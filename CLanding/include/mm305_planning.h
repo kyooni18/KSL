@@ -48,4 +48,32 @@ Mm305PlanResult mm305_plan(const TerminalModel *model,
 bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *result,
     const LandingConfiguration *cfg);
 
+/* MM304 -> MM305 downstream-feasibility contract (see GuidanceMachine).
+   Oldest measured-state age at which a qualified route may still be handed
+   over; MM305 replans from its own measured state after adoption. */
+#define MM305_ADMISSION_MAX_AGE_S 10.0
+/* Wait after a rejected qualification before planning again. */
+#define MM305_ADMISSION_RETRY_S 5.0
+
+/* Build a qualification request from the live MM304 state (invalid unless a
+   qualification request is outstanding). */
+Mm305PlanRequest guidance_mm305_admission_request(const GuidanceMachine *g,
+    const Telemetry *t, const VehicleState *state,
+    const LandingConfiguration *cfg, const TerminalModel *model);
+
+/* Store a finished qualification result (control thread, under the lock). */
+void guidance_mm305_admission_accept(GuidanceMachine *g, const Mm305PlanResult *result);
+
+/* Given the physical admission verdict, return true when ownership may
+   transfer now: a qualified route planned from a measured state no older than
+   MM305_ADMISSION_MAX_AGE_S against the current model snapshot.  Otherwise
+   raises a qualification request (at the retry cadence) and returns false. */
+bool guidance_mm305_admission_qualified(GuidanceMachine *g, const Telemetry *t,
+    bool physically_admissible, uint64_t model_snapshot_id);
+
+/* After the phase has become PHASE_TAEM: commit the qualified route as the
+   MM305 route so the handoff is bumpless.  Returns true when adopted. */
+bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
+    const LandingConfiguration *cfg);
+
 #endif

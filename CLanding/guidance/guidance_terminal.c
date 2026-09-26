@@ -1,4 +1,5 @@
 #include "guidance_internal.h"
+#include "mm305_planning.h"
 
 #include <float.h>
 #include <math.h>
@@ -218,8 +219,34 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
            the retired fixed Entry inlet as a second ownership gate. */
         TaemInterfaceCapture admission=entry_mm305_admission_envelope(
             g,t,course,p,cfg);
-        bool strict_handoff=g->entry_exec.entry_complete&&
+        bool physical_handoff=g->entry_exec.entry_complete&&
             admission.valid&&admission.ready;
+        /* Downstream-feasibility contract: the physical envelope is a lower
+           bound (it cannot see turn authority or energy excess at Mach 2+);
+           ownership moves only once MM305 has a replay-qualified route from a
+           recent measured state.  Diagnostic shadows are advisory forecasts
+           of the physical boundary and do not plan. */
+        bool strict_handoff=physical_handoff;
+        if (physical_handoff && !g->diagnostic_shadow) {
+            uint64_t snapshot=terminal_model&&terminal_model->replay_validated?
+                terminal_model->snapshot_id:0;
+            strict_handoff=snapshot!=0&&
+                guidance_mm305_admission_qualified(g,t,true,snapshot);
+            if (!strict_handoff && snapshot!=0 && g->mm305_admission_needed &&
+                !g->mm305_async_planning) {
+                /* No worker (offline tools/tests): qualify synchronously; the
+                   retry cadence bounds how often a failing search runs. */
+                Mm305PlanRequest request=guidance_mm305_admission_request(
+                    g,t,state,cfg,terminal_model);
+                if (request.valid) {
+                    Mm305PlanResult result=mm305_plan(terminal_model,&request);
+                    guidance_mm305_admission_accept(g,&result);
+                } else g->mm305_admission_needed=false;
+                strict_handoff=guidance_mm305_admission_qualified(g,t,true,snapshot);
+            }
+        } else if (!physical_handoff && !g->diagnostic_shadow) {
+            guidance_mm305_admission_qualified(g,t,false,0);
+        }
         if (!strict_handoff) {
             double low=0.0,high=0.0;
             entry_taem_handoff_altitude_bounds(s,&low,&high);
@@ -273,6 +300,9 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         if (!taem_exec_enter(g,t,s,p,aero,cfg,false))
             return terminal_abort(g,
                 "MM304 ownership handoff was qualified, but the TAEM executive could not enter Path Acquisition.");
+        if (!g->diagnostic_shadow && !guidance_mm305_adopt_admission_route(g,cfg))
+            return terminal_abort(g,
+                "MM304 ownership handoff was qualified, but MM305 could not adopt the qualified route.");
         if (g->diagnostic_shadow && g->diagnostic_stop_at_taem) {
             g->phase=PHASE_TAEM;
             entry.phase=PHASE_TAEM;

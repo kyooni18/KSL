@@ -51,6 +51,53 @@ static void terminal_prediction_commit(LandingController *c,EntryPrediction *pr,
 /* MM305 route planning job.  Highest priority on the worker: it is not an
    advisory forecast but the route the tracker is waiting for.  Returns true
    when a job ran (successfully or not). */
+/* MM304 -> MM305 qualification: the route MM305 would fly from the latest
+   measured MM304 state.  Ownership stays with MM304 until it is found. */
+static bool mm305_admission_job(LandingController *c){
+    pthread_mutex_lock(&c->mutex);
+    if(c->stop_prediction_thread||!c->session||!c->has_latest||!c->terminal_model_valid||
+       !c->guidance.automation_engaged||c->guidance.paused||c->guidance.aborted||
+       c->guidance.phase!=PHASE_ENTRY_ENERGY||!c->guidance.mm305_async_planning||
+       !c->guidance.mm305_admission_needed){
+        pthread_mutex_unlock(&c->mutex);
+        return false;
+    }
+    LandingConfiguration cfg=effective_config(c);
+    TerminalModel *model=malloc(sizeof(*model));
+    if(!model){c->guidance.mm305_admission_needed=false;pthread_mutex_unlock(&c->mutex);return true;}
+    *model=c->terminal_model;
+    Mm305PlanRequest request=guidance_mm305_admission_request(&c->guidance,&c->latest_telemetry,
+        &c->latest_state,&cfg,model);
+    double token=c->guidance.mm305_admission_request_ut;
+    uint64_t generation=c->prediction_generation;
+    if(!request.valid){
+        c->guidance.mm305_admission_needed=false;
+        pthread_mutex_unlock(&c->mutex);
+        free(model);
+        return true;
+    }
+    pthread_mutex_unlock(&c->mutex);
+
+    Mm305PlanResult result=mm305_plan(model,&request);
+    free(model);
+
+    pthread_mutex_lock(&c->mutex);
+    bool current=!c->stop_prediction_thread&&generation==c->prediction_generation&&
+        c->guidance.phase==PHASE_ENTRY_ENERGY&&c->guidance.mm305_admission_needed&&
+        c->guidance.mm305_admission_request_ut==token&&
+        c->terminal_model_valid&&c->terminal_model.snapshot_id==result.model_snapshot_id;
+    if(current){
+        guidance_mm305_admission_accept(&c->guidance,&result);
+        char event[256];
+        snprintf(event,sizeof(event),"event=mm305-admission; request-ut=%.3f; found=%d; solve-wall=%.3f; rejections=%u",
+            request.request_ut,result.found,result.solve_wall_s,
+            (unsigned)c->guidance.mm305_admission_rejections);
+        log_state_event(c,event,true);
+    }
+    pthread_mutex_unlock(&c->mutex);
+    return true;
+}
+
 static bool mm305_planning_job(LandingController *c){
     pthread_mutex_lock(&c->mutex);
     if(c->stop_prediction_thread||!c->session||!c->has_latest||!c->terminal_model_valid||
@@ -108,7 +155,7 @@ static void *mm305_planner_worker(void *arg){
         bool stop=c->stop_prediction_thread;
         pthread_mutex_unlock(&c->mutex);
         if(stop)break;
-        if(!mm305_planning_job(c))sleep_seconds(.005);
+        if(!mm305_planning_job(c)&&!mm305_admission_job(c))sleep_seconds(.005);
     }
     return NULL;
 }

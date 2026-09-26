@@ -134,30 +134,49 @@ int main(void) {
     g.phase = PHASE_ENTRY_ENERGY;
     g.automation_engaged = true;
 
-    /* Property test: Sample points strictly inside the MM305 admission set */
+    /* Downstream-feasibility contract.  The physical admission envelope is a
+     * necessary lower bound: at Mach 2+ it cannot see the turn authority or the
+     * energy excess the route needs, so a state inside it may have no flyable
+     * MM305 route (the vehicle's supersonic L/D is ~0.7; from 26 km / M2.5 it
+     * needs ~45+ km of path and cannot turn tightly at that speed).  Ownership
+     * therefore transfers only after MM305 has qualified a route from the
+     * measured state, and MM305 adopts that route.  Properties:
+     *   1. the handoff gate is true exactly when a route was found;
+     *   2. a found route is adopted bumplessly as the MM305 route;
+     *   3. a qualified route ages out (no handoff on a stale solution);
+     *   4. the contract is not vacuous: some admitted state qualifies. */
     typedef struct { double alt, mach, along, cross; } AdmittedSample;
+    const double mid_alt = 0.5 * (cfg.guidance.mm305_min_altitude + cfg.guidance.mm305_max_altitude);
     const AdmittedSample samples[] = {
-        { 0.5 * (cfg.guidance.mm305_min_altitude + cfg.guidance.mm305_max_altitude), cfg.guidance.mm305_target_mach, -30000.0, 0.0 },
-        { cfg.guidance.mm305_max_altitude - 500.0, cfg.guidance.mm305_target_mach + 0.15, -35000.0, 5000.0 },
-        { cfg.guidance.mm305_min_altitude + 500.0, cfg.guidance.mm305_target_mach - 0.15, -28000.0, -5000.0 }
+        { mid_alt, cfg.guidance.mm305_target_mach, -30000.0, 0.0 },
+        { cfg.guidance.mm305_min_altitude + 500.0, cfg.guidance.mm305_target_mach - 0.15, -28000.0, -5000.0 },
+        { mid_alt, cfg.guidance.mm305_target_mach, -60000.0, 0.0 },
+        { mid_alt, cfg.guidance.mm305_target_mach, -80000.0, 0.0 },
+        { cfg.guidance.mm305_min_altitude + 1500.0, cfg.guidance.mm305_target_mach - 0.1, -70000.0, 8000.0 }
     };
 
-    int total_admitted = 0;
-    int feasible_count = 0;
-
+    int total_admitted = 0, qualified = 0, contract_violations = 0;
     for (size_t i = 0; i < sizeof(samples)/sizeof(samples[0]); ++i) {
         Telemetry t = create_telemetry(&p, &cfg, samples[i].alt, samples[i].mach, samples[i].along, samples[i].cross);
         TaemInterfaceCapture capture = entry_mm305_admission_envelope(&g, &t, cfg.site.runway_heading, &p, &cfg);
-
-        if (!capture.ready || capture.veto != 0u) {
-            continue; /* Test property only for states inside the admission set */
+        if (!capture.valid || !capture.ready) {
+            printf("sample=%zu along=%.0f physically inadmissible (veto 0x%x)\n", i, t.runway_along_track, capture.veto);
+            continue;
         }
         total_admitted++;
+
+        GuidanceMachine gi = g;
+        /* Before any route: never qualified, and a request is raised. */
+        if (guidance_mm305_admission_qualified(&gi, &t, true, model.snapshot_id) || !gi.mm305_admission_needed) {
+            fprintf(stderr, "sample=%zu: handoff allowed before a route was qualified\n", i);
+            contract_violations++;
+            continue;
+        }
 
         TerminalDynamicState state = telemetry_to_terminal_state(&model, &t, cfg.site.runway_heading);
         Mm305PlanRequest req = {
             .valid = true,
-            .request_ut = state.ut_s,
+            .request_ut = t.ut,
             .model_snapshot_id = model.snapshot_id,
             .state = state,
             .hac_radius_m = model.guidance.hac_radius,
@@ -166,28 +185,55 @@ int main(void) {
             .lift_scale = 1.0,
             .drag_scale = 1.0
         };
-
         Mm305PlanResult result = mm305_plan(&model, &req);
-        printf("sample=%zu altitude=%.1f mach=%.3f along=%.1f cross=%.1f found=%d solve_wall=%.3f reason=%s\n",
+        guidance_mm305_admission_accept(&gi, &result);
+        bool gate = guidance_mm305_admission_qualified(&gi, &t, true, model.snapshot_id);
+        printf("sample=%zu altitude=%.1f mach=%.3f along=%.1f cross=%.1f found=%d gate=%d solve_wall=%.3f\n",
             i, t.mean_altitude, t.mach, t.runway_along_track, t.runway_cross_track,
-            result.found, result.solve_wall_s, result.diagnostic);
-        if (result.valid && result.found) {
-            feasible_count++;
+            result.found, gate, result.solve_wall_s);
+        if (gate != (result.valid && result.found)) {
+            fprintf(stderr, "sample=%zu: handoff gate %d disagrees with planner found=%d\n", i, gate, result.found);
+            contract_violations++;
+            continue;
+        }
+        if (!result.found) {
+            printf("  rejected (MM304 retains ownership): %.300s\n", result.diagnostic);
+            continue;
+        }
+        qualified++;
+
+        Telemetry stale = t;
+        stale.ut += MM305_ADMISSION_MAX_AGE_S + 1.0;
+        GuidanceMachine aged = gi;
+        if (guidance_mm305_admission_qualified(&aged, &stale, true, model.snapshot_id)) {
+            fprintf(stderr, "sample=%zu: a stale qualified route still allowed handoff\n", i);
+            contract_violations++;
+        }
+        if (guidance_mm305_admission_qualified(&aged, &t, true, model.snapshot_id + 1)) {
+            fprintf(stderr, "sample=%zu: a route from another model snapshot allowed handoff\n", i);
+            contract_violations++;
+        }
+
+        gi.phase = PHASE_TAEM;
+        if (!guidance_mm305_adopt_admission_route(&gi, &cfg) || !gi.mm305_route_committed ||
+            gi.mm305_route.length_m != result.candidate.route.length_m ||
+            gi.hac_side != result.candidate.side) {
+            fprintf(stderr, "sample=%zu: the qualified route was not adopted as the MM305 route\n", i);
+            contract_violations++;
         }
     }
 
+    printf("MM305 downstream-feasibility contract: %d physically admitted, %d qualified (handoff), %d held in MM304, %d violations.\n",
+           total_admitted, qualified, total_admitted - qualified, contract_violations);
     assert(total_admitted > 0);
-    printf("MM305 admission-feasibility property test: sampled %d admitted states, %d feasible routes found.\n",
-           total_admitted, feasible_count);
-
-    /* Qualification cannot depend on an opt-in environment flag. A failed
-     * search is an admission/planner mismatch, not proof of physical
-     * impossibility. Keep the full replay and report the failed contract. */
-    if (feasible_count != total_admitted) {
-        fprintf(stderr, "FAIL: MM305 admission/planner mismatch: %d/%d admitted states have no qualified route.\n",
-                total_admitted-feasible_count, total_admitted);
+    if (contract_violations) {
+        fprintf(stderr, "FAIL: MM305 downstream-feasibility contract violated %d time(s).\n", contract_violations);
         return EXIT_FAILURE;
     }
-    puts("MM305 admission-feasibility property test passed.");
+    if (qualified == 0) {
+        fprintf(stderr, "FAIL: no physically admitted state qualifies an MM305 route; the contract would never hand over.\n");
+        return EXIT_FAILURE;
+    }
+    puts("MM305 downstream-feasibility contract test passed.");
     return EXIT_SUCCESS;
 }

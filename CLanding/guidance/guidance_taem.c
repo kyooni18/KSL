@@ -234,13 +234,12 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     return out;
 }
 
-Mm305PlanRequest guidance_mm305_plan_request(const GuidanceMachine *g,
+static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
         const Telemetry *t, const VehicleState *state,
         const LandingConfiguration *cfg, const TerminalModel *model) {
     Mm305PlanRequest r;
     memset(&r,0,sizeof(r));
-    if (!g || !t || !state || !cfg || !model || !model->replay_validated ||
-        !g->mm305_planning_needed)
+    if (!g || !t || !state || !cfg || !model || !model->replay_validated)
         return r;
     r.state=terminal_live_state(state,t,model);
     if (!terminal_state_validate(&r.state,NULL,0)) return r;
@@ -259,6 +258,96 @@ Mm305PlanRequest guidance_mm305_plan_request(const GuidanceMachine *g,
     r.drag_scale=isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?g->mm305_drag_scale:1.0;
     r.valid=true;
     return r;
+}
+
+Mm305PlanRequest guidance_mm305_plan_request(const GuidanceMachine *g,
+        const Telemetry *t, const VehicleState *state,
+        const LandingConfiguration *cfg, const TerminalModel *model) {
+    if (!g || !g->mm305_planning_needed) {
+        Mm305PlanRequest r;
+        memset(&r,0,sizeof(r));
+        return r;
+    }
+    return mm305_request_from_state(g,t,state,cfg,model);
+}
+
+Mm305PlanRequest guidance_mm305_admission_request(const GuidanceMachine *g,
+        const Telemetry *t, const VehicleState *state,
+        const LandingConfiguration *cfg, const TerminalModel *model) {
+    if (!g || !g->mm305_admission_needed) {
+        Mm305PlanRequest r;
+        memset(&r,0,sizeof(r));
+        return r;
+    }
+    Mm305PlanRequest r=mm305_request_from_state(g,t,state,cfg,model);
+    /* Qualification is for the route MM305 will fly from this state: no side
+       is committed yet, and the measured force scales belong to MM305. */
+    r.restrict_side=false;
+    r.lift_scale=r.drag_scale=1.0;
+    return r;
+}
+
+void guidance_mm305_admission_accept(GuidanceMachine *g, const Mm305PlanResult *result) {
+    if (!g || !result || !result->valid) return;
+    g->mm305_admission_needed=false;
+    g->mm305_admission_valid=true;
+    g->mm305_admission_found=result->found;
+    g->mm305_admission_result_ut=result->request_ut;
+    g->mm305_admission_snapshot_id=result->model_snapshot_id;
+    g->mm305_admission_solve_wall_s=result->solve_wall_s;
+    if (result->found) {
+        g->mm305_admission_route=result->candidate.route;
+        g->mm305_admission_runway_end=result->candidate.runway_end;
+        g->mm305_admission_side=result->candidate.side;
+    } else {
+        g->mm305_admission_route=(TaemRoute){0};
+        g->mm305_admission_rejections++;
+        fprintf(stderr,"MM305_ADMISSION rejected: %s\n",result->diagnostic);
+    }
+}
+
+bool guidance_mm305_admission_qualified(GuidanceMachine *g, const Telemetry *t,
+        bool physically_admissible, uint64_t model_snapshot_id) {
+    if (!g || !t || !isfinite(t->ut)) return false;
+    if (!physically_admissible) {
+        /* Outside the physical set a pending request is moot; a held result
+           stays for diagnosis but can never be handed over once stale. */
+        g->mm305_admission_needed=false;
+        return false;
+    }
+    double age=t->ut-g->mm305_admission_result_ut;
+    if (g->mm305_admission_valid && g->mm305_admission_found &&
+        g->mm305_admission_snapshot_id==model_snapshot_id &&
+        age>=-1e-6 && age<=MM305_ADMISSION_MAX_AGE_S)
+        return true;
+    bool rejected_recently=g->mm305_admission_valid && !g->mm305_admission_found &&
+        isfinite(g->mm305_admission_last_attempt_ut) &&
+        t->ut-g->mm305_admission_last_attempt_ut<MM305_ADMISSION_RETRY_S;
+    if (!g->mm305_admission_needed && !rejected_recently) {
+        g->mm305_admission_needed=true;
+        g->mm305_admission_request_ut=t->ut;
+        g->mm305_admission_last_attempt_ut=t->ut;
+    }
+    return false;
+}
+
+bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
+        const LandingConfiguration *cfg) {
+    if (!g || !cfg || !g->mm305_admission_valid || !g->mm305_admission_found ||
+        !g->mm305_admission_route.valid)
+        return false;
+    Mm305PlanResult result;
+    memset(&result,0,sizeof(result));
+    result.valid=result.found=true;
+    result.request_ut=g->mm305_admission_result_ut;
+    result.model_snapshot_id=g->mm305_admission_snapshot_id;
+    result.solve_wall_s=g->mm305_admission_solve_wall_s;
+    result.candidate.route=g->mm305_admission_route;
+    result.candidate.runway_end=g->mm305_admission_runway_end;
+    result.candidate.side=g->mm305_admission_side;
+    bool adopted=guidance_mm305_accept_plan(g,&result,cfg);
+    if (adopted) g->mm305_last_plan_attempt_ut=g->mm305_admission_result_ut;
+    return adopted;
 }
 
 bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *result,

@@ -153,6 +153,23 @@ typedef struct {
     unsigned mm305_plan_failures;
     unsigned mm305_replans;
     double mm305_lift_scale, mm305_drag_scale; /* measured / model, low-passed */
+    /* MM304 -> MM305 downstream-feasibility contract.  The physical admission
+       envelope is necessary, not sufficient: ownership transfers only after
+       MM305 has found a replay-qualified route from a recent measured MM304
+       state, and MM305 then adopts that same route (bumpless).  Planned on
+       the MM305 worker when one runs, synchronously otherwise. */
+    bool mm305_admission_needed;       /* qualification request outstanding */
+    double mm305_admission_request_ut;
+    double mm305_admission_last_attempt_ut;
+    bool mm305_admission_valid;        /* a planner result is held */
+    bool mm305_admission_found;        /* ...and it found a qualified route */
+    double mm305_admission_result_ut;  /* measured-state UT it was planned from */
+    uint64_t mm305_admission_snapshot_id;
+    TaemRoute mm305_admission_route;
+    int mm305_admission_runway_end;
+    double mm305_admission_side;
+    double mm305_admission_solve_wall_s;
+    unsigned mm305_admission_rejections;
     TaemInterfaceTarget taem_interface_target;
     bool taem_interface_captured, taem_safety_handoff;
     double taem_interface_diagnostic_ut;
