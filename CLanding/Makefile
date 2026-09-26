@@ -154,10 +154,12 @@ entry-energy-law-test: $(TARGET)
 	$(BUILD)/entry_energy_law_tests
 
 $(BUILD)/sim.o: ../ShuttleSim/src/sim.c | $(BUILD)
-	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD)/scenario.o: ../ShuttleSim/src/scenario.c | $(BUILD)
-	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
+-include $(BUILD)/sim.d $(BUILD)/scenario.d
 
 backend-protocol-test: $(TARGET)
 	cd $(REPO_ROOT) && python3 Validation/BackendProtocolTests.py "$(abspath $(TARGET))"
