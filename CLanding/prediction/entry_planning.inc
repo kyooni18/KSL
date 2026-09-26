@@ -7,6 +7,14 @@ typedef struct {
     bool aborted;
 } TerminalShadowOutcome;
 
+typedef struct {
+    double ut, altitude, speed, mach, fpa, range, along, cross;
+    double commanded_bank, achieved_bank, commanded_aoa, achieved_aoa, energy_margin;
+    int phase;
+    unsigned mm305_veto;
+    bool mm305_ready;
+} EntryWitnessTracePoint;
+
 static Telemetry guidance_shadow_telemetry(const Telemetry*base,VehicleState state,
         PredictorGuidance*response,AeroContext*ctx,const PlanetModel*p,
         const LandingConfiguration*cfg,AtmosState*out_at){
@@ -117,6 +125,9 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     bool entry_witness_trace=entry_witness_trace_env&&
         strcmp(entry_witness_trace_env,"1")==0;
     bool entry_witness_phase_traced=false;
+    EntryWitnessTracePoint entry_witness_history[8];
+    unsigned entry_witness_history_count=0,entry_witness_history_next=0;
+    double next_entry_witness_history_ut=state.ut;
     double entry_alt=p->atmosphere_depth-cfg->guidance.entry_interface_altitude_margin;
     out.entered_atmosphere=telemetry->mean_altitude<=entry_alt&&telemetry->vertical_speed<0.0;
     bool initial_terminal_owned=taem_exec_owns_vehicle(&shadow.taem_exec);
@@ -179,6 +190,22 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
         }
         unsigned previous_reversals=shadow.entry_control_reversals;
         GuidanceResult r=guidance_update_with_terminal_model(&shadow,&synthetic,&state,plan,p,aero,cfg,terminal_model);
+        if(entry_witness_trace&&state.ut+1e-6>=next_entry_witness_history_ut){
+            TaemInterfaceCapture admission=entry_mm305_admission_envelope(
+                &shadow,&synthetic,synthetic.ground_track_heading,p,cfg);
+            double command_aoa=r.command.has_target_aoa?r.command.target_aoa:response.actual_aoa;
+            entry_witness_history[entry_witness_history_next]=(EntryWitnessTracePoint){
+                .ut=state.ut,.altitude=geo.altitude,.speed=at.speed,.mach=at.mach,
+                .fpa=synthetic.flight_path_angle,.range=range,
+                .along=synthetic.runway_along_track,.cross=synthetic.runway_cross_track,
+                .commanded_bank=isfinite(r.command.target_roll)?norm_signed_deg(r.command.target_roll):response.actual_bank,
+                .achieved_bank=response.actual_bank,.commanded_aoa=command_aoa,
+                .achieved_aoa=response.actual_aoa,.energy_margin=shadow.entry_feedback.energy_margin,
+                .phase=(int)r.phase,.mm305_veto=admission.veto,.mm305_ready=admission.ready};
+            entry_witness_history_next=(entry_witness_history_next+1U)%8U;
+            if(entry_witness_history_count<8U)entry_witness_history_count++;
+            next_entry_witness_history_ut=state.ut+45.0;
+        }
         if(entry_witness_trace&&!entry_witness_phase_traced&&r.phase==PHASE_ENTRY_ENERGY){
             fprintf(stderr,
                 "ENTRY_WITNESS first-entry ut=%.2f h=%.0f V=%.0f margin=%+.0f D=%.3f Dref=%.3f bank=%+.1f cross=%+.0f planning=%d\n",
@@ -245,6 +272,16 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                 shadow.mm305_route_committed?1:0,shadow.mm305_route.valid?1:0,
                 shadow.taem_exec.terminal_evaluation.valid?1:0,
                 shadow.taem_exec.terminal_evaluation.feasible?1:0);
+            unsigned first=(entry_witness_history_next+8U-entry_witness_history_count)%8U;
+            for(unsigned i=0;i<entry_witness_history_count;i++){
+                const EntryWitnessTracePoint*q=&entry_witness_history[(first+i)%8U];
+                fprintf(stderr,
+                    "ENTRY_WITNESS state ut=%.2f phase=%d h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f along=%.0f cross=%.0f bank=%.1f/%.1f aoa=%.1f/%.1f energy=%+.0f mm305Ready=%d mm305Veto=0x%x\n",
+                    q->ut,q->phase,q->altitude,q->speed,q->mach,q->fpa,q->range,
+                    q->along,q->cross,q->commanded_bank,q->achieved_bank,
+                    q->commanded_aoa,q->achieved_aoa,q->energy_margin,
+                    q->mm305_ready?1:0,q->mm305_veto);
+            }
         }
         bool terminal_public_phase=out.reached_taem&&r.phase==PHASE_TAEM;
         if(include_trajectory&&(state.ut-lastsample>=2.0||terminal_public_phase)){
