@@ -189,17 +189,39 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double later_bank=fmin(bank_limit,10.0);
     double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
     double y=clampd(t->runway_cross_track,-2000.0,2000.0);
-    double rate_gain=fmin(omega,sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
+    /* The bank command passes through the Final roll limiter (rate and
+       acceleration limited).  A lateral acceleration demand therefore arrives
+       only after the minimum-time swing of that limiter from its present
+       state, and the cross-track rate keeps integrating the present lateral
+       acceleration (fading roughly linearly) meanwhile.  Both the prediction
+       horizon and the position bandwidth come from that swing time, so the
+       capture is consistent with whatever roll limits are configured.  */
+    GuidanceAttitudeLimits roll_limits=decision_guidance_attitude_limits(t,s,PHASE_FINAL,false);
+    double roll_now=g->roll_limiter.has_value?norm_signed_deg(g->roll_limiter.value):
+        norm_signed_deg(t->roll);
+    double roll_rate_now=g->roll_limiter.has_value?g->roll_limiter.rate:
+        (isfinite(t->roll_rate)?t->roll_rate:0.0);
+    double reversal_time=decision_axis_capture_time(2.0*later_bank,0.0,
+        roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
+    const double RATE_CLOSURE_TAU=2.0;
+    /* Position loop an order slower than the rate loop plus one bank reversal. */
+    double omega_limit=.25/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
+    double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
-    /* The roll command is slew-limited (approach roll rate/accel), so close on
-       the cross-track rate predicted one roll-response time ahead, using the
-       lateral acceleration the present bank already produces. */
-    double roll_rate_limit=fmax(1.0,fabs(s->approach_roll_rate));
-    double roll_lag=clampd(1.0+10.0/roll_rate_limit,1.5,5.0);
-    double present_accel=lift_accel*sin(clampd(norm_signed_deg(t->roll),-60.0,60.0)*DEG2RAD);
-    double predicted_rate=cross_rate+present_accel*roll_lag;
+    double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);
     double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
-    double lateral_accel=clampd(.5*(desired_rate-predicted_rate),-lateral_limit,lateral_limit);
+    double lateral_accel=0.0;
+    for(int it=0;it<3;++it){
+        double bank_goal=asin(clampd(lateral_accel/lift_accel,-1.0,1.0))*RAD2DEG;
+        double swing=decision_axis_capture_time(bank_goal-roll_now,roll_rate_now,
+            roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
+        if(!isfinite(swing))swing=reversal_time;
+        if(!isfinite(swing))swing=10.0;
+        /* rate at swing end = cross_rate + (a0 + a_cmd)/2 * swing; close the
+           remaining rate error with time constant RATE_CLOSURE_TAU. */
+        lateral_accel=clampd((desired_rate-cross_rate-.5*present_accel*swing)/
+            (.5*swing+RATE_CLOSURE_TAU),-lateral_limit,lateral_limit);
+    }
     double bank=clampd(asin(clampd(lateral_accel/lift_accel,-1.0,1.0))*RAD2DEG,
         -bank_limit,bank_limit);
     /* Flight-path normal acceleration resolves lift through bank only.
