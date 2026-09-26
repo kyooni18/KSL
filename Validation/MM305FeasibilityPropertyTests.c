@@ -74,27 +74,35 @@ static TerminalDynamicState telemetry_to_terminal_state(const TerminalModel *mod
     state.ut_s = 1000.0;
     state.mass_kg = t->mass;
 
-    /* Reconstruct inertial position and velocity from runway coords */
-    double to_rad = acos(-1.0) / 180.0;
-    double lat = model->site.latitude * to_rad;
-    double lon = model->site.longitude * to_rad;
-    Vec3 runway_pos = world_lla_to_inertial(&model->world, lat, lon, model->site.altitude, state.ut_s);
-    LocalFrame lf = world_local_frame_i(&model->world, runway_pos, state.ut_s);
-
-    double psi = runway_heading_deg * to_rad;
-    Vec3 fwd = v3_add(v3_scale(lf.north, cos(psi)), v3_scale(lf.east, sin(psi)));
-    Vec3 right = v3_add(v3_scale(lf.north, sin(psi)), v3_scale(lf.east, -cos(psi)));
-
-    Vec3 delta = v3_add(v3_scale(fwd, t->runway_along_track),
-                        v3_scale(right, t->runway_cross_track));
-    delta = v3_add(delta, v3_scale(lf.up, t->radar_altitude));
-
-    state.position_i_m = v3_add(runway_pos, delta);
-
-    double gamma = t->flight_path_angle * to_rad;
-    Vec3 air_v = v3_add(v3_scale(fwd, t->true_air_speed * cos(gamma)),
-                        v3_scale(lf.up, t->true_air_speed * sin(gamma)));
-    state.velocity_i_mps = v3_add(air_v, world_atmosphere_velocity_i(&model->world, state.position_i_m));
+    /* Use the production spherical frame in both directions. The old tangent
+     * offset reversed crossrange and changed altitude/course at large range.
+     * A zeroed attitude model also made every replay fail validation. */
+    state.attitude = model->attitude;
+    state.attitude.aoa_rad = t->angle_of_attack * DEG2RAD;
+    state.attitude.bank_rad = t->roll * DEG2RAD;
+    TaemFrameWorld world;
+    TaemRunwayFrame runway;
+    TaemVec3 position_b, velocity_b, north, east, up, position_i, velocity_i;
+    assert(taem_geometry_runway(model, &world, &runway));
+    assert(taem_runway_unproject(&world, &runway, t->runway_along_track,
+        t->runway_cross_track, t->mean_altitude-model->site.altitude, &position_b));
+    assert(taem_local_north_east_up(position_b, &north, &east, &up));
+    double psi = runway_heading_deg * DEG2RAD;
+    velocity_b = taem_vec3_add(taem_vec3_scale(north, t->horizontal_speed*cos(psi)),
+        taem_vec3_scale(east, t->horizontal_speed*sin(psi)));
+    velocity_b = taem_vec3_add(velocity_b, taem_vec3_scale(up, t->vertical_speed));
+    assert(taem_fixed_to_inertial(&world, position_b, velocity_b, state.ut_s,
+        &position_i, &velocity_i));
+    state.position_i_m = (Vec3){position_i.x, position_i.y, position_i.z};
+    state.velocity_i_mps = (Vec3){velocity_i.x, velocity_i.y, velocity_i.z};
+    assert(terminal_state_validate(&state, NULL, 0));
+    TaemGeometryState geometry;
+    assert(taem_geometry_state(model, &state, &geometry));
+    assert(fabs(geometry.runway_along_m-t->runway_along_track)<1e-6);
+    assert(fabs(geometry.runway_cross_m-t->runway_cross_track)<1e-6);
+    assert(fabs(geometry.altitude_above_runway_m-t->radar_altitude)<1e-6);
+    assert(fabs(geometry.flight_path_angle_deg-t->flight_path_angle)<1e-6);
+    assert(fabs(geometry.airspeed_mps-t->true_air_speed)<1e-6);
 
     return state;
 }
@@ -160,6 +168,9 @@ int main(void) {
         };
 
         Mm305PlanResult result = mm305_plan(&model, &req);
+        printf("sample=%zu altitude=%.1f mach=%.3f along=%.1f cross=%.1f found=%d solve_wall=%.3f reason=%s\n",
+            i, t.mean_altitude, t.mach, t.runway_along_track, t.runway_cross_track,
+            result.found, result.solve_wall_s, result.diagnostic);
         if (result.valid && result.found) {
             feasible_count++;
         }
@@ -169,17 +180,14 @@ int main(void) {
     printf("MM305 admission-feasibility property test: sampled %d admitted states, %d feasible routes found.\n",
            total_admitted, feasible_count);
 
-    const char *strict = getenv("KSP_LANDER_STRICT_PROPERTY_TEST");
-    if (strict && strcmp(strict, "1") == 0) {
-        /* In strict contract mode (red until items 7 & 13 land), all admitted states must be feasible */
-        assert(feasible_count == total_admitted);
-    } else {
-        if (feasible_count < total_admitted) {
-            printf("[CONTRACT STATUS] Admission => MM305-feasible property test: %d/%d feasible (red until items 7 and 13 land).\n",
-                   feasible_count, total_admitted);
-        }
+    /* Qualification cannot depend on an opt-in environment flag. A failed
+     * search is an admission/planner mismatch, not proof of physical
+     * impossibility. Keep the full replay and report the failed contract. */
+    if (feasible_count != total_admitted) {
+        fprintf(stderr, "FAIL: MM305 admission/planner mismatch: %d/%d admitted states have no qualified route.\n",
+                total_admitted-feasible_count, total_admitted);
+        return EXIT_FAILURE;
     }
-
     puts("MM305 admission-feasibility property test passed.");
-    return 0;
+    return EXIT_SUCCESS;
 }

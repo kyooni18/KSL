@@ -193,7 +193,7 @@ int main(void) {
     double cross = sim.state.touchdown_cross_m;
 
     printf("============================================================\n");
-    printf("Final Touchdown Quality Test (Fixed Plant B, Direct FCS):\n");
+    printf("Final Touchdown Quality Test (selected model profile, Direct FCS):\n");
     printf("  Touchdown seen:     %s\n", sim.state.touchdown_seen ? "YES" : "NO");
     printf("  On runway:          %s\n", sim.state.on_runway_at_touchdown ? "YES" : "NO");
     printf("  Sink rate:          %.2f m/s  (Quality limit: <= 3.0 m/s)\n", sink);
@@ -209,15 +209,13 @@ int main(void) {
     bool cross_ok = fabs(cross) <= 35.0;
     bool quality_ok = sink_ok && speed_ok && along_ok && cross_ok && sim.state.on_runway_at_touchdown;
 
-    const char *strict = getenv("KSP_LANDER_STRICT_QUALITY_GATE");
-    if (strict && strcmp(strict, "1") == 0) {
-        assert(quality_ok);
-    } else {
-        if (!quality_ok) {
-            printf("[CONTRACT STATUS] Final touchdown quality: red until D1-D4 and item 16 land (sink=%.1f m/s > 3.0 m/s limit).\n", sink);
-        }
+    /* The <=3 m/s mission limit is a gate, including in the default test
+     * invocation. Report each failure without disabling it through getenv. */
+    if (!quality_ok) {
+        fprintf(stderr, "FAIL: touchdown quality: sink=%d speed=%d along=%d cross=%d runway=%d\n",
+            sink_ok, speed_ok, along_ok, cross_ok, sim.state.on_runway_at_touchdown);
+        return EXIT_FAILURE;
     }
-
-    puts("Final touchdown quality test completed.");
-    return 0;
+    puts("Final touchdown quality test passed.");
+    return EXIT_SUCCESS;
 }

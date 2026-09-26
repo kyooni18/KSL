@@ -1,0 +1,54 @@
+make: Entering directory '/Users/kyooni18/Code/KSPShuttleLander/CLanding'
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/ShuttleArchitectureContractTests.c \
+	build-research/entry_exec.o build-research/taem_exec.o -pthread -lm -lsqlite3 \
+	-o build-research/shuttle_architecture_contract_tests
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/MM305AdmissionTests.c \
+	build-research/decision_envelope.o build-research/math.o build-research/models.o build-research/json.o \
+	build-research/taem_planner.o build-research/taem_geometry.o build-research/taem_frames_energy.o build-research/taem_reachability.o \
+	build-research/flight_physics/math3.o build-research/flight_physics/world.o build-research/flight_physics/aero.o \
+	build-research/entry_exec.o build-research/taem_exec.o -pthread -lm -lsqlite3 \
+	-o build-research/mm305_admission_tests
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/TAEMFramesEnergyTests.c taem_frames_energy.c \
+	-pthread -lm -o build-research/taem_frames_energy_tests
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/TAEMNativeStackTests.c \
+	build-research/controller.o build-research/entry_alpha.o build-research/entry_drag_reference.o build-research/entry_energy_control.o build-research/entry_lateral.o build-research/entry_exec.o build-research/taem_exec.o build-research/guidance_common.o build-research/guidance_core.o build-research/guidance_entry.o build-research/guidance_taem.o build-research/guidance_final.o build-research/guidance_terminal.o build-research/guidance.o build-research/taem_frames_energy.o build-research/taem_geometry.o build-research/terminal_model.o build-research/terminal_propagator.o build-research/taem_reachability.o build-research/taem_tracker.o build-research/taem_planner.o build-research/terminal_solver.o build-research/taem_candidate_search.o build-research/predictor.o build-research/decision_envelope.o build-research/async_prediction_policy.o build-research/flight_control.o build-research/vessel_physics.o build-research/aero_certification.o build-research/math.o build-research/models.o build-research/calibration.o build-research/calibration_observation.o build-research/trajectory_calibration.o build-research/krpc.o build-research/krpc_cnano_client.o build-research/krpc_cnano_transport.o build-research/krpc_cnano_batch.o build-research/json.o build-research/sim_telemetry.o build-research/planner_log.o build-research/flight_log_codec.o build-research/physics_store.o build-research/flight_physics/math3.o build-research/flight_physics/quat.o build-research/flight_physics/world.o build-research/flight_physics/aero.o build-research/flight_physics/attitude.o build-research/flight_physics/flight_physics.o build-research/cnano/decoder.o build-research/cnano/encoder.o build-research/cnano/error.o build-research/cnano/krpc.o build-research/cnano/krpc.pb.o build-research/cnano/memory.o build-research/cnano/utils.o build-research/cnano/communication.o build-research/nanopb/pb_common.o build-research/nanopb/pb_encode.o build-research/nanopb/pb_decode.o \
+	-pthread -lm -lsqlite3 -o build-research/taem_native_stack_tests
+build-research/shuttle_architecture_contract_tests
+Shuttle architecture contract tests passed.
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/VesselPhysicsTests.c \
+	build-research/controller.o build-research/entry_alpha.o build-research/entry_drag_reference.o build-research/entry_energy_control.o build-research/entry_lateral.o build-research/entry_exec.o build-research/taem_exec.o build-research/guidance_common.o build-research/guidance_core.o build-research/guidance_entry.o build-research/guidance_taem.o build-research/guidance_final.o build-research/guidance_terminal.o build-research/guidance.o build-research/taem_frames_energy.o build-research/taem_geometry.o build-research/terminal_model.o build-research/terminal_propagator.o build-research/taem_reachability.o build-research/taem_tracker.o build-research/taem_planner.o build-research/terminal_solver.o build-research/taem_candidate_search.o build-research/predictor.o build-research/decision_envelope.o build-research/async_prediction_policy.o build-research/flight_control.o build-research/vessel_physics.o build-research/aero_certification.o build-research/math.o build-research/models.o build-research/calibration.o build-research/calibration_observation.o build-research/trajectory_calibration.o build-research/krpc.o build-research/krpc_cnano_client.o build-research/krpc_cnano_transport.o build-research/krpc_cnano_batch.o build-research/json.o build-research/sim_telemetry.o build-research/planner_log.o build-research/flight_log_codec.o build-research/physics_store.o build-research/flight_physics/math3.o build-research/flight_physics/quat.o build-research/flight_physics/world.o build-research/flight_physics/aero.o build-research/flight_physics/attitude.o build-research/flight_physics/flight_physics.o build-research/cnano/decoder.o build-research/cnano/encoder.o build-research/cnano/error.o build-research/cnano/krpc.o build-research/cnano/krpc.pb.o build-research/cnano/memory.o build-research/cnano/utils.o build-research/cnano/communication.o build-research/nanopb/pb_common.o build-research/nanopb/pb_encode.o build-research/nanopb/pb_decode.o \
+	-pthread -lm -lsqlite3 -o build-research/vessel_physics_tests
+build-research/mm305_admission_tests
+MM305 admissible-state tests passed.
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/EntryLateralFeedbackTests.c build-research/entry_lateral.o \
+	-pthread -lm -lsqlite3 -o build-research/entry_lateral_feedback_tests
+build-research/taem_frames_energy_tests
+TAEM frame/energy algebraic checks passed: 256 spherical round trips max 2.33e-10 m; 256 no-wind energy residuals max 7.11e-15 W/kg; inertial energy-rate residual max 0 W/kg
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-research/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+	../Validation/EntryEnergyLawTests.c build-research/entry_energy_control.o build-research/math.o \
+	-pthread -lm -lsqlite3 -o build-research/entry_energy_law_tests
+build-research/entry_lateral_feedback_tests
+Entry lateral feedback tests passed.
+cd .. && python3 Validation/BackendProtocolTests.py "/Users/kyooni18/Code/KSPShuttleLander/CLanding/build-research/landing_backend"
+cd .. && "/Users/kyooni18/Code/KSPShuttleLander/CLanding/build-research/taem_native_stack_tests"
+normal lift balance: gamma=-35 required=7.885857 delivered=7.960665 residual=+0.074808
+normal lift balance: gamma=-20 required=9.046284 delivered=9.104698 residual=+0.058415
+normal lift balance: gamma=+0 required=9.626854 delivered=9.560077 residual=-0.066777
+normal lift balance: gamma=+20 required=9.046284 delivered=9.104698 residual=+0.058415
+fixture: 15430 m above runway, lateral 3.712/3.947 m/s^2
+LandingBackend native TCP/simulator UI protocol tests passed.
+build-research/entry_energy_law_tests
+Entry energy law unit tests passed.
+build-research/vessel_physics_tests
+Vessel physics tests passed
+MM305 route rejected: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;
+MM305_ROUTE {"runwayEnd":0,"side":1,"radius":12000,"sweep":4.7123889803846897,"leadLength":5000,"arcLength":56548.667764616279,"entry":[4000,12000.000000000004],"center":[-8000,12000],"exit":[-8000,0],"finalDistance":8000,"replan":false,"liftScale":0.0000,"dragScale":0.0000,"solveWall":2.885}
+MM305_ROUTE {"runwayEnd":0,"side":1,"radius":12000,"sweep":4.7123889803846897,"leadLength":5000,"arcLength":56548.667764616279,"entry":[4000,12000.000000000004],"center":[-8000,12000],"exit":[-8000,0],"finalDistance":8000,"replan":true,"liftScale":0.0000,"dragScale":0.0000,"solveWall":2.885}
+TAEM native model, route descriptor, Final interface, and replay gate tests passed.
+make: Leaving directory '/Users/kyooni18/Code/KSPShuttleLander/CLanding'

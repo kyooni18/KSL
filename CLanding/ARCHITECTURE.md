@@ -9,7 +9,7 @@ CLanding is organized around explicit subsystem ownership. The public compatibil
 - `guidance_common.c`: stage-neutral response, runway-frame, and shared TAEM/Final guidance primitives.
 - `guidance_core.c`: shared guidance state, stabilization, command construction, and common state-machine primitives.
 - `guidance_entry.c`: MM304/Entry ownership. `entry/contract.inc` is the live command path; `entry/forecast.inc` is the advisory forecast. The energy (vertical) law is `entry_energy_control.c`, the lateral (bank-sign) law is `entry_lateral.c`, the alpha schedule is `entry_alpha.c`.
-- `guidance_taem.c`: MM305/TAEM live ownership boundary. Route planning (`mm305_plan()`, `include/mm305_planning.h`) is re-entrant and runs on the prediction worker; the per-tick owner flies an acquisition law while no route is held, tracks a committed route, re-plans periodically and on divergence, and corrects the planning model with the measured lift/drag ratio. Fixed-HAC construction, native replay, reachability and tracking live in the `taem_*` / `terminal_*` modules.
+- `guidance_taem.c`: MM305/TAEM live ownership boundary. Route planning (`mm305_plan()`, `include/mm305_planning.h`) is re-entrant and runs on the prediction worker; the per-tick owner flies an acquisition law while no route is held, tracks a committed route, re-plans on tracking degradation, and corrects the planning model with the measured lift/drag ratio. Fixed-HAC construction, native replay, reachability and tracking live in the `taem_*` / `terminal_*` modules.
 - `guidance_final.c`: final-approach planning, phases, recovery, and sequence control.
 - `guidance_terminal.c`: Entry→MM305 and MM305→Final ownership transitions and orchestration.
 - `guidance_internal.h`: private interfaces shared only by guidance modules.
@@ -67,7 +67,7 @@ The maintained regression gate is intentionally small:
 make -C CLanding test
 ```
 
-It runs seven targets: architecture/ownership contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM native stack (model, route descriptor, Final interface, replay gate), vessel physics, MM304 lateral feedback (including azimuth reversal), and the backend protocol. `qualification` is an alias of `test`. Maintained tests use supported headers and APIs; they do not include production `.c` files.
+It runs ten targets: architecture/ownership contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM native stack (model, route descriptor, Final interface, replay gate), vessel physics, MM304 lateral feedback (including azimuth reversal), the backend protocol, MM304 energy-law tests, admission/planner feasibility, and Final touchdown quality. The last two are hard gates and currently fail; see `Audit/2026-09-26-closed-loop/ENGINEERING_LOG.md`. `qualification` is an alias of `test`. Maintained tests use supported headers and APIs; they do not include production `.c` files.
 
 Historical white-box tests and campaign probes under `Validation/` are not part of the maintained gate. They may remain temporarily while an active validation campaign depends on them, but new regression coverage should be black-box or public-contract based rather than exposing file-local helpers.
 
