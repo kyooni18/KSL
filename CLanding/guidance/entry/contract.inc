@@ -1,3 +1,23 @@
+static double entry_diagnostic_milestone_due(GuidanceMachine*g,double range_m){
+    static const double milestone_m[]={220000.0,170000.0,140000.0,100000.0};
+    const char*trace=getenv("KSP_LANDER_TRACE_ENTRY_MILESTONES");
+    if(!g||!g->diagnostic_shadow||!trace||strcmp(trace,"1")!=0||!isfinite(range_m))
+        return NAN;
+    double previous=g->diagnostic_entry_has_previous_range?
+        g->diagnostic_entry_previous_range_m:range_m;
+    g->diagnostic_entry_previous_range_m=range_m;
+    g->diagnostic_entry_has_previous_range=true;
+    for(unsigned i=0;i<sizeof(milestone_m)/sizeof(milestone_m[0]);i++){
+        unsigned bit=1U<<i;
+        if(!(g->diagnostic_entry_milestone_mask&bit)&&previous>milestone_m[i]&&
+           range_m<=milestone_m[i]){
+            g->diagnostic_entry_milestone_mask|=bit;
+            return milestone_m[i];
+        }
+    }
+    return NAN;
+}
+
 static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,double dt,const char*warning){
     const VehicleProfile*v=&cfg->vehicle;
@@ -26,6 +46,13 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     c.has_target_aoa=true;
     c.target_aoa=aoa;
     c.target_pitch=t->flight_path_angle+aoa;
+    double milestone=entry_diagnostic_milestone_due(g,t->range_to_site);
+    if(isfinite(milestone))
+        fprintf(stderr,
+            "MM304_SHADOW_MILESTONE hold=1 milestone=%.0f ut=%.2f h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f status=\"%s\" previousBank=%.1f previousAoA=%.1f feedbackValid=%d lateralValid=%d\n",
+            milestone,t->ut,t->mean_altitude,t->true_air_speed,t->mach,
+            t->flight_path_angle,t->range_to_site,warning?warning:"",
+            bank,aoa,g->entry_feedback.valid?1:0,g->entry_feedback.lateral_valid?1:0);
     return stabilized(g,result_make(PHASE_ENTRY_ENERGY,c,
         "MM304 feedback model unavailable; retaining the bounded current Entry command.",
         warning),t,v,s,dt);
@@ -109,6 +136,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     }
 
     TaemInterfaceCapture admission=entry_mm305_admission_envelope(g,t,course,p,cfg);
+    double diagnostic_milestone=entry_diagnostic_milestone_due(g,t->range_to_site);
     bool handoff_ready=admission.valid&&admission.ready;
     if(handoff_ready&&g->entry_exec.phase==ENTRY_PHASE_TRANSITION&&
        !entry_exec_accept_taem_handoff(&g->entry_exec,&obs))
@@ -301,6 +329,22 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .commanded_bank_deg=bank,
         .bank_sign=side
     };
+
+    if(isfinite(diagnostic_milestone))
+        fprintf(stderr,
+            "MM304_SHADOW_MILESTONE hold=0 milestone=%.0f ut=%.2f phase=%s h=%.0f V=%.1f M=%.2f q=%.0f fpa=%.2f range=%.0f predRange=%.0f reqRange=%.0f rangeErr=%+.0f Dtelemetry=%.3f Dmodel=%.3f Dref=%.3f bankEnergy=%.1f objective=siteBearing azErr=%+.2f xte=%+.0f bankCmd=%+.1f roll=%+.1f aoaNom=%.1f aoaCmd=%.1f aoa=%.1f d/e/a/l=%d%d%d%d degraded=%d%d%d%d sat=%d%d%d mm305Ready=%d veto=0x%x\n",
+            diagnostic_milestone,t->ut,entry_phase_string(g->entry_exec.phase),
+            t->mean_altitude,t->true_air_speed,t->mach,t->dynamic_pressure,
+            t->flight_path_angle,t->range_to_site,energy.predicted_range_m,
+            energy.required_range_m,energy.range_error_m,
+            energy_in.measured_drag_accel,drag_in.modeled_drag_accel,
+            energy.reference_drag_accel,energy.bank_magnitude_deg,
+            lateral.azimuth_error_deg,-t->runway_cross_track,bank,
+            norm_signed_deg(t->roll),alpha.nominal_aoa,aoa,t->angle_of_attack,
+            drag.valid?1:0,energy.valid?1:0,alpha.valid?1:0,lateral_out.valid?1:0,
+            drag.degraded?1:0,energy.degraded?1:0,alpha.degraded?1:0,lateral_out.degraded_authority?1:0,
+            energy.saturated_lift_up?1:0,energy.saturated_bank_limit?1:0,
+            energy.protection_active?1:0,handoff_ready?1:0,admission.veto);
 
     g->entry_lateral_bank_magnitude=lateral_out.bank_magnitude_deg;
     g->entry_vertical_bank_magnitude=lateral_out.bank_magnitude_deg;

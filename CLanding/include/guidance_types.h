@@ -119,6 +119,10 @@ typedef struct {
     GuidancePhase phase; bool automation_engaged, paused, aborted;
     bool diagnostic_shadow; /* Prediction rollouts must not masquerade as live decisions. */
     bool diagnostic_stop_at_taem; /* Boundary-only entry supervision stops before MM305 route search. */
+    /* Shadow-only trace state; never read by guidance or transition decisions. */
+    double diagnostic_entry_previous_range_m;
+    unsigned diagnostic_entry_milestone_mask;
+    bool diagnostic_entry_has_previous_range;
     double s_turn_sign; double s_turn_leg_started_ut; bool has_s_turn_leg_started;
     double s_turn_reversal_requested_ut; bool has_s_turn_reversal_requested;
     EntryExecutive entry_exec; EntryLateralState entry_lateral; EntryEnergyState entry_energy; TaemExecutive taem_exec;
