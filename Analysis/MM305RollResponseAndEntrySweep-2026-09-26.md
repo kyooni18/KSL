@@ -90,3 +90,13 @@ Vehicle tracking was weaker: one live exit event occurred at cross −518 m,
 Contact failed at 61.6 m/s and 8.57 m/s sink. The direct-control moment
 coefficients are generic, not a qualified STS-N identification, so this run
 exposes a control-loop sensitivity without predicting live-KSP response.
+
+## Rejected transition change
+
+An experiment required the existing priced Final contract to pass before
+latching HAC exit. It failed: the controller stayed on the exhausted HAC
+endpoint while post-HAC runway-line conditioning was needed, and the exact
+entry crashed in TAEM at along +1819 m/cross +164 m with 8 m radar height
+(`mm305-final-contract-latch-servo-20260926T104437Z-_96_4gyu`). The change
+was removed. HAC geometry exit and Final admission are distinct boundaries;
+future MM305 work must explicitly account for the conditioning segment.
