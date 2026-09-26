@@ -210,3 +210,15 @@ so asynchronous), or (2) a conservative physical energy-excess / minimum-range
 veto consistent with the planner, with MM304 targeting a handoff range the
 vehicle can actually use. Either makes these test samples inadmissible, so
 the test's sample set must come from the real admission set.
+
+## Experiment 6: MM304 -> MM305 downstream-feasibility contract (Claude)
+
+Implemented option 1 (user decision): ownership transfers only with a
+replay-qualified MM305 route from a measured MM304 state (<= 10 s old, same
+model snapshot); MM305 adopts that route. Planner profiling now brackets the
+feasible route length by bisection (commits 37957c0, 8e65364). Test states
+from 26 km / M2.5: 28-30 km out and 70-80 km out have no route (held in
+MM304); 60 km qualifies (7.2 km HAC, 47 km lead). `make test` all green.
+Open: MM304 must target the ~45-66 km handoff window; no live or full-chain
+sim run yet with the contract; live KSP checkpoint `50km-Main` is available
+(not yet flown).
