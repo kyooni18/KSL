@@ -333,7 +333,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.replay.maximum_lateral_authority_shortfall_mps2);
         if (replay_reaches_exit(&trial.replay)) {
             fprintf(stderr,
-                "MM305_REPLAY_EXIT side=%+.0f radius=%.0f sweep=%.1f lead=%.0f refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f reason=%s\n",
+                "MM305_REPLAY_EXIT side=%+.0f radius=%.0f sweep=%.1f lead=%.0f refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f energy=%.1f reason=%s\n",
                 trial.route.side, trial.route.hac.radius_m,
                 trial.route.hac.arc_sweep_rad * 180.0 / 3.14159265358979323846,
                 trial.route.lead_length_m,
@@ -344,6 +344,9 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.replay.final_geometry.altitude_above_runway_m,
                 trial.replay.final_geometry.airspeed_mps,
                 trial.replay.final_geometry.flight_path_angle_deg,
+                trial.replay.final_state.attitude.bank_rad * 180.0 / 3.14159265358979323846,
+                trial.replay.final_state.attitude.aoa_rad * 180.0 / 3.14159265358979323846,
+                trial.replay.energy_end_j_kg,
                 trial.replay.reason ? trial.replay.reason : "none");
             finish_candidate(model, initial, &trial);
             if (candidate_reaches_target_speed(model, &trial)) return trial;

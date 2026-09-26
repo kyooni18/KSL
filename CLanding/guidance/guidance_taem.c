@@ -572,7 +572,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         if (g->mm305_route_committed && g->mm305_route_cursor+2>=g->mm305_route.count &&
             exit_distance<=700.0 && fabs(demand.course_error_deg)<=12.0) {
             fprintf(stderr,
-                "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f reason=exit-gate\n",
+                "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=exit-gate\n",
                 (unsigned long long)g->mm305_model_snapshot_id,
                 g->mm305_route.side, g->mm305_route.hac.radius_m,
                 g->mm305_route.hac.arc_sweep_rad * 180.0 / 3.14159265358979323846,
@@ -580,7 +580,11 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 g->mm305_route.count, demand.course_error_deg,
                 geometry.heading_error_deg, geometry.runway_along_m,
                 geometry.runway_cross_m, geometry.altitude_above_runway_m,
-                geometry.airspeed_mps, geometry.flight_path_angle_deg);
+                geometry.airspeed_mps, geometry.flight_path_angle_deg,
+                current.attitude.bank_rad*RAD2DEG,
+                current.attitude.aoa_rad*RAD2DEG,
+                demand.control.bank_rad*RAD2DEG,
+                demand.control.angle_of_attack_rad*RAD2DEG);
             g->mm305_hac_exit_reached=true;
             g->hac_completed=true;
             g->hac_captured=true;
