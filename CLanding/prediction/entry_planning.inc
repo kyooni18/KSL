@@ -276,7 +276,7 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             for(unsigned i=0;i<entry_witness_history_count;i++){
                 const EntryWitnessTracePoint*q=&entry_witness_history[(first+i)%8U];
                 fprintf(stderr,
-                    "ENTRY_WITNESS state ut=%.2f phase=%d h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f along=%.0f cross=%.0f bank=%.1f/%.1f aoa=%.1f/%.1f energy=%+.0f mm305Ready=%d mm305Veto=0x%x\n",
+                    "ENTRY_WITNESS state ut=%.2f phase=%d h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f along=%.0f cross=%.0f bank=%.1f/%.1f aoa=%.1f/%.1f rangeErr=%+.0f mm305Ready=%d mm305Veto=0x%x\n",
                     q->ut,q->phase,q->altitude,q->speed,q->mach,q->fpa,q->range,
                     q->along,q->cross,q->commanded_bank,q->achieved_bank,
                     q->commanded_aoa,q->achieved_aoa,q->energy_margin,

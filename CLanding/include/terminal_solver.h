@@ -23,6 +23,7 @@ typedef struct {
     double maximum_load_g;
     double maximum_cross_track_m;
     double maximum_course_error_deg;
+    double final_route_course_error_deg;
     double maximum_altitude_error_m;
     double maximum_lateral_authority_shortfall_mps2;
     double maximum_vertical_authority_shortfall_mps2;

@@ -487,6 +487,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
             fabs(demand.course_error_deg) <= 12.0) {
             reached_gate = true;
             out.final_route_index = reference_index;
+            out.final_route_course_error_deg = demand.course_error_deg;
             out.final_target_altitude_m = reference.altitude_m;
             out.final_target_flight_path_angle_deg = reference.flight_path_angle_deg;
             break;
