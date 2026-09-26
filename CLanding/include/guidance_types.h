@@ -162,6 +162,11 @@ typedef struct {
     double mm305_command_aoa_rad;
     double mm305_command_ut;
     bool mm305_command_valid;
+    /* Online TAEM elevator trim line u = a + b*AoA (exponentially weighted
+       least squares over quasi-steady samples, seeded by a prior). */
+    bool mm305_trim_initialized;
+    double mm305_trim_intercept;   /* a in u = a + b*AoA, adapted when settled */
+    double mm305_trim_last_ut;
     /* MM304 -> MM305 downstream-feasibility contract.  The physical admission
        envelope is necessary, not sufficient: ownership transfers only after
        MM305 has found a replay-qualified route from a recent measured MM304

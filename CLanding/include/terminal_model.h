@@ -35,6 +35,10 @@ typedef struct {
     AttitudeModel attitude;
     double mass_kg;
     double ut_s;
+    /* Highest AoA the TAEM pitch surfaces can hold in trim with manoeuvre
+       margin; <= 0 means no identified limit.  Carried with the state so the
+       live tracker and every replay seeded from it respect the same limit. */
+    double trim_aoa_ceiling_rad;
 } TerminalDynamicState;
 
 typedef struct {

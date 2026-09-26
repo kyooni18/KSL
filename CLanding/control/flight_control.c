@@ -836,25 +836,48 @@ bool flight_control_step_attitude(FlightControlState *state,
             (profile == PROFILE_APPROACH || profile == PROFILE_FLARE) &&
             isfinite(telemetry->radar_altitude) &&
             telemetry->radar_altitude < 700.0;
-        double ki = in_approach ? tuning->pitch_trim_ki : 0.008;
+        /* TAEM flies with the body flap removed from pitch, so the elevators
+           alone carry the static-stability trim moment (live MM305: ~0.036
+           input per degree of AoA at M2.5).  The Entry gain left a 2-3 deg
+           AoA deficit decaying over ~7 s; TAEM closes it in ~2 s. */
+        double ki = in_approach ? tuning->pitch_trim_ki :
+            (profile == PROFILE_TAEM ? 0.025 : 0.008);
+        /* Anti-windup on the total elevator demand, not just its PD part. */
+        double elevator_total = pitch_command + state->pitch_trim +
+            (profile == PROFILE_TAEM && command->has_pitch_trim_feedforward &&
+             isfinite(command->pitch_trim_feedforward) ?
+             command->pitch_trim_feedforward : 0.0);
         bool saturated_high =
-            pitch_command >= 1.0 && aerodynamic_pitch_error > 0.0;
+            elevator_total >= 1.0 && aerodynamic_pitch_error > 0.0;
         bool saturated_low =
-            pitch_command <= -1.0 && aerodynamic_pitch_error < 0.0;
+            elevator_total <= -1.0 && aerodynamic_pitch_error < 0.0;
         if (!saturated_high && !saturated_low &&
             fabs(aerodynamic_pitch_error) > 0.20)
             state->pitch_trim +=
                 ki * aerodynamic_pitch_error * control_dt;
-        double trim_min = in_approach ? -0.18 : -0.35;
-        double trim_max = in_approach ? 0.42 : 0.50;
+        /* TAEM trims on the elevators alone (body flap off), so its trim
+           range spans their real travel; guidance keeps planned incidence
+           within 0.75 of it, leaving the rest for manoeuvring. */
+        bool taem_trim = profile == PROFILE_TAEM;
+        /* With guidance's model-based elevator feedforward, the integrator
+           only trims the residual of that model. */
+        bool residual_trim = taem_trim && command->has_pitch_trim_feedforward;
+        double trim_min = in_approach ? -0.18 :
+            (residual_trim ? -0.25 : (taem_trim ? -0.60 : -0.35));
+        double trim_max = in_approach ? 0.42 :
+            (residual_trim ? 0.25 : (taem_trim ? 0.90 : 0.50));
         state->pitch_trim =
             fc_clamp(state->pitch_trim, trim_min, trim_max);
     } else {
         state->pitch_trim *= fmax(0.0, 1.0 - control_dt);
     }
     state->terminal_pitch_integral = state->pitch_trim;
+    double pitch_feedforward = profile == PROFILE_TAEM &&
+        command->has_pitch_trim_feedforward &&
+        isfinite(command->pitch_trim_feedforward) ?
+        command->pitch_trim_feedforward : 0.0;
     pitch_command =
-        fc_clamp(pitch_command + state->pitch_trim, -1.0, 1.0);
+        fc_clamp(pitch_command + pitch_feedforward + state->pitch_trim, -1.0, 1.0);
 
     /* Entry/TAEM can expose direct kRPC control to large authority changes as q
        rises. Smooth that high-energy path only. Final/flare already has an

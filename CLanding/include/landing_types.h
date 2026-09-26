@@ -241,6 +241,8 @@ typedef struct {
 typedef struct {
     double target_pitch, target_heading, target_roll, target_throttle, wheel_steering;
     bool has_target_aoa; double target_aoa;
+    /* Model-based elevator input that holds target_aoa in trim (TAEM). */
+    bool has_pitch_trim_feedforward; double pitch_trim_feedforward;
     bool gear, brakes, airbrakes, use_inertial_direction; Vector3 inertial_direction;
     bool autopilot_engaged, heading_control_enabled, hac_control_tuning, terminal_pitch_tuning; NavballSpeedMode navball_speed_mode; ControlProfile control_profile;
 } GuidanceCommand;

@@ -28,8 +28,10 @@ static const double command_envelope_fraction = 0.75;
 static double shape_attitude_command(double target, double previous,
         double measured, double rate_max, double accel_max, double wn,
         double zeta, double authority, double dt, bool wrap) {
-    if (!isfinite(target) || !(dt > 0.0)) return target;
     if (!isfinite(previous)) previous = isfinite(measured) ? measured : target;
+    if (!isfinite(target)) return target;
+    /* No physics time has passed: the command cannot move. */
+    if (!(dt > 0.0)) return previous;
     double root = sqrt(fmax(authority, 0.0));
     double rate = command_envelope_fraction * rate_max * root;
     double accel = command_envelope_fraction * accel_max * fmax(authority, 0.0);
@@ -101,7 +103,9 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
         const TaemPathReference *r, double dt) {
     TaemTrackerOutput out;
     memset(&out, 0, sizeof(out));
-    if (!m || !s || !g || !r || !(dt > 0.0) ||
+    /* dt == 0 is a repeated physics frame (guidance ran faster than KSP
+     * advanced); it holds the shaped command rather than invalidating it. */
+    if (!m || !s || !g || !r || !(dt >= 0.0) ||
         !(g->ground_speed_mps > 0.0) || !(g->airspeed_mps > 0.0) ||
         !isfinite(r->curvature_right_per_m) ||
         !isfinite(r->flight_path_angle_deg) ||
@@ -157,6 +161,8 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
         m->vehicle.terminal_maximum_lift_angle_of_attack > 0.0)
         aoa_max = fmin(aoa_max,
             m->vehicle.terminal_maximum_lift_angle_of_attack);
+    if (s->trim_aoa_ceiling_rad > 0.0)
+        aoa_max = fmin(aoa_max, degrees(s->trim_aoa_ceiling_rad));
     double bank_max = fmin(m->vehicle.maximum_bank_angle, 80.0);
     double g_limit = fmax(0.0, m->vehicle.maximum_g_load) * gravity;
     double best_error = INFINITY;
