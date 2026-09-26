@@ -26,10 +26,19 @@ static inline TaemPathReference taem_alignment_reference(
 static inline bool taem_alignment_ready(const TerminalModel *model,
         const TerminalDynamicState *state, const TaemGeometryState *geometry) {
     const double degrees_per_radian=57.29577951308232;
+    double station=-model->guidance.final_approach_distance;
+    double target_height=model->guidance.final_approach_distance*
+        tan(model->guidance.final_glide_slope/degrees_per_radian);
+    double target_speed=fmax(model->guidance.final_alignment_speed,
+        model->vehicle.touchdown_speed);
     return fabs(geometry->runway_cross_m)<0.5*model->site.runway_width &&
         fabs(geometry->heading_error_deg)<2.0 &&
         fabs(state->attitude.bank_rad*degrees_per_radian)<5.0 &&
-        fabs(state->attitude.bank_rate_rad_s*degrees_per_radian)<3.0;
+        fabs(state->attitude.bank_rate_rad_s*degrees_per_radian)<3.0 &&
+        fabs(geometry->runway_along_m-station)<=250.0 &&
+        fabs(geometry->altitude_above_runway_m-target_height)<=150.0 &&
+        fabs(geometry->airspeed_mps-target_speed)<=10.0 &&
+        fabs(geometry->flight_path_angle_deg+model->guidance.final_glide_slope)<=3.0;
 }
 
 static inline bool taem_alignment_exhausted(const TaemGeometryState *geometry) {

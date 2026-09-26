@@ -20,7 +20,7 @@ typedef struct {
     int upstream_end;          /* runway end to search when not searching both */
     bool restrict_side;        /* replan: keep the committed side */
     double side;
-    double lift_scale, drag_scale;
+    double lift_scale, drag_scale, scale_mach;
 } Mm305PlanRequest;
 
 typedef struct {
@@ -30,6 +30,7 @@ typedef struct {
     uint64_t model_snapshot_id;
     TaemFixedHacCandidate candidate;
     double solve_wall_s;
+    double scale_mach, lift_scale, drag_scale;
     char diagnostic[768];
 } Mm305PlanResult;
 

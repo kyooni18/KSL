@@ -206,19 +206,31 @@ static const TerminalModel *mm305_model_for_end(const TerminalModel *model,
     return &reciprocal;
 }
 
-/* Scale the planning model's lift/drag toward the measured vehicle.  Crude
- * (one global factor per force) but it closes the loop on model error: each
- * replan starts from the live state with the live force ratio. */
-static void mm305_scale_model(TerminalModel *m, double lift_scale, double drag_scale) {
+/* Apply each measured force ratio only near the Mach where it was observed.
+ * Live MM305 drag has a strong Mach dependence, so extrapolating one ratio
+ * across the complete table can badly misprice the low-subsonic HAC exit. */
+static double mm305_mach_scale_weight(double mach, double observed_mach) {
+    const double support_width=0.5;
+    if (!isfinite(mach) || !isfinite(observed_mach)) return 0.0;
+    return clampd(1.0-fabs(mach-observed_mach)/support_width,0.0,1.0);
+}
+
+static void mm305_scale_model(TerminalModel *m, double observed_mach,
+        double lift_scale, double drag_scale) {
     if (!(fabs(lift_scale-1.0)>1e-9) && !(fabs(drag_scale-1.0)>1e-9)) return;
-    for (size_t i=0;i<m->aero.mach_count;++i)
+    for (size_t i=0;i<m->aero.mach_count;++i) {
+        double weight=mm305_mach_scale_weight(m->aero.mach[i],observed_mach);
+        double local_lift_scale=1.0+weight*(lift_scale-1.0);
+        double local_drag_scale=1.0+weight*(drag_scale-1.0);
         for (size_t j=0;j<m->aero.alpha_count;++j) {
-            m->aero.cl[i][j]*=lift_scale;
-            m->aero.cd[i][j]*=drag_scale;
+            m->aero.cl[i][j]*=local_lift_scale;
+            m->aero.cd[i][j]*=local_drag_scale;
         }
+    }
     for (size_t i=0;i<m->aero.book_count;++i) {
-        m->aero.book[i].lift_per_q_m2*=lift_scale;
-        m->aero.book[i].drag_per_q_m2*=drag_scale;
+        double weight=mm305_mach_scale_weight(m->aero.book[i].mach,observed_mach);
+        m->aero.book[i].lift_per_q_m2*=1.0+weight*(lift_scale-1.0);
+        m->aero.book[i].drag_per_q_m2*=1.0+weight*(drag_scale-1.0);
     }
 }
 
@@ -243,6 +255,9 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     double started=mm305_wall_seconds();
     out.request_ut=request->request_ut;
     out.model_snapshot_id=request->model_snapshot_id;
+    out.scale_mach=request->scale_mach;
+    out.lift_scale=request->lift_scale;
+    out.drag_scale=request->drag_scale;
     TerminalModel *scaled=malloc(sizeof(*scaled));
     TerminalModel *reciprocal=malloc(sizeof(*reciprocal));
     if (!scaled || !reciprocal) {
@@ -251,7 +266,8 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         return out;
     }
     *scaled=*model;
-    mm305_scale_model(scaled,clampd(request->lift_scale,0.5,2.0),
+    mm305_scale_model(scaled,request->scale_mach,
+        clampd(request->lift_scale,0.5,2.0),
         clampd(request->drag_scale,0.5,2.0));
     /* Plan only incidences the TAEM elevators can hold in trim. */
     if (request->state.trim_aoa_ceiling_rad > 0.0)
@@ -328,6 +344,10 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
     r.side=g->hac_side;
     r.lift_scale=isfinite(g->mm305_lift_scale)&&g->mm305_lift_scale>0.0?g->mm305_lift_scale:1.0;
     r.drag_scale=isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?g->mm305_drag_scale:1.0;
+    AeroForces observed=aero_compute(&model->world,&model->aero,
+        r.state.position_i_m,r.state.velocity_i_mps,r.state.ut_s,r.state.mass_kg,
+        r.state.attitude.aoa_rad,r.state.attitude.bank_rad);
+    r.scale_mach=observed.mach;
     r.valid=true;
     return r;
 }
@@ -443,7 +463,8 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
     fprintf(stderr,"MM305_ROUTE {\"runwayEnd\":%d,\"side\":%.17g,"
         "\"radius\":%.17g,\"sweep\":%.17g,\"leadLength\":%.17g,\"arcLength\":%.17g,"
         "\"entry\":[%.17g,%.17g],\"center\":[%.17g,%.17g],\"exit\":[%.17g,%.17g],"
-        "\"finalDistance\":%.17g,\"replan\":%s,\"liftScale\":%.4f,\"dragScale\":%.4f,"
+        "\"finalDistance\":%.17g,\"replan\":%s,\"scaleMach\":%.3f,"
+        "\"liftScale\":%.4f,\"dragScale\":%.4f,"
         "\"solveWall\":%.3f}\n",
         candidate->runway_end,candidate->side,candidate->route.hac.radius_m,
         candidate->route.hac.arc_sweep_rad,candidate->route.lead_length_m,
@@ -452,7 +473,7 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
         candidate->route.hac.center.x,candidate->route.hac.center.y,
         candidate->route.hac.exit.x,candidate->route.hac.exit.y,
         cfg->guidance.final_approach_distance,replan?"true":"false",
-        g->mm305_lift_scale,g->mm305_drag_scale,result->solve_wall_s);
+        result->scale_mach,result->lift_scale,result->drag_scale,result->solve_wall_s);
     g->mm305_route_cursor=0;
     g->mm305_route_committed=true;
     g->mm305_hac_exit_reached=false;

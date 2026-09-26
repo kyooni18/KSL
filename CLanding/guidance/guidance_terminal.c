@@ -39,36 +39,9 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
         double projected_end_speed=NAN,conditioning_slope=NAN;
         if(!terminal_final_conditioning_reachable(g,t,course,p,aero,cfg,
                 &conditioning_energy,&projected_end_speed,&conditioning_slope)){
-            /* The contract is priced with the guidance prior, and an unpowered
-               vehicle has no abort that ends better than trying.  If the vehicle
-               is on the runway line and geometrically inside Final's steep-glide
-               envelope, hand it to Final's energy laws (moving aim point, speed
-               closure, predictive preflare) instead of aborting. */
-            double height=t->mean_altitude-cfg->site.altitude;
-            double distance=-t->runway_along_track;
-            double track_error=fabs(norm_signed_deg(course-cfg->site.runway_heading));
-            if(distance>500.0&&height>0.0&&fabs(t->runway_cross_track)<400.0&&
-               track_error<20.0&&atan2(height,distance)*RAD2DEG<38.0){
-                g->final_approach_captured=true;
-                g->taem_exec.taem_complete=true;
-                terminal_store_preflare_plan(g,&approach_plan);
-                terminal_set_stage(g,TERMINAL_OUTER_FINAL,t->ut);
-                robust_pid_reset(&g->final_altitude_pid);
-                robust_pid_reset(&g->speed_pid);
-                robust_pid_reset(&g->flare_sink_pid);
-                fprintf(stderr,"Final admitted outside the priced contract: h %.0f m at %.0f m, "
-                    "cross %.0f m, track error %.1f deg (%s).\n",height,distance,
-                    t->runway_cross_track,track_error,
-                    taem_terminal_block_reason_string(evaluation.block_reason));
-                Trajectory ref;
-                trajectory_init(&ref);
-                GuidanceResult result=terminal_approach_sequence(g,t,course,p,aero,cfg,&ref,dt);
-                trajectory_clear(&ref);
-                return result;
-            }
             char reason[320];
             snprintf(reason,sizeof(reason),
-                "Post-HAC final alignment exhausted its physical conditioning envelope: approach=%d preflare=%s terminal=%s.",
+                "Post-HAC final alignment cannot meet the priced delivery contract: approach=%d preflare=%s terminal=%s.",
                 approach?1:0,approach_plan.reject_reason?approach_plan.reject_reason:"none",
                 taem_terminal_block_reason_string(evaluation.block_reason));
             return terminal_abort(g,reason);
