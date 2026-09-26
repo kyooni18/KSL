@@ -182,11 +182,7 @@ int main(int argc,char **argv){
             }
         }
         if(rate>0){double target=sim.state.sim_elapsed_s/rate;double wall=monotonic_s()-wall0;if(target>wall)sleep_s(target-wall);}
-        if(sim.state.on_ground){
-            Vec3 surf=v3_sub(sim.state.velocity_i_mps,world_atmosphere_velocity_i(&sim.world,sim.state.position_i_m));
-            Vec3 up=v3_normalized(sim.state.position_i_m);surf=v3_sub(surf,v3_scale(up,v3_dot(surf,up)));
-            if(v3_norm(surf)<0.5)break;
-        }
+        if(sim.state.on_ground&&sim.state.stopped)break;
     }
     /* The stop condition can occur between telemetry periods. Preserve the
      * actual terminal state, not the preceding still-moving sample. No further
