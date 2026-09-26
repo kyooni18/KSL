@@ -762,7 +762,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        slow trim: capped, slew-limited, available until the Final alignment
        point and faded to stowed over the last stretch so Final and the runway
        never fly with it open. */
-    const double sb_cap=0.30, sb_slew_per_s=0.05;
+    const double sb_cap=0.50, sb_slew_per_s=0.05;
     const double sb_stow_remaining_m=500.0, sb_fade_m=2500.0;
     double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
         fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;
