@@ -488,7 +488,10 @@ static void mm305_observe_force_scale(GuidanceMachine *g, const Telemetry *t,
     if (!(g->mm305_lift_scale>0.0)) g->mm305_lift_scale=1.0;
     if (!(g->mm305_drag_scale>0.0)) g->mm305_drag_scale=1.0;
     g->mm305_lift_scale+=a*(lift_ratio-g->mm305_lift_scale);
-    g->mm305_drag_scale+=a*(drag_ratio-g->mm305_drag_scale);
+    /* The planner models the clean airframe; measured drag with the split
+       rudder open includes the brake, so the drag scale holds meanwhile. */
+    if (!(g->taem_speedbrake_fraction>0.02))
+        g->mm305_drag_scale+=a*(drag_ratio-g->mm305_drag_scale);
 }
 
 /* Acquisition law flown while no qualified route is held: head for the
@@ -658,15 +661,34 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
            different route every interval (the energy lever picks new lengths)
            and each switch kicked the tracker, producing bank/incidence spikes
            worse than the error it removed. */
+        /* Energy is closed-loop too: the plan's speed profile comes from aero
+           scales identified at plan time, and live drag varies with Mach.  When
+           the measured energy (altitude surplus counted as speed) departs the
+           plan by more than 10%, re-plan from the measured state so the route
+           (length, HAC sweep) again delivers the alignment speed. */
+        double plan_speed_now=taem_route_planned_speed(&g->mm305_route,reference.station_m);
+        double energy_ratio=NAN;
+        if (isfinite(plan_speed_now)&&plan_speed_now>1.0&&isfinite(reference.altitude_m)) {
+            double dh=end_model->site.altitude+geometry.altitude_above_runway_m-
+                reference.altitude_m;
+            energy_ratio=sqrt(fmax(0.0,geometry.airspeed_mps*geometry.airspeed_mps+
+                2.0*9.81*dh))/plan_speed_now-1.0;
+        }
+        bool energy_off_plan=isfinite(energy_ratio)&&fabs(energy_ratio)>0.10&&
+            isfinite(route_remaining)&&route_remaining>15000.0;
         if (g->mm305_route_committed && g->mm305_async_planning &&
             !g->mm305_planning_needed &&
             t->ut-g->mm305_last_plan_attempt_ut>=replan_interval_s &&
-            (fabs(demand.cross_track_error_m)>1000.0 ||
+            (energy_off_plan ||
+             fabs(demand.cross_track_error_m)>1000.0 ||
              fabs(demand.course_error_deg)>20.0 ||
              (isfinite(reference.flight_path_angle_deg) &&
               fabs(geometry.flight_path_angle_deg-reference.flight_path_angle_deg)>6.0))) {
             double remaining=taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor);
             if (isfinite(remaining) && remaining>fmax(8000.0,0.35*g->mm305_route.hac.arc_length_m)) {
+                if (energy_off_plan && !g->diagnostic_shadow)
+                    fprintf(stderr,"MM305 energy off plan by %+.0f%% with %.0f m left; re-planning.\n",
+                        100.0*energy_ratio,remaining);
                 g->mm305_planning_needed=true;
                 g->mm305_last_plan_attempt_ut=t->ut;
                 g->mm305_plan_request_ut=t->ut;
@@ -737,14 +759,15 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        (altitude surplus counted as speed) is bled with a PI on the
        speed-equivalent excess ratio; a deficit leaves the brake stowed.
        Asymmetric split-rudder drag disturbs yaw, so the brake is only a weak,
-       slow, far-field trim: capped, slew-limited, and faded to stowed well
-       before the HAC exit so Final and the runway never fly with it open. */
+       slow trim: capped, slew-limited, available until the Final alignment
+       point and faded to stowed over the last stretch so Final and the runway
+       never fly with it open. */
     const double sb_cap=0.30, sb_slew_per_s=0.05;
-    const double sb_stow_remaining_m=12000.0, sb_fade_m=8000.0;
+    const double sb_stow_remaining_m=500.0, sb_fade_m=2500.0;
     double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
         fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;
     g->taem_speedbrake_ut=t->ut;
-    double planned_speed=g->mm305_route_committed&&!g->mm305_runway_alignment_active?
+    double planned_speed=g->mm305_route_committed?
         taem_route_planned_speed(&g->mm305_route,reference.station_m):NAN;
     double sb_remaining=g->mm305_route_committed?
         taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor):NAN;
