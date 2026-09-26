@@ -117,3 +117,60 @@ body attitude and dissipative friction need discriminating tests before any
 rollout qualification. The runner additionally appears to assess an earlier
 telemetry sample; final recorded contact=true but rolloutValid=false. That
 classification inconsistency must not be used to obscure the physical defects.
+
+## Experiment 4: Final campaigns and the Final energy band (Claude)
+
+Tool: `ShuttleSim/scripts/run_final_campaign.py` (runway-relative Final
+checkpoints, mirrored cross-track pairs, simulator-truth classification,
+`--ld-band` required-L/D filter, outcome distributions and mirror asymmetry
+in `summary.json`). Profile identified, model = plant (`--nominal-plant`),
+ideal servo, no speedbrakes, seed 1, 24 cases. Required L/D is
+(target - along) / (h + (V^2 - v_td^2)/2g) with v_td 75 m/s, target 375 m.
+Campaign directories are under `ShuttleSim/campaigns/` (not committed).
+
+Mechanisms found and fixed (commits 0e389fb, 6e51dc1, 5e3386f):
+
+1. Lateral capture ignored the Final roll limiter (0.99 deg/s^2): ±300 m
+   cross-track oscillation. Median |cross| at 30 m height 249 -> 86 m.
+2. Preflare profile used s = s_sgs + sqrt(2a dh), whose required pull grows
+   without bound as sink nears the shallow-glide sink; the latch used the
+   correct s^2 = s_sgs^2 + 2a dh. Late hard pull -> balloon -> stall.
+3. Arc hold/pull switch held any flight path (including a climb) until the
+   required pull reached 0.9 of design; arc command floored at zero (no push).
+4. Linear sink blend from 25 m plus a 0.5 m/s float from 3.5 m spent ~18 s
+   near the ground; at g/(L/D) ~3 m/s^2 that is ~50 m/s of speed.
+5. Fixed outer-glide speed reference 1.6 v_td: this vehicle is drag-dominated
+   at approach speeds (L/D ~1.9-2.3 through the arc, measured), so a 0.25 g
+   arc from a 24 deg glide bled 120 -> 85 m/s before the shallow glide.
+   Replaced by a point-mass touchdown-speed prediction with learned aero and a
+   0.5 g design pull (arc loss scales with arc time).
+
+Feasible-band campaign (required L/D 2.0-3.4), HEAD 0e389fb -> 5e3386f:
+touchdown sink median 7.1 -> 2.8 m/s, speed median 43.9 -> 59.1 m/s,
+along median 668 -> 305 m, passes 0 -> 2. The C touchdown-quality fixture
+(direct FCS) fails at 0e389fb and passes at 5e3386f (sink 1.86 m/s,
+62.3 m/s, along 1293 m).
+
+Outcome versus required L/D (both bands, current code):
+
+| Required L/D | Outcome |
+|---|---|
+| <= 1.6 | energy excess: lands 1300-1560 m or overruns (needs MM305 path lengthening) |
+| ~1.8-2.25 | only band reaching the zone at gate speed; flare quality inconsistent |
+| >= 2.3 | energy-short: touchdown 46-62 m/s |
+
+Implication for the MM305 -> Final contract: without speedbrakes the usable
+Final energy band is narrow; MM305 must deliver required L/D ~1.8-2.25, and
+states outside it are infeasible-initial-state, not Final guidance failures.
+The nominal handoff fixture (3.5 km, 20 deg, 185 m/s) needs L/D ~1.4.
+
+Open: flare ringing (incidence lag ~1.7 s from pitch wn 1.5, zeta 1.3, 5.9
+deg/s rate limit vs a 1 s flare time constant); lateral capture for |cross|
+> ~100 m at 3-7 km; a measured-acceleration sink lead was tried and rejected
+(p90 sink 9.3 m/s, mirror asymmetry 14 m/s). Not yet run: model != plant
+dispersions, direct FCS campaigns.
+
+Build hygiene: `build/sim.o`/`scenario.o` lacked header dependency tracking,
+so the touchdown fixture linked a stale AeroTable layout (e3fa2cb).
+`mm305-feasibility-test` fails identically on clean HEAD ("2/2 admitted
+states have no qualified route") - pre-existing, not caused by this work.
