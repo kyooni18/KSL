@@ -135,6 +135,7 @@ static double terminal_learned_max_lift_to_drag(const GuidanceMachine*g,const Te
 
 typedef struct {
     double arrest_accel,sgs_height,sgs_sink,final_accel,float_height,float_sink,lift_ratio,aoa_max,g0;
+    const PlanetModel*planet;double site_altitude;
 } TerminalFlarePlan;
 
 /*
@@ -154,8 +155,13 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
     double m=fmax(t->mass,1.0);
     double sound=isfinite(t->mach)&&t->mach>.05&&isfinite(t->true_air_speed)?
         t->true_air_speed/t->mach:340.0;
-    double rho=isfinite(t->atmospheric_density)&&t->atmospheric_density>0.0?
+    double rho_now=isfinite(t->atmospheric_density)&&t->atmospheric_density>0.0?
         t->atmospheric_density:2.0*fmax(t->dynamic_pressure,1.0)/fmax(V*V,1.0);
+    /* Anchor on the measured density and speed of sound and carry them down
+       with the planet's atmosphere profile: from a few kilometres up the
+       air near the runway is tens of percent denser, and so draggier. */
+    double rho_model_now=p->planet?planet_atmospheric_density(p->planet,p->site_altitude+height):NAN;
+    double sound_model_now=p->planet?planet_atmospheric_speed_of_sound(p->planet,p->site_altitude+height):NAN;
     double sin_glide=clampd(sink/fmax(V,1.0),-.95,.95);
     const double DT=.25,TAU=1.5;
     for(int i=0;i<1200&&height>0.0&&V>5.0;++i){
@@ -171,7 +177,12 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
                 -.3*p->g0,1.5*p->g0);
         }else sink=V*sin_glide;
         double gamma=-asin(clampd(sink/V,-.95,.95));
-        tc.mach=V/sound;tc.dynamic_pressure=.5*rho*V*V;
+        double rho=rho_now,a=sound;
+        if(rho_model_now>0.0&&sound_model_now>0.0){
+            rho*=planet_atmospheric_density(p->planet,p->site_altitude+height)/rho_model_now;
+            a*=planet_atmospheric_speed_of_sound(p->planet,p->site_altitude+height)/sound_model_now;
+        }
+        tc.mach=V/a;tc.dynamic_pressure=.5*rho*V*V;
         double lift=m*(accel_up+p->g0*cos(gamma))/fmax(p->lift_ratio,.3);
         double aoa=terminal_aoa_for_lift(g,&tc,v,fmax(0.0,lift),p->aoa_max);
         double L=0.0,D=0.0;terminal_aero_q(g,&tc,v,aoa,&L,&D);
@@ -370,7 +381,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double predicted_touchdown_speed=NAN;
     if(!g->terminal_pull_latch){
         TerminalFlarePlan plan={arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL,H_FLOAT,S_FLOAT,
-            g->terminal_lift_ratio,aoa_max,g0};
+            g->terminal_lift_ratio,aoa_max,g0,p,site->altitude};
         predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&plan);
         speed_ref=fmax(1.3*fmax(speed_1g,v_td),
             sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed)));
@@ -435,15 +446,22 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            arrested high and holds level at the shallow-glide height only
            bleeds the float speed until it stalls onto the runway.  Near the
            ground it is never a reason to push over. */
-        const double NO_PUSH_HEIGHT=3.0*H_FLOAT;
-        double profile_sink=terminal_sink_profile(height,float_height,float_sink,
+        /* Sink is tracked directly (feedforward plus sink error over a 1 s
+           time constant), with the profile read one second of sink ahead:
+           the final flare lasts only a few seconds, so a gamma loop with a
+           2 s time constant behind a 1.5 s incidence lag starts the arrest
+           after the flare is already over and the mains hit at the
+           shallow-glide sink. */
+        const double NO_PUSH_HEIGHT=3.0*H_FLOAT,FLARE_TAU=1.0,FLARE_LEAD=1.0;
+        double lead_height=fmax(0.0,height-fmax(0.0,sink)*FLARE_LEAD);
+        double profile_sink=terminal_sink_profile(lead_height,float_height,float_sink,
             arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL);
         double reference_sink=height>NO_PUSH_HEIGHT?profile_sink:
-            fmin(profile_sink,fmax(float_sink,sink_now));
+            fmin(profile_sink,fmax(float_sink,sink));
+        double flare_top=terminal_final_flare_height(float_height,float_sink,FINAL_FLARE_ACCEL,SGS_SINK);
+        double ff=lead_height>float_height&&lead_height<=flare_top&&sink>float_sink?FINAL_FLARE_ACCEL:0.0;
+        arc_accel=ff+(sink-reference_sink)/FLARE_TAU;
         reference_fpa=fmax(glide_fpa,-asin(fmin(.95,reference_sink/V)));
-        if(height>float_height&&height<=terminal_final_flare_height(float_height,float_sink,
-               FINAL_FLARE_ACCEL,SGS_SINK))
-            sink_rate_ff=FINAL_FLARE_ACCEL/(V*fmax(.3,cos(reference_fpa)));
     }
     double reference_sink=V*sin(reference_fpa);
     double measured_gamma_rate=isfinite(t->lift_force)?
