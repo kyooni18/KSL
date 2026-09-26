@@ -415,9 +415,10 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         if (diagnostics && strcmp(diagnostics, "2") == 0 &&
             step % (size_t)fmax(1.0, round(2.5 / dt)) == 0)
             fprintf(stderr,
-                "TAEM replay trace: t=%.1f idx=%zu along=%.0f cross=%.0f h=%.0f course=%.1f ref=%.1f kappa=%.3g xt=%.0f crsErr=%.1f fpa=%.1f refFpa=%.1f bank=%.1f cmdBank=%.1f aoa=%.1f cmdAoa=%.1f\n",
+                "TAEM replay trace: t=%.1f idx=%zu along=%.0f cross=%.0f h=%.0f V=%.1f course=%.1f ref=%.1f kappa=%.3g xt=%.0f crsErr=%.1f fpa=%.1f refFpa=%.1f bank=%.1f cmdBank=%.1f aoa=%.1f cmdAoa=%.1f\n",
                 elapsed, reference_index, geometry.runway_along_m,
                 geometry.runway_cross_m, geometry.altitude_above_runway_m,
+                geometry.airspeed_mps,
                 geometry.course_deg, reference.course_deg,
                 reference.curvature_right_per_m, demand.cross_track_error_m,
                 demand.course_error_deg, geometry.flight_path_angle_deg,
