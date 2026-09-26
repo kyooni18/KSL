@@ -1,0 +1,27 @@
+# MM305 turn-margin and command-continuity experiment
+
+All runs used ShuttleSim `engageHACTest`, the simulator transport, fresh simulator UDP ports, `--no-mirror`, and no replay archive. No live KSP session or kRPC endpoint was touched. The four cardinal cases start 8 km from the runway threshold at 10 km altitude, 180 m/s airspeed and −8° flight-path angle, heading toward the threshold. The nominal case starts about 60 km west at 26 km and Mach 2.6. These are synthetic handoff probes, not recorded MM304 states.
+
+## Mechanism and change
+
+The tracker already imposed a Mach-dependent AoA cap (28° at high Mach, 15° subsonic), but route ranking did not price control reserve. Native replay now records commanded AoA, lateral authority use, combined bank/AoA turn burden, and bank-target reversals. Candidate comparison uses tracking and turn burden where predicted exit-speed deficits differ by at most 1 m/s, or where both candidates reach the configured speed target. A larger deficit remains significant to an unpowered vehicle. No geometry, admission, or Final gate was weakened.
+
+The largest observed control discontinuity was in the **bank target**, not the simulated attitude: at one 90° inlet tick it fell from 63.2° to 8.9° while measured bank stayed near 64°. The shared MM305 tracker now slews its bank target at five times the identified maximum physical roll rate. Native replay carries the prior requested bank in its propagated attitude state; live guidance carries the prior issued bank target in MM305 state. Actual roll remains bounded by ShuttleSim's normal attitude dynamics.
+
+## Committed-code ShuttleSim sweep
+
+The maximum consecutive 0.1 s bank-target jump fell from 33.8°–69.5° in the earlier five runs to 6.23° in every committed-code run. Measured heading changed by at most 0.91° per 0.1 s in the committed-code sweep. The table evaluates **MM305 HAC and runway alignment**, not touchdown or rollout.
+
+| Entry heading | MM305 aligned exit: along / cross | Exit altitude / airspeed | Exit bank | Commanded-bank reversals | MM305 route adoptions |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Nominal 90° high energy | −2982 / +14 m | 1585 m / 148.2 m/s | +0.04° | 2 | 1 |
+| 0° | −2959 / −21 m | 1567 m / 141.8 m/s | −0.64° | 1 | 1 |
+| 180° | −3056 / −17 m | 1632 m / 140.2 m/s | −2.89° | 1 | 1 |
+| 90° low energy | −3055 / +18 m | 1653 m / 117.6 m/s | +1.03° | 2 | 2 |
+| 270° | −3018 / −13 m | 1611 m / 129.1 m/s | −0.74° | 0 | 1 |
+
+The 90° low-energy inlet still releases its initial route and adopts another. It also has two bank-sign reversals. This remains a guidance/route-selection limitation; the smooth bank target alone does not prove smooth route ownership. All five states reached a measured runway-line alignment state with bank under 3°. The 90° exit airspeed is materially below the configured 160 m/s preference. Final approach and landing results are intentionally excluded from MM305 acceptance in this experiment.
+
+A slower target slew at twice the physical roll rate was rejected: the 0° case diverged and spent too much energy before alignment. Replaying candidate routes at 0.1 s instead of 0.5 s was also rejected after the 90° case selected a different route and needed more recovery. A fully weighted speed/turn score preferred a lower-energy 90° route but still needed repeated replanning. The committed comparison keeps predicted exit-energy differences above 1 m/s decisive.
+
+Focused `taem-native-stack-test` and `mm305-recovery-monitor-test` pass, including a new tracker command-continuity assertion. Relevant commits: `2cc4cba`, `33b4933`.
