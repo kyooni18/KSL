@@ -40,7 +40,7 @@ static bool perform_time_warp(LandingController*c,const Telemetry*t,char*err,siz
     double lead=fmax(0.0,c->configuration.guidance.minimum_planning_lead_time);
     double target=burn_start-lead;
     if(target<=t->ut+lead){c->time_warp_issued=true;return true;}
-    krpc_safe(c->session);
+    krpc_neutralize(c->session);
     c->time_warp_issued=true;
     snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Time-warping to 100 seconds before the planned deorbit burn.");
     char reason[192];snprintf(reason,sizeof(reason),"event=time-warp-start; from_ut=%.9g; target_ut=%.9g",t->ut,target);log_state_event(c,reason,true);publish(c);

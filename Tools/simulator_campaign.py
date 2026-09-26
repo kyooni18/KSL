@@ -288,7 +288,7 @@ def main() -> int:
     sim_record = run_dir / "simulator-telemetry.jsonl"
     sim_stderr = (run_dir / "simulator.log").open("w", encoding="utf-8")
     backend_stderr = (run_dir / "guidance.log").open("w", encoding="utf-8")
-    mirror = ROOT / "Runtime/WebTelemetry/controller-snapshot.json"
+    mirror = run_dir / "controller-snapshot.json"
     run_meta = ROOT / "Runtime/WebTelemetry/simulator-run.json"
 
     manifest: dict[str, Any] = {
@@ -410,6 +410,7 @@ def main() -> int:
         else:
             os.environ.pop("KSP_LANDER_MM305_FIXED_HAC", None)
         os.environ["KSP_LANDER_ROOT"] = str(ROOT)
+        os.environ["KSP_LANDER_CAMPAIGN_IDENTITY"] = f"sim:{run_id}"
         os.environ["KSP_LANDER_SIM_PUBLISH_HZ"] = f"{args.publish_hz:g}"
         recorder = SnapshotRecorder(run_dir, mirror, manifest)
         # BackendProcess inherits stderr; redirecting it requires launching a small

@@ -183,11 +183,20 @@
       <div id="sim-history-list" class="sim-history-list"><div class="sim-history-empty">Loading runs…</div></div>
     </div>
 
+    <div id="ksp-history-panel" class="sim-history-panel playback-history" hidden>
+      <div class="sim-history-head">
+        <div><b>KSP FLIGHT HISTORY</b><span id="ksp-history-count" class="muted"></span></div>
+        <button id="ksp-history-close" type="button" aria-label="Close KSP flight history">×</button>
+      </div>
+      <div id="ksp-history-list" class="sim-history-list"><div class="sim-history-empty">Loading runs…</div></div>
+    </div>
+
     <div class="playback-shell">
       <div class="playback-summary">
         <button id="sim-replay-live" class="playback-live active" type="button" aria-pressed="true">
           <span class="playback-live-dot"></span><span>LIVE KSP</span>
         </button>
+        <button id="ksp-history-open" class="playback-runs" type="button" aria-pressed="false">KSP REPLAY</button>
         <button id="sim-history-open" class="playback-runs" type="button" aria-pressed="false">SIM REPLAY</button>
         <div class="playback-context">
           <strong id="playback-run-name">LIVE KSP TELEMETRY</strong>

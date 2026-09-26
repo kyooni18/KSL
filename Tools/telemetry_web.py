@@ -92,6 +92,147 @@ ORBIT_TRAJECTORY_SAMPLE_COUNT = 73
 ORBIT_TRAJECTORY_REFRESH_SECONDS = 2.0
 ORBIT_TRAJECTORY_THRUST_EPSILON = 1.0
 
+_SIM_BACKEND_PID_CACHE_AT = 0.0
+_SIM_BACKEND_PID_CACHE: set[int] = set()
+
+
+def simulator_backend_pids(root: Path) -> set[int]:
+    """Return backend PIDs owned by recorded ShuttleSim runs."""
+    global _SIM_BACKEND_PID_CACHE_AT, _SIM_BACKEND_PID_CACHE
+    now = time.monotonic()
+    if now - _SIM_BACKEND_PID_CACHE_AT < 60.0:
+        return _SIM_BACKEND_PID_CACHE
+    pids: set[int] = set()
+    manifests = [root / "Runtime" / "WebTelemetry" / "simulator-run.json"]
+    archived = sorted(
+        (root / "ShuttleSim" / "runs").glob("*/manifest.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )[:256]
+    manifests.extend(archived)
+    for path in manifests:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(value, dict):
+            continue
+        try:
+            pid = int(value.get("backendPid"))
+        except (TypeError, ValueError):
+            continue
+        if pid > 0:
+            pids.add(pid)
+    _SIM_BACKEND_PID_CACHE = pids
+    _SIM_BACKEND_PID_CACHE_AT = now
+    return pids
+
+
+def log_session_pid(path: Path) -> int | None:
+    try:
+        with _open_jsonl_file(path) as handle:
+            for _ in range(4):
+                raw = handle.readline()
+                if not raw:
+                    break
+                try:
+                    record = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(record, dict):
+                    continue
+                session_id = record.get("sessionId")
+                if not isinstance(session_id, str):
+                    continue
+                match = re.search(r"-(\d+)-\d+$", session_id)
+                if match:
+                    return int(match.group(1))
+    except (OSError, UnicodeError):
+        return None
+    return None
+
+
+def vehicle_log_reports_control(path: Path) -> bool | None:
+    """Identify live KSP vehicle logs without relying on process/PID history."""
+    try:
+        with _open_jsonl_file(path) as handle:
+            for index, raw in enumerate(handle):
+                if index >= 256:
+                    break
+                try:
+                    record = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(record, dict):
+                    continue
+                fields = record.get("fields")
+                if not isinstance(fields, dict):
+                    continue
+                applied = fields.get("appliedControl")
+                if not isinstance(applied, dict):
+                    continue
+                available = applied.get("reportedAvailable")
+                if isinstance(available, bool):
+                    return available
+    except (OSError, UnicodeError):
+        return None
+    return None
+
+
+def paired_vehicle_log(root: Path, path: Path, session: dict[str, Any] | None = None) -> Path | None:
+    if "-vehicle" in path.name:
+        return path
+    peer = session.get("peer") if isinstance(session, dict) and isinstance(session.get("peer"), dict) else {}
+    value = peer.get("path")
+    if isinstance(value, str) and value:
+        candidate = Path(value).expanduser()
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        if candidate.is_file():
+            return candidate
+        compressed = Path(str(candidate) + ".gz")
+        if compressed.is_file():
+            return compressed
+    name = re.sub(r"-planner(?:-\d{3})?\.jsonl(?:\.gz)?$", "-vehicle.jsonl", path.name)
+    candidate = path.with_name(name)
+    if candidate.is_file():
+        return candidate
+    compressed = Path(str(candidate) + ".gz")
+    return compressed if compressed.is_file() else None
+
+
+def log_is_simulator(root: Path, path: Path) -> bool:
+    session: dict[str, Any] | None = None
+    try:
+        with _open_jsonl_file(path) as handle:
+            for _ in range(4):
+                raw = handle.readline()
+                if not raw:
+                    break
+                try:
+                    record = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(record, dict) or record.get("recordType") != "sessionStart":
+                    continue
+                session = record
+                identity = str(record.get("campaignIdentity") or "").lower()
+                if identity.startswith("sim:") or identity.startswith("shuttlesim:"):
+                    return True
+                break
+    except (OSError, UnicodeError):
+        return False
+
+    vehicle_path = paired_vehicle_log(root, path, session)
+    if vehicle_path is not None:
+        control_available = vehicle_log_reports_control(vehicle_path)
+        if control_available is not None:
+            # Native live KSP exposes applied-control feedback. ShuttleSim does not.
+            return not control_available
+
+    pid = log_session_pid(path)
+    return pid is not None and pid in simulator_backend_pids(root)
+
 
 def actual_trajectory_history_path(root: Path) -> Path:
     return root / "Runtime" / "WebTelemetry" / "actual-trajectory.json"
@@ -173,8 +314,11 @@ def load_actual_trajectory_from_vehicle_log(root: Path, current: dict[str, Any])
     current_point = normalize_actual_trajectory_point(current)
     if current_point is None:
         return []
-    candidates = sorted((root / "FlightLogs").glob("*-vehicle.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)
-    for path in candidates[:8]:
+    candidates = [
+        path for path in sorted((root / "FlightLogs").glob("*-vehicle.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)
+        if not log_is_simulator(root, path)
+    ][:8]
+    for path in candidates:
         fields: dict[str, Any] = {}
         points: list[dict[str, float]] = []
         try:
@@ -467,6 +611,11 @@ def _terminal_phase(value: Any) -> bool:
     return any(token in phase for token in ("TAEM", "HAC", "FINAL", "PREFLARE", "FLARE", "TOUCHDOWN", "ROLLOUT"))
 
 
+def _entry_interface_phase(value: Any) -> bool:
+    phase = " ".join(str(value or "").upper().replace("_", " ").replace("-", " ").split())
+    return "ENTRY INTERFACE" in phase
+
+
 def _displayable_entry_prediction(exact: dict[str, Any],
                                   predicted: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Expose only trajectory geometry backed by the current executable MM304 plan.
@@ -511,6 +660,12 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
     reference = _trajectory_points(exact.get("referenceTrajectory"))
     if predicted is None and reference is None:
         return False
+
+    entry_interface = _entry_interface_phase(exact.get("phase"))
+    observer_prediction = _trajectory_points(snapshot.get("predictedTrajectory")) or []
+    observer_plan = _trajectory_points(snapshot.get("plannedTrajectory")) or []
+    displayed_prediction: list[dict[str, Any]] = []
+
     if predicted is not None:
         exact_guidance = exact.get("guidanceState")
         exact_entry_plan_ready = (
@@ -518,6 +673,12 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
             and not _terminal_phase(exact.get("phase"))
         )
         displayed_prediction = _displayable_entry_prediction(exact, predicted)
+        # The exact controller mirror serializes empty trajectory arrays while
+        # ENTRY INTERFACE is still owned by the orbital/entry planner. Preserve
+        # the fresh live follower forecast instead of erasing it with that empty
+        # transport field.
+        if entry_interface and len(displayed_prediction) < 2 and len(predicted) < 2 and len(observer_prediction) >= 2:
+            displayed_prediction = copy.deepcopy(observer_prediction)
         snapshot["predictedTrajectory"] = displayed_prediction
         if len(displayed_prediction) < 2 and len(predicted) >= 2:
             # Keep rejected/stale forecast geometry available to the archive
@@ -542,8 +703,28 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
             if len(reference) >= 2:
                 snapshot["replayCandidateTrajectory"] = reference
             snapshot["referenceTrajectory"] = []
-            if reference or _terminal_phase(exact.get("phase")):
+            # During active Entry/MM304, an uncommitted reference is still useful
+            # operator intent. Do not let certification status erase the feasible
+            # guidance path; terminal phases continue to own strict reference display.
+            if _terminal_phase(exact.get("phase")):
                 snapshot["plannedTrajectory"] = []
+
+    if entry_interface:
+        current_plan = _trajectory_points(snapshot.get("plannedTrajectory")) or []
+        if len(current_plan) < 2:
+            # ENTRY INTERFACE precedes MM304's terminal-ready plan contract, but
+            # it still has a real live atmospheric trajectory. Prefer a selected
+            # follower plan, then the exact controller forecast, then the fresh
+            # follower forecast. This is display-only and does not relax guidance
+            # admission or handoff gates.
+            entry_plan = observer_plan
+            if len(entry_plan) < 2 and predicted is not None and len(predicted) >= 2:
+                entry_plan = predicted
+            if len(entry_plan) < 2 and len(observer_prediction) >= 2:
+                entry_plan = observer_prediction
+            if len(entry_plan) >= 2:
+                snapshot["plannedTrajectory"] = copy.deepcopy(entry_plan)
+
     tick_sequence = optional_number(exact.get("tickSequence"))
     if tick_sequence is not None:
         snapshot["trajectoryRevision"] = int(tick_sequence)
@@ -551,8 +732,8 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
 
 
 def newest_planner_log(root: Path) -> Path | None:
-    logs = list((root / "FlightLogs").glob("*-planner.jsonl"))
-    return max(logs, key=lambda path: path.stat().st_mtime, default=None)
+    logs = sorted((root / "FlightLogs").glob("*-planner*.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)
+    return next((path for path in logs if not log_is_simulator(root, path)), None)
 
 
 def _committed_plan_path(record: dict[str, Any], current: dict[str, Any]) -> list[dict[str, Any]]:
@@ -581,10 +762,10 @@ def _committed_plan_path(record: dict[str, Any], current: dict[str, Any]) -> lis
 
 def candidate_path(record: dict[str, Any]) -> list[dict[str, Any]]:
     current_value = record.get("currentPlan")
-    if not _entry_plan_displayable(current_value):
-        # Historical planner traces may contain local/diagnostic candidates even
-        # when terminal delivery was not proven. Never render those as PLAN.
+    if not isinstance(current_value, dict) or current_value.get("valid") is not True:
         return []
+    # currentPlan is the command path guidance is actually flying now. It does
+    # not need terminalReady/TAEM certification to be useful on the operator map.
     current = current_value
     trace = record.get("plannerTrace")
     if isinstance(trace, dict):
@@ -630,7 +811,12 @@ class PlannerFollower:
         self.latest: dict[str, Any] = {}
         self.prediction: list[dict[str, Any]] = []
         self.planned: list[dict[str, Any]] = []
+        # Best non-empty trajectory seen in the current live planner lineage.
+        # Unlike a certified PLAN, this is allowed to be provisional: it exists
+        # so the operator can see what guidance is actually trying to fly.
+        self.feasible: list[dict[str, Any]] = []
         self.trajectory_revision = 0
+        self.configuration: dict[str, Any] = {}
         self.last_record_wall = 0.0
 
     def poll(self) -> None:
@@ -643,7 +829,9 @@ class PlannerFollower:
             self.latest = {}
             self.prediction = []
             self.planned = []
+            self.feasible = []
             self.trajectory_revision = 0
+            self.configuration = {}
             self.last_record_wall = 0.0
         try:
             size = path.stat().st_size
@@ -653,7 +841,9 @@ class PlannerFollower:
                 self.latest = {}
                 self.prediction = []
                 self.planned = []
+                self.feasible = []
                 self.trajectory_revision = 0
+                self.configuration = {}
             with path.open("r", encoding="utf-8") as handle:
                 handle.seek(self.offset)
                 for raw in handle:
@@ -663,21 +853,77 @@ class PlannerFollower:
                         continue
                     if not isinstance(record, dict):
                         continue
+                    if record.get("recordType") == "sessionStart":
+                        session_configuration = record.get("configuration")
+                        if isinstance(session_configuration, dict):
+                            self.configuration = copy.deepcopy(session_configuration)
                     self.latest = record
                     self.last_record_wall = time.time()
                     if record.get("trajectoryIncluded"):
                         published = record.get("publishedPrediction")
+                        raw_prediction = record.get("rawPrediction")
                         if isinstance(published, list):
                             self.prediction = [item for item in published if isinstance(item, dict)]
-                        # A trajectory-bearing planner record is an authoritative snapshot of
-                        # both propagated prediction and selected-plan geometry. An explicit
-                        # empty candidate set therefore clears stale PLAN geometry just like an
-                        # explicit empty publishedPrediction clears PRED.
+
+                        # PLAN certification is intentionally not a visibility gate.
+                        # Keep the newest non-empty forecast as the current feasible
+                        # guidance path. Empty predictor publications do not erase it;
+                        # a later non-empty publication replaces it immediately.
+                        published_points = [
+                            item for item in published if isinstance(item, dict)
+                        ] if isinstance(published, list) else []
+                        raw_points = [
+                            item for item in raw_prediction if isinstance(item, dict)
+                        ] if isinstance(raw_prediction, list) else []
+                        feasible = published_points if len(published_points) >= 2 else raw_points
+                        if len(feasible) >= 2:
+                            self.feasible = copy.deepcopy(feasible)
+
                         self.planned = candidate_path(record)
                         self.trajectory_revision += 1
                 self.offset = handle.tell()
         except OSError:
             return
+
+    def current_guidance_path(self, telemetry: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return the best available path guidance is presently trying to fly."""
+        source = self.planned if len(self.planned) >= 2 else self.feasible
+        if len(source) < 2:
+            return []
+
+        current_ut = optional_number(telemetry.get("ut"))
+        future: list[dict[str, Any]] = []
+        if current_ut is None:
+            future = [copy.deepcopy(point) for point in source if isinstance(point, dict)]
+        else:
+            for point in source:
+                if not isinstance(point, dict):
+                    continue
+                point_ut = optional_number(point.get("ut"))
+                if point_ut is None or point_ut >= current_ut - 0.25:
+                    future.append(copy.deepcopy(point))
+
+        if not future:
+            return []
+
+        latitude = optional_number(telemetry.get("latitude"))
+        longitude = optional_number(telemetry.get("longitude"))
+        if latitude is not None and longitude is not None:
+            live_point: dict[str, Any] = {
+                "latitude": latitude,
+                "longitude": longitude,
+                "ut": current_ut,
+                "phase": "CURRENT GUIDANCE",
+            }
+            altitude = optional_number(telemetry.get("meanAltitude"))
+            speed = optional_number(telemetry.get("trueAirSpeed"))
+            if altitude is not None:
+                live_point["altitude"] = altitude
+            if speed is not None:
+                live_point["speed"] = speed
+            future.insert(0, live_point)
+
+        return future if len(future) >= 2 else []
 
     @property
     def fresh(self) -> bool:
@@ -856,13 +1102,9 @@ def build_orbital_trajectory(
     }
 
 
-def read_controller_mirror(root: Path, max_age: float | None = 1.5) -> dict[str, Any] | None:
-    """Read the display-only exact backend snapshot mirror.
-
-    Live mode requires freshness. Simulator/replay mode may intentionally retain
-    the final frame after the producer exits, so max_age=None disables freshness
-    rejection while keeping the exact same snapshot schema.
-    """
+def read_controller_mirror(root: Path, max_age: float | None = 1.5,
+                           allow_simulation: bool = False) -> dict[str, Any] | None:
+    """Read the exact backend mirror without crossing source domains."""
     path = root / "Runtime" / "WebTelemetry" / "controller-snapshot.json"
     try:
         if max_age is not None and time.time() - path.stat().st_mtime > max_age:
@@ -872,6 +1114,13 @@ def read_controller_mirror(root: Path, max_age: float | None = 1.5) -> dict[str,
         return None
     if not isinstance(value, dict):
         return None
+    if not allow_simulation:
+        simulation = value.get("simulation") if isinstance(value.get("simulation"), dict) else {}
+        server = value.get("server") if isinstance(value.get("server"), dict) else {}
+        source = str(server.get("source") or "").lower()
+        mode = str(server.get("mode") or "").lower()
+        if simulation.get("active") is True or server.get("simulation") is True or mode == "simulator" or "shuttlesim" in source:
+            return None
     if max_age is not None:
         generated_at = optional_number(value.get("generatedAt"))
         if generated_at is None or time.time() - generated_at > max_age:
@@ -1999,6 +2248,358 @@ def load_simulation_replay(root: Path, run_id: str, max_frames: int = 600) -> di
     return {"run": manifest, "frames": compact, "simulatorFrames": simulator_frames}
 
 
+
+_LIVE_PLANNER_NAME_RE = re.compile(r"^(?P<run>.+)-planner(?:-(?P<segment>\d{3}))?\.jsonl(?:\.gz)?$")
+
+
+def _jsonl_first_dict(path: Path) -> dict[str, Any] | None:
+    try:
+        with _open_jsonl_file(path) as handle:
+            for raw in handle:
+                if not raw.strip():
+                    continue
+                try:
+                    value = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                return value if isinstance(value, dict) else None
+    except OSError:
+        return None
+    return None
+
+
+def _ksp_run_id_from_planner(path: Path) -> str | None:
+    match = _LIVE_PLANNER_NAME_RE.match(path.name)
+    return match.group("run") if match else None
+
+
+def _resolve_live_log_path(root: Path, value: Any, fallback: Path) -> Path:
+    candidates: list[Path] = []
+    if isinstance(value, str) and value:
+        raw = Path(value).expanduser()
+        candidates.append(raw if raw.is_absolute() else root / raw)
+    candidates.append(fallback)
+    for candidate in list(candidates):
+        if candidate.suffix == ".gz":
+            candidates.append(candidate.with_suffix(""))
+        else:
+            candidates.append(Path(str(candidate) + ".gz"))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return fallback
+
+
+def _ksp_run_descriptor(root: Path, run_id: str) -> tuple[dict[str, Any], list[Path], Path] | None:
+    if not run_id or "/" in run_id or "\\" in run_id or run_id in {".", ".."}:
+        return None
+    log_root = root / "FlightLogs"
+    planner_paths = list(log_root.glob(f"{run_id}-planner*.jsonl")) + list(log_root.glob(f"{run_id}-planner*.jsonl.gz"))
+    if not planner_paths:
+        return None
+    planner_paths = [path for path in planner_paths if _ksp_run_id_from_planner(path) == run_id]
+    planner_paths.sort(key=lambda path: (0 if "-planner.jsonl" in path.name else 1, path.name))
+    session: dict[str, Any] | None = None
+    session_path: Path | None = None
+    for path in planner_paths:
+        first = _jsonl_first_dict(path)
+        if not isinstance(first, dict) or first.get("recordType") != "sessionStart":
+            continue
+        if log_is_simulator(root, path):
+            return None
+        if session is None or int(first.get("rotationIndex") or 0) == 0:
+            session = first
+            session_path = path
+        if int(first.get("rotationIndex") or 0) == 0:
+            break
+    if session is None or session_path is None:
+        return None
+    peer = session.get("peer") if isinstance(session.get("peer"), dict) else {}
+    vehicle_path = _resolve_live_log_path(
+        root,
+        peer.get("path"),
+        log_root / f"{run_id}-vehicle.jsonl",
+    )
+    return session, planner_paths, vehicle_path
+
+
+def _live_run_started_at(run_id: str, session: dict[str, Any], path: Path) -> float:
+    started = session.get("startedUTC")
+    if isinstance(started, str) and started:
+        try:
+            return datetime.datetime.fromisoformat(started.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            pass
+    return _extract_run_timestamp(run_id, {}, path)
+
+
+def list_ksp_runs(root: Path, limit: int = 250) -> list[dict[str, Any]]:
+    log_root = root / "FlightLogs"
+    try:
+        planner_candidates = list(log_root.glob("*-planner.jsonl")) + list(log_root.glob("*-planner.jsonl.gz"))
+    except OSError:
+        return []
+    planner_candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for path in planner_candidates:
+        run_id = _ksp_run_id_from_planner(path)
+        if not run_id or run_id in seen or log_is_simulator(root, path):
+            continue
+        descriptor = _ksp_run_descriptor(root, run_id)
+        if descriptor is None:
+            continue
+        session, planner_paths, vehicle_path = descriptor
+        seen.add(run_id)
+        started_at = _live_run_started_at(run_id, session, path)
+        started_dt = datetime.datetime.fromtimestamp(started_at, tz=datetime.timezone.utc) if started_at > 0 else None
+        try:
+            modified = max(item.stat().st_mtime for item in [*planner_paths, vehicle_path] if item.is_file())
+        except (OSError, ValueError):
+            modified = started_at
+        state = "running" if modified and time.time() - modified < 8.0 else "finished"
+        replay_bytes = 0
+        for item in [*planner_paths, vehicle_path]:
+            try:
+                if item.is_file():
+                    replay_bytes += item.stat().st_size
+            except OSError:
+                pass
+        result.append({
+            "runId": run_id,
+            "sourceMode": "ksp",
+            "state": state,
+            "mode": "live-ksp",
+            "scenario": "LIVE KSP",
+            "vessel": session.get("vessel"),
+            "campaignIdentity": session.get("campaignIdentity"),
+            "startedAt": started_at if started_at > 0 else None,
+            "startedAtISO": started_dt.isoformat() if started_dt else None,
+            "date": started_dt.strftime("%Y-%m-%d") if started_dt else None,
+            "time": started_dt.strftime("%H:%M:%S UTC") if started_dt else None,
+            "hasReplay": vehicle_path.is_file(),
+            "replayBytes": replay_bytes,
+            "terminalPhase": None,
+            "final": {},
+        })
+        if len(result) >= max(1, limit):
+            break
+    return result
+
+
+def _ksp_vehicle_telemetry(fields: dict[str, Any], ut: float | None, vessel: str | None) -> dict[str, Any]:
+    state = fields.get("state") if isinstance(fields.get("state"), dict) else {}
+    position = fields.get("position") if isinstance(fields.get("position"), dict) else {}
+    motion = fields.get("motion") if isinstance(fields.get("motion"), dict) else {}
+    attitude = fields.get("attitude") if isinstance(fields.get("attitude"), dict) else {}
+    aero = fields.get("aero") if isinstance(fields.get("aero"), dict) else {}
+    physics = fields.get("physics") if isinstance(fields.get("physics"), dict) else {}
+    vehicle = fields.get("vehicle") if isinstance(fields.get("vehicle"), dict) else {}
+    guidance = fields.get("guidance") if isinstance(fields.get("guidance"), dict) else {}
+    return {
+        "ut": ut,
+        "vesselName": vessel,
+        "vesselSituation": state.get("vesselSituation"),
+        "latitude": position.get("latitude"),
+        "longitude": position.get("longitude"),
+        "meanAltitude": position.get("altitude"),
+        "radarAltitude": position.get("radarAltitude"),
+        "trueAirSpeed": motion.get("trueAirSpeed"),
+        "horizontalSpeed": motion.get("horizontalSpeed"),
+        "verticalSpeed": motion.get("verticalSpeed"),
+        "flightPathAngle": motion.get("flightPathAngle"),
+        "pitch": attitude.get("pitch"),
+        "roll": attitude.get("roll"),
+        "heading": attitude.get("heading"),
+        "angleOfAttack": attitude.get("angleOfAttack"),
+        "sideslip": attitude.get("sideslip"),
+        "pitchRate": attitude.get("pitchRate"),
+        "rollRate": attitude.get("rollRate"),
+        "yawRate": attitude.get("yawRate"),
+        "courseRate": attitude.get("courseRate"),
+        "dynamicPressure": aero.get("dynamicPressure"),
+        "staticPressure": aero.get("staticPressure"),
+        "density": aero.get("density"),
+        "mach": aero.get("mach"),
+        "stallFraction": aero.get("stallFraction"),
+        "stallFractionMeasured": aero.get("stallFractionMeasured"),
+        "liftForce": aero.get("liftForce"),
+        "dragForce": aero.get("dragForce"),
+        "gForce": aero.get("gForce"),
+        "mass": vehicle.get("mass"),
+        "availableThrust": vehicle.get("availableThrust"),
+        "currentThrust": vehicle.get("currentThrust"),
+        "physicsCertifiedConfidence": physics.get("confidence"),
+        "physicsCertifiedUncertainty": physics.get("certifiedUncertainty"),
+        "rangeToSite": guidance.get("rangeToSite"),
+        "bearingToSite": guidance.get("bearingToSite"),
+        "runwayAlongTrack": guidance.get("runwayAlongTrack"),
+        "runwayCrossTrack": guidance.get("runwayCrossTrack"),
+        "specificMechanicalEnergy": guidance.get("specificMechanicalEnergy"),
+    }
+
+
+def _ksp_vehicle_command(fields: dict[str, Any]) -> dict[str, Any]:
+    state = fields.get("state") if isinstance(fields.get("state"), dict) else {}
+    command = fields.get("command") if isinstance(fields.get("command"), dict) else {}
+    return {
+        "autopilotEngaged": bool(state.get("automation")),
+        "controlProfile": state.get("controlProfile"),
+        "targetPitch": command.get("targetPitch"),
+        "targetHeading": command.get("targetHeading"),
+        "targetRoll": command.get("targetRoll"),
+        "targetThrottle": command.get("targetThrottle"),
+        "targetAoA": command.get("targetAoA"),
+        "gear": command.get("gear"),
+        "brakes": command.get("brakes"),
+        "airbrakes": command.get("airbrakes"),
+    }
+
+
+def _load_ksp_planner_records(paths: list[Path], session_id: str | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    configuration: dict[str, Any] = {}
+    for path in paths:
+        try:
+            with _open_jsonl_file(path) as handle:
+                for raw in handle:
+                    try:
+                        value = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(value, dict):
+                        continue
+                    if session_id and value.get("sessionId") not in (None, session_id):
+                        continue
+                    if value.get("recordType") == "sessionStart":
+                        candidate = value.get("configuration")
+                        if isinstance(candidate, dict) and not configuration:
+                            configuration = copy.deepcopy(candidate)
+                        continue
+                    if value.get("recordType") == "plannerSample":
+                        records.append(value)
+        except OSError:
+            continue
+    records.sort(key=lambda value: (number(value.get("ut"), -1.0), number(value.get("tickSequence"), 0.0)))
+    return records, configuration
+
+
+def load_ksp_replay(root: Path, run_id: str, max_frames: int = 600) -> dict[str, Any] | None:
+    descriptor = _ksp_run_descriptor(root, run_id)
+    if descriptor is None:
+        return None
+    session, planner_paths, vehicle_path = descriptor
+    if not vehicle_path.is_file():
+        return {"run": {"runId": run_id, "sourceMode": "ksp"}, "frames": []}
+
+    planner_records, configuration = _load_ksp_planner_records(planner_paths, session.get("sessionId"))
+    if not configuration:
+        candidate = session.get("configuration")
+        configuration = copy.deepcopy(candidate) if isinstance(candidate, dict) else load_configuration(DEFAULT_CONFIG)
+    site = configuration.get("site") if isinstance(configuration.get("site"), dict) else {}
+
+    fields: dict[str, Any] = {}
+    raw_frames: list[dict[str, Any]] = []
+    planner_cursor = -1
+    current_plan: dict[str, Any] = {}
+    terminal: dict[str, Any] = {}
+    prediction: list[dict[str, Any]] = []
+    planned: list[dict[str, Any]] = []
+    trajectory_revision = 0
+    current_phase = "Offline"
+    vessel = str(session.get("vessel") or "STS-N")
+
+    try:
+        with _open_jsonl_file(vehicle_path) as handle:
+            for raw in handle:
+                try:
+                    record = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(record, dict):
+                    continue
+                kind = record.get("recordType")
+                patch = record.get("fields")
+                if kind == "vehicleKeyframe" and isinstance(patch, dict):
+                    fields = copy.deepcopy(patch)
+                elif kind == "vehicleDelta" and isinstance(patch, dict):
+                    merge_vehicle_fields(fields, patch)
+                else:
+                    continue
+                ut = optional_number(record.get("ut"))
+                if ut is None:
+                    continue
+                while planner_cursor + 1 < len(planner_records):
+                    candidate = planner_records[planner_cursor + 1]
+                    candidate_ut = optional_number(candidate.get("ut"))
+                    if candidate_ut is None or candidate_ut > ut + 0.05:
+                        break
+                    planner_cursor += 1
+                    current_phase = str(candidate.get("phase") or current_phase)
+                    cp = candidate.get("currentPlan")
+                    current_plan = cp if isinstance(cp, dict) else {}
+                    tg = candidate.get("terminalGeometry")
+                    terminal = tg if isinstance(tg, dict) else {}
+                    if candidate.get("trajectoryIncluded"):
+                        published = candidate.get("publishedPrediction")
+                        prediction = [item for item in published if isinstance(item, dict)] if isinstance(published, list) else []
+                        planned = candidate_path(candidate)
+                        trajectory_revision = int(number(candidate.get("tickSequence"), trajectory_revision + 1))
+
+                state = fields.get("state") if isinstance(fields.get("state"), dict) else {}
+                phase = str(state.get("phase") or current_phase or "Offline")
+                g_state = guidance_state(current_plan, terminal, ut)
+                projected = (
+                    projected_taem_trajectory(prediction, terminal, configuration, g_state)
+                    if prediction and _entry_plan_displayable(current_plan) and not _terminal_phase(phase)
+                    else []
+                )
+                raw_frames.append({
+                    "connectionStatus": "connected",
+                    "phase": phase,
+                    "statusMessage": "Archived live KSP replay",
+                    "warningMessage": None,
+                    "automationEngaged": bool(state.get("automation")),
+                    "plannerFresh": bool(planner_cursor >= 0),
+                    "tickSequence": record.get("tickSequence"),
+                    "trajectoryRevision": trajectory_revision,
+                    "telemetry": _ksp_vehicle_telemetry(fields, ut, vessel),
+                    "command": _ksp_vehicle_command(fields),
+                    "guidanceState": g_state,
+                    "predictedTrajectory": _downsample_replay_points(prediction, 120),
+                    "projectedTAEMTrajectory": _downsample_replay_points(projected, 120),
+                    "plannedTrajectory": _downsample_replay_points(planned, 120),
+                    "referenceTrajectory": [],
+                    "orbitalTrajectory": [],
+                    "orbitalTrajectoryMeta": {},
+                    "actualTrajectory": [],
+                    "site": copy.deepcopy(site),
+                    "replay": {"active": True, "sourceMode": "ksp-replay", "runId": run_id},
+                    "server": {"generatedAt": time.time(), "source": "KSP archive replay"},
+                })
+    except OSError:
+        return {"run": {"runId": run_id, "sourceMode": "ksp"}, "frames": []}
+
+    if not raw_frames:
+        return {"run": {"runId": run_id, "sourceMode": "ksp"}, "frames": []}
+    max_frames = max(20, min(2000, max_frames))
+    if len(raw_frames) > max_frames:
+        scale = (len(raw_frames) - 1) / float(max_frames - 1)
+        indices = sorted({min(len(raw_frames) - 1, int(round(i * scale))) for i in range(max_frames)})
+        raw_frames = [raw_frames[index] for index in indices]
+    started_at = _live_run_started_at(run_id, session, planner_paths[0])
+    run = {
+        "runId": run_id,
+        "sourceMode": "ksp",
+        "mode": "live-ksp-replay",
+        "vessel": vessel,
+        "campaignIdentity": session.get("campaignIdentity"),
+        "startedAt": started_at if started_at > 0 else None,
+        "scenario": "LIVE KSP",
+        "hasReplay": True,
+    }
+    return {"run": run, "frames": raw_frames}
+
 def simulator_packet_telemetry(packet: dict[str, Any]) -> dict[str, Any]:
     pos = packet.get("position") if isinstance(packet.get("position"), dict) else {}
     vel = packet.get("velocity") if isinstance(packet.get("velocity"), dict) else {}
@@ -2160,7 +2761,7 @@ def simulator_collector_loop(store: "SnapshotStore", root: Path, stop: threading
                         last_trail_time = sim_time
                         if len(trail) > 900:
                             trail = trail[::2]
-            mirror = read_controller_mirror(root, max_age=None)
+            mirror = read_controller_mirror(root, max_age=None, allow_simulation=True)
             run = read_simulator_run(root)
             packet_recent = last_packet is not None and time.monotonic() - last_packet_wall < 3.0
             if last_packet is not None:
@@ -2408,6 +3009,7 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
 
         try:
             follower.poll()
+            display_configuration = follower.configuration or configuration
             vessel = connection.space_center.active_vessel
             if vessel is None:
                 raise RuntimeError("No active vessel")
@@ -2583,10 +3185,16 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
             mass = max(0.0, number(read_optional(vessel, "mass", 0.0)))
             control = read_optional(vessel, "control")
             throttle = optional_number(read_optional(control, "throttle")) if control is not None else None
+            control_pitch = optional_number(read_optional(control, "pitch")) if control is not None else None
+            control_roll = optional_number(read_optional(control, "roll")) if control is not None else None
+            control_yaw = optional_number(read_optional(control, "yaw")) if control is not None else None
             telemetry["thrust"] = thrust
             telemetry["currentThrust"] = thrust
             telemetry["availableThrust"] = available_thrust
             telemetry["throttle"] = throttle
+            telemetry["controlPitch"] = control_pitch
+            telemetry["controlRoll"] = control_roll
+            telemetry["controlYaw"] = control_yaw
             telemetry["specificImpulse"] = optional_number(read_optional(vessel, "specific_impulse"))
             telemetry["propulsiveAcceleration"] = thrust / mass if mass > 1.0 else None
             if orbit is not None:
@@ -2647,17 +3255,17 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 "guidanceState": guidance_state(current, terminal, ut),
                 "predictedTrajectory": follower.prediction if follower.fresh else [],
                 "projectedTAEMTrajectory": (
-                    projected_taem_trajectory(follower.prediction, terminal, configuration, guidance_state(current, terminal, ut))
+                    projected_taem_trajectory(follower.prediction, terminal, display_configuration, guidance_state(current, terminal, ut))
                     if follower.fresh and _entry_plan_displayable(current) and not _terminal_phase(phase)
                     else []
                 ),
-                "plannedTrajectory": follower.planned if follower.fresh else [],
+                "plannedTrajectory": follower.current_guidance_path(telemetry) if follower.fresh else [],
                 "referenceTrajectory": [],
                 "deorbitPlan": None,
                 "actualTrajectory": actual,
                 "orbitalTrajectory": orbital_trajectory,
                 "orbitalTrajectoryMeta": orbital_trajectory_meta,
-                "site": configuration.get("site", {}),
+                "site": display_configuration.get("site", {}),
                 "rlTraining": rl_status,
                 "server": {"generatedAt": time.time(), "source": "kRPC observer", "reconnectDelay": 0.0},
             }
@@ -2677,7 +3285,7 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                     snapshot["guidanceState"] = exact_guidance
                 exact_plan = exact.get("plan")
                 snapshot["deorbitPlan"] = copy.deepcopy(exact_plan) if isinstance(exact_plan, dict) else None
-                apply_exact_trajectory_geometry(snapshot, exact, terminal, configuration)
+                apply_exact_trajectory_geometry(snapshot, exact, terminal, display_configuration)
                 for key in ("tickSequence", "connectionStatus", "phase", "statusMessage", "warningMessage", "automationEngaged"):
                     if exact.get(key) is not None:
                         snapshot[key] = exact[key]
@@ -2774,6 +3382,25 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
+        if path == "/api/ksp-runs":
+            try:
+                limit = int((query.get("limit") or ["250"])[0])
+            except ValueError:
+                limit = 250
+            self.send_json({"runs": list_ksp_runs(ROOT, max(1, min(500, limit)))})
+            return
+        if path == "/api/ksp-replay":
+            run_id = (query.get("id") or [""])[0]
+            try:
+                max_frames = int((query.get("maxFrames") or ["600"])[0])
+            except ValueError:
+                max_frames = 600
+            replay = load_ksp_replay(ROOT, run_id, max_frames)
+            if replay is None:
+                self.send_json({"error": "KSP run not found"}, HTTPStatus.NOT_FOUND)
+            else:
+                self.send_json(replay)
+            return
         if path == "/api/sim-runs":
             self.send_json({"runs": list_simulation_runs(ROOT)})
             return

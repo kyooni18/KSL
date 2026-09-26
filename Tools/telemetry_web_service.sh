@@ -10,8 +10,14 @@ HOST=${KSP_LANDER_WEB_HOST:-127.0.0.1}
 PORT=${KSP_LANDER_WEB_PORT:-8789}
 MODE=${KSP_LANDER_WEB_MODE:-live}
 SIM_TELEMETRY_PORT=${KSP_LANDER_SIM_WEB_TELEMETRY_PORT:-8797}
+CONFIG=${KSP_LANDER_WEB_CONFIG:-}
 ACTION=${1:-start}
 mkdir -p "$RUNTIME"
+
+if [[ "$PORT" == "8789" && "$MODE" != "live" ]]; then
+  print -u2 "WebTelemetry port 8789 is reserved for live KSP; simulator data is available through replay only"
+  exit 2
+fi
 
 find_python() {
   local candidates=()
@@ -56,19 +62,64 @@ launchd_pid() {
   print -r -- "$pid"
 }
 
-stop_server() {
-  launchctl remove "$LABEL" 2>/dev/null || true
-  local pid=""
-  if ! pid=$(current_pid); then
-    local listener listener_cmd
-    listener=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)
-    if [[ -n "$listener" ]]; then
-      listener_cmd=$(ps -p "$listener" -o command= 2>/dev/null || true)
-      [[ "$listener_cmd" == *telemetry_web.py* ]] && pid="$listener"
+active_live_config() {
+  local line tail candidate
+  while IFS= read -r line; do
+    [[ "$line" == *"$ROOT/Tools/headless_flight.py"* ]] || continue
+    [[ "$line" == *" --live "* ]] || continue
+    [[ "$line" == *" --config "* ]] || continue
+    tail=${line#*" --config "}
+    candidate=${tail%% *}
+    [[ "$candidate" == /* ]] || candidate="$ROOT/$candidate"
+    [[ -f "$candidate" ]] || continue
+    print -r -- "$candidate"
+    return 0
+  done < <(ps ax -o command=)
+  return 1
+}
+
+if [[ -n "$CONFIG" ]]; then
+  [[ "$CONFIG" == /* ]] || CONFIG="$ROOT/$CONFIG"
+elif [[ "$MODE" == "live" ]]; then
+  CONFIG=$(active_live_config || true)
+fi
+
+telemetry_process_pid() {
+  local pid cmd
+  if pid=$(current_pid); then
+    cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+    if [[ "$cmd" == *telemetry_web.py* ]]; then
+      print -r -- "$pid"
+      return 0
     fi
   fi
+  pid=$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)
+  [[ -n "$pid" ]] || return 1
+  cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+  [[ "$cmd" == *telemetry_web.py* ]] || return 1
+  print -r -- "$pid"
+}
+
+server_matches_requested() {
+  local cmd="$1"
+  [[ "$cmd" == *"$ROOT/Tools/telemetry_web.py"* ]] || return 1
+  [[ "$cmd" == *"--host $HOST"* ]] || return 1
+  [[ "$cmd" == *"--port $PORT"* ]] || return 1
+  [[ "$cmd" == *"--mode $MODE"* ]] || return 1
+  if [[ -n "$CONFIG" ]]; then
+    [[ "$cmd" == *"--config $CONFIG"* ]] || return 1
+  fi
+  if [[ "$MODE" == "simulator" ]]; then
+    [[ "$cmd" == *"--sim-telemetry-port $SIM_TELEMETRY_PORT"* ]] || return 1
+  fi
+  return 0
+}
+
+stop_server() {
+  launchctl remove "$LABEL" 2>/dev/null || true
+  local pid="" cmd=""
+  pid=$(telemetry_process_pid || true)
   if [[ -n "$pid" ]]; then
-    local cmd
     cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
     if [[ "$cmd" == *telemetry_web.py* ]]; then
       kill "$pid" 2>/dev/null || true
@@ -91,14 +142,15 @@ case "$ACTION" in
     stop_server
     ;;
   start)
-    if pid=$(current_pid); then
+    pid=$(telemetry_process_pid || true)
+    if [[ -n "$pid" ]]; then
       current_cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
-      expected_script="$ROOT/Tools/telemetry_web.py"
-      if [[ "$current_cmd" == *"$expected_script"* ]]; then
-        print "telemetry web already running: pid=$pid http://$HOST:$PORT"
+      if server_matches_requested "$current_cmd"; then
+        print -r -- "$pid" > "$PID_FILE"
+        print "telemetry web already running: pid=$pid http://$HOST:$PORT mode=$MODE"
         exit 0
       fi
-      print -u2 "telemetry web process uses a stale repo root; restarting from $ROOT"
+      print -u2 "telemetry web mode/config changed or stale; restarting only the telemetry observer"
       stop_server
     fi
     ;;
@@ -128,10 +180,14 @@ MODE_ARGS=(--mode "$MODE")
 if [[ "$MODE" == "simulator" ]]; then
   MODE_ARGS+=(--sim-telemetry-port "$SIM_TELEMETRY_PORT")
 fi
+CONFIG_ARGS=()
+if [[ -n "$CONFIG" ]]; then
+  CONFIG_ARGS+=(--config "$CONFIG")
+fi
 
 launchctl submit -l "$LABEL" -p "$PY" -o "$LOG_FILE" -e "$LOG_FILE" -- \
   "$PY" "$ROOT/Tools/telemetry_web.py" --host "$HOST" --port "$PORT" \
-  "${MODE_ARGS[@]}" "${RL_ARGS[@]}"
+  "${MODE_ARGS[@]}" "${CONFIG_ARGS[@]}" "${RL_ARGS[@]}"
 pid=""
 for _ in {1..20}; do
   pid=$(launchd_pid || true)

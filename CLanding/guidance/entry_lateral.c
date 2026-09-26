@@ -175,10 +175,9 @@ static void update_bank_command(EntryLateralState *state, double target,
     target = clamp_value(target, -bank_limit, bank_limit);
     double error = target - state->command_bank_deg;
 
-    /*
-     * Time-optimal bounded double-integrator command: desired roll rate is the
-     * smaller of the actuator rate limit and the exact stopping-rate curve.
-     */
+    /* Bounded double-integrator reference. The executive may reduce the
+       instantaneous roll-rate envelope below the vehicle maximum when measured
+       coordination says a faster bank change would outrun yaw authority. */
     double desired_rate = 0.0;
     if (fabs(error) > DBL_EPSILON) {
         double stopping_rate = sqrt(2.0 * accel_limit * fabs(error));
@@ -188,8 +187,6 @@ static void update_bank_command(EntryLateralState *state, double target,
     double rate_delta = desired_rate - state->command_bank_rate_deg_s;
     state->command_bank_rate_deg_s +=
         clamp_value(rate_delta, -accel_limit * dt, accel_limit * dt);
-    state->command_bank_rate_deg_s =
-        clamp_value(state->command_bank_rate_deg_s, -rate_limit, rate_limit);
 
     double next = state->command_bank_deg + state->command_bank_rate_deg_s * dt;
     if ((target - state->command_bank_deg) * (target - next) <= 0.0) {
@@ -226,6 +223,48 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             -fabs(limits->maximum_roll_rate_deg_s),
             fabs(limits->maximum_roll_rate_deg_s));
     }
+
+    /* Reversal feasibility is a coupled lateral problem, not just a roll-rate
+       problem. Estimate measured sideslip rate and reserve enough beta margin
+       to decelerate the current bank-rate command before the configured
+       coordination envelope is exhausted. This makes the guidance reference
+       back off while yaw coordination is falling behind instead of continuing
+       a time-optimal roll until recovery has to intervene. */
+    EntryLateralLimits command_limits=*limits;
+    double sideslip_rate=NAN;
+    double coordination_rate=fabs(limits->maximum_roll_rate_deg_s);
+    bool sideslip_valid=input->has_sideslip&&
+        isfinite(input->sideslip_deg)&&isfinite(input->maximum_sideslip_deg)&&
+        input->maximum_sideslip_deg>0.0;
+    if(sideslip_valid){
+        if(state->has_previous_sideslip&&input->dt>DBL_EPSILON){
+            sideslip_rate=wrap_signed_deg(
+                input->sideslip_deg-state->previous_sideslip_deg)/input->dt;
+            double beta=fabs(input->sideslip_deg);
+            double beta_sign=beta>DBL_EPSILON?unit_sign(input->sideslip_deg):
+                (fabs(sideslip_rate)>DBL_EPSILON?unit_sign(sideslip_rate):1.0);
+            double outward_beta_rate=beta_sign*sideslip_rate;
+            double measured_roll_rate=finite_or(input->measured_bank_rate_deg_s,0.0);
+            bool roll_driving_departure=outward_beta_rate>0.0&&
+                sideslip_rate*measured_roll_rate>0.0;
+            if(roll_driving_departure){
+                double beta_margin=fmax(0.0,input->maximum_sideslip_deg-beta);
+                double accel=fabs(limits->maximum_roll_accel_deg_s2);
+                double safe_rate=accel*beta_margin/outward_beta_rate;
+                coordination_rate=fmin(coordination_rate,fmax(0.0,safe_rate));
+            }
+        }
+        state->previous_sideslip_deg=input->sideslip_deg;
+        state->has_previous_sideslip=true;
+    }else{
+        state->has_previous_sideslip=false;
+    }
+    /* A newly tightened coordination limit is itself acceleration-limited: the
+       planner cannot instantaneously erase bank-rate momentum. */
+    double decel_floor=fmax(0.0,fabs(state->command_bank_rate_deg_s)-
+        fabs(limits->maximum_roll_accel_deg_s2)*input->dt);
+    coordination_rate=fmax(coordination_rate,decel_floor);
+    command_limits.maximum_roll_rate_deg_s=fmax(DBL_EPSILON,coordination_rate);
 
     state->bank_sign = choose_bank_sign(state, input);
 
@@ -283,8 +322,8 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         double opposite_target = -state->bank_sign * magnitude;
         double roll_span = fabs(opposite_target - finite_or(input->measured_bank_deg, 0.0));
         double response_time = rest_to_rest_roll_time(roll_span,
-            fabs(limits->maximum_roll_rate_deg_s),
-            fabs(limits->maximum_roll_accel_deg_s2));
+            fabs(command_limits.maximum_roll_rate_deg_s),
+            fabs(command_limits.maximum_roll_accel_deg_s2));
         double projected = input->crossrange_error_m;
         if (input->has_crossrange_rate && isfinite(input->crossrange_error_rate_mps))
             projected += input->crossrange_error_rate_mps * response_time;
@@ -326,7 +365,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     }
 
     double raw_target = state->bank_sign * magnitude;
-    update_bank_command(state, raw_target, limits, input->dt);
+    update_bank_command(state, raw_target, &command_limits, input->dt);
 
     /*
      * Capture is a kinematic state, not a tuned angle band. Once the measured
@@ -358,6 +397,8 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     output.target_bank_rate_deg_s = state->command_bank_rate_deg_s;
     output.expected_course_rate_deg_s =
         lateral_accel / input->relative_speed * ENTRY_LATERAL_RAD2DEG;
+    output.sideslip_rate_deg_s=sideslip_rate;
+    output.coordination_roll_rate_limit_deg_s=command_limits.maximum_roll_rate_deg_s;
     return output;
 }
 

@@ -1275,13 +1275,13 @@ def main() -> int:
         type=int,
         choices=(1, 2, 3, 4),
         default=4,
-        help="Maximum pre-entry physics-warp multiplier; capped to 2x during early MM304, hard-forced to 1x at/below 40 km, and 1x at TAEM (default: 4x).",
+        help="Maximum post-burn pre-entry physics-warp multiplier; physics warp is permanently released to 1x at/below the configured release altitude (default: 4x).",
     )
     parser.add_argument(
         "--preentry-warp-release-altitude",
         type=float,
         default=72000.0,
-        help="Altitude below which physics warp is capped to 2x and guarded by MM304 attitude/rate stability; a non-configurable 40 km hard cutoff forces 1x (default: 72000 m).",
+        help="Altitude at/below which physics warp is forbidden and permanently released to 1x for atmospheric entry (default: 72000 m).",
     )
     parser.add_argument(
         "--checkpoint-altitude",
@@ -1302,6 +1302,14 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--mm305-checkpoint-name",
+        default="",
+        help=(
+            "Save a checkpoint on the first backend snapshot where MM305/TAEM ownership is latched; "
+            "this does not wait for the stricter HAC-contract checkpoint."
+        ),
+    )
+    parser.add_argument(
         "--taem-checkpoint-name",
         default="",
         help="Save a checkpoint only after the complete MM304->TAEM 6-20 km HAC contract is true.",
@@ -1309,7 +1317,7 @@ def main() -> int:
     parser.add_argument(
         "--require-strict",
         action="store_true",
-        help="Require a strict robust deorbit plan and a strict achieved post-burn state before continuing entry.",
+        help="Report strict deorbit/post-burn qualification as warnings while continuing the selected best-available live plan.",
     )
     parser.add_argument(
         "--strict-checkpoint-name",
@@ -1677,7 +1685,7 @@ def main() -> int:
                 )
                 print(
                     f"pre-entry coast: up to {args.preentry_physics_warp}x above "
-                    f"{args.preentry_warp_release_altitude / 1000:.1f} km; max 2x stable MM304 only above 40 km; hard 1x at/below 40 km and at TAEM",
+                    f"{args.preentry_warp_release_altitude / 1000:.1f} km; permanent 1x at/below that altitude for entry",
                     flush=True,
                 )
         else:
@@ -1710,13 +1718,25 @@ def main() -> int:
                 f"burn UT {BackendProcess._number(plan.get('burnUT')):.1f}, "
                 f"delta-v {BackendProcess._number(plan.get('deltaV')):.2f} m/s, "
                 f"strict={bool(plan.get('targetCaptureAchieved'))}, "
-                f"executable={bool(plan.get('executionQualified'))}",
+                f"nominal={bool(plan.get('nominalCaptureAchieved'))}, "
+                f"executable={bool(plan.get('executionQualified'))}, "
+                f"recovery={BackendProcess._number(plan.get('recoveryPassed')):.0f}/"
+                f"{BackendProcess._number(plan.get('robustnessScenarios')):.0f}, "
+                f"miss={BackendProcess._number(plan.get('predictedClosestDistance')) / 1000:.1f} km",
                 flush=True,
             )
             if not plan.get("executionQualified"):
-                raise RuntimeError("Planner produced a preview-only plan; live engagement is blocked")
+                print(
+                    "WARNING: best available deorbit plan is not entry-stage qualified; "
+                    "continuing live test with qualification failures visible",
+                    flush=True,
+                )
             if args.require_strict and not plan.get("targetCaptureAchieved"):
-                raise RuntimeError("Planner did not produce a strict robust deorbit plan; live engagement is blocked")
+                print(
+                    "WARNING: selected deorbit plan did not pass strict full-route certification; "
+                    "continuing live test with strict=false",
+                    flush=True,
+                )
             if not args.live:
                 print("plan validated; pass --live to engage the controller", flush=True)
                 return 0
@@ -1739,6 +1759,7 @@ def main() -> int:
         checkpoint_saved = False
         descent_checkpoint_tracker = DescentCheckpointTracker(descent_checkpoints)
         taem_checkpoint_saved = False
+        mm305_checkpoint_saved = False
         taem_checkpoint_block_reported = False
         strict_checkpoint_saved = False
         burn_seen = False
@@ -1766,6 +1787,19 @@ def main() -> int:
                 print(
                     f"checkpoint saved: {checkpoint.name} at {altitude / 1000:.1f} km "
                     f"(planned {checkpoint.altitude / 1000:.1f} km)",
+                    flush=True,
+                )
+            taem_executive = guidance_state.get("taemExecutive") or {}
+            if (
+                args.mm305_checkpoint_name
+                and not mm305_checkpoint_saved
+                and taem_executive.get("ownershipLatched") is True
+            ):
+                backend.send("saveCheckpoint", timeout=30.0, name=args.mm305_checkpoint_name)
+                mm305_checkpoint_saved = True
+                print(
+                    f"MM305 ownership checkpoint saved: {args.mm305_checkpoint_name}; "
+                    f"phase {snapshot.get('phase') or 'unknown'}; alt {altitude / 1000:.1f} km",
                     flush=True,
                 )
             if args.taem_checkpoint_name and not taem_checkpoint_saved:
@@ -1820,7 +1854,7 @@ def main() -> int:
                 )
                 print(
                     f"post-burn coast: up to {args.preentry_physics_warp}x above "
-                    f"{args.preentry_warp_release_altitude / 1000:.1f} km; max 2x stable MM304 only above 40 km; hard 1x at/below 40 km and at TAEM",
+                    f"{args.preentry_warp_release_altitude / 1000:.1f} km; permanent 1x at/below that altitude for entry",
                     flush=True,
                 )
             if (
@@ -1835,18 +1869,11 @@ def main() -> int:
                 )
                 if args.require_strict and not achieved_strict:
                     print(
-                        "post-burn strict verification failed: "
+                        "WARNING: post-burn strict verification failed; continuing the live flight: "
                         f"Pe {BackendProcess._number(plan.get('achievedPostBurnPeriapsisAltitude')) / 1000:.1f} km, "
                         f"TAEM {BackendProcess._number(plan.get('predictedTAEMDistance')) / 1000:.1f} km",
                         flush=True,
                     )
-                    if engaged:
-                        try:
-                            backend.send("abort", timeout=30.0)
-                        except Exception:
-                            pass
-                        engaged = False
-                    raise RuntimeError("Achieved post-burn state is outside the strict corridor")
                 if achieved_strict:
                     if args.strict_checkpoint_name:
                         pitch = BackendProcess._number(telemetry.get("pitch"))

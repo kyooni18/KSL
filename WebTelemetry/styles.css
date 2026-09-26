@@ -276,7 +276,7 @@ body.replay-mode .simulation-status{border-style:dashed}
 .playback-summary{
   min-height:48px;
   display:grid;
-  grid-template-columns:auto auto minmax(0,1fr) auto;
+  grid-template-columns:auto auto auto minmax(0,1fr) auto;
   align-items:center;
   gap:8px;
   padding:7px;
@@ -324,7 +324,6 @@ body.replay-mode .simulation-status{border-style:dashed}
   box-shadow:0 0 0 2px rgba(114,241,154,.15),0 0 10px rgba(114,241,154,.28);
 }
 .playback-dock.replay-active .playback-live{color:var(--muted)}
-.playback-dock.replay-active .playback-runs{border-color:rgba(102,216,239,.34);background:rgba(102,216,239,.09);color:var(--cyan)}
 .playback-runs{min-width:58px;padding:0 10px}
 .playback-runs.active{border-color:rgba(102,216,239,.34);background:rgba(102,216,239,.09);color:var(--cyan)}
 .playback-context{

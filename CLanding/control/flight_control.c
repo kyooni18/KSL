@@ -13,7 +13,8 @@
    and are read once, never per control tick. */
 typedef struct {
     double roll_accel_max, pitch_accel_max, pitch_lag_s, pitch_wn, pitch_zeta,
-        pitch_trim_ki, roll_lag_s, roll_wn, roll_zeta, yaw_accel_max, yaw_wn;
+        pitch_trim_ki, roll_lag_s, roll_wn, roll_zeta, yaw_accel_max, yaw_wn,
+        yaw_lag_s;
 } FlightControlTuning;
 
 static FlightControlTuning fc_tuning_values;
@@ -43,6 +44,7 @@ static void fc_tuning_init(void) {
         .roll_zeta = fc_tuning_override(on, "KSP_LANDER_ROLL_ZETA", 1.15),
         .yaw_accel_max = fc_tuning_override(on, "KSP_LANDER_YAW_ACCEL", 30.0),
         .yaw_wn = fc_tuning_override(on, "KSP_LANDER_YAW_WN", 1.0),
+        .yaw_lag_s = fc_tuning_override(on, "KSP_LANDER_YAW_LAG", 0.20),
     };
     fc_tuning_values = t;
 }
@@ -173,6 +175,7 @@ void flight_control_init(FlightControlState *state, double nominal_dt) {
     if (!state) return;
     memset(state, 0, sizeof(*state));
     state->nominal_dt = isfinite(nominal_dt) && nominal_dt > 0.0 ? nominal_dt : 0.1;
+    state->pitch_response_scale = 0.70;
 }
 
 void flight_control_reset_transients(FlightControlState *state) {
@@ -192,6 +195,14 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->target_pitch_rate = 0.0;
     state->has_last_target_roll = false;
     state->target_roll_rate = 0.0;
+    state->has_quaternion_error_sample = false;
+    state->last_quaternion_pitch_error = 0.0;
+    state->last_quaternion_roll_error = 0.0;
+    state->last_quaternion_yaw_error = 0.0;
+    state->quaternion_pitch_error_rate = 0.0;
+    state->quaternion_roll_error_rate = 0.0;
+    state->quaternion_yaw_error_rate = 0.0;
+    state->pitch_response_scale = 0.70;
     state->rcs_transonic_cutoff = false;
     state->has_last_profile = false;
     state->main_gear_contact_latched = false;
@@ -296,6 +307,50 @@ static double fc_capped_pd_command(double angle_error,
     return fc_clamp(accel/available,-1.0,1.0);
 }
 
+/* Direct kRPC pitch input is effectively instantaneous, while the controller's
+   plant model already assumes a finite pitch-response lag.  Apply that same lag
+   to the commanded actuator signal so small AoA/rate errors do not alternate
+   between full-positive/full-negative pulses at low dynamic pressure. */
+static double fc_smooth_actuator_command(double target,double previous,
+        double dt,double time_constant){
+    target=fc_clamp(fc_finite(target,0.0),-1.0,1.0);
+    previous=fc_clamp(fc_finite(previous,0.0),-1.0,1.0);
+    double tau=fmax(0.0,fc_finite(time_constant,0.0));
+    if(!(tau>DBL_EPSILON)||!(dt>0.0))return target;
+    double alpha=1.0-exp(-dt/tau);
+    return fc_clamp(previous+alpha*(target-previous),-1.0,1.0);
+}
+
+static double fc_lowpass_rate(double previous,double raw,double dt,double tau){
+    if(!isfinite(raw))return fc_finite(previous,0.0);
+    if(!(dt>0.0)||!isfinite(dt))return raw;
+    tau=fmax(0.0,fc_finite(tau,0.0));
+    if(!(tau>DBL_EPSILON))return raw;
+    double alpha=1.0-exp(-dt/tau);
+    return fc_finite(previous,0.0)+alpha*(raw-fc_finite(previous,0.0));
+}
+
+/* Adapt loop aggressiveness from the response the plant is actually producing.
+   The nominal second-order loop expects corrective rate on the order of
+   wn*|error|.  Persistent rate beyond that envelope means the current plant is
+   responding faster than the fixed model expects.  Back bandwidth off quickly;
+   restore it slowly once the response settles.  Using target-relative rate
+   prevents commanded AoA/bank motion from being mistaken for oscillation. */
+static double fc_adapt_response_scale(double current,double angle_error,
+        double relative_rate,double nominal_wn,double dt){
+    if(!(current>0.0&&current<=1.0))current=0.70;
+    double wn=fmax(0.10,fc_finite(nominal_wn,0.10));
+    double error=fabs(fc_finite(angle_error,0.0));
+    double rate=fabs(fc_finite(relative_rate,0.0));
+    double reference_rate=wn*fmax(error,0.35);
+    double response_ratio=rate/fmax(reference_rate,0.05);
+    double desired=response_ratio>1.0?1.0/sqrt(response_ratio):1.0;
+    desired=fc_clamp(desired,0.40,1.0);
+    double tau=desired<current?0.40:3.0;
+    double alpha=1.0-exp(-fmax(0.0,dt)/tau);
+    return fc_clamp(current+alpha*(desired-current),0.40,1.0);
+}
+
 static double fc_pitch_accel_for_profile(double reported,double cap,
         ControlProfile profile,double radar_altitude){
     double used=reported>DBL_EPSILON&&reported<cap?reported:cap;
@@ -352,11 +407,94 @@ static void fc_schedule_bandwidth(double q, double mach, ControlProfile profile,
     if (roll_scale_out) *roll_scale_out = r_scale;
 }
 
-bool flight_control_step(FlightControlState *state,
-                         const Telemetry *telemetry,
-                         const GuidanceCommand *command,
-                         double sample_dt,
-                         FlightControlOutput *output) {
+static void fc_quat_rotation_matrix(const double qv[4],double r[3][3]){
+    double x=qv[0],y=qv[1],z=qv[2],w=qv[3];
+    double n=sqrt(x*x+y*y+z*z+w*w);
+    if(!(n>1e-12)){x=y=z=0.0;w=1.0;}else{x/=n;y/=n;z/=n;w/=n;}
+    r[0][0]=1-2*(y*y+z*z);r[0][1]=2*(x*y-z*w);r[0][2]=2*(x*z+y*w);
+    r[1][0]=2*(x*y+z*w);r[1][1]=1-2*(x*x+z*z);r[1][2]=2*(y*z-x*w);
+    r[2][0]=2*(x*z-y*w);r[2][1]=2*(y*z+x*w);r[2][2]=1-2*(x*x+y*y);
+}
+
+static void fc_matrix_quaternion(const double m[3][3],double*qx,double*qy,double*qz,double*qw){
+    double x=0,y=0,z=0,w=1,tr=m[0][0]+m[1][1]+m[2][2],scale;
+    if(tr>0){scale=sqrt(fmax(1e-12,tr+1))*2;w=.25*scale;x=(m[2][1]-m[1][2])/scale;y=(m[0][2]-m[2][0])/scale;z=(m[1][0]-m[0][1])/scale;}
+    else if(m[0][0]>m[1][1]&&m[0][0]>m[2][2]){scale=sqrt(fmax(1e-12,1+m[0][0]-m[1][1]-m[2][2]))*2;w=(m[2][1]-m[1][2])/scale;x=.25*scale;y=(m[0][1]+m[1][0])/scale;z=(m[0][2]+m[2][0])/scale;}
+    else if(m[1][1]>m[2][2]){scale=sqrt(fmax(1e-12,1+m[1][1]-m[0][0]-m[2][2]))*2;w=(m[0][2]-m[2][0])/scale;x=(m[0][1]+m[1][0])/scale;y=.25*scale;z=(m[1][2]+m[2][1])/scale;}
+    else{scale=sqrt(fmax(1e-12,1+m[2][2]-m[0][0]-m[1][1]))*2;w=(m[1][0]-m[0][1])/scale;x=(m[0][2]+m[2][0])/scale;y=(m[1][2]+m[2][1])/scale;z=.25*scale;}
+    double n=sqrt(x*x+y*y+z*z+w*w);if(n>1e-12){x/=n;y/=n;z/=n;w/=n;}
+    if(w<0){x=-x;y=-y;z=-z;w=-w;}*qx=x;*qy=y;*qz=z;*qw=w;
+}
+
+static Vector3 fc_rotate_axis(Vector3 value,Vector3 axis,double angle){
+    axis=vnorm(axis,v3(0,1,0));
+    double c=cos(angle),s=sin(angle);
+    return vadd(vadd(vscale(value,c),vscale(vcross(axis,value),s)),
+        vscale(axis,vdot(axis,value)*(1.0-c)));
+}
+
+static Vector3 fc_plane_up(Vector3 preferred,Vector3 forward){
+    Vector3 projected=vproject_plane(preferred,forward);
+    if(vmag(projected)>1e-8)return vnorm(projected,v3(1,0,0));
+    Vector3 seed=v3(1,0,0);double best=fabs(vdot(seed,forward));
+    Vector3 y=v3(0,1,0),z=v3(0,0,1);
+    double dy=fabs(vdot(y,forward)),dz=fabs(vdot(z,forward));
+    if(dy<best){seed=y;best=dy;}if(dz<best)seed=z;
+    return vnorm(vproject_plane(seed,forward),v3(1,0,0));
+}
+
+bool flight_control_airframe_error(const double attitude_quaternion[4],
+        Vector3 air_direction,Vector3 radial_up,double target_aoa_deg,
+        double target_bank_deg,bool use_yaw_error,FlightControlAttitudeError *error){
+    if(!error)return false;
+    memset(error,0,sizeof(*error));
+    if(!attitude_quaternion||!isfinite(target_aoa_deg)||!isfinite(target_bank_deg)||
+       vmag(air_direction)<=1e-9||vmag(radial_up)<=1e-9)return false;
+    for(int i=0;i<4;i++)if(!isfinite(attitude_quaternion[i]))return false;
+
+    Vector3 air=vnorm(air_direction,v3(0,1,0));
+    Vector3 radial=vnorm(radial_up,v3(1,0,0));
+    Vector3 flight_up=fc_plane_up(radial,air);
+    /* The raw kRPC vessel frame and the canonical guidance frame have opposite
+       handedness (canonical_to_raw swaps Y/Z). Therefore positive guidance bank
+       is a negative rotation about raw air velocity. Bank the aerodynamic lift
+       plane first, then apply AoA inside that plane; this preserves zero desired
+       sideslip instead of rolling an already-pitched body about its nose. */
+    double bank=target_bank_deg*DEG2RAD;
+    Vector3 banked_up=vnorm(fc_rotate_axis(flight_up,air,-bank),flight_up);
+    double alpha=target_aoa_deg*DEG2RAD;
+    Vector3 forward=vnorm(vadd(vscale(air,cos(alpha)),vscale(banked_up,sin(alpha))),air);
+    Vector3 right=vnorm(vcross(banked_up,air),v3(1,0,0));
+    Vector3 down=vnorm(vcross(right,forward),v3(0,0,1));
+
+    double current[3][3],desired[3][3],relative[3][3];
+    fc_quat_rotation_matrix(attitude_quaternion,current);
+    desired[0][0]=right.x;desired[1][0]=right.y;desired[2][0]=right.z;
+    desired[0][1]=forward.x;desired[1][1]=forward.y;desired[2][1]=forward.z;
+    desired[0][2]=down.x;desired[1][2]=down.y;desired[2][2]=down.z;
+    for(int i=0;i<3;i++)for(int j=0;j<3;j++){
+        relative[i][j]=0.0;
+        for(int k=0;k<3;k++)relative[i][j]+=current[k][i]*desired[k][j];
+    }
+    double x,y,z,w;fc_matrix_quaternion(relative,&x,&y,&z,&w);
+    double vn=sqrt(x*x+y*y+z*z);
+    if(vn>1e-12){
+        double angle=2.0*atan2(vn,fmax(0.0,w))*RAD2DEG/vn;
+        error->pitch_error_deg=-x*angle;
+        error->roll_error_deg=-y*angle;
+        error->yaw_error_deg=-z*angle;
+    }
+    error->use_yaw_error=use_yaw_error;
+    error->valid=true;
+    return true;
+}
+
+bool flight_control_step_attitude(FlightControlState *state,
+                                  const Telemetry *telemetry,
+                                  const GuidanceCommand *command,
+                                  const FlightControlAttitudeError *attitude_error,
+                                  double sample_dt,
+                                  FlightControlOutput *output) {
     if (!state || !telemetry || !command || !output) return false;
     memset(output, 0, sizeof(*output));
 
@@ -379,6 +517,12 @@ bool flight_control_step(FlightControlState *state,
         return true;
     }
     if (!rollout_profile && !fc_atmospheric_profile(profile)) return false;
+    bool quaternion_control = !rollout_profile && attitude_error && attitude_error->valid &&
+        isfinite(attitude_error->pitch_error_deg) &&
+        isfinite(attitude_error->roll_error_deg) &&
+        isfinite(attitude_error->yaw_error_deg);
+    bool quaternion_yaw_control = quaternion_control && attitude_error->use_yaw_error &&
+        !command->heading_control_enabled;
 
     double measured_dt = isfinite(sample_dt) && sample_dt > 0.0 ? sample_dt : 0.0;
     if (state->has_sample && isfinite(telemetry->ut) && telemetry->ut < state->last_ut) {
@@ -458,24 +602,33 @@ bool flight_control_step(FlightControlState *state,
         fabs(telemetry->body_roll_rate)<=DBL_EPSILON &&
         fabs(state->roll_rate)>DBL_EPSILON;
 
-    /*
-     * Pitch is controlled in AoA, so use its filtered coordinate rate.  Roll
-     * damping benefits from the native body roll rate when it is live: it is the
-     * actuator-rate state and arrives earlier than the filtered Euler bank rate.
-     */
+    /* Authority identification uses physical body rates on the quaternion path.
+       Tracking damping is different: it uses the derivative of target-relative
+       quaternion error below, so motion of the air-relative reference itself is
+       not mistaken for attitude tracking error. Scalar fallback keeps its
+       historical AoA/bank/beta coordinates. */
     double observed_pitch_rate=
         telemetry->has_angle_of_attack_rate&&isfinite(telemetry->angle_of_attack_rate)?
             telemetry->angle_of_attack_rate:state->aoa_rate;
     if(rollout_pitch_hold)
         observed_pitch_rate=isfinite(telemetry->pitch_rate)?telemetry->pitch_rate:state->pitch_rate;
+    else if(quaternion_control&&body_pitch_rate_valid)
+        observed_pitch_rate=telemetry->body_pitch_rate;
     bool live_body_roll=body_roll_rate_valid&&
         !(fabs(telemetry->body_roll_rate)<=DBL_EPSILON&&
           isfinite(telemetry->roll_rate)&&fabs(telemetry->roll_rate)>DBL_EPSILON);
-    double observed_roll_rate=live_body_roll?telemetry->body_roll_rate:
-        (isfinite(telemetry->roll_rate)?telemetry->roll_rate:state->roll_rate);
-    double observed_yaw_rate=
+    double observed_roll_rate=quaternion_control&&body_roll_rate_valid?
+        telemetry->body_roll_rate:
+        (live_body_roll?telemetry->body_roll_rate:
+            (isfinite(telemetry->roll_rate)?telemetry->roll_rate:state->roll_rate));
+    double observed_body_yaw_rate=
         body_yaw_rate_valid?telemetry->body_yaw_rate:
         (isfinite(telemetry->heading_rate)?telemetry->heading_rate:state->heading_rate);
+    double observed_yaw_coordinate_rate=quaternion_yaw_control?
+        observed_body_yaw_rate:
+        (command->heading_control_enabled?
+            (isfinite(telemetry->heading_rate)?telemetry->heading_rate:state->heading_rate):
+            -state->sideslip_rate);
 
     if (sample_valid) {
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_PITCH],
@@ -485,7 +638,7 @@ bool flight_control_step(FlightControlState *state,
             observed_roll_rate,state->last_control[FLIGHT_CONTROL_AXIS_ROLL],
             measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_YAW],
-            observed_yaw_rate,state->last_control[FLIGHT_CONTROL_AXIS_YAW],
+            observed_yaw_coordinate_rate,state->last_control[FLIGHT_CONTROL_AXIS_YAW],
             measured_dt,0.0);
     }
 
@@ -497,7 +650,9 @@ bool flight_control_step(FlightControlState *state,
             ? command->target_aoa
             : fc_finite(command->target_pitch, 0.0) - flight_path_angle);
     double measured_pitch_state = rollout_pitch_hold ? pitch : aoa;
-    double pitch_error = target_pitch_state - measured_pitch_state;
+    double aerodynamic_pitch_error = target_pitch_state - measured_pitch_state;
+    double pitch_error = quaternion_control ?
+        attitude_error->pitch_error_deg : aerodynamic_pitch_error;
     if (state->has_last_target_pitch) {
         double raw_target_rate = (target_pitch_state - state->last_target_pitch_state) / control_dt;
         raw_target_rate = fc_clamp(raw_target_rate, -6.0, 6.0);
@@ -510,7 +665,8 @@ bool flight_control_step(FlightControlState *state,
     state->has_last_target_pitch = true;
 
     double roll_target = fc_signed_angle(fc_finite(command->target_roll, 0.0));
-    double roll_error = fc_signed_angle(roll_target - roll);
+    double roll_error = quaternion_control ? attitude_error->roll_error_deg :
+        fc_signed_angle(roll_target - roll);
 
     if (state->has_last_target_roll) {
         state->target_roll_rate =
@@ -521,19 +677,70 @@ bool flight_control_step(FlightControlState *state,
     state->last_target_roll = roll_target;
     state->has_last_target_roll = true;
 
-    double raw_pitch_authority =
+    const FlightControlTuning *tuning=fc_tuning();
+    if(quaternion_control){
+        bool continuous_error=state->has_quaternion_error_sample&&sample_valid&&
+            state->has_last_profile&&state->last_profile==profile;
+        if(continuous_error){
+            double raw_pitch_rate=fc_signed_angle(
+                pitch_error-state->last_quaternion_pitch_error)/measured_dt;
+            double raw_roll_rate=fc_signed_angle(
+                roll_error-state->last_quaternion_roll_error)/measured_dt;
+            double raw_yaw_rate=fc_signed_angle(
+                attitude_error->yaw_error_deg-state->last_quaternion_yaw_error)/measured_dt;
+            state->quaternion_pitch_error_rate=fc_lowpass_rate(
+                state->quaternion_pitch_error_rate,raw_pitch_rate,control_dt,tuning->pitch_lag_s);
+            state->quaternion_roll_error_rate=fc_lowpass_rate(
+                state->quaternion_roll_error_rate,raw_roll_rate,control_dt,tuning->roll_lag_s);
+            state->quaternion_yaw_error_rate=fc_lowpass_rate(
+                state->quaternion_yaw_error_rate,raw_yaw_rate,control_dt,tuning->yaw_lag_s);
+        }else{
+            state->quaternion_pitch_error_rate=0.0;
+            state->quaternion_roll_error_rate=0.0;
+            state->quaternion_yaw_error_rate=0.0;
+        }
+        state->last_quaternion_pitch_error=pitch_error;
+        state->last_quaternion_roll_error=roll_error;
+        state->last_quaternion_yaw_error=attitude_error->yaw_error_deg;
+        state->has_quaternion_error_sample=true;
+    }else{
+        state->has_quaternion_error_sample=false;
+        state->quaternion_pitch_error_rate=0.0;
+        state->quaternion_roll_error_rate=0.0;
+        state->quaternion_yaw_error_rate=0.0;
+    }
+
+    /* KSP's live available-torque/inertia report already follows the changing
+       aerodynamic control-surface authority.  Use that physical value for the
+       pitch loop whenever it is available; the AoA-response observer is a
+       fallback, not a replacement.  Letting one noisy learned acceleration
+       replace the live authority made the normalized PD jump toward +/-1 as q
+       changed, producing the observed pitch limit cycle. */
+    double observed_pitch_authority=
         fc_axis_available(&state->authority[FLIGHT_CONTROL_AXIS_PITCH], q);
-    double raw_roll_authority =
+    double reported_pitch_authority=
+        fc_reported_axis_accel(telemetry,FLIGHT_CONTROL_AXIS_PITCH);
+    double raw_pitch_authority=reported_pitch_authority>DBL_EPSILON?
+        reported_pitch_authority:observed_pitch_authority;
+    double observed_roll_authority =
         fc_axis_available(&state->authority[FLIGHT_CONTROL_AXIS_ROLL], q);
-    double yaw_authority =
+    double reported_roll_authority=
+        fc_reported_axis_accel(telemetry,FLIGHT_CONTROL_AXIS_ROLL);
+    double raw_roll_authority=reported_roll_authority>DBL_EPSILON?
+        reported_roll_authority:observed_roll_authority;
+
+    double observed_yaw_authority=
         fc_axis_available(&state->authority[FLIGHT_CONTROL_AXIS_YAW], q);
+    double reported_yaw_authority=
+        fc_reported_axis_accel(telemetry,FLIGHT_CONTROL_AXIS_YAW);
+    double yaw_authority=reported_yaw_authority>DBL_EPSILON?
+        reported_yaw_authority:observed_yaw_authority;
 
     double pitch_authority = raw_pitch_authority;
     double roll_authority = raw_roll_authority;
     /* The identified roll authority can be wildly off live (3e5 deg/s^2 seen
        against ~100 observed); bound it by the observed full-input response so
        the proportional law keeps real gain. */
-    const FlightControlTuning *tuning=fc_tuning();
     const double roll_accel_max=tuning->roll_accel_max;
     if(!(roll_authority>DBL_EPSILON)||roll_authority>roll_accel_max)roll_authority=roll_accel_max;
     bool pitch_guard_known=fc_axis_control_authority_known(
@@ -553,8 +760,10 @@ bool flight_control_step(FlightControlState *state,
         fmax(0.0,state->authority[FLIGHT_CONTROL_AXIS_YAW].aero_per_q)*q/
         yaw_authority,0.0,1.0); /* decision-literal-ok: normalized fraction domain */
 
-    double effective_pitch_rate=observed_pitch_rate;
-    double effective_roll_rate=observed_roll_rate;
+    double effective_pitch_rate=quaternion_control?
+        -state->quaternion_pitch_error_rate:observed_pitch_rate;
+    double effective_roll_rate=quaternion_control?
+        -state->quaternion_roll_error_rate:observed_roll_rate;
 
     state->roll_trim = 0.0;
     state->terminal_pitch_authority = pitch_authority;
@@ -580,53 +789,87 @@ bool flight_control_step(FlightControlState *state,
     double pitch_wn_used = pitch_wn;
     double roll_wn_used = roll_wn;
     double roll_bandwidth_scale = 1.0;
+    bool adaptive_pitch = profile == PROFILE_ENTRY || profile == PROFILE_TAEM ||
+                          profile == PROFILE_RECOVERY;
     if (rollout_pitch_hold) {
         pitch_wn_used = 0.55;
     } else {
         fc_schedule_bandwidth(q, telemetry->mach, profile, pitch_wn, roll_wn,
                               &pitch_wn_used, &roll_wn_used, &roll_bandwidth_scale);
+        if (adaptive_pitch) {
+            double pitch_commanded_rate =
+                quaternion_control ? 0.0 : state->target_pitch_rate;
+            double pitch_relative_rate =
+                effective_pitch_rate - pitch_commanded_rate;
+            state->pitch_response_scale = fc_adapt_response_scale(
+                state->pitch_response_scale, pitch_error, pitch_relative_rate,
+                pitch_wn_used, control_dt);
+            pitch_wn_used *= state->pitch_response_scale;
+        } else {
+            /* Final/flare is a separately identified low-altitude plant. The
+               high-energy self-tuning reduction adds response lag exactly where
+               the flare has only seconds, so use its validated nominal loop. */
+            state->pitch_response_scale = 1.0;
+        }
     }
-    double pitch_zeta_used = rollout_pitch_hold ? 1.45 : pitch_zeta;
-    double pitch_command = fc_capped_pd_command(pitch_error, effective_pitch_rate,
-        state->target_pitch_rate, pitch_auth_used, pitch_wn_used, pitch_zeta_used, pitch_lag_s,
+
+    double pitch_zeta_used = rollout_pitch_hold ? 1.45 :
+        (adaptive_pitch ?
+            fc_clamp(pitch_zeta / fmax(state->pitch_response_scale, 0.40),
+                     pitch_zeta, 2.4) :
+            pitch_zeta);
+    double pitch_commanded_rate =
+        quaternion_control ? 0.0 : state->target_pitch_rate;
+    double pitch_command = fc_capped_pd_command(
+        pitch_error, effective_pitch_rate, pitch_commanded_rate,
+        pitch_auth_used, pitch_wn_used, pitch_zeta_used, pitch_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH]);
 
-    /* Regime-wide pitch trim integrator with anti-windup:
-       Direct-control plants have natural aerodynamic trim (e.g. 6 deg AoA) that creates
-       persistent steady-state offsets when holding high AoA across Entry/TAEM or Approach.
-       The integrator runs in active atmospheric flight before main gear contact. */
+    /* Regime-wide aerodynamic pitch trim with anti-windup. Quaternion attitude
+       error is the transient 3-D tracking coordinate; trim remains tied to the
+       physical AoA error so bank/yaw maneuvers cannot wind elevator bias. */
     bool trim_active = !state->main_gear_contact_latched &&
                        fc_atmospheric_profile(profile) &&
                        q > 100.0;
     if (trim_active) {
-        bool in_approach = (profile == PROFILE_APPROACH || profile == PROFILE_FLARE) &&
-                           isfinite(telemetry->radar_altitude) && telemetry->radar_altitude < 700.0;
+        bool in_approach =
+            (profile == PROFILE_APPROACH || profile == PROFILE_FLARE) &&
+            isfinite(telemetry->radar_altitude) &&
+            telemetry->radar_altitude < 700.0;
         double ki = in_approach ? tuning->pitch_trim_ki : 0.008;
-
-        /* Anti-windup: freeze integration when actuator is saturated in the error direction */
-        bool saturated_high = (pitch_command >= 1.0 && pitch_error > 0.0);
-        bool saturated_low = (pitch_command <= -1.0 && pitch_error < 0.0);
-
-        if (!saturated_high && !saturated_low) {
-            if (fabs(pitch_error) > 0.20) {
-                state->pitch_trim += ki * pitch_error * control_dt;
-            }
-        }
+        bool saturated_high =
+            pitch_command >= 1.0 && aerodynamic_pitch_error > 0.0;
+        bool saturated_low =
+            pitch_command <= -1.0 && aerodynamic_pitch_error < 0.0;
+        if (!saturated_high && !saturated_low &&
+            fabs(aerodynamic_pitch_error) > 0.20)
+            state->pitch_trim +=
+                ki * aerodynamic_pitch_error * control_dt;
         double trim_min = in_approach ? -0.18 : -0.35;
         double trim_max = in_approach ? 0.42 : 0.50;
-        state->pitch_trim = fc_clamp(state->pitch_trim, trim_min, trim_max);
+        state->pitch_trim =
+            fc_clamp(state->pitch_trim, trim_min, trim_max);
     } else {
         state->pitch_trim *= fmax(0.0, 1.0 - control_dt);
     }
     state->terminal_pitch_integral = state->pitch_trim;
-    pitch_command = fc_clamp(pitch_command + state->pitch_trim, -1.0, 1.0);
+    pitch_command =
+        fc_clamp(pitch_command + state->pitch_trim, -1.0, 1.0);
+
+    /* Entry/TAEM can expose direct kRPC control to large authority changes as q
+       rises. Smooth that high-energy path only. Final/flare already has an
+       identified incidence response and explicit command slew, so a second
+       actuator lag there delays sink arrest and degrades touchdown. */
+    if (!state->main_gear_contact_latched && adaptive_pitch)
+        pitch_command = fc_smooth_actuator_command(
+            pitch_command,
+            state->last_control[FLIGHT_CONTROL_AXIS_PITCH],
+            control_dt,
+            pitch_lag_s / fmax(state->pitch_response_scale, 0.40));
 
     if (state->main_gear_contact_latched) {
-        /* Exact post-mains contract: the first real rear/main-wheel contact
-           permanently releases pitch for this flight.  Do not hold attitude,
-           derotate, trim, or resume AoA control if the gear bounces; the nose
-           comes down under the vehicle's own aerodynamic and gear moments.
-           (Nose-gear contact still gates wheel braking in guidance.) */
+        /* After first real main-wheel contact, permanently release pitch for
+           this flight. Do not hold attitude, trim, or resume AoA control. */
         state->pitch_trim = 0.0;
         state->terminal_pitch_integral = 0.0;
         state->has_last_target_pitch = false;
@@ -634,52 +877,50 @@ bool flight_control_step(FlightControlState *state,
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH] = 0.0;
         pitch_command = 0.0;
     } else if (rollout_profile) {
-        if (rollout_pitch_hold) pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
-        else pitch_command = 0.0;
+        if (rollout_pitch_hold)
+            pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
+        else
+            pitch_command = 0.0;
     }
     (void)pitch_guard_known;
 
-    double commanded_roll_rate = state->target_roll_rate;
+    double commanded_roll_rate =
+        quaternion_control ? 0.0 : state->target_roll_rate;
     double relative_rate = effective_roll_rate - commanded_roll_rate;
-    double roll_command = fc_capped_pd_command(roll_error, effective_roll_rate,
-        commanded_roll_rate, roll_authority, roll_wn_used, roll_zeta, roll_lag_s,
+    double roll_command = fc_capped_pd_command(
+        roll_error, effective_roll_rate, commanded_roll_rate,
+        roll_authority, roll_wn_used, roll_zeta, roll_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
     (void)roll_guard_known;
 
     double heading_error = 0.0;
-    /* Positive yaw closes positive sideslip in the validated atmospheric model. */
+    /* A complete air-relative reference closes yaw as the third quaternion
+       error. Explicit runway-heading holds retain the validated heading law. */
     double yaw_error = sideslip;
-    double target_yaw_rate = 0.0;
+    double yaw_coordinate_rate = observed_yaw_coordinate_rate;
+    double yaw_target_rate = 0.0;
     double u_coord = 0.0;
 
     if (command->heading_control_enabled) {
         heading_error =
             fc_signed_angle(fc_finite(command->target_heading, 0.0) - heading);
         yaw_error = heading_error;
+    } else if (quaternion_yaw_control) {
+        yaw_error = attitude_error->yaw_error_deg;
+        yaw_coordinate_rate = -state->quaternion_yaw_error_rate;
     } else if (fc_atmospheric_profile(profile) && q > 200.0 && telemetry->true_air_speed > 30.0) {
-        /* Turn-coordination feed-forward:
-           In banked turns, coordinated steady turn rate is r_coord = (g / V) * sin(bank).
-           Kinematic cross-coupling from roll rate at angle of attack: r_ARI = roll_rate * sin(AoA). */
         double rad_roll = roll * DEG2RAD;
-        double rad_aoa = aoa * DEG2RAD;
-        double speed = fmax(telemetry->true_air_speed, 30.0);
-        double r_coord = (9.80665 / speed) * sin(rad_roll) * RAD2DEG;
-        double r_ari = observed_roll_rate * sin(rad_aoa);
-        target_yaw_rate = fc_clamp(r_coord + r_ari, -15.0, 15.0);
-
-        /* Rudder aerodynamic coordination feed-forward */
         u_coord = 0.08 * fc_clamp(q / 3000.0, 0.0, 1.0) * sin(rad_roll);
     }
 
     const double yaw_accel_max = tuning->yaw_accel_max;
     const double yaw_wn = tuning->yaw_wn;
-    if (!(yaw_authority > DBL_EPSILON) || yaw_authority > yaw_accel_max) yaw_authority = yaw_accel_max;
-    double yaw_rate = command->heading_control_enabled && isfinite(telemetry->heading_rate)
-        ? telemetry->heading_rate : observed_yaw_rate;
-    double yaw_command = fc_capped_pd_command(yaw_error, yaw_rate, target_yaw_rate, yaw_authority,
-        yaw_wn, 1.0, 0.20, state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
-    yaw_command = fc_clamp(yaw_command + u_coord, -1.0, 1.0);
-
+    if (!(yaw_authority > DBL_EPSILON) || yaw_authority > yaw_accel_max)
+        yaw_authority = yaw_accel_max;
+    double yaw_command = fc_capped_pd_command(yaw_error, yaw_coordinate_rate,
+        yaw_target_rate, yaw_authority, yaw_wn, 1.0, tuning->yaw_lag_s,
+        state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
+    yaw_command=fc_clamp(yaw_command+u_coord,-1.0,1.0);
     /* Mission constraint: RCS is not used during atmospheric guidance. */
     double rcs_assist = 0.0;
     state->rcs_transonic_cutoff = true;
@@ -701,15 +942,17 @@ bool flight_control_step(FlightControlState *state,
 
     FlightControlDiagnostics *d = &output->diagnostics;
     d->target_pitch_state = target_pitch_state;
-    d->target_pitch_state = target_pitch_state;
     d->measured_pitch_state = measured_pitch_state;
     d->pitch_error = pitch_error;
+    d->effective_pitch_rate = effective_pitch_rate;
     d->body_pitch_rate = body_pitch_rate_valid ? telemetry->body_pitch_rate : 0.0;
-    d->body_pitch_rate_available = body_pitch_rate_valid && !body_pitch_rate_stale;
+    d->body_pitch_rate_available = body_pitch_rate_valid &&
+        (quaternion_control || !body_pitch_rate_stale);
     d->roll_error = roll_error;
     d->effective_roll_rate = effective_roll_rate;
     d->body_roll_rate = body_roll_rate_valid ? telemetry->body_roll_rate : 0.0;
-    d->body_roll_rate_available = body_roll_rate_valid && !body_roll_rate_stale;
+    d->body_roll_rate_available = body_roll_rate_valid &&
+        (quaternion_control || !body_roll_rate_stale);
     d->target_roll_rate = state->target_roll_rate;
     d->commanded_roll_rate = commanded_roll_rate;
     d->relative_roll_rate = relative_rate;
@@ -717,7 +960,7 @@ bool flight_control_step(FlightControlState *state,
     d->heading_error = heading_error;
     d->sideslip = sideslip;
     d->sideslip_rate = state->sideslip_rate;
-    d->body_yaw_rate = body_yaw_rate_valid ? telemetry->body_yaw_rate : 0.0;
+    d->body_yaw_rate = observed_body_yaw_rate;
     d->body_yaw_rate_available = body_yaw_rate_valid;
     d->flight_path_angle = flight_path_angle;
     d->pitch_trim = state->pitch_trim;
@@ -728,7 +971,8 @@ bool flight_control_step(FlightControlState *state,
     d->pitch_raw_authority = raw_pitch_authority;
     d->pitch_guard_authority = pitch_guard_authority;
     d->pitch_aero_fraction = pitch_aero_fraction;
-    d->pitch_fast_command_limit = 1.0; /* decision-literal-ok: normalized actuator command domain */
+    d->pitch_bandwidth_scale = state->pitch_response_scale;
+
     d->pitch_hold_seconds = control_dt;
     d->pitch_rate_impulse_budget = pitch_authority*control_dt;
     d->roll_authority = roll_authority;
@@ -746,9 +990,11 @@ bool flight_control_step(FlightControlState *state,
     d->beta_roll_coupling = state->beta.roll_gain;
     d->beta_confidence = state->beta.confidence;
     d->sample_dt = control_dt;
+    d->quaternion_attitude_control = quaternion_control;
+    double controlled_yaw_error = command->heading_control_enabled ? heading_error :
+        (quaternion_yaw_control ? attitude_error->yaw_error_deg : sideslip);
     d->attitude_error = fmax(fabs(pitch_error),
-        fmax(fabs(roll_error),command->heading_control_enabled?
-            fabs(heading_error):fabs(sideslip)));
+        fmax(fabs(roll_error),fabs(controlled_yaw_error)));
     d->rcs_transonic_cutoff = true;
 
     state->last_ut = fc_finite(telemetry->ut, state->last_ut + control_dt);
@@ -761,4 +1007,13 @@ bool flight_control_step(FlightControlState *state,
     state->last_profile = profile;
     state->has_last_profile = true;
     return true;
+}
+
+bool flight_control_step(FlightControlState *state,
+                         const Telemetry *telemetry,
+                         const GuidanceCommand *command,
+                         double sample_dt,
+                         FlightControlOutput *output) {
+    return flight_control_step_attitude(state, telemetry, command, NULL,
+        sample_dt, output);
 }

@@ -10,8 +10,6 @@ import time
 from backend_mailbox import BackendMailbox
 from run_artifacts import write_json
 
-MIRROR = pathlib.Path(__file__).resolve().parents[2] / "Runtime" / "WebTelemetry" / "controller-snapshot.json"
-
 def _downsample_trajectory(points, limit=120):
     if not isinstance(points, list) or len(points) <= limit:
         return points if isinstance(points, list) else []
@@ -39,6 +37,7 @@ class Backend:
                  replay_path: pathlib.Path | None = None, compact_log: bool = False,
                  lean_snapshots: bool = True):
         self.proc=proc; self.mailbox=BackendMailbox(); self.latest=None; self.mirror=mirror
+        self.mirror_path=log_path.parent / "controller-snapshot.json"
         self.replay_lock=threading.Lock()
         self.compact_log=compact_log
         self.lean_snapshots=lean_snapshots
@@ -90,7 +89,7 @@ class Backend:
                         mirror=dict(snap); mirror["generatedAt"]=time.time()
                         mirror.setdefault("server",{})
                         mirror["server"]={**mirror["server"],"source":"ShuttleSim Guidance lockstep","mode":"simulator"}
-                        write_json(MIRROR,mirror)
+                        write_json(self.mirror_path,mirror)
             if emit:
                 log_obj=obj
                 if self.compact_log and typ=="snapshot" and isinstance(obj.get("snapshot"),dict):

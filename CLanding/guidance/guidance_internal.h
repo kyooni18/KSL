@@ -9,6 +9,15 @@
 #include "entry_energy_control.h"
 #include "taem_exec.h"
 #include "taem_planner.h"
+/* AoA retains a true aerodynamic hard limit.  MM304 bank is different: 40 deg
+   is an operational planning target, not a controller/recovery boundary.  The
+   planner must stay inside that target while downstream control keeps the full
+   physical authority needed to track and brake the maneuver. */
+#define GUIDANCE_HARD_AOA_LIMIT_DEG 40.0
+#define MM304_PLANNED_MAX_BANK_DEG 40.0
+#define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
+#define MM304_COORDINATION_BETA_SCALE_DEG 5.0
+
 
 /* Shared live MM304→MM305 capture contract.  The terminal owner must use the
    same predicate as Entry; otherwise an energy-qualified but spatially remote

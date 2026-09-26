@@ -525,18 +525,17 @@ def stop_warp_for_parent_loss(conn, sc, parent_pid: int | None) -> bool:
 
 
 def preentry_warp(multiplier: int, release_altitude: float, interval: float, parent_pid: int | None = None) -> int:
-    """Own KSP physics warp from the post-burn coast through MM304.
+    """Own KSP physics warp only during the post-burn pre-entry coast.
 
     KSP exposes physics_warp_factor as an index: 0=1x, 1=2x, 2=3x,
-    3=4x. Above release_altitude the requested pre-entry multiplier may be
-    used while the low-incidence coast attitude is settled. Between
-    release_altitude and 40 km the helper caps itself at 2x and uses an
-    aerodynamic-entry stability envelope. At or below 40 km physics warp is
-    forbidden: the helper forces 1x and exits, so it cannot re-arm later.
+    3=4x. Above release_altitude the requested multiplier may be used while
+    the low-incidence coast attitude is settled. At or below release_altitude
+    physics warp is forbidden: force 1x and exit so atmospheric-entry guidance
+    can never re-arm accelerated physics.
     """
 
     factor = max(0, min(3, multiplier - 1))
-    entry_factor = min(factor, 1)  # Never exceed 2x once aerodynamic entry starts.
+    entry_cutoff_altitude = max(release_altitude, ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE)
     conn = connect("KSP Lander Entry Physics Warp")
     sc = conn.space_center
     if stop_warp_for_parent_loss(conn, sc, parent_pid):
@@ -570,19 +569,19 @@ def preentry_warp(multiplier: int, release_altitude: float, interval: float, par
             emit({"event": "entry-warp-skipped", "reason": "1x-requested", "altitude": altitude})
             return 0
 
-        if altitude <= ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE:
+        if altitude <= entry_cutoff_altitude:
             sc.rails_warp_factor = 0
             sc.physics_warp_factor = 0
             emit({
                 "event": "entry-warp-disabled",
-                "reason": "below-40km-hard-cutoff",
+                "reason": "at-or-below-entry-release-altitude",
                 "altitude": altitude,
-                "cutoffAltitude": ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE,
+                "cutoffAltitude": entry_cutoff_altitude,
                 "physicsWarpFactor": int(sc.physics_warp_factor),
             })
             return 0
-        entry_mode = altitude <= release_altitude
-        active_factor = entry_factor if entry_mode else factor
+        entry_mode = False
+        active_factor = factor
         sc.rails_warp_factor = 0
         sc.physics_warp_factor = 0
         emit(
@@ -612,38 +611,18 @@ def preentry_warp(multiplier: int, release_altitude: float, interval: float, par
                 sc.physics_warp_factor = 0
 
             altitude = float(flight.mean_altitude)
-            if altitude <= ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE:
+            if altitude <= entry_cutoff_altitude:
                 sc.rails_warp_factor = 0
                 sc.physics_warp_factor = 0
                 emit({
                     "event": "entry-warp-disabled",
-                    "reason": "below-40km-hard-cutoff",
+                    "reason": "at-or-below-entry-release-altitude",
                     "altitude": altitude,
-                    "cutoffAltitude": ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE,
+                    "cutoffAltitude": entry_cutoff_altitude,
                     "physicsWarpFactor": int(sc.physics_warp_factor),
                 })
                 return 0
-            now_entry_mode = altitude <= release_altitude
-            if now_entry_mode and not entry_mode:
-                # Crossing into the aerodynamic-entry warp regime is always made
-                # at 1x first. Re-arm 2x only after the new attitude/rate envelope
-                # has remained settled for the dwell below.
-                sc.physics_warp_factor = 0
-                armed = False
-                stable_since = None
-                entry_mode = True
-                active_factor = entry_factor
-                emit(
-                    {
-                        "event": "entry-warp-capped",
-                        "altitude": altitude,
-                        "entryCapAltitude": release_altitude,
-                        "maximumMultiplier": entry_factor + 1,
-                        "physicsWarpFactor": int(sc.physics_warp_factor),
-                    }
-                )
-            elif not now_entry_mode:
-                entry_mode = False
+            entry_mode = False
 
             pitch = float(flight.pitch)
             roll = ((float(flight.roll) + 180.0) % 360.0) - 180.0

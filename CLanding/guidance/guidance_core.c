@@ -124,6 +124,7 @@ static void reset_controllers(GuidanceMachine*g){
     g->has_previous_relative_roll_rate=false;
     g->previous_sideslip=0.0;
     g->has_previous_sideslip=false;
+    g->entry_coordination_beta_rate=0.0;
 
     g->entry_predictive_score=0.0;
     g->entry_reference_speed=0.0;
@@ -350,8 +351,9 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
 }
        GuidanceCommand atmospheric(const Telemetry*t,double heading,double roll,const VehicleProfile*v,double throttle,bool air,ControlProfile profile){GuidanceCommand c;guidance_command_init(&c);c.autopilot_engaged=true;c.target_heading=norm_deg(heading);c.target_roll=clampd(roll,-v->maximum_bank_angle,v->maximum_bank_angle);c.target_throttle=clampd(throttle,0,1);c.gear=t->gear;c.airbrakes=air;c.navball_speed_mode=SPEED_SURFACE;c.control_profile=profile;return c;}
        void aerodynamic_pitch_target(GuidanceCommand*c,const Telemetry*t,const VehicleProfile*v,double surface_pitch){
+    double aoa_ceiling=fmin(v->maximum_angle_of_attack,GUIDANCE_HARD_AOA_LIMIT_DEG);
     c->has_target_aoa=true;
-    c->target_aoa=clampd(surface_pitch-t->flight_path_angle,0,v->maximum_angle_of_attack);
+    c->target_aoa=clampd(surface_pitch-t->flight_path_angle,0,aoa_ceiling);
     c->target_pitch=t->flight_path_angle+c->target_aoa;
 }
        GuidanceResult stabilized(GuidanceMachine*g,GuidanceResult r,const Telemetry*t,const VehicleProfile*v,const GuidanceSettings*s,double dt){
@@ -367,17 +369,12 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
      * native FCS and by ShuttleSim, so simulator-only behavior cannot diverge
      * from the real guidance contract.
      */
-    if(r.phase==PHASE_ATTITUDE_RECOVERY){
-        reset_limiters(g);
-        return r;
-    }
-
-    double aoa_ceiling=v->maximum_angle_of_attack;
+    double aoa_ceiling=fmin(v->maximum_angle_of_attack,GUIDANCE_HARD_AOA_LIMIT_DEG);
     if(r.phase==PHASE_ENTRY_ENERGY&&r.command.has_target_aoa&&
        isfinite(r.command.target_aoa)&&r.command.target_aoa>aoa_ceiling)
-        aoa_ceiling=entry_final_s_turn_aoa_ceiling(v);
+        aoa_ceiling=fmin(GUIDANCE_HARD_AOA_LIMIT_DEG,entry_final_s_turn_aoa_ceiling(v));
 
-    bool aerodynamic_phase=r.phase==PHASE_ENTRY_ENERGY||
+    bool aerodynamic_phase=r.phase==PHASE_ENTRY_ENERGY||r.phase==PHASE_ATTITUDE_RECOVERY||
         r.phase==PHASE_TAEM||r.phase==PHASE_HEADING_ALIGNMENT||
         r.phase==PHASE_FINAL||r.phase==PHASE_FLARE;
 
@@ -394,10 +391,14 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
         r.command.target_pitch=t->flight_path_angle+target_aoa;
     }
 
+    double requested_roll=norm_signed_deg(r.command.target_roll);
     double bank_limit=(r.phase==PHASE_FINAL||r.phase==PHASE_FLARE)?
         terminal_lateral_bank_limit(t,v):dynamic_bank_limit(t,v);
-    r.command.target_roll=clampd(norm_signed_deg(r.command.target_roll),
-        -bank_limit,bank_limit);
+    /* MM304's 40 deg operating target is owned by the entry planner.  Do not
+       impose that value again at the controller boundary: the controller needs
+       the vehicle's full physical bank authority to track, arrest overshoot and
+       execute reversals without target discontinuities. */
+    r.command.target_roll=clampd(requested_roll,-bank_limit,bank_limit);
     r.command.target_heading=norm_deg(r.command.target_heading);
     r.command.target_throttle=clampd(r.command.target_throttle,0.0,1.0);
 

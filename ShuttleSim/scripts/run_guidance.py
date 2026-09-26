@@ -350,6 +350,7 @@ def main():
     env=os.environ.copy()
     env.update({
         "KSP_LANDER_ROOT":str(ROOT),
+        "KSP_LANDER_CAMPAIGN_IDENTITY":f"sim:{run_id}",
         "KSP_LANDER_SIMULATOR":"1",
         "KSP_LANDER_UNPOWERED_ONLY":"1",
         "KSP_LANDER_HAC_DIAGNOSTICS":"1",

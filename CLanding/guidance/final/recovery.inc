@@ -26,9 +26,22 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         t->body_pitch_rate : t->pitch_rate;
     double body_yaw_rate = t->has_body_yaw_rate ? fabs(t->body_yaw_rate) : 0;
     double sideslip = fabs(t->sideslip);
-    double beta_rate = 0;
+    /* AoA has a real aerodynamic hard boundary. Bank does not use the MM304
+       40 deg planning target as a recovery threshold: nominal guidance may
+       intentionally command that bank, and recovery should respond to actual
+       loss of control (rate divergence, beta/yaw departure, oscillation or
+       sustained saturation), not merely reaching the planned attitude. */
+    double signed_aoa=t->angle_of_attack;
+    double outward_aoa_rate=0.0;
+    if(t->has_angle_of_attack_rate&&isfinite(t->angle_of_attack_rate))
+        outward_aoa_rate=(signed_aoa>=0.0?1.0:-1.0)*t->angle_of_attack_rate;
+    double projected_abs_aoa=fabs(signed_aoa)+
+        fmax(0.0,outward_aoa_rate)*GUIDANCE_ATTITUDE_LOOKAHEAD_S;
+    bool attitude_envelope_threat=projected_abs_aoa>=GUIDANCE_HARD_AOA_LIMIT_DEG;
+    double beta_rate=0.0;
     if(g->has_previous_sideslip&&dt>1e-4)
         beta_rate=norm_signed_deg(t->sideslip-g->previous_sideslip)/dt;
+    g->entry_coordination_beta_rate=beta_rate;
     g->previous_sideslip=t->sideslip;
     g->has_previous_sideslip=true;
     bool roll_saturated = t->has_controls && fabs(t->control_roll) >= .35;
@@ -148,12 +161,10 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     bool yaw_saturated_departure=!hac_control_tuning&&yaw_saturated&&
         (body_yaw_rate>10||(sideslip>12&&fabs(t->heading_rate)>8))&&!yaw_rate_braking;
     /* Beta magnitude by itself is not a control departure. A banked shuttle
-       can carry a transient 10-20 deg sideslip while the rudder/RCS loop is
-       actively damping it, especially near the first S-turn reversal. The
-       old absolute |beta|>10 deg gate therefore latched recovery on a stable
-       vehicle as soon as q crossed 120 Pa. Treat sideslip as a departure only
-       when it is accompanied by actual yaw motion or saturated yaw authority;
-       the normal entry law already unloads bank continuously as beta grows. */
+       can carry transient sideslip while the rudder loop is actively damping it.
+       MM304 now unloads planned bank continuously when corrective yaw authority
+       is being consumed; recovery remains the later safety net for genuine yaw
+       motion/runaway or exhausted authority rather than an absolute beta gate. */
     bool emergency_rate = roll_rate > 75 || pitch_rate > 45 ||
         (aero_loaded&&extreme_yaw)||(bank_departure&&sideslip>25);
     /* A roll rate above the nominal comfort envelope is not a departure when
@@ -193,12 +204,12 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         t->control_pitch * signed_pitch_rate < 0;
     bool pitch_departure = pitch_rate > 18 ||
         (pitch_saturated && pitch_rate > 10 && !corrective_pitch_saturation && !pitch_rate_braking);
-    bool bad = beta_runaway || (aero_loaded && (oscillatory_roll || extreme_rate || divergent_roll ||
+    bool bad = attitude_envelope_threat || beta_runaway || (aero_loaded && (oscillatory_roll || extreme_rate || divergent_roll ||
         pitch_departure || uncoordinated_yaw || yaw_saturated_departure));
     g->control_bad_duration = bad ? g->control_bad_duration + dt :
         fmax(0, g->control_bad_duration - dt * 1.5);
     bool recovery_trigger=!g->attitude_recovery&&
-        (extreme_rate||oscillatory_roll||g->control_bad_duration>=.35);
+        (attitude_envelope_threat||extreme_rate||oscillatory_roll||g->control_bad_duration>=.35);
     if(recovery_trigger){
         const char*diag_env=getenv("KSP_LANDER_HAC_DIAGNOSTICS");
         if(diag_env&&strcmp(diag_env,"1")==0&&!g->diagnostic_shadow)

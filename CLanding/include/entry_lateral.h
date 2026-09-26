@@ -42,6 +42,11 @@ typedef struct {
     bool has_crossrange_accel;
     double crossrange_error_accel_mps2;
     double crossrange_uncertainty_m;
+    /* Measured coordination state. The planner uses the configured sideslip
+       envelope to slow bank motion before a reversal outruns yaw coordination. */
+    bool has_sideslip;
+    double sideslip_deg;
+    double maximum_sideslip_deg;
     EntryLateralLongitudinalDemand longitudinal;
     /* Bank magnitude owned by the energy law (entry_energy_control). When set,
        it replaces the legacy vertical-lift allocation above. */
@@ -66,6 +71,8 @@ typedef struct {
     double last_reversal_ut;
     double command_bank_deg;
     double command_bank_rate_deg_s;
+    bool has_previous_sideslip;
+    double previous_sideslip_deg;
 } EntryLateralState;
 
 typedef struct {
@@ -85,6 +92,8 @@ typedef struct {
     double projected_crossrange_error_m;
     double reversal_response_time_s;
     double expected_course_rate_deg_s;
+    double sideslip_rate_deg_s;
+    double coordination_roll_rate_limit_deg_s;
 } EntryLateralOutput;
 
 /*

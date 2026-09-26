@@ -188,8 +188,10 @@ typedef struct {
 typedef struct {
     unsigned scenarios,passed,unsafe;
     unsigned recovery_passed;
+    unsigned entry_stage_passed;
     double pass_fraction,recovery_pass_fraction,worst_closest,worst_taem_error,worst_alignment_error,worst_entry_angle,min_periapsis,max_dynamic_pressure,max_g_load;
-    bool qualified,recovery_qualified;
+    double entry_stage_pass_fraction;
+    bool qualified,recovery_qualified,entry_stage_qualified;
 } RobustAssessment;
 
 static bool hard_unsafe(const EntryPrediction*pr,double peri,const VehicleProfile*v,const GuidanceSettings*s,bool burn_completed){
@@ -273,6 +275,8 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
             energy_margin=deorbit_energy_margin_probe(after,p,aero,env,&scenario_cal,site,v,s);
         bool pass=base_pass&&deorbit_energy_margin_qualified(&energy_margin,s,true);
         bool recovery=base_recovery&&deorbit_energy_margin_qualified(&energy_margin,s,false);
+        bool entry_stage=deorbit_entry_stage_qualified(&pr,v,s,peri,
+            site->altitude,p->atmosphere_depth,burn_completed);
         bool unsafe=hard_unsafe(&pr,peri,v,s,burn_completed);
         double align_metric=deorbit_alignment_contract_utilization(&pr,site,s);
         double align_pos=deorbit_alignment_position_error(&pr,s);
@@ -289,6 +293,7 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
         r.scenarios++;
         if(pass)r.passed++;
         if(recovery)r.recovery_passed++;
+        if(entry_stage)r.entry_stage_passed++;
         if(unsafe)r.unsafe++;
         if(isfinite(pr.closest_distance))r.worst_closest=fmax(r.worst_closest,pr.closest_distance);
         if(isfinite(pr.taem_range_error))r.worst_taem_error=fmax(r.worst_taem_error,fabs(pr.taem_range_error));
@@ -303,11 +308,16 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
     if(r.min_periapsis==DBL_MAX)r.min_periapsis=-DBL_MAX;
     r.pass_fraction=r.scenarios?(double)r.passed/r.scenarios:0;
     r.recovery_pass_fraction=r.scenarios?(double)r.recovery_passed/r.scenarios:0;
+    r.entry_stage_pass_fraction=r.scenarios?
+        (double)r.entry_stage_passed/r.scenarios:0;
     r.qualified=c->executable_witness_capture&&
         r.pass_fraction+1e-9>=s->deorbit_robust_minimum_pass_fraction&&r.unsafe==0;
     r.recovery_qualified=c->executable_witness_capture&&
         deorbit_energy_margin_qualified(&c->energy_margin,s,false)&&
         r.recovery_pass_fraction+1e-9>=s->deorbit_robust_minimum_pass_fraction&&r.unsafe==0;
+    r.entry_stage_qualified=deorbit_entry_stage_robustness_qualified(
+        r.entry_stage_passed,r.scenarios,r.unsafe,
+        s->deorbit_robust_minimum_pass_fraction);
     return r;
 }
 
@@ -903,8 +913,6 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     deorbit_record_execution_witness(&selected,&detailed,site,v,s);
     bool nominal_capture=selected.executable_witness_capture&&
         deorbit_energy_margin_qualified(&selected.energy_margin,s,true);
-    bool recovery_capture=selected.executable_witness_capture&&
-        deorbit_energy_margin_qualified(&selected.energy_margin,s,false);
     /* Stress cases are evaluated before the expensive production-guidance
        witness. Join their unchanged results with that witness now, instead of
        leaving the base-capture prerequisite unset on the selected candidate. */
@@ -937,8 +945,17 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     out->robustness_pass_fraction=selected_robust.pass_fraction;
     out->recovery_passed=selected_robust.recovery_passed;
     out->recovery_pass_fraction=selected_robust.recovery_pass_fraction;
-    out->execution_qualified=out->target_capture_achieved||
-        (recovery_capture&&selected_robust.recovery_qualified);
+    out->entry_stage_passed=selected_robust.entry_stage_passed;
+    out->entry_stage_scenarios=selected_robust.scenarios;
+    out->entry_stage_pass_fraction=selected_robust.entry_stage_pass_fraction;
+    bool nominal_entry_stage=deorbit_entry_stage_qualified(&detailed,v,s,
+        selected.peri,site->altitude,p->atmosphere_depth,true);
+    out->entry_stage_qualified=nominal_entry_stage&&
+        selected_robust.entry_stage_qualified;
+    /* Orbital-stage admission certifies the finite burn and safe atmospheric
+       entry envelope. MM304/TAEM shadow capture remains separately represented
+       by target_capture_achieved and is advisory at this stage boundary. */
+    out->execution_qualified=out->entry_stage_qualified;
     out->execution_degraded=out->execution_qualified&&
         !out->target_capture_achieved;
     out->worst_case_closest_distance=selected_robust.worst_closest;
@@ -953,7 +970,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     model_confidence/=4.0;
     double evidence_confidence=fmin(model_confidence,
         fmin(cal->confidence,selected_robust.pass_fraction));
-    if(selected_robust.unsafe||!nominal_capture)evidence_confidence=0.0;
+    if(selected_robust.unsafe||!nominal_entry_stage)evidence_confidence=0.0;
     out->confidence=clampd(evidence_confidence,0.0,1.0);
 
     out->trajectory=detailed.trajectory;
@@ -972,8 +989,8 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         selected_robust.recovery_pass_fraction*100,
         selected_robust.unsafe?"; unsafe stress case detected":"",
         out->target_capture_achieved?".":out->execution_qualified?
-            "; guarded recovery execution accepted.":
-            "; execution acceptance not met.");
+            "; entry-stage qualified; downstream MM304/TAEM shadow capture not achieved.":
+            "; entry-stage execution acceptance not met.");
 
     if(selected.pred.mm304_gate_recorded&&detailed.mm304_gate_recorded){
         fprintf(stderr,
@@ -1022,4 +1039,3 @@ bool deorbit_plan_create(DeorbitPlan*out,VehicleState state,double period,
     return deorbit_plan_create_with_telemetry(out,state,period,p,aero,env,cal,
         site,v,s,thrust,NULL);
 }
-

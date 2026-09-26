@@ -79,6 +79,7 @@ bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
                             char *error, size_t error_size);
 bool krpc_cnano_client_save(KrpcCNanoClient *client, const char *name,
                             char *error, size_t error_size);
+void krpc_cnano_client_neutralize(KrpcCNanoClient *client);
 void krpc_cnano_client_safe(KrpcCNanoClient *client);
 
 KrpcCNanoBudget krpc_cnano_client_budget(const KrpcCNanoClient *client);

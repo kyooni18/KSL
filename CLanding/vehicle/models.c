@@ -344,6 +344,10 @@ static void plan_log_json(JsonWriter*w,const DeorbitPlan*p){
     KEY(w,"recoveryPassFraction");jw_number(w,p->recovery_pass_fraction);COMMA(w);
     KEY(w,"executionQualified");jw_bool(w,p->execution_qualified);COMMA(w);
     KEY(w,"executionDegraded");jw_bool(w,p->execution_degraded);COMMA(w);
+    KEY(w,"entryStageQualified");jw_bool(w,p->entry_stage_qualified);COMMA(w);
+    KEY(w,"entryStageScenarios");jw_integer(w,p->entry_stage_scenarios);COMMA(w);
+    KEY(w,"entryStagePassed");jw_integer(w,p->entry_stage_passed);COMMA(w);
+    KEY(w,"entryStagePassFraction");jw_number(w,p->entry_stage_pass_fraction);COMMA(w);
     KEY(w,"worstCaseClosestDistance");jw_number(w,p->worst_case_closest_distance);COMMA(w);
     KEY(w,"worstCaseTAEMRangeError");jw_number(w,p->worst_case_taem_range_error);COMMA(w);
     KEY(w,"worstCaseEntryFlightPathAngle");jw_number(w,p->worst_case_entry_flight_path_angle);COMMA(w);

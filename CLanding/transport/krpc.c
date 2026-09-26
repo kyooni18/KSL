@@ -350,10 +350,11 @@ bool krpc_read_telemetry(KRPCSession *s,const LandingConfiguration *cfg,Telemetr
     s->last_telemetry=*t;s->has_last_telemetry=true;s->last_state=*state;s->has_last_state=true;store_observation(s,t,state);return true;
 }
 
-static void fill_direct_result(KRPCApplyResult *result,const GuidanceCommand *command,const FlightControlOutput *fc){
+static void fill_direct_result(KRPCApplyResult *result,const GuidanceCommand *command,
+        const FlightControlOutput *fc,double applied_yaw){
     memset(result,0,sizeof(*result));result->applied=true;result->autopilot_engaged=false;result->gear=fc->gear;result->brakes=fc->brakes;result->airbrakes=fc->airbrakes;
     result->target_pitch=command->target_pitch;result->target_heading=command->target_heading;result->target_roll=command->target_roll;result->throttle=fc->throttle;result->wheel_steering=fc->wheel_steering;
-    result->has_actuator_feedback=true;result->control_pitch=fc->pitch;result->control_roll=fc->roll;result->control_yaw=fc->yaw;result->has_control_diagnostics=true;
+    result->has_actuator_feedback=true;result->control_pitch=fc->pitch;result->control_roll=fc->roll;result->control_yaw=applied_yaw;result->has_control_diagnostics=true;
     result->control_body_pitch_rate_available=fc->diagnostics.body_pitch_rate_available;result->control_body_roll_rate_available=fc->diagnostics.body_roll_rate_available;result->control_body_yaw_rate_available=fc->diagnostics.body_yaw_rate_available;result->control_target_aoa=fc->diagnostics.target_pitch_state;result->control_measured_aoa=fc->diagnostics.measured_pitch_state;
     result->control_aoa_rate=fc->diagnostics.effective_pitch_rate;result->control_roll_rate=fc->diagnostics.effective_roll_rate;result->control_body_pitch_rate=fc->diagnostics.body_pitch_rate;result->control_body_roll_rate=fc->diagnostics.body_roll_rate;result->control_body_yaw_rate=fc->diagnostics.body_yaw_rate;result->control_pitch_error=fc->diagnostics.pitch_error;result->control_pitch_trim=fc->diagnostics.pitch_trim;
     result->control_pitch_authority=fc->diagnostics.pitch_authority;result->control_pitch_aero_fraction=fc->diagnostics.pitch_aero_fraction;result->control_roll_authority=fc->diagnostics.roll_authority;result->control_roll_raw_authority=fc->diagnostics.roll_raw_authority;result->control_roll_aero_fraction=fc->diagnostics.roll_aero_fraction;
@@ -443,7 +444,7 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
             }
             if(!sim_send_guidance_inputs(s,command,&fc,true,error,error_size))return false;
             s->last_control_ut=s->last_telemetry.ut;s->has_last_control_ut=true;
-            if(result){fill_direct_result(result,command,&fc);
+            if(result){fill_direct_result(result,command,&fc,fc.yaw);
                 snprintf(result->reference_frame,sizeof(result->reference_frame),"shuttlesim-direct");}
             snprintf(s->last_control_profile,sizeof(s->last_control_profile),"%s",profile_string(command->control_profile));
             return true;
@@ -463,7 +464,31 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
         if(!s->has_last_telemetry){set_error(error,error_size,"Native flight control has no telemetry sample");return false;}
         double dt=1.0/fmax(2.0,s->flight_control.nominal_dt>0?1.0/s->flight_control.nominal_dt:10.0);
         if(s->has_last_control_ut&&s->last_telemetry.ut>s->last_control_ut)dt=clampd(s->last_telemetry.ut-s->last_control_ut,.01,2.0);
-        FlightControlOutput fc;bool valid=inertial_entry?inertial_entry_capture_step(s,command,&fc):flight_control_step(&s->flight_control,&s->last_telemetry,command,dt,&fc);
+        FlightControlOutput fc;
+        bool valid=false;
+        if(inertial_entry){
+            valid=inertial_entry_capture_step(s,command,&fc);
+        }else{
+            FlightControlAttitudeError attitude_error={0};
+            const FlightControlAttitudeError *attitude_ptr=NULL;
+            const PlanetModel *planet=krpc_session_planet(s);
+            bool quaternion_eligible=command->control_profile!=PROFILE_ROLLOUT&&
+                s->has_last_state&&s->last_telemetry.has_attitude_quaternion&&planet;
+            if(quaternion_eligible){
+                Vector3 surface_velocity=vsub(s->last_state.velocity,
+                    vcross(planet_rotation_vector(planet),s->last_state.position));
+                double target_aoa=command->has_target_aoa&&isfinite(command->target_aoa)?
+                    command->target_aoa:
+                    command->target_pitch-s->last_telemetry.flight_path_angle;
+                if(flight_control_airframe_error(s->last_telemetry.attitude_quaternion,
+                    canonical_to_raw(surface_velocity),canonical_to_raw(s->last_state.position),
+                    target_aoa,command->target_roll,!command->heading_control_enabled,
+                    &attitude_error))
+                    attitude_ptr=&attitude_error;
+            }
+            valid=flight_control_step_attitude(&s->flight_control,&s->last_telemetry,
+                command,attitude_ptr,dt,&fc);
+        }
         if(!valid||!fc.valid){set_error(error,error_size,"Native %s flight-control law rejected profile %s",inertial_entry?"inertial-entry":"atmospheric",profile_string(command->control_profile));return false;}
         /* Unpowered landing forbids main-engine energy recovery, not the brief
            attitude-only RCS authority needed to rotate from the retrograde deorbit
@@ -472,8 +497,17 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
            blend RCS out with aerodynamic authority and enforce the transonic cutoff. */
         const char *unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
         if(unpowered&&strcmp(unpowered,"1")==0)fc.throttle=0.0;
-        if(!krpc_cnano_client_set_direct_controls(s->client,fc.pitch,fc.roll,fc.yaw,fc.throttle,fc.wheel_steering,fc.rcs_requested,error,error_size))return false;
-        if(result)fill_direct_result(result,command,&fc);
+        /* Keep the transport transparent: FlightControlOutput is expressed in
+           the same direct-control axis convention consumed by native kRPC. Any
+           sideslip/yaw sign or coordinate correction belongs in the flight-control
+           law, not at this actuator boundary. */
+        double native_yaw=fc.yaw;
+        if(!krpc_cnano_client_set_direct_controls(s->client,fc.pitch,fc.roll,native_yaw,fc.throttle,fc.wheel_steering,fc.rcs_requested,error,error_size))return false;
+        if(result){
+            fill_direct_result(result,command,&fc,native_yaw);
+            if(fc.diagnostics.quaternion_attitude_control)
+                snprintf(result->reference_frame,sizeof(result->reference_frame),"air-relative-quaternion");
+        }
         s->last_control_ut=s->last_telemetry.ut;s->has_last_control_ut=true;
     }else{
         Vector3 radial_up;
@@ -498,6 +532,7 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
     return true;
 }
 
+void krpc_neutralize(KRPCSession *s){if(!s)return;if(s->simulator){char ignored[128];(void)sim_send_guidance(s,NULL,false,ignored,sizeof(ignored));}else if(s->client)krpc_cnano_client_neutralize(s->client);flight_control_reset_transients(&s->flight_control);s->has_last_control_ut=false;}
 void krpc_safe(KRPCSession *s){if(!s)return;if(s->simulator){char ignored[128];(void)sim_send_guidance(s,NULL,false,ignored,sizeof(ignored));}else if(s->client)krpc_cnano_client_safe(s->client);flight_control_reset_transients(&s->flight_control);s->has_last_control_ut=false;}
 bool krpc_set_gear(KRPCSession *s,bool value,char *error,size_t error_size){if(!s)return false;if(s->simulator){GuidanceCommand c;guidance_command_init(&c);c.gear=value;c.brakes=s->has_last_telemetry?s->last_telemetry.brakes:false;c.has_target_aoa=true;c.target_aoa=s->has_last_telemetry?s->last_telemetry.angle_of_attack:0;c.target_roll=s->has_last_telemetry?s->last_telemetry.roll:0;return sim_send_guidance(s,&c,false,error,error_size);}return s->client&&krpc_cnano_client_set_gear(s->client,value,error,error_size);}
 bool krpc_set_brakes(KRPCSession *s,bool value,char *error,size_t error_size){if(!s)return false;if(s->simulator){GuidanceCommand c;guidance_command_init(&c);c.gear=s->has_last_telemetry?s->last_telemetry.gear:false;c.brakes=value;c.has_target_aoa=true;c.target_aoa=s->has_last_telemetry?s->last_telemetry.angle_of_attack:0;c.target_roll=s->has_last_telemetry?s->last_telemetry.roll:0;return sim_send_guidance(s,&c,false,error,error_size);}return s->client&&krpc_cnano_client_set_brakes(s->client,value,error,error_size);}

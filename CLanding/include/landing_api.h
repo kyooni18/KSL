@@ -118,6 +118,8 @@ bool deorbit_capture_qualified(const EntryPrediction *p,const LandingSite *site,
 bool deorbit_recovery_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);
 bool deorbit_live_cutoff_capture_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);
 bool deorbit_runway_capture_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);
+bool deorbit_entry_stage_qualified(const EntryPrediction *p,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis,double site_altitude,double atmosphere_depth,bool finite_burn_completed);
+bool deorbit_entry_stage_robustness_qualified(unsigned passed,unsigned scenarios,unsigned unsafe,double required_pass_fraction);
 
 bool guidance_accept_entry_plan(GuidanceMachine *g,const GuidanceMachine *request,
     const GuidanceMachine *result,const Telemetry *t,const LandingConfiguration *cfg);
@@ -154,7 +156,7 @@ const char *krpc_session_transport(const KRPCSession *s); const char *krpc_sessi
 const char *krpc_session_physics_structure_id(const KRPCSession *s); const char *krpc_session_physics_environment_id(const KRPCSession *s); const char *krpc_session_physics_storage(const KRPCSession *s); unsigned krpc_session_physics_history_count(const KRPCSession *s);
 void krpc_session_seed_physics(const KRPCSession *s,VesselPhysicsModel *model);
 bool krpc_orbital_up_reference(const GuidanceCommand *command,const VehicleState *state,Vector3 *out);
-bool krpc_read_telemetry(KRPCSession *s,const LandingConfiguration *cfg,Telemetry *t,VehicleState *state,char *error,size_t error_size); bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_group,const char *phase,const char *status,const char *warning,const Trajectory *hud_predicted_trajectory,const Trajectory *hud_reference_trajectory,KRPCApplyResult *result,char *error,size_t error_size); void krpc_safe(KRPCSession *s); bool krpc_set_gear(KRPCSession *s,bool value,char *error,size_t error_size); bool krpc_set_brakes(KRPCSession *s,bool value,char *error,size_t error_size); bool krpc_save_game(KRPCSession *s,const char *name,char *error,size_t error_size); bool krpc_warp(KRPCSession *s,double ut,char *error,size_t error_size);
+bool krpc_read_telemetry(KRPCSession *s,const LandingConfiguration *cfg,Telemetry *t,VehicleState *state,char *error,size_t error_size); bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_group,const char *phase,const char *status,const char *warning,const Trajectory *hud_predicted_trajectory,const Trajectory *hud_reference_trajectory,KRPCApplyResult *result,char *error,size_t error_size); void krpc_neutralize(KRPCSession *s); void krpc_safe(KRPCSession *s); bool krpc_set_gear(KRPCSession *s,bool value,char *error,size_t error_size); bool krpc_set_brakes(KRPCSession *s,bool value,char *error,size_t error_size); bool krpc_save_game(KRPCSession *s,const char *name,char *error,size_t error_size); bool krpc_warp(KRPCSession *s,double ut,char *error,size_t error_size);
 
 /* controller */
 typedef void (*SnapshotCallback)(const LandingSnapshot *snapshot, void *context);

@@ -58,7 +58,7 @@ NANOPB_SOURCE_NAMES := pb_common pb_encode pb_decode
 NANOPB_OBJECTS := $(NANOPB_SOURCE_NAMES:%=$(BUILD)/nanopb/%.o)
 CNANO_HEADERS := $(CNANO_COMPAT)/pb.h $(CNANO_COMPAT)/pb_common.h $(CNANO_COMPAT)/pb_encode.h $(CNANO_COMPAT)/pb_decode.h
 
-.PHONY: all clean debug test qualification architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test backend-protocol-test mm305-recovery-monitor-test
+.PHONY: all clean debug test qualification architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test backend-protocol-test mm305-recovery-monitor-test
 .SECONDARY: $(CNANO_HEADERS)
 
 all: $(TARGET)
@@ -141,6 +141,18 @@ vessel-physics-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/vessel_physics_tests
 	$(BUILD)/vessel_physics_tests
 
+flight-control-yaw-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/FlightControlYawTests.c $(BUILD)/flight_control.o $(BUILD)/math.o \
+		$(LDFLAGS) -lm -o $(BUILD)/flight_control_yaw_tests
+	$(BUILD)/flight_control_yaw_tests
+
+flight-control-quaternion-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/FlightControlQuaternionTests.c $(BUILD)/flight_control.o $(BUILD)/math.o \
+		$(LDFLAGS) -lm -o $(BUILD)/flight_control_quaternion_tests
+	$(BUILD)/flight_control_quaternion_tests
+
 entry-lateral-feedback-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/EntryLateralFeedbackTests.c $(BUILD)/entry_lateral.o \
@@ -195,6 +207,6 @@ entry-forecast-admission-test: $(TARGET)
 
 contract-tests: mm305-feasibility-test touchdown-quality-test
 
-test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test mm305-recovery-monitor-test touchdown-quality-test
+test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test mm305-recovery-monitor-test touchdown-quality-test
 
 qualification: test

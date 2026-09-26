@@ -22,10 +22,10 @@ static void set_paused_triplet(KrpcCNanoClient *client, bool paused){
     client->pause_triplet_sent=true;
 }
 
-void krpc_cnano_client_safe(KrpcCNanoClient *client){
+void krpc_cnano_client_neutralize(KrpcCNanoClient *client){
     if(!client||!client->connected)return;
     ClientBatch batch={0};
-#define SAFE_ADD(expr) do{if(!(expr)){(void)safe_flush_batch(client,&batch);goto safe_done;}}while(0)
+#define SAFE_ADD(expr) do{if(!(expr)){(void)safe_flush_batch(client,&batch);goto neutral_done;}}while(0)
     SAFE_ADD(batch_add_object_bool(&batch,PROC_AUTOPILOT_SET_ENGAGED,client->autopilot,false,false));
     SAFE_ADD(batch_add_object_bool(&batch,PROC_CONTROL_SET_SAS,client->control,false,false));
     SAFE_ADD(batch_add_object_float(&batch,PROC_CONTROL_SET_PITCH,client->control,0.0f,false));
@@ -38,7 +38,7 @@ void krpc_cnano_client_safe(KrpcCNanoClient *client){
     for(size_t i=0;i<client->engine_count;i++){
         CommandableEngine *engine=&client->engines[i];
         size_t needed=(engine->independent_owned?2u:0u)+((engine->activated_by_client&&!engine->initially_active)?1u:0u);
-        if(needed&&batch.count+needed>KRPC_CNANO_BATCH_MAX&&!safe_flush_batch(client,&batch))goto safe_done;
+        if(needed&&batch.count+needed>KRPC_CNANO_BATCH_MAX&&!safe_flush_batch(client,&batch))goto neutral_done;
         if(engine->independent_owned){
             SAFE_ADD(batch_add_object_float(&batch,PROC_ENGINE_SET_THROTTLE,engine->object,0.0f,false));
             SAFE_ADD(batch_add_object_bool(&batch,PROC_ENGINE_SET_INDEPENDENT_THROTTLE,engine->object,false,false));
@@ -50,15 +50,21 @@ void krpc_cnano_client_safe(KrpcCNanoClient *client){
         }
     }
     (void)safe_flush_batch(client,&batch);
-safe_done:
+neutral_done:
 #undef SAFE_ADD
-    /* C-Nano shutdown is also the escape path from automated control. */
-    set_paused_triplet(client, true);
     client->cached_rcs=false;client->has_rcs=true;
     client->cached_sas=false;client->has_sas=true;
     client->cached_autopilot_engaged=false;client->has_autopilot_engaged=true;
     client->cached_command_throttle=0.0;client->has_command_throttle=true;
     client->cached_command_wheel=0.0;client->has_command_wheel=true;
+}
+
+void krpc_cnano_client_safe(KrpcCNanoClient *client){
+    if(!client||!client->connected)return;
+    krpc_cnano_client_neutralize(client);
+    /* The safe/shutdown path also freezes KSP. Warp preparation must only
+       neutralize controls, otherwise UT cannot advance under rails warp. */
+    set_paused_triplet(client, true);
 }
 
 KrpcCNanoBudget krpc_cnano_client_budget(const KrpcCNanoClient *client) {

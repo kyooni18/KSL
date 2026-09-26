@@ -135,6 +135,9 @@ typedef struct {
     unsigned robustness_scenarios, robustness_passed, robustness_unsafe;
     double robustness_pass_fraction, worst_case_closest_distance, worst_case_taem_range_error;
     bool execution_qualified, execution_degraded;
+    bool entry_stage_qualified;
+    unsigned entry_stage_scenarios, entry_stage_passed;
+    double entry_stage_pass_fraction;
     unsigned recovery_passed;
     double recovery_pass_fraction;
     double worst_case_entry_flight_path_angle, worst_case_post_burn_periapsis_altitude;

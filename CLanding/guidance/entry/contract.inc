@@ -146,7 +146,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     /* Energy/range control: drag reference re-solved from the range still
        required, tracked with a damped law against *measured* drag and lift. */
     double transition_velocity=entry_alpha_transition_velocity(s,taem_velocity);
-    double energy_bank_limit=dynamic_bank_limit(t,v);
+    double energy_bank_limit=fmin(dynamic_bank_limit(t,v),MM304_PLANNED_MAX_BANK_DEG);
     EntryEnergyConfig energy_cfg=entry_energy_default_config();
     EntryEnergyInput energy_in={
         .ut=t->ut,
@@ -210,7 +210,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     g->entry_alpha_modulation=alpha.modulation;
 
     EntryLateralLimits limits=entry_lateral_default_limits();
-    limits.maximum_bank_deg=dynamic_bank_limit(t,v);
+    limits.maximum_bank_deg=fmin(dynamic_bank_limit(t,v),MM304_PLANNED_MAX_BANK_DEG);
     limits.maximum_roll_rate_deg_s=s->entry_roll_rate;
     limits.maximum_roll_accel_deg_s2=s->entry_roll_acceleration;
 
@@ -248,6 +248,10 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         isfinite(t->trajectory_range_residual)?fabs(t->trajectory_range_residual):0.0,
         isfinite(t->predicted_raw_published_position_delta_30s)?
             fabs(t->predicted_raw_published_position_delta_30s):0.0);
+    lateral.has_sideslip=isfinite(t->sideslip)&&
+        isfinite(cfg->calibration.maximum_sideslip)&&cfg->calibration.maximum_sideslip>0.0;
+    lateral.sideslip_deg=lateral.has_sideslip?t->sideslip:0.0;
+    lateral.maximum_sideslip_deg=lateral.has_sideslip?cfg->calibration.maximum_sideslip:0.0;
     lateral.longitudinal=(EntryLateralLongitudinalDemand){
         .valid=drag.valid,
         .confidence=drag.confidence,
@@ -260,6 +264,46 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
 
     lateral.has_bank_magnitude=true;
     lateral.bank_magnitude_deg=energy.bank_magnitude_deg;
+    /* 40 deg is MM304's nominal planning ceiling, not a promise that the
+       airframe can coordinate that bank at every q/Mach point.  Coordination
+       feasibility is predictive: compare the measured time for beta to reach
+       the established 5 deg runaway scale with the time the airframe needs to
+       unload its present bank.  If beta is escaping faster than bank can be
+       removed, reduce the *planned* magnitude early.  The ordinary lateral
+       allocator still applies the physical roll-rate/acceleration limits. */
+    if(t->has_controls&&isfinite(t->sideslip)&&isfinite(t->control_yaw)){
+        double signed_beta=norm_signed_deg(t->sideslip);
+        double beta=fabs(signed_beta);
+        double yaw_use=clampd(fabs(t->control_yaw),0.0,1.0);
+        bool corrective_yaw=signed_beta*t->control_yaw>0.0;
+        double outward_beta_rate=(signed_beta>=0.0?1.0:-1.0)*
+            g->entry_coordination_beta_rate;
+
+        double direct_scale=1.0;
+        if(corrective_yaw&&yaw_use>DBL_EPSILON&&beta>DBL_EPSILON){
+            double beta_load=clampd(beta/MM304_COORDINATION_BETA_SCALE_DEG,0.0,1.0);
+            direct_scale=1.0-beta_load*yaw_use;
+        }
+
+        double predictive_scale=1.0;
+        if(corrective_yaw&&outward_beta_rate>DBL_EPSILON&&
+                beta<MM304_COORDINATION_BETA_SCALE_DEG){
+            double rate_limit=fmax(DBL_EPSILON,fabs(limits.maximum_roll_rate_deg_s));
+            double accel_limit=fmax(DBL_EPSILON,fabs(limits.maximum_roll_accel_deg_s2));
+            double bank_span=fabs(lateral.measured_bank_deg);
+            /* Conservative measured-state time to wings level: traverse the
+               remaining bank at the allowed rate and reserve time to arrest the
+               current roll rate.  This is rebuilt each guidance tick. */
+            double rollout_time=bank_span/rate_limit+
+                fabs(lateral.measured_bank_rate_deg_s)/accel_limit;
+            double beta_margin=MM304_COORDINATION_BETA_SCALE_DEG-beta;
+            double beta_escape_time=beta_margin/outward_beta_rate;
+            if(rollout_time>DBL_EPSILON)
+                predictive_scale=clampd(beta_escape_time/rollout_time,0.0,1.0);
+        }
+
+        lateral.bank_magnitude_deg*=fmin(direct_scale,predictive_scale);
+    }
     lateral.has_azimuth_error=isfinite(t->course_to_site_error);
     lateral.azimuth_error_deg=lateral.has_azimuth_error?t->course_to_site_error:0.0;
     {

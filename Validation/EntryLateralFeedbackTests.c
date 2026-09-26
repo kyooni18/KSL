@@ -141,6 +141,48 @@ static void azimuth_turn_bank_floor(void){
     assert(out.bank_magnitude_deg>=30.0-1e-9);
 }
 
+static void sideslip_coordination_slows_bank_reference(void){
+    EntryLateralLimits l=limits();
+    EntryLateralState state={0};
+    entry_lateral_state_init(&state,100.0,1.0,40.0);
+    EntryLateralInput in=input();
+    in.has_crossrange_error=false;
+    in.has_bank_magnitude=true;
+    in.bank_magnitude_deg=40.0;
+    in.measured_bank_deg=40.0;
+    in.has_sideslip=true;
+    in.maximum_sideslip_deg=8.0;
+    in.sideslip_deg=-4.0;
+    EntryLateralOutput seed=entry_lateral_update(&state,&in,&l);
+    assert(seed.valid);
+
+    in.ut+=0.1;
+    in.bank_magnitude_deg=0.0;
+    in.measured_bank_rate_deg_s=-4.0;
+    in.sideslip_deg=-4.4;
+    EntryLateralOutput limited=entry_lateral_update(&state,&in,&l);
+    double expected=l.maximum_roll_accel_deg_s2*(8.0-4.4)/4.0;
+    assert(limited.valid);
+    assert(fabs(limited.sideslip_rate_deg_s+4.0)<1e-9);
+    assert(fabs(limited.coordination_roll_rate_limit_deg_s-expected)<1e-9);
+    assert(limited.coordination_roll_rate_limit_deg_s<l.maximum_roll_rate_deg_s);
+
+    EntryLateralState recovering={0};
+    entry_lateral_state_init(&recovering,100.0,1.0,40.0);
+    in.ut=100.0;
+    in.bank_magnitude_deg=40.0;
+    in.measured_bank_rate_deg_s=0.0;
+    in.sideslip_deg=-4.0;
+    (void)entry_lateral_update(&recovering,&in,&l);
+    in.ut=100.1;
+    in.bank_magnitude_deg=0.0;
+    in.measured_bank_rate_deg_s=-4.0;
+    in.sideslip_deg=-3.6;
+    EntryLateralOutput free=entry_lateral_update(&recovering,&in,&l);
+    assert(free.valid);
+    assert(fabs(free.coordination_roll_rate_limit_deg_s-l.maximum_roll_rate_deg_s)<1e-9);
+}
+
 /* Mirror property: flipping the target side (azimuth error, crossrange and
    measured bank) must flip the commanded bank exactly, from any state, for
    any flight direction.  This is the check that the old eastbound/crossrange
@@ -175,6 +217,7 @@ int main(void){
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
     azimuth_turn_bank_floor();
+    sideslip_coordination_slows_bank_reference();
     mirror_symmetry();
     puts("Entry lateral feedback tests passed.");
     return 0;

@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-#define FLIGHT_CONTROL_REVISION "native-c-fcs-20260911-r2"
+#define FLIGHT_CONTROL_REVISION "native-c-fcs-20260927-r3"
 
 typedef enum {
     FLIGHT_CONTROL_AXIS_PITCH = 0,
@@ -46,6 +46,18 @@ typedef struct {
     double confidence;
     bool initialized;
 } FlightControlBetaModel;
+
+/* Shortest-rotation attitude error resolved in the vessel body axes and
+   expressed in the same pitch/roll/yaw sign convention as direct kRPC
+   controls. The target frame itself is constructed from air-relative AoA
+   and bank, so guidance remains aerodynamic rather than Euler-attitude based. */
+typedef struct {
+    bool valid;
+    bool use_yaw_error;
+    double pitch_error_deg;
+    double roll_error_deg;
+    double yaw_error_deg;
+} FlightControlAttitudeError;
 
 typedef struct {
     ControlProfile profile;
@@ -94,6 +106,7 @@ typedef struct {
     double roll_hold_seconds;
     double roll_rate_impulse_budget;
     double roll_bandwidth_scale;
+    double pitch_bandwidth_scale;
 
     double yaw_authority;
     double yaw_aero_fraction;
@@ -103,6 +116,7 @@ typedef struct {
 
     double sample_dt;
     double attitude_error;
+    bool quaternion_attitude_control;
     bool rcs_transonic_cutoff;
 } FlightControlDiagnostics;
 
@@ -155,6 +169,23 @@ typedef struct {
     double target_roll_rate;
     bool has_last_target_roll;
 
+    /* Quaternion tracking differentiates the target-relative rotation vector,
+       not absolute body rate. This keeps damping in the moving air-relative
+       reference frame while the authority observer still sees physical rates. */
+    bool has_quaternion_error_sample;
+    double last_quaternion_pitch_error;
+    double last_quaternion_roll_error;
+    double last_quaternion_yaw_error;
+    double quaternion_pitch_error_rate;
+    double quaternion_roll_error_rate;
+    double quaternion_yaw_error_rate;
+
+    /* Online pitch-response tuning.  The pitch loop adapts its closed-loop
+       bandwidth from measured target-relative response; roll and yaw retain
+       their validated fixed/scheduled laws because they must sustain lateral
+       control against aerodynamic cross-coupling. */
+    double pitch_response_scale;
+
     bool rcs_transonic_cutoff;
     ControlProfile last_profile;
     bool has_last_profile;
@@ -172,6 +203,24 @@ void flight_control_seed_axis_authority(FlightControlState *state,
                                         double non_aero_accel,
                                         double aero_accel_per_pascal,
                                         double confidence);
+
+/* Construct an air-relative desired body frame in the same reference frame as
+   attitude_quaternion. air_direction and radial_up must already be expressed
+   in that frame. Positive bank follows the measured lift-vector convention. */
+bool flight_control_airframe_error(const double attitude_quaternion[4],
+                                   Vector3 air_direction,
+                                   Vector3 radial_up,
+                                   double target_aoa_deg,
+                                   double target_bank_deg,
+                                   bool use_yaw_error,
+                                   FlightControlAttitudeError *error);
+
+bool flight_control_step_attitude(FlightControlState *state,
+                                  const Telemetry *telemetry,
+                                  const GuidanceCommand *command,
+                                  const FlightControlAttitudeError *attitude_error,
+                                  double sample_dt,
+                                  FlightControlOutput *output);
 
 bool flight_control_step(FlightControlState *state,
                          const Telemetry *telemetry,

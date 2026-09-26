@@ -238,7 +238,7 @@ typedef struct {
        instantaneous aileron command is correctly signed as braking. */
     double previous_relative_roll_rate, roll_oscillation_score, roll_rate_excess_duration;
     bool has_previous_relative_roll_rate;
-    double previous_sideslip; bool has_previous_sideslip;
+    double previous_sideslip, entry_coordination_beta_rate; bool has_previous_sideslip;
     double entry_predictive_score, entry_reference_speed, entry_reference_altitude, entry_reference_range; bool has_entry_predictive_score;
     bool entry_control_plan_valid, entry_control_terminal_ready;
     uint64_t control_plan_sequence;

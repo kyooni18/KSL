@@ -11,7 +11,7 @@
   let snapshot = null;
   let latestLiveSnapshot = null;
   const archiveReplay = {
-    active: false, frames: [], run: null, index: 0, playing: false, speed: 20,
+    active: false, kind: "sim", frames: [], run: null, index: 0, playing: false, speed: 20,
     raf: 0, anchorWall: 0, anchorUt: 0,
   };
   let eventSource = null;
@@ -85,8 +85,10 @@
   };
   const displayablePlannedTrajectory = (source) => {
     if (isReplaySnapshot(source)) return replayAwarePlannedTrajectory(source);
-    const allowed = isTerminalPhase(source?.phase) ? terminalReferenceDisplayable(source) : entryPlanDisplayable(source);
-    return allowed && Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : [];
+    // The backend already curates plannedTrajectory as the best path guidance is
+    // presently trying to fly. It is allowed to be provisional and to change;
+    // certification status must not hide operator intent.
+    return Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : [];
   };
   const displayableReferenceTrajectory = (source) => {
     if (isReplaySnapshot(source)) {
@@ -98,7 +100,13 @@
   };
   const displayableProjectedTAEMTrajectory = (source) => entryPlanDisplayable(source) && Array.isArray(source?.projectedTAEMTrajectory)
     ? source.projectedTAEMTrajectory : [];
-  const isReplaySnapshot = (source) => String(source?.simulation?.sourceMode || "").toLowerCase() === "replay";
+  const replayMetadata = (source) => {
+    const archived = source?.replay;
+    if (archived && archived.active === true && /replay/i.test(String(archived.sourceMode || ""))) return archived;
+    const simulation = source?.simulation;
+    return simulation && String(simulation.sourceMode || "").toLowerCase() === "replay" ? simulation : null;
+  };
+  const isReplaySnapshot = (source) => !!replayMetadata(source);
   const replayCandidateTrajectory = (source) => isReplaySnapshot(source) && Array.isArray(source?.replayCandidateTrajectory)
     ? source.replayCandidateTrajectory : [];
   const replayCandidatePrediction = (source) => isReplaySnapshot(source) && Array.isArray(source?.replayCandidatePrediction)
@@ -428,47 +436,172 @@
     return {x:(x/tangent)*radial,y:-(y/tangent)*radial,behind,angle:angle*180/Math.PI};
   }
 
-  function drawVelocityNavCue(ctx, cue, color, retrograde = false, target = false) {
+  function drawVelocityNavCue(ctx, cue, color, retrograde = false) {
     if (!cue) return;
     ctx.save();
     ctx.translate(cue.x, cue.y);
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = target ? 2.2 : 1.9;
-    ctx.lineCap = "round";
+    ctx.lineWidth = 2.1;
+    ctx.lineCap = "butt";
     ctx.lineJoin = "round";
     ctx.globalAlpha = cue.behind ? .48 : .98;
     if (cue.behind) ctx.setLineDash([3, 3]);
 
-    // Keep the maneuver/target frame separate from the stock velocity glyph.
-    // KSP's navball uses a ring-and-dot for prograde and a ring-and-X for
-    // retrograde; unlike the old corner ticks, both remain readable at a glance.
-    if (target) {
-      ctx.rotate(Math.PI / 4);
-      ctx.strokeRect(-13, -13, 26, 26);
-      ctx.rotate(-Math.PI / 4);
-    }
+    // Match KSP's stock velocity glyphs: both are green. Prograde is a
+    // ring with a center dot and spokes at 12/3/9 o'clock. Retrograde is
+    // a ring with an X and spokes at 12/4:30/7:30.
+    const ring = 7.5;
+    const spokeInner = 9.2;
+    const spokeOuter = 14.2;
 
     ctx.beginPath();
-    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+    ctx.arc(0, 0, ring, 0, Math.PI * 2);
     ctx.stroke();
+
     if (retrograde) {
+      const x = 5.2;
+      const diag = Math.SQRT1_2;
       ctx.beginPath();
-      ctx.moveTo(-7.5, -7.5); ctx.lineTo(7.5, 7.5);
-      ctx.moveTo(7.5, -7.5); ctx.lineTo(-7.5, 7.5);
+      ctx.moveTo(-x, -x); ctx.lineTo(x, x);
+      ctx.moveTo(x, -x); ctx.lineTo(-x, x);
+      ctx.moveTo(0, -spokeInner); ctx.lineTo(0, -spokeOuter);
+      ctx.moveTo(-spokeInner * diag, spokeInner * diag); ctx.lineTo(-spokeOuter * diag, spokeOuter * diag);
+      ctx.moveTo(spokeInner * diag, spokeInner * diag); ctx.lineTo(spokeOuter * diag, spokeOuter * diag);
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+      ctx.arc(0, 0, 1.45, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(0, -13); ctx.lineTo(0, -9);
-      ctx.moveTo(0, 13); ctx.lineTo(0, 9);
-      ctx.moveTo(-13, 0); ctx.lineTo(-9, 0);
-      ctx.moveTo(13, 0); ctx.lineTo(9, 0);
+      ctx.moveTo(0, -spokeInner); ctx.lineTo(0, -spokeOuter);
+      ctx.moveTo(-spokeInner, 0); ctx.lineTo(-spokeOuter, 0);
+      ctx.moveTo(spokeInner, 0); ctx.lineTo(spokeOuter, 0);
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  function drawNavTargetFrame(ctx, cue, color) {
+    if (!cue) return;
+    ctx.save();
+    ctx.translate(cue.x, cue.y);
+    ctx.rotate(Math.PI / 4);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.0;
+    ctx.lineJoin = "round";
+    ctx.globalAlpha = cue.behind ? .42 : .88;
+    if (cue.behind) ctx.setLineDash([3, 3]);
+    ctx.strokeRect(-13, -13, 26, 26);
+    ctx.restore();
+  }
+
+
+  function drawNavControlSliders(ctx, telemetry, cx, cy, radius, colors) {
+    const pitchValue = finite(telemetry?.controlPitch) ? Math.max(-1, Math.min(1, n(telemetry.controlPitch))) : null;
+    const rollValue = finite(telemetry?.controlRoll) ? Math.max(-1, Math.min(1, n(telemetry.controlRoll))) : null;
+    const yawValue = finite(telemetry?.controlYaw) ? Math.max(-1, Math.min(1, n(telemetry.controlYaw))) : null;
+    if (pitchValue === null && rollValue === null && yawValue === null) return;
+
+    const inset = Math.max(9, Math.min(14, radius * .065));
+    const half = Math.max(18, Math.min(58, radius * .26));
+    const verticalX = radius - inset;
+    const horizontalY = radius - inset;
+
+    const drawVertical = (x, value, label, labelInsideSign) => {
+      if (value === null) return;
+      const thumbY = cy - value * half;
+
+      ctx.save();
+      ctx.lineCap = "round";
+
+      ctx.strokeStyle = colors.line;
+      ctx.globalAlpha = .72;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, cy - half);
+      ctx.lineTo(x, cy + half);
+      ctx.stroke();
+
+      ctx.globalAlpha = .50;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - 4, cy - half); ctx.lineTo(x + 4, cy - half);
+      ctx.moveTo(x - 4, cy); ctx.lineTo(x + 4, cy);
+      ctx.moveTo(x - 4, cy + half); ctx.lineTo(x + 4, cy + half);
+      ctx.stroke();
+
+      ctx.strokeStyle = colors.cyan;
+      ctx.globalAlpha = .88;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(x, cy);
+      ctx.lineTo(x, thumbY);
+      ctx.stroke();
+
+      ctx.fillStyle = colors.cyan;
+      ctx.globalAlpha = 1;
+      ctx.fillRect(x - 5, thumbY - 2, 10, 4);
+
+      ctx.fillStyle = colors.text;
+      ctx.globalAlpha = .72;
+      ctx.font = "700 8px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = labelInsideSign > 0 ? "left" : "right";
+      ctx.fillText(label, x + labelInsideSign * 7, cy - half - 7);
+      ctx.restore();
+    };
+
+    const drawHorizontal = (y, value, label) => {
+      if (value === null) return;
+      const thumbX = cx + value * half;
+
+      ctx.save();
+      ctx.lineCap = "round";
+
+      ctx.strokeStyle = colors.line;
+      ctx.globalAlpha = .72;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - half, y);
+      ctx.lineTo(cx + half, y);
+      ctx.stroke();
+
+      ctx.globalAlpha = .50;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx - half, y - 4); ctx.lineTo(cx - half, y + 4);
+      ctx.moveTo(cx, y - 4); ctx.lineTo(cx, y + 4);
+      ctx.moveTo(cx + half, y - 4); ctx.lineTo(cx + half, y + 4);
+      ctx.stroke();
+
+      ctx.strokeStyle = colors.cyan;
+      ctx.globalAlpha = .88;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(cx, y);
+      ctx.lineTo(thumbX, y);
+      ctx.stroke();
+
+      ctx.fillStyle = colors.cyan;
+      ctx.globalAlpha = 1;
+      ctx.fillRect(thumbX - 2, y - 5, 4, 10);
+
+      ctx.fillStyle = colors.text;
+      ctx.globalAlpha = .72;
+      ctx.font = "700 8px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "right";
+      ctx.fillText(label, cx - half - 7, y);
+      ctx.restore();
+    };
+
+    // Actual normalized control effort, not attitude error:
+    // pitch is vertical on the right; roll and yaw are lateral controls,
+    // so roll lives across the top and yaw across the bottom.
+    drawVertical(cx + verticalX, pitchValue, "P", -1);
+    drawHorizontal(cy - horizontalY, rollValue, "R");
+    drawHorizontal(cy + horizontalY, yawValue, "Y");
   }
 
   function drawNavball() {
@@ -525,10 +658,10 @@
     if (orbitMode) {
       const prograde = projectDirectionToNavball(t, progradeAttitude(t), r);
       const retrograde = projectDirectionToNavball(t, retrogradeAttitude(t), r);
-      drawVelocityNavCue(navCtx, prograde, c.cyan, false, false);
-      drawVelocityNavCue(navCtx, retrograde, c.orange, true, false);
+      drawVelocityNavCue(navCtx, prograde, c.green, false);
+      drawVelocityNavCue(navCtx, retrograde, c.green, true);
       const burnTarget = Boolean(snapshot?.deorbitPlan) || cmd.useInertialDirection === true || /COAST TO BURN|BURN SETUP|DEORBIT BURN/.test(String(snapshot?.phase || "").toUpperCase());
-      if (burnTarget) drawVelocityNavCue(navCtx, retrograde, c.orange, true, true);
+      if (burnTarget) drawNavTargetFrame(navCtx, retrograde, c.orange);
     } else {
       const fpaOffset = Math.max(-r*.66, Math.min(r*.66, (pitch - fpa) * ppd));
       navCtx.strokeStyle = c.cyan; navCtx.lineWidth = 1.8;
@@ -571,6 +704,8 @@
       navCtx.beginPath(); navCtx.arc(x, y, 3.2, 0, Math.PI*2); navCtx.fill();
     }
     navCtx.restore();
+
+    drawNavControlSliders(navCtx, t, cx, cy, r, c);
 
     navCtx.fillStyle = c.text; navCtx.font = "600 12px ui-monospace, SFMono-Regular, Menlo, monospace"; navCtx.textAlign = "center";
     const headingText = orbitMode && finite(t.orbitalHeading)
@@ -1256,8 +1391,10 @@
     const predAlpha = predFreshness.stale ? .38 : 1;
     const predDash = predFreshness.stale ? [7, 6] : [];
     const orbitalSegments = drawPath(orbital, width, height, c.cyan, 1.45, [8,6], 1.2, .58);
-    const plannedSegments = drawPath(planned, width, height, c.orange, 1.8, [5,5], 1.5, .94);
     const predictedSegments = drawPath(predicted, width, height, c.green, predFreshness.stale ? 1.45 : 2.2, predDash, predFreshness.stale ? .8 : 2.4, predAlpha);
+    // Draw the selected/committed plan above the forecast so an Entry Interface
+    // plan remains visibly orange even when both streams share the same geometry.
+    const plannedSegments = drawPath(planned, width, height, c.orange, 1.8, [5,5], 1.5, .94);
     const projectedSegments = drawPath(projectedTaem, width, height, c.green, 1.6, [7,5], 1.4, .72);
     const burnSegments = orbitMode && burn.points.length >= 2 ? drawPath(burn.points, width, height, c.orange, 3.0, [], 3.2, 1) : [];
     drawPath(actual, width, height, c.cyan, 2.0, [], 1.8, .90);
@@ -1444,44 +1581,52 @@
     setTitle("vessel", `${vesselName}${finite(t.ut) ? ` · UT ${n(t.ut).toFixed(1)} s` : ""}${tick !== null ? ` · controller tick ${tick}` : ""}`);
 
     const sim = snapshot.simulation && typeof snapshot.simulation === "object" ? snapshot.simulation : null;
+    const archivedReplay = snapshot.replay && typeof snapshot.replay === "object" ? snapshot.replay : null;
     const simStatus = $("simulation-status");
-    // Keep completed simulator/replay frames identifiable while they are inspected.
     if (simStatus) {
-      const active = !!(sim && (sim.active || sim.sourceMode === "simulator" || sim.sourceMode === "replay"));
+      const simActive = !!(sim && (sim.active || sim.sourceMode === "simulator" || sim.sourceMode === "replay"));
+      const kspReplay = !!(archivedReplay && archivedReplay.active && String(archivedReplay.sourceMode || "").toLowerCase() === "ksp-replay");
+      const active = simActive || kspReplay;
+      const replaying = (simActive && String(sim?.sourceMode || "").toLowerCase() === "replay") || kspReplay;
+      const replayStatus = kspReplay ? archivedReplay : sim;
       simStatus.hidden = !active;
-      document.body.classList.toggle("simulation-mode", active);
-      const replaying = active && String(sim && sim.sourceMode || "").toLowerCase() === "replay";
+      document.body.classList.toggle("simulation-mode", simActive);
       document.body.classList.toggle("replay-mode", replaying);
       if (active) {
-        const simState = String(sim.state || "idle").toUpperCase();
-        const simMode = String(sim.mode || sim.sourceMode || "simulator").toUpperCase();
-        const runId = sim.runId || "UNNAMED RUN";
-        const elapsed = finite(sim.simElapsedSeconds)
-          ? "T+ " + (n(sim.simElapsedSeconds) >= 60 ? `${duration(sim.simElapsedSeconds)} (${n(sim.simElapsedSeconds).toFixed(1)}s)` : `${n(sim.simElapsedSeconds).toFixed(1)} s`)
-          : (finite(t.ut) ? "UT " + n(t.ut).toFixed(1) + " s" : "T+ —");
-        const effective = finite(sim.effectiveRate) ?
-          n(sim.effectiveRate).toFixed(n(sim.effectiveRate) >= 100 ? 0 : 1) + "×" :
-          (sim.rateMode ? String(sim.rateMode).toUpperCase() : "MAX");
-        $("sim-state").textContent = "SIM " + simState;
+        const sourceState = String(replayStatus?.state || "idle").toUpperCase();
+        const runId = replayStatus?.runId || "UNNAMED RUN";
+        const simMode = kspReplay ? "LIVE KSP ARCHIVE" : String(sim?.mode || sim?.sourceMode || "simulator").toUpperCase();
+        const elapsed = kspReplay
+          ? (finite(t.ut) ? "UT " + n(t.ut).toFixed(1) + " s" : "UT —")
+          : finite(sim?.simElapsedSeconds)
+            ? "T+ " + (n(sim.simElapsedSeconds) >= 60 ? `${duration(sim.simElapsedSeconds)} (${n(sim.simElapsedSeconds).toFixed(1)}s)` : `${n(sim.simElapsedSeconds).toFixed(1)} s`)
+            : (finite(t.ut) ? "UT " + n(t.ut).toFixed(1) + " s" : "T+ —");
+        const effective = kspReplay
+          ? (finite(replayStatus?.replaySpeed) ? n(replayStatus.replaySpeed).toFixed(1) + "×" : "1×")
+          : finite(sim?.effectiveRate)
+            ? n(sim.effectiveRate).toFixed(n(sim.effectiveRate) >= 100 ? 0 : 1) + "×"
+            : (sim?.rateMode ? String(sim.rateMode).toUpperCase() : "MAX");
+        $("sim-state").textContent = (kspReplay ? "KSP " : "SIM ") + sourceState;
         $("sim-state").className = "sim-state " +
-          (simState.includes("FINISH") ? "finished" :
-           (simState.includes("ERROR") || simState.includes("ABORT") ? "bad" :
-            (simState.includes("PAUSE") ? "paused" : "running")));
+          (sourceState.includes("FINISH") ? "finished" :
+           (sourceState.includes("ERROR") || sourceState.includes("ABORT") ? "bad" :
+            (sourceState.includes("PAUSE") ? "paused" : "running")));
         $("sim-run").textContent = runId;
         $("sim-mode").textContent = simMode;
         $("sim-time").textContent = elapsed;
         $("sim-rate").textContent = effective;
-        $("sim-lockstep").textContent = sim.lockstep ? "LOCKSTEP" : "FREE-RUN";
+        $("sim-lockstep").textContent = kspReplay ? "KSP ARCHIVE" : (sim?.lockstep ? "LOCKSTEP" : "FREE-RUN");
         const view = $("sim-view");
         if (view) {
           view.hidden = false;
-          view.textContent = replaying ? "SIM REPLAY" : "SIMULATOR";
+          view.textContent = kspReplay ? "KSP REPLAY" : (replaying ? "SIM REPLAY" : "SIMULATOR");
           view.className = `sim-view-badge${replaying ? " replay" : ""}`;
           if (replaying) {
-            const ri = finite(sim.replayIndex) ? Math.trunc(n(sim.replayIndex)) + 1 : null;
-            const rc = finite(sim.replayCount) ? Math.trunc(n(sim.replayCount)) : null;
-            const rs = finite(sim.replaySpeed) ? n(sim.replaySpeed).toFixed(1) + "×" : "";
-            view.title = ri !== null && rc ? `Archived replay ${ri}/${rc}${rs ? ` at ${rs}` : ""}` : "Archived simulator replay";
+            const ri = finite(replayStatus?.replayIndex) ? Math.trunc(n(replayStatus.replayIndex)) + 1 : null;
+            const rc = finite(replayStatus?.replayCount) ? Math.trunc(n(replayStatus.replayCount)) : null;
+            const rs = finite(replayStatus?.replaySpeed) ? n(replayStatus.replaySpeed).toFixed(1) + "×" : "";
+            const label = kspReplay ? "Archived KSP replay" : "Archived simulator replay";
+            view.title = ri !== null && rc ? `${label} ${ri}/${rc}${rs ? ` at ${rs}` : ""}` : label;
           } else view.title = "Live simulator telemetry";
         }
         const traces = $("sim-traces");
@@ -1503,11 +1648,15 @@
             statusLine.title = snapshot.warningMessage ? `${snapshot.statusMessage || phase} · WARNING: ${snapshot.warningMessage}` : (snapshot.statusMessage || phase);
           }
         }
-        setTitle("sim-state", "source " + (sim.sourceMode || "simulator") + " · phase " + phase + " · state " + simState);
-        setTitle("sim-run", (sim.scenario || "scenario unavailable") + (sim.runDirectory ? " · " + sim.runDirectory : ""));
-        setTitle("sim-rate", "effective " + effective +
-          (finite(sim.wallSeconds) ? " · wall " + n(sim.wallSeconds).toFixed(2) + " s" : "") +
-          (finite(sim.physicsDt) ? " · dt " + n(sim.physicsDt).toFixed(3) + " s" : ""));
+        setTitle("sim-state", "source " + (replayStatus?.sourceMode || (kspReplay ? "ksp-replay" : "simulator")) + " · phase " + phase + " · state " + sourceState);
+        setTitle("sim-run", kspReplay ? "Archived live KSP flight" : ((sim?.scenario || "scenario unavailable") + (sim?.runDirectory ? " · " + sim.runDirectory : "")));
+        setTitle("sim-rate", "playback/effective " + effective +
+          (!kspReplay && finite(sim?.wallSeconds) ? " · wall " + n(sim.wallSeconds).toFixed(2) + " s" : "") +
+          (!kspReplay && finite(sim?.physicsDt) ? " · dt " + n(sim.physicsDt).toFixed(3) + " s" : ""));
+      } else {
+        $("sim-view")?.setAttribute("hidden", "");
+        $("sim-traces")?.setAttribute("hidden", "");
+        $("sim-status-line")?.setAttribute("hidden", "");
       }
     } else {
       $("sim-view")?.setAttribute("hidden", "");
@@ -1926,14 +2075,17 @@
     dock.classList.toggle("replay-active", !!active);
     dock.classList.toggle("live-active", !active);
     const live = $("sim-replay-live");
-    const replayView = $("sim-history-open");
+    const simView = $("sim-history-open");
+    const kspView = $("ksp-history-open");
     live.classList.toggle("active", !active);
     live.setAttribute("aria-pressed", active ? "false" : "true");
-    replayView.classList.toggle("active", !!active);
-    replayView.setAttribute("aria-pressed", active ? "true" : "false");
-    for (const id of ["sim-replay-back", "sim-replay-play", "sim-replay-forward", "sim-replay-speed", "sim-replay-seek"]) {
-      $(id).disabled = !active;
-    }
+    const simActive = !!active && archiveReplay.kind === "sim";
+    const kspActive = !!active && archiveReplay.kind === "ksp";
+    simView.classList.toggle("active", simActive);
+    simView.setAttribute("aria-pressed", simActive ? "true" : "false");
+    kspView.classList.toggle("active", kspActive);
+    kspView.setAttribute("aria-pressed", kspActive ? "true" : "false");
+    for (const id of ["sim-replay-back", "sim-replay-play", "sim-replay-forward", "sim-replay-speed", "sim-replay-seek"]) $(id).disabled = !active;
     if (active) {
       $("playback-run-name").textContent = archiveReplay.run?.runId || "REPLAY";
     } else {
@@ -2003,14 +2155,24 @@
     archiveReplay.index = Math.max(0, Math.min(archiveReplay.frames.length - 1, Math.trunc(index)));
     const raw = archiveReplay.frames[archiveReplay.index];
     const frame = { ...raw, actualTrajectory: replayTrail(archiveReplay.index) };
-    frame.simulation = {
-      ...(raw.simulation || {}),
-      active: true, sourceMode: "replay",
-      state: archiveReplay.playing ? "replay" : "paused",
-      replayIndex: archiveReplay.index, replayCount: archiveReplay.frames.length,
-      replaySpeed: archiveReplay.speed,
-      runId: archiveReplay.run && archiveReplay.run.runId,
-    };
+    if (archiveReplay.kind === "sim") {
+      frame.simulation = {
+        ...(raw.simulation || {}), active: true, sourceMode: "replay",
+        state: archiveReplay.playing ? "replay" : "paused",
+        replayIndex: archiveReplay.index, replayCount: archiveReplay.frames.length,
+        replaySpeed: archiveReplay.speed, runId: archiveReplay.run && archiveReplay.run.runId,
+      };
+      delete frame.replay;
+    } else {
+      delete frame.simulation;
+      frame.replay = {
+        ...(raw.replay || {}), active: true, sourceMode: "ksp-replay",
+        state: archiveReplay.playing ? "replay" : "paused",
+        replayIndex: archiveReplay.index, replayCount: archiveReplay.frames.length,
+        replaySpeed: archiveReplay.speed, runId: archiveReplay.run && archiveReplay.run.runId,
+      };
+      frame.server = { ...(raw.server || {}), source: "KSP archive replay" };
+    }
     $("sim-replay-seek").max = String(Math.max(0, archiveReplay.frames.length - 1));
     $("sim-replay-seek").value = String(archiveReplay.index);
     $("sim-replay-position").textContent = replayTimelineLabel(archiveReplay.index);
@@ -2056,10 +2218,11 @@
   function leaveArchiveReplay() {
     setReplayPlaying(false);
     archiveReplay.active = false;
+    archiveReplay.kind = "sim";
     archiveReplay.frames = [];
     archiveReplay.run = null;
     archiveReplay.index = 0;
-    closeRunHistory();
+    closeAllRunHistories();
     setReplayControlsActive(false);
     setPlaybackExpanded(false);
     document.querySelectorAll(".sim-run-row.active").forEach((el) => el.classList.remove("active"));
@@ -2067,26 +2230,28 @@
     else render();
   }
 
-  async function startArchiveReplay(runId, row) {
+  async function startArchiveReplay(runId, row, kind = "sim") {
     setPlaybackExpanded(true);
     $("playback-run-name").textContent = runId || "LOADING REPLAY";
     $("sim-replay-position").textContent = "LOADING…";
-    const response = await fetch("/api/sim-replay?id=" + encodeURIComponent(runId) + "&maxFrames=1600", {cache:"no-store"});
+    const endpoint = kind === "ksp" ? "/api/ksp-replay" : "/api/sim-replay";
+    const response = await fetch(endpoint + "?id=" + encodeURIComponent(runId) + "&maxFrames=1600", {cache:"no-store"});
     if (!response.ok) throw new Error("Replay HTTP " + String(response.status));
     const data = await response.json();
     const guidanceFrames = Array.isArray(data.frames) ? data.frames : [];
     const simulatorFrames = Array.isArray(data.simulatorFrames) ? data.simulatorFrames : [];
-    const frames = hydrateArchiveReplayFrames(guidanceFrames, simulatorFrames);
+    const frames = kind === "sim" ? hydrateArchiveReplayFrames(guidanceFrames, simulatorFrames) : guidanceFrames;
     if (!frames.length) throw new Error("Run has no replay frames");
     archiveReplay.active = true;
+    archiveReplay.kind = kind;
     archiveReplay.frames = frames;
-    archiveReplay.run = data.run || {runId: runId};
+    archiveReplay.run = data.run || {runId: runId, sourceMode: kind};
     archiveReplay.index = 0;
     archiveReplay.speed = Math.max(.1, n($("sim-replay-speed").value, 20));
     setReplayControlsActive(true);
     document.querySelectorAll(".sim-run-row.active").forEach((el) => el.classList.remove("active"));
     if (row) row.classList.add("active");
-    closeRunHistory();
+    closeAllRunHistories();
     showReplayFrame(0);
     setReplayPlaying(true);
   }
@@ -2117,137 +2282,99 @@
     return "Undated Runs";
   };
 
-  function renderRunHistory(runs) {
-    const list = $("sim-history-list");
-    $("sim-history-count").textContent = String(runs.length) + " RUNS";
+  function renderRunHistory(runs, kind = "sim") {
+    const prefix = kind === "ksp" ? "ksp" : "sim";
+    const list = $(prefix + "-history-list");
+    $(prefix + "-history-count").textContent = String(runs.length) + " RUNS";
     list.replaceChildren();
     if (!runs.length) {
       const empty = document.createElement("div");
       empty.className = "sim-history-empty";
-      empty.textContent = "No archived simulator campaigns yet.";
+      empty.textContent = kind === "ksp" ? "No archived live KSP flights yet." : "No archived simulator campaigns yet.";
       list.appendChild(empty);
       return;
     }
-
-    // Ensure latest runs are sorted to top
     const sortedRuns = [...runs].sort((a, b) => {
-      const ta = finite(a.startedAt) ? n(a.startedAt) : 0;
-      const tb = finite(b.startedAt) ? n(b.startedAt) : 0;
-      if (tb !== ta) return tb - ta;
-      return String(b.runId || "").localeCompare(String(a.runId || ""));
+      const ta = finite(a.startedAt) ? n(a.startedAt) : 0, tb = finite(b.startedAt) ? n(b.startedAt) : 0;
+      return tb !== ta ? tb - ta : String(b.runId || "").localeCompare(String(a.runId || ""));
     });
-
-    // Group runs by date (latest dates first)
     const groups = [];
     let currentGroup = null;
     for (const run of sortedRuns) {
       const dateKey = runDateHeader(run);
-      if (!currentGroup || currentGroup.date !== dateKey) {
-        currentGroup = { date: dateKey, runs: [] };
-        groups.push(currentGroup);
-      }
+      if (!currentGroup || currentGroup.date !== dateKey) { currentGroup = { date: dateKey, runs: [] }; groups.push(currentGroup); }
       currentGroup.runs.push(run);
     }
-
     for (const group of groups) {
-      const groupHeader = document.createElement("div");
-      groupHeader.className = "sim-history-date-header";
-      const titleSpan = document.createElement("span");
-      titleSpan.textContent = group.date;
-      const countSpan = document.createElement("span");
-      countSpan.className = "muted";
-      countSpan.textContent = `${group.runs.length} RUN${group.runs.length === 1 ? "" : "S"}`;
-      groupHeader.append(titleSpan, countSpan);
-      list.appendChild(groupHeader);
-
+      const groupHeader = document.createElement("div"); groupHeader.className = "sim-history-date-header";
+      const titleSpan = document.createElement("span"); titleSpan.textContent = group.date;
+      const countSpan = document.createElement("span"); countSpan.className = "muted"; countSpan.textContent = `${group.runs.length} RUN${group.runs.length === 1 ? "" : "S"}`;
+      groupHeader.append(titleSpan, countSpan); list.appendChild(groupHeader);
       for (const run of group.runs) {
-        const row = document.createElement("button");
-        row.type = "button";
-        row.className = "sim-run-row";
-        if (archiveReplay.active && archiveReplay.run?.runId === run.runId) row.classList.add("active");
-        const replayAvailable = !!run.hasReplay;
-        row.disabled = !replayAvailable;
-        const dot = document.createElement("span");
-        dot.className = "sim-run-dot " + (run.success ? "success" : run.state === "failed" ? "failed" : "");
-        const main = document.createElement("span");
-        main.className = "sim-run-main";
-
-        const head = document.createElement("span");
-        head.className = "sim-run-head";
-        const name = document.createElement("span");
-        name.className = "sim-run-name";
-        name.textContent = run.runId || "unnamed";
-        head.appendChild(name);
-
-        if (run.time) {
-          const timeSpan = document.createElement("span");
-          timeSpan.className = "sim-run-time";
-          timeSpan.textContent = run.time;
-          head.appendChild(timeSpan);
-        }
+        const row = document.createElement("button"); row.type = "button"; row.className = "sim-run-row";
+        if (archiveReplay.active && archiveReplay.kind === kind && archiveReplay.run?.runId === run.runId) row.classList.add("active");
+        const replayAvailable = !!run.hasReplay; row.disabled = !replayAvailable;
+        const dot = document.createElement("span"); dot.className = "sim-run-dot " + (run.success ? "success" : run.state === "failed" ? "failed" : "");
+        const main = document.createElement("span"); main.className = "sim-run-main";
+        const head = document.createElement("span"); head.className = "sim-run-head";
+        const name = document.createElement("span"); name.className = "sim-run-name"; name.textContent = run.runId || "unnamed"; head.appendChild(name);
+        if (run.time) { const timeSpan = document.createElement("span"); timeSpan.className = "sim-run-time"; timeSpan.textContent = run.time; head.appendChild(timeSpan); }
         main.appendChild(head);
-
-        const meta = document.createElement("span");
-        meta.className = "sim-run-meta";
+        const meta = document.createElement("span"); meta.className = "sim-run-meta";
         const scenario = String(run.scenario || "").split("/").pop();
         const parts = [run.terminalPhase || run.state || "unknown", scenario];
-        if (finite(run.simElapsedSeconds)) {
-          parts.push(formatDurationLong(run.simElapsedSeconds) + " sim");
-        }
-        if (finite(run.wallSeconds)) {
-          parts.push(formatDurationLong(run.wallSeconds) + " real");
-        }
-
-        meta.textContent = parts.filter(Boolean).join(" · ");
-        main.appendChild(meta);
-
-        const final = document.createElement("span");
-        final.className = "sim-run-final";
-        const f = run.final || {};
+        if (finite(run.simElapsedSeconds)) parts.push(formatDurationLong(run.simElapsedSeconds) + " sim");
+        if (finite(run.wallSeconds)) parts.push(formatDurationLong(run.wallSeconds) + " real");
+        meta.textContent = parts.filter(Boolean).join(" · "); main.appendChild(meta);
+        const final = document.createElement("span"); final.className = "sim-run-final"; const f = run.final || {};
         final.textContent = "ALT " + runDistance(f.altitude) + " · A " + runDistance(f.runwayAlongTrack) + " · X " + runDistance(f.runwayCrossTrack);
         row.append(dot, main, final);
-        if (replayAvailable) {
-          row.addEventListener("click", () => startArchiveReplay(run.runId, row).catch((error) => {
-            $("sim-replay-position").textContent = "Unable to load run";
-            $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
-            if (!archiveReplay.active) setReplayControlsActive(false);
-            setReplayPlaying(false);
-          }));
-        }
+        if (replayAvailable) row.addEventListener("click", () => startArchiveReplay(run.runId, row, kind).catch((error) => {
+          $("sim-replay-position").textContent = "Unable to load run";
+          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
+          if (!archiveReplay.active) setReplayControlsActive(false);
+          setReplayPlaying(false);
+        }));
         list.appendChild(row);
       }
     }
   }
 
-  async function refreshRunHistory() {
-    const response = await fetch("/api/sim-runs", {cache:"no-store"});
+  async function refreshRunHistory(kind = "sim") {
+    const endpoint = kind === "ksp" ? "/api/ksp-runs" : "/api/sim-runs";
+    const response = await fetch(endpoint, {cache:"no-store"});
     if (!response.ok) throw new Error("History HTTP " + String(response.status));
     const data = await response.json();
-    renderRunHistory(Array.isArray(data.runs) ? data.runs : []);
+    renderRunHistory(Array.isArray(data.runs) ? data.runs : [], kind);
   }
 
-  function openRunHistory() {
+  function openRunHistory(kind = "sim") {
     setPlaybackExpanded(true);
-    $("sim-history-panel").hidden = false;
-    $("sim-history-open").classList.add("active");
-    $("sim-history-open").setAttribute("aria-pressed", "true");
-    refreshRunHistory().catch((error) => {
-      const list = $("sim-history-list");
-      list.replaceChildren();
-      const empty = document.createElement("div");
-      empty.className = "sim-history-empty";
-      empty.textContent = String(error.message || error);
-      list.appendChild(empty);
+    const prefix = kind === "ksp" ? "ksp" : "sim", other = kind === "ksp" ? "sim" : "ksp";
+    $(other + "-history-panel").hidden = true;
+    $(other + "-history-open").classList.remove("active");
+    $(other + "-history-open").setAttribute("aria-pressed", "false");
+    $(prefix + "-history-panel").hidden = false;
+    $(prefix + "-history-open").classList.add("active");
+    $(prefix + "-history-open").setAttribute("aria-pressed", "true");
+    refreshRunHistory(kind).catch((error) => {
+      const list = $(prefix + "-history-list"); list.replaceChildren();
+      const empty = document.createElement("div"); empty.className = "sim-history-empty"; empty.textContent = String(error.message || error); list.appendChild(empty);
     });
   }
 
-  function closeRunHistory() {
-    $("sim-history-panel").hidden = true;
-    if (!archiveReplay.active) {
-      $("sim-history-open").classList.remove("active");
-      $("sim-history-open").setAttribute("aria-pressed", "false");
+  function closeRunHistory(kind = "sim") {
+    const prefix = kind === "ksp" ? "ksp" : "sim";
+    $(prefix + "-history-panel").hidden = true;
+    const activeForKind = archiveReplay.active && archiveReplay.kind === kind;
+    if (!activeForKind) {
+      $(prefix + "-history-open").classList.remove("active");
+      $(prefix + "-history-open").setAttribute("aria-pressed", "false");
     }
   }
+
+  function closeAllRunHistories() { closeRunHistory("sim"); closeRunHistory("ksp"); }
+
 
   function connect() {
     clearTimeout(reconnectTimer);
@@ -2347,11 +2474,13 @@
 
   setPlaybackExpanded(false);
   setReplayControlsActive(false);
-  $("sim-history-open").addEventListener("click", () => $("sim-history-panel").hidden ? openRunHistory() : closeRunHistory());
-  $("sim-history-close").addEventListener("click", closeRunHistory);
+  $("sim-history-open").addEventListener("click", () => $("sim-history-panel").hidden ? openRunHistory("sim") : closeRunHistory("sim"));
+  $("sim-history-close").addEventListener("click", () => closeRunHistory("sim"));
+  $("ksp-history-open").addEventListener("click", () => $("ksp-history-panel").hidden ? openRunHistory("ksp") : closeRunHistory("ksp"));
+  $("ksp-history-close").addEventListener("click", () => closeRunHistory("ksp"));
   $("playback-toggle").addEventListener("click", () => {
     const expand = $("playback-dock").classList.contains("collapsed");
-    if (!expand) closeRunHistory();
+    if (!expand) closeAllRunHistories();
     setPlaybackExpanded(expand);
   });
   $("sim-replay-back").addEventListener("click", () => seekReplayBy(-10));

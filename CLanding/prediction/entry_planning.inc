@@ -488,6 +488,28 @@ bool deorbit_capture_qualified(const EntryPrediction*p,const LandingSite*site,
     return true;
 }
 
+bool deorbit_entry_stage_qualified(const EntryPrediction*p,
+        const VehicleProfile*v,const GuidanceSettings*s,double peri,
+        double site_altitude,double atmosphere_depth,bool finite_burn_completed){
+    if(!finite_burn_completed||!p||!v||!s||!p->entered_atmosphere||
+       !isfinite(peri)||!isfinite(site_altitude)||!isfinite(atmosphere_depth)||
+       !(peri>site_altitude&&peri<atmosphere_depth)||
+       !isfinite(p->entry_range)||!isfinite(p->entry_flight_path_angle)||
+       !isfinite(p->peak_dynamic_pressure)||!isfinite(p->peak_g_load))
+        return false;
+    return p->entry_flight_path_angle>=s->maximum_entry_flight_path_angle&&
+        p->peak_dynamic_pressure<=v->maximum_dynamic_pressure&&
+        p->peak_g_load<=v->maximum_g_load;
+}
+
+bool deorbit_entry_stage_robustness_qualified(unsigned passed,
+        unsigned scenarios,unsigned unsafe,double required_pass_fraction){
+    if(scenarios==0||passed>scenarios||unsafe!=0||
+       !isfinite(required_pass_fraction)||required_pass_fraction<0.0||
+       required_pass_fraction>1.0)return false;
+    return (double)passed/scenarios+1e-9>=required_pass_fraction;
+}
+
 bool deorbit_recovery_qualified(const EntryPrediction*p,const LandingSite*site,
         const VehicleProfile*v,const GuidanceSettings*s,double peri){
     return deorbit_capture_qualified(p,site,v,s,peri,false);
