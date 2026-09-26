@@ -125,6 +125,33 @@ def classify(res, args):
     return "pass"
 
 
+def metrics(results):
+    """Distribution of the physical outcome, so changes are judged on more
+    than a pass count; mirror asymmetry flags chaotic sensitivity (a mirrored
+    case should land as the mirror image of its twin)."""
+    import statistics as st
+    td = [r["summary"] for r in results if r["summary"].get("touchdown")]
+
+    def dist(key):
+        v = sorted(s[key] for s in td if s.get(key) is not None)
+        if not v:
+            return None
+        return dict(median=round(st.median(v), 2), p90=round(v[min(len(v) - 1, int(0.9 * len(v)))], 2),
+                    min=round(v[0], 2), max=round(v[-1], 2))
+    by_id = {r["case"]["id"]: r for r in results}
+    asym = []
+    for r in results:
+        m = r["case"].get("mirror_of")
+        if m is None or m not in by_id:
+            continue
+        a, b = by_id[m]["summary"], r["summary"]
+        if a.get("touchdown_speed_mps") is not None and b.get("touchdown_speed_mps") is not None:
+            asym.append(abs(a["touchdown_speed_mps"] - b["touchdown_speed_mps"]))
+    return dict(touchdowns=len(td), sink=dist("touchdown_sink_mps"), speed=dist("touchdown_speed_mps"),
+                along=dist("touchdown_along_m"),
+                mirror_speed_asymmetry_max=round(max(asym), 2) if asym else None)
+
+
 def run_case(c, args, scen_dir):
     name = f"{args.label}-{c['id']:03d}"
     scen = scen_dir / f"{name}.ini"
@@ -251,7 +278,7 @@ def main():
     counts = {}
     for r in results:
         counts[r["class"]] = counts.get(r["class"], 0) + 1
-    summary = dict(counts=counts, passes=counts.get("pass", 0), total=len(results))
+    summary = dict(counts=counts, passes=counts.get("pass", 0), total=len(results), metrics=metrics(results))
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=1))
     print(json.dumps(summary))
     print("campaign:", out_dir)
