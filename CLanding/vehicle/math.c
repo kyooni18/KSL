@@ -591,7 +591,19 @@ double entry_bank_authority_limit(double true_air_speed,double dynamic_pressure,
     if(dynamic_pressure<=DBL_MIN||true_air_speed<v->minimum_safe_speed||
        dynamic_pressure>v->maximum_dynamic_pressure||g_force>v->maximum_g_load)
         return 0.0;
-    return fmin(fabs(maximum_bank),v->maximum_bank_angle);
+
+    double bank=fmin(fabs(maximum_bank),v->maximum_bank_angle);
+    /*
+     * A nonzero q is not the same thing as useful S-turn authority.  The live
+     * STS-N can hold AoA in very thin air while still lacking enough lateral/
+     * yaw authority to coordinate a large bank.  Ramp the bank envelope from
+     * near-wings-level to the configured maximum over the same low-q authority
+     * scale used by the entry contract tests.  Quadratic shaping keeps the
+     * earliest hypersonic entry conservative without introducing a hard gate.
+     */
+    double authority_q=fmax(250.0,v->maximum_dynamic_pressure*.008);
+    double authority_fraction=clampd(dynamic_pressure/authority_q,0.0,1.0);
+    return bank*authority_fraction*authority_fraction;
 }
 
 double entry_taem_range_target(const PlanetModel*p,const GuidanceSettings*s){

@@ -1289,6 +1289,14 @@ static void test_mm304_live_bank_limit_matches_shared_predictor_authority_core(v
     t.stall_fraction = 0.0;
 
     const double authority_q = fmax(250.0, cfg.vehicle.maximum_dynamic_pressure * .008);
+    t.dynamic_pressure = authority_q * .5;
+    double half_q_bank = entry_bank_authority_limit(t.true_air_speed, t.dynamic_pressure,
+        t.g_force, &cfg.vehicle, cfg.vehicle.maximum_bank_angle);
+    assert(fabs(half_q_bank - cfg.vehicle.maximum_bank_angle * .25) < 1e-9);
+    t.dynamic_pressure = authority_q;
+    assert(fabs(entry_bank_authority_limit(t.true_air_speed, t.dynamic_pressure, t.g_force,
+        &cfg.vehicle, cfg.vehicle.maximum_bank_angle) - cfg.vehicle.maximum_bank_angle) < 1e-9);
+
     const double pressures[] = {250.0, authority_q, 400.0, 600.0, 672.52, 900.0};
     for (size_t i = 0; i < sizeof(pressures) / sizeof(pressures[0]); ++i) {
         t.dynamic_pressure = pressures[i];
