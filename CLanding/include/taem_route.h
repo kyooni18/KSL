@@ -69,6 +69,10 @@ typedef struct {
     double profile_generation_aoa_deg;
     float profile_altitude_lut[TAEM_ROUTE_PROFILE_LUT_POINTS];
     float profile_fpa_lut[TAEM_ROUTE_PROFILE_LUT_POINTS];
+    /* Planned airspeed along the same stations (zero speedbrake); valid when
+     * profile_speed_tabulated.  Live TAEM bleeds excess over it. */
+    bool profile_speed_tabulated;
+    float profile_speed_lut[TAEM_ROUTE_PROFILE_LUT_POINTS];
 } TaemRoute;
 
 

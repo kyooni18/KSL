@@ -230,6 +230,8 @@ typedef struct {
     unsigned char terminal_aero_seen[21];
     double terminal_aero_mach[21];
     double terminal_aoa_cmd_last,terminal_aoa_cmd_ut;
+    double taem_speedbrake_integral, taem_speedbrake_ut;   /* TAEM energy-excess PI */
+    double taem_speedbrake_fraction;                       /* slew-limited output */
     bool terminal_pull_latch;
     bool terminal_aim_valid;
     double terminal_aim_along;   /* energy-placed outer-glide aim point, runway along-track m */

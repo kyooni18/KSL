@@ -89,14 +89,12 @@ static bool candidate_preferred(const TerminalModel *model,
     if (trial->status != TAEM_PLAN_UNQUALIFIED) return false;
     if (best->status != TAEM_PLAN_UNQUALIFIED) return true;
     double target = exit_speed_target(model);
-    double trial_deficit = fmax(0.0,
-        target - trial->replay.final_geometry.airspeed_mps);
-    double best_deficit = fmax(0.0,
-        target - best->replay.final_geometry.airspeed_mps);
-    /* A speed difference below 1 m/s is smaller than the useful precision of
-     * this native profile prediction.  Within that band, select the route
-     * with less replayed turn burden and better tracking.  Larger deficits
-     * still matter to an unpowered vehicle. */
+    double trial_deficit = fabs(target - trial->replay.final_geometry.airspeed_mps);
+    double best_deficit = fabs(target - best->replay.final_geometry.airspeed_mps);
+    /* TAEM targets the Final alignment airspeed: slow starves Final and fast
+     * lands long.  A difference below 1 m/s is smaller than the useful
+     * precision of this native profile prediction.  Within that band, select
+     * the route with less replayed turn burden and better tracking. */
     if (fabs(trial_deficit - best_deficit) > 1.0)
         return trial_deficit < best_deficit;
     return trial->quality_score < best->quality_score;
@@ -109,7 +107,7 @@ static void finish_candidate(const TerminalModel *model,
     trial->status = TAEM_PLAN_UNQUALIFIED;
     trial->reason = "native HAC and runway alignment reach their exit; Final tail qualification is pending";
     double target_speed = exit_speed_target(model);
-    double deficit = fmax(0.0, target_speed -
+    double deficit = fabs(target_speed -
         trial->replay.final_geometry.airspeed_mps) / target_speed;
     double cross_limit = fmax(1200.0, 0.1 * trial->route.hac.radius_m);
     trial->quality_score = trial->replay.maximum_cross_track_m / cross_limit +
@@ -299,7 +297,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     for (size_t i = 0; i < count; ++i) {
         if (!tried[i] || !results[i].valid) continue;
         stations[i].score = stations[i].score +
-            fmax(0.0, target_speed - results[i].exit_speed_mps) / target_speed * 10.0;
+            fabs(target_speed - results[i].exit_speed_mps) / target_speed * 10.0;
         if (i != profiled) {
             JoinStation swap = stations[profiled];
             stations[profiled] = stations[i];

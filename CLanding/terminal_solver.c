@@ -70,7 +70,7 @@ static void record_turn_demand(const TerminalModel *m,
 #define TERMINAL_PROFILE_TURN_MARGIN 1.3
 
 typedef struct {
-    double station_m, altitude_m, fpa_deg;
+    double station_m, altitude_m, fpa_deg, speed_mps;
 } ProfileSample;
 
 typedef struct {
@@ -123,7 +123,7 @@ static ProfileFlight fly_profile(const TerminalModel *m,
         double altitude = m->site.altitude + geometry.altitude_above_runway_m;
         if (samples && count < sample_capacity)
             samples[count++] = (ProfileSample){station, altitude,
-                geometry.flight_path_angle_deg};
+                geometry.flight_path_angle_deg, geometry.airspeed_mps};
         if (station >= route->length_m) {
             AeroForces forces = aero_compute(&m->world,&m->aero,
                 state.position_i_m,state.velocity_i_mps,state.ut_s,state.mass_kg,
@@ -199,6 +199,181 @@ static ProfileFlight fly_profile(const TerminalModel *m,
     return out;
 }
 
+/* Largest altitude departure from the smooth reference that still counts as
+ * following it, and the exit altitude tolerance at the alignment point. */
+#define TERMINAL_SMOOTH_TRACK_ERROR_M 300.0
+#define TERMINAL_SMOOTH_EXIT_ERROR_M 150.0
+/* Exit-speed error a smooth profile may leave; larger misses use the
+ * glide-and-dive profile. */
+#define TERMINAL_SMOOTH_SPEED_TOLERANCE 0.12
+#define TERMINAL_SMOOTH_BOW_FRACTION 0.30
+#define TERMINAL_SMOOTH_BOW_STEPS 13
+
+static double alignment_speed(const TerminalModel *m) {
+    return isfinite(m->guidance.final_alignment_speed) &&
+        m->guidance.final_alignment_speed > 0.0 ?
+        m->guidance.final_alignment_speed : m->vehicle.final_approach_speed;
+}
+
+/* Fly the native tracker along the route's analytic (C1 Hermite + bow)
+ * vertical reference, which runs from the live state to the Final alignment
+ * point at the Final slope.  Returns the flight to the exit; *max_error is the
+ * largest altitude departure from the reference.  Samples record the
+ * reference (smooth) altitude/FPA and the flown airspeed. */
+static ProfileFlight fly_smooth_profile(const TerminalModel *m,
+        const TerminalDynamicState *initial, const TaemRoute *route,
+        double dt, double max_elapsed, double *max_error,
+        ProfileSample *samples, size_t sample_capacity, size_t *sample_count) {
+    ProfileFlight out = {.end_altitude_m = NAN, .capture_station_m = INFINITY,
+                         .exit_speed_mps = NAN, .exit_fpa_deg = NAN,
+                         .exit_specific_energy_j_kg = NAN};
+    *max_error = INFINITY;
+    TerminalDynamicState state = *initial;
+    TaemGeometryState geometry;
+    if (!taem_geometry_state(m, &state, &geometry)) return out;
+    size_t cursor = 0, count = 0;
+    double worst = 0.0;
+    size_t max_steps = (size_t)ceil(max_elapsed / dt);
+    for (size_t step = 0; step < max_steps; ++step) {
+        TaemPathReference reference;
+        size_t index = cursor;
+        if (!taem_route_reference(route, &geometry, &cursor, &reference, &index))
+            return out;
+        double altitude = m->site.altitude + geometry.altitude_above_runway_m;
+        worst = fmax(worst, fabs(altitude - reference.altitude_m));
+        if (samples && count < sample_capacity)
+            samples[count++] = (ProfileSample){reference.station_m,
+                reference.altitude_m, reference.flight_path_angle_deg,
+                geometry.airspeed_mps};
+        if (reference.station_m >= route->length_m) {
+            if (sample_count) *sample_count = count;
+            out.end_altitude_m = altitude;
+            out.exit_speed_mps = geometry.airspeed_mps;
+            out.exit_fpa_deg = geometry.flight_path_angle_deg;
+            out.valid = true;
+            *max_error = worst;
+            return out;
+        }
+        TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
+                                                       &reference, dt);
+        if (!demand.valid) return out;
+        if (terminal_propagator_step(m, &state, &demand.control) != TERMINAL_STEP_OK)
+            return out;
+        if (!taem_geometry_state(m, &state, &geometry)) return out;
+        if (geometry.altitude_above_runway_m <= 0.0) return out;
+    }
+    return out;
+}
+
+static bool smooth_flight_ok(const TaemRoute *route, ProfileFlight f,
+                             double max_error) {
+    return f.valid && isfinite(f.end_altitude_m) &&
+        max_error <= TERMINAL_SMOOTH_TRACK_ERROR_M &&
+        fabs(f.end_altitude_m - route->profile_final_altitude_m) <=
+            TERMINAL_SMOOTH_EXIT_ERROR_M;
+}
+
+static void tabulate_profile(TaemRoute *route, const ProfileSample *samples,
+                             size_t count) {
+    /* Resample the actual projected route stations. Flight distance includes
+     * cross-track corrections and must never stretch an early endpoint onto
+     * the runway-anchored route exit. */
+    const size_t intervals = TAEM_ROUTE_PROFILE_LUT_POINTS - 1;
+    size_t k = 0;
+    for (size_t j = 0; j <= intervals; ++j) {
+        double s = route->length_m * (double)j / (double)intervals;
+        while (k + 2 < count && samples[k + 1].station_m < s) ++k;
+        double s0 = samples[k].station_m, s1 = samples[k + 1].station_m;
+        double f = s1 > s0 ? fmax(0.0, fmin(1.0, (s - s0) / (s1 - s0))) : 0.0;
+        route->profile_altitude_lut[j] = (float)((1.0 - f) * samples[k].altitude_m +
+                                                 f * samples[k + 1].altitude_m);
+        route->profile_fpa_lut[j] = (float)((1.0 - f) * samples[k].fpa_deg +
+                                            f * samples[k + 1].fpa_deg);
+        route->profile_speed_lut[j] = (float)((1.0 - f) * samples[k].speed_mps +
+                                              f * samples[k + 1].speed_mps);
+    }
+    route->profile_total_length_m = route->length_m;
+    route->profile_tabulated = true;
+    route->profile_speed_tabulated = true;
+}
+
+/* TAEM targets the Final alignment point with its altitude and airspeed.  The
+ * vertical reference is one smooth curve from the live state to that point at
+ * the Final slope; its interior bow (how high the middle of the route is held,
+ * and so how much drag is spent where) is the energy control.  Solve the bow so
+ * the native tracker arrives at the alignment airspeed. */
+static bool solve_smooth_profile(const TerminalModel *m,
+        const TerminalDynamicState *initial, TaemRoute *route, double dt,
+        double max_elapsed, TerminalProfileResult *result) {
+    double target_speed = alignment_speed(m);
+    double drop = route->profile_start_altitude_m - route->profile_final_altitude_m;
+    if (!(target_speed > 0.0) || !(drop > 0.0)) return false;
+    TaemRoute trial = *route;
+    trial.profile_tabulated = false;
+    trial.profile_speed_tabulated = false;
+    trial.profile_local_offset_m = 0.0;
+    trial.profile_initial_sag_m = 0.0;
+    double span = TERMINAL_SMOOTH_BOW_FRACTION * drop;
+    double bows[TERMINAL_SMOOTH_BOW_STEPS], errors[TERMINAL_SMOOTH_BOW_STEPS];
+    bool ok[TERMINAL_SMOOTH_BOW_STEPS];
+    long best = -1;
+    for (int i = 0; i < TERMINAL_SMOOTH_BOW_STEPS; ++i) {
+        bows[i] = -span + 2.0 * span * i / (TERMINAL_SMOOTH_BOW_STEPS - 1);
+        trial.profile_midpoint_offset_m = bows[i];
+        double max_error;
+        ProfileFlight f = fly_smooth_profile(m, initial, &trial, dt, max_elapsed,
+                                             &max_error, NULL, 0, NULL);
+        ok[i] = smooth_flight_ok(&trial, f, max_error);
+        errors[i] = ok[i] ? f.exit_speed_mps - target_speed : NAN;
+        if (ok[i] && (best < 0 || fabs(errors[i]) < fabs(errors[best]))) best = i;
+    }
+    if (best < 0) return false;
+    double bow = bows[best], error = errors[best];
+    /* Refine inside a feasible bracket that crosses the target speed. */
+    for (int side = -1; side <= 1; side += 2) {
+        long j = best + side;
+        if (j < 0 || j >= TERMINAL_SMOOTH_BOW_STEPS || !ok[j] ||
+            (errors[j] > 0.0) == (errors[best] > 0.0)) continue;
+        double a = bows[best], ea = errors[best], b = bows[j];
+        for (int iteration = 0; iteration < 8; ++iteration) {
+            double c = 0.5 * (a + b);
+            trial.profile_midpoint_offset_m = c;
+            double max_error;
+            ProfileFlight f = fly_smooth_profile(m, initial, &trial, dt,
+                max_elapsed, &max_error, NULL, 0, NULL);
+            if (!smooth_flight_ok(&trial, f, max_error)) break;
+            double ec = f.exit_speed_mps - target_speed;
+            if (fabs(ec) < fabs(error)) { bow = c; error = ec; }
+            if ((ec > 0.0) == (ea > 0.0)) { a = c; ea = ec; } else b = c;
+        }
+        break;
+    }
+    if (fabs(error) > TERMINAL_SMOOTH_SPEED_TOLERANCE * target_speed) return false;
+    trial.profile_midpoint_offset_m = bow;
+    size_t capacity = (size_t)ceil(max_elapsed / dt) + 1;
+    ProfileSample *samples = calloc(capacity, sizeof(*samples));
+    if (!samples) return false;
+    size_t count = 0;
+    double max_error;
+    ProfileFlight flight = fly_smooth_profile(m, initial, &trial, dt,
+        max_elapsed, &max_error, samples, capacity, &count);
+    if (!smooth_flight_ok(&trial, flight, max_error) || count < 2) {
+        free(samples);
+        return false;
+    }
+    route->profile_midpoint_offset_m = bow;
+    route->profile_local_offset_m = 0.0;
+    route->profile_initial_sag_m = 0.0;
+    tabulate_profile(route, samples, count);
+    free(samples);
+    route->profile_generation_aoa_deg = NAN;
+    result->valid = true;
+    result->aoa_deg = NAN;
+    result->exit_speed_mps = flight.exit_speed_mps;
+    result->exit_fpa_deg = flight.exit_fpa_deg;
+    result->reason = "smooth reference meets the Final alignment point altitude and speed";
+    return true;
+}
 
 TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
         const TerminalDynamicState *initial, TaemRoute *route, double dt,
@@ -212,6 +387,8 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
         return out;
     TaemGeometryState start;
     if (!taem_geometry_state(m, initial, &start)) return out;
+    if (solve_smooth_profile(m, initial, route, dt, max_elapsed, &out))
+        return out;
     const double pi = 3.14159265358979323846;
     double target = route->profile_final_altitude_m;
     double start_altitude = m->site.altitude + start.altitude_above_runway_m;
@@ -325,23 +502,8 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
         out.reason = "profile propagation failed";
         return out;
     }
-    /* Resample the actual projected route stations. Flight distance includes
-     * cross-track corrections and must never stretch an early endpoint onto
-     * the runway-anchored route exit. */
-    const size_t intervals = TAEM_ROUTE_PROFILE_LUT_POINTS - 1;
-    size_t k = 0;
-    for (size_t j = 0; j <= intervals; ++j) {
-        double s = route->length_m * (double)j / (double)intervals;
-        while (k + 2 < count && samples[k + 1].station_m < s) ++k;
-        double s0 = samples[k].station_m, s1 = samples[k + 1].station_m;
-        double f = s1 > s0 ? fmax(0.0, fmin(1.0, (s - s0) / (s1 - s0))) : 0.0;
-        route->profile_altitude_lut[j] = (float)((1.0 - f) * samples[k].altitude_m +
-                                                 f * samples[k + 1].altitude_m);
-        route->profile_fpa_lut[j] = (float)((1.0 - f) * samples[k].fpa_deg +
-                                            f * samples[k + 1].fpa_deg);
-    }
+    tabulate_profile(route, samples, count);
     free(samples);
-    route->profile_total_length_m = route->length_m;
     route->profile_generation_aoa_deg = aoa_high;
     route->profile_tabulated = true;
     out.valid = true;

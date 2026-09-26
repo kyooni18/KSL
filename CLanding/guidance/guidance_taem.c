@@ -732,6 +732,44 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     command.has_target_aoa=true;
     command.target_aoa=demand.control.angle_of_attack_rad*RAD2DEG;
     command.target_pitch=t->flight_path_angle+command.target_aoa;
+    /* Split-rudder speedbrake: the route plan carries the zero-brake airspeed
+       that delivers the Final alignment speed.  Energy above that plan
+       (altitude surplus counted as speed) is bled with a PI on the
+       speed-equivalent excess ratio; a deficit leaves the brake stowed.
+       Asymmetric split-rudder drag disturbs yaw, so the brake is only a weak,
+       slow, far-field trim: capped, slew-limited, and faded to stowed well
+       before the HAC exit so Final and the runway never fly with it open. */
+    const double sb_cap=0.30, sb_slew_per_s=0.05;
+    const double sb_stow_remaining_m=12000.0, sb_fade_m=8000.0;
+    double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
+        fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;
+    g->taem_speedbrake_ut=t->ut;
+    double planned_speed=g->mm305_route_committed&&!g->mm305_runway_alignment_active?
+        taem_route_planned_speed(&g->mm305_route,reference.station_m):NAN;
+    double sb_remaining=g->mm305_route_committed?
+        taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor):NAN;
+    double sb_limit=isfinite(sb_remaining)?
+        sb_cap*clampd((sb_remaining-sb_stow_remaining_m)/sb_fade_m,0.0,1.0):0.0;
+    double sb_target=0.0;
+    if (isfinite(planned_speed)&&planned_speed>1.0&&isfinite(reference.altitude_m)&&
+        sb_limit>0.0) {
+        double surplus_height=end_model->site.altitude+
+            geometry.altitude_above_runway_m-reference.altitude_m;
+        double equivalent=sqrt(fmax(0.0,geometry.airspeed_mps*geometry.airspeed_mps+
+            2.0*9.81*surplus_height));
+        double ratio=equivalent/planned_speed-1.0;
+        g->taem_speedbrake_integral=clampd(
+            g->taem_speedbrake_integral+0.05*ratio*sb_dt,0.0,sb_limit);
+        sb_target=clampd(1.5*ratio+g->taem_speedbrake_integral,0.0,sb_limit);
+        if (diagnostics && strcmp(diagnostics,"2")==0 && !g->diagnostic_shadow)
+            fprintf(stderr,"TAEM speedbrake: V=%.1f Veq=%.1f plan=%.1f dh=%.0f limit=%.2f target=%.2f\n",
+                geometry.airspeed_mps,equivalent,planned_speed,surplus_height,
+                sb_limit,sb_target);
+    } else g->taem_speedbrake_integral=0.0;
+    double sb_step=sb_slew_per_s*sb_dt;
+    g->taem_speedbrake_fraction=clampd(sb_target,
+        g->taem_speedbrake_fraction-sb_step,g->taem_speedbrake_fraction+sb_step);
+    command.speedbrake_fraction=g->taem_speedbrake_fraction;
     GuidanceResult result=stabilized(g,
         result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);
     result.command.has_pitch_trim_feedforward=true;

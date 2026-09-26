@@ -546,6 +546,18 @@ static bool route_sample_at_station(const TaemRoute *route, double station,
     return isfinite(*course_deg) && isfinite(*curvature_right_per_m);
 }
 
+double taem_route_planned_speed(const TaemRoute *route, double station_m) {
+    if (!route || !route->profile_speed_tabulated ||
+        !(route->profile_total_length_m > 0.0) || !isfinite(station_m)) return NAN;
+    const size_t intervals = TAEM_ROUTE_PROFILE_LUT_POINTS - 1;
+    double u = clamp(station_m / route->profile_total_length_m, 0.0, 1.0) *
+        (double)intervals;
+    size_t i = (size_t)fmin(floor(u), (double)intervals - 1.0);
+    double f = u - (double)i;
+    return (1.0 - f) * route->profile_speed_lut[i] +
+           f * route->profile_speed_lut[i + 1];
+}
+
 bool taem_route_reference(const TaemRoute *route, const TaemGeometryState *state,
         size_t *cursor, TaemPathReference *reference, size_t *point_index) {
     if (!route || !route->valid || route->count < 3 || !state || !cursor ||

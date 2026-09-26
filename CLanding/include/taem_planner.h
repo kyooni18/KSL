@@ -63,6 +63,10 @@ bool taem_route_build_fixed_hac(const TerminalModel *model,
 
 /* Finds the closest point at or after cursor. The cursor is monotone so a
  * self-near 270-degree circle cannot make the tracker jump to another branch. */
+/* Planned (zero-speedbrake) airspeed at a route station, or NAN when the
+ * route carries no speed plan. */
+double taem_route_planned_speed(const TaemRoute *route, double station_m);
+
 bool taem_route_reference(const TaemRoute *route, const TaemGeometryState *state,
         size_t *cursor, TaemPathReference *reference, size_t *point_index);
 

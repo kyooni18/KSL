@@ -32,6 +32,12 @@ typedef struct {
     float available_thrust;
 } CommandableEngine;
 
+/* Field handles of one rudder-half ModuleControlSurface. */
+typedef struct {
+    krpc_SpaceCenter_PartField_t deploy, deploy_angle, deploy_invert,
+        ignore_pitch, ignore_roll, ignore_yaw, range;
+} FinModuleFields;
+
 typedef struct {
     krpc_SpaceCenter_ControlSurface_t object;
     KrpcSurfaceRole role;
@@ -72,6 +78,14 @@ struct KrpcCNanoClient {
     bool surface_roles_classified;
     KrpcSurfaceAllocation applied_surface_allocation;
     bool has_applied_surface_allocation;
+    /* Split-rudder speedbrake: every ModuleControlSurface on the rudder part.
+       The halves carry opposite deployInvert, so a common deploy angle opens
+       them symmetrically (drag, no net yaw). */
+    FinModuleFields fin_modules[4];
+    size_t fin_module_count;
+    double speedbrake_max_angle_deg;
+    double applied_speedbrake_fraction;
+    bool has_applied_speedbrake;
 
     krpc_SpaceCenter_PartField_t main_wheel_grounded_fields[CNANO_MAIN_WHEEL_LIMIT];
     size_t main_wheel_grounded_field_count;

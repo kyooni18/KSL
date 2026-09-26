@@ -22,7 +22,7 @@
     "clientName": "Spaceplane Landing Guidance",
     "rpcHost": "127.0.0.1",
     "rpcPort": 50000,
-    "timeoutMs": 2000
+    "timeoutMs": 10000
   },
   "guidance": {
     "approachRollRate": 3.5,

@@ -515,6 +515,7 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
            law, not at this actuator boundary. */
         double native_yaw=fc.yaw;
         if(!krpc_cnano_client_set_direct_controls(s->client,fc.pitch,fc.roll,native_yaw,fc.throttle,fc.wheel_steering,fc.rcs_requested,error,error_size))return false;
+        if(!krpc_cnano_client_set_speedbrake(s->client,command->speedbrake_fraction,error,error_size))return false;
         if(result){
             fill_direct_result(result,command,&fc,native_yaw);
             if(fc.diagnostics.quaternion_attitude_control)

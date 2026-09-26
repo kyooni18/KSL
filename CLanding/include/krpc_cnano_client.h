@@ -75,6 +75,10 @@ typedef enum {
 bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
                                               KrpcSurfaceAllocation allocation,
                                               char *error, size_t error_size);
+/* Opens the split-rudder speedbrake to `fraction` of its deflection range
+   (0 = stowed, 1 = full); a no-op on a vessel without the split fin. */
+bool krpc_cnano_client_set_speedbrake(KrpcCNanoClient *client, double fraction,
+                                      char *error, size_t error_size);
 /* Reports the classified surface layout, e.g. "E2 A2 R1 B1" (count per role),
    or an empty string when the layout could not be classified. */
 const char *krpc_cnano_client_surface_layout(const KrpcCNanoClient *client,

@@ -361,6 +361,78 @@ static void inventory_engines(KrpcCNanoClient *client) {
    the fuselage) or the body flap (below it); off-centre surfaces are elevons,
    split into the inboard and outboard halves by span.  Any layout that does not
    classify cleanly leaves the surfaces unmanaged rather than guessing. */
+/* Collect the rudder part's ModuleControlSurface halves (split speedbrake). */
+static bool fin_module_fields(KrpcCNanoClient *client, krpc_SpaceCenter_Module_t module,
+                              FinModuleFields *out) {
+    memset(out, 0, sizeof(*out));
+    krpc_list_object_t fields = KRPC_NULL_LIST;
+    krpc_error_t e = krpc_SpaceCenter_Module_FieldList(client->connection, &fields, module);
+    client->total_rpc_calls++; client->total_wire_requests++;
+    if (e != KRPC_OK) return false;
+    for (size_t k = 0; k < fields.size; ++k) {
+        krpc_SpaceCenter_PartField_t field = (krpc_SpaceCenter_PartField_t)fields.items[k];
+        char *name = NULL;
+        e = krpc_SpaceCenter_PartField_Name(client->connection, &name, field);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK || !name) { if (name) krpc_free(name); continue; }
+        if (!strcmp(name, "deploy")) out->deploy = field;
+        else if (!strcmp(name, "deployAngle")) out->deploy_angle = field;
+        else if (!strcmp(name, "deployInvert")) out->deploy_invert = field;
+        else if (!strcmp(name, "ignorePitch")) out->ignore_pitch = field;
+        else if (!strcmp(name, "ignoreRoll")) out->ignore_roll = field;
+        else if (!strcmp(name, "ignoreYaw")) out->ignore_yaw = field;
+        else if (!strcmp(name, "ctrlSurfaceRange")) out->range = field;
+        krpc_free(name);
+    }
+    KRPC_FREE_LIST(fields);
+    return out->deploy && out->deploy_angle && out->deploy_invert &&
+        out->ignore_pitch && out->ignore_roll && out->ignore_yaw && out->range;
+}
+
+static void inventory_fin_modules(KrpcCNanoClient *client) {
+    client->fin_module_count = 0;
+    client->has_applied_speedbrake = false;
+    client->speedbrake_max_angle_deg = 0.0;
+    for (size_t i = 0; i < client->surface_count; ++i) {
+        if (client->surfaces[i].role != KRPC_SURFACE_ROLE_RUDDER) continue;
+        krpc_SpaceCenter_Part_t part = KRPC_NULL;
+        krpc_list_object_t modules = KRPC_NULL_LIST;
+        krpc_error_t e = krpc_SpaceCenter_ControlSurface_Part(client->connection, &part, client->surfaces[i].object);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK || part == KRPC_NULL) continue;
+        e = krpc_SpaceCenter_Part_Modules(client->connection, &modules, part);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK) continue;
+        for (size_t j = 0; j < modules.size && client->fin_module_count < 4; ++j) {
+            krpc_SpaceCenter_Module_t module = (krpc_SpaceCenter_Module_t)modules.items[j];
+            char *name = NULL;
+            e = krpc_SpaceCenter_Module_Name(client->connection, &name, module);
+            client->total_rpc_calls++; client->total_wire_requests++;
+            bool surface = e == KRPC_OK && name && strcmp(name, "ModuleControlSurface") == 0;
+            if (name) krpc_free(name);
+            FinModuleFields fields;
+            if (!surface || !fin_module_fields(client, module, &fields)) continue;
+            float range_deg = 0.0f;
+            e = krpc_SpaceCenter_PartField_FloatValue(client->connection, &range_deg, fields.range);
+            client->total_rpc_calls++; client->total_wire_requests++;
+            if (e == KRPC_OK && isfinite(range_deg) && range_deg > 0.0f)
+                client->speedbrake_max_angle_deg = client->speedbrake_max_angle_deg > 0.0 ?
+                    fmin(client->speedbrake_max_angle_deg, range_deg) : range_deg;
+            client->fin_modules[client->fin_module_count++] = fields;
+        }
+        KRPC_FREE_LIST(modules);
+    }
+    if (client->fin_module_count != 2 || !(client->speedbrake_max_angle_deg > 0.0)) {
+        client->fin_module_count = 0;
+        return;
+    }
+    /* The split brake needs the two halves to open in opposite directions.
+     * The STS-N save carries them as (true, false), which opens the wrong way;
+     * set the switched pair explicitly so reconnects stay idempotent. */
+    RPC_OPTIONAL(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[0].deploy_invert, false));
+    RPC_OPTIONAL(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[1].deploy_invert, true));
+}
+
 static void inventory_control_surfaces(KrpcCNanoClient *client) {
     client->surface_count = 0;
     client->surface_roles_classified = false;
@@ -415,6 +487,7 @@ static void inventory_control_surfaces(KrpcCNanoClient *client) {
             client->surfaces[i].role = fabs(client->surfaces[i].lateral_m) < split ?
                 KRPC_SURFACE_ROLE_ELEVATOR : KRPC_SURFACE_ROLE_AILERON;
     client->surface_roles_classified = true;
+    inventory_fin_modules(client);
 }
 
 static void inventory_main_wheels(KrpcCNanoClient *client) {

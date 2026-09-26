@@ -193,8 +193,37 @@ bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
         RPC_REQUIRED(client, krpc_SpaceCenter_ControlSurface_set_RollEnabled(client->connection, surface->object, roll), error, error_size);
         RPC_REQUIRED(client, krpc_SpaceCenter_ControlSurface_set_YawEnabled(client->connection, surface->object, yaw), error, error_size);
     }
+    /* kRPC's ControlSurface wraps only the first module of a part; the second
+       rudder half is addressed as a module so both halves obey the roles. */
+    bool separated = allocation == KRPC_SURFACE_ALLOCATION_SEPARATED;
+    for (size_t i = 0; i < client->fin_module_count; ++i) {
+        RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_pitch, separated), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_roll, separated), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_yaw, false), error, error_size);
+    }
     client->applied_surface_allocation = allocation;
     client->has_applied_surface_allocation = true;
+    return true;
+}
+
+bool krpc_cnano_client_set_speedbrake(KrpcCNanoClient *client, double fraction,
+                                      char *error, size_t error_size) {
+    if (!client || !client->connected) return false;
+    if (client->fin_module_count == 0) return true;
+    fraction = isfinite(fraction) ? clampd(fraction, 0.0, 1.0) : 0.0;
+    /* Quantize to 2% so the brake is not rewritten every tick. */
+    fraction = round(fraction * 50.0) / 50.0;
+    if (client->has_applied_speedbrake &&
+        fabs(client->applied_speedbrake_fraction - fraction) < 1e-9) return true;
+    bool deploy = fraction > 0.0;
+    float angle = (float)(fraction * client->speedbrake_max_angle_deg);
+    for (size_t i = 0; i < client->fin_module_count; ++i) {
+        if (deploy)
+            RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_FloatValue(client->connection, client->fin_modules[i].deploy_angle, angle), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].deploy, deploy), error, error_size);
+    }
+    client->applied_speedbrake_fraction = fraction;
+    client->has_applied_speedbrake = true;
     return true;
 }
 
