@@ -26,6 +26,39 @@ static bool state_energy(const TerminalModel *m, const TerminalDynamicState *s,
     return taem_energy_diagnostic(&world, pi, vi, vb, air, fi, fb,
         s->mass_kg, forces.drag_n, energy);
 }
+
+static void record_turn_demand(const TerminalModel *m,
+        const TaemTrackerOutput *demand, double mach, double dt,
+        int *last_turn_sign, TerminalSolverResult *out) {
+    double aoa_limit = fmin(m->vehicle.maximum_angle_of_attack,
+        m->aero.alpha_deg[m->aero.alpha_count - 1]);
+    if (mach < 1.0 && m->vehicle.terminal_maximum_lift_angle_of_attack > 0.0)
+        aoa_limit = fmin(aoa_limit,
+            m->vehicle.terminal_maximum_lift_angle_of_attack);
+    double bank_limit = fmin(m->vehicle.maximum_bank_angle, 80.0);
+    double aoa_deg = fabs(demand->control.angle_of_attack_rad) * 57.29577951308232;
+    double bank_deg = fabs(demand->control.bank_rad) * 57.29577951308232;
+    double aoa_fraction = aoa_deg / fmax(aoa_limit, 1.0);
+    double bank_fraction = bank_deg / fmax(bank_limit, 1.0);
+    double lateral_fraction = fabs(demand->required_lateral_accel_mps2) /
+        fmax(demand->available_lateral_accel_mps2, 0.1);
+    /* Lateral demand measures attempted velocity-vector change.  High
+     * incidence while banked also spends the vertical-lift reserve. */
+    out->turn_burden_integral_s += dt * (
+        lateral_fraction * lateral_fraction * (1.0 + aoa_fraction * aoa_fraction) +
+        bank_fraction * bank_fraction * aoa_fraction * aoa_fraction);
+    out->maximum_turn_authority_fraction = fmax(
+        out->maximum_turn_authority_fraction, lateral_fraction);
+    out->maximum_commanded_aoa_deg = fmax(out->maximum_commanded_aoa_deg,
+        aoa_deg);
+    int sign = demand->control.bank_rad > 5.0 / 57.29577951308232 ? 1 :
+        demand->control.bank_rad < -5.0 / 57.29577951308232 ? -1 : 0;
+    if (sign) {
+        if (*last_turn_sign && sign != *last_turn_sign)
+            ++out->bank_target_reversals;
+        *last_turn_sign = sign;
+    }
+}
 /* Steepest sustained descent MM305 may plan when the vehicle starts above the
  * exit glide line, as an excess over the Final glide slope.  Steeper
  * descents are not flown: the route is rejected so a longer one is chosen. */
@@ -356,6 +389,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
     double elapsed = 0.0;
     size_t max_steps = (size_t)ceil(max_elapsed / dt);
     const char *diagnostics = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+    int last_turn_sign = 0;
     for (size_t step = 0; step < max_steps; ++step) {
         TaemPathReference reference;
         size_t reference_index = cursor;
@@ -428,6 +462,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         AeroForces forces = aero_compute(&m->world, &m->aero,
             state.position_i_m, state.velocity_i_mps, state.ut_s, state.mass_kg,
             state.attitude.aoa_rad, state.attitude.bank_rad);
+        record_turn_demand(m, &demand, forces.mach, dt, &last_turn_sign, &out);
         double altitude = v3_norm(state.position_i_m) - m->world.radius_m;
         double local_radius = m->world.radius_m + altitude;
         double gravity = m->world.mu_m3_s2 / (local_radius * local_radius);
@@ -528,6 +563,7 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
             AeroForces forces = aero_compute(&m->world, &m->aero,
                 state.position_i_m, state.velocity_i_mps, state.ut_s,
                 state.mass_kg, state.attitude.aoa_rad, state.attitude.bank_rad);
+            record_turn_demand(m, &demand, forces.mach, dt, &last_turn_sign, &out);
             double load = fabs(forces.lift_n) / state.mass_kg / 9.80665;
             out.maximum_load_g = fmax(out.maximum_load_g, load);
             out.maximum_dynamic_pressure_pa = fmax(out.maximum_dynamic_pressure_pa,

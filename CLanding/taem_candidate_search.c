@@ -84,21 +84,22 @@ static bool better_failure(const TaemFixedHacCandidate *trial,
     return trial->replay.elapsed_s > best->replay.elapsed_s;
 }
 
-static bool candidate_reaches_target_speed(const TerminalModel *model,
-        const TaemFixedHacCandidate *candidate) {
-    return candidate->status == TAEM_PLAN_UNQUALIFIED &&
-        candidate->replay.final_geometry.airspeed_mps >= exit_speed_target(model);
-}
-
 static bool candidate_preferred(const TerminalModel *model,
         const TaemFixedHacCandidate *trial, const TaemFixedHacCandidate *best) {
     if (trial->status != TAEM_PLAN_UNQUALIFIED) return false;
     if (best->status != TAEM_PLAN_UNQUALIFIED) return true;
     double target = exit_speed_target(model);
-    double trial_deficit = fmax(0.0, target - trial->replay.final_geometry.airspeed_mps);
-    double best_deficit = fmax(0.0, target - best->replay.final_geometry.airspeed_mps);
-    return trial_deficit < best_deficit ||
-        (trial_deficit == best_deficit && trial->quality_score < best->quality_score);
+    double trial_deficit = fmax(0.0,
+        target - trial->replay.final_geometry.airspeed_mps);
+    double best_deficit = fmax(0.0,
+        target - best->replay.final_geometry.airspeed_mps);
+    /* A speed difference below 1 m/s is smaller than the useful precision of
+     * this native profile prediction.  Within that band, select the route
+     * with less replayed turn burden and better tracking.  Larger deficits
+     * still matter to an unpowered vehicle. */
+    if (fabs(trial_deficit - best_deficit) > 1.0)
+        return trial_deficit < best_deficit;
+    return trial->quality_score < best->quality_score;
 }
 /* Replay qualified the HAC and runway-line roll-out. Rank by tracking quality,
  * energy closure and how far the aligned exit airspeed falls short of the
@@ -117,7 +118,12 @@ static void finish_candidate(const TerminalModel *model,
         fabs(trial->replay.energy_closure_residual_j_kg) /
             fmax(250.0, 0.02 * fmax(fabs(trial->replay.drag_work_j_kg),
                                     initial_kinetic(initial))) +
-        4.0 * deficit;
+        4.0 * deficit +
+        2.0 * trial->replay.turn_burden_integral_s /
+            fmax(trial->replay.elapsed_s, 1.0) +
+        2.0 * fmax(0.0,
+            trial->replay.maximum_turn_authority_fraction - 0.8) +
+        0.5 * trial->replay.bank_target_reversals;
     if (!isfinite(trial->quality_score)) trial->quality_score = INFINITY;
 }
 
@@ -319,7 +325,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                                               dt, maximum_elapsed);
         if (diagnostics_enabled())
             fprintf(stderr,
-                "TAEM candidate: side=%+.0f join_sweep=%.1f lead=%.0f arc=%.0f leadPeakK=%.3e liveK=%.3e status=%d elapsed=%.2f index=%zu/%zu reason=%s cross=%.1f course=%.1f altErr=%.1f exitV=%.1f latShort=%.2f\n",
+                "TAEM candidate: side=%+.0f join_sweep=%.1f lead=%.0f arc=%.0f leadPeakK=%.3e liveK=%.3e status=%d elapsed=%.2f index=%zu/%zu reason=%s cross=%.1f course=%.1f altErr=%.1f exitV=%.1f latShort=%.2f turnMean=%.3f turnPeak=%.3f aoaMax=%.1f reversals=%u\n",
                 side, stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
                 trial.route.lead_length_m, trial.route.hac.arc_length_m,
                 taem_route_lead_peak_curvature(&trial.route), live_curvature,
@@ -330,7 +336,12 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.replay.maximum_course_error_deg,
                 trial.replay.maximum_altitude_error_m,
                 trial.replay.final_geometry.airspeed_mps,
-                trial.replay.maximum_lateral_authority_shortfall_mps2);
+                trial.replay.maximum_lateral_authority_shortfall_mps2,
+                trial.replay.turn_burden_integral_s /
+                    fmax(trial.replay.elapsed_s, 1.0),
+                trial.replay.maximum_turn_authority_fraction,
+                trial.replay.maximum_commanded_aoa_deg,
+                trial.replay.bank_target_reversals);
         if (replay_reaches_aligned_exit(&trial.replay)) {
             fprintf(stderr,
                 "MM305_REPLAY_EXIT side=%+.0f radius=%.0f sweep=%.1f lead=%.0f refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f energy=%.1f reason=%s\n",
@@ -349,7 +360,12 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 trial.replay.energy_end_j_kg,
                 trial.replay.reason ? trial.replay.reason : "none");
             finish_candidate(model, initial, &trial);
-            if (candidate_reaches_target_speed(model, &trial)) return trial;
+            if (diagnostics_enabled())
+                fprintf(stderr, "TAEM rank: side=%+.0f radius=%.0f sweep=%.1f exitV=%.1f quality=%.3f reversals=%u\n",
+                    side, trial.route.hac.radius_m,
+                    trial.route.hac.arc_sweep_rad * 57.29577951308232,
+                    trial.replay.final_geometry.airspeed_mps,
+                    trial.quality_score, trial.replay.bank_target_reversals);
             if (candidate_preferred(model, &trial, &best_failure)) {
                 best_failure = trial;
                 have_failure = true;
@@ -453,8 +469,7 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                 double radius = hac_radius;
                 *slot = evaluate_side(ends[end], initial, &geometry, radius,
                     side, spacing, dt, maximum_elapsed, stations);
-                for (int step = 1; step < TAEM_HAC_RADIUS_STEPS &&
-                        !candidate_reaches_target_speed(ends[end], slot); ++step) {
+                for (int step = 1; step < TAEM_HAC_RADIUS_STEPS; ++step) {
                     double next_radius = fmax(floor_radius, radius * TAEM_HAC_RADIUS_RATIO);
                     if (!(next_radius < radius)) break;
                     radius = next_radius;

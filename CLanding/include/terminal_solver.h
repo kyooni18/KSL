@@ -27,6 +27,11 @@ typedef struct {
     double maximum_altitude_error_m;
     double maximum_lateral_authority_shortfall_mps2;
     double maximum_vertical_authority_shortfall_mps2;
+    /* Native-replay turn demand; high AoA, bank and lateral demand all count. */
+    double turn_burden_integral_s;
+    double maximum_turn_authority_fraction;
+    double maximum_commanded_aoa_deg;
+    unsigned bank_target_reversals;
     double failure_cross_track_m;
     double failure_course_error_deg;
     double failure_required_lateral_accel_mps2;
