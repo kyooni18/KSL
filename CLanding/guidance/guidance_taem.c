@@ -95,8 +95,9 @@ bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
     return true;
 }
 
-static TerminalDynamicState terminal_live_state(const VehicleState *state,
-        const Telemetry *telemetry,const TerminalModel *model) {
+static TerminalDynamicState terminal_live_state(const GuidanceMachine *g,
+        const VehicleState *state, const Telemetry *telemetry,
+        const TerminalModel *model) {
     AttitudeModel attitude = model->attitude;
     attitude.aoa_rad = telemetry->angle_of_attack * DEG2RAD;
     attitude.bank_rad = telemetry->roll * DEG2RAD;
@@ -107,6 +108,10 @@ static TerminalDynamicState terminal_live_state(const VehicleState *state,
     attitude.bank_rate_rad_s = telemetry->roll_rate * DEG2RAD;
     attitude.cmd_aoa_rad = attitude.requested_aoa_rad = attitude.aoa_rad;
     attitude.cmd_bank_rad = attitude.requested_bank_rad = attitude.bank_rad;
+    if (g && g->mm305_command_valid) {
+        attitude.cmd_bank_rad = attitude.requested_bank_rad =
+            g->mm305_command_bank_rad;
+    }
     return (TerminalDynamicState){
         .position_i_m = {state->position.x,state->position.y,state->position.z},
         .velocity_i_mps = {state->velocity.x,state->velocity.y,state->velocity.z},
@@ -242,7 +247,7 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
     memset(&r,0,sizeof(r));
     if (!g || !t || !state || !cfg || !model || !model->replay_validated)
         return r;
-    r.state=terminal_live_state(state,t,model);
+    r.state=terminal_live_state(g,state,t,model);
     if (!terminal_state_validate(&r.state,NULL,0)) return r;
     r.request_ut=t->ut;
     r.model_snapshot_id=model->snapshot_id;
@@ -470,7 +475,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             &cfg->vehicle,0.0,false,PROFILE_TAEM),
             "MM305 native HAC exit reached; awaiting the existing numeric Final contract.",NULL);
 
-    TerminalDynamicState current=terminal_live_state(vehicle_state,t,model);
+    TerminalDynamicState current=terminal_live_state(g,vehicle_state,t,model);
     if (!terminal_state_validate(&current,NULL,0))
         return terminal_abort(g,
             "MM305 native state could not be projected into the fixed runway frame.");
@@ -660,6 +665,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     command.target_pitch=t->flight_path_angle+command.target_aoa;
     GuidanceResult result=stabilized(g,
         result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);
+    g->mm305_command_bank_rad = result.command.target_roll * DEG2RAD;
+    g->mm305_command_valid = true;
     g->phase=PHASE_TAEM;
     return result;
 }

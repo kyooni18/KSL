@@ -114,6 +114,38 @@ static void test_tracker_normal_lift_balance(const TerminalModel *model,
         assert(fabs(normal_lift-demand.delivered_vertical_lift_mps2)<1e-9);
     }
 }
+
+static void test_tracker_bank_target_continuity(const TerminalModel *model,
+        const TerminalDynamicState *initial) {
+    TerminalDynamicState state = *initial;
+    TaemGeometryState geometry;
+    assert(taem_geometry_state(model, &state, &geometry));
+    TaemPathReference reference = {
+        .runway_along_m = geometry.runway_along_m,
+        .runway_cross_m = geometry.runway_cross_m,
+        .course_deg = geometry.course_deg,
+        .curvature_right_per_m = 1.0 / 2000.0,
+        .altitude_m = model->site.altitude + geometry.altitude_above_runway_m,
+        .flight_path_angle_deg = geometry.flight_path_angle_deg
+    };
+    const double dt = 0.1;
+    const double max_step = 5.0 * model->attitude.max_roll_rate_rad_s * dt;
+    state.attitude.requested_bank_rad = 0.0;
+    TaemTrackerOutput right = taem_tracker_update(model, &state, &geometry,
+                                                   &reference, dt);
+    assert(right.valid && right.control.bank_rad > 0.0);
+    assert(right.control.bank_rad <= max_step + 1e-9);
+    state.attitude.requested_bank_rad = 70.0 * 3.14159265358979323846 / 180.0;
+    reference.curvature_right_per_m = -reference.curvature_right_per_m;
+    TaemTrackerOutput reversal = taem_tracker_update(model, &state, &geometry,
+                                                      &reference, dt);
+    assert(reversal.valid);
+    assert(state.attitude.requested_bank_rad - reversal.control.bank_rad <=
+           max_step + 1e-9);
+    assert(reversal.control.angle_of_attack_rad <=
+           model->vehicle.maximum_angle_of_attack *
+           3.14159265358979323846 / 180.0 + 1e-9);
+}
 int main(void) {
     LandingConfiguration configuration = landing_configuration_default();
     char atmosphere[512], aero[512], book[512], attitude[512];
@@ -158,6 +190,7 @@ int main(void) {
     TaemGeometryState geometry;
     assert(taem_geometry_state(&model, &state, &geometry));
     test_tracker_normal_lift_balance(&model,&state);
+    test_tracker_bank_target_continuity(&model,&state);
 
     TaemReachability reachability;
     assert(taem_fixed_hac_turn_reachability(&model, &state, &geometry,

@@ -202,10 +202,21 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
         chosen_vertical = glide_vertical;
     }
 
+    /* A bounded bank target can still jump across the entire range in one
+     * tick when inversion switches AoA solutions. Advance it at a rate tied
+     * to the attitude plant; replay and live control share this memory. */
+    double bank_target = radians(chosen_bank);
+    double bank_step = 5.0 * m->attitude.max_roll_rate_rad_s * dt;
+    if (isfinite(s->attitude.requested_bank_rad) && bank_step > 0.0)
+        bank_target = s->attitude.requested_bank_rad +
+            clamp_value(remainder(bank_target - s->attitude.requested_bank_rad,
+                                  2.0 * 3.14159265358979323846),
+                        -bank_step, bank_step);
+
     out.valid = true;
     out.control = (TerminalControl){
         .angle_of_attack_rad = radians(chosen_aoa),
-        .bank_rad = radians(chosen_bank),
+        .bank_rad = bank_target,
         .dt_s = dt
     };
     out.cross_track_error_m = cross_track;
