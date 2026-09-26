@@ -79,3 +79,14 @@ same tiny perturbation selected opposite HAC sides and one route required a
 later release/replan. Route selection and downstream response remain fragile.
 The next MM305 change should be driven by exit-state margin and topology
 stability over nearby states, with Final's existing gates left intact.
+
+## Direct-control check
+
+`mm305-direct-control-roll-horizon-20260926T104138Z-66aml3yu` used the same
+exact entry and 4.5 km/20° temporary config with ShuttleSim's surface-moment
+attitude plant. The first 100 s again had no near-full bank-target reversal.
+Vehicle tracking was weaker: one live exit event occurred at cross −518 m,
+232 m/s, and +57.5° bank, followed by another near cross +6 m and 148 m/s.
+Contact failed at 61.6 m/s and 8.57 m/s sink. The direct-control moment
+coefficients are generic, not a qualified STS-N identification, so this run
+exposes a control-loop sensitivity without predicting live-KSP response.
