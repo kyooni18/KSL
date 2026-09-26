@@ -17,8 +17,16 @@ static double clamp_value(double x, double lo, double hi) {
 static double lateral_response_time(const TerminalModel *m) {
     double roll_wn = m->attitude.roll_wn;
     double roll_zeta = m->attitude.roll_zeta;
-    return roll_wn > 0.0 && roll_zeta > 0.0 ?
-        clamp_value(4.0 / (roll_wn * roll_zeta), 1.0, 20.0) : 8.0;
+    double settling = roll_wn > 0.0 && roll_zeta > 0.0 ?
+        4.0 / (roll_wn * roll_zeta) : 8.0;
+    /* The lateral PD law can request either bank sign.  Its horizon must
+     * include the time to slew between the two permitted bank extremes;
+     * otherwise cross-track error reverses the target before the vehicle has
+     * flown the preceding command.  The same model is used in native replay. */
+    double bank_limit = radians(fmin(m->vehicle.maximum_bank_angle, 80.0));
+    double roll_rate = m->attitude.max_roll_rate_rad_s;
+    double reversal = roll_rate > 0.0 ? 2.0 * bank_limit / roll_rate : 0.0;
+    return clamp_value(fmax(settling, reversal), 1.0, 20.0);
 }
 
 static double lateral_demand(const TaemGeometryState *g,
