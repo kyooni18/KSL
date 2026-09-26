@@ -20,7 +20,7 @@
 #define TAEM_JOIN_SWEEP_STEP_DEG 15.0
 #define TAEM_JOIN_MAX_STATIONS 120
 #define TAEM_JOIN_MAX_REPLAYS 3
-#define TAEM_JOIN_MAX_PROFILES 6
+#define TAEM_JOIN_MAX_PROFILES 12
 #define TAEM_PROFILE_DT_S 0.5
 #define TAEM_MIN_HAC_RADIUS_M 3000.0
 
@@ -29,6 +29,12 @@ typedef struct {
     double score;
     TaemRoute route;
 } JoinStation;
+
+static int compare_station_length(const void *a, const void *b) {
+    double la = ((const JoinStation *)a)->route.length_m;
+    double lb = ((const JoinStation *)b)->route.length_m;
+    return (la > lb) - (la < lb);
+}
 
 static int compare_station(const void *a, const void *b) {
     double x = ((const JoinStation *)a)->score;
@@ -234,28 +240,60 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     if (count == 0) return best_failure;
     qsort(stations, count, sizeof(stations[0]), compare_station);
 
-    /* Generate a dynamically feasible vertical reference for the most
-     * promising lateral routes by native propagation.  Routes whose energy
-     * cannot be brought to the HAC exit altitude by any incidence are dropped
-     * here without a full replay; survivors are ordered by how well their exit
-     * airspeed meets the Final alignment speed. */
+    /* Generate a dynamically feasible vertical reference by native
+     * propagation.  Profile feasibility is monotone in route length for a
+     * given state: too short cannot descend within the slope limit, too long
+     * runs out of energy.  The glide-slope score above is only a geometric
+     * proxy (it ignores kinetic energy and the vehicle's L/D: at Mach 2.5 this
+     * vehicle's L/D is ~0.7, so a 12 deg configured slope ranks routes several
+     * times longer than it can fly first).  Bracket the feasible length window
+     * by bisection over length, then profile outward from it until the
+     * budget is spent; survivors are then ranked by score and exit speed. */
     double target_speed = exit_speed_target(model);
-    size_t profiled = 0;
     size_t profile_budget = count < TAEM_JOIN_MAX_PROFILES ? count : TAEM_JOIN_MAX_PROFILES;
-    for (size_t i = 0; i < profile_budget; ++i) {
-        TerminalProfileResult profile = terminal_solver_generate_profile(model,
-            initial, &stations[i].route, TAEM_PROFILE_DT_S, maximum_elapsed);
-        if (diagnostics_enabled())
-            fprintf(stderr,
-                "TAEM profile: side=%+.0f radius=%.0f join_sweep=%.1f length=%.0f valid=%d aoa=%.2f exitV=%.1f exitFpa=%.1f reason=%s\n",
-                side, stations[i].route.hac.radius_m,
-                stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
-                stations[i].route.length_m, profile.valid ? 1 : 0,
-                profile.aoa_deg, profile.exit_speed_mps, profile.exit_fpa_deg,
-                profile.reason);
-        if (!profile.valid) continue;
+    qsort(stations, count, sizeof(stations[0]), compare_station_length);
+    unsigned char *tried = calloc(count, 1);
+    TerminalProfileResult *results = calloc(count, sizeof(*results));
+    if (!tried || !results) {
+        free(tried); free(results);
+        best_failure.reason = "profile workspace allocation failed";
+        return best_failure;
+    }
+    size_t used = 0;
+#define PROFILE_STATION(k) do { \
+        if (!tried[(k)] && used < profile_budget) { \
+            tried[(k)] = 1; ++used; \
+            results[(k)] = terminal_solver_generate_profile(model, initial, \
+                &stations[(k)].route, TAEM_PROFILE_DT_S, maximum_elapsed); \
+            if (diagnostics_enabled()) \
+                fprintf(stderr, "TAEM profile: side=%+.0f radius=%.0f join_sweep=%.1f length=%.0f valid=%d aoa=%.2f exitV=%.1f exitFpa=%.1f reason=%s\n", \
+                    side, stations[(k)].route.hac.radius_m, \
+                    stations[(k)].sweep_rad * 180.0 / 3.14159265358979323846, \
+                    stations[(k)].route.length_m, results[(k)].valid ? 1 : 0, \
+                    results[(k)].aoa_deg, results[(k)].exit_speed_mps, \
+                    results[(k)].exit_fpa_deg, results[(k)].reason); \
+        } } while (0)
+    long lo = 0, hi = (long)count - 1, hit = -1;
+    while (lo <= hi && used < profile_budget) {
+        long mid = lo + (hi - lo) / 2;
+        PROFILE_STATION((size_t)mid);
+        const TerminalProfileResult *r = &results[mid];
+        if (r->valid) { hit = mid; break; }
+        if (r->reason && strstr(r->reason, "too long")) hi = mid - 1;
+        else if (r->reason && strstr(r->reason, "too short")) lo = mid + 1;
+        else { hit = mid; break; } /* other failure: search its neighbourhood */
+    }
+    if (hit < 0) hit = lo < (long)count ? lo : (long)count - 1;
+    for (long d = 0; used < profile_budget && (hit - d >= 0 || hit + d < (long)count); ++d) {
+        if (hit - d >= 0) PROFILE_STATION((size_t)(hit - d));
+        if (hit + d < (long)count) PROFILE_STATION((size_t)(hit + d));
+    }
+#undef PROFILE_STATION
+    size_t profiled = 0;
+    for (size_t i = 0; i < count; ++i) {
+        if (!tried[i] || !results[i].valid) continue;
         stations[i].score = stations[i].score +
-            fmax(0.0, target_speed - profile.exit_speed_mps) / target_speed * 10.0;
+            fmax(0.0, target_speed - results[i].exit_speed_mps) / target_speed * 10.0;
         if (i != profiled) {
             JoinStation swap = stations[profiled];
             stations[profiled] = stations[i];
@@ -263,6 +301,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         }
         ++profiled;
     }
+    free(tried); free(results);
     if (profiled == 0) {
         best_failure.reason = "no HAC join has an energy-feasible native vertical profile";
         return best_failure;
