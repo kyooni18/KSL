@@ -23,17 +23,33 @@ static double terminal_geometry_fpa(double height,double distance,double float_h
 /*
  * Shuttle-style flare profile as sink versus wheel height:
  *  - above the shallow-glide height: a constant-deceleration preflare arc,
- *    sink = s_sgs + sqrt(2 a (h - h_sgs)), so the pull-up starts only as high
+ *    sink^2 = s_sgs^2 + 2 a (h - h_sgs) (the same kinematics the latch height
+ *    is sized with; a profile of the form s_sgs + sqrt(2 a dh) demands a
+ *    deceleration a*s/(s - s_sgs) that grows without bound as the sink nears
+ *    the shallow-glide sink, a hard late pull), so the pull-up starts only as high
  *    as the present sink and the available pull require (energy is kept for
  *    the float instead of being bled at high incidence from a kilometre up);
- *  - below it: the shallow glide blends linearly into the float sink.
+ *  - then the shallow glide at its constant sink;
+ *  - then a gentle constant-deceleration final flare to the float sink at
+ *    the float height, and the float sink below it.
+ * Time spent near the ground costs speed at about g/(L/D), so the segments
+ * below the arc are sized to be short: a linear sink blend from the
+ * shallow-glide height, or a very low float sink, spends many seconds there
+ * and delivers the vehicle to the runway well below touchdown speed.
  */
+static double terminal_final_flare_height(double float_height,double float_sink,
+        double final_accel,double sgs_sink){
+    return float_height+fmax(0.0,sgs_sink*sgs_sink-float_sink*float_sink)/(2.0*final_accel);
+}
 static double terminal_sink_profile(double height,double float_height,double float_sink,
-        double arrest_accel,double sgs_height,double sgs_sink){
+        double arrest_accel,double sgs_height,double sgs_sink,double final_accel){
     if(height>sgs_height)
-        return sgs_sink+sqrt(2.0*arrest_accel*(height-sgs_height));
-    double u=clampd((height-float_height)/fmax(1.0,sgs_height-float_height),0.0,1.0);
-    return float_sink+(sgs_sink-float_sink)*u;
+        return sqrt(sgs_sink*sgs_sink+2.0*arrest_accel*(height-sgs_height));
+    if(height>terminal_final_flare_height(float_height,float_sink,final_accel,sgs_sink))
+        return sgs_sink;
+    if(height>float_height)
+        return sqrt(float_sink*float_sink+2.0*final_accel*(height-float_height));
+    return float_sink;
 }
 
 static void terminal_learn_aero(GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v){
@@ -117,16 +133,66 @@ static double terminal_learned_max_lift_to_drag(const GuidanceMachine*g,const Te
     return clampd(best,1.5,10.0);
 }
 
+typedef struct {
+    double arrest_accel,sgs_height,sgs_sink,final_accel,float_height,float_sink,lift_ratio,aoa_max,g0;
+} TerminalFlarePlan;
+
+/*
+ * Touchdown speed the planned vertical profile delivers from the present
+ * state: hold the present flight-path angle until the preflare latch height,
+ * then track the sink profile (arc, shallow glide, final flare, float) with
+ * the learned lift and drag, integrating speed as a point mass.  The time
+ * spent in the arc and near the ground is where an unpowered vehicle's speed
+ * goes, and it depends on the vehicle's L/D at the incidences actually
+ * flown, so a fixed multiple of touchdown speed at the outer glide cannot
+ * tell whether the flare will arrive at touchdown speed; this can.
+ */
+static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
+        const VehicleProfile*v,double height,double V,double sink,bool latched,
+        const TerminalFlarePlan*p){
+    Telemetry tc=*t;
+    double m=fmax(t->mass,1.0);
+    double sound=isfinite(t->mach)&&t->mach>.05&&isfinite(t->true_air_speed)?
+        t->true_air_speed/t->mach:340.0;
+    double rho=isfinite(t->atmospheric_density)&&t->atmospheric_density>0.0?
+        t->atmospheric_density:2.0*fmax(t->dynamic_pressure,1.0)/fmax(V*V,1.0);
+    double sin_glide=clampd(sink/fmax(V,1.0),-.95,.95);
+    const double DT=.25,TAU=1.5;
+    for(int i=0;i<1200&&height>0.0&&V>5.0;++i){
+        if(!latched){
+            double pull=fmax(0.0,sink*sink-p->sgs_sink*p->sgs_sink)/(2.0*p->arrest_accel);
+            if(height<=pull+p->sgs_height+sink*1.5)latched=true;
+        }
+        double accel_up=0.0;
+        if(latched){
+            double ref=terminal_sink_profile(height,p->float_height,p->float_sink,
+                p->arrest_accel,p->sgs_height,p->sgs_sink,p->final_accel);
+            accel_up=clampd((sink-ref)/TAU+(sink>p->sgs_sink&&height>p->sgs_height?p->arrest_accel:0.0),
+                -.3*p->g0,1.5*p->g0);
+        }else sink=V*sin_glide;
+        double gamma=-asin(clampd(sink/V,-.95,.95));
+        tc.mach=V/sound;tc.dynamic_pressure=.5*rho*V*V;
+        double lift=m*(accel_up+p->g0*cos(gamma))/fmax(p->lift_ratio,.3);
+        double aoa=terminal_aoa_for_lift(g,&tc,v,fmax(0.0,lift),p->aoa_max);
+        double L=0.0,D=0.0;terminal_aero_q(g,&tc,v,aoa,&L,&D);
+        V+=(-D*tc.dynamic_pressure/m-p->g0*sin(gamma))*DT;
+        if(latched)sink-=accel_up*DT;
+        height-=sink*DT;
+    }
+    return V;
+}
+
 static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,const LandingConfiguration*cfg,const Trajectory*ref,double dt){
     const GuidanceSettings*s=&cfg->guidance;
     const VehicleProfile*v=&cfg->vehicle;
     const LandingSite*site=&cfg->site;
     const double g0=planet_surface_gravity(p);
-    const double H_FLOAT=3.5;
-    const double S_FLOAT=.5;
+    const double H_FLOAT=1.5;
+    const double S_FLOAT=1.0;       /* a third of the 3 m/s touchdown sink gate */
+    const double FINAL_FLARE_ACCEL=.1*g0;
     const double TOUCHDOWN_ALONG=75.0;
-    const double ARREST_ACCEL=.25*g0;  /* preflare design pull (Shuttle ~1.25-1.3 g) */
+    const double ARREST_ACCEL=.5*g0;   /* preflare design pull; see the arc energy note below */
     const double SGS_HEIGHT=25.0;   /* shallow-glide segment below this wheel height */
     const double SGS_SINK=3.5;      /* ~ -2..-2.5 deg at touchdown speeds */
     const double TOUCHDOWN_PITCH=8.0;
@@ -296,7 +362,19 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     /* The learned table tends to over-predict lift at the incidence limit
        until that incidence has been flown, so never trust a 1-g speed below
        the configured touchdown speed. */
+    /* Energy-consistent outer-glide speed: predict the touchdown speed the
+       planned profile delivers and ask for the speed whose extra kinetic
+       energy makes up the shortfall (or sheds the excess).  The floor keeps
+       the stall margin the arc needs at its incidence limit. */
     double speed_ref=1.6*fmax(speed_1g,v_td);
+    double predicted_touchdown_speed=NAN;
+    if(!g->terminal_pull_latch){
+        TerminalFlarePlan plan={arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL,H_FLOAT,S_FLOAT,
+            g->terminal_lift_ratio,aoa_max,g0};
+        predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&plan);
+        speed_ref=fmax(1.3*fmax(speed_1g,v_td),
+            sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed)));
+    }
     if(!g->terminal_pull_latch&&isfinite(speed_ref))
         glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);
@@ -334,32 +412,38 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double sink_rate_ff=0.0;
     double arc_accel=NAN;
     if(flaring&&height>SGS_HEIGHT){
-        /* Preflare arc: the constant deceleration that takes the present sink
-           to the shallow-glide sink at the shallow-glide height (less the
-           height lost during the incidence response), re-solved every cycle.
-           It spreads the arrest over the height left instead of riding a
-           maximum-sink boundary and compressing the pull into the last
-           metres; being re-solved, it is itself the closed loop. */
-        double room=fmax(5.0,height-SGS_HEIGHT-sink_now*.5*response);
-        double decel=fmax(0.0,(sink_now*sink_now-SGS_SINK*SGS_SINK)/(2.0*room));
-        /* Pull only when the arc actually needs close to the design pull;
-           otherwise hold the present sink.  Spreading a gentle pull over a
-           high latch flies shallower than a low-L/D vehicle's equilibrium
-           glide and bleeds the speed the final arrest needs. */
-        arc_accel=decel>=.9*arrest_accel?1.1*decel:0.0;
-        double reference_sink=arc_accel>0.0?fmax(SGS_SINK,sink_now-1.5*decel):sink_now;
-        reference_fpa=fmax(glide_fpa,-asin(fmin(.95,reference_sink/V)));
-        sink_rate_ff=decel/(V*fmax(.3,cos(reference_fpa)));
+        /* Preflare arc: the deceleration that takes the present sink to the
+           shallow-glide sink at the shallow-glide height, less the height
+           lost while the incidence responds, re-solved every cycle so it is
+           itself the closed loop.  The latch is sized so this starts at the
+           design pull, and it fades to nothing as the sink reaches its goal
+           instead of carrying a full design pull into the last metres (a
+           balloon).  There is no hold-then-pull switch: holding until the
+           required pull reaches the design value leaves the incidence lag to
+           turn it into a late hard pull.  An overshoot below the shallow-glide
+           sink, or a climb, is flown back to it rather than held while the
+           float speed bleeds away. */
+        const double PREFLARE_TAU=1.5;
+        double room=fmax(3.0,height-SGS_HEIGHT-fmax(0.0,sink)*.5*response);
+        arc_accel=sink>SGS_SINK?(sink*sink-SGS_SINK*SGS_SINK)/(2.0*room):
+            (sink-SGS_SINK)/PREFLARE_TAU;
+        double arc_goal=sink>SGS_SINK?fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU):SGS_SINK;
+        reference_fpa=fmax(glide_fpa,-asin(clampd(arc_goal/V,0.0,.95)));
     }else if(flaring){
-        /* Shallow glide blending into the float; never a reason to push over. */
+        /* Shallow glide blending into the float.  It is tracked both ways
+           (its sink never exceeds the shallow-glide sink): a vehicle that
+           arrested high and holds level at the shallow-glide height only
+           bleeds the float speed until it stalls onto the runway.  Near the
+           ground it is never a reason to push over. */
+        const double NO_PUSH_HEIGHT=3.0*H_FLOAT;
         double profile_sink=terminal_sink_profile(height,float_height,float_sink,
-            arrest_accel,SGS_HEIGHT,SGS_SINK);
-        double reference_sink=fmin(profile_sink,fmax(float_sink,sink_now));
+            arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL);
+        double reference_sink=height>NO_PUSH_HEIGHT?profile_sink:
+            fmin(profile_sink,fmax(float_sink,sink_now));
         reference_fpa=fmax(glide_fpa,-asin(fmin(.95,reference_sink/V)));
-        if(height>float_height){
-            double slope=(SGS_SINK-float_sink)/fmax(1.0,SGS_HEIGHT-float_height);
-            sink_rate_ff=slope*sink/(V*fmax(.3,cos(reference_fpa)));
-        }
+        if(height>float_height&&height<=terminal_final_flare_height(float_height,float_sink,
+               FINAL_FLARE_ACCEL,SGS_SINK))
+            sink_rate_ff=FINAL_FLARE_ACCEL/(V*fmax(.3,cos(reference_fpa)));
     }
     double reference_sink=V*sin(reference_fpa);
     double measured_gamma_rate=isfinite(t->lift_force)?
@@ -369,7 +453,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        (falling behind raises the required deceleration), so its deceleration
        is commanded directly; a gamma-rate lead there fights the slow incidence
        response and produces a push-over halfway down the arc. */
-    double vertical_accel=isfinite(arc_accel)?clampd(arc_accel,0.0,1.5*g0):
+    double vertical_accel=isfinite(arc_accel)?clampd(arc_accel,-.3*g0,1.5*g0):
         clampd(V*(sink_rate_ff+.5*(reference_fpa-lead_gamma)),-.3*g0,1.5*g0);
     double lift_required=t->mass*(vertical_accel+g0*cos(gamma))/lift_div/
         g->terminal_lift_ratio;
@@ -460,11 +544,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     trajectory_copy(&r.reference,ref);
     r=stabilized(g,r,t,v,s,dt);
     if(getenv("KSP_LANDER_FINAL_TRACE"))
-        fprintf(stderr,"FINAL_TRACE ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
-            "pfh=%.0f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f ld=%.2f long=%d\n",
-            t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
+        fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
+            "pfh=%.0f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f ld=%.2f long=%d vtd=%.1f\n",
+            (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
             response,arrest_accel,g->terminal_aim_along,glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
-            vertical_accel,aoa,ld_float,long_landing);
+            vertical_accel,aoa,ld_float,long_landing,predicted_touchdown_speed);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
         fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f\n",
