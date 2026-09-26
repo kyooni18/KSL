@@ -62,7 +62,7 @@ static void record_turn_demand(const TerminalModel *m,
 /* Steepest sustained descent MM305 may plan when the vehicle starts above the
  * exit glide line, as an excess over the Final glide slope.  Steeper
  * descents are not flown: the route is rejected so a longer one is chosen. */
-#define TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG 10.0
+#define TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG 3.0
 /* Incidence of the late energy-building dive: low enough to accelerate,
  * with dynamic pressure and load still checked by the full replay. */
 #define TERMINAL_PROFILE_DIVE_AOA_DEG 3.0
@@ -76,6 +76,7 @@ typedef struct {
 typedef struct {
     double end_altitude_m;   /* MSL at route end; -INFINITY if runway reached first */
     double capture_station_m; /* INFINITY if the exit glide line was never met */
+    double steepest_descent_deg; /* smooth profile: steepest reference descent */
     double exit_speed_mps, exit_fpa_deg;
     double exit_specific_energy_j_kg;
     bool valid;
@@ -232,7 +233,7 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
     TaemGeometryState geometry;
     if (!taem_geometry_state(m, &state, &geometry)) return out;
     size_t cursor = 0, count = 0;
-    double worst = 0.0;
+    double worst = 0.0, steepest = -INFINITY;
     size_t max_steps = (size_t)ceil(max_elapsed / dt);
     for (size_t step = 0; step < max_steps; ++step) {
         TaemPathReference reference;
@@ -241,6 +242,7 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
             return out;
         double altitude = m->site.altitude + geometry.altitude_above_runway_m;
         worst = fmax(worst, fabs(altitude - reference.altitude_m));
+        steepest = fmax(steepest, -reference.flight_path_angle_deg);
         if (samples && count < sample_capacity)
             samples[count++] = (ProfileSample){reference.station_m,
                 reference.altitude_m, reference.flight_path_angle_deg,
@@ -252,6 +254,7 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
             out.exit_fpa_deg = geometry.flight_path_angle_deg;
             out.valid = true;
             *max_error = worst;
+            out.steepest_descent_deg = steepest;
             return out;
         }
         TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
@@ -265,9 +268,15 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
     return out;
 }
 
+/* A smooth reference may not descend steeper than the Final slope plus the
+ * same excess the glide-and-dive profile allows: a route that needs a steeper
+ * plunge is too short for the energy, and a longer one (more HAC sweep) must
+ * be chosen instead. */
 static bool smooth_flight_ok(const TaemRoute *route, ProfileFlight f,
                              double max_error) {
     return f.valid && isfinite(f.end_altitude_m) &&
+        f.steepest_descent_deg <= route->profile_final_slope_deg +
+            TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG &&
         max_error <= TERMINAL_SMOOTH_TRACK_ERROR_M &&
         fabs(f.end_altitude_m - route->profile_final_altitude_m) <=
             TERMINAL_SMOOTH_EXIT_ERROR_M;
