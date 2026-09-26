@@ -20,6 +20,7 @@
 #define CNANO_ENGINE_LIMIT 32
 #define CNANO_ATMOSPHERE_SAMPLES 71
 #define CNANO_MAIN_WHEEL_LIMIT 2
+#define CNANO_CONTROL_SURFACE_LIMIT 16
 #define CNANO_MEDIUM_PERIOD 0.25
 #define CNANO_SLOW_PERIOD 1.0
 
@@ -30,6 +31,12 @@ typedef struct {
     bool independent_owned;
     float available_thrust;
 } CommandableEngine;
+
+typedef struct {
+    krpc_SpaceCenter_ControlSurface_t object;
+    KrpcSurfaceRole role;
+    double lateral_m;
+} CommandableSurface;
 
 struct KrpcCNanoClient {
     KrpcCNanoTransport transport;
@@ -59,6 +66,12 @@ struct KrpcCNanoClient {
     CommandableEngine engines[CNANO_ENGINE_LIMIT];
     size_t engine_count;
     double commandable_thrust;
+
+    CommandableSurface surfaces[CNANO_CONTROL_SURFACE_LIMIT];
+    size_t surface_count;
+    bool surface_roles_classified;
+    KrpcSurfaceAllocation applied_surface_allocation;
+    bool has_applied_surface_allocation;
 
     krpc_SpaceCenter_PartField_t main_wheel_grounded_fields[CNANO_MAIN_WHEEL_LIMIT];
     size_t main_wheel_grounded_field_count;

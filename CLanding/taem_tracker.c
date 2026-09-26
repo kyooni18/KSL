@@ -14,6 +14,52 @@ static double clamp_value(double x, double lo, double hi) {
     return fmax(lo, fmin(hi, x));
 }
 
+/* Fraction of the identified attitude authority available at q, matching
+ * the ShuttleSim servo's scaling (acceleration ~ q, rate ~ sqrt(q)). */
+static double attitude_authority(double q_pa, double full_authority_q_pa) {
+    if (!(full_authority_q_pa > 0.0)) return 1.0;
+    return clamp_value(q_pa / full_authority_q_pa, 0.0, 1.0);
+}
+
+/* Share of the demonstrated rate/acceleration envelope a command may use;
+ * the remainder is the closed loop's margin to arrest and correct. */
+static const double command_envelope_fraction = 0.75;
+
+static double shape_attitude_command(double target, double previous,
+        double measured, double rate_max, double accel_max, double wn,
+        double zeta, double authority, double dt, bool wrap) {
+    if (!isfinite(target) || !(dt > 0.0)) return target;
+    if (!isfinite(previous)) previous = isfinite(measured) ? measured : target;
+    double root = sqrt(fmax(authority, 0.0));
+    double rate = command_envelope_fraction * rate_max * root;
+    double accel = command_envelope_fraction * accel_max * fmax(authority, 0.0);
+    if (!(rate > 0.0) || !(accel > 0.0)) return previous;
+    double error = target - previous;
+    if (wrap) error = remainder(error, 2.0 * tracker_pi);
+    /* Arrive with zero rate: v <= sqrt(2 a |e|). */
+    double allowed = fmin(rate, sqrt(2.0 * accel * fabs(error)));
+    double next = previous + clamp_value(error, -allowed * dt, allowed * dt);
+    /* Never lead the vehicle by more than the rate it can build within one
+     * closed-loop response time; a saturated axis holds the command back
+     * instead of accumulating an attitude error it cannot close. */
+    if (isfinite(measured)) {
+        double response = wn > 0.0 && zeta > 0.0 ? 1.0 / (wn * zeta) : 1.0;
+        double lead_max = rate * fmax(response, dt);
+        double lead_previous = previous - measured;
+        double lead_next = next - measured;
+        if (wrap) {
+            lead_previous = remainder(lead_previous, 2.0 * tracker_pi);
+            lead_next = remainder(lead_next, 2.0 * tracker_pi);
+        }
+        /* Restrict only motion that increases the lead beyond the bound; a
+         * command moving back toward the vehicle keeps its shaped value. */
+        if (fabs(lead_next) > lead_max && fabs(lead_next) > fabs(lead_previous))
+            next = fabs(lead_previous) >= lead_max ? previous :
+                measured + (lead_next > 0.0 ? lead_max : -lead_max);
+    }
+    return wrap ? remainder(next, 2.0 * tracker_pi) : next;
+}
+
 static double lateral_response_time(const TerminalModel *m) {
     double roll_wn = m->attitude.roll_wn;
     double roll_zeta = m->attitude.roll_zeta;
@@ -202,20 +248,27 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
         chosen_vertical = glide_vertical;
     }
 
-    /* A bounded bank target can still jump across the entire range in one
-     * tick when inversion switches AoA solutions. Advance it at a rate tied
-     * to the attitude plant; replay and live control share this memory. */
-    double bank_target = radians(chosen_bank);
-    double bank_step = 5.0 * m->attitude.max_roll_rate_rad_s * dt;
-    if (isfinite(s->attitude.requested_bank_rad) && bank_step > 0.0)
-        bank_target = s->attitude.requested_bank_rad +
-            clamp_value(remainder(bank_target - s->attitude.requested_bank_rad,
-                                  2.0 * 3.14159265358979323846),
-                        -bank_step, bank_step);
+    /* The commanded attitude must itself be flyable.  Shape bank and AoA with
+     * the identified attitude envelope the replay servo also obeys: the rate
+     * is held below the vehicle's demonstrated maximum (with tracking margin),
+     * decelerates into the target within the angular-acceleration limit, and
+     * never leads the measured attitude by more than the closed loop can
+     * absorb.  A target the vehicle cannot follow is not a command. */
+    double q = fmax(0.0, flow.dynamic_pressure_pa);
+    double bank_target = shape_attitude_command(radians(chosen_bank),
+        s->attitude.requested_bank_rad, s->attitude.bank_rad,
+        m->attitude.max_roll_rate_rad_s, m->attitude.max_roll_accel_rad_s2,
+        m->attitude.roll_wn, m->attitude.roll_zeta,
+        attitude_authority(q, m->attitude.roll_full_authority_q_pa), dt, true);
+    double aoa_target = shape_attitude_command(radians(chosen_aoa),
+        s->attitude.requested_aoa_rad, s->attitude.aoa_rad,
+        m->attitude.max_pitch_rate_rad_s, m->attitude.max_pitch_accel_rad_s2,
+        m->attitude.pitch_wn, m->attitude.pitch_zeta,
+        attitude_authority(q, m->attitude.pitch_full_authority_q_pa), dt, false);
 
     out.valid = true;
     out.control = (TerminalControl){
-        .angle_of_attack_rad = radians(chosen_aoa),
+        .angle_of_attack_rad = aoa_target,
         .bank_rad = bank_target,
         .dt_s = dt
     };

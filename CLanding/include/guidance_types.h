@@ -159,6 +159,8 @@ typedef struct {
     unsigned mm305_replans;
     double mm305_lift_scale, mm305_drag_scale; /* measured / model, low-passed */
     double mm305_command_bank_rad;
+    double mm305_command_aoa_rad;
+    double mm305_command_ut;
     bool mm305_command_valid;
     /* MM304 -> MM305 downstream-feasibility contract.  The physical admission
        envelope is necessary, not sufficient: ownership transfers only after

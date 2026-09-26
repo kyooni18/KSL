@@ -356,6 +356,67 @@ static void inventory_engines(KrpcCNanoClient *client) {
     KRPC_FREE_LIST(engines);
 }
 
+/* Classify the aerodynamic control surfaces from vessel-frame geometry
+   (x right, y forward, z down).  Centre-line surfaces are the rudder (above
+   the fuselage) or the body flap (below it); off-centre surfaces are elevons,
+   split into the inboard and outboard halves by span.  Any layout that does not
+   classify cleanly leaves the surfaces unmanaged rather than guessing. */
+static void inventory_control_surfaces(KrpcCNanoClient *client) {
+    client->surface_count = 0;
+    client->surface_roles_classified = false;
+    client->has_applied_surface_allocation = false;
+    krpc_SpaceCenter_Parts_t parts = KRPC_NULL;
+    krpc_list_object_t surfaces = KRPC_NULL_LIST;
+    krpc_error_t e = krpc_SpaceCenter_Vessel_Parts(client->connection, &parts, client->vessel);
+    client->total_rpc_calls++; client->total_wire_requests++;
+    if (e != KRPC_OK || parts == KRPC_NULL) return;
+    e = krpc_SpaceCenter_Parts_ControlSurfaces(client->connection, &surfaces, parts);
+    client->total_rpc_calls++; client->total_wire_requests++;
+    if (e != KRPC_OK) return;
+
+    size_t elevons = 0;
+    for (size_t i = 0; i < surfaces.size && client->surface_count < CNANO_CONTROL_SURFACE_LIMIT; ++i) {
+        krpc_SpaceCenter_ControlSurface_t surface = surfaces.items[i];
+        krpc_SpaceCenter_Part_t part = KRPC_NULL;
+        krpc_tuple_double_double_double_t position = {0};
+        e = krpc_SpaceCenter_ControlSurface_Part(client->connection, &part, surface);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK || part == KRPC_NULL) continue;
+        e = krpc_SpaceCenter_Part_Position(client->connection, &position, part, client->vessel_frame);
+        client->total_rpc_calls++; client->total_wire_requests++;
+        if (e != KRPC_OK || !isfinite(position.e0) || !isfinite(position.e2)) continue;
+        CommandableSurface *entry = &client->surfaces[client->surface_count++];
+        entry->object = surface;
+        entry->lateral_m = position.e0;
+        if (fabs(position.e0) < 0.5) {
+            entry->role = position.e2 < 0.0 ? KRPC_SURFACE_ROLE_RUDDER : KRPC_SURFACE_ROLE_BODY_FLAP;
+        } else {
+            entry->role = KRPC_SURFACE_ROLE_UNKNOWN;
+            ++elevons;
+        }
+    }
+    KRPC_FREE_LIST(surfaces);
+    if (elevons < 2 || elevons % 2 != 0) return;
+
+    /* Inboard half (smaller |span|) are elevators, outboard half ailerons. */
+    double spans[CNANO_CONTROL_SURFACE_LIMIT];
+    size_t n = 0;
+    for (size_t i = 0; i < client->surface_count; ++i)
+        if (client->surfaces[i].role == KRPC_SURFACE_ROLE_UNKNOWN)
+            spans[n++] = fabs(client->surfaces[i].lateral_m);
+    for (size_t i = 1; i < n; ++i)
+        for (size_t j = i; j > 0 && spans[j - 1] > spans[j]; --j) {
+            double t = spans[j]; spans[j] = spans[j - 1]; spans[j - 1] = t;
+        }
+    double split = 0.5 * (spans[n / 2 - 1] + spans[n / 2]);
+    if (!(spans[n / 2] - spans[n / 2 - 1] > 0.25)) return;
+    for (size_t i = 0; i < client->surface_count; ++i)
+        if (client->surfaces[i].role == KRPC_SURFACE_ROLE_UNKNOWN)
+            client->surfaces[i].role = fabs(client->surfaces[i].lateral_m) < split ?
+                KRPC_SURFACE_ROLE_ELEVATOR : KRPC_SURFACE_ROLE_AILERON;
+    client->surface_roles_classified = true;
+}
+
 static void inventory_main_wheels(KrpcCNanoClient *client) {
     client->main_wheel_grounded_field_count = 0;
     krpc_SpaceCenter_Parts_t parts = KRPC_NULL;
@@ -475,7 +536,7 @@ static KrpcCNanoClient *finish_client_open(KrpcCNanoClient *client,
     double met=NAN,now_ut=client->planet.epoch_ut;
     krpc_error_t met_error=krpc_SpaceCenter_Vessel_MET(client->connection,&met,client->vessel);client->total_rpc_calls++;client->total_wire_requests++;
     if(met_error==KRPC_OK&&isfinite(met)&&met>=0.0&&isfinite(now_ut))snprintf(client->flight_key,sizeof(client->flight_key),"launch-ut:%.3f",now_ut-met);
-    inventory_engines(client);inventory_main_wheels(client);reset_rate_filters(client);return client;
+    inventory_engines(client);inventory_control_surfaces(client);inventory_main_wheels(client);reset_rate_filters(client);return client;
 }
 
 KrpcCNanoClient *krpc_cnano_client_open_transport(const LandingConfiguration *configuration,

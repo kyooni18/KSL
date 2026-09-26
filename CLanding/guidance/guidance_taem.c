@@ -108,9 +108,16 @@ static TerminalDynamicState terminal_live_state(const GuidanceMachine *g,
     attitude.bank_rate_rad_s = telemetry->roll_rate * DEG2RAD;
     attitude.cmd_aoa_rad = attitude.requested_aoa_rad = attitude.aoa_rad;
     attitude.cmd_bank_rad = attitude.requested_bank_rad = attitude.bank_rad;
-    if (g && g->mm305_command_valid) {
+    /* Continue the shaped command only while MM305 has owned every recent
+       tick; after any other owner (e.g. attitude recovery) the command restarts
+       from the measured attitude instead of a stale target. */
+    if (g && g->mm305_command_valid && isfinite(g->mm305_command_ut) &&
+        telemetry->ut - g->mm305_command_ut >= 0.0 &&
+        telemetry->ut - g->mm305_command_ut <= 1.0) {
         attitude.cmd_bank_rad = attitude.requested_bank_rad =
             g->mm305_command_bank_rad;
+        attitude.cmd_aoa_rad = attitude.requested_aoa_rad =
+            g->mm305_command_aoa_rad;
     }
     return (TerminalDynamicState){
         .position_i_m = {state->position.x,state->position.y,state->position.z},
@@ -666,6 +673,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     GuidanceResult result=stabilized(g,
         result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);
     g->mm305_command_bank_rad = result.command.target_roll * DEG2RAD;
+    g->mm305_command_aoa_rad = result.command.target_aoa * DEG2RAD;
+    g->mm305_command_ut = t->ut;
     g->mm305_command_valid = true;
     g->phase=PHASE_TAEM;
     return result;

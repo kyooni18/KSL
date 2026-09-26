@@ -173,6 +173,45 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
     return true;
 }
 
+bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
+                                              KrpcSurfaceAllocation allocation,
+                                              char *error, size_t error_size) {
+    if (!client || !client->connected) return false;
+    if (!client->surface_roles_classified) return true;
+    if (client->has_applied_surface_allocation && client->applied_surface_allocation == allocation)
+        return true;
+    for (size_t i = 0; i < client->surface_count; ++i) {
+        const CommandableSurface *surface = &client->surfaces[i];
+        bool pitch = true, roll = true, yaw = true;
+        if (allocation == KRPC_SURFACE_ALLOCATION_SEPARATED) {
+            pitch = surface->role == KRPC_SURFACE_ROLE_ELEVATOR;
+            roll = surface->role == KRPC_SURFACE_ROLE_AILERON;
+            yaw = surface->role == KRPC_SURFACE_ROLE_AILERON ||
+                  surface->role == KRPC_SURFACE_ROLE_RUDDER;
+        }
+        RPC_REQUIRED(client, krpc_SpaceCenter_ControlSurface_set_PitchEnabled(client->connection, surface->object, pitch), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_ControlSurface_set_RollEnabled(client->connection, surface->object, roll), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_ControlSurface_set_YawEnabled(client->connection, surface->object, yaw), error, error_size);
+    }
+    client->applied_surface_allocation = allocation;
+    client->has_applied_surface_allocation = true;
+    return true;
+}
+
+const char *krpc_cnano_client_surface_layout(const KrpcCNanoClient *client,
+                                             char *buffer, size_t buffer_size) {
+    if (!buffer || buffer_size == 0) return "";
+    buffer[0] = '\0';
+    if (!client || !client->surface_roles_classified) return buffer;
+    unsigned counts[5] = {0};
+    for (size_t i = 0; i < client->surface_count; ++i)
+        if ((unsigned)client->surfaces[i].role < 5) counts[client->surfaces[i].role]++;
+    snprintf(buffer, buffer_size, "E%u A%u R%u B%u",
+             counts[KRPC_SURFACE_ROLE_ELEVATOR], counts[KRPC_SURFACE_ROLE_AILERON],
+             counts[KRPC_SURFACE_ROLE_RUDDER], counts[KRPC_SURFACE_ROLE_BODY_FLAP]);
+    return buffer;
+}
+
 bool krpc_cnano_client_set_gear(KrpcCNanoClient *client, bool value, char *error, size_t error_size) {
     if (!client || !client->connected) return false;
     if (client->has_gear && client->cached_gear == value) return true;

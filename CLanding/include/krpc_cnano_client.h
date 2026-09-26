@@ -56,6 +56,29 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
                                      const GuidanceCommand *command,
                                      const Vector3 *inertial_up_reference,
                                      char *error, size_t error_size);
+/* Per-surface axis participation.  MIXED is the craft's native stock mixing
+   (every surface on pitch, roll and yaw).  SEPARATED gives the inboard elevons
+   pitch only (elevators), the outboard elevons roll and yaw (ailerons), the
+   rudder yaw only, and removes the centre body flap from all axes, so a roll
+   request can no longer consume elevator deflection. */
+typedef enum {
+    KRPC_SURFACE_ALLOCATION_MIXED,
+    KRPC_SURFACE_ALLOCATION_SEPARATED
+} KrpcSurfaceAllocation;
+typedef enum {
+    KRPC_SURFACE_ROLE_UNKNOWN,
+    KRPC_SURFACE_ROLE_ELEVATOR,
+    KRPC_SURFACE_ROLE_AILERON,
+    KRPC_SURFACE_ROLE_RUDDER,
+    KRPC_SURFACE_ROLE_BODY_FLAP
+} KrpcSurfaceRole;
+bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
+                                              KrpcSurfaceAllocation allocation,
+                                              char *error, size_t error_size);
+/* Reports the classified surface layout, e.g. "E2 A2 R1 B1" (count per role),
+   or an empty string when the layout could not be classified. */
+const char *krpc_cnano_client_surface_layout(const KrpcCNanoClient *client,
+                                             char *buffer, size_t buffer_size);
 bool krpc_cnano_client_set_gear(KrpcCNanoClient *client, bool value,
                                 char *error, size_t error_size);
 bool krpc_cnano_client_set_brakes(KrpcCNanoClient *client, bool value,

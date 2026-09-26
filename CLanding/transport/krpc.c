@@ -36,6 +36,9 @@ struct KRPCSession {
     bool has_last_state;
     double last_control_ut;
     bool has_last_control_ut;
+    /* TAEM ownership permanently switches the aerosurfaces from stock mixing to
+       dedicated elevator/aileron/rudder roles for the rest of the flight. */
+    bool taem_surface_roles_latched;
     bool simulator;
     int sim_rx_fd, sim_tx_fd;
     struct sockaddr_in sim_command_addr;
@@ -458,6 +461,15 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
         snprintf(s->last_control_profile,sizeof(s->last_control_profile),"%s",profile_string(command->control_profile));return true;
     }
     if(!s->client){set_error(error,error_size,"Native C-Nano apply has invalid state");return false;}
+    if(command->control_profile==PROFILE_TAEM&&!s->taem_surface_roles_latched){
+        s->taem_surface_roles_latched=true;
+        char layout[48];
+        fprintf(stderr,"Surface allocation: TAEM ownership -> separated elevator/aileron/rudder roles, body flap off (%s)\n",
+            krpc_cnano_client_surface_layout(s->client,layout,sizeof(layout))[0]?layout:"unclassified; stock mixing kept");
+    }
+    if(!krpc_cnano_client_set_surface_allocation(s->client,
+        s->taem_surface_roles_latched?KRPC_SURFACE_ALLOCATION_SEPARATED:KRPC_SURFACE_ALLOCATION_MIXED,
+        error,error_size))return false;
     bool atmospheric=command->control_profile!=PROFILE_ORBITAL;
     bool inertial_entry=atmospheric&&command->control_profile==PROFILE_ENTRY&&command->use_inertial_direction;
     if(atmospheric){
