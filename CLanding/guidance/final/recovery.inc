@@ -42,11 +42,18 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         nominal_roll_rate = s->approach_roll_rate;
     double bad_roll_rate = fmax(12, nominal_roll_rate * 3);
     double extreme_roll_rate = fmax(24, nominal_roll_rate * 6);
-    double previous_roll_target = g->roll_limiter.has_value ?
+    bool native_route_tracking=g->phase==PHASE_TAEM&&g->mm305_route_committed&&
+        g->mm305_route.valid&&!g->mm305_hac_exit_reached;
+    /* Native MM305 bypasses the limiter but still leaves its latest target
+       in value; the monitor must use that command history while the route is
+       active rather than treating measured roll as the target. */
+    double previous_roll_target = (g->roll_limiter.has_value || native_route_tracking) ?
         norm_signed_deg(g->roll_limiter.value) : norm_signed_deg(t->roll);
     double roll_error = norm_signed_deg(previous_roll_target - norm_signed_deg(t->roll));
-    double reference_roll_rate = g->roll_limiter.has_value && isfinite(g->roll_limiter.rate) ?
-        g->roll_limiter.rate : 0;
+    double reference_roll_rate = 0;
+    if (!native_route_tracking && g->roll_limiter.has_value &&
+        isfinite(g->roll_limiter.rate))
+        reference_roll_rate = g->roll_limiter.rate;
     /* On the committed native MM305 route, a captured bank reference is a
        command-history value rather than measured airframe motion. */
     bool fixed_hac_bank_captured=g->mm305_route_committed&&
