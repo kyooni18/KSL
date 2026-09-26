@@ -1,0 +1,161 @@
+{
+ "tool": "ShuttleSim/tools/identify_stsn_attitude.py",
+ "live_logs": "../../FlightLogs",
+ "samples": 48131,
+ "train": 36668,
+ "heldout": 11463,
+ "settings": {
+  "live_logs": "../../FlightLogs",
+  "base_ini": "/private/tmp/claude-502/-Users-kyooni18-Code-KSPShuttleLander/8a1d4eba-caee-4411-9053-e2c0bd45b0f5/scratchpad/att_base.ini",
+  "ini": "/private/tmp/claude-502/-Users-kyooni18-Code-KSPShuttleLander/8a1d4eba-caee-4411-9053-e2c0bd45b0f5/scratchpad/att_id.ini",
+  "report": "/private/tmp/claude-502/-Users-kyooni18-Code-KSPShuttleLander/8a1d4eba-caee-4411-9053-e2c0bd45b0f5/scratchpad/att_id.json",
+  "min_q": 500.0,
+  "max_mach": 0.9,
+  "min_radar_alt": 15.0,
+  "max_accel": 80.0,
+  "max_body_rate": 30.0,
+  "max_sideslip": 4.0,
+  "jobs": 8
+ },
+ "pitch": {
+  "axis": "pitch",
+  "q_cap_kpa": 4.5,
+  "control_per_kpa": 12.621076738788199,
+  "control_max": 56.7948453245469,
+  "rate_damping": 0.3313742449060519,
+  "train_r2": 0.7610031095828743,
+  "heldout_r2": 0.7580576549406199,
+  "train_n": 36668,
+  "heldout_n": 11463,
+  "stiffness_per_kpa": 0.6103672335165395,
+  "trim": 2.445192346734759,
+  "heldout_by_q": [
+   {
+    "q_kpa": [
+     0.5,
+     2
+    ],
+    "n": 270,
+    "r2": 0.6780788326764272
+   },
+   {
+    "q_kpa": [
+     2,
+     4
+    ],
+    "n": 805,
+    "r2": 0.7792979161028669
+   },
+   {
+    "q_kpa": [
+     4,
+     7
+    ],
+    "n": 6168,
+    "r2": 0.7805676873864328
+   },
+   {
+    "q_kpa": [
+     7,
+     12
+    ],
+    "n": 4220,
+    "r2": 0.7047685117692017
+   }
+  ]
+ },
+ "roll": {
+  "axis": "roll",
+  "q_cap_kpa": 6.5,
+  "control_per_kpa": 42.709084087316164,
+  "control_max": 277.6090465675551,
+  "rate_damping": -0.9806755434462859,
+  "train_r2": 0.36995455623881046,
+  "heldout_r2": 0.24489510104226064,
+  "train_n": 36668,
+  "heldout_n": 11463,
+  "heldout_by_q": [
+   {
+    "q_kpa": [
+     0.5,
+     2
+    ],
+    "n": 270,
+    "r2": 0.230801578122796
+   },
+   {
+    "q_kpa": [
+     2,
+     4
+    ],
+    "n": 805,
+    "r2": 0.11111892768276133
+   },
+   {
+    "q_kpa": [
+     4,
+     7
+    ],
+    "n": 6168,
+    "r2": 0.21632435490077673
+   },
+   {
+    "q_kpa": [
+     7,
+     12
+    ],
+    "n": 4220,
+    "r2": 0.26474390889612553
+   }
+  ]
+ },
+ "yaw": {
+  "axis": "yaw",
+  "q_cap_kpa": 8.0,
+  "control_per_kpa": 0.9147332577392722,
+  "control_max": 7.317866061914177,
+  "rate_damping": -0.14439204486915963,
+  "train_r2": 0.4101299556491108,
+  "heldout_r2": 0.3690217950370236,
+  "train_n": 36668,
+  "heldout_n": 11463,
+  "stiffness_per_kpa": -0.15033390532923832,
+  "trim": -0.016156681275860375,
+  "heldout_by_q": [
+   {
+    "q_kpa": [
+     0.5,
+     2
+    ],
+    "n": 270,
+    "r2": 0.14581050820720687
+   },
+   {
+    "q_kpa": [
+     2,
+     4
+    ],
+    "n": 805,
+    "r2": 0.2937189562366078
+   },
+   {
+    "q_kpa": [
+     4,
+     7
+    ],
+    "n": 6168,
+    "r2": 0.3497449701121834
+   },
+   {
+    "q_kpa": [
+     7,
+     12
+    ],
+    "n": 4220,
+    "r2": 0.39241625748979614
+   }
+  ]
+ },
+ "pitch_damping_ratio_at_4kpa": 0.0,
+ "units": "deg, deg/s, deg/s^2, kPa"
+}

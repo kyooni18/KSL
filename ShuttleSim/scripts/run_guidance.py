@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, io, json, math, os, pathlib, shutil, socket, subprocess, time
+import argparse, hashlib, io, json, math, os, pathlib, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
 from run_geometry import fixed_hac_geometry_evidence
 from run_artifacts import allocate_run, compress_recording, write_json
-from model_paths import model_file
+from model_paths import model_file, active_profile, file_digest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
@@ -178,6 +178,38 @@ def _phase_run_label(label: str, scenario: str, engage: str) -> tuple[str, str |
     return label,None
 
 
+
+def _git(*cmd):
+    try:
+        return subprocess.run(["git","-C",str(ROOT),*cmd],capture_output=True,text=True,check=True).stdout.strip()
+    except (OSError,subprocess.CalledProcessError):
+        return None
+
+
+def _run_provenance(args):
+    """Exact effective model/config identity for campaign reproducibility."""
+    kinds=("atmosphere","aero","aero_book","attitude")
+    plant={k:getattr(args,k) for k in kinds}
+    guidance={k:getattr(args,"terminal_"+k) or getattr(args,k) for k in kinds}
+    status=_git("status","--porcelain","--untracked-files=no")
+    return {
+        "modelProfile":active_profile(),
+        "plantDigests":{k:file_digest(v) for k,v in plant.items()},
+        "guidanceModelDigests":{k:file_digest(v) for k,v in guidance.items()},
+        "certifiedPriorDigest":file_digest(args.certified_prior),
+        "guidanceModelEqualsPlant":all(file_digest(plant[k])==file_digest(guidance[k]) for k in kinds),
+        "configurationPath":args.configuration,
+        "configurationDigest":file_digest(args.configuration),
+        "scenarioDigest":file_digest(args.scenario),
+        "gitHead":_git("rev-parse","HEAD"),
+        "gitDirty":bool(status) if status is not None else None,
+        "gitDirtyDiffDigest":hashlib.sha256((_git("diff","HEAD") or "").encode()).hexdigest() if status else None,
+        "backendDigest":file_digest(args.backend_build_dir/"landing_backend"),
+        "simulatorDigest":file_digest(args.sim_build_dir/"shuttlesim"),
+        "directControl":bool(args.direct_control),
+        "engage":args.engage,
+    }
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--scenario",default=str(SIM/"scenarios/ksp86km-postburn.ini"))
@@ -203,6 +235,8 @@ def main():
     ap.add_argument("--terminal-aero",default=None,help="MM305 aero table (default: --aero)")
     ap.add_argument("--terminal-aero-book",default=None,help="guidance force book / certified prior (default: --aero-book)")
     ap.add_argument("--terminal-attitude",default=None,help="MM305 attitude model (default: --attitude)")
+    ap.add_argument("--certified-prior",default=str(model_file("certified_prior")),
+                    help="guidance vessel-physics certified aero prior (force/q samples)")
     ap.add_argument("--engage",default="engageReentry",
                     choices=["engage","engageReentry","engageHACTest","engageFinalTest"],
                     help="backend engage method; engage runs createPlan + production deorbit/entry/landing guidance")
@@ -230,7 +264,7 @@ def main():
         ap.error("time steps, rates, and timeouts must be positive finite values")
     if not args.label or pathlib.Path(args.label).name!=args.label or args.label in (".",".."):
         ap.error("label must be a single nonempty filename component")
-    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude",
+    for name in ("scenario","configuration","atmosphere","aero","aero_book","attitude","certified_prior",
                  "terminal_atmosphere","terminal_aero","terminal_aero_book","terminal_attitude"):
         value=getattr(args,name)
         if value is None:
@@ -318,6 +352,7 @@ def main():
         "KSP_LANDER_TERMINAL_AERO":args.terminal_aero or args.aero,
         "KSP_LANDER_TERMINAL_AERO_BOOK":args.terminal_aero_book or args.aero_book,
         "KSP_LANDER_TERMINAL_ATTITUDE":args.terminal_attitude or args.attitude,
+        "KSP_LANDER_CERTIFIED_PRIOR":args.certified_prior,
     })
     # A phase-specific CLI action must select its matching backend mode, not
     # depend on an inherited operator shell variable.
@@ -344,6 +379,7 @@ def main():
         manifest["backendPid"]=be_proc.pid
         manifest["physicsSources"]={name:getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
         manifest["guidanceModelSources"]={name:getattr(args,"terminal_"+name) or getattr(args,name) for name in ("atmosphere","aero","aero_book","attitude")}
+        manifest["provenance"]=_run_provenance(args)
         write_json(manifest_path,manifest)
     backend=Backend(be_proc,guidance_log,mirror=not args.no_mirror,replay_path=guidance_replay,
                     compact_log=args.compact_guidance_log)

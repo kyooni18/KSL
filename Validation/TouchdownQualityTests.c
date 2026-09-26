@@ -97,7 +97,9 @@ int main(void) {
 
     VesselPhysicsModel physics;
     vessel_physics_init(&physics);
-    load_force_book(book_path, &physics);
+    char prior_path[512];
+    shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_CERTIFIED_PRIOR, prior_path, sizeof(prior_path));
+    load_force_book(prior_path, &physics);
     AerodynamicEnvelope env;
     AerodynamicModel plan_aero;
     assert(vessel_physics_derive_envelope(&physics, &cfg.vehicle, &env, &plan_aero));

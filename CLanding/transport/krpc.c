@@ -150,8 +150,8 @@ static void open_sim_physics_store(KRPCSession *session,const LandingConfigurati
 
 static void sim_load_force_book(KRPCSession *s){
     char root[1024];project_root(root,sizeof(root));char path[1400];
-    if(!shuttle_sim_model_path(root,SHUTTLE_SIM_MODEL_FORCE_BOOK,path,sizeof(path)))return;
-    const char*configured=getenv("KSP_LANDER_TERMINAL_AERO_BOOK");
+    if(!shuttle_sim_model_path(root,SHUTTLE_SIM_MODEL_CERTIFIED_PRIOR,path,sizeof(path)))return;
+    const char*configured=getenv("KSP_LANDER_CERTIFIED_PRIOR");
     if(configured&&strcmp(configured,"none")==0)return;
     const char*source=configured&&*configured?configured:path;
     FILE*f=fopen(source,"r");if(!f)return;

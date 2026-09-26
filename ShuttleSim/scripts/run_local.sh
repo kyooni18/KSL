@@ -21,14 +21,17 @@ echo "  record:        $RECORD"
 echo "  rate:          $RATE"
 echo "Resume with: $SIM/scripts/simctl.py resume"
 
-model_file() {  # fitted KSP model when present, tracked reference model otherwise
-  if [ -f "$SIM/data/fitted/$1" ]; then echo "$SIM/data/fitted/$1"; else echo "$SIM/reference-model/$2"; fi
+model_file() {  # active KSP_LANDER_MODEL_PROFILE (scripts/model_paths.py)
+  python3 -c "import sys; sys.path.insert(0, '$SIM/scripts'); from model_paths import model_file; print(model_file('$1'))"
 }
+BOOK="$(model_file aero_book)"
+BOOK_ARGS=()
+[ "$BOOK" != "none" ] && BOOK_ARGS=(--aero-book "$BOOK")
 exec "$BUILD/shuttlesim" \
   --scenario "$SCENARIO" \
-  --aero "$(model_file stsn_aero_ksp_robust.csv stsn_aero_reference.csv)" \
-  --aero-book "$(model_file stsn_force_book.csv stsn_force_book_reference.csv)" \
-  --attitude "$(model_file stsn_attitude_ksp.ini stsn_attitude_reference.ini)" \
+  --aero "$(model_file aero)" \
+  "${BOOK_ARGS[@]}" \
+  --attitude "$(model_file attitude)" \
   --dt "${SIM_DT:-0.02}" \
   --rate "$RATE" \
   --telemetry-hz "${SIM_TELEMETRY_HZ:-20}" \

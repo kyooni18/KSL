@@ -40,11 +40,19 @@ typedef enum {
     SHUTTLE_SIM_MODEL_ATMOSPHERE = 0,
     SHUTTLE_SIM_MODEL_AERO,
     SHUTTLE_SIM_MODEL_FORCE_BOOK,
-    SHUTTLE_SIM_MODEL_ATTITUDE
+    SHUTTLE_SIM_MODEL_ATTITUDE,
+    /* Guidance-side certified vessel-physics prior (force/q samples seeding
+       VesselPhysicsModel).  Distinct from FORCE_BOOK, which is the direct force
+       book aero_compute() consults (plant and MM305 terminal model). */
+    SHUTTLE_SIM_MODEL_CERTIFIED_PRIOR
 } ShuttleSimModelFile;
 
 /* Writes "<root>/<relative path>" (or the relative path when root is NULL or
-   empty) into buffer and returns buffer, or NULL on invalid input/overflow. */
+   empty) of the active model profile's file into buffer and returns buffer, or
+   NULL on invalid input/overflow/unknown profile.  A profile without a force
+   book yields the literal "none".  The profile comes from
+   KSP_LANDER_MODEL_PROFILE (default "identified"). */
+const char *shuttle_sim_model_profile(void);
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
                                    char *buffer, size_t buffer_size);
 

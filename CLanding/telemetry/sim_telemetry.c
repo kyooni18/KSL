@@ -427,9 +427,9 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     snprintf(t->vessel_situation, sizeof(t->vessel_situation), "%s",
              on_ground ? "landed" : "flying");
     t->has_main_gear_grounded = true;
-    t->main_gear_grounded = on_ground;
+    t->main_gear_grounded = bool_value(&doc, ground, "main_contact", on_ground);
     t->has_nose_gear_grounded = true;
-    t->nose_gear_grounded = on_ground && (t->pitch <= 0.5);
+    t->nose_gear_grounded = bool_value(&doc, ground, "nose_contact", on_ground && (t->pitch <= 0.5));
 
     t->runway_along_track = number_value(&doc, runway, "along_m", 0.0);
     t->runway_cross_track = number_value(&doc, runway, "cross_m", 0.0);
@@ -516,29 +516,55 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     return true;
 }
 
+/* Named model profiles.  A profile is the single source of truth for which
+   atmosphere/aero/force-book/attitude files describe the vehicle; the choice
+   never depends on which files happen to exist on disk.  "identified" is the
+   tracked, held-out-validated KSP identification (see
+   ShuttleSim/reference-model/README.md); "fitted-legacy" is the git-ignored
+   September fit with its 2-nearest-neighbour force book; "reference-b" is the
+   audit's synthetic plant B.  Select with KSP_LANDER_MODEL_PROFILE. */
+static const struct {
+    const char *name;
+    const char *files[5];
+} model_profiles[] = {
+    {"identified", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                    "ShuttleSim/reference-model/stsn_aero_identified.csv",
+                    "none",
+                    "ShuttleSim/reference-model/stsn_attitude_identified.ini",
+                    "ShuttleSim/reference-model/stsn_certified_prior_identified.csv"}},
+    {"fitted-legacy", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
+                       "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
+                       "ShuttleSim/data/fitted/stsn_force_book.csv",
+                       "ShuttleSim/data/fitted/stsn_attitude_ksp.ini",
+                       "ShuttleSim/data/fitted/stsn_force_book.csv"}},
+    {"reference-b", {"ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
+                     "ShuttleSim/reference-model/stsn_aero_reference.csv",
+                     "ShuttleSim/reference-model/stsn_force_book_reference.csv",
+                     "ShuttleSim/reference-model/stsn_attitude_reference.ini",
+                     "ShuttleSim/reference-model/stsn_force_book_reference.csv"}},
+};
+
+const char *shuttle_sim_model_profile(void) {
+    const char *configured = getenv("KSP_LANDER_MODEL_PROFILE");
+    if (!configured || !configured[0]) return model_profiles[0].name;
+    for (size_t i = 0; i < sizeof(model_profiles) / sizeof(model_profiles[0]); ++i)
+        if (strcmp(configured, model_profiles[i].name) == 0) return model_profiles[i].name;
+    return NULL;
+}
+
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
                                    char *buffer, size_t buffer_size) {
-    static const char *const fitted[] = {
-        "ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
-        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
-        "ShuttleSim/data/fitted/stsn_force_book.csv",
-        "ShuttleSim/data/fitted/stsn_attitude_ksp.ini"};
-    static const char *const reference[] = {
-        "ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
-        "ShuttleSim/reference-model/stsn_aero_reference.csv",
-        "ShuttleSim/reference-model/stsn_force_book_reference.csv",
-        "ShuttleSim/reference-model/stsn_attitude_reference.ini"};
-    if (!buffer || buffer_size == 0 || (int)kind < 0 ||
-        (size_t)kind >= sizeof(fitted) / sizeof(fitted[0]))
+    if (!buffer || buffer_size == 0 || (int)kind < 0 || (int)kind > SHUTTLE_SIM_MODEL_CERTIFIED_PRIOR)
         return NULL;
-    const char *prefix = root && root[0] ? root : NULL;
-    const char *const choices[] = {fitted[kind], reference[kind]};
-    for (size_t i = 0; i < 2; ++i) {
-        int written = prefix ?
-            snprintf(buffer, buffer_size, "%s/%s", prefix, choices[i]) :
-            snprintf(buffer, buffer_size, "%s", choices[i]);
-        if (written < 0 || (size_t)written >= buffer_size) return NULL;
-        if (i == 1 || access(buffer, R_OK) == 0) return buffer;
-    }
-    return NULL;
+    const char *profile = shuttle_sim_model_profile();
+    if (!profile) return NULL;
+    const char *file = NULL;
+    for (size_t i = 0; i < sizeof(model_profiles) / sizeof(model_profiles[0]); ++i)
+        if (strcmp(profile, model_profiles[i].name) == 0) file = model_profiles[i].files[kind];
+    if (!file) return NULL;
+    int written = (strcmp(file, "none") != 0 && root && root[0]) ?
+        snprintf(buffer, buffer_size, "%s/%s", root, file) :
+        snprintf(buffer, buffer_size, "%s", file);
+    if (written < 0 || (size_t)written >= buffer_size) return NULL;
+    return buffer;
 }
