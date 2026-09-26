@@ -7,14 +7,17 @@ dispersions (lift/drag scale within the identified model's held-out band),
 runs each through run_guidance.py (engageFinalTest) in parallel, and writes a
 JSONL of classified results plus a summary.
 
-Classification (first match wins):
-  abort:<reason>        guidance terminated (latched abort)
+Classification is by simulator truth first (first match wins); a guidance
+abort latched after the physical outcome (e.g. the runway-envelope abort when
+the vehicle rolls off the far end) is recorded alongside, not instead:
+  abort:<reason>        guidance terminated before any touchdown
   no-touchdown          sim ended airborne
   crash                 non-survivable impact
   belly / tail-strike   structure contact before/without gear
   off-runway-touchdown  first contact outside the paved rectangle
   hard-touchdown        sink > gate
   speed                 touchdown speed outside the runner gate
+  long-touchdown        first contact beyond the touchdown zone (--long-along)
   runway-departure      rolled off the pavement
   not-stopped           rollout did not end stopped on the runway
   pass
@@ -59,21 +62,35 @@ def scenario_text(name, along, cross, height, speed, fpa_deg, heading_err_deg, a
         f"runway_length_m={RUNWAY['length']}", f"runway_width_m={RUNWAY['width']}", ""])
 
 
-def make_cases(n, seed, mirror=True):
+def required_ld(along, height, speed, v_td=75.0, target=375.0, g=9.81):
+    """Mean lift-to-drag the vehicle must fly from the checkpoint to arrive
+    at the touchdown target at touchdown speed (energy height over range).
+    A straight-in Final cannot fly much below its drag-polar L/D without a
+    speedbrake, so a low value marks an energy-infeasible (too high or too
+    fast) Final state rather than a guidance failure."""
+    energy = height + (speed * speed - v_td * v_td) / (2.0 * g)
+    return (target - along) / max(energy, 1.0)
+
+
+def make_cases(n, seed, mirror=True, ld_band=None, speed=(140.0, 220.0), along_range=(2500.0, 6000.0),
+               glide_range=(12.0, 26.0)):
     rng = random.Random(seed)
     cases = []
     while len(cases) < n:
-        along = -rng.uniform(2500.0, 6000.0)
-        glide = rng.uniform(12.0, 26.0)
+        along = -rng.uniform(*along_range)
+        glide = rng.uniform(*glide_range)
         height = -along * math.tan(math.radians(glide))
-        speed = rng.uniform(140.0, 220.0)
+        speed_ = rng.uniform(*speed)
+        ld = required_ld(along, height, speed_)
+        if ld_band and not (ld_band[0] <= ld <= ld_band[1]):
+            continue
         cross = rng.uniform(0.0, 250.0)
         herr = rng.uniform(-6.0, 6.0)
         lift = rng.uniform(0.88, 1.12)
         drag = rng.uniform(0.9, 1.1)
         aoa = rng.uniform(2.0, 6.0)
-        base = dict(along=along, height=height, speed=speed, fpa=-glide, aoa=aoa,
-                    lift_scale=lift, drag_scale=drag)
+        base = dict(along=along, height=height, speed=speed_, fpa=-glide, aoa=aoa,
+                    lift_scale=lift, drag_scale=drag, ld_required=ld)
         cases.append(dict(base, cross=cross, heading_err=herr))
         if mirror and len(cases) < n:
             cases.append(dict(base, cross=-cross, heading_err=-herr, mirror_of=len(cases) - 1))
@@ -82,11 +99,11 @@ def make_cases(n, seed, mirror=True):
     return cases
 
 
-def classify(res, sink_gate, speed_lo, speed_hi):
+def classify(res, args):
     sim = res.get("simulatorSummary") or {}
-    if res.get("abortReason"):
-        return "abort:" + res["abortReason"][:60]
     if not sim.get("touchdown"):
+        if res.get("abortReason"):
+            return "abort:" + res["abortReason"][:60]
         return "no-touchdown"
     if sim.get("crashed"):
         return "crash"
@@ -94,11 +111,13 @@ def classify(res, sink_gate, speed_lo, speed_hi):
         return "tail-strike" if sim.get("tail_strike") else "belly"
     if not sim.get("on_runway"):
         return "off-runway-touchdown"
-    if sim.get("touchdown_sink_mps", 99) > sink_gate:
+    if sim.get("touchdown_sink_mps", 99) > args.sink_gate:
         return "hard-touchdown"
     spd = sim.get("touchdown_speed_mps", 0)
-    if not (speed_lo <= spd <= speed_hi):
+    if not (args.speed_lo <= spd <= args.speed_hi):
         return "speed"
+    if sim.get("touchdown_along_m", 0) > args.long_along:
+        return "long-touchdown"
     if sim.get("runway_departure"):
         return "runway-departure"
     if not sim.get("stopped"):
@@ -160,7 +179,7 @@ def run_case(c, args, scen_dir):
                    "bounce_count", "max_gear_load_g", "runway_departure", "stopped", "stop_along_m",
                    "stop_cross_m", "crashed", "tail_strike", "sim_time_s")})
     out["end_state"] = end_state
-    out["class"] = classify(res, args.sink_gate, args.speed_lo, args.speed_hi)
+    out["class"] = classify(res, args)
     if p.returncode != 0 and not res:
         out["class"] = "harness-error"
         out["stderr_tail"] = p.stderr[-600:]
@@ -179,6 +198,14 @@ def main():
     ap.add_argument("--sink-gate", type=float, default=3.0)
     ap.add_argument("--speed-lo", type=float, default=0.85 * 75.0)
     ap.add_argument("--speed-hi", type=float, default=1.15 * 75.0)
+    ap.add_argument("--ld-band", type=float, nargs=2, default=None,
+                    help="only keep checkpoints whose required mean L/D is inside this band")
+    ap.add_argument("--speed-range", type=float, nargs=2, default=(140.0, 220.0))
+    ap.add_argument("--along-range", type=float, nargs=2, default=(2500.0, 6000.0),
+                    help="checkpoint distance before the threshold, m")
+    ap.add_argument("--glide-range", type=float, nargs=2, default=(12.0, 26.0))
+    ap.add_argument("--long-along", type=float, default=1000.0,
+                    help="first contact beyond this along-track distance is a long landing")
     ap.add_argument("--out", type=pathlib.Path, default=None)
     args = ap.parse_args()
 
@@ -189,7 +216,8 @@ def main():
     scen_dir.mkdir(exist_ok=True)
     subprocess.run(["make", "-C", str(ROOT / "CLanding"), "-j4"], check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["cmake", "--build", str(SIM / "build"), "-j4"], check=True, stdout=subprocess.DEVNULL)
-    cases = make_cases(args.cases, args.seed)
+    cases = make_cases(args.cases, args.seed, ld_band=args.ld_band, speed=args.speed_range,
+                       along_range=args.along_range, glide_range=args.glide_range)
     if args.nominal_plant:
         for c in cases:
             c["lift_scale"] = c["drag_scale"] = 1.0
@@ -212,8 +240,8 @@ def main():
             s = r["summary"]
             c = r["case"]
             e = r.get("end_state") or {}
-            print("%3d %-26s along %6.0f h %5.0f V %4.0f x %+5.0f L%.2f D%.2f | td %s sink %s V %s at %s stop %s | end x %s a %s" % (
-                c["id"], r["class"][:26], c["along"], c["height"], c["speed"], c["cross"], c["lift_scale"],
+            print("%3d %-26s along %6.0f h %5.0f V %4.0f LD %.2f x %+5.0f L%.2f D%.2f | td %s sink %s V %s at %s stop %s | end x %s a %s" % (
+                c["id"], r["class"][:26], c["along"], c["height"], c["speed"], c["ld_required"], c["cross"], c["lift_scale"],
                 c["drag_scale"], s.get("on_runway"),
                 "%.2f" % s["touchdown_sink_mps"] if s.get("touchdown_sink_mps") is not None else "-",
                 "%.1f" % s["touchdown_speed_mps"] if s.get("touchdown_speed_mps") is not None else "-",
