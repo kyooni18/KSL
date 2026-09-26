@@ -174,3 +174,39 @@ Build hygiene: `build/sim.o`/`scenario.o` lacked header dependency tracking,
 so the touchdown fixture linked a stale AeroTable layout (e3fa2cb).
 `mm305-feasibility-test` fails identically on clean HEAD ("2/2 admitted
 states have no qualified route") - pre-existing, not caused by this work.
+
+## Experiment 5: why mm305-feasibility-test fails (Claude)
+
+`Validation/MM305FeasibilityPropertyTests.c` admits two states (26 km / M2.5,
+30 km before threshold; 22.5 km / M2.35, 28 km, 5 km crossrange) and MM305
+finds no route for either ("no HAC join has an energy-feasible native vertical
+profile"). Fails identically on clean HEAD and under every model profile
+(identified, fitted-legacy; reference-b finds 1/2).
+
+Diagnosis (temporary instrumentation in terminal_solver.c, reverted):
+- Every candidate route (20-140 km) was profiled. 20 km routes are too short
+  to descend; every route >= 30 km reaches the ground part-way.
+- The constant-AoA profile flights are identical at every AoA because the
+  lateral demand of the lead turn exceeds thin-air lift: the loop drives AoA
+  to its cap and banks 46-69 deg at 26 km / 790 m/s, vertical lift collapses,
+  flight path steepens -8 -> -15 -> -26 -> -51 deg, cross-track error grows
+  and demand reaches hundreds of m/s^2 at 90 deg bank: a spiral dive to the
+  ground ~27 km along a 59 km route at 51 m/s. The planner's rejection is
+  physically correct.
+- Identified supersonic aero: max L/D ~0.65-0.75 (M1.5-4) vs ~2.8 at M0.3.
+  Point-mass straight glides from 26 km / M2.5 reach 3 km altitude after
+  46-66 km (38-57 km from 22.5 km / M2.35). These states are only 20-22 km
+  from the Final interface, so MM305 must add >=25 km of path by turning at
+  a speed where the vehicle cannot turn tightly.
+
+Conclusion: the defect is admission, not the planner. The MM304 -> MM305
+admission (`entry_mm305_admission_envelope`) checks a lower energy bound, a
+maximum range, Mach/altitude windows, but no energy-excess (minimum range)
+bound and no turn-feasibility bound, so it certifies states MM305 cannot fly.
+The Shuttle-like built-in TAEM interface range is 96.5 km; the runtime JSON
+uses 40 km. Fix options (a design decision): (1) admission requires a
+qualified MM305 route (the downstream-feasibility contract; seconds per solve,
+so asynchronous), or (2) a conservative physical energy-excess / minimum-range
+veto consistent with the planner, with MM304 targeting a handoff range the
+vehicle can actually use. Either makes these test samples inadmissible, so
+the test's sample set must come from the real admission set.
