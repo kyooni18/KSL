@@ -210,7 +210,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double SGS_HEIGHT=25.0;   /* shallow-glide segment below this wheel height */
     const double SGS_SINK=3.5;      /* ~ -2..-2.5 deg at touchdown speeds */
     const double TOUCHDOWN_PITCH=8.0;
-    const double TOUCHDOWN_ATTITUDE_START=120.0;
+    const double TOUCHDOWN_ATTITUDE_START=26.0;
     const double TOUCHDOWN_ATTITUDE_FULL=5.0;
 
     double height=t->mean_altitude-site->altitude;

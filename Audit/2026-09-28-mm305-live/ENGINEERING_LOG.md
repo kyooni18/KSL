@@ -132,3 +132,53 @@ problem: requested incidence is not reached, actual pitch is below the
 modeled height. Before changing contact gates, determine the gear contact
 attitude and structural limits in KSP, then change the upstream energy and
 flare control that produces a survivable actual state.
+
+## Rejected profile and flare experiments
+
+Two isolated configuration trials lowered the glide slopes to the built-in
+defaults (Final 20 deg / TAEM 12 deg) and to Final 20 deg with TAEM held at 24
+deg. Both repeated live checkpoints failed to qualify any native HAC join and
+aborted near 1.1 km before committing the route; the recorded reasons were
+energy-infeasible vertical profiles or insufficient live curvature authority.
+The configurations are kept only as ignored Runtime experiment files; the
+checked-in live profile remains at 28/24 deg.
+
+A separate live trial changed `FINAL_FLARE_ACCEL` from 0.1g to 0.05g. It still
+reached main-wheel contact near 2.77 m radar altitude at about 66 m/s and
+-2.58 m/s, then sink worsened to -3.62 m/s. KSP reduced vehicle mass from
+43.5 t to 43.4 t and then 12.3 t, followed by an impact recovery trigger.
+This did not produce a survivable touchdown and was reverted. The exact trial
+is `Runtime/Headless/mm305-finalflare-05g-live.log` with vehicle records
+`FlightLogs/2026-09-27T20-27-55Z-STS-N-vehicle.jsonl`.
+
+Both successful-route landing attempts show the full 8 deg touchdown attitude
+command arriving too late for the observed pitch response: measured pitch was
+about 1–2 deg at first main-wheel contact even though the AoA command was near
+15 deg. The next focused test starts the existing smooth 8 deg attitude floor
+at 400 m wheel height rather than 120 m, with the 0.1g final sink profile
+restored. No contact or crash checks are being bypassed.
+
+The 400 m attitude-ramp run was stopped by the independent guard at 66.3 m
+radar altitude and -13.75 m/s vertical speed. The vehicle log at recovery had
+pitch -2.91 deg, AoA 8.05 deg, and a 15 deg AoA command; the early attitude
+floor did not produce the commanded attitude or reduce sink before the guard.
+That ramp change was reverted. The run is represented by
+`Runtime/Headless/mm305-touchdown400-live.log` and
+`FlightLogs/2026-09-27T20-33-47Z-STS-N-vehicle.jsonl`.
+
+A moderate slope profile (Final 24 deg / TAEM 20 deg) did qualify a route and
+reach Final, but the live Final trace still followed about a -26 deg outer
+glide. Near the runway it reported 70 m/s, -8.4 m/s sink at 15 m wheel height;
+the final diagnostic then saw -73 deg/s roll rate at 3 m radar altitude and
+aborted for insufficient recovery height. It did not report `landed` and the
+guarded runner restored the saved checkpoint. The isolated profile is
+`Runtime/Headless/mm305-final24-taem20-profile.json`; its trace is
+`Runtime/Headless/mm305-final24-taem20-live.log`.
+
+This shows the config slope changes do not yet change the live Final capture
+geometry enough to improve delivery. The 400 m attitude floor likewise did
+not make actual pitch follow the command; its guard sample was pitch -2.91 deg
+at AoA 8.05 deg versus a 15 deg command. Both experiments are rejected. The
+next test keeps the checked-in profile and varies only the already-supported
+live pitch-loop bandwidth override to measure whether faster AoA tracking
+raises actual pitch and lowers sink before main-wheel contact.
