@@ -256,3 +256,14 @@ STS-N paused and flying at 22 km. Run: `Runtime/Headless/mm305-final8500-speed18
 The requested target is too aggressive for this route; the next check uses an
 intermediate 170 m/s target to determine whether the planner can still qualify
 a route while preserving more approach energy.
+
+The intermediate `finalAlignmentSpeed=170` m/s test also failed to qualify a
+route at the same 8,500 m final-distance setting. At 1.1 km the vehicle was
+moving 67.6 m/s, and both candidates failed on energy-feasible vertical
+profiles and/or live curvature authority. It aborted before route commitment;
+the guard restored the checkpoint, and the probe again confirmed a paused
+flying STS-N at 22 km. Run: `Runtime/Headless/mm305-final8500-speed170-live.log`.
+The 170 and 180 m/s station targets are rejected. The next experiment keeps
+the 160 m/s alignment target and raises the touchdown-speed target from 75 to
+85 m/s, testing whether earlier terminal speed scheduling can preserve the
+energy needed for a survivable contact.
