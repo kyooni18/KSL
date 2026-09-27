@@ -62,8 +62,9 @@ typedef struct {
     bool gear, brakes, has_airbrakes, airbrakes;
     bool has_control_state;
     double control_state_pitch, control_state_roll, control_state_yaw;
-    bool command_applied, has_actuator_feedback;
+    bool command_applied, has_actuator_feedback, has_control_diagnostics;
     double control_pitch, control_roll, control_yaw;
+    double control_pitch_error, control_pitch_trim, control_pitch_authority, control_pitch_aero_fraction;
 
     bool has_loop_wall_delta, has_telemetry_latency, has_guidance_compute, has_apply_latency, has_control_loop;
     double loop_wall_delta_ms, telemetry_latency_ms, guidance_compute_ms, apply_latency_ms, control_loop_ms;
