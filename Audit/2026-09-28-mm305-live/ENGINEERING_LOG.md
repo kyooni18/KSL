@@ -70,3 +70,65 @@ the contract-ready log or the guard's recovery as a landing success.
 
 Foundation Memory and Jev tools were not exposed in the working session. This
 file preserves the confirmed measurements until those tools are available.
+
+## Guarded repeat with same-UT AoA command preservation
+
+After changing the AoA slew limiter to retain its previous command on a
+same-UT evaluation, a fourth guarded live run used the same checkpoint,
+profile, and HAC-only settings. The run is represented by
+`FlightLogs/2026-09-27T19-59-12Z-STS-N-{vehicle,planner}.jsonl` and campaign
+identity `e7e9ba28486911ff-97b2d3fd98c52ab3-23edce430a42f1af`.
+
+- It passed below the former 1,200 m guard recovery point and continued to
+  radar altitude 2 m near runway along-track 1,243 m and cross-track 11 m.
+  At that point the flight log had true airspeed 65.9 m/s, sink 5.8 m/s,
+  pitch 2.2 deg, and AoA 7.2 deg. It did not report `landed`.
+- The Final trace showed requested AoA reaching the 15 deg ceiling while the
+  measured AoA remained about 7–9 deg through the low flare. The flight log
+  showed a sharp pitch-rate event near the end; the terminal monitor initiated
+  attitude recovery with only a few metres of radar clearance, so the existing
+  insufficient-height guard ended the attempt in Abort. The named checkpoint
+  was restored and a read-only probe confirmed it was paused and safe.
+- This is progress in descent arrest and runway alignment, not a landing pass.
+  The control departure that triggered recovery is not yet identified. Repeat
+  with `KSP_LANDER_HAC_DIAGNOSTICS=1` before changing recovery thresholds or
+  terminal control gains; retain the independent guard.
+
+The new AoA limiter behavior is compiled, but this run does not isolate its
+effect from the existing low-altitude pitch/flare tuning. Use the recovery
+diagnostic to identify the trigger and compare requested versus measured AoA
+and pitch response before selecting a control change.
+
+## Recovery-trigger diagnostic repeat
+
+A fifth guarded run repeated the same profile with
+`KSP_LANDER_HAC_DIAGNOSTICS=1`. Its detailed runner trace is in
+`Runtime/Headless/mm305-aoa-fix-recoverydiag-live.log`; its flight records are
+`FlightLogs/2026-09-27T20-05-26Z-STS-N-{vehicle,planner}.jsonl`.
+
+- This run reached runway altitude near along-track 1,273 m and cross-track
+  11.5 m, but it was a physical crash, not a touchdown: at 1.48 m radar
+  altitude the logged mass fell from 43.5 t to 12.3 t and then 4.6 t. It never
+  reported `landed`. Immediately before the break-up, speed was 63.4 m/s,
+  vertical speed -4.15 m/s, pitch 3.81 deg, and AoA 7.57 deg despite a
+  14.79 deg AoA command. The final trajectory trace reported about 3 m/s sink
+  at zero modeled wheel height, but that value alone did not predict structural
+  survival.
+- The control diagnostic identified the recovery trigger: pitch rate spiked to
+  53.09 deg/s at the same 1.48 m radar-altitude sample; `extreme=1`,
+  `pitch=1`, and `emergency=1`. The subsequent Abort for insufficient recovery
+  height occurred after the mass-loss event. Thus recovery was reacting to the
+  impact/break-up transient, not causing the crash.
+- The independent guard did not fire before the collision because sink had
+  fallen below its low-altitude sink threshold. The named save was restored
+  afterward; a read-only probe again reported a paused, flying STS-N at the
+  saved 22 km checkpoint.
+
+The same-UT AoA command change still needs an isolated before/after comparison.
+The present landing failure is at least partly a touchdown-geometry/energy
+problem: requested incidence is not reached, actual pitch is below the
+8-degree touchdown target, and the shuttle breaks up at contact at only about
+63 m/s. Do not suppress the pitch-rate recovery or infer success from zero
+modeled height. Before changing contact gates, determine the gear contact
+attitude and structural limits in KSP, then change the upstream energy and
+flare control that produces a survivable actual state.

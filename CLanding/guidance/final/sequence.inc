@@ -206,11 +206,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double S_FLOAT=1.0;       /* a third of the 3 m/s touchdown sink gate */
     const double FINAL_FLARE_ACCEL=.1*g0;
     const double TOUCHDOWN_ALONG=75.0;
-    const double ARREST_ACCEL=.5*g0;   /* preflare design pull; see the arc energy note below */
+    const double ARREST_ACCEL=.15*g0;  /* reserve a full sink-response window for outer-glide pull */
     const double SGS_HEIGHT=25.0;   /* shallow-glide segment below this wheel height */
     const double SGS_SINK=3.5;      /* ~ -2..-2.5 deg at touchdown speeds */
     const double TOUCHDOWN_PITCH=8.0;
-    const double TOUCHDOWN_ATTITUDE_START=26.0;
+    const double TOUCHDOWN_ATTITUDE_START=120.0;
     const double TOUCHDOWN_ATTITUDE_FULL=5.0;
 
     double height=t->mean_altitude-site->altitude;
@@ -523,13 +523,15 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        pitch step.  The smoothstep begins gently at 26 m main-wheel height and
        reaches the full 8 deg only near 5 m, so the incidence floor assists sink
        arrest without exciting the live pitch loop. */
+    double touchdown_attitude_floor=NAN,touchdown_aoa_floor=NAN;
     if(flaring&&height<=TOUCHDOWN_ATTITUDE_START){
         double u=clampd((TOUCHDOWN_ATTITUDE_START-height)/
             (TOUCHDOWN_ATTITUDE_START-TOUCHDOWN_ATTITUDE_FULL),0.0,1.0);
         u=u*u*(3.0-2.0*u);
-        double attitude_floor=TOUCHDOWN_PITCH*u;
-        double touchdown_aoa=clampd(attitude_floor-t->flight_path_angle,0.0,aoa_max);
-        aoa=fmax(aoa,touchdown_aoa);
+        touchdown_attitude_floor=TOUCHDOWN_PITCH*u;
+        touchdown_aoa_floor=clampd(touchdown_attitude_floor-t->flight_path_angle,
+            0.0,aoa_max);
+        aoa=fmax(aoa,touchdown_aoa_floor);
     }
 
     if(stage==TERMINAL_TOUCHDOWN_FLARE||(flaring&&height<=15.0))
@@ -542,10 +544,15 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
 
     /* Follow incidence references at measured-safe slew rates; the flare slew
        is slower to avoid chasing force-response noise. */
-    if(g->terminal_aoa_cmd_ut>0.0&&t->ut>g->terminal_aoa_cmd_ut&&
-       t->ut<g->terminal_aoa_cmd_ut+2.0){
+    /* A backend may evaluate guidance more than once at the same UT while
+       servicing a live telemetry batch. Preserve the queued flare incidence
+       on a zero-time evaluation; resetting it to measured AoA erases the
+       response ramp just commanded on the previous call. */
+    double aoa_command_elapsed=t->ut-g->terminal_aoa_cmd_ut;
+    if(g->terminal_aoa_cmd_ut>0.0&&isfinite(aoa_command_elapsed)&&
+       aoa_command_elapsed>=0.0&&aoa_command_elapsed<2.0){
         double rate=flaring?FLARE_SLEW:6.0;
-        double allowance=rate*(t->ut-g->terminal_aoa_cmd_ut);
+        double allowance=rate*aoa_command_elapsed;
         aoa=clampd(aoa,g->terminal_aoa_cmd_last-allowance,
             g->terminal_aoa_cmd_last+allowance);
     }else aoa=t->angle_of_attack;
@@ -589,12 +596,13 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     r=stabilized(g,r,t,v,s,dt);
     if(getenv("KSP_LANDER_FINAL_TRACE"))
         fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
-            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f ld=%.2f long=%d vtd=%.1f\n",
+            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d vtd=%.1f\n",
             (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
             g->preflare_trigger_altitude,g->terminal_preflare_plan_valid?1:0,
             g->preflare_reference_speed,response,arrest_accel,g->terminal_aim_along,
             glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
-            vertical_accel,aoa,ld_float,long_landing,predicted_touchdown_speed);
+            vertical_accel,aoa,touchdown_attitude_floor,touchdown_aoa_floor,
+            aoa,r.command.target_aoa,ld_float,long_landing,predicted_touchdown_speed);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
         fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f\n",
