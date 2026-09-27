@@ -245,3 +245,14 @@ touchdown speed. The next isolated live experiment raises only the final
 alignment speed target, with the 8,500 m route and all touchdown, contact, and
 recovery gates held fixed, to test whether retaining more terminal energy
 improves contact speed and actual pitch.
+
+Raising `finalAlignmentSpeed` from 160 to 180 m/s at the same 8,500 m route
+profile made both HAC candidates infeasible throughout acquisition. The vessel
+fell from 763.5 m/s at the 21.6 km handoff to 63.4 m/s at 1.1 km while route
+search alternated between energy-infeasible profiles and insufficient live
+curvature authority. MM305 aborted before route commitment. All gates remained
+active; the guard restored the named save, and the subsequent probe confirmed
+STS-N paused and flying at 22 km. Run: `Runtime/Headless/mm305-final8500-speed180-live.log`.
+The requested target is too aggressive for this route; the next check uses an
+intermediate 170 m/s target to determine whether the planner can still qualify
+a route while preserving more approach energy.
