@@ -226,3 +226,22 @@ reach Final, so the distance increase is rejected. The runner restored the
 named save, and the follow-up guard probe confirmed STS-N flying at the 22 km
 checkpoint with KSP paused. Run: `Runtime/Headless/mm305-final11k-live.log`;
 profile: `Runtime/Headless/mm305-final11k-profile.json`.
+
+A live 8,500 m final-approach-distance trial qualified and committed a native
+route, then reached Final. Its route was later replanned to a 9,000 m final
+station. At first main-wheel contact, KSP telemetry showed 2.77 m radar
+altitude, 64.6 m/s TAS, -3.2 m/s vertical speed, 0.7 deg pitch, and 3.6 deg
+AoA. Vessel mass fell from 43.5 t to 43.4 t at contact and to 12.3 t on the
+following sample; the next sample was 4.6 t with a 46 deg pitch / 45 deg AoA
+breakup transient. The controller aborted at 2 m radar altitude for a control
+departure. It did not complete a sustained landing. Guard recovery restored
+STS-N to the paused 22 km named checkpoint. Run and evidence:
+`Runtime/Headless/mm305-final8500-live.log`,
+`FlightLogs/2026-09-27T21-13-23Z-STS-N-vehicle.jsonl`.
+
+This trial confirms the touchdown-attitude request still does not produce the
+required contact pitch, while the vehicle arrives below the configured 75 m/s
+touchdown speed. The next isolated live experiment raises only the final
+alignment speed target, with the 8,500 m route and all touchdown, contact, and
+recovery gates held fixed, to test whether retaining more terminal energy
+improves contact speed and actual pitch.
