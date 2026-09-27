@@ -589,9 +589,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     r=stabilized(g,r,t,v,s,dt);
     if(getenv("KSP_LANDER_FINAL_TRACE"))
         fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
-            "pfh=%.0f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f ld=%.2f long=%d vtd=%.1f\n",
+            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f ld=%.2f long=%d vtd=%.1f\n",
             (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
-            response,arrest_accel,g->terminal_aim_along,glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
+            g->preflare_trigger_altitude,g->terminal_preflare_plan_valid?1:0,
+            g->preflare_reference_speed,response,arrest_accel,g->terminal_aim_along,
+            glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
             vertical_accel,aoa,ld_float,long_landing,predicted_touchdown_speed);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
