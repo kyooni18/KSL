@@ -359,3 +359,49 @@ vehicle reached at contact. Do not treat the transient KSP `landed` sample
 after Abort as a pass. Run and evidence:
 `Runtime/Headless/mm305-conservative-arrest-live.log`,
 `FlightLogs/2026-09-27T22-10-22Z-STS-N-{vehicle,planner}.jsonl`.
+
+
+## Preflare assumed-authority cap trial
+
+A focused live diagnosis compared the default integrity-gate run and the
+rejected 0.10 g outer-arrest run after delta-decoding their vehicle logs. The
+common contact-region failure was persistent AoA tracking error without hard
+pitch-command saturation: the default run was approximately 8.2 deg actual
+versus 15 deg requested AoA at 50 m wheel height with about +0.55 pitch control,
+and approximately 9.3 deg versus 14.8 deg at 10 m with about +0.58 control.
+Starting the pull much earlier had not removed that deficit.
+
+As a single-variable trial, `fc_pitch_accel_for_profile()` was changed only to
+cap assumed flare pitch acceleration at 20 deg/s^2 throughout preflare, tapering
+to the existing 16 deg/s^2 near-contact value. Guidance geometry, preflare/sink
+laws, MM305 gates, recovery, touchdown, and structural-integrity gates were left
+unchanged. This reproduced the intent of historical commit `f8333f0` without
+restoring the separate flare-lead behavior later reverted by `3bbf1d6`.
+
+The first guarded run did not exercise Final: MM305 replanning lost the active
+route, later reacquired it, but aborted from TAEM at about 3.85 km altitude and
+158 m/s before Final ownership. Because the source change is flare-only, that
+run is evidence of existing MM305 live replanning nondeterminism rather than an
+effect of the trial.
+
+A second identical guarded run reached Final. The cap modestly increased early
+flare pitch effort but did not remove the contact-region lag. Delta-decoded
+samples were about 8.7 deg actual versus 14.7 deg requested AoA at 50 m wheel
+height with +0.53 pitch control, 9.2 versus 15 deg at 10 m with +0.59 control,
+and 9.2 versus 15 deg at 5 m with +0.58 control. The vehicle was about 65.7 m/s
+with 8.6 m/s sink at 10 m and about 64.8 m/s with 8.9 m/s sink at 5 m. The
+runner aborted at radar altitude about 1 m, along roughly +1.24 km, cross +12 m,
+for insufficient attitude-recovery height. This is a failure; no transient
+`landed` or post-impact state counts as success. The guard restored and froze
+`STS-N-MM305-handoff` afterward. Evidence:
+`FlightLogs/2026-09-27T23-49-12Z-STS-N-{vehicle,planner}.jsonl` and preserved
+runner output `/tmp/authority20-run2.out` for this investigation session.
+
+The all-preflare 20 deg/s^2 assumed-authority cap is rejected as a sufficient
+fix and production source is restored to the prior near-contact-only schedule.
+The result strengthens the conclusion that Final is arriving with an
+unfavorable vertical/energy state that the available late pull cannot repair;
+the next investigation should compare the MM305-certified terminal delivery
+trajectory against the trajectory Final actually executes, especially the
+stored post-pull energy/response state at ownership transfer, before any further
+pitch-gain or flare-timing changes.
