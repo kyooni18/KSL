@@ -124,13 +124,15 @@ class DescentCheckpointTracker:
 
 
 def landing_completion_evidence(
-    snapshot: dict[str, Any], configuration: dict[str, Any]
+    snapshot: dict[str, Any], configuration: dict[str, Any], integrity_reference_dry_mass: float
 ) -> tuple[bool, str]:
-    """Independently verify runway touchdown and completed rollout evidence.
+    """Independently verify intact runway touchdown and completed rollout.
 
     A backend phase label is not sufficient acceptance evidence. Mirror the C
     rollout stop envelope and require either KSP's landed state or the same
     near-contact telemetry used by the controller's debounced ground latch.
+    Also reject a landed remnant after structural breakup by comparing its dry
+    mass with the largest intact-vessel dry mass observed during the flight.
     """
     if str(snapshot.get("phase", "")) != "Complete":
         return False, f"phase={snapshot.get('phase') or 'unknown'}"
@@ -140,6 +142,19 @@ def landing_completion_evidence(
 
     def number(value: Any) -> float:
         return BackendProcess._number(value, float("nan"))
+
+    final_dry_mass = number(telemetry.get("dryMass"))
+    reference_dry_mass = number(integrity_reference_dry_mass)
+    if not math.isfinite(reference_dry_mass) or reference_dry_mass <= 1.0:
+        return False, "structural-integrity-reference-unavailable"
+    if not math.isfinite(final_dry_mass) or final_dry_mass <= 1.0:
+        return False, "final-dry-mass-unavailable"
+    retention = final_dry_mass / reference_dry_mass
+    if retention < 0.95:
+        return False, (
+            f"structural-mass-retention={retention:.1%} <95.0% "
+            f"(initial={reference_dry_mass:.1f}kg final={final_dry_mass:.1f}kg)"
+        )
 
     surface_speed = number(telemetry.get("surfaceSpeed"))
     if not math.isfinite(surface_speed) or surface_speed >= 1.5:
@@ -1555,6 +1570,7 @@ def main() -> int:
     backend.snapshot_sink = hud.snapshot
     engaged = False
     completed = False
+    integrity_reference_dry_mass = 0.0
     crash_guard: subprocess.Popen[str] | None = None
     preentry_warp: subprocess.Popen[str] | None = None
     try:
@@ -1573,6 +1589,10 @@ def main() -> int:
         if connected.get("connectionStatus") != "connected":
             raise RuntimeError(str(connected.get("lastError") or "kRPC connection failed"))
         backend._handle_snapshot(connected, force=True)
+        connected_telemetry = connected.get("telemetry") or {}
+        connected_dry_mass = BackendProcess._number(connected_telemetry.get("dryMass"))
+        if math.isfinite(connected_dry_mass) and connected_dry_mass > 1.0:
+            integrity_reference_dry_mass = connected_dry_mass
 
         if args.connect_only:
             # A successful observation/probe is not a failed flight. Preserve the
@@ -1777,6 +1797,9 @@ def main() -> int:
             snapshot = message.get("snapshot") or {}
             backend._handle_snapshot(snapshot)
             telemetry = snapshot.get("telemetry") or {}
+            observed_dry_mass = BackendProcess._number(telemetry.get("dryMass"))
+            if math.isfinite(observed_dry_mass) and observed_dry_mass > integrity_reference_dry_mass:
+                integrity_reference_dry_mass = observed_dry_mass
             guidance_state = snapshot.get("guidanceState") or {}
             plan = snapshot.get("plan") or {}
             burn_seen = burn_seen or bool(guidance_state.get("burnStarted"))
@@ -1930,7 +1953,9 @@ def main() -> int:
             if phase in TERMINAL_PHASES:
                 backend._handle_snapshot(snapshot, force=True)
                 if phase == "Complete":
-                    landing_ok, landing_reason = landing_completion_evidence(snapshot, configuration)
+                    landing_ok, landing_reason = landing_completion_evidence(
+                        snapshot, configuration, integrity_reference_dry_mass
+                    )
                     if not landing_ok:
                         engaged = False
                         raise RuntimeError(

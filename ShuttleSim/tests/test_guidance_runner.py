@@ -14,8 +14,42 @@ import unittest
 from types import SimpleNamespace
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "Tools"))
 from backend_mailbox import BackendMailbox
 from run_guidance import Backend
+from headless_flight import landing_completion_evidence
+
+
+class LandingCompletionEvidenceTests(unittest.TestCase):
+    @staticmethod
+    def snapshot(dry_mass):
+        return {
+            "phase": "Complete",
+            "telemetry": {
+                "dryMass": dry_mass,
+                "surfaceSpeed": 1.46,
+                "runwayLength": 2500.0,
+                "runwayWidth": 70.0,
+                "runwayAlongTrack": 1598.0,
+                "runwayCrossTrack": 7.6,
+                "vesselSituation": "landed",
+                "gear": True,
+            },
+        }
+
+    def test_landed_remnant_after_breakup_is_not_success(self):
+        ok, reason = landing_completion_evidence(
+            self.snapshot(3875.0), {"site": {"runwayLength": 2500.0, "runwayWidth": 70.0}}, 29865.0
+        )
+        self.assertFalse(ok)
+        self.assertIn("structural-mass-retention=13.0%", reason)
+
+    def test_intact_landed_vessel_passes_integrity_evidence(self):
+        ok, reason = landing_completion_evidence(
+            self.snapshot(29865.0), {"site": {"runwayLength": 2500.0, "runwayWidth": 70.0}}, 29865.0
+        )
+        self.assertTrue(ok)
+        self.assertIn("landed surface-speed=1.46m/s", reason)
 
 
 class MailboxTests(unittest.TestCase):

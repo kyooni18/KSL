@@ -291,3 +291,23 @@ above contact, it provides no touchdown result and cannot establish whether
 the higher target helps. Run: `Runtime/Headless/mm305-final8500-td95-live.log`.
 The target is not accepted; the aerodynamic residual warnings rose as high as
 60% before the backend fault.
+
+A new default-profile run reached the runner's `Complete` rollout state and
+reported `actual touchdown/rollout verified`, but KSP flight records show
+catastrophic structural loss at first-wheel contact: mass went from 43,515.8
+kg to 43,375.8 kg at 2.7 m radar altitude, then to 12,271.1 kg and 4,614.8 kg
+within the next samples. KSP eventually reported the remaining 4,614.8 kg
+remnant landed/stopped at 1.46 m/s, along 1,598 m, cross 7.6 m. Its final dry
+mass was 3,875 kg versus the 29,865 kg intact dry mass observed at the start.
+This is not an intact touchdown and does not pass the campaign requirement.
+Evidence: `Runtime/Headless/mm305-aero-diagnostic-live.log` and
+`FlightLogs/2026-09-27T21-47-47Z-STS-N-vehicle.jsonl`.
+
+The headless completion check previously accepted a landed remnant using only
+runway position, gear, and rollout speed. It now requires at least 95% of the
+largest dry mass observed during the flight before accepting `Complete`.
+This stronger evidence gate rejects this breakup and leaves the flight failed
+so the test guard restores the checkpoint. Two focused regression tests cover
+both intact landing acceptance and rejection of the observed 13% structural
+mass retention. They pass with
+`python3 ShuttleSim/tests/test_guidance_runner.py LandingCompletionEvidenceTests`.
