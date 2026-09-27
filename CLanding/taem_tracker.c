@@ -1,6 +1,8 @@
 #include "taem_tracker.h"
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "shuttlesim/aero.h"
@@ -27,7 +29,8 @@ static const double command_envelope_fraction = 0.75;
 
 static double shape_attitude_command(double target, double previous,
         double measured, double rate_max, double accel_max, double wn,
-        double zeta, double authority, double dt, bool wrap) {
+        double zeta, double authority, double dt, bool wrap,
+        double lead_response_cycles) {
     if (!isfinite(previous)) previous = isfinite(measured) ? measured : target;
     if (!isfinite(target)) return target;
     /* No physics time has passed: the command cannot move. */
@@ -41,20 +44,23 @@ static double shape_attitude_command(double target, double previous,
     /* Arrive with zero rate: v <= sqrt(2 a |e|). */
     double allowed = fmin(rate, sqrt(2.0 * accel * fabs(error)));
     double next = previous + clamp_value(error, -allowed * dt, allowed * dt);
-    /* Never lead the vehicle by more than the rate it can build within one
-     * closed-loop response time; a saturated axis holds the command back
-     * instead of accumulating an attitude error it cannot close. */
+    /* Keep guidance inside the demonstrated closed-loop envelope without
+       starving the actuator of enough error to generate the required response.
+       Roll deliberately uses one response time of lead so a path change cannot
+       demand another bank reversal before the vehicle has absorbed the first.
+       Pitch is different: elevator acceleration needs command error to arrest a
+       steep descent.  Its caller may reserve a full settling horizon while the
+       same rate and acceleration bounds above remain authoritative. */
     if (isfinite(measured)) {
         double response = wn > 0.0 && zeta > 0.0 ? 1.0 / (wn * zeta) : 1.0;
-        double lead_max = rate * fmax(response, dt);
+        double lead_horizon = fmax(dt, lead_response_cycles * response);
+        double lead_max = rate * lead_horizon;
         double lead_previous = previous - measured;
         double lead_next = next - measured;
         if (wrap) {
             lead_previous = remainder(lead_previous, 2.0 * tracker_pi);
             lead_next = remainder(lead_next, 2.0 * tracker_pi);
         }
-        /* Restrict only motion that increases the lead beyond the bound; a
-         * command moving back toward the vehicle keeps its shaped value. */
         if (fabs(lead_next) > lead_max && fabs(lead_next) > fabs(lead_previous))
             next = fabs(lead_previous) >= lead_max ? previous :
                 measured + (lead_next > 0.0 ? lead_max : -lead_max);
@@ -240,37 +246,50 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
     }
     if (!isfinite(best_error)) return out;
 
-    /* An unpowered vehicle must not spend the rest of its kinetic energy trying
-     * to hold a vertical path that the current dynamic pressure cannot support.
-     * If even the best vertical-tracking solution under-delivers required lift,
-     * fly the best-L/D incidence that can still generate the required lateral
-     * acceleration.  The resulting steeper descent builds density and preserves
-     * speed; altitude/FPA/energy closure remain checked by native replay. */
+    /* A genuinely lift-starved vehicle may need to trade altitude for
+       density, but best-L/D must not override an active pull-up request.  Keep
+       the bounded minimum-vertical-error solution when the TAEM reference is
+       asking for a meaningfully shallower flight path. */
     double vertical_tolerance = fmax(0.25, 0.1 * fmax(1.0, vertical_required));
+    bool vertical_recovery_requested =
+        target_gamma > gamma + radians(0.5);
     if (chosen_lateral_feasible && have_glide_candidate &&
-        chosen_vertical < vertical_required - vertical_tolerance) {
+        chosen_vertical < vertical_required - vertical_tolerance &&
+        !vertical_recovery_requested) {
         chosen_aoa = glide_aoa;
         chosen_bank = glide_bank;
         chosen_vertical = glide_vertical;
     }
 
-    /* The commanded attitude must itself be flyable.  Shape bank and AoA with
-     * the identified attitude envelope the replay servo also obeys: the rate
-     * is held below the vehicle's demonstrated maximum (with tracking margin),
-     * decelerates into the target within the angular-acceleration limit, and
-     * never leads the measured attitude by more than the closed loop can
-     * absorb.  A target the vehicle cannot follow is not a command. */
+    /* The commanded attitude must itself be flyable. Shape bank and AoA
+       inside the identified rate/acceleration envelope. Roll keeps a tight
+       command lead; pitch may use a full settling horizon so the elevator can
+       generate enough error to arrest a steep descent without exceeding its
+       demonstrated motion limits. */
     double q = fmax(0.0, flow.dynamic_pressure_pa);
     double bank_target = shape_attitude_command(radians(chosen_bank),
         s->attitude.requested_bank_rad, s->attitude.bank_rad,
         m->attitude.max_roll_rate_rad_s, m->attitude.max_roll_accel_rad_s2,
         m->attitude.roll_wn, m->attitude.roll_zeta,
-        attitude_authority(q, m->attitude.roll_full_authority_q_pa), dt, true);
+        attitude_authority(q, m->attitude.roll_full_authority_q_pa), dt, true,
+        1.0);
     double aoa_target = shape_attitude_command(radians(chosen_aoa),
         s->attitude.requested_aoa_rad, s->attitude.aoa_rad,
         m->attitude.max_pitch_rate_rad_s, m->attitude.max_pitch_accel_rad_s2,
         m->attitude.pitch_wn, m->attitude.pitch_zeta,
-        attitude_authority(q, m->attitude.pitch_full_authority_q_pa), dt, false);
+        attitude_authority(q, m->attitude.pitch_full_authority_q_pa), dt, false,
+        4.0);
+    const char *tracker_diag = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+    if (tracker_diag && strcmp(tracker_diag,"2")==0 && dt > 0.0 && dt <= 0.2) {
+        double pitch_authority=attitude_authority(q,m->attitude.pitch_full_authority_q_pa);
+        fprintf(stderr,
+            "TAEM pitch trace: gamma=%.2f target=%.2f gammaRate=%.2f rawAoa=%.2f shapedAoa=%.2f actualAoa=%.2f prevAoa=%.2f aoaMax=%.2f q=%.0f authority=%.2f vertReq=%.2f vertRaw=%.2f glideAoa=%.2f recovery=%d\n",
+            degrees(gamma),degrees(target_gamma),degrees(desired_gamma_rate),
+            chosen_aoa,degrees(aoa_target),degrees(s->attitude.aoa_rad),
+            degrees(s->attitude.requested_aoa_rad),aoa_max,q,pitch_authority,
+            vertical_required,chosen_vertical,glide_aoa,
+            vertical_recovery_requested?1:0);
+    }
 
     out.valid = true;
     out.control = (TerminalControl){

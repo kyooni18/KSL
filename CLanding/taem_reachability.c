@@ -19,12 +19,27 @@ bool taem_hac_geometry_sweep(const TerminalModel *m, double radius, double side,
         sweep_abs_rad > 1.5 * reachability_pi * (1.0 + 1e-9) ||
         !(m->guidance.final_approach_distance > 0.0)) return false;
 
-    /* Coordinates use runway-forward and runway-right axes. Course is
-     * clockwise from north and positive relative course points to the right.
-     * The circle, radius and Final exit remain fixed; only the capture point
-     * moves around that circle. */
+    /* Coordinates use runway-forward and runway-right axes.  The circular
+       HAC must end early enough for the real vehicle to unload bank and settle
+       before Final's alignment station.  Size that rollout from the identified
+       roll response rather than a fixed distance. */
     double final_distance = m->guidance.final_approach_distance;
-    TaemPoint2 exit = {-final_distance, 0.0};
+    double alignment_speed = fmax(m->guidance.final_alignment_speed,
+        m->vehicle.minimum_safe_speed);
+    double roll_settle = m->attitude.roll_wn > 0.0 && m->attitude.roll_zeta > 0.0 ?
+        4.0 / (m->attitude.roll_wn * m->attitude.roll_zeta) : 6.0;
+    double bank_limit = radians(fmin(m->vehicle.maximum_bank_angle,80.0));
+    double unload = m->attitude.max_roll_rate_rad_s > 0.0 ?
+        bank_limit / m->attitude.max_roll_rate_rad_s : 4.0;
+    /* The circular HAC ends with finite bank.  One nominal settling interval was
+       enough to reduce the bank but live/native replay still reached the Final
+       alignment station at about 14 deg bank and 3.8 deg/s.  Reserve a second
+       identified settling interval after worst-case roll unload so cross-track,
+       bank and bank-rate can all converge before Final owns the vehicle. */
+    double rollout_time = unload + 2.0 * roll_settle;
+    double rollout_distance = alignment_speed *
+        fmax(4.0,fmin(20.0,rollout_time));
+    TaemPoint2 exit = {-(final_distance + rollout_distance), 0.0};
     TaemPoint2 center = {exit.x, side * radius};
     double end_angle = atan2(exit.y - center.y, exit.x - center.x);
     /* The exit must be flown in the runway-forward (+x) direction.  At the
@@ -49,8 +64,8 @@ bool taem_hac_geometry_sweep(const TerminalModel *m, double radius, double side,
         .capture_course_deg = capture_course,
         .arc_sweep_rad = sweep,
         .arc_length_m = fabs(sweep) * radius,
-        .final_length_m = final_distance,
-        .total_length_m = fabs(sweep) * radius + final_distance
+        .final_length_m = final_distance + rollout_distance,
+        .total_length_m = fabs(sweep) * radius + final_distance + rollout_distance
     };
     return true;
 }

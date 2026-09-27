@@ -596,6 +596,7 @@ typedef struct {
     double energy_excess;
     double entry_fpa_error;
     double entry_course_error;
+    double entry_groundtrack_crossrange_error;
     double entry_range_error;
     double handoff_alignment_utilization;
     double handoff_range_error;
@@ -630,41 +631,3 @@ typedef enum {
     DEORBIT_REJECT_COUNT
 } DeorbitRejectReason;
 
-static int execution_witness_status_compare(const Candidate*a,const Candidate*b){
-    if(!a||!b)return 0;
-    if(a->executable_witness_evaluated!=b->executable_witness_evaluated)
-        return a->executable_witness_evaluated?-1:1;
-    if(!a->executable_witness_evaluated)return 0;
-    if(a->executable_witness_capture!=b->executable_witness_capture)
-        return a->executable_witness_capture?-1:1;
-    if(a->executable_witness_handoff_valid!=b->executable_witness_handoff_valid)
-        return a->executable_witness_handoff_valid?-1:1;
-    if(a->executable_witness_boundary_missed!=b->executable_witness_boundary_missed)
-        return a->executable_witness_boundary_missed?1:-1;
-    if(a->executable_witness_aborted!=b->executable_witness_aborted)
-        return a->executable_witness_aborted?1:-1;
-    if(a->executable_witness_present!=b->executable_witness_present)
-        return a->executable_witness_present?-1:1;
-    return 0;
-}
-
-static int execution_witness_geometry_compare(const Candidate*a,const Candidate*b){
-    if(!a||!b||!a->executable_witness_evaluated||
-       !b->executable_witness_evaluated)return 0;
-    if(a->executable_witness_taem_error<b->executable_witness_taem_error)return -1;
-    if(a->executable_witness_taem_error>b->executable_witness_taem_error)return 1;
-    bool a_energy=isfinite(a->executable_witness_energy_margin);
-    bool b_energy=isfinite(b->executable_witness_energy_margin);
-    if(a_energy!=b_energy)return a_energy?-1:1;
-    if(a_energy){
-        double a_residual=fabs(a->executable_witness_energy_margin);
-        double b_residual=fabs(b->executable_witness_energy_margin);
-        if(a_residual<b_residual)return -1;
-        if(a_residual>b_residual)return 1;
-    }
-    if(a->executable_witness_alignment_error<b->executable_witness_alignment_error)return -1;
-    if(a->executable_witness_alignment_error>b->executable_witness_alignment_error)return 1;
-    if(a->executable_witness_closest_distance<b->executable_witness_closest_distance)return -1;
-    if(a->executable_witness_closest_distance>b->executable_witness_closest_distance)return 1;
-    return 0;
-}

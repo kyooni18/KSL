@@ -11,16 +11,15 @@
  * sweep to the Final exit.  The step is fine enough that a state already part
  * way around the circle finds a join with compatible chord/tangent geometry.
  * The search is hierarchical: cheap geometry/authority pruning and energy
- * ranking of every station, then full native replay of only a few survivors,
- * then vertical-profile refinement of the selected route only. */
+ * ranking of every station, then full native replay of only a few survivors. */
 #define TAEM_JOIN_SWEEP_MAX_DEG 270.0
 #define TAEM_JOIN_SWEEP_MIN_DEG 15.0
-#define TAEM_HAC_RADIUS_STEPS 5
+#define TAEM_HAC_RADIUS_STEPS 4
 #define TAEM_HAC_RADIUS_RATIO 0.6
-#define TAEM_JOIN_SWEEP_STEP_DEG 15.0
-#define TAEM_JOIN_MAX_STATIONS 120
-#define TAEM_JOIN_MAX_REPLAYS 3
-#define TAEM_JOIN_MAX_PROFILES 12
+#define TAEM_JOIN_SWEEP_STEP_DEG 30.0
+#define TAEM_JOIN_MAX_STATIONS 48
+#define TAEM_JOIN_MAX_REPLAYS 2
+#define TAEM_JOIN_MAX_PROFILES 6
 #define TAEM_PROFILE_DT_S 0.5
 #define TAEM_MIN_HAC_RADIUS_M 3000.0
 
@@ -44,8 +43,81 @@ static int compare_station(const void *a, const void *b) {
 
 static bool diagnostics_enabled(void) {
     const char *diagnostics = getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
-    return diagnostics && strcmp(diagnostics, "1") == 0;
+    return diagnostics &&
+        (strcmp(diagnostics, "1") == 0 || strcmp(diagnostics, "2") == 0);
 }
+static double hermite_peak_descent_deg(const TaemRoute *route,
+        double length_m) {
+    if (!route || !(length_m > 0.0)) return INFINITY;
+    const double d2r=3.14159265358979323846/180.0;
+    double h0=route->profile_start_altitude_m;
+    double h1=route->profile_final_altitude_m;
+    double m0=tan(route->profile_start_fpa_deg*d2r);
+    double m1=-tan(route->profile_final_slope_deg*d2r);
+    double peak=0.0;
+    for(int i=0;i<=96;++i) {
+        double x=(double)i/96.0, x2=x*x;
+        double dx=(6.0*x2-6.0*x)*h0+
+            (3.0*x2-4.0*x+1.0)*length_m*m0+
+            (-6.0*x2+6.0*x)*h1+
+            (3.0*x2-2.0*x)*length_m*m1;
+        double descent=-atan(dx/length_m)/d2r;
+        peak=fmax(peak,descent);
+    }
+    return peak;
+}
+
+static double minimum_vertical_profile_length(const TerminalModel *model,
+        const TaemRoute *route) {
+    if (!model || !route) return INFINITY;
+    const double d2r=3.14159265358979323846/180.0;
+    double final_limit=route->profile_final_slope_deg+3.0;
+    double limit=isfinite(model->guidance.taem_glide_slope) &&
+        model->guidance.taem_glide_slope>0.0 ?
+        fmax(final_limit,model->guidance.taem_glide_slope) : final_limit;
+    double drop=route->profile_start_altitude_m-route->profile_final_altitude_m;
+    if (!(drop>0.0) || !(limit>0.0) || limit>=89.0) return INFINITY;
+    double lo=drop/tan(limit*d2r);
+    double hi=fmax(lo,route->length_m);
+    for(int i=0;i<8 && hermite_peak_descent_deg(route,hi)>limit;++i)
+        hi*=1.25;
+    if (hermite_peak_descent_deg(route,hi)>limit) return INFINITY;
+    for(int i=0;i<24;++i) {
+        double mid=0.5*(lo+hi);
+        if (hermite_peak_descent_deg(route,mid)<=limit) hi=mid;
+        else lo=mid;
+    }
+    return hi;
+}
+
+
+static double profile_lateral_authority_ratio(const TerminalModel *model,
+        const TaemRoute *route, double live_curvature, double live_density) {
+    if (!model || !route || !route->profile_tabulated ||
+        !(route->length_m > 0.0) || !(live_curvature > 0.0) ||
+        !(live_density > 0.0)) return INFINITY;
+
+    double worst = 0.0;
+    const int samples = 64;
+    for (int i = 0; i <= samples; ++i) {
+        double station = route->length_m * (double)i / (double)samples;
+        double curvature = fabs(taem_route_curvature_at_station(route, station));
+        double altitude = taem_route_planned_altitude(route, station);
+        if (!isfinite(curvature) || !isfinite(altitude)) return INFINITY;
+        AtmosphereSample atmosphere = world_atmosphere_sample(&model->world, altitude);
+        if (!(atmosphere.density_kg_m3 > 0.0)) return INFINITY;
+        double available_curvature = live_curvature *
+            atmosphere.density_kg_m3 / live_density;
+        if (!(available_curvature > 0.0) || !isfinite(available_curvature))
+            return INFINITY;
+        worst = fmax(worst, curvature / available_curvature);
+    }
+    return worst;
+}
+
+
+
+
 
 static bool replay_reaches_aligned_exit(const TerminalSolverResult *replay) {
     return replay->status == TERMINAL_SOLVER_UNQUALIFIED &&
@@ -75,6 +147,35 @@ static double initial_kinetic(const TerminalDynamicState *initial) {
     double vy = initial->velocity_i_mps.y;
     double vz = initial->velocity_i_mps.z;
     return 0.5 * (vx * vx + vy * vy + vz * vz);
+}
+
+static double estimated_energy_route_length(const TerminalModel *model,
+        const TerminalDynamicState *initial, const TaemGeometryState *geometry) {
+    if (!model || !initial || !geometry || !(initial->mass_kg > 1.0))
+        return NAN;
+    double target_speed = exit_speed_target(model);
+    double final_height = model->guidance.final_approach_distance *
+        tan(model->guidance.final_glide_slope *
+            3.14159265358979323846 / 180.0);
+    double radius = model->world.radius_m + model->site.altitude +
+        fmax(0.0, geometry->altitude_above_runway_m);
+    double gravity = model->world.mu_m3_s2 / fmax(radius * radius, 1.0);
+    double energy = 0.5 * (geometry->airspeed_mps * geometry->airspeed_mps -
+        target_speed * target_speed) +
+        gravity * (geometry->altitude_above_runway_m - final_height);
+    energy = fmax(0.0, energy);
+
+    AeroForces forces = aero_compute(&model->world, &model->aero,
+        initial->position_i_m, initial->velocity_i_mps, initial->ut_s,
+        initial->mass_kg, initial->attitude.aoa_rad, initial->attitude.bank_rad);
+    double drag = forces.drag_n > 0.0 ? forces.drag_n / initial->mass_kg : NAN;
+    if (!(drag > 0.0) || !isfinite(drag)) return NAN;
+
+    /* This is only a search-order estimate, never an admission rule.  Bias low
+       enough that rising density later in TAEM does not push the search toward
+       routes much longer than the live vehicle can actually fly. */
+    double planning_drag = fmax(0.75, 0.85 * drag);
+    return energy / planning_drag;
 }
 
 static bool better_failure(const TaemFixedHacCandidate *trial,
@@ -131,6 +232,40 @@ static void mark_failure(TaemFixedHacCandidate *trial) {
     trial->reason = trial->replay.reason;
 }
 
+TaemFixedHacCandidate taem_fixed_hac_evaluate_route(const TerminalModel *model,
+        const TerminalDynamicState *initial, const TaemRoute *route,
+        int runway_end, double dt, double maximum_elapsed) {
+    TaemFixedHacCandidate candidate;
+    memset(&candidate, 0, sizeof(candidate));
+    candidate.status = TAEM_PLAN_INFEASIBLE;
+    candidate.reason = "provisional route qualification failed";
+    candidate.runway_end = runway_end;
+    if (!model || !initial || !route || !route->valid ||
+        !(dt > 0.0) || !(maximum_elapsed > 0.0))
+        return candidate;
+
+    candidate.side = route->side;
+    candidate.route = *route;
+    candidate.route_built = true;
+
+    TerminalProfileResult profile = terminal_solver_generate_profile(
+        model, initial, &candidate.route, dt, maximum_elapsed);
+    if (!profile.valid) {
+        candidate.reason = profile.reason ? profile.reason :
+            "provisional route has no feasible native vertical profile";
+        return candidate;
+    }
+
+    candidate.replay = terminal_solver_replay(
+        model, initial, &candidate.route, dt, maximum_elapsed);
+    if (replay_reaches_aligned_exit(&candidate.replay)) {
+        finish_candidate(model, initial, &candidate);
+        return candidate;
+    }
+    mark_failure(&candidate);
+    return candidate;
+}
+
 static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         const TerminalDynamicState *initial, const TaemGeometryState *geometry,
         double hac_radius, double side, double spacing, double dt,
@@ -155,56 +290,67 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     candidate.required_lateral_accel_mps2 = reachability.required_lateral_accel_mps2;
     candidate.available_lateral_accel_mps2 = reachability.available_lateral_accel_mps2;
 
-    /* The live curvature authority bounds the roll-settling prefix of the lead
-     * (enforced inside the planner).  Later lead curvature is judged by native
-     * replay at the propagated state.  For cheap pruning only, bound it
-     * optimistically: bank-limited curvature is 0.5*rho*S*CL*sin(bank)/m and
-     * does not depend on speed, so descending to runway density is the most
-     * it can grow.  A lead exceeding that ceiling cannot be flown.  The whole
-     * lead is not ranked against the live thin-air authority again; that
-     * systematically discarded joins that become executable as density builds. */
+    /* The lead occurs before the HAC join, so its most optimistic usable
+       curvature authority is the authority available at the join altitude—not
+       runway density.  Using runway density allowed the planner to generate
+       turns that only become flyable after the maneuver should already have
+       ended.  Compute a per-sweep ceiling below once the downstream HAC geometry
+       is known. */
     double live_curvature = 0.95 * reachability.available_lateral_accel_mps2 /
         fmax(geometry->ground_speed_mps * geometry->ground_speed_mps, 1.0);
     double rho_live = world_atmosphere_sample(&model->world,
         model->site.altitude + geometry->altitude_above_runway_m).density_kg_m3;
-    double rho_runway = world_atmosphere_sample(&model->world,
-        model->site.altitude).density_kg_m3;
-    double density_gain = rho_live > 0.0 && rho_runway > rho_live ?
-        rho_runway / rho_live : 1.0;
-    double curvature_ceiling = live_curvature * density_gain;
 
     TaemFixedHacCandidate best_failure = candidate;
     bool have_failure = false;
     size_t count = 0;
     char reason[160];
-    for (double sweep_deg = TAEM_JOIN_SWEEP_MAX_DEG;
-         sweep_deg >= TAEM_JOIN_SWEEP_MIN_DEG - 1e-9;
-         sweep_deg -= TAEM_JOIN_SWEEP_STEP_DEG) {
-        /* Two lead shapes per join: the smoothest lead and the shortest lead
-         * within the optimistic authority ceiling.  The smoothest lead can be
-         * a long loop when the vehicle is close to the circle; the compact
-         * one is what an energy-limited state may need. */
-        /* A third, energy-matched lead is sized so the whole route meets the
-         * TAEM glide-slope length: a state too high for the direct lead
-         * dissipates the excess along a longer lead rather than in a steep
-         * descent near the runway. */
+    for (double sweep_deg = TAEM_JOIN_SWEEP_MAX_DEG;;) {
         double sweep_rad = sweep_deg * 3.14159265358979323846 / 180.0;
+        TaemFixedHacGeometry sweep_geometry;
+        if (!taem_hac_geometry_sweep(model, hac_radius, side, sweep_rad,
+                &sweep_geometry))
+            continue;
+
+        /* The lead finishes at the HAC join, so its optimistic authority may
+           grow only to the density expected at that join—not all the way to
+           runway density. */
+        double terminal_height = sweep_geometry.final_length_m *
+            tan(model->guidance.final_glide_slope *
+                3.14159265358979323846 / 180.0);
+        double hac_height = terminal_height + sweep_geometry.arc_length_m *
+            tan(fmin(model->guidance.taem_glide_slope, 12.0) *
+                3.14159265358979323846 / 180.0);
+        double rho_join = world_atmosphere_sample(&model->world,
+            model->site.altitude + fmax(0.0, hac_height)).density_kg_m3;
+        double density_gain = rho_live > 0.0 && rho_join > rho_live ?
+            rho_join / rho_live : 1.0;
+        double sweep_curvature_ceiling = live_curvature * density_gain;
+
+        /* Three lead shapes per join: smoothest, shortest within authority,
+           and an energy/vertical-geometry matched lead when the direct route is
+           too short to satisfy the TAEM/Final endpoint tangents. */
         double energy_lead_length = NAN;
-        for (int variant = 0; variant < 3 && count < TAEM_JOIN_MAX_STATIONS; ++variant) {
+        for (int variant = 0;
+             variant < 3 && count < TAEM_JOIN_MAX_STATIONS; ++variant) {
             JoinStation *station = &stations[count];
             station->sweep_rad = sweep_rad;
             if (variant == 2 && !isfinite(energy_lead_length)) continue;
+
             bool built = variant == 0 ?
                 taem_route_build_hac(model, geometry, hac_radius, side,
                     station->sweep_rad, spacing, live_curvature,
                     &station->route, reason, sizeof(reason)) :
                 variant == 1 ?
                 taem_route_build_hac_shortest(model, geometry, hac_radius, side,
-                    station->sweep_rad, spacing, live_curvature, curvature_ceiling,
+                    station->sweep_rad, spacing, live_curvature,
+                    sweep_curvature_ceiling,
                     &station->route, reason, sizeof(reason)) :
                 taem_route_build_hac_length(model, geometry, hac_radius, side,
-                    station->sweep_rad, spacing, live_curvature, curvature_ceiling,
-                    energy_lead_length, &station->route, reason, sizeof(reason));
+                    station->sweep_rad, spacing, live_curvature,
+                    sweep_curvature_ceiling, energy_lead_length,
+                    &station->route, reason, sizeof(reason));
+
             if (!built) {
                 if (!have_failure) {
                     best_failure.reason =
@@ -215,47 +361,90 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 }
                 continue;
             }
+
             if (variant > 0 && count > 0 &&
                 fabs(stations[count - 1].sweep_rad - station->sweep_rad) < 1e-9 &&
-                fabs(stations[count - 1].route.length_m - station->route.length_m) < 200.0)
-                continue; /* identical to the previous lead */
+                fabs(stations[count - 1].route.length_m -
+                     station->route.length_m) < 200.0)
+                continue;
+
             double peak = taem_route_lead_peak_curvature(&station->route);
             double hac_curvature = 1.0 / station->route.hac.radius_m;
-            if (!isfinite(peak) || peak > curvature_ceiling) continue;
-            /* Energy: an unpowered route whose altitude drop spread over its
-             * length is much shallower than the configured TAEM glide slope
-             * cannot be held, and one much steeper dives through the energy
-             * Final needs.  Prefer lengths near the glide-slope length. */
-            double drop = station->route.profile_start_altitude_m -
-                          station->route.profile_final_altitude_m;
-            double glide_length = drop > 0.0 ?
-                drop / tan(model->guidance.taem_glide_slope * 3.14159265358979323846 / 180.0) :
-                0.0;
-            if (variant == 0 && glide_length > station->route.length_m + 1000.0)
-                energy_lead_length = glide_length -
+            if (!isfinite(peak)) continue;
+            /* Do not apply the join-density curvature ceiling to the entire lead.
+               The live q/speed state evolves along it; native propagation below
+               is the authority gate for all non-initial stations. */
+            /* Averages are insufficient here: with a shallower live inlet
+               tangent and -Final-slope outlet tangent, a Hermite profile needs
+               more distance than drop/tan(TAEM slope). */
+            double profile_length =
+                minimum_vertical_profile_length(model, &station->route);
+            if (!isfinite(profile_length)) continue;
+            if (variant == 0 &&
+                profile_length > station->route.length_m + 1000.0)
+                energy_lead_length = profile_length -
                     (station->route.length_m - station->route.lead_length_m);
+
             station->score =
                 0.25 * fmax(0.0, peak - hac_curvature) / hac_curvature +
-                fabs(station->route.length_m - glide_length) /
-                    fmax(glide_length, station->route.hac.radius_m);
+                fabs(station->route.length_m - profile_length) /
+                    fmax(profile_length, station->route.hac.radius_m);
             ++count;
         }
+        if (sweep_deg <= TAEM_JOIN_SWEEP_MIN_DEG + 1e-9) break;
+        sweep_deg = fmax(TAEM_JOIN_SWEEP_MIN_DEG,
+            sweep_deg - TAEM_JOIN_SWEEP_STEP_DEG);
     }
     if (count == 0) return best_failure;
     qsort(stations, count, sizeof(stations[0]), compare_station);
 
     /* Generate a dynamically feasible vertical reference by native
-     * propagation.  Profile feasibility is monotone in route length for a
-     * given state: too short cannot descend within the slope limit, too long
-     * runs out of energy.  The glide-slope score above is only a geometric
-     * proxy (it ignores kinetic energy and the vehicle's L/D: at Mach 2.5 this
-     * vehicle's L/D is ~0.7, so a 12 deg configured slope ranks routes several
-     * times longer than it can fly first).  Bracket the feasible length window
-     * by bisection over length, then profile outward from it until the
-     * budget is spent; survivors are then ranked by score and exit speed. */
+     * propagation.  Feasibility is only approximately monotone within one route
+     * family; it is not monotone after different HAC radii/sweeps are mixed.
+     * Order the expensive profile checks around the route length implied by the
+     * current specific-energy surplus instead of bisecting the mixed list. */
     double target_speed = exit_speed_target(model);
     size_t profile_budget = count < TAEM_JOIN_MAX_PROFILES ? count : TAEM_JOIN_MAX_PROFILES;
+    if (diagnostics_enabled() && count > 0) {
+        size_t n = count < 8 ? count : 8;
+        for (size_t i = 0; i < n; ++i)
+            fprintf(stderr,
+                "TAEM geometry: side=%+.0f radius=%.0f sweep=%.1f total=%.0f lead=%.0f arc=%.0f rollout=%.0f peakK=%.3e score=%.3f\n",
+                side, stations[i].route.hac.radius_m,
+                stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
+                stations[i].route.length_m, stations[i].route.lead_length_m,
+                stations[i].route.hac.arc_length_m,
+                stations[i].route.rollout_length_m,
+                taem_route_lead_peak_curvature(&stations[i].route),
+                stations[i].score);
+    }
     qsort(stations, count, sizeof(stations[0]), compare_station_length);
+    double target_length = estimated_energy_route_length(model, initial, geometry);
+    if (!isfinite(target_length))
+        target_length = stations[0].route.length_m;
+    size_t center = 0;
+    double center_error = fabs(stations[0].route.length_m - target_length);
+    for (size_t i = 1; i < count; ++i) {
+        double error = fabs(stations[i].route.length_m - target_length);
+        if (error < center_error) {
+            center = i;
+            center_error = error;
+        }
+    }
+    if (diagnostics_enabled()) {
+        size_t n = count < 10 ? count : 10;
+        fprintf(stderr,
+            "TAEM energy length target: side=%+.0f target=%.0f nearest=%zu/%.0f count=%zu\n",
+            side, target_length, center, stations[center].route.length_m, count);
+        for (size_t i = 0; i < n; ++i)
+            fprintf(stderr,
+                "TAEM shortest: side=%+.0f idx=%zu/%zu radius=%.0f sweep=%.1f total=%.0f lead=%.0f arc=%.0f rollout=%.0f score=%.3f\n",
+                side,i,count,stations[i].route.hac.radius_m,
+                stations[i].sweep_rad*180.0/3.14159265358979323846,
+                stations[i].route.length_m,stations[i].route.lead_length_m,
+                stations[i].route.hac.arc_length_m,
+                stations[i].route.rollout_length_m,stations[i].score);
+    }
     unsigned char *tried = calloc(count, 1);
     TerminalProfileResult *results = calloc(count, sizeof(*results));
     if (!tried || !results) {
@@ -264,40 +453,163 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         return best_failure;
     }
     size_t used = 0;
-#define PROFILE_STATION(k) do { \
-        if (!tried[(k)] && used < profile_budget) { \
-            tried[(k)] = 1; ++used; \
-            results[(k)] = terminal_solver_generate_profile(model, initial, \
-                &stations[(k)].route, TAEM_PROFILE_DT_S, maximum_elapsed); \
-            if (diagnostics_enabled()) \
-                fprintf(stderr, "TAEM profile: side=%+.0f radius=%.0f join_sweep=%.1f length=%.0f valid=%d aoa=%.2f exitV=%.1f exitFpa=%.1f reason=%s\n", \
-                    side, stations[(k)].route.hac.radius_m, \
-                    stations[(k)].sweep_rad * 180.0 / 3.14159265358979323846, \
-                    stations[(k)].route.length_m, results[(k)].valid ? 1 : 0, \
-                    results[(k)].aoa_deg, results[(k)].exit_speed_mps, \
-                    results[(k)].exit_fpa_deg, results[(k)].reason); \
-        } } while (0)
-    long lo = 0, hi = (long)count - 1, hit = -1;
-    while (lo <= hi && used < profile_budget) {
-        long mid = lo + (hi - lo) / 2;
-        PROFILE_STATION((size_t)mid);
-        const TerminalProfileResult *r = &results[mid];
-        if (r->valid) { hit = mid; break; }
-        if (r->reason && strstr(r->reason, "too long")) hi = mid - 1;
-        else if (r->reason && strstr(r->reason, "too short")) lo = mid + 1;
-        else { hit = mid; break; } /* other failure: search its neighbourhood */
+#define PROFILE_STATION(k) do {         if (!tried[(k)] && used < profile_budget) {             tried[(k)] = 1; ++used;             results[(k)] = terminal_solver_generate_profile(model, initial,                 &stations[(k)].route, TAEM_PROFILE_DT_S, maximum_elapsed);             if (diagnostics_enabled())                 fprintf(stderr, "TAEM profile: side=%+.0f radius=%.0f join_sweep=%.1f length=%.0f valid=%d aoa=%.2f exitV=%.1f exitFpa=%.1f reason=%s\n",                     side, stations[(k)].route.hac.radius_m,                     stations[(k)].sweep_rad * 180.0 / 3.14159265358979323846,                     stations[(k)].route.length_m, results[(k)].valid ? 1 : 0,                     results[(k)].aoa_deg, results[(k)].exit_speed_mps,                     results[(k)].exit_fpa_deg, results[(k)].reason);         } } while (0)
+#define PROFILE_TOO_LONG(r) ((r) && (         strstr((r),"too long") ||         strcmp((r),"ground before route end")==0 ||         strcmp((r),"max elapsed before route end")==0 ||         strstr((r),"too slow for Final handoff")))
+#define PROFILE_TOO_SHORT(r) ((r) && (         strstr((r),"too short") ||         strstr((r),"retains excess energy")))
+
+    /* The energy-length estimate is only a search-order hint.  Spend the
+       bounded profile budget on complete lead families first: a short member
+       and its longest same-sweep companion give the refinement stage a real
+       short/long bracket instead of unrelated points from the mixed list. */
+    size_t anchor_sweeps = 0;
+    double anchored_sweep[2] = {NAN, NAN};
+    for (size_t i = 0; i < count && used < profile_budget &&
+            anchor_sweeps < 2; ++i) {
+        bool seen = false;
+        for (size_t a = 0; a < anchor_sweeps; ++a)
+            if (fabs(stations[i].sweep_rad - anchored_sweep[a]) < 1e-9)
+                seen = true;
+        if (seen) continue;
+
+        anchored_sweep[anchor_sweeps++] = stations[i].sweep_rad;
+        PROFILE_STATION(i);
+        size_t mate = i;
+        for (size_t j = i + 1; j < count; ++j) {
+            if (fabs(stations[j].sweep_rad - stations[i].sweep_rad) < 1e-9 &&
+                stations[j].route.lead_length_m > stations[mate].route.lead_length_m)
+                mate = j;
+        }
+        if (mate != i) PROFILE_STATION(mate);
     }
-    if (hit < 0) hit = lo < (long)count ? lo : (long)count - 1;
-    for (long d = 0; used < profile_budget && (hit - d >= 0 || hit + d < (long)count); ++d) {
-        if (hit - d >= 0) PROFILE_STATION((size_t)(hit - d));
-        if (hit + d < (long)count) PROFILE_STATION((size_t)(hit + d));
+
+    PROFILE_STATION(center);
+    long left = (long)center - 1;
+    size_t right = center + 1;
+    while (used < profile_budget && (left >= 0 || right < count)) {
+        bool take_left = false;
+        if (left >= 0 && right < count) {
+            double le = fabs(stations[left].route.length_m - target_length);
+            double re = fabs(stations[right].route.length_m - target_length);
+            take_left = le <= re;
+        } else {
+            take_left = left >= 0;
+        }
+        if (take_left) {
+            PROFILE_STATION((size_t)left);
+            --left;
+        } else {
+            PROFILE_STATION(right);
+            ++right;
+        }
+    }
+
+    /* If sampled variants of one exact HAC family straddle the feasible
+       window, refine the lead continuously.  Search all tried pairs in that
+       family; global length adjacency is meaningless across mixed geometry. */
+    bool refined_valid = false;
+    for (size_t i = 0; i < count && !refined_valid; ++i) {
+        if (!tried[i] || results[i].valid) continue;
+        bool i_short = PROFILE_TOO_SHORT(results[i].reason);
+        bool i_long = PROFILE_TOO_LONG(results[i].reason);
+        if (!i_short && !i_long) continue;
+        for (size_t j = i + 1; j < count && !refined_valid; ++j) {
+            if (!tried[j] || results[j].valid) continue;
+            bool j_short = PROFILE_TOO_SHORT(results[j].reason);
+            bool j_long = PROFILE_TOO_LONG(results[j].reason);
+            if (!((i_short && j_long) || (i_long && j_short))) continue;
+            JoinStation *a = &stations[i];
+            JoinStation *b = &stations[j];
+            if (fabs(a->sweep_rad - b->sweep_rad) > 1e-9 ||
+                fabs(a->route.hac.radius_m - b->route.hac.radius_m) > 1e-6)
+                continue;
+
+            double short_lead = (i_short ? a : b)->route.lead_length_m;
+            double long_lead = (i_long ? a : b)->route.lead_length_m;
+            if (short_lead > long_lead) {
+                double tmp = short_lead; short_lead = long_lead; long_lead = tmp;
+            }
+            if (!(long_lead - short_lead > 5.0)) continue;
+            const TaemRoute *profile_short_route = i_short ? &a->route : &b->route;
+            const TaemRoute *profile_long_route = i_long ? &a->route : &b->route;
+
+            TaemFixedHacGeometry sweep_geometry;
+            if (!taem_hac_geometry_sweep(model, a->route.hac.radius_m, side,
+                    a->sweep_rad, &sweep_geometry))
+                continue;
+            double terminal_height = sweep_geometry.final_length_m *
+                tan(model->guidance.final_glide_slope *
+                    3.14159265358979323846 / 180.0);
+            double hac_height = terminal_height + sweep_geometry.arc_length_m *
+                tan(fmin(model->guidance.taem_glide_slope, 12.0) *
+                    3.14159265358979323846 / 180.0);
+            double rho_join = world_atmosphere_sample(&model->world,
+                model->site.altitude + fmax(0.0, hac_height)).density_kg_m3;
+            double density_gain = rho_live > 0.0 && rho_join > rho_live ?
+                rho_join / rho_live : 1.0;
+            double curvature_ceiling = live_curvature * density_gain;
+
+            for (int refine = 0; refine < 5 && long_lead - short_lead > 2.0; ++refine) {
+                double lead = 0.5 * (short_lead + long_lead);
+                JoinStation candidate_station = {0};
+                candidate_station.sweep_rad = a->sweep_rad;
+                char refine_reason[160] = {0};
+                if (!taem_route_blend_hac_length(model, geometry,
+                        profile_short_route, profile_long_route, spacing,
+                        live_curvature, curvature_ceiling, lead,
+                        &candidate_station.route, refine_reason, sizeof(refine_reason)))
+                    break;
+
+                TerminalProfileResult pr = terminal_solver_generate_profile(
+                    model, initial, &candidate_station.route,
+                    TAEM_PROFILE_DT_S, maximum_elapsed);
+                if (diagnostics_enabled())
+                    fprintf(stderr,
+                        "TAEM profile refine: side=%+.0f radius=%.0f sweep=%.1f lead=%.1f total=%.1f valid=%d exitV=%.1f exitFpa=%.1f reason=%s\n",
+                        side, candidate_station.route.hac.radius_m,
+                        candidate_station.sweep_rad * 180.0 / 3.14159265358979323846,
+                        candidate_station.route.lead_length_m,
+                        candidate_station.route.length_m, pr.valid ? 1 : 0,
+                        pr.exit_speed_mps, pr.exit_fpa_deg,
+                        pr.reason ? pr.reason : "none");
+
+                if (pr.valid) {
+                    candidate_station.score = 0.5 * (a->score + b->score);
+                    stations[i] = candidate_station;
+                    results[i] = pr;
+                    tried[i] = 1;
+                    refined_valid = true;
+                    break;
+                }
+                if (PROFILE_TOO_SHORT(pr.reason))
+                    short_lead = candidate_station.route.lead_length_m;
+                else if (PROFILE_TOO_LONG(pr.reason))
+                    long_lead = candidate_station.route.lead_length_m;
+                else break;
+            }
+        }
     }
 #undef PROFILE_STATION
+#undef PROFILE_TOO_LONG
+#undef PROFILE_TOO_SHORT
+
     size_t profiled = 0;
     for (size_t i = 0; i < count; ++i) {
         if (!tried[i] || !results[i].valid) continue;
-        stations[i].score = stations[i].score +
-            fabs(target_speed - results[i].exit_speed_mps) / target_speed * 10.0;
+        double authority_ratio = profile_lateral_authority_ratio(model,
+            &stations[i].route, live_curvature, rho_live);
+        if (!isfinite(authority_ratio)) continue;
+        if (diagnostics_enabled())
+            fprintf(stderr,
+                "TAEM authority: side=%+.0f sweep=%.1f length=%.0f ratio=%.3f leadPeakK=%.3e liveK=%.3e\n",
+                side, stations[i].sweep_rad * 180.0 / 3.14159265358979323846,
+                stations[i].route.length_m, authority_ratio,
+                taem_route_lead_peak_curvature(&stations[i].route), live_curvature);
+
+        /* Rank against the authority envelope before expensive closed-loop
+           replay. Replay remains the final proof of feasibility. */
+        stations[i].score +=
+            fabs(target_speed - results[i].exit_speed_mps) / target_speed * 10.0 +
+            20.0 * fmax(0.0, authority_ratio - 0.8);
         if (i != profiled) {
             JoinStation swap = stations[profiled];
             stations[profiled] = stations[i];
@@ -305,9 +617,11 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         }
         ++profiled;
     }
-    free(tried); free(results);
+    free(tried);
+    free(results);
     if (profiled == 0) {
-        best_failure.reason = "no HAC join has an energy-feasible native vertical profile";
+        best_failure.reason =
+            "no HAC join has an energy-feasible native vertical profile";
         return best_failure;
     }
     qsort(stations, profiled, sizeof(stations[0]), compare_station);
@@ -467,6 +781,9 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                 double radius = hac_radius;
                 *slot = evaluate_side(ends[end], initial, &geometry, radius,
                     side, spacing, dt, maximum_elapsed, stations);
+                if (slot->status == TAEM_PLAN_UNQUALIFIED &&
+                    slot->route_built && slot->replay.path_constraints_ok)
+                    goto radius_search_done;
                 for (int step = 1; step < TAEM_HAC_RADIUS_STEPS; ++step) {
                     double next_radius = fmax(floor_radius, radius * TAEM_HAC_RADIUS_RATIO);
                     if (!(next_radius < radius)) break;
@@ -479,6 +796,8 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                          tighter.route_built && !slot->route_built))
                         *slot = tighter;
                 }
+radius_search_done:
+                ;
             }
             slot->runway_end = end;
         }

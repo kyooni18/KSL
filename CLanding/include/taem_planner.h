@@ -52,6 +52,15 @@ bool taem_route_build_hac_length(const TerminalModel *model,
         double target_lead_length_m, TaemRoute *route,
         char *reason, size_t reason_size);
 
+/* Interpolates between two already feasible routes for the same HAC family.
+ * Used only after profile propagation has bracketed a too-short/too-long lead. */
+bool taem_route_blend_hac_length(const TerminalModel *model,
+        const TaemGeometryState *start, const TaemRoute *route_a,
+        const TaemRoute *route_b, double point_spacing_m,
+        double maximum_lead_curvature_per_m, double peak_curvature_limit_per_m,
+        double target_lead_length_m, TaemRoute *route,
+        char *reason, size_t reason_size);
+
 /* Peak curvature of the finite C1 lead; INFINITY for an invalid route. */
 double taem_route_lead_peak_curvature(const TaemRoute *route);
 
@@ -60,6 +69,13 @@ bool taem_route_build_fixed_hac(const TerminalModel *model,
         const TaemGeometryState *start, double hac_radius_m, double side,
         double point_spacing_m, double maximum_lead_curvature_per_m,
         TaemRoute *route, char *reason, size_t reason_size);
+
+/* Shapes the analytic vertical profile so its initial FPA curvature does
+ * not demand more vertical lift than the measured/identified vehicle can
+ * provide while also satisfying the route's initial lateral curvature. */
+bool taem_route_limit_initial_vertical_authority(const TerminalModel *model,
+        const TerminalDynamicState *state, const TaemGeometryState *geometry,
+        TaemRoute *route);
 
 /* Finds the closest point at or after cursor. The cursor is monotone so a
  * self-near 270-degree circle cannot make the tracker jump to another branch. */

@@ -34,8 +34,9 @@ typedef struct {
     double maximum_vertical_lift_correction;
 
     double maximum_drag_g_fraction;
-    /* Local profile feasibility: calibrate q/beta against measured/modelled drag
-       and allow bounded control authority above the current achieved value. */
+    /* Local profile feasibility: direct measured drag is always valid local
+       authority evidence. minimum_local_drag_confidence gates model-only
+       extrapolation when no live force measurement is available. */
     double local_drag_authority_multiplier;
     double minimum_local_drag_confidence;
     double minimum_drag_accel;

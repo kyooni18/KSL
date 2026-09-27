@@ -8,6 +8,7 @@
 #include "sim_telemetry.h"
 #include "landing_api.h"
 #include "taem_candidate_search.h"
+#include "taem_alignment.h"
 #include "taem_geometry.h"
 #include "taem_reachability.h"
 #include "terminal_solver.h"
@@ -92,6 +93,10 @@ static void test_tracker_normal_lift_balance(const TerminalModel *model,
                                 v3_scale(frame.up,180.0*sin(gamma)));
         sample.velocity_i_mps=v3_add(air_velocity,
             world_atmosphere_velocity_i(&model->world,sample.position_i_m));
+        sample.attitude.requested_aoa_rad=NAN;
+        sample.attitude.aoa_rad=NAN;
+        sample.attitude.requested_bank_rad=NAN;
+        sample.attitude.bank_rad=NAN;
         TaemGeometryState geometry;
         assert(taem_geometry_state(model,&sample,&geometry));
         TaemPathReference reference={
@@ -301,8 +306,11 @@ int main(void) {
         .altitude_m = geometry.altitude_above_runway_m,
         .flight_path_angle_deg = geometry.flight_path_angle_deg + 20.0
     };
+    TerminalDynamicState capped_state = state;
+    capped_state.attitude.requested_aoa_rad = 3.0 * 3.14159265358979323846 / 180.0;
+    capped_state.attitude.aoa_rad = 3.0 * 3.14159265358979323846 / 180.0;
     TaemTrackerOutput capped_demand = taem_tracker_update(&limited_model,
-        &state, &geometry, &high_lift_reference, 0.25);
+        &capped_state, &geometry, &high_lift_reference, 0.25);
     assert(capped_demand.valid);
     assert(fabs(capped_demand.control.angle_of_attack_rad *
         180.0 / 3.14159265358979323846 - 3.0) < 1e-9);
@@ -330,24 +338,37 @@ int main(void) {
     assert(memcmp(&snapshot.mm305_route, &first.mm305_route, sizeof(route)) == 0);
     assert(sizeof(TaemRoute) < 4096);
 
-    /* The MM305 descriptor ends at HAC exit at the configured Final glide
+    /* The MM305 descriptor ends at the alignment station at the configured Final glide
      * height; the untouched Final contract must still admit the live state. */
     size_t exit_cursor = route.count - 1;
     TaemGeometryState at_exit = geometry;
-    at_exit.runway_along_m = route.hac.exit.x;
-    at_exit.runway_cross_m = route.hac.exit.y;
+    at_exit.runway_along_m = route.alignment_along_m;
+    at_exit.runway_cross_m = 0.0;
     TaemPathReference exit_reference;
     size_t exit_index = 0;
     assert(taem_route_reference(&route, &at_exit, &exit_cursor,
         &exit_reference, &exit_index));
-    double expected_exit_altitude = model.site.altitude +
-        route.hac.final_length_m * tan(model.guidance.final_glide_slope *
-                                       3.14159265358979323846 / 180.0);
+    double expected_exit_altitude = route.profile_final_altitude_m;
     assert(exit_index == route.count - 1);
     assert(fabs(exit_reference.altitude_m - expected_exit_altitude) < 1e-6);
     assert(fabs(exit_reference.flight_path_angle_deg +
                 model.guidance.final_glide_slope) < 1e-6);
     assert(exit_reference.altitude_m > model.site.altitude);
+    /* Alignment guidance intentionally carries no absolute-altitude
+     * command, but solver bookkeeping must retain a finite explicit Final
+     * target altitude. This guards the live failure where ready=1 was later
+     * rejected because reference.altitude_m (NAN) leaked into path checks. */
+    TaemGeometryState alignment_geometry = at_exit;
+    alignment_geometry.runway_along_m = -model.guidance.final_approach_distance;
+    alignment_geometry.runway_cross_m = 0.0;
+    TaemPathReference alignment_reference =
+        taem_alignment_reference(&model, &alignment_geometry);
+    assert(isnan(alignment_reference.altitude_m));
+    assert(isfinite(taem_alignment_target_height(&model)));
+    assert(isfinite(taem_alignment_target_altitude(&model)));
+    assert(fabs(taem_alignment_target_altitude(&model) -
+        (model.site.altitude + taem_alignment_target_height(&model))) < 1e-9);
+
 
     /* Interior profile candidates preserve the live start and HAC-exit
      * altitude/FPA contracts while changing only the path between them. */
@@ -449,6 +470,14 @@ int main(void) {
     assert(planner_g.mm305_model_snapshot_id == model.snapshot_id);
     assert(guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
     assert(planner_g.mm305_replans == 1);
+    /* A failed later replan must leave the already committed route
+     * untouched; live MM305 continues flying the last qualified route. */
+    TaemRoute held_route = planner_g.mm305_route;
+    planner_g.mm305_planning_needed = true;
+    assert(!guidance_mm305_accept_plan(&planner_g, &rejected, &plan_cfg));
+    assert(planner_g.mm305_route_committed);
+    assert(memcmp(&planner_g.mm305_route, &held_route, sizeof(held_route)) == 0);
+
     /* A plan arriving after the HAC exit must not be adopted. */
     planner_g.mm305_hac_exit_reached = true;
     assert(!guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));

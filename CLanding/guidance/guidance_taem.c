@@ -77,6 +77,9 @@ static bool guidance_begin_mm305_restart(GuidanceMachine *g, const Telemetry *t,
     g->hac_radius = cfg->guidance.hac_radius;
     g->hac_side = 0.0;
     g->terminal_final_handoff_latched = false;
+    g->terminal_final_handoff_distance = NAN;
+    g->terminal_final_handoff_slope_deg = NAN;
+    g->terminal_final_handoff_speed_mps = NAN;
     g->terminal_path_committed = false;
     g->hac_completed = false;
     g->final_approach_captured = false;
@@ -261,6 +264,50 @@ static bool mm305_candidate_ok(const TaemFixedHacCandidate *c) {
         c->replay.path_constraints_ok;
 }
 
+/* The Final alignment station is an energy-management choice, not a fixed
+ * runway landmark.  A high/fast MM305 state needs more runway-upstream Final
+ * distance so Final does not inherit a steep, late energy dump.  Keep the
+ * configured distance as the low-energy minimum and smoothly extend it up to
+ * 9 km for high/fast arrivals.  The live replay frontier for this vehicle is
+ * between 9.0 and 9.5 km; keep margin instead of sitting on the infeasible edge.
+ * Once a route is committed this value is
+ * latched, so replanning cannot walk the alignment point toward the runway. */
+static double mm305_energy_aware_final_distance(const TerminalModel *model,
+        const TerminalDynamicState *state) {
+    if (!model) return NAN;
+    double base=fmax(500.0,model->guidance.final_approach_distance);
+    if (!state) return base;
+    TaemGeometryState geometry;
+    if (!taem_geometry_state(model,state,&geometry)) return base;
+
+    double slope=model->guidance.final_glide_slope;
+    if (!(slope>1.0&&slope<60.0)) return base;
+    double nominal_height=base*tan(slope*DEG2RAD);
+    double alignment_speed=fmax(model->guidance.final_alignment_speed,
+        model->vehicle.minimum_safe_speed);
+    double altitude_load=clampd(
+        fmax(0.0,geometry.altitude_above_runway_m-nominal_height)/3000.0,0.0,1.0);
+    double speed_load=clampd(
+        fmax(0.0,geometry.airspeed_mps-alignment_speed)/250.0,0.0,1.0);
+    double load=fmax(altitude_load,speed_load);
+    double maximum=fmax(base,9000.0);
+    return base+load*fmax(0.0,maximum-base);
+}
+
+static double mm305_final_alignment_speed_for_distance(const TerminalModel *model,
+        double final_distance_m) {
+    if (!model) return NAN;
+    double base=fmax(model->guidance.final_alignment_speed,
+        fmax(model->vehicle.minimum_safe_speed,model->vehicle.touchdown_speed));
+    /* A farther alignment station is useful only if MM305 does not throw away
+       the extra energy before Final receives it.  Preserve a modest kinetic
+       reserve as the station moves from 8 to 9 km; Final then spends that
+       reserve over the extra runway-upstream distance instead of forcing TAEM
+       to arrive at the same 160 m/s regardless of geometry. */
+    double extra_distance=clampd(final_distance_m-8000.0,0.0,1000.0);
+    return base+0.005*extra_distance;
+}
+
 Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *request) {
     Mm305PlanResult out;
     memset(&out,0,sizeof(out));
@@ -282,6 +329,18 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         return out;
     }
     *scaled=*model;
+    if (isfinite(request->final_approach_distance_m) &&
+            request->final_approach_distance_m>=500.0) {
+        double final_distance=request->final_approach_distance_m;
+        double base_slope=clampd(model->guidance.final_glide_slope,3.0,45.0);
+        double raw_handoff_height=final_distance*tan(base_slope*DEG2RAD);
+        double handoff_height=fmin(raw_handoff_height,4000.0);
+        scaled->guidance.final_approach_distance=final_distance;
+        scaled->guidance.final_glide_slope=clampd(
+            atan2(handoff_height,final_distance)*RAD2DEG,15.0,base_slope);
+        scaled->guidance.final_alignment_speed=
+            mm305_final_alignment_speed_for_distance(model,final_distance);
+    }
     mm305_scale_model(scaled,request->scale_mach,
         clampd(request->lift_scale,0.5,2.0),
         clampd(request->drag_scale,0.5,2.0));
@@ -291,6 +350,39 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
             scaled->vehicle.maximum_angle_of_attack,
             request->state.trim_aoa_ceiling_rad * RAD2DEG);
     mm305_reciprocal_model(scaled,reciprocal);
+    /* First try to qualify the exact provisional route the live tracker is
+       already flying.  A successful result is a bumpless promotion from
+       acquisition to committed MM305 guidance; only a failed seed falls back to
+       the wider HAC search. */
+    if (request->seed_route_valid &&
+        fabs(request->seed_route.alignment_along_m+
+            scaled->guidance.final_approach_distance)<=500.0 &&
+        (!request->restrict_side || request->seed_route.side * request->side > 0.0)) {
+        const TerminalModel *seed_model =
+            request->seed_runway_end == 1 ? reciprocal : scaled;
+        TaemFixedHacCandidate seed = taem_fixed_hac_evaluate_route(
+            seed_model, &request->state, &request->seed_route,
+            request->seed_runway_end, 0.5, 420.0);
+        if (mm305_candidate_ok(&seed)) {
+            out.valid = true;
+            out.found = true;
+            out.candidate = seed;
+            snprintf(out.diagnostic,sizeof(out.diagnostic),
+                "MM305 provisional route promoted after native replay scale=%.3f/%.3f",
+                request->lift_scale,request->drag_scale);
+            free(scaled); free(reciprocal);
+            out.solve_wall_s=mm305_wall_seconds()-started;
+            return out;
+        }
+        const char *seed_diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+        if (seed_diag && strcmp(seed_diag,"2")==0)
+            fprintf(stderr,
+                "MM305 seed route rejected: side=%+.0f radius=%.0f sweep=%.1f length=%.0f reason=%s elapsed=%.1f\n",
+                seed.side,seed.route.hac.radius_m,
+                seed.route.hac.arc_sweep_rad*RAD2DEG,
+                seed.route.length_m,seed.reason?seed.reason:"unknown",
+                seed.replay.elapsed_s);
+    }
     /* HAC size is the route's energy lever: a larger HAC flies a longer path
        and sheds more energy, a smaller one less.  The candidate search already
        tightens the radius when the configured one fails; add the larger HAC it
@@ -323,6 +415,21 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
                 radius,200.0,0.5,420.0);
             for (int i=0;i<search.candidate_count;++i)
                 search.candidates[i].runway_end=runway_end;
+            const char *plan_diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+            if (plan_diag && strcmp(plan_diag,"2")==0) {
+                fprintf(stderr,
+                    "MM305 search pass: end=%s radius=%.0f selected=%d candidates=%d",
+                    runway_end==1?"RECIP":"CONF",radius,
+                    search.selected_candidate,search.candidate_count);
+                for (int di=0;di<search.candidate_count;++di) {
+                    const TaemFixedHacCandidate *dc=&search.candidates[di];
+                    fprintf(stderr," [%c status=%d len=%.0f %s]",
+                        dc->side>0.0?'R':'L',(int)dc->status,
+                        dc->route_built?dc->route.length_m:NAN,
+                        dc->reason?dc->reason:"unknown");
+                }
+                fprintf(stderr,"\n");
+            }
             for (int i=0;i<search.candidate_count;++i) {
                 const TaemFixedHacCandidate *c=&search.candidates[i];
                 if (!mm305_candidate_ok(c)) continue;
@@ -370,6 +477,14 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
         g->taem_interface_target.hac_radius>0.0 ?
         g->taem_interface_target.hac_radius : g->hac_radius;
     if (!(r.hac_radius_m>0.0)) r.hac_radius_m=cfg->guidance.hac_radius;
+    r.final_approach_distance_m=g->terminal_final_handoff_latched &&
+        isfinite(g->terminal_final_handoff_distance) &&
+        g->terminal_final_handoff_distance>=500.0 ?
+        g->terminal_final_handoff_distance :
+        mm305_energy_aware_final_distance(model,&r.state);
+    if (!(r.final_approach_distance_m>=500.0) ||
+            !isfinite(r.final_approach_distance_m))
+        r.final_approach_distance_m=cfg->guidance.final_approach_distance;
     r.search_both_ends=cfg->site.allow_reciprocal_runway && !g->runway_end_committed;
     r.upstream_end=g->runway_end_preview_valid&&g->runway_end_index==1?1:0;
     r.restrict_side=g->mm305_route_committed||g->mm305_replans>0;
@@ -380,6 +495,12 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
         r.state.position_i_m,r.state.velocity_i_mps,r.state.ut_s,r.state.mass_kg,
         r.state.attitude.aoa_rad,r.state.attitude.bank_rad);
     r.scale_mach=observed.mach;
+    if (g->mm305_acquisition_route_valid &&
+            g->mm305_acquisition_route.valid) {
+        r.seed_route_valid = true;
+        r.seed_route = g->mm305_acquisition_route;
+        r.seed_runway_end = r.upstream_end;
+    }
     r.valid=true;
     return r;
 }
@@ -487,6 +608,17 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
         return false;
     }
     const TaemFixedHacCandidate *candidate=&result->candidate;
+    double final_distance=-candidate->route.alignment_along_m;
+    if (!(final_distance>=500.0) || !isfinite(final_distance))
+        final_distance=cfg->guidance.final_approach_distance;
+    double final_slope=candidate->route.profile_final_slope_deg;
+    if (!(final_slope>=3.0 && final_slope<=45.0) || !isfinite(final_slope))
+        final_slope=cfg->guidance.final_glide_slope;
+    TerminalModel handoff_model={0};
+    handoff_model.guidance=cfg->guidance;
+    handoff_model.vehicle=cfg->vehicle;
+    double final_speed=mm305_final_alignment_speed_for_distance(
+        &handoff_model,final_distance);
     bool replan=g->mm305_route_committed;
     g->mm305_route=candidate->route;
     g->runway_end_index=candidate->runway_end;
@@ -495,7 +627,7 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
     fprintf(stderr,"MM305_ROUTE {\"runwayEnd\":%d,\"side\":%.17g,"
         "\"radius\":%.17g,\"sweep\":%.17g,\"leadLength\":%.17g,\"arcLength\":%.17g,"
         "\"entry\":[%.17g,%.17g],\"center\":[%.17g,%.17g],\"exit\":[%.17g,%.17g],"
-        "\"finalDistance\":%.17g,\"replan\":%s,\"scaleMach\":%.3f,"
+        "\"finalDistance\":%.17g,\"finalSlope\":%.3f,\"finalSpeed\":%.1f,\"replan\":%s,\"scaleMach\":%.3f,"
         "\"liftScale\":%.4f,\"dragScale\":%.4f,"
         "\"solveWall\":%.3f}\n",
         candidate->runway_end,candidate->side,candidate->route.hac.radius_m,
@@ -504,7 +636,7 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
         candidate->route.hac.entry.x,candidate->route.hac.entry.y,
         candidate->route.hac.center.x,candidate->route.hac.center.y,
         candidate->route.hac.exit.x,candidate->route.hac.exit.y,
-        cfg->guidance.final_approach_distance,replan?"true":"false",
+        final_distance,final_slope,final_speed,replan?"true":"false",
         result->scale_mach,result->lift_scale,result->drag_scale,result->solve_wall_s);
     g->mm305_route_cursor=0;
     g->mm305_route_committed=true;
@@ -526,7 +658,9 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
     g->terminal_path_kind=TERMINAL_PATH_HAC;
     g->terminal_path_committed=true;
     g->terminal_final_handoff_latched=true;
-    g->terminal_final_handoff_distance=cfg->guidance.final_approach_distance;
+    g->terminal_final_handoff_distance=final_distance;
+    g->terminal_final_handoff_slope_deg=final_slope;
+    g->terminal_final_handoff_speed_mps=final_speed;
     g->hac_completed=false;
     g->hac_captured=true;
     return true;
@@ -561,23 +695,22 @@ static void mm305_observe_force_scale(GuidanceMachine *g, const Telemetry *t,
     else g->mm305_drag_scale+=a*(drag_ratio-g->mm305_drag_scale);
     const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
     if (diag && (first_lift || first_drag || strcmp(diag,"aero")==0))
-        fprintf(stderr,"MM305 aero sample: raw=%.3f/%.3f clamped=%.3f/%.3f filtered=%.3f/%.3f measured=%.0f/%.0f modeled=%.0f/%.0f q=%.0f aoa=%.2f sb=%.3f\n",
-            lift_raw,drag_raw,lift_ratio,drag_ratio,g->mm305_lift_scale,g->mm305_drag_scale,
+        fprintf(stderr,"MM305 aero sample: ut=%.2f mach=%.3f aoa=%.2f raw=%.3f/%.3f clamped=%.3f/%.3f filtered=%.3f/%.3f measured=%.0f/%.0f modeled=%.0f/%.0f q=%.0f sb=%.3f\n",
+            current->ut_s,modeled.mach,t->angle_of_attack,lift_raw,drag_raw,
+            lift_ratio,drag_ratio,g->mm305_lift_scale,g->mm305_drag_scale,
             fabs(t->lift_force),fabs(t->drag_force),modeled.lift_n,modeled.drag_n,
-            t->dynamic_pressure,t->angle_of_attack,g->taem_speedbrake_fraction);
+            t->dynamic_pressure,g->taem_speedbrake_fraction);
 
 }
 
-/* Build the concrete path flown while no replay-qualified route is held.
- * This is still provisional: it may be replaced by the async planner at any
- * time, and it never satisfies the MM305->Final admission contract.  The key
- * invariant is simpler: while it is displayed as acquisition guidance, the
- * tracker follows this exact same route geometry. */
-static bool mm305_build_acquisition_route(GuidanceMachine *g,
+/* Build one concrete provisional route without mutating guidance state.
+ * Acquisition uses this both to compare real route lengths across sweep choices
+ * and to install the chosen path. */
+static bool mm305_make_acquisition_route(const GuidanceMachine *g,
         const TerminalModel *model, const TerminalDynamicState *current,
         const TaemGeometryState *geometry, double hac_radius, double side,
-        double selected_sweep) {
-    if (!g || !model || !current || !geometry) return false;
+        double selected_sweep, TaemRoute *out, char *reason, size_t reason_size) {
+    if (!model || !current || !geometry || !out) return false;
 
     TaemReachability reachability;
     if (!taem_fixed_hac_turn_reachability(model,current,geometry,hac_radius,
@@ -607,20 +740,42 @@ static bool mm305_build_acquisition_route(GuidanceMachine *g,
     double spacing=clampd(0.5*geometry->ground_speed_mps,250.0,700.0);
 
     TaemRoute route={0};
-    char reason[160]={0};
     bool built=taem_route_build_hac_shortest(model,geometry,hac_radius,side,
         selected_sweep,spacing,live_curvature,peak_curvature_limit,
-        &route,reason,sizeof(reason));
+        &route,reason,reason_size);
     if (!built)
         built=taem_route_build_hac(model,geometry,hac_radius,side,
-            selected_sweep,spacing,live_curvature,&route,reason,sizeof(reason));
+            selected_sweep,spacing,live_curvature,&route,reason,reason_size);
     if (!built) {
         const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
-        if (diag && strcmp(diag,"2")==0 && !g->diagnostic_shadow)
+        if (diag && strcmp(diag,"2")==0 && g && !g->diagnostic_shadow)
             fprintf(stderr,"MM305 acquisition route build failed: %s\n",
-                reason[0]?reason:"unknown");
+                reason&&reason[0]?reason:"unknown");
         return false;
     }
+    if (!taem_route_limit_initial_vertical_authority(
+            model,current,geometry,&route)) {
+        const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+        if (diag && strcmp(diag,"2")==0 && g && !g->diagnostic_shadow)
+            fprintf(stderr,
+                "MM305 acquisition route rejected: initial vertical authority cannot support route curvature\n");
+        return false;
+    }
+    *out=route;
+    return true;
+}
+
+static bool mm305_install_acquisition_route(GuidanceMachine *g,
+        const TerminalModel *model, const TerminalDynamicState *current,
+        const TaemGeometryState *geometry, double hac_radius, double side,
+        double selected_sweep, const TaemRoute *prebuilt) {
+    if (!g) return false;
+    TaemRoute route={0};
+    char reason[160]={0};
+    if (prebuilt && prebuilt->valid) route=*prebuilt;
+    else if (!mm305_make_acquisition_route(g,model,current,geometry,hac_radius,
+            side,selected_sweep,&route,reason,sizeof(reason)))
+        return false;
 
     g->mm305_acquisition_route=route;
     g->mm305_acquisition_route_cursor=0;
@@ -712,64 +867,131 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
     double planning_drag=fmax(0.75,0.85*available_drag);
     double required_path=energy_excess/planning_drag;
 
-    double selected_sweep=0.5*M_PI;
-    double selected_path=0.0;
-    for (double sweep_deg=90.0;sweep_deg<=270.0+1e-6;sweep_deg+=15.0) {
-        TaemFixedHacGeometry trial;
-        double sweep=sweep_deg*DEG2RAD;
-        if (!taem_hac_geometry_sweep(model,hac_radius,side,sweep,&trial))
-            continue;
-        double dx=trial.entry.x-geometry->runway_along_m;
-        double dy=trial.entry.y-geometry->runway_cross_m;
-        double rollout=fmax(0.0,
-            -model->guidance.final_approach_distance-trial.exit.x);
-        double path=hypot(dx,dy)+trial.arc_length_m+rollout;
-        selected_sweep=sweep;
-        selected_path=path;
-        if (path>=1.10*required_path) break;
-    }
-    if (!(selected_path>0.0)) return false;
-
+    /* Choose using the route the tracker would actually fly, not a chord+
+       arc approximation.  The old approximation could select a 135 deg sweep
+       whose built cubic lead made the real route ~140 km even though the energy
+       target was only ~40 km.  Re-evaluate at a modest cadence so the displayed
+       and tracked path remains stable between updates. */
     bool refresh=!g->mm305_acquisition_route_valid||
         !g->mm305_acquisition_route.valid||
-        current->ut_s-g->mm305_acquisition_route_ut>=6.0||
-        !isfinite(g->mm305_acquisition_sweep_rad)||
-        fabs(selected_sweep-g->mm305_acquisition_sweep_rad)>15.0*DEG2RAD;
+        current->ut_s-g->mm305_acquisition_route_ut>=4.0;
     if (refresh) {
-        if (!mm305_build_acquisition_route(g,model,current,geometry,hac_radius,
-                side,selected_sweep))
+        double selected_sweep=NAN;
+        double selected_error=INFINITY;
+        double selected_length=INFINITY;
+        TaemRoute selected_route={0};
+
+        /* Use the same radius freedom as qualification.  At the handoff save,
+           a 12 km HAC can require a 90+ km finite lead while a tight HAC reduces
+           that lead by tens of kilometres.  Acquisition must improve geometry,
+           not lock itself to the nominal radius and wait for an impossible plan. */
+        const double radius_candidates[]={
+            hac_radius,
+            fmax(3000.0,0.60*hac_radius),
+            fmax(3000.0,0.36*hac_radius),
+            3000.0
+        };
+        for (size_t ri=0;ri<sizeof(radius_candidates)/sizeof(radius_candidates[0]);++ri) {
+            double candidate_radius=radius_candidates[ri];
+            bool duplicate=false;
+            for (size_t rj=0;rj<ri;++rj)
+                if (fabs(candidate_radius-radius_candidates[rj])<1.0)
+                    duplicate=true;
+            if (duplicate) continue;
+
+            for (double sweep_deg=15.0;sweep_deg<=270.0+1e-6;sweep_deg+=15.0) {
+                double sweep=sweep_deg*DEG2RAD;
+                TaemRoute trial={0};
+                char reason[160]={0};
+                if (!mm305_make_acquisition_route(g,model,current,geometry,
+                        candidate_radius,side,sweep,&trial,reason,sizeof(reason)))
+                    continue;
+                double error=fabs(trial.length_m-required_path);
+                bool trial_over=trial.length_m>required_path;
+                bool selected_over=selected_route.valid&&selected_length>required_path;
+
+                /* If every build is too long, the shortest route is the only
+                   recoverable direction for an unpowered vehicle. Otherwise use
+                   the closest energy length, breaking ties shorter. */
+                bool prefer=false;
+                if (!selected_route.valid) prefer=true;
+                else if (trial_over && selected_over)
+                    prefer=trial.length_m<selected_length-1.0;
+                else if (error<selected_error-1.0)
+                    prefer=true;
+                else if (fabs(error-selected_error)<=1.0 &&
+                        trial.length_m<selected_length)
+                    prefer=true;
+                if (prefer) {
+                    selected_error=error;
+                    selected_length=trial.length_m;
+                    selected_sweep=sweep;
+                    selected_route=trial;
+                }
+            }
+        }
+        if (!selected_route.valid || !isfinite(selected_sweep) ||
+            !mm305_install_acquisition_route(g,model,current,geometry,
+                selected_route.hac.radius_m,side,selected_sweep,&selected_route)) {
             g->mm305_acquisition_route_valid=false;
+            return false;
+        }
     }
 
+    double selected_sweep=g->mm305_acquisition_sweep_rad;
+    double selected_path=g->mm305_acquisition_route.length_m;
     bool have_route=g->mm305_acquisition_route_valid&&
         taem_route_reference(&g->mm305_acquisition_route,geometry,
             &g->mm305_acquisition_route_cursor,reference,NULL);
-    if (!have_route) {
-        if (!mm305_build_acquisition_route(g,model,current,geometry,hac_radius,
-                side,selected_sweep) ||
-            !taem_route_reference(&g->mm305_acquisition_route,geometry,
-                &g->mm305_acquisition_route_cursor,reference,NULL))
-            return false;
-    }
+    if (!have_route)
+        return false;
 
     double route_remaining=taem_route_remaining_at_index(
         &g->mm305_acquisition_route,g->mm305_acquisition_route_cursor);
     if (isfinite(route_remaining)&&route_remaining>0.0)
         selected_path=route_remaining;
 
-    double altitude_to_alignment=fmax(0.0,
-        geometry->altitude_above_runway_m-alignment_height);
-    double required_average_slope=
-        atan2(altitude_to_alignment,fmax(selected_path,2000.0))*RAD2DEG;
-    /* Keep the provisional route's lateral geometry exact, but preserve altitude
-       while the qualified planner works.  The committed route later owns the
-       full vertical profile. */
+    /* Acquisition owns the exact lateral route, but its analytic vertical
+       curvature is not replay-qualified yet.  Feeding that curvature forward at
+       the live handoff turned a ~1 deg FPA correction into >20 m/s^2 of required
+       vertical lift.  Track the route FPA without altitude/curvature feed-forward,
+       then back the requested pull-up toward the measured FPA until the native
+       tracker reports adequate vertical authority.  A committed route retains its
+       full tabulated vertical profile. */
     reference->altitude_m=NAN;
-    reference->flight_path_angle_deg=
-        -clampd(required_average_slope,2.0,8.0);
     reference->vertical_curvature_per_m=0.0;
-
+    double route_fpa=reference->flight_path_angle_deg;
+    double measured_fpa=geometry->flight_path_angle_deg;
     TaemTrackerOutput full=taem_tracker_update(model,current,geometry,reference,dt);
+    if (!full.valid) return false;
+    if (route_fpa>measured_fpa &&
+            (!full.vertical_authority_ok ||
+             full.required_vertical_lift_mps2>
+                full.delivered_vertical_lift_mps2+0.25)) {
+        TaemPathReference best=*reference;
+        best.flight_path_angle_deg=measured_fpa;
+        TaemTrackerOutput best_demand=taem_tracker_update(
+            model,current,geometry,&best,dt);
+        if (!best_demand.valid) return false;
+        double lo=measured_fpa,hi=route_fpa;
+        for (int i=0;i<8;++i) {
+            double candidate=0.5*(lo+hi);
+            TaemPathReference trial=*reference;
+            trial.flight_path_angle_deg=candidate;
+            TaemTrackerOutput td=taem_tracker_update(
+                model,current,geometry,&trial,dt);
+            bool ok=td.valid&&td.vertical_authority_ok&&
+                td.required_vertical_lift_mps2<=
+                    td.delivered_vertical_lift_mps2+0.25;
+            if (ok) {
+                lo=candidate;
+                best=trial;
+                best_demand=td;
+            } else hi=candidate;
+        }
+        *reference=best;
+        full=best_demand;
+    }
     if (!full.valid) return false;
     double full_lateral=fabs(full.required_lateral_accel_mps2);
     double lateral_limit=0.80*fmax(0.0,full.available_lateral_accel_mps2);
@@ -814,8 +1036,6 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         const VehicleState *vehicle_state,double course,const PlanetModel *planet,
         AerodynamicModel aero,const LandingConfiguration *cfg,
         const TerminalModel *model,double dt) {
-    (void)planet;
-    (void)aero;
     if (!g || !t || !vehicle_state || !cfg || !model || !model->replay_validated)
         return terminal_abort(g,
             "MM305 native fixed-HAC model is unavailable; no legacy HAC fallback is permitted.");
@@ -876,6 +1096,18 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     double live_drag_scale=isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?
         clampd(g->mm305_drag_scale,0.5,2.0):1.0;
     mm305_scale_model(&live_model,t->mach,live_lift_scale,live_drag_scale);
+    if (g->terminal_final_handoff_latched &&
+            isfinite(g->terminal_final_handoff_distance) &&
+            g->terminal_final_handoff_distance>=500.0) {
+        live_model.guidance.final_approach_distance=g->terminal_final_handoff_distance;
+        if (isfinite(g->terminal_final_handoff_slope_deg) &&
+                g->terminal_final_handoff_slope_deg>=3.0 &&
+                g->terminal_final_handoff_slope_deg<=45.0)
+            live_model.guidance.final_glide_slope=g->terminal_final_handoff_slope_deg;
+        if (isfinite(g->terminal_final_handoff_speed_mps) &&
+                g->terminal_final_handoff_speed_mps>0.0)
+            live_model.guidance.final_alignment_speed=g->terminal_final_handoff_speed_mps;
+    }
     const TerminalModel *control_model=&live_model;
     TaemGeometryState geometry;
     if (!taem_geometry_state(control_model,&current,&geometry))
@@ -898,23 +1130,37 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             return terminal_abort(g,
                 "MM305 missed the Final alignment point; late runway-line capture is not permitted.");
         if (taem_alignment_ready(control_model,&current,&geometry)) {
-            fprintf(stderr,
-                "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=runway-aligned\n",
-                (unsigned long long)g->mm305_model_snapshot_id,
-                g->mm305_route.side,g->mm305_route.hac.radius_m,
-                g->mm305_route.hac.arc_sweep_rad*RAD2DEG,
-                g->mm305_route.lead_length_m,g->mm305_route_cursor,
-                g->mm305_route.count,demand.course_error_deg,
-                geometry.heading_error_deg,geometry.runway_along_m,
-                geometry.runway_cross_m,geometry.altitude_above_runway_m,
-                geometry.airspeed_mps,geometry.flight_path_angle_deg,
-                current.attitude.bank_rad*RAD2DEG,
-                current.attitude.aoa_rad*RAD2DEG,
-                demand.control.bank_rad*RAD2DEG,
-                demand.control.angle_of_attack_rad*RAD2DEG);
-            g->mm305_hac_exit_reached=true;
-            g->hac_completed=true;
-            g->hac_remaining=0.0;
+            /* Geometric alignment is necessary but not sufficient for ownership
+               transfer.  Keep MM305 on the runway line until Final's own priced
+               delivery contract accepts the measured state; otherwise the old
+               +/-250 m, +/-10 m/s readiness window could hand Final a state that
+               it immediately had to abort. */
+            TerminalPreflarePlan final_plan={0};
+            bool final_approach=terminal_outer_capture_admissible(g,t,course,planet,aero,cfg,
+                &final_plan);
+            TaemTerminalContract final_contract=terminal_delivery_contract(g,t,course,planet,cfg,
+                &final_plan);
+            TaemTerminalEvaluation final_eval=
+                taem_exec_evaluate_terminal_contract(&final_contract);
+            if (final_approach && final_eval.valid && final_eval.feasible) {
+                fprintf(stderr,
+                    "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=final-contract-ready\n",
+                    (unsigned long long)g->mm305_model_snapshot_id,
+                    g->mm305_route.side,g->mm305_route.hac.radius_m,
+                    g->mm305_route.hac.arc_sweep_rad*RAD2DEG,
+                    g->mm305_route.lead_length_m,g->mm305_route_cursor,
+                    g->mm305_route.count,demand.course_error_deg,
+                    geometry.heading_error_deg,geometry.runway_along_m,
+                    geometry.runway_cross_m,geometry.altitude_above_runway_m,
+                    geometry.airspeed_mps,geometry.flight_path_angle_deg,
+                    current.attitude.bank_rad*RAD2DEG,
+                    current.attitude.aoa_rad*RAD2DEG,
+                    demand.control.bank_rad*RAD2DEG,
+                    demand.control.angle_of_attack_rad*RAD2DEG);
+                g->mm305_hac_exit_reached=true;
+                g->hac_completed=true;
+                g->hac_remaining=0.0;
+            }
         }
         status=g->mm305_hac_exit_reached?
             "MM305 delivered a settled runway-line state to Final." :
@@ -931,7 +1177,43 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         g->hac_remaining=route_remaining;
         g->hac_progress_valid=true;
         g->hac_captured=true;
-        demand=taem_tracker_update(control_model,&current,&geometry,&reference,dt);
+
+        /* An unpowered vehicle cannot correct an energy deficit with the
+           speedbrake: it must exchange altitude for airspeed.  The certified
+           route remains the geometric target, but while there is ample path
+           remaining, bias the tracker toward a steeper local glide and a lower
+           temporary altitude target.  Fade the bias out before the alignment
+           station so the exact Final delivery geometry is still recovered. */
+        TaemPathReference tracker_reference=reference;
+        double tracker_plan_speed=taem_route_planned_speed(
+            &g->mm305_route,reference.station_m);
+        if (isfinite(tracker_plan_speed)&&tracker_plan_speed>1.0&&
+                isfinite(reference.altitude_m)&&route_remaining>3500.0) {
+            double dh=control_model->site.altitude+geometry.altitude_above_runway_m-
+                reference.altitude_m;
+            double equivalent=sqrt(fmax(0.0,
+                geometry.airspeed_mps*geometry.airspeed_mps+2.0*9.81*dh));
+            double ratio=equivalent/tracker_plan_speed-1.0;
+            if (ratio<-0.03) {
+                double strength=clampd((-ratio-0.03)/0.15,0.0,1.0);
+                double fade=clampd((route_remaining-3500.0)/5000.0,0.0,1.0);
+                double deficit_height=fmax(0.0,
+                    (tracker_plan_speed*tracker_plan_speed-equivalent*equivalent)/(2.0*9.81));
+                double altitude_relief=fmin(700.0,0.70*deficit_height)*fade;
+                tracker_reference.altitude_m-=altitude_relief;
+                tracker_reference.flight_path_angle_deg=clampd(
+                    reference.flight_path_angle_deg-8.0*strength*fade,-35.0,-2.0);
+                if (!g->diagnostic_shadow) {
+                    const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+                    if (diag&&strcmp(diag,"2")==0)
+                        fprintf(stderr,
+                            "MM305 energy recovery: ratio=%+.1f%% remaining=%.0f fpa %.1f->%.1f altRelief=%.0f\n",
+                            100.0*ratio,route_remaining,reference.flight_path_angle_deg,
+                            tracker_reference.flight_path_angle_deg,altitude_relief);
+                }
+            }
+        }
+        demand=taem_tracker_update(control_model,&current,&geometry,&tracker_reference,dt);
         if (!demand.valid)
             return terminal_abort(g,
                 "Live MM305 tracker could not produce a bounded control command.");
@@ -972,31 +1254,46 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             energy_ratio=sqrt(fmax(0.0,geometry.airspeed_mps*geometry.airspeed_mps+
                 2.0*9.81*dh))/plan_speed_now-1.0;
         }
-        bool energy_off_plan=isfinite(energy_ratio)&&fabs(energy_ratio)>0.10&&
-            isfinite(route_remaining)&&route_remaining>15000.0;
+        bool energy_high=isfinite(energy_ratio)&&energy_ratio>0.10;
+        bool energy_low=isfinite(energy_ratio)&&energy_ratio<-0.06;
+        bool energy_off_plan=(energy_high||energy_low)&&isfinite(route_remaining);
+        double energy_replan_interval=energy_low?10.0:replan_interval_s;
         if (g->mm305_route_committed && g->mm305_async_planning &&
             !g->mm305_planning_needed &&
-            t->ut-g->mm305_last_plan_attempt_ut>=replan_interval_s &&
+            t->ut-g->mm305_last_plan_attempt_ut>=energy_replan_interval &&
             (energy_off_plan ||
              fabs(demand.cross_track_error_m)>1000.0 ||
              fabs(demand.course_error_deg)>20.0 ||
              (isfinite(reference.flight_path_angle_deg) &&
               fabs(geometry.flight_path_angle_deg-reference.flight_path_angle_deg)>6.0))) {
-            double remaining=taem_route_remaining_at_index(&g->mm305_route,g->mm305_route_cursor);
-            if (isfinite(remaining) && remaining>fmax(8000.0,0.35*g->mm305_route.hac.arc_length_m)) {
+            double remaining=taem_route_remaining_at_index(
+                &g->mm305_route,g->mm305_route_cursor);
+            /* Excess energy can wait for generous route authority.  An energy
+               deficit cannot: with the brake already shut, replanning is the only
+               way to trade altitude for speed and shorten the remaining path. */
+            double minimum_remaining=energy_low?
+                fmax(4500.0,0.20*g->mm305_route.hac.arc_length_m):
+                fmax(8000.0,0.35*g->mm305_route.hac.arc_length_m);
+            if (isfinite(remaining) && remaining>minimum_remaining) {
                 if (energy_off_plan && !g->diagnostic_shadow)
-                    fprintf(stderr,"MM305 energy off plan by %+.0f%% with %.0f m left; re-planning.\n",
+                    fprintf(stderr,
+                        "MM305 energy off plan by %+.0f%% with %.0f m left; re-planning.\n",
                         100.0*energy_ratio,remaining);
                 g->mm305_planning_needed=true;
                 g->mm305_last_plan_attempt_ut=t->ut;
                 g->mm305_plan_request_ut=t->ut;
             }
         }
+
         double exit_distance=hypot(
             geometry.runway_along_m-g->mm305_route.alignment_along_m,
             geometry.runway_cross_m);
-        if (g->mm305_route_committed && g->mm305_route_cursor+2>=g->mm305_route.count &&
-            exit_distance<=700.0 && fabs(demand.course_error_deg)<=12.0) {
+        double alignment_capture=taem_alignment_capture_distance(
+            control_model,&geometry);
+        if (g->mm305_route_committed &&
+            isfinite(route_remaining) && route_remaining<=alignment_capture &&
+            exit_distance<=alignment_capture+500.0 &&
+            fabs(demand.course_error_deg)<=12.0) {
             fprintf(stderr,
                 "MM305_ALIGNMENT_ROUTE_END model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f\n",
                 (unsigned long long)g->mm305_model_snapshot_id,
@@ -1063,7 +1360,13 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        its tabulated speed/altitude profile.  Acquisition uses endpoint energy and
        the provisional HAC path, so route-search latency cannot silently preserve
        too much energy all the way to KSC. */
-    const double sb_cap=0.50, sb_nominal=0.25, sb_slew_per_s=0.05;
+    /* The replayed MM305 speed profile is a clean-glider profile: split-rudder
+       drag is not part of terminal_solver propagation.  Therefore the brake is
+       corrective authority only, never a nominal 25% bias.  Opening stays
+       deliberately slow, while stowing is faster so a falling energy error does
+       not turn into an unrecoverable underspeed several seconds later. */
+    const double sb_cap=0.50, sb_acquisition_nominal=0.25;
+    const double sb_deploy_slew_per_s=0.05, sb_stow_slew_per_s=0.20;
     const double sb_stow_remaining_m=500.0, sb_fade_m=2500.0;
     double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
         fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;
@@ -1086,20 +1389,32 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         double equivalent=sqrt(fmax(0.0,geometry.airspeed_mps*geometry.airspeed_mps+
             2.0*9.81*surplus_height));
         double ratio=equivalent/planned_speed-1.0;
-        double energy_high=clampd(ratio/0.02,0.0,1.0);
-        double authority_fade=fmax(sb_geometric_fade,energy_high);
-        sb_limit=sb_cap*authority_fade;
-        double sb_base=sb_nominal*authority_fade;
-        g->taem_speedbrake_integral=clampd(
-            g->taem_speedbrake_integral+0.05*ratio*sb_dt,
-            -sb_base,sb_limit-sb_base);
-        sb_target=clampd(sb_base+2.5*ratio+g->taem_speedbrake_integral,
-            0.0,sb_limit);
+        /* A farther Final station already buys clean-glider dissipation distance.
+           Do not spend the same split-rudder authority used by the short 8 km
+           corridor or natural drag will compound it and create a late underspeed. */
+        double extended_final=clampd(
+            (control_model->guidance.final_approach_distance-8000.0)/2000.0,
+            0.0,1.0);
+        double committed_cap=sb_cap*(1.0-0.40*extended_final);
+        double energy_deadband=0.01+0.03*extended_final;
+        double brake_error=fmax(0.0,ratio-energy_deadband);
+        double proportional_gain=2.5-0.8*extended_final;
+        double integral_gain=0.04*(1.0-0.50*extended_final);
+        sb_limit=committed_cap*sb_geometric_fade;
+        if (brake_error>0.0)
+            g->taem_speedbrake_integral=clampd(
+                g->taem_speedbrake_integral+integral_gain*brake_error*sb_dt,
+                0.0,sb_limit);
+        else
+            g->taem_speedbrake_integral=fmax(0.0,
+                g->taem_speedbrake_integral-0.14*sb_dt);
+        sb_target=clampd(proportional_gain*brake_error+
+            g->taem_speedbrake_integral,0.0,sb_limit);
         if (diagnostics && strcmp(diagnostics,"2")==0 && !g->diagnostic_shadow)
             fprintf(stderr,
-                "TAEM speedbrake: V=%.1f Veq=%.1f plan=%.1f dh=%.0f limit=%.2f target=%.2f\n",
+                "TAEM speedbrake: V=%.1f Veq=%.1f plan=%.1f dh=%.0f limit=%.2f target=%.2f actual=%.2f\n",
                 geometry.airspeed_mps,equivalent,planned_speed,surplus_height,
-                sb_limit,sb_target);
+                sb_limit,sb_target,g->taem_speedbrake_fraction);
     } else if (!g->mm305_route_committed &&
             isfinite(acquisition_required_drag) &&
             isfinite(acquisition_available_drag)) {
@@ -1107,7 +1422,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             fmax(acquisition_available_drag,0.25)-1.0;
         double energy_high=clampd(ratio/0.15,0.0,1.0);
         sb_limit=sb_cap;
-        double sb_base=sb_nominal*energy_high;
+        double sb_base=sb_acquisition_nominal*energy_high;
         g->taem_speedbrake_integral=clampd(
             g->taem_speedbrake_integral+0.04*ratio*sb_dt,
             -sb_base,sb_limit-sb_base);
@@ -1122,10 +1437,11 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         g->taem_speedbrake_integral=0.0;
     }
 
-    double sb_step=sb_slew_per_s*sb_dt;
+    double sb_open_step=sb_deploy_slew_per_s*sb_dt;
+    double sb_close_step=sb_stow_slew_per_s*sb_dt;
     g->taem_speedbrake_fraction=clampd(sb_target,
-        g->taem_speedbrake_fraction-sb_step,
-        g->taem_speedbrake_fraction+sb_step);
+        g->taem_speedbrake_fraction-sb_close_step,
+        g->taem_speedbrake_fraction+sb_open_step);
     command.speedbrake_fraction=g->taem_speedbrake_fraction;
     GuidanceResult result=stabilized(g,
         result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);

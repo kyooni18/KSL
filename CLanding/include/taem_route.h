@@ -39,6 +39,7 @@ typedef struct {
     size_t count;
     size_t lead_count;
     size_t arc_count;
+    size_t rollout_count;
     double length_m;
     double side;
     TaemFixedHacGeometry hac;
@@ -48,6 +49,8 @@ typedef struct {
     double p3_along_m, p3_cross_m;
     double lead_length_m;
     float lead_arc_fraction_lut[TAEM_ROUTE_LEAD_LUT_POINTS];
+    double rollout_length_m;
+    double alignment_along_m;
     double initial_course_deg, runway_heading_deg;
     double profile_start_altitude_m, profile_start_fpa_deg;
     double profile_final_altitude_m, profile_final_slope_deg;
@@ -83,8 +86,14 @@ static inline double taem_route_station_at_index(const TaemRoute *route, size_t 
     if (index >= route->count) index = route->count - 1;
     if (index <= route->lead_count)
         return route->lead_length_m * (double)index / (double)route->lead_count;
-    return route->lead_length_m + route->hac.arc_length_m *
-        (double)(index - route->lead_count) / (double)route->arc_count;
+    if (index <= route->lead_count + route->arc_count)
+        return route->lead_length_m + route->hac.arc_length_m *
+            (double)(index - route->lead_count) / (double)route->arc_count;
+    if (route->rollout_count == 0) return route->lead_length_m + route->hac.arc_length_m;
+    return route->lead_length_m + route->hac.arc_length_m +
+        route->rollout_length_m *
+        (double)(index - route->lead_count - route->arc_count) /
+        (double)route->rollout_count;
 }
 
 static inline double taem_route_remaining_at_index(const TaemRoute *route, size_t index) {

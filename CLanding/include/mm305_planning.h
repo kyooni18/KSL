@@ -16,11 +16,15 @@ typedef struct {
     uint64_t model_snapshot_id;
     TerminalDynamicState state;
     double hac_radius_m;
+    double final_approach_distance_m; /* energy-aware Final alignment station */
     bool search_both_ends;
     int upstream_end;          /* runway end to search when not searching both */
     bool restrict_side;        /* replan: keep the committed side */
     double side;
     double lift_scale, drag_scale, scale_mach;
+    bool seed_route_valid;
+    TaemRoute seed_route;           /* provisional route currently tracked live */
+    int seed_runway_end;
 } Mm305PlanRequest;
 
 typedef struct {

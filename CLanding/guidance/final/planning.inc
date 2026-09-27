@@ -1,10 +1,21 @@
 double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s){
-    return g->terminal_glide_mode&&g->terminal_test_glide_slope>0?g->terminal_test_glide_slope:s->final_glide_slope;
+    if(g->terminal_glide_mode&&g->terminal_test_glide_slope>0)
+        return g->terminal_test_glide_slope;
+    if(g->terminal_final_handoff_latched&&
+            isfinite(g->terminal_final_handoff_slope_deg)&&
+            g->terminal_final_handoff_slope_deg>=3.0&&
+            g->terminal_final_handoff_slope_deg<=45.0)
+        return g->terminal_final_handoff_slope_deg;
+    return s->final_glide_slope;
 }
 
 static double terminal_final_distance(const GuidanceMachine*g,const GuidanceSettings*s){
     if(g->terminal_glide_mode&&g->terminal_test_final_approach_distance>0)
         return g->terminal_test_final_approach_distance;
+    if(g->terminal_final_handoff_latched&&
+            isfinite(g->terminal_final_handoff_distance)&&
+            g->terminal_final_handoff_distance>=500.0)
+        return g->terminal_final_handoff_distance;
     return s->final_approach_distance;
 }
 
@@ -13,18 +24,22 @@ static double terminal_final_distance(const GuidanceMachine*g,const GuidanceSett
    speed, then spends the remaining station-to-runway distance decelerating to
    the configured touchdown speed. Keep this schedule monotone and bounded;
    do not turn the 160 m/s station value into a flat final-approach hold. */
-static double terminal_final_alignment_speed(const GuidanceSettings*s,
-        const VehicleProfile*v){
+static double terminal_final_alignment_speed(const GuidanceMachine*g,
+        const GuidanceSettings*s,const VehicleProfile*v){
     double fallback=fmax(v->final_approach_speed,v->minimum_safe_speed);
     double alignment=s&&isfinite(s->final_alignment_speed)&&s->final_alignment_speed>0.0?
         s->final_alignment_speed:fallback;
+    if(g&&g->terminal_final_handoff_latched&&
+            isfinite(g->terminal_final_handoff_speed_mps)&&
+            g->terminal_final_handoff_speed_mps>0.0)
+        alignment=g->terminal_final_handoff_speed_mps;
     return fmax(alignment,fmax(v->touchdown_speed,1.0));
 }
 
 static double terminal_final_speed_target(const GuidanceMachine*g,
         const VehicleProfile*v,const GuidanceSettings*s,double distance){
     double final_distance=fmax(1.0,terminal_final_distance(g,s));
-    double alignment=terminal_final_alignment_speed(s,v);
+    double alignment=terminal_final_alignment_speed(g,s,v);
     double touchdown=clampd(v->touchdown_speed,1.0,alignment);
     double fraction=clampd(distance/final_distance,0.0,1.0);
     return touchdown+(alignment-touchdown)*fraction;
@@ -255,6 +270,7 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     plan.predicted_kinetic_margin=.5*margin_v2;
     plan.effective_accel=modeled_up;
     plan.response_time=response_time;
+    plan.plan_source_ut=t->ut;
     plan.reject_reason="none";
     return plan;
 }
@@ -270,6 +286,8 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     g->preflare_predicted_height_loss=p->predicted_height_loss;
     g->preflare_predicted_kinetic_margin=p->predicted_kinetic_margin;
     g->preflare_effective_accel=p->effective_accel;
+    g->preflare_response_time=p->response_time;
+    g->preflare_plan_source_ut=p->plan_source_ut;
 }
 
        void terminal_set_stage(GuidanceMachine*g,TerminalVerticalStage stage,double ut){
@@ -376,9 +394,24 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     double air_path=hypot(ground_to_gate,height_to_gate);
 
     double minimum_speed=plan->minimum_speed;
-    double gate_speed=fmax(plan->reference_speed,minimum_speed);
-    double live_loss=t->mass>0.0&&isfinite(t->drag_force)&&t->drag_force>=0.0?
-        t->drag_force/t->mass:NAN;
+    /* The preflare plan may publish a decelerating point target below the
+       configured Final-approach speed.  That point target is guidance, not the
+       upper energy boundary for MM305 delivery.  Use the vehicle's certified
+       Final-approach speed as the handoff ceiling while preserving any higher
+       plan reference. */
+    double gate_speed=fmax(fmax(plan->reference_speed,v->final_approach_speed),
+        minimum_speed);
+    AerodynamicModel aero={
+        .lift_to_drag=v->estimated_lift_to_drag,
+        .ballistic_coefficient=t->estimated_ballistic_coefficient>0.0?
+            t->estimated_ballistic_coefficient:v->estimated_ballistic_coefficient,
+        .confidence=t->aerodynamic_confidence>0.0?t->aerodynamic_confidence:1.0
+    };
+    double live_loss=terminal_expected_energy_loss_accel(g,t,aero,v);
+    if(!isfinite(live_loss)||live_loss<0.0){
+        live_loss=t->mass>0.0&&isfinite(t->drag_force)&&t->drag_force>=0.0?
+            t->drag_force/t->mass:NAN;
+    }
     if(!isfinite(live_loss))return contract;
 
     /* Drag acceleration scales with V^2; extending the instantaneous value as
@@ -390,6 +423,16 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
             gravity*height_to_gate,&predicted_gate_speed,&predicted_drag_work))
         return contract;
     (void)predicted_drag_work;
+
+    /* Cross-check with TAEM's atmosphere-resolved drag work projection over the
+       ground-to-gate distance to account for increasing air density in the descent. */
+    double proj_gate_speed=NAN,proj_gate_alt=NAN;
+    double conditioning_aoa=terminal_fpa_force_aoa(t,p,aero,v,-slope);
+    double proj_work=terminal_projected_drag_work_state_anchored(g,t,p,aero,v,s,
+        conditioning_aoa,ground_to_gate,slope,&proj_gate_speed,&proj_gate_alt,NAN);
+    if(isfinite(proj_work)&&isfinite(proj_gate_speed)&&proj_gate_speed>0.0){
+        predicted_gate_speed=fmin(predicted_gate_speed,proj_gate_speed);
+    }
     double predicted_gate_v2=predicted_gate_speed*predicted_gate_speed;
 
     /* The preflare plan already models the pull-up response, induced drag and
@@ -402,6 +445,16 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     double gate_energy=.5*gate_speed*gate_speed;
     double planned_exit_energy=.5*planned_exit_v2;
     double high_energy_margin=gate_energy-planned_exit_energy;
+    const char *delivery_diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+    if(delivery_diag&&strcmp(delivery_diag,"2")==0&&
+       (g->mm305_runway_alignment_active||g->mm305_hac_exit_reached||g->hac_completed||g->final_approach_captured)){
+        fprintf(stderr,
+            "FINAL_DELIVERY_ENERGY ut=%.2f distance=%.1f along=%.1f h=%.1f radar=%.1f V=%.2f fpa=%.2f trigger=%.1f preflareGround=%.1f groundToGate=%.1f minV=%.2f refV=%.2f predictedExitV=%.2f predictedGateV=%.2f lowMargin=%.1f highMargin=%.1f liveDrag=%.4f\n",
+            t->ut,distance,t->runway_along_track,t->mean_altitude-site->altitude,t->radar_altitude,
+            t->true_air_speed,t->flight_path_angle,plan->trigger_altitude,preflare_ground,
+            ground_to_gate,minimum_speed,gate_speed,sqrt(fmax(0.0,planned_exit_v2)),
+            predicted_gate_speed,low_energy_margin,high_energy_margin,live_loss);
+    }
     /* The trigger is solved analytically to the reference-energy boundary; do
        not reject an exact solution because of sub-millijoule floating-point
        roundoff.  This tolerance is numerical only, not a flight-energy allowance. */
@@ -432,8 +485,7 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
 
     contract.valid=true;
     contract.path_committed=g->terminal_final_test_mode||
-        (g->terminal_path_committed&&g->mm305_route_committed&&
-         g->mm305_hac_exit_reached);
+        (g->terminal_path_committed&&g->mm305_route_committed);
     contract.range_to_go=distance;
     contract.range_margin=(response_available-response_required)*t->horizontal_speed;
     contract.dynamic_pressure=t->dynamic_pressure;

@@ -136,13 +136,17 @@ static double achievable_profile_drag_cap(const EntryDragReferenceInput*i,
         const EntryDragReferenceConfig*c,double velocity){
     double structural=maximum_reference_drag(i,c);
     double confidence=clampd(isfinite(i->aero_confidence)?i->aero_confidence:0.0,0.0,1.0);
-    if(confidence<c->minimum_local_drag_confidence)return structural;
 
     bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>c->minimum_drag_accel;
     bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>c->minimum_drag_accel;
-    if(!measured&&!modeled)return structural;
-    double achieved=measured&&modeled?fmax(i->measured_drag_accel,i->modeled_drag_accel):
-        (measured?i->measured_drag_accel:i->modeled_drag_accel);
+
+    /* A live force measurement is already direct evidence of local drag authority;
+       do not discard it merely because the longer-horizon aero calibrator has not
+       accumulated confidence yet. That old ordering made early live Entry fall
+       back to the structural q/g cap and command drag several times larger than
+       the vehicle had demonstrated. Model-only evidence still requires confidence. */
+    if(!measured&&(!modeled||confidence<c->minimum_local_drag_confidence))return structural;
+    double achieved=measured?i->measured_drag_accel:i->modeled_drag_accel;
 
     /* Calibrate q/beta to the drag actually demonstrated at the current state,
        then project that calibration along a smooth current-altitude -> TAEM-
@@ -170,17 +174,17 @@ static double achievable_profile_drag_floor(const EntryDragReferenceInput*i,
         const EntryDragReferenceConfig*c,double velocity){
     if(!i->has_incidence)return c->minimum_drag_accel;
     double confidence=clampd(isfinite(i->aero_confidence)?i->aero_confidence:0.0,0.0,1.0);
-    if(confidence<c->minimum_local_drag_confidence)return c->minimum_drag_accel;
 
     bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>c->minimum_drag_accel;
     bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>c->minimum_drag_accel;
-    if(!measured&&!modeled)return c->minimum_drag_accel;
-    /* Use the lower trustworthy anchor. A minimum-drag envelope must not become
-       pessimistic because one force source happens to read high. In live MM304 the
-       measured source normally wins and this remains anchored to observed energy
-       loss rather than the nominal ballistic coefficient. */
-    double achieved=measured&&modeled?fmin(i->measured_drag_accel,i->modeled_drag_accel):
-        (measured?i->measured_drag_accel:i->modeled_drag_accel);
+    if(!measured&&(!modeled||confidence<c->minimum_local_drag_confidence))
+        return c->minimum_drag_accel;
+
+    /* Use the live force measurement whenever it exists. Global aero-model
+       confidence describes extrapolation quality, not whether the force just
+       measured on the vehicle happened. Model-only fallback remains confidence
+       gated. */
+    double achieved=measured?i->measured_drag_accel:i->modeled_drag_accel;
 
     double rho_now=fmax(0.0,planet_atmospheric_density(i->planet,i->altitude));
     double q_now=.5*rho_now*i->relative_velocity*i->relative_velocity;

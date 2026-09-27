@@ -122,6 +122,17 @@ static Point cubic_second_derivative(Point p0, Point p1, Point p2, Point p3,
 }
 
 
+static double cubic_length_estimate(Point p0, Point p1, Point p2, Point p3) {
+    Point previous = p0;
+    double length = 0.0;
+    for (int i = 1; i <= 64; ++i) {
+        Point current = cubic(p0, p1, p2, p3, (double)i / 64.0);
+        length += distance(previous, current);
+        previous = current;
+    }
+    return length;
+}
+
 static double cubic_peak_curvature(Point p0, Point p1, Point p2, Point p3) {
     double peak = 0.0;
     Point previous = cubic_derivative(p0, p1, p2, p3, 0.0);
@@ -322,6 +333,7 @@ static bool build_hac(const TerminalModel *m,
     Point p1 = {0.0, 0.0}, p2 = {0.0, 0.0};
     double best_control_polygon = INFINITY;
     double best_peak_curvature = INFINITY;
+    double best_target_error = INFINITY;
     /* Only the route's instantaneous starting curvature is constrained by
        the *current* thin-air lateral authority here.  Authority later on the
        lead changes rapidly with q and speed, so applying today's curvature
@@ -355,12 +367,12 @@ static bool build_hac(const TerminalModel *m,
                     peak_curvature < best_peak_curvature - curvature_tolerance;
                 bool similarly_smooth = isfinite(best_peak_curvature) &&
                     fabs(peak_curvature-best_peak_curvature) <= curvature_tolerance;
+                double target_error = isfinite(target_polygon_m) ?
+                    fabs(cubic_length_estimate(p0, p1_try, p2_try, p3) -
+                         target_polygon_m) : INFINITY;
                 bool better = isfinite(target_polygon_m) ?
                     (peak_curvature <= peak_curvature_limit &&
-                     fabs((2.0 * distance(p0, p3) + control_polygon) / 3.0 -
-                          target_polygon_m) <
-                         fabs((2.0 * distance(p0, p3) + best_control_polygon) / 3.0 -
-                          target_polygon_m)) :
+                     target_error < best_target_error) :
                     isfinite(peak_curvature_limit) ?
                     (peak_curvature <= peak_curvature_limit &&
                      control_polygon < best_control_polygon) :
@@ -369,6 +381,7 @@ static bool build_hac(const TerminalModel *m,
                 if (better) {
                     best_peak_curvature = peak_curvature;
                     best_control_polygon = control_polygon;
+                    best_target_error = target_error;
                     p1 = p1_try;
                     p2 = p2_try;
                     lead_feasible = true;
@@ -459,6 +472,125 @@ bool taem_route_build_hac_length(const TerminalModel *m,
     return build_hac(m, start, hac_radius_m, side, sweep_abs_rad, spacing,
         maximum_lead_curvature, peak_curvature_limit, target_lead_length_m,
         route, reason, reason_size);
+}
+
+bool taem_route_blend_hac_length(const TerminalModel *m,
+        const TaemGeometryState *start, const TaemRoute *route_a,
+        const TaemRoute *route_b, double spacing,
+        double maximum_lead_curvature, double peak_curvature_limit,
+        double target_lead_length_m, TaemRoute *route,
+        char *reason, size_t reason_size) {
+    if (reason && reason_size) reason[0] = '\0';
+    if (!m || !start || !route_a || !route_b || !route ||
+        !route_a->valid || !route_b->valid ||
+        !(spacing >= 100.0) || !isfinite(spacing) ||
+        !(maximum_lead_curvature > 0.0) || !isfinite(maximum_lead_curvature) ||
+        !(peak_curvature_limit > 0.0) || !isfinite(peak_curvature_limit) ||
+        !(target_lead_length_m > 0.0) || !isfinite(target_lead_length_m)) {
+        if (reason && reason_size) snprintf(reason, reason_size, "invalid route input");
+        return false;
+    }
+
+    const TaemRoute *short_route = route_a;
+    const TaemRoute *long_route = route_b;
+    if (short_route->lead_length_m > long_route->lead_length_m) {
+        short_route = route_b;
+        long_route = route_a;
+    }
+    if (fabs(short_route->hac.radius_m - long_route->hac.radius_m) > 1e-6 ||
+        fabs(short_route->hac.arc_sweep_rad - long_route->hac.arc_sweep_rad) > 1e-9 ||
+        short_route->side != long_route->side ||
+        fabs(short_route->p0_along_m - long_route->p0_along_m) > 1e-6 ||
+        fabs(short_route->p0_cross_m - long_route->p0_cross_m) > 1e-6 ||
+        fabs(short_route->p3_along_m - long_route->p3_along_m) > 1e-6 ||
+        fabs(short_route->p3_cross_m - long_route->p3_cross_m) > 1e-6 ||
+        target_lead_length_m < short_route->lead_length_m - 1.0 ||
+        target_lead_length_m > long_route->lead_length_m + 1.0) {
+        if (reason && reason_size) snprintf(reason, reason_size, "routes do not bracket one HAC lead family");
+        return false;
+    }
+
+    Point p0 = {short_route->p0_along_m, short_route->p0_cross_m};
+    Point p3 = {short_route->p3_along_m, short_route->p3_cross_m};
+    Point short_p1 = {short_route->p1_along_m, short_route->p1_cross_m};
+    Point short_p2 = {short_route->p2_along_m, short_route->p2_cross_m};
+    Point long_p1 = {long_route->p1_along_m, long_route->p1_cross_m};
+    Point long_p2 = {long_route->p2_along_m, long_route->p2_cross_m};
+    Point best_p1 = {0.0, 0.0}, best_p2 = {0.0, 0.0};
+    double best_error = INFINITY;
+    bool found = false;
+
+    for (int i = 0; i <= 32; ++i) {
+        double t1 = (double)i / 32.0;
+        Point p1 = {short_p1.x + t1 * (long_p1.x - short_p1.x),
+                    short_p1.y + t1 * (long_p1.y - short_p1.y)};
+        for (int j = 0; j <= 32; ++j) {
+            double t2 = (double)j / 32.0;
+            Point p2 = {short_p2.x + t2 * (long_p2.x - short_p2.x),
+                        short_p2.y + t2 * (long_p2.y - short_p2.y)};
+            if (!cubic_forward_regular(p0, p1, p2, p3)) continue;
+            double initial_curvature = cubic_endpoint_curvature(p0, p1, p2, p3, 0.0);
+            double peak_curvature = cubic_peak_curvature(p0, p1, p2, p3);
+            if (!isfinite(initial_curvature) || !isfinite(peak_curvature) ||
+                initial_curvature > maximum_lead_curvature * 1.000001 ||
+                peak_curvature > peak_curvature_limit * 1.000001)
+                continue;
+            double lead_length = cubic_length_estimate(p0, p1, p2, p3);
+            double error = fabs(lead_length - target_lead_length_m);
+            if (error < best_error) {
+                best_error = error;
+                best_p1 = p1;
+                best_p2 = p2;
+                found = true;
+            }
+        }
+    }
+    if (!found) {
+        if (reason && reason_size) snprintf(reason, reason_size, "no curvature-feasible route between profile brackets");
+        return false;
+    }
+
+    TaemRoute candidate = {0};
+    candidate.side = short_route->side;
+    candidate.hac = short_route->hac;
+    candidate.p0_along_m = p0.x;
+    candidate.p0_cross_m = p0.y;
+    candidate.p1_along_m = best_p1.x;
+    candidate.p1_cross_m = best_p1.y;
+    candidate.p2_along_m = best_p2.x;
+    candidate.p2_cross_m = best_p2.y;
+    candidate.p3_along_m = p3.x;
+    candidate.p3_cross_m = p3.y;
+    candidate.initial_course_deg = start->course_deg;
+    candidate.runway_heading_deg = m->site.runway_heading;
+    if (!cubic_arc_lookup(&candidate)) {
+        if (reason && reason_size) snprintf(reason, reason_size, "interpolated lead arc-length lookup failed");
+        return false;
+    }
+
+    candidate.alignment_along_m = -m->guidance.final_approach_distance;
+    candidate.rollout_length_m = candidate.alignment_along_m - candidate.hac.exit.x;
+    if (!(candidate.rollout_length_m >= 0.0) || !isfinite(candidate.rollout_length_m)) {
+        if (reason && reason_size) snprintf(reason, reason_size, "interpolated route has invalid rollout");
+        return false;
+    }
+    candidate.lead_count = (size_t)fmax(2.0, ceil(candidate.lead_length_m / spacing));
+    candidate.arc_count = (size_t)fmax(3.0, ceil(candidate.hac.arc_length_m / spacing));
+    candidate.rollout_count = candidate.rollout_length_m > 1.0 ?
+        (size_t)fmax(1.0, ceil(candidate.rollout_length_m / spacing)) : 0;
+    if (candidate.lead_count + candidate.arc_count + candidate.rollout_count + 1 >
+        TAEM_ROUTE_MAX_POINTS) {
+        if (reason && reason_size) snprintf(reason, reason_size, "interpolated HAC route exceeded point capacity");
+        return false;
+    }
+    candidate.count = candidate.lead_count + candidate.arc_count +
+        candidate.rollout_count + 1;
+    if (!route_finish(m, start, &candidate)) {
+        if (reason && reason_size) snprintf(reason, reason_size, "interpolated route sampling produced invalid geometry");
+        return false;
+    }
+    *route = candidate;
+    return true;
 }
 
 double taem_route_lead_peak_curvature(const TaemRoute *route) {
@@ -561,6 +693,113 @@ double taem_route_planned_altitude(const TaemRoute *route, double station_m) {
     double f = u - (double)i;
     return (1.0 - f) * route->profile_altitude_lut[i] +
            f * route->profile_altitude_lut[i + 1];
+}
+
+bool taem_route_limit_initial_vertical_authority(const TerminalModel *m,
+        const TerminalDynamicState *state, const TaemGeometryState *geometry,
+        TaemRoute *route) {
+    if (!m || !state || !geometry || !route || !route->valid ||
+        !(state->mass_kg > 1.0) || !(geometry->airspeed_mps > 1.0) ||
+        !(geometry->ground_speed_mps > 1.0) ||
+        !(route->profile_total_length_m > 100.0))
+        return false;
+
+    /* Evaluate the unmodified analytic profile at the live route origin.  The
+       Hermite curve already matches the measured FPA there; only its second
+       derivative may be physically impossible. */
+    route->profile_initial_sag_m = 0.0;
+    route->profile_initial_sag_length_m = 0.0;
+    double base_altitude = NAN, base_fpa = NAN, base_curvature = NAN;
+    vertical_profile(&(TerminalModel){
+        .site.altitude = route->profile_final_altitude_m,
+        .guidance.taem_glide_slope = route->profile_final_slope_deg
+    }, route->profile_start_altitude_m, route->profile_start_fpa_deg,
+        route->profile_total_length_m, 0.0,
+        route->profile_midpoint_offset_m, route->profile_local_offset_m,
+        route->profile_local_start_fraction, route->profile_local_peak_fraction,
+        route->profile_local_end_fraction, 0.0, 0.0,
+        &base_altitude, &base_fpa, &base_curvature);
+    if (!isfinite(base_curvature) || !isfinite(base_fpa)) return false;
+
+    double altitude = sqrt(
+        state->position_i_m.x*state->position_i_m.x +
+        state->position_i_m.y*state->position_i_m.y +
+        state->position_i_m.z*state->position_i_m.z) - m->world.radius_m;
+    double local_radius = m->world.radius_m + altitude;
+    if (!(local_radius > 1.0)) return false;
+    double gravity = m->world.mu_m3_s2 / (local_radius * local_radius);
+    double gamma = radians(geometry->flight_path_angle_deg);
+
+    double aoa_max = fmin(m->vehicle.maximum_angle_of_attack,
+        m->aero.alpha_deg[m->aero.alpha_count - 1]);
+    AeroForces flow = aero_compute(&m->world, &m->aero,
+        state->position_i_m, state->velocity_i_mps, state->ut_s,
+        state->mass_kg, 0.0, 0.0);
+    if (flow.mach < 1.0 &&
+        isfinite(m->vehicle.terminal_maximum_lift_angle_of_attack) &&
+        m->vehicle.terminal_maximum_lift_angle_of_attack > 0.0)
+        aoa_max = fmin(aoa_max,
+            m->vehicle.terminal_maximum_lift_angle_of_attack);
+    if (state->trim_aoa_ceiling_rad > 0.0)
+        aoa_max = fmin(aoa_max, degrees(state->trim_aoa_ceiling_rad));
+
+    double g_limit = fmax(0.0, m->vehicle.maximum_g_load) * gravity;
+    double lift_max = 0.0;
+    for (double aoa = 0.0; aoa <= aoa_max + 1e-9; aoa += 0.5) {
+        AeroForces f = aero_compute(&m->world, &m->aero,
+            state->position_i_m, state->velocity_i_mps, state->ut_s,
+            state->mass_kg, radians(aoa), 0.0);
+        if (isfinite(f.lift_n))
+            lift_max = fmax(lift_max,
+                fmin(fabs(f.lift_n) / state->mass_kg, g_limit));
+    }
+    if (!(lift_max > 1e-6)) return false;
+
+    double lateral_curvature = taem_route_curvature_at_station(route, 0.0);
+    if (!isfinite(lateral_curvature)) return false;
+    double lateral_required = fabs(geometry->ground_speed_mps *
+        geometry->ground_speed_mps * lateral_curvature);
+    double bank_limit = radians(fmin(m->vehicle.maximum_bank_angle, 80.0));
+    if (lateral_required > lift_max * sin(bank_limit) + 1e-6)
+        return false;
+
+    double vertical_available = sqrt(fmax(0.0,
+        lift_max * lift_max - lateral_required * lateral_required));
+    /* Leave modest control margin so a route does not depend on sitting exactly
+       on the identified trim/lift ceiling from its first sample. */
+    vertical_available *= 0.95;
+
+    double radial_required = (gravity -
+        geometry->airspeed_mps * geometry->airspeed_mps / local_radius) *
+        cos(gamma);
+    double gamma_rate_max =
+        (vertical_available - radial_required) / geometry->airspeed_mps;
+    double curvature_max = gamma_rate_max / geometry->ground_speed_mps;
+
+    if (base_curvature <= curvature_max + 1e-9)
+        return true;
+
+    double pitch_response = m->attitude.pitch_wn > 0.0 &&
+        m->attitude.pitch_zeta > 0.0 ?
+        4.0 / (m->attitude.pitch_wn * m->attitude.pitch_zeta) : 4.0;
+    double sag_length = geometry->ground_speed_mps *
+        fmax(2.0, 2.0 * pitch_response);
+    sag_length = fmax(1000.0, fmin(sag_length,
+        fmin(6000.0, 0.30 * route->profile_total_length_m)));
+    if (!(sag_length > 100.0)) return false;
+
+    double slope0 = tan(radians(route->profile_start_fpa_deg));
+    double delta_second_slope =
+        (curvature_max - base_curvature) * (1.0 + slope0 * slope0);
+    double sag = delta_second_slope * sag_length * sag_length / 32.0;
+    double drop = route->profile_start_altitude_m -
+        route->profile_final_altitude_m;
+    double sag_limit = fmax(50.0, 0.20 * fmax(0.0, drop));
+    sag = fmax(-sag_limit, fmin(sag_limit, sag));
+
+    route->profile_initial_sag_m = sag;
+    route->profile_initial_sag_length_m = sag_length;
+    return true;
 }
 
 double taem_route_curvature_at_station(const TaemRoute *route, double station_m) {

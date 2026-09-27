@@ -79,6 +79,7 @@ typedef struct {
     double steepest_descent_deg; /* smooth profile: steepest reference descent */
     double exit_speed_mps, exit_fpa_deg;
     double exit_specific_energy_j_kg;
+    const char *reason;
     bool valid;
 } ProfileFlight;
 
@@ -105,10 +106,14 @@ static ProfileFlight fly_profile(const TerminalModel *m,
     const double pi = 3.14159265358979323846;
     ProfileFlight out = {.end_altitude_m = NAN, .capture_station_m = INFINITY,
                          .exit_speed_mps = NAN, .exit_fpa_deg = NAN,
-                         .exit_specific_energy_j_kg = NAN};
+                         .exit_specific_energy_j_kg = NAN,
+                         .reason = "profile propagation did not complete"};
     TerminalDynamicState state = *initial;
     TaemGeometryState geometry;
-    if (!taem_geometry_state(m, &state, &geometry)) return out;
+    if (!taem_geometry_state(m, &state, &geometry)) {
+        out.reason = "initial TAEM geometry invalid";
+        return out;
+    }
     size_t cursor = 0, count = 0;
     double station = 0.0;
     double bank_max = fmin(m->vehicle.maximum_bank_angle, 80.0) * pi / 180.0;
@@ -118,8 +123,10 @@ static ProfileFlight fly_profile(const TerminalModel *m,
     for (size_t step = 0; step < max_steps; ++step) {
         TaemPathReference reference;
         size_t index = cursor;
-        if (!taem_route_reference(route, &geometry, &cursor, &reference, &index))
+        if (!taem_route_reference(route, &geometry, &cursor, &reference, &index)) {
+            out.reason = "route reference projection failed";
             return out;
+        }
         station = reference.station_m;
         double altitude = m->site.altitude + geometry.altitude_above_runway_m;
         if (samples && count < sample_capacity)
@@ -130,7 +137,10 @@ static ProfileFlight fly_profile(const TerminalModel *m,
                 state.position_i_m,state.velocity_i_mps,state.ut_s,state.mass_kg,
                 state.attitude.aoa_rad,state.attitude.bank_rad);
             TaemEnergyDiagnostic energy;
-            if (!state_energy(m,&state,forces,&energy)) return out;
+            if (!state_energy(m,&state,forces,&energy)) {
+                out.reason = "exit energy diagnostic failed";
+                return out;
+            }
             out.exit_specific_energy_j_kg = energy.effective_specific_energy_j_kg;
             if (sample_count) *sample_count = count;
             out.end_altitude_m = altitude;
@@ -158,12 +168,18 @@ static ProfileFlight fly_profile(const TerminalModel *m,
             reference.vertical_curvature_per_m = 0.0;
             TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
                                                            &reference, dt);
-            if (!demand.valid) return out;
+            if (!demand.valid) {
+                out.reason = "TAEM tracker rejected vertical-line reference";
+                return out;
+            }
             control = demand.control;
         } else {
             double required_lateral = taem_tracker_lateral_demand(m, &geometry,
                                                                   &reference);
-            if (!isfinite(required_lateral)) return out;
+            if (!isfinite(required_lateral)) {
+                out.reason = "lateral demand became non-finite";
+                return out;
+            }
             double aoa_cmd = station < dive_station_m ? aoa_deg : dive_aoa_deg;
             double aoa = aoa_cmd * pi / 180.0;
             AeroForces forces = aero_compute(&m->world, &m->aero,
@@ -187,9 +203,17 @@ static ProfileFlight fly_profile(const TerminalModel *m,
             control = (TerminalControl){.angle_of_attack_rad = aoa,
                 .bank_rad = fmax(-bank_max, fmin(bank_max, bank)), .dt_s = dt};
         }
-        if (terminal_propagator_step(m, &state, &control) != TERMINAL_STEP_OK)
+        TerminalStepStatus step_status = terminal_propagator_step(m, &state, &control);
+        if (step_status != TERMINAL_STEP_OK) {
+            out.reason = step_status == TERMINAL_STEP_INVALID_INPUT ?
+                "terminal propagator rejected input" :
+                "terminal propagator produced invalid result";
             return out;
-        if (!taem_geometry_state(m, &state, &geometry)) return out;
+        }
+        if (!taem_geometry_state(m, &state, &geometry)) {
+            out.reason = "TAEM geometry invalid after propagation";
+            return out;
+        }
         if (geometry.altitude_above_runway_m <= 0.0) {
             if (sample_count) *sample_count = count;
             out.end_altitude_m = -INFINITY;
@@ -197,6 +221,7 @@ static ProfileFlight fly_profile(const TerminalModel *m,
             return out;
         }
     }
+    out.reason = "profile exceeded propagation time before route completion";
     return out;
 }
 
@@ -215,6 +240,16 @@ static double alignment_speed(const TerminalModel *m) {
         m->guidance.final_alignment_speed > 0.0 ?
         m->guidance.final_alignment_speed : m->vehicle.final_approach_speed;
 }
+static double taem_descent_limit(const TerminalModel *m,
+        const TaemRoute *route) {
+    double final_limit=route->profile_final_slope_deg+
+        TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG;
+    double taem_limit=isfinite(m->guidance.taem_glide_slope) &&
+        m->guidance.taem_glide_slope>0.0 ?
+        m->guidance.taem_glide_slope : final_limit;
+    return fmax(final_limit,taem_limit);
+}
+
 
 /* Fly the native tracker along the route's analytic (C1 Hermite + bow)
  * vertical reference, which runs from the live state to the Final alignment
@@ -227,19 +262,23 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
         ProfileSample *samples, size_t sample_capacity, size_t *sample_count) {
     ProfileFlight out = {.end_altitude_m = NAN, .capture_station_m = INFINITY,
                          .exit_speed_mps = NAN, .exit_fpa_deg = NAN,
-                         .exit_specific_energy_j_kg = NAN};
+                         .exit_specific_energy_j_kg = NAN,
+                         .reason = "not completed"};
     *max_error = INFINITY;
     TerminalDynamicState state = *initial;
     TaemGeometryState geometry;
-    if (!taem_geometry_state(m, &state, &geometry)) return out;
+    if (!taem_geometry_state(m, &state, &geometry)) {
+        out.reason="initial geometry failed"; return out;
+    }
     size_t cursor = 0, count = 0;
     double worst = 0.0, steepest = -INFINITY;
     size_t max_steps = (size_t)ceil(max_elapsed / dt);
     for (size_t step = 0; step < max_steps; ++step) {
         TaemPathReference reference;
         size_t index = cursor;
-        if (!taem_route_reference(route, &geometry, &cursor, &reference, &index))
-            return out;
+        if (!taem_route_reference(route, &geometry, &cursor, &reference, &index)) {
+            out.reason="route reference failed"; return out;
+        }
         double altitude = m->site.altitude + geometry.altitude_above_runway_m;
         worst = fmax(worst, fabs(altitude - reference.altitude_m));
         steepest = fmax(steepest, -reference.flight_path_angle_deg);
@@ -255,16 +294,26 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
             out.valid = true;
             *max_error = worst;
             out.steepest_descent_deg = steepest;
+            out.reason = "completed";
             return out;
         }
         TaemTrackerOutput demand = taem_tracker_update(m, &state, &geometry,
                                                        &reference, dt);
-        if (!demand.valid) return out;
-        if (terminal_propagator_step(m, &state, &demand.control) != TERMINAL_STEP_OK)
-            return out;
-        if (!taem_geometry_state(m, &state, &geometry)) return out;
-        if (geometry.altitude_above_runway_m <= 0.0) return out;
+        if (!demand.valid) {
+            out.reason="tracker invalid"; return out;
+        }
+        if (terminal_propagator_step(m, &state, &demand.control) != TERMINAL_STEP_OK) {
+            out.reason="propagator failed"; return out;
+        }
+
+        if (!taem_geometry_state(m, &state, &geometry)) {
+            out.reason="post-step geometry failed"; return out;
+        }
+        if (geometry.altitude_above_runway_m <= 0.0) {
+            out.reason="ground before route end"; return out;
+        }
     }
+    out.reason="max elapsed before route end";
     return out;
 }
 
@@ -272,11 +321,10 @@ static ProfileFlight fly_smooth_profile(const TerminalModel *m,
  * same excess the glide-and-dive profile allows: a route that needs a steeper
  * plunge is too short for the energy, and a longer one (more HAC sweep) must
  * be chosen instead. */
-static bool smooth_flight_ok(const TaemRoute *route, ProfileFlight f,
-                             double max_error) {
+static bool smooth_flight_ok(const TerminalModel *m,
+        const TaemRoute *route, ProfileFlight f, double max_error) {
     return f.valid && isfinite(f.end_altitude_m) &&
-        f.steepest_descent_deg <= route->profile_final_slope_deg +
-            TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG &&
+        f.steepest_descent_deg <= taem_descent_limit(m,route) &&
         max_error <= TERMINAL_SMOOTH_TRACK_ERROR_M &&
         fabs(f.end_altitude_m - route->profile_final_altitude_m) <=
             TERMINAL_SMOOTH_EXIT_ERROR_M;
@@ -317,70 +365,147 @@ static bool solve_smooth_profile(const TerminalModel *m,
     double target_speed = alignment_speed(m);
     double drop = route->profile_start_altitude_m - route->profile_final_altitude_m;
     if (!(target_speed > 0.0) || !(drop > 0.0)) return false;
+
     TaemRoute trial = *route;
     trial.profile_tabulated = false;
     trial.profile_speed_tabulated = false;
     trial.profile_local_offset_m = 0.0;
-    trial.profile_initial_sag_m = 0.0;
+    TaemGeometryState start_geometry;
+    if (!taem_geometry_state(m,initial,&start_geometry)) return false;
     double span = TERMINAL_SMOOTH_BOW_FRACTION * drop;
-    double bows[TERMINAL_SMOOTH_BOW_STEPS], errors[TERMINAL_SMOOTH_BOW_STEPS];
+    double bows[TERMINAL_SMOOTH_BOW_STEPS];
+    double errors[TERMINAL_SMOOTH_BOW_STEPS];
     bool ok[TERMINAL_SMOOTH_BOW_STEPS];
     long best = -1;
+
+    int raw_valid=0, descent_ok=0, track_ok=0, endpoint_ok=0;
+    int fail_tracker=0, fail_propagator=0, fail_ground=0, fail_reference=0;
+    int fail_geometry=0, fail_timeout=0;
+    double min_steep=INFINITY, min_track=INFINITY, min_endpoint=INFINITY;
+    double raw_min_speed=INFINITY, raw_max_speed=-INFINITY;
+
     for (int i = 0; i < TERMINAL_SMOOTH_BOW_STEPS; ++i) {
         bows[i] = -span + 2.0 * span * i / (TERMINAL_SMOOTH_BOW_STEPS - 1);
         trial.profile_midpoint_offset_m = bows[i];
-        double max_error;
+        if (!taem_route_limit_initial_vertical_authority(
+                m,initial,&start_geometry,&trial)) {
+            ok[i]=false;
+            errors[i]=NAN;
+            continue;
+        }
+
+        double max_error = INFINITY;
         ProfileFlight f = fly_smooth_profile(m, initial, &trial, dt, max_elapsed,
                                              &max_error, NULL, 0, NULL);
-        ok[i] = smooth_flight_ok(&trial, f, max_error);
-        errors[i] = ok[i] ? f.exit_speed_mps - target_speed : NAN;
-        if (ok[i] && (best < 0 || fabs(errors[i]) < fabs(errors[best]))) best = i;
+        if (f.valid && isfinite(f.end_altitude_m)) {
+            ++raw_valid;
+            min_steep=fmin(min_steep,f.steepest_descent_deg);
+            min_track=fmin(min_track,max_error);
+            min_endpoint=fmin(min_endpoint,
+                fabs(f.end_altitude_m-trial.profile_final_altitude_m));
+            raw_min_speed=fmin(raw_min_speed,f.exit_speed_mps);
+            raw_max_speed=fmax(raw_max_speed,f.exit_speed_mps);
+            if (f.steepest_descent_deg<=taem_descent_limit(m,&trial)) ++descent_ok;
+            if (max_error<=TERMINAL_SMOOTH_TRACK_ERROR_M) ++track_ok;
+            if (fabs(f.end_altitude_m-trial.profile_final_altitude_m)<=
+                TERMINAL_SMOOTH_EXIT_ERROR_M) ++endpoint_ok;
+        } else if (f.reason) {
+            if (strcmp(f.reason,"tracker invalid")==0) ++fail_tracker;
+            else if (strcmp(f.reason,"propagator failed")==0) ++fail_propagator;
+            else if (strcmp(f.reason,"ground before route end")==0) ++fail_ground;
+            else if (strcmp(f.reason,"route reference failed")==0) ++fail_reference;
+            else if (strcmp(f.reason,"initial geometry failed")==0 ||
+                     strcmp(f.reason,"post-step geometry failed")==0) ++fail_geometry;
+            else if (strcmp(f.reason,"max elapsed before route end")==0) ++fail_timeout;
+        }
+
+        ok[i] = smooth_flight_ok(m,&trial,f,max_error);
+        errors[i] = ok[i] ? f.exit_speed_mps-target_speed : NAN;
+        if (ok[i] && (best<0 || fabs(errors[i])<fabs(errors[best]))) best=i;
     }
+
+    if (getenv("KSP_LANDER_TAEM_DIAGNOSTICS")) {
+        double min_speed=INFINITY,max_speed=-INFINITY;
+        int feasible=0;
+        for (int i=0;i<TERMINAL_SMOOTH_BOW_STEPS;++i) {
+            if (!ok[i]) continue;
+            double speed=target_speed+errors[i];
+            min_speed=fmin(min_speed,speed);
+            max_speed=fmax(max_speed,speed);
+            ++feasible;
+        }
+        fprintf(stderr,
+            "TAEM smooth envelope: route=%.0f targetV=%.1f feasible=%d minV=%.1f maxV=%.1f bestV=%.1f bow=%.0f span=%.0f raw=%d descent=%d track=%d endpoint=%d fail[t=%d p=%d g=%d r=%d geom=%d timeout=%d] minSteep=%.1f minTrack=%.0f minEnd=%.0f rawV=%.1f..%.1f limit=%.1f\n",
+            route->length_m,target_speed,feasible,
+            feasible?min_speed:NAN,feasible?max_speed:NAN,
+            best>=0?target_speed+errors[best]:NAN,
+            best>=0?bows[best]:NAN,span,
+            raw_valid,descent_ok,track_ok,endpoint_ok,
+            fail_tracker,fail_propagator,fail_ground,fail_reference,
+            fail_geometry,fail_timeout,
+            raw_valid?min_steep:NAN,raw_valid?min_track:NAN,
+            raw_valid?min_endpoint:NAN,raw_valid?raw_min_speed:NAN,
+            raw_valid?raw_max_speed:NAN,taem_descent_limit(m,route));
+    }
+
     if (best < 0) return false;
-    double bow = bows[best], error = errors[best];
+    double bow=bows[best], error=errors[best];
+
     /* Refine inside a feasible bracket that crosses the target speed. */
-    for (int side = -1; side <= 1; side += 2) {
-        long j = best + side;
-        if (j < 0 || j >= TERMINAL_SMOOTH_BOW_STEPS || !ok[j] ||
-            (errors[j] > 0.0) == (errors[best] > 0.0)) continue;
-        double a = bows[best], ea = errors[best], b = bows[j];
-        for (int iteration = 0; iteration < 8; ++iteration) {
-            double c = 0.5 * (a + b);
-            trial.profile_midpoint_offset_m = c;
-            double max_error;
-            ProfileFlight f = fly_smooth_profile(m, initial, &trial, dt,
-                max_elapsed, &max_error, NULL, 0, NULL);
-            if (!smooth_flight_ok(&trial, f, max_error)) break;
-            double ec = f.exit_speed_mps - target_speed;
-            if (fabs(ec) < fabs(error)) { bow = c; error = ec; }
-            if ((ec > 0.0) == (ea > 0.0)) { a = c; ea = ec; } else b = c;
+    for (int side=-1; side<=1; side+=2) {
+        long j=best+side;
+        if (j<0 || j>=TERMINAL_SMOOTH_BOW_STEPS || !ok[j] ||
+            (errors[j]>0.0)==(errors[best]>0.0)) continue;
+        double a=bows[best], ea=errors[best], b=bows[j];
+        for (int iteration=0; iteration<8; ++iteration) {
+            double c=0.5*(a+b);
+            trial.profile_midpoint_offset_m=c;
+            if (!taem_route_limit_initial_vertical_authority(
+                    m,initial,&start_geometry,&trial))
+                break;
+            double max_error=INFINITY;
+            ProfileFlight f=fly_smooth_profile(m,initial,&trial,dt,max_elapsed,
+                                               &max_error,NULL,0,NULL);
+            if (!smooth_flight_ok(m,&trial,f,max_error)) break;
+            double ec=f.exit_speed_mps-target_speed;
+            if (fabs(ec)<fabs(error)) { bow=c; error=ec; }
+            if ((ec>0.0)==(ea>0.0)) { a=c; ea=ec; } else b=c;
         }
         break;
     }
-    if (fabs(error) > TERMINAL_SMOOTH_SPEED_TOLERANCE * target_speed) return false;
-    trial.profile_midpoint_offset_m = bow;
-    size_t capacity = (size_t)ceil(max_elapsed / dt) + 1;
-    ProfileSample *samples = calloc(capacity, sizeof(*samples));
+
+    if (fabs(error)>TERMINAL_SMOOTH_SPEED_TOLERANCE*target_speed) return false;
+
+    trial.profile_midpoint_offset_m=bow;
+    if (!taem_route_limit_initial_vertical_authority(
+            m,initial,&start_geometry,&trial))
+        return false;
+    size_t capacity=(size_t)ceil(max_elapsed/dt)+1;
+    ProfileSample *samples=calloc(capacity,sizeof(*samples));
     if (!samples) return false;
-    size_t count = 0;
-    double max_error;
-    ProfileFlight flight = fly_smooth_profile(m, initial, &trial, dt,
-        max_elapsed, &max_error, samples, capacity, &count);
-    if (!smooth_flight_ok(&trial, flight, max_error) || count < 2) {
+
+    size_t count=0;
+    double max_error=INFINITY;
+    ProfileFlight flight=fly_smooth_profile(m,initial,&trial,dt,max_elapsed,
+                                            &max_error,samples,capacity,&count);
+    if (!smooth_flight_ok(m,&trial,flight,max_error) || count<2) {
         free(samples);
         return false;
     }
-    route->profile_midpoint_offset_m = bow;
-    route->profile_local_offset_m = 0.0;
-    route->profile_initial_sag_m = 0.0;
-    tabulate_profile(route, samples, count);
+
+    route->profile_midpoint_offset_m=bow;
+    route->profile_local_offset_m=0.0;
+    route->profile_initial_sag_m=trial.profile_initial_sag_m;
+    route->profile_initial_sag_length_m=trial.profile_initial_sag_length_m;
+    tabulate_profile(route,samples,count);
     free(samples);
-    route->profile_generation_aoa_deg = NAN;
-    result->valid = true;
-    result->aoa_deg = NAN;
-    result->exit_speed_mps = flight.exit_speed_mps;
-    result->exit_fpa_deg = flight.exit_fpa_deg;
-    result->reason = "smooth reference meets the Final alignment point altitude and speed";
+
+    route->profile_generation_aoa_deg=NAN;
+    result->valid=true;
+    result->aoa_deg=NAN;
+    result->exit_speed_mps=flight.exit_speed_mps;
+    result->exit_fpa_deg=flight.exit_fpa_deg;
+    result->reason="smooth reference meets the Final alignment point altitude and speed";
     return true;
 }
 
@@ -409,25 +534,37 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
      * maximum-range incidence; solutions are taken on the low-AoA (faster)
      * branch below it. */
     double best_aoa = NAN, high_end = -INFINITY, best_energy = -INFINITY;
+    const char *last_propagation_reason = NULL;
     for (double aoa = 2.0; aoa <= max_profile_aoa(m) + 1e-9; aoa += 2.0) {
         ProfileFlight f = fly_profile(m, initial, route, aoa, INFINITY, aoa, NAN, false, dt,
                                       max_elapsed, NULL, 0, NULL);
-        if (!f.valid) continue;
-        if (!isfinite(f.end_altitude_m)) { if (!isfinite(high_end)) high_end = -INFINITY; continue; }
+        if (!f.valid) {
+            last_propagation_reason = f.reason;
+            continue;
+        }
+        if (!isfinite(f.end_altitude_m)) {
+            if (!isfinite(high_end)) high_end = -INFINITY;
+            continue;
+        }
         high_end = fmax(high_end, f.end_altitude_m);
         double energy = f.exit_specific_energy_j_kg;
-        if (energy > best_energy) { best_energy = energy; best_aoa = aoa; }
+        if (energy > best_energy) {
+            best_energy = energy;
+            best_aoa = aoa;
+        }
     }
     if (!isfinite(best_aoa)) {
-        out.reason = high_end == -INFINITY ?
-            "route is too long for the available energy" :
-            "profile propagation failed";
+        out.reason = last_propagation_reason ? last_propagation_reason :
+            (high_end == -INFINITY ?
+                "route is too long for the available energy" :
+                "profile propagation failed");
         return out;
     }
     if (high_end < target) {
         out.reason = "route is too long for the available energy";
         return out;
     }
+
     double aoa_low = 0.5, aoa_high = best_aoa;
     bool capture = false;
     double dive_station = INFINITY, dive_aoa = aoa_low, descent_limit = NAN;
@@ -441,12 +578,14 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
          * the dive start so the capture happens one pull-out before the exit. */
         double capture_target = route->length_m - TERMINAL_PROFILE_PULLOUT_M;
         dive_aoa = fmin(best_aoa, TERMINAL_PROFILE_DIVE_AOA_DEG);
-        descent_limit = route->profile_final_slope_deg +
-            TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG;
+        descent_limit = taem_descent_limit(m, route);
         ProfileFlight steep = fly_profile(m, initial, route, best_aoa, 0.0,
             dive_aoa, descent_limit, true, dt, max_elapsed, NULL, 0, NULL);
         if (!steep.valid || !(steep.capture_station_m <= capture_target)) {
-            out.reason = "route is too short to descend within the slope limit";
+            out.reason = steep.valid ?
+                "route is too short to descend within the slope limit" :
+                (steep.reason ? steep.reason :
+                    "route is too short to descend within the slope limit");
             return out;
         }
         double early = 0.0, late = route->length_m;
@@ -454,8 +593,12 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
             double s = 0.5 * (early + late);
             ProfileFlight f = fly_profile(m, initial, route, best_aoa, s,
                 dive_aoa, descent_limit, true, dt, max_elapsed, NULL, 0, NULL);
-            if (!f.valid) { out.reason = "profile propagation failed"; return out; }
-            if (f.capture_station_m <= capture_target) early = s; else late = s;
+            if (!f.valid) {
+                out.reason = f.reason ? f.reason : "profile propagation failed";
+                return out;
+            }
+            if (f.capture_station_m <= capture_target) early = s;
+            else late = s;
         }
         dive_station = early;
         aoa_high = best_aoa;
@@ -475,40 +618,68 @@ TerminalProfileResult terminal_solver_generate_profile(const TerminalModel *m,
                 double aoa = 0.5 * (aoa_low + shallow);
                 ProfileFlight f = fly_profile(m, initial, route, aoa, INFINITY,
                     aoa, NAN, true, dt, max_elapsed, NULL, 0, NULL);
-                if (!f.valid) { out.reason = "profile propagation failed"; return out; }
-                if (f.capture_station_m <= capture_target) shallow = aoa; else aoa_low = aoa;
+                if (!f.valid) {
+                    out.reason = f.reason ? f.reason : "profile propagation failed";
+                    return out;
+                }
+                if (f.capture_station_m <= capture_target) shallow = aoa;
+                else aoa_low = aoa;
             }
             aoa_high = shallow;
             dive_aoa = shallow;
             capture = true;
         }
     }
+
     if (!above_line && !capture) {
-        ProfileFlight low = fly_profile(m, initial, route, aoa_low, INFINITY, aoa_low, NAN, false, dt,
-                                        max_elapsed, NULL, 0, NULL);
-        if (!low.valid) { out.reason = "profile propagation failed"; return out; }
+        ProfileFlight low = fly_profile(m, initial, route, aoa_low, INFINITY,
+            aoa_low, NAN, false, dt, max_elapsed, NULL, 0, NULL);
+        if (!low.valid) {
+            out.reason = low.reason ? low.reason : "profile propagation failed";
+            return out;
+        }
         if (low.end_altitude_m > target) {
             out.reason = "route is too short to dissipate the available energy";
             return out;
         }
         for (int iteration = 0; iteration < 10; ++iteration) {
             double aoa = 0.5 * (aoa_low + aoa_high);
-            ProfileFlight f = fly_profile(m, initial, route, aoa, INFINITY, aoa, NAN, false, dt,
-                                          max_elapsed, NULL, 0, NULL);
-            if (!f.valid) { out.reason = "profile propagation failed"; return out; }
-            if (f.end_altitude_m < target) aoa_low = aoa; else aoa_high = aoa;
+            ProfileFlight f = fly_profile(m, initial, route, aoa, INFINITY,
+                aoa, NAN, false, dt, max_elapsed, NULL, 0, NULL);
+            if (!f.valid) {
+                out.reason = f.reason ? f.reason : "profile propagation failed";
+                return out;
+            }
+            if (f.end_altitude_m < target) aoa_low = aoa;
+            else aoa_high = aoa;
         }
     }
+
     size_t capacity = (size_t)ceil(max_elapsed / dt) + 1;
     ProfileSample *samples = calloc(capacity, sizeof(*samples));
-    if (!samples) { out.reason = "profile allocation failed"; return out; }
+    if (!samples) {
+        out.reason = "profile allocation failed";
+        return out;
+    }
     size_t count = 0;
     ProfileFlight flight = fly_profile(m, initial, route, aoa_high,
         dive_station, dive_aoa, descent_limit, capture, dt,
         max_elapsed, samples, capacity, &count);
     if (!flight.valid || !isfinite(flight.end_altitude_m) || count < 2) {
         free(samples);
-        out.reason = "profile propagation failed";
+        out.reason = flight.reason ? flight.reason : "profile propagation failed";
+        return out;
+    }
+    double target_speed = alignment_speed(m);
+    double speed_error = flight.exit_speed_mps - target_speed;
+    double speed_tolerance = TERMINAL_SMOOTH_SPEED_TOLERANCE * target_speed;
+    if (!isfinite(flight.exit_speed_mps) || fabs(speed_error) > speed_tolerance) {
+        free(samples);
+        out.exit_speed_mps = flight.exit_speed_mps;
+        out.exit_fpa_deg = flight.exit_fpa_deg;
+        out.reason = flight.exit_speed_mps < target_speed ?
+            "alignment profile is too slow for Final handoff" :
+            "alignment profile retains excess energy for Final handoff";
         return out;
     }
     tabulate_profile(route, samples, count);
@@ -688,40 +859,88 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
         if (state_energy(m, &state, end_forces, &energy))
             out.energy_end_j_kg = energy.effective_specific_energy_j_kg;
 
-        double end_distance = hypot(geometry.runway_along_m - route->hac.exit.x,
-                                    geometry.runway_cross_m - route->hac.exit.y);
-        bool at_final_route_point = reference_index + 2 >= route->count;
-        if (at_final_route_point && end_distance <= 700.0 &&
+        double end_distance = hypot(
+            geometry.runway_along_m - route->alignment_along_m,
+            geometry.runway_cross_m);
+        double route_remaining = taem_route_remaining_at_index(route,cursor);
+        double alignment_capture = taem_alignment_capture_distance(m,&geometry);
+        bool in_alignment_capture =
+            isfinite(route_remaining) && route_remaining <= alignment_capture;
+        if (in_alignment_capture && end_distance <= alignment_capture + 500.0 &&
             fabs(demand.course_error_deg) <= 12.0) {
             reached_gate = true;
             out.final_route_index = reference_index;
             out.final_route_course_error_deg = demand.course_error_deg;
             out.final_target_altitude_m = reference.altitude_m;
             out.final_target_flight_path_angle_deg = reference.flight_path_angle_deg;
+            if (diagnostics)
+                fprintf(stderr,
+                    "TAEM alignment gate entry: t=%.1f along=%.1f cross=%.1f courseErr=%.2f bank=%.2f bankRate=%.2f h=%.1f V=%.1f fpa=%.2f\n",
+                    elapsed,geometry.runway_along_m,geometry.runway_cross_m,
+                    geometry.heading_error_deg,state.attitude.bank_rad*57.29577951308232,
+                    state.attitude.bank_rate_rad_s*57.29577951308232,
+                    geometry.altitude_above_runway_m,geometry.airspeed_mps,
+                    geometry.flight_path_angle_deg);
             break;
         }
         out.final_route_index = reference_index;
     }
 
-    /* The live vehicle continues on the runway line after the geometric
-     * circle endpoint.  Replay the same measured-state law before ranking a
-     * route; endpoint-only scoring preferred banked exits that could not
-     * actually deliver a settled Final state. */
+    /* Replay the same point-target alignment law as live MM305.  The
+     * alignment station is a hard upstream delivery point; a candidate that
+     * passes it without satisfying the Final contract is infeasible rather than
+     * being allowed to align somewhere closer to the runway. */
     if (reached_gate) {
         reached_gate = false;
         while (elapsed + dt <= max_elapsed + 1e-9) {
-            if (taem_alignment_exhausted(&geometry)) {
+            if (taem_alignment_exhausted(m,&geometry)) {
+                if (diagnostics)
+                    fprintf(stderr,
+                        "TAEM alignment miss: t=%.1f along=%.1f targetAlong=%.1f cross=%.1f courseErr=%.2f bank=%.2f bankRate=%.2f h=%.1f targetH=%.1f V=%.1f targetV=%.1f fpa=%.2f targetFpa=%.2f\n",
+                        elapsed,geometry.runway_along_m,-m->guidance.final_approach_distance,
+                        geometry.runway_cross_m,geometry.heading_error_deg,
+                        state.attitude.bank_rad*57.29577951308232,
+                        state.attitude.bank_rate_rad_s*57.29577951308232,
+                        geometry.altitude_above_runway_m,
+                        m->guidance.final_approach_distance*
+                            tan(m->guidance.final_glide_slope/57.29577951308232),
+                        geometry.airspeed_mps,
+                        fmax(m->guidance.final_alignment_speed,m->vehicle.touchdown_speed),
+                        geometry.flight_path_angle_deg,-m->guidance.final_glide_slope);
                 out.status = TERMINAL_SOLVER_INFEASIBLE;
-                out.reason = "runway-line alignment exhausted approach distance";
+                out.reason = "Final alignment point was missed";
                 break;
+            }
+            if (diagnostics &&
+                    fabs(geometry.runway_along_m +
+                         m->guidance.final_approach_distance) <= 300.0) {
+                double target_h=m->guidance.final_approach_distance*
+                    tan(m->guidance.final_glide_slope/57.29577951308232);
+                double target_v=fmax(m->guidance.final_alignment_speed,
+                    m->vehicle.touchdown_speed);
+                fprintf(stderr,
+                    "TAEM alignment station sample: t=%.1f along=%.1f cross=%.1f hdgErr=%.2f bank=%.2f bankRate=%.2f h=%.1f dh=%+.1f V=%.1f dV=%+.1f fpa=%.2f dFpa=%+.2f ready=%d\n",
+                    elapsed,geometry.runway_along_m,geometry.runway_cross_m,
+                    geometry.heading_error_deg,
+                    state.attitude.bank_rad*57.29577951308232,
+                    state.attitude.bank_rate_rad_s*57.29577951308232,
+                    geometry.altitude_above_runway_m,
+                    geometry.altitude_above_runway_m-target_h,
+                    geometry.airspeed_mps,geometry.airspeed_mps-target_v,
+                    geometry.flight_path_angle_deg,
+                    geometry.flight_path_angle_deg+
+                        m->guidance.final_glide_slope,
+                    taem_alignment_ready(m,&state,&geometry)?1:0);
             }
             if (taem_alignment_ready(m, &state, &geometry)) {
                 reached_gate = true;
                 TaemPathReference reference = taem_alignment_reference(m, &geometry);
                 out.final_route_course_error_deg =
                     remainder(geometry.course_deg - reference.course_deg, 360.0);
-                out.final_target_altitude_m = reference.altitude_m;
-                out.final_target_flight_path_angle_deg = reference.flight_path_angle_deg;
+                out.final_target_altitude_m =
+                    taem_alignment_target_altitude(m);
+                out.final_target_flight_path_angle_deg =
+                    reference.flight_path_angle_deg;
                 break;
             }
             TaemPathReference reference = taem_alignment_reference(m, &geometry);

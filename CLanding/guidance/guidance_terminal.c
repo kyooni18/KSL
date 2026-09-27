@@ -23,6 +23,16 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
        are actively changing sink and speed according to their own certified
        envelopes. */
     if(g->final_approach_captured&&g->taem_exec.taem_complete){
+        /* Continuously refresh the preflare plan during outer glide descent
+           before pull-up is committed. This updates trigger altitude, target AoA
+           and energy margins as atmospheric density, Mach and learned aerodynamics
+           evolve over the 8-9 km horizon. */
+        if(!g->terminal_pull_latch){
+            TerminalPreflarePlan fresh_plan={0};
+            if(terminal_outer_gate(g,t,course,p,aero,cfg,&fresh_plan)&&fresh_plan.feasible){
+                terminal_store_preflare_plan(g,&fresh_plan);
+            }
+        }
         Trajectory ref;
         trajectory_init(&ref);
         GuidanceResult result=terminal_approach_sequence(g,t,course,p,aero,cfg,&ref,dt);

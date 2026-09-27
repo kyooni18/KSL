@@ -136,6 +136,7 @@ static double terminal_learned_max_lift_to_drag(const GuidanceMachine*g,const Te
 typedef struct {
     double arrest_accel,sgs_height,sgs_sink,final_accel,float_height,float_sink,lift_ratio,aoa_max,g0;
     const PlanetModel*planet;double site_altitude;
+    double preflare_trigger_altitude;
 } TerminalFlarePlan;
 
 /*
@@ -167,7 +168,9 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
     for(int i=0;i<1200&&height>0.0&&V>5.0;++i){
         if(!latched){
             double pull=fmax(0.0,sink*sink-p->sgs_sink*p->sgs_sink)/(2.0*p->arrest_accel);
-            if(height<=pull+p->sgs_height+sink*1.5)latched=true;
+            double target_latch=fmax(pull+p->sgs_height+sink*1.5,
+                isfinite(p->preflare_trigger_altitude)?p->preflare_trigger_altitude:0.0);
+            if(height<=target_latch)latched=true;
         }
         double accel_up=0.0;
         if(latched){
@@ -344,8 +347,10 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double sink_now=fmax(0.0,-t->vertical_speed);
     double pull_height=fmax(0.0,sink_now*sink_now-SGS_SINK*SGS_SINK)/(2.0*arrest_accel);
     double energy_height=fmax(0.0,V*V-v_td*v_td)/(2.0*g0);
+    double handoff_slope=terminal_outer_glide_slope(g,s);
     double glide_tan=fmax(tan(4.0*DEG2RAD),fabs(tan(g->terminal_aim_valid?
-        terminal_geometry_fpa(height,fmax(120.0,g->terminal_aim_along-along),0.0):gamma)));
+        terminal_geometry_fpa(height,fmax(120.0,g->terminal_aim_along-along),0.0):
+        (isfinite(gamma)&&fabs(gamma)>1e-3?gamma:-handoff_slope*DEG2RAD))));
     /* Horizontal distance flown from preflare start to touchdown: the
        constant-deceleration arc (time sink/a) plus the float, which dissipates
        the speed above touchdown speed and the shallow-glide height at LD_f. */
@@ -355,8 +360,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double aim=touchdown_target-arc_distance-float_distance+preflare_height/glide_tan;
     aim=clampd(aim,touchdown_target-6000.0,touchdown_target);
     if(!g->terminal_pull_latch){
-        if(!g->terminal_aim_valid){g->terminal_aim_along=aim;g->terminal_aim_valid=true;}
-        else{
+        if(!g->terminal_aim_valid){
+            double seed_distance=height/fmax(tan(4.0*DEG2RAD),tan(handoff_slope*DEG2RAD));
+            double seed_aim=clampd(along+seed_distance,touchdown_target-6000.0,touchdown_target);
+            g->terminal_aim_along=seed_aim;
+            g->terminal_aim_valid=true;
+        }else{
             double tau=4.0,a=clampd(dt/(tau+dt),0.0,1.0);
             g->terminal_aim_along+=a*(aim-g->terminal_aim_along);
         }
@@ -364,31 +373,6 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     }
     double aim_distance=fmax(120.0,g->terminal_aim_along-along);
     double glide_fpa=terminal_geometry_fpa(height,aim_distance,0.0);
-    /* Outer-glide speed closure.  The flare needs speed in hand: the arc is
-       flown near maximum incidence and bleeds speed, and below the 1-g speed
-       at that incidence it cannot hold the shallow glide.  The Shuttle held
-       its outer-glide reference speed with the speedbrake; here the glide
-       angle does it (steeper is faster on the front side of the polar).
-       V_1g comes from the learned lift at the incidence limit. */
-    /* The learned table tends to over-predict lift at the incidence limit
-       until that incidence has been flown, so never trust a 1-g speed below
-       the configured touchdown speed. */
-    /* Energy-consistent outer-glide speed: predict the touchdown speed the
-       planned profile delivers and ask for the speed whose extra kinetic
-       energy makes up the shortfall (or sheds the excess).  The floor keeps
-       the stall margin the arc needs at its incidence limit. */
-    double speed_ref=1.6*fmax(speed_1g,v_td);
-    double predicted_touchdown_speed=NAN;
-    if(!g->terminal_pull_latch){
-        TerminalFlarePlan plan={arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL,H_FLOAT,S_FLOAT,
-            g->terminal_lift_ratio,aoa_max,g0,p,site->altitude};
-        predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&plan);
-        speed_ref=fmax(1.3*fmax(speed_1g,v_td),
-            sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed)));
-    }
-    if(!g->terminal_pull_latch&&isfinite(speed_ref))
-        glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
-            -35.0*DEG2RAD,-3.0*DEG2RAD);
 
     /* Preflare latch: the height a constant design pull needs to take the
        present sink down to the shallow-glide sink, plus the height lost while
@@ -407,9 +391,47 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     }
     const double FLARE_SLEW=5.0; /* deg/s incidence command slew in the flare */
     double response=clampd(1.5+fmax(0.0,aoa_pull-t->angle_of_attack)/FLARE_SLEW,1.5,8.0);
+    if(g->terminal_preflare_plan_valid&&isfinite(g->preflare_response_time)&&g->preflare_response_time>0.0)
+        response=fmax(response,g->preflare_response_time);
     double response_height=sink_now*response;
-    if(height<=preflare_height+response_height)
+    /* Final admission already priced a preflare trigger from the measured
+       response and energy state.  Never let the live controller wait below
+       that certified trigger just because its local pull estimate became more
+       optimistic after handoff. */
+    double planned_preflare_trigger=g->terminal_preflare_plan_valid&&
+        isfinite(g->preflare_trigger_altitude)&&g->preflare_trigger_altitude>0.0?
+        g->preflare_trigger_altitude:0.0;
+    double preflare_latch_height=fmax(preflare_height+response_height,
+        planned_preflare_trigger);
+    if(height<=preflare_latch_height)
         g->terminal_pull_latch=true;
+
+    /* Outer-glide speed closure.  The flare needs speed in hand: the arc is
+       flown near maximum incidence and bleeds speed, and below the 1-g speed
+       at that incidence it cannot hold the shallow glide.  The Shuttle held
+       its outer-glide reference speed with the speedbrake; here the glide
+       angle does it (steeper is faster on the front side of the polar).
+       V_1g comes from the learned lift at the incidence limit. */
+    /* The learned table tends to over-predict lift at the incidence limit
+       until that incidence has been flown, so never trust a 1-g speed below
+       the configured touchdown speed. */
+    /* Energy-consistent outer-glide speed: predict the touchdown speed the
+       planned profile delivers and ask for the speed whose extra kinetic
+       energy makes up the shortfall (or sheds the excess).  The floor keeps
+       the stall margin the arc needs at its incidence limit. */
+    double station_speed=terminal_final_speed_target(g,v,s,fmax(0.0,-along));
+    double speed_ref=fmax(station_speed,1.6*fmax(speed_1g,v_td));
+    double predicted_touchdown_speed=NAN;
+    if(!g->terminal_pull_latch){
+        TerminalFlarePlan plan={arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL,H_FLOAT,S_FLOAT,
+            g->terminal_lift_ratio,aoa_max,g0,p,site->altitude,planned_preflare_trigger};
+        predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&plan);
+        speed_ref=fmax(station_speed,fmax(1.3*fmax(speed_1g,v_td),
+            sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed))));
+    }
+    if(!g->terminal_pull_latch&&isfinite(speed_ref))
+        glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
+            -35.0*DEG2RAD,-3.0*DEG2RAD);
 
     /* Long landing: an unpowered vehicle cannot go around.  Past the point
        where the float would leave too little runway, stop floating and put
@@ -435,7 +457,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            sink, or a climb, is flown back to it rather than held while the
            float speed bleeds away. */
         const double PREFLARE_TAU=1.5;
-        double room=fmax(3.0,height-SGS_HEIGHT-fmax(0.0,sink)*.5*response);
+        /* Keep the same incidence-response height reserve used by the preflare
+           latch.  Returning half of that reserve immediately after latching
+           makes the closed-loop arc relax its pull and recreates the very
+           response loss the admission trigger was sized to cover. */
+        double room=fmax(3.0,height-SGS_HEIGHT-fmax(0.0,sink)*response);
         arc_accel=sink>SGS_SINK?(sink*sink-SGS_SINK*SGS_SINK)/(2.0*room):
             (sink-SGS_SINK)/PREFLARE_TAU;
         double arc_goal=sink>SGS_SINK?fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU):SGS_SINK;

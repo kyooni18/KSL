@@ -32,7 +32,6 @@ static bool deorbit_energy_margin_qualified(const DeorbitEnergyMargin*m,
 }
 
 static void candidate_clear(Candidate*c){entry_prediction_clear(&c->pred);}
-static void candidate_move(Candidate*dst,Candidate*src){*dst=*src;memset(src,0,sizeof(*src));trajectory_init(&src->pred.trajectory);}
 static double deorbit_candidate_safety_violation(const EntryPrediction*p,
         const VehicleProfile*v,const GuidanceSettings*s){
     if(!p||!v||!s||!p->entered_atmosphere)return INFINITY;
@@ -123,6 +122,10 @@ static bool eval_candidate(Candidate*out,VehicleState coast,double dv,
     out->entry_fpa_error=fabs(
         pr.entry_flight_path_angle-s->target_entry_flight_path_angle);
     out->entry_course_error=fabs(pr.entry_course_error);
+    double entry_central_angle=pr.entry_range/fmax(p->radius,DBL_MIN);
+    double entry_cross_sine=sin(entry_central_angle)*sin(pr.entry_course_error*DEG2RAD);
+    out->entry_groundtrack_crossrange_error=fabs(
+        asin(clampd(entry_cross_sine,-1.0,1.0))*p->radius);
     out->entry_range_error=fabs(pr.entry_range-s->target_entry_range);
     out->handoff_alignment_utilization=INFINITY;
     out->handoff_range_error=INFINITY;
@@ -140,44 +143,6 @@ static bool eval_candidate(Candidate*out,VehicleState coast,double dv,
     return true;
 }
 
-static bool better(const Candidate*a,const Candidate*b,bool hasb){
-    if(!a)return false;
-    if(!hasb||!b)return true;
-    int witness_status=execution_witness_status_compare(a,b);
-    if(witness_status)return witness_status<0;
-    int witness_geometry=execution_witness_geometry_compare(a,b);
-    if(witness_geometry)return witness_geometry<0;
-    if(a->tier!=b->tier)return a->tier>b->tier;
-
-    if(a->safety_violation<b->safety_violation)return true;
-    if(a->safety_violation>b->safety_violation)return false;
-    if(a->energy_deficit<b->energy_deficit)return true;
-    if(a->energy_deficit>b->energy_deficit)return false;
-
-    if(a->handoff_alignment_utilization<b->handoff_alignment_utilization)return true;
-    if(a->handoff_alignment_utilization>b->handoff_alignment_utilization)return false;
-    if(a->handoff_range_error<b->handoff_range_error)return true;
-    if(a->handoff_range_error>b->handoff_range_error)return false;
-
-    /* Keep enough positive unpowered reach for a controlled approach (~60 km
-       wings-level runway overshoot buffer), then minimize deviation from that
-       buffer before refining the configured entry-angle, course, and range
-       objectives. */
-    const double target_reach_buffer=60000.0;
-    double buf_a=a->energy_margin.valid?fabs(a->energy_margin.impact_along_track-target_reach_buffer):INFINITY;
-    double buf_b=b->energy_margin.valid?fabs(b->energy_margin.impact_along_track-target_reach_buffer):INFINITY;
-    if(buf_a<buf_b)return true;
-    if(buf_a>buf_b)return false;
-    if(a->entry_fpa_error<b->entry_fpa_error)return true;
-    if(a->entry_fpa_error>b->entry_fpa_error)return false;
-    if(a->entry_course_error<b->entry_course_error)return true;
-    if(a->entry_course_error>b->entry_course_error)return false;
-    if(a->entry_range_error<b->entry_range_error)return true;
-    if(a->entry_range_error>b->entry_range_error)return false;
-    if(a->dv<b->dv)return true;
-    if(a->dv>b->dv)return false;
-    return a->burn_ut<b->burn_ut;
-}
 
 typedef struct {
     double timing_offset,thrust_scale,dv_offset,mass_scale,position_offset,velocity_offset;
@@ -321,34 +286,6 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
     return r;
 }
 
-static bool robust_better(const Candidate*a,const RobustAssessment*ra,const Candidate*b,const RobustAssessment*rb,bool hasb){
-    if(!hasb)return true;
-    int witness_status=execution_witness_status_compare(a,b);
-    if(witness_status)return witness_status<0;
-    if(ra->qualified!=rb->qualified)return ra->qualified;
-    if(ra->recovery_qualified!=rb->recovery_qualified)return ra->recovery_qualified;
-    if(!ra->qualified&&!ra->recovery_qualified&&
-       !rb->qualified&&!rb->recovery_qualified){
-        int witness_geometry=execution_witness_geometry_compare(a,b);
-        if(witness_geometry)return witness_geometry<0;
-    }
-    if(ra->unsafe!=rb->unsafe)return ra->unsafe<rb->unsafe;
-    if(ra->passed!=rb->passed)return ra->passed>rb->passed;
-    if(ra->recovery_passed!=rb->recovery_passed)return ra->recovery_passed>rb->recovery_passed;
-    if(a->tier!=b->tier)return a->tier>b->tier;
-    /* Once candidates are in the same qualified stress class, let the
-       configured entry-angle/periapsis targets in Candidate.score decide the
-       trajectory. Independent "shallower is always better" tie-breaks defeat
-       those targets and can select a grazing entry even when a safe deeper
-       solution is available. */
-    if(ra->worst_taem_error<rb->worst_taem_error)return true;
-    if(ra->worst_taem_error>rb->worst_taem_error)return false;
-    if(ra->worst_alignment_error<rb->worst_alignment_error)return true;
-    if(ra->worst_alignment_error>rb->worst_alignment_error)return false;
-    if(ra->worst_closest<rb->worst_closest)return true;
-    if(ra->worst_closest>rb->worst_closest)return false;
-    return better(a,b,true);
-}
 
 static double deorbit_finite_burn_periapsis(VehicleState coast,double dv,
         const PlanetModel*p,const GuidanceSettings*s,double thrust,
@@ -580,16 +517,100 @@ static void deorbit_record_execution_witness(Candidate*c,
         isfinite(witness->closest_distance)?witness->closest_distance:INFINITY;
 }
 
-static void deorbit_evaluate_candidate_witness(Candidate*c,
-        const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,
-        const TrajectoryCalibrationModel*cal,const LandingSite*site,
-        const VehicleProfile*v,const GuidanceSettings*s,
-        const Telemetry*authority_source){
-    if(!c)return;
-    EntryPrediction witness=deorbit_executable_policy_witness(c,p,aero,env,cal,
-        site,v,s,authority_source,false);
-    deorbit_record_execution_witness(c,&witness,site,v,s);
-    entry_prediction_clear(&witness);
+typedef struct {
+    bool valid,closing;
+    double burn_start,burn_ut,dv,duration,peri;
+    double entry_range,entry_fpa,entry_speed,entry_course_error;
+    double entry_crossrange,entry_miss;
+} DeorbitTimingProbe;
+
+static bool deorbit_timing_probe_entry(DeorbitTimingProbe*out,VehicleState state,
+        const PlanetModel*p,const LandingSite*site,const GuidanceSettings*s){
+    if(!out||!p||!site||!s)return false;
+    GeoPoint target={site->latitude,site->longitude,site->altitude};
+    double entry_alt=entry_guidance_start_altitude(p,s),elapsed=0.0;
+    while(elapsed<4500.0){
+        GeoPoint geo=predictor_geo_point(state.position,p,state.ut);
+        Vector3 up=vnorm(state.position,v3(0,1,0));
+        Vector3 air=vsub(state.velocity,vcross(planet_rotation_vector(p),state.position));
+        double speed=vmag(air),vertical=vdot(air,up);
+        if(geo.altitude<=entry_alt&&vertical<0.0){
+            double horizontal=vmag(vproject_plane(air,up));
+            double bearing=initial_bearing(geo,target);
+            double course=surface_course(state.position,state.velocity,
+                planet_rotation_vector(p),p->north_axis,bearing);
+            double signed_error=norm_signed_deg(bearing-course);
+            double range=great_circle_distance(geo,target,p->radius);
+            double central=range/fmax(p->radius,DBL_MIN);
+            double cross_sine=sin(central)*sin(signed_error*DEG2RAD);
+            out->entry_range=range;
+            out->entry_fpa=atan2(vertical,fmax(horizontal,.1))*RAD2DEG;
+            out->entry_speed=speed;
+            out->entry_course_error=fabs(signed_error);
+            out->entry_crossrange=fabs(asin(clampd(cross_sine,-1.0,1.0))*p->radius);
+            out->entry_miss=hypot(out->entry_crossrange,
+                range-s->target_entry_range);
+            out->closing=out->entry_course_error<90.0;
+            out->valid=isfinite(out->entry_range)&&isfinite(out->entry_fpa)&&
+                isfinite(out->entry_speed)&&isfinite(out->entry_course_error)&&
+                isfinite(out->entry_crossrange)&&isfinite(out->entry_miss);
+            return out->valid;
+        }
+        if(!isfinite(geo.altitude)||geo.altitude<-1000.0)return false;
+        double excess=geo.altitude-entry_alt;
+        double dt=excess>10000.0?8.0:(excess>2000.0?2.0:.25);
+        state=rk4_gravity(state,dt,p);
+        elapsed+=dt;
+    }
+    return false;
+}
+
+static bool deorbit_timing_probe_start(DeorbitTimingProbe*out,VehicleState initial,
+        double burn_start,const PlanetModel*p,const TrajectoryCalibrationModel*cal,
+        const LandingSite*site,const GuidanceSettings*s,double thrust,
+        DeorbitRejectReason*reject){
+    if(reject)*reject=DEORBIT_REJECT_START;
+    if(!out||!isfinite(burn_start)||burn_start<initial.ut)return false;
+    memset(out,0,sizeof(*out));
+    VehicleState coast=predictor_propagate_vacuum(initial,burn_start,p,12.0);
+    double dv=0.0;
+    if(!deorbit_solve_target_periapsis(coast,p,s,thrust,cal,&dv,reject))return false;
+    double duration=0.0,delivered=0.0;
+    VehicleState after=retro_burn_scenario(coast,dv,thrust,
+        s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,
+        p,0.0,0.0,&duration,&delivered,cal?cal->physics:NULL);
+    double tolerance=fmax(GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS,
+        sqrt(DBL_EPSILON)*fmax(1.0,fabs(dv)));
+    if(reject)*reject=DEORBIT_REJECT_FINITE_BURN;
+    if(!isfinite(duration)||!isfinite(delivered)||delivered+tolerance<dv)return false;
+    double peri=predictor_postburn_periapsis(after,p);
+    if(reject)*reject=DEORBIT_REJECT_POSTBURN_PERIAPSIS;
+    if(!isfinite(peri)||peri>=p->atmosphere_depth||peri<=-p->radius)return false;
+    out->burn_start=burn_start;
+    out->burn_ut=coast.ut+duration*.5;
+    out->dv=dv;out->duration=duration;out->peri=peri;
+    if(reject)*reject=DEORBIT_REJECT_ENTRY_PREDICTION;
+    if(!deorbit_timing_probe_entry(out,after,p,site,s))return false;
+    if(reject)*reject=DEORBIT_REJECT_NONE;
+    return true;
+}
+
+static bool deorbit_timing_probe_better(const DeorbitTimingProbe*a,
+        const DeorbitTimingProbe*b,bool hasb,const GuidanceSettings*s){
+    if(!a||!a->valid)return false;
+    if(!hasb||!b||!b->valid)return true;
+    if(a->closing!=b->closing)return a->closing;
+    if(a->entry_miss<b->entry_miss)return true;
+    if(a->entry_miss>b->entry_miss)return false;
+    if(a->entry_crossrange<b->entry_crossrange)return true;
+    if(a->entry_crossrange>b->entry_crossrange)return false;
+    double af=fabs(a->entry_fpa-s->target_entry_flight_path_angle);
+    double bf=fabs(b->entry_fpa-s->target_entry_flight_path_angle);
+    if(af<bf)return true;
+    if(af>bf)return false;
+    if(a->entry_course_error<b->entry_course_error)return true;
+    if(a->entry_course_error>b->entry_course_error)return false;
+    return a->burn_start<b->burn_start;
 }
 
 bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
@@ -607,7 +628,6 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     trajectory_init(&out->trajectory);
 
     double lead=fmax(0.0,s->minimum_planning_lead_time);
-    const int time_samples=49; /* numerical search resolution only */
     double search_horizon=period;
     Vector3 angular_momentum=vcross(state.position,state.velocity);
     double angular_momentum_magnitude=vmag(angular_momentum);
@@ -627,58 +647,58 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             if(isfinite(target_phase_period)&&target_phase_period>0.0)
                 search_horizon=fmax(period,target_phase_period);
         }
+
+        /* Inclined inertial planes do not repeat their body-fixed node longitude
+           after one spacecraft orbit.  Let the rotating runway sweep once under
+           the plane so deorbit timing, rather than atmospheric bank, owns the
+           large-scale crossrange. */
+        if(fabs(p->rotational_speed)>DBL_EPSILON){
+            double rotation_period=2.0*acos(-1.0)/fabs(p->rotational_speed);
+            if(isfinite(rotation_period)&&rotation_period>0.0)
+                search_horizon=fmax(search_horizon,rotation_period);
+        }
     }
+    /* One-degree body-rotation spacing is only the coarse numerical grid.
+       The cheap orbital probe is refined below to sub-second burn timing. */
+    const int time_samples=361;
     double coarse_step=search_horizon/(double)(time_samples-1);
 
-    Candidate nominal;
-    memset(&nominal,0,sizeof(nominal));
-    trajectory_init(&nominal.pred.trajectory);
-    bool nominal_valid=false;
     unsigned rejection_counts[DEORBIT_REJECT_COUNT]={0};
 
     /*
-     * Search one complete body-fixed ground-track phase. Orbital phase alone
-     * repeats after one spacecraft orbit, but a rotating runway does not return
-     * to the same relative longitude at that time. The synodic horizon above is
-     * derived from orbital mean motion and the planet's spin projected on the
-     * orbit normal. Rank those natural burn opportunities with the search and
-     * stress models, then run the separate production-guidance witness once on
-     * the selected candidate. Capture gates remain unchanged.
+     * Solve orbital ground-track geometry first.  This probe includes the real
+     * finite retro burn and target-periapsis solve, then propagates ballistically
+     * only to Entry Interface.  MM304/TAEM behavior is intentionally absent:
+     * large crossrange belongs to deorbit timing, not atmospheric recovery.
      */
+    DeorbitTimingProbe timing_best={0};
+    bool timing_valid=false;
     for(int i=0;i<time_samples;i++){
         double offset=lead+search_horizon*(double)i/(double)(time_samples-1);
-        Candidate c;
+        DeorbitTimingProbe probe={0};
         DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-        if(!deorbit_evaluate_start(&c,state,state.ut+offset,0.0,
-                p,aero,env,cal,site,v,s,thrust,&rejection)){
+        if(!deorbit_timing_probe_start(&probe,state,state.ut+offset,p,cal,
+                site,s,thrust,&rejection)){
             if(rejection>DEORBIT_REJECT_NONE&&rejection<DEORBIT_REJECT_COUNT)
                 rejection_counts[rejection]++;
             continue;
         }
         if(getenv("KSP_LANDER_TRACE_DEORBIT_CANDIDATES"))
             fprintf(stderr,
-                "DEORBIT_CANDIDATE sample=%d start=%.2f burn=%.2f tier=%d dv=%.2f entry=%.1fkm/%.2fdeg courseErr=%.2f gate=(%.1f,%.1f)km V=%.1f reachedTAEM=%d boundaryMiss=%d TAEM=(%.1f,%.1f)km course=%.2f V=%.1f rangeErr=%.1fkm impactValid=%d impact=(%.1f,%.1f)km align=%.3f\n",
-                i,state.ut+offset,c.burn_ut,c.tier,c.dv,
-                c.pred.entry_range/1000.0,c.pred.entry_flight_path_angle,
-                c.pred.entry_course_error,c.pred.mm304_gate_along_track/1000.0,
-                c.pred.mm304_gate_cross_track/1000.0,c.pred.mm304_gate_speed,
-                c.pred.reached_taem?1:0,
-                c.pred.taem_ownership_boundary_missed?1:0,
-                c.pred.taem_along_track/1000.0,c.pred.taem_cross_track/1000.0,
-                c.pred.taem_course,c.pred.taem_speed,c.pred.taem_range_error/1000.0,
-                c.energy_margin.valid?1:0,c.energy_margin.impact_along_track/1000.0,
-                c.energy_margin.impact_cross_track/1000.0,
-                c.handoff_alignment_utilization);
-        if(better(&c,&nominal,nominal_valid)){
-            if(nominal_valid)candidate_clear(&nominal);
-            candidate_move(&nominal,&c);
-            nominal_valid=true;
-        }else candidate_clear(&c);
+                "DEORBIT_TIMING sample=%d start=%.2f burn=%.2f dv=%.2f entry=%.1fkm cross=%.1fkm miss=%.1fkm courseErr=%.2f FPA=%.2f closing=%d\n",
+                i,probe.burn_start,probe.burn_ut,probe.dv,
+                probe.entry_range/1000.0,probe.entry_crossrange/1000.0,
+                probe.entry_miss/1000.0,probe.entry_course_error,
+                probe.entry_fpa,probe.closing?1:0);
+        if(deorbit_timing_probe_better(&probe,&timing_best,timing_valid,s)){
+            timing_best=probe;
+            timing_valid=true;
+        }
     }
-    if(!nominal_valid){
+    if(!timing_valid){
         if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
             fprintf(stderr,
-                "Deorbit search rejected all burn starts: start=%u target-input=%u target-orbit=%u target-low-state=%u target-impulse-bound=%u target-impulse-root=%u target-finite-seed=%u target-finite-bracket=%u target-finite-root=%u impulsive-periapsis=%u finite-burn=%u postburn-periapsis=%u entry-prediction=%u.\n",
+                "Deorbit timing search rejected all burn starts: start=%u target-input=%u target-orbit=%u target-low-state=%u target-impulse-bound=%u target-impulse-root=%u target-finite-seed=%u target-finite-bracket=%u target-finite-root=%u impulsive-periapsis=%u finite-burn=%u postburn-periapsis=%u entry-prediction=%u.\n",
                 rejection_counts[DEORBIT_REJECT_START],
                 rejection_counts[DEORBIT_REJECT_TARGET_INPUT],
                 rejection_counts[DEORBIT_REJECT_TARGET_ORBIT],
@@ -695,101 +715,47 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         return false;
     }
 
-    /*
-     * Refine burn time around the best orbital-phase sample.  Bisection of the
-     * search interval is numerical convergence, not a flight-policy threshold;
-     * delta-v is re-solved from the configured periapsis at every time sample.
-     */
+    /* Refine burn time using only orbital geometry.  Delta-v is re-solved from
+       the configured periapsis at every probe; downstream guidance cannot move
+       the selected ground-track pass. */
     double time_step=coarse_step;
-    for(int iteration=0;iteration<7;iteration++){
-        double center=nominal.burn_ut-nominal.duration*.5;
-        Candidate iteration_best;
-        memset(&iteration_best,0,sizeof(iteration_best));
-        trajectory_init(&iteration_best.pred.trajectory);
-        bool found=false;
-
-        for(int direction=-1;direction<=1;direction++){
-            double start=center+direction*time_step;
-            if(start<state.ut+lead)continue;
-            Candidate c;
-            if(!deorbit_evaluate_start(&c,state,start,0.0,
-                    p,aero,env,cal,site,v,s,thrust,NULL))
+    for(int iteration=0;iteration<9;iteration++){
+        DeorbitTimingProbe iteration_best=timing_best;
+        for(int direction=-1;direction<=1;direction+=2){
+            double start=timing_best.burn_start+direction*time_step;
+            if(start<state.ut+lead||start>state.ut+lead+search_horizon)continue;
+            DeorbitTimingProbe probe={0};
+            if(!deorbit_timing_probe_start(&probe,state,start,p,cal,site,s,
+                    thrust,NULL))
                 continue;
-            if(better(&c,&iteration_best,found)){
-                if(found)candidate_clear(&iteration_best);
-                candidate_move(&iteration_best,&c);
-                found=true;
-            }else candidate_clear(&c);
+            if(deorbit_timing_probe_better(&probe,&iteration_best,true,s))
+                iteration_best=probe;
         }
-        if(found&&better(&iteration_best,&nominal,true)){
-            candidate_clear(&nominal);
-            candidate_move(&nominal,&iteration_best);
-        }else if(found)candidate_clear(&iteration_best);
-        time_step*=.5; /* numerical interval refinement */
+        if(deorbit_timing_probe_better(&iteration_best,&timing_best,true,s))
+            timing_best=iteration_best;
+        time_step*=.5;
     }
 
+    if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+        fprintf(stderr,
+            "DEORBIT_TIMING_SELECTED start=%.3f burn=%.3f dv=%.2f entry=%.1fkm cross=%.1fkm miss=%.1fkm courseErr=%.2f FPA=%.2f\n",
+            timing_best.burn_start,timing_best.burn_ut,timing_best.dv,
+            timing_best.entry_range/1000.0,timing_best.entry_crossrange/1000.0,
+            timing_best.entry_miss/1000.0,timing_best.entry_course_error,
+            timing_best.entry_fpa);
+
+    /* Only now pay for atmospheric prediction.  It may reject the correctly
+       targeted orbital pass, but it is not allowed to retime that pass. */
     Candidate selected;
     memset(&selected,0,sizeof(selected));
     trajectory_init(&selected.pred.trajectory);
-    double nominal_start=nominal.burn_ut-nominal.duration*.5;
-    fprintf(stderr, "DEORBIT_AFTER_BISECTION: start=%.2f burn=%.2f tier=%d dv=%.2f entry=%.1fkm marginImpact=%+.1fkm\n",
-        nominal_start, nominal.burn_ut, nominal.tier, nominal.dv,
-        nominal.pred.entry_range/1000.0, nominal.energy_margin.impact_along_track/1000.0);
-    RobustAssessment selected_robust=assess_candidate_robustness(
-        &nominal,state,p,aero,env,cal,site,v,s,thrust,false);
-    candidate_move(&selected,&nominal);
-    bool selected_any=true;
-
-    /*
-     * Robust refinement uses the configured uncertainty scales themselves as
-     * the initial neighborhood.  No rescue corridor or hand-authored interior
-     * gate is involved.
-     */
-    double robust_time_step=fmax(coarse_step,
-        fmax(0.0,s->deorbit_timing_uncertainty));
-    double robust_dv_step=fmax(0.0,s->deorbit_delta_v_uncertainty);
-    for(int iteration=0;iteration<6;iteration++){
-        double center_start=selected.burn_ut-selected.duration*.5;
-        Candidate iteration_best;
-        RobustAssessment iteration_robust={0};
-        memset(&iteration_best,0,sizeof(iteration_best));
-        trajectory_init(&iteration_best.pred.trajectory);
-        bool found=false;
-
-        for(int ti=-1;ti<=1;ti++)for(int di=-1;di<=1;di++){
-            if(ti==0&&di==0)continue;
-            double start=center_start+ti*robust_time_step;
-            if(start<state.ut+lead)continue;
-
-            Candidate c;
-            double dv_offset=di*robust_dv_step;
-            if(!deorbit_evaluate_start(&c,state,start,dv_offset,
-                    p,aero,env,cal,site,v,s,thrust,NULL))
-                continue;
-            RobustAssessment rr=assess_candidate_robustness(
-                &c,state,p,aero,env,cal,site,v,s,thrust,false);
-            if(robust_better(&c,&rr,&iteration_best,&iteration_robust,found)){
-                if(found)candidate_clear(&iteration_best);
-                candidate_move(&iteration_best,&c);
-                iteration_robust=rr;
-                found=true;
-            }else candidate_clear(&c);
-        }
-
-        if(found&&robust_better(&iteration_best,&iteration_robust,
-                &selected,&selected_robust,selected_any)){
-            candidate_clear(&selected);
-            candidate_move(&selected,&iteration_best);
-            selected_robust=iteration_robust;
-            selected_any=true;
-        }else if(found)candidate_clear(&iteration_best);
-
-        robust_time_step*=.5; /* numerical interval refinement */
-        robust_dv_step*=.5;
+    if(!deorbit_evaluate_start(&selected,state,timing_best.burn_start,0.0,
+            p,aero,env,cal,site,v,s,thrust,NULL)){
+        candidate_clear(&selected);
+        return false;
     }
-    fprintf(stderr, "DEORBIT_AFTER_ROBUST: start=%.2f burn=%.2f tier=%d dv=%.2f entry=%.1fkm marginImpact=%+.1fkm\n",
-        selected.burn_ut-selected.duration*.5, selected.burn_ut, selected.tier, selected.dv,
-        selected.pred.entry_range/1000.0, selected.energy_margin.impact_along_track/1000.0);
+    RobustAssessment selected_robust=assess_candidate_robustness(
+        &selected,state,p,aero,env,cal,site,v,s,thrust,false);
 
     if(getenv("KSP_LANDER_TRACE_STRESS")){
         RobustAssessment traced=assess_candidate_robustness(
@@ -797,117 +763,9 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         (void)traced;
     }
 
-    /* Reduced-model robustness may prefer a nearby burn opportunity whose
-       production MM304 witness is materially worse. Compare the two natural
-       planner results, then use their measured interface-position residuals
-       for one bounded secant probe inside the already searched ground-track
-       phase. Every proposal is re-solved from the configured periapsis and
-       must still pass the unchanged production and stress gates below. */
-    deorbit_evaluate_candidate_witness(&selected,p,aero,env,cal,site,v,s,
-        authority_source);
-    double selected_start=selected.burn_ut-selected.duration*.5;
-    double comparison_start_a=selected_start;
-    double comparison_range_a=selected.executable_witness_range_error;
-    double alternate_range_error=NAN;
-    bool witness_selection_changed=false;
-    double witness_resolution=fmax(s->deorbit_timing_uncertainty,
-        sqrt(DBL_EPSILON)*fmax(1.0,fmax(fabs(selected_start),fabs(nominal_start))));
-    bool alternate_measured=false;
-    if(isfinite(nominal_start)&&
-       fabs(nominal_start-selected_start)>witness_resolution){
-        Candidate alternate;
-        DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-        if(deorbit_evaluate_start(&alternate,state,nominal_start,0.0,
-                p,aero,env,cal,site,v,s,thrust,&rejection)){
-            deorbit_evaluate_candidate_witness(&alternate,p,aero,env,cal,
-                site,v,s,authority_source);
-            alternate_range_error=alternate.executable_witness_range_error;
-            alternate_measured=true;
-            if(better(&alternate,&selected,true)){
-                candidate_clear(&selected);
-                candidate_move(&selected,&alternate);
-                witness_selection_changed=true;
-            }else candidate_clear(&alternate);
-        }
-    }
-
-    /* Without a distinct natural alternate, seed the secant with one probe
-       half a coarse sample toward the residual (short -> later burn). */
-    if(!alternate_measured&&isfinite(comparison_range_a)&&
-       fabs(comparison_range_a)>s->target_deorbit_capture_radius*.25){
-        double seed=comparison_start_a+
-            (comparison_range_a<0.0?.5:-.5)*coarse_step;
-        seed=clampd(seed,state.ut+lead,state.ut+lead+search_horizon);
-        Candidate probe;
-        DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-        if(fabs(seed-comparison_start_a)>witness_resolution&&
-           deorbit_evaluate_start(&probe,state,seed,0.0,
-                p,aero,env,cal,site,v,s,thrust,&rejection)){
-            deorbit_evaluate_candidate_witness(&probe,p,aero,env,cal,
-                site,v,s,authority_source);
-            alternate_range_error=probe.executable_witness_range_error;
-            alternate_measured=isfinite(alternate_range_error);
-            nominal_start=seed;
-            if(getenv("KSP_LANDER_TRACE_DEORBIT_CANDIDATES"))
-                fprintf(stderr,"DEORBIT_WITNESS_SEED start=%.1f rangeA=%.0f "
-                    "seed=%.1f rangeB=%.0f capture=%d\n",comparison_start_a,
-                    comparison_range_a,seed,alternate_range_error,
-                    probe.executable_witness_capture);
-            if(better(&probe,&selected,true)){
-                candidate_clear(&selected);
-                candidate_move(&selected,&probe);
-                witness_selection_changed=true;
-            }else candidate_clear(&probe);
-        }
-    }
-
-    /* Secant on the signed witness TAEM range residual, a few bounded
-       steps from the two measured natural candidates. Each probe moves at
-       most one coarse sample and is accepted only through better(). */
-    if(alternate_measured&&isfinite(comparison_range_a)&&
-       isfinite(alternate_range_error)){
-        double xa=comparison_start_a,ya=comparison_range_a;
-        double xb=nominal_start,yb=alternate_range_error;
-        double phase_start=state.ut+lead;
-        double phase_end=phase_start+search_horizon;
-        for(int iter=0;iter<4;++iter){
-            double slope=(yb-ya)/(xb-xa);
-            if(!isfinite(slope)||fabs(slope)<=DBL_EPSILON)break;
-            if(fabs(ya)<fabs(yb)){double t=xa;xa=xb;xb=t;yb=ya;}
-            double proposal=xb-yb/slope;
-            proposal=clampd(proposal,xb-coarse_step,xb+coarse_step);
-            proposal=clampd(proposal,phase_start,phase_end);
-            if(!isfinite(proposal)||fabs(proposal-xb)<=witness_resolution||
-               fabs(proposal-xa)<=witness_resolution)break;
-            Candidate probe;
-            DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-            if(!deorbit_evaluate_start(&probe,state,proposal,0.0,
-                    p,aero,env,cal,site,v,s,thrust,&rejection))break;
-            deorbit_evaluate_candidate_witness(&probe,p,aero,env,cal,
-                site,v,s,authority_source);
-            double yp=probe.executable_witness_range_error;
-            if(getenv("KSP_LANDER_TRACE_DEORBIT_CANDIDATES"))
-                fprintf(stderr,"DEORBIT_WITNESS_SECANT iter=%d start=%.1f "
-                    "range=%.0f capture=%d\n",iter,proposal,yp,
-                    probe.executable_witness_capture);
-            if(better(&probe,&selected,true)){
-                candidate_clear(&selected);
-                candidate_move(&selected,&probe);
-                witness_selection_changed=true;
-            }else candidate_clear(&probe);
-            if(!isfinite(yp))break;
-            xa=xb;ya=yb;xb=proposal;yb=yp;
-            if(fabs(yp)<=s->target_deorbit_capture_radius*.25)break;
-        }
-    }
-
-    if(witness_selection_changed)
-        selected_robust=assess_candidate_robustness(&selected,state,p,aero,
-            env,cal,site,v,s,thrust,false);
-
-    /* The orbital-phase scan and final production-guidance witness must agree
-       before engagement. Keep the selected trajectory as a fresh, serialized
-       witness; a reduced-model candidate cannot qualify by itself. */
+    /* Atmospheric guidance certifies the orbital solution; it does not
+       retime the burn.  If MM304 cannot accept this correctly targeted pass,
+       that is an Entry problem rather than permission to move the ground track. */
     EntryPrediction detailed=deorbit_executable_policy_witness(
         &selected,p,aero,env,cal,site,v,s,authority_source,true);
     deorbit_record_execution_witness(&selected,&detailed,site,v,s);

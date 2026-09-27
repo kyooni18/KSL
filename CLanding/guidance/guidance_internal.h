@@ -48,6 +48,7 @@ typedef struct {
     double predicted_kinetic_margin;
     double effective_accel;
     double response_time;
+    double plan_source_ut;
     DecisionMargin height;
 } TerminalPreflarePlan;
 

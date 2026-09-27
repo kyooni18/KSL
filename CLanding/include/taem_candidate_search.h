@@ -40,6 +40,13 @@ TaemFixedHacCandidate taem_fixed_hac_evaluate_exact(const TerminalModel *model,
         const TerminalDynamicState *initial, double hac_radius_m, double side,
         double route_spacing_m, double dt_s, double maximum_elapsed_s);
 
+/* Qualify one already-built route against the same native profile/replay
+ * contracts used by the search.  This lets MM305 test the provisional route it
+ * is already tracking before searching unrelated geometry. */
+TaemFixedHacCandidate taem_fixed_hac_evaluate_route(const TerminalModel *model,
+        const TerminalDynamicState *initial, const TaemRoute *route,
+        int runway_end, double dt_s, double maximum_elapsed_s);
+
 /* Same fixed-HAC contract evaluated from both runway ends.  reciprocal_model
  * is the configured model with its site replaced by the reciprocal threshold
  * (NULL searches the configured end only).  Each candidate's route is framed

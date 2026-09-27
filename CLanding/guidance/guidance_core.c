@@ -47,6 +47,8 @@ static void reset_controllers(GuidanceMachine*g){
     g->runway_end_reciprocal_path=NAN;
     g->terminal_final_handoff_latched=false;
     g->terminal_final_handoff_distance=NAN;
+    g->terminal_final_handoff_slope_deg=NAN;
+    g->terminal_final_handoff_speed_mps=NAN;
 
     robust_pid_reset(&g->entry_energy_pid);
     robust_pid_reset(&g->taem_altitude_pid);

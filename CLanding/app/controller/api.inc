@@ -103,6 +103,46 @@ void landing_controller_engage_reentry(LandingController*c){
         initial_s_turn_sign=course_error<0.0?-1.0:1.0;
     }
 
+    /* Reentry engagement is phase-adaptive.  A vehicle already inside the
+       terminal region should resume MM305 directly instead of replaying MM304
+       merely to rediscover an ownership transition that happened before the
+       controller attached.  This is phase classification only: MM305 still has
+       to qualify a route and earn the unchanged Final handoff. */
+    double live_course=surface_course(state.position,state.velocity,
+        planet_rotation_vector(p),p->north_axis,t.heading);
+    double terminal_restart_range=entry_taem_range_target(p,&cfg.guidance);
+    bool late_terminal_restart=in_atmosphere&&descending&&
+        isfinite(live_course)&&isfinite(t.range_to_site)&&
+        t.mean_altitude<=cfg.guidance.mm305_max_altitude+1000.0&&
+        t.range_to_site<=terminal_restart_range&&
+        t.true_air_speed>cfg.vehicle.minimum_safe_speed;
+    if(late_terminal_restart){
+        char status[384]={0};
+        if(!guidance_begin_mm305_continuation(&c->guidance,&t,live_course,p,
+                c->aerodynamics,&cfg,status,sizeof(status))){
+            set_warning(c,status[0]?status:
+                "The live terminal state could not initialize MM305 continuation.");
+            publish(c);pthread_mutex_unlock(&c->mutex);return;
+        }
+        if(c->has_plan){deorbit_plan_clear(&c->plan);c->has_plan=false;}
+        c->plan_stale=false;c->time_warp_issued=true;c->has_prediction_cache=false;
+        c->last_prediction_ut=-1e300;
+        trajectory_clear(&c->dynamic_trajectory);trajectory_init(&c->dynamic_trajectory);
+        trajectory_clear(&c->stabilized_trajectory);trajectory_init(&c->stabilized_trajectory);
+        trajectory_clear(&c->trajectory_calibrator.forecast);
+        trajectory_init(&c->trajectory_calibrator.forecast);
+        c->latest_telemetry=t;c->latest_state=state;c->has_latest=true;
+        landing_snapshot_set_sample(&c->snapshot,&t,&c->latest_state);
+        c->snapshot.plan=NULL;c->snapshot.phase=PHASE_TAEM;
+        c->snapshot.automation_engaged=true;c->snapshot.paused=false;
+        snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s",status);
+        set_error(c,NULL);set_warning(c,NULL);
+        log_state_event(c,
+            "event=reentry-continuation-armed; late-terminal-restart=true; mm305-ownership-adopted=true",
+            true);
+        publish(c);pthread_mutex_unlock(&c->mutex);return;
+    }
+
     GuidanceMachine qualification_guidance;
     guidance_initialize_reentry_continuation(&qualification_guidance,&t,p,&cfg,
         initial_s_turn_sign,false,&c->envelope,&c->trajectory_calibration);

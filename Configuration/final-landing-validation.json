@@ -41,7 +41,7 @@
     "entryRollAcceleration": 1.8,
     "entryRollRate": 4.5,
     "finalAlignmentSpeed": 160,
-    "finalApproachDistance": 3200,
+    "finalApproachDistance": 8000,
     "finalGlideSlope": 20,
     "flareAltitude": 55,
     "gearDeploymentAltitude": 1500,

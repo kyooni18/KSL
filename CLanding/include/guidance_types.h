@@ -210,6 +210,8 @@ typedef struct {
        terminal path. It is immutable until that path is explicitly invalidated. */
     bool terminal_final_handoff_latched;
     double terminal_final_handoff_distance;
+    double terminal_final_handoff_slope_deg;
+    double terminal_final_handoff_speed_mps;
     double hac_side; bool hac_side_selected; double delivered_delta_v, burn_command_started_ut, burn_active_elapsed;
     double burn_progress_watch_ut, burn_progress_watch_delta_v;
     bool has_burn_command_started, has_burn_progress_watch, deorbit_burn_completed, atmospheric_interface_crossed, has_previous_ut;
@@ -250,6 +252,7 @@ typedef struct {
     double preflare_trigger_altitude, preflare_target_aoa, preflare_target_sink;
     double preflare_minimum_speed, preflare_reference_speed, preflare_predicted_height_loss;
     double preflare_predicted_kinetic_margin, preflare_effective_accel;
+    double preflare_response_time, preflare_plan_source_ut;
     bool attitude_recovery; double control_bad_duration, control_good_duration, recovery_duration, recovery_heading, recovery_aoa;
     /* Roll-limit-cycle monitor.  Unlike the ordinary departure detector this
        tracks repeated high-energy relative-rate reversals even when each

@@ -8,8 +8,8 @@
 
 /* Translation-unit private helpers. */
 static double terminal_final_distance(const GuidanceMachine*g,const GuidanceSettings*s);
-static double terminal_final_alignment_speed(const GuidanceSettings*s,
-        const VehicleProfile*v);
+static double terminal_final_alignment_speed(const GuidanceMachine*g,
+        const GuidanceSettings*s,const VehicleProfile*v);
 static double terminal_final_speed_target(const GuidanceMachine*g,
         const VehicleProfile*v,const GuidanceSettings*s,double distance);
 static void terminal_observe_response(GuidanceMachine*g,const Telemetry*t,double dt);

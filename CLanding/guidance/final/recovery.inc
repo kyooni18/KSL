@@ -316,6 +316,8 @@ static double observed_signed_roll_rate(const Telemetry *t) {
     g->terminal_path_committed=false;
     g->terminal_final_handoff_latched=false;
     g->terminal_final_handoff_distance=NAN;
+    g->terminal_final_handoff_slope_deg=NAN;
+    g->terminal_final_handoff_speed_mps=NAN;
     g->hac_side_selected=false;
     g->hac_captured=false;
     g->hac_completed=false;
