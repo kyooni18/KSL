@@ -311,3 +311,27 @@ so the test guard restores the checkpoint. Two focused regression tests cover
 both intact landing acceptance and rejection of the observed 13% structural
 mass retention. They pass with
 `python3 ShuttleSim/tests/test_guidance_runner.py LandingCompletionEvidenceTests`.
+
+## Structural integrity gate live validation
+
+A guarded repeat from `STS-N-MM305-handoff` used the new completion gate with
+the default live profile. MM305 again committed the HAC route and reached
+Final, but it did not produce a `Complete` event for the gate to inspect. At
+15 m wheel height the live flare was at 70.5 m/s with 8.6 m/s sink; at 2 m it
+was at 67.5 m/s with 8.1 m/s sink. The measured pitch/AoA remained about
+2.4/9.3 deg while the requested AoA was 15 deg. At 2.8 m radar altitude,
+control departure recovery triggered with high pitch/roll rates and the runner
+aborted for insufficient recovery height. There was no `landed` completion.
+The harness restored and froze the named 22 km checkpoint, confirmed by a
+read-only probe.
+
+This is an abort, not a structural-gate rejection: the run never reached the
+completion-evidence function. The new 95% dry-mass condition has focused unit
+coverage and the previous false-positive record proves the failure shape it
+must reject, but a live landed-remnant replay has not yet exercised the
+condition. The fundamental Final problem remains inadequate flare authority
+and excessive sink at runway height. Keep the success gate and independent
+recovery guard active; do not count runway-altitude arrival or Abort as a
+touchdown pass. Run: `Runtime/Headless/mm305-integrity-gate-live.log`;
+vehicle/planner records:
+`FlightLogs/2026-09-27T21-57-59Z-STS-N-{vehicle,planner}.jsonl`.
