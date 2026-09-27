@@ -820,6 +820,28 @@ bool flight_control_step_attitude(FlightControlState *state,
             pitch_zeta);
     double pitch_commanded_rate =
         quaternion_control ? 0.0 : state->target_pitch_rate;
+    /*
+     * During the terminal flare, a positive incidence error has a hard time
+     * budget: the mains will reach the runway whether or not the ordinary
+     * overdamped loop has finished closing it.  Quaternion error already
+     * follows the moving attitude target, but a zero commanded rate makes the
+     * PD damper oppose the extra pitch rate needed to remove a persistent
+     * positive error before contact.  Use the measured time-to-mains only for
+     * that one-sided, descending flare case.  This does not relax guidance or
+     * touchdown gates and leaves negative/overshoot errors on the nominal law.
+     */
+    if (profile == PROFILE_FLARE && pitch_error > 0.0 &&
+        vertical_speed < -0.5 && isfinite(telemetry->radar_altitude) &&
+        telemetry->radar_altitude > 0.0) {
+        const double main_gear_down = 3.1535;
+        double wheel_height =
+            fmax(0.35, telemetry->radar_altitude - main_gear_down);
+        double time_to_mains =
+            fmax(0.40, wheel_height / fmax(0.5, -vertical_speed));
+        double closure_rate =
+            fc_clamp(pitch_error / time_to_mains, 0.0, 6.0);
+        pitch_commanded_rate = fmax(pitch_commanded_rate, closure_rate);
+    }
     double pitch_command = fc_capped_pd_command(
         pitch_error, effective_pitch_rate, pitch_commanded_rate,
         pitch_auth_used, pitch_wn_used, pitch_zeta_used, pitch_lag_s,
