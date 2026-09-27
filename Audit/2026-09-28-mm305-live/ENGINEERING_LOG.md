@@ -182,3 +182,47 @@ at AoA 8.05 deg versus a 15 deg command. Both experiments are rejected. The
 next test keeps the checked-in profile and varies only the already-supported
 live pitch-loop bandwidth override to measure whether faster AoA tracking
 raises actual pitch and lowers sink before main-wheel contact.
+
+The supported live pitch-loop override at `KSP_LANDER_PITCH_WN=1.30` was not
+safe: at first main-wheel contact (2.72 m radar altitude) actual sink was
+-5.82 m/s, pitch 2.11 deg, and AoA 7.32 deg versus a 14.99 deg request.
+Flight control released pitch on wheel contact, mass fell from 43.5 t to
+43.4 t and then 12.0 t, and the recovery diagnostic later saw a 61 deg/s
+pitch-rate spike. The attempt aborted; the guard restored the checkpoint.
+Trace and vehicle log:
+`Runtime/Headless/mm305-pitchwn130-live.log`,
+`FlightLogs/2026-09-27T20-46-54Z-STS-N-vehicle.jsonl`.
+
+The bandwidth override is rejected. The baseline Final trajectory also
+repeatedly hit the `terminal_geometry_fpa` -25 deg clamp. The next guarded run
+tests capping that nominal Final glide at -20 deg while preserving the same
+route admission, touchdown gates, and recovery guard.
+
+The first -20 deg geometry-only cap did not constrain the live path: Final's
+underspeed correction adds up to 12 deg of dive after the geometry calculation,
+and the actual trace still showed about -25 deg. It reached the runway region
+but aborted after an impact-rate event at 2 m radar altitude, with 64 m/s
+speed and 3.2 m/s modeled sink. It did not report `landed`; the checkpoint was
+restored. The next experiment applies the same -20 deg lower bound after speed
+correction as well, so the speed loop cannot recreate the steep trajectory.
+
+Applying the -20 deg bound after speed correction held the live outer reference
+at -20 deg, but the descent still did not arrest: the independent guard
+quickloaded at 251.6 m radar altitude with -31.69 m/s vertical speed and
+102.8 m/s TAS. The live vessel never contacted the runway. This profile change
+is reverted; a shallower Final target by itself is not enough when the MM305
+handoff is too close/low-energy. The attempt is logged in
+`Runtime/Headless/mm305-final20-combined-live.log` and
+`FlightLogs/2026-09-27T21-00-34Z-STS-N-vehicle.jsonl`.
+
+A final-approach-distance trial increased `guidance.finalApproachDistance` to
+11,000 m while leaving the 28/24 deg glide slopes and all gates unchanged.
+The live vessel remained in MM305 acquisition and never qualified either
+reciprocal HAC candidate; recurring reasons were `fixed-HAC candidate is
+infeasible` and `finite lead exceeds live curvature authority`. It reached
+1.1 km altitude at 65.5 m/s and aborted because no qualified route remained
+before the height needed to fly one. This profile did not commit a route or
+reach Final, so the distance increase is rejected. The runner restored the
+named save, and the follow-up guard probe confirmed STS-N flying at the 22 km
+checkpoint with KSP paused. Run: `Runtime/Headless/mm305-final11k-live.log`;
+profile: `Runtime/Headless/mm305-final11k-profile.json`.
