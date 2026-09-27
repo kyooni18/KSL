@@ -258,6 +258,11 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_hac_exit_reached=false;
         g->mm305_runway_alignment_active=false;
         g->mm305_model_snapshot_id=0;
+        g->mm305_acquisition_route=(TaemRoute){0};
+        g->mm305_acquisition_route_cursor=0;
+        g->mm305_acquisition_route_valid=false;
+        g->mm305_acquisition_route_ut=-INFINITY;
+        g->mm305_acquisition_sweep_rad=NAN;
         g->mm305_planning_needed=false;
         g->mm305_plan_request_ut=NAN;
         g->mm305_last_plan_attempt_ut=-INFINITY;

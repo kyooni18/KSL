@@ -147,6 +147,15 @@ typedef struct {
     bool mm305_route_committed, mm305_hac_exit_reached;
     bool mm305_runway_alignment_active;
     uint64_t mm305_model_snapshot_id;
+    /* While the qualified MM305 planner is still solving, guidance flies a
+       concrete provisional TAEM route.  It is not a Final/admission commitment;
+       it exists so the displayed acquisition path and the tracker's reference
+       geometry are exactly the same path. */
+    TaemRoute mm305_acquisition_route;
+    size_t mm305_acquisition_route_cursor;
+    bool mm305_acquisition_route_valid;
+    double mm305_acquisition_route_ut;
+    double mm305_acquisition_sweep_rad;
     /* MM305 planning is re-entrant: routes are (re)planned from the measured
        state, asynchronously when the controller provides a worker, and the
        vehicle flies the acquisition law while no qualified route is held. */

@@ -521,6 +521,199 @@ def projected_taem_trajectory(
     return projected
 
 
+def provisional_mm305_acquisition_trajectory(
+    telemetry: dict[str, Any], configuration: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Display the path the live MM305 acquisition law is presently trying to fly.
+
+    This is deliberately marked provisional. It mirrors the acquisition target
+    geometry actually used by guidance while no route is committed; rejected or
+    merely-evaluated planner candidates are never promoted to the PLAN trace.
+    """
+    if not isinstance(telemetry, dict):
+        return []
+    latitude = optional_number(telemetry.get("latitude"))
+    longitude = optional_number(telemetry.get("longitude"))
+    altitude = optional_number(telemetry.get("meanAltitude"))
+    if altitude is None:
+        altitude = optional_number(telemetry.get("altitude"))
+    course = optional_number(telemetry.get("groundTrackHeading"))
+    if course is None:
+        course = optional_number(telemetry.get("heading"))
+    ut = optional_number(telemetry.get("ut"))
+    speed = optional_number(telemetry.get("trueAirSpeed"))
+    if speed is None:
+        speed = optional_number(telemetry.get("surfaceSpeed"))
+    if None in (latitude, longitude, altitude, course):
+        return []
+
+    site = configuration.get("site") if isinstance(configuration.get("site"), dict) else {}
+    guidance = configuration.get("guidance") if isinstance(configuration.get("guidance"), dict) else {}
+    vehicle = configuration.get("vehicle") if isinstance(configuration.get("vehicle"), dict) else {}
+    if optional_number(site.get("latitude")) is None or optional_number(site.get("longitude")) is None:
+        return []
+
+    runway_heading_deg = number(site.get("runwayHeading"), 90.0)
+    runway_heading = math.radians(runway_heading_deg)
+    axis_e, axis_n = math.sin(runway_heading), math.cos(runway_heading)
+    right_e, right_n = math.cos(runway_heading), -math.sin(runway_heading)
+    current = {"latitude": latitude, "longitude": longitude, "altitude": altitude}
+    east, north = local_offsets(site, current)
+    along = east * axis_e + north * axis_n
+    cross = east * right_e + north * right_n
+    side = 1.0 if cross >= 0.0 else -1.0
+
+    radius = max(3000.0, number(guidance.get("hacRadius"), 12000.0))
+    final_distance = max(500.0, number(guidance.get("finalApproachDistance"), 8000.0))
+    alignment_speed = max(
+        number(guidance.get("finalAlignmentSpeed"), 160.0),
+        number(vehicle.get("minimumSafeSpeed"), 85.0),
+    )
+    # Approximate the same bank-unload rollout used by native acquisition.
+    # The exact committed route replaces this display path immediately on commit.
+    rollout_distance = alignment_speed * 12.0
+    exit_along = -(final_distance + rollout_distance)
+    center_along = exit_along
+    center_cross = side * radius
+    end_angle = math.atan2(-center_cross, exit_along - center_along)
+
+    # Native MM305 acquisition chooses 90..270 deg of HAC according to current
+    # specific-energy surplus and measured drag. Mirror that choice here so the
+    # orange PLAN trace shows what the controller is actually steering toward,
+    # rather than a rejected planner candidate.
+    final_slope = math.radians(max(0.1, number(guidance.get("finalGlideSlope"), 20.0)))
+    site_altitude = number(site.get("altitude"), 0.0)
+    alignment_height = final_distance * math.tan(final_slope)
+    altitude_above_runway = max(0.0, altitude - site_altitude)
+    current_speed = max(alignment_speed, number(speed, alignment_speed))
+    energy_excess = max(
+        0.0,
+        0.5 * (current_speed * current_speed - alignment_speed * alignment_speed)
+        + 9.81 * (altitude_above_runway - alignment_height),
+    )
+    drag_force = optional_number(telemetry.get("dragForce"))
+    mass = optional_number(telemetry.get("mass"))
+    available_drag = (
+        abs(drag_force) / mass
+        if drag_force is not None and mass is not None and mass > 1.0
+        else None
+    )
+    planning_drag = max(0.75, 0.85 * available_drag) if available_drag is not None else None
+    required_path = energy_excess / planning_drag if planning_drag is not None and planning_drag > 0.0 else None
+
+    sweep_deg = 90.0
+    entry_along = along
+    entry_cross = cross
+    capture_course = runway_heading_deg
+    for candidate_sweep in range(90, 271, 15):
+        signed_sweep = side * math.radians(float(candidate_sweep))
+        start_angle = end_angle - signed_sweep
+        candidate_entry_along = center_along + radius * math.cos(start_angle)
+        candidate_entry_cross = center_cross + radius * math.sin(start_angle)
+        candidate_path = (
+            math.hypot(candidate_entry_along - along, candidate_entry_cross - cross)
+            + radius * abs(signed_sweep)
+            + rollout_distance
+        )
+        sweep_deg = float(candidate_sweep)
+        entry_along = candidate_entry_along
+        entry_cross = candidate_entry_cross
+        capture_course = (
+            runway_heading_deg + math.degrees(start_angle + side * math.pi / 2.0)
+        ) % 360.0
+        if required_path is None or candidate_path >= 1.10 * required_path:
+            break
+
+    sweep = side * math.radians(sweep_deg)
+    start_angle = end_angle - sweep
+
+    taem_slope = math.radians(
+        min(12.0, max(0.1, number(guidance.get("taemGlideSlope"), 12.0)))
+    )
+    final_fix_altitude = site_altitude + final_distance * math.tan(final_slope)
+    arc_length = radius * abs(sweep)
+    entry_altitude = min(
+        altitude,
+        max(final_fix_altitude, final_fix_altitude + arc_length * math.tan(taem_slope)),
+    )
+    exit_altitude = final_fix_altitude + rollout_distance * math.tan(final_slope)
+    start_speed = max(alignment_speed, number(speed, alignment_speed))
+    final_speed = max(
+        number(vehicle.get("finalApproachSpeed"), 115.0),
+        number(vehicle.get("minimumSafeSpeed"), 85.0),
+    )
+
+    points: list[dict[str, Any]] = []
+    elapsed = 0.0
+    previous_xy: tuple[float, float] | None = None
+
+    def append_runway(x: float, y: float, h: float, v: float, phase: str) -> None:
+        nonlocal elapsed, previous_xy
+        e = x * axis_e + y * right_e
+        n = x * axis_n + y * right_n
+        if previous_xy is not None:
+            ds = math.hypot(x - previous_xy[0], y - previous_xy[1])
+            elapsed += ds / max(80.0, v)
+        previous_xy = (x, y)
+        point = local_point(site, e, n, h)
+        point.update({
+            "ut": number(ut, 0.0) + elapsed,
+            "speed": v,
+            "phase": phase,
+            "kind": "provisional-plan",
+        })
+        points.append(point)
+
+    append_runway(along, cross, altitude, start_speed, "MM305 ACQ PLAN")
+
+    delta0 = math.radians(course - runway_heading_deg)
+    delta1 = math.radians(capture_course - runway_heading_deg)
+    t0 = (math.cos(delta0), math.sin(delta0))
+    t1 = (math.cos(delta1), math.sin(delta1))
+    span = max(1.0, math.hypot(entry_along - along, entry_cross - cross))
+    p0 = (along, cross)
+    p1 = (along + t0[0] * span * 0.34, cross + t0[1] * span * 0.34)
+    p2 = (entry_along - t1[0] * span * 0.26, entry_cross - t1[1] * span * 0.26)
+    p3 = (entry_along, entry_cross)
+    for index in range(1, 25):
+        f = index / 24.0
+        q = 1.0 - f
+        x = q**3*p0[0] + 3*q*q*f*p1[0] + 3*q*f*f*p2[0] + f**3*p3[0]
+        y = q**3*p0[1] + 3*q*q*f*p1[1] + 3*q*f*f*p2[1] + f**3*p3[1]
+        smooth = f*f*(3.0 - 2.0*f)
+        h = altitude + (entry_altitude - altitude) * smooth
+        v = start_speed + (max(alignment_speed * 1.35, alignment_speed) - start_speed) * smooth
+        append_runway(x, y, h, v, "MM305 ACQ PLAN")
+
+    arc_exit_speed = max(alignment_speed * 1.12, final_speed)
+    for index in range(1, 25):
+        f = index / 24.0
+        angle = start_angle + sweep * f
+        x = center_along + radius * math.cos(angle)
+        y = center_cross + radius * math.sin(angle)
+        smooth = f*f*(3.0 - 2.0*f)
+        h = entry_altitude + (exit_altitude - entry_altitude) * smooth
+        v = max(alignment_speed, start_speed * (1.0 - 0.55*f))
+        if index == 24:
+            v = arc_exit_speed
+        append_runway(x, y, h, v, "HAC PROVISIONAL")
+
+    for index in range(1, 9):
+        f = index / 8.0
+        x = exit_along + rollout_distance * f
+        h = exit_altitude + (final_fix_altitude - exit_altitude) * f
+        v = arc_exit_speed + (alignment_speed - arc_exit_speed) * f
+        append_runway(x, 0.0, h, v, "MM305 ALIGN")
+
+    for index in range(1, 17):
+        f = index / 16.0
+        x = -final_distance * (1.0 - f)
+        h = site_altitude + (final_fix_altitude - site_altitude) * (1.0 - f)
+        v = alignment_speed + (final_speed - alignment_speed) * f
+        append_runway(x, 0.0, h, v, "FINAL PROJ")
+    return points
+
+
 
 def _trajectory_points(value: Any) -> list[dict[str, Any]] | None:
     if not isinstance(value, list):
@@ -697,17 +890,21 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
             else:
                 snapshot["plannedTrajectory"] = []
         else:
-            # The controller can publish candidate/reference geometry before MM305
-            # commits it. Keep that forensic geometry out of the operator PLAN/REF
-            # surfaces; otherwise an unproven candidate looks like a fixed path.
-            if len(reference) >= 2:
-                snapshot["replayCandidateTrajectory"] = reference
+            # During MM305 acquisition the controller now publishes the exact
+            # provisional route that the TAEM tracker is following.  Show that
+            # geometry directly as PLAN; only reconstruct a display path when an
+            # older/empty controller mirror has no reference points.
             snapshot["referenceTrajectory"] = []
-            # During active Entry/MM304, an uncommitted reference is still useful
-            # operator intent. Do not let certification status erase the feasible
-            # guidance path; terminal phases continue to own strict reference display.
             if _terminal_phase(exact.get("phase")):
-                snapshot["plannedTrajectory"] = []
+                provisional = reference if len(reference) >= 2 else provisional_mm305_acquisition_trajectory(
+                    snapshot.get("telemetry") if isinstance(snapshot.get("telemetry"), dict) else {},
+                    configuration,
+                )
+                snapshot["plannedTrajectory"] = (
+                    copy.deepcopy(provisional) if len(provisional) >= 2 else []
+                )
+                snapshot["planProvisional"] = len(provisional) >= 2
+                snapshot["planProvisionalKind"] = "acquisition" if len(provisional) >= 2 else None
 
     if entry_interface:
         current_plan = _trajectory_points(snapshot.get("plannedTrajectory")) or []
@@ -724,6 +921,7 @@ def apply_exact_trajectory_geometry(snapshot: dict[str, Any], exact: dict[str, A
                 entry_plan = observer_prediction
             if len(entry_plan) >= 2:
                 snapshot["plannedTrajectory"] = copy.deepcopy(entry_plan)
+                snapshot["planProvisional"] = True
 
     tick_sequence = optional_number(exact.get("tickSequence"))
     if tick_sequence is not None:

@@ -139,35 +139,6 @@ static double cubic_peak_curvature(Point p0, Point p1, Point p2, Point p3) {
     return peak;
 }
 
-static double cubic_endpoint_curvature(Point p0, Point p1, Point p2, Point p3,
-        double t);
-/* Bound the beginning of the finite lead by the curvature the live vehicle can
- * actually sustain while roll response settles.  The full cubic may rise toward
- * HAC curvature later, after the propagator has proved the changing speed/q state. */
-static double cubic_prefix_peak_curvature(Point p0, Point p1, Point p2, Point p3,
-        double distance_limit) {
-    if (!(distance_limit > 0.0) || !isfinite(distance_limit))
-        return cubic_endpoint_curvature(p0, p1, p2, p3, 0.0);
-    Point previous_position = cubic(p0, p1, p2, p3, 0.0);
-    Point previous_derivative = cubic_derivative(p0, p1, p2, p3, 0.0);
-    double cumulative = 0.0, peak = 0.0;
-    for (int i = 0; i <= 256; ++i) {
-        double t = (double)i / 256.0;
-        Point position = cubic(p0, p1, p2, p3, t);
-        if (i > 0) cumulative += distance(previous_position, position);
-        Point d = cubic_derivative(p0, p1, p2, p3, t);
-        Point dd = cubic_second_derivative(p0, p1, p2, p3, t);
-        double speed = hypot(d.x, d.y);
-        if (speed < 1.0 || d.x*previous_derivative.x + d.y*previous_derivative.y <= 0.0)
-            return INFINITY;
-        peak = fmax(peak, fabs(d.x*dd.y - d.y*dd.x) /
-            (speed*speed*speed));
-        previous_position = position;
-        previous_derivative = d;
-        if (cumulative >= distance_limit) break;
-    }
-    return peak;
-}
 
 static bool cubic_forward_regular(Point p0, Point p1, Point p2, Point p3) {
     Point previous = cubic_derivative(p0, p1, p2, p3, 0.0);
@@ -242,22 +213,27 @@ static Point route_position(const TaemRoute *route, size_t index) {
             (double)index / (double)route->lead_count);
         return cubic(p0, p1, p2, p3, t);
     }
-    size_t arc_index = index - route->lead_count;
-    double end_angle = atan2(route->hac.exit.y - route->hac.center.y,
-                             route->hac.exit.x - route->hac.center.x);
-    double start_angle = end_angle - route->hac.arc_sweep_rad;
-    double t = (double)arc_index / (double)route->arc_count;
-    double angle = start_angle + route->hac.arc_sweep_rad * t;
-    return (Point){route->hac.center.x + route->hac.radius_m * cos(angle),
-                   route->hac.center.y + route->hac.radius_m * sin(angle)};
+    if (index <= route->lead_count + route->arc_count) {
+        size_t arc_index = index - route->lead_count;
+        double end_angle = atan2(route->hac.exit.y - route->hac.center.y,
+                                 route->hac.exit.x - route->hac.center.x);
+        double start_angle = end_angle - route->hac.arc_sweep_rad;
+        double t = (double)arc_index / (double)route->arc_count;
+        double angle = start_angle + route->hac.arc_sweep_rad * t;
+        return (Point){route->hac.center.x + route->hac.radius_m * cos(angle),
+                       route->hac.center.y + route->hac.radius_m * sin(angle)};
+    }
+    size_t rollout_index = index - route->lead_count - route->arc_count;
+    double t = route->rollout_count > 0 ?
+        clamp((double)rollout_index / (double)route->rollout_count, 0.0, 1.0) : 1.0;
+    return (Point){
+        route->hac.exit.x + t * (route->alignment_along_m - route->hac.exit.x),
+        0.0
+    };
 }
 
 static double route_station(const TaemRoute *route, size_t index) {
-    if (index <= route->lead_count)
-        return route->lead_length_m * (double)index /
-               (double)route->lead_count;
-    return route->lead_length_m + route->hac.arc_length_m *
-        (double)(index - route->lead_count) / (double)route->arc_count;
+    return taem_route_station_at_index(route,index);
 }
 
 
@@ -265,17 +241,18 @@ static bool route_finish(const TerminalModel *m, const TaemGeometryState *start,
                          TaemRoute *route) {
     if (route->count < 3 || route->lead_count < 2 || route->arc_count < 3)
         return false;
-    route->length_m = route->lead_length_m + route->hac.arc_length_m;
+    route->length_m = route->lead_length_m + route->hac.arc_length_m +
+        route->rollout_length_m;
     if (!(route->length_m > 0.0) || !isfinite(route->length_m)) return false;
-    /* The live MM305 tracker owns only the route through the HAC exit. Keep
-     * that endpoint above runway elevation at the configured Final glide
-     * height; Final's existing numeric admission contract decides whether the
-     * actual state can transfer into the downstream approach. */
+
+    /* MM305 owns the full path through the bank-unload rollout and ends at the
+       fixed Final alignment station.  The vertical/speed profile therefore also
+       terminates at that station rather than at the circular HAC exit. */
     route->profile_total_length_m = route->length_m;
     route->profile_start_altitude_m = m->site.altitude + start->altitude_above_runway_m;
     route->profile_start_fpa_deg = start->flight_path_angle_deg;
     route->profile_final_altitude_m = m->site.altitude +
-        route->hac.final_length_m * tan(radians(m->guidance.final_glide_slope));
+        m->guidance.final_approach_distance * tan(radians(m->guidance.final_glide_slope));
     route->profile_final_slope_deg = m->guidance.final_glide_slope;
     route->profile_midpoint_offset_m = 0.0;
     route->profile_local_offset_m = 0.0;
@@ -345,14 +322,12 @@ static bool build_hac(const TerminalModel *m,
     Point p1 = {0.0, 0.0}, p2 = {0.0, 0.0};
     double best_control_polygon = INFINITY;
     double best_peak_curvature = INFINITY;
-    double roll_settling_time = (m->attitude.roll_wn > 0.0 &&
-        m->attitude.roll_zeta > 0.0) ?
-        4.0 / (m->attitude.roll_wn * m->attitude.roll_zeta) : 0.0;
-    double initial_authority_distance = fmax(spacing,
-        start->ground_speed_mps * fmax(0.0, roll_settling_time));
-    /* Only the beginning of the lead is constrained by the live-state
-     * curvature limit.  Later curvature is evaluated at the propagated speed,
-     * density, lift and bank state by terminal_solver_replay(). */
+    /* Only the route's instantaneous starting curvature is constrained by
+       the *current* thin-air lateral authority here.  Authority later on the
+       lead changes rapidly with q and speed, so applying today's curvature
+       ceiling to a finite prefix or the whole cubic is not a physical gate.
+       Native profile propagation and replay evaluate lateral authority at every
+       subsequent station and remain the authoritative rejection mechanism. */
     double initial_handle = initial_handle_min;
     for (int initial_trial = 0; initial_trial < 32 &&
             initial_handle <= maximum_handle * 1.000001; ++initial_trial) {
@@ -369,13 +344,9 @@ static bool build_hac(const TerminalModel *m,
             }
             double initial_curvature = cubic_endpoint_curvature(
                 p0, p1_try, p2_try, p3, 0.0);
-            double early_peak_curvature = cubic_prefix_peak_curvature(
-                p0, p1_try, p2_try, p3, initial_authority_distance);
             double peak_curvature = cubic_peak_curvature(p0, p1_try, p2_try, p3);
-            if (isfinite(initial_curvature) && isfinite(early_peak_curvature) &&
-                isfinite(peak_curvature) &&
-                initial_curvature <= maximum_lead_curvature * 1.000001 &&
-                early_peak_curvature <= maximum_lead_curvature * 1.000001) {
+            if (isfinite(initial_curvature) && isfinite(peak_curvature) &&
+                initial_curvature <= maximum_lead_curvature * 1.000001) {
                 double control_polygon = initial_handle +
                     distance(p1_try, p2_try) + final_handle;
                 double curvature_tolerance = 0.02 *
@@ -428,10 +399,18 @@ static bool build_hac(const TerminalModel *m,
         ceil(route->lead_length_m / spacing));
     size_t arc_count = (size_t)fmax(3.0,
         ceil(route->hac.arc_length_m / spacing));
-    if (lead_count + arc_count + 1 > TAEM_ROUTE_MAX_POINTS) goto capacity_failure;
+    route->alignment_along_m = -m->guidance.final_approach_distance;
+    route->rollout_length_m = route->alignment_along_m - route->hac.exit.x;
+    if (!(route->rollout_length_m >= 0.0) || !isfinite(route->rollout_length_m))
+        goto capacity_failure;
+    size_t rollout_count = route->rollout_length_m > 1.0 ?
+        (size_t)fmax(1.0,ceil(route->rollout_length_m / spacing)) : 0;
+    if (lead_count + arc_count + rollout_count + 1 > TAEM_ROUTE_MAX_POINTS)
+        goto capacity_failure;
     route->lead_count = lead_count;
     route->arc_count = arc_count;
-    route->count = lead_count + arc_count + 1;
+    route->rollout_count = rollout_count;
+    route->count = lead_count + arc_count + rollout_count + 1;
 
     if (!route_finish(m, start, route)) {
         if (reason && reason_size) snprintf(reason, reason_size, "route sampling produced invalid geometry");
@@ -526,24 +505,38 @@ static bool route_sample_at_station(const TaemRoute *route, double station,
         return isfinite(*course_deg) && isfinite(*curvature_right_per_m);
     }
 
-    if (!(route->hac.arc_length_m > 0.0) || !(route->hac.radius_m > 0.0))
-        return false;
-    double arc_station = station - route->lead_length_m;
-    double fraction = clamp(arc_station / route->hac.arc_length_m, 0.0, 1.0);
-    double sweep_sign = route->hac.arc_sweep_rad >= 0.0 ? 1.0 : -1.0;
-    double end_angle = atan2(route->hac.exit.y - route->hac.center.y,
-                             route->hac.exit.x - route->hac.center.x);
-    double start_angle = end_angle - route->hac.arc_sweep_rad;
-    double angle = start_angle + route->hac.arc_sweep_rad * fraction;
-    *position = (Point){
-        route->hac.center.x + route->hac.radius_m * cos(angle),
-        route->hac.center.y + route->hac.radius_m * sin(angle)
+    double arc_end_station=route->lead_length_m+route->hac.arc_length_m;
+    if (station <= arc_end_station) {
+        if (!(route->hac.arc_length_m > 0.0) || !(route->hac.radius_m > 0.0))
+            return false;
+        double arc_station = station - route->lead_length_m;
+        double fraction = clamp(arc_station / route->hac.arc_length_m, 0.0, 1.0);
+        double sweep_sign = route->hac.arc_sweep_rad >= 0.0 ? 1.0 : -1.0;
+        double end_angle = atan2(route->hac.exit.y - route->hac.center.y,
+                                 route->hac.exit.x - route->hac.center.x);
+        double start_angle = end_angle - route->hac.arc_sweep_rad;
+        double angle = start_angle + route->hac.arc_sweep_rad * fraction;
+        *position = (Point){
+            route->hac.center.x + route->hac.radius_m * cos(angle),
+            route->hac.center.y + route->hac.radius_m * sin(angle)
+        };
+        double tangent_x = -sin(angle) * sweep_sign;
+        double tangent_y = cos(angle) * sweep_sign;
+        *course_deg = route->runway_heading_deg + degrees(atan2(tangent_y, tangent_x));
+        *curvature_right_per_m = sweep_sign / route->hac.radius_m;
+        return isfinite(*course_deg) && isfinite(*curvature_right_per_m);
+    }
+
+    double rollout_station=station-arc_end_station;
+    double f=route->rollout_length_m>0.0?
+        clamp(rollout_station/route->rollout_length_m,0.0,1.0):1.0;
+    *position=(Point){
+        route->hac.exit.x+f*(route->alignment_along_m-route->hac.exit.x),
+        0.0
     };
-    double tangent_x = -sin(angle) * sweep_sign;
-    double tangent_y = cos(angle) * sweep_sign;
-    *course_deg = route->runway_heading_deg + degrees(atan2(tangent_y, tangent_x));
-    *curvature_right_per_m = sweep_sign / route->hac.radius_m;
-    return isfinite(*course_deg) && isfinite(*curvature_right_per_m);
+    *course_deg=route->runway_heading_deg;
+    *curvature_right_per_m=0.0;
+    return true;
 }
 
 double taem_route_planned_speed(const TaemRoute *route, double station_m) {
@@ -556,6 +549,55 @@ double taem_route_planned_speed(const TaemRoute *route, double station_m) {
     double f = u - (double)i;
     return (1.0 - f) * route->profile_speed_lut[i] +
            f * route->profile_speed_lut[i + 1];
+}
+
+double taem_route_planned_altitude(const TaemRoute *route, double station_m) {
+    if (!route || !route->profile_tabulated ||
+        !(route->profile_total_length_m > 0.0) || !isfinite(station_m)) return NAN;
+    const size_t intervals = TAEM_ROUTE_PROFILE_LUT_POINTS - 1;
+    double u = clamp(station_m / route->profile_total_length_m, 0.0, 1.0) *
+        (double)intervals;
+    size_t i = (size_t)fmin(floor(u), (double)intervals - 1.0);
+    double f = u - (double)i;
+    return (1.0 - f) * route->profile_altitude_lut[i] +
+           f * route->profile_altitude_lut[i + 1];
+}
+
+double taem_route_curvature_at_station(const TaemRoute *route, double station_m) {
+    Point position;
+    double course = NAN, curvature = NAN;
+    if (!route_sample_at_station(route, station_m, &position, &course, &curvature))
+        return NAN;
+    return curvature;
+}
+
+bool taem_route_point_at_index(const TaemRoute *route, size_t index,
+        TaemRoutePoint *point) {
+    if (!route || !route->valid || route->count < 2 || !point ||
+        index >= route->count) return false;
+    double station = route_station(route, index);
+    Point position;
+    double course = NAN, curvature = NAN;
+    if (!route_sample_at_station(route, station, &position, &course, &curvature))
+        return false;
+    double altitude = NAN;
+    if (route->profile_tabulated)
+        altitude = taem_route_planned_altitude(route, station);
+    else if (route->profile_total_length_m > 0.0) {
+        double f = clamp(station / route->profile_total_length_m, 0.0, 1.0);
+        altitude = route->profile_start_altitude_m +
+            f * (route->profile_final_altitude_m - route->profile_start_altitude_m);
+    }
+    *point = (TaemRoutePoint){
+        .along_m = position.x,
+        .cross_m = position.y,
+        .course_deg = course,
+        .curvature_right_per_m = curvature,
+        .altitude_m = altitude,
+        .flight_path_angle_deg = NAN,
+        .distance_from_start_m = station
+    };
+    return true;
 }
 
 bool taem_route_reference(const TaemRoute *route, const TaemGeometryState *state,

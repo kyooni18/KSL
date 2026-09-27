@@ -1821,9 +1821,11 @@
     } else if (terminalPhase) {
       if (terminalPlanProven && referenceCount >= 2) { planChip = "REF COMMITTED"; planTone = "good"; }
       else if (terminalPlanProven && plannedCount >= 2) { planChip = "PLAN COMMITTED"; planTone = "good"; }
+      else if (plannedCount >= 2 && snapshot.planProvisionalKind === "acquisition") { planChip = "ACQ GUIDANCE"; planTone = "warn"; }
+      else if (plannedCount >= 2) { planChip = "PLAN PROVISIONAL"; planTone = "warn"; }
       else if (g.terminalCandidateValid || g.terminalPathSelected) { planChip = "CANDIDATE · UNCOMMITTED"; planTone = "warn"; }
       else if (referenceCount === 1 || plannedCount === 1) { planChip = "PATH 1PT"; planTone = "warn"; }
-      else { planChip = "REF WAIT"; planTone = "warn"; }
+      else { planChip = "PLAN WAIT"; planTone = "warn"; }
     } else if (entryPlanProven) {
       if (plannedCount >= 2 && predictedCount >= 2) { planChip = "PLAN PROVEN + PRED"; planTone = "good"; }
       else if (plannedCount >= 2) { planChip = "PLAN PROVEN"; planTone = "good"; }
@@ -1842,7 +1844,7 @@
     if (isReplaySnapshot(snapshot)) {
       setTitle("plan-valid", `Archive view · ${predictedCount} prediction points · ${plannedCount} path-plan points · ${referenceCount} reference points · live KSP telemetry is paused behind the LIVE KSP switch`);
     } else if (!orbitMode) {
-      setTitle("plan-valid", `Entry command ${g.entryPlanValid ? "valid" : "not valid"} · terminal handoff ${g.entryPlanTerminalReady ? "proven" : "unproven"} · terminal path ${terminalPlanProven ? "committed/captured" : "not committed"} · ${orbitalCount} orbital · ${predictedCount} predicted · ${plannedCount} proven plan · ${referenceCount} committed reference points${orbitalCount >= 2 ? " · orbital geometry is observer-only osculating propagation" : ""}`);
+      setTitle("plan-valid", `Entry command ${g.entryPlanValid ? "valid" : "not valid"} · terminal handoff ${g.entryPlanTerminalReady ? "proven" : "unproven"} · terminal path ${terminalPlanProven ? "committed/captured" : "not committed"} · ${orbitalCount} orbital · ${predictedCount} predicted · ${plannedCount} displayed plan · ${referenceCount} committed reference points${snapshot.planProvisional ? " · PLAN is provisional live guidance intent" : ""}${orbitalCount >= 2 ? " · orbital geometry is observer-only osculating propagation" : ""}`);
     }
 
     // Entry command bars, retained for atmospheric mode.
