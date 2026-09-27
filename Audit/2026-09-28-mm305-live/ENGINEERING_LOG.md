@@ -267,3 +267,16 @@ The 170 and 180 m/s station targets are rejected. The next experiment keeps
 the 160 m/s alignment target and raises the touchdown-speed target from 75 to
 85 m/s, testing whether earlier terminal speed scheduling can preserve the
 energy needed for a survivable contact.
+
+With the 8,500 m route and 160 m/s alignment target restored, raising only
+`vehicle.touchdownSpeed` from 75 to 85 m/s qualified a native route and reached
+Final. The actual descent remained too steep: at 896 m wheel height it was
+133.3 m/s with -40.9 m/s vertical speed. At the end, the terminal monitor
+aborted for control departure near 3 m radar altitude; the last live telemetry
+sample was 68.7 m/s, -9.7 m/s vertical speed, -0.87 deg pitch, and 7.26 deg
+AoA versus an 11.56 deg target, with the roll-rate divergence guard active.
+There was no sustained `landed` state. The named checkpoint was restored and
+the follow-up probe confirmed a paused flying STS-N at 22 km. Run and vehicle
+log: `Runtime/Headless/mm305-final8500-td85-live.log`,
+`FlightLogs/2026-09-27T21-30-46Z-STS-N-vehicle.jsonl`. The stricter touchdown
+speed target did not preserve enough energy or arrest sink and is rejected.
