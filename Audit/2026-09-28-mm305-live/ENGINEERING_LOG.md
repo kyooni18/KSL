@@ -280,3 +280,14 @@ the follow-up probe confirmed a paused flying STS-N at 22 km. Run and vehicle
 log: `Runtime/Headless/mm305-final8500-td85-live.log`,
 `FlightLogs/2026-09-27T21-30-46Z-STS-N-vehicle.jsonl`. The stricter touchdown
 speed target did not preserve enough energy or arrest sink and is rejected.
+
+A 95 m/s touchdown-target trial at the same 8,500 m / 160 m/s alignment
+profile qualified a route and reached Final, but the live run ended in a
+backend fault at 1.3 km altitude, 4.3 km from the runway, 157.9 m/s TAS, and
+-63.9 m/s vertical speed. The runner reported `fast telemetry batch procedure
+641 failed` and restored the named save. The postflight probe confirmed KSP
+paused with STS-N flying at the 22 km checkpoint. Because this run faulted well
+above contact, it provides no touchdown result and cannot establish whether
+the higher target helps. Run: `Runtime/Headless/mm305-final8500-td95-live.log`.
+The target is not accepted; the aerodynamic residual warnings rose as high as
+60% before the backend fault.
