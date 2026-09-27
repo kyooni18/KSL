@@ -335,3 +335,27 @@ recovery guard active; do not count runway-altitude arrival or Abort as a
 touchdown pass. Run: `Runtime/Headless/mm305-integrity-gate-live.log`;
 vehicle/planner records:
 `FlightLogs/2026-09-27T21-57-59Z-STS-N-{vehicle,planner}.jsonl`.
+
+## Conservative outer-arrest profile trial
+
+The next isolated live trial lowered the outer preflare design arrest rate
+from 0.15 g to 0.10 g, leaving the selected MM305 route, handoff, contact
+checks, completion gate, and recovery guard unchanged. This moved the live
+preflare latch from the prior 564 m planned trigger to about 3.65 km wheel
+height. Sink then fell from about 82 m/s to 28 m/s by 400 m, showing that the
+earlier arc tracked its intended gentler profile. The vehicle still arrived
+at 3.3 m radar altitude at only 69.2 m/s with 9.8 m/s sink and -0.7 deg pitch;
+mass fell by 1,220 kg at contact. KSP briefly reported the reduced-mass vessel
+landed, but the control monitor aborted at 2.8 m radar altitude and the runner
+did not complete. The guard restored and froze the 22 km checkpoint.
+
+This profile is rejected: earlier deceleration improved the mid-approach sink
+but did not improve contact, and the vehicle ended with greater sink than the
+0.15 g baseline's 8.1 m/s contact-region sample. The production constant was
+restored. The remaining bottleneck is the Final handoff and pull-up/attitude
+response: the run still entered Final near 4.1 km and 9.1 km range on an
+approximately -24 deg path, while requested incidence again exceeded what the
+vehicle reached at contact. Do not treat the transient KSP `landed` sample
+after Abort as a pass. Run and evidence:
+`Runtime/Headless/mm305-conservative-arrest-live.log`,
+`FlightLogs/2026-09-27T22-10-22Z-STS-N-{vehicle,planner}.jsonl`.
