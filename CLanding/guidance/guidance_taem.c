@@ -889,21 +889,18 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
         double selected_length=INFINITY;
         TaemRoute selected_route={0};
 
-        /* Use the same radius freedom as qualification.  At the handoff save,
-           a 12 km HAC can require a 90+ km finite lead while a tight HAC reduces
-           that lead by tens of kilometres.  Acquisition must improve geometry,
-           not lock itself to the nominal radius and wait for an impossible plan. */
-        double locked_radius=g->mm305_acquisition_route_valid&&
-            g->mm305_acquisition_route.valid&&g->mm305_acquisition_route.hac.radius_m>0.0?
-            g->mm305_acquisition_route.hac.radius_m:NAN;
+        /* Radius is an energy/geometry variable until the shuttle actually joins
+           a HAC.  Do not latch the nominal 12 km radius during acquisition: a
+           tighter circle can shorten the lead substantially and can be the better
+           route even when 12 km is technically feasible.  Once joined_fixed_hac
+           is true, refresh is disabled above and the selected circle stays fixed. */
         const double radius_candidates[]={
-            isfinite(locked_radius)?locked_radius:hac_radius,
+            hac_radius,
             fmax(3000.0,0.60*hac_radius),
             fmax(3000.0,0.36*hac_radius),
             3000.0
         };
-        size_t radius_count=isfinite(locked_radius)?1:
-            sizeof(radius_candidates)/sizeof(radius_candidates[0]);
+        size_t radius_count=sizeof(radius_candidates)/sizeof(radius_candidates[0]);
         for (size_t ri=0;ri<radius_count;++ri) {
             double candidate_radius=radius_candidates[ri];
             bool duplicate=false;

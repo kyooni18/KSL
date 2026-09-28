@@ -771,20 +771,17 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                 slot->reason = "initial state cannot be projected into the runway frame";
             } else {
                 /* The analytic circle stays the primitive; its radius is a
-                 * bounded search variable.  The handed-over radius is tried
-                 * first.  Only when no route around it is feasible are
-                 * tighter circles tried, down to the steady turn radius at
-                 * the Final alignment speed and the vehicle bank limit: a
-                 * state with little energy near the runway can still fly a
-                 * short HAC where a large circle is beyond its glide range. */
+                 * bounded search variable.  The configured radius is only the
+                 * top of the search, not a preferred answer.  Evaluate tighter
+                 * circles as well and let Final-speed closure plus replayed turn/
+                 * tracking quality choose the radius.  The lower bound is the
+                 * steady turn radius at the Final alignment speed and bank limit,
+                 * never below the 3 km HAC floor. */
                 double side = side_index == 0 ? -1.0 : 1.0;
                 double floor_radius = hac_radius_floor(ends[end]);
                 double radius = hac_radius;
                 *slot = evaluate_side(ends[end], initial, &geometry, radius,
                     side, spacing, dt, maximum_elapsed, stations);
-                if (slot->status == TAEM_PLAN_UNQUALIFIED &&
-                    slot->route_built && slot->replay.path_constraints_ok)
-                    goto radius_search_done;
                 for (int step = 1; step < TAEM_HAC_RADIUS_STEPS; ++step) {
                     double next_radius = fmax(floor_radius, radius * TAEM_HAC_RADIUS_RATIO);
                     if (!(next_radius < radius)) break;
@@ -797,8 +794,6 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                          tighter.route_built && !slot->route_built))
                         *slot = tighter;
                 }
-radius_search_done:
-                ;
             }
             slot->runway_end = end;
         }
