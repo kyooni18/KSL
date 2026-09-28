@@ -894,20 +894,12 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
            tighter circle can shorten the lead substantially and can be the better
            route even when 12 km is technically feasible.  Once joined_fixed_hac
            is true, refresh is disabled above and the selected circle stays fixed. */
-        const double radius_candidates[]={
-            hac_radius,
-            fmax(3000.0,0.60*hac_radius),
-            fmax(3000.0,0.36*hac_radius),
-            3000.0
-        };
-        size_t radius_count=sizeof(radius_candidates)/sizeof(radius_candidates[0]);
+        const size_t radius_count=7;
+        double radius_floor=fmin(hac_radius,3000.0);
         for (size_t ri=0;ri<radius_count;++ri) {
-            double candidate_radius=radius_candidates[ri];
-            bool duplicate=false;
-            for (size_t rj=0;rj<ri;++rj)
-                if (fabs(candidate_radius-radius_candidates[rj])<1.0)
-                    duplicate=true;
-            if (duplicate) continue;
+            double fraction=(double)ri/(double)(radius_count-1);
+            double candidate_radius=hac_radius+fraction*(radius_floor-hac_radius);
+            if (ri>0 && candidate_radius>=hac_radius-1.0) continue;
 
             for (double sweep_deg=15.0;sweep_deg<=270.0+1e-6;sweep_deg+=15.0) {
                 double sweep=sweep_deg*DEG2RAD;

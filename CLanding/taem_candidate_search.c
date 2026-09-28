@@ -14,8 +14,7 @@
  * ranking of every station, then full native replay of only a few survivors. */
 #define TAEM_JOIN_SWEEP_MAX_DEG 270.0
 #define TAEM_JOIN_SWEEP_MIN_DEG 15.0
-#define TAEM_HAC_RADIUS_STEPS 4
-#define TAEM_HAC_RADIUS_RATIO 0.6
+#define TAEM_HAC_RADIUS_STEPS 7
 #define TAEM_JOIN_SWEEP_STEP_DEG 30.0
 #define TAEM_JOIN_MAX_STATIONS 48
 #define TAEM_JOIN_MAX_REPLAYS 2
@@ -186,20 +185,31 @@ static bool better_failure(const TaemFixedHacCandidate *trial,
     return trial->replay.elapsed_s > best->replay.elapsed_s;
 }
 
+static double candidate_circle_penalty(const TaemFixedHacCandidate *trial) {
+    if (!trial || !trial->route_built) return INFINITY;
+    double arc=fmax(trial->route.hac.arc_length_m,1.0);
+    double lead=fmax(trial->route.lead_length_m,0.0);
+    /* A HAC should spend its heading change on the analytic circle, not in a
+     * long finite lead.  log1p keeps the penalty dimensionless and bounded
+     * enough that energy feasibility remains dominant. */
+    return log1p(lead/arc);
+}
+
 static bool candidate_preferred(const TerminalModel *model,
         const TaemFixedHacCandidate *trial, const TaemFixedHacCandidate *best) {
     if (trial->status != TAEM_PLAN_UNQUALIFIED) return false;
     if (best->status != TAEM_PLAN_UNQUALIFIED) return true;
-    double target = exit_speed_target(model);
-    double trial_deficit = fabs(target - trial->replay.final_geometry.airspeed_mps);
-    double best_deficit = fabs(target - best->replay.final_geometry.airspeed_mps);
-    /* TAEM targets the Final alignment airspeed: slow starves Final and fast
-     * lands long.  A difference below 1 m/s is smaller than the useful
-     * precision of this native profile prediction.  Within that band, select
-     * the route with less replayed turn burden and better tracking. */
-    if (fabs(trial_deficit - best_deficit) > 1.0)
-        return trial_deficit < best_deficit;
-    return trial->quality_score < best->quality_score;
+    double target=exit_speed_target(model);
+    double trial_speed=trial->replay.final_geometry.airspeed_mps;
+    double best_speed=best->replay.final_geometry.airspeed_mps;
+    double trial_shortfall=fmax(0.0,target-trial_speed);
+    double best_shortfall=fmax(0.0,target-best_speed);
+    /* An unpowered shuttle cannot repair a material energy deficit.  Keep
+     * shortfall dominant, but treat differences below 2 m/s as prediction
+     * noise so geometry can choose a steadier, more circular HAC. */
+    if (fabs(trial_shortfall-best_shortfall)>2.0)
+        return trial_shortfall<best_shortfall;
+    return trial->quality_score<best->quality_score;
 }
 /* Replay qualified the HAC and runway-line roll-out. Rank by tracking quality,
  * energy closure and how far the aligned exit airspeed falls short of the
@@ -223,7 +233,8 @@ static void finish_candidate(const TerminalModel *model,
             fmax(trial->replay.elapsed_s, 1.0) +
         2.0 * fmax(0.0,
             trial->replay.maximum_turn_authority_fraction - 0.8) +
-        0.5 * trial->replay.bank_target_reversals;
+        0.5 * trial->replay.bank_target_reversals +
+        1.25 * candidate_circle_penalty(trial);
     if (!isfinite(trial->quality_score)) trial->quality_score = INFINITY;
 }
 
@@ -778,13 +789,15 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                  * steady turn radius at the Final alignment speed and bank limit,
                  * never below the 3 km HAC floor. */
                 double side = side_index == 0 ? -1.0 : 1.0;
-                double floor_radius = hac_radius_floor(ends[end]);
+                double floor_radius = fmin(hac_radius, hac_radius_floor(ends[end]));
                 double radius = hac_radius;
                 *slot = evaluate_side(ends[end], initial, &geometry, radius,
                     side, spacing, dt, maximum_elapsed, stations);
                 for (int step = 1; step < TAEM_HAC_RADIUS_STEPS; ++step) {
-                    double next_radius = fmax(floor_radius, radius * TAEM_HAC_RADIUS_RATIO);
-                    if (!(next_radius < radius)) break;
+                    double fraction = (double)step / (double)(TAEM_HAC_RADIUS_STEPS - 1);
+                    double next_radius = hac_radius +
+                        fraction * (floor_radius - hac_radius);
+                    if (!(next_radius < radius - 1.0)) continue;
                     radius = next_radius;
                     TaemFixedHacCandidate tighter = evaluate_side(ends[end],
                         initial, &geometry, radius, side, spacing, dt,
