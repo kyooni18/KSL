@@ -451,3 +451,28 @@ next path. Investigation returns upstream to Final energy/speed execution: why a
 Final trajectory that still references roughly 120 m/s near the runway actually
 falls into the mid-60 m/s range before contact, and how that differs from the
 MM305 terminal-delivery plan that admitted the handoff.
+
+
+## 20-degree Final-slope live rejection
+
+A guarded live run from `STS-N-MM305-handoff` exercised the pre-existing
+`Configuration/live-mm305.json` trial with `finalGlideSlope` reduced from the
+committed 28 degrees to 20 degrees while `finalApproachDistance` remained 3.2 km.
+The run used the previously pinned backend/source (`c24d734f...`) rather than any
+subsequent diagnostic source changes.
+
+The vehicle never qualified an MM305 route or entered Final. Candidate routes
+repeatedly failed as too long for the available energy or outside live curvature
+authority. At the terminal abort the vehicle was about 1.1 km altitude and 6.6 km
+from the runway at only 73.4 m/s TAS; MM305 reported that no qualified route had
+been found before the height needed to fly one. This is a failure, not a softer
+Final handoff. The guard restored `STS-N-MM305-handoff` at about 22 km and froze
+KSP afterward.
+
+This rejects 20 degrees as a direct isolated Final-handoff geometry fix for the
+current checkpoint. It moves the required handoff lower and allows the MM305
+acquisition to spend too much energy before route qualification. The active
+investigation therefore remains the producer/consumer energy contract between
+MM305 admission and the pull-to-touchdown Final profile. Evidence:
+`Runtime/Headless/mm305-final20-handoff-live.log` and campaign artifact identity
+`c24d734f7657186f-e7ad55ae3046c7ff-b3c162afd002a9e9`.
