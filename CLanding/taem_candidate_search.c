@@ -171,10 +171,11 @@ static double estimated_energy_route_length(const TerminalModel *model,
     double drag = forces.drag_n > 0.0 ? forces.drag_n / initial->mass_kg : NAN;
     if (!(drag > 0.0) || !isfinite(drag)) return NAN;
 
-    /* This is only a search-order estimate, never an admission rule.  Bias low
-       enough that rising density later in TAEM does not push the search toward
-       routes much longer than the live vehicle can actually fly. */
-    double planning_drag = fmax(0.75, 0.85 * drag);
+    /* This is only a search-order estimate, never an admission rule.  Do not
+       discount the measured drag: doing so lengthens the requested unpowered
+       route even though density normally rises later in TAEM.  Native profile
+       propagation remains the physical energy/vertical-feasibility proof. */
+    double planning_drag = fmax(0.75, drag);
     return energy / planning_drag;
 }
 

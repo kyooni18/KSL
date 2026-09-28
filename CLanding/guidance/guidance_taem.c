@@ -864,17 +864,25 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
         current->mass_kg,current->attitude.aoa_rad,current->attitude.bank_rad);
     double available_drag=current->mass_kg>1.0&&modeled.drag_n>0.0?
         modeled.drag_n/current->mass_kg:0.0;
-    double planning_drag=fmax(0.75,0.85*available_drag);
+    /* Never discount live drag when converting surplus energy to route length.
+       A smaller drag estimate asks an unpowered vehicle to fly farther, while
+       the atmosphere normally gets denser through TAEM.  Qualification still
+       comes only from the native profile/replay gates. */
+    double planning_drag=fmax(0.75,available_drag);
     double required_path=energy_excess/planning_drag;
 
     /* Choose using the route the tracker would actually fly, not a chord+
-       arc approximation.  The old approximation could select a 135 deg sweep
-       whose built cubic lead made the real route ~140 km even though the energy
-       target was only ~40 km.  Re-evaluate at a modest cadence so the displayed
-       and tracked path remains stable between updates. */
+       arc approximation.  Before joining the HAC, re-evaluate at a modest
+       cadence.  Once the lead has delivered the shuttle onto the analytic HAC
+       primitive, keep that circle/rollout instead of moving the geometry every
+       few seconds; steady curvature lets bank, lift demand and AoA settle. */
+    bool joined_fixed_hac=g->mm305_acquisition_route_valid&&
+        g->mm305_acquisition_route.valid&&
+        g->mm305_acquisition_route_cursor>=g->mm305_acquisition_route.lead_count&&
+        g->mm305_acquisition_route_cursor<g->mm305_acquisition_route.count;
     bool refresh=!g->mm305_acquisition_route_valid||
         !g->mm305_acquisition_route.valid||
-        current->ut_s-g->mm305_acquisition_route_ut>=4.0;
+        (!joined_fixed_hac&&current->ut_s-g->mm305_acquisition_route_ut>=4.0);
     if (refresh) {
         double selected_sweep=NAN;
         double selected_error=INFINITY;
@@ -885,13 +893,18 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
            a 12 km HAC can require a 90+ km finite lead while a tight HAC reduces
            that lead by tens of kilometres.  Acquisition must improve geometry,
            not lock itself to the nominal radius and wait for an impossible plan. */
+        double locked_radius=g->mm305_acquisition_route_valid&&
+            g->mm305_acquisition_route.valid&&g->mm305_acquisition_route.hac.radius_m>0.0?
+            g->mm305_acquisition_route.hac.radius_m:NAN;
         const double radius_candidates[]={
-            hac_radius,
+            isfinite(locked_radius)?locked_radius:hac_radius,
             fmax(3000.0,0.60*hac_radius),
             fmax(3000.0,0.36*hac_radius),
             3000.0
         };
-        for (size_t ri=0;ri<sizeof(radius_candidates)/sizeof(radius_candidates[0]);++ri) {
+        size_t radius_count=isfinite(locked_radius)?1:
+            sizeof(radius_candidates)/sizeof(radius_candidates[0]);
+        for (size_t ri=0;ri<radius_count;++ri) {
             double candidate_radius=radius_candidates[ri];
             bool duplicate=false;
             for (size_t rj=0;rj<ri;++rj)
@@ -1023,9 +1036,10 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
     const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
     if (diag&&strcmp(diag,"2")==0&&!g->diagnostic_shadow)
         fprintf(stderr,
-            "MM305 acquisition route: sweep=%.0f path=%.0f E=%.0f reqD=%.2f availD=%.2f cursor=%zu/%zu xt=%.0f courseErr=%.1f V=%.1f h=%.0f\n",
-            selected_sweep*RAD2DEG,selected_path,energy_excess,
-            energy_excess/fmax(selected_path,1000.0),available_drag,
+            "MM305 acquisition route: radius=%.0f sweep=%.0f path=%.0f E=%.0f reqD=%.2f availD=%.2f joined=%d cursor=%zu/%zu xt=%.0f courseErr=%.1f V=%.1f h=%.0f\n",
+            g->mm305_acquisition_route.hac.radius_m,selected_sweep*RAD2DEG,
+            selected_path,energy_excess,
+            energy_excess/fmax(selected_path,1000.0),available_drag,joined_fixed_hac?1:0,
             g->mm305_acquisition_route_cursor,g->mm305_acquisition_route.count,
             demand->cross_track_error_m,demand->course_error_deg,
             geometry->airspeed_mps,geometry->altitude_above_runway_m);
