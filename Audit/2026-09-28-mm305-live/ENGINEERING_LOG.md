@@ -405,3 +405,49 @@ the next investigation should compare the MM305-certified terminal delivery
 trajectory against the trajectory Final actually executes, especially the
 stored post-pull energy/response state at ownership transfer, before any further
 pitch-gain or flare-timing changes.
+
+
+## Flare closure live validation
+
+Commit `c4cab42` added a one-sided flare pitch-error closure rate based on measured
+time to main-gear contact, leaving guidance, recovery, touchdown, and integrity
+gates unchanged. A guarded live run from `STS-N-MM305-handoff` reached Final and
+made an intact runway contact. Delta-decoded telemetry showed stronger late
+pitch demand than the previous baseline: about +0.76 pitch control at 10 m wheel
+height and +0.85 at 5 m, with actual AoA improving to about 10.9 and 11.2 deg
+against a roughly 15 deg target. Contact-region sink improved from the prior
+~8.1 m/s baseline to roughly 6.6 m/s. Vehicle mass remained 43,515.8 kg through
+contact, so this run did not repeat the earlier structural breakup.
+
+The run still failed the normal landing contract. The first hard contact did not
+satisfy the existing ground latch because sink remained above 3 m/s, so no valid
+runway touchdown was latched. The vehicle subsequently rolled until KSP reported
+a landed state beyond the RW09 contact envelope, at which point the runner
+aborted. The guard restored and froze the named checkpoint. This is a useful
+control improvement but not a landing pass. Evidence:
+`Runtime/Headless/mm305-flare-closure-live.log` and
+`FlightLogs/2026-09-27T23-58-42Z-STS-N-{vehicle,planner}.jsonl`.
+
+## Flare response-reserve trial
+
+A single-variable follow-up kept the `c4cab42` closure law but shortened its
+closure deadline by a response reserve derived from two damped pitch-loop time
+constants. The intent was to command the same positive pitch-error closure early
+enough for the airframe to realize it before contact; no guidance or gate was
+changed. The source built cleanly and the same guarded checkpoint case was flown.
+
+The trial was worse. Delta-decoded live samples were approximately 90.3 m/s and
+13.1 m/s sink at 100 m, 79.2 m/s and 9.6 m/s sink at 50 m, 64.9 m/s and 8.3 m/s
+sink at 10 m, and 63.9 m/s and 8.8 m/s sink at 5 m. The runner aborted near
+radar altitude 1 m at about along +1.34 km, cross +11 m for insufficient
+attitude-recovery height. The guard restored and froze `STS-N-MM305-handoff`.
+The response-reserve change is rejected and source was restored to `c4cab42`.
+Evidence: `Runtime/Headless/mm305-flare-response-reserve-live.log` and
+`FlightLogs/2026-09-28T00-07-04Z-STS-N-{vehicle,planner}.jsonl`.
+
+The comparison shows that demanding still more pitch earlier trades away speed
+without producing a safer contact. Further flare-gain/lead escalation is not the
+next path. Investigation returns upstream to Final energy/speed execution: why a
+Final trajectory that still references roughly 120 m/s near the runway actually
+falls into the mid-60 m/s range before contact, and how that differs from the
+MM305 terminal-delivery plan that admitted the handoff.
