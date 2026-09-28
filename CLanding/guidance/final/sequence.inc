@@ -133,11 +133,6 @@ static double terminal_learned_max_lift_to_drag(const GuidanceMachine*g,const Te
     return clampd(best,1.5,10.0);
 }
 
-typedef struct {
-    double arrest_accel,sgs_height,sgs_sink,final_accel,float_height,float_sink,lift_ratio,aoa_max,g0;
-    const PlanetModel*planet;double site_altitude;
-    double preflare_trigger_altitude;
-} TerminalFlarePlan;
 
 /*
  * Touchdown speed the planned vertical profile delivers from the present

@@ -476,3 +476,50 @@ investigation therefore remains the producer/consumer energy contract between
 MM305 admission and the pull-to-touchdown Final profile. Evidence:
 `Runtime/Headless/mm305-final20-handoff-live.log` and campaign artifact identity
 `c24d734f7657186f-e7ad55ae3046c7ff-b3c162afd002a9e9`.
+
+
+## MM305-to-Final touchdown-energy diagnostic
+
+A behavior-neutral diagnostic was added to the existing MM305 Final-delivery trace.
+It evaluates Final's density-aware pull-to-touchdown speed predictor but does not
+change guidance, admission, recovery, touchdown, or integrity behavior. The pinned
+live artifact was `626f24991293cd9b-288578158888926c-23edce430a42f1af`, using
+the committed 28-degree / 3.2 km baseline configuration.
+
+The guarded run reached the normal MM305-to-Final handoff. At the authoritative
+`MM305_LIVE_EXIT`, the vehicle was about 4.12 km mean altitude / 4.01 km radar
+altitude, 9.24 km before the runway, 168.9 m/s TAS, and -24.24 deg FPA. The legacy
+preflare certificate admitted that state with `plannedExitV=85.00 m/s`, exactly
+the aerodynamic `minimumSafeSpeed`, and therefore zero lower kinetic margin. In
+contrast, the full Final predictor evaluated from the same handoff state predicted
+only about 72.4-72.8 m/s at touchdown, below the configured 75 m/s touchdown
+target. This is direct live evidence that the producer contract proves survival
+through the pull, not sufficient energy for the remaining Final profile.
+
+The unchanged live execution reproduced the known failure. Final entered near
+4.1 km / 9.2 km and about 169 m/s; preflare began above 2.1 km wheel height. Speed
+then fell through about 121 m/s at 544 m, 101 m/s at 188 m, 79 m/s at 50 m, and
+roughly 68 m/s at 15-20 m. The runner aborted near radar 3 m / along +1.28 km /
+cross +11 m for insufficient attitude-recovery height; the guard then restored
+and froze `STS-N-MM305-handoff`. This is a failure.
+
+A raw predictor sample immediately after Final ownership jumped to an implausible
+~135 m/s despite nearly unchanged kinematics, so that raw predictor is not yet
+suitable as a hard gate. The trace contains multiple contract evaluators and Final
+also begins persistent aero learning at ownership. The producer-side mechanism is
+clear independently of that transition sample: `terminal_preflare_plan()` prices
+the delayed pull with local measured drag frozen at the current altitude, while
+the pull descends from kilometre-scale altitude into much denser air. At the live
+handoff density was about 0.668 kg/m^3, versus roughly 1.1 kg/m^3 near the runway.
+The downstream Final predictor already carries atmospheric density down. The next
+isolated change should therefore correct the producer's pull-energy propagation
+before changing any gate threshold.
+
+Validation around the diagnostic source: the production backend builds cleanly
+with `-Werror`; MM305 recovery-monitor passes. The maintained suite still stops at
+the pre-existing `mm305-feasibility-test` because none of its five synthetic
+admitted states qualifies a route. `touchdown-quality-test` also retains its
+pre-existing sink failure (4.24 m/s versus the 3.0 m/s quality limit) and itself
+shows the same contract gap: `plannedExitSpeed=85`, `lowMargin=0`, admission
+accepted. Evidence: `Runtime/Headless/mm305-touchdown-predictor-diagnostic-live.log`
+and `FlightLogs/2026-09-28T00-44-49Z-STS-N-{vehicle,planner}.jsonl`.

@@ -445,16 +445,43 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     double gate_energy=.5*gate_speed*gate_speed;
     double planned_exit_energy=.5*planned_exit_v2;
     double high_energy_margin=gate_energy-planned_exit_energy;
+    /* The delivery contract owns the complete unpowered path to contact, not
+       just the pull-up exit.  Reuse Final's density-aware pull-to-touchdown
+       predictor so MM305 cannot hand off a state that is above the aerodynamic
+       floor yet already destined to arrive below the configured touchdown
+       speed.  A non-finite forecast is not evidence of adequate energy. */
+    GuidanceMachine touchdown_prediction=*g;
+    terminal_learn_aero(&touchdown_prediction,t,v);
+    double touchdown_aoa_limit=final_lift_aoa_limit(t,v);
+    TerminalFlarePlan touchdown_plan={
+        .arrest_accel=.15*gravity,.sgs_height=25.0,.sgs_sink=3.5,
+        .final_accel=.10*gravity,.float_height=1.5,.float_sink=1.0,
+        .lift_ratio=touchdown_prediction.terminal_lift_ratio>0.0?
+            touchdown_prediction.terminal_lift_ratio:1.0,
+        .aoa_max=touchdown_aoa_limit,.g0=gravity,.planet=p,
+        .site_altitude=site->altitude,.preflare_trigger_altitude=plan->trigger_altitude
+    };
+    double touchdown_prediction_height=fmax(0.0,t->mean_altitude-site->altitude);
+    double predicted_touchdown_speed=terminal_predict_touchdown_speed(
+        &touchdown_prediction,t,v,touchdown_prediction_height,t->true_air_speed,
+        fmax(0.0,-t->vertical_speed),false,&touchdown_plan);
+    double touchdown_target=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
+    double touchdown_energy_margin=isfinite(predicted_touchdown_speed)?
+        .5*(predicted_touchdown_speed*predicted_touchdown_speed-
+            touchdown_target*touchdown_target):NAN;
+
     const char *delivery_diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
     if(delivery_diag&&strcmp(delivery_diag,"2")==0&&
        (g->mm305_runway_alignment_active||g->mm305_hac_exit_reached||g->hac_completed||g->final_approach_captured)){
         fprintf(stderr,
-            "FINAL_DELIVERY_ENERGY ut=%.2f distance=%.1f along=%.1f h=%.1f radar=%.1f V=%.2f fpa=%.2f trigger=%.1f preflareGround=%.1f groundToGate=%.1f minV=%.2f refV=%.2f predictedExitV=%.2f predictedGateV=%.2f lowMargin=%.1f highMargin=%.1f liveDrag=%.4f\n",
+            "FINAL_DELIVERY_ENERGY ut=%.2f distance=%.1f along=%.1f h=%.1f radar=%.1f V=%.2f fpa=%.2f trigger=%.1f preflareGround=%.1f groundToGate=%.1f minV=%.2f refV=%.2f predictedExitV=%.2f predictedGateV=%.2f predictedTouchdownV=%.2f touchdownMargin=%.1f lowMargin=%.1f highMargin=%.1f liveDrag=%.4f\n",
             t->ut,distance,t->runway_along_track,t->mean_altitude-site->altitude,t->radar_altitude,
             t->true_air_speed,t->flight_path_angle,plan->trigger_altitude,preflare_ground,
             ground_to_gate,minimum_speed,gate_speed,sqrt(fmax(0.0,planned_exit_v2)),
-            predicted_gate_speed,low_energy_margin,high_energy_margin,live_loss);
+            predicted_gate_speed,predicted_touchdown_speed,touchdown_energy_margin,
+            low_energy_margin,high_energy_margin,live_loss);
     }
+
     /* The trigger is solved analytically to the reference-energy boundary; do
        not reject an exact solution because of sub-millijoule floating-point
        roundoff.  This tolerance is numerical only, not a flight-energy allowance. */
@@ -465,10 +492,10 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
         static bool final_energy_diag_printed=false;
         if(!final_energy_diag_printed){
             fprintf(stderr,
-                "FINAL_TEST_ENERGY preTriggerSpeed=%.6f plannedExitSpeed=%.6f minimumSpeed=%.6f referenceGateSpeed=%.6f lowMargin=%.6f highMargin=%.6f liveDragAccel=%.6f airPath=%.6f heightToGate=%.6f groundToGate=%.6f\n",
+                "FINAL_TEST_ENERGY preTriggerSpeed=%.6f plannedExitSpeed=%.6f minimumSpeed=%.6f referenceGateSpeed=%.6f predictedTouchdownSpeed=%.6f touchdownMargin=%.6f lowMargin=%.6f highMargin=%.6f liveDragAccel=%.6f airPath=%.6f heightToGate=%.6f groundToGate=%.6f\n",
                 predicted_gate_v2>=0.0?sqrt(predicted_gate_v2):NAN,sqrt(planned_exit_v2),
-                minimum_speed,gate_speed,low_energy_margin,high_energy_margin,live_loss,
-                air_path,height_to_gate,ground_to_gate);
+                minimum_speed,gate_speed,predicted_touchdown_speed,touchdown_energy_margin,
+                low_energy_margin,high_energy_margin,live_loss,air_path,height_to_gate,ground_to_gate);
             final_energy_diag_printed=true;
         }
     }
@@ -481,7 +508,8 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
 
     if(!isfinite(response_available)||!isfinite(response_required)||
        !isfinite(low_energy_margin)||!isfinite(high_energy_margin)||
-       !isfinite(current_specific)||!isfinite(fpa_margin))return contract;
+       !isfinite(touchdown_energy_margin)||!isfinite(current_specific)||
+       !isfinite(fpa_margin))return contract;
 
     contract.valid=true;
     contract.path_committed=g->terminal_final_test_mode||
@@ -501,7 +529,8 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     contract.flight_path_angle=t->flight_path_angle;
     contract.flight_path_angle_margin=fpa_margin;
     contract.specific_energy=current_specific;
-    contract.specific_energy_margin=fmin(low_energy_margin,high_energy_margin);
+    contract.specific_energy_margin=fmin(fmin(low_energy_margin,high_energy_margin),
+        touchdown_energy_margin);
     contract.response_time_available=response_available;
     contract.response_time_required=response_required;
     contract.attitude_response_qualified=plan->effective_accel>0.0&&

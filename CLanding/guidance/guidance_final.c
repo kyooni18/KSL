@@ -7,6 +7,17 @@
 #include <string.h>
 
 /* Translation-unit private helpers. */
+typedef struct {
+    double arrest_accel,sgs_height,sgs_sink,final_accel,float_height,float_sink,lift_ratio,aoa_max,g0;
+    const PlanetModel*planet;double site_altitude;
+    double preflare_trigger_altitude;
+} TerminalFlarePlan;
+
+static double final_lift_aoa_limit(const Telemetry *t, const VehicleProfile *v);
+static void terminal_learn_aero(GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v);
+static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
+        const VehicleProfile*v,double height,double V,double sink,bool latched,
+        const TerminalFlarePlan*p);
 static double terminal_final_distance(const GuidanceMachine*g,const GuidanceSettings*s);
 static double terminal_final_alignment_speed(const GuidanceMachine*g,
         const GuidanceSettings*s,const VehicleProfile*v);
