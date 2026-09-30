@@ -14,6 +14,8 @@
 #include "terminal_solver.h"
 #include "mm305_planning.h"
 #include "shuttlesim/math3.h"
+#include "taem_planner.h"
+#include "guidance_internal.h"
 
 static double fixture_value(const char *path, const char *key) {
     FILE *f = fopen(path, "r");
@@ -151,6 +153,306 @@ static void test_tracker_bank_target_continuity(const TerminalModel *model,
            model->vehicle.maximum_angle_of_attack *
            3.14159265358979323846 / 180.0 + 1e-9);
 }
+static TerminalDynamicState live_like_mm305_state(const TerminalModel *model) {
+    TaemFrameWorld world;
+    TaemRunwayFrame runway;
+    assert(taem_geometry_runway(model, &world, &runway));
+    TaemVec3 position_b, north, east, up;
+    assert(taem_runway_unproject(&world, &runway, -46841.0, 10011.0,
+                                 21052.0, &position_b));
+    assert(taem_local_north_east_up(position_b, &north, &east, &up));
+    const double course = 79.7 * DEG2RAD;
+    const double fpa = -14.5 * DEG2RAD;
+    const double speed = 761.8;
+    const double horizontal = speed * cos(fpa);
+    TaemVec3 velocity_b = taem_vec3_add(
+        taem_vec3_add(taem_vec3_scale(north, horizontal * cos(course)),
+                      taem_vec3_scale(east, horizontal * sin(course))),
+        taem_vec3_scale(up, speed * sin(fpa)));
+    TaemVec3 position_i, velocity_i;
+    assert(taem_fixed_to_inertial(&world, position_b, velocity_b, 21901.45,
+                                  &position_i, &velocity_i));
+    TerminalDynamicState state = {0};
+    state.position_i_m = (Vec3){position_i.x, position_i.y, position_i.z};
+    state.velocity_i_mps = (Vec3){velocity_i.x, velocity_i.y, velocity_i.z};
+    state.mass_kg = 43515.769531;
+    state.ut_s = 21901.45;
+    state.attitude = model->attitude;
+    state.attitude.aoa_rad = 3.4 * DEG2RAD;
+    state.attitude.bank_rad = 2.1 * DEG2RAD;
+    state.attitude.aoa_rate_rad_s = 0.0;
+    state.attitude.bank_rate_rad_s = 0.0;
+    state.attitude.cmd_aoa_rad = state.attitude.requested_aoa_rad = state.attitude.aoa_rad;
+    state.attitude.cmd_bank_rad = state.attitude.requested_bank_rad = state.attitude.bank_rad;
+    state.trim_aoa_ceiling_rad = 13.6 * DEG2RAD;
+    return state;
+}
+static void test_mm305_native_family_matrix(const TerminalModel *model,
+        const TerminalDynamicState *state, const TaemGeometryState *geometry);
+
+
+static void test_mm305_acquisition_qualification_contract(
+        const TerminalModel *model, const LandingConfiguration *configuration) {
+    /* Reproduce the pinned configuration from the reference live run without
+       changing global production defaults. */
+    LandingConfiguration live_configuration=*configuration;
+    live_configuration.guidance.final_approach_distance=3200.0;
+    live_configuration.guidance.final_glide_slope=28.0;
+    live_configuration.guidance.taem_glide_slope=24.0;
+    live_configuration.guidance.minimum_planning_lead_time=90.0;
+    live_configuration.guidance.use_time_warp=false;
+    TerminalModel live_model=*model;
+    live_model.guidance=live_configuration.guidance;
+    configuration=&live_configuration;
+    model=&live_model;
+    TerminalDynamicState live = live_like_mm305_state(model);
+    TaemGeometryState geometry;
+    assert(terminal_state_validate(&live, NULL, 0));
+    assert(taem_geometry_state(model, &live, &geometry));
+    assert(fabs(geometry.runway_along_m + 46841.0) < 2.0);
+    assert(fabs(geometry.runway_cross_m - 10011.0) < 2.0);
+    assert(fabs(geometry.altitude_above_runway_m - 21052.0) < 2.0);
+    assert(fabs(geometry.airspeed_mps - 761.8) < 0.5);
+    assert(fabs(geometry.course_deg - 79.7) < 0.1);
+    assert(fabs(geometry.flight_path_angle_deg + 14.5) < 0.1);
+
+    VehicleState vehicle = {
+        .ut = live.ut_s,
+        .position = {live.position_i_m.x, live.position_i_m.y, live.position_i_m.z},
+        .velocity = {live.velocity_i_mps.x, live.velocity_i_mps.y, live.velocity_i_mps.z},
+        .mass = live.mass_kg
+    };
+    Telemetry telemetry = {0};
+    telemetry.ut = live.ut_s;
+    telemetry.mean_altitude = model->site.altitude + geometry.altitude_above_runway_m;
+    telemetry.radar_altitude = geometry.altitude_above_runway_m;
+    telemetry.true_air_speed = geometry.airspeed_mps;
+    telemetry.surface_speed = geometry.ground_speed_mps;
+    telemetry.horizontal_speed = geometry.ground_speed_mps * cos(geometry.flight_path_angle_deg * DEG2RAD);
+    telemetry.vertical_speed = geometry.ground_speed_mps * sin(geometry.flight_path_angle_deg * DEG2RAD);
+    telemetry.flight_path_angle = geometry.flight_path_angle_deg;
+    telemetry.heading = telemetry.ground_track_heading = geometry.course_deg;
+    telemetry.angle_of_attack = 3.4;
+    telemetry.roll = 2.1;
+    telemetry.mass = live.mass_kg;
+    telemetry.mach = 2.545;
+    telemetry.speed_of_sound = geometry.airspeed_mps / telemetry.mach;
+
+    const double trim_intercept = 0.75 - 0.047 * 13.6;
+    GuidanceMachine acquisition;
+    guidance_machine_init(&acquisition);
+    acquisition.phase = PHASE_TAEM;
+    acquisition.mm305_async_planning = true;
+    acquisition.mm305_lift_scale = 0.5;
+    acquisition.mm305_drag_scale = 0.5;
+    acquisition.hac_radius = model->guidance.hac_radius;
+    acquisition.mm305_trim_initialized = true;
+    acquisition.mm305_trim_intercept = trim_intercept;
+
+    PlanetModel planet = {0};
+    planet.radius = model->world.radius_m;
+    planet.gravitational_parameter = model->world.mu_m3_s2;
+    planet.rotational_speed = model->world.rotation_rate_rad_s;
+    AerodynamicModel aero = {
+        .lift_to_drag = configuration->vehicle.estimated_lift_to_drag,
+        .ballistic_coefficient = configuration->vehicle.estimated_ballistic_coefficient,
+        .confidence = 1.0
+    };
+    GuidanceResult acquisition_result = taem_guidance_native(&acquisition, &telemetry,
+        &vehicle, geometry.course_deg, &planet, aero, configuration, model, 0.1);
+    (void)acquisition_result;
+    assert(acquisition.mm305_acquisition_route_valid);
+    assert(!acquisition.terminal_final_handoff_latched);
+
+    GuidanceMachine qualifier;
+    guidance_machine_init(&qualifier);
+    qualifier.phase = PHASE_TAEM;
+    qualifier.mm305_planning_needed = true;
+    qualifier.mm305_lift_scale = 0.5;
+    qualifier.mm305_drag_scale = 0.5;
+    qualifier.mm305_trim_initialized = true;
+    qualifier.mm305_trim_intercept = trim_intercept;
+    /* Model the live async handoff: native qualification receives the exact
+     * provisional route already being tracked, rather than searching as if it
+     * had no seed. */
+    qualifier.mm305_acquisition_route=acquisition.mm305_acquisition_route;
+    qualifier.mm305_acquisition_route_valid=true;
+    Mm305PlanRequest request = guidance_mm305_plan_request(&qualifier, &telemetry,
+        &vehicle, configuration, model);
+    assert(request.valid);
+    double resolved_distance = mm305_final_alignment_distance(&qualifier, model,
+        &request.state);
+    assert(fabs(request.final_approach_distance_m - resolved_distance) < 1e-9);
+    assert(fabs(acquisition.mm305_acquisition_route.alignment_along_m +
+                resolved_distance) < 1.0);
+
+    TerminalModel planning_model;
+    mm305_prepare_planning_model(&planning_model,model,resolved_distance,
+        request.scale_mach,request.lift_scale,request.drag_scale,
+        request.state.trim_aoa_ceiling_rad);
+    /* Acquisition and qualifier must agree on the complete Final interface,
+     * not just its distance: target altitude is capped consistently, while
+     * slope and alignment speed are resolved from the same unmodified base. */
+    TerminalModel expected_contract;
+    mm305_apply_final_alignment(&expected_contract,model,resolved_distance);
+    assert(fabs(planning_model.guidance.final_approach_distance -
+        expected_contract.guidance.final_approach_distance) < 1e-9);
+    assert(fabs(planning_model.guidance.final_glide_slope -
+        expected_contract.guidance.final_glide_slope) < 1e-9);
+    assert(fabs(planning_model.guidance.final_alignment_speed -
+        expected_contract.guidance.final_alignment_speed) < 1e-9);
+    double expected_handoff_height=fmin(resolved_distance *
+        tan(model->guidance.final_glide_slope * DEG2RAD),4000.0);
+    double applied_handoff_height=planning_model.guidance.final_approach_distance *
+        tan(planning_model.guidance.final_glide_slope * DEG2RAD);
+    assert(fabs(applied_handoff_height-expected_handoff_height) < 1e-6);
+    TerminalProfileResult acquisition_profile = terminal_solver_generate_profile(
+        &planning_model, &request.state, &acquisition.mm305_acquisition_route,
+        0.75, 420.0);
+    Mm305PlanResult qualified = mm305_plan(model, &request);
+    TaemFixedHacCandidate acquisition_replay=taem_fixed_hac_evaluate_route(
+        &planning_model,&request.state,&acquisition.mm305_acquisition_route,
+        0,0.5,420.0);
+
+    fprintf(stderr,
+        "MM305 contract smoke: final=%.0f slope=%.2f speed=%.1f acq R=%.0f sweep=%.1f lead=%.0f arc=%.0f path=%.0f profile=%d exitV=%.1f replayStatus=%d replayExitV=%.1f reason=%s",
+        resolved_distance, planning_model.guidance.final_glide_slope,
+        planning_model.guidance.final_alignment_speed,
+        acquisition.mm305_acquisition_route.hac.radius_m,
+        acquisition.mm305_acquisition_route.hac.arc_sweep_rad * RAD2DEG,
+        acquisition.mm305_acquisition_route.lead_length_m,
+        acquisition.mm305_acquisition_route.hac.arc_length_m,
+        acquisition.mm305_acquisition_route.length_m,
+        acquisition_profile.valid ? 1 : 0, acquisition_profile.exit_speed_mps,
+        (int)acquisition_replay.status,
+        acquisition_replay.replay.final_geometry.airspeed_mps,
+        acquisition_replay.reason ? acquisition_replay.reason : "none");
+    if (qualified.found) {
+        TaemRoute qualified_profile_route=qualified.candidate.route;
+        TerminalProfileResult qualified_profile=terminal_solver_generate_profile(
+            &planning_model,&request.state,&qualified_profile_route,0.75,420.0);
+        fprintf(stderr,
+            " qualifier R=%.0f sweep=%.1f lead=%.0f arc=%.0f path=%.0f coarseExitV=%.1f replayExitV=%.1f\n",
+            qualified.candidate.route.hac.radius_m,
+            qualified.candidate.route.hac.arc_sweep_rad * RAD2DEG,
+            qualified.candidate.route.lead_length_m,
+            qualified.candidate.route.hac.arc_length_m,
+            qualified.candidate.route.length_m,
+            qualified_profile.exit_speed_mps,
+            qualified.candidate.replay.final_geometry.airspeed_mps);
+        assert(fabs(qualified.candidate.route.alignment_along_m + resolved_distance) < 1.0);
+    } else {
+        fprintf(stderr, " qualifier rejected: %s\n", qualified.diagnostic);
+    }
+    assert(qualified.found);
+    assert(fabs(qualified.candidate.route.hac.radius_m -
+                acquisition.mm305_acquisition_route.hac.radius_m) < 1.0);
+    assert(fabs(qualified.candidate.route.hac.arc_sweep_rad -
+                acquisition.mm305_acquisition_route.hac.arc_sweep_rad) < 1e-9);
+    assert(fabs(qualified.candidate.route.lead_length_m -
+                acquisition.mm305_acquisition_route.lead_length_m) < 1.0);
+    assert(fabs(qualified.candidate.route.length_m -
+                acquisition.mm305_acquisition_route.length_m) < 1.0);
+    /* Prove convergence independently of the live seed-promotion fast path:
+     * acquisition must agree with the qualifier's own search from this same
+     * physical state, not merely pass its provisional route back as a seed. */
+    Mm305PlanRequest independent_request=request;
+    independent_request.seed_route_valid=false;
+    Mm305PlanResult independent_qualified=mm305_plan(model,&independent_request);
+    if (independent_qualified.found) {
+        fprintf(stderr,"MM305 independent search: acq R=%.0f sweep=%.1f lead=%.0f path=%.0f vs qualifier R=%.0f sweep=%.1f lead=%.0f path=%.0f\\n",
+            acquisition.mm305_acquisition_route.hac.radius_m,
+            acquisition.mm305_acquisition_route.hac.arc_sweep_rad*RAD2DEG,
+            acquisition.mm305_acquisition_route.lead_length_m,
+            acquisition.mm305_acquisition_route.length_m,
+            independent_qualified.candidate.route.hac.radius_m,
+            independent_qualified.candidate.route.hac.arc_sweep_rad*RAD2DEG,
+            independent_qualified.candidate.route.lead_length_m,
+            independent_qualified.candidate.route.length_m);
+    } else {
+        fprintf(stderr,"MM305 independent search rejected: %s\\n",independent_qualified.diagnostic);
+    }
+    assert(independent_qualified.found);
+    assert(fabs(independent_qualified.candidate.route.alignment_along_m +
+        resolved_distance)<1.0);
+    TaemGeometryState family_geometry;
+    assert(taem_geometry_state(&planning_model, &request.state, &family_geometry));
+    test_mm305_native_family_matrix(&planning_model, &request.state, &family_geometry);
+    assert(!qualifier.terminal_final_handoff_latched);
+}
+
+static void test_mm305_native_family_matrix(const TerminalModel *model,
+        const TerminalDynamicState *state, const TaemGeometryState *geometry) {
+    const double radii_m[] = {3000.0, 4300.0, 7200.0, 12000.0, 18000.0};
+    const double sweeps_deg[] = {15.0, 30.0, 60.0, 120.0,
+                                 180.0, 195.0, 240.0, 270.0};
+    TaemReachability reachability = {0};
+    assert(taem_fixed_hac_turn_reachability(model, state, geometry,
+        7200.0, &reachability));
+    double curvature = 0.95 * reachability.available_lateral_accel_mps2 /
+        fmax(geometry->ground_speed_mps * geometry->ground_speed_mps, 1.0);
+    fprintf(stderr, "MM305 native family matrix (Final=%.0f slope=%.2f speed=%.1f):\n",
+        model->guidance.final_approach_distance,
+        model->guidance.final_glide_slope,
+        model->guidance.final_alignment_speed);
+    TaemFixedHacCandidate radius12_sweep30 = {0};
+    TaemFixedHacCandidate radius18_sweep15 = {0};
+    for (size_t ri = 0; ri < sizeof(radii_m) / sizeof(radii_m[0]); ++ri) {
+        for (size_t si = 0; si < sizeof(sweeps_deg) / sizeof(sweeps_deg[0]); ++si) {
+            TaemRoute route = {0};
+            char reason[160] = {0};
+            double sweep = sweeps_deg[si] * DEG2RAD;
+            if (!taem_route_build_hac(model, geometry, radii_m[ri],
+                    geometry->runway_cross_m >= 0.0 ? 1.0 : -1.0,
+                    sweep, 420.0, curvature, &route, reason, sizeof(reason))) {
+                fprintf(stderr, " family R=%.0f sweep=%.0f build=reject reason=%s\n",
+                    radii_m[ri], sweeps_deg[si], reason[0] ? reason : "unavailable");
+                continue;
+            }
+            TaemFixedHacCandidate replay = {0};
+            if (sweeps_deg[si] <= 30.0)
+                replay = taem_fixed_hac_evaluate_route(model, state, &route,
+                    0, 0.5, 420.0);
+            TerminalProfileResult profile = terminal_solver_generate_profile(
+                model, state, &route, 0.75, 420.0);
+            fprintf(stderr,
+                " family R=%.0f sweep=%.0f lead=%.0f arc=%.0f path=%.0f profile=%d profileV=%.1f replayStatus=%d replayV=%.1f quality=%.3f profileReason=%s replayReason=%s\n",
+                radii_m[ri], sweeps_deg[si], route.lead_length_m,
+                route.hac.arc_length_m, route.length_m, profile.valid ? 1 : 0,
+                profile.exit_speed_mps, (int)replay.status,
+                replay.replay.final_geometry.airspeed_mps, replay.quality_score,
+                profile.reason ? profile.reason : "none",
+                replay.reason ? replay.reason : "not-run");
+            if (fabs(radii_m[ri] - 12000.0) < 1.0 &&
+                    fabs(sweeps_deg[si] - 30.0) < 1e-9)
+                radius12_sweep30 = replay;
+            if (fabs(radii_m[ri] - 18000.0) < 1.0 &&
+                    fabs(sweeps_deg[si] - 15.0) < 1e-9)
+                radius18_sweep15 = replay;
+        }
+    }
+    assert(radius12_sweep30.status == TAEM_PLAN_UNQUALIFIED);
+    assert(radius18_sweep15.status == TAEM_PLAN_UNQUALIFIED);
+    assert(taem_fixed_hac_candidate_preferred(model, &radius12_sweep30,
+        &radius18_sweep15));
+    assert(radius12_sweep30.route.hac.arc_length_m >
+           radius18_sweep15.route.hac.arc_length_m);
+    assert(radius12_sweep30.route.lead_length_m /
+               radius12_sweep30.route.hac.arc_length_m <
+           radius18_sweep15.route.lead_length_m /
+               radius18_sweep15.route.hac.arc_length_m);
+    fprintf(stderr,
+        "MM305 similar-energy circle ranking: R12k/30 lead=%.0f arc=%.0f exitV=%.1f quality=%.3f beats R18k/15 lead=%.0f arc=%.0f exitV=%.1f quality=%.3f\n",
+        radius12_sweep30.route.lead_length_m,
+        radius12_sweep30.route.hac.arc_length_m,
+        radius12_sweep30.replay.final_geometry.airspeed_mps,
+        radius12_sweep30.quality_score,
+        radius18_sweep15.route.lead_length_m,
+        radius18_sweep15.route.hac.arc_length_m,
+        radius18_sweep15.replay.final_geometry.airspeed_mps,
+        radius18_sweep15.quality_score);
+}
+
 int main(void) {
     LandingConfiguration configuration = landing_configuration_default();
     char atmosphere[512], aero[512], book[512], attitude[512];
@@ -168,6 +470,7 @@ int main(void) {
     assert(terminal_model_capture(&model, &files, &configuration, 41,
                                   reason, sizeof(reason)));
     assert(model.replay_validated && model.snapshot_id == 41);
+    test_mm305_acquisition_qualification_contract(&model, &configuration);
     TerminalModel invalid=model;
     double *positive_fields[]={&invalid.world.radius_m,&invalid.world.mu_m3_s2,
         &invalid.world.atmosphere_top_m,&invalid.aero.reference_area_m2,
@@ -368,6 +671,27 @@ int main(void) {
     assert(isfinite(taem_alignment_target_altitude(&model)));
     assert(fabs(taem_alignment_target_altitude(&model) -
         (model.site.altitude + taem_alignment_target_height(&model))) < 1e-9);
+    /* Live MM305 replay showed alignment could begin only ~2.2 km before
+     * Final, with the unpowered vehicle still needing bank/FPA settlement.
+     * Keep enough capture horizon to settle, and do not declare the strict
+     * miss while a steep, low-energy vehicle is still upstream of Final. */
+    alignment_geometry.ground_speed_mps = 170.0;
+    assert(fabs(taem_alignment_capture_distance(&model,
+        &alignment_geometry) - 5100.0) < 1e-9);
+    TaemGeometryState steep_alignment = alignment_geometry;
+    steep_alignment.flight_path_angle_deg =
+        -model.guidance.final_glide_slope - 8.0;
+    steep_alignment.runway_along_m =
+        -model.guidance.final_approach_distance - 100.0;
+    assert(!taem_alignment_exhausted(&model, &steep_alignment));
+    steep_alignment.runway_along_m =
+        -model.guidance.final_approach_distance + 1.0;
+    assert(taem_alignment_exhausted(&model, &steep_alignment));
+    steep_alignment.flight_path_angle_deg =
+        -model.guidance.final_glide_slope;
+    steep_alignment.runway_along_m =
+        -model.guidance.final_approach_distance + 501.0;
+    assert(taem_alignment_exhausted(&model, &steep_alignment));
 
 
     /* Interior profile candidates preserve the live start and HAC-exit

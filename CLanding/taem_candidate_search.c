@@ -195,7 +195,7 @@ static double candidate_circle_penalty(const TaemFixedHacCandidate *trial) {
     return log1p(lead/arc);
 }
 
-static bool candidate_preferred(const TerminalModel *model,
+bool taem_fixed_hac_candidate_preferred(const TerminalModel *model,
         const TaemFixedHacCandidate *trial, const TaemFixedHacCandidate *best) {
     if (trial->status != TAEM_PLAN_UNQUALIFIED) return false;
     if (best->status != TAEM_PLAN_UNQUALIFIED) return true;
@@ -690,7 +690,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                     trial.route.hac.arc_sweep_rad * 57.29577951308232,
                     trial.replay.final_geometry.airspeed_mps,
                     trial.quality_score, trial.replay.bank_target_reversals);
-            if (candidate_preferred(model, &trial, &best_failure)) {
+            if (taem_fixed_hac_candidate_preferred(model, &trial, &best_failure)) {
                 best_failure = trial;
                 have_failure = true;
             }
@@ -802,7 +802,7 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
                     TaemFixedHacCandidate tighter = evaluate_side(ends[end],
                         initial, &geometry, radius, side, spacing, dt,
                         maximum_elapsed, stations);
-                    if (candidate_preferred(ends[end], &tighter, slot) ||
+                    if (taem_fixed_hac_candidate_preferred(ends[end], &tighter, slot) ||
                         (slot->status != TAEM_PLAN_UNQUALIFIED &&
                          tighter.route_built && !slot->route_built))
                         *slot = tighter;
@@ -817,7 +817,7 @@ TaemFixedHacSearch taem_fixed_hac_search_runway_ends(const TerminalModel *model,
     int best = -1;
     for (int i = 0; i < result.candidate_count; ++i) {
         if (result.candidates[i].status == TAEM_PLAN_UNQUALIFIED &&
-            (best < 0 || candidate_preferred(ends[result.candidates[i].runway_end],
+            (best < 0 || taem_fixed_hac_candidate_preferred(ends[result.candidates[i].runway_end],
                 &result.candidates[i], &result.candidates[best])))
             best = i;
     }

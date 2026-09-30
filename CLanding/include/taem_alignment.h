@@ -16,15 +16,16 @@ static inline double taem_alignment_target_altitude(
     return model->site.altitude + taem_alignment_target_height(model);
 }
 
-/* Begin exact alignment-point capture far enough upstream for a real
- * unpowered shuttle to settle bank/rate and trim residual energy.  This is not
- * the Final handoff gate; it only changes which MM305 reference law is flown. */
+/* Begin exact alignment-point capture with time to settle bank/rate, course and
+ * residual energy before Final. The earlier 15 s/3.5 km horizon transitioned
+ * too near the station for the unpowered shuttle to meet Final's strict state
+ * gate, even when it was still well aligned with the HAC reference. */
 static inline double taem_alignment_capture_distance(
         const TerminalModel *model, const TaemGeometryState *geometry) {
     (void)model;
     double speed = geometry ? fmax(0.0, geometry->ground_speed_mps) : 0.0;
-    double response_distance = 15.0 * speed;
-    return fmax(2000.0, fmin(3500.0, response_distance));
+    double response_distance = 30.0 * speed;
+    return fmax(3000.0, fmin(6000.0, response_distance));
 }
 
 /* MM305 owns delivery to the Final alignment station.  The endpoint has
@@ -96,10 +97,16 @@ static inline bool taem_alignment_ready(const TerminalModel *model,
         fabs(geometry->airspeed_mps-target_speed)<=10.0 &&
         fabs(geometry->flight_path_angle_deg+model->guidance.final_glide_slope)<=3.0;
 }
-
 static inline bool taem_alignment_exhausted(const TerminalModel *model,
         const TaemGeometryState *geometry) {
     double station=-model->guidance.final_approach_distance;
+    /* If the measured flight path is already steeper than Final's delivery
+     * line by several degrees, the HAC route has spent too much altitude before
+     * its station. Continue on the controlled vertical intercept rather than
+     * attempting the Final handoff from an irrecoverable flight-path state. */
+    if (geometry->flight_path_angle_deg <
+            -model->guidance.final_glide_slope - 6.0)
+        return geometry->runway_along_m > station;
     return geometry->runway_along_m>station+500.0 ||
         geometry->altitude_above_runway_m<300.0;
 }

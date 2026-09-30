@@ -38,6 +38,17 @@ typedef struct {
     char diagnostic[768];
 } Mm305PlanResult;
 
+/* Resolve and apply the state-dependent Final delivery contract used by both
+   provisional acquisition and replay qualification. Resolution is provisional
+   until a qualified route is committed; an already-latched handoff is preserved. */
+double mm305_final_alignment_distance(const GuidanceMachine *g,
+    const TerminalModel *base, const TerminalDynamicState *state);
+void mm305_apply_final_alignment(TerminalModel *out,
+    const TerminalModel *base, double final_distance_m);
+void mm305_prepare_planning_model(TerminalModel *out,
+    const TerminalModel *base, double final_distance_m, double scale_mach,
+    double lift_scale, double drag_scale, double trim_aoa_ceiling_rad);
+
 /* Build a request from the live guidance state (NULL-safe; returns invalid
    when MM305 does not currently need a plan). */
 Mm305PlanRequest guidance_mm305_plan_request(const GuidanceMachine *g,

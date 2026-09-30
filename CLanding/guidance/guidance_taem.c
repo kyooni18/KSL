@@ -308,6 +308,56 @@ static double mm305_final_alignment_speed_for_distance(const TerminalModel *mode
     return base+0.005*extra_distance;
 }
 
+/* The Final alignment station is a shared planning contract, not a per-planner
+ * tweak.  Provisional acquisition and the asynchronous qualifier must deliver
+ * HAC energy to the same station; if they do not, the two planners pick
+ * different HAC families for the same physical state even though the physics
+ * is identical.  Resolve the station from the same measured state both see, and
+ * honour an already-latched handoff so replanning cannot walk the Final
+ * station toward the runway. */
+double mm305_final_alignment_distance(const GuidanceMachine *g,
+        const TerminalModel *base, const TerminalDynamicState *state) {
+    if (!base) return NAN;
+    if (g && g->terminal_final_handoff_latched &&
+            isfinite(g->terminal_final_handoff_distance) &&
+            g->terminal_final_handoff_distance>=500.0)
+        return g->terminal_final_handoff_distance;
+    double distance=mm305_energy_aware_final_distance(base,state);
+    if (distance>=500.0 && isfinite(distance)) return distance;
+    return fmax(500.0,base->guidance.final_approach_distance);
+}
+
+/* Apply the Final delivery contract (station, capped handoff altitude, adjusted
+ * glide slope, alignment speed) to a private model copy.  Every reference value
+ * is taken from the un-contracted base model, so this is idempotent: applying it
+ * to a model that already carries the contract cannot compound the
+ * distance-based Final speed reserve. */
+void mm305_apply_final_alignment(TerminalModel *out,
+        const TerminalModel *base, double final_distance_m) {
+    if (!out || !base) return;
+    if (!(final_distance_m>=500.0) || !isfinite(final_distance_m)) return;
+    double base_slope=clampd(base->guidance.final_glide_slope,3.0,45.0);
+    double handoff_height=fmin(final_distance_m*tan(base_slope*DEG2RAD),4000.0);
+    out->guidance.final_approach_distance=final_distance_m;
+    out->guidance.final_glide_slope=clampd(
+        atan2(handoff_height,final_distance_m)*RAD2DEG,15.0,base_slope);
+    out->guidance.final_alignment_speed=
+        mm305_final_alignment_speed_for_distance(base,final_distance_m);
+}
+
+void mm305_prepare_planning_model(TerminalModel *out,
+        const TerminalModel *base, double final_distance_m, double scale_mach,
+        double lift_scale, double drag_scale, double trim_aoa_ceiling_rad) {
+    if (!out || !base) return;
+    *out=*base;
+    mm305_apply_final_alignment(out,base,final_distance_m);
+    mm305_scale_model(out,scale_mach,clampd(lift_scale,0.5,2.0),
+        clampd(drag_scale,0.5,2.0));
+    if (trim_aoa_ceiling_rad>0.0 && isfinite(trim_aoa_ceiling_rad))
+        out->vehicle.maximum_angle_of_attack=fmin(
+            out->vehicle.maximum_angle_of_attack,trim_aoa_ceiling_rad*RAD2DEG);
+}
+
 Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *request) {
     Mm305PlanResult out;
     memset(&out,0,sizeof(out));
@@ -328,27 +378,10 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         snprintf(out.diagnostic,sizeof(out.diagnostic),"MM305 plan allocation failed");
         return out;
     }
-    *scaled=*model;
-    if (isfinite(request->final_approach_distance_m) &&
-            request->final_approach_distance_m>=500.0) {
-        double final_distance=request->final_approach_distance_m;
-        double base_slope=clampd(model->guidance.final_glide_slope,3.0,45.0);
-        double raw_handoff_height=final_distance*tan(base_slope*DEG2RAD);
-        double handoff_height=fmin(raw_handoff_height,4000.0);
-        scaled->guidance.final_approach_distance=final_distance;
-        scaled->guidance.final_glide_slope=clampd(
-            atan2(handoff_height,final_distance)*RAD2DEG,15.0,base_slope);
-        scaled->guidance.final_alignment_speed=
-            mm305_final_alignment_speed_for_distance(model,final_distance);
-    }
-    mm305_scale_model(scaled,request->scale_mach,
-        clampd(request->lift_scale,0.5,2.0),
-        clampd(request->drag_scale,0.5,2.0));
-    /* Plan only incidences the TAEM elevators can hold in trim. */
-    if (request->state.trim_aoa_ceiling_rad > 0.0)
-        scaled->vehicle.maximum_angle_of_attack = fmin(
-            scaled->vehicle.maximum_angle_of_attack,
-            request->state.trim_aoa_ceiling_rad * RAD2DEG);
+    mm305_prepare_planning_model(scaled,model,
+        request->final_approach_distance_m,request->scale_mach,
+        request->lift_scale,request->drag_scale,
+        request->state.trim_aoa_ceiling_rad);
     mm305_reciprocal_model(scaled,reciprocal);
     /* First try to qualify the exact provisional route the live tracker is
        already flying.  A successful result is a bumpless promotion from
@@ -383,19 +416,19 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
                 seed.route.length_m,seed.reason?seed.reason:"unknown",
                 seed.replay.elapsed_s);
     }
-    /* HAC size is the route's energy lever: a larger HAC flies a longer path
-       and sheds more energy, a smaller one less.  The candidate search already
-       tightens the radius when the configured one fails; add the larger HAC it
-       never tries, for states with energy to spare. */
+    /* Radius is a planning variable, not a nominal/fallback switch. The
+       configured-radius search and the larger high-energy band both search
+       continuously down to the 3 km floor; compare every replay-qualified
+       candidate before selecting one. */
     const double radius_factors[]={1.0,1.5};
     TaemFixedHacSearch search;
     memset(&search,0,sizeof(search));
-    int best=-1;
+    TaemFixedHacCandidate best_candidate={0};
+    bool have_best=false;
 
-    /* Prefer the configured runway end.  Searching both runway ends doubles the
-       most expensive part of MM305 planning and can consume tens of seconds of
-       live TAEM time.  The reciprocal remains a fallback when the configured end
-       has no feasible route. */
+    /* Preserve configured-runway-end preference: exhaust its full radius domain
+       before considering the reciprocal end. Within one end, however, no radius
+       band wins merely because it was searched first. */
     const TerminalModel *end_models[2]={
         request->search_both_ends||request->upstream_end==0?scaled:reciprocal,
         reciprocal
@@ -405,12 +438,12 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         1
     };
     int end_count=request->search_both_ends?2:1;
-    for (int end_pass=0;end_pass<end_count&&best<0;++end_pass) {
+    for (int end_pass=0;end_pass<end_count&&!have_best;++end_pass) {
         const TerminalModel *end_model=end_models[end_pass];
         int runway_end=end_ids[end_pass];
-        for (size_t r=0;r<sizeof(radius_factors)/sizeof(radius_factors[0])&&best<0;++r) {
+        for (size_t r=0;r<sizeof(radius_factors)/sizeof(radius_factors[0]);++r) {
             double radius=request->hac_radius_m*radius_factors[r];
-            if (!(radius>=2000.0)) continue;
+            if (!(radius>=3000.0)) continue;
             search=taem_fixed_hac_search(end_model,&request->state,
                 radius,200.0,0.5,420.0);
             for (int i=0;i<search.candidate_count;++i)
@@ -428,24 +461,24 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
                         dc->route_built?dc->route.length_m:NAN,
                         dc->reason?dc->reason:"unknown");
                 }
-                fprintf(stderr,"\n");
+                fprintf(stderr, "\n");
             }
             for (int i=0;i<search.candidate_count;++i) {
                 const TaemFixedHacCandidate *c=&search.candidates[i];
                 if (!mm305_candidate_ok(c)) continue;
                 if (request->restrict_side && c->side*request->side<=0.0) continue;
-                if (best<0 || (i==search.selected_candidate) ||
-                    (search.selected_candidate<0 &&
-                     c->quality_score<search.candidates[best].quality_score))
-                    best=i;
-                if (i==search.selected_candidate) break;
+                if (!have_best || taem_fixed_hac_candidate_preferred(
+                        end_model,c,&best_candidate)) {
+                    best_candidate=*c;
+                    have_best=true;
+                }
             }
         }
     }
     out.valid=true;
-    if (best>=0) {
+    if (have_best) {
         out.found=true;
-        out.candidate=search.candidates[best];
+        out.candidate=best_candidate;
     }
     int used=snprintf(out.diagnostic,sizeof(out.diagnostic),
         "MM305 route %s scale=%.3f/%.3f:",
@@ -477,11 +510,7 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
         g->taem_interface_target.hac_radius>0.0 ?
         g->taem_interface_target.hac_radius : g->hac_radius;
     if (!(r.hac_radius_m>0.0)) r.hac_radius_m=cfg->guidance.hac_radius;
-    r.final_approach_distance_m=g->terminal_final_handoff_latched &&
-        isfinite(g->terminal_final_handoff_distance) &&
-        g->terminal_final_handoff_distance>=500.0 ?
-        g->terminal_final_handoff_distance :
-        mm305_energy_aware_final_distance(model,&r.state);
+    r.final_approach_distance_m=mm305_final_alignment_distance(g,model,&r.state);
     if (!(r.final_approach_distance_m>=500.0) ||
             !isfinite(r.final_approach_distance_m))
         r.final_approach_distance_m=cfg->guidance.final_approach_distance;
@@ -703,19 +732,145 @@ static void mm305_observe_force_scale(GuidanceMachine *g, const Telemetry *t,
 
 }
 
+typedef enum {
+    MM305_ACQ_ROUTE_NORMAL = 0,
+    MM305_ACQ_ROUTE_SHORTEST,
+    MM305_ACQ_ROUTE_ENERGY
+} Mm305AcquisitionRouteKind;
+
+typedef enum {
+    MM305_ACQ_PROFILE_FEASIBLE = 0,
+    MM305_ACQ_PROFILE_TOO_SHORT,
+    MM305_ACQ_PROFILE_TOO_LONG,
+    MM305_ACQ_PROFILE_INVALID
+} Mm305AcquisitionProfileClass;
+
+typedef struct {
+    bool valid;
+    double radius_m;
+    double sweep_rad;
+    double target_lead_m;
+    double cheap_score;
+    Mm305AcquisitionRouteKind kind;
+} Mm305AcquisitionSeed;
+
+typedef struct {
+    bool valid;
+    TaemRoute route;
+    double sweep_rad;
+    Mm305AcquisitionProfileClass profile_class;
+    double speed_error_mps;
+    double energy_metric;
+    double circle_penalty;
+    const char *profile_reason;
+    double replay_quality;
+} Mm305AcquisitionChoice;
+
+static double mm305_acquisition_circle_penalty(const TaemRoute *route) {
+    if (!route || !route->valid) return INFINITY;
+    return log1p(fmax(0.0,route->lead_length_m) /
+        fmax(1.0,route->hac.arc_length_m));
+}
+
+static Mm305AcquisitionProfileClass mm305_acquisition_profile_class(
+        const TerminalProfileResult *profile) {
+    if (!profile) return MM305_ACQ_PROFILE_INVALID;
+    if (profile->valid) return MM305_ACQ_PROFILE_FEASIBLE;
+    const char *reason=profile->reason ? profile->reason : "";
+    if (strstr(reason,"too short to descend") ||
+            strstr(reason,"too short to dissipate") ||
+            strstr(reason,"retains excess energy"))
+        return MM305_ACQ_PROFILE_TOO_SHORT;
+    if (strstr(reason,"too long for the available energy") ||
+            strstr(reason,"too slow for Final handoff") ||
+            strstr(reason,"propagation time before route completion"))
+        return MM305_ACQ_PROFILE_TOO_LONG;
+    return MM305_ACQ_PROFILE_INVALID;
+}
+
+static void mm305_acquisition_seed_consider(Mm305AcquisitionSeed *seeds,
+        size_t capacity, double radius_m, double sweep_rad,
+        Mm305AcquisitionRouteKind kind, double target_lead_m,
+        double cheap_score) {
+    if (!seeds || capacity==0 || !isfinite(radius_m) ||
+            !isfinite(sweep_rad) || !isfinite(cheap_score))
+        return;
+    for (size_t i=0;i<capacity;++i) {
+        if (!seeds[i].valid) continue;
+        if (fabs(seeds[i].radius_m-radius_m)<=1.0 &&
+                fabs(seeds[i].sweep_rad-sweep_rad)<=1e-9 &&
+                seeds[i].kind==kind) {
+            if (cheap_score<seeds[i].cheap_score) {
+                seeds[i].target_lead_m=target_lead_m;
+                seeds[i].cheap_score=cheap_score;
+            }
+            return;
+        }
+    }
+    size_t slot=capacity;
+    double worst=-INFINITY;
+    for (size_t i=0;i<capacity;++i) {
+        if (!seeds[i].valid) {
+            slot=i;
+            break;
+        }
+        if (seeds[i].cheap_score>worst) {
+            worst=seeds[i].cheap_score;
+            slot=i;
+        }
+    }
+    if (slot>=capacity || (seeds[slot].valid &&
+            cheap_score>=seeds[slot].cheap_score))
+        return;
+    seeds[slot]=(Mm305AcquisitionSeed){
+        .valid=true,.radius_m=radius_m,.sweep_rad=sweep_rad,
+        .target_lead_m=target_lead_m,.cheap_score=cheap_score,.kind=kind
+    };
+}
+
+static bool mm305_acquisition_choice_better(
+        const Mm305AcquisitionChoice *candidate,
+        const Mm305AcquisitionChoice *best) {
+    if (!candidate || !candidate->valid) return false;
+    /* A provisional route counts as feasible only if the exact native replay
+     * gate accepts it. Among replay-qualified options use qualifier ordering. */
+    if (candidate->profile_class==MM305_ACQ_PROFILE_FEASIBLE &&
+            candidate->replay_quality==0.0)
+        return false;
+    if (best->profile_class==MM305_ACQ_PROFILE_FEASIBLE &&
+            best->replay_quality==0.0)
+        return true;
+    if (candidate->profile_class!=best->profile_class)
+        return candidate->profile_class<best->profile_class;
+    if (candidate->profile_class==MM305_ACQ_PROFILE_FEASIBLE) {
+        if (candidate->speed_error_mps<best->speed_error_mps-2.0) return true;
+        if (best->speed_error_mps<candidate->speed_error_mps-2.0) return false;
+        if (candidate->replay_quality<best->replay_quality) return true;
+        if (candidate->replay_quality>best->replay_quality) return false;
+    }
+    if (candidate->energy_metric<best->energy_metric-0.05) return true;
+    if (best->energy_metric<candidate->energy_metric-0.05) return false;
+    if (candidate->circle_penalty<best->circle_penalty-0.02) return true;
+    if (best->circle_penalty<candidate->circle_penalty-0.02) return false;
+    return candidate->route.length_m<best->route.length_m;
+}
+
 /* Build one concrete provisional route without mutating guidance state.
- * Acquisition uses this both to compare real route lengths across sweep choices
- * and to install the chosen path. */
-static bool mm305_make_acquisition_route(const GuidanceMachine *g,
+ * Acquisition enumerates the same finite-lead HAC families as qualification:
+ * normal, shortest within curvature authority, and a length-targeted lead. */
+static bool mm305_make_acquisition_route_variant(const GuidanceMachine *g,
         const TerminalModel *model, const TerminalDynamicState *current,
         const TaemGeometryState *geometry, double hac_radius, double side,
-        double selected_sweep, TaemRoute *out, char *reason, size_t reason_size) {
+        double selected_sweep, Mm305AcquisitionRouteKind kind,
+        double target_lead_m, TaemRoute *out, char *reason,
+        size_t reason_size) {
+    (void)g;
     if (!model || !current || !geometry || !out) return false;
 
     TaemReachability reachability;
     if (!taem_fixed_hac_turn_reachability(model,current,geometry,hac_radius,
             &reachability) || !reachability.valid ||
-        !(reachability.available_lateral_accel_mps2 > 0.0))
+        !(reachability.available_lateral_accel_mps2>0.0))
         return false;
 
     double live_curvature=0.95*reachability.available_lateral_accel_mps2/
@@ -740,29 +895,37 @@ static bool mm305_make_acquisition_route(const GuidanceMachine *g,
     double spacing=clampd(0.5*geometry->ground_speed_mps,250.0,700.0);
 
     TaemRoute route={0};
-    bool built=taem_route_build_hac_shortest(model,geometry,hac_radius,side,
-        selected_sweep,spacing,live_curvature,peak_curvature_limit,
-        &route,reason,reason_size);
-    if (!built)
+    bool built=false;
+    if (kind==MM305_ACQ_ROUTE_NORMAL)
         built=taem_route_build_hac(model,geometry,hac_radius,side,
             selected_sweep,spacing,live_curvature,&route,reason,reason_size);
-    if (!built) {
-        const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
-        if (diag && strcmp(diag,"2")==0 && g && !g->diagnostic_shadow)
-            fprintf(stderr,"MM305 acquisition route build failed: %s\n",
-                reason&&reason[0]?reason:"unknown");
-        return false;
-    }
+    else if (kind==MM305_ACQ_ROUTE_SHORTEST)
+        built=taem_route_build_hac_shortest(model,geometry,hac_radius,side,
+            selected_sweep,spacing,live_curvature,peak_curvature_limit,
+            &route,reason,reason_size);
+    else if (kind==MM305_ACQ_ROUTE_ENERGY &&
+            isfinite(target_lead_m) && target_lead_m>0.0)
+        built=taem_route_build_hac_length(model,geometry,hac_radius,side,
+            selected_sweep,spacing,live_curvature,peak_curvature_limit,
+            target_lead_m,&route,reason,reason_size);
+    if (!built) return false;
     if (!taem_route_limit_initial_vertical_authority(
-            model,current,geometry,&route)) {
-        const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
-        if (diag && strcmp(diag,"2")==0 && g && !g->diagnostic_shadow)
-            fprintf(stderr,
-                "MM305 acquisition route rejected: initial vertical authority cannot support route curvature\n");
+            model,current,geometry,&route))
         return false;
-    }
     *out=route;
     return true;
+}
+
+static bool mm305_make_acquisition_route(const GuidanceMachine *g,
+        const TerminalModel *model, const TerminalDynamicState *current,
+        const TaemGeometryState *geometry, double hac_radius, double side,
+        double selected_sweep, TaemRoute *out, char *reason, size_t reason_size) {
+    if (mm305_make_acquisition_route_variant(g,model,current,geometry,hac_radius,
+            side,selected_sweep,MM305_ACQ_ROUTE_SHORTEST,NAN,out,reason,
+            reason_size))
+        return true;
+    return mm305_make_acquisition_route_variant(g,model,current,geometry,hac_radius,
+        side,selected_sweep,MM305_ACQ_ROUTE_NORMAL,NAN,out,reason,reason_size);
 }
 
 static bool mm305_install_acquisition_route(GuidanceMachine *g,
@@ -838,36 +1001,51 @@ static void mm305_route_to_reference_trajectory(Trajectory *out,
 }
 
 static bool mm305_acquisition_command(GuidanceMachine *g,
-        const TerminalModel *model, const TerminalDynamicState *current,
+        const TerminalModel *base_model, const TerminalModel *model,
+        const TerminalDynamicState *current,
         const TaemGeometryState *geometry, double hac_radius, double dt,
         TaemTrackerOutput *demand, TaemPathReference *reference,
         double *path_remaining_out, double *required_drag_out,
         double *available_drag_out) {
-    if (!g) return false;
+    if (!g || !model || !current || !geometry) return false;
+    /* Provisional acquisition must solve the same Final delivery geometry the
+     * asynchronous qualifier solves.  Both resolve the energy-aware alignment
+     * station from the same measured TerminalDynamicState and apply it through
+     * one shared contract, so the two planners cannot disagree about where
+     * Final begins.  This value stays provisional and state-dependent; it is
+     * latched only when a replay-qualified route is committed. */
+    const TerminalModel *final_base=base_model?base_model:model;
+    double final_distance=mm305_final_alignment_distance(g,final_base,current);
+    TerminalModel acquisition_model=*model;
+    mm305_apply_final_alignment(&acquisition_model,final_base,final_distance);
+    if (current->trim_aoa_ceiling_rad>0.0)
+        acquisition_model.vehicle.maximum_angle_of_attack=fmin(
+            acquisition_model.vehicle.maximum_angle_of_attack,
+            current->trim_aoa_ceiling_rad*RAD2DEG);
+    const TerminalModel *planning_model=&acquisition_model;
+
     double side=g->mm305_acquisition_route_valid?
         g->mm305_acquisition_route.side:
         (geometry->runway_cross_m>=0.0?1.0:-1.0);
-    double alignment_height=model->guidance.final_approach_distance*
-        tan(model->guidance.final_glide_slope*DEG2RAD);
-    double alignment_speed=fmax(model->guidance.final_alignment_speed,
-        model->vehicle.minimum_safe_speed);
-    double radius=model->world.radius_m+model->site.altitude+
+    double alignment_height=planning_model->guidance.final_approach_distance*
+        tan(planning_model->guidance.final_glide_slope*DEG2RAD);
+    double alignment_speed=fmax(planning_model->guidance.final_alignment_speed,
+        planning_model->vehicle.minimum_safe_speed);
+    double radius=planning_model->world.radius_m+planning_model->site.altitude+
         fmax(0.0,geometry->altitude_above_runway_m);
-    double gravity=model->world.mu_m3_s2/fmax(radius*radius,1.0);
+    double gravity=planning_model->world.mu_m3_s2/fmax(radius*radius,1.0);
     double energy_excess=0.5*(geometry->airspeed_mps*geometry->airspeed_mps-
         alignment_speed*alignment_speed)+
         gravity*(geometry->altitude_above_runway_m-alignment_height);
     energy_excess=fmax(0.0,energy_excess);
 
-    AeroForces modeled=aero_compute(&model->world,&model->aero,
+    AeroForces modeled=aero_compute(&planning_model->world,&planning_model->aero,
         current->position_i_m,current->velocity_i_mps,current->ut_s,
         current->mass_kg,current->attitude.aoa_rad,current->attitude.bank_rad);
     double available_drag=current->mass_kg>1.0&&modeled.drag_n>0.0?
         modeled.drag_n/current->mass_kg:0.0;
-    /* Never discount live drag when converting surplus energy to route length.
-       A smaller drag estimate asks an unpowered vehicle to fly farther, while
-       the atmosphere normally gets denser through TAEM.  Qualification still
-       comes only from the native profile/replay gates. */
+    /* Scalar path length only seeds the shortlist. Native profile propagation
+       below remains the provisional energy/turn-cost authority. */
     double planning_drag=fmax(0.75,available_drag);
     double required_path=energy_excess/planning_drag;
 
@@ -884,60 +1062,192 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
         !g->mm305_acquisition_route.valid||
         (!joined_fixed_hac&&current->ut_s-g->mm305_acquisition_route_ut>=4.0);
     if (refresh) {
-        double selected_sweep=NAN;
-        double selected_error=INFINITY;
-        double selected_length=INFINITY;
-        TaemRoute selected_route={0};
+        enum {
+            MM305_ACQ_RADIUS_COUNT=7,
+            MM305_ACQ_GLOBAL_SEEDS=4,
+            MM305_ACQ_RADIUS_SEEDS=1,
+            MM305_ACQ_RADIUS_SHORTEST_SEEDS=1,
+            MM305_ACQ_NATIVE_SEEDS=
+                MM305_ACQ_GLOBAL_SEEDS+
+                MM305_ACQ_RADIUS_COUNT*
+                    (MM305_ACQ_RADIUS_SEEDS+MM305_ACQ_RADIUS_SHORTEST_SEEDS)
+        };
+        Mm305AcquisitionSeed global_seeds[MM305_ACQ_GLOBAL_SEEDS]={0};
+        Mm305AcquisitionSeed radius_seeds[MM305_ACQ_RADIUS_COUNT]
+            [MM305_ACQ_RADIUS_SEEDS]={0};
+        Mm305AcquisitionSeed radius_shortest[MM305_ACQ_RADIUS_COUNT]={0};
+        Mm305AcquisitionSeed native_seeds[MM305_ACQ_NATIVE_SEEDS]={0};
+        Mm305AcquisitionChoice selected={0};
 
-        /* Radius is an energy/geometry variable until the shuttle actually joins
-           a HAC.  Do not latch the nominal 12 km radius during acquisition: a
-           tighter circle can shorten the lead substantially and can be the better
-           route even when 12 km is technically feasible.  Once joined_fixed_hac
-           is true, refresh is disabled above and the selected circle stays fixed. */
-        const size_t radius_count=7;
-        double radius_floor=fmin(hac_radius,3000.0);
-        for (size_t ri=0;ri<radius_count;++ri) {
-            double fraction=(double)ri/(double)(radius_count-1);
-            double candidate_radius=hac_radius+fraction*(radius_floor-hac_radius);
-            if (ri>0 && candidate_radius>=hac_radius-1.0) continue;
+        /* Radius is a genuine state variable. Sample the larger high-energy band
+           plus the established 12/9/7.2/6/4.32/3 km families for a 12 km
+           nominal radius. The scalar drag/path estimate only seeds the bounded
+           shortlist; native profile propagation below decides the ordering. */
+        const double radius_floor=3000.0;
+        const double radius_factors[MM305_ACQ_RADIUS_COUNT]={
+            1.50,1.00,0.75,0.60,0.50,0.36,0.25
+        };
+        const double cheap_scale=fmax(required_path,5000.0);
+        double previous_radius=INFINITY;
+        for (size_t ri=0;ri<MM305_ACQ_RADIUS_COUNT;++ri) {
+            double candidate_radius=fmax(radius_floor,
+                hac_radius*radius_factors[ri]);
+            if (fabs(candidate_radius-previous_radius)<=1.0) continue;
+            previous_radius=candidate_radius;
 
-            for (double sweep_deg=15.0;sweep_deg<=270.0+1e-6;sweep_deg+=15.0) {
+            for (double sweep_deg=15.0;sweep_deg<=270.0+1e-6;
+                    sweep_deg+=15.0) {
                 double sweep=sweep_deg*DEG2RAD;
-                TaemRoute trial={0};
+                TaemRoute normal={0};
                 char reason[160]={0};
-                if (!mm305_make_acquisition_route(g,model,current,geometry,
-                        candidate_radius,side,sweep,&trial,reason,sizeof(reason)))
-                    continue;
-                double error=fabs(trial.length_m-required_path);
-                bool trial_over=trial.length_m>required_path;
-                bool selected_over=selected_route.valid&&selected_length>required_path;
+                bool have_normal=mm305_make_acquisition_route_variant(
+                    g,planning_model,current,geometry,candidate_radius,side,sweep,
+                    MM305_ACQ_ROUTE_NORMAL,NAN,&normal,reason,sizeof(reason));
+                double energy_lead=NAN;
+                if (have_normal) {
+                    double nonlead=normal.length_m-normal.lead_length_m;
+                    energy_lead=fmax(100.0,required_path-nonlead);
+                }
 
-                /* If every build is too long, the shortest route is the only
-                   recoverable direction for an unpowered vehicle. Otherwise use
-                   the closest energy length, breaking ties shorter. */
-                bool prefer=false;
-                if (!selected_route.valid) prefer=true;
-                else if (trial_over && selected_over)
-                    prefer=trial.length_m<selected_length-1.0;
-                else if (error<selected_error-1.0)
-                    prefer=true;
-                else if (fabs(error-selected_error)<=1.0 &&
-                        trial.length_m<selected_length)
-                    prefer=true;
-                if (prefer) {
-                    selected_error=error;
-                    selected_length=trial.length_m;
-                    selected_sweep=sweep;
-                    selected_route=trial;
+                for (int variant=0;variant<3;++variant) {
+                    Mm305AcquisitionRouteKind kind=
+                        (Mm305AcquisitionRouteKind)variant;
+                    double target_lead=kind==MM305_ACQ_ROUTE_ENERGY?
+                        energy_lead:NAN;
+                    if (kind==MM305_ACQ_ROUTE_ENERGY &&
+                            !isfinite(target_lead))
+                        continue;
+
+                    TaemRoute trial={0};
+                    if (kind==MM305_ACQ_ROUTE_NORMAL && have_normal)
+                        trial=normal;
+                    else if (!mm305_make_acquisition_route_variant(
+                            g,planning_model,current,geometry,candidate_radius,
+                            side,sweep,kind,target_lead,&trial,reason,
+                            sizeof(reason)))
+                        continue;
+
+                    double circle=mm305_acquisition_circle_penalty(&trial);
+                    double length_error=fabs(trial.length_m-required_path)/
+                        cheap_scale;
+                    double cheap_score=length_error+0.03*circle;
+                    mm305_acquisition_seed_consider(global_seeds,
+                        MM305_ACQ_GLOBAL_SEEDS,candidate_radius,sweep,kind,
+                        target_lead,cheap_score);
+                    mm305_acquisition_seed_consider(radius_seeds[ri],
+                        MM305_ACQ_RADIUS_SEEDS,candidate_radius,sweep,kind,
+                        target_lead,cheap_score);
+                    mm305_acquisition_seed_consider(&radius_shortest[ri],
+                        MM305_ACQ_RADIUS_SHORTEST_SEEDS,candidate_radius,sweep,
+                        kind,target_lead,trial.length_m/cheap_scale);
                 }
             }
         }
-        if (!selected_route.valid || !isfinite(selected_sweep) ||
-            !mm305_install_acquisition_route(g,model,current,geometry,
-                selected_route.hac.radius_m,side,selected_sweep,&selected_route)) {
+
+        for (size_t i=0;i<MM305_ACQ_GLOBAL_SEEDS;++i)
+            if (global_seeds[i].valid)
+                mm305_acquisition_seed_consider(native_seeds,
+                    MM305_ACQ_NATIVE_SEEDS,global_seeds[i].radius_m,
+                    global_seeds[i].sweep_rad,global_seeds[i].kind,
+                    global_seeds[i].target_lead_m,global_seeds[i].cheap_score);
+        for (size_t ri=0;ri<MM305_ACQ_RADIUS_COUNT;++ri) {
+            for (size_t i=0;i<MM305_ACQ_RADIUS_SEEDS;++i)
+                if (radius_seeds[ri][i].valid)
+                    mm305_acquisition_seed_consider(native_seeds,
+                        MM305_ACQ_NATIVE_SEEDS,radius_seeds[ri][i].radius_m,
+                        radius_seeds[ri][i].sweep_rad,radius_seeds[ri][i].kind,
+                        radius_seeds[ri][i].target_lead_m,
+                        radius_seeds[ri][i].cheap_score);
+            if (radius_shortest[ri].valid)
+                mm305_acquisition_seed_consider(native_seeds,
+                    MM305_ACQ_NATIVE_SEEDS,radius_shortest[ri].radius_m,
+                    radius_shortest[ri].sweep_rad,radius_shortest[ri].kind,
+                    radius_shortest[ri].target_lead_m,
+                    radius_shortest[ri].cheap_score);
+        }
+
+        for (size_t i=0;i<MM305_ACQ_NATIVE_SEEDS;++i) {
+            const Mm305AcquisitionSeed *seed=&native_seeds[i];
+            if (!seed->valid) continue;
+            TaemRoute trial={0};
+            char reason[160]={0};
+            if (!mm305_make_acquisition_route_variant(
+                    g,planning_model,current,geometry,seed->radius_m,side,
+                    seed->sweep_rad,seed->kind,seed->target_lead_m,
+                    &trial,reason,sizeof(reason)))
+                continue;
+
+            /* This is the provisional energy model: use the same native profile
+               propagation that qualification uses, but on a bounded shortlist
+               and a coarser time step. It therefore prices sustained turn lift,
+               AoA and drag instead of extrapolating one inlet drag sample. */
+            TaemRoute profile_route=trial;
+            TerminalProfileResult profile=terminal_solver_generate_profile(
+                planning_model,current,&profile_route,0.75,420.0);
+            Mm305AcquisitionProfileClass profile_class=
+                mm305_acquisition_profile_class(&profile);
+            double predicted_speed=profile.exit_speed_mps;
+            const char *classification_reason=profile.reason;
+            /* The profile integration is a cheap provisional filter, not the
+             * admission authority. Let native replay overrule its coarse-step
+             * failure when replay accepts this exact route, and reject every
+             * coarse-step success which replay does not qualify. */
+            double replay_quality=NAN;
+            TaemFixedHacCandidate replay=taem_fixed_hac_evaluate_route(
+                planning_model,current,&trial,0,0.5,420.0);
+            if (mm305_candidate_ok(&replay)) {
+                profile_class=MM305_ACQ_PROFILE_FEASIBLE;
+                predicted_speed=replay.replay.final_geometry.airspeed_mps;
+                classification_reason="native replay qualified provisional route";
+                replay_quality=replay.quality_score;
+            } else if (profile.valid) {
+                profile_class=MM305_ACQ_PROFILE_INVALID;
+                predicted_speed=replay.replay.final_geometry.airspeed_mps;
+                classification_reason=replay.reason ? replay.reason :
+                    "native replay did not satisfy Final alignment";
+            }
+            bool speed_is_prediction=profile_class==MM305_ACQ_PROFILE_FEASIBLE ||
+                (predicted_speed>0.0 && classification_reason &&
+                 strstr(classification_reason,"Final handoff"));
+            double speed_error=speed_is_prediction&&isfinite(predicted_speed)?
+                fabs(predicted_speed-alignment_speed):NAN;
+            Mm305AcquisitionChoice candidate={
+                .valid=true,
+                .route=trial,
+                .sweep_rad=seed->sweep_rad,
+                .profile_class=profile_class,
+                .speed_error_mps=speed_error,
+                .energy_metric=fabs(trial.length_m-required_path)/cheap_scale,
+                .circle_penalty=mm305_acquisition_circle_penalty(&trial),
+                .profile_reason=classification_reason,
+                .replay_quality=replay_quality
+            };
+            if (mm305_acquisition_choice_better(&candidate,&selected))
+                selected=candidate;
+        }
+        if (!selected.valid ||
+                !mm305_install_acquisition_route(g,model,current,geometry,
+                    selected.route.hac.radius_m,side,selected.sweep_rad,
+                    &selected.route)) {
             g->mm305_acquisition_route_valid=false;
             return false;
         }
+
+        const char *diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
+        if (diag && strcmp(diag,"2")==0 && !g->diagnostic_shadow)
+            fprintf(stderr,
+                "MM305 acquisition selected: radius=%.0f sweep=%.0f path=%.0f lead=%.0f arc=%.0f native=%s exitErr=%s%.1f circlePenalty=%.3f reason=%s\n",
+                selected.route.hac.radius_m,selected.sweep_rad*RAD2DEG,
+                selected.route.length_m,selected.route.lead_length_m,
+                selected.route.hac.arc_length_m,
+                selected.profile_class==MM305_ACQ_PROFILE_FEASIBLE?"feasible":
+                selected.profile_class==MM305_ACQ_PROFILE_TOO_SHORT?"too-short":
+                selected.profile_class==MM305_ACQ_PROFILE_TOO_LONG?"too-long":
+                "invalid",
+                isfinite(selected.speed_error_mps)?"":"n/a ",
+                isfinite(selected.speed_error_mps)?selected.speed_error_mps:0.0,
+                selected.circle_penalty,
+                selected.profile_reason?selected.profile_reason:"unknown");
     }
 
     double selected_sweep=g->mm305_acquisition_sweep_rad;
@@ -1093,16 +1403,15 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        nominal model, so it systematically under-commanded AoA whenever live lift
        was below the table.  Scale a per-tick copy only; the frozen certified
        model snapshot remains immutable. */
-    TerminalModel live_model=*end_model;
+    TerminalModel live_model;
     double live_lift_scale=isfinite(g->mm305_lift_scale)&&g->mm305_lift_scale>0.0?
         clampd(g->mm305_lift_scale,0.5,2.0):1.0;
     double live_drag_scale=isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?
         clampd(g->mm305_drag_scale,0.5,2.0):1.0;
-    mm305_scale_model(&live_model,t->mach,live_lift_scale,live_drag_scale);
-    if (g->terminal_final_handoff_latched &&
-            isfinite(g->terminal_final_handoff_distance) &&
-            g->terminal_final_handoff_distance>=500.0) {
-        live_model.guidance.final_approach_distance=g->terminal_final_handoff_distance;
+    double live_final_distance=mm305_final_alignment_distance(g,end_model,&current);
+    mm305_prepare_planning_model(&live_model,end_model,live_final_distance,t->mach,
+        live_lift_scale,live_drag_scale,current.trim_aoa_ceiling_rad);
+    if (g->terminal_final_handoff_latched) {
         if (isfinite(g->terminal_final_handoff_slope_deg) &&
                 g->terminal_final_handoff_slope_deg>=3.0 &&
                 g->terminal_final_handoff_slope_deg<=45.0)
@@ -1324,7 +1633,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     double acquisition_available_drag=NAN;
     if (!g->mm305_route_committed) {
         double hac_radius=g->hac_radius>=3000.0?g->hac_radius:cfg->guidance.hac_radius;
-        if (!mm305_acquisition_command(g,control_model,&current,&geometry,
+        if (!mm305_acquisition_command(g,end_model,control_model,&current,
+                &geometry,
                 hac_radius,dt,&demand,&reference,
                 &acquisition_path_remaining,&acquisition_required_drag,
                 &acquisition_available_drag))

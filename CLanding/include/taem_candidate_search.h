@@ -26,6 +26,11 @@ typedef struct {
     const char *reason;
 } TaemFixedHacSearch;
 
+/* Compare two replay-qualified MM305 candidates with the same energy-first
+ * ordering used internally by the HAC search. */
+bool taem_fixed_hac_candidate_preferred(const TerminalModel *model,
+        const TaemFixedHacCandidate *trial, const TaemFixedHacCandidate *best);
+
 /* Searches both runway sides using one fixed geometry contract and a native
  * full-horizon replay. It cannot mark a candidate qualified until a separately
  * verified unchanged Final-tail result is attached. */
