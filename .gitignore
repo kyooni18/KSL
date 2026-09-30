@@ -96,7 +96,7 @@ env/
 # Transient simulator/debug outputs
 /ShuttleSim/.pending-runs/
 /FlightLogs-archive-*/
-/.tmp-*
+/.tmp*
 /.yeet_snapshot_*
 /1
 /ShuttleSim/1
