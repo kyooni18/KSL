@@ -20,6 +20,17 @@ def one(parts, name):
     return found[0]
 
 
+def set_autopilot_engaged(autopilot, engaged):
+    """Support kRPC clients exposing engagement as either methods or a property."""
+    method = getattr(autopilot, 'engage' if engaged else 'disengage', None)
+    if callable(method):
+        method()
+    elif hasattr(autopilot, 'engaged'):
+        autopilot.engaged = engaged
+    else:
+        raise AttributeError('AutoPilot has no engagement control')
+
+
 class Shuttle:
     def __init__(self, conn):
         self.conn = conn
@@ -161,7 +172,7 @@ def run(args):
             control.sas = False
             ap.reference_frame = v.surface_reference_frame
             ap.target_pitch_and_heading(90, args.heading)
-            ap.engage()
+            set_autopilot_engaged(ap, True)
             for group, u in zip(shuttle.groups, result.throttles):
                 for e in group:
                     e.thrust_limit = u
@@ -240,8 +251,10 @@ def run(args):
                     time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
         finally:
             control.throttle = 0
-            ap.disengage()
-            control.sas = True
+            try:
+                set_autopilot_engaged(ap, False)
+            finally:
+                control.sas = True
             print('Control released; liquid throttle zero. Burning SRBs cannot be stopped.')
 
 

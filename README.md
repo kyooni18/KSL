@@ -87,9 +87,10 @@ Inspect an updated craft without running KSP:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Five focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
-zero-thrust/zero-arm cases, maximum-thrust selection, and separator/transfer
-behavior. The actual source attachment tree was also checked offline.
+Six focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
+zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
+behavior, and kRPC autopilot engagement compatibility. The actual source
+attachment tree was also checked offline.
 **No live launch has been validated:** local kRPC ports were closed during
 implementation. First use should be treated as a flight test with telemetry.
 

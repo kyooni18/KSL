@@ -1,7 +1,7 @@
 """Exercise actual craft topology with a small kRPC-shaped test double."""
 import unittest
 from types import SimpleNamespace
-from shuttle.flight import Shuttle
+from shuttle.flight import Shuttle, set_autopilot_engaged
 
 
 class Part:
@@ -17,6 +17,16 @@ class Part:
 
 
 class FlightTests(unittest.TestCase):
+    def test_autopilot_engagement_property_used_by_current_krpc(self):
+        class AutoPilot:
+            engaged = False
+
+        autopilot = AutoPilot()
+        set_autopilot_engaged(autopilot, True)
+        self.assertTrue(autopilot.engaged)
+        set_autopilot_engaged(autopilot, False)
+        self.assertFalse(autopilot.engaged)
+
     def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
         boosters = [Part('Pollux'), Part('Pollux')]
         separators = [Part('radialDecoupler1-2', children=[b]) for b in boosters]
