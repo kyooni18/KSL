@@ -35,9 +35,9 @@ that roll through booster separation, then targets 0° after 180 seconds; use
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
 Telemetry is written to `telemetry.csv`; use `--telemetry` to choose another path.
-Ctrl-C returns liquid throttle to zero and releases autopilot to SAS. Burning
-solid boosters continue until burnout; shutdown does not automatically separate
-boosters or land the vehicle.
+Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
+Burning solid boosters continue until burnout; shutdown does not automatically
+separate boosters or land the vehicle.
 
 ## Control model
 
@@ -91,9 +91,10 @@ Inspect an updated craft without running KSP:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Seven focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
+Eight focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
 zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
-behavior, kRPC autopilot engagement compatibility, and heading-to-roll mapping.
+behavior, kRPC autopilot engagement compatibility, heading-to-roll mapping, and
+SAS restoration when autopilot cleanup fails.
 The actual source attachment tree was also checked offline.
 One live flight test reached 32.1 km and separated the Pollux boosters, with
 near-zero moment residual after separation. The controller process then stopped

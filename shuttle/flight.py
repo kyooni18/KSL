@@ -2,6 +2,7 @@
 import argparse
 import csv
 import math
+import signal
 import time
 from .allocation import allocate
 
@@ -35,6 +36,21 @@ def set_autopilot_engaged(autopilot, engaged):
         autopilot.engaged = engaged
     else:
         raise AttributeError('AutoPilot has no engagement control')
+
+
+def release_controls(control, autopilot):
+    """Cut thrust and return attitude control to SAS, even if one write fails."""
+    try:
+        control.throttle = 0
+    finally:
+        try:
+            set_autopilot_engaged(autopilot, False)
+        finally:
+            control.sas = True
+
+
+def _terminate_as_exception(signum, _frame):
+    raise SystemExit(128 + signum)
 
 
 class Shuttle:
@@ -178,6 +194,8 @@ def run(args):
         initial_roll = roll_for_heading(args.heading)
         initial_roll_set = False
         roll_reset = False
+        old_sigterm_handler = signal.getsignal(signal.SIGTERM)
+        signal.signal(signal.SIGTERM, _terminate_as_exception)
         try:
             control.throttle = 0
             control.sas = False
@@ -275,11 +293,11 @@ def run(args):
                         raise RuntimeError('Skiff out of fuel')
                     time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
         finally:
-            control.throttle = 0
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
             try:
-                set_autopilot_engaged(ap, False)
+                release_controls(control, ap)
             finally:
-                control.sas = True
+                signal.signal(signal.SIGTERM, old_sigterm_handler)
             print('Control released; liquid throttle zero. Burning SRBs cannot be stopped.')
 
 

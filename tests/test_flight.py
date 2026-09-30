@@ -1,7 +1,8 @@
 """Exercise actual craft topology with a small kRPC-shaped test double."""
 import unittest
 from types import SimpleNamespace
-from shuttle.flight import Shuttle, roll_for_heading, set_autopilot_engaged
+from shuttle.flight import (Shuttle, release_controls, roll_for_heading,
+                            set_autopilot_engaged)
 
 
 class Part:
@@ -31,6 +32,13 @@ class FlightTests(unittest.TestCase):
         self.assertTrue(autopilot.engaged)
         set_autopilot_engaged(autopilot, False)
         self.assertFalse(autopilot.engaged)
+
+    def test_control_release_restores_sas_even_if_autopilot_release_fails(self):
+        control = SimpleNamespace(throttle=1, sas=False)
+        with self.assertRaises(AttributeError):
+            release_controls(control, SimpleNamespace())
+        self.assertEqual(control.throttle, 0)
+        self.assertTrue(control.sas)
 
     def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
         boosters = [Part('Pollux'), Part('Pollux')]
