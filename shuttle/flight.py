@@ -27,6 +27,15 @@ def roll_for_heading(heading):
     return roll if roll <= 180 else roll - 360
 
 
+def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
+    """Return (target roll, reset due), or (None, False) before liftoff."""
+    if not liftoff:
+        return None, False
+    reset_due = (booster_separation_ut is not None and
+                 current_ut - booster_separation_ut >= reset_delay)
+    return (0 if reset_due else roll_for_heading(heading)), reset_due
+
+
 def validate_launch_vessel(vessel, space_center):
     if vessel.name != 'STS':
         raise ValueError(f'Expected the active vessel to be named STS; got {vessel.name!r}')
@@ -273,15 +282,15 @@ def run(args):
                         result = shuttle.update()
                     else:
                         shuttle.skiff.thrust_limit = 1
-                    if initial_roll_set:
-                        separation_ut = shuttle.booster_separation_ut
-                        if (not roll_reset and separation_ut is not None and
-                                conn.space_center.ut - separation_ut >= args.roll_reset_delay):
-                            ap.target_roll = 0
+                    target_roll, reset_due = flight_roll_target(
+                        args.heading, initial_roll_set,
+                        shuttle.booster_separation_ut, conn.space_center.ut,
+                        args.roll_reset_delay)
+                    if target_roll is not None:
+                        ap.target_roll = target_roll
+                        if reset_due and not roll_reset:
                             roll_reset = True
                             print('Roll reset: targeting 0 deg')
-                        elif not roll_reset:
-                            ap.target_roll = initial_roll
                     if conn.space_center.ut >= next_report:
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,

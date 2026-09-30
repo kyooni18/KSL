@@ -3,7 +3,7 @@ import unittest
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from shuttle.flight import (Shuttle, release_controls, roll_for_heading,
+from shuttle.flight import (Shuttle, flight_roll_target, release_controls, roll_for_heading,
                             run, set_autopilot_engaged)
 
 
@@ -24,6 +24,16 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(roll_for_heading(90), 180)
         self.assertEqual(roll_for_heading(45), 90)
         self.assertEqual(roll_for_heading(315), -90)
+
+    def test_roll_stays_inverted_until_180_seconds_after_booster_separation(self):
+        self.assertEqual(flight_roll_target(90, False, None, 10, 180),
+                         (None, False))
+        self.assertEqual(flight_roll_target(90, True, None, 10, 180),
+                         (180, False))
+        self.assertEqual(flight_roll_target(90, True, 1000, 1179.9, 180),
+                         (180, False))
+        self.assertEqual(flight_roll_target(90, True, 1000, 1180, 180),
+                         (0, True))
 
     def test_launch_rejects_non_pad_vessel_before_part_inspection(self):
         conn = MagicMock()
