@@ -1,0 +1,95 @@
+{
+  "ship": "STS",
+  "parts": 67,
+  "sha256": "01d7d59e9c2ccdfeabaaa8a3623e5c646315e49482e182fb0960c3b84e12e569",
+  "editor_mass_t": 330.244019,
+  "engines": [
+    {
+      "name": "LiquidEngineLV-TX87",
+      "id": "LiquidEngineLV-TX87_4293433692",
+      "position": [
+        0.559134364,
+        12.8587112,
+        0.409581661
+      ],
+      "stage": 5
+    },
+    {
+      "name": "LiquidEngineLV-TX87",
+      "id": "LiquidEngineLV-TX87_4293431306",
+      "position": [
+        0.55913341,
+        12.8587112,
+        2.08958387
+      ],
+      "stage": 5
+    },
+    {
+      "name": "LiquidEngineLV-TX87",
+      "id": "LiquidEngineLV-TX87_4293430768",
+      "position": [
+        2.23913574,
+        12.8587112,
+        2.08958387
+      ],
+      "stage": 5
+    },
+    {
+      "name": "LiquidEngineLV-TX87",
+      "id": "LiquidEngineLV-TX87_4293430230",
+      "position": [
+        2.23913765,
+        12.8587112,
+        0.409582138
+      ],
+      "stage": 5
+    },
+    {
+      "name": "LiquidEngineRE-I2",
+      "id": "LiquidEngineRE-I2_4293437508",
+      "position": [
+        0.899133205,
+        10.2916622,
+        -2.55042505
+      ],
+      "stage": 5
+    },
+    {
+      "name": "LiquidEngineLV-T91",
+      "id": "LiquidEngineLV-T91_4293359324",
+      "position": [
+        1.39913559,
+        12.786272,
+        1.24958229
+      ],
+      "stage": 5
+    },
+    {
+      "name": "Pollux",
+      "id": "Pollux_4293163826",
+      "position": [
+        4.35960197,
+        16.9699821,
+        1.24957943
+      ],
+      "stage": 5
+    },
+    {
+      "name": "Pollux",
+      "id": "Pollux_4293345002",
+      "position": [
+        -1.56133461,
+        16.9699821,
+        1.24957991
+      ],
+      "stage": 5
+    }
+  ],
+  "resources": {
+    "ElectricCharge": 515.0,
+    "MonoPropellant": 340.0,
+    "LiquidFuel": 16035.0,
+    "Oxidizer": 18865.0,
+    "SolidFuel": 11616.0
+  }
+}
