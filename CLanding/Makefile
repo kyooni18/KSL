@@ -134,6 +134,16 @@ taem-native-stack-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_native_stack_tests
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_native_stack_tests)"
 
+.PHONY: final-delivery-parity-test
+final-delivery-parity-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/FinalDeliveryParityTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/final_delivery_parity_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/final_delivery_parity_tests)"
+
+test: final-delivery-parity-test
+
 vessel-physics-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/VesselPhysicsTests.c \

@@ -94,3 +94,17 @@ MM305 alignment에서는 `final_contract`와 `final_eval`을 로컬로 계산하
 4. **실제로 평가한 gate의 ready 여부, block reason, 모든 margin을 JSONL에 저장한다.** 기하 조건 미달과 Final 계약 거부를 구분할 수 있어야 한다.
 
 테스트나 빌드는 추가 실행하지 않았다. JSONL 복원, native 로그 교차 확인, 실행 artifact와 source hash 대조, 관련 코드 확인을 수행했고 주요 원인 구분은 Jev로도 검토했다. 서로 다른 초기 상태에 대한 견고성과 전체 착륙 성공은 이번 조사에서 검증하지 않았다.
+
+## 후속 수정: 비행 실행 없이 구현
+
+사용자의 `fix it. (without runs)` 요청에 따라 다음을 구현했다. KSP 비행, ShuttleSim 비행 캠페인, 기존 native trajectory replay 테스트는 실행하지 않았다.
+
+- Final 인계 예측과 실제 제어의 주륜 높이, 가용 양력에 따른 pull-up 가속도, flare 계획 생성 코드를 공유한다. 밀도·음속의 기준점은 실제 측정된 COM 고도다. 예측이 접촉까지 도달하지 못하면 미완료 속도를 착륙 예측으로 반환하지 않는다.
+- MM305부터 공력 학습값을 같은 GuidanceMachine에 유지하고, 한 UT sample을 여러 게이트/제어 호출이 중복 학습하지 않도록 한다. 예측은 읽기 전용 복사본을 사용한다.
+- planner request는 학습된 Final 공력·응답 상태도 포함한다. native 정렬 exit는 production Final 인계 계약을 추가로 검사하고, 그 검사를 통과하지 않은 결과는 채택하지 않는다. 이는 **Final admission 검증**이며 완전한 touchdown/rollout 검증으로 표시하지 않는다.
+- 비동기 계획이 1초보다 오래됐으면 선택된 경로만 최신 실측 상태에서 다시 검증한다. 이 작업은 제어 mutex 밖에서 수행하고, 재검증 결과도 채택 시점에 만료됐으면 거부한다. generation/request token/model snapshot 검사도 유지한다.
+- MM305가 실제로 계산한 Final contract와 evaluation을 executive telemetry에 저장한다.
+
+새 테스트 파일은 하나이며 두 가지 핵심 동작을 검사한다: cold/warm 공력 상태에서 인계 예측과 첫 Final 제어의 예측이 일치하고 예측이 원본 상태를 변경하지 않는지, 오래된 계획과 Final admission 미검증 결과가 거부되는지. backend 빌드, `final-delivery-parity-test`, `architecture-test`, `mm305-admission-test`가 통과했다. 변경한 기존 native stack 테스트는 컴파일만 확인했고 비행 replay는 실행하지 않았다. 기존 미커밋 작업은 보존했다.
+
+비행 없이 제거한 것은 코드상의 예측 입력 불일치, 미검증 후보 채택, 오래된 결과 채택, 잘못된 진단 저장 경로다. 실제 KSP 착륙 성공과 이전 로그의 불연속이 얼마나 줄었는지는 비행 검증 없이 주장하지 않는다.

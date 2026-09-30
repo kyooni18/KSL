@@ -157,6 +157,17 @@ GuidanceResult taem_guidance_native(GuidanceMachine*g,const Telemetry*t,
         AerodynamicModel aero,const LandingConfiguration*cfg,
         const TerminalModel*model,double dt);
 double terminal_outer_glide_slope(const GuidanceMachine*g,const GuidanceSettings*s);
+/* Observe once per measured tick, before MM305 admission and Final control.
+   Forecasting uses a private copy and never advances the live estimator. */
+void terminal_observe_landing_aero(GuidanceMachine*g,const Telemetry*t,
+        const VehicleProfile*v,double gravity,double dt);
+double terminal_delivery_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,const LandingConfiguration*cfg,double trigger_altitude);
+/* Native replay exit must pass the same production Final admission contract.
+   This checks delivery only; it does not certify touchdown or rollout. */
+bool terminal_native_delivery_admissible(const TerminalModel*model,
+        const TerminalDynamicState*state,const GuidanceMachine*seed,
+        TaemTerminalEvaluation*evaluation);
 void terminal_store_preflare_plan(GuidanceMachine*g,const TerminalPreflarePlan*p);
 void terminal_set_stage(GuidanceMachine*g,TerminalVerticalStage stage,double ut);
 bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,

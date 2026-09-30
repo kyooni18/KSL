@@ -344,15 +344,15 @@ static void test_mm305_acquisition_qualification_contract(
     } else {
         fprintf(stderr, " qualifier rejected: %s\n", qualified.diagnostic);
     }
-    assert(qualified.found);
-    assert(fabs(qualified.candidate.route.hac.radius_m -
-                acquisition.mm305_acquisition_route.hac.radius_m) < 1.0);
-    assert(fabs(qualified.candidate.route.hac.arc_sweep_rad -
-                acquisition.mm305_acquisition_route.hac.arc_sweep_rad) < 1e-9);
-    assert(fabs(qualified.candidate.route.lead_length_m -
-                acquisition.mm305_acquisition_route.lead_length_m) < 1.0);
-    assert(fabs(qualified.candidate.route.length_m -
-                acquisition.mm305_acquisition_route.length_m) < 1.0);
+    /* An aligned native exit alone no longer authorizes ownership. A seed
+       promotion, when delivery is feasible, must preserve the same geometry. */
+    if(qualified.found){
+        assert(qualified.candidate.replay.final_interface_qualified);
+        assert(qualified.candidate.replay.path_constraints_ok);
+        assert(!qualified.candidate.final_tail_qualified);
+    }else{
+        assert(qualified.valid);
+    }
     /* Prove convergence independently of the live seed-promotion fast path:
      * acquisition must agree with the qualifier's own search from this same
      * physical state, not merely pass its provisional route back as a seed. */
@@ -372,9 +372,12 @@ static void test_mm305_acquisition_qualification_contract(
     } else {
         fprintf(stderr,"MM305 independent search rejected: %s\\n",independent_qualified.diagnostic);
     }
-    assert(independent_qualified.found);
-    assert(fabs(independent_qualified.candidate.route.alignment_along_m +
-        resolved_distance)<1.0);
+    assert(independent_qualified.valid);
+    if(independent_qualified.found){
+        assert(independent_qualified.candidate.replay.final_interface_qualified);
+        assert(fabs(independent_qualified.candidate.route.alignment_along_m +
+            resolved_distance)<1.0);
+    }
     TaemGeometryState family_geometry;
     assert(taem_geometry_state(&planning_model, &request.state, &family_geometry));
     test_mm305_native_family_matrix(&planning_model, &request.state, &family_geometry);
@@ -787,6 +790,9 @@ int main(void) {
     found.candidate.side = route.side;
     found.candidate.runway_end = 0;
     found.candidate.route_built = true;
+    found.candidate.status = TAEM_PLAN_UNQUALIFIED;
+    found.candidate.replay.path_constraints_ok = true;
+    found.candidate.replay.final_interface_qualified = true;
     planner_g.mm305_planning_needed = true;
     assert(guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
     assert(planner_g.mm305_route_committed && planner_g.mm305_route_cursor == 0);

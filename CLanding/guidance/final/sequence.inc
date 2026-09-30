@@ -112,6 +112,67 @@ static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const Vehi
     *D=(g->terminal_drag_area_ema>0.0?g->terminal_drag_area_ema:50.0)*df;
 }
 
+void terminal_observe_landing_aero(GuidanceMachine*g,const Telemetry*t,
+        const VehicleProfile*v,double gravity,double dt){
+    if(!g||!t||!v||!isfinite(t->ut)||!isfinite(t->angle_of_attack)||
+       !isfinite(t->mach)||!isfinite(t->dynamic_pressure)||!(gravity>0.0))return;
+    if(g->terminal_aero_sample_valid&&t->ut==g->terminal_aero_sample_ut)return;
+    terminal_learn_aero(g,t,v);
+    if(!(g->terminal_lift_ratio>0.0)||!isfinite(g->terminal_lift_ratio))
+        g->terminal_lift_ratio=1.0;
+    double L=0.0,D=0.0;
+    terminal_aero_q(g,t,v,t->angle_of_attack,&L,&D);
+    double modeled=L*fmax(t->dynamic_pressure,1.0);
+    if(modeled>.2*t->mass*gravity&&isfinite(t->lift_force)&&t->lift_force>0.0)
+        g->terminal_lift_ratio+=clampd(dt/2.0,0.0,1.0)*
+            (clampd(t->lift_force/modeled,.6,1.6)-g->terminal_lift_ratio);
+    g->terminal_aero_sample_ut=t->ut;
+    g->terminal_aero_sample_valid=true;
+}
+
+static double terminal_wheel_height(const Telemetry*t,const LandingConfiguration*cfg){
+    if(!isfinite(t->mean_altitude)||!isfinite(t->flight_path_angle)||
+       !isfinite(t->angle_of_attack))return NAN;
+    double height=t->mean_altitude-cfg->site.altitude;
+    if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&
+            terminal_runway_contact_position(t,cfg))
+        height=fmin(height,t->radar_altitude);
+    double pitch=(t->flight_path_angle+t->angle_of_attack)*DEG2RAD;
+    return fmax(0.0,height-3.1535*cos(pitch)-.9058*sin(pitch));
+}
+
+static TerminalFlarePlan terminal_flare_plan(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,const LandingConfiguration*cfg,double trigger_altitude){
+    double gravity=planet_surface_gravity(p);
+    double limit=final_lift_aoa_limit(t,&cfg->vehicle);
+    double L=0.0,D=0.0;
+    terminal_aero_q(g,t,&cfg->vehicle,limit,&L,&D);
+    double pull=L*fmax(t->dynamic_pressure,1.0)*g->terminal_lift_ratio/
+        fmax(t->mass,1.0)-gravity*cos(t->flight_path_angle*DEG2RAD);
+    return (TerminalFlarePlan){
+        .arrest_accel=clampd(.4*pull,.12*gravity,.15*gravity),
+        .sgs_height=25.0,.sgs_sink=3.5,.final_accel=.1*gravity,
+        .float_height=1.5,.float_sink=1.0,.lift_ratio=g->terminal_lift_ratio,
+        .aoa_max=limit,.g0=gravity,.planet=p,.site_altitude=cfg->site.altitude,
+        .preflare_trigger_altitude=trigger_altitude
+    };
+}
+
+double terminal_delivery_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,const LandingConfiguration*cfg,double trigger_altitude){
+    if(!g||!t||!p||!cfg||!isfinite(t->true_air_speed)||
+       !isfinite(t->vertical_speed)||!isfinite(t->mach)||
+       !isfinite(t->angle_of_attack)||!(t->mass>0.0))return NAN;
+    GuidanceMachine forecast=*g;
+    double dt=forecast.terminal_aero_sample_valid?
+        clampd(t->ut-forecast.terminal_aero_sample_ut,0.0,1.0):.1;
+    terminal_observe_landing_aero(&forecast,t,&cfg->vehicle,planet_surface_gravity(p),dt);
+    TerminalFlarePlan plan=terminal_flare_plan(&forecast,t,p,cfg,trigger_altitude);
+    return terminal_predict_touchdown_speed(&forecast,t,&cfg->vehicle,
+        terminal_wheel_height(t,cfg),t->true_air_speed,
+        fmax(0.0,-t->vertical_speed),false,&plan);
+}
+
 /* Smallest incidence producing the lift; the maximum-lift incidence if none. */
 static double terminal_aoa_for_lift(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double lift,double aoa_max){
     double q=fmax(t->dynamic_pressure,1.0),best=aoa_max,best_l=-INFINITY;
@@ -147,6 +208,8 @@ static double terminal_learned_max_lift_to_drag(const GuidanceMachine*g,const Te
 static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
         const VehicleProfile*v,double height,double V,double sink,bool latched,
         const TerminalFlarePlan*p){
+    if(!isfinite(height)||!isfinite(V)||!isfinite(sink)||
+       !(p->arrest_accel>0.0)||!(p->lift_ratio>0.0)||!(p->g0>0.0))return NAN;
     Telemetry tc=*t;
     double m=fmax(t->mass,1.0);
     double sound=isfinite(t->mach)&&t->mach>.05&&isfinite(t->true_air_speed)?
@@ -156,8 +219,8 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
     /* Anchor on the measured density and speed of sound and carry them down
        with the planet's atmosphere profile: from a few kilometres up the
        air near the runway is tens of percent denser, and so draggier. */
-    double rho_model_now=p->planet?planet_atmospheric_density(p->planet,p->site_altitude+height):NAN;
-    double sound_model_now=p->planet?planet_atmospheric_speed_of_sound(p->planet,p->site_altitude+height):NAN;
+    double rho_model_now=p->planet?planet_atmospheric_density(p->planet,t->mean_altitude):NAN;
+    double sound_model_now=p->planet?planet_atmospheric_speed_of_sound(p->planet,t->mean_altitude):NAN;
     double sin_glide=clampd(sink/fmax(V,1.0),-.95,.95);
     const double DT=.25,TAU=1.5;
     for(int i=0;i<1200&&height>0.0&&V>5.0;++i){
@@ -188,7 +251,8 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
         if(latched)sink-=accel_up*DT;
         height-=sink*DT;
     }
-    return V;
+    /* A timeout or loss of flying speed is not a touchdown forecast. */
+    return height<=0.0&&isfinite(V)&&V>0.0?V:NAN;
 }
 
 static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetry*t,double course,
@@ -201,30 +265,18 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double S_FLOAT=1.0;       /* a third of the 3 m/s touchdown sink gate */
     const double FINAL_FLARE_ACCEL=.1*g0;
     const double TOUCHDOWN_ALONG=75.0;
-    const double ARREST_ACCEL=.15*g0;  /* reserve a full sink-response window for outer-glide pull */
     const double SGS_HEIGHT=25.0;   /* shallow-glide segment below this wheel height */
     const double SGS_SINK=3.5;      /* ~ -2..-2.5 deg at touchdown speeds */
     const double TOUCHDOWN_PITCH=8.0;
     const double TOUCHDOWN_ATTITUDE_START=26.0;
     const double TOUCHDOWN_ATTITUDE_FULL=5.0;
 
-    double height=t->mean_altitude-site->altitude;
-    if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&terminal_runway_contact_position(t,cfg))
-        height=fmin(height,t->radar_altitude);
-    {   /* Fly the deployed main-wheel contact patch, not the CG. On the intact
-           STS-N the main-gear part origin is 2.8035 m below and 0.9058 m aft of
-           the COM; the 0.35 m wheel radius puts the contact patch 3.1535 m down. */
-        const double MAIN_GEAR_DOWN=3.1535;
-        const double MAIN_GEAR_AFT=.9058;
-        double th=(t->flight_path_angle+t->angle_of_attack)*DEG2RAD;
-        height-=MAIN_GEAR_DOWN*cos(th)+MAIN_GEAR_AFT*sin(th);
-    }
-    height=fmax(0.0,height);
+    double height=terminal_wheel_height(t,cfg);
     double V=fmax(1.0,t->true_air_speed),Vh=fmax(1.0,t->horizontal_speed);
     double along=t->runway_along_track,gamma=t->flight_path_angle*DEG2RAD;
     double aoa_max=final_lift_aoa_limit(t,v);
     double v_td=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
-    terminal_learn_aero(g,t,v);
+    terminal_observe_landing_aero(g,t,v,g0,dt);
 
     TerminalVerticalStage stage=g->terminal_vertical_stage;
     if(stage<TERMINAL_OUTER_FINAL)stage=TERMINAL_OUTER_FINAL;
@@ -306,15 +358,6 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     /* Learn the lift scale in flight and target a geometric runway intercept.
        Pull capture is one-way: after it begins, the sink profile can only
        flatten relative to the geometric glide. */
-    if(g->terminal_lift_ratio<=0.0)g->terminal_lift_ratio=1.0;
-    double lift_per_q=0.0,drag_per_q=0.0;
-    terminal_aero_q(g,t,v,t->angle_of_attack,&lift_per_q,&drag_per_q);
-    (void)drag_per_q;
-    double modeled_lift=lift_per_q*fmax(t->dynamic_pressure,1.0);
-    if(modeled_lift>.2*t->mass*g0&&isfinite(t->lift_force)&&t->lift_force>0.0)
-        g->terminal_lift_ratio+=fmin(1.0,dt/2.0)*
-            (clampd(t->lift_force/modeled_lift,.6,1.6)-g->terminal_lift_ratio);
-
     /*
      * Outer glide aim point.  The Shuttle flew a steep outer glide to an aim
      * point short of the runway and used the speedbrake to arrive at preflare
@@ -329,11 +372,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double runway_length=site->runway_length>100.0?site->runway_length:2500.0;
     double touchdown_target=clampd(.15*runway_length,TOUCHDOWN_ALONG,600.0);
     double ld_float=.8*terminal_learned_max_lift_to_drag(g,t,v,aoa_max);
-    double pull_capability=NAN;
-    {   double L=0.0,D=0.0;terminal_aero_q(g,t,v,aoa_max,&L,&D);
-        pull_capability=L*fmax(t->dynamic_pressure,1.0)*g->terminal_lift_ratio/
-            fmax(t->mass,1.0)-g0*cos(gamma); }
-    double arrest_accel=clampd(.4*pull_capability,.12*g0,ARREST_ACCEL);
+    double planned_preflare_trigger=g->terminal_preflare_plan_valid&&
+        isfinite(g->preflare_trigger_altitude)&&g->preflare_trigger_altitude>0.0?
+        g->preflare_trigger_altitude:0.0;
+    TerminalFlarePlan flare_plan=terminal_flare_plan(g,t,p,cfg,planned_preflare_trigger);
+    double arrest_accel=flare_plan.arrest_accel;
     double lift_q_max=0.0,drag_q_max=0.0;
     terminal_aero_q(g,t,v,aoa_max,&lift_q_max,&drag_q_max);
     double rho=isfinite(t->atmospheric_density)&&t->atmospheric_density>0.0?
@@ -393,9 +436,6 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        response and energy state.  Never let the live controller wait below
        that certified trigger just because its local pull estimate became more
        optimistic after handoff. */
-    double planned_preflare_trigger=g->terminal_preflare_plan_valid&&
-        isfinite(g->preflare_trigger_altitude)&&g->preflare_trigger_altitude>0.0?
-        g->preflare_trigger_altitude:0.0;
     double preflare_latch_height=fmax(preflare_height+response_height,
         planned_preflare_trigger);
     if(height<=preflare_latch_height)
@@ -418,12 +458,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double speed_ref=fmax(station_speed,1.6*fmax(speed_1g,v_td));
     double predicted_touchdown_speed=NAN;
     if(!g->terminal_pull_latch){
-        TerminalFlarePlan plan={arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL,H_FLOAT,S_FLOAT,
-            g->terminal_lift_ratio,aoa_max,g0,p,site->altitude,planned_preflare_trigger};
-        predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&plan);
+        predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&flare_plan);
         speed_ref=fmax(station_speed,fmax(1.3*fmax(speed_1g,v_td),
             sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed))));
     }
+    g->terminal_predicted_touchdown_speed=predicted_touchdown_speed;
     if(!g->terminal_pull_latch&&isfinite(speed_ref))
         glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);

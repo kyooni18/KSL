@@ -15,6 +15,7 @@ typedef struct {
     double request_ut;
     uint64_t model_snapshot_id;
     TerminalDynamicState state;
+    GuidanceMachine final_guidance; /* immutable learned Final/response state */
     double hac_radius_m;
     double final_approach_distance_m; /* energy-aware Final alignment station */
     bool search_both_ends;
@@ -29,8 +30,9 @@ typedef struct {
 
 typedef struct {
     bool valid;                /* planner ran */
-    bool found;                /* a qualified candidate exists */
+    bool found;                /* native route + Final admission passed; tail unqualified */
     double request_ut;
+    TerminalDynamicState initial_state; /* state used for latest qualification */
     uint64_t model_snapshot_id;
     TaemFixedHacCandidate candidate;
     double solve_wall_s;
@@ -58,6 +60,11 @@ Mm305PlanRequest guidance_mm305_plan_request(const GuidanceMachine *g,
 /* Pure, re-entrant: may run on any thread. */
 Mm305PlanResult mm305_plan(const TerminalModel *model,
     const Mm305PlanRequest *request);
+/* Reprice the chosen geometry from a newer measured state, without a search. */
+Mm305PlanResult mm305_revalidate_plan(const TerminalModel *model,
+    const Mm305PlanRequest *request, const Mm305PlanResult *previous);
+bool mm305_plan_result_fresh(const Mm305PlanResult *result,
+    const Telemetry *telemetry);
 
 /* Adopt a finished plan into guidance (control thread, under the controller
    lock).  Returns true when a new route was committed. */

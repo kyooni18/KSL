@@ -234,6 +234,9 @@ typedef struct {
        unit aerodynamic factor).  Kept per machine so predictor copies of the
        guidance never share or pollute the live estimate. */
     double terminal_lift_area_ema, terminal_drag_area_ema;
+    double terminal_aero_sample_ut;
+    bool terminal_aero_sample_valid;
+    double terminal_predicted_touchdown_speed;
     double terminal_speedbrake_cda; /* learned speedbrake drag area, m^2 (0 = unknown) */
     double terminal_vs_prev, terminal_vs_prev_ut, terminal_vs_rate_ema;
     /* Observed lift/q and drag/q (m^2) in 1 deg incidence bins 0..20 deg. */

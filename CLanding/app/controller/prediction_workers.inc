@@ -126,22 +126,43 @@ static bool mm305_planning_job(LandingController *c){
     pthread_mutex_unlock(&c->mutex);
 
     Mm305PlanResult result=mm305_plan(model,&request);
-    free(model);
 
     pthread_mutex_lock(&c->mutex);
     bool current=!c->stop_prediction_thread&&generation==c->prediction_generation&&
         c->guidance.phase==PHASE_TAEM&&c->guidance.mm305_planning_needed&&
         c->guidance.mm305_plan_request_ut==token&&
         c->terminal_model_valid&&c->terminal_model.snapshot_id==result.model_snapshot_id;
+    if(current&&result.found&&!mm305_plan_result_fresh(&result,&c->latest_telemetry)){
+        /* Search is expensive in live time. Qualify only the selected geometry
+           again from the current state, outside the control-loop mutex. */
+        cfg=effective_config(c);
+        Mm305PlanRequest fresh=guidance_mm305_plan_request(&c->guidance,
+            &c->latest_telemetry,&c->latest_state,&cfg,model);
+        pthread_mutex_unlock(&c->mutex);
+        result=mm305_revalidate_plan(model,&fresh,&result);
+        pthread_mutex_lock(&c->mutex);
+        current=!c->stop_prediction_thread&&generation==c->prediction_generation&&
+            c->guidance.phase==PHASE_TAEM&&c->guidance.mm305_planning_needed&&
+            c->guidance.mm305_plan_request_ut==token&&c->terminal_model_valid&&
+            c->terminal_model.snapshot_id==result.model_snapshot_id;
+    }
     if(current){
-        bool adopted=guidance_mm305_accept_plan(&c->guidance,&result,&cfg);
+        bool stale=result.found&&!mm305_plan_result_fresh(&result,&c->latest_telemetry);
+        bool adopted=false;
+        if(stale){
+            c->guidance.mm305_planning_needed=false;
+            c->guidance.mm305_plan_failures++;
+            snprintf(result.diagnostic,sizeof(result.diagnostic),
+                "MM305 route rejected: current-state qualification expired before adoption");
+        }else adopted=guidance_mm305_accept_plan(&c->guidance,&result,&cfg);
         char event[256];
         snprintf(event,sizeof(event),"event=mm305-plan; request-ut=%.3f; found=%d; adopted=%d; solve-wall=%.3f; replans=%u",
-            request.request_ut,result.found,adopted,result.solve_wall_s,
+            result.request_ut,result.found,adopted,result.solve_wall_s,
             (unsigned)c->guidance.mm305_replans);
         log_state_event(c,event,true);
     }
     pthread_mutex_unlock(&c->mutex);
+    free(model);
     return true;
 }
 

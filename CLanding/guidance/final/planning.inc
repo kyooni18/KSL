@@ -450,21 +450,8 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
        predictor so MM305 cannot hand off a state that is above the aerodynamic
        floor yet already destined to arrive below the configured touchdown
        speed.  A non-finite forecast is not evidence of adequate energy. */
-    GuidanceMachine touchdown_prediction=*g;
-    terminal_learn_aero(&touchdown_prediction,t,v);
-    double touchdown_aoa_limit=final_lift_aoa_limit(t,v);
-    TerminalFlarePlan touchdown_plan={
-        .arrest_accel=.15*gravity,.sgs_height=25.0,.sgs_sink=3.5,
-        .final_accel=.10*gravity,.float_height=1.5,.float_sink=1.0,
-        .lift_ratio=touchdown_prediction.terminal_lift_ratio>0.0?
-            touchdown_prediction.terminal_lift_ratio:1.0,
-        .aoa_max=touchdown_aoa_limit,.g0=gravity,.planet=p,
-        .site_altitude=site->altitude,.preflare_trigger_altitude=plan->trigger_altitude
-    };
-    double touchdown_prediction_height=fmax(0.0,t->mean_altitude-site->altitude);
-    double predicted_touchdown_speed=terminal_predict_touchdown_speed(
-        &touchdown_prediction,t,v,touchdown_prediction_height,t->true_air_speed,
-        fmax(0.0,-t->vertical_speed),false,&touchdown_plan);
+    double predicted_touchdown_speed=terminal_delivery_touchdown_speed(
+        g,t,p,cfg,plan->trigger_altitude);
     double touchdown_target=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
     double touchdown_energy_margin=isfinite(predicted_touchdown_speed)?
         .5*(predicted_touchdown_speed*predicted_touchdown_speed-

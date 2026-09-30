@@ -264,6 +264,33 @@ static bool mm305_candidate_ok(const TaemFixedHacCandidate *c) {
         c->replay.path_constraints_ok;
 }
 
+static bool mm305_candidate_delivery_ok(const TerminalModel*model,
+        const Mm305PlanRequest*request,TaemFixedHacCandidate*c){
+    if(!mm305_candidate_ok(c))return false;
+    TerminalModel*delivery=malloc(sizeof(*delivery));
+    if(!delivery)return false;
+    *delivery=*model;
+    delivery->guidance.final_approach_distance=-c->route.alignment_along_m;
+    delivery->guidance.final_glide_slope=c->route.profile_final_slope_deg;
+    TaemTerminalEvaluation evaluation={0};
+    c->replay.final_interface_qualified=terminal_native_delivery_admissible(
+        delivery,&c->replay.final_state,&request->final_guidance,&evaluation);
+    free(delivery);
+    if(!c->replay.final_interface_qualified){
+        c->reason=taem_terminal_block_reason_string(evaluation.block_reason);
+        return false;
+    }
+    return true;
+}
+
+bool mm305_plan_result_fresh(const Mm305PlanResult*result,const Telemetry*t){
+    if(!result||!t||!result->valid||!isfinite(t->ut)||
+            !isfinite(result->request_ut)||!isfinite(result->initial_state.ut_s))return false;
+    double age=t->ut-result->request_ut;
+    return age>=0.0&&age<=1.0&&
+        fabs(result->initial_state.ut_s-result->request_ut)<=1e-6;
+}
+
 /* The Final alignment station is an energy-management choice, not a fixed
  * runway landmark.  A high/fast MM305 state needs more runway-upstream Final
  * distance so Final does not inherit a steep, late energy dump.  Keep the
@@ -367,6 +394,7 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     }
     double started=mm305_wall_seconds();
     out.request_ut=request->request_ut;
+    out.initial_state=request->state;
     out.model_snapshot_id=request->model_snapshot_id;
     out.scale_mach=request->scale_mach;
     out.lift_scale=request->lift_scale;
@@ -396,7 +424,7 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         TaemFixedHacCandidate seed = taem_fixed_hac_evaluate_route(
             seed_model, &request->state, &request->seed_route,
             request->seed_runway_end, 0.5, 420.0);
-        if (mm305_candidate_ok(&seed)) {
+        if (mm305_candidate_delivery_ok(seed_model,request,&seed)) {
             out.valid = true;
             out.found = true;
             out.candidate = seed;
@@ -464,8 +492,8 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
                 fprintf(stderr, "\n");
             }
             for (int i=0;i<search.candidate_count;++i) {
-                const TaemFixedHacCandidate *c=&search.candidates[i];
-                if (!mm305_candidate_ok(c)) continue;
+                TaemFixedHacCandidate *c=&search.candidates[i];
+                if (!mm305_candidate_delivery_ok(end_model,request,c)) continue;
                 if (request->restrict_side && c->side*request->side<=0.0) continue;
                 if (!have_best || taem_fixed_hac_candidate_preferred(
                         end_model,c,&best_candidate)) {
@@ -494,6 +522,38 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     return out;
 }
 
+Mm305PlanResult mm305_revalidate_plan(const TerminalModel*model,
+        const Mm305PlanRequest*request,const Mm305PlanResult*previous){
+    Mm305PlanResult out={0};
+    if(!model||!request||!request->valid||!previous||!previous->found||
+            request->model_snapshot_id!=previous->model_snapshot_id)return out;
+    double started=mm305_wall_seconds();
+    TerminalModel*scaled=malloc(sizeof(*scaled));
+    TerminalModel*reciprocal=malloc(sizeof(*reciprocal));
+    if(!scaled||!reciprocal){free(scaled);free(reciprocal);return out;}
+    mm305_prepare_planning_model(scaled,model,request->final_approach_distance_m,
+        request->scale_mach,request->lift_scale,request->drag_scale,
+        request->state.trim_aoa_ceiling_rad);
+    mm305_reciprocal_model(scaled,reciprocal);
+    const TerminalModel*end=previous->candidate.runway_end==1?reciprocal:scaled;
+    out.valid=true;
+    out.request_ut=request->request_ut;
+    out.initial_state=request->state;
+    out.model_snapshot_id=request->model_snapshot_id;
+    out.scale_mach=request->scale_mach;
+    out.lift_scale=request->lift_scale;
+    out.drag_scale=request->drag_scale;
+    out.candidate=taem_fixed_hac_evaluate_route(end,&request->state,
+        &previous->candidate.route,previous->candidate.runway_end,.5,420.0);
+    out.found=mm305_candidate_delivery_ok(end,request,&out.candidate);
+    free(scaled);free(reciprocal);
+    out.solve_wall_s=mm305_wall_seconds()-started;
+    snprintf(out.diagnostic,sizeof(out.diagnostic),
+        "MM305 current-state route revalidation %s: %s",
+        out.found?"passed":"rejected",out.candidate.reason?out.candidate.reason:"invalid");
+    return out;
+}
+
 static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
         const Telemetry *t, const VehicleState *state,
         const LandingConfiguration *cfg, const TerminalModel *model) {
@@ -504,6 +564,7 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
     r.state=terminal_live_state(g,state,t,model);
     if (!terminal_state_validate(&r.state,NULL,0)) return r;
     r.request_ut=t->ut;
+    r.final_guidance=*g;
     r.model_snapshot_id=model->snapshot_id;
     r.hac_radius_m=g->taem_interface_target.valid &&
         isfinite(g->taem_interface_target.hac_radius) &&
@@ -565,11 +626,12 @@ void guidance_mm305_admission_accept(GuidanceMachine *g, const Mm305PlanResult *
     if (!g || !result || !result->valid) return;
     g->mm305_admission_needed=false;
     g->mm305_admission_valid=true;
-    g->mm305_admission_found=result->found;
+    g->mm305_admission_found=result->found&&mm305_candidate_ok(&result->candidate)&&
+        result->candidate.replay.final_interface_qualified;
     g->mm305_admission_result_ut=result->request_ut;
     g->mm305_admission_snapshot_id=result->model_snapshot_id;
     g->mm305_admission_solve_wall_s=result->solve_wall_s;
-    if (result->found) {
+    if (g->mm305_admission_found) {
         g->mm305_admission_route=result->candidate.route;
         g->mm305_admission_runway_end=result->candidate.runway_end;
         g->mm305_admission_side=result->candidate.side;
@@ -619,6 +681,10 @@ bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
     result.candidate.route=g->mm305_admission_route;
     result.candidate.runway_end=g->mm305_admission_runway_end;
     result.candidate.side=g->mm305_admission_side;
+    result.candidate.status=TAEM_PLAN_UNQUALIFIED;
+    result.candidate.route_built=true;
+    result.candidate.replay.path_constraints_ok=true;
+    result.candidate.replay.final_interface_qualified=true;
     bool adopted=guidance_mm305_accept_plan(g,&result,cfg);
     if (adopted) g->mm305_last_plan_attempt_ut=g->mm305_admission_result_ut;
     return adopted;
@@ -631,7 +697,9 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
     if (g->phase!=PHASE_TAEM || g->mm305_hac_exit_reached || g->hac_completed ||
         g->final_approach_captured)
         return false;
-    if (!result->found) {
+    if (!result->found || !mm305_candidate_ok(&result->candidate) ||
+            !result->candidate.route.valid ||
+            !result->candidate.replay.final_interface_qualified) {
         g->mm305_plan_failures++;
         fprintf(stderr,"%s\n",result->diagnostic);
         return false;
@@ -1432,6 +1500,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     TaemPathReference reference;
     TaemTrackerOutput demand;
     const char *status;
+    terminal_observe_landing_aero(g,t,&cfg->vehicle,planet_surface_gravity(planet),dt);
     if (g->mm305_route_committed && g->mm305_runway_alignment_active) {
         reference=taem_alignment_reference(control_model,&geometry);
         demand=taem_tracker_update(control_model,&current,&geometry,&reference,dt);
@@ -1454,6 +1523,10 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 &final_plan);
             TaemTerminalEvaluation final_eval=
                 taem_exec_evaluate_terminal_contract(&final_contract);
+            g->taem_exec.terminal_contract=final_contract;
+            g->taem_exec.terminal_evaluation=final_eval;
+            g->terminal_predicted_touchdown_speed=terminal_delivery_touchdown_speed(
+                g,t,planet,cfg,final_plan.trigger_altitude);
             if (final_approach && final_eval.valid && final_eval.feasible) {
                 fprintf(stderr,
                     "MM305_LIVE_EXIT model=%llu side=%+.0f radius=%.0f sweep=%.1f lead=%.0f cursor=%zu/%zu refErr=%.2f runwayCourseErr=%.2f along=%.1f cross=%.1f h=%.1f airV=%.1f fpa=%.2f bank=%.2f aoa=%.2f cmdBank=%.2f cmdAoa=%.2f reason=final-contract-ready\n",

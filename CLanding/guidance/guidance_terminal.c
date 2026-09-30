@@ -121,6 +121,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         const TerminalModel *terminal_model) {
     const GuidanceSettings *s=&cfg->guidance;
     const VehicleProfile *v=&cfg->vehicle;
+    terminal_observe_landing_aero(g,t,v,planet_surface_gravity(p),dt);
     if (g->terminal_final_test_mode) {
         g->terminal_glide_mode=false;
         GuidanceResult result=terminal_final_test_guidance(g,t,course,p,aero,cfg,dt);
