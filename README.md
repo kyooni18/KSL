@@ -91,10 +91,11 @@ Inspect an updated craft without running KSP:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Eight focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
+Nine focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
 zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
 behavior, kRPC autopilot engagement compatibility, heading-to-roll mapping, and
-SAS restoration when autopilot cleanup fails.
+SAS restoration when autopilot cleanup fails. Launch commands validate the STS
+and launch-pad state before inspecting craft topology.
 The actual source attachment tree was also checked offline.
 One live flight test reached 32.1 km and separated the Pollux boosters, with
 near-zero moment residual after separation. The controller process then stopped

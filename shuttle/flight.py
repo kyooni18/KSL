@@ -27,6 +27,13 @@ def roll_for_heading(heading):
     return roll if roll <= 180 else roll - 360
 
 
+def validate_launch_vessel(vessel, space_center):
+    if vessel.name != 'STS':
+        raise ValueError(f'Expected the active vessel to be named STS; got {vessel.name!r}')
+    if vessel.situation != space_center.VesselSituation.pre_launch:
+        raise ValueError('Launch requires an STS on the launch pad')
+
+
 def set_autopilot_engaged(autopilot, engaged):
     """Support kRPC clients exposing engagement as either methods or a property."""
     method = getattr(autopilot, 'engage' if engaged else 'disengage', None)
@@ -168,18 +175,16 @@ def run(args):
     import krpc
     with krpc.connect(name='STS Launch Program', address=args.address,
                       rpc_port=args.rpc_port, stream_port=args.stream_port) as conn:
+        v = conn.space_center.active_vessel
+        if args.launch:
+            validate_launch_vessel(v, conn.space_center)
         shuttle = Shuttle(conn)
-        v = shuttle.vessel
         result = shuttle.allocation()
         print(f'{v.name}: {v.mass/1000:.2f} t; engine groups Skiff/Near/Far/Cheetah')
         print(f'Preflight throttles: {result.throttles}; residual {result.residual:.0f} N m')
         if not args.launch:
             print('Read-only preflight complete. Use --launch to fly.')
             return
-        if v.name != 'STS':
-            raise ValueError('Expected the active vessel to be named STS')
-        if v.situation != conn.space_center.VesselSituation.pre_launch:
-            raise ValueError('Launch requires an STS on the launch pad')
         body = v.orbit.body
         if body.name != 'Kerbin':
             raise ValueError('Default ascent guidance is designed for Kerbin')

@@ -2,7 +2,7 @@
 import unittest
 from types import SimpleNamespace
 from shuttle.flight import (Shuttle, release_controls, roll_for_heading,
-                            set_autopilot_engaged)
+                            set_autopilot_engaged, validate_launch_vessel)
 
 
 class Part:
@@ -22,6 +22,13 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(roll_for_heading(90), 180)
         self.assertEqual(roll_for_heading(45), 90)
         self.assertEqual(roll_for_heading(315), -90)
+
+    def test_launch_rejects_non_pad_vessel_before_part_inspection(self):
+        vessel = SimpleNamespace(name='STS', situation='flying')
+        space_center = SimpleNamespace(
+            VesselSituation=SimpleNamespace(pre_launch='prelaunch'))
+        with self.assertRaisesRegex(ValueError, 'on the launch pad'):
+            validate_launch_vessel(vessel, space_center)
 
     def test_autopilot_engagement_property_used_by_current_krpc(self):
         class AutoPilot:
