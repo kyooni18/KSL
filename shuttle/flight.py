@@ -20,6 +20,12 @@ def one(parts, name):
     return found[0]
 
 
+def roll_for_heading(heading):
+    """Map launch heading to body roll; 90 degrees maps to 180 degrees."""
+    roll = (2 * heading) % 360
+    return roll if roll <= 180 else roll - 360
+
+
 def set_autopilot_engaged(autopilot, engaged):
     """Support kRPC clients exposing engagement as either methods or a property."""
     method = getattr(autopilot, 'engage' if engaged else 'disengage', None)
@@ -71,6 +77,7 @@ class Shuttle:
         self.sepmotors = [p.engine for p in parts if p.name == 'sepMotor1']
         self.transfers = {}
         self.separated = False
+        self.booster_separation_ut = None
         self.et_attached = True
 
     def project(self, position):
@@ -118,6 +125,7 @@ class Shuttle:
             for d in self.booster_decouplers:
                 d.decouple()
             self.separated = True
+            self.booster_separation_ut = self.sc.ut
             print('Pollux burnout: boosters separated')
         result = self.allocation()
         for group, u in zip(self.groups, result.throttles):
@@ -167,6 +175,9 @@ def run(args):
         started = conn.space_center.ut
         state = 'ASCENT'
         next_report = 0
+        initial_roll = roll_for_heading(args.heading)
+        initial_roll_set = False
+        roll_reset = False
         try:
             control.throttle = 0
             control.sas = False
@@ -185,7 +196,7 @@ def run(args):
             with open(args.telemetry, 'w', newline='') as log:
                 writer = csv.writer(log)
                 writer.writerow(['ut', 'state', 'altitude_m', 'apoapsis_m', 'periapsis_m',
-                                 'throttles', 'residual_Nm', 'feasible'])
+                                 'throttles', 'residual_Nm', 'feasible', 'target_roll_deg'])
                 while True:
                     tick = time.monotonic()
                     if conn.space_center.active_vessel != v:
@@ -193,6 +204,10 @@ def run(args):
                     if conn.space_center.ut-started > args.timeout:
                         raise RuntimeError('Mission timeout')
                     altitude = flight.mean_altitude
+                    if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
+                        initial_roll_set = True
+                        ap.target_roll = initial_roll
+                        print(f'Liftoff: target roll {initial_roll:.1f} deg for heading {args.heading:.1f} deg')
                     if state == 'ASCENT':
                         pitch = max(5, 90*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
                         ap.target_pitch_and_heading(pitch, args.heading)
@@ -235,12 +250,22 @@ def run(args):
                         result = shuttle.update()
                     else:
                         shuttle.skiff.thrust_limit = 1
+                    if initial_roll_set:
+                        separation_ut = shuttle.booster_separation_ut
+                        if (not roll_reset and separation_ut is not None and
+                                conn.space_center.ut - separation_ut >= args.roll_reset_delay):
+                            ap.target_roll = 0
+                            roll_reset = True
+                            print('Roll reset: targeting 0 deg')
+                        elif not roll_reset:
+                            ap.target_roll = initial_roll
                     if conn.space_center.ut >= next_report:
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
                                          result.throttles if shuttle.et_attached else (1,),
                                          result.residual if shuttle.et_attached else 0,
-                                         result.feasible if shuttle.et_attached else True])
+                                         result.feasible if shuttle.et_attached else True,
+                                         0 if roll_reset else initial_roll if initial_roll_set else ''])
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m')
                         next_report = conn.space_center.ut+2
@@ -268,12 +293,15 @@ def main():
     parser.add_argument('--heading', type=float, default=90)
     parser.add_argument('--turn-start', type=float, default=1000)
     parser.add_argument('--turn-end', type=float, default=45000)
+    parser.add_argument('--roll-reset-delay', type=float, default=180,
+                        help='Seconds after booster separation before rolling to 0 degrees')
     parser.add_argument('--hz', type=float, default=10)
     parser.add_argument('--timeout', type=float, default=1800)
     parser.add_argument('--telemetry', default='telemetry.csv')
     args = parser.parse_args()
-    if not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or args.timeout <= 0:
-        parser.error('Invalid loop rate, turn altitudes, or timeout')
+    if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
+            args.timeout <= 0 or args.roll_reset_delay < 0):
+        parser.error('Invalid loop rate, turn altitudes, timeout, or roll reset delay')
     run(args)
 
 

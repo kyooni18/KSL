@@ -28,6 +28,10 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 ```
 
 `--turn-start 1000 --turn-end 45000` sets the altitude range of the gravity turn.
+After liftoff, the shuttle targets a body roll of twice the launch heading,
+wrapped to the range -180° to 180° (heading 90° targets roll 180°). It holds
+that roll through booster separation, then targets 0° after 180 seconds; use
+`--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
 Telemetry is written to `telemetry.csv`; use `--telemetry` to choose another path.
@@ -87,12 +91,15 @@ Inspect an updated craft without running KSP:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Six focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
+Seven focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
 zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
-behavior, and kRPC autopilot engagement compatibility. The actual source
-attachment tree was also checked offline.
-**No live launch has been validated:** local kRPC ports were closed during
-implementation. First use should be treated as a flight test with telemetry.
+behavior, kRPC autopilot engagement compatibility, and heading-to-roll mapping.
+The actual source attachment tree was also checked offline.
+One live flight test reached 32.1 km and separated the Pollux boosters, with
+near-zero moment residual after separation. The controller process then stopped
+before orbit insertion and left throttle at 1 with autopilot disengaged; KSP
+reported catastrophic failure at 32.1 km. A complete launch is not yet
+validated. Keep future runs attended and monitor telemetry through insertion.
 
 API semantics were checked against the official kRPC documentation:
 [engines and parts](https://krpc.github.io/krpc/0.5.4/python/api/space-center/parts.html),

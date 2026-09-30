@@ -1,7 +1,7 @@
 """Exercise actual craft topology with a small kRPC-shaped test double."""
 import unittest
 from types import SimpleNamespace
-from shuttle.flight import Shuttle, set_autopilot_engaged
+from shuttle.flight import Shuttle, roll_for_heading, set_autopilot_engaged
 
 
 class Part:
@@ -17,6 +17,11 @@ class Part:
 
 
 class FlightTests(unittest.TestCase):
+    def test_launch_heading_maps_to_double_body_roll(self):
+        self.assertEqual(roll_for_heading(90), 180)
+        self.assertEqual(roll_for_heading(45), 90)
+        self.assertEqual(roll_for_heading(315), -90)
+
     def test_autopilot_engagement_property_used_by_current_krpc(self):
         class AutoPilot:
             engaged = False
