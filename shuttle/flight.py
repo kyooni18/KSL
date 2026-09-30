@@ -51,10 +51,10 @@ class Shuttle:
             if p.name != 'radialDecoupler1-2':
                 continue
             subtree = descendants(p)
-            if any(e.part in subtree for e in self.boosters):
-                self.booster_decouplers.append(p.decoupler)
-            elif all(t in subtree for t in self.tanks) and self.skiff.part not in subtree:
+            if all(t in subtree for t in self.tanks) and self.skiff.part not in subtree:
                 self.et_decoupler = p.decoupler
+            elif sum(e.part in subtree for e in self.boosters) == 1 and not any(t in subtree for t in self.tanks):
+                self.booster_decouplers.append(p.decoupler)
         if len(self.booster_decouplers) != 2 or self.et_decoupler is None:
             raise ValueError('Could not uniquely identify booster and ET separators')
         self.sepmotors = [p.engine for p in parts if p.name == 'sepMotor1']

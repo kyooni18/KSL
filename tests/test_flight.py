@@ -1,0 +1,51 @@
+"""Exercise actual craft topology with a small kRPC-shaped test double."""
+import unittest
+from types import SimpleNamespace
+from shuttle.flight import Shuttle
+
+
+class Part:
+    def __init__(self, name, z=0, children=()):
+        self.name = name
+        self.children = list(children)
+        self.position = lambda frame: (0, 0, z)
+        self.decoupler = SimpleNamespace(decouple=lambda: None)
+        self.engine = SimpleNamespace(part=self, active=False, has_fuel=True,
+                                      max_thrust=100, thrust=0, thrust_limit=1)
+        self.resources = SimpleNamespace(amount=lambda r: 100,
+                                         max=lambda r: 100)
+
+
+class FlightTests(unittest.TestCase):
+    def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
+        boosters = [Part('Pollux'), Part('Pollux')]
+        separators = [Part('radialDecoupler1-2', children=[b]) for b in boosters]
+        tanks = [Part('Size3LargeTank'), Part('Size3LargeTank')]
+        et = Part('radialDecoupler1-2', children=tanks+separators)
+        skiff = Part('LiquidEngineRE-I2', -3.8)
+        cheetah = Part('LiquidEngineLV-T91')
+        bobcats = [Part('LiquidEngineLV-TX87', z) for z in (-.84, -.84, .84, .84)]
+        orbiter_tank = Part('mk3FuselageLFO.25')
+        all_parts = [et, skiff, cheetah, orbiter_tank]+tanks+separators+boosters+bobcats
+        calls = []
+        def transfer(*args):
+            calls.append(args)
+            return SimpleNamespace(complete=False)
+        vessel = SimpleNamespace(parts=SimpleNamespace(all=all_parts), reference_frame=None, control=SimpleNamespace(throttle=1))
+        sc = SimpleNamespace(active_vessel=vessel,
+                             ResourceTransfer=SimpleNamespace(start=transfer))
+        shuttle = Shuttle(SimpleNamespace(space_center=sc))
+        self.assertIs(shuttle.et_decoupler, et.decoupler)
+        self.assertEqual(shuttle.booster_decouplers, [p.decoupler for p in separators])
+        self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[1]], [-.84, -.84])
+        self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[2]], [.84, .84])
+        orbiter_tank.resources.amount = lambda r: 90
+        shuttle.top_off()
+        shuttle.top_off()
+        self.assertEqual(len(calls), 2)  # one in-flight transfer per resource
+        self.assertTrue(all(c[0] in tanks and c[1] is orbiter_tank for c in calls))
+        self.assertFalse(shuttle.release_et())  # no separation during transfer
+
+
+if __name__ == '__main__':
+    unittest.main()
