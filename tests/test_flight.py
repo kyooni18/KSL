@@ -1,8 +1,10 @@
 """Exercise actual craft topology with a small kRPC-shaped test double."""
 import unittest
+import sys
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 from shuttle.flight import (Shuttle, release_controls, roll_for_heading,
-                            set_autopilot_engaged, validate_launch_vessel)
+                            run, set_autopilot_engaged)
 
 
 class Part:
@@ -24,11 +26,19 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(roll_for_heading(315), -90)
 
     def test_launch_rejects_non_pad_vessel_before_part_inspection(self):
-        vessel = SimpleNamespace(name='STS', situation='flying')
-        space_center = SimpleNamespace(
-            VesselSituation=SimpleNamespace(pre_launch='prelaunch'))
-        with self.assertRaisesRegex(ValueError, 'on the launch pad'):
-            validate_launch_vessel(vessel, space_center)
+        conn = MagicMock()
+        conn.__enter__.return_value = conn
+        conn.space_center.active_vessel = SimpleNamespace(
+            name='STS', situation='flying')
+        conn.space_center.VesselSituation.pre_launch = 'prelaunch'
+        krpc = SimpleNamespace(connect=lambda **kwargs: conn)
+        args = SimpleNamespace(address='127.0.0.1', rpc_port=50000,
+                               stream_port=50001, launch=True)
+        with patch.dict(sys.modules, {'krpc': krpc}), \
+                patch('shuttle.flight.Shuttle') as shuttle:
+            with self.assertRaisesRegex(ValueError, 'on the launch pad'):
+                run(args)
+        shuttle.assert_not_called()
 
     def test_autopilot_engagement_property_used_by_current_krpc(self):
         class AutoPilot:
