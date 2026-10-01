@@ -12,18 +12,33 @@ from shuttle.flight import (Shuttle, ascent_pitch, attitude_error_exceeded,
 
 
 class Part:
-    def __init__(self, name, z=0, children=(), solid_fuel=False):
+    ENGINE_NAMES = {'LiquidEngineRE-I2', 'LiquidEngineLV-T91',
+                    'LiquidEngineLV-TX87', 'engineLargeSkipper_v2', 'sepMotor1'}
+
+    def __init__(self, name, z=0, children=(), resources=None, is_engine=None):
         self.name = name
         self.title = name
         self.children = list(children)
         self.position = lambda frame: (0, 0, z)
-        self.decoupler = SimpleNamespace(decouple=lambda: None)
-        self.engine = SimpleNamespace(part=self, active=False, has_fuel=True,
-                                      max_thrust=100, thrust=0, thrust_limit=1)
+        self.decoupled = False
+        self.decoupler = SimpleNamespace(decouple=self._decouple)
+        if is_engine is None:
+            is_engine = name in self.ENGINE_NAMES or name.startswith('Replacement')
+        self.engine = (SimpleNamespace(part=self, active=False, has_fuel=True,
+                                       max_thrust=100, thrust=0, thrust_limit=1,
+                                       specific_impulse=300,
+                                       kerbin_sea_level_specific_impulse=300,
+                                       vacuum_specific_impulse=300)
+                       if is_engine else None)
+        values = dict(resources or {})
         self.resources = SimpleNamespace(
-            has_resource=lambda r: solid_fuel if r == 'SolidFuel' else True,
-            amount=lambda r: 100 if r != 'SolidFuel' or solid_fuel else 0,
-            max=lambda r: 100 if r != 'SolidFuel' or solid_fuel else 0)
+            has_resource=lambda r: r in values,
+            amount=lambda r: values.get(r, (0, 0, 1))[0],
+            max=lambda r: values.get(r, (0, 0, 1))[1],
+            density=lambda r: values.get(r, (0, 0, 1))[2])
+
+    def _decouple(self):
+        self.decoupled = True
 
 
 class FlightTests(unittest.TestCase):
@@ -115,38 +130,86 @@ class FlightTests(unittest.TestCase):
         self.assertTrue(control.sas)
 
     def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
-        boosters = [Part('ReplacementSRB-A', solid_fuel=True),
-                    Part('ReplacementSRB-B', solid_fuel=True)]
-        sep_motor = Part('sepMotor1', solid_fuel=True)
-        separators = [Part('radialDecoupler1-2', children=[b]) for b in boosters]
-        tanks = [Part('Size3LargeTank'), Part('Size3LargeTank')]
-        et = Part('radialDecoupler1-2', children=tanks+separators)
+        booster_engines = [Part('engineLargeSkipper_v2') for _ in range(4)]
+        for i, part in enumerate(booster_engines):
+            part.title = f'RE-I5 Skipper {i+1}'
+        booster_tanks = [
+            Part(f'BoosterTank-{i+1}', resources={
+                'LiquidFuel': (10, 10, 1), 'Oxidizer': (10, 10, 1)})
+            for i in range(4)]
+        sep_motors = [Part('sepMotor1', resources={'SolidFuel': (5, 5, 1)})
+                      for _ in range(4)]
+        separators = [Part('radialDecoupler1-2', children=[tank, engine, sep])
+                      for tank, engine, sep in zip(booster_tanks, booster_engines, sep_motors)]
+        tanks = [Part('Size3LargeTank', resources={'LiquidFuel': (100, 100, 1),
+                                                   'Oxidizer': (100, 100, 1)}),
+                 Part('Size3LargeTank', resources={'LiquidFuel': (100, 100, 1),
+                                                   'Oxidizer': (100, 100, 1)})]
         skiff = Part('LiquidEngineRE-I2', -3.8)
         cheetah = Part('LiquidEngineLV-T91')
         bobcats = [Part('LiquidEngineLV-TX87', z) for z in (-.84, -.84, .84, .84)]
-        orbiter_tank = Part('mk3FuselageLFO.25')
-        all_parts = [et, skiff, cheetah, orbiter_tank, sep_motor]+tanks+separators+boosters+bobcats
+        orbiter_tank = Part('mk3FuselageLFO.25',
+                            resources={'LiquidFuel': (90, 100, 1),
+                                       'Oxidizer': (90, 100, 1)})
+        et = Part('radialDecoupler1-2',
+                  children=tanks+separators+[cheetah]+bobcats)
+        all_parts = ([et, skiff, orbiter_tank]+tanks+separators+booster_tanks+
+                     booster_engines+sep_motors+[cheetah]+bobcats)
         calls = []
         def transfer(*args):
             calls.append(args)
             return SimpleNamespace(complete=False)
-        vessel = SimpleNamespace(parts=SimpleNamespace(all=all_parts), reference_frame=None, control=SimpleNamespace(throttle=1))
-        sc = SimpleNamespace(active_vessel=vessel,
+        vessel = SimpleNamespace(parts=SimpleNamespace(all=all_parts),
+                                 reference_frame=None,
+                                 control=SimpleNamespace(throttle=1),
+                                 mass=1000)
+        sc = SimpleNamespace(active_vessel=vessel, ut=1000,
                              ResourceTransfer=SimpleNamespace(start=transfer))
         shuttle = Shuttle(SimpleNamespace(space_center=sc))
         self.assertIs(shuttle.et_decoupler, et.decoupler)
         self.assertEqual(shuttle.booster_decouplers, [p.decoupler for p in separators])
-        self.assertEqual([e.part.name for e in shuttle.boosters],
-                         ['ReplacementSRB-A', 'ReplacementSRB-B'])
-        self.assertNotIn(sep_motor.engine, shuttle.boosters)
+        self.assertEqual(shuttle.booster_kinds, ['liquid'] * 4)
+        self.assertEqual([e.part.name for e in shuttle.boosters], ['engineLargeSkipper_v2'] * 4)
+        self.assertTrue(all(sep.engine not in shuttle.boosters for sep in sep_motors))
+        self.assertEqual(len(shuttle.groups), 5)  # four core groups + one shared booster group
+        self.assertEqual(shuttle.groups[-1], [p.engine for p in booster_engines])
+
+        # All four Skippers receive one shared throttle, regardless of position.
+        for i, engine_part in enumerate(booster_engines):
+            engine_part.position = lambda frame, z=(-3, -1, 1, 3)[i]: (0, 0, z)
+            engine_part.engine.max_thrust = 1000
+        bounds = shuttle.group_upper_bounds()
+        self.assertEqual(len(bounds), 5)
+        self.assertEqual(bounds[-1], 1.0)
+        self.assertGreater(shuttle.liquid_booster_nominal_burn_time(), 0)
+        vessel.mass = 10
+        limited = shuttle.allocation(max_g=3)
+        self.assertLessEqual(shuttle.commanded_g(limited), 3.000001)
+        vessel.mass = 1000
+        shuttle.update(max_g=3)
+        booster_limits = [p.engine.thrust_limit for p in booster_engines]
+        self.assertTrue(all(abs(x-booster_limits[0]) < 1e-12 for x in booster_limits))
+
         self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[1]], [-.84, -.84])
         self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[2]], [.84, .84])
-        orbiter_tank.resources.amount = lambda r: 90
         shuttle.top_off()
         shuttle.top_off()
-        self.assertEqual(len(calls), 2)  # one in-flight transfer per resource
+        self.assertEqual(len(calls), 2)
         self.assertTrue(all(c[0] in tanks and c[1] is orbiter_tank for c in calls))
-        self.assertFalse(shuttle.release_et())  # no separation during transfer
+        self.assertFalse(shuttle.release_et())
+
+        # The four liquid boosters stay attached while fueled, then cut and separate
+        # together as soon as one branch begins to run dry.
+        shuttle.transfers = {}
+        shuttle.update(max_g=3)
+        self.assertFalse(shuttle.separated)
+        booster_engines[0].engine.has_fuel = False
+        shuttle.update(max_g=3)
+        self.assertTrue(shuttle.separated)
+        self.assertTrue(all(p.decoupled for p in separators))
+        self.assertTrue(all(not e.active and e.thrust_limit == 0
+                            for e in [p.engine for p in booster_engines]))
+        self.assertEqual(len(shuttle.groups), 4)
 
 
 if __name__ == '__main__':

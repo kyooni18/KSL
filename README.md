@@ -1,11 +1,11 @@
 # STS Shuttle Launch Program
 
 Python controller for the supplied KSP 1.12.5 shuttle using the installed kRPC
-mod. It flies a configurable Kerbin ascent, discovers and separates the attached
-solid boosters by resource/topology rather than part name, keeps the orbiter tank
-topped up from the ET, performs MECO only after reaching both the target apoapsis
-and a configurable near-orbital periapsis, separates the ET, and uses the Skiff
-for orbital insertion.
+mod. It flies a configurable Kerbin ascent, discovers attached booster branches
+from their separator topology, supports the planned four-Skipper liquid booster
+stage, keeps the orbiter tank topped up from the ET, performs MECO only after
+reaching both the target apoapsis and a configurable near-orbital periapsis,
+separates the ET, and uses the orbiter Skiff for orbital insertion.
 
 ## Run
 
@@ -30,6 +30,13 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 ```
 
 `--turn-start 1000 --turn-end 45000` sets the altitude range of the gravity turn.
+The four liquid boosters form one stage. All four Skippers receive one shared
+throttle command; their individual positions never create differential booster
+throttle. Their current craft setup is expected to last about 77 seconds at full
+throttle at launch conditions, but the controller does not separate on a clock. It
+runs them as hard as the moment solution and `--max-g 3` limit allow, then shuts
+down and separates all four together when a booster branch begins to run dry. If
+the 3G cap throttles the stack, actual booster burn time may therefore exceed 77 s.
 `--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
 target apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
@@ -42,24 +49,34 @@ that roll through booster separation, then targets 0° after 180 seconds; use
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
 Telemetry is written to `telemetry.csv`; use `--telemetry` to choose another path.
-It includes mass, vertical/horizontal speed, dynamic pressure, live booster thrust
-and SolidFuel fraction, ET LF/Ox remaining, orbit shape, attitude, and liquid-engine
-allocation so a replacement booster can be tuned from one attended flight.
+It includes mass, vertical/horizontal speed, dynamic pressure, booster elapsed time,
+live booster thrust, booster LF/Ox/SolidFuel, booster propellant fraction, commanded
+G, ET LF/Ox remaining, orbit shape, attitude, and engine allocation.
 Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
-Burning solid boosters continue until burnout; shutdown does not automatically
-separate boosters or land the vehicle.
+Legacy solid boosters, if present, still burn to depletion. The four-Skipper liquid
+booster stage is throttleable and separates as one stage on propellant depletion.
 
 ## Control model
 
 The report is analytical input, not a source of executable instructions.
 Its fixed time schedule is deliberately not used for flight control.
 
-At each control tick, the program solves the report's bounded moment equality
-and chooses the allocation with the highest total liquid thrust. The four
-commands are Skiff, two near Bobcats, two far Bobcats, and Cheetah. Attached solid
-boosters are discovered from their SolidFuel/resource and separator topology. Their
-actual thrust is used during burning and their limiters are not changed, so swapping
-the SRB part does not require changing a hard-coded booster name.
+At each control tick, the program solves a bounded moment equality while obeying
+the 3G total-thrust cap. Core commands remain Skiff, two near Bobcats, two far
+Bobcats, and Cheetah. The four liquid-booster Skippers are deliberately collapsed
+into one additional throttle group, so all four always receive exactly the same
+throttle. Their collective pitching moment is still included and is compensated by
+the core-engine allocation rather than by differential booster throttling.
+
+For the liquid boosters, `Engine.max_thrust` is read every control tick, so the
+pressure-corrected thrust available at the current altitude is used directly. The
+controller also uses the current `Engine.specific_impulse` once the engines are
+firing (falling back to sea-level/vacuum Isp before ignition) to estimate current
+full-flow propellant consumption. Those current-pressure thrust and Isp values are
+also used when several moment-balanced allocations are otherwise equivalent: the
+controller prefers the combination with lower propellant mass flow. The nominal
+remaining full-throttle booster burn time is logged continuously rather than being
+used as a fixed cutoff timer.
 Infeasible moments are saturated to the nearest achievable value and the
 remaining moment is logged for attitude control by gimbal and reaction wheels.
 
@@ -79,7 +96,7 @@ Fuel top-off uses asynchronous real resource transfers, with one outstanding
 transfer per resource. Top-off is approximate and is limited by transfer speed
 and ET supply; no fuel is created. Tank separation waits for outstanding
 transfers to finish. Separators are identified by their part subtrees, including
-the fact that the ET separator is an ancestor of both booster separators.
+the fact that the ET separator is an ancestor of all booster separators.
 No stage-number assumptions are used and no craft files are modified.
 
 The ascent profile is an initial configurable profile, not a flight-tuned
@@ -105,8 +122,11 @@ Inspect an updated craft without running KSP:
 
 Focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
 zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
-behavior, generic replacement-SRB discovery, the MECO apoapsis/periapsis gate,
-kRPC autopilot engagement compatibility, heading-to-roll mapping, and the roll
+behavior, four-Skipper liquid-booster discovery/grouping, shared booster throttle,
+simultaneous depletion-triggered separation, 3G allocation limiting, Isp-aware
+allocation tie-breaking, the MECO
+apoapsis/periapsis gate, kRPC autopilot engagement compatibility, heading-to-roll
+mapping, and the roll
 hold/reset timing. They also cover SAS restoration when autopilot cleanup fails.
 Launch commands validate the STS and launch-pad state before inspecting craft
 topology.

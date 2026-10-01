@@ -29,6 +29,28 @@ class AllocationTests(unittest.TestCase):
         self.assertEqual(r.throttles, (0.5, 1, 1))
         self.assertEqual(r.thrust, 55)
 
+    def test_thrust_cap_preserves_moment_balance(self):
+        r = allocate([100, 100], [-1, 1], thrust_cap=80)
+        self.assertTrue(r.feasible)
+        self.assertAlmostEqual(r.thrust, 80)
+        self.assertAlmostEqual(r.throttles[0], .4)
+        self.assertAlmostEqual(r.throttles[1], .4)
+
+    def test_group_upper_bound_limits_booster_throttle(self):
+        r = allocate([100, 100], [-1, 1], upper_bounds=[.25, 1])
+        self.assertTrue(r.feasible)
+        self.assertAlmostEqual(r.throttles[0], .25)
+        self.assertAlmostEqual(r.throttles[1], .25)
+        self.assertAlmostEqual(r.thrust, 50)
+
+    def test_efficiency_breaks_equal_thrust_ties(self):
+        r = allocate([100, 100], [0, 0], thrust_cap=100,
+                     mass_flows=[10, 1])
+        self.assertTrue(r.feasible)
+        self.assertAlmostEqual(r.thrust, 100)
+        self.assertEqual(r.throttles, (0, 1))
+        self.assertAlmostEqual(r.mass_flow, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
