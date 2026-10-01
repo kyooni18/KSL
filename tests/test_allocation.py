@@ -51,6 +51,19 @@ class AllocationTests(unittest.TestCase):
         self.assertEqual(r.throttles, (0, 1))
         self.assertAlmostEqual(r.mass_flow, 1)
 
+    def test_control_moment_tolerance_keeps_thrust_that_controls_can_trim(self):
+        r = allocate([100, 100], [-2, 1], moment_tolerance=100)
+        self.assertTrue(r.feasible)
+        self.assertEqual(r.throttles, (1, 1))
+        self.assertAlmostEqual(r.thrust, 200)
+        self.assertAlmostEqual(r.residual, -100)
+
+    def test_moment_tolerance_boundary_combines_with_thrust_cap(self):
+        r = allocate([100, 100], [-2, 1], thrust_cap=180, moment_tolerance=80)
+        self.assertTrue(r.feasible)
+        self.assertAlmostEqual(r.thrust, 180)
+        self.assertLessEqual(abs(r.residual), 80.000001)
+
 
 if __name__ == '__main__':
     unittest.main()

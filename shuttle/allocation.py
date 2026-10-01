@@ -23,7 +23,7 @@ def _bounded(value, tol=1e-9):
 
 
 def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
-             upper_bounds=None, mass_flows=None):
+             upper_bounds=None, mass_flows=None, moment_tolerance=0.0):
     if len(thrusts) != len(arms) or not thrusts:
         raise ValueError('Thrusts and arms must have the same nonzero length')
     if upper_bounds is None:
@@ -36,7 +36,8 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
         mass_flows = [0.0] * len(thrusts)
     if len(mass_flows) != len(thrusts) or any(m < 0 for m in mass_flows):
         raise ValueError('Mass flows must match thrust groups and be nonnegative')
-    values = (*thrusts, *arms, *upper_bounds, *mass_flows, fixed_moment, target)
+    values = (*thrusts, *arms, *upper_bounds, *mass_flows, fixed_moment, target,
+              moment_tolerance)
     if thrust_cap is not None:
         values += (thrust_cap,)
     if any(not math.isfinite(x) for x in values):
@@ -45,6 +46,8 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
         raise ValueError('Thrust must be nonnegative')
     if thrust_cap is not None and thrust_cap < 0:
         raise ValueError('Thrust cap must be nonnegative')
+    if moment_tolerance < 0:
+        raise ValueError('Moment tolerance must be nonnegative')
 
     n = len(thrusts)
     effective_thrusts = [t * bound for t, bound in zip(thrusts, upper_bounds)]
@@ -66,22 +69,28 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
     for bits in product((0.0, 1.0), repeat=n):
         add(list(bits))
 
-    # Intersections of the desired moment plane with box edges.
-    for free in range(n):
-        others = [i for i in range(n) if i != free]
-        for bits in product((0.0, 1.0), repeat=len(others)):
-            u = [0.0] * n
-            for i, bit in zip(others, bits):
-                u[i] = bit
-            remainder = wanted - sum(coefficients[i] * u[i] for i in others)
-            a = coefficients[free]
-            if abs(a) < 1e-12:
-                if abs(remainder) <= 1e-6:
-                    u[free] = 1.0
-                    add(u)
-                continue
-            u[free] = remainder / a
-            add(u)
+    # Intersections of the admissible moment slab boundaries with box edges.
+    # Include the exact target plane too: it remains useful as a best-effort
+    # fallback if the requested tolerance cannot be met.
+    moment_planes = [wanted]
+    if moment_tolerance > 0:
+        moment_planes.extend((wanted - moment_tolerance, wanted + moment_tolerance))
+    for moment_plane in moment_planes:
+        for free in range(n):
+            others = [i for i in range(n) if i != free]
+            for bits in product((0.0, 1.0), repeat=len(others)):
+                u = [0.0] * n
+                for i, bit in zip(others, bits):
+                    u[i] = bit
+                remainder = moment_plane - sum(coefficients[i] * u[i] for i in others)
+                a = coefficients[free]
+                if abs(a) < 1e-12:
+                    if abs(remainder) <= 1e-6:
+                        u[free] = 1.0
+                        add(u)
+                    continue
+                u[free] = remainder / a
+                add(u)
 
     if math.isfinite(cap):
         # Intersections of the thrust-cap plane with box edges.
@@ -101,21 +110,23 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
                 u[free] = remainder / t
                 add(u)
 
-        # Intersections of moment and thrust-cap planes with box faces.
-        for i, j in combinations(range(n), 2):
-            others = [k for k in range(n) if k not in (i, j)]
-            for bits in product((0.0, 1.0), repeat=len(others)):
-                u = [0.0] * n
-                for k, bit in zip(others, bits):
-                    u[k] = bit
-                rhs_m = wanted - sum(coefficients[k] * u[k] for k in others)
-                rhs_t = cap - sum(effective_thrusts[k] * u[k] for k in others)
-                det = coefficients[i] * effective_thrusts[j] - coefficients[j] * effective_thrusts[i]
-                if abs(det) < 1e-12:
-                    continue
-                u[i] = (rhs_m * effective_thrusts[j] - coefficients[j] * rhs_t) / det
-                u[j] = (coefficients[i] * rhs_t - rhs_m * effective_thrusts[i]) / det
-                add(u)
+        # Intersections of each moment-slab boundary and the thrust-cap
+        # plane with box faces.
+        for moment_plane in moment_planes:
+            for i, j in combinations(range(n), 2):
+                others = [k for k in range(n) if k not in (i, j)]
+                for bits in product((0.0, 1.0), repeat=len(others)):
+                    u = [0.0] * n
+                    for k, bit in zip(others, bits):
+                        u[k] = bit
+                    rhs_m = moment_plane - sum(coefficients[k] * u[k] for k in others)
+                    rhs_t = cap - sum(effective_thrusts[k] * u[k] for k in others)
+                    det = coefficients[i] * effective_thrusts[j] - coefficients[j] * effective_thrusts[i]
+                    if abs(det) < 1e-12:
+                        continue
+                    u[i] = (rhs_m * effective_thrusts[j] - coefficients[j] * rhs_t) / det
+                    u[j] = (coefficients[i] * rhs_t - rhs_m * effective_thrusts[i]) / det
+                    add(u)
 
     if not candidates:
         raise ArithmeticError('No allocation vertex found')
@@ -123,13 +134,18 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
     def score(u):
         moment = fixed_moment + sum(a * x for a, x in zip(coefficients, u))
         residual = abs(moment - target)
+        uncovered = max(0.0, residual - moment_tolerance)
         thrust = sum(t * x for t, x in zip(effective_thrusts, u))
         mass_flow = sum(m * x for m, x in zip(effective_mass_flows, u))
-        return (residual, -thrust, mass_flow)
+        # First keep the residual inside the torque authority envelope, then
+        # maximize thrust. Among equally powerful solutions prefer less control
+        # effort, then lower propellant flow.
+        return (uncovered, -thrust, residual, mass_flow)
 
     normalized = min(candidates, key=score)
     throttles = tuple(x * bound for x, bound in zip(normalized, upper_bounds))
     thrust = sum(t * x for t, x in zip(thrusts, throttles))
     mass_flow = sum(m * x for m, x in zip(mass_flows, throttles))
     residual = fixed_moment + sum((t * a) * x for t, a, x in zip(thrusts, arms, throttles)) - target
-    return Allocation(throttles, thrust, residual, abs(residual) <= 1e-5, mass_flow)
+    return Allocation(throttles, thrust, residual,
+                      abs(residual) <= moment_tolerance + 1e-5, mass_flow)

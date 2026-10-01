@@ -5,10 +5,12 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from shuttle.flight import (Shuttle, ascent_pitch, attitude_error_exceeded,
                             meco_ready, g_force_throttle,
-                            direction_for_pitch_heading,
+                            direction_for_pitch_heading, direction_error_deg,
                             pitch_heading_for_direction, surface_up_for_pitch_heading,
-                            flight_roll_target,
-                            release_controls, roll_for_heading, run, set_autopilot_engaged)
+                            flight_roll_target, hold_turn_for_roll, manual_roll_command,
+                            mission_roll_allowed, roll_accel_authority_deg_s2, roll_attitude_settled,
+                            roll_for_roof, slew_roll, ensure_autopilot_engaged, release_controls, roll_for_heading,
+                            run, set_autopilot_engaged)
 
 
 class Part:
@@ -66,11 +68,60 @@ class FlightTests(unittest.TestCase):
         self.assertAlmostEqual(pitch, 58)
         self.assertAlmostEqual(heading, 90)
 
+    def test_nose_error_ignores_roll_and_measures_direction_only(self):
+        target = direction_for_pitch_heading(89, 90)
+        self.assertAlmostEqual(direction_error_deg(target, target), 0)
+        actual = direction_for_pitch_heading(88, 90)
+        self.assertAlmostEqual(direction_error_deg(actual, target), 1, places=6)
+
     def test_surface_roll_reference_is_unit_and_perpendicular_near_vertical(self):
         direction = direction_for_pitch_heading(89, 90)
         up = surface_up_for_pitch_heading(89, 90)
         self.assertAlmostEqual(sum(a*b for a, b in zip(direction, up)), 0)
         self.assertAlmostEqual(sum(x*x for x in up), 1)
+
+    def test_pad_roof_is_converted_to_krpc_roll_sign(self):
+        self.assertAlmostEqual(
+            roll_for_roof((1, 0, 0), (0, 0, -1), (0, -1, 0)), 90)
+
+    def test_roll_slew_uses_shortest_path_and_rate_limit(self):
+        self.assertAlmostEqual(slew_roll(90, 180, 3), 93)
+        self.assertAlmostEqual(slew_roll(179, -179, 3), -179)
+
+    def test_mission_roll_starts_after_climbing_above_the_pad(self):
+        self.assertFalse(mission_roll_allowed(False, 100, 30))
+        self.assertFalse(mission_roll_allowed(True, 29.9, 30))
+        self.assertTrue(mission_roll_allowed(True, 30, 30))
+        self.assertTrue(mission_roll_allowed(True, 100, 30))
+
+    def test_roll_settle_requires_angle_rate_and_pitch_yaw_close(self):
+        self.assertTrue(roll_attitude_settled(2, .5, 1, 2))
+        self.assertFalse(roll_attitude_settled(3, .5, 1, 1))
+        self.assertFalse(roll_attitude_settled(1, 1, 1, 1))
+        self.assertFalse(roll_attitude_settled(1, .5, 4, 1))
+        self.assertFalse(roll_attitude_settled(1, .5, 1, 4))
+
+    def test_manual_roll_controller_accelerates_then_brakes_without_saturating(self):
+        accelerate = manual_roll_command(90, 0, 45, 4)
+        brake = manual_roll_command(90, 6, 45, 4)
+        reverse = manual_roll_command(-90, 0, 45, 4)
+        self.assertGreater(accelerate, 0)
+        self.assertLessEqual(accelerate, .35)
+        self.assertLess(brake, 0)
+        self.assertLess(reverse, 0)
+        self.assertEqual(manual_roll_command(90, 0, 0, 4), 0)
+
+    def test_roll_acceleration_uses_conservative_bidirectional_torque(self):
+        vessel = SimpleNamespace(
+            available_torque=((0, 200, 0), (0, -100, 0)),
+            moment_of_inertia=(1, 10, 1))
+        self.assertAlmostEqual(roll_accel_authority_deg_s2(vessel),
+                               1800 / 3.141592653589793, places=5)
+
+    def test_gravity_turn_waits_for_dedicated_roll_phase(self):
+        self.assertTrue(hold_turn_for_roll(True, False))
+        self.assertFalse(hold_turn_for_roll(False, False))
+        self.assertFalse(hold_turn_for_roll(True, True))
 
     def test_gravity_turn_is_independent_of_delayed_roll_reset(self):
         self.assertEqual(ascent_pitch(1000, 1000, 45000), 89)
@@ -128,12 +179,56 @@ class FlightTests(unittest.TestCase):
         set_autopilot_engaged(autopilot, False)
         self.assertFalse(autopilot.engaged)
 
+    def test_autopilot_recovery_disables_sas_and_reengages(self):
+        class Control:
+            sas = True
+        class AutoPilot:
+            engaged = False
+            def engage(self):
+                self.engaged = True
+
+        control = Control()
+        autopilot = AutoPilot()
+        self.assertTrue(ensure_autopilot_engaged(control, autopilot))
+        self.assertFalse(control.sas)
+        self.assertTrue(autopilot.engaged)
+        self.assertFalse(ensure_autopilot_engaged(control, autopilot))
+
     def test_control_release_restores_sas_even_if_autopilot_release_fails(self):
-        control = SimpleNamespace(throttle=1, sas=False)
+        control = SimpleNamespace(throttle=1, roll=.6, sas=False)
         with self.assertRaises(AttributeError):
             release_controls(control, SimpleNamespace())
         self.assertEqual(control.throttle, 0)
+        self.assertEqual(control.roll, 0)
         self.assertTrue(control.sas)
+
+    def test_booster_separation_restores_cruise_moment_budget(self):
+        class Engine:
+            def __init__(self):
+                self.thrust_limit = 1.0
+                self.active = True
+
+        class Decoupler:
+            def __init__(self):
+                self.called = False
+            def decouple(self):
+                self.called = True
+
+        boosters = [Engine() for _ in range(4)]
+        sepmotors = [Engine() for _ in range(4)]
+        decouplers = [Decoupler() for _ in range(4)]
+        fake = SimpleNamespace(
+            liquid_boosters=boosters, sepmotors=sepmotors, booster_decouplers=decouplers,
+            separated=False, booster_separation_ut=None, sc=SimpleNamespace(ut=123.0),
+            core_groups=[[Engine()], [Engine()]], groups=[],
+            cruise_control_moment_budget=456.0, control_moment_budget=0.0)
+        Shuttle._separate_boosters(fake)
+        self.assertTrue(fake.separated)
+        self.assertEqual(fake.booster_separation_ut, 123.0)
+        self.assertEqual(fake.groups, fake.core_groups)
+        self.assertEqual(fake.control_moment_budget, 456.0)
+        self.assertTrue(all(e.thrust_limit == 0 and not e.active for e in boosters))
+        self.assertTrue(all(d.called for d in decouplers))
 
     def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
         booster_engines = [Part('engineLargeSkipper_v2') for _ in range(4)]

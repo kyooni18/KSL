@@ -42,16 +42,21 @@ target apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
 segment until the periapsis gate is met. ET propellant exhaustion still triggers
 the existing early separation/orbiter-recovery path.
-After liftoff, the shuttle targets a body roll of twice the launch heading,
-wrapped to the range -180° to 180° (heading 90° targets roll 180°). It holds
-that roll through booster separation, then targets 0° after 180 seconds; use
-`--roll-reset-delay` to change that wait.
+The shuttle preserves its measured pad roll through the first 30 m of climb, then
+performs a dedicated rate-damped body roll to twice the launch heading, wrapped to
+-180°..180° (heading 90° targets roll 180°). During that initial roll, pitch stays
+at 89° and the gravity turn is held. The roll axis is driven directly from measured
+roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; once settled, the
+gravity turn is released. The 180° roll is held through booster separation, then
+targets 0° after 180 seconds; use `--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
 Telemetry is written to `telemetry.csv`; use `--telemetry` to choose another path.
 It includes mass, vertical/horizontal speed, dynamic pressure, booster elapsed time,
 live booster thrust, booster LF/Ox/SolidFuel, booster propellant fraction, commanded
-G, ET LF/Ox remaining, orbit shape, attitude, and engine allocation.
+G, ET LF/Ox remaining, orbit shape, engine allocation, actual/target roll, measured
+roll rate, direct roll-control input, and pitch/yaw attitude errors. Read-only
+preflight also prints the current-pressure full-throttle physical thrust acceleration.
 Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
 Legacy solid boosters, if present, still burn to depletion. The four-Skipper liquid
 booster stage is throttleable and separates as one stage on propellant depletion.
@@ -81,7 +86,10 @@ controller prefers the combination with lower propellant mass flow. The nominal
 remaining full-throttle booster burn time is logged continuously rather than being
 used as a fixed cutoff timer.
 Infeasible moments are saturated to the nearest achievable value and the
-remaining moment is logged for attitude control by gimbal and reaction wheels.
+remaining moment is logged for attitude control by gimbal and reaction wheels. The
+launch-calibrated cruise moment budget remains in force during the initial body roll;
+roll-axis control no longer lowers engine thrust by switching to a separate tighter
+moment budget.
 
 The vessel reference frame is centered on the instantaneous CoM. Engine offsets
 are read in that frame, so depletion, transfer, and separation change the lever
@@ -129,16 +137,18 @@ behavior, four-Skipper liquid-booster discovery/grouping, shared booster throttl
 simultaneous depletion-triggered separation, 3G allocation limiting, Isp-aware
 allocation tie-breaking, the MECO
 apoapsis/periapsis gate, kRPC autopilot engagement compatibility, heading-to-roll
-mapping, and the roll
-hold/reset timing. They also cover SAS restoration when autopilot cleanup fails.
+mapping, direct rate-damped roll control, roll settling/hold/reset timing, and
+control cleanup. They also cover SAS restoration when autopilot cleanup fails.
 Launch commands validate the STS and launch-pad state before inspecting craft
 topology.
 The actual source attachment tree was also checked offline.
-One live flight test reached 32.1 km and separated the Pollux boosters, with
-near-zero moment residual after separation. The controller process then stopped
-before orbit insertion and left throttle at 1 with autopilot disengaged; KSP
-reported catastrophic failure at 32.1 km. A complete launch is not yet
-validated. Keep future runs attended and monitor telemetry through insertion.
+A historical Pollux live test reached 32.1 km and separated the boosters before
+the controller stopped. Later four-Skipper launch tests exposed a separate low-altitude
+roll instability: the kRPC AutoPilot roll-angle loop coupled strongly into pitch/yaw
+and the temporary roll-specific moment budget also reduced launch acceleration. The
+controller now uses direct rate-damped roll control after +30 m and keeps the normal
+cruise moment budget, but that new roll controller has not yet been live-validated. A
+complete launch is still not validated; keep future runs attended through insertion.
 
 API semantics were checked against the official kRPC documentation:
 [engines and parts](https://krpc.github.io/krpc/0.5.4/python/api/space-center/parts.html),
