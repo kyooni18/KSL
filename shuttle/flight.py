@@ -27,12 +27,6 @@ def roll_for_heading(heading):
     return roll if roll <= 180 else roll - 360
 
 
-def roll_reference_for_heading(heading):
-    """Return a fixed cross-track up vector in the surface reference frame."""
-    angle = math.radians(heading)
-    return (0.0, -math.sin(angle), math.cos(angle))
-
-
 def direction_for_pitch_heading(pitch, heading):
     """Convert pitch/heading to a direction vector in the surface frame."""
     pitch, heading = math.radians(pitch), math.radians(heading)
@@ -219,8 +213,9 @@ def run(args):
         state = 'ASCENT'
         next_report = 0
         initial_roll = roll_for_heading(args.heading)
-        roll_reference = roll_reference_for_heading(args.heading)
-        roll_up_reference = roll_reference
+        # Surface-frame x is zenith; keep roll measured against it while
+        # pitch changes through vertical, and convert it at frame transitions.
+        roll_up_reference = (1, 0, 0)
         initial_roll_set = False
         roll_reset = False
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -278,7 +273,8 @@ def run(args):
                             time.sleep(1/args.hz)
                             continue
                         ap.reference_frame = v.orbital_reference_frame
-                        roll_up_reference = (1, 0, 0)
+                        # Orbital-frame x points anti-radially (toward the body).
+                        roll_up_reference = (-1, 0, 0)
                         target_direction = (0, 1, 0)
                         radius = body.equatorial_radius+v.orbit.apoapsis_altitude
                         dv = max(0, math.sqrt(body.gravitational_parameter/radius)-math.sqrt(body.gravitational_parameter*(2/radius-1/v.orbit.semi_major_axis)))

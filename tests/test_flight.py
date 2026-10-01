@@ -1,11 +1,10 @@
 """Exercise actual craft topology with a small kRPC-shaped test double."""
-import math
 import unittest
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from shuttle.flight import (Shuttle, flight_roll_target, release_controls, roll_for_heading,
-                            roll_reference_for_heading, run, set_autopilot_engaged)
+from shuttle.flight import (Shuttle, direction_for_pitch_heading, flight_roll_target,
+                            release_controls, roll_for_heading, run, set_autopilot_engaged)
 
 
 class Part:
@@ -26,13 +25,15 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(roll_for_heading(45), 90)
         self.assertEqual(roll_for_heading(315), -90)
 
-    def test_roll_reference_is_unit_cross_track_for_launch_heading(self):
-        for heading in (0, 45, 90, 180, 315):
-            reference = roll_reference_for_heading(heading)
-            angle = math.radians(heading)
-            downrange = (0.0, math.cos(angle), math.sin(angle))
-            self.assertAlmostEqual(sum(x * x for x in reference), 1.0)
-            self.assertAlmostEqual(sum(x * y for x, y in zip(reference, downrange)), 0.0)
+    def test_direction_vectors_match_surface_heading_axes(self):
+        vertical = direction_for_pitch_heading(90, 90)
+        self.assertAlmostEqual(vertical[0], 1.0)
+        self.assertAlmostEqual(vertical[1], 0.0)
+        self.assertAlmostEqual(vertical[2], 0.0)
+        direction = direction_for_pitch_heading(0, 90)
+        self.assertAlmostEqual(direction[0], 0.0)
+        self.assertAlmostEqual(direction[1], 0.0)
+        self.assertAlmostEqual(direction[2], 1.0)
 
     def test_roll_stays_inverted_until_180_seconds_after_booster_separation(self):
         self.assertEqual(flight_roll_target(90, False, None, 10, 180),
