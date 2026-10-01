@@ -6,6 +6,8 @@ import signal
 import time
 from .allocation import allocate
 
+ROLL_RESET_GRACE = 60.0
+
 
 def descendants(part):
     result = [part]
@@ -57,6 +59,12 @@ def ascent_pitch(altitude, roll_reset, turn_start_altitude, turn_end_altitude,
     progress = min(1, max(0, (altitude-turn_start_altitude) /
                           (turn_end_altitude-turn_start_altitude)))
     return max(5, initial_pitch*(1-progress))
+
+
+def attitude_error_exceeded(error, altitude, since_roll_reset=None):
+    """Preserve the attitude guard while allowing the commanded half-roll."""
+    return (error > 45 and altitude > 1000 and
+            (since_roll_reset is None or since_roll_reset >= ROLL_RESET_GRACE))
 
 
 def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
@@ -243,6 +251,7 @@ def run(args):
         # the target direction before using it as the roll reference.
         initial_roll_set = False
         roll_reset = False
+        roll_reset_ut = None
         turn_start_altitude = None
         turn_end_altitude = None
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -285,6 +294,7 @@ def run(args):
                         args.roll_reset_delay)
                     if reset_due and not roll_reset:
                         roll_reset = True
+                        roll_reset_ut = conn.space_center.ut
                         turn_start_altitude = max(args.turn_start, altitude)
                         turn_end_altitude = max(args.turn_end, turn_start_altitude+10000)
                         print(f'Roll reset: targeting 0 deg; starting gravity turn at {turn_start_altitude/1000:.1f} km')
@@ -363,7 +373,9 @@ def run(args):
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m')
                         next_report = conn.space_center.ut+2
-                    if ap.error > 45 and altitude > 1000:
+                    since_roll_reset = (None if roll_reset_ut is None else
+                                        conn.space_center.ut-roll_reset_ut)
+                    if attitude_error_exceeded(ap.error, altitude, since_roll_reset):
                         raise RuntimeError(f'Attitude error {ap.error:.1f} deg exceeds 45 degrees')
                     if not shuttle.skiff.has_fuel:
                         raise RuntimeError('Skiff out of fuel')
