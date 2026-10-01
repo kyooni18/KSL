@@ -3,7 +3,7 @@ import unittest
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from shuttle.flight import (Shuttle, direction_for_pitch_heading, flight_roll_target,
+from shuttle.flight import (Shuttle, direction_for_pitch_heading, pitch_heading_for_direction, flight_roll_target,
                             release_controls, roll_for_heading, run, set_autopilot_engaged)
 
 
@@ -37,6 +37,12 @@ class FlightTests(unittest.TestCase):
         self.assertAlmostEqual(direction[0], 0.0)
         self.assertAlmostEqual(direction[1], 0.0)
         self.assertAlmostEqual(direction[2], 1.0)
+
+    def test_surface_direction_round_trips_pitch_and_heading(self):
+        direction = direction_for_pitch_heading(58, 90)
+        pitch, heading = pitch_heading_for_direction(direction)
+        self.assertAlmostEqual(pitch, 58)
+        self.assertAlmostEqual(heading, 90)
 
     def test_roll_stays_inverted_until_180_seconds_after_booster_separation(self):
         self.assertEqual(flight_roll_target(90, False, None, 10, 180),

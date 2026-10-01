@@ -34,6 +34,14 @@ def direction_for_pitch_heading(pitch, heading):
             math.cos(pitch) * math.sin(heading))
 
 
+def pitch_heading_for_direction(direction):
+    """Convert a surface-frame direction to pitch and compass heading."""
+    x, y, z = direction
+    pitch = math.degrees(math.asin(max(-1.0, min(1.0, x))))
+    heading = math.degrees(math.atan2(z, y)) % 360
+    return pitch, heading
+
+
 def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
     """Return (target roll, reset due), or (None, False) before liftoff."""
     if not liftoff:
@@ -239,7 +247,9 @@ def run(args):
             with open(args.telemetry, 'w', newline='') as log:
                 writer = csv.writer(log)
                 writer.writerow(['ut', 'state', 'altitude_m', 'apoapsis_m', 'periapsis_m',
-                                 'throttles', 'residual_Nm', 'feasible', 'target_roll_deg'])
+                                 'throttles', 'residual_Nm', 'feasible', 'target_roll_deg',
+                                 'autopilot_error_deg', 'actual_pitch_deg',
+                                 'actual_heading_deg', 'target_pitch_deg'])
                 while True:
                     tick = time.monotonic()
                     if conn.space_center.active_vessel != v:
@@ -253,6 +263,7 @@ def run(args):
                         print(f'Liftoff: target roll {initial_roll:.1f} deg for heading {args.heading:.1f} deg')
                     if state == 'ASCENT':
                         pitch = max(5, initial_pitch*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
+                        target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if v.orbit.apoapsis_altitude >= args.orbit:
                             control.throttle = 0
@@ -261,12 +272,14 @@ def run(args):
                             if shuttle.release_et():
                                 state = 'ORBITER_ASCENT'
                     elif state == 'ORBITER_ASCENT':
+                        target_pitch = 5
                         target_direction = direction_for_pitch_heading(5, args.heading)
                         control.throttle = min(1, max(.05, (args.orbit-v.orbit.apoapsis_altitude)/5000))
                         if v.orbit.apoapsis_altitude >= args.orbit:
                             control.throttle = 0
                             state = 'COAST'
                     elif state == 'COAST':
+                        target_pitch = None
                         control.throttle = 0
                         if not shuttle.separated:
                             raise RuntimeError('Target reached before SRB burnout; coast cannot stop SRBs')
@@ -285,6 +298,7 @@ def run(args):
                         if v.orbit.time_to_apoapsis <= dv/acceleration/2+1:
                             state = 'INSERTION'
                     elif state == 'INSERTION':
+                        target_pitch = None
                         target_direction = (0, 1, 0)
                         control.throttle = min(1, max(.03, (args.orbit-v.orbit.periapsis_altitude)/10000))
                         if v.orbit.periapsis_altitude >= args.orbit-1000:
@@ -308,17 +322,20 @@ def run(args):
                         roll_reset = True
                         print('Roll reset: targeting 0 deg')
                     if conn.space_center.ut >= next_report:
+                        actual_pitch, actual_heading = pitch_heading_for_direction(
+                            v.direction(v.surface_reference_frame))
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
                                          result.throttles if shuttle.et_attached else (1,),
                                          result.residual if shuttle.et_attached else 0,
                                          result.feasible if shuttle.et_attached else True,
-                                         0 if roll_reset else initial_roll if initial_roll_set else ''])
+                                         0 if roll_reset else initial_roll if initial_roll_set else '',
+                                         ap.error, actual_pitch, actual_heading, target_pitch or ''])
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m')
                         next_report = conn.space_center.ut+2
                     if ap.error > 45 and altitude > 1000:
-                        raise RuntimeError('Attitude error exceeds 45 degrees')
+                        raise RuntimeError(f'Attitude error {ap.error:.1f} deg exceeds 45 degrees')
                     if not shuttle.skiff.has_fuel:
                         raise RuntimeError('Skiff out of fuel')
                     time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
