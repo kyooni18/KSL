@@ -1,9 +1,11 @@
 # STS Shuttle Launch Program
 
 Python controller for the supplied KSP 1.12.5 shuttle using the installed kRPC
-mod. It flies a configurable Kerbin ascent, separates burnt-out Pollux boosters,
-keeps the orbiter tank topped up from the ET, cuts off at target apoapsis,
-separates the ET, and uses the Skiff for orbital insertion.
+mod. It flies a configurable Kerbin ascent, discovers and separates the attached
+solid boosters by resource/topology rather than part name, keeps the orbiter tank
+topped up from the ET, performs MECO only after reaching both the target apoapsis
+and a configurable near-orbital periapsis, separates the ET, and uses the Skiff
+for orbital insertion.
 
 ## Run
 
@@ -28,6 +30,11 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 ```
 
 `--turn-start 1000 --turn-end 45000` sets the altitude range of the gravity turn.
+`--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
+target apoapsis alone cannot discard the ET with insufficient horizontal energy.
+If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
+segment until the periapsis gate is met. ET propellant exhaustion still triggers
+the existing early separation/orbiter-recovery path.
 After liftoff, the shuttle targets a body roll of twice the launch heading,
 wrapped to the range -180° to 180° (heading 90° targets roll 180°). It holds
 that roll through booster separation, then targets 0° after 180 seconds; use
@@ -35,6 +42,9 @@ that roll through booster separation, then targets 0° after 180 seconds; use
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
 Telemetry is written to `telemetry.csv`; use `--telemetry` to choose another path.
+It includes mass, vertical/horizontal speed, dynamic pressure, live booster thrust
+and SolidFuel fraction, ET LF/Ox remaining, orbit shape, attitude, and liquid-engine
+allocation so a replacement booster can be tuned from one attended flight.
 Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
 Burning solid boosters continue until burnout; shutdown does not automatically
 separate boosters or land the vehicle.
@@ -46,8 +56,10 @@ Its fixed time schedule is deliberately not used for flight control.
 
 At each control tick, the program solves the report's bounded moment equality
 and chooses the allocation with the highest total liquid thrust. The four
-commands are Skiff, two near Bobcats, two far Bobcats, and Cheetah. The Pollux
-contribution uses actual thrust during burning; its limiter is not changed.
+commands are Skiff, two near Bobcats, two far Bobcats, and Cheetah. Attached solid
+boosters are discovered from their SolidFuel/resource and separator topology. Their
+actual thrust is used during burning and their limiters are not changed, so swapping
+the SRB part does not require changing a hard-coded booster name.
 Infeasible moments are saturated to the nearest achievable value and the
 remaining moment is logged for attitude control by gimbal and reaction wheels.
 
@@ -91,12 +103,13 @@ Inspect an updated craft without running KSP:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Ten focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
+Focused tests cover the report's c=-0.4 m allocation, infeasible saturation,
 zero-thrust/zero-arm cases, maximum-thrust selection, separator/transfer
-behavior, kRPC autopilot engagement compatibility, heading-to-roll mapping, and
-the roll hold/reset timing. They also cover SAS restoration when autopilot
-cleanup fails. Launch commands validate the STS and launch-pad state before
-inspecting craft topology.
+behavior, generic replacement-SRB discovery, the MECO apoapsis/periapsis gate,
+kRPC autopilot engagement compatibility, heading-to-roll mapping, and the roll
+hold/reset timing. They also cover SAS restoration when autopilot cleanup fails.
+Launch commands validate the STS and launch-pad state before inspecting craft
+topology.
 The actual source attachment tree was also checked offline.
 One live flight test reached 32.1 km and separated the Pollux boosters, with
 near-zero moment residual after separation. The controller process then stopped

@@ -4,6 +4,7 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from shuttle.flight import (Shuttle, ascent_pitch, attitude_error_exceeded,
+                            meco_ready,
                             direction_for_pitch_heading,
                             pitch_heading_for_direction, surface_up_for_pitch_heading,
                             flight_roll_target,
@@ -11,15 +12,18 @@ from shuttle.flight import (Shuttle, ascent_pitch, attitude_error_exceeded,
 
 
 class Part:
-    def __init__(self, name, z=0, children=()):
+    def __init__(self, name, z=0, children=(), solid_fuel=False):
         self.name = name
+        self.title = name
         self.children = list(children)
         self.position = lambda frame: (0, 0, z)
         self.decoupler = SimpleNamespace(decouple=lambda: None)
         self.engine = SimpleNamespace(part=self, active=False, has_fuel=True,
                                       max_thrust=100, thrust=0, thrust_limit=1)
-        self.resources = SimpleNamespace(amount=lambda r: 100,
-                                         max=lambda r: 100)
+        self.resources = SimpleNamespace(
+            has_resource=lambda r: solid_fuel if r == 'SolidFuel' else True,
+            amount=lambda r: 100 if r != 'SolidFuel' or solid_fuel else 0,
+            max=lambda r: 100 if r != 'SolidFuel' or solid_fuel else 0)
 
 
 class FlightTests(unittest.TestCase):
@@ -57,6 +61,11 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(ascent_pitch(1000, 1000, 45000), 89)
         self.assertAlmostEqual(ascent_pitch(23000, 1000, 45000), 44.5)
         self.assertEqual(ascent_pitch(45000, 1000, 45000), 5)
+
+    def test_normal_meco_requires_both_apoapsis_and_periapsis(self):
+        self.assertFalse(meco_ready(100000, -100000, 100000, 45000))
+        self.assertFalse(meco_ready(90000, 45000, 100000, 45000))
+        self.assertTrue(meco_ready(100000, 45000, 100000, 45000))
 
     def test_attitude_error_guard_allows_bounded_roll_reset_maneuver(self):
         self.assertFalse(attitude_error_exceeded(179.5, 45000, 1))
@@ -106,7 +115,9 @@ class FlightTests(unittest.TestCase):
         self.assertTrue(control.sas)
 
     def test_et_ancestor_is_not_a_booster_separator_and_topoff_is_serial(self):
-        boosters = [Part('Pollux'), Part('Pollux')]
+        boosters = [Part('ReplacementSRB-A', solid_fuel=True),
+                    Part('ReplacementSRB-B', solid_fuel=True)]
+        sep_motor = Part('sepMotor1', solid_fuel=True)
         separators = [Part('radialDecoupler1-2', children=[b]) for b in boosters]
         tanks = [Part('Size3LargeTank'), Part('Size3LargeTank')]
         et = Part('radialDecoupler1-2', children=tanks+separators)
@@ -114,7 +125,7 @@ class FlightTests(unittest.TestCase):
         cheetah = Part('LiquidEngineLV-T91')
         bobcats = [Part('LiquidEngineLV-TX87', z) for z in (-.84, -.84, .84, .84)]
         orbiter_tank = Part('mk3FuselageLFO.25')
-        all_parts = [et, skiff, cheetah, orbiter_tank]+tanks+separators+boosters+bobcats
+        all_parts = [et, skiff, cheetah, orbiter_tank, sep_motor]+tanks+separators+boosters+bobcats
         calls = []
         def transfer(*args):
             calls.append(args)
@@ -125,6 +136,9 @@ class FlightTests(unittest.TestCase):
         shuttle = Shuttle(SimpleNamespace(space_center=sc))
         self.assertIs(shuttle.et_decoupler, et.decoupler)
         self.assertEqual(shuttle.booster_decouplers, [p.decoupler for p in separators])
+        self.assertEqual([e.part.name for e in shuttle.boosters],
+                         ['ReplacementSRB-A', 'ReplacementSRB-B'])
+        self.assertNotIn(sep_motor.engine, shuttle.boosters)
         self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[1]], [-.84, -.84])
         self.assertEqual([e.part.position(None)[2] for e in shuttle.groups[2]], [.84, .84])
         orbiter_tank.resources.amount = lambda r: 90

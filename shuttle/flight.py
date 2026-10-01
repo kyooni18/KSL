@@ -23,6 +23,30 @@ def one(parts, name):
     return found[0]
 
 
+def has_resource(part, resource):
+    """Return whether a part carries a resource without assuming a specific part name."""
+    try:
+        return part.resources.has_resource(resource)
+    except AttributeError:
+        try:
+            return part.resources.max(resource) > 0
+        except Exception:
+            return False
+
+
+def solid_booster_parts(parts):
+    """Find main solid motors by resource topology; separation motors are excluded."""
+    return [p for p in parts
+            if p.name != 'sepMotor1' and has_resource(p, 'SolidFuel')
+            and p.resources.max('SolidFuel') > 0]
+
+
+def meco_ready(apoapsis_altitude, periapsis_altitude, target_apoapsis, minimum_periapsis):
+    """Normal MECO requires both the target apoapsis and a near-orbital periapsis."""
+    return (apoapsis_altitude >= target_apoapsis and
+            periapsis_altitude >= minimum_periapsis)
+
+
 def roll_for_heading(heading):
     """Map launch heading to body roll; 90 degrees maps to 180 degrees."""
     roll = (2 * heading) % 360
@@ -115,10 +139,11 @@ class Shuttle:
         parts = self.vessel.parts.all
         self.skiff = one(parts, 'LiquidEngineRE-I2').engine
         self.cheetah = one(parts, 'LiquidEngineLV-T91').engine
-        self.boosters = [p.engine for p in parts if p.name == 'Pollux']
+        booster_parts = solid_booster_parts(parts)
+        self.boosters = [p.engine for p in booster_parts]
         bobcats = [p.engine for p in parts if p.name == 'LiquidEngineLV-TX87']
-        if len(bobcats) != 4 or len(self.boosters) != 2:
-            raise ValueError('Expected four Bobcats and two Pollux boosters')
+        if len(bobcats) != 4 or not self.boosters:
+            raise ValueError('Expected four Bobcats and at least one solid booster')
         self.tanks = [p for p in parts if p.name == 'Size3LargeTank']
         self.shuttle_tank = one(parts, 'mk3FuselageLFO.25')
         if len(self.tanks) != 2:
@@ -133,6 +158,7 @@ class Shuttle:
         bobcats.sort(key=lambda e: self.project(e.part.position(frame)), reverse=True)
         self.groups = [[self.skiff], bobcats[:2], bobcats[2:], [self.cheetah]]
         self.booster_decouplers = []
+        self.booster_branches = []
         self.et_decoupler = None
         for p in parts:
             if p.name != 'radialDecoupler1-2':
@@ -140,10 +166,15 @@ class Shuttle:
             subtree = descendants(p)
             if all(t in subtree for t in self.tanks) and self.skiff.part not in subtree:
                 self.et_decoupler = p.decoupler
-            elif sum(e.part in subtree for e in self.boosters) == 1 and not any(t in subtree for t in self.tanks):
+                continue
+            branch_boosters = [e for e in self.boosters if e.part in subtree]
+            if branch_boosters and not any(t in subtree for t in self.tanks):
                 self.booster_decouplers.append(p.decoupler)
-        if len(self.booster_decouplers) != 2 or self.et_decoupler is None:
-            raise ValueError('Could not uniquely identify booster and ET separators')
+                self.booster_branches.append(branch_boosters)
+        covered = [e for branch in self.booster_branches for e in branch]
+        if (not self.booster_decouplers or self.et_decoupler is None or
+                any(e not in covered for e in self.boosters)):
+            raise ValueError('Could not uniquely identify solid-booster and ET separators')
         self.sepmotors = [p.engine for p in parts if p.name == 'sepMotor1']
         self.transfers = {}
         self.separated = False
@@ -168,10 +199,24 @@ class Shuttle:
         if not self.separated:
             for e in self.boosters:
                 # Before ignition use pressure-corrected full thrust; after ignition
-                # actual thrust includes the Pollux burn curve and burnout.
+                # actual thrust includes the active solid motor's burn curve and burnout.
                 thrust = e.thrust if e.active else (e.max_thrust if e.has_fuel else 0)
                 fixed += thrust*(self.project(e.part.position(frame))-com)
         return allocate(thrusts, arms, fixed)
+
+    def booster_telemetry(self):
+        if self.separated:
+            return 0.0, 0.0, 0.0
+        thrust = sum(e.thrust if e.active else 0.0 for e in self.boosters)
+        fuel = sum(e.part.resources.amount('SolidFuel') for e in self.boosters)
+        capacity = sum(e.part.resources.max('SolidFuel') for e in self.boosters)
+        fraction = fuel / capacity if capacity > 0 else 0.0
+        return thrust, fuel, fraction
+
+    def et_resource_amount(self, resource):
+        if not self.et_attached:
+            return 0.0
+        return sum(t.resources.amount(resource) for t in self.tanks)
 
     def top_off(self):
         for resource in ('LiquidFuel', 'Oxidizer'):
@@ -227,7 +272,12 @@ def run(args):
             validate_launch_vessel(v, conn.space_center)
         shuttle = Shuttle(conn)
         result = shuttle.allocation()
+        booster_names = ', '.join(sorted({e.part.title for e in shuttle.boosters}))
+        booster_max_thrust = sum(e.max_thrust for e in shuttle.boosters)
+        booster_solid_fuel = sum(e.part.resources.max('SolidFuel') for e in shuttle.boosters)
         print(f'{v.name}: {v.mass/1000:.2f} t; engine groups Skiff/Near/Far/Cheetah')
+        print(f'Detected solid boosters: {len(shuttle.boosters)} motor(s): {booster_names}; '
+              f'{booster_max_thrust/1000:.0f} kN max; {booster_solid_fuel:.0f} SolidFuel')
         print(f'Preflight throttles: {result.throttles}; residual {result.residual:.0f} N m')
         if not args.launch:
             print('Read-only preflight complete. Use --launch to fly.')
@@ -272,6 +322,9 @@ def run(args):
             with open(args.telemetry, 'w', newline='') as log:
                 writer = csv.writer(log)
                 writer.writerow(['ut', 'state', 'altitude_m', 'apoapsis_m', 'periapsis_m',
+                                 'mass_kg', 'vertical_speed_mps', 'horizontal_speed_mps',
+                                 'dynamic_pressure_pa', 'booster_thrust_N', 'booster_solid_fuel',
+                                 'booster_solid_fuel_fraction', 'et_liquid_fuel', 'et_oxidizer',
                                  'throttles', 'residual_Nm', 'feasible', 'target_roll_deg',
                                  'autopilot_error_deg', 'actual_pitch_deg',
                                  'actual_heading_deg', 'target_pitch_deg'])
@@ -298,11 +351,19 @@ def run(args):
                         pitch = ascent_pitch(altitude, turn_start_altitude,
                                              turn_end_altitude,
                                              initial_pitch)
+                        if (v.orbit.apoapsis_altitude >= args.orbit and
+                                v.orbit.periapsis_altitude < args.meco_periapsis):
+                            pitch = min(pitch, args.meco_pitch)
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
-                        if v.orbit.apoapsis_altitude >= args.orbit:
+                        if (shuttle.separated and
+                                meco_ready(v.orbit.apoapsis_altitude,
+                                           v.orbit.periapsis_altitude,
+                                           args.orbit, args.meco_periapsis)):
                             control.throttle = 0
                             state = 'COAST'
+                            print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
+                                  f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                         elif shuttle.separated and any(sum(t.resources.amount(r) for t in shuttle.tanks) < 1 for r in ('LiquidFuel', 'Oxidizer')):
                             if shuttle.release_et():
                                 state = 'ORBITER_ASCENT'
@@ -358,13 +419,19 @@ def run(args):
                     if conn.space_center.ut >= next_report:
                         actual_pitch, actual_heading = pitch_heading_for_direction(
                             v.direction(v.surface_reference_frame))
+                        booster_thrust, booster_fuel, booster_fraction = shuttle.booster_telemetry()
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
+                                         v.mass, flight.vertical_speed, flight.horizontal_speed,
+                                         flight.dynamic_pressure, booster_thrust, booster_fuel,
+                                         booster_fraction, shuttle.et_resource_amount('LiquidFuel'),
+                                         shuttle.et_resource_amount('Oxidizer'),
                                          result.throttles if shuttle.et_attached else (1,),
                                          result.residual if shuttle.et_attached else 0,
                                          result.feasible if shuttle.et_attached else True,
                                          0 if roll_reset else initial_roll if initial_roll_set else '',
-                                         ap.error, actual_pitch, actual_heading, target_pitch or ''])
+                                         ap.error, actual_pitch, actual_heading,
+                                         '' if target_pitch is None else target_pitch])
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m')
                         next_report = conn.space_center.ut+2
@@ -394,6 +461,10 @@ def main():
     parser.add_argument('--heading', type=float, default=90)
     parser.add_argument('--turn-start', type=float, default=1000)
     parser.add_argument('--turn-end', type=float, default=45000)
+    parser.add_argument('--meco-periapsis', type=float, default=45000,
+                        help='Minimum periapsis altitude required for normal MECO in m')
+    parser.add_argument('--meco-pitch', type=float, default=0,
+                        help='Surface pitch used to build horizontal energy after target apoapsis')
     parser.add_argument('--roll-reset-delay', type=float, default=180,
                         help='Seconds after booster separation before rolling to 0 degrees')
     parser.add_argument('--hz', type=float, default=10)
@@ -401,8 +472,10 @@ def main():
     parser.add_argument('--telemetry', default='telemetry.csv')
     args = parser.parse_args()
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
-            args.timeout <= 0 or args.roll_reset_delay < 0):
-        parser.error('Invalid loop rate, turn altitudes, timeout, or roll reset delay')
+            args.timeout <= 0 or args.roll_reset_delay < 0 or
+            not 0 <= args.meco_periapsis < args.orbit or
+            not -10 <= args.meco_pitch <= 20):
+        parser.error('Invalid loop rate, ascent/MECO profile, timeout, or roll reset delay')
     run(args)
 
 
