@@ -53,10 +53,10 @@ class FlightTests(unittest.TestCase):
         self.assertAlmostEqual(sum(a*b for a, b in zip(direction, up)), 0)
         self.assertAlmostEqual(sum(x*x for x in up), 1)
 
-    def test_gravity_turn_waits_for_roll_reset_then_starts_smoothly(self):
-        self.assertEqual(ascent_pitch(20000, False, None, None), 89)
-        self.assertEqual(ascent_pitch(20000, True, 20000, 45000), 89)
-        self.assertAlmostEqual(ascent_pitch(32500, True, 20000, 45000), 44.5)
+    def test_gravity_turn_is_independent_of_delayed_roll_reset(self):
+        self.assertEqual(ascent_pitch(1000, 1000, 45000), 89)
+        self.assertAlmostEqual(ascent_pitch(23000, 1000, 45000), 44.5)
+        self.assertEqual(ascent_pitch(45000, 1000, 45000), 5)
 
     def test_attitude_error_guard_allows_bounded_roll_reset_maneuver(self):
         self.assertFalse(attitude_error_exceeded(179.5, 45000, 1))

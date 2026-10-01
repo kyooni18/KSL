@@ -51,11 +51,9 @@ def surface_up_for_pitch_heading(pitch, heading):
             -math.sin(pitch)*math.sin(heading))
 
 
-def ascent_pitch(altitude, roll_reset, turn_start_altitude, turn_end_altitude,
+def ascent_pitch(altitude, turn_start_altitude, turn_end_altitude,
                  initial_pitch=89.0):
-    """Keep the inverted launch near vertical, then start its gradual turn."""
-    if not roll_reset:
-        return initial_pitch
+    """Fly the gravity turn independently of the delayed body-roll reset."""
     progress = min(1, max(0, (altitude-turn_start_altitude) /
                           (turn_end_altitude-turn_start_altitude)))
     return max(5, initial_pitch*(1-progress))
@@ -252,8 +250,8 @@ def run(args):
         initial_roll_set = False
         roll_reset = False
         roll_reset_ut = None
-        turn_start_altitude = None
-        turn_end_altitude = None
+        turn_start_altitude = args.turn_start
+        turn_end_altitude = args.turn_end
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
         signal.signal(signal.SIGTERM, _terminate_as_exception)
         try:
@@ -295,12 +293,9 @@ def run(args):
                     if reset_due and not roll_reset:
                         roll_reset = True
                         roll_reset_ut = conn.space_center.ut
-                        turn_start_altitude = max(args.turn_start, altitude)
-                        turn_end_altitude = max(args.turn_end, turn_start_altitude+10000)
-                        print(f'Roll reset: targeting 0 deg; starting gravity turn at {turn_start_altitude/1000:.1f} km')
+                        print('Roll reset: targeting 0 deg')
                     if state == 'ASCENT':
-                        pitch = ascent_pitch(altitude, roll_reset,
-                                             turn_start_altitude,
+                        pitch = ascent_pitch(altitude, turn_start_altitude,
                                              turn_end_altitude,
                                              initial_pitch)
                         target_pitch = pitch
