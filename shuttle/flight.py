@@ -42,6 +42,16 @@ def pitch_heading_for_direction(direction):
     return pitch, heading
 
 
+def ascent_pitch(altitude, roll_reset, turn_start_altitude, turn_end_altitude,
+                 initial_pitch=89.0):
+    """Keep the inverted launch near vertical, then start its gradual turn."""
+    if not roll_reset:
+        return initial_pitch
+    progress = min(1, max(0, (altitude-turn_start_altitude) /
+                          (turn_end_altitude-turn_start_altitude)))
+    return max(5, initial_pitch*(1-progress))
+
+
 def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
     """Return (target roll, reset due), or (None, False) before liftoff."""
     if not liftoff:
@@ -227,6 +237,8 @@ def run(args):
         roll_up_reference = (1, 0, 0)
         initial_roll_set = False
         roll_reset = False
+        turn_start_altitude = None
+        turn_end_altitude = None
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
         signal.signal(signal.SIGTERM, _terminate_as_exception)
         try:
@@ -261,8 +273,20 @@ def run(args):
                         initial_roll_set = True
                         ap.target_roll = initial_roll
                         print(f'Liftoff: target roll {initial_roll:.1f} deg for heading {args.heading:.1f} deg')
+                    target_roll, reset_due = flight_roll_target(
+                        args.heading, initial_roll_set,
+                        shuttle.booster_separation_ut, conn.space_center.ut,
+                        args.roll_reset_delay)
+                    if reset_due and not roll_reset:
+                        roll_reset = True
+                        turn_start_altitude = max(args.turn_start, altitude)
+                        turn_end_altitude = max(args.turn_end, turn_start_altitude+10000)
+                        print(f'Roll reset: targeting 0 deg; starting gravity turn at {turn_start_altitude/1000:.1f} km')
                     if state == 'ASCENT':
-                        pitch = max(5, initial_pitch*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
+                        pitch = ascent_pitch(altitude, roll_reset,
+                                             turn_start_altitude,
+                                             turn_end_altitude,
+                                             initial_pitch)
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if v.orbit.apoapsis_altitude >= args.orbit:
@@ -310,17 +334,10 @@ def run(args):
                         result = shuttle.update()
                     else:
                         shuttle.skiff.thrust_limit = 1
-                    target_roll, reset_due = flight_roll_target(
-                        args.heading, initial_roll_set,
-                        shuttle.booster_separation_ut, conn.space_center.ut,
-                        args.roll_reset_delay)
                     if target_roll is not None:
                         ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
                     else:
                         ap.target_direction = target_direction
-                    if reset_due and not roll_reset:
-                        roll_reset = True
-                        print('Roll reset: targeting 0 deg')
                     if conn.space_center.ut >= next_report:
                         actual_pitch, actual_heading = pitch_heading_for_direction(
                             v.direction(v.surface_reference_frame))
