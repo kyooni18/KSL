@@ -119,6 +119,16 @@ def attitude_error_exceeded(error, altitude, since_roll_reset=None):
             (since_roll_reset is None or since_roll_reset >= ROLL_RESET_GRACE))
 
 
+def g_force_throttle(current_throttle, actual_g, max_g, recovery_step=.02):
+    """Limit observed G without disturbing relative engine throttle allocation."""
+    current = min(1.0, max(0.0, current_throttle))
+    if actual_g > max_g and actual_g > 0:
+        return max(0.0, min(current, current * max_g / actual_g))
+    if actual_g < max_g - .1:
+        return min(1.0, current + recovery_step)
+    return current
+
+
 def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
     """Return (target roll, reset due), or (None, False) before liftoff."""
     if not liftoff:
@@ -328,11 +338,11 @@ class Shuttle:
                         upper_bounds=self.group_upper_bounds(),
                         mass_flows=mass_flows)
 
-    def commanded_g(self, result):
+    def commanded_g(self, result, main_throttle=1.0):
         fixed_thrust, _ = self._solid_booster_state()
         if self.vessel.mass <= 0:
             return 0.0
-        return (result.thrust + fixed_thrust) / (self.vessel.mass * G0)
+        return (result.thrust * main_throttle + fixed_thrust) / (self.vessel.mass * G0)
 
     def booster_telemetry(self):
         if self.separated:
@@ -585,6 +595,9 @@ def run(args):
                                        max(0.0, conn.space_center.ut-liftoff_ut))
                     if shuttle.et_attached:
                         result = shuttle.update(max_g=args.max_g)
+                        if state == 'ASCENT':
+                            control.throttle = g_force_throttle(
+                                control.throttle, flight.g_force, args.max_g)
                     else:
                         shuttle.skiff.thrust_limit = 1
                     if target_roll is not None:
@@ -601,7 +614,8 @@ def run(args):
                         actual_pitch, actual_heading = pitch_heading_for_direction(
                             v.direction(v.surface_reference_frame))
                         booster_thrust, booster_lf, booster_ox, booster_sf, booster_fraction = shuttle.booster_telemetry()
-                        commanded_g = shuttle.commanded_g(result) if shuttle.et_attached else 0.0
+                        commanded_g = (shuttle.commanded_g(result, control.throttle)
+                                       if shuttle.et_attached else 0.0)
                         booster_full_time = shuttle.liquid_booster_nominal_burn_time()
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,

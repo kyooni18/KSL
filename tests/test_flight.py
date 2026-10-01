@@ -4,7 +4,7 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from shuttle.flight import (Shuttle, ascent_pitch, attitude_error_exceeded,
-                            meco_ready,
+                            meco_ready, g_force_throttle,
                             direction_for_pitch_heading,
                             pitch_heading_for_direction, surface_up_for_pitch_heading,
                             flight_roll_target,
@@ -81,6 +81,12 @@ class FlightTests(unittest.TestCase):
         self.assertFalse(meco_ready(100000, -100000, 100000, 45000))
         self.assertFalse(meco_ready(90000, 45000, 100000, 45000))
         self.assertTrue(meco_ready(100000, 45000, 100000, 45000))
+
+    def test_g_force_governor_preserves_ratios_with_global_throttle(self):
+        self.assertAlmostEqual(g_force_throttle(1.0, 3.3, 3.0), 3.0/3.3)
+        self.assertAlmostEqual(g_force_throttle(.7, 3.5, 3.0), .6)
+        self.assertAlmostEqual(g_force_throttle(.7, 2.8, 3.0), .72)
+        self.assertEqual(g_force_throttle(.7, 2.95, 3.0), .7)
 
     def test_attitude_error_guard_allows_bounded_roll_reset_maneuver(self):
         self.assertFalse(attitude_error_exceeded(179.5, 45000, 1))
