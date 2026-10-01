@@ -3,7 +3,9 @@ import unittest
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from shuttle.flight import (Shuttle, ascent_pitch, direction_for_pitch_heading, pitch_heading_for_direction, flight_roll_target,
+from shuttle.flight import (Shuttle, ascent_pitch, direction_for_pitch_heading,
+                            pitch_heading_for_direction, surface_up_for_pitch_heading,
+                            flight_roll_target,
                             release_controls, roll_for_heading, run, set_autopilot_engaged)
 
 
@@ -43,6 +45,12 @@ class FlightTests(unittest.TestCase):
         pitch, heading = pitch_heading_for_direction(direction)
         self.assertAlmostEqual(pitch, 58)
         self.assertAlmostEqual(heading, 90)
+
+    def test_surface_roll_reference_is_unit_and_perpendicular_near_vertical(self):
+        direction = direction_for_pitch_heading(89, 90)
+        up = surface_up_for_pitch_heading(89, 90)
+        self.assertAlmostEqual(sum(a*b for a, b in zip(direction, up)), 0)
+        self.assertAlmostEqual(sum(x*x for x in up), 1)
 
     def test_gravity_turn_waits_for_roll_reset_then_starts_smoothly(self):
         self.assertEqual(ascent_pitch(20000, False, None, None), 89)

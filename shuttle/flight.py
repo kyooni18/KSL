@@ -42,6 +42,13 @@ def pitch_heading_for_direction(direction):
     return pitch, heading
 
 
+def surface_up_for_pitch_heading(pitch, heading):
+    """Return a unit surface-up vector perpendicular to the launch direction."""
+    pitch, heading = math.radians(pitch), math.radians(heading)
+    return (math.cos(pitch), -math.sin(pitch)*math.cos(heading),
+            -math.sin(pitch)*math.sin(heading))
+
+
 def ascent_pitch(altitude, roll_reset, turn_start_altitude, turn_end_altitude,
                  initial_pitch=89.0):
     """Keep the inverted launch near vertical, then start its gradual turn."""
@@ -232,9 +239,8 @@ def run(args):
         next_report = 0
         initial_roll = roll_for_heading(args.heading)
         initial_pitch = 89.0
-        # Surface-frame x is zenith; keep roll measured against it while
-        # pitch changes through vertical, and convert it at frame transitions.
-        roll_up_reference = (1, 0, 0)
+        # Surface-frame x is zenith. Project it into the plane perpendicular to
+        # the target direction before using it as the roll reference.
         initial_roll_set = False
         roll_reset = False
         turn_start_altitude = None
@@ -335,6 +341,12 @@ def run(args):
                     else:
                         shuttle.skiff.thrust_limit = 1
                     if target_roll is not None:
+                        if state in ('ASCENT', 'ORBITER_ASCENT'):
+                            roll_up_reference = surface_up_for_pitch_heading(
+                                target_pitch, args.heading)
+                        else:
+                            # Orbital-frame x points anti-radially (toward the body).
+                            roll_up_reference = (-1, 0, 0)
                         ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
                     else:
                         ap.target_direction = target_direction
