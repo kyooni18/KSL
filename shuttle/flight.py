@@ -27,6 +27,19 @@ def roll_for_heading(heading):
     return roll if roll <= 180 else roll - 360
 
 
+def roll_reference_for_heading(heading):
+    """Return a fixed cross-track up vector in the surface reference frame."""
+    angle = math.radians(heading)
+    return (0.0, -math.sin(angle), math.cos(angle))
+
+
+def direction_for_pitch_heading(pitch, heading):
+    """Convert pitch/heading to a direction vector in the surface frame."""
+    pitch, heading = math.radians(pitch), math.radians(heading)
+    return (math.sin(pitch), math.cos(pitch) * math.cos(heading),
+            math.cos(pitch) * math.sin(heading))
+
+
 def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
     """Return (target roll, reset due), or (None, False) before liftoff."""
     if not liftoff:
@@ -206,6 +219,8 @@ def run(args):
         state = 'ASCENT'
         next_report = 0
         initial_roll = roll_for_heading(args.heading)
+        roll_reference = roll_reference_for_heading(args.heading)
+        roll_up_reference = roll_reference
         initial_roll_set = False
         roll_reset = False
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -214,7 +229,7 @@ def run(args):
             control.throttle = 0
             control.sas = False
             ap.reference_frame = v.surface_reference_frame
-            ap.target_pitch_and_heading(90, args.heading)
+            ap.target_direction = direction_for_pitch_heading(90, args.heading)
             set_autopilot_engaged(ap, True)
             for group, u in zip(shuttle.groups, result.throttles):
                 for e in group:
@@ -242,7 +257,7 @@ def run(args):
                         print(f'Liftoff: target roll {initial_roll:.1f} deg for heading {args.heading:.1f} deg')
                     if state == 'ASCENT':
                         pitch = max(5, 90*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
-                        ap.target_pitch_and_heading(pitch, args.heading)
+                        target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if v.orbit.apoapsis_altitude >= args.orbit:
                             control.throttle = 0
                             state = 'COAST'
@@ -250,7 +265,7 @@ def run(args):
                             if shuttle.release_et():
                                 state = 'ORBITER_ASCENT'
                     elif state == 'ORBITER_ASCENT':
-                        ap.target_pitch_and_heading(5, args.heading)
+                        target_direction = direction_for_pitch_heading(5, args.heading)
                         control.throttle = min(1, max(.05, (args.orbit-v.orbit.apoapsis_altitude)/5000))
                         if v.orbit.apoapsis_altitude >= args.orbit:
                             control.throttle = 0
@@ -263,7 +278,8 @@ def run(args):
                             time.sleep(1/args.hz)
                             continue
                         ap.reference_frame = v.orbital_reference_frame
-                        ap.target_direction = (0, 1, 0)
+                        roll_up_reference = (1, 0, 0)
+                        target_direction = (0, 1, 0)
                         radius = body.equatorial_radius+v.orbit.apoapsis_altitude
                         dv = max(0, math.sqrt(body.gravitational_parameter/radius)-math.sqrt(body.gravitational_parameter*(2/radius-1/v.orbit.semi_major_axis)))
                         acceleration = shuttle.skiff.max_thrust/v.mass
@@ -272,6 +288,7 @@ def run(args):
                         if v.orbit.time_to_apoapsis <= dv/acceleration/2+1:
                             state = 'INSERTION'
                     elif state == 'INSERTION':
+                        target_direction = (0, 1, 0)
                         control.throttle = min(1, max(.03, (args.orbit-v.orbit.periapsis_altitude)/10000))
                         if v.orbit.periapsis_altitude >= args.orbit-1000:
                             print('Orbital insertion complete')
@@ -287,10 +304,12 @@ def run(args):
                         shuttle.booster_separation_ut, conn.space_center.ut,
                         args.roll_reset_delay)
                     if target_roll is not None:
-                        ap.target_roll = target_roll
-                        if reset_due and not roll_reset:
-                            roll_reset = True
-                            print('Roll reset: targeting 0 deg')
+                        ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
+                    else:
+                        ap.target_direction = target_direction
+                    if reset_due and not roll_reset:
+                        roll_reset = True
+                        print('Roll reset: targeting 0 deg')
                     if conn.space_center.ut >= next_report:
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
