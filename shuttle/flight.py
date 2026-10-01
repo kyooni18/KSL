@@ -213,6 +213,7 @@ def run(args):
         state = 'ASCENT'
         next_report = 0
         initial_roll = roll_for_heading(args.heading)
+        initial_pitch = 89.0
         # Surface-frame x is zenith; keep roll measured against it while
         # pitch changes through vertical, and convert it at frame transitions.
         roll_up_reference = (1, 0, 0)
@@ -224,7 +225,7 @@ def run(args):
             control.throttle = 0
             control.sas = False
             ap.reference_frame = v.surface_reference_frame
-            ap.target_direction = direction_for_pitch_heading(90, args.heading)
+            ap.target_direction = direction_for_pitch_heading(initial_pitch, args.heading)
             set_autopilot_engaged(ap, True)
             for group, u in zip(shuttle.groups, result.throttles):
                 for e in group:
@@ -251,7 +252,7 @@ def run(args):
                         ap.target_roll = initial_roll
                         print(f'Liftoff: target roll {initial_roll:.1f} deg for heading {args.heading:.1f} deg')
                     if state == 'ASCENT':
-                        pitch = max(5, 90*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
+                        pitch = max(5, initial_pitch*(1-min(1, max(0, (altitude-args.turn_start)/(args.turn_end-args.turn_start)))))
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if v.orbit.apoapsis_altitude >= args.orbit:
                             control.throttle = 0
