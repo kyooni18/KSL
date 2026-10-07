@@ -38,14 +38,11 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 .venv/bin/python -m shuttle.flight --launch --orbit 100000 --heading 90
 ```
 
-`--turn-start 1000 --turn-end 45000` sets the altitude range of the gravity turn.
-The four liquid boosters form one stage. All four Skippers receive one shared
-throttle command; their individual positions never create differential booster
-throttle. Their current craft setup is expected to last about 77 seconds at full
-throttle at launch conditions, but the controller does not separate on a clock. It
-runs them as hard as the moment solution and `--max-g 3` limit allow, then shuts
-down and separates all four together when a booster branch begins to run dry. If
-the 3G cap throttles the stack, actual booster burn time may therefore exceed 77 s.
+`--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
+The current STS has two Size2 liquid side boosters. They receive one shared
+throttle command and separate together as soon as either branch runs dry; the
+staged Mite motors are left out of launch control. The four-Skipper profile
+described below applies only to that separate vehicle variant.
 `--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
 target apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
@@ -67,8 +64,8 @@ G, ET LF/Ox remaining, orbit shape, engine allocation, actual/target roll, measu
 roll rate, direct roll-control input, and pitch/yaw attitude errors. Read-only
 preflight also prints the current-pressure full-throttle physical thrust acceleration.
 Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
-Legacy solid boosters, if present, still burn to depletion. The four-Skipper liquid
-booster stage is throttleable and separates as one stage on propellant depletion.
+Legacy solid boosters, if present, still burn to depletion. Liquid booster stages
+are throttleable and separate together on propellant depletion.
 
 ## Control model
 
