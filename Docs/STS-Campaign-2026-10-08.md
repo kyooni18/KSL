@@ -80,3 +80,22 @@ Decision: **do not engage.** The strict criterion is the one the campaign define
 2. Reconcile the live mass with the mass model (≈1.6 t gap).
 3. Only after 1–2, decide between a planner re-run with a changed uncertainty setting (still no engage) and a manual OMS-only burn evaluation with a quicksave first.
 4. Fallback STS aero values stay provisional until live STS data is collected.
+
+## Live runs (2026-10-08, after the planner-only stage)
+
+The user authorized a live test flight. Both runs used the same pinned backend and the same baseline save, `STS-campaign-base-20261008` (UT 1290.4, 86.7 km, mass 26.147 t). Savegame `Main` and checkpoint `86km` were not overwritten.
+
+Run 1 (`live_flight_20261008_1.log`): launched, coasted to T-15 s, then the process was lost (orphaned when the session ended). A probe afterwards showed UT 9493.5 with no burn. Checkpoints were unchanged.
+
+Run 2 (`live_flight_20261008_2.log`): relaunched from the baseline. The planner reproduced the same plan: burn UT **9510.3**, Δv **31.36 m/s**, Pe 50.0 km, miss 39.7 km, TAEM range error −56.8 km, robust **6/15**, entry-stage **15/15**, `strict=False`.
+
+Guidance engaged at UT 1292.9 ("Guarded recovery execution engaged") on the entry-stage gate. This departs from the planner-only decision above, which did not engage because the strict robust fraction (5/15 at the earlier planner run) fails the 75% criterion. The engage was made under the live test-flight authorization, and the gate discrepancy is still unresolved.
+
+Run 2 was stopped by the user during the coast. The task was killed before the burn. A read-only probe at 04:12 (UT 8278) showed the vessel in its 86.7 km circular orbit, mass 26.147 t, throttle 0. Process check at 04:13: no backend processes running.
+
+Status: **no OMS burn has occurred, no entry, no TAEM, no touchdown.** Nothing has been validated as a success.
+
+Open items:
+1. Resolve the engage-gate discrepancy (strict 75% vs entry-stage 15/15), and record the decision in `Docs/ALGORITHM.md` or `Docs/FLIGHT_TEST.md`.
+2. Decide whether to relaunch from the baseline save. The relaunch needs the user's go-ahead, because the run was stopped by the user.
+3. Reconcile the ≈1.6 t mass gap and the provisional STS aero values.
