@@ -148,8 +148,19 @@ Conclusion: the terminal atmosphere already matches live KSP to within about 1%.
 
 MM305 offline rerun with the `identified` profile (the default): same result as the committed baseline, 5 admitted, 0 qualified, 0 violations. The rejection is "no HAC join has an energy-feasible native vertical profile". That points at the aero (STS-N-era coefficient tables) and the energy profile, not at the atmosphere.
 
+Diagnostics (`KSP_LANDER_TAEM_DIAGNOSTICS=1`, run from the repo root): every HAC join station fails in `terminal_solver_generate_profile` (`CLanding/terminal_solver.c:586`, `:681`). The failures split two ways:
+- "route is too short to descend within the slope limit" (76 probes at short leads).
+- "alignment profile is too slow for Final handoff" (exit speed 113–132 m/s against the 160 m/s `final_alignment_speed`, with the 12% tolerance window 141–179 m/s, `TERMINAL_SMOOTH_SPEED_TOLERANCE` in `terminal_solver.c:234`).
+No lead in the bisection range lands inside the window.
+
+Ballistic-coefficient probe (temporary override of `estimated_ballistic_coefficient`, reverted afterward; not a fix):
+- BC 700 (config, STS-N-inherited): 5 admitted, 0 qualified.
+- BC 250: 2 admitted, 0 qualified.
+- BC 120: 0 admitted; every sample vetoed `0x10` (energy or turn margin negative, `CLanding/prediction/decision/taem_capture.inc:153`).
+So the drag scale alone does not open a window. The 700 value is not established for STS and must not be tuned to pass the test.
+
 Next, in order (not yet done):
-1. Find why no HAC join has an energy-feasible native vertical profile. Check the aero coefficients and the force book (`none` for `identified`) against the STS-N-era sources. Do not reuse STS-N calibration as STS validation.
+1. The MM305 gate has no STS-valid window with the current STS-N-era aero, across the drag values tried. Resolve it with STS-specific aero data (not available offline) or by stating that MM305 cannot qualify for STS. Do not tune BC or any aero value to pass the test, and do not reuse STS-N calibration as STS validation.
 2. Provide an STS-specific aero book, or mark STS terminal aero as unavailable and refuse admissibility.
 3. Re-run `make -C CLanding test` before any live relaunch.
 
