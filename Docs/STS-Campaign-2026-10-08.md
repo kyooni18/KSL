@@ -190,3 +190,16 @@ Live observation, not a pass. Command: `--live --reentry-only` with `KSP_LANDER_
 - No touchdown, rollout, or landing occurred.
 
 Reading: the dominant failure is energy and range. At 10.7 km the vehicle is still about 198 km out with a predicted range margin near −100 km, so MM304 cannot bring it to the HAC. This matches the offline MM305 finding that the STS-N-era aero cannot produce an energy-feasible native profile. The run does not show a gate problem. The next change must address aero or energy, not the shadow gate.
+
+## MM305 root-cause probes (2026-10-08, offline, all reverted)
+
+Temporary single-value probes. Source is restored; `git status` shows no `CLanding` change.
+
+- `finalAlignmentSpeed` 160 → 120 m/s: still 0 of 5 qualified. The rejection is unchanged.
+- `estimatedLiftToDrag` 0.4 → 1.0 and → 4.0: the outcome and per-station reason counts are identical. The scalar L/D does not reach the native vertical profile. Only the final preflare planning uses it.
+- Per-station reasons, baseline (`KSP_LANDER_TAEM_DIAGNOSTICS=1`): "route is too long for the available energy" (317), "profile exceeded propagation time" (300), "route is too short to descend within the slope limit" (277), "alignment profile is too slow for Final handoff" (96). The lead-length bisection never finds a station between the too-short and too-long bounds.
+- The native profile is driven by the identified STS-N aero table (`ShuttleSim/reference-model/stsn_aero_identified.csv`). At alpha 18 its L/D is 0.74 at Mach 2, 0.67 at Mach 3, and 0.54 at Mach 5. Those are the MM305 speeds. The energy and slope bounds cannot both be met at that L/D, so no lead length qualifies.
+
+Conclusion: MM305 cannot qualify for STS with the available aero. The blocker is the aero data, not a gate constant or the handoff speed. Changing the 12% tolerance, the slope limit, or the alignment speed to make the test pass would be tuning to the test, so it was not done. The same limit explains live run 9: MM304 could not close range from 10.7 km (predicted margin about −100 km).
+
+Not resolved, and needing STS-specific aero (lift and drag tables for the orbiter in the MM305 band, Mach 1.5–5, alpha 15–20) before any further MM305 or live entry attempt is meaningful.
