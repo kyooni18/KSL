@@ -177,3 +177,16 @@ Next, in order (not yet done):
 
 Status: no entry, TAEM, touchdown, or rollout has occurred. The only path to guidance engagement is past the MM305 and shadow gate, which is a design decision (see the MM305 section above), not a runner setting.
 
+
+## Live run 9 (2026-10-08, from `STS-campaign-72km-20261008`)
+
+Live observation, not a pass. Command: `--live --reentry-only` with `KSP_LANDER_UNPOWERED_ONLY=1`.
+
+- Entry Interface at UT 9932.4, alt 71.9 km, range 1092.8 km, TAS 2092.6 m/s. The shadow gate qualified on its own. The log reads "Reentry-only continuation armed ... after shadow qualification". No rejection message was logged.
+- An opt-in `KSP_LANDER_BYPASS_SHADOW_GATE` bypass was added and then reverted before this run's conclusions were written. It was never exercised: no `shadow-gate-bypassed` event appears in the run log or the state logs. Run 9 did not depend on it. Do not cite it as the reason run 9 engaged.
+- MM304 phases reached: Temperature Control, Equilibrium Glide, Constant Drag, Transition. Predicted range margin ran +2490 km, +160 km, −62 km, −104 km, then settled near −100 km.
+- MM305 was never admissible. TAEM was never acquired.
+- Abort at UT 10785.4: alt 10.7 km, range 197.6 km, TAS 85.0 m/s, cross-track −43.5 km. Message: "MM304 flight recovery margin was exhausted before TAEM acquisition." The runner restored the 72 km save and froze the quicksave.
+- No touchdown, rollout, or landing occurred.
+
+Reading: the dominant failure is energy and range. At 10.7 km the vehicle is still about 198 km out with a predicted range margin near −100 km, so MM304 cannot bring it to the HAC. This matches the offline MM305 finding that the STS-N-era aero cannot produce an energy-feasible native profile. The run does not show a gate problem. The next change must address aero or energy, not the shadow gate.
