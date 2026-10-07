@@ -211,3 +211,9 @@ Not resolved, and needing STS-specific aero (lift and drag tables for the orbite
 - Result: `success=false`, `abortReason="MM304 flight recovery margin was exhausted before TAEM acquisition."`, no touchdown, no rollout.
 - This matches live run 9 (abort at 10.7 km with the same message). The offline harness reproduces the live failure, so it is a valid bench for entry-profile experiments.
 - Existing offline manifests in `ShuttleSim/runs/` (23 runs): none has `rolloutValid`, `touchdownSpeedOk`, or `touchdownGearDown` set true. The offline closed loop has never landed with the current aero.
+
+## Offline entry-AoA probe (2026-10-08, temporary configs, `Configuration/sts.json` unchanged)
+
+- `vehicle.entryAngleOfAttack` 12 and 24 (default 18), offline closed loop from `ksp70km-entry-interface`: both abort with the same message, "MM304 flight recovery margin was exhausted before TAEM acquisition." No touchdown, no rollout.
+- The result does not change across entry AoA. The abort is insensitive to this knob, which points at the aero table or the MM304 range/energy plan, not the entry AoA command.
+- Not yet tested: whether `entryAngleOfAttack` is read by the offline path at all (`run_guidance.py` may take the initial AoA from the scenario `initial_aoa_deg`). Check before reading this result as a sensitivity.
