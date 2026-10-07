@@ -16,6 +16,7 @@ BOOSTER_PAD_CAP = 1.00
 OUTER_SKIPPER_PAD_CAP = 0.45
 THROTTLE_SLEW_PER_SECOND = 0.25
 PITCH_SLEW_DEG_PER_SECOND = 2.0
+MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
 def smoothstep01(value):
@@ -418,6 +419,14 @@ def g_force_throttle(current_throttle, actual_g, max_g, recovery_step=.02):
     if actual_g < max_g - .1:
         return min(1.0, current + recovery_step)
     return current
+
+
+def dynamic_pressure_throttle(current_throttle, dynamic_pressure, max_dynamic_pressure):
+    """Reduce liquid throttle when measured aerodynamic pressure exceeds its cap."""
+    if max_dynamic_pressure <= 0 or dynamic_pressure <= max_dynamic_pressure:
+        return current_throttle
+    ratio = max_dynamic_pressure / max(dynamic_pressure, 1e-9)
+    return current_throttle * math.sqrt(ratio)
 
 
 
@@ -1390,6 +1399,8 @@ def run(args):
                         if state == 'ASCENT':
                             control.throttle = g_force_throttle(
                                 control.throttle, flight.g_force, args.max_g)
+                            control.throttle = dynamic_pressure_throttle(
+                                control.throttle, flight.dynamic_pressure, args.max_q)
                     else:
                         shuttle.skiff.thrust_limit = 1
                     actual_roll = ''
@@ -1554,6 +1565,8 @@ def main():
                         help='Surface pitch used to build horizontal energy after target apoapsis')
     parser.add_argument('--max-g', type=float, default=3.0,
                         help='Maximum commanded thrust acceleration in Earth g')
+    parser.add_argument('--max-q', type=float, default=MAX_DYNAMIC_PRESSURE_PA,
+                        help='Maximum dynamic pressure in Pa; reduces liquid throttle above this value')
     parser.add_argument('--launch-g', type=float, default=LAUNCH_TARGET_G,
                         help='Gentle initial thrust-acceleration target in Earth g')
     parser.add_argument('--booster-min-g', type=float, default=BOOSTER_MIN_G,

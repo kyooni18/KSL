@@ -12,6 +12,9 @@ throttles the SSMEs and paired liquid boosters during ascent, then disables the
 SSMEs and enables both AJ10s when the ET is released. The documented
 four-Skipper and J-N500 layouts remain separate supported variants; their
 variant-specific allocation notes below do not describe this Orbiter craft.
+The ascent also applies a 25 kPa default dynamic-pressure cap and a measured-G
+cap. Set `--max-q` to tune the pressure limit for the installed aero parts and
+KSP aero settings.
 
 ## Run
 
@@ -76,7 +79,10 @@ At each control tick, the program solves a bounded moment equality while obeying
 the 3G total-thrust cap. KSP's measured `Flight.g_force` is also fed back into the
 global liquid throttle: if aerodynamic or other loads push observed G above the
 limit, the whole liquid stack is scaled down together, preserving all relative
-engine allocations. Core commands remain Skiff, two near Bobcats, two far Bobcats,
+engine allocations. Measured dynamic pressure also reduces liquid throttle above
+the configured `--max-q` cap. This feedback guard does not predict lift, drag,
+angle of attack, or aerodynamic pitching torque. Core commands remain Skiff, two
+near Bobcats, two far Bobcats,
 and Cheetah. The four liquid-booster Skippers are deliberately collapsed
 into one additional throttle group, so all four always receive exactly the same
 throttle. Their collective pitching moment is still included and is compensated by
