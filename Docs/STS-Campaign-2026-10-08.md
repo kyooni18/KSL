@@ -122,3 +122,34 @@ Open items:
 1. The planning aero is the blocker. Fix it from data, not from the single measured-drag ratio: the MM304 feedback is labelled degraded, and the predicted range is unstable. Compare the live density at entry altitudes against `ShuttleSim/data/kerbin_atmosphere_seed.csv` (the seed is isothermal 170 K above 40 km, with density 0.00175 kg/m³ at 40 km). Then decide whether to refit the drag model or change the atmosphere source.
 2. Diagnose the run 5 backend timeout. KSP was responsive afterwards (UT and altitude readable), so the timeout is in the runner, not in KSP.
 3. Keep the 86 km, 72 km, and baseline saves unchanged. The quicksave is overwritten by each cleanup.
+
+## Atmosphere and aero source diagnosis (offline + read-only probes, 2026-10-08)
+
+Live KSP density (read-only `CelestialBody.density_at`, KSP 1.12.5, this install) against `ShuttleSim/data/kerbin_atmosphere_seed.csv`:
+
+| altitude (km) | live density (kg/m³) | seed density (kg/m³) | live/seed |
+|---|---|---|---|
+| 0 | 1.140 | 1.225 | 0.93 |
+| 10 | 0.282 | 0.414 | 0.68 |
+| 20 | 0.0400 | 0.098 | 0.41 |
+| 30 | 0.00571 | 0.0150 | 0.38 |
+| 40 | 0.00100 | 0.00175 | 0.57 |
+| 50 | 0.000222 | 0.000170 | 1.31 |
+| 55 | 9.63e-5 | 5.0e-5 | 1.93 |
+| 60 | 3.82e-5 | 1.4e-5 | 2.73 |
+| 65 | 1.15e-5 | 3.4e-6 | 3.38 |
+| 70 | 0 | 0 | — |
+
+The seed file is documented as an approximation to be replaced by exported KSP data. It is not this install.
+
+Which tables each path uses:
+- Live guidance and planning: the 71-sample live table captured in `CLanding/transport/client/session.inc:297–320` into `PlanetModel`.
+- Terminal model (MM305/TAEM admissibility, `CLanding/app/controller/api.inc:10–22`): atmosphere, aero, and force book come from the ShuttleSim default model files (`shuttle_sim_model_path`, `SHUTTLE_SIM_MODEL_ATMOSPHERE/AERO/FORCE_BOOK`) unless overridden by environment variables. These defaults are not STS-specific and not live-derived.
+- `CLanding/guidance/guidance_final.c:50–68` also copies the terminal atmosphere into `PlanetModel` for native terminal delivery admissibility.
+
+Conclusion: the shadow gate and terminal admissibility can see a different atmosphere than the one KSP actually applies, and both use STS-N-era aero. The −62 km range error and the unstable predicted range are consistent with this. The measured-drag ratio in the earlier notes does not reconcile with a single density scale and should not be used to fit the drag model.
+
+Next, in order (not yet done):
+1. Make the terminal path take atmosphere from the live capture when a live capture is present, and keep the seed as the offline fallback. Record the source in the run manifest.
+2. Provide an STS-specific aero book, or mark the STS terminal aero as unavailable and refuse admissibility. Do not reuse the STS-N book as validation.
+3. Re-run offline validation on the new source before any live relaunch.
