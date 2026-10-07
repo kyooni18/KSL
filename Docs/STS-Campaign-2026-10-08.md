@@ -167,3 +167,13 @@ Next, in order (not yet done):
 ## Offline baseline (2026-10-08)
 
 `make -C CLanding test` on the committed source (before any CLanding change) fails at `mm305-feasibility-test`: "no physically admitted state qualifies an MM305 route; the contract would never hand over." 5 samples admitted, 0 qualified, all held in MM304. The failure is in the repository state, not from the run 3–5 changes (`97abc5b` and `6199020` touch only `Configuration/sts.json` and `Tools/ksp_test_guard.py`). The rejection reason is "no HAC join has an energy-feasible native vertical profile". The atmosphere source has been ruled out (see the source check above), so the cause is in the aero and energy profile. Fixing this is the first gate before any further live entry attempt.
+
+## Live attempts after the offline probes (2026-10-08)
+
+- Run 6 and run 8 (`--reentry-only` and `--connect-only`, both from `STS-campaign-72km-20261008`): the load helper returned `scene-did-not-settle` (`Tools/ksp_test_guard.py:265`). Run 7 with the same command settled. KSP load timing is flaky.
+- `--reentry-only` is a live continuation mode and is refused without `--live` (run 7). No unguided observation mode exists in the runner.
+- Read-only probe after the failed loads: KSP is in the Flight scene, vessel STS at 69.94 km, speed 2099.7 m/s, Mach 7.11, throttle 0, SAS off. UT is frozen at 9964.8 across 80 s of samples, so the game clock is paused. The vessel is parked and not descending. The 72 km save and the 86 km checkpoint are untouched.
+- Run 5 reported "0 certified aerodynamic cells" for STS. The shadow gate rejects reentry for this reason, so guidance never engages. Rerunning the live command without a change reproduces the rejection.
+
+Status: no entry, TAEM, touchdown, or rollout has occurred. The only path to guidance engagement is past the MM305 and shadow gate, which is a design decision (see the MM305 section above), not a runner setting.
+
