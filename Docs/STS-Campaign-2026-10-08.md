@@ -99,3 +99,26 @@ Open items:
 1. Resolve the engage-gate discrepancy (strict 75% vs entry-stage 15/15), and record the decision in `Docs/ALGORITHM.md` or `Docs/FLIGHT_TEST.md`.
 2. Decide whether to relaunch from the baseline save. The relaunch needs the user's go-ahead, because the run was stopped by the user.
 3. Reconcile the ≈1.6 t mass gap and the provisional STS aero values.
+
+## Live runs 3–5 (2026-10-08, after the run 2 stop)
+
+Run bq0adnn5y (`live_flight_20261008_3.log`): burn from baseline UT 1290.3 under the STS profile with `timeoutMs: 2000`. Post-burn Pe 52.0 km, Ap 86.8 km, mass 25.819 t. Coast to 72 km saved `STS-campaign-72km-20261008`. Entry was flown on guarded recovery. The fault at UT 10250.0 (55.3 km, range 486.7 km) was `direct control C-Nano batch failed: decoding failed (transport=timeout)`. Control was returned to the pilot and the runner reloaded the baseline.
+
+Live measurements from this run (provisional, STS profile, degraded aero feedback per MM304):
+- Entry drag: measured D 0.00 m/s² at 69 km against reference 2.7 m/s²; D 0.56 against reference 1.03 at 55 km. The measured drag was far below the reference model.
+- Predicted range minus available range swung from −179 km (69 km) to +541 km (55 km). This is an unstable prediction, not a single scale error.
+
+Changes committed:
+- `97abc5b` raised the STS `timeoutMs` from 2000 to 10000, to match the validated MM305 and live-cnano profiles. Connection setting only.
+- `6199020` widened the load settle window in `Tools/ksp_test_guard.py` from target+8 s to target+60 s. This was needed because the 72 km save (UT 9930) loads from a baseline scene at UT 1290, and the Flight scene takes longer than 8 s to rebuild.
+
+Run 4 (`live_flight_20261008_4.log`): failed in the load helper (`scene-did-not-settle`). The save had loaded, and KSP was paused at UT 9958.7, 70.3 km.
+
+Run 5 (`live_flight_20261008_5.log`): loaded `STS-campaign-72km-20261008` at UT 9930.2 and settled. Guidance did not engage: "Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=0.5 km, range error=−62.0 km, q=8.4 kPa, g=3.07." The run then exited with "Timed out waiting for the landing backend" after cleanup restored and froze the quicksave.
+
+Status: **no entry-stage control, no TAEM, no MM305 handoff, no touchdown, no rollout.** The entry-stage shadow gate rejects the STS planning aero (inherited STS-N fallback, LD 0.4, β 700). Nothing here is validated as a success.
+
+Open items:
+1. The planning aero is the blocker. Fix it from data, not from the single measured-drag ratio: the MM304 feedback is labelled degraded, and the predicted range is unstable. Compare the live density at entry altitudes against `ShuttleSim/data/kerbin_atmosphere_seed.csv` (the seed is isothermal 170 K above 40 km, with density 0.00175 kg/m³ at 40 km). Then decide whether to refit the drag model or change the atmosphere source.
+2. Diagnose the run 5 backend timeout. KSP was responsive afterwards (UT and altitude readable), so the timeout is in the runner, not in KSP.
+3. Keep the 86 km, 72 km, and baseline saves unchanged. The quicksave is overwritten by each cleanup.
