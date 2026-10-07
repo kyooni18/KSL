@@ -203,3 +203,11 @@ Temporary single-value probes. Source is restored; `git status` shows no `CLandi
 Conclusion: MM305 cannot qualify for STS with the available aero. The blocker is the aero data, not a gate constant or the handoff speed. Changing the 12% tolerance, the slope limit, or the alignment speed to make the test pass would be tuning to the test, so it was not done. The same limit explains live run 9: MM304 could not close range from 10.7 km (predicted margin about −100 km).
 
 Not resolved, and needing STS-specific aero (lift and drag tables for the orbiter in the MM305 band, Mach 1.5–5, alpha 15–20) before any further MM305 or live entry attempt is meaningful.
+
+## Offline closed-loop reproduction (2026-10-08)
+
+`ShuttleSim/scripts/run_guidance.py --scenario ksp70km-entry-interface.ini --configuration Configuration/sts.json`, closed loop, no KSP.
+
+- Result: `success=false`, `abortReason="MM304 flight recovery margin was exhausted before TAEM acquisition."`, no touchdown, no rollout.
+- This matches live run 9 (abort at 10.7 km with the same message). The offline harness reproduces the live failure, so it is a valid bench for entry-profile experiments.
+- Existing offline manifests in `ShuttleSim/runs/` (23 runs): none has `rolloutValid`, `touchdownSpeedOk`, or `touchdownGearDown` set true. The offline closed loop has never landed with the current aero.
