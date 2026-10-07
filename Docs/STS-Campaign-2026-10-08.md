@@ -123,37 +123,36 @@ Open items:
 2. Diagnose the run 5 backend timeout. KSP was responsive afterwards (UT and altitude readable), so the timeout is in the runner, not in KSP.
 3. Keep the 86 km, 72 km, and baseline saves unchanged. The quicksave is overwritten by each cleanup.
 
-## Atmosphere and aero source diagnosis (offline + read-only probes, 2026-10-08)
+## Atmosphere and aero source check (offline + read-only probes, 2026-10-08)
 
-Live KSP density (read-only `CelestialBody.density_at`, KSP 1.12.5, this install) against `ShuttleSim/data/kerbin_atmosphere_seed.csv`:
-
-| altitude (km) | live density (kg/m³) | seed density (kg/m³) | live/seed |
-|---|---|---|---|
-| 0 | 1.140 | 1.225 | 0.93 |
-| 10 | 0.282 | 0.414 | 0.68 |
-| 20 | 0.0400 | 0.098 | 0.41 |
-| 30 | 0.00571 | 0.0150 | 0.38 |
-| 40 | 0.00100 | 0.00175 | 0.57 |
-| 50 | 0.000222 | 0.000170 | 1.31 |
-| 55 | 9.63e-5 | 5.0e-5 | 1.93 |
-| 60 | 3.82e-5 | 1.4e-5 | 2.73 |
-| 65 | 1.15e-5 | 3.4e-6 | 3.38 |
-| 70 | 0 | 0 | — |
-
-The seed file is documented as an approximation to be replaced by exported KSP data. It is not this install.
+Correction: an earlier version of this section said the terminal model used the seed atmosphere and that the live/seed mismatch explained the shadow-gate rejection. That was wrong. The seed CSV (`ShuttleSim/data/kerbin_atmosphere_seed.csv`) is not used on any live or MM305 path. The seed is only used by ShuttleSim's own tests and tools.
 
 Which tables each path uses:
-- Live guidance and planning: the 71-sample live table captured in `CLanding/transport/client/session.inc:297–320` into `PlanetModel`.
-- Terminal model (MM305/TAEM admissibility, `CLanding/app/controller/api.inc:10–22`): atmosphere, aero, and force book come from the ShuttleSim default model files (`shuttle_sim_model_path`, `SHUTTLE_SIM_MODEL_ATMOSPHERE/AERO/FORCE_BOOK`) unless overridden by environment variables. These defaults are not STS-specific and not live-derived.
-- `CLanding/guidance/guidance_final.c:50–68` also copies the terminal atmosphere into `PlanetModel` for native terminal delivery admissibility.
+- Terminal model (MM305/TAEM admissibility): `shuttle_sim_model_path` with the default profile `identified` (`CLanding/telemetry/sim_telemetry.c`, `model_profiles[]`). Atmosphere is `ShuttleSim/reference-model/kerbin_atmosphere_identified.csv`. Aero is `stsn_aero_identified.csv`, which is STS-N-era. The force book is `none` for this profile, so only the coefficient tables are loaded.
+- Live guidance: the 71-sample table captured from KSP in `CLanding/transport/client/session.inc:297–320`.
 
-Conclusion: the shadow gate and terminal admissibility can see a different atmosphere than the one KSP actually applies, and both use STS-N-era aero. The −62 km range error and the unstable predicted range are consistent with this. The measured-drag ratio in the earlier notes does not reconcile with a single density scale and should not be used to fit the drag model.
+Live KSP density (read-only `CelestialBody.density_at`, KSP 1.12.5) against the `identified` table the terminal model uses:
+
+| altitude (km) | live (kg/m³) | identified (kg/m³) | live/identified |
+|---|---|---|---|
+| 0 | 1.1399 | 1.1486 | 0.992 |
+| 10 | 0.2819 | 0.2826 | 0.998 |
+| 20 | 0.04003 | 0.04003 | 1.000 |
+| 30 | 0.005714 | 0.005719 | 0.999 |
+| 40 | 0.0010007 | 0.0010010 | 1.000 |
+| 50 | 0.00022172 | 0.00022144 | 1.001 |
+| 60 | 3.8179e-5 | 3.8091e-5 | 1.002 |
+| 65 | 1.1478e-5 | 1.1538e-5 | 0.995 |
+
+Conclusion: the terminal atmosphere already matches live KSP to within about 1%. The atmosphere source is not the cause of the MM305 rejection or the shadow-gate rejection. The earlier proposal to adopt the live table into the terminal model is dropped and was reverted, since it would change nothing measurable.
+
+MM305 offline rerun with the `identified` profile (the default): same result as the committed baseline, 5 admitted, 0 qualified, 0 violations. The rejection is "no HAC join has an energy-feasible native vertical profile". That points at the aero (STS-N-era coefficient tables) and the energy profile, not at the atmosphere.
 
 Next, in order (not yet done):
-1. Make the terminal path take atmosphere from the live capture when a live capture is present, and keep the seed as the offline fallback. Record the source in the run manifest.
-2. Provide an STS-specific aero book, or mark the STS terminal aero as unavailable and refuse admissibility. Do not reuse the STS-N book as validation.
-3. Re-run offline validation on the new source before any live relaunch.
+1. Find why no HAC join has an energy-feasible native vertical profile. Check the aero coefficients and the force book (`none` for `identified`) against the STS-N-era sources. Do not reuse STS-N calibration as STS validation.
+2. Provide an STS-specific aero book, or mark STS terminal aero as unavailable and refuse admissibility.
+3. Re-run `make -C CLanding test` before any live relaunch.
 
 ## Offline baseline (2026-10-08)
 
-`make -C CLanding test` on the committed source (before any CLanding change) fails at `mm305-feasibility-test`: "no physically admitted state qualifies an MM305 route; the contract would never hand over." 5 samples admitted, 0 qualified, all held in MM304. The failure is in the repository state, not from the run 3–5 changes (`97abc5b` and `6199020` touch only `Configuration/sts.json` and `Tools/ksp_test_guard.py`). The rejection reason is "no HAC join has an energy-feasible native vertical profile", which is consistent with the atmosphere and aero source split above. Fixing this is the first gate before any further live entry attempt.
+`make -C CLanding test` on the committed source (before any CLanding change) fails at `mm305-feasibility-test`: "no physically admitted state qualifies an MM305 route; the contract would never hand over." 5 samples admitted, 0 qualified, all held in MM304. The failure is in the repository state, not from the run 3–5 changes (`97abc5b` and `6199020` touch only `Configuration/sts.json` and `Tools/ksp_test_guard.py`). The rejection reason is "no HAC join has an energy-feasible native vertical profile". The atmosphere source has been ruled out (see the source check above), so the cause is in the aero and energy profile. Fixing this is the first gate before any further live entry attempt.
