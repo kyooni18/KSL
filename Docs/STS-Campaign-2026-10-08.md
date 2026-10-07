@@ -153,3 +153,7 @@ Next, in order (not yet done):
 1. Make the terminal path take atmosphere from the live capture when a live capture is present, and keep the seed as the offline fallback. Record the source in the run manifest.
 2. Provide an STS-specific aero book, or mark the STS terminal aero as unavailable and refuse admissibility. Do not reuse the STS-N book as validation.
 3. Re-run offline validation on the new source before any live relaunch.
+
+## Offline baseline (2026-10-08)
+
+`make -C CLanding test` on the committed source (before any CLanding change) fails at `mm305-feasibility-test`: "no physically admitted state qualifies an MM305 route; the contract would never hand over." 5 samples admitted, 0 qualified, all held in MM304. The failure is in the repository state, not from the run 3–5 changes (`97abc5b` and `6199020` touch only `Configuration/sts.json` and `Tools/ksp_test_guard.py`). The rejection reason is "no HAC join has an energy-feasible native vertical profile", which is consistent with the atmosphere and aero source split above. Fixing this is the first gate before any further live entry attempt.
