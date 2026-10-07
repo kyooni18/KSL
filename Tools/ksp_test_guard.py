@@ -233,7 +233,7 @@ def load_save(name: str) -> int:
                     rewound = state["ut"] < before_ut - 0.25
                     loaded_target = (
                         target_ut is not None
-                        and target_ut - 0.5 <= state["ut"] <= target_ut + 8.0
+                        and target_ut - 0.5 <= state["ut"] <= target_ut + 60.0
                     )
                     if (rewound or loaded_target) and state["railsWarpFactor"] == 0 and state["physicsWarpFactor"] == 0:
                         try:
