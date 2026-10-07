@@ -45,7 +45,8 @@ def manifest(path, meta):
         values = node['values']
         name = values['part'][0].rsplit('_', 1)[0]
         if name in ('LiquidEngineRE-I2', 'LiquidEngineLV-TX87', 'LiquidEngineLV-T91',
-                    'engineLargeSkipper_v2', 'engineLargeSkipper', 'Pollux'):
+                    'engineLargeSkipper_v2', 'engineLargeSkipper', 'Pollux',
+                    'SSME', 'benjee10.AJ10.v2', 'Size2LFB.v2', 'Mite'):
             engines.append({'name': name, 'id': values['part'][0],
                             'position': [float(v) for v in values['pos'][0].split(',')],
                             'stage': int(values['istg'][0])})

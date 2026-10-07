@@ -4,11 +4,55 @@ import csv
 import math
 import signal
 import time
-from .allocation import allocate
+from .allocation import Allocation, allocate
 
 ROLL_RESET_GRACE = 60.0
 G0 = 9.80665
 CONTROL_TORQUE_FRACTION = 0.65
+
+LAUNCH_TARGET_G = 1.08
+BOOSTER_MIN_G = 1.20
+BOOSTER_PAD_CAP = 1.00
+OUTER_SKIPPER_PAD_CAP = 0.45
+THROTTLE_SLEW_PER_SECOND = 0.25
+PITCH_SLEW_DEG_PER_SECOND = 2.0
+
+
+def smoothstep01(value):
+    x = min(1.0, max(0.0, value))
+    return x*x*(3.0-2.0*x)
+
+
+def ascent_target_g(altitude, atmosphere_depth, max_g, launch_g=LAUNCH_TARGET_G,
+                    minimum_g=0.0):
+    """Smooth ascent target with an optional hard lower bound."""
+    if atmosphere_depth <= 0:
+        target = min(max_g, launch_g)
+    else:
+        blend = smoothstep01(max(0.0, altitude) / atmosphere_depth)
+        target = min(max_g, launch_g + (max_g-launch_g)*blend)
+    return min(max_g, max(minimum_g, target))
+
+
+def slew_value(current, target, rate_per_second, dt):
+    if dt <= 0 or rate_per_second <= 0:
+        return current
+    step = rate_per_second*dt
+    return current + max(-step, min(step, target-current))
+
+
+def slew_vector(current, target, rate_per_second, dt):
+    """Move all actuator channels with one interpolation factor."""
+    if len(current) != len(target):
+        raise ValueError('Current and target vectors must have equal length')
+    if dt <= 0 or rate_per_second <= 0:
+        return tuple(current)
+    delta = [t-c for c, t in zip(current, target)]
+    largest = max((abs(x) for x in delta), default=0.0)
+    if largest == 0:
+        return tuple(target)
+    alpha = min(1.0, rate_per_second*dt/largest)
+    return tuple(c + alpha*d for c, d in zip(current, delta))
 
 
 def descendants(part):
@@ -88,10 +132,54 @@ def part_engine(part):
         return None
 
 
+def isolate_aero_roll(vessel):
+    """Disable only aerodynamic roll channels and return restorable states."""
+    states = []
+    for part in vessel.parts.all:
+        try:
+            surface = part.control_surface
+            if surface is None:
+                continue
+            enabled = surface.roll_enabled
+            states.append((surface, enabled))
+            if enabled:
+                surface.roll_enabled = False
+        except Exception:
+            continue
+    return states
+
+
+def restore_aero_roll(states):
+    """Restore control-surface roll-channel states captured by isolate_aero_roll."""
+    for surface, enabled in states:
+        try:
+            surface.roll_enabled = enabled
+        except Exception:
+            pass
+
+
 def is_skipper_engine(engine):
     name = getattr(engine.part, 'name', '')
     title = getattr(engine.part, 'title', '')
-    return name in ('engineLargeSkipper_v2', 'engineLargeSkipper') or 'Skipper' in title
+    return name in ('engineLargeSkipper.v2', 'engineLargeSkipper_v2', 'engineLargeSkipper') or 'Skipper' in title
+
+
+def is_wolfhound_engine(engine):
+    name = getattr(engine.part, 'name', '')
+    title = getattr(engine.part, 'title', '')
+    return name == 'LiquidEngineRE-J10' or 'Wolfhound' in title
+
+
+def is_kodiak_engine(engine):
+    name = getattr(engine.part, 'name', '')
+    title = getattr(engine.part, 'title', '')
+    return name == 'LiquidEngineRK-7' or 'Kodiak' in title
+
+
+def is_cub_engine(engine):
+    name = getattr(engine.part, 'name', '')
+    title = getattr(engine.part, 'title', '')
+    return name == 'LiquidEngineRV-1' or 'Cub' in title
 
 
 def meco_ready(apoapsis_altitude, periapsis_altitude, target_apoapsis, minimum_periapsis):
@@ -121,6 +209,14 @@ def pitch_heading_for_direction(direction):
     return pitch, heading
 
 
+def surface_axis_errors(direction, target_pitch, target_heading):
+    """Pitch/heading errors from geometry, independent of AutoPilot engagement state."""
+    actual_pitch, actual_heading = pitch_heading_for_direction(direction)
+    pitch_error = abs(target_pitch-actual_pitch)
+    heading_error = abs(wrap_roll(target_heading-actual_heading))
+    return pitch_error, heading_error
+
+
 def direction_error_deg(actual, target):
     """Angular nose error independent of roll and AutoPilot.error quirks."""
     an = math.sqrt(sum(x*x for x in actual))
@@ -136,6 +232,49 @@ def surface_up_for_pitch_heading(pitch, heading):
     pitch, heading = math.radians(pitch), math.radians(heading)
     return (math.cos(pitch), -math.sin(pitch)*math.cos(heading),
             -math.sin(pitch)*math.sin(heading))
+
+
+def dot3(a, b):
+    return sum(x*y for x, y in zip(a, b))
+
+
+def cross3(a, b):
+    return (a[1]*b[2]-a[2]*b[1],
+            a[2]*b[0]-a[0]*b[2],
+            a[0]*b[1]-a[1]*b[0])
+
+
+def normalize3(v):
+    length = math.sqrt(dot3(v, v))
+    if length <= 1e-12:
+        raise ValueError('Cannot normalize a zero-length vector')
+    return tuple(x/length for x in v)
+
+
+def project_perpendicular(v, axis):
+    axis = normalize3(axis)
+    return tuple(x-axis[i]*dot3(v, axis) for i, x in enumerate(v))
+
+
+def desired_orbiter_side(pitch, heading, earthward=True):
+    """Desired ET->orbiter side axis in the surface frame.
+
+    The orbiter is mounted on vessel -Z. Heads-down means that side axis follows
+    local-down projected into the plane normal to the commanded flight direction.
+    """
+    projected_up = surface_up_for_pitch_heading(pitch, heading)
+    return tuple(-x for x in projected_up) if earthward else projected_up
+
+
+def roll_error_to_side(direction, actual_side, target_side):
+    """Signed roll error from the real orbiter-side vector, in control.roll sign."""
+    axis = normalize3(direction)
+    current = normalize3(project_perpendicular(actual_side, axis))
+    target = normalize3(project_perpendicular(target_side, axis))
+    signed_rh = math.degrees(math.atan2(dot3(axis, cross3(current, target)),
+                                        dot3(current, target)))
+    # KSP/kRPC roll-control sign is opposite the right-hand rotation about +forward.
+    return wrap_roll(-signed_rh)
 
 
 def wrap_roll(angle):
@@ -174,6 +313,18 @@ def roll_delta(current, target):
     return (target-current+180.0) % 360.0 - 180.0
 
 
+def body_roll_rate_deg_s(vessel):
+    """Physical roll rate in the same sign convention as roll_for_roof/kRPC roll angles."""
+    frame = vessel.surface_reference_frame
+    direction = vessel.direction(frame)
+    omega = vessel.angular_velocity(frame)
+    norm = math.sqrt(sum(x*x for x in direction))
+    if norm <= 0:
+        return 0.0
+    # roll_for_roof/kRPC roll angle uses the opposite sign from right-hand angular velocity.
+    return -math.degrees(sum(w*d for w, d in zip(omega, direction)) / norm)
+
+
 def slew_roll(current, target, max_delta):
     """Move toward target by the shortest roll path, with a per-step rate limit."""
     if max_delta < 0:
@@ -203,22 +354,22 @@ def roll_accel_authority_deg_s2(vessel):
 
 
 def manual_roll_command(error_deg, rate_deg_s, accel_deg_s2, rate_limit_deg_s,
-                        control_limit=.35, response_time=.35):
-    """Rate-damped roll command using measured angle/rate and current torque authority."""
+                        control_limit=1.0, response_time=.20):
+    """Rate-damped direct roll with explicit overspeed braking."""
     if accel_deg_s2 <= 0 or rate_limit_deg_s <= 0 or control_limit <= 0 or response_time <= 0:
         return 0.0
     desired_rate = max(-rate_limit_deg_s, min(rate_limit_deg_s, error_deg * .5))
+    if abs(rate_deg_s) > rate_limit_deg_s * 1.25:
+        return -math.copysign(control_limit, rate_deg_s)
     rate_error = desired_rate - rate_deg_s
     command = rate_error / (accel_deg_s2 * response_time)
     return max(-control_limit, min(control_limit, command))
 
 
-def roll_attitude_settled(roll_error, roll_rate, pitch_error, heading_error,
-                          angle_limit=2.0, rate_limit=.75, axis_limit=3.0):
-    """Return true when the manual roll and AutoPilot pitch/yaw have all settled."""
+def roll_attitude_settled(roll_error, roll_rate, nose_error,
+                          angle_limit=2.0, rate_limit=.75, nose_limit=3.0):
     return (abs(roll_error) <= angle_limit and abs(roll_rate) <= rate_limit and
-            abs(pitch_error) <= axis_limit and abs(heading_error) <= axis_limit)
-
+            abs(nose_error) <= nose_limit)
 
 def hold_turn_for_roll(roll_active, roll_reset):
     """Keep launch pitch fixed for the entire dedicated roll phase."""
@@ -227,10 +378,30 @@ def hold_turn_for_roll(roll_active, roll_reset):
 
 def ascent_pitch(altitude, turn_start_altitude, turn_end_altitude,
                  initial_pitch=89.0):
-    """Fly the gravity turn independently of the delayed body-roll reset."""
     progress = min(1, max(0, (altitude-turn_start_altitude) /
                           (turn_end_altitude-turn_start_altitude)))
-    return max(5, initial_pitch*(1-progress))
+    eased = progress * progress * (3 - 2 * progress)
+    return max(5, initial_pitch*(1-eased))
+
+
+def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
+                       initial_pitch=89.0, minimum_pitch=5.0):
+    """Follow surface prograde with a bounded pitch-over bias.
+
+    The bias is larger at low dynamic pressure to establish horizontal velocity,
+    then shrinks through max-Q so the stack stays close to prograde.
+    """
+    vertical = max(0.0, vertical_speed)
+    horizontal = max(0.5, horizontal_speed)
+    flight_path_pitch = math.degrees(math.atan2(vertical, horizontal))
+    q = max(0.0, dynamic_pressure)
+    if q <= 5000:
+        pitch_under = 7.0
+    elif q < 25000:
+        pitch_under = 7.0 - 4.0 * (q - 5000.0) / 20000.0
+    else:
+        pitch_under = 3.0
+    return min(initial_pitch, max(minimum_pitch, flight_path_pitch - pitch_under))
 
 
 def attitude_error_exceeded(error, altitude, since_roll_reset=None):
@@ -249,18 +420,20 @@ def g_force_throttle(current_throttle, actual_g, max_g, recovery_step=.02):
     return current
 
 
-def flight_roll_target(heading, liftoff, booster_separation_ut, current_ut, reset_delay):
-    """Return (target roll, reset due), or (None, False) before liftoff."""
+
+
+def earthward_roll_target(liftoff, booster_separation_ut, current_ut, reset_delay):
+    """Return whether the orbiter side should face Kerbin, plus delayed-flip state."""
     if not liftoff:
         return None, False
-    reset_due = (booster_separation_ut is not None and
-                 current_ut - booster_separation_ut >= reset_delay)
-    return (0 if reset_due else roll_for_heading(heading)), reset_due
+    flipped = (booster_separation_ut is not None and
+               current_ut - booster_separation_ut >= reset_delay)
+    return (not flipped), flipped
 
 
 def validate_launch_vessel(vessel, space_center):
-    if vessel.name != 'STS':
-        raise ValueError(f'Expected the active vessel to be named STS; got {vessel.name!r}')
+    if vessel.name not in ('STS', 'STS-N'):
+        raise ValueError(f'Expected the active vessel to be named STS or STS-N; got {vessel.name!r}')
     if vessel.situation != space_center.VesselSituation.pre_launch:
         raise ValueError('Launch requires an STS on the launch pad')
 
@@ -310,21 +483,29 @@ class Shuttle:
         self.sc = conn.space_center
         self.vessel = self.sc.active_vessel
         parts = self.vessel.parts.all
+        if any(p.name == 'SSME' for p in parts):
+            self._init_orbiter_shuttle(parts)
+            return
+        if any(p.name == 'nfa-atomic-multimode-25-1' for p in parts):
+            self._init_nuclear_et(parts)
+            return
+        self.vehicle_kind = 'skipper-liquid'
         self.skiff = one(parts, 'LiquidEngineRE-I2').engine
-        self.cheetah = one(parts, 'LiquidEngineLV-T91').engine
-        bobcats = [p.engine for p in parts if p.name == 'LiquidEngineLV-TX87']
-        if len(bobcats) != 4:
-            raise ValueError('Expected four Bobcats')
+        self.wolfhound = one(parts, 'LiquidEngineRE-J10').engine
+        et_skippers = [part_engine(p) for p in parts
+                       if part_engine(p) is not None and is_skipper_engine(part_engine(p))]
+        if len(et_skippers) != 4:
+            raise ValueError(f'Expected four ET Skippers, found {len(et_skippers)}')
+        self.et_skippers = et_skippers
 
-        # Identify the ET attachment from the known ET liquid engines rather than
-        # from tank part names, so replacement booster tanks may use any shape.
+        # The ET subtree contains Wolfhound + four Skippers and excludes the orbiter Skiff.
         et_candidates = []
         for p in parts:
             if p.name != 'radialDecoupler1-2':
                 continue
             subtree = descendants(p)
-            if (self.cheetah.part in subtree and
-                    all(e.part in subtree for e in bobcats) and
+            if (self.wolfhound.part in subtree and
+                    all(e.part in subtree for e in self.et_skippers) and
                     self.skiff.part not in subtree):
                 et_candidates.append((p, subtree))
         if len(et_candidates) != 1:
@@ -332,7 +513,8 @@ class Shuttle:
         self.et_decoupler_part, et_subtree = et_candidates[0]
         self.et_decoupler = self.et_decoupler_part.decoupler
 
-        main_engine_parts = {self.skiff.part, self.cheetah.part, *(e.part for e in bobcats)}
+        main_engine_parts = {self.skiff.part, self.wolfhound.part,
+                             *(e.part for e in self.et_skippers)}
         self.booster_decouplers = []
         self.booster_branch_parts = []
         self.booster_branches = []
@@ -362,40 +544,50 @@ class Shuttle:
             self.booster_branch_parts.append(subtree)
             self.booster_branches.append(engines)
             self.booster_kinds.append(kind)
-        if not self.booster_branches:
-            raise ValueError('Could not identify any booster branches')
+
+        if len(self.booster_branches) != 4:
+            raise ValueError(f'Expected four booster branches, found {len(self.booster_branches)}')
+        if self.booster_kinds != ['liquid'] * 4:
+            raise ValueError(f'Expected four liquid booster branches, found {self.booster_kinds}')
+        for i, branch in enumerate(self.booster_branches, 1):
+            kodiaks = [e for e in branch if is_kodiak_engine(e)]
+            cubs = [e for e in branch if is_cub_engine(e)]
+            if len(branch) != 5 or len(kodiaks) != 1 or len(cubs) != 4:
+                raise ValueError(
+                    f'Booster {i} requires one Kodiak and four Cubs; '
+                    f'found {len(kodiaks)} Kodiak, {len(cubs)} Cub, {len(branch)} engines')
 
         booster_parts = {part for branch in self.booster_branch_parts for part in branch}
         self.tanks = [p for p in et_subtree
-                      if p.name == 'Size3LargeTank' and p not in booster_parts]
+                      if p not in booster_parts and
+                      has_resource(p, 'LiquidFuel') and has_resource(p, 'Oxidizer') and
+                      p.resources.max('LiquidFuel') > 0 and p.resources.max('Oxidizer') > 0]
         self.shuttle_tank = one(parts, 'mk3FuselageLFO.25')
-        if len(self.tanks) != 2:
-            raise ValueError(f'Expected two ET tanks, found {len(self.tanks)}')
+        self.transfer_resources = ('LiquidFuel', 'Oxidizer')
+        if not self.tanks:
+            raise ValueError('Could not identify ET propellant tanks')
 
         frame = self.vessel.reference_frame
         s = self.skiff.part.position(frame)
-        c = self.cheetah.part.position(frame)
-        length = math.hypot(s[0]-c[0], s[2]-c[2])
+        w = self.wolfhound.part.position(frame)
+        length = math.hypot(s[0]-w[0], s[2]-w[2])
         if length < 1:
             raise ValueError('Invalid shuttle/ET geometry')
-        self.radial = ((s[0]-c[0])/length, (s[2]-c[2])/length)
-        bobcats.sort(key=lambda e: self.project(e.part.position(frame)), reverse=True)
-        self.core_groups = [[self.skiff], bobcats[:2], bobcats[2:], [self.cheetah]]
+        self.radial = ((s[0]-w[0])/length, (s[2]-w[2])/length)
+
+        skipper_by_arm = sorted(
+            self.et_skippers,
+            key=lambda e: self.project(e.part.position(frame)),
+            reverse=True)
+        self.inner_skippers = skipper_by_arm[:2]
+        self.outer_skippers = skipper_by_arm[2:]
+        self.core_groups = [[self.skiff], [self.wolfhound],
+                            list(self.inner_skippers), list(self.outer_skippers)]
         self.boosters = [e for branch in self.booster_branches for e in branch]
-        self.liquid_boosters = [e for branch, kind in zip(self.booster_branches, self.booster_kinds)
-                                if kind == 'liquid' for e in branch]
-        self.solid_boosters = [e for branch, kind in zip(self.booster_branches, self.booster_kinds)
-                               if kind == 'solid' for e in branch]
-        if self.liquid_boosters:
-            if len(self.booster_branches) != 4 or len(self.liquid_boosters) != 4:
-                raise ValueError('Liquid booster configuration requires four one-engine branches')
-            if not all(is_skipper_engine(e) for e in self.liquid_boosters):
-                raise ValueError('Liquid booster configuration requires four Skipper engines')
-        # All four liquid boosters share one throttle command. Their collective moment
-        # is still modeled, but position never creates differential booster throttles.
+        self.liquid_boosters = list(self.boosters)
+        self.solid_boosters = []
         self.liquid_booster_group = list(self.liquid_boosters)
-        self.groups = self.core_groups + ([self.liquid_booster_group]
-                                          if self.liquid_booster_group else [])
+        self.groups = self.core_groups + [self.liquid_booster_group]
         booster_part_set = {p for branch in self.booster_branch_parts for p in branch}
         self.sepmotors = [p.engine for p in booster_part_set
                           if p.name == 'sepMotor1' and p.engine is not None]
@@ -405,12 +597,193 @@ class Shuttle:
         self.et_attached = True
         self.control_moment_budget = 0.0
         self.cruise_control_moment_budget = 0.0
+        self.et_reference_thrust = (
+            self._engine_sea_level_max_thrust(self.wolfhound) +
+            sum(self._engine_sea_level_max_thrust(e) for e in self.et_skippers))
 
+    def _init_nuclear_et(self, parts):
+        """Initialize the STS-N J-N500, twin-Rhino ET, twin-RSRM layout."""
+        self.vehicle_kind = 'nuclear-solid'
+        engines = [part_engine(p) for p in parts if part_engine(p) is not None]
+        self.skiff = one(parts, 'nfa-atomic-multimode-25-1').engine
+        self.wolfhound = None
+        self.et_skippers = []
+        self.et_engines = [e for e in engines
+                           if e.part.name == 'Size3AdvancedEngine' and
+                           'Rhino' in getattr(e.part, 'title', '')]
+        if len(self.et_engines) != 2:
+            raise ValueError(f'Expected two ET Rhino engines, found {len(self.et_engines)}')
+
+        et_candidates = []
+        for part in parts:
+            if part.name != 'STS.ET.decoupler':
+                continue
+            subtree = descendants(part)
+            if (all(e.part in subtree for e in self.et_engines) and
+                    self.skiff.part not in subtree):
+                et_candidates.append((part, subtree))
+        if len(et_candidates) != 1:
+            raise ValueError(f'Expected one ET separator around both Rhinos, found {len(et_candidates)}')
+        self.et_decoupler_part, et_subtree = et_candidates[0]
+        self.et_decoupler = self.et_decoupler_part.decoupler
+
+        self.booster_decouplers = []
+        self.booster_branch_parts = []
+        self.booster_branches = []
+        self.booster_kinds = []
+        for part in parts:
+            if (part is self.et_decoupler_part or part not in et_subtree or
+                    part.name != 'PC.RSRM.RadialDecoupler'):
+                continue
+            subtree = descendants(part)
+            branch_engines = [part_engine(p) for p in subtree
+                              if part_engine(p) is not None]
+            solid_fuel = resource_total(subtree, 'SolidFuel', maximum=True)
+            if not branch_engines or solid_fuel <= 0:
+                continue
+            if not any(e.part.name == 'PC.4Seg.RSRM' for e in branch_engines):
+                continue
+            self.booster_decouplers.append(part.decoupler)
+            self.booster_branch_parts.append(subtree)
+            self.booster_branches.append(branch_engines)
+            self.booster_kinds.append('solid')
+        if len(self.booster_branches) != 2:
+            raise ValueError(f'Expected two RSRM booster branches, found {len(self.booster_branches)}')
+
+        booster_parts = {p for branch in self.booster_branch_parts for p in branch}
+        self.tanks = [p for p in et_subtree if p not in booster_parts and
+                      has_resource(p, 'LiquidFuel') and has_resource(p, 'Oxidizer') and
+                      p.resources.max('LiquidFuel') > 0 and p.resources.max('Oxidizer') > 0]
+        if not self.tanks:
+            raise ValueError('Could not identify ET propellant tanks')
+        self.shuttle_tank = one(parts, 'Rockomax8BW')
+        self.transfer_resources = ('LiquidFuel',)
+
+        frame = self.vessel.reference_frame
+        orbiter_pos = self.skiff.part.position(frame)
+        et_pos = tuple(sum(e.part.position(frame)[i] for e in self.et_engines) /
+                       len(self.et_engines) for i in range(3))
+        dx, dz = orbiter_pos[0]-et_pos[0], orbiter_pos[2]-et_pos[2]
+        length = math.hypot(dx, dz)
+        if length < 1:
+            raise ValueError('Invalid orbiter/ET geometry')
+        self.radial = (dx/length, dz/length)
+
+        self.inner_skippers = []
+        self.outer_skippers = []
+        self.core_groups = [[self.skiff], self.et_engines]
+        self.boosters = [e for branch in self.booster_branches for e in branch]
+        self.liquid_boosters = []
+        self.solid_boosters = [e for e in self.boosters
+                               if resource_total([e.part], 'SolidFuel', maximum=True) > 0]
+        self.liquid_booster_group = []
+        self.groups = self.core_groups
+        self.sepmotors = [p.engine for p in booster_parts
+                          if p.name == 'sepMotor1' and p.engine is not None]
+        self.transfers = {}
+        self.separated = False
+        self.booster_separation_ut = None
+        self.et_attached = True
+        self.control_moment_budget = 0.0
+        self.cruise_control_moment_budget = 0.0
+        self.et_reference_thrust = sum(self._engine_sea_level_max_thrust(e)
+                                       for e in self.et_engines)
+
+    def _init_orbiter_shuttle(self, parts):
+        """Initialize the three-SSME orbiter, external tank, twin-LFB craft."""
+        self.vehicle_kind = 'orbiter-shuttle'
+        engines = [part_engine(p) for p in parts if part_engine(p) is not None]
+        ssmes = [e for e in engines if e.part.name == 'SSME']
+        self.orbiter_engines = [e for e in engines
+                                if e.part.name == 'benjee10.AJ10.v2']
+        if len(ssmes) != 3:
+            raise ValueError(f'Expected three SSMEs, found {len(ssmes)}')
+        if len(self.orbiter_engines) != 2:
+            raise ValueError(f'Expected two AJ10 orbital engines, found {len(self.orbiter_engines)}')
+        self.skiff = self.orbiter_engines[0]
+        self.wolfhound = None
+        self.et_skippers = []
+        self.et_engines = []
+
+        et_candidates = []
+        for part in parts:
+            if part.name != 'radialDecoupler1-2':
+                continue
+            subtree = descendants(part)
+            carries_et = any(
+                p.name == 'Size4.Tank.04' or
+                (has_resource(p, 'LiquidFuel') and has_resource(p, 'Oxidizer'))
+                for p in subtree)
+            if carries_et:
+                et_candidates.append((part, subtree))
+        if len(et_candidates) != 1:
+            raise ValueError(f'Expected one external-tank separator, found {len(et_candidates)}')
+        self.et_decoupler_part, et_subtree = et_candidates[0]
+        self.et_decoupler = self.et_decoupler_part.decoupler
+
+        self.booster_decouplers = []
+        self.booster_branch_parts = []
+        self.booster_branches = []
+        self.booster_kinds = []
+        for part in et_subtree:
+            if part.name != 'radialDecoupler':
+                continue
+            subtree = descendants(part)
+            branch_engines = [part_engine(p) for p in subtree
+                              if part_engine(p) is not None]
+            lfb_engines = [e for e in branch_engines
+                           if e.part.name == 'Size2LFB.v2']
+            if len(lfb_engines) != 1:
+                continue
+            self.booster_decouplers.append(part.decoupler)
+            self.booster_branch_parts.append(subtree)
+            self.booster_branches.append(branch_engines)
+            self.booster_kinds.append('liquid')
+        if len(self.booster_branches) != 2:
+            raise ValueError(f'Expected two liquid side boosters, found {len(self.booster_branches)}')
+        booster_parts = {p for branch in self.booster_branch_parts for p in branch}
+        self.tanks = [p for p in et_subtree if p not in booster_parts and
+                      (has_resource(p, 'LiquidFuel') or has_resource(p, 'Oxidizer'))]
+        if not self.tanks:
+            raise ValueError('Could not identify external-tank propellant storage')
+        self.shuttle_tank = None
+        self.transfer_resources = ()
+
+        self.boosters = [e for branch in self.booster_branches for e in branch
+                         if e.part.name == 'Size2LFB.v2']
+        self.liquid_boosters = list(self.boosters)
+        # Mite motors are staged later in this craft. Keep them out of the launch
+        # controller so the launch command cannot ignite them prematurely.
+        self.solid_boosters = []
+        self.liquid_booster_group = list(self.liquid_boosters)
+        self.core_groups = [ssmes]
+        self.groups = self.core_groups + [self.liquid_booster_group]
+        self.inner_skippers = []
+        self.outer_skippers = []
+        self.sepmotors = []
+        self.transfers = {}
+        self.separated = False
+        self.booster_separation_ut = None
+        self.et_attached = True
+        self.control_moment_budget = 0.0
+        self.cruise_control_moment_budget = 0.0
+        frame = self.vessel.reference_frame
+        engine_pos = [e.part.position(frame) for e in ssmes]
+        et_pos = tuple(sum(e.part.position(frame)[i] for e in self.orbiter_engines) /
+                       len(self.orbiter_engines) for i in range(3))
+        dx = sum(p[0] for p in engine_pos) / len(engine_pos) - et_pos[0]
+        dz = sum(p[2] for p in engine_pos) / len(engine_pos) - et_pos[2]
+        length = math.hypot(dx, dz)
+        if length < 1:
+            raise ValueError('Invalid orbiter/external-tank geometry')
+        self.radial = (dx/length, dz/length)
+        self.et_reference_thrust = sum(self._engine_sea_level_max_thrust(e)
+                                       for e in ssmes)
     def project(self, position):
         return position[0]*self.radial[0] + position[2]*self.radial[1]
 
     def _solid_booster_state(self):
-        if self.separated:
+        if self.separated or not self.solid_boosters:
             return 0.0, 0.0
         frame = self.vessel.reference_frame
         thrust_total = 0.0
@@ -432,6 +805,15 @@ class Shuttle:
             isp = getattr(engine, 'vacuum_specific_impulse', 0.0)
         return max(0.0, isp)
 
+    @staticmethod
+    def _engine_sea_level_max_thrust(engine):
+        vac_thrust = getattr(engine, 'max_vacuum_thrust', 0.0)
+        sea_isp = getattr(engine, 'kerbin_sea_level_specific_impulse', 0.0)
+        vac_isp = getattr(engine, 'vacuum_specific_impulse', 0.0)
+        if vac_thrust > 0 and sea_isp > 0 and vac_isp > 0:
+            return vac_thrust * sea_isp / vac_isp
+        return max(0.0, engine.max_thrust)
+
     def _engine_mass_flow(self, engine):
         if not engine.has_fuel:
             return 0.0
@@ -447,10 +829,45 @@ class Shuttle:
         mass_flow = sum(self._engine_mass_flow(engine) for engine in self.liquid_boosters)
         return propellant_mass / mass_flow if mass_flow > 0 else math.inf
 
-    def group_upper_bounds(self):
-        # Liquid Skippers are not stretched to a fixed cutoff time. They run at the
-        # largest common throttle allowed by control authority and the stack G limit.
-        return [1.0] * len(self.groups)
+    def booster_nominal_burn_time(self):
+        if self.liquid_boosters:
+            return self.liquid_booster_nominal_burn_time()
+        if not self.solid_boosters or self.separated:
+            return 0.0
+        propellant_mass = sum(resource_mass(parts, ('SolidFuel',))
+                              for parts, kind in zip(self.booster_branch_parts,
+                                                     self.booster_kinds)
+                              if kind == 'solid')
+        mass_flow = sum(self._engine_mass_flow(engine)
+                        for engine in self.solid_boosters)
+        return propellant_mass/mass_flow if mass_flow > 0 else math.inf
+
+    def et_skipper_upper_bound(self):
+        """Let Wolfhound pressure recovery replace ET Skipper thrust continuously."""
+        if not self.et_attached:
+            return 1.0
+        wolfhound_thrust = self.wolfhound.max_thrust if self.wolfhound.has_fuel else 0.0
+        skipper_full = sum(e.max_thrust for e in self.et_skippers if e.has_fuel)
+        if skipper_full <= 0:
+            return 0.0
+        required_skipper = max(0.0, self.et_reference_thrust - wolfhound_thrust)
+        return min(1.0, required_skipper / skipper_full)
+
+    def group_upper_bounds(self, altitude=0.0):
+        bounds = [1.0] * len(self.groups)
+        if (not self.et_attached or
+                self.vehicle_kind in ('nuclear-solid', 'orbiter-shuttle')):
+            return bounds
+        skipper_cap = self.et_skipper_upper_bound()
+        if len(bounds) >= 4:
+            bounds[2] = skipper_cap
+            outer_blend = smoothstep01(max(0.0, altitude) / 15000.0)
+            bounds[3] = min(skipper_cap, OUTER_SKIPPER_PAD_CAP +
+                            (1.0-OUTER_SKIPPER_PAD_CAP)*outer_blend)
+        if not self.separated and len(bounds) >= 5:
+            booster_blend = smoothstep01(max(0.0, altitude) / 10000.0)
+            bounds[4] = BOOSTER_PAD_CAP + (1.0-BOOSTER_PAD_CAP)*booster_blend
+        return bounds
 
     def control_moment_authority(self):
         """Return symmetric control torque available about the ET/orbiter moment axis."""
@@ -488,13 +905,14 @@ class Shuttle:
                 break
             time.sleep(.02)
         authority = self.control_moment_authority()
+        roll_accel = roll_accel_authority_deg_s2(self.vessel)
         control.throttle = 0
         self.cruise_control_moment_budget = authority * CONTROL_TORQUE_FRACTION
         self.control_moment_budget = self.cruise_control_moment_budget
         fraction = actual_thrust / target_thrust if target_thrust > 0 else 0.0
-        return authority, self.control_moment_budget, fraction
+        return authority, self.control_moment_budget, fraction, roll_accel
 
-    def allocation(self, max_g=None):
+    def _group_state(self):
         frame = self.vessel.reference_frame
         thrusts, arms, mass_flows = [], [], []
         for group in self.groups:
@@ -504,21 +922,42 @@ class Shuttle:
             thrusts.append(thrust)
             arms.append(sum(t*a for t, a in values)/thrust if thrust else 0.0)
             mass_flows.append(sum(self._engine_mass_flow(e) for e in group))
+        return thrusts, arms, mass_flows
+
+    def allocation(self, max_g=None, target_g=None, altitude=0.0):
+        thrusts, arms, mass_flows = self._group_state()
         fixed_thrust, fixed_moment = self._solid_booster_state()
+        requested_g = max_g if target_g is None else min(max_g, target_g)
         thrust_cap = None
-        if max_g is not None:
-            thrust_cap = max(0.0, max_g * G0 * self.vessel.mass - fixed_thrust)
-        return allocate(thrusts, arms, fixed_moment,
-                        thrust_cap=thrust_cap,
-                        upper_bounds=self.group_upper_bounds(),
-                        mass_flows=mass_flows,
-                        moment_tolerance=self.control_moment_budget)
+        if requested_g is not None:
+            thrust_cap = max(0.0, requested_g * G0 * self.vessel.mass - fixed_thrust)
+        result = allocate(thrusts, arms, fixed_moment,
+                          thrust_cap=thrust_cap,
+                          upper_bounds=self.group_upper_bounds(altitude),
+                          mass_flows=mass_flows,
+                          moment_tolerance=self.control_moment_budget)
+        return Allocation(result.throttles, result.thrust+fixed_thrust,
+                          result.residual, result.feasible, result.mass_flow)
+
+    def allocation_for_throttles(self, throttles):
+        thrusts, arms, mass_flows = self._group_state()
+        fixed_thrust, fixed_moment = self._solid_booster_state()
+        thrust = fixed_thrust + sum(t*u for t, u in zip(thrusts, throttles))
+        residual = fixed_moment + sum(t*a*u for t, a, u in zip(thrusts, arms, throttles))
+        mass_flow = sum(m*u for m, u in zip(mass_flows, throttles))
+        return Allocation(tuple(throttles), thrust, residual,
+                          abs(residual) <= self.control_moment_budget + 1e-5,
+                          mass_flow)
 
     def commanded_g(self, result, main_throttle=1.0):
-        fixed_thrust, _ = self._solid_booster_state()
         if self.vessel.mass <= 0:
             return 0.0
-        return (result.thrust * main_throttle + fixed_thrust) / (self.vessel.mass * G0)
+        if self.solid_boosters and not self.separated:
+            fixed_thrust, _ = self._solid_booster_state()
+            thrust = fixed_thrust + max(0.0, result.thrust-fixed_thrust)*main_throttle
+        else:
+            thrust = result.thrust*main_throttle
+        return thrust / (self.vessel.mass * G0)
 
     def booster_telemetry(self):
         if self.separated:
@@ -533,13 +972,43 @@ class Shuttle:
                        for parts in self.booster_branch_parts)
         return thrust, lf, ox, sf, current_mass/max_mass if max_mass > 0 else 0.0
 
+    def gimbal_telemetry(self):
+        """Return live gimbal actuation for engines that expose it through kRPC."""
+        engines = [e for group in self.groups for e in group] + self.boosters
+        result = []
+        for engine in engines:
+            name = engine.part.name
+            try:
+                if engine.gimballed:
+                    position = tuple(round(x, 3) for x in
+                                     engine.part.position(self.vessel.reference_frame))
+                    result.append((name, position, tuple(engine.gimbal_actuation)))
+            except Exception:
+                continue
+        return tuple(result)
+
+    def engine_limit_telemetry(self):
+        engines = [e for group in self.groups for e in group] + self.boosters
+        result = []
+        for engine in engines:
+            try:
+                result.append((engine.part.name,
+                               tuple(round(x, 3) for x in
+                                     engine.part.position(self.vessel.reference_frame)),
+                               round(engine.thrust_limit, 4), bool(engine.active)))
+            except Exception:
+                continue
+        return tuple(result)
+
     def et_resource_amount(self, resource):
         if not self.et_attached:
             return 0.0
         return sum(t.resources.amount(resource) for t in self.tanks)
 
     def top_off(self):
-        for resource in ('LiquidFuel', 'Oxidizer'):
+        if not self.transfer_resources:
+            return
+        for resource in self.transfer_resources:
             previous = self.transfers.get(resource)
             if previous is not None and not previous.complete:
                 continue
@@ -574,7 +1043,7 @@ class Shuttle:
     def _separate_boosters(self):
         # The four liquid boosters are one stage: common cutoff, then simultaneous
         # decoupler command. No branch is allowed to detach early.
-        for engine in self.liquid_boosters:
+        for engine in self.liquid_boosters + getattr(self, 'solid_boosters', []):
             try:
                 engine.thrust_limit = 0.0
                 engine.active = False
@@ -596,22 +1065,40 @@ class Shuttle:
         self.control_moment_budget = self.cruise_control_moment_budget
         print('Boosters shut down/burned out and separated')
 
-    def update(self, max_g=3.0):
+    def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
+               throttle_slew=THROTTLE_SLEW_PER_SECOND):
         if self.et_attached:
             self.top_off()
         if (not self.separated and
                 (self._liquid_booster_depleted() or self._solid_boosters_depleted())):
             self._separate_boosters()
-        result = self.allocation(max_g=max_g)
-        for group, throttle in zip(self.groups, result.throttles):
+        target = self.allocation(max_g=max_g, target_g=target_g, altitude=altitude)
+        current = tuple(
+            sum(engine.thrust_limit for engine in group) / len(group)
+            for group in self.groups)
+        applied = slew_vector(current, target.throttles, throttle_slew, dt)
+        for group, throttle in zip(self.groups, applied):
             for engine in group:
                 engine.thrust_limit = throttle
-        return result
+        return self.allocation_for_throttles(applied)
 
     def release_et(self):
         self.vessel.control.throttle = 0
         if any(not transfer.complete for transfer in self.transfers.values()):
             return False
+        if self.vehicle_kind == 'orbiter-shuttle':
+            for group in self.core_groups:
+                for engine in group:
+                    engine.active = False
+            self.et_decoupler.decouple()
+            self.et_attached = False
+            self.core_groups = [self.orbiter_engines]
+            self.groups = [self.orbiter_engines]
+            for engine in self.orbiter_engines:
+                engine.active = True
+                engine.thrust_limit = 1.0
+            print('External tank separated; AJ10 orbital engines enabled')
+            return True
         for group in self.core_groups[1:]:
             for engine in group:
                 engine.active = False
@@ -631,7 +1118,13 @@ def run(args):
         if args.launch:
             validate_launch_vessel(v, conn.space_center)
         shuttle = Shuttle(conn)
-        result = shuttle.allocation(max_g=args.max_g)
+        body = v.orbit.body
+        preflight_altitude = v.flight(body.reference_frame).mean_altitude
+        preflight_target_g = ascent_target_g(
+            preflight_altitude, body.atmosphere_depth, args.max_g, args.launch_g,
+            args.booster_min_g)
+        result = shuttle.allocation(
+            max_g=args.max_g, target_g=preflight_target_g, altitude=preflight_altitude)
         booster_names = ', '.join(sorted({e.part.title for e in shuttle.boosters}))
         booster_max_thrust = sum(e.max_thrust for e in shuttle.boosters)
         kinds = ','.join(shuttle.booster_kinds)
@@ -641,22 +1134,48 @@ def run(args):
                          for parts in shuttle.booster_branch_parts)
         booster_sf = sum(resource_total(parts, 'SolidFuel', maximum=True)
                          for parts in shuttle.booster_branch_parts)
-        print(f'{v.name}: {v.mass/1000:.2f} t; engine groups Skiff/Near/Far/Cheetah')
+        if shuttle.vehicle_kind == 'nuclear-solid':
+            print(f'{v.name}: {v.mass/1000:.2f} t; engine groups Orbiter-J-N500 / ET-2xRhino / fixed twin-RSRM')
+        else:
+            print(f'{v.name}: {v.mass/1000:.2f} t; engine groups '
+                  'Orbiter-Skiff / ET-Wolfhound / ET-Skipper-inner2 / ET-Skipper-outer2 / '
+                  'Booster-4x(Kodiak+4xCub)')
         print(f'Detected boosters: {len(shuttle.booster_branches)} branch(es), '
               f'{len(shuttle.boosters)} engine(s), kinds={kinds}: {booster_names}; '
               f'{booster_max_thrust/1000:.0f} kN max; LF/Ox/SF={booster_lf:.0f}/{booster_ox:.0f}/{booster_sf:.0f}')
-        full_thrust = sum(engine.max_thrust for group in shuttle.groups for engine in group)
+        fixed_thrust, _ = shuttle._solid_booster_state()
+        full_thrust = (sum(engine.max_thrust for group in shuttle.groups for engine in group) +
+                       fixed_thrust)
         full_throttle_g = full_thrust / (v.mass * G0) if v.mass > 0 else 0.0
+        if shuttle.vehicle_kind == 'nuclear-solid':
+            print(f"Orbiter J-N500 / ET Rhino thrust: {shuttle.skiff.max_thrust/1000:.0f}/"
+                  f"{sum(e.max_thrust for e in shuttle.et_engines)/1000:.0f} kN; "
+                  f"fixed SRB thrust {fixed_thrust/1000:.0f} kN")
+        elif shuttle.vehicle_kind == 'orbiter-shuttle':
+            ssme_thrust = sum(e.max_thrust for e in shuttle.core_groups[0])
+            oms_thrust = sum(e.max_thrust for e in shuttle.orbiter_engines)
+            print(f"Orbiter SSMEs / paired AJ10 OMS: {ssme_thrust/1000:.0f}/"
+                  f"{oms_thrust/1000:.0f} kN; external-tank propellant "
+                  f"LF/Ox={shuttle.et_resource_amount('LiquidFuel'):.0f}/"
+                  f"{shuttle.et_resource_amount('Oxidizer'):.0f}")
+        else:
+            skipper_cap = shuttle.et_skipper_upper_bound()
+            skipper_thrust = sum(e.max_thrust for e in shuttle.et_skippers)
+            print(f'Wolfhound current/vacuum max thrust: {shuttle.wolfhound.max_thrust/1000:.1f}/'
+                  f'{shuttle.wolfhound.max_vacuum_thrust/1000:.1f} kN; '
+                  f'ET Skipper common cap {skipper_cap*100:.1f}% '
+                  f'({skipper_thrust*skipper_cap/1000:.0f} kN of {skipper_thrust/1000:.0f} kN)')
         print(f'Full-throttle physical thrust acceleration at current pressure: {full_throttle_g:.2f} G')
         print(f'Preflight throttles: {result.throttles}; residual {result.residual:.0f} N m; '
-              f'commanded {shuttle.commanded_g(result):.2f} G / {args.max_g:.2f} G cap')
-        if shuttle.liquid_boosters:
-            nominal_burn = shuttle.liquid_booster_nominal_burn_time()
-            print(f'Liquid-booster full-throttle burn estimate at current pressure: {nominal_burn:.1f} s')
+              f'commanded {shuttle.commanded_g(result):.2f} G / target {preflight_target_g:.2f} G')
+        print(f'Pad group caps: {tuple(round(x, 3) for x in shuttle.group_upper_bounds(preflight_altitude))}; '
+              f'booster floor {args.booster_min_g:.2f} G; throttle slew {args.throttle_slew:.2f}/s')
+        if shuttle.boosters:
+            nominal_burn = shuttle.booster_nominal_burn_time()
+            print(f'Booster full-throttle burn estimate at current pressure: {nominal_burn:.1f} s')
         if not args.launch:
             print('Read-only preflight complete. Use --launch to fly.')
             return
-        body = v.orbit.body
         if body.name != 'Kerbin':
             raise ValueError('Default ascent guidance is designed for Kerbin')
         if args.orbit <= body.atmosphere_depth + 10000:
@@ -667,9 +1186,10 @@ def run(args):
         started = conn.space_center.ut
         state = 'ASCENT'
         next_report = 0
-        mission_roll = roll_for_heading(args.heading)
+        mission_roll = 0.0
+        post_booster_roll = roll_for_heading(args.heading)
         initial_pitch = 89.0
-        # Preserve the craft's actual pad roll, then command the mission roll once.
+        commanded_pitch = initial_pitch
         launch_roll = None
         mission_roll_commanded = False
         mission_roll_settled = False
@@ -679,10 +1199,13 @@ def run(args):
         roll_reset = False
         roll_reset_ut = None
         roll_rate = 0.0
+        body_roll_rate = 0.0
         last_roll_angle = None
         last_roll_ut = None
-        saved_roll_pid = None
         saved_auto_tune = None
+        saved_roll_pid = None
+        roll_surface_states = []
+        roll_accel_reference = 0.0
         turn_start_altitude = args.turn_start
         turn_end_altitude = args.turn_end
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
@@ -706,15 +1229,20 @@ def run(args):
             set_autopilot_engaged(ap, True)
             ap.set_direction_and_up(initial_direction, initial_up, launch_roll)
             launch_altitude = flight.mean_altitude
-            print(f'Pad roll {launch_roll:.1f} deg; mission roll {mission_roll:.1f} deg starts after '
-                  f'+{args.roll_start:.0f} m climb; manual rate cap {args.roll_rate:.1f} deg/s; '
-                  'pitch holds 89 deg until settled')
+            print(f'Pad roll {launch_roll:.1f} deg; physical heads-down roll starts after '
+                  f'+{args.roll_start:.0f} m climb; manual roll cap {args.roll_rate:.1f} deg/s; '
+                  f'gravity turn uses prograde-AoA guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
             clamps = list(v.parts.launch_clamps)
             if clamps:
-                authority, budget, spool = shuttle.calibrate_control_authority(control)
-                result = shuttle.allocation(max_g=args.max_g)
+                authority, budget, spool, roll_accel_reference = shuttle.calibrate_control_authority(control)
+                launch_target_g = ascent_target_g(
+                    flight.mean_altitude, body.atmosphere_depth, args.max_g, args.launch_g,
+                    args.booster_min_g)
+                result = shuttle.allocation(
+                    max_g=args.max_g, target_g=launch_target_g, altitude=flight.mean_altitude)
                 print(f'Launch control authority: {authority/1000:.0f} kN m; '
-                      f'moment budget {budget/1000:.0f} kN m; spool {spool*100:.0f}%')
+                      f'moment budget {budget/1000:.0f} kN m; spool {spool*100:.0f}%; '
+                      f'roll accel {roll_accel_reference:.1f} deg/s^2')
             for group, u in zip(shuttle.groups, result.throttles):
                 for e in group:
                     e.thrust_limit = u
@@ -735,10 +1263,11 @@ def run(args):
                                  'et_liquid_fuel', 'et_oxidizer', 'throttles', 'residual_Nm',
                                  'feasible', 'target_roll_deg', 'nose_error_deg',
                                  'autopilot_error_deg', 'actual_roll_deg', 'roll_error_deg', 'roll_rate_deg_s',
-                                 'roll_control', 'pitch_error_deg', 'heading_error_deg',
+                                 'body_roll_rate_deg_s', 'roll_control', 'pitch_error_deg', 'heading_error_deg',
                                  'roll_control_oscillation',
                                  'actual_pitch_deg', 'actual_heading_deg', 'target_pitch_deg',
-                                 'control_moment_budget_Nm'])
+                                 'control_moment_budget_Nm', 'engine_limit_state',
+                                 'engine_gimbal_actuation', 'available_torque_Nm'])
                 while True:
                     tick = time.monotonic()
                     if conn.space_center.active_vessel != v:
@@ -753,46 +1282,48 @@ def run(args):
                     if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
                         initial_roll_set = True
                         liftoff_ut = conn.space_center.ut
-                        print(f'Liftoff: holding pad roll {launch_roll:.1f} deg; '
-                              f'mission roll {mission_roll:.1f} deg deferred')
-                    desired_roll, reset_due = flight_roll_target(
-                        args.heading, initial_roll_set,
-                        shuttle.booster_separation_ut, conn.space_center.ut,
-                        args.roll_reset_delay)
+                        print(f'Liftoff: holding pad roll {launch_roll:.1f} deg; physical heads-down roll deferred')
+                    earthward_mode, reset_due = earthward_roll_target(
+                        initial_roll_set, shuttle.booster_separation_ut,
+                        conn.space_center.ut, args.roll_reset_delay)
                     roll_allowed = mission_roll_allowed(
                         initial_roll_set, altitude_gain, args.roll_start)
-                    if roll_allowed and not reset_due and not mission_roll_commanded:
+                    if roll_allowed and not mission_roll_commanded:
                         saved_auto_tune = ap.auto_tune
                         saved_roll_pid = ap.roll_pid_gains
                         ap.auto_tune = False
+                        # Keep the craft's aerodynamic roll authority. The prior
+                        # isolation left direct roll with too little authority once
+                        # pitch-over coupling and dynamic pressure increased.
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                         control.roll = 0
                         mission_roll_commanded = True
-                        last_roll_angle = None
-                        last_roll_ut = None
-                        roll_rate = 0.0
-                        print(f'Manual mission roll started: {mission_roll:.1f} deg')
-                    roll_active = mission_roll_commanded and not mission_roll_settled and not reset_due
+                        print(f'Physical orbiter-side roll started: earthward; '
+                              f'aerodynamic roll surfaces remain enabled')
+                    roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
                     if recovered_autopilot and roll_active:
                         ap.auto_tune = False
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
-                    target_roll = (0 if reset_due else
-                                   mission_roll if mission_roll_commanded else launch_roll)
+                    target_roll = launch_roll if not mission_roll_commanded else None
                     if reset_due and not roll_reset:
                         roll_reset = True
                         roll_reset_ut = conn.space_center.ut
-                        print('Roll reset: targeting 0 deg')
+                        print('Post-booster physical roll: orbiter side now targets spaceward')
                     roll_requires_authority = False
                     if state == 'ASCENT':
-                        roll_requires_authority = hold_turn_for_roll(roll_active, roll_reset)
-                        if roll_requires_authority:
-                            pitch = initial_pitch
+                        roll_requires_authority = mission_roll_commanded and not mission_roll_settled
+                        if roll_requires_authority or altitude < turn_start_altitude:
+                            raw_pitch = initial_pitch
                         else:
-                            pitch = ascent_pitch(altitude, turn_start_altitude,
-                                                 turn_end_altitude,
-                                                 initial_pitch)
+                            raw_pitch = gravity_turn_pitch(
+                                flight.vertical_speed, flight.horizontal_speed,
+                                flight.dynamic_pressure, initial_pitch)
+                        commanded_pitch = slew_value(
+                            commanded_pitch, raw_pitch,
+                            PITCH_SLEW_DEG_PER_SECOND, 1/args.hz)
+                        pitch = commanded_pitch
                         if (v.orbit.apoapsis_altitude >= args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
                             pitch = min(pitch, args.meco_pitch)
@@ -830,9 +1361,12 @@ def run(args):
                         target_direction = (0, 1, 0)
                         radius = body.equatorial_radius+v.orbit.apoapsis_altitude
                         dv = max(0, math.sqrt(body.gravitational_parameter/radius)-math.sqrt(body.gravitational_parameter*(2/radius-1/v.orbit.semi_major_axis)))
-                        acceleration = shuttle.skiff.max_thrust/v.mass
+                        orbital_thrust = sum(
+                            engine.max_thrust for engine in
+                            getattr(shuttle, 'orbiter_engines', [shuttle.skiff]))
+                        acceleration = orbital_thrust/v.mass
                         if acceleration <= 0:
-                            raise RuntimeError('Skiff has no thrust for insertion')
+                            raise RuntimeError('Orbiter engines have no thrust for insertion')
                         if v.orbit.time_to_apoapsis <= dv/acceleration/2+1:
                             state = 'INSERTION'
                     elif state == 'INSERTION':
@@ -847,7 +1381,12 @@ def run(args):
                     booster_elapsed = (None if liftoff_ut is None else
                                        max(0.0, conn.space_center.ut-liftoff_ut))
                     if shuttle.et_attached:
-                        result = shuttle.update(max_g=args.max_g)
+                        target_g = ascent_target_g(
+                            altitude, body.atmosphere_depth, args.max_g, args.launch_g,
+                            args.booster_min_g if not shuttle.separated else 0.0)
+                        result = shuttle.update(
+                            max_g=args.max_g, target_g=target_g, altitude=altitude,
+                            dt=1/args.hz, throttle_slew=args.throttle_slew)
                         if state == 'ASCENT':
                             control.throttle = g_force_throttle(
                                 control.throttle, flight.g_force, args.max_g)
@@ -855,45 +1394,50 @@ def run(args):
                         shuttle.skiff.thrust_limit = 1
                     actual_roll = ''
                     roll_control = 0.0
-                    if roll_active and state == 'ASCENT':
+                    if roll_active and state in ('ASCENT', 'ORBITER_ASCENT'):
+                        # AutoPilot owns pitch/yaw only. Direct roll control keeps the
+                        # real orbiter-mounted side (-Z) on the requested Earth/space side.
                         ap.target_direction = target_direction
                         ap.target_roll = float('nan')
                         surface_frame = v.surface_reference_frame
                         actual_direction = v.direction(surface_frame)
-                        roll_up_reference = surface_up_for_pitch_heading(target_pitch, args.heading)
-                        roof_direction = conn.space_center.transform_direction(
+                        roll_up_reference = surface_up_for_pitch_heading(
+                            target_pitch, args.heading)
+                        actual_side = conn.space_center.transform_direction(
                             (0, 0, -1), v.reference_frame, surface_frame)
-                        actual_roll = roll_for_roof(actual_direction, roll_up_reference, roof_direction)
-                        now_ut = conn.space_center.ut
-                        if last_roll_angle is not None and last_roll_ut is not None and now_ut > last_roll_ut:
-                            instantaneous_rate = roll_delta(last_roll_angle, actual_roll) / (now_ut-last_roll_ut)
-                            roll_rate = .7*roll_rate + .3*instantaneous_rate
-                        last_roll_angle = actual_roll
-                        last_roll_ut = now_ut
-                        roll_error_signed = roll_delta(actual_roll, mission_roll)
+                        target_side = desired_orbiter_side(
+                            target_pitch, args.heading, bool(earthward_mode))
+                        actual_roll = roll_for_roof(
+                            actual_direction, roll_up_reference, actual_side)
+                        physical_target_roll = roll_for_roof(
+                            actual_direction, roll_up_reference, target_side)
+                        target_roll = physical_target_roll
+                        roll_error_signed = roll_delta(
+                            actual_roll, physical_target_roll)
                         roll_error = abs(roll_error_signed)
-                        pitch_error = abs(ap.pitch_error)
-                        heading_error = abs(ap.heading_error)
+                        body_roll_rate = body_roll_rate_deg_s(v)
+                        roll_rate = body_roll_rate
+                        pitch_error, heading_error = surface_axis_errors(
+                            actual_direction, target_pitch, args.heading)
                         roll_control = manual_roll_command(
-                            roll_error_signed, roll_rate, roll_accel_authority_deg_s2(v),
-                            args.roll_rate, args.roll_control_limit, args.roll_response_time)
+                            roll_error_signed, body_roll_rate, roll_accel_reference,
+                            args.roll_rate, args.roll_control_limit,
+                            args.roll_response_time)
                         control.roll = roll_control
-                        if roll_attitude_settled(roll_error, roll_rate, pitch_error, heading_error):
-                            if roll_settle_since is None:
-                                roll_settle_since = now_ut
-                            elif now_ut-roll_settle_since >= args.roll_settle_time:
-                                mission_roll_settled = True
-                                roll_active = False
-                                control.roll = 0
-                                roll_control = 0.0
-                                if saved_roll_pid is not None:
-                                    ap.roll_pid_gains = saved_roll_pid
-                                if saved_auto_tune is not None:
-                                    ap.auto_tune = saved_auto_tune
-                                ap.set_direction_and_up(target_direction, roll_up_reference, mission_roll)
-                                print('Manual mission roll settled; gravity turn released')
-                        else:
-                            roll_settle_since = None
+                        settle_nose_error = direction_error_deg(
+                            actual_direction, target_direction)
+                        if not mission_roll_settled:
+                            if roll_attitude_settled(
+                                    roll_error, body_roll_rate,
+                                    settle_nose_error):
+                                if roll_settle_since is None:
+                                    roll_settle_since = conn.space_center.ut
+                                elif (conn.space_center.ut-roll_settle_since >=
+                                      args.roll_settle_time):
+                                    mission_roll_settled = True
+                                    print('Physical heads-down roll settled; gravity turn released')
+                            else:
+                                roll_settle_since = None
                     elif target_roll is not None:
                         control.roll = 0
                         if state in ('ASCENT', 'ORBITER_ASCENT'):
@@ -908,26 +1452,43 @@ def run(args):
                             # Orbital-frame x points anti-radially (toward the body).
                             roll_up_reference = (-1, 0, 0)
                         ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
-                        try:
-                            roll_error = abs(ap.roll_error)
-                        except Exception:
-                            roll_error = 0.0
-                        pitch_error = abs(ap.pitch_error)
-                        heading_error = abs(ap.heading_error)
+                        if state in ('ASCENT', 'ORBITER_ASCENT'):
+                            roll_error = abs(roll_delta(actual_roll, target_roll))
+                            pitch_error, heading_error = surface_axis_errors(
+                                actual_direction, target_pitch, args.heading)
+                        else:
+                            # Orbital-frame attitude errors are diagnostic only here.
+                            try:
+                                roll_error = abs(ap.roll_error)
+                            except Exception:
+                                roll_error = 0.0
+                            pitch_error = 0.0
+                            heading_error = 0.0
                     else:
-                        control.roll = 0
                         ap.target_direction = target_direction
                         roll_error = 0.0
-                        pitch_error = abs(ap.pitch_error)
-                        heading_error = abs(ap.heading_error)
+                        pitch_error = 0.0
+                        heading_error = 0.0
                     nose_error = direction_error_deg(v.direction(ap.reference_frame), target_direction)
+                    try:
+                        autopilot_error = ap.error
+                    except Exception:
+                        autopilot_error = ''
                     if conn.space_center.ut >= next_report:
                         actual_pitch, actual_heading = pitch_heading_for_direction(
                             v.direction(v.surface_reference_frame))
                         booster_thrust, booster_lf, booster_ox, booster_sf, booster_fraction = shuttle.booster_telemetry()
                         commanded_g = (shuttle.commanded_g(result, control.throttle)
                                        if shuttle.et_attached else 0.0)
-                        booster_full_time = shuttle.liquid_booster_nominal_burn_time()
+                        booster_full_time = shuttle.booster_nominal_burn_time()
+                        engine_limits = shuttle.engine_limit_telemetry()
+                        gimbal_actuation = shuttle.gimbal_telemetry()
+                        try:
+                            available_torque = tuple(
+                                tuple(round(x, 1) for x in side)
+                                for side in v.available_torque)
+                        except Exception:
+                            available_torque = ()
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
                                          v.mass, flight.vertical_speed, flight.horizontal_speed,
@@ -941,21 +1502,23 @@ def run(args):
                                          result.residual if shuttle.et_attached else 0,
                                          result.feasible if shuttle.et_attached else True,
                                          '' if target_roll is None else target_roll,
-                                         nose_error, ap.error, actual_roll, roll_error, roll_rate,
-                                         roll_control, pitch_error, heading_error,
+                                         nose_error, autopilot_error, actual_roll, roll_error, roll_rate,
+                                         body_roll_rate, roll_control, pitch_error, heading_error,
                                          ap.roll_control_oscillation,
                                          actual_pitch, actual_heading,
                                          '' if target_pitch is None else target_pitch,
-                                         shuttle.control_moment_budget])
+                                         shuttle.control_moment_budget, engine_limits,
+                                         gimbal_actuation, available_torque])
                         log.flush()
-                        print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f} deg/s; ctl {roll_control:.2f}')
+                        print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
                         next_report = conn.space_center.ut+2
                     since_roll_reset = (None if roll_reset_ut is None else
                                         conn.space_center.ut-roll_reset_ut)
                     if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
                         raise RuntimeError(f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
-                    if not shuttle.skiff.has_fuel:
-                        raise RuntimeError('Skiff out of fuel')
+                    orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])
+                    if not shuttle.et_attached and not any(e.has_fuel for e in orbital_engines):
+                        raise RuntimeError('Orbiter engines out of fuel')
                     time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
         finally:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -963,6 +1526,7 @@ def run(args):
                 try:
                     if saved_roll_pid is not None:
                         ap.roll_pid_gains = saved_roll_pid
+                    restore_aero_roll(roll_surface_states)
                     if saved_auto_tune is not None:
                         ap.auto_tune = saved_auto_tune
                 finally:
@@ -980,20 +1544,28 @@ def main():
     parser.add_argument('--stream-port', type=int, default=50001)
     parser.add_argument('--orbit', type=float, default=100000, help='Target altitude in m')
     parser.add_argument('--heading', type=float, default=90)
-    parser.add_argument('--turn-start', type=float, default=1000)
-    parser.add_argument('--turn-end', type=float, default=45000)
+    parser.add_argument('--turn-start', type=float, default=3000,
+                        help='Altitude in m where the post-roll gravity turn begins')
+    parser.add_argument('--turn-end', type=float, default=55000,
+                        help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
     parser.add_argument('--meco-periapsis', type=float, default=45000,
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--meco-pitch', type=float, default=0,
                         help='Surface pitch used to build horizontal energy after target apoapsis')
     parser.add_argument('--max-g', type=float, default=3.0,
                         help='Maximum commanded thrust acceleration in Earth g')
+    parser.add_argument('--launch-g', type=float, default=LAUNCH_TARGET_G,
+                        help='Gentle initial thrust-acceleration target in Earth g')
+    parser.add_argument('--booster-min-g', type=float, default=BOOSTER_MIN_G,
+                        help='Hard minimum thrust acceleration while boosters are attached and burning')
+    parser.add_argument('--throttle-slew', type=float, default=THROTTLE_SLEW_PER_SECOND,
+                        help='Maximum per-second change of each engine-group thrust limiter')
     parser.add_argument('--roll-reset-delay', type=float, default=180,
-                        help='Seconds after booster separation before rolling to 0 degrees')
+                        help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
     parser.add_argument('--roll-rate', type=float, default=6.0,
-                        help='AutoPilot roll-axis angular velocity cap in deg/s')
+                        help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
     parser.add_argument('--roll-time-to-peak', type=float, default=2.5,
@@ -1002,10 +1574,10 @@ def main():
                         help='AutoTune target roll overshoot fraction')
     parser.add_argument('--roll-settle-time', type=float, default=2.0,
                         help='Seconds roll/pitch/yaw errors must remain settled')
-    parser.add_argument('--roll-control-limit', type=float, default=.35,
-                        help='Maximum direct roll control magnitude during the initial mission roll')
-    parser.add_argument('--roll-response-time', type=float, default=.35,
-                        help='Rate-controller response horizon in seconds for the manual mission roll')
+    parser.add_argument('--roll-control-limit', type=float, default=1.0,
+                        help='Maximum direct roll-control magnitude during physical roll')
+    parser.add_argument('--roll-response-time', type=float, default=.20,
+                        help='Rate-controller response horizon in seconds for physical roll')
     parser.add_argument('--hz', type=float, default=10)
     parser.add_argument('--timeout', type=float, default=1800)
     parser.add_argument('--telemetry', default='telemetry.csv')
@@ -1015,7 +1587,8 @@ def main():
             not 0 < args.roll_rate <= 30 or not 0 < args.roll_attenuation <= 90 or
             args.roll_time_to_peak <= 0 or not 0 <= args.roll_overshoot <= 1 or
             args.roll_settle_time < 0 or not 0 < args.roll_control_limit <= 1 or
-            args.roll_response_time <= 0 or not 0 < args.max_g <= 10 or
+            args.roll_response_time <= 0 or not 0 < args.launch_g <= args.max_g <= 10 or
+            not 0 < args.booster_min_g <= args.max_g or not 0 < args.throttle_slew <= 1 or
             not 0 <= args.meco_periapsis < args.orbit or
             not -10 <= args.meco_pitch <= 20):
         parser.error('Invalid loop rate, ascent/MECO profile, G limit, timeout, or roll profile')

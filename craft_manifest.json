@@ -1,95 +1,105 @@
 {
   "ship": "STS",
-  "parts": 67,
-  "sha256": "01d7d59e9c2ccdfeabaaa8a3623e5c646315e49482e182fb0960c3b84e12e569",
-  "editor_mass_t": 330.244019,
+  "parts": 46,
+  "sha256": "8630384df80f04a8a87882f03121ca2411769c63ec5e9f881c2b0507f6118d9b",
+  "editor_mass_t": null,
   "engines": [
     {
-      "name": "LiquidEngineLV-TX87",
-      "id": "LiquidEngineLV-TX87_4293433692",
+      "name": "SSME",
+      "id": "SSME_4293588236",
       "position": [
-        0.559134364,
-        12.8587112,
-        0.409581661
+        -0.889326751,
+        4.86501884,
+        0.671552002
       ],
-      "stage": 5
+      "stage": 6
     },
     {
-      "name": "LiquidEngineLV-TX87",
-      "id": "LiquidEngineLV-TX87_4293431306",
+      "name": "SSME",
+      "id": "SSME_4293587360",
       "position": [
-        0.55913341,
-        12.8587112,
-        2.08958387
+        0.538673222,
+        4.86501884,
+        0.671552002
       ],
-      "stage": 5
+      "stage": 6
     },
     {
-      "name": "LiquidEngineLV-TX87",
-      "id": "LiquidEngineLV-TX87_4293430768",
+      "name": "SSME",
+      "id": "SSME_4293586904",
       "position": [
-        2.23913574,
-        12.8587112,
-        2.08958387
+        -0.175326765,
+        5.08635902,
+        -0.425968826
       ],
-      "stage": 5
+      "stage": 6
     },
     {
-      "name": "LiquidEngineLV-TX87",
-      "id": "LiquidEngineLV-TX87_4293430230",
+      "name": "benjee10.AJ10.v2",
+      "id": "benjee10.AJ10.v2_4293583528",
       "position": [
-        2.23913765,
-        12.8587112,
-        0.409582138
+        -1.30370855,
+        4.77887344,
+        -1.37511694
       ],
-      "stage": 5
+      "stage": 2
     },
     {
-      "name": "LiquidEngineRE-I2",
-      "id": "LiquidEngineRE-I2_4293437508",
+      "name": "benjee10.AJ10.v2",
+      "id": "benjee10.AJ10.v2_4293582864",
       "position": [
-        0.899133205,
-        10.2916622,
-        -2.55042505
+        0.953055084,
+        4.77887344,
+        -1.37511694
       ],
-      "stage": 5
+      "stage": 2
     },
     {
-      "name": "LiquidEngineLV-T91",
-      "id": "LiquidEngineLV-T91_4293359324",
+      "name": "Size2LFB.v2",
+      "id": "Size2LFB.v2_4293302178",
       "position": [
-        1.39913559,
-        12.786272,
-        1.24958229
+        3.75381255,
+        7.39665604,
+        4.59497643
       ],
-      "stage": 5
+      "stage": 6
     },
     {
-      "name": "Pollux",
-      "id": "Pollux_4293163826",
+      "name": "Mite",
+      "id": "Mite_4293293794",
       "position": [
-        4.35960197,
-        16.9699821,
-        1.24957943
+        3.60052061,
+        16.6737976,
+        4.37452555
       ],
-      "stage": 5
+      "stage": 2
     },
     {
-      "name": "Pollux",
-      "id": "Pollux_4293345002",
+      "name": "Size2LFB.v2",
+      "id": "Size2LFB.v2_4293272126",
       "position": [
-        -1.56133461,
-        16.9699821,
-        1.24957991
+        -4.10446596,
+        7.39665699,
+        4.59497643
       ],
-      "stage": 5
+      "stage": 6
+    },
+    {
+      "name": "Mite",
+      "id": "Mite_4293271850",
+      "position": [
+        -3.95117426,
+        16.6737976,
+        4.37452602
+      ],
+      "stage": 2
     }
   ],
   "resources": {
-    "ElectricCharge": 515.0,
-    "MonoPropellant": 340.0,
-    "LiquidFuel": 16035.0,
-    "Oxidizer": 18865.0,
-    "SolidFuel": 11616.0
+    "ElectricCharge": 210.0,
+    "MonoPropellant": 400.0,
+    "LiquidFuel": 32778.0,
+    "Oxidizer": 40062.0,
+    "SolidFuel": 80.0
   }
 }

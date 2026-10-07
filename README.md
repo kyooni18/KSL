@@ -1,11 +1,17 @@
 # STS Shuttle Launch Program
 
-Python controller for the supplied KSP 1.12.5 shuttle using the installed kRPC
-mod. It flies a configurable Kerbin ascent, discovers attached booster branches
-from their separator topology, supports the planned four-Skipper liquid booster
-stage, keeps the orbiter tank topped up from the ET, performs MECO only after
-reaching both the target apoapsis and a configurable near-orbital periapsis,
-separates the ET, and uses the orbiter Skiff for orbital insertion.
+Python controller for KSP 1.12.5 shuttle launches using kRPC. It flies a
+configurable Kerbin ascent, discovers attached booster branches from separator
+topology, controls engine thrust and pitch moment, and handles booster and ET
+separation followed by orbital insertion.
+
+The current `craft_manifest.json` describes the 46-part Orbiter craft: three
+SSMEs fed from its external tank, two detachable Size2 liquid boosters, two AJ10
+orbital engines, and two Mite motors left under KSP staging. The controller
+throttles the SSMEs and paired liquid boosters during ascent, then disables the
+SSMEs and enables both AJ10s when the ET is released. The documented
+four-Skipper and J-N500 layouts remain separate supported variants; their
+variant-specific allocation notes below do not describe this Orbiter craft.
 
 ## Run
 
@@ -118,11 +124,11 @@ tuning. This program covers launch and insertion, not rendezvous or landing.
 
 ## Source and validation
 
-`craft_manifest.json` records the source craft SHA-256, engine positions, resource
-amounts, and editor mass. The currently supplied craft contains **67 parts and
-330.244019 t**, whereas the report describes **60 parts and 459.45401 t**. The
-engine-line geometry agrees, but the old mass and time schedule should not be
-used as current flight predictions. Live vessel readings take precedence.
+`craft_manifest.json` records the source craft SHA-256, engine positions, and
+resource amounts. The current craft has **46 parts**. Its editor mass is not
+present in the supplied craft file, so use the live vessel mass in KSP for launch
+predictions. The older report describes a different 60-part vehicle; its mass,
+engine layout, and burn schedule do not apply to the current craft.
 
 Inspect an updated craft without running KSP:
 

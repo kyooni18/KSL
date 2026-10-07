@@ -64,6 +64,16 @@ class AllocationTests(unittest.TestCase):
         self.assertAlmostEqual(r.thrust, 180)
         self.assertLessEqual(abs(r.residual), 80.000001)
 
+    def test_roundoff_near_zero_moment_does_not_beat_thrust_cap(self):
+        r = allocate([241400, 71100, 1139800, 1139800, 1452200],
+                     [3.4098, -.4909, .34915, -1.33085, -.4859],
+                     thrust_cap=3143515,
+                     upper_bounds=[1, 1, .997177846, .45, .88],
+                     moment_tolerance=0)
+        self.assertTrue(r.feasible)
+        self.assertAlmostEqual(r.thrust, 3143515, delta=.001)
+        self.assertLess(abs(r.residual), 1e-5)
+
 
 if __name__ == '__main__':
     unittest.main()

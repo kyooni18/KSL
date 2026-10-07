@@ -134,7 +134,7 @@ def allocate(thrusts, arms, fixed_moment=0.0, target=0.0, thrust_cap=None,
     def score(u):
         moment = fixed_moment + sum(a * x for a, x in zip(coefficients, u))
         residual = abs(moment - target)
-        uncovered = max(0.0, residual - moment_tolerance)
+        uncovered = max(0.0, residual - moment_tolerance - 1e-5)
         thrust = sum(t * x for t, x in zip(effective_thrusts, u))
         mass_flow = sum(m * x for m, x in zip(effective_mass_flows, u))
         # First keep the residual inside the torque authority envelope, then
