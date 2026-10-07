@@ -23,7 +23,7 @@
     "rpcPort": 50000,
     "serialPort": "/dev/tty.krpc",
     "baudRate": 921600,
-    "timeoutMs": 2000,
+    "timeoutMs": 10000,
     "clientName": "Spaceplane Landing Guidance"
   },
   "guidance": {
