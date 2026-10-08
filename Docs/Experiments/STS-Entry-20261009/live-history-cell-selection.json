@@ -1,0 +1,77 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_ARCHIVE_AUDIT",
+  "qualification": {
+    "shadowGateEvidence": false,
+    "flightQualification": false,
+    "independentFlightSupportEstablished": false
+  },
+  "purpose": "Reproduce the exact original-STS aerodynamic history reducer used by the live shadow admission attempt and inspect whether the high-Mach, high-AoA matched cell was present.",
+  "provenance": {
+    "gitHeadAtAudit": "fda19b0",
+    "database": "Runtime/Physics/observations.sqlite3",
+    "databaseSHA256": "542b61cd4efd96daae8fbad3ba740eaf454a710bf8d3f777e0a4071a5da091a1",
+    "selectionImplementation": [
+      "CLanding/persistence/store/load_observe.inc:physics_store_load_history",
+      "CLanding/persistence/store/history.inc",
+      "CLanding/persistence/store/reduction.inc"
+    ],
+    "databaseOpenedReadOnly": true,
+    "physicsContext": "sha256:600bfa014c6cd51cf0d22f98edaeed5e230750c54335e094d663d3c8b59a4bd9",
+    "compatibleContextCount": 1,
+    "currentAttempt": "native-20948-1791480689-633313000",
+    "currentAttemptWasHeldOut": true,
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointExpectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUnchanged": true
+  },
+  "selection": {
+    "selectedCellCount": 60,
+    "selectedMachAtLeast5Q1To1000AoAA22To26Count": 12,
+    "targetCellKey": {
+      "qLog2Bin": 6,
+      "machHalfBin": 14,
+      "aoa4DegBin": 6,
+      "beta4DegBin": 0,
+      "gear": 0,
+      "wheelBrakes": 0,
+      "airbrakes": 0
+    },
+    "targetCellSelectedCount": 1,
+    "targetCell": {
+      "qPa": 65.562805,
+      "mach": 7.130614,
+      "aoaDeg": 25.193676,
+      "sideslipDeg": 0.036678,
+      "forcePerQWindAxesM2": {
+        "drag": 82.740061113,
+        "lift": 37.998338123,
+        "side": -0.00556875
+      },
+      "independentFlightSupport": 1,
+      "latestObservationUT": 10116.511826,
+      "sourceObservation": {
+        "id": 228397,
+        "sessionId": "native-29000-1791408848-554058000",
+        "flightKey": "launch-ut:9.080",
+        "ut": 10116.511826173375,
+        "qPa": 65.56280517578125,
+        "mach": 7.130614291845485,
+        "aoaDeg": 25.193675994873047,
+        "sideslipDeg": 0.03667828440666199,
+        "bankDeg": 0.088134765625,
+        "massKg": 25815.921875,
+        "gear": 0,
+        "wheelBrakes": 0,
+        "airbrakes": 0,
+        "liftPerQM2": 38.04397167622321,
+        "dragPerQM2": 82.71908886857624,
+        "controlProfile": "entry",
+        "quality": 1.0,
+        "eligible": true
+      }
+    }
+  },
+  "interpretation": "The 60 cells loaded for the rejected live attempt did include an original-STS measured cell near Mach 7.13, q 65.6 Pa, AoA 25.2 deg, with gear, brakes, and speedbrakes stowed. Its reducer support is one independent launch key (launch-ut:9.080), not independent corroboration; multiple KSP sessions under that same launch identity collapse to one source. The attempt had no new observations and the shadow still rejected before guidance engagement, so repeating the same admission run would add no evidence."
+}
