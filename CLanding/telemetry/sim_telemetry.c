@@ -532,6 +532,13 @@ static const struct {
                     "none",
                     "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                     "ShuttleSim/reference-model/stsn_certified_prior_identified.csv"}},
+    /* Opt-in offline STS experiment basis, with no certified aero cells.
+       Attitude dynamics remain borrowed from STS-N and are not STS validation. */
+    {"sts-provisional", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_provisional.csv",
+                         "none",
+                         "ShuttleSim/reference-model/stsn_attitude_identified.ini",
+                         "none"}},
     {"fitted-legacy", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",

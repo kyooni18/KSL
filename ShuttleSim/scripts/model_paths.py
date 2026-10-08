@@ -15,6 +15,14 @@ import pathlib
 SIM = pathlib.Path(__file__).resolve().parents[1]
 
 PROFILES = {
+    "sts-provisional": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_provisional.csv",
+        "aero_book": None,
+        # Borrowed response dynamics, not STS attitude validation.
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",

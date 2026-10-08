@@ -276,7 +276,7 @@ def main():
         value=getattr(args,name)
         if value is None:
             continue
-        if name in ("aero_book","terminal_aero_book") and value.lower()=="none":
+        if name in ("aero_book","terminal_aero_book","certified_prior") and value.lower()=="none":
             setattr(args,name,"none")
             continue
         path=pathlib.Path(value).expanduser().resolve()

@@ -1,0 +1,178 @@
+{
+  "status": "provisional; not STS validation",
+  "certified_cells": 0,
+  "assumptions": [
+    "normal-force polar; no independent alpha sweep",
+    "constant endpoint parameters outside measured Mach support",
+    "single flight; residuals are in-sample, not held-out validation"
+  ],
+  "source": [
+    {
+      "path": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+      "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330"
+    }
+  ],
+  "accepted_samples": 10639,
+  "knots": [
+    {
+      "mach": 0.373564816707651,
+      "mach_bin": [
+        0,
+        0.5
+      ],
+      "alpha_support": [
+        14.5599813461304,
+        17.2220821380615
+      ],
+      "count": 258,
+      "k": 2.549911752218013,
+      "cd0": 0.06363753636784865,
+      "in_sample_median_relative_error": 0.10539972926794294,
+      "in_sample_p95_relative_error": 0.2629015696267183
+    },
+    {
+      "mach": 0.853747767334629,
+      "mach_bin": [
+        0.5,
+        1
+      ],
+      "alpha_support": [
+        16.2104949951172,
+        17.2212753295898
+      ],
+      "count": 962,
+      "k": 0.8469289342535895,
+      "cd0": 0.07631637641940969,
+      "in_sample_median_relative_error": 0.15335439508037357,
+      "in_sample_p95_relative_error": 0.514908202885981
+    },
+    {
+      "mach": 1.20729339726613,
+      "mach_bin": [
+        1,
+        1.5
+      ],
+      "alpha_support": [
+        17.2362804412842,
+        18.2704162597656
+      ],
+      "count": 348,
+      "k": 0.7052954530282195,
+      "cd0": 0.21443090172136128,
+      "in_sample_median_relative_error": 0.05100955850788669,
+      "in_sample_p95_relative_error": 0.1260746284632619
+    },
+    {
+      "mach": 1.75775107626592,
+      "mach_bin": [
+        1.5,
+        2
+      ],
+      "alpha_support": [
+        17.7918357849121,
+        18.2663879394531
+      ],
+      "count": 314,
+      "k": 0.627417342640419,
+      "cd0": 0.14887321215362806,
+      "in_sample_median_relative_error": 0.07764082628867958,
+      "in_sample_p95_relative_error": 0.1514498531622307
+    },
+    {
+      "mach": 2.49385312888988,
+      "mach_bin": [
+        2,
+        3
+      ],
+      "alpha_support": [
+        17.5642871856689,
+        22.1219787597656
+      ],
+      "count": 658,
+      "k": 0.5371014933362421,
+      "cd0": 0.1301549611719442,
+      "in_sample_median_relative_error": 0.05648466510103689,
+      "in_sample_p95_relative_error": 0.11262048864293739
+    },
+    {
+      "mach": 3.48900964150756,
+      "mach_bin": [
+        3,
+        4
+      ],
+      "alpha_support": [
+        19.5403842926025,
+        26.1741371154785
+      ],
+      "count": 669,
+      "k": 0.43718639084707595,
+      "cd0": 0.17330175662835828,
+      "in_sample_median_relative_error": 0.07075452649821734,
+      "in_sample_p95_relative_error": 0.163039003687665
+    },
+    {
+      "mach": 4.47490238502981,
+      "mach_bin": [
+        4,
+        5
+      ],
+      "alpha_support": [
+        26.1156444549561,
+        27.6190013885498
+      ],
+      "count": 707,
+      "k": 0.3803034857200328,
+      "cd0": 0.1965905786658885,
+      "in_sample_median_relative_error": 0.021599611750239278,
+      "in_sample_p95_relative_error": 0.04388565067953232
+    },
+    {
+      "mach": 5.62561945097365,
+      "mach_bin": [
+        5,
+        6
+      ],
+      "alpha_support": [
+        22.4821949005127,
+        27.9828319549561
+      ],
+      "count": 1593,
+      "k": 0.38397707640614887,
+      "cd0": 0.16435485150268286,
+      "in_sample_median_relative_error": 0.02105952493527674,
+      "in_sample_p95_relative_error": 0.14033994492714486
+    },
+    {
+      "mach": 6.60386665693724,
+      "mach_bin": [
+        6,
+        7
+      ],
+      "alpha_support": [
+        23.8881340026855,
+        24.9891738891602
+      ],
+      "count": 3825,
+      "k": 0.3908023831947624,
+      "cd0": 0.19538361076198069,
+      "in_sample_median_relative_error": 0.05172427828950488,
+      "in_sample_p95_relative_error": 0.10213774109714491
+    },
+    {
+      "mach": 7.11385249997298,
+      "mach_bin": [
+        7,
+        8
+      ],
+      "alpha_support": [
+        24.9995346069336,
+        25.0889282226562
+      ],
+      "count": 1305,
+      "k": 0.39409862564794584,
+      "cd0": 0.22935138039616848,
+      "in_sample_median_relative_error": 0.012281982037867012,
+      "in_sample_p95_relative_error": 0.02419751497650191
+    }
+  ]
+}
