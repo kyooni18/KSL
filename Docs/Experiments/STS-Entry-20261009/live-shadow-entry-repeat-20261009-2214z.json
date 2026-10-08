@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "title": "Original STS normal shadow admission repeat from the 72 km campaign checkpoint",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "status": "rejected_before_engagement",
+  "objective": "Continue collecting normal-gate STS admission data while preserving the original checkpoint and all campaign safety gates.",
+  "gitHeadAtReport": "a66b31575adf338d76417543a0a73e64850ed76e",
+  "attempts": [
+    {
+      "manifestPath": "Runtime/Headless/run-manifests/20261008T221315652772Z-86543.json",
+      "manifestSHA256": "b891ade3a323f0d8eaaba6cb2f32fb5409c149842edf3ee9b107e3128b8103f0",
+      "campaignManifestPath": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-badd735f8d8c6356/manifest.json",
+      "campaignManifestSHA256": "04cc94729ef8d8a835f3e4670d09e74b16ec460a4351072debb7a0bc5b1998d1",
+      "campaignIdentity": "64635833ea57a683-de043146f5e1187c-badd735f8d8c6356",
+      "backendSHA256": "de043146f5e1187ca164c8abc106ad581ae5bc6b773d2d59d61762b35220271b",
+      "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+      "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+      "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+      "startedUTC": "2026-10-08T22:13:15.652772+00:00",
+      "argv": [
+        "Tools/headless_flight.py",
+        "--live",
+        "--backend",
+        "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-acc9900320638938/landing_backend",
+        "--reentry-only",
+        "--config",
+        "Configuration/sts.json",
+        "--initial-save",
+        "STS-campaign-72km-20261008",
+        "--checkpoint-physics-profile",
+        "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+        "--max-wall-seconds",
+        "900"
+      ],
+      "diagnosticEnvironment": {
+        "KSP_LANDER_MODEL_PROFILE": "unset (runtime default identified)",
+        "KSP_LANDER_UNPOWERED_ONLY": "1",
+        "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+        "KSP_LANDER_MANUAL_FORCE_REENTRY": "unset",
+        "KSP_LANDER_FORCE_REENTRY_TEST": "unset at launch"
+      },
+      "result": "rejected_before_shadow_gate",
+      "rejection": "Aerodynamic profile identified describes STS-N, not STS; cross-vehicle model reuse is blocked.",
+      "guidanceEngaged": false,
+      "liveControlsIssued": false,
+      "liveDescentStarted": false,
+      "interpretation": "Setup refusal only. No shadow prediction or live descent. This launch omitted the already-established original-STS profile selector; do not repeat with the default profile."
+    },
+    {
+      "attemptId": "native-87704-1791497673-524564000",
+      "manifestPath": "Runtime/Headless/run-manifests/20261008T221433104784Z-87704.json",
+      "manifestSHA256": "b7e0cc444be0ed1736259030fb09745263ea3a43614865fa57d9c09a23f7e04e",
+      "campaignManifestPath": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-badd735f8d8c6356/manifest.json",
+      "campaignManifestSHA256": "04cc94729ef8d8a835f3e4670d09e74b16ec460a4351072debb7a0bc5b1998d1",
+      "campaignIdentity": "64635833ea57a683-de043146f5e1187c-badd735f8d8c6356",
+      "backendSHA256": "de043146f5e1187ca164c8abc106ad581ae5bc6b773d2d59d61762b35220271b",
+      "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+      "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+      "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+      "startedUTC": "2026-10-08T22:14:33.104784+00:00",
+      "argv": [
+        "Tools/headless_flight.py",
+        "--live",
+        "--backend",
+        "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-acc9900320638938/landing_backend",
+        "--reentry-only",
+        "--config",
+        "Configuration/sts.json",
+        "--initial-save",
+        "STS-campaign-72km-20261008",
+        "--checkpoint-physics-profile",
+        "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+        "--max-wall-seconds",
+        "900"
+      ],
+      "diagnosticEnvironment": {
+        "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+        "KSP_LANDER_UNPOWERED_ONLY": "1",
+        "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+        "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+        "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+        "KSP_LANDER_MANUAL_FORCE_REENTRY": "unset",
+        "KSP_LANDER_FORCE_REENTRY_TEST": "unset at launch; verified-checkpoint policy held out this attempt"
+      },
+      "checkpointPrior": {
+        "aerodynamicPriorCells": 60,
+        "currentAttemptHeldOut": true,
+        "normalQualificationRequired": true
+      },
+      "result": "rejected_by_normal_closed_loop_shadow_gate",
+      "qualification": {
+        "normalShadowGateUsed": true,
+        "gateBypassed": false,
+        "shadowPredictionEntered": true,
+        "MM305Reached": false,
+        "guidanceEngaged": false,
+        "liveControlsIssued": false,
+        "liveDescentStarted": false,
+        "touchdownVerified": false,
+        "rolloutVerified": false
+      },
+      "shadowSummary": {
+        "closestMissM": 4500,
+        "rangeErrorM": 64900,
+        "peakDynamicPressurePa": 5300,
+        "peakGLoad": 1.63,
+        "shadowAbort": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+      },
+      "shadowWitness": [
+        {
+          "kind": "near-site",
+          "ut": 10516.31,
+          "altitudeM": 38002,
+          "speedMps": 1730.3,
+          "mach": 5.21,
+          "flightPathAngleDeg": -3.78,
+          "rangeToSiteM": 4583,
+          "runwayAlongTrackM": 839,
+          "runwayCrossTrackM": 4506,
+          "courseToSiteErrorDeg": -101.1,
+          "bankCommandDeg": -40,
+          "bankActualDeg": -40,
+          "angleOfAttackDeg": 28,
+          "mm305Ready": false,
+          "mm305Veto": "0x89"
+        },
+        {
+          "kind": "45s-later",
+          "ut": 10561.31,
+          "altitudeM": 32607,
+          "speedMps": 1422.1,
+          "mach": 4.44,
+          "flightPathAngleDeg": -4.94,
+          "rangeToSiteM": 68278,
+          "runwayAlongTrackM": 68216,
+          "runwayCrossTrackM": 2909,
+          "courseToSiteErrorDeg": -173.6,
+          "bankCommandDeg": -40,
+          "bankActualDeg": -40,
+          "mm305Ready": false,
+          "mm305Veto": "0x89"
+        },
+        {
+          "kind": "shadow-abort",
+          "ut": 10832.91,
+          "altitudeM": 9347,
+          "speedMps": 85.0,
+          "mach": 0.28,
+          "rangeToSiteM": 161402,
+          "runwayAlongTrackM": 156781,
+          "runwayCrossTrackM": -38793,
+          "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+        }
+      ],
+      "interpretation": "The shadow forecast passes near the site but is pointed away from it, then range grows and recovery is exhausted before TAEM. This is simulated admission evidence only; no atmospheric live trajectory or control response was measured."
+    }
+  ],
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "path": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+    "expectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postRunSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "preflightPhysics": {
+      "ut": 9931.271826169332,
+      "meanAltitudeM": 71919.67456402932,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0,
+      "actualThrustN": 0
+    },
+    "postRunSettle": {
+      "helper": "Tools/settle_known_checkpoint.py",
+      "ready": true,
+      "ut": 9931.291826169332,
+      "utDeltaAcrossIndependentReadOnlyProbeS": 0.0,
+      "meanAltitudeM": 71917.32721801347,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "pitchRollYawInput": [
+        0,
+        0,
+        0
+      ],
+      "throttle": 0,
+      "actualThrustN": 0,
+      "wheelBrakes": false,
+      "actionGroups0Through9": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0
+    },
+    "checkpointUnchanged": true
+  },
+  "liveKSP": {
+    "processCount": 1,
+    "pid": 69877,
+    "runnerAndBackendStoppedAfterAttempt": true
+  },
+  "dataLimitations": {
+    "fullConsoleLogPersisted": false,
+    "capturedEvidence": "Run manifests plus selected stdout and ENTRY_WITNESS excerpts recorded above. The witness states are shadow predictions; they are not measured atmospheric flight states."
+  },
+  "noProductionChangeJustified": true
+}
