@@ -204,21 +204,21 @@ void landing_controller_engage_reentry(LandingController*c){
     memset(&prediction,0,sizeof(prediction));
     trajectory_init(&prediction.trajectory);
     if(simulator_fast_qualification){
-        /* The simulator is the plant for the control loop below. Seed only
-           the observable state used by the replay/archive; guidance remains
-           responsible for all subsequent MM304, TAEM, HAC, and rollout
-           decisions. */
+        /* Offline downstream-controller diagnostics may start from a saved
+           state without a shadow rollout. Keep observed entry state, but do
+           not manufacture TAEM, recovery, or qualification results. */
         prediction.entered_atmosphere=in_atmosphere;
         prediction.entry_range=t.range_to_site;
         prediction.entry_flight_path_angle=t.flight_path_angle;
         prediction.entry_speed=t.true_air_speed;
-        prediction.taem_distance=t.range_to_site;
-        prediction.taem_range_error=t.range_to_site;
-        prediction.closest_distance=t.range_to_site;
-        prediction.taem_speed=t.true_air_speed;
-        prediction.taem_flight_path_angle=t.flight_path_angle;
-        prediction.peak_dynamic_pressure=t.dynamic_pressure;
-        prediction.peak_g_load=t.g_force;
+        prediction.taem_distance=NAN;
+        prediction.taem_range_error=NAN;
+        prediction.closest_distance=NAN;
+        prediction.taem_speed=NAN;
+        prediction.taem_flight_path_angle=NAN;
+        prediction.minimum_entry_speed=NAN;
+        prediction.peak_dynamic_pressure=NAN;
+        prediction.peak_g_load=NAN;
         prediction.final_state=state;
     }else{
         double gravity=planet_surface_gravity(p);
@@ -243,9 +243,10 @@ void landing_controller_engage_reentry(LandingController*c){
         trajectory_clear(&qualification_plan.trajectory);
     }
 
-    bool recovery=simulator_fast_qualification||
+    bool shadow_qualified=!simulator_fast_qualification&&
         reentry_guidance_shadow_recovery_qualified(
             &prediction,&cfg.vehicle,&cfg.guidance);
+    bool recovery=simulator_fast_qualification||shadow_qualified;
     if(!recovery){
         char msg[768];
         snprintf(msg,sizeof(msg),
@@ -270,44 +271,58 @@ void landing_controller_engage_reentry(LandingController*c){
     plan.predicted_taem_distance=prediction.taem_distance;
     plan.predicted_taem_range_error=prediction.taem_range_error;
     plan.predicted_closest_distance=prediction.closest_distance;
-    plan.predicted_entry_range=prediction.entry_range;
-    plan.predicted_entry_flight_path_angle=prediction.entry_flight_path_angle;
+    plan.predicted_entry_range=shadow_qualified?prediction.entry_range:NAN;
+    plan.predicted_entry_flight_path_angle=shadow_qualified?prediction.entry_flight_path_angle:NAN;
     plan.predicted_post_burn_periapsis_altitude=t.periapsis_altitude;
-    plan.nominal_capture_achieved=true;
-    plan.robustness_qualified=true;
-    plan.target_capture_achieved=true;
-    plan.robustness_scenarios=1;
-    plan.robustness_passed=1;
+    plan.nominal_capture_achieved=shadow_qualified;
+    plan.robustness_qualified=shadow_qualified;
+    plan.target_capture_achieved=shadow_qualified;
+    plan.robustness_scenarios=shadow_qualified?1:0;
+    plan.robustness_passed=shadow_qualified?1:0;
     plan.robustness_unsafe=0;
-    plan.robustness_pass_fraction=1.0;
-    plan.execution_qualified=true;
-    plan.execution_degraded=false;
-    plan.recovery_passed=1;
-    plan.recovery_pass_fraction=1.0;
-    plan.worst_case_closest_distance=prediction.closest_distance;
-    plan.worst_case_taem_range_error=fabs(prediction.taem_range_error);
-    plan.worst_case_entry_flight_path_angle=prediction.entry_flight_path_angle;
-    plan.worst_case_post_burn_periapsis_altitude=t.periapsis_altitude;
-    plan.worst_case_peak_dynamic_pressure=prediction.peak_dynamic_pressure;
-    plan.worst_case_peak_g_load=prediction.peak_g_load;
-    plan.live_cutoff_capture_qualified=true;
+    plan.robustness_pass_fraction=shadow_qualified?1.0:0.0;
+    plan.execution_qualified=shadow_qualified;
+    plan.execution_degraded=simulator_fast_qualification;
+    plan.recovery_passed=shadow_qualified?1:0;
+    plan.recovery_pass_fraction=shadow_qualified?1.0:0.0;
+    plan.worst_case_closest_distance=shadow_qualified?prediction.closest_distance:NAN;
+    plan.worst_case_taem_range_error=shadow_qualified?fabs(prediction.taem_range_error):NAN;
+    plan.worst_case_entry_flight_path_angle=shadow_qualified?prediction.entry_flight_path_angle:NAN;
+    plan.worst_case_post_burn_periapsis_altitude=shadow_qualified?t.periapsis_altitude:NAN;
+    plan.worst_case_peak_dynamic_pressure=shadow_qualified?prediction.peak_dynamic_pressure:NAN;
+    plan.worst_case_peak_g_load=shadow_qualified?prediction.peak_g_load:NAN;
+    plan.live_cutoff_capture_qualified=shadow_qualified;
     plan.live_cutoff_periapsis_altitude=t.periapsis_altitude;
-    plan.live_cutoff_closest_distance=prediction.closest_distance;
-    plan.live_cutoff_entry_flight_path_angle=prediction.entry_flight_path_angle;
-    plan.achieved_state_verified=true;
-    plan.achieved_state_capture_qualified=true;
+    plan.live_cutoff_closest_distance=shadow_qualified?prediction.closest_distance:NAN;
+    plan.live_cutoff_entry_flight_path_angle=shadow_qualified?prediction.entry_flight_path_angle:NAN;
+    plan.achieved_state_verified=shadow_qualified;
+    plan.achieved_state_capture_qualified=shadow_qualified;
     plan.achieved_post_burn_periapsis_altitude=t.periapsis_altitude;
     plan.confidence=clampd(c->planning_aerodynamics.confidence,0.0,1.0); /* decision-literal-ok: confidence domain */
 
     guidance_initialize_reentry_continuation(&c->guidance,&t,p,&cfg,
         initial_s_turn_sign,false,&c->envelope,&c->trajectory_calibration);
     trajectory_copy(&plan.trajectory,&prediction.trajectory);
-    snprintf(plan.note,sizeof(plan.note),
+    snprintf(plan.note,sizeof(plan.note),simulator_fast_qualification?
+        "Offline downstream-controller diagnostic; no shadow qualification was performed.":
         "Reentry continuation qualified by production shadow executive from live state.");
-    prediction_cache_store(c,&prediction);
-    c->cached_prediction_ut=t.ut;
-    c->cached_prediction_sign=initial_s_turn_sign;
-    prediction_cache_apply(c,&t,&cfg);
+    if(shadow_qualified){
+        prediction_cache_store(c,&prediction);
+        c->cached_prediction_ut=t.ut;
+        c->cached_prediction_sign=initial_s_turn_sign;
+        prediction_cache_apply(c,&t,&cfg);
+    }else{
+        c->has_prediction_cache=false;
+        t.predicted_miss_distance=NAN;
+        t.predicted_taem_distance=NAN;
+        t.predicted_taem_range_error=NAN;
+        t.predicted_entry_range=NAN;
+        t.predicted_entry_flight_path_angle=NAN;
+        t.predicted_taem_speed=NAN;
+        t.predicted_taem_energy_error=NAN;
+        t.predicted_peak_dynamic_pressure=NAN;
+        t.predicted_peak_g_load=NAN;
+    }
     entry_prediction_clear(&prediction);
 
     if(c->has_plan)deorbit_plan_clear(&c->plan);
@@ -332,19 +347,22 @@ void landing_controller_engage_reentry(LandingController*c){
     c->snapshot.phase=c->guidance.phase;
     c->snapshot.automation_engaged=true;
     c->snapshot.paused=false;
-    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),
-        in_atmosphere?
+    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),simulator_fast_qualification?
+        "Offline downstream-controller diagnostic armed without shadow qualification.":
+        (in_atmosphere?
         "Reentry-only guidance resumed from live atmospheric state after shadow qualification.":
-        "Reentry-only continuation armed from live post-deorbit state after shadow qualification.");
-    set_error(c,NULL);set_warning(c,NULL);
+        "Reentry-only continuation armed from live post-deorbit state after shadow qualification."));
+    set_error(c,NULL);
+    set_warning(c,simulator_fast_qualification?
+        "This offline diagnostic skips shadow admission and cannot demonstrate qualification.":NULL);
     reference_trajectory(&c->snapshot.reference_trajectory,&cfg.site,
         &cfg.guidance,p->radius,initial_s_turn_sign);
     c->log_reference_trajectory_dirty=true;
-    log_state_event(c,
-        in_atmosphere?
+    log_state_event(c,simulator_fast_qualification?
+        "event=offline-reentry-diagnostic-armed; simulator-fast-qualification=true; shadow-qualified=false":
+        (in_atmosphere?
         "event=reentry-continuation-armed; atmospheric-restart=true; shadow-qualified=true":
-        "event=reentry-continuation-armed; deorbit-planner-skipped=true; shadow-qualified=true",
-        true);
+        "event=reentry-continuation-armed; deorbit-planner-skipped=true; shadow-qualified=true"),true);
     publish(c);
     pthread_mutex_unlock(&c->mutex);
 }
