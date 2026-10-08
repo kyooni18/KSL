@@ -65,10 +65,18 @@ def main():
     ap.add_argument('logs', nargs='+', type=Path)
     ap.add_argument('--table', required=True, type=Path)
     ap.add_argument('--report', required=True, type=Path)
+    ap.add_argument('--mach-bin-width', type=float,
+                    help='optional uniform Mach bins on [0, 8), for resolution experiments')
     args = ap.parse_args()
     rows = [r for p in args.logs for r in samples(p)]
     knots = []
-    for lo, hi in BINS:
+    bins = BINS
+    if args.mach_bin_width is not None:
+        width = args.mach_bin_width
+        if not math.isfinite(width) or width < .25 or width > 2:
+            ap.error('Mach bin width must be finite and between .25 and 2')
+        bins = [(i*width, min(8, (i+1)*width)) for i in range(math.ceil(8/width))]
+    for lo, hi in bins:
         rs = [r for r in rows if lo <= r['mach'] < hi]
         if len(rs) < 30:
             continue
@@ -111,6 +119,8 @@ def main():
                              'single flight; residuals are in-sample, not held-out validation'],
                 source=[dict(path=str(p), sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in args.logs],
                 accepted_samples=len(rows), knots=knots)
+    if args.mach_bin_width is not None:
+        report['mach_bin_width'] = args.mach_bin_width
     args.report.write_text(json.dumps(report, indent=2)+'\n')
     print(f'{len(rows)} accepted STS samples; {len(knots)} provisional Mach knots')
 
