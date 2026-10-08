@@ -46,6 +46,29 @@ PROFILES = {
     },
 }
 
+# Profile identity is not a statement of flight certification. In particular,
+# sts-provisional has no certified cells and borrows STS-N attitude dynamics.
+PROFILE_VEHICLES = {
+    "identified": "STS-N",
+    "sts-provisional": "STS",
+    "fitted-legacy": "STS-N",
+    "reference-b": "STS-N",
+}
+
+
+def validate_vehicle_profile(configuration: dict, profile: str | None = None) -> None:
+    name = active_profile() if profile is None else profile
+    expected = PROFILE_VEHICLES.get(name)
+    vehicle = configuration.get("vehicle") if isinstance(configuration, dict) else None
+    actual = vehicle.get("modelId") if isinstance(vehicle, dict) else None
+    if expected is None:
+        raise ValueError(f"Unknown aerodynamic profile {name!r}")
+    if actual != expected:
+        raise ValueError(
+            f"Aerodynamic profile {name!r} describes {expected}, not {actual!r}; "
+            "select a vehicle-matched profile explicitly. Cross-vehicle model reuse is blocked."
+        )
+
 
 def active_profile() -> str:
     name = os.environ.get("KSP_LANDER_MODEL_PROFILE") or "identified"

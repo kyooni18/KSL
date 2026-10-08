@@ -32,10 +32,9 @@ void shuttle_sim_prepare_guidance_telemetry(
     const LandingConfiguration *configuration,
     const PlanetModel *planet);
 
-/* ShuttleSim model data files.  The KSP-fitted set lives under the git-ignored
-   ShuttleSim/data/fitted/; a tracked, explicitly labelled reference model under
-   ShuttleSim/reference-model/ keeps a clean checkout buildable, testable and
-   simulatable.  The fitted file wins whenever it is readable. */
+/* Named model data profiles are selected explicitly; file existence never
+   changes the selected plant. Profiles carry a vehicle model identity so
+   STS and STS-N are not silently treated as interchangeable calibrations. */
 typedef enum {
     SHUTTLE_SIM_MODEL_ATMOSPHERE = 0,
     SHUTTLE_SIM_MODEL_AERO,
@@ -53,6 +52,9 @@ typedef enum {
    book yields the literal "none".  The profile comes from
    KSP_LANDER_MODEL_PROFILE (default "identified"). */
 const char *shuttle_sim_model_profile(void);
+/* Aerodynamic profile identity, not a claim of independent certification. */
+const char *shuttle_sim_model_vehicle_id(void);
+bool shuttle_sim_model_matches_vehicle(const char *model_id, char *reason, size_t size);
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
                                    char *buffer, size_t buffer_size);
 

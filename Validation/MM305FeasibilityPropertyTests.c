@@ -30,7 +30,7 @@ static PlanetModel test_planet(void) {
 }
 
 static Telemetry create_telemetry(const PlanetModel *p, const LandingConfiguration *cfg,
-                                  double altitude, double mach, double along, double cross) {
+                                  double altitude, double mach, double along, double cross, double mass_kg) {
     Telemetry t;
     memset(&t, 0, sizeof(t));
     t.latitude = cfg->site.latitude;
@@ -47,7 +47,7 @@ static Telemetry create_telemetry(const PlanetModel *p, const LandingConfigurati
     t.runway_cross_track = cross;
     t.dynamic_pressure = fmin(7000.0, 0.35 * cfg->vehicle.maximum_dynamic_pressure);
     t.g_force = fmin(1.2, 0.35 * cfg->vehicle.maximum_g_load);
-    t.mass = 40000.0;
+    t.mass = mass_kg;
     t.angle_of_attack = 18.0;
     t.sideslip = 0.0;
     t.lift_force = t.mass * 8.0;
@@ -114,9 +114,66 @@ static TerminalDynamicState telemetry_to_terminal_state(const TerminalModel *mod
     return state;
 }
 
-int main(void) {
+static bool load_configuration_file(const char *path, LandingConfiguration *cfg) {
+    FILE *file = fopen(path, "rb");
+    if (!file) return false;
+    bool ok = false;
+    char *text = NULL;
+    JsonToken *tokens = NULL;
+    if (fseek(file, 0, SEEK_END) != 0) goto done;
+    long length = ftell(file);
+    if (length <= 0 || length > 1048576 || fseek(file, 0, SEEK_SET) != 0) goto done;
+    text = calloc((size_t)length + 1, 1);
+    tokens = calloc(16384, sizeof(*tokens));
+    if (!text || !tokens || fread(text, 1, (size_t)length, file) != (size_t)length) goto done;
+    JsonDoc document;
+    if (json_parse(text, tokens, 16384, &document) <= 0) goto done;
+    ok = landing_configuration_from_json(cfg, &document, 0);
+done:
+    free(tokens);
+    free(text);
+    fclose(file);
+    return ok;
+}
+
+int main(int argc, char **argv) {
+    setvbuf(stdout, NULL, _IOLBF, 0);
     LandingConfiguration cfg = landing_configuration_default();
+    const char *configuration_path = NULL;
+    double mass_kg = 40000.0;
+    bool explicit_mass = false;
+    for (int n = 1; n < argc; ++n) {
+        if (!strcmp(argv[n], "--configuration") && n + 1 < argc) {
+            configuration_path = argv[++n];
+        } else if (!strcmp(argv[n], "--mass-kg") && n + 1 < argc) {
+            char *end = NULL;
+            mass_kg = strtod(argv[++n], &end);
+            if (!end || end == argv[n] || *end || !isfinite(mass_kg) || mass_kg <= 0.0) {
+                fprintf(stderr, "mass must be a positive finite number in kg\n");
+                return EXIT_FAILURE;
+            }
+            explicit_mass = true;
+        } else {
+            fprintf(stderr, "usage: %s [--configuration FILE --mass-kg MEASURED_MASS]\n", argv[0]);
+            return EXIT_FAILURE;
+        }
+    }
+    if (configuration_path && (!explicit_mass || !load_configuration_file(configuration_path, &cfg))) {
+        fprintf(stderr, "explicit configuration requires a readable config and --mass-kg\n");
+        return EXIT_FAILURE;
+    }
     landing_configuration_normalize(&cfg);
+    const char *profile = shuttle_sim_model_profile();
+    const char *profile_vehicle = shuttle_sim_model_vehicle_id();
+    if (!profile_vehicle || strcmp(profile_vehicle, cfg.vehicle.model_id)) {
+        fprintf(stderr, "model mismatch: profile %s describes %s, configuration describes %s\n",
+            profile ? profile : "unknown", profile_vehicle ? profile_vehicle : "unknown", cfg.vehicle.model_id);
+        return EXIT_FAILURE;
+    }
+    printf("MM305 fixture: profile=%s modelId=%s massKg=%.6f configuration=%s state=%s\n",
+        profile, cfg.vehicle.model_id, mass_kg, configuration_path ? configuration_path : "native-default",
+        configuration_path ? "native-atmosphere-and-forces" : "legacy-envelope-property-fixture");
+    fflush(stdout);
     cfg.site.latitude = -0.0486111111;
     cfg.site.longitude = -74.7283333333;
     cfg.site.altitude = 70.0;
@@ -136,6 +193,10 @@ int main(void) {
     assert(terminal_model_capture(&model, &files, &cfg, 101, reason, sizeof(reason)));
     assert(model.replay_validated);
 
+    if (configuration_path && !shuttle_sim_load_planet(files.atmosphere_csv, &p, reason, sizeof(reason))) {
+        fprintf(stderr, "configured fixture atmosphere unavailable: %s\n", reason);
+        return EXIT_FAILURE;
+    }
     GuidanceMachine g;
     memset(&g, 0, sizeof(g));
     g.phase = PHASE_ENTRY_ENERGY;
@@ -164,7 +225,22 @@ int main(void) {
 
     int total_admitted = 0, qualified = 0, contract_violations = 0;
     for (size_t i = 0; i < sizeof(samples)/sizeof(samples[0]); ++i) {
-        Telemetry t = create_telemetry(&p, &cfg, samples[i].alt, samples[i].mach, samples[i].along, samples[i].cross);
+        Telemetry t = create_telemetry(&p, &cfg, samples[i].alt, samples[i].mach,
+                                      samples[i].along, samples[i].cross, mass_kg);
+        TerminalDynamicState state = telemetry_to_terminal_state(&model, &t, cfg.site.runway_heading);
+        if (configuration_path) {
+            /* A vehicle-specific experiment uses the same atmosphere, mass and
+               forces as its native replay, not the legacy fake envelope values. */
+            AeroForces forces = aero_compute(&model.world, &model.aero,
+                state.position_i_m, state.velocity_i_mps, state.ut_s, state.mass_kg,
+                state.attitude.aoa_rad, state.attitude.bank_rad);
+            t.dynamic_pressure = forces.dynamic_pressure_pa;
+            t.lift_force = forces.lift_n;
+            t.drag_force = forces.drag_n;
+            t.g_force = hypot(forces.lift_n, forces.drag_n) / (state.mass_kg * 9.80665);
+            t.physics_sample_valid = true;
+            t.ut = state.ut_s;
+        }
         TaemInterfaceCapture capture = entry_mm305_admission_envelope(&g, &t, cfg.site.runway_heading, &p, &cfg);
         if (!capture.valid || !capture.ready) {
             printf("sample=%zu along=%.0f physically inadmissible (veto 0x%x)\n", i, t.runway_along_track, capture.veto);
@@ -180,7 +256,6 @@ int main(void) {
             continue;
         }
 
-        TerminalDynamicState state = telemetry_to_terminal_state(&model, &t, cfg.site.runway_heading);
         Mm305PlanRequest req = {
             .valid = true,
             .request_ut = t.ut,

@@ -5,8 +5,25 @@ static const char *terminal_model_path(const char *environment_name,
     return shuttle_sim_model_path(NULL, kind, buffer, buffer_size);
 }
 
+/* A named aerodynamic profile is vehicle-specific even when it is provisional.
+   Matching identity is necessary, not sufficient, for any flight qualification. */
+static bool controller_model_identity_ready(LandingController *c) {
+    char reason[384];
+    if (shuttle_sim_model_matches_vehicle(c->configuration.vehicle.model_id,
+                                         reason, sizeof(reason))) return true;
+    set_warning(c, reason);
+    publish(c);
+    return false;
+}
+
 static bool controller_capture_terminal_model(LandingController *c,
         const LandingConfiguration *cfg) {
+    char reason[256];
+    if (!shuttle_sim_model_matches_vehicle(cfg->vehicle.model_id, reason, sizeof(reason))) {
+        c->terminal_model_valid = false;
+        fprintf(stderr, "MM305 native model unavailable: %s\n", reason);
+        return false;
+    }
     char atmosphere[512], aero[512], book[512], attitude[512];
     TerminalModelSourceFiles files = {
         .atmosphere_csv = terminal_model_path("KSP_LANDER_TERMINAL_ATMOSPHERE",
@@ -24,7 +41,6 @@ static bool controller_capture_terminal_model(LandingController *c,
         fprintf(stderr, "MM305 native model unavailable: model path too long\n");
         return false;
     }
-    char reason[256];
     uint64_t snapshot_id = ++c->terminal_model_capture_sequence;
     if (!snapshot_id) snapshot_id = ++c->terminal_model_capture_sequence;
     c->terminal_model_valid = terminal_model_capture(&c->terminal_model,
@@ -42,11 +58,32 @@ void landing_controller_connect(LandingController*c){stop_thread(c);pthread_mute
 void landing_controller_disconnect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,true);pthread_mutex_unlock(&c->mutex);}
 
 void landing_controller_create_plan(LandingController*c){pthread_mutex_lock(&c->mutex);if(!c->session){pthread_mutex_unlock(&c->mutex);return;}if(c->glide.active){set_warning(c,"Stop the glide calibration before creating a deorbit plan.");log_state_event(c,"event=planning-blocked; reason=calibration-active",false);publish(c);pthread_mutex_unlock(&c->mutex);return;}LandingConfiguration cfg=effective_config(c);char err[768];Telemetry t;VehicleState s;if(!read_live_sample(c,&cfg,&t,&s,err,sizeof(err))){c->snapshot.phase=PHASE_FAULT;set_error(c,err);log_state_event(c,"event=planning-failed; reason=telemetry-read",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->latest_telemetry=t;c->latest_state=s;c->has_latest=true;landing_snapshot_set_sample(&c->snapshot,&t,&s);c->snapshot.phase=PHASE_PLANNING;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Searching orbital opportunities and stress-testing finite-burn atmospheric entry…");set_error(c,NULL);publish(c);const PlanetModel*planet=krpc_session_planet(c->session);if(t.apoapsis_altitude<=planet->atmosphere_depth||t.periapsis_altitude<=planet->atmosphere_depth){c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Planning rejected.");set_error(c,"Initial apoapsis and periapsis must both be outside the active planet atmosphere.");log_state_event(c,"event=planning-failed; reason=orbit-inside-atmosphere",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}DeorbitPlan p;if(!deorbit_plan_create_with_telemetry(&p,s,t.orbit_period,krpc_session_planet(c->session),c->planning_aerodynamics,&c->envelope,&c->trajectory_calibration,&cfg.site,&cfg.vehicle,&cfg.guidance,t.available_thrust,&t)){c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"No usable deorbit solution was found.");set_error(c,"The current orbit, landing site, thrust or calibrated aerodynamic profile did not produce a safe finite-burn atmospheric-entry solution across the searched opportunities.");log_state_event(c,"event=planning-failed; reason=no-executable-deorbit-solution",true);publish(c);pthread_mutex_unlock(&c->mutex);return;}if(c->has_plan)deorbit_plan_clear(&c->plan);c->plan=p;c->has_plan=true;c->plan_stale=false;c->time_warp_issued=false;c->log_plan_trajectory_dirty=true;trajectory_clear(&c->dynamic_trajectory);trajectory_copy(&c->dynamic_trajectory,&p.trajectory);trajectory_clear(&c->stabilized_trajectory);trajectory_copy(&c->stabilized_trajectory,&p.trajectory);guidance_reset_plan(&c->guidance);t.predicted_miss_distance=p.predicted_closest_distance;t.predicted_entry_range=p.predicted_entry_range;t.predicted_entry_flight_path_angle=p.predicted_entry_flight_path_angle;trajectory_calibrator_set_forecast(&c->trajectory_calibrator,&p.trajectory);landing_snapshot_set_sample(&c->snapshot,&t,&c->latest_state);c->snapshot.phase=PHASE_IDLE;if(p.target_capture_achieved)snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Robust full-route plan ready. %u/%u strict recovery scenarios pass (%.0f%%).",p.robustness_passed,p.robustness_scenarios,p.robustness_pass_fraction*100);else if(p.execution_qualified)snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Entry-stage qualified. %u/%u burn/entry stress cases pass (%.0f%%); downstream MM304/TAEM shadow capture remains advisory.",p.entry_stage_passed,p.entry_stage_scenarios,p.entry_stage_pass_fraction*100);else snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Best available plan selected under warning: finite-burn or atmospheric-entry qualification did not pass.");set_warning(c,p.target_capture_achieved?NULL:p.execution_qualified?"Orbital burn and safe atmospheric entry are qualified. Review the separate MM304/TAEM shadow result; it is not the orbital-stage admission gate.":"Best available orbital plan is unqualified. Live execution may continue for testing under warning; runtime abort protections and all downstream transition/handoff gates remain active.");set_error(c,NULL);reference_trajectory(&c->snapshot.reference_trajectory,&cfg.site,&cfg.guidance,krpc_session_planet(c->session)->radius,1);c->log_reference_trajectory_dirty=true;char plan_reason[256];snprintf(plan_reason,sizeof(plan_reason),"event=plan-created; execution-qualified=%s; strict-capture=%s; entry-stage=%s; entry-stage-pass=%.6g; downstream-shadow-capture=%s",p.execution_qualified?"true":"false",p.target_capture_achieved?"true":"false",p.entry_stage_qualified?"true":"false",p.entry_stage_pass_fraction,p.nominal_capture_achieved?"true":"false");log_state_event(c,plan_reason,true);publish(c);pthread_mutex_unlock(&c->mutex);}
-void landing_controller_engage(LandingController*c){pthread_mutex_lock(&c->mutex);c->prediction_generation++;if(c->glide.active)set_warning(c,"Stop calibration before engaging landing guidance.");else if(!c->has_plan)set_warning(c,"Create and review a deorbit plan before engaging guidance.");else if(c->plan_stale)set_warning(c,"Engagement blocked because planning-relevant configuration changed. Create a new deorbit plan.");else if(c->has_latest&&c->session&&c->latest_telemetry.ut>c->plan.burn_ut+c->plan.estimated_burn_duration*.5&&c->latest_telemetry.mean_altitude>krpc_session_planet(c->session)->atmosphere_depth)set_warning(c,"Engagement blocked because the selected deorbit-burn window has passed. Create a new plan.");else{guidance_set_engaged(&c->guidance,true);c->snapshot.automation_engaged=true;c->snapshot.paused=false;set_warning(c,!c->plan.execution_qualified?"Best available unqualified plan engaged under warning. Runtime abort protections and all downstream transition/handoff gates remain active.":c->plan.execution_degraded?"Guarded recovery execution engaged. Live cutoff and achieved-state verification will supervise the burn and entry handoff.":NULL);}publish(c);pthread_mutex_unlock(&c->mutex);}
+void landing_controller_engage(LandingController*c){
+    pthread_mutex_lock(&c->mutex);
+    c->prediction_generation++;
+    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
+    if(c->glide.active)set_warning(c,"Stop calibration before engaging landing guidance.");
+    else if(!c->has_plan)set_warning(c,"Create and review a deorbit plan before engaging guidance.");
+    else if(c->plan_stale)set_warning(c,"Engagement blocked because planning-relevant configuration changed. Create a new deorbit plan.");
+    else if(c->has_latest&&c->session&&c->latest_telemetry.ut>c->plan.burn_ut+c->plan.estimated_burn_duration*.5&&c->latest_telemetry.mean_altitude>krpc_session_planet(c->session)->atmosphere_depth)
+        set_warning(c,"Engagement blocked because the selected deorbit-burn window has passed. Create a new plan.");
+    else{
+        guidance_set_engaged(&c->guidance,true);
+        c->snapshot.automation_engaged=true;
+        c->snapshot.paused=false;
+        set_warning(c,!c->plan.execution_qualified?
+            "Best available unqualified plan engaged under warning. Runtime abort protections and all downstream transition/handoff gates remain active.":
+            c->plan.execution_degraded?
+            "Guarded recovery execution engaged. Live cutoff and achieved-state verification will supervise the burn and entry handoff.":NULL);
+    }
+    publish(c);
+    pthread_mutex_unlock(&c->mutex);
+}
 
 void landing_controller_engage_reentry(LandingController*c){
     pthread_mutex_lock(&c->mutex);
     c->prediction_generation++;
+    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
 
     if(!c->session){
         set_warning(c,"Connect to KSP before starting reentry-only guidance.");
@@ -314,6 +351,7 @@ void landing_controller_engage_reentry(LandingController*c){
 
 void landing_controller_engage_hac_test(LandingController*c){
     pthread_mutex_lock(&c->mutex);c->prediction_generation++;
+    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
     if(!c->session){set_warning(c,"Connect to KSP before starting the HAC-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     if(c->glide.active){set_warning(c,"Stop calibration before starting the HAC-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     LandingConfiguration cfg=effective_config(c);char err[768]={0};Telemetry t;VehicleState state;
@@ -348,6 +386,7 @@ void landing_controller_engage_hac_test(LandingController*c){
 
 void landing_controller_engage_final_test(LandingController*c){
     pthread_mutex_lock(&c->mutex);c->prediction_generation++;
+    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
     if(!c->session){set_warning(c,"Connect to ShuttleSim before starting the final-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     if((!krpc_session_is_simulator(c->session)&&!getenv("KSP_LANDER_FINAL_TEST_LIVE"))||!getenv("KSP_LANDER_FINAL_APPROACH_TEST")||strcmp(getenv("KSP_LANDER_FINAL_APPROACH_TEST"),"1")){
         set_warning(c,"Final-only landing test is simulator-only and requires KSP_LANDER_FINAL_APPROACH_TEST=1.");publish(c);pthread_mutex_unlock(&c->mutex);return;

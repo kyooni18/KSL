@@ -4,7 +4,7 @@ import argparse, hashlib, io, json, math, os, pathlib, shutil, socket, subproces
 from run_backend import Backend, stop_process
 from run_geometry import fixed_hac_geometry_evidence
 from run_artifacts import allocate_run, compress_recording, write_json
-from model_paths import model_file, active_profile, file_digest
+from model_paths import model_file, active_profile, file_digest, validate_vehicle_profile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SIM = ROOT / "ShuttleSim"
@@ -283,6 +283,13 @@ def main():
         if not path.is_file():
             ap.error(f"{name} input does not exist: {path}")
         setattr(args,name,str(path))
+    # Reject configuration/profile mistakes before allocating ports, creating
+    # run artifacts, or launching a backend. Never relabel STS-N data as STS.
+    try:
+        config=json.loads(pathlib.Path(args.configuration).read_text(encoding="utf-8"))
+        validate_vehicle_profile(config)
+    except (OSError, ValueError) as exc:
+        ap.error(str(exc))
     if args.no_mirror:
         args.web_telemetry_port=0
     _ACTIVE["mirror"]=not args.no_mirror
@@ -393,7 +400,6 @@ def main():
                     compact_log=args.compact_guidance_log)
     backend.wait(lambda o:o.get("type")=="ready",10)
 
-    config=json.loads(pathlib.Path(args.configuration).read_text())
     # The backend owns the telemetry bind. Release only that reservation at the
     # exact handoff point; the command endpoint remains reserved until ShuttleSim
     # is ready to become its owner.

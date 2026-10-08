@@ -525,26 +525,27 @@ bool shuttle_sim_decode_telemetry(const char *packet,
    audit's synthetic plant B.  Select with KSP_LANDER_MODEL_PROFILE. */
 static const struct {
     const char *name;
+    const char *vehicle_model_id;
     const char *files[5];
 } model_profiles[] = {
-    {"identified", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+    {"identified", "STS-N", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
                     "ShuttleSim/reference-model/stsn_aero_identified.csv",
                     "none",
                     "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                     "ShuttleSim/reference-model/stsn_certified_prior_identified.csv"}},
     /* Opt-in offline STS experiment basis, with no certified aero cells.
        Attitude dynamics remain borrowed from STS-N and are not STS validation. */
-    {"sts-provisional", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+    {"sts-provisional", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
                          "ShuttleSim/reference-model/sts_aero_provisional.csv",
                          "none",
                          "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                          "none"}},
-    {"fitted-legacy", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
+    {"fitted-legacy", "STS-N", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",
                        "ShuttleSim/data/fitted/stsn_attitude_ksp.ini",
                        "ShuttleSim/data/fitted/stsn_force_book.csv"}},
-    {"reference-b", {"ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
+    {"reference-b", "STS-N", {"ShuttleSim/reference-model/kerbin_atmosphere_reference.csv",
                      "ShuttleSim/reference-model/stsn_aero_reference.csv",
                      "ShuttleSim/reference-model/stsn_force_book_reference.csv",
                      "ShuttleSim/reference-model/stsn_attitude_reference.ini",
@@ -557,6 +558,28 @@ const char *shuttle_sim_model_profile(void) {
     for (size_t i = 0; i < sizeof(model_profiles) / sizeof(model_profiles[0]); ++i)
         if (strcmp(configured, model_profiles[i].name) == 0) return model_profiles[i].name;
     return NULL;
+}
+
+const char *shuttle_sim_model_vehicle_id(void) {
+    const char *profile = shuttle_sim_model_profile();
+    if (!profile) return NULL;
+    for (size_t i = 0; i < sizeof(model_profiles) / sizeof(model_profiles[0]); ++i)
+        if (strcmp(profile, model_profiles[i].name) == 0)
+            return model_profiles[i].vehicle_model_id;
+    return NULL;
+}
+
+bool shuttle_sim_model_matches_vehicle(const char *model_id, char *reason, size_t size) {
+    if (reason && size) reason[0] = '\0';
+    const char *profile = shuttle_sim_model_profile();
+    const char *vehicle = shuttle_sim_model_vehicle_id();
+    if (vehicle && model_id && strcmp(vehicle, model_id) == 0) return true;
+    if (reason && size)
+        snprintf(reason, size,
+            "Aerodynamic profile '%s' describes %s, not %s; cross-vehicle model reuse is blocked.",
+            profile ? profile : "unknown", vehicle ? vehicle : "unknown",
+            model_id && *model_id ? model_id : "an unspecified vehicle");
+    return false;
 }
 
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
