@@ -2084,7 +2084,10 @@ def main() -> int:
                 if args.no_quickload:
                     print("test cleanup froze failed KSP state", flush=True)
                 else:
-                    print("test cleanup restored and froze KSP quicksave", flush=True)
+                    print(
+                        f"test cleanup restored and froze KSP save {args.initial_save}",
+                        flush=True,
+                    )
             except Exception as exc:
                 print(f"warning: final KSP fail-safe cleanup failed: {exc}", file=sys.stderr, flush=True)
         stop_process(crash_guard)
