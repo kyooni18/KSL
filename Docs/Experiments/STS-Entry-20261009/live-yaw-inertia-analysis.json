@@ -1,22 +1,25 @@
 {
   "status": "complete",
   "classification": "UNQUALIFIED_DIAGNOSTIC_ANALYSIS",
-  "purpose": "Compare the repeated live vacuum yaw-pulse roll response against the cross-axis response predicted by the measured inertia tensors.",
+  "purpose": "Audit yaw-to-roll response from the repeated live vacuum pulse against the measured STS inertia tensors, with explicit angular-rate units and axis mapping.",
   "qualification": {
     "qualified": false,
-    "shadow_gate_evidence": false,
-    "atmospheric_coordination_evidence": false,
-    "landing_or_rollout_evidence": false
+    "shadowGateEvidence": false,
+    "atmosphericCoordinationEvidence": false,
+    "landingOrRolloutEvidence": false
   },
   "provenance": {
     "gitHeadAtCapture": "943145cc26bd81b7d484e5982d2e40f82d895109",
+    "gitHeadAtAnalysis": "57cb4a31fe351903caee7c44145d7080aa872af5",
     "rawYawPulse": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
     "rawYawPulseSHA256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
+    "probeSource": "Tools/probe_sts_preentry_roll.py",
+    "probeSourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4",
     "coordinateCrosscheck": "Docs/Experiments/STS-Entry-20261008/live-body-coordinate-crosscheck.json",
     "coordinateCrosscheckSHA256": "01d8f811a62269f59a4b92cdeb07f3975ce31769038dc733f4e8fd3f160354d5",
     "checkpointName": "STS-campaign-72km-20261008",
     "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
-    "sourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4"
+    "analysisScript": "Tools/analyze_sts_yaw_inertia.py"
   },
   "benchConditions": {
     "vessel": "STS",
@@ -36,20 +39,33 @@
       "positive": 0.15000000596046448,
       "negative": -0.15000000596046448
     },
-    "method": "OLS slopes of recorded body-rate components versus elapsed seconds over each constant-command interval. Body-rate component 1 is roll and component 2 is yaw per the retained probe implementation."
+    "sampleCount": 42,
+    "method": "OLS of body-rate components versus elapsed seconds over each constant-yaw-command interval. The probe converts KRPC angular velocity from rad/s to degrees/s when writing body_rates; the report includes the resulting degree/s\u00b2 slopes and their rad/s\u00b2 equivalents."
+  },
+  "measuredAccelerationRadPerSecondSquared": {
+    "positiveYaw": {
+      "roll": 0.0012127893779522384,
+      "yaw": 0.0031495409369302198
+    },
+    "negativeYaw": {
+      "roll": -0.0011837728263865593,
+      "yaw": -0.0030769784250661903
+    }
   },
   "measuredAccelerationDegPerSecondSquared": {
     "positiveYaw": {
       "roll": 0.06948771279495972,
-      "yaw": 0.18045540308978059,
-      "rollToYawRatio": 0.38506861864583813
+      "yaw": 0.18045540308978059
     },
     "negativeYaw": {
       "roll": -0.06782518685422258,
-      "yaw": -0.17629787740910374,
-      "rollToYawRatio": 0.3847192481894294
-    },
-    "meanAbsoluteRollToYawRatio": 0.3848939334176338
+      "yaw": -0.17629787740910374
+    }
+  },
+  "measuredRollToYawAccelerationRatio": {
+    "positiveYaw": 0.38506861864583813,
+    "negativeYaw": 0.3847192481894294,
+    "meanAbsolute": 0.3848939334176338
   },
   "measuredVesselInertiaTensorRowMajorKgM2": [
     948936.25,
@@ -75,23 +91,56 @@
   ],
   "pureBodyYawTorqueCounterfactual": {
     "unitTorqueBodyVectorNm": [
-      0,
-      0,
-      1
+      0.0,
+      0.0,
+      1.0
     ],
-    "vesselAngularAccelerationVectorPerUnitTorque": [
-      -9.519133814416452e-11,
-      3.672161523079399e-08,
+    "vesselAngularAccelerationVectorPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+      -9.519132401733303e-11,
+      3.672161953040924e-08,
       1.0197293677386547e-06
     ],
-    "vesselRollToYawAngularAccelerationRatio": 0.03601113824173526,
-    "rootAngularAccelerationVectorPerUnitTorque": [
-      3.8391986864124065e-10,
-      6.949531817814847e-06,
+    "vesselRollToYawAngularAccelerationRatio": 0.03601114245816306,
+    "rootAngularAccelerationVectorPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+      3.839199207159595e-10,
+      6.949531470951546e-06,
       0.00011697390450003334
     ],
-    "rootRollToYawAngularAccelerationRatio": 0.05941095877339776,
-    "measuredResponseRatioDividedByVesselInertiaPrediction": 10.688191271098432
+    "rootRollToYawAngularAccelerationRatio": 0.05941095580809278,
+    "measuredResponseRatioDividedByVesselInertiaPrediction": 10.688190019652804,
+    "vessel": {
+      "unitTorqueBodyVectorNm": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "axisMapping": "Body-rate component 1 (local +Y) is roll; component 2 (local +Z) is yaw.",
+      "angularAccelerationRadPerSecondSquaredPerNmXYZ": [
+        -9.519132401733303e-11,
+        3.672161953040924e-08,
+        1.0197293677386547e-06
+      ],
+      "rollToYawAngularAccelerationRatio": 0.03601114245816306,
+      "maximumCapturedTensorAsymmetryKgM2": 0.000732421875,
+      "calculation": "Symmetrize the captured tensor at floating-point precision, then solve I * alpha = [0, 0, 1] Nm."
+    },
+    "rootPart": {
+      "unitTorqueBodyVectorNm": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "axisMapping": "Body-rate component 1 (local +Y) is roll; component 2 (local +Z) is yaw.",
+      "angularAccelerationRadPerSecondSquaredPerNmXYZ": [
+        3.839199207159595e-10,
+        6.949531470951546e-06,
+        0.00011697390450003334
+      ],
+      "rollToYawAngularAccelerationRatio": 0.05941095580809278,
+      "maximumCapturedTensorAsymmetryKgM2": 3.0517578125e-05,
+      "calculation": "Symmetrize the captured tensor at floating-point precision, then solve I * alpha = [0, 0, 1] Nm."
+    }
   },
-  "interpretation": "Full-vessel off-diagonal inertia predicts only about 3.6% roll acceleration per unit yaw acceleration for a pure body-yaw torque, while the repeated vacuum actuator pulses show about 38% cross-axis response. Inertia coupling alone therefore does not explain the measured response. The result does not isolate a cause and is not evidence of atmospheric yaw-roll coordination or flight qualification."
+  "interpretation": "The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of 0.385. The full-vessel inertia predicts 0.036 for a pure body-z yaw torque, about 10.7 times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s\u00b2 equivalents are provided separately. This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification.",
+  "sourceSHA256": "8493d2a33ac950414b5806509e2b87e2d7abd10380b85d81cda2a039befee2e2"
 }
