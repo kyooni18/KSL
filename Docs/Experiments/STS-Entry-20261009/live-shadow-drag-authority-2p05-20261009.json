@@ -1,0 +1,157 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Test whether a modest drag-authority cap increase, sized from the matched KSP wrench discrepancy, improves the original STS normal-gate shadow forecast.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "candidate": {
+    "baseGitHead": "ee9fee184d639e25cdc0257413924680cc671ce1",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "changedFile": "CLanding/guidance/entry_drag_reference.c",
+    "changedFileSHA256": "b9be010db4cad63cf5ba957b7570bc381353bc9e1dd01c4e2a39c80365a06f36",
+    "change": "Increase local_drag_authority_multiplier from the default 1.85 to 2.05 in an isolated CLanding copy; all other source, configuration, gate, and flight-limit values remain unchanged.",
+    "selectionRationale": "The full-mass original-STS KSP wrench diagnostic at the matched Mach-5.212/AoA-28 shadow state produced static drag acceleration about 10.6% above the shadow model. 1.85*1.106 is approximately 2.05. That API value is a hypothetical simulation, so this candidate is diagnostic only.",
+    "focusedTest": "entry-forecast-admission-test passed in the isolated build.",
+    "backendSHA256": "f98d1b73954177cdcde3c0daa9bd7bf25a07a72f967aa65d15e9d5813dc83b1d",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462"
+  },
+  "run": {
+    "startedUTC": "2026-10-08T21:19:16.971853+00:00",
+    "runner": "Tools/headless_flight.py",
+    "runnerArguments": [
+      "--live",
+      "--backend",
+      "/Users/kyooni18/Documents/Codex/2026-10-09/continue-the-autonomous-ksp-sts-landing-3/work/entry-drag-authority-2p05/CLanding/build-2p05/landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/sts.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset"
+    },
+    "exitReason": "engageReentry rejected by the closed-loop shadow gate before engagement.",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T211916971853Z-52564.json",
+    "runManifestSHA256": "3b790de5d77435cef8ee1feb3e7d793db8c642bf716de84290923806ec12fd03",
+    "campaignIdentity": "64635833ea57a683-f98d1b73954177cd-badd735f8d8c6356",
+    "backendExecutableSHA256": "f98d1b73954177cdcde3c0daa9bd7bf25a07a72f967aa65d15e9d5813dc83b1d",
+    "backendPID": 52564,
+    "kspPID": 69877,
+    "kspProcessCount": 1,
+    "plannerLog": {
+      "path": "FlightLogs/2026-10-08T21-19-17Z-STS-planner.jsonl",
+      "sha256": "ea4c6f6b8f0e44003a331b886ada4050482b3a1a63b5684e41889103585d16ff"
+    },
+    "vehicleLog": {
+      "path": "FlightLogs/2026-10-08T21-19-17Z-STS-vehicle.jsonl",
+      "sha256": "10404c79f1f69628fb8476673939af259dbb00492f1cf9ceb5d0e928fcde8ab5"
+    },
+    "capturedConsole": {
+      "path": "/Users/kyooni18/Documents/Codex/2026-10-09/continue-the-autonomous-ksp-sts-landing-3/work/entry-drag-authority-2p05/runner-console.log",
+      "sha256": "bc538edbb4c2827b12d19d8155b39a54f1beb47930f26f301ea2194bc9e456d1"
+    }
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "hashUnchanged": true,
+    "postRunSettle": {
+      "method": "Tools/settle_known_checkpoint.py followed by an independent read-only kRPC verification.",
+      "vessel": "STS",
+      "ut": 9931.271826169332,
+      "meanAltitudeM": 71918.50024395343,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "controls": [0.0, 0.0, 0.0],
+      "throttle": 0.0,
+      "actualThrustN": 0.0,
+      "speedbrakeActionGroupEnabled": false,
+      "controlSurfacesNeutral": true,
+      "kspPID": 69877,
+      "singleKSPProcess": true
+    }
+  },
+  "shadowResult": {
+    "entered": true,
+    "mm305Reached": false,
+    "closestMissKm": 4.6,
+    "rangeErrorKm": 63.7,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "firstSTurnReversal": {
+      "ut": 10469.01,
+      "altitudeM": 42898,
+      "speedMps": 1885.5,
+      "crossTrackM": 2356,
+      "side": -1,
+      "reversalCount": 1
+    },
+    "nearSite": {
+      "ut": 10516.31,
+      "altitudeM": 37908,
+      "speedMps": 1727.4,
+      "mach": 5.20,
+      "flightPathAngleDeg": -3.80,
+      "rangeM": 4716,
+      "runwayAlongTrackM": 772,
+      "runwayCrossTrackM": 4652,
+      "courseToSiteErrorDeg": -99.9,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "entryFeedbackMarginM": 70197,
+      "mm305Veto": "0x89"
+    },
+    "plus45Seconds": {
+      "ut": 10561.31,
+      "altitudeM": 32513,
+      "speedMps": 1415.7,
+      "mach": 4.43,
+      "flightPathAngleDeg": -4.95,
+      "rangeM": 68016,
+      "runwayAlongTrackM": 67953,
+      "runwayCrossTrackM": 2925,
+      "courseToSiteErrorDeg": -173.4,
+      "bankDeg": -40.0,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.21,
+      "altitudeM": 9346,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeM": 160168,
+      "runwayAlongTrackM": 155512,
+      "runwayCrossTrackM": -38776,
+      "courseDeg": 252.1,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "interpretation": {
+    "finding": "The 2.05 multiplier slightly improved shadow range error from the +64.9 km baseline to +63.7 km, while closest miss remained 4.6 km. First reversal was at UT 10469.01, nearly the baseline UT 10470.11. At 37.9 km/Mach 5.20, course error was still -99.9 degrees; 45 seconds later it was -173.4 degrees and range had opened to 68.0 km. MM305 veto 0x89 remained and MM304 later aborted before TAEM.",
+    "decision": "Do not adopt the 2.05 multiplier. The small simulated range change does not fix target-course capture or normal shadow admission; keep the production multiplier and all flight limits unchanged.",
+    "limits": "This was an unqualified shadow prediction from the named checkpoint. No live control or descent began. The KSP wrench comparison used for candidate sizing is also a hypothetical simulation, not measured flight evidence."
+  },
+  "errors": []
+}
