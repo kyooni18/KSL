@@ -1195,6 +1195,38 @@ class BackendProcess:
                 if predicate(snapshot):
                     return snapshot
 
+    def engage(self, method: str, timeout: float = 180.0,
+               acknowledgement_timeout: float = 15.0) -> dict[str, Any]:
+        """Require a fresh engagement decision, including snapshots before the reply.
+
+        Native commands publish their snapshot before the method response. A
+        rejected command can then remain quiet while KSP is paused; discarding
+        that snapshot loses the actual rejection and manufactures a timeout.
+        Successful orbital engagement may likewise enter a blocking coast warp.
+        """
+        before = self.latest_snapshot
+        self.send(method, timeout=timeout)
+
+        def decided(snapshot: dict[str, Any]) -> bool:
+            return (snapshot.get("automationEngaged") is True
+                    or snapshot.get("phase") in TERMINAL_PHASES
+                    or bool(snapshot.get("lastError") or snapshot.get("warningMessage")))
+
+        armed = self.latest_snapshot
+        if armed is None or armed is before or not decided(armed):
+            try:
+                armed = self.read_until(decided, acknowledgement_timeout)
+            except TimeoutError as exc:
+                latest = self.latest_snapshot or {}
+                detail = (latest.get("lastError") or latest.get("warningMessage")
+                          or latest.get("statusMessage") or "no decision snapshot")
+                raise TimeoutError(f"{method} did not confirm engagement: {detail}") from exc
+        if armed.get("automationEngaged") is not True or armed.get("phase") in TERMINAL_PHASES:
+            detail = (armed.get("lastError") or armed.get("warningMessage")
+                      or armed.get("statusMessage") or "automation was not armed")
+            raise RuntimeError(f"{method} rejected: {detail}")
+        return armed
+
     def send(self, method: str, timeout: float = 30.0, **fields: Any) -> dict[str, Any]:
         request_id = str(self.next_id)
         self.next_id += 1
@@ -1206,7 +1238,10 @@ class BackendProcess:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError(f"Backend method {method} timed out")
-            message = self._read_message(remaining)
+            try:
+                message = self._read_message(remaining)
+            except TimeoutError as exc:
+                raise TimeoutError(f"Backend method {method} timed out (request {request_id})") from exc
             if message.get("type") == "snapshot":
                 self._handle_snapshot(message.get("snapshot") or {})
                 continue
@@ -1215,6 +1250,14 @@ class BackendProcess:
             if not message.get("ok"):
                 raise RuntimeError(str(message.get("error") or f"Backend method {method} failed"))
             return message.get("result") or {}
+
+
+def validate_plan_qualification(plan: dict[str, Any], require_strict: bool) -> None:
+    """Keep orbital entry admission distinct from optional full-route certification."""
+    if plan.get("executionQualified") is not True:
+        raise RuntimeError("Deorbit plan failed entry-stage qualification; execution is blocked")
+    if require_strict and plan.get("targetCaptureAchieved") is not True:
+        raise RuntimeError("Deorbit plan failed required strict full-route qualification; execution is blocked")
 
 
 def load_configuration(path: Path, auto_warp: bool) -> dict[str, Any]:
@@ -1332,7 +1375,7 @@ def main() -> int:
     parser.add_argument(
         "--require-strict",
         action="store_true",
-        help="Report strict deorbit/post-burn qualification as warnings while continuing the selected best-available live plan.",
+        help="Require strict full-route qualification before engagement and after the burn; abort on failure.",
     )
     parser.add_argument(
         "--strict-checkpoint-name",
@@ -1640,23 +1683,7 @@ def main() -> int:
                 )
             if not args.no_crash_guard:
                 crash_guard = start_crash_guard(root, args.initial_save)
-            backend.send("engageHACTest", timeout=180.0)
-            armed = backend.latest_snapshot
-            if not armed or not armed.get("automationEngaged"):
-                armed = backend.read_until(
-                    lambda snapshot: bool(snapshot.get("automationEngaged"))
-                    or snapshot.get("phase") in {"Abort", "Fault"}
-                    or bool(snapshot.get("warningMessage")),
-                    15.0,
-                )
-            if not armed.get("automationEngaged"):
-                raise RuntimeError(
-                    str(
-                        armed.get("lastError")
-                        or armed.get("warningMessage")
-                        or "HAC-only landing test was not armed"
-                    )
-                )
+            armed = backend.engage("engageHACTest", timeout=180.0)
             telemetry = armed.get("telemetry") or {}
             guidance_state = armed.get("guidanceState") or {}
             print(
@@ -1674,17 +1701,7 @@ def main() -> int:
                 raise RuntimeError("--reentry-only is a live continuation mode; pass --live")
             if not args.no_crash_guard:
                 crash_guard = start_crash_guard(root, args.initial_save)
-            backend.send("engageReentry", timeout=180.0)
-            armed = backend.latest_snapshot
-            if not armed or not armed.get("automationEngaged"):
-                armed = backend.read_until(
-                    lambda snapshot: bool(snapshot.get("automationEngaged"))
-                    or snapshot.get("phase") in {"Abort", "Fault"}
-                    or bool(snapshot.get("warningMessage")),
-                    15.0,
-                )
-            if not armed.get("automationEngaged"):
-                raise RuntimeError(str(armed.get("lastError") or armed.get("warningMessage") or "Reentry-only continuation was not armed"))
+            armed = backend.engage("engageReentry", timeout=180.0)
             plan = armed.get("plan") or {}
             telemetry = armed.get("telemetry") or {}
             print(
@@ -1745,31 +1762,22 @@ def main() -> int:
                 f"miss={BackendProcess._number(plan.get('predictedClosestDistance')) / 1000:.1f} km",
                 flush=True,
             )
-            if not plan.get("executionQualified"):
-                print(
-                    "WARNING: best available deorbit plan is not entry-stage qualified; "
-                    "continuing live test with qualification failures visible",
-                    flush=True,
-                )
-            if args.require_strict and not plan.get("targetCaptureAchieved"):
-                print(
-                    "WARNING: selected deorbit plan did not pass strict full-route certification; "
-                    "continuing live test with strict=false",
-                    flush=True,
-                )
+            validate_plan_qualification(plan, args.require_strict)
             if not args.live:
-                print("plan validated; pass --live to engage the controller", flush=True)
+                print(
+                    "plan produced: entry-stage qualification passed; "
+                    f"strict full-route qualification={bool(plan.get('targetCaptureAchieved'))}; "
+                    "no live flight has been validated",
+                    flush=True,
+                )
                 return 0
 
             if not args.no_crash_guard:
                 crash_guard = start_crash_guard(root, args.initial_save)
-            backend.send("engage", timeout=120.0)
+            backend.engage("engage", timeout=120.0)
             engaged = True
-            # Engagement can immediately trigger a blocking coast-to-burn warp
-            # inside the C control thread. The successful command response is
-            # sufficient acknowledgement here; waiting for a fresh snapshot would
-            # incorrectly treat that intentional quiet period as an engagement
-            # failure.
+            # engage() consumes the already-published decision snapshot, so a
+            # blocking coast-to-burn warp does not require another telemetry tick.
 
         deadline = (
             time.monotonic() + args.max_wall_seconds
@@ -1891,11 +1899,10 @@ def main() -> int:
                     plan.get("achievedStateCaptureQualified")
                 )
                 if args.require_strict and not achieved_strict:
-                    print(
-                        "WARNING: post-burn strict verification failed; continuing the live flight: "
+                    raise RuntimeError(
+                        "Required post-burn strict verification failed: "
                         f"Pe {BackendProcess._number(plan.get('achievedPostBurnPeriapsisAltitude')) / 1000:.1f} km, "
-                        f"TAEM {BackendProcess._number(plan.get('predictedTAEMDistance')) / 1000:.1f} km",
-                        flush=True,
+                        f"TAEM {BackendProcess._number(plan.get('predictedTAEMDistance')) / 1000:.1f} km"
                     )
                 if achieved_strict:
                     if args.strict_checkpoint_name:
