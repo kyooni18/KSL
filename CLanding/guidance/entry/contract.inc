@@ -200,6 +200,8 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.bank_effectiveness=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
         t->bank_effectiveness:1.0;
     lateral.lift_accel=live_lift_accel(t,aero,v);
+    lateral.has_measured_lift=t->physics_sample_valid&&isfinite(t->mass)&&t->mass>DBL_MIN&&
+        isfinite(t->lift_force)&&t->lift_force>0.0;
     lateral.authority_confidence=clampd(
         fmax(t->aerodynamic_confidence,t->physics_authority_confidence[1]),0.0,1.0);
     lateral.course_to_site_error_deg=isfinite(t->course_to_site_error)?

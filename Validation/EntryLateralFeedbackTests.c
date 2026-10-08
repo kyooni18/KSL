@@ -210,7 +210,44 @@ static void mirror_symmetry(void){
         }
 }
 
+/* A missing certified model must not erase a force measured at this tick.
+ * Conversely, model-only lift still requires model confidence. */
+static void measured_lift_is_not_model_confidence(void){
+    EntryLateralLimits l=limits();
+    EntryLateralInput in=input();
+    in.measured_bank_deg=0.0;
+    in.authority_confidence=0.0;
+    in.longitudinal.confidence=0.5;
+    in.has_measured_lift=true;
+    EntryLateralState measured_state={0};
+    EntryLateralOutput measured=entry_lateral_update(&measured_state,&in,&l);
+    assert(measured.valid&&!measured.degraded_authority);
+    assert(fabs(measured.bank_magnitude_deg-60.0)<1e-9);
+    assert(measured.target_bank_deg>0.0);
+    assert(measured.target_bank_deg<=l.maximum_roll_accel_deg_s2*in.dt*in.dt+1e-9);
+
+    in.has_measured_lift=false;
+    EntryLateralState modeled_state={0};
+    EntryLateralOutput modeled=entry_lateral_update(&modeled_state,&in,&l);
+    assert(modeled.valid&&modeled.degraded_authority);
+    assert(modeled.bank_magnitude_deg==0.0);
+
+    in.has_measured_lift=true;
+    const double invalid_lifts[]={0.0,-1.0,NAN};
+    for(size_t i=0;i<sizeof(invalid_lifts)/sizeof(invalid_lifts[0]);++i){
+        EntryLateralState unavailable={0};
+        in.lift_accel=invalid_lifts[i];
+        EntryLateralOutput out=entry_lateral_update(&unavailable,&in,&l);
+        assert(out.valid&&out.degraded_authority&&out.bank_magnitude_deg==0.0);
+    }
+    in.lift_accel=4.0; /* Less than required vertical lift: keep wings level. */
+    EntryLateralState insufficient={0};
+    EntryLateralOutput level=entry_lateral_update(&insufficient,&in,&l);
+    assert(level.valid&&!level.degraded_authority&&level.bank_magnitude_deg==0.0);
+}
+
 int main(void){
+    measured_lift_is_not_model_confidence();
     initial_side_follows_crossrange_sign();
     predicts_crossing_over_physical_roll_response();
     uncertainty_corridor_prevents_chatter();

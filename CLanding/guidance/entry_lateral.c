@@ -144,7 +144,11 @@ static bool bank_magnitude(const EntryLateralInput *input,
         fmin(finite_or(input->authority_confidence, 0.0),
              finite_or(input->longitudinal.confidence, 0.0)),
         0.0, 1.0); /* decision-literal-ok: probability/confidence domain */
-    double available_lift = measured_lift * confidence;
+    /* A measured force exists independently of a model's confidence. Scaling
+     * that observation by zero erased roll authority whenever no certified
+     * prior was loaded. Keep confidence discounting for model-only lift. */
+    double available_lift = input->has_measured_lift ? measured_lift :
+        measured_lift * confidence;
     if (!(available_lift > DBL_EPSILON)) return false;
 
     double effectiveness = finite_or(input->bank_effectiveness, 1.0);

@@ -33,6 +33,9 @@ typedef struct {
     double measured_bank_rate_deg_s;
     double bank_effectiveness;
     double lift_accel;
+    /* Direct local force evidence; distinct from confidence in extrapolating
+     * an aerodynamic/authority model to future states. */
+    bool has_measured_lift;
     double authority_confidence;
     double course_to_site_error_deg;
     bool has_crossrange_error;
