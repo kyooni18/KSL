@@ -235,3 +235,22 @@ The open question from the entry-AoA probe is resolved, and the probe result sta
 - Offline plant effective ballistic coefficient along the 70 km baseline (`m·q/drag`, 40252 kg mass from the scenario): median 456 (range 351–767), not the planner's 700. Drag is higher than the planner assumes at most altitudes.
 - Offline run with `estimatedBallisticCoefficient` = 456 (temp config): still aborts at the same floor. BC is not the lever on its own.
 - Not done, and not a valid fix: lowering `minimum_safe_speed` to avoid the abort would only let the vehicle continue below the handoff window with no path to the runway. It would be gate tuning, so it was not changed.
+
+## AoA schedule and the drag cap (2026-10-08): correction and result
+
+Correction to the earlier entry-AoA conclusion: the guidance does not fly the configured entry AoA through the hypersonic phase. In the offline 12° run the plant flew about 23–24° from 91 s, reached the 28° `maximumAngleOfAttack` at about 6,300 s, and only dropped to 12° near the end. The MM304 energy controller sets AoA, bounded by `maximumAngleOfAttack`. The earlier "entry AoA is insensitive" reading was therefore not a valid sensitivity test.
+
+Cap test (offline, temp configs, `Configuration/sts.json` unchanged):
+- `maximumAngleOfAttack` = 18: the plant flew at most 18° (honored). The run aborted at 5.6 km, 84.8 m/s, 267.6 km along-track to the runway, cross-track 45.4 km. Abort message: "MM304 flight recovery margin was exhausted before TAEM acquisition."
+- `maximumAngleOfAttack` = 22: same abort message.
+
+Best L/D available from the identified STS-N aero table (`ShuttleSim/reference-model/stsn_aero_identified.csv`), maximized over alpha at each Mach:
+- Mach 1.0: 1.25 (alpha 20)
+- Mach 1.5: 0.65 (alpha 25)
+- Mach 2.0: 0.75 (alpha 16)
+- Mach 3.0: 0.74 (alpha 10)
+- Mach 5.0: 0.63 (alpha 6)
+- Mach 7.0: 0.53 (alpha 14)
+- Mach 10.0: 0.53 (alpha 0)
+
+Result: with this aero table, no AoA schedule reaches a glide L/D above about 0.75 in the hypersonic-to-supersonic range where the vehicle must bleed energy. The offline closed loop covers roughly 830 km and then runs out of speed about 267 km short of the runway. This is a property of the aero data, not of a gate constant or the AoA command. Landing from this entry state needs STS-specific aero with a materially higher hypersonic and supersonic L/D. Until that exists, every guidance variant tested here aborts in the same way.
