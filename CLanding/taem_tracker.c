@@ -154,8 +154,24 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
     desired_gamma_rate = clamp_value(desired_gamma_rate,
         -radians(8.0), radians(8.0));
     double airspeed = g->airspeed_mps;
-    double vertical_required = (gravity - airspeed * airspeed / radius) * cos(gamma) +
-        airspeed * desired_gamma_rate;
+    /* Gamma belongs to the rotating, co-moving atmosphere, not an inertial
+       non-rotating planet. In that frame a_free = g - 2*w x v_air - w x (w x r).
+       Project onto the unit lift-up direction normal to v_air, then use
+       gamma_dot = a_normal/V + V*cos(gamma)/r. Drag has zero normal projection.
+       This keeps the tracker consistent with the inertial native propagator. */
+    Vec3 up = v3_scale(s->position_i_m, 1.0 / radius);
+    Vec3 air = v3_sub(s->velocity_i_mps,
+        world_atmosphere_velocity_i(&m->world, s->position_i_m));
+    Vec3 air_direction = v3_normalized(air);
+    Vec3 lift_up = v3_normalized(v3_sub(up,
+        v3_scale(air_direction, v3_dot(up, air_direction))));
+    Vec3 omega = {0.0, 0.0, m->world.rotation_rate_rad_s};
+    Vec3 rotating_terms = v3_add(v3_scale(v3_cross(omega, air), 2.0),
+        v3_cross(omega, v3_cross(omega, s->position_i_m)));
+    Vec3 free_accel = v3_sub(world_gravity_accel(&m->world, s->position_i_m),
+                             rotating_terms);
+    double vertical_required = airspeed * desired_gamma_rate -
+        airspeed * airspeed * cos(gamma) / radius - v3_dot(free_accel, lift_up);
     vertical_required = fmax(0.0, vertical_required);
 
     double aoa_max = fmin(m->vehicle.maximum_angle_of_attack,

@@ -40,3 +40,13 @@ sts-model-identity-test: $(TARGET)
 	python3 -m unittest discover -s $(VALIDATION_ROOT) -p test_model_identity.py
 
 sts-repair-test: sts-model-identity-test
+
+.PHONY: sts-taem-frame-test
+sts-taem-frame-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TAEMVerticalFrameTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_vertical_frame_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_vertical_frame_tests)"
+
+sts-repair-test: sts-taem-frame-test
