@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import statistics
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +69,29 @@ def selected_state(row: tuple[float, dict, dict], label: str) -> dict:
         "speedbrakeState": state.get("state", {}).get("airbrakes"),
         "currentEngineThrustN": vehicle.get("currentThrust"),
         "reportedControlApplied": applied.get("applySucceeded"),
+    }
+
+
+def control_input_identifiability(rows: list[tuple[float, dict, dict]]) -> dict:
+    roll = [float(row[2]["appliedControl"]["reportedRoll"]) for row in rows]
+    yaw = [float(row[2]["appliedControl"]["reportedYaw"]) for row in rows]
+    roll_std = statistics.pstdev(roll) if roll else None
+    yaw_std = statistics.pstdev(yaw) if yaw else None
+    correlation = (
+        statistics.correlation(roll, yaw)
+        if len(rows) > 1 and roll_std and yaw_std
+        else None
+    )
+    vif = None
+    if correlation is not None and abs(correlation) < 1.0:
+        vif = 1.0 / (1.0 - correlation * correlation)
+    return {
+        "sampleCount": len(rows),
+        "rollCommandPopulationStd": roll_std,
+        "yawCommandPopulationStd": yaw_std,
+        "rollYawCommandPearsonCorrelation": correlation,
+        "twoInputVarianceInflationFactor": vif,
+        "note": "This is a command-collinearity diagnostic, not a causal actuator fit. High correlation limits separation of roll and yaw contributions.",
     }
 
 
@@ -185,6 +209,10 @@ def main() -> int:
                 "basis": "vehicle.currentThrust, state.airbrakes, and command.airbrakes in reconstructed telemetry deltas; this audit does not claim RCS state because the log does not persist it per sample.",
             },
         },
+        "controlInputIdentifiability": {
+            "qAtLeast200Pa": control_input_identifiability(atmospheric),
+            "qAtLeast1000PaAndWithin10kmAlongTrack": control_input_identifiability(runway_window),
+        },
         "runwayCrossingWindow": {
             "referenceUT": RUNWAY_PASS_UT,
             "selectedCrossingSample": selected_state(crossing, "closest_logged_sample_to_first_runway_longitude_passage"),
@@ -194,7 +222,7 @@ def main() -> int:
             "samples": selected,
             "rollRateFiniteDifferenceWindows": acceleration_windows,
         },
-        "interpretation": "Near the runway-longitude passage, measured sideslip changes from about +0.4 to below -1 degree while commanded yaw grows and measured roll rate reverses from negative to positive. Roll command also grows, so these live data do not isolate yaw-to-roll causality. The trace does show that the real STS can develop substantial body-rate and sideslip dynamics near the site that the point-mass shadow does not represent. Keep the normal gate and bank ramp unchanged; obtain gate-qualified in-flight coordination evidence before using this trace to retune guidance.",
+        "interpretation": "Near the runway-longitude passage, measured sideslip changes from about +0.4 to below -1 degree while commanded yaw grows and measured roll rate reverses from negative to positive. Across all 9,689 q>=200 Pa samples, roll and yaw commands correlate at r=0.931 (two-input VIF 7.53); in the 208-sample high-q runway window they correlate at r=0.930 (VIF 7.35), while roll-command variation is much smaller than yaw-command variation. These archived bypassed data therefore do not isolate yaw-to-roll causality. They show substantial measured body-rate and sideslip dynamics near the site, but remain unqualified. Keep the normal gate and bank ramp unchanged; obtain gate-qualified in-flight coordination evidence before using this trace to retune guidance.",
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")

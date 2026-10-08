@@ -13,7 +13,7 @@
     "sourceFile": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
     "sourceSHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
     "analysisScript": "Tools/analyze_sts_run9_atmospheric_coordination.py",
-    "analysisScriptSHA256": "885839dbd4aa189598f268d6cc7639a00fa7f95c68b8271de810b0e0b2f22cad",
+    "analysisScriptSHA256": "63537f085040089cb9a8f4795698be2d1a59ba7b7ff87dbdbe2916c0c8b1b3dd",
     "sessionId": "2026-10-07T21-34-08Z-29000-108766028242",
     "startedUTC": "2026-10-07T21-34-08Z",
     "vessel": "STS",
@@ -32,6 +32,24 @@
       "samplesWithEngineThrustOver1N": 0,
       "samplesWithSpeedbrakeCommandOrState": 0,
       "basis": "vehicle.currentThrust, state.airbrakes, and command.airbrakes in reconstructed telemetry deltas; this audit does not claim RCS state because the log does not persist it per sample."
+    }
+  },
+  "controlInputIdentifiability": {
+    "qAtLeast200Pa": {
+      "sampleCount": 9689,
+      "rollCommandPopulationStd": 0.013345348904839715,
+      "yawCommandPopulationStd": 0.1560446553935789,
+      "rollYawCommandPearsonCorrelation": 0.9312737732320481,
+      "twoInputVarianceInflationFactor": 7.534139486365728,
+      "note": "This is a command-collinearity diagnostic, not a causal actuator fit. High correlation limits separation of roll and yaw contributions."
+    },
+    "qAtLeast1000PaAndWithin10kmAlongTrack": {
+      "sampleCount": 208,
+      "rollCommandPopulationStd": 0.01049845421795878,
+      "yawCommandPopulationStd": 0.12580158383517548,
+      "rollYawCommandPearsonCorrelation": 0.9295137652835966,
+      "twoInputVarianceInflationFactor": 7.352716261837229,
+      "note": "This is a command-collinearity diagnostic, not a causal actuator fit. High correlation limits separation of roll and yaw contributions."
     }
   },
   "runwayCrossingWindow": {
@@ -300,5 +318,5 @@
       }
     ]
   },
-  "interpretation": "Near the runway-longitude passage, measured sideslip changes from about +0.4 to below -1 degree while commanded yaw grows and measured roll rate reverses from negative to positive. Roll command also grows, so these live data do not isolate yaw-to-roll causality. The trace does show that the real STS can develop substantial body-rate and sideslip dynamics near the site that the point-mass shadow does not represent. Keep the normal gate and bank ramp unchanged; obtain gate-qualified in-flight coordination evidence before using this trace to retune guidance."
+  "interpretation": "Near the runway-longitude passage, measured sideslip changes from about +0.4 to below -1 degree while commanded yaw grows and measured roll rate reverses from negative to positive. Across all 9,689 q>=200 Pa samples, roll and yaw commands correlate at r=0.931 (two-input VIF 7.53); in the 208-sample high-q runway window they correlate at r=0.930 (VIF 7.35), while roll-command variation is much smaller than yaw-command variation. These archived bypassed data therefore do not isolate yaw-to-roll causality. They show substantial measured body-rate and sideslip dynamics near the site, but remain unqualified. Keep the normal gate and bank ramp unchanged; obtain gate-qualified in-flight coordination evidence before using this trace to retune guidance."
 }
