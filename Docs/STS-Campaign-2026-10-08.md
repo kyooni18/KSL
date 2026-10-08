@@ -273,3 +273,14 @@ Reading:
 - Conclusion: scaling the plant's lift or drag alone does not produce a TAEM handoff with the existing guidance. The blocker is the energy and geometry balance of the guidance on this plant, not one scalar aero term. This agrees with the earlier finding that the identified STS-N aero offers only about 0.5–0.75 L/D across the entry Mach range.
 
 Still open: the drag ×0.25 along-track sign, and whether a combined lift and drag change (matching a full STS aero table) gives a TAEM handoff. Neither is answered by these runs.
+
+### Drag ×0.25 along-track diagnosis (2026-10-08, offline)
+
+Source: `ShuttleSim/runs/mm304-sens-dragx0.25-20261008T005700Z-fhjyxyuk/guidance-events.jsonl.gz`, guidance snapshots (735 samples, phase MM304 Entry).
+
+- The vehicle does not abort, because its speed stays above the 85 m/s floor (146.8 m/s at timeout). It ends at the 2400 s sim limit.
+- The guidance commands AoA up to the 28° `maximumAngleOfAttack` and holds it there.
+- Roll rises from about 3° to the 40° roll command and stays there for a long stretch.
+- Heading drifts from the runway heading of 90° to about 111° and then about 102°. The final along-track is -1,266 km, so the vehicle is flying away from the runway.
+- Interpretation: with less drag, the energy controller has excess energy to dump. It dumps it through a large bank and turn, not through range, and the heading error is not corrected in time. This is a steering problem on the low-drag plant, not an abort. The snapshots are coarse (one every few seconds of sim time), so the exact heading history needs a finer trace before any fix is considered.
+- Not a fix: nothing in this result justifies changing guidance gains. It only identifies where the low-drag case goes wrong.
