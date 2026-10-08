@@ -226,3 +226,12 @@ The open question from the entry-AoA probe is resolved, and the probe result sta
 - Several MM304/final paths clamp it to 10–18°: `guidance_terminal.c:183`, `final/recovery.inc:247,254,375`. A value of 24 is therefore clamped to 18 on those paths, so the 24° offline run cannot have tested a higher AoA there.
 - The offline plant takes its own initial AoA from `initial_aoa_deg` in the scenario (1.3° in `ksp70km-entry-interface.ini`), not from the vehicle config.
 - Result unchanged: 12° and 24° both abort with "MM304 flight recovery margin was exhausted before TAEM acquisition." The abort is not sensitive to the entry-AoA command across this range, given these clamps.
+
+## Trigger of the MM304 abort (2026-10-08)
+
+- Source: `CLanding/guidance/guidance_terminal.c:249`. The abort fires when `!physical_handoff` and `handoff_lost` holds, where `handoff_lost = true_air_speed < minimum_safe_speed || mean_altitude < site.altitude + 100`.
+- With `minimum_safe_speed` = 85 m/s (`Configuration/sts.json`), live run 9 ended at TAS 85.0 m/s, and the offline run hits the same floor.
+- So the abort is the airspeed floor, reached because the vehicle bleeds speed below 85 m/s before reaching the MM305 handoff window (141–179 m/s, the same window as the offline profile failure). The handoff never happens, so the floor triggers the abort.
+- Offline plant effective ballistic coefficient along the 70 km baseline (`m·q/drag`, 40252 kg mass from the scenario): median 456 (range 351–767), not the planner's 700. Drag is higher than the planner assumes at most altitudes.
+- Offline run with `estimatedBallisticCoefficient` = 456 (temp config): still aborts at the same floor. BC is not the lever on its own.
+- Not done, and not a valid fix: lowering `minimum_safe_speed` to avoid the abort would only let the vehicle continue below the handoff window with no path to the runway. It would be gate tuning, so it was not changed.
