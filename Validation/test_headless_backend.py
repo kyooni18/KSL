@@ -90,6 +90,15 @@ class PlanAdmissionTests(unittest.TestCase):
 
 
 class StartupPhysicsTests(unittest.TestCase):
+    def test_verified_reload_uses_attempt_holdout_without_shadow_bypass(self):
+        for reentry, verified, expected in [(True, True, True), (True, False, False),
+                                            (False, True, False)]:
+            with self.subTest(reentry=reentry, verified=verified):
+                env = {"KSP_LANDER_UNPOWERED_ONLY": "1"}
+                self.assertEqual(flight.configure_checkpoint_history_policy(reentry, verified, env),expected)
+                self.assertEqual(env.get("KSP_LANDER_FORCE_REENTRY_TEST"),"1" if expected else None)
+                self.assertNotIn("KSP_LANDER_BYPASS_SHADOW_GATE",env)
+
     def test_paused_placeholder_mass_cannot_certify_restored_physics(self):
         initial = {"paused": True, "vessel": "STS", "ut": 9934.591826,
                    "mass": 22000.0, "dryMass": 20056.283203125,

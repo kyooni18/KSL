@@ -56,6 +56,18 @@ def signed_angle_degrees(value: float) -> float:
     return wrapped - 360.0 if wrapped > 180.0 else wrapped
 
 
+def configure_checkpoint_history_policy(reentry_only: bool, verified: bool, environ: dict) -> bool:
+    """Use completed-attempt evidence after an independently verified reload."""
+    if not reentry_only or not verified:
+        return False
+    if environ.get("KSP_LANDER_UNPOWERED_ONLY") != "1":
+        raise RuntimeError("Checkpoint history policy requires the unpowered test policy")
+    # This transport option changes only the history holdout identity. It does
+    # not bypass entry qualification or any runtime flight gate.
+    environ["KSP_LANDER_FORCE_REENTRY_TEST"] = "1"
+    return True
+
+
 class DescentCheckpoint(NamedTuple):
     altitude: float
     name: str
@@ -1517,6 +1529,9 @@ def main() -> int:
                 restored = json.loads(prepared.stdout.strip().splitlines()[-1])
                 print("Known checkpoint physics frozen: " + json.dumps(restored), flush=True)
                 os.environ["KSP_LANDER_STARTUP_ADOPT_PAUSE"] = "1"
+                if configure_checkpoint_history_policy(args.reentry_only,
+                        bool(restored.get("ready")),os.environ):
+                    print("Checkpoint history: completed attempts retained; current attempt held out; normal qualification required", flush=True)
             else:
                 restored = settle_restored_reentry_state(root, restored)
         if args.hac_only:

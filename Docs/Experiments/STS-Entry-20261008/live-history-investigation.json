@@ -1,0 +1,43 @@
+{
+  "scope": "Real KSP normal admission, identical-input predictor repeat and historical-force A/B. Diagnostic binary retains first original prediction as admission result; neither additional prediction alters gates.",
+  "diagnosticSourceBase": "7f93e18",
+  "diagnosticPatchSHA256": "cc5dbf642ccb3fe635265edc661ff275b8f394dfa62372930029078411fa913f",
+  "launchKeysObserved": [
+    "launch-ut:9.080",
+    "launch-ut:9.100"
+  ],
+  "tests": [
+    {
+      "log": "sts-live-shadow-repeat-20261008.log.gz",
+      "rawSHA256": "689c88a353d4b2cbb95dcb60c46a9cb32543833e329eedee94c05c458d8e5e36",
+      "evidence": [
+        "LIVE_SHADOW_INPUT ut=9931.091826169 mass=25816.105469 r=0x1.305c9b9a49ea8p+17,0x1.3f251e7255dc9p+19,0x1.18a6fa930c0fcp+6 v=-0x1.17d3a90c5111p+11,0x1.d970f375bab9ep+8,0x1.87e9d4337fbafp-5 roll=0x1.ep-12 aoa=0x1.96772ap+0 fpa=-0x1.9b2ce0512dc1fp+0 bankeff=0x1p+0 calrho=0x1p+0 caldrag=0x1p+0 callift=0x1p+0 ld=0x1.999999999999ap-2 beta=0x1.5ep+9",
+        "LIVE_SHADOW_REPEAT index=0 taem=0 miss=496.333186805 rangeerr=-61113.920331750 q=8402.168631244 g=3.220997879",
+        "LIVE_SHADOW_REPEAT index=1 taem=0 miss=496.333186805 rangeerr=-61113.920331750 q=8402.168631244 g=3.220997879",
+        "LIVE_SHADOW_REPEAT index=2 taem=0 miss=496.333186805 rangeerr=-61113.920331750 q=8402.168631244 g=3.220997879",
+        "headless flight failed: engageReentry rejected: Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=0.5 km, range error=-61.1 km, q=8.4 kPa, g=3.22."
+      ]
+    },
+    {
+      "log": "sts-live-shadow-history-ab-20261008.log.gz",
+      "rawSHA256": "836c4aac7cb067817950d368635027972a9b177358910f255a9d60e9be3c5f32",
+      "evidence": [
+        "Checkpoint aerodynamic prior: attempt native-95093-1791468588-666380000, 60 prior cells; current attempt held out.",
+        "LIVE_SHADOW_INPUT ut=9931.131826169 mass=25816.105469 r=0x1.302fd5abfe016p+17,0x1.3f277c373d1c8p+19,0x1.18a8f02382d47p+6 v=-0x1.17d5fb5a890cap+11,0x1.d92308fc999e2p+8,0x1.87a54fc348d02p-5 roll=0x1.2p-12 aoa=0x1.9864e6p+0 fpa=-0x1.9b2efb31e72c9p+0 bankeff=0x1p+0 calrho=0x1p+0 caldrag=0x1p+0 callift=0x1p+0 ld=0x1.4204135a501e4p-1 beta=0x1.12da25140f2f1p+9",
+        "LIVE_SHADOW_REPEAT index=0 taem=0 miss=1467.194268570 rangeerr=85387.990667824 q=5336.977360864 g=1.628142177",
+        "LIVE_SHADOW_REPEAT index=1 taem=0 miss=496.689940518 rangeerr=-38380.476587367 q=4897.943829327 g=2.217948581",
+        "LIVE_SHADOW_REPEAT index=2 taem=0 miss=1467.194268570 rangeerr=85387.990667824 q=5336.977360864 g=1.628142177",
+        "headless flight failed: engageReentry rejected: Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=1.5 km, range error=+85.4 km, q=5.3 kPa, g=1.63."
+      ]
+    },
+    {
+      "log": "sts-live-history-policy-20261008.log.gz",
+      "rawSHA256": "3332991e42ffc52d4599853d8f2d9809e7b85c414ba809915ab9e2808c019c38",
+      "evidence": [
+        "Checkpoint history: completed attempts retained; current attempt held out; normal qualification required",
+        "Checkpoint aerodynamic prior: attempt native-96574-1791468699-66761000, 60 prior cells; current attempt held out.",
+        "headless flight failed: engageReentry rejected: Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=1.5 km, range error=+85.4 km, q=5.3 kPa, g=1.63."
+      ]
+    }
+  ]
+}
