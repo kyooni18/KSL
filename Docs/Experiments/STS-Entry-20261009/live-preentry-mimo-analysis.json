@@ -1,0 +1,775 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_LIVE_VACUUM_DIAGNOSTIC",
+  "purpose": "Compare the measured original-STS vacuum roll/yaw response with full-vessel inertia using repeated three-axis rate pulses and actual control readbacks.",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "atmosphericCoordinationEvidence": false,
+    "landingOrRolloutEvidence": false
+  },
+  "method": {
+    "fit": "OLS of all three body-rate components against elapsed seconds for each constant actual-control polarity; actual control readback selects the window, not the issued command.",
+    "rateConvention": "Legacy body_rates are negated relative to right-handed transformed angular velocity and are sign-corrected before Euler analysis. The independent yaw frame crosscheck already stores right-handed vessel-frame rates.",
+    "torqueInference": "Apply the measured symmetric full-vessel inertia tensor to each three-axis angular-acceleration fit and add omega cross I-omega. Reported torque is an inferred net vessel moment, not direct reaction-wheel telemetry.",
+    "inertiaCounterfactual": "Invert the measured full-vessel tensor for a unit torque aligned only with the commanded body axis; compare its cross/primary angular-acceleration ratio with the measured ratio.",
+    "axisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ]
+  },
+  "provenance": {
+    "gitHeadAtAnalysis": "70b609679270dd2ea8ef9a9230bdc4eb5bdfc319",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postRunCheckpointVerification": {
+      "method": "Separate bounded read-only kRPC query after settle_known_checkpoint.py restored the saved checkpoint.",
+      "vessel": "STS",
+      "ut": 9931.251826169331,
+      "paused": true,
+      "altitudeM": 71919.67588308488,
+      "dynamicPressurePa": 0.0,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "thrustN": 0.0,
+      "sas": false,
+      "rcs": false,
+      "controls": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "kspPid": 69877,
+      "singleKspProcess": true,
+      "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+    },
+    "inputTraces": [
+      {
+        "label": "roll-pulse-1",
+        "path": "Docs/Experiments/STS-Entry-20261009/live-preentry-roll-crosscheck-20261009.json",
+        "sha256": "e363ec7b141cafa750fb6e38c7f3e0f5a5162f3da9aa8e66aca01f6a52362543",
+        "probeSourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4",
+        "sampleCount": 39
+      },
+      {
+        "label": "roll-pulse-2",
+        "path": "Docs/Experiments/STS-Entry-20261009/live-preentry-roll-crosscheck-repeat-20261009.json",
+        "sha256": "e1470df29125000681f07eee61f68fff0f53284988c6ebbb937e2a490a81d6f5",
+        "probeSourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4",
+        "sampleCount": 38
+      },
+      {
+        "label": "yaw-pulse-1",
+        "path": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
+        "sha256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
+        "probeSourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4",
+        "sampleCount": 42
+      },
+      {
+        "label": "yaw-pulse-2-native-frame",
+        "path": "Docs/Experiments/STS-Entry-20261009/live-yaw-frame-crosscheck-20261009.json",
+        "sha256": "f034f821c17eeffd3227aafd39d4046fa731a7f9b885c773a198d7a14a768897",
+        "probeSourceSHA256": "a0ca1f9c5fd5621d8286517e88b9cf0fabc822d239f85c520e299e0bf46ac570",
+        "sampleCount": 38
+      }
+    ],
+    "controlAndWheelFrameEvidence": [
+      {
+        "path": "Docs/Experiments/STS-Entry-20261008/live-control-frames.json",
+        "sha256": "cc0f2c7c4011926ee3871214a02747333a7442be1c7b99e5ed0c6b454c2ec3cb"
+      },
+      {
+        "path": "Docs/Experiments/STS-Entry-20261008/live-wheel-frames.json",
+        "sha256": "a3305d3942f10c2e43a01114699c5d413fc936d52de88560d462301128471e30"
+      }
+    ],
+    "inertiaTensorDocumentation": "kRPC Vessel API documents the full 3x3 tensor in row-major order in Vessel.reference_frame.",
+    "analyzer": "Tools/analyze_sts_preentry_mimo.py"
+  },
+  "runAnalyses": [
+    {
+      "label": "roll-pulse-1",
+      "controlAxis": "roll",
+      "bodyAxisOrder": [
+        "+X pitch",
+        "+Y roll",
+        "+Z yaw"
+      ],
+      "rateSourceField": "body_rates",
+      "rateSignCorrectionToRightHanded": -1.0,
+      "rightHandedRateFrame": "right-handed vessel axes: +X pitch, +Y roll, +Z yaw",
+      "positiveControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.3400000000074215,
+          0.7000000000152795
+        ],
+        "meanActualControl": 0.15000000596046448,
+        "actualControlRanges": {
+          "roll": [
+            0.15000000596046448,
+            0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "yaw": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -7.433611846377103e-05,
+          -0.017191023256298094,
+          -0.0006143994268262187
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.0002563305446926555,
+          -0.0029511500497780957,
+          -0.00010548070690910454
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -69.40598122257147,
+          -1491.310090055551,
+          -549.480079650679
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -69.65711297170948,
+          -1491.3115731767232,
+          -548.8283049974564
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.2511317491380135,
+          0.0014831211722093618,
+          -0.6517746532226247
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          -462.7065230975045,
+          -9942.066871974763,
+          -3663.200385442022
+        ]
+      },
+      "negativeControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.7400000000161526,
+          1.1000000000240107
+        ],
+        "meanActualControl": -0.15000000596046448,
+        "actualControlRanges": {
+          "roll": [
+            -0.15000000596046448,
+            -0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "yaw": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -3.4215177316077887e-06,
+          0.0168263054286379,
+          0.0006011082251651455
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.00025953831525025653,
+          -0.004031271199424604,
+          -0.0001438494789723496
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -3.643530345404728,
+          1459.6795169005509,
+          536.0250160758104
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -4.111242501641624,
+          1459.677469190304,
+          536.9262643898184
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.4677121562368961,
+          0.002047710246865224,
+          -0.9012483140078881
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          24.290201337492306,
+          -9731.196392654003,
+          -3573.4999651739386
+        ]
+      },
+      "symmetricMeanAngularAccelerationPerUnitControlRadPerSecondSquaredXYZ": [
+        -0.00023638199304756768,
+        -0.11339109111069617,
+        -0.004051692012304772
+      ],
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        -219.2081608800061,
+        -9836.631632314384,
+        -3618.35017530798
+      ],
+      "observedAbsCrossToPrimaryAccelerationRatio": 0.035732013623092966,
+      "pureAxisInertiaPredictedAbsCrossToPrimaryAccelerationRatio": 0.0031885411836000597,
+      "observedAccelerationRatioDividedByInertiaPrediction": 11.206382971271307,
+      "inferredAbsCrossToPrimaryNetTorqueRatio": 0.3678444319721513,
+      "pureAxisInertiaCounterfactual": {
+        "unitTorqueAxis": "roll",
+        "alphaPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+          6.59106802658233e-10,
+          1.1513910809295089e-05,
+          3.6712578799735286e-08
+        ],
+        "crossToPrimaryAngularAccelerationRatio": 0.0031885411836000597,
+        "maximumTensorAsymmetryKgM2": 0.00262451171875
+      },
+      "physicalConditions": {
+        "vessel": "STS",
+        "checkpointName": "STS-campaign-72km-20261008",
+        "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+        "massKgRange": [
+          25816.10546875,
+          25816.10546875
+        ],
+        "altitudeMRange": [
+          71829.21208818769,
+          71917.32721912733
+        ],
+        "dynamicPressurePaRange": [
+          0.0,
+          0.0
+        ],
+        "maximumAbsoluteThrustN": 0.0,
+        "sasOnAnySample": false,
+        "rcsOnAnySample": false
+      }
+    },
+    {
+      "label": "roll-pulse-2",
+      "controlAxis": "roll",
+      "bodyAxisOrder": [
+        "+X pitch",
+        "+Y roll",
+        "+Z yaw"
+      ],
+      "rateSourceField": "body_rates",
+      "rateSignCorrectionToRightHanded": -1.0,
+      "rightHandedRateFrame": "right-handed vessel axes: +X pitch, +Y roll, +Z yaw",
+      "positiveControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.3400000000074215,
+          0.7000000000152795
+        ],
+        "meanActualControl": 0.15000000596046448,
+        "actualControlRanges": {
+          "roll": [
+            0.15000000596046448,
+            0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "yaw": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          2.748754139328602e-05,
+          -0.01717486179416115,
+          -0.0006018447887078162
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.0002617475900386386,
+          -0.002965139481038794,
+          -0.0001026737531502475
+        ],
+        "inferredNetTorqueNmXYZ": [
+          27.2150963217428,
+          -1489.950178207471,
+          -537.2155887707121
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          26.970349261659447,
+          -1489.9517284047809,
+          -536.5468832614041
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.24474706008335245,
+          0.0015501973099202697,
+          -0.6687055093080388
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          181.43396826874718,
+          -9933.000793347817,
+          -3581.4371161578892
+        ]
+      },
+      "negativeControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.7400000000161526,
+          1.1000000000240107
+        ],
+        "meanActualControl": -0.15000000596046448,
+        "actualControlRanges": {
+          "roll": [
+            -0.15000000596046448,
+            -0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "yaw": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -1.350526242466234e-05,
+          0.016833385412593185,
+          0.0006105089633009178
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.00025836052670797597,
+          -0.00404203871865648,
+          -0.00014588225990740664
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -13.206404672650018,
+          1460.2647745031404,
+          545.2141754995363
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -13.682566962844355,
+          1460.2627442279068,
+          546.1137227870597
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.4761622901943361,
+          0.0020302752337679197,
+          -0.8995472875234873
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          88.04269431916444,
+          -9735.09810984956,
+          -3634.761025564482
+        ]
+      },
+      "symmetricMeanAngularAccelerationPerUnitControlRadPerSecondSquaredXYZ": [
+        0.00013664267396346918,
+        -0.1133608195179602,
+        -0.004041179012780421
+      ],
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        134.7383312939558,
+        -9834.049451598688,
+        -3608.0990708611857
+      ],
+      "observedAbsCrossToPrimaryAccelerationRatio": 0.03564881614268994,
+      "pureAxisInertiaPredictedAbsCrossToPrimaryAccelerationRatio": 0.0031890960827816233,
+      "observedAccelerationRatioDividedByInertiaPrediction": 11.178344965886383,
+      "inferredAbsCrossToPrimaryNetTorqueRatio": 0.3668986096337587,
+      "pureAxisInertiaCounterfactual": {
+        "unitTorqueAxis": "roll",
+        "alphaPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+          6.612366541742097e-10,
+          1.1513915414340728e-05,
+          3.6718982545352965e-08
+        ],
+        "crossToPrimaryAngularAccelerationRatio": 0.0031890960827816233,
+        "maximumTensorAsymmetryKgM2": 0.002685546875
+      },
+      "physicalConditions": {
+        "vessel": "STS",
+        "checkpointName": "STS-campaign-72km-20261008",
+        "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+        "massKgRange": [
+          25816.10546875,
+          25816.10546875
+        ],
+        "altitudeMRange": [
+          71831.56152627361,
+          71918.50024448533
+        ],
+        "dynamicPressurePaRange": [
+          0.0,
+          0.0
+        ],
+        "maximumAbsoluteThrustN": 0.0,
+        "sasOnAnySample": false,
+        "rcsOnAnySample": false
+      }
+    },
+    {
+      "label": "yaw-pulse-1",
+      "controlAxis": "yaw",
+      "bodyAxisOrder": [
+        "+X pitch",
+        "+Y roll",
+        "+Z yaw"
+      ],
+      "rateSourceField": "body_rates",
+      "rateSignCorrectionToRightHanded": -1.0,
+      "rightHandedRateFrame": "right-handed vessel axes: +X pitch, +Y roll, +Z yaw",
+      "positiveControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.3800000000082946,
+          0.7200000000157161
+        ],
+        "meanActualControl": 0.15000000596046448,
+        "actualControlRanges": {
+          "yaw": [
+            0.15000000596046448,
+            0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "roll": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          1.9087966185801486e-05,
+          -0.0012127893779522384,
+          -0.0031495409369302198
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.00025504957589936534,
+          -0.0001930137952599253,
+          -0.0005205785206612552
+        ],
+        "inferredNetTorqueNmXYZ": [
+          17.985624484312158,
+          -95.49807872102029,
+          -3085.2070636316066
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          17.895063138843447,
+          -95.49401979408296,
+          -3085.164199389276
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.09056134546870932,
+          -0.004058926937338919,
+          -0.04286424233075827
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          119.90415846418453,
+          -636.653832841785,
+          -20568.04627357665
+        ]
+      },
+      "negativeControl": {
+        "sampleCount": 12,
+        "elapsedSeconds": [
+          0.7600000000165892,
+          1.1400000000248838
+        ],
+        "meanActualControl": -0.15000000596046448,
+        "actualControlRanges": {
+          "yaw": [
+            -0.15000000596046448,
+            -0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "roll": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -2.4991736711275323e-05,
+          0.0011837728263865593,
+          0.0030769784250661903
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.0002527981261468906,
+          -0.00023858894527111727,
+          -0.0006405653047308003
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -23.36459594897403,
+          93.19595752781476,
+          3014.035139436323
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -23.502332678583727,
+          93.20090008650313,
+          3014.0876560915867
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.13773672960969513,
+          -0.004942558688367932,
+          -0.05251665526385485
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          155.76396680365627,
+          -621.3063588302684,
+          -20093.566797795545
+        ]
+      },
+      "symmetricMeanAngularAccelerationPerUnitControlRadPerSecondSquaredXYZ": [
+        0.0001469323371516895,
+        -0.007988540363693251,
+        -0.0207550637152559
+      ],
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        137.8340626339204,
+        -628.9800958360267,
+        -20330.806535686097
+      ],
+      "observedAbsCrossToPrimaryAccelerationRatio": 0.38489596916155533,
+      "pureAxisInertiaPredictedAbsCrossToPrimaryAccelerationRatio": 0.03601114245816306,
+      "observedAccelerationRatioDividedByInertiaPrediction": 10.688246550598024,
+      "inferredAbsCrossToPrimaryNetTorqueRatio": 0.03093729187437771,
+      "pureAxisInertiaCounterfactual": {
+        "unitTorqueAxis": "yaw",
+        "alphaPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+          -9.519132401733303e-11,
+          3.672161953040924e-08,
+          1.0197293677386547e-06
+        ],
+        "crossToPrimaryAngularAccelerationRatio": 0.03601114245816306,
+        "maximumTensorAsymmetryKgM2": 0.000732421875
+      },
+      "physicalConditions": {
+        "vessel": "STS",
+        "checkpointName": "STS-campaign-72km-20261008",
+        "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+        "massKgRange": [
+          25816.10546875,
+          25816.10546875
+        ],
+        "altitudeMRange": [
+          71832.736877274,
+          71919.67456787708
+        ],
+        "dynamicPressurePaRange": [
+          0.0,
+          0.0
+        ],
+        "maximumAbsoluteThrustN": 0.0,
+        "sasOnAnySample": false,
+        "rcsOnAnySample": false
+      }
+    },
+    {
+      "label": "yaw-pulse-2-native-frame",
+      "controlAxis": "yaw",
+      "bodyAxisOrder": [
+        "+X pitch",
+        "+Y roll",
+        "+Z yaw"
+      ],
+      "rateSourceField": "vesselFrameRatesDegPerSecond",
+      "rateSignCorrectionToRightHanded": 1.0,
+      "rightHandedRateFrame": "right-handed vessel axes: +X pitch, +Y roll, +Z yaw",
+      "positiveControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.3400000000074215,
+          0.7000000000152795
+        ],
+        "meanActualControl": 0.15000000596046448,
+        "actualControlRanges": {
+          "yaw": [
+            0.15000000596046448,
+            0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "roll": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -1.7911810639210193e-06,
+          -0.0012053883543102467,
+          -0.0032153022221492384
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.0002608257606419611,
+          -0.0002018354601850523,
+          -0.0005507219328775764
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -1.8242035226606321,
+          -94.65262795967205,
+          -3149.7347563127655
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -1.9243992757083719,
+          -94.6482357850495,
+          -3149.688912602159
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.10019575304773981,
+          -0.004392174622548567,
+          -0.04584371060672461
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          -12.161356334488664,
+          -631.0174946567646,
+          -20998.230874357043
+        ]
+      },
+      "negativeControl": {
+        "sampleCount": 10,
+        "elapsedSeconds": [
+          0.7400000000161526,
+          1.1000000000240107
+        ],
+        "meanActualControl": -0.15000000596046448,
+        "actualControlRanges": {
+          "yaw": [
+            -0.15000000596046448,
+            -0.15000000596046448
+          ],
+          "pitch": [
+            0.0,
+            0.0
+          ],
+          "roll": [
+            0.0,
+            0.0
+          ]
+        },
+        "bodyAngularAccelerationRadPerSecondSquaredXYZ": [
+          -6.030611037483317e-05,
+          0.0011888949316285348,
+          0.0031065345642307994
+        ],
+        "meanRightHandedBodyRateRadPerSecondXYZ": [
+          -0.00025805444222455707,
+          -0.0002814691764227535,
+          -0.0007340811843570964
+        ],
+        "inferredNetTorqueNmXYZ": [
+          -56.8247978143767,
+          93.55333965044095,
+          3042.99605891759
+        ],
+        "inertiaTimesAlphaNmXYZ": [
+          -57.01095162800765,
+          93.55911057199613,
+          3043.059285551096
+        ],
+        "gyroscopicCorrectionNmXYZ": [
+          0.18615381363094866,
+          -0.00577092155518405,
+          -0.06322663350623714
+        ],
+        "inferredNetTorquePerUnitControlNmXYZ": [
+          378.83197037574797,
+          -623.6889062197691,
+          -20286.6395866653
+        ]
+      },
+      "symmetricMeanAngularAccelerationPerUnitControlRadPerSecondSquaredXYZ": [
+        0.0001950497566191262,
+        -0.007980943969328386,
+        -0.02107278845057608
+      ],
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        183.33530702062964,
+        -627.3532004382669,
+        -20642.43523051117
+      ],
+      "observedAbsCrossToPrimaryAccelerationRatio": 0.37873222084712793,
+      "pureAxisInertiaPredictedAbsCrossToPrimaryAccelerationRatio": 0.03599687102678606,
+      "observedAccelerationRatioDividedByInertiaPrediction": 10.521253932468325,
+      "inferredAbsCrossToPrimaryNetTorqueRatio": 0.030391433638168264,
+      "pureAxisInertiaCounterfactual": {
+        "unitTorqueAxis": "yaw",
+        "alphaPerUnitTorqueRadPerSecondSquaredPerNmXYZ": [
+          -9.519835301892046e-11,
+          3.670704213412546e-08,
+          1.0197286899411605e-06
+        ],
+        "crossToPrimaryAngularAccelerationRatio": 0.03599687102678606,
+        "maximumTensorAsymmetryKgM2": 0.0009765625
+      },
+      "physicalConditions": {
+        "vessel": "STS",
+        "checkpointName": "STS-campaign-72km-20261008",
+        "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+        "massKgRange": [
+          25816.10546875,
+          25816.10546875
+        ],
+        "altitudeMRange": [
+          71831.56152054842,
+          71918.5002419597
+        ],
+        "dynamicPressurePaRange": [
+          0.0,
+          0.0
+        ],
+        "maximumAbsoluteThrustN": 0.0,
+        "sasOnAnySample": false,
+        "rcsOnAnySample": false
+      }
+    }
+  ],
+  "summaryByControlAxis": {
+    "roll": {
+      "repeatCount": 2,
+      "meanObservedAbsCrossToPrimaryAccelerationRatio": 0.03569041488289146,
+      "observedAbsCrossToPrimaryAccelerationRatioByRun": {
+        "roll-pulse-1": 0.035732013623092966,
+        "roll-pulse-2": 0.03564881614268994
+      },
+      "meanPureAxisInertiaPrediction": 0.0031888186331908413,
+      "meanInferredAbsCrossToPrimaryNetTorqueRatio": 0.367371520802955,
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        -42.23491479302514,
+        -9835.340541956535,
+        -3613.224623084583
+      ],
+      "axisIndices": {
+        "primary": 1,
+        "cross": 2
+      }
+    },
+    "yaw": {
+      "repeatCount": 2,
+      "meanObservedAbsCrossToPrimaryAccelerationRatio": 0.3818140950043416,
+      "observedAbsCrossToPrimaryAccelerationRatioByRun": {
+        "yaw-pulse-1": 0.38489596916155533,
+        "yaw-pulse-2-native-frame": 0.37873222084712793
+      },
+      "meanPureAxisInertiaPrediction": 0.03600400674247456,
+      "meanInferredAbsCrossToPrimaryNetTorqueRatio": 0.03066436275627299,
+      "symmetricMeanInferredNetTorquePerUnitControlNmXYZ": [
+        160.58468482727503,
+        -628.1666481371468,
+        -20486.620883098636
+      ],
+      "axisIndices": {
+        "primary": 2,
+        "cross": 1
+      }
+    }
+  },
+  "interpretation": "Across independent pulses, the right-handed rate response is repeatable and substantially exceeds the cross-axis acceleration predicted by a pure-axis torque passed through the measured inertia tensor. The inferred net torque vector therefore contains input-correlated cross-axis components under this vacuum bench. The available wheel/control-frame snapshots show a single wheel and control frame aligned with the root, but do not identify the physical source of the inferred cross-axis moment. The source remains unresolved. These zero-q measurements do not establish atmospheric control-surface coordination or justify changing entry guidance.",
+  "sourceSHA256": "8b78283e6e4d08535a97c5cd25e43a0508d0157f0614353154473d375ff5c573"
+}
