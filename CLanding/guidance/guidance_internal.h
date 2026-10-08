@@ -101,6 +101,7 @@ double guidance_feedback_lift_accel(const GuidanceMachine*g,const Telemetry*t,
     AerodynamicModel aero,const VehicleProfile*v);
 double live_lift_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v);
 double live_drag_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v);
+double entry_measured_drag_accel(const Telemetry*t);
 void entry_program_commit_planned_reversal(GuidanceMachine*g,EntryControlPlan*plan,
         double ut,bool replace_existing);
 

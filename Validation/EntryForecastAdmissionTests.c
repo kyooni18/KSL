@@ -57,6 +57,41 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
     if(!matches) exit(EXIT_FAILURE);
 }
 
+static void test_entry_measured_drag_requires_valid_physics(void) {
+    Telemetry t={0};
+    t.mass=25816.0;
+    t.drag_force=1006.824;
+    assert(isnan(entry_measured_drag_accel(&t)));
+    t.physics_sample_valid=true;
+    assert(fabs(entry_measured_drag_accel(&t)-0.039)<1e-12);
+}
+
+static void test_entry_drag_authority_is_continuous_at_output_floor(
+        const PlanetModel *planet,const LandingConfiguration *cfg) {
+    EntryDragReferenceConfig drag_cfg=entry_drag_reference_default_config();
+    EntryDragReferenceInput input={
+        .phase=ENTRY_PHASE_TEMPERATURE_CONTROL,
+        .relative_velocity=2110.0,
+        .latitude=cfg->site.latitude,
+        .altitude=66920.0,
+        .range_to_site=936190.0,
+        .taem_range=35000.0,
+        .taem_latitude=cfg->site.latitude,
+        .taem_altitude=cfg->guidance.taem_interface_altitude,
+        .taem_velocity=cfg->guidance.taem_force_handoff_speed,
+        .measured_drag_accel=NAN,
+        .modeled_drag_accel=0.0399,
+        .aero_confidence=0.8,
+        .planet=planet,
+        .vehicle=&cfg->vehicle
+    };
+    EntryDragReferenceOutput below=entry_drag_reference_compute(&input,&drag_cfg);
+    input.modeled_drag_accel=0.0401;
+    EntryDragReferenceOutput above=entry_drag_reference_compute(&input,&drag_cfg);
+    assert(below.valid&&above.valid);
+    assert(fabs(below.reference_drag_accel-above.reference_drag_accel)<0.1);
+}
+
 int main(void) {
     /* Prospective feedback consumes the rollout's force, independently of the
        fallback polar, without marking the synthetic observation measured. */
@@ -78,6 +113,7 @@ int main(void) {
         g.diagnostic_shadow=false;
         assert(guidance_feedback_lift_accel(&g,&t,a,&v)==2.0);
     }
+    test_entry_measured_drag_requires_valid_physics();
 
     LandingConfiguration cfg=landing_configuration_default();
     landing_configuration_normalize(&cfg);
@@ -85,6 +121,7 @@ int main(void) {
     char path[512],reason[256];
     shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_ATMOSPHERE,path,sizeof(path));
     assert(shuttle_sim_load_planet(path,&planet,reason,sizeof(reason)));
+    test_entry_drag_authority_is_continuous_at_output_floor(&planet,&cfg);
     check_case(&planet,&cfg,30000,0,2.5,26000,true,"closing");
     check_case(&planet,&cfg,30000,180,2.5,26000,false,"receding");
     check_case(&planet,&cfg,140000,0,2.5,26000,false,"outside range");

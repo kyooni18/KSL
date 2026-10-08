@@ -128,6 +128,60 @@ static void azimuth_deadband_reversal(void){
     assert(rev.valid&&rev.reversal_requested&&rev.bank_sign<0.0);
 }
 
+static void behind_site_preserves_turn_until_azimuth_ahead(void){
+    EntryLateralLimits l=limits();
+    l.maximum_roll_rate_deg_s=1.8;
+    l.maximum_roll_accel_deg_s2=1.0;
+    EntryLateralState state={0};
+    entry_lateral_state_init(&state,100.0,-1.0,-40.0);
+    state.leg_captured=true;
+
+    EntryLateralInput in=azimuth_input(-170.0,5.0);
+    in.ut=100.1;
+    in.measured_bank_deg=-40.0;
+    in.bank_magnitude_deg=40.0;
+    in.has_crossrange_error=true;
+    in.crossrange_error_m=-3000.0;
+    in.has_crossrange_rate=true;
+    in.crossrange_error_rate_mps=80.0;
+    in.has_crossrange_course_alignment=true;
+    in.crossrange_course_alignment=1.0;
+
+    EntryLateralOutput behind=entry_lateral_update(&state,&in,&l);
+    assert(behind.valid&&!behind.reversal_requested);
+    assert(behind.bank_sign<0.0);
+    assert(behind.projected_crossrange_error_m>behind.crossrange_corridor_m);
+
+    in.ut=100.2;
+    in.azimuth_error_deg=-20.0;
+    EntryLateralOutput ahead=entry_lateral_update(&state,&in,&l);
+    assert(ahead.valid&&ahead.reversal_requested);
+    assert(ahead.bank_sign>0.0);
+
+    EntryLateralState reverse_course={0};
+    entry_lateral_state_init(&reverse_course,100.0,1.0,40.0);
+    reverse_course.leg_captured=true;
+    in=azimuth_input(170.0,5.0);
+    in.ut=100.1;
+    in.measured_bank_deg=40.0;
+    in.bank_magnitude_deg=40.0;
+    in.has_crossrange_error=true;
+    in.crossrange_error_m=-3000.0;
+    in.has_crossrange_rate=true;
+    in.crossrange_error_rate_mps=80.0;
+    in.has_crossrange_course_alignment=true;
+    in.crossrange_course_alignment=-1.0;
+    EntryLateralOutput reverse_behind=entry_lateral_update(&reverse_course,&in,&l);
+    assert(reverse_behind.valid&&!reverse_behind.reversal_requested);
+    assert(reverse_behind.bank_sign>0.0);
+
+    in.ut=100.2;
+    in.azimuth_error_deg=20.0;
+    EntryLateralOutput reverse_ahead=entry_lateral_update(&reverse_course,&in,&l);
+    assert(reverse_ahead.valid&&reverse_ahead.reversal_requested);
+    assert(reverse_ahead.bank_sign<0.0);
+}
+
 /* A large azimuth error keeps a turning bank even when the energy law asks
    for lift-up. */
 static void azimuth_turn_bank_floor(void){
@@ -262,6 +316,7 @@ int main(void){
     uncertainty_corridor_prevents_chatter();
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
+    behind_site_preserves_turn_until_azimuth_ahead();
     azimuth_turn_bank_floor();
     sideslip_coordination_slows_bank_reference();
     mirror_symmetry();

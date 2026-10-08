@@ -145,8 +145,11 @@ static double achievable_profile_drag_cap(const EntryDragReferenceInput*i,
     double structural=maximum_reference_drag(i,c);
     double confidence=clampd(isfinite(i->aero_confidence)?i->aero_confidence:0.0,0.0,1.0);
 
-    bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>c->minimum_drag_accel;
-    bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>c->minimum_drag_accel;
+    /* minimum_drag_accel bounds the controller output; it is not an evidence
+       threshold. Using it here makes the authority cap jump from the structural
+       limit to a local q/beta estimate when a force estimate crosses that value. */
+    bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>0.0;
+    bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>0.0;
 
     /* A live force measurement is already direct evidence of local drag authority;
        do not discard it merely because the longer-horizon aero calibrator has not
@@ -183,8 +186,8 @@ static double achievable_profile_drag_floor(const EntryDragReferenceInput*i,
     if(!i->has_incidence)return c->minimum_drag_accel;
     double confidence=clampd(isfinite(i->aero_confidence)?i->aero_confidence:0.0,0.0,1.0);
 
-    bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>c->minimum_drag_accel;
-    bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>c->minimum_drag_accel;
+    bool measured=isfinite(i->measured_drag_accel)&&i->measured_drag_accel>0.0;
+    bool modeled=isfinite(i->modeled_drag_accel)&&i->modeled_drag_accel>0.0;
     if(!measured&&(!modeled||confidence<c->minimum_local_drag_confidence))
         return c->minimum_drag_accel;
 

@@ -87,8 +87,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
 
     EntryPhase phase=g->entry_exec.initialized?g->entry_exec.phase:ENTRY_PHASE_PREENTRY;
     EntryDragReferenceConfig drag_cfg=entry_drag_reference_default_config();
-    double measured_drag=t->mass>DBL_MIN&&isfinite(t->drag_force)&&t->drag_force>=0.0?
-        t->drag_force/t->mass:NAN;
+    double measured_drag=entry_measured_drag_accel(t);
     EntryDragReferenceInput drag_in={
         .phase=phase,
         .relative_velocity=t->true_air_speed,
@@ -222,6 +221,8 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     if(lateral.has_crossrange_error&&isfinite(map_speed)&&isfinite(course_relative)){
         lateral.has_crossrange_rate=true;
         lateral.crossrange_error_rate_mps=-map_speed*sin(course_relative);
+        lateral.has_crossrange_course_alignment=true;
+        lateral.crossrange_course_alignment=cos(course_relative);
         double effective_bank=clampd(lateral.measured_bank_deg*lateral.bank_effectiveness,
             -nextafter(90.0,0.0),nextafter(90.0,0.0));
         double course_rate_rad=map_speed>DBL_EPSILON?

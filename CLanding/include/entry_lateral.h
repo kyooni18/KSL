@@ -48,6 +48,10 @@ typedef struct {
     bool has_crossrange_accel;
     double crossrange_error_accel_mps2;
     double crossrange_uncertainty_m;
+    /* Cosine of current ground course relative to runway heading. This maps
+       predicted target-current crossrange to the corrective bank sign. */
+    bool has_crossrange_course_alignment;
+    double crossrange_course_alignment;
     /* Measured coordination state. The planner uses the configured sideslip
        envelope to slow bank motion before a reversal outruns yaw coordination. */
     bool has_sideslip;

@@ -300,6 +300,54 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         output.corridor_metric = deadband > 0.0 ? error / deadband : NAN;
         output.course_corridor_deg = deadband;
         double demanded_sign = unit_sign(error);
+
+        /* While the target is ahead, allow runway-frame crossrange capture to
+           correct a point-bearing bank request. Project crossrange through the
+           measured roll response before deciding whether those requests differ. */
+        bool crossrange_projection_valid=authority_valid&&magnitude>DBL_EPSILON&&
+            input->has_crossrange_error&&isfinite(input->crossrange_error_m)&&
+            input->has_crossrange_rate&&isfinite(input->crossrange_error_rate_mps)&&
+            input->has_crossrange_course_alignment&&
+            isfinite(input->crossrange_course_alignment)&&
+            fabs(input->crossrange_course_alignment)>DBL_EPSILON;
+        double crossrange_demand=0.0;
+        if(crossrange_projection_valid){
+            double opposite_target=-state->bank_sign*magnitude;
+            double roll_span=fabs(opposite_target-finite_or(input->measured_bank_deg,0.0));
+            double response_time=rest_to_rest_roll_time(roll_span,
+                fabs(command_limits.maximum_roll_rate_deg_s),
+                fabs(command_limits.maximum_roll_accel_deg_s2));
+            double projected=input->crossrange_error_m+
+                input->crossrange_error_rate_mps*response_time;
+            if(input->has_crossrange_accel&&isfinite(input->crossrange_error_accel_mps2))
+                projected+=0.5*input->crossrange_error_accel_mps2*
+                    response_time*response_time;
+            double uncertainty=isfinite(input->crossrange_uncertainty_m)?
+                fmax(0.0,input->crossrange_uncertainty_m):0.0;
+            double numerical_resolution=sqrt(DBL_EPSILON)*fmax(1.0,
+                fmax(fabs(input->crossrange_error_m),fabs(projected)));
+            double corridor=uncertainty+numerical_resolution;
+            output.reversal_response_time_s=response_time;
+            output.projected_crossrange_error_m=projected;
+            output.crossrange_corridor_m=corridor;
+            output.corridor_metric=projected/fmax(corridor,numerical_resolution);
+            if(fabs(projected)>corridor)
+                crossrange_demand=unit_sign(projected)*
+                    unit_sign(input->crossrange_course_alignment);
+        }
+
+        bool point_target_behind=cos(error*ENTRY_LATERAL_DEG2RAD)<=0.0;
+        /* Keep the selected turn direction through the rear hemisphere. The
+           wrapped point-bearing error changes sign at 180 degrees, and the
+           crossrange projection changes sign when the centerline is crossed;
+           either discontinuity can otherwise reverse the aircraft away from
+           a target that is still behind it. Resume crossrange capture once the
+           target is ahead of the aircraft. */
+        if(point_target_behind)
+            demanded_sign=state->bank_sign;
+        else if(crossrange_demand&&crossrange_demand*demanded_sign<0.0)
+            demanded_sign=crossrange_demand;
+
         bool captured_or_small = state->leg_captured || magnitude < 5.0;
         if (authority_valid && fabs(error) > deadband &&
             demanded_sign * state->bank_sign < 0.0) {

@@ -60,6 +60,13 @@ double guidance_feedback_lift_accel(const GuidanceMachine*g,const Telemetry*t,
     return fmax(0.0,t->dynamic_pressure)/aero.ballistic_coefficient*fmax(0.0,df);
 }
 
+double entry_measured_drag_accel(const Telemetry*t){
+    if(!t||!t->physics_sample_valid||!isfinite(t->mass)||t->mass<=DBL_MIN||
+       !isfinite(t->drag_force)||t->drag_force<0.0)
+        return NAN;
+    return t->drag_force/t->mass;
+}
+
 
 /* Live Entry and async forecast acceptance share one translation unit. */
 #include "entry/forecast.inc"
