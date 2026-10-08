@@ -10,7 +10,7 @@
   },
   "provenance": {
     "gitHeadAtCapture": "943145cc26bd81b7d484e5982d2e40f82d895109",
-    "gitHeadAtAnalysis": "aad57cd7d457860fafc102c808691679e6e938fc",
+    "gitHeadAtAnalysis": "177ae6a9824d8ec4ec5658e166607b182d64291c",
     "rawYawPulse": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
     "rawYawPulseSHA256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
     "probeSource": "Tools/probe_sts_preentry_roll.py",

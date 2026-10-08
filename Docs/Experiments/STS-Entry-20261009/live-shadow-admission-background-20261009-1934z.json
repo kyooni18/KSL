@@ -1,0 +1,176 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_REPRODUCTION",
+  "missionResult": {
+    "landingVerified": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "guidanceEngaged": false,
+    "liveDescentStarted": false
+  },
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "shadowAborted": true,
+    "flightQualification": false,
+    "liveControlIssued": false
+  },
+  "run": {
+    "startedUTC": "2026-10-08T19:34:49.995825+00:00",
+    "attemptId": "native-90181-1791488090-730529000",
+    "campaignIdentity": "64635833ea57a683-967eaf2d3722b242-badd735f8d8c6356",
+    "gitHead": "177ae6a9824d8ec4ec5658e166607b182d64291c",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T193449995825Z-90181.json",
+    "backendProcessId": 90181,
+    "runnerArgs": [
+      "Tools/headless_flight.py",
+      "--backend",
+      "CLanding/build/landing_backend",
+      "--config",
+      "Configuration/sts.json",
+      "--live",
+      "--reentry-only",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "diagnosticEnvironment": {
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset"
+    },
+    "liveKSPProcessId": 69877,
+    "liveKSPProcessCount": 1,
+    "exitCode": 1,
+    "exitReason": "Expected admission rejection: engageReentry rejected by the normal closed-loop shadow gate."
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "expectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postRunSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "unchanged": true,
+    "startPhysicsSettle": {
+      "ready": true,
+      "ut": 9931.291826169332,
+      "meanAltitudeM": 71918.50155575667,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true,
+      "physicsWarpFactor": 0
+    },
+    "aerodynamicPriorCells": 60,
+    "currentAttemptHeldOut": true
+  },
+  "summary": {
+    "closestMissKm": 4.5,
+    "shadowRangeErrorKm": 64.8,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63
+  },
+  "witness": {
+    "firstEntry": {
+      "ut": 9980.63,
+      "altitudeM": 68994,
+      "speedMps": 2103,
+      "entryFeedbackMargin": 15101997,
+      "dragAccelMps2": 0.002,
+      "referenceDragAccelMps2": 0.04,
+      "bankDeg": 0.0,
+      "crossTrackM": 13
+    },
+    "firstSTurnReversal": {
+      "ut": 10470.83,
+      "altitudeM": 42794,
+      "speedMps": 1882.3,
+      "crossTrackM": 2274,
+      "side": -1,
+      "reversalCount": 1
+    },
+    "nearSite": {
+      "ut": 10516.33,
+      "altitudeM": 37995,
+      "speedMps": 1730.1,
+      "mach": 5.2,
+      "flightPathAngleDeg": -3.78,
+      "rangeToSiteM": 4593,
+      "runwayAlongTrackM": 869,
+      "runwayCrossTrackM": 4510,
+      "courseToSiteErrorDeg": -101.5,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "entryFeedbackMargin": 74767,
+      "mm305Veto": "0x89"
+    },
+    "downstreamPoint": {
+      "ut": 10561.33,
+      "altitudeM": 32601,
+      "speedMps": 1421.7,
+      "mach": 4.44,
+      "rangeToSiteM": 68293,
+      "courseToSiteErrorDeg": -173.6,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.83,
+      "altitudeM": 9349,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeToSiteM": 161343,
+      "runwayAlongTrackM": 156720,
+      "runwayCrossTrackM": -38795,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "postRunLiveState": {
+    "probe": "read-only after cleanup",
+    "vessel": "STS",
+    "vesselCount": 1,
+    "ut": 9930.25182616931,
+    "paused": true,
+    "meanAltitudeM": 71978.31624316552,
+    "massKg": 22000.0,
+    "partCount": 22,
+    "sas": false,
+    "rcs": true,
+    "directControlsAndThrottleZero": true,
+    "gear": false,
+    "wheelBrakes": false,
+    "speedbrakeActionGroupEnabled": false,
+    "actualThrustN": 0.0,
+    "controlSurfacesNeutral": true
+  },
+  "postRunCheckpointSettle": {
+    "helper": "Tools/settle_known_checkpoint.py",
+    "ready": true,
+    "ut": 9931.23182616933,
+    "meanAltitudeM": 71920.85019100225,
+    "massKg": 25816.10546875,
+    "dryMassKg": 20348.0,
+    "actualThrustN": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "sasOff": true,
+    "rcsOff": true
+  },
+  "invariants": {
+    "singleLiveKSPProcessPreserved": true,
+    "checkpointHashUnchanged": true,
+    "gateBypassAbsent": true,
+    "liveDescentOrControls": false
+  },
+  "interpretation": "A fresh current-source attempt restored and settled the named checkpoint, held out its own telemetry, and ran the normal shadow qualification. It reproduced a 4.5 km closest miss and +64.8 km range error; near the site the shadow course points away from KSC, MM305 veto is 0x89, and the prediction later aborts before TAEM. Guidance never engaged and the live vessel did not descend. Cleanup restored the checkpoint save but left its transient 22,000 kg post-load mass; the existing settle helper re-established the verified 25,816.105 kg paused state with SAS/RCS off. This remains an unqualified simulator rejection, not a flight or landing result."
+}

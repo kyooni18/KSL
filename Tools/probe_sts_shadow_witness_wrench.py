@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import math
@@ -129,6 +130,18 @@ def sts_flight_roll(rotation, position, geometric_offset_deg: float) -> float:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=OUTPUT_PATH)
+    parser.add_argument(
+        "--checkpoint-ut-tolerance-s",
+        type=float,
+        default=1.0,
+        help="Allowed settled-state UT offset from the saved checkpoint epoch.",
+    )
+    args = parser.parse_args()
+    if not math.isfinite(args.checkpoint_ut_tolerance_s) or args.checkpoint_ut_tolerance_s < 0.0:
+        raise ValueError("Checkpoint UT tolerance must be a finite non-negative number")
+
     config_path = ROOT / "Configuration/sts.json"
     profile_path = ROOT / "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
     config = json.loads(config_path.read_text())
@@ -160,6 +173,7 @@ def main() -> int:
             "checkpointProfile": str(profile_path.relative_to(ROOT)),
             "checkpointName": profile["saveName"],
             "checkpointSHA256Before": checkpoint_hash_before,
+            "checkpointUTToleranceSeconds": args.checkpoint_ut_tolerance_s,
             "checkpointUsedAsLoadedVesselSource": True,
             "trace": str(TRACE_PATH.relative_to(ROOT)),
             "traceSHA256": trace_hash,
@@ -216,10 +230,12 @@ def main() -> int:
         checkpoint_saved_ut = float(profile["savedUT"])
         if not before["paused"]:
             raise RuntimeError("Refusing to probe while KSP is unpaused")
-        if abs(current_ut - checkpoint_saved_ut) > 1.0 or abs(before["altitude_m"] - 72000.0) > 500.0:
+        if abs(current_ut - checkpoint_saved_ut) > args.checkpoint_ut_tolerance_s or abs(before["altitude_m"] - 72000.0) > 500.0:
             raise RuntimeError("The live STS is not at the saved 72 km checkpoint state")
         if before["sas"]:
             raise RuntimeError("Refusing to probe with SAS enabled")
+        if before["rcs"]:
+            raise RuntimeError("Refusing to probe with RCS enabled")
         if any(abs(value) > 1e-9 for value in before["controls"].values()):
             raise RuntimeError("Refusing to probe with a direct control or throttle input")
         if abs(before["thrust_n"]) > 1.0:
@@ -230,6 +246,10 @@ def main() -> int:
             raise RuntimeError("Refusing to probe with a deployed or deflected control surface")
         if len(vessel.parts.all) != int(profile["partCount"]):
             raise RuntimeError("Loaded original-STS part count does not match the checkpoint profile")
+        if abs(before["mass_kg"] - float(profile["mass"])) > 1.0:
+            raise RuntimeError("Loaded vessel mass does not match the settled checkpoint profile")
+        if abs(float(vessel.dry_mass) - float(profile["dryMass"])) > 1.0:
+            raise RuntimeError("Loaded vessel dry mass does not match the settled checkpoint profile")
 
         site = config["site"]
         latitude = float(site["latitude"])
@@ -377,8 +397,8 @@ def main() -> int:
             "pausedLoadedDryMassKg": float(vessel.dry_mass),
             "checkpointProfileDryMassKg": float(profile["dryMass"]),
             "massStateMatchesSettledProfile": abs(before["mass_kg"] - float(profile["mass"])) < 1.0,
-            "massUsedForDragAcceleration": "checkpoint profile mass; the paused loaded vessel reports a placeholder mass, so no angular-acceleration inference is made from the simulated torque.",
-            "torqueLimitation": "The wrench torque is returned about the current loaded vessel center of mass. Because the paused loaded mass differs from the settled checkpoint profile, torque is retained as descriptive output only and is not used to infer angular acceleration or calibrate control coupling.",
+            "massUsedForDragAcceleration": "checkpoint profile mass; it agrees within 1 kg with the settled live vessel mass.",
+            "torqueLimitation": "The returned torque is a hypothetical KSP aerodynamic result about the settled vessel center of mass. It is not measured flight torque or actuator response and does not qualify atmospheric coordination.",
         }
         report["positionGeometry"] = {
             "siteLatitudeDeg": latitude,
@@ -430,12 +450,12 @@ def main() -> int:
             except Exception:
                 pass
         report["sourceSHA256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        OUTPUT_PATH.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
 
     print(json.dumps({
         "status": report["status"],
-        "output": str(OUTPUT_PATH),
+        "output": str(args.output),
         "samples": len(report["samples"]),
         "matchedDragAccelerationMps2": report.get("matchedWitnessComparison", {}).get("simulatedDragAccelerationMps2"),
         "liveStateUnchanged": report.get("liveStateUnchanged"),

@@ -1,0 +1,2993 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+  "purpose": "Compare the current original-STS KSP aerodynamic model at a hypothetical KSC 38 km witness state with the retained entry-shadow drag estimate, and sample nearby Mach/AoA/sideslip/bank conditions.",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "measuredAerodynamicEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "Every returned wrench is a counterfactual KSP simulation. It is not measured flight force, a shadow-gate pass, or landing qualification."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "177ae6a9824d8ec4ec5658e166607b182d64291c",
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "vehicleModelId": "STS",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUTToleranceSeconds": 2.0,
+    "checkpointUsedAsLoadedVesselSource": true,
+    "trace": "Runtime/STS-Campaign-20261009/entry-trace/headless-live.log",
+    "traceSHA256": "606d4af38a4611270fc72f607464cd7ec73e385d67a8bd47856587e947fc4c84",
+    "inputTraceRecord": {
+      "ut": 10515.612,
+      "h": 38016.7,
+      "V": 1731.89,
+      "q": 2033.34,
+      "D": 5.379,
+      "Dref": 9.95,
+      "along": -336.8,
+      "xtk": 4542.7,
+      "Bcmd": -40.0,
+      "roll": -40.01,
+      "aoa": 28.0
+    },
+    "nearestShadowWitnessRecord": {
+      "ut": 10517.11,
+      "h": 37845.0,
+      "V": 1724.6,
+      "M": 5.19
+    },
+    "witnessSoundSpeedApproxMps": 332.2928709055876,
+    "witnessSoundSpeedTimeOffsetS": 1.4980000000014115,
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "apiUt": "The shadow trace UT is passed explicitly. The KSC site position and local orientation are rotated from current paused UT using the live body's measured angular velocity so they refer to the same inertial epoch.",
+    "positionOrigin": "Configuration site latitude/longitude (KSC Runway 09 center) at the shadow trace altitude; the shadow point is about 4.55 km from the runway center, so this is a nearby uniform-atmosphere location proxy.",
+    "velocityOrigin": "Requested local-body airflow for the selected AoA and sideslip plus the planet's local rotational velocity at the target inertial position.",
+    "angularVelocityPolicy": "Zero hypothetical vessel angular velocity to isolate static aerodynamic force and moment; no damping moment is included.",
+    "surfaceStatePolicy": "Use the currently loaded original-STS part and control-surface state. No control, action group, throttle, RCS, SAS, save, position, velocity, orientation, or time setters are called."
+  },
+  "gridDefinition": {
+    "nominalMachValues": [
+      4.0,
+      5.19,
+      5.211938478487767,
+      6.0
+    ],
+    "angleOfAttackDeg": [
+      18.0,
+      28.0
+    ],
+    "sideslipDeg": [
+      -5.0,
+      0.0,
+      5.0
+    ],
+    "bankDeg": [
+      -40.0,
+      0.0,
+      40.0
+    ],
+    "bankConvention": "KSP Flight.roll for the original STS, calibrated from its loaded 72 km checkpoint attitude; the checkpoint's local +Z axis is opposite radial up.",
+    "nominalMachPolicy": "Mach slices use the closest recorded shadow-witness speed of sound (V/M, 1.50 s from the trace point). The trace-speed slice is exact input TAS; the API accepts velocity rather than Mach, so nominal Mach is provenance metadata, not a separate API output.",
+    "dynamicPressureScaling": "The trace q is scaled by TAS squared at fixed density only for comparison metadata; KSP computes each wrench internally from the hypothetical position, velocity and explicit UT.",
+    "pressureBoundPa": 45000.0
+  },
+  "samples": [
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": -4.999999999999995,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -51475.45850589368,
+        31065.533351343747,
+        32818.6379419575
+      ],
+      "forceN_bodyXYZ": [
+        4641.033842236131,
+        -41993.735964512125,
+        -53915.119695487876
+      ],
+      "dragN_alongRelativeAirflow": 56788.220543675794,
+      "dragAccelerationMps2_usingCheckpointMass": 2.19972070503555,
+      "effectiveDragAreaM2_usingTraceQ": 47.416209685907056,
+      "torqueNm_nonrotating": [
+        -8014.622932512397,
+        -15871.894599645762,
+        1635.5466818664222
+      ],
+      "torqueNm_bodyXYZ": [
+        17020.523191701766,
+        -3127.265104193534,
+        4398.662879787205
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.00000000000001,
+        "sideslipDeg": -5.0000000000000036,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -60902.99610801487,
+        -4683.878986729156,
+        30995.823035761736
+      ],
+      "forceN_bodyXYZ": [
+        4641.037559956967,
+        -41993.74668162711,
+        -53915.12508532144
+      ],
+      "dragN_alongRelativeAirflow": 56788.23268070495,
+      "dragAccelerationMps2_usingCheckpointMass": 2.1997211751695684,
+      "effectiveDragAreaM2_usingTraceQ": 47.41621981990868,
+      "torqueNm_nonrotating": [
+        3738.1879676288377,
+        -17017.138079513978,
+        3907.935349478812
+      ],
+      "torqueNm_bodyXYZ": [
+        17020.639187057597,
+        -3127.2307290358176,
+        4398.552719435025
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": -4.999999999999996,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -45563.48708244486,
+        -38241.66027702486,
+        33961.76197502255
+      ],
+      "forceN_bodyXYZ": [
+        4641.042322384532,
+        -41993.765689807165,
+        -53915.13314140101
+      ],
+      "dragN_alongRelativeAirflow": 56788.25358483201,
+      "dragAccelerationMps2_usingCheckpointMass": 2.1997219849015988,
+      "effectiveDragAreaM2_usingTraceQ": 47.41623727413533,
+      "torqueNm_nonrotating": [
+        13464.017127816704,
+        -10199.786417275269,
+        5788.409727602471
+      ],
+      "torqueNm_bodyXYZ": [
+        17020.44430997343,
+        -3127.20250670071,
+        4398.427824115726
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": -4.900628750991172e-15,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -46247.64224927829,
+        33566.17483878708,
+        28127.097636100152
+      ],
+      "forceN_bodyXYZ": [
+        -0.05221183504181681,
+        -36395.081796441365,
+        -52269.15102987212
+      ],
+      "dragN_alongRelativeAirflow": 50765.835653381946,
+      "dragAccelerationMps2_usingCheckpointMass": 1.9664405527426299,
+      "effectiveDragAreaM2_usingTraceQ": 42.38772557364669,
+      "torqueNm_nonrotating": [
+        -11541.217849634684,
+        -14045.318796953496,
+        -2197.949879333296
+      ],
+      "torqueNm_bodyXYZ": [
+        18311.209709634186,
+        -32.95054784736476,
+        13.65518355731001
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000004,
+        "sideslipDeg": 9.80125750198234e-15,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -58227.7240172428,
+        -41.486345511000565,
+        25810.68474797719
+      ],
+      "forceN_bodyXYZ": [
+        -0.04890390075161122,
+        -36395.03401472562,
+        -52269.135362746296
+      ],
+      "dragN_alongRelativeAirflow": 50765.78536886169,
+      "dragAccelerationMps2_usingCheckpointMass": 1.9664386049460747,
+      "effectiveDragAreaM2_usingTraceQ": 42.38768358780291,
+      "torqueNm_nonrotating": [
+        21.355968673779028,
+        -18311.347898474254,
+        37.65786850620549
+      ],
+      "torqueNm_bodyXYZ": [
+        18311.36446270352,
+        -32.91761559826864,
+        13.564513921779508
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": 4.9006287509911725e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -46195.27052953052,
+        -33629.73152674952,
+        28137.21839557917
+      ],
+      "forceN_bodyXYZ": [
+        -0.045601660101965535,
+        -36395.07152837308,
+        -52269.14662916172
+      ],
+      "dragN_alongRelativeAirflow": 50765.8245279744,
+      "dragAccelerationMps2_usingCheckpointMass": 1.9664401217942908,
+      "effectiveDragAreaM2_usingTraceQ": 42.387716284314294,
+      "torqueNm_nonrotating": [
+        11571.009886703605,
+        -14009.174063196911,
+        2270.7803716291123
+      ],
+      "torqueNm_bodyXYZ": [
+        18311.209884574317,
+        -32.89792164993287,
+        13.472829572270712
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000014,
+        "sideslipDeg": 5.0,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -45645.27243699977,
+        38194.903496705,
+        34002.669399511535
+      ],
+      "forceN_bodyXYZ": [
+        -4644.303227447133,
+        -42049.46067849263,
+        -53933.2585650306
+      ],
+      "dragN_alongRelativeAirflow": 56846.885060193075,
+      "dragAccelerationMps2_usingCheckpointMass": 2.201993105022704,
+      "effectiveDragAreaM2_usingTraceQ": 47.465192538154845,
+      "torqueNm_nonrotating": [
+        -13356.802408232557,
+        -10193.439523051957,
+        -5700.984475492543
+      ],
+      "torqueNm_bodyXYZ": [
+        16930.309537962785,
+        3061.721682182075,
+        -4336.136893839306
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": 5.000000000000015,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -60938.60413631588,
+        4601.439392201712,
+        31045.659686672287
+      ],
+      "forceN_bodyXYZ": [
+        -4644.298147328962,
+        -42049.43745570046,
+        -53933.245853751876
+      ],
+      "dragN_alongRelativeAirflow": 56846.85870223448,
+      "dragAccelerationMps2_usingCheckpointMass": 2.2019920840337264,
+      "effectiveDragAreaM2_usingTraceQ": 47.465170530166574,
+      "torqueNm_nonrotating": [
+        -3662.9715090064,
+        -16933.950248137175,
+        -3826.7082110423617
+      ],
+      "torqueNm_bodyXYZ": [
+        16930.509365853184,
+        3061.7619066122843,
+        -4336.264942852589
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.00000000000001,
+        "sideslipDeg": 5.000000000000004,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -51453.18186708511,
+        -31145.07817199634,
+        32879.67383537124
+      ],
+      "forceN_bodyXYZ": [
+        -4644.29399909624,
+        -42049.428470396655,
+        -53933.2445590885
+      ],
+      "dragN_alongRelativeAirflow": 56846.84942912819,
+      "dragAccelerationMps2_usingCheckpointMass": 2.2019917248352217,
+      "effectiveDragAreaM2_usingTraceQ": 47.465162787441976,
+      "torqueNm_nonrotating": [
+        8016.830188412572,
+        -15750.782267327233,
+        -1568.4365070420836
+      ],
+      "torqueNm_bodyXYZ": [
+        16930.385751700174,
+        3061.7966247312525,
+        -4336.374188954122
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000018,
+        "sideslipDeg": -4.999999999999996,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -84768.98158180428,
+        53385.698968870776,
+        46520.24839992357
+      ],
+      "forceN_bodyXYZ": [
+        6852.665259754343,
+        -61766.49164799867,
+        -91312.03695207564
+      ],
+      "dragN_alongRelativeAirflow": 97631.5735839697,
+      "dragAccelerationMps2_usingCheckpointMass": 3.7818088297499393,
+      "effectiveDragAreaM2_usingTraceQ": 81.5190037775909,
+      "torqueNm_nonrotating": [
+        -17835.813012032606,
+        -27195.762060259665,
+        -527.4221055850994
+      ],
+      "torqueNm_bodyXYZ": [
+        32156.8466512245,
+        -2868.0383859983094,
+        3964.270826013606
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": -4.999999999999983,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -101371.72065823709,
+        -6925.232921168494,
+        43310.103246009305
+      ],
+      "forceN_bodyXYZ": [
+        6852.674567684677,
+        -61766.50614852966,
+        -91312.0430878487
+      ],
+      "dragN_alongRelativeAirflow": 97631.59001930762,
+      "dragAccelerationMps2_usingCheckpointMass": 3.7818094663811417,
+      "effectiveDragAreaM2_usingTraceQ": 81.51901750053241,
+      "torqueNm_nonrotating": [
+        3372.734360395318,
+        -32153.830596058895,
+        3573.263635785679
+      ],
+      "torqueNm_bodyXYZ": [
+        32156.991273242515,
+        -2868.0196951271682,
+        3964.1830630837685
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": -5.000000000000001,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -76027.98364187666,
+        -63995.78358538974,
+        48210.37893595868
+      ],
+      "forceN_bodyXYZ": [
+        6852.684534540778,
+        -61766.52762047159,
+        -91312.05851849918
+      ],
+      "dragN_alongRelativeAirflow": 97631.6169911177,
+      "dragAccelerationMps2_usingCheckpointMass": 3.7818105111479703,
+      "effectiveDragAreaM2_usingTraceQ": 81.51904002106554,
+      "torqueNm_nonrotating": [
+        22748.319135878814,
+        -22066.60902366602,
+        7319.530679947152
+      ],
+      "torqueNm_bodyXYZ": [
+        32156.76542287448,
+        -2867.9897145776667,
+        3964.071041381279
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000018,
+        "sideslipDeg": -4.90062875099117e-15,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -77717.30594322283,
+        57087.76321533588,
+        42983.313554531785
+      ],
+      "forceN_bodyXYZ": [
+        -0.07896091471775435,
+        -56955.214170911335,
+        -88896.91319089397
+      ],
+      "dragN_alongRelativeAirflow": 92023.04201554146,
+      "dragAccelerationMps2_usingCheckpointMass": 3.564559497092499,
+      "effectiveDragAreaM2_usingTraceQ": 76.83607294558689,
+      "torqueNm_nonrotating": [
+        -21208.280527775558,
+        -25854.439567818772,
+        -4066.110908022626
+      ],
+      "torqueNm_bodyXYZ": [
+        33686.3895070477,
+        -33.91187394020017,
+        49.78143660205751
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": 0.0,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -98092.46885031478,
+        -70.570916843356,
+        39043.70490045873
+      ],
+      "forceN_bodyXYZ": [
+        -0.07064950175117701,
+        -56955.17028900484,
+        -88896.88911938289
+      ],
+      "dragN_alongRelativeAirflow": 92022.99196922783,
+      "dragAccelerationMps2_usingCheckpointMass": 3.564557558522999,
+      "effectiveDragAreaM2_usingTraceQ": 76.83603115863744,
+      "torqueNm_nonrotating": [
+        68.65790312719867,
+        -33686.53747530974,
+        47.78760639174132
+      ],
+      "torqueNm_bodyXYZ": [
+        33686.58761977762,
+        -33.88242502526555,
+        49.71071065957949
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": -4.90062875099117e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -77628.22158275559,
+        -57195.87869824877,
+        43000.53567592746
+      ],
+      "forceN_bodyXYZ": [
+        -0.06234348283032887,
+        -56955.203281298294,
+        -88896.9077851699
+      ],
+      "dragN_alongRelativeAirflow": 92023.02986275012,
+      "dragAccelerationMps2_usingCheckpointMass": 3.5645590263479243,
+      "effectiveDragAreaM2_usingTraceQ": 76.83606279842438,
+      "torqueNm_nonrotating": [
+        21310.45977634623,
+        -25756.134085651436,
+        4154.903043652881
+      ],
+      "torqueNm_bodyXYZ": [
+        33686.403017291865,
+        -33.86457878064721,
+        49.63029695814657
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": 5.0000000000000036,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -76156.22274885008,
+        63911.8332675342,
+        48238.28749595734
+      ],
+      "forceN_bodyXYZ": [
+        -6855.993863582829,
+        -61818.28250299526,
+        -91339.58819731226
+      ],
+      "dragN_alongRelativeAirflow": 97690.30359687112,
+      "dragAccelerationMps2_usingCheckpointMass": 3.7840837667729597,
+      "effectiveDragAreaM2_usingTraceQ": 81.56804131706527,
+      "torqueNm_nonrotating": [
+        -22546.034292049244,
+        -22090.95915090528,
+        -7211.57539001668
+      ],
+      "torqueNm_bodyXYZ": [
+        32028.38826900563,
+        2800.401623695223,
+        -3831.5863225233916
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999996,
+        "sideslipDeg": 4.999999999999998,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -101419.27922083158,
+        6783.399464643803,
+        43353.623608230046
+      ],
+      "forceN_bodyXYZ": [
+        -6855.984027228595,
+        -61818.264453998854,
+        -91339.58095397562
+      ],
+      "dragN_alongRelativeAirflow": 97690.28347630042,
+      "dragAccelerationMps2_usingCheckpointMass": 3.784082987392385,
+      "effectiveDragAreaM2_usingTraceQ": 81.56802451708121,
+      "torqueNm_nonrotating": [
+        -3205.420418770212,
+        -32031.66394074723,
+        -3472.081217695816
+      ],
+      "torqueNm_bodyXYZ": [
+        32028.62881076102,
+        2800.444079023906,
+        -3831.7114086346155
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 4.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1329.1714836223505,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999996,
+        "sideslipDeg": 5.000000000000001,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 1197.6541549788672,
+      "forceN_nonrotating": [
+        -84718.19463428331,
+        -53519.04925073831,
+        46582.79198768278
+      ],
+      "forceN_bodyXYZ": [
+        -6855.974649447555,
+        -61818.248852223995,
+        -91339.57173434539
+      ],
+      "dragN_alongRelativeAirflow": 97690.26462396004,
+      "dragAccelerationMps2_usingCheckpointMass": 3.784082257137359,
+      "effectiveDragAreaM2_usingTraceQ": 81.56800877602583,
+      "torqueNm_nonrotating": [
+        17883.885598998997,
+        -26984.262369557466,
+        605.5201376877076
+      ],
+      "torqueNm_bodyXYZ": [
+        32028.50102379432,
+        2800.49039517822,
+        -3831.815509606997
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000004,
+        "sideslipDeg": -4.999999999999988,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -83161.45271326334,
+        49318.324634907935,
+        56353.68799174727
+      ],
+      "forceN_bodyXYZ": [
+        7758.204738181361,
+        -71115.95248981995,
+        -86059.24745866559
+      ],
+      "dragN_alongRelativeAirflow": 94546.6620902798,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6623132086351213,
+      "effectiveDragAreaM2_usingTraceQ": 46.89213886381478,
+      "torqueNm_nonrotating": [
+        -11899.627804256343,
+        -23938.05176601876,
+        2761.548013175764
+      ],
+      "torqueNm_bodyXYZ": [
+        25515.90781071889,
+        -4970.3026447469465,
+        6818.515371839829
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": -4.999999999999995,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -97988.59388278991,
+        -7826.5924735535145,
+        53486.83938076791
+      ],
+      "forceN_bodyXYZ": [
+        7758.209461448685,
+        -71115.9495793845,
+        -86059.24685466528
+      ],
+      "dragN_alongRelativeAirflow": 94546.659558548,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6623131105671978,
+      "effectiveDragAreaM2_usingTraceQ": 46.89213760815628,
+      "torqueNm_nonrotating": [
+        5770.758810620902,
+        -25510.622232090263,
+        6178.077973759826
+      ],
+      "torqueNm_bodyXYZ": [
+        25516.049168990558,
+        -4970.2379627671535,
+        6818.3664295605095
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": -5.0,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -73282.7483048215,
+        -61309.36673656271,
+        58263.787349776496
+      ],
+      "forceN_bodyXYZ": [
+        7758.2172069037915,
+        -71115.9806876319,
+        -86059.2581985983
+      ],
+      "dragN_alongRelativeAirflow": 94546.69319885652,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6623144136417167,
+      "effectiveDragAreaM2_usingTraceQ": 46.89215429267992,
+      "torqueNm_nonrotating": [
+        20299.381117645848,
+        -15146.379649842514,
+        8987.147313746116
+      ],
+      "torqueNm_bodyXYZ": [
+        25515.794971449937,
+        -4970.178302574975,
+        6818.213967830385
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": -7.553955685535526e-15,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -74365.59288155481,
+        53465.99410471924,
+        48422.06495841361
+      ],
+      "forceN_bodyXYZ": [
+        -0.08169575525971595,
+        -61658.79211437133,
+        -83257.0937521718
+      ],
+      "dragN_alongRelativeAirflow": 84368.85289895041,
+      "dragAccelerationMps2_usingCheckpointMass": 3.2680705752909485,
+      "effectiveDragAreaM2_usingTraceQ": 41.84426904612087,
+      "torqueNm_nonrotating": [
+        -17451.64852343592,
+        -21239.35554753674,
+        -3321.6801821057365
+      ],
+      "torqueNm_bodyXYZ": [
+        27689.360399287685,
+        -51.66374208424622,
+        21.703191694425186
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000004,
+        "sideslipDeg": 0.0,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -93448.12160178412,
+        -66.08283563907769,
+        44732.38202342479
+      ],
+      "forceN_bodyXYZ": [
+        -0.07646267412928864,
+        -61658.74159162478,
+        -83257.08008730559
+      ],
+      "dragN_alongRelativeAirflow": 84368.8006262872,
+      "dragAccelerationMps2_usingCheckpointMass": 3.268068550482661,
+      "effectiveDragAreaM2_usingTraceQ": 41.844243120541606,
+      "torqueNm_nonrotating": [
+        33.009878628937415,
+        -27689.564811439148,
+        58.92919459295952
+      ],
+      "torqueNm_bodyXYZ": [
+        27689.59071759553,
+        -51.589120648175594,
+        21.59174912101298
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000004,
+        "sideslipDeg": 3.776977842767763e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -74282.16945718494,
+        -53567.231538193504,
+        48438.18491314039
+      ],
+      "forceN_bodyXYZ": [
+        -0.07121074381575454,
+        -61658.77428387044,
+        -83257.0856168867
+      ],
+      "dragN_alongRelativeAirflow": 84368.83342719502,
+      "dragAccelerationMps2_usingCheckpointMass": 3.2680698210425656,
+      "effectiveDragAreaM2_usingTraceQ": 41.84425938874918,
+      "torqueNm_nonrotating": [
+        17497.638061305246,
+        -21183.311902328227,
+        3435.654081336535
+      ],
+      "torqueNm_bodyXYZ": [
+        27689.35979707146,
+        -51.50405270848205,
+        21.475642952377257
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": 5.0000000000000036,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -73416.4787723018,
+        61237.21918358026,
+        58336.05706147791
+      ],
+      "forceN_bodyXYZ": [
+        -7764.168752244834,
+        -71212.33211273733,
+        -86090.61133941128
+      ],
+      "dragN_alongRelativeAirflow": 94648.15064468274,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6662444195853316,
+      "effectiveDragAreaM2_usingTraceQ": 46.942473960590654,
+      "torqueNm_nonrotating": [
+        -20122.23845215986,
+        -15128.29774204852,
+        -8848.489070722553
+      ],
+      "torqueNm_bodyXYZ": [
+        25362.47237016259,
+        4867.671656534467,
+        -6716.874246943891
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000014,
+        "sideslipDeg": 5.00000000000001,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -98049.77903717288,
+        7695.7484168303,
+        53573.15038858635
+      ],
+      "forceN_bodyXYZ": [
+        -7764.161238626548,
+        -71212.3073670886,
+        -86090.5989943593
+      ],
+      "dragN_alongRelativeAirflow": 94648.12274455893,
+      "dragAccelerationMps2_usingCheckpointMass": 3.666243338859797,
+      "effectiveDragAreaM2_usingTraceQ": 46.94246012301616,
+      "torqueNm_nonrotating": [
+        -5651.027378012508,
+        -25368.06014816033,
+        -6050.546458587479
+      ],
+      "torqueNm_bodyXYZ": [
+        25362.729812066187,
+        4867.758546138803,
+        -6717.035192097392
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": 5.000000000000004,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -83130.01820251829,
+        -49446.6341378126,
+        56457.90898327617
+      ],
+      "forceN_bodyXYZ": [
+        -7764.156505090694,
+        -71212.30361520468,
+        -86090.59605005634
+      ],
+      "dragN_alongRelativeAirflow": 94648.11787095133,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6662431500781194,
+      "effectiveDragAreaM2_usingTraceQ": 46.94245770586171,
+      "torqueNm_nonrotating": [
+        11896.814296728888,
+        -23737.69892036927,
+        -2657.7201025702084
+      ],
+      "torqueNm_bodyXYZ": [
+        25362.56518045377,
+        4867.832177652748,
+        -6717.180505688492
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000014,
+        "sideslipDeg": -4.999999999999986,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -137754.94421991246,
+        85586.99888800288,
+        79890.072532158
+      ],
+      "forceN_bodyXYZ": [
+        11508.252043317305,
+        -104588.13847965834,
+        -147013.14277691965
+      ],
+      "dragN_alongRelativeAirflow": 161753.3052444124,
+      "dragAccelerationMps2_usingCheckpointMass": 6.26559683060353,
+      "effectiveDragAreaM2_usingTraceQ": 80.22449744401715,
+      "torqueNm_nonrotating": [
+        -27289.15068835729,
+        -41600.77761061492,
+        -662.7765509663641
+      ],
+      "torqueNm_bodyXYZ": [
+        49175.9252579716,
+        -4529.72396055762,
+        6080.435158750042
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": -4.999999999999993,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -164185.37020051104,
+        -11625.08471302396,
+        74779.72768847214
+      ],
+      "forceN_bodyXYZ": [
+        11508.265693739377,
+        -104588.14857394138,
+        -147013.1458551356
+      ],
+      "dragN_alongRelativeAirflow": 161753.31675256797,
+      "dragAccelerationMps2_usingCheckpointMass": 6.265597276377811,
+      "effectiveDragAreaM2_usingTraceQ": 80.22450315169648,
+      "torqueNm_nonrotating": [
+        5148.219987403515,
+        -49171.2472377761,
+        5608.971484267486
+      ],
+      "torqueNm_bodyXYZ": [
+        49176.09508333052,
+        -4529.658427803595,
+        6080.308540789276
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000014,
+        "sideslipDeg": -5.000000000000003,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -123081.79887650673,
+        -103397.67217163829,
+        82727.19483037968
+      ],
+      "forceN_bodyXYZ": [
+        11508.279185422442,
+        -104588.17128661166,
+        -147013.16446769924
+      ],
+      "dragN_alongRelativeAirflow": 161753.34661104972,
+      "dragAccelerationMps2_usingCheckpointMass": 6.2655984329613394,
+      "effectiveDragAreaM2_usingTraceQ": 80.22451796055427,
+      "torqueNm_nonrotating": [
+        34774.205822835924,
+        -33733.73803444136,
+        11337.121724416149
+      ],
+      "torqueNm_bodyXYZ": [
+        49175.7604077332,
+        -4529.582497852842,
+        6080.153953302896
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": 7.553955685535522e-15,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -125871.46525504594,
+        91777.00380431769,
+        73908.91631462831
+      ],
+      "forceN_bodyXYZ": [
+        -0.12254490263876505,
+        -96459.8376293749,
+        -142914.91114664113
+      ],
+      "dragN_alongRelativeAirflow": 152263.46812383985,
+      "dragAccelerationMps2_usingCheckpointMass": 5.898003146531613,
+      "effectiveDragAreaM2_usingTraceQ": 75.51783990355362,
+      "torqueNm_nonrotating": [
+        -32573.40168900689,
+        -39716.925621731374,
+        -6241.9361385734965
+      ],
+      "torqueNm_bodyXYZ": [
+        51743.7215073257,
+        -55.155351221645105,
+        81.7780723661781
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": 7.55395568553552e-15,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -158627.55943364574,
+        -113.4559454398662,
+        67575.43112012336
+      ],
+      "forceN_bodyXYZ": [
+        -0.11044723677332513,
+        -96459.78633298687,
+        -142914.88374476339
+      ],
+      "dragN_alongRelativeAirflow": 152263.40996741512,
+      "dragAccelerationMps2_usingCheckpointMass": 5.898000893812821,
+      "effectiveDragAreaM2_usingTraceQ": 75.51781105981568,
+      "torqueNm_nonrotating": [
+        110.12177155922157,
+        -51743.94543060703,
+        77.39672401406993
+      ],
+      "torqueNm_bodyXYZ": [
+        51744.026693422325,
+        -55.080473160407564,
+        81.69133964415596
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": -7.553955685535523e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -125728.24799573178,
+        -91950.82129217128,
+        73936.60807010712
+      ],
+      "forceN_bodyXYZ": [
+        -0.09836034032923635,
+        -96459.82450142004,
+        -142914.90527736864
+      ],
+      "dragN_alongRelativeAirflow": 152263.45377708718,
+      "dragAccelerationMps2_usingCheckpointMass": 5.898002590802826,
+      "effectiveDragAreaM2_usingTraceQ": 75.51783278802037,
+      "torqueNm_nonrotating": [
+        32737.228965756574,
+        -39559.06260295156,
+        6385.830507037183
+      ],
+      "torqueNm_bodyXYZ": [
+        51743.74108002322,
+        -55.016312476524035,
+        81.59591961752085
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": 5.000000000000009,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -123292.04421207123,
+        103265.6464986311,
+        82777.70463424781
+      ],
+      "forceN_bodyXYZ": [
+        -11514.306211611256,
+        -104677.68996013938,
+        -147060.7774845507
+      ],
+      "dragN_alongRelativeAirflow": 161854.87932378543,
+      "dragAccelerationMps2_usingCheckpointMass": 6.269531354407106,
+      "effectiveDragAreaM2_usingTraceQ": 80.27487495845945,
+      "torqueNm_nonrotating": [
+        -34440.78370226092,
+        -33764.21681631417,
+        -11160.868992052407
+      ],
+      "torqueNm_bodyXYZ": [
+        48957.68801056729,
+        4419.835140641482,
+        -5862.1461848249455
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": 5.000000000000001,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -164267.06660035654,
+        11397.425838375028,
+        74855.08683957468
+      ],
+      "forceN_bodyXYZ": [
+        -11514.289955497778,
+        -104677.64797399234,
+        -147060.7549703223
+      ],
+      "dragN_alongRelativeAirflow": 161854.83044690406,
+      "dragAccelerationMps2_usingCheckpointMass": 6.269529461136162,
+      "effectiveDragAreaM2_usingTraceQ": 80.27485071708003,
+      "torqueNm_nonrotating": [
+        -4878.450397530969,
+        -48962.71846251073,
+        -5445.034535916428
+      ],
+      "torqueNm_bodyXYZ": [
+        48958.074854896186,
+        4419.921656647275,
+        -5862.309926050057
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.19,
+      "speedSource": "nearest recorded witness TAS",
+      "trueAirSpeedMps": 1724.6,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": 5.000000000000001,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2016.2582552453916,
+      "forceN_nonrotating": [
+        -137677.82125809666,
+        -85803.7529102887,
+        79996.16287587487
+      ],
+      "forceN_bodyXYZ": [
+        -11514.277789660424,
+        -104677.64629425242,
+        -147060.75046730757
+      ],
+      "dragN_alongRelativeAirflow": 161854.8258031101,
+      "dragAccelerationMps2_usingCheckpointMass": 6.269529281256434,
+      "effectiveDragAreaM2_usingTraceQ": 80.27484841390586,
+      "torqueNm_nonrotating": [
+        27359.305250336238,
+        -41250.73403844863,
+        788.0815767640297
+      ],
+      "torqueNm_bodyXYZ": [
+        48957.84952507993,
+        4420.021460114534,
+        -5862.430829894154
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": -5.000000000000009,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -83876.775203161,
+        49738.826266046235,
+        56852.6621983019
+      ],
+      "forceN_bodyXYZ": [
+        7826.049698479168,
+        -71741.64698462568,
+        -86795.03724228736
+      ],
+      "dragN_alongRelativeAirflow": 95371.88790057294,
+      "dragAccelerationMps2_usingCheckpointMass": 3.694278751556746,
+      "effectiveDragAreaM2_usingTraceQ": 46.904053380434625,
+      "torqueNm_nonrotating": [
+        -11996.40024383319,
+        -24135.524970659135,
+        2786.2448557297976
+      ],
+      "torqueNm_bodyXYZ": [
+        25725.28627685544,
+        -5012.921234387894,
+        6876.089839966375
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": -4.999999999999984,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -98829.73039914604,
+        -7895.023611993544,
+        53961.49966061421
+      ],
+      "forceN_bodyXYZ": [
+        7826.055941714381,
+        -71741.6562162135,
+        -86795.03480024701
+      ],
+      "dragN_alongRelativeAirflow": 95371.89643929848,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6942790823086376,
+      "effectiveDragAreaM2_usingTraceQ": 46.90405757979407,
+      "torqueNm_nonrotating": [
+        5819.366874555402,
+        -25719.96676893541,
+        6230.86713518751
+      ],
+      "torqueNm_bodyXYZ": [
+        25725.439532805896,
+        -5012.839645387982,
+        6875.945477223371
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999986,
+        "sideslipDeg": -4.999999999999986,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -73911.69587742233,
+        -61834.70690734179,
+        58779.465325747544
+      ],
+      "forceN_bodyXYZ": [
+        7826.063281524053,
+        -71741.67810672006,
+        -86795.04401588567
+      ],
+      "dragN_alongRelativeAirflow": 95371.92065584323,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6942800203488577,
+      "effectiveDragAreaM2_usingTraceQ": 46.90406948953113,
+      "torqueNm_nonrotating": [
+        20466.835132369215,
+        -15269.626990612669,
+        9062.89802518846
+      ],
+      "torqueNm_bodyXYZ": [
+        25725.177211053237,
+        -5012.7628170578855,
+        6875.786193798046
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": -7.522159014299155e-15,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -75003.52033077828,
+        53922.512625693766,
+        48850.81476681492
+      ],
+      "forceN_bodyXYZ": [
+        -0.08239291048084851,
+        -62200.84684941367,
+        -83967.98309158222
+      ],
+      "dragN_alongRelativeAirflow": 85104.05447389887,
+      "dragAccelerationMps2_usingCheckpointMass": 3.2965489835119817,
+      "effectiveDragAreaM2_usingTraceQ": 41.85431579268537,
+      "torqueNm_nonrotating": [
+        -17595.68956972617,
+        -21414.665186293605,
+        -3349.0947329240084
+      ],
+      "torqueNm_bodyXYZ": [
+        27917.9049972687,
+        -52.0918020657582,
+        21.88636475212479
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": -7.522159014299155e-15,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -94248.98570892484,
+        -66.64707439623217,
+        45129.63263451874
+      ],
+      "forceN_bodyXYZ": [
+        -0.07712270707997959,
+        -62200.801054217445,
+        -83967.96912470838
+      ],
+      "dragN_alongRelativeAirflow": 85104.0066040777,
+      "dragAccelerationMps2_usingCheckpointMass": 3.2965471292500284,
+      "effectiveDragAreaM2_usingTraceQ": 41.85429225022756,
+      "torqueNm_nonrotating": [
+        33.28374738909728,
+        -27918.11436479268,
+        59.417636196020716
+      ],
+      "torqueNm_bodyXYZ": [
+        27918.140486182816,
+        -52.01667342365727,
+        21.771734448460847
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": 1.1283238521448736e-14,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -74919.38425460612,
+        -54024.61419223166,
+        48867.07228094239
+      ],
+      "forceN_bodyXYZ": [
+        -0.07182625550194643,
+        -62200.82872259068,
+        -83967.9744619187
+      ],
+      "dragN_alongRelativeAirflow": 85104.03456755307,
+      "dragAccelerationMps2_usingCheckpointMass": 3.296548212429518,
+      "effectiveDragAreaM2_usingTraceQ": 41.85430600271134,
+      "torqueNm_nonrotating": [
+        17642.05810159913,
+        -21358.155933766437,
+        3464.0255241376876
+      ],
+      "torqueNm_bodyXYZ": [
+        27917.90366081926,
+        -51.94351201769314,
+        21.652711916693534
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": 5.000000000000001,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -74046.57736238574,
+        61761.94766430589,
+        58852.381802297874
+      ],
+      "forceN_bodyXYZ": [
+        -7832.06835225434,
+        -71838.88311764639,
+        -86826.66767710503
+      ],
+      "dragN_alongRelativeAirflow": 95474.27476319298,
+      "dragAccelerationMps2_usingCheckpointMass": 3.698244758934204,
+      "effectiveDragAreaM2_usingTraceQ": 46.954407410070615,
+      "torqueNm_nonrotating": [
+        -20288.16431412243,
+        -15251.361476617343,
+        -8923.072000455468
+      ],
+      "torqueNm_bodyXYZ": [
+        25570.516227255885,
+        4909.3997403649955,
+        -6773.577054521371
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000014,
+        "sideslipDeg": 5.000000000000006,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -98891.44216988687,
+        7763.062365761059,
+        54048.56164472954
+      ],
+      "forceN_bodyXYZ": [
+        -7832.060100401039,
+        -71838.85130495296,
+        -86826.65354237416
+      ],
+      "dragN_alongRelativeAirflow": 95474.23955220818,
+      "dragAccelerationMps2_usingCheckpointMass": 3.6982433950187374,
+      "effectiveDragAreaM2_usingTraceQ": 46.95439009324962,
+      "torqueNm_nonrotating": [
+        -5698.6165558515195,
+        -25576.149627921062,
+        -6102.247316855237
+      ],
+      "torqueNm_bodyXYZ": [
+        25570.77429226991,
+        4909.48516715044,
+        -6773.739015035704
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": 5.000000000000006,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -83845.07899907797,
+        -49868.231347789326,
+        56957.79815916198
+      ],
+      "forceN_bodyXYZ": [
+        -7832.054996276049,
+        -71838.84670039141,
+        -86826.6523629183
+      ],
+      "dragN_alongRelativeAirflow": 95474.23438173534,
+      "dragAccelerationMps2_usingCheckpointMass": 3.698243194737833,
+      "effectiveDragAreaM2_usingTraceQ": 46.954387550402465,
+      "torqueNm_nonrotating": [
+        11993.548847645978,
+        -23933.452906084553,
+        -2681.5229080962777
+      ],
+      "torqueNm_bodyXYZ": [
+        25570.621012866606,
+        4909.565824026164,
+        -6773.880092766737
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": -5.000000000000008,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -138941.113686989,
+        86319.46891264073,
+        80594.50144281756
+      ],
+      "forceN_bodyXYZ": [
+        11608.779018891393,
+        -105504.93519841266,
+        -148273.74125996407
+      ],
+      "dragN_alongRelativeAirflow": 163158.03297925935,
+      "dragAccelerationMps2_usingCheckpointMass": 6.320009676325718,
+      "effectiveDragAreaM2_usingTraceQ": 80.24139247703746,
+      "torqueNm_nonrotating": [
+        -27514.073912135926,
+        -41944.60978297638,
+        -666.4531117261777
+      ],
+      "torqueNm_bodyXYZ": [
+        49581.7541025543,
+        -4568.812658670942,
+        6131.421029628855
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": -5.000000000000001,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -165597.00254856815,
+        -11726.612436707546,
+        75440.5569816911
+      ],
+      "forceN_bodyXYZ": [
+        11608.791730777171,
+        -105504.93930896453,
+        -148273.74031156756
+      ],
+      "dragN_alongRelativeAirflow": 163158.0372592132,
+      "dragAccelerationMps2_usingCheckpointMass": 6.320009842111914,
+      "effectiveDragAreaM2_usingTraceQ": 80.24139458192589,
+      "torqueNm_nonrotating": [
+        5191.192724935823,
+        -49577.0893420802,
+        5657.070212903116
+      ],
+      "torqueNm_bodyXYZ": [
+        49581.9778477688,
+        -4568.724739823196,
+        6131.308171086861
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": -4.999999999999997,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -124139.81285537411,
+        -104285.68821950424,
+        83456.39669734602
+      ],
+      "forceN_bodyXYZ": [
+        11608.805677232776,
+        -105504.96189698414,
+        -148273.75593392082
+      ],
+      "dragN_alongRelativeAirflow": 163158.06564921295,
+      "dragAccelerationMps2_usingCheckpointMass": 6.3200109418130435,
+      "effectiveDragAreaM2_usingTraceQ": 80.24140854417507,
+      "torqueNm_nonrotating": [
+        35061.50888870005,
+        -34011.63887935558,
+        11432.469375967881
+      ],
+      "torqueNm_bodyXYZ": [
+        49581.63686481939,
+        -4568.655974750804,
+        6131.150726746571
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.0,
+        "sideslipDeg": 0.0,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -126953.15734736287,
+        92563.14120925262,
+        74560.15688155385
+      ],
+      "forceN_bodyXYZ": [
+        -0.12357944835093804,
+        -97304.57966827037,
+        -144139.08228081724
+      ],
+      "dragN_alongRelativeAirflow": 153584.04460914835,
+      "dragAccelerationMps2_usingCheckpointMass": 5.949156350655732,
+      "effectiveDragAreaM2_usingTraceQ": 75.53288904420724,
+      "torqueNm_nonrotating": [
+        -32843.01535797944,
+        -40045.70655013754,
+        -6293.573435408468
+      ],
+      "torqueNm_bodyXYZ": [
+        52172.036936338816,
+        -55.63927369160592,
+        82.484396118125
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.0,
+        "sideslipDeg": 0.0,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -159989.83666464087,
+        -114.42779351759272,
+        68172.42025786568
+      ],
+      "forceN_bodyXYZ": [
+        -0.11138141102856025,
+        -97304.52843897586,
+        -144139.05979563482
+      ],
+      "dragN_alongRelativeAirflow": 153583.98882021237,
+      "dragAccelerationMps2_usingCheckpointMass": 5.949154189642825,
+      "effectiveDragAreaM2_usingTraceQ": 75.53286160711558,
+      "torqueNm_nonrotating": [
+        111.04410342129009,
+        -52172.27187816804,
+        78.05608451698546
+      ],
+      "torqueNm_bodyXYZ": [
+        52172.3538248807,
+        -55.55272067213082,
+        82.38168122299976
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999993,
+        "sideslipDeg": -3.761079507149577e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -126808.71450621038,
+        -92738.44791978678,
+        74588.09004856013
+      ],
+      "forceN_bodyXYZ": [
+        -0.09917977087025065,
+        -97304.57078643874,
+        -144139.07686133485
+      ],
+      "dragN_alongRelativeAirflow": 153584.0342226636,
+      "dragAccelerationMps2_usingCheckpointMass": 5.949155948329945,
+      "effectiveDragAreaM2_usingTraceQ": 75.53288393611675,
+      "torqueNm_nonrotating": [
+        33008.22288717613,
+        -39886.50474177435,
+        6438.690948148956
+      ],
+      "torqueNm_bodyXYZ": [
+        52172.0512522807,
+        -55.471222899239365,
+        82.28537955085449
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999996,
+        "sideslipDeg": 4.999999999999986,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -124351.8820104344,
+        104152.54770474648,
+        83507.36449105926
+      ],
+      "forceN_bodyXYZ": [
+        -11614.887364364811,
+        -105595.27658945671,
+        -148321.79755746754
+      ],
+      "dragN_alongRelativeAirflow": 163260.50374740243,
+      "dragAccelerationMps2_usingCheckpointMass": 6.3239789338264325,
+      "effectiveDragAreaM2_usingTraceQ": 80.2917877715495,
+      "torqueNm_nonrotating": [
+        -34725.232759237064,
+        -34042.3210768945,
+        -11254.759215961554
+      ],
+      "torqueNm_bodyXYZ": [
+        49361.66169771993,
+        4458.019525494337,
+        -5911.297306429435
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999993,
+        "sideslipDeg": 4.999999999999999,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -165679.44261202315,
+        11497.00707858018,
+        75516.60303482579
+      ],
+      "forceN_bodyXYZ": [
+        -11614.873295395751,
+        -105595.2543090484,
+        -148321.78934888286
+      ],
+      "dragN_alongRelativeAirflow": 163260.47908460503,
+      "dragAccelerationMps2_usingCheckpointMass": 6.3239779785003885,
+      "effectiveDragAreaM2_usingTraceQ": 80.29177564234463,
+      "torqueNm_nonrotating": [
+        -4919.130405163698,
+        -49366.68454264036,
+        -5491.75912093835
+      ],
+      "torqueNm_bodyXYZ": [
+        49362.002015437705,
+        4458.074114277413,
+        -5911.44120646704
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 5.211938478487767,
+      "speedSource": "exact selected ENTRY_TRACE TAS",
+      "trueAirSpeedMps": 1731.89,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.00000000000001,
+        "sideslipDeg": 4.999999999999997,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2033.34,
+      "forceN_nonrotating": [
+        -138863.34200069844,
+        -86538.0855634364,
+        80701.5163380102
+      ],
+      "forceN_bodyXYZ": [
+        -11614.859487007969,
+        -105595.22749275905,
+        -148321.7641268173
+      ],
+      "dragN_alongRelativeAirflow": 163260.44249786253,
+      "dragAccelerationMps2_usingCheckpointMass": 6.323976561294245,
+      "effectiveDragAreaM2_usingTraceQ": 80.2917576489237,
+      "torqueNm_nonrotating": [
+        27584.7906077807,
+        -41591.587544061484,
+        792.8158559218527
+      ],
+      "torqueNm_bodyXYZ": [
+        49361.8008347038,
+        4458.178437151313,
+        -5911.568968505042
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000018,
+        "sideslipDeg": -4.999999999999997,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -112559.80464324002,
+        66261.71581458359,
+        78157.37022284376
+      ],
+      "forceN_bodyXYZ": [
+        10647.809744786835,
+        -98104.00858539842,
+        -115892.73821634619
+      ],
+      "dragN_alongRelativeAirflow": 129551.97741023997,
+      "dragAccelerationMps2_usingCheckpointMass": 5.018261962767897,
+      "effectiveDragAreaM2_usingTraceQ": 48.07619661102357,
+      "torqueNm_nonrotating": [
+        -15377.822745551834,
+        -31303.915562371007,
+        3857.776111867538
+      ],
+      "torqueNm_bodyXYZ": [
+        33221.61448420008,
+        -6706.881407279034,
+        9090.493458049641
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": -4.9999999999999964,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -132400.6346320985,
+        -10739.908584578101,
+        74321.15615484524
+      ],
+      "forceN_bodyXYZ": [
+        10647.819993522353,
+        -98104.04228611845,
+        -115892.74677946616
+      ],
+      "dragN_alongRelativeAirflow": 129552.01286888079,
+      "dragAccelerationMps2_usingCheckpointMass": 5.018263336276446,
+      "effectiveDragAreaM2_usingTraceQ": 48.07620976957678,
+      "torqueNm_nonrotating": [
+        7677.748310390969,
+        -33214.533575425216,
+        8315.511459497695
+      ],
+      "torqueNm_bodyXYZ": [
+        33221.76857854349,
+        -6706.789119535964,
+        9090.316980368338
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.99999999999999,
+        "sideslipDeg": -4.99999999999999,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -99003.93779061268,
+        -82716.22324268174,
+        80778.49899341435
+      ],
+      "forceN_bodyXYZ": [
+        10647.829425552824,
+        -98104.07767940461,
+        -115892.76446960522
+      ],
+      "dragN_alongRelativeAirflow": 129552.05266961329,
+      "dragAccelerationMps2_usingCheckpointMass": 5.018264877978132,
+      "effectiveDragAreaM2_usingTraceQ": 48.07622453946203,
+      "torqueNm_nonrotating": [
+        26544.974499155873,
+        -19583.57951929624,
+        11963.40251345217
+      ],
+      "torqueNm_bodyXYZ": [
+        33221.45803431307,
+        -6706.676834618174,
+        9090.130337826815
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": 0.0,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -100429.00163664855,
+        71923.06633950926,
+        67163.00798928585
+      ],
+      "forceN_bodyXYZ": [
+        -0.10887639997235965,
+        -85006.71143525836,
+        -111998.39505337186
+      ],
+      "dragN_alongRelativeAirflow": 115455.59425353515,
+      "dragAccelerationMps2_usingCheckpointMass": 4.472231367002537,
+      "effectiveDragAreaM2_usingTraceQ": 42.845087818295134,
+      "torqueNm_nonrotating": [
+        -22828.11657870088,
+        -27783.221119418515,
+        -4343.638281975455
+      ],
+      "torqueNm_bodyXYZ": [
+        36220.04815814786,
+        -68.93345072864577,
+        28.903749312277796
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.00000000000001,
+        "sideslipDeg": -6.534171667988229e-15,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -126099.03247131834,
+        -88.89605112559296,
+        62199.59208447559
+      ],
+      "forceN_bodyXYZ": [
+        -0.10203954433382023,
+        -85006.63051392775,
+        -111998.37461697303
+      ],
+      "dragN_alongRelativeAirflow": 115455.5109775818,
+      "dragAccelerationMps2_usingCheckpointMass": 4.472228141265983,
+      "effectiveDragAreaM2_usingTraceQ": 42.84505691493737,
+      "torqueNm_nonrotating": [
+        43.43231349848807,
+        -36220.29515336841,
+        78.51232704929757
+      ],
+      "torqueNm_bodyXYZ": [
+        36220.32945342418,
+        -68.83697088245026,
+        28.762915881135996
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 17.999999999999996,
+        "sideslipDeg": 0.0,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -100316.7880175744,
+        -72059.25953064066,
+        67184.70103580916
+      ],
+      "forceN_bodyXYZ": [
+        -0.0952599022348295,
+        -85006.69721605768,
+        -111998.39429182306
+      ],
+      "dragN_alongRelativeAirflow": 115455.58049494016,
+      "dragAccelerationMps2_usingCheckpointMass": 4.472230834056338,
+      "effectiveDragAreaM2_usingTraceQ": 42.845082712538115,
+      "torqueNm_nonrotating": [
+        22888.537513170457,
+        -27709.235279422533,
+        4495.546810170578
+      ],
+      "torqueNm_bodyXYZ": [
+        36220.039567550615,
+        -68.73860567567499,
+        28.62016419340489
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.000000000000007,
+        "sideslipDeg": 5.000000000000003,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -99185.64582435951,
+        82620.33612500405,
+        80879.30221598469
+      ],
+      "forceN_bodyXYZ": [
+        -10656.222107777008,
+        -98237.5547760366,
+        -115936.19610787417
+      ],
+      "dragN_alongRelativeAirflow": 129692.61538427646,
+      "dragAccelerationMps2_usingCheckpointMass": 5.023709646467801,
+      "effectiveDragAreaM2_usingTraceQ": 48.12838677458505,
+      "torqueNm_nonrotating": [
+        -26303.112286114898,
+        -19553.899167099917,
+        -11777.386917545005
+      ],
+      "torqueNm_bodyXYZ": [
+        33009.04469713656,
+        6569.960715371619,
+        -8952.88308644508
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": 5.000000000000004,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -132485.22849992538,
+        10564.080280044465,
+        74440.72671722819
+      ],
+      "forceN_bodyXYZ": [
+        -10656.210099285687,
+        -98237.49906783423,
+        -115936.17347595563
+      ],
+      "dragN_alongRelativeAirflow": 129692.55459059525,
+      "dragAccelerationMps2_usingCheckpointMass": 5.023707291593533,
+      "effectiveDragAreaM2_usingTraceQ": 48.12836421430439,
+      "torqueNm_nonrotating": [
+        -7517.283806396439,
+        -33016.47215181986,
+        -8145.228138684429
+      ],
+      "torqueNm_bodyXYZ": [
+        33009.36713552389,
+        6570.069023193973,
+        -8953.077959656428
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 18.0,
+        "sideslipDeg": 5.0000000000000036,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -112519.57654856134,
+        -66435.20642648601,
+        78301.11135869248
+      ],
+      "forceN_bodyXYZ": [
+        -10656.202255880402,
+        -98237.48936936776,
+        -115936.17569804884
+      ],
+      "dragN_alongRelativeAirflow": 129692.54540235864,
+      "dragAccelerationMps2_usingCheckpointMass": 5.023706935682498,
+      "effectiveDragAreaM2_usingTraceQ": 48.12836080458824,
+      "torqueNm_nonrotating": [
+        15369.66295650272,
+        -31030.120742389514,
+        -3720.083762338062
+      ],
+      "torqueNm_bodyXYZ": [
+        33009.18754889897,
+        6570.148466582021,
+        -8953.247587957017
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.0,
+        "sideslipDeg": -5.000000000000004,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -186608.56462433952,
+        115348.12341561729,
+        110395.86677625294
+      ],
+      "forceN_bodyXYZ": [
+        15778.06976856626,
+        -143813.36949697736,
+        -198453.92572646443
+      ],
+      "dragN_alongRelativeAirflow": 220685.56231096646,
+      "dragAccelerationMps2_usingCheckpointMass": 8.54836788457721,
+      "effectiveDragAreaM2_usingTraceQ": 81.89548855190002,
+      "torqueNm_nonrotating": [
+        -35662.23080676077,
+        -54492.37899483463,
+        -636.1928318920163
+      ],
+      "torqueNm_bodyXYZ": [
+        64334.04334122386,
+        -6145.331797343424,
+        8061.301409872482
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": -5.000000000000002,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -222133.7349777041,
+        -15935.778558805727,
+        103527.03350501166
+      ],
+      "forceN_bodyXYZ": [
+        15778.084141487576,
+        -143813.37119804884,
+        -198453.91970239423
+      ],
+      "dragN_alongRelativeAirflow": 220685.56224252286,
+      "dragAccelerationMps2_usingCheckpointMass": 8.548367881926014,
+      "effectiveDragAreaM2_usingTraceQ": 81.89548852650088,
+      "torqueNm_nonrotating": [
+        6798.192427421201,
+        -64327.89071810403,
+        7573.535614777538
+      ],
+      "torqueNm_bodyXYZ": [
+        64334.31765262247,
+        -6145.274132945324,
+        8061.176355303694
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.999999999999986,
+        "sideslipDeg": -5.0,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -166494.47119363508,
+        -139763.17098541022,
+        114285.02792520006
+      ],
+      "forceN_bodyXYZ": [
+        15778.10485333865,
+        -143813.42037029736,
+        -198453.95445402985
+      ],
+      "dragN_alongRelativeAirflow": 220685.62355180664,
+      "dragAccelerationMps2_usingCheckpointMass": 8.54837025677241,
+      "effectiveDragAreaM2_usingTraceQ": 81.8955112781195,
+      "torqueNm_nonrotating": [
+        45531.641013347486,
+        -44063.279815224276,
+        15062.58579035366
+      ],
+      "torqueNm_bodyXYZ": [
+        64333.830985152825,
+        -6145.157687181629,
+        8060.997451204481
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": 0.0,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -170230.80618797572,
+        123783.73596938151,
+        102075.4721825951
+      ],
+      "forceN_bodyXYZ": [
+        -0.16268572967965156,
+        -132535.19326473324,
+        -192755.71388028635
+      ],
+      "dragN_alongRelativeAirflow": 207514.95609347688,
+      "dragAccelerationMps2_usingCheckpointMass": 8.038197731029264,
+      "effectiveDragAreaM2_usingTraceQ": 77.00793170671712,
+      "torqueNm_nonrotating": [
+        -42716.80836433366,
+        -52087.85613237073,
+        -8184.212565677782
+      ],
+      "torqueNm_bodyXYZ": [
+        67858.9301269041,
+        -73.77599566609206,
+        109.39724113418924
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000007,
+        "sideslipDeg": 0.0,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -214410.39110574021,
+        -153.0244798482875,
+        93533.2107961726
+      ],
+      "forceN_bodyXYZ": [
+        -0.14738488185685128,
+        -132535.11294399138,
+        -192755.66033025057
+      ],
+      "dragN_alongRelativeAirflow": 207514.8600342522,
+      "dragAccelerationMps2_usingCheckpointMass": 8.03819401012617,
+      "effectiveDragAreaM2_usingTraceQ": 77.00789605954087,
+      "torqueNm_nonrotating": [
+        146.24788501430646,
+        -67859.16945698344,
+        103.30114238744272
+      ],
+      "torqueNm_bodyXYZ": [
+        67859.27772759365,
+        -73.65462825993382,
+        109.27143512342445
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.000000000000004,
+        "sideslipDeg": -3.267085833994115e-15,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -170037.6253123642,
+        -124018.16341725894,
+        102112.80450499899
+      ],
+      "forceN_bodyXYZ": [
+        -0.1321448885719292,
+        -132535.15578286583,
+        -192755.69046004338
+      ],
+      "dragN_alongRelativeAirflow": 207514.91200381427,
+      "dragAccelerationMps2_usingCheckpointMass": 8.03819602319368,
+      "effectiveDragAreaM2_usingTraceQ": 77.00791534522784,
+      "torqueNm_nonrotating": [
+        42934.33565763005,
+        -51878.08166694619,
+        8376.33057423671
+      ],
+      "torqueNm_bodyXYZ": [
+        67858.95763006163,
+        -73.54640296646176,
+        109.13286116580093
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -40.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.99999999999999,
+        "sideslipDeg": 5.000000000000003,
+        "bankDeg": -40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -166780.20547284943,
+        139586.543821254,
+        114356.03845961805
+      ],
+      "forceN_bodyXYZ": [
+        -15786.595177071518,
+        -143937.40285556627,
+        -198519.90116261912
+      ],
+      "dragN_alongRelativeAirflow": 220826.25929446006,
+      "dragAccelerationMps2_usingCheckpointMass": 8.553817854038552,
+      "effectiveDragAreaM2_usingTraceQ": 81.94770061362406,
+      "torqueNm_nonrotating": [
+        -45079.29817108056,
+        -44095.758403527805,
+        -14825.68925720275
+      ],
+      "torqueNm_bodyXYZ": [
+        64031.751253863695,
+        5998.446195558205,
+        -7767.46865670773
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "angleOfAttackDeg": 27.99999999999999,
+        "sideslipDeg": 5.000000000000008,
+        "bankDeg": 0.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -222246.6633551828,
+        15628.818277639824,
+        103631.47807225783
+      ],
+      "forceN_bodyXYZ": [
+        -15786.575073583255,
+        -143937.3566948861,
+        -198519.88307432478
+      ],
+      "dragN_alongRelativeAirflow": 220826.20848033312,
+      "dragAccelerationMps2_usingCheckpointMass": 8.553815885727412,
+      "effectiveDragAreaM2_usingTraceQ": 81.94768175671423,
+      "torqueNm_nonrotating": [
+        -6437.72871591947,
+        -64038.37191473643,
+        -7354.392490720267
+      ],
+      "torqueNm_bodyXYZ": [
+        64032.21876637045,
+        5998.554269928558,
+        -7767.678156556169
+      ]
+    },
+    {
+      "nominalMachFromAdjacentWitness": 6.0,
+      "speedSource": "adjacent-witness sound-speed scaling",
+      "trueAirSpeedMps": 1993.7572254335257,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 40.0,
+      "achieved": {
+        "angleOfAttackDeg": 28.0,
+        "sideslipDeg": 4.999999999999988,
+        "bankDeg": 40.0
+      },
+      "dynamicPressureEstimatePa": 2694.7218487024516,
+      "forceN_nonrotating": [
+        -186506.83508803952,
+        -115641.78282254889,
+        110541.82125449639
+      ],
+      "forceN_bodyXYZ": [
+        -15786.558449705102,
+        -143937.34093669502,
+        -198519.878530044
+      ],
+      "dragN_alongRelativeAirflow": 220826.1910454632,
+      "dragAccelerationMps2_usingCheckpointMass": 8.553815210378827,
+      "effectiveDragAreaM2_usingTraceQ": 81.94767528670697,
+      "torqueNm_nonrotating": [
+        35749.131452344904,
+        -54016.392927797315,
+        802.3773670365135
+      ],
+      "torqueNm_bodyXYZ": [
+        64031.95818128726,
+        5998.674046815544,
+        -7767.828211044602
+      ]
+    }
+  ],
+  "errors": [],
+  "matchedWitnessComparison": {
+    "sampleIndex": 48,
+    "simulatedDragAccelerationMps2": 5.949156350655732,
+    "shadowModelDragAccelerationMps2": 5.379,
+    "shadowDRAGREFAccelerationMps2": 9.95,
+    "simulationMinusShadowModelMps2": 0.5701563506557328,
+    "simulationToShadowModelRatio": 1.1059967188428579,
+    "simulationToDRAGREFRatio": 0.5979051608699228,
+    "note": "The comparison uses current original-STS parts, a simulated KSC runway-center position, zero angular velocity, checkpoint-profile mass, and the shadow trace's q-scaled density proxy. It is a model discrepancy diagnostic, not measured flight force or qualification."
+  },
+  "gridSummary": {
+    "sampleCount": 72,
+    "speedSliceCount": 4,
+    "maximumAchievedAngleErrorDeg": 1.7763568394002505e-14,
+    "maximumAchievedBankErrorDeg": 0.0,
+    "elapsedWallSeconds": 7.536815084022237
+  },
+  "liveStateBefore": {
+    "ut": 9931.23182616933,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71920.85019100225,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.31640625,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155519.7927973389,
+      70.16976492961203,
+      653675.1624820054
+    ],
+    "velocity_mps": [
+      -2238.8680984381635,
+      0.04772663244689328,
+      472.375898560573
+    ],
+    "rotation_xyzw": [
+      0.7022768106687585,
+      -0.7022951208871999,
+      -0.0823918739641814,
+      0.08246453277293891
+    ],
+    "angular_velocity_rad_s": [
+      -6.1674018293489015e-06,
+      0.00024853754439391196,
+      -7.947517413106789e-07
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.611985683441162,
+    "sideslip_deg": 0.000692417670506984,
+    "roll_deg": 0.003387451171875
+  },
+  "liveActuatorStateBefore": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "kspProcessPIDsBefore": [
+    69877
+  ],
+  "loadedMassAssessment": {
+    "pausedLoadedMassKg": 25816.10546875,
+    "checkpointProfileMassKg": 25816.10493262963,
+    "pausedLoadedDryMassKg": 20348.0,
+    "checkpointProfileDryMassKg": 20348.0004251,
+    "massStateMatchesSettledProfile": true,
+    "massUsedForDragAcceleration": "checkpoint profile mass; it agrees within 1 kg with the settled live vessel mass.",
+    "torqueLimitation": "The returned torque is a hypothetical KSP aerodynamic result about the settled vessel center of mass. It is not measured flight torque or actuator response and does not qualify atmospheric coordination."
+  },
+  "positionGeometry": {
+    "siteLatitudeDeg": -0.0486111111,
+    "siteLongitudeDeg": -74.7283333333,
+    "runwayHeadingDeg": 90.0,
+    "targetAltitudeM": 38016.7,
+    "targetUT": 10515.612,
+    "currentPausedUT": 9931.23182616933,
+    "bodyAngularVelocityRadPerS_nonrotating": [
+      0.0,
+      -0.0002915709005598024,
+      0.0
+    ],
+    "spinExtrapolationSeconds": 584.3801738306684,
+    "inertialSpinAngleRad": 0.17038825355310186,
+    "positionNonrotatingM": [
+      -626414.712876673,
+      -541.3085785738167,
+      -121118.22305313263
+    ],
+    "futureSiteLatitudeSeenInCurrentFrameDeg": -0.048611111667427986,
+    "futureSiteLongitudeSeenInCurrentFrameDeg": -64.96580628443547,
+    "siteLongitudeAtCurrentUTDeg": -74.72833420558923,
+    "checkpointFlightRollDeg": 0.003387451171875,
+    "checkpointGeometricLocalZBankDeg": -179.99969106947228,
+    "stsFlightRollGeometricOffsetDeg": -179.99692147935582,
+    "vesselLocalZSignRelativeToRadialUp": -1.0,
+    "baseGeometricLocalZBankDeg": -180.0,
+    "baseBankBeforeCounterfactualRollDeg": 0.0030785206441805713
+  },
+  "liveStateAfter": {
+    "ut": 9931.23182616933,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71920.85019100225,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.31640625,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155519.7927973389,
+      70.16976492961203,
+      653675.1624820054
+    ],
+    "velocity_mps": [
+      -2238.8680984381635,
+      0.04772663244689328,
+      472.375898560573
+    ],
+    "rotation_xyzw": [
+      0.7022768106687585,
+      -0.7022951208871999,
+      -0.0823918739641814,
+      0.08246453277293891
+    ],
+    "angular_velocity_rad_s": [
+      -6.1674018293489015e-06,
+      0.00024853754439391196,
+      -7.947517413106789e-07
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.611985683441162,
+    "sideslip_deg": 0.000692417670506984,
+    "roll_deg": 0.003387451171875
+  },
+  "liveActuatorStateAfter": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "liveStateUnchanged": true,
+  "liveActuatorStateUnchanged": true,
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointUnchanged": true,
+  "kspProcessPIDsAfter": [
+    69877
+  ],
+  "singleKspProcessPreserved": true,
+  "sourceSHA256": "c1801078b9964fce11ab25923e07532a9abfc70183b20e000946c72e11b466d9"
+}
