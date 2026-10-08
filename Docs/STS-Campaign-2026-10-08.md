@@ -254,3 +254,22 @@ Best L/D available from the identified STS-N aero table (`ShuttleSim/reference-m
 - Mach 10.0: 0.53 (alpha 0)
 
 Result: with this aero table, no AoA schedule reaches a glide L/D above about 0.75 in the hypersonic-to-supersonic range where the vehicle must bleed energy. The offline closed loop covers roughly 830 km and then runs out of speed about 267 km short of the runway. This is a property of the aero data, not of a gate constant or the AoA command. Landing from this entry state needs STS-specific aero with a materially higher hypersonic and supersonic L/D. Until that exists, every guidance variant tested here aborts in the same way.
+
+## Plant sensitivity sweep: lift and drag scaling (2026-10-08, offline only)
+
+Purpose: find out whether the existing guidance can reach TAEM if the plant's aero were different, with the guidance model unchanged. These are sensitivity results only. They are not STS aero, not a fix, and not validation. Runs use `ShuttleSim/scripts/run_guidance.py --scenario ksp70km-entry-interface.ini --configuration Configuration/sts.json --max-sim-time 2400`.
+
+| Plant change | Outcome | Abort altitude (m) | TAS (m/s) | Along-track to runway (km) |
+|---|---|---|---|---|
+| lift ×1.5 | MM304 abort | 7,767 | 84.9 | 274 |
+| lift ×2.0 | MM304 abort | 9,913 | 85.0 | 428 |
+| lift ×3.0 | MM304 abort | 12,632 | 84.9 | 768 |
+| drag ×0.5 | MM304 abort | 5,962 | 85.0 | 679 |
+| drag ×0.25 | no abort; timed out at 2400 s sim time, still in MM304 Entry | 11,129 | 146.8 | -1,266 |
+
+Reading:
+- Every lift and drag case that aborts does so at the 85 m/s airspeed floor, before the MM305 handoff window (141–179 m/s). Scaling lift up moves the abort to higher altitude but does not carry the vehicle to TAEM.
+- Drag ×0.25 is the only case that avoids the floor, but it does not get near the runway. At 2400 s it is still in MM304 Entry at 11.1 km, 147 m/s, with along-track -1,266 km. It is not a landing, and the along-track sign is unexplained. It may mean the guidance steers the wrong way when drag is low, or that the plant drifts. This has not been diagnosed.
+- Conclusion: scaling the plant's lift or drag alone does not produce a TAEM handoff with the existing guidance. The blocker is the energy and geometry balance of the guidance on this plant, not one scalar aero term. This agrees with the earlier finding that the identified STS-N aero offers only about 0.5–0.75 L/D across the entry Mach range.
+
+Still open: the drag ×0.25 along-track sign, and whether a combined lift and drag change (matching a full STS aero table) gives a TAEM handoff. Neither is answered by these runs.
