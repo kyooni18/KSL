@@ -1,0 +1,304 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_LIVE_TELEMETRY_ANALYSIS",
+  "qualification": {
+    "shadowGatePassed": false,
+    "shadowGateBypassed": true,
+    "measuredFlightData": true,
+    "qualifiedAerodynamicEvidence": false,
+    "landingOrRollout": false,
+    "note": "This original-STS atmospheric telemetry is from an archived run with an explicit KSP_LANDER_BYPASS_SHADOW_GATE event. It is useful for physical diagnosis only and cannot qualify entry, TAEM, touchdown, or rollout."
+  },
+  "provenance": {
+    "sourceFile": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "sourceSHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "analysisScript": "Tools/analyze_sts_run9_atmospheric_coordination.py",
+    "analysisScriptSHA256": "885839dbd4aa189598f268d6cc7639a00fa7f95c68b8271de810b0e0b2f22cad",
+    "sessionId": "2026-10-07T21-34-08Z-29000-108766028242",
+    "startedUTC": "2026-10-07T21-34-08Z",
+    "vessel": "STS",
+    "gateBypassEvents": [
+      {
+        "recordSequence": 2,
+        "tickSequence": 1,
+        "ut": 9932.41182616936,
+        "event": "event=shadow-gate-bypassed; reason=KSP_LANDER_BYPASS_SHADOW_GATE"
+      }
+    ],
+    "bodyRateUnits": "degrees/second; CLanding/transport/client/telemetry.inc converts KSP body angular velocity to deg/s with the recorded sign convention.",
+    "reportedControlUnits": "normalized direct-control axis values, not measured surface deflections.",
+    "noPropulsionAndBrakeAudit": {
+      "samplesAtQAtLeast200Pa": 9689,
+      "samplesWithEngineThrustOver1N": 0,
+      "samplesWithSpeedbrakeCommandOrState": 0,
+      "basis": "vehicle.currentThrust, state.airbrakes, and command.airbrakes in reconstructed telemetry deltas; this audit does not claim RCS state because the log does not persist it per sample."
+    }
+  },
+  "runwayCrossingWindow": {
+    "referenceUT": 10515.3518261821,
+    "selectedCrossingSample": {
+      "label": "closest_logged_sample_to_first_runway_longitude_passage",
+      "recordSequence": 10869,
+      "tickSequence": 10867,
+      "ut": 10515.3518261821,
+      "secondsFromRunwayLongitudePass": 0.0,
+      "meanAltitudeM": 39805.2968835147,
+      "dynamicPressurePa": 1637.58508300781,
+      "mach": 5.36569136650165,
+      "trueAirSpeedMps": 1781.08666992188,
+      "angleOfAttackDeg": 22.484260559082,
+      "sideslipDeg": 0.318363815546036,
+      "bankDeg": 1.1190185546875,
+      "headingDeg": 90.206413269043,
+      "bodyRatesDegPerSecond_pitchRollYaw": [
+        -0.184407044215339,
+        -0.196058380569295,
+        0.184664807975786
+      ],
+      "runwayAlongTrackM": -20.0852253908815,
+      "runwayCrossTrackM": -301.27330889334,
+      "liftForceN": 55400.390092877,
+      "dragForceN": 86422.0146886587,
+      "targetRollDeg": 0.696105673695066,
+      "reportedControlXYZ_pitchRollYaw": [
+        0.31640836596489,
+        0.0094208437949419,
+        0.217777878046036
+      ],
+      "targetThrottle": 0,
+      "speedbrakeCommanded": false,
+      "speedbrakeState": false,
+      "currentEngineThrustN": 0,
+      "reportedControlApplied": true
+    },
+    "sampleCountWithinPlusMinus10kmAlongTrackAndQAtLeast1kPa": 208,
+    "dynamicPressureRangePa": [
+      1537.66271972656,
+      1740.37707519531
+    ],
+    "sideslipRangeDeg": [
+      -2.21143651008606,
+      0.39592170715332
+    ],
+    "samples": [
+      {
+        "label": "two_point_five_km_before_runway_longitude",
+        "recordSequence": 10843,
+        "tickSequence": 10841,
+        "ut": 10513.871826182,
+        "secondsFromRunwayLongitudePass": -1.4800000000996079,
+        "meanAltitudeM": 39944.3389722854,
+        "dynamicPressurePa": 1612.15368652344,
+        "mach": 5.37814073250579,
+        "trueAirSpeedMps": 1785.34265136719,
+        "angleOfAttackDeg": 22.512020111084,
+        "sideslipDeg": 0.39546811580658,
+        "bankDeg": 1.16107177734375,
+        "headingDeg": 90.1442184448242,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.197560420199492,
+          -0.00358198558550768,
+          0.00192765394373419
+        ],
+        "runwayAlongTrackM": -2491.30657189394,
+        "runwayCrossTrackM": -305.40750332293,
+        "liftForceN": 54620.244247791,
+        "dragForceN": 85293.4615178469,
+        "targetRollDeg": 4.07127957740943e-25,
+        "reportedControlXYZ_pitchRollYaw": [
+          0.316190987825394,
+          -0.00183022848796099,
+          -0.016645161435008
+        ],
+        "targetThrottle": 0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "currentEngineThrustN": 0,
+        "reportedControlApplied": true
+      },
+      {
+        "label": "runway_longitude_crossing",
+        "recordSequence": 10869,
+        "tickSequence": 10867,
+        "ut": 10515.3518261821,
+        "secondsFromRunwayLongitudePass": 0.0,
+        "meanAltitudeM": 39805.2968835147,
+        "dynamicPressurePa": 1637.58508300781,
+        "mach": 5.36569136650165,
+        "trueAirSpeedMps": 1781.08666992188,
+        "angleOfAttackDeg": 22.484260559082,
+        "sideslipDeg": 0.318363815546036,
+        "bankDeg": 1.1190185546875,
+        "headingDeg": 90.206413269043,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.184407044215339,
+          -0.196058380569295,
+          0.184664807975786
+        ],
+        "runwayAlongTrackM": -20.0852253908815,
+        "runwayCrossTrackM": -301.27330889334,
+        "liftForceN": 55400.390092877,
+        "dragForceN": 86422.0146886587,
+        "targetRollDeg": 0.696105673695066,
+        "reportedControlXYZ_pitchRollYaw": [
+          0.31640836596489,
+          0.0094208437949419,
+          0.217777878046036
+        ],
+        "targetThrottle": 0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "currentEngineThrustN": 0,
+        "reportedControlApplied": true
+      },
+      {
+        "label": "near_site_yaw_roll_transition",
+        "recordSequence": 10880,
+        "tickSequence": 10878,
+        "ut": 10515.9918261821,
+        "secondsFromRunwayLongitudePass": 0.6400000000012369,
+        "meanAltitudeM": 39744.9835182697,
+        "dynamicPressurePa": 1647.62561035156,
+        "mach": 5.36082997002857,
+        "trueAirSpeedMps": 1779.24157714844,
+        "angleOfAttackDeg": 22.5157775878906,
+        "sideslipDeg": 0.0187904611229897,
+        "bankDeg": 1.02926635742188,
+        "headingDeg": 90.4729461669922,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.0126624472041557,
+          -0.250566564860574,
+          0.518688208289168
+        ],
+        "runwayAlongTrackM": 1046.87054410536,
+        "runwayCrossTrackM": -299.467765223318,
+        "liftForceN": 54522.9935551717,
+        "dragForceN": 85836.8238614119,
+        "targetRollDeg": 1.72272560685503,
+        "reportedControlXYZ_pitchRollYaw": [
+          0.447639167308807,
+          0.0179757755249739,
+          0.28914138674736
+        ],
+        "targetThrottle": 0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "currentEngineThrustN": 0,
+        "reportedControlApplied": true
+      },
+      {
+        "label": "cross_track_turn_building",
+        "recordSequence": 10893,
+        "tickSequence": 10891,
+        "ut": 10516.7118261821,
+        "secondsFromRunwayLongitudePass": 1.360000000000582,
+        "meanAltitudeM": 39676.9779731036,
+        "dynamicPressurePa": 1662.10510253906,
+        "mach": 5.35383526350989,
+        "trueAirSpeedMps": 1777.14123535156,
+        "angleOfAttackDeg": 22.8487987518311,
+        "sideslipDeg": -0.484827369451523,
+        "bankDeg": 1.14935302734375,
+        "headingDeg": 91.0297164916992,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.525412935562329,
+          0.114097360242367,
+          0.912630553919002
+        ],
+        "runwayAlongTrackM": 2245.98073247878,
+        "runwayCrossTrackM": -297.430129306724,
+        "liftForceN": 54988.0865377169,
+        "dragForceN": 87488.7236528511,
+        "targetRollDeg": 3.4187255586169,
+        "reportedControlXYZ_pitchRollYaw": [
+          0.417782127857208,
+          0.0244441665709019,
+          0.313559770584106
+        ],
+        "targetThrottle": 0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "currentEngineThrustN": 0,
+        "reportedControlApplied": true
+      },
+      {
+        "label": "two_seconds_after_runway_longitude",
+        "recordSequence": 10905,
+        "tickSequence": 10903,
+        "ut": 10517.4318261821,
+        "secondsFromRunwayLongitudePass": 2.0800000000017462,
+        "meanAltitudeM": 39608.8301645303,
+        "dynamicPressurePa": 1675.78405761719,
+        "mach": 5.34678231911899,
+        "trueAirSpeedMps": 1774.9150390625,
+        "angleOfAttackDeg": 23.4704704284668,
+        "sideslipDeg": -1.08881783485413,
+        "bankDeg": 1.7960205078125,
+        "headingDeg": 91.9041442871094,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.79491817058625,
+          0.865273681301768,
+          1.31170150073639
+        ],
+        "runwayAlongTrackM": 3443.75023886593,
+        "runwayCrossTrackM": -295.385284139717,
+        "liftForceN": 57777.3487823577,
+        "dragForceN": 93676.6292548883,
+        "targetRollDeg": 5.65476376394762,
+        "reportedControlXYZ_pitchRollYaw": [
+          0.366381943225861,
+          0.0264986082911491,
+          0.306742131710052
+        ],
+        "targetThrottle": 0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "currentEngineThrustN": 0,
+        "reportedControlApplied": true
+      }
+    ],
+    "rollRateFiniteDifferenceWindows": [
+      {
+        "startUT": 10514.7918261821,
+        "endUT": 10515.3918261821,
+        "durationS": 0.6000000000003638,
+        "rollAngularAccelerationDegPerSecondSquared": -0.32079399163945105,
+        "yawAngularAccelerationDegPerSecondSquared": 0.30456192338656835,
+        "meanReportedRollCommand": 0.005789619288407265,
+        "meanReportedYawCommand": 0.1556446850299834,
+        "note": "Finite difference over unqualified live telemetry. Roll/yaw commands covary; this is observational and not a causal actuator derivative."
+      },
+      {
+        "startUT": 10515.3918261821,
+        "endUT": 10515.9918261821,
+        "durationS": 0.6000000000003638,
+        "rollAngularAccelerationDegPerSecondSquared": -0.09084697381874324,
+        "yawAngularAccelerationDegPerSecondSquared": 0.5567056671886323,
+        "meanReportedRollCommand": 0.01393824396654965,
+        "meanReportedYawCommand": 0.2574217468500135,
+        "note": "Finite difference over unqualified live telemetry. Roll/yaw commands covary; this is observational and not a causal actuator derivative."
+      },
+      {
+        "startUT": 10515.9918261821,
+        "endUT": 10516.5918261821,
+        "durationS": 0.6000000000003638,
+        "rollAngularAccelerationDegPerSecondSquared": 0.4325213106409027,
+        "yawAngularAccelerationDegPerSecondSquared": 0.5296696603091257,
+        "meanReportedRollCommand": 0.0208498910069466,
+        "meanReportedYawCommand": 0.299450799822807,
+        "note": "Finite difference over unqualified live telemetry. Roll/yaw commands covary; this is observational and not a causal actuator derivative."
+      },
+      {
+        "startUT": 10516.5918261821,
+        "endUT": 10517.1918261821,
+        "durationS": 0.5999999999985448,
+        "rollAngularAccelerationDegPerSecondSquared": 0.9477658572045671,
+        "yawAngularAccelerationDegPerSecondSquared": 0.576285630717721,
+        "meanReportedRollCommand": 0.02521884068846705,
+        "meanReportedYawCommand": 0.3181992918252945,
+        "note": "Finite difference over unqualified live telemetry. Roll/yaw commands covary; this is observational and not a causal actuator derivative."
+      }
+    ]
+  },
+  "interpretation": "Near the runway-longitude passage, measured sideslip changes from about +0.4 to below -1 degree while commanded yaw grows and measured roll rate reverses from negative to positive. Roll command also grows, so these live data do not isolate yaw-to-roll causality. The trace does show that the real STS can develop substantial body-rate and sideslip dynamics near the site that the point-mass shadow does not represent. Keep the normal gate and bank ramp unchanged; obtain gate-qualified in-flight coordination evidence before using this trace to retune guidance."
+}

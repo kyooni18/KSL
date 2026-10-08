@@ -1,0 +1,782 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+  "purpose": "Measure the original STS KSP aerodynamic torque response to hypothetical angular rates at the retained 38 km shadow witness state, extending the static wrench grid with rate-dependent damping.",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "measuredAerodynamicEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "Every wrench is an instantaneous hypothetical KSP simulation. The witness state is a shadow-model trace at the KSC runway-center proxy, not measured atmospheric flight telemetry."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "024f9a3705844ef1214aee1b8bbd78d9405bd661",
+    "sourceScript": "Tools/probe_sts_aero_rate_damping.py",
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "vehicleModelId": "STS",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUsedAsLoadedVesselSource": true,
+    "shadowTrace": "Runtime/STS-Campaign-20261009/entry-trace/headless-live.log",
+    "shadowTraceSHA256": "606d4af38a4611270fc72f607464cd7ec73e385d67a8bd47856587e947fc4c84",
+    "selectedENTRYTraceRecord": {
+      "ut": 10515.612,
+      "h": 38016.7,
+      "V": 1731.89,
+      "q": 2033.34,
+      "D": 5.379,
+      "Dref": 9.95,
+      "along": -336.8,
+      "xtk": 4542.7,
+      "Bcmd": -40.0,
+      "roll": -40.01,
+      "aoa": 28.0
+    },
+    "nearestShadowWitnessRecord": {
+      "ut": 10517.11,
+      "h": 37845.0,
+      "V": 1724.6,
+      "M": 5.19
+    },
+    "yawRateAmplitudeSource": {
+      "source": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
+      "sourceSHA256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
+      "sampleCount": 22,
+      "commandedYawRange": [
+        -0.15000000596046448,
+        0.15000000596046448
+      ],
+      "maximumAbsoluteBodyRatesDegPerSecondXYZ": [
+        0.01620695898549729,
+        0.025429628329039996,
+        0.06856663797464597
+      ],
+      "units": "The retained pulse stores body rates in degrees/second. These maxima set small hypothetical rate magnitudes; they are not measured atmospheric rates."
+    },
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "stateOrigin": "Shadow ENTRY_TRACE state projected to the configured KSC runway-center latitude/longitude at trace altitude and UT; Mach is reconstructed from the adjacent shadow-witness speed of sound.",
+    "sideslipPolicy": "Zero sideslip because the retained ENTRY_TRACE has no measured or modeled sideslip field.",
+    "angularVelocityPolicy": "Hypothetical body-axis rates are rotated into the non-rotating reference frame. The API reads the loaded STS part/control-surface state; no controls or state setters are called.",
+    "controlAndFlightPolicy": "Read-only wrench calls only. No propulsion, RCS, speedbrakes, SAS, control axes, position, velocity, rotation, UT, physics, or save state is changed."
+  },
+  "gridDefinition": {
+    "angleOfAttackDeg": 28.0,
+    "sideslipDeg": 0.0,
+    "bankDeg": -40.01,
+    "nominalMachFromWitnessSoundSpeed": 5.211938478487767,
+    "bodyRateAxes": {
+      "bodyX": "vessel local X",
+      "bodyY_roll": "vessel local Y / roll axis",
+      "bodyZ_yaw": "vessel local Z / yaw axis"
+    },
+    "requestCases": [
+      {
+        "case": "zero",
+        "axis": null,
+        "rateDegPerSecond": 0.0,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyX_negative_measured-envelope",
+        "axis": "bodyX",
+        "rateDegPerSecond": -0.01620695898549729,
+        "bodyRateRadPerSecondXYZ": [
+          -0.0002828647960326076,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyX_positive_measured-envelope",
+        "axis": "bodyX",
+        "rateDegPerSecond": 0.01620695898549729,
+        "bodyRateRadPerSecondXYZ": [
+          0.0002828647960326076,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyY_roll_negative_measured-envelope",
+        "axis": "bodyY_roll",
+        "rateDegPerSecond": -0.025429628329039996,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          -0.00044383074190017187,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyY_roll_positive_measured-envelope",
+        "axis": "bodyY_roll",
+        "rateDegPerSecond": 0.025429628329039996,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.00044383074190017187,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyZ_yaw_negative_measured-envelope",
+        "axis": "bodyZ_yaw",
+        "rateDegPerSecond": -0.06856663797464597,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.0,
+          -0.0011967135896805486
+        ]
+      },
+      {
+        "case": "bodyZ_yaw_positive_measured-envelope",
+        "axis": "bodyZ_yaw",
+        "rateDegPerSecond": 0.06856663797464597,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.0,
+          0.0011967135896805486
+        ]
+      },
+      {
+        "case": "bodyY_roll_negative_1deg_s_linearity_check",
+        "axis": "bodyY_roll",
+        "rateDegPerSecond": -1.0,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          -0.017453292519943295,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyY_roll_positive_1deg_s_linearity_check",
+        "axis": "bodyY_roll",
+        "rateDegPerSecond": 1.0,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.017453292519943295,
+          0.0
+        ]
+      },
+      {
+        "case": "bodyZ_yaw_negative_1deg_s_linearity_check",
+        "axis": "bodyZ_yaw",
+        "rateDegPerSecond": -1.0,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.0,
+          -0.017453292519943295
+        ]
+      },
+      {
+        "case": "bodyZ_yaw_positive_1deg_s_linearity_check",
+        "axis": "bodyZ_yaw",
+        "rateDegPerSecond": 1.0,
+        "bodyRateRadPerSecondXYZ": [
+          0.0,
+          0.0,
+          0.017453292519943295
+        ]
+      }
+    ],
+    "tensorUnits": "d(body-axis torque N m)/d(body-axis angular velocity rad/s)"
+  },
+  "samples": [
+    {
+      "case": "zero",
+      "axis": null,
+      "rateDegPerSecond": 0.0,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "forceN_bodyXYZ": [
+        -0.13322190957842395,
+        -97304.38097072676,
+        -144139.02781865903
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.42084423577,
+        -55.59140436497728,
+        82.16555256160791
+      ]
+    },
+    {
+      "case": "bodyX_negative_measured-envelope",
+      "axis": "bodyX",
+      "rateDegPerSecond": -0.01620695898549729,
+      "bodyRateRadPerSecondXYZ": [
+        -0.0002828647960326076,
+        0.0,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        0.00017838541722260356,
+        0.00021679829740608032,
+        3.449107128970021e-05
+      ],
+      "forceN_bodyXYZ": [
+        -0.13321800477569923,
+        -97304.32828853329,
+        -144139.00475388486
+      ],
+      "torqueNm_bodyXYZ": [
+        52174.11959349425,
+        -55.58725219322332,
+        82.15688745625812
+      ]
+    },
+    {
+      "case": "bodyX_positive_measured-envelope",
+      "axis": "bodyX",
+      "rateDegPerSecond": 0.01620695898549729,
+      "bodyRateRadPerSecondXYZ": [
+        0.0002828647960326076,
+        0.0,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        -0.00017838541722260356,
+        -0.00021679829740608032,
+        -3.449107128970021e-05
+      ],
+      "forceN_bodyXYZ": [
+        -0.1332295771862846,
+        -97304.4523728498,
+        -144139.05882149676
+      ],
+      "torqueNm_bodyXYZ": [
+        52168.74284436727,
+        -55.56999280072887,
+        82.15326502208336
+      ]
+    },
+    {
+      "case": "bodyY_roll_negative_measured-envelope",
+      "axis": "bodyY_roll",
+      "rateDegPerSecond": -0.025429628329039996,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        -0.00044383074190017187,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        -8.42548637992973e-05,
+        3.2860749101730306e-11,
+        0.0004357600777742471
+      ],
+      "forceN_bodyXYZ": [
+        -0.13219355151522905,
+        -97304.39326721111,
+        -144139.03210022507
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.44200072907,
+        -53.609547507227035,
+        81.61438919437205
+      ]
+    },
+    {
+      "case": "bodyY_roll_positive_measured-envelope",
+      "axis": "bodyY_roll",
+      "rateDegPerSecond": 0.025429628329039996,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.00044383074190017187,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        8.42548637992973e-05,
+        -3.2860749101730306e-11,
+        -0.0004357600777742471
+      ],
+      "forceN_bodyXYZ": [
+        -0.13426185096614063,
+        -97304.39042464695,
+        -144139.0276126784
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.397141698115,
+        -57.540116368261806,
+        82.69649336578732
+      ]
+    },
+    {
+      "case": "bodyZ_yaw_negative_measured-envelope",
+      "axis": "bodyZ_yaw",
+      "rateDegPerSecond": -0.06856663797464597,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        -0.0011967135896805486
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        -0.0009005280473169785,
+        0.0007686711897658765,
+        -0.00017411850489102787
+      ],
+      "forceN_bodyXYZ": [
+        -0.19053841999266297,
+        -97304.67549221241,
+        -144139.18720056166
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.35532760517,
+        -56.0879088901911,
+        89.86210529548407
+      ]
+    },
+    {
+      "case": "bodyZ_yaw_positive_measured-envelope",
+      "axis": "bodyZ_yaw",
+      "rateDegPerSecond": 0.06856663797464597,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0011967135896805486
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        0.0009005280473169785,
+        -0.0007686711897658765,
+        0.00017411850489102787
+      ],
+      "forceN_bodyXYZ": [
+        -0.07589469355298206,
+        -97304.60161098062,
+        -144139.145303539
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.43867955124,
+        -55.051581181860456,
+        74.45479400361364
+      ]
+    },
+    {
+      "case": "bodyY_roll_negative_1deg_s_linearity_check",
+      "axis": "bodyY_roll",
+      "rateDegPerSecond": -1.0,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        -0.017453292519943295,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        -0.0033132558096840284,
+        1.2922229397638318e-09,
+        0.017135920043181287
+      ],
+      "forceN_bodyXYZ": [
+        -0.09224748850101605,
+        -97304.65124769436,
+        -144139.1745263746
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.72879557725,
+        21.934372753092248,
+        60.41126550050831
+      ]
+    },
+    {
+      "case": "bodyY_roll_positive_1deg_s_linearity_check",
+      "axis": "bodyY_roll",
+      "rateDegPerSecond": 1.0,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.017453292519943295,
+        0.0
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        0.0033132558096840284,
+        -1.2922229397638318e-09,
+        -0.017135920043181287
+      ],
+      "forceN_bodyXYZ": [
+        -0.1741913968580775,
+        -97304.7446058891,
+        -144139.2220980529
+      ],
+      "torqueNm_bodyXYZ": [
+        52171.70542351767,
+        -133.06395381327638,
+        103.88792308521079
+      ]
+    },
+    {
+      "case": "bodyZ_yaw_negative_1deg_s_linearity_check",
+      "axis": "bodyZ_yaw",
+      "rateDegPerSecond": -1.0,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        -0.017453292519943295
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        -0.013133618242299826,
+        0.011210571386774271,
+        -0.002539405606490611
+      ],
+      "forceN_bodyXYZ": [
+        -0.9694133790326305,
+        -97308.63383993789,
+        -144141.28459321166
+      ],
+      "torqueNm_bodyXYZ": [
+        52170.43042549768,
+        -63.13048087489915,
+        194.46424840508553
+      ]
+    },
+    {
+      "case": "bodyZ_yaw_positive_1deg_s_linearity_check",
+      "axis": "bodyZ_yaw",
+      "rateDegPerSecond": 1.0,
+      "bodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.017453292519943295
+      ],
+      "angularVelocityReferenceFrameRadPerSecond": [
+        0.013133618242299826,
+        -0.011210571386774271,
+        0.002539405606490611
+      ],
+      "forceN_bodyXYZ": [
+        0.7029849560349248,
+        -97308.50100204562,
+        -144141.2133666756
+      ],
+      "torqueNm_bodyXYZ": [
+        52170.40542150147,
+        -48.04772700317153,
+        -30.133448854503513
+      ]
+    }
+  ],
+  "errors": [],
+  "liveStateBefore": {
+    "ut": 9932.55182616936,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71843.30659057957,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.60400390625,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      152562.89685586322,
+      70.23203560584413,
+      654291.9731900827
+    ],
+    "velocity_mps": [
+      -2241.235932888537,
+      0.04664767360659662,
+      462.32441071695246
+    ],
+    "rotation_xyzw": [
+      0.7022764893166438,
+      -0.7022956733634526,
+      -0.08238969666521534,
+      0.08246571582781426
+    ],
+    "angular_velocity_rad_s": [
+      -1.394740525198153e-05,
+      0.00024082846357487142,
+      -1.6848129211932856e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.870450496673584,
+    "sideslip_deg": 0.0007936286274343729,
+    "roll_deg": 0.003570556640625
+  },
+  "liveActuatorStateBefore": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "kspProcessPIDsBefore": [
+    69877
+  ],
+  "staticZeroRateTorqueNmBodyXYZ": [
+    52171.42084423577,
+    -55.59140436497728,
+    82.16555256160791
+  ],
+  "rateDampingDerivativeMatrixNmPerRadPerSecond": [
+    [
+      -9504.097368063694,
+      -50.53619174881929,
+      34.82535286255121
+    ],
+    [
+      30.50820168597896,
+      -4428.004293040668,
+      432.9890281463602
+    ],
+    [
+      -6.403119485997829,
+      1219.0504952208314,
+      -6437.3428298676145
+    ]
+  ],
+  "rateDampingDerivativeColumns": [
+    {
+      "rateAxis": "bodyX",
+      "centralDifferenceRateDegPerSecond": 0.01620695898549729,
+      "bodyTorqueDerivativeNmPerRadPerSecondXYZ": [
+        -9504.097368063694,
+        30.50820168597896,
+        -6.403119485997829
+      ]
+    },
+    {
+      "rateAxis": "bodyY_roll",
+      "centralDifferenceRateDegPerSecond": 0.025429628329039996,
+      "bodyTorqueDerivativeNmPerRadPerSecondXYZ": [
+        -50.53619174881929,
+        -4428.004293040668,
+        1219.0504952208314
+      ]
+    },
+    {
+      "rateAxis": "bodyZ_yaw",
+      "centralDifferenceRateDegPerSecond": 0.06856663797464597,
+      "bodyTorqueDerivativeNmPerRadPerSecondXYZ": [
+        34.82535286255121,
+        432.9890281463602,
+        -6437.3428298676145
+      ]
+    }
+  ],
+  "crossAxisRatiosAtThisOneHypotheticalState": {
+    "rollTorqueFromYawRateToYawTorqueFromYawRate": 0.06726207374530413,
+    "yawTorqueFromRollRateToRollTorqueFromRollRate": 0.2753047229734552,
+    "note": "Ratios describe simulated aerodynamic damping only; they do not include wheel/RCS actuator torque or the measured live yaw-pulse torque."
+  },
+  "rateLinearityCheck": {
+    "bodyY_roll": {
+      "measuredEnvelopeDerivativeNmPerRadPerSecondXYZ": [
+        -50.53619174881929,
+        -4428.004293040668,
+        1219.0504952208314
+      ],
+      "oneDegPerSecondDerivativeNmPerRadPerSecondXYZ": [
+        -0.6695601861977112,
+        -4440.374971921694,
+        1245.5144934694458
+      ],
+      "relativeDifferenceXYZ": [
+        0.9867508776774151,
+        0.0027937368761065716,
+        0.02170869734466615
+      ]
+    },
+    "bodyZ_yaw": {
+      "measuredEnvelopeDerivativeNmPerRadPerSecondXYZ": [
+        34.82535286255121,
+        432.9890281463602,
+        -6437.3428298676145
+      ],
+      "oneDegPerSecondDerivativeNmPerRadPerSecondXYZ": [
+        -0.7163117269553634,
+        432.08907014229715,
+        -6434.250070665714
+      ],
+      "relativeDifferenceXYZ": [
+        1.0205686853994704,
+        0.0020784776185110952,
+        0.0004804403437317422
+      ]
+    }
+  },
+  "hypotheticalState": {
+    "speedMps": 1731.89,
+    "nominalMachFromWitnessSoundSpeed": 5.211938478487767,
+    "angleOfAttackDeg": 28.0,
+    "sideslipDeg": 0.0,
+    "bankDeg": -40.01,
+    "altitudeM": 38016.7,
+    "ut": 10515.612,
+    "bodyAngularVelocityReferenceFrameRadPerS": [
+      0.0,
+      -0.0002915709005598024,
+      0.0
+    ],
+    "spinExtrapolationSeconds": 583.0601738306395,
+    "achieved": {
+      "angleOfAttackDeg": 28.000000000000014,
+      "sideslipDeg": -7.522159014299145e-15,
+      "bankDeg": -40.00999999999999
+    }
+  },
+  "loadedMassAssessment": {
+    "pausedLoadedMassKg": 25816.10546875,
+    "checkpointProfileMassKg": 25816.10493262963,
+    "massMatchesSettledProfile": true,
+    "note": "A full-mass checkpoint match was required before wrench simulation. Torque derivatives remain ideal rigid-body KSP aero outputs and are not live angular acceleration measurements."
+  },
+  "gridSummary": {
+    "sampleCount": 11,
+    "apiCallCount": 11,
+    "elapsedWallSeconds": 2.123805333976634
+  },
+  "liveStateAfter": {
+    "ut": 9932.55182616936,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71843.30659057957,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.60400390625,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      152562.89685586322,
+      70.23203560584413,
+      654291.9731900827
+    ],
+    "velocity_mps": [
+      -2241.235932888537,
+      0.04664767360659662,
+      462.32441071695246
+    ],
+    "rotation_xyzw": [
+      0.7022764893166438,
+      -0.7022956733634526,
+      -0.08238969666521534,
+      0.08246571582781426
+    ],
+    "angular_velocity_rad_s": [
+      -1.394740525198153e-05,
+      0.00024082846357487142,
+      -1.6848129211932856e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.870450496673584,
+    "sideslip_deg": 0.0007936286274343729,
+    "roll_deg": 0.003570556640625
+  },
+  "liveActuatorStateAfter": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "liveStateUnchanged": true,
+  "liveActuatorStateUnchanged": true,
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointUnchanged": true,
+  "kspProcessPIDsAfter": [
+    69877
+  ],
+  "singleKspProcessPreserved": true,
+  "sourceSHA256": "88ac61116604c08deba6f89fc19136fe41a7dce026473fdebb5f9417e9e88424"
+}
