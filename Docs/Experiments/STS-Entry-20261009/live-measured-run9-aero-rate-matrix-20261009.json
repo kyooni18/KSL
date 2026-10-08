@@ -1,0 +1,3179 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_COUNTERFACTUAL_SIMULATION_FROM_BYPASSED_MEASUREMENTS",
+  "purpose": "Measure local aerodynamic force and torque derivatives with respect to body angular velocity at five archived measured original-STS atmospheric states.",
+  "qualification": {
+    "qualified": false,
+    "inputRunShadowGateBypassed": true,
+    "measuredFlightStatesUsedAsInputs": true,
+    "simulatedWrenchIsMeasuredFlightData": false,
+    "shadowGateEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "All wrench values are hypothetical KSP simulations. The archived source telemetry explicitly records a shadow-gate bypass and cannot qualify the campaign."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "e8f9d1163c8f3b2bea64e20ba0133a3fd0985ba2",
+    "inputTelemetry": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "inputTelemetrySHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "inputGateBypassEvents": [
+      {
+        "recordSequence": 2,
+        "tickSequence": 1,
+        "ut": 9932.41182616936,
+        "event": "event=shadow-gate-bypassed; reason=KSP_LANDER_BYPASS_SHADOW_GATE"
+      }
+    ],
+    "inputMeasuredStates": [
+      {
+        "recordSequence": 10837,
+        "tickSequence": 10835,
+        "ut": 10513.551826182,
+        "positionM_canonicalXYZ": [
+          -629012.673255966,
+          -117941.274903211,
+          -216.265638162211
+        ],
+        "velocityMps_canonicalXYZ": [
+          455.126814338905,
+          -1919.39601165314,
+          -2.91287473218452
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -629012.673255966,
+          -216.265638162211,
+          -117941.274903211
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          455.126814338905,
+          -2.91287473218452,
+          -1919.39601165314
+        ],
+        "trueAirSpeedMps_reported": 1786.25451660156,
+        "altitudeM": 39974.323089011,
+        "machReported": 5.38293404514563,
+        "dynamicPressurePaReported": 1602.39282226562,
+        "angleOfAttackDeg": 22.5983066558838,
+        "sideslipDeg": 0.39592170715332,
+        "bankDeg": 1.15365600585938,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.205255228873053,
+          -0.00292544250974559,
+          0.00378588743997008
+        ],
+        "liftForceN_reported": 54322.9652577301,
+        "dragForceN_reported": 84860.7220932568,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10873,
+        "tickSequence": 10871,
+        "ut": 10515.5918261821,
+        "positionM_canonicalXYZ": [
+          -628072.422107512,
+          -121847.765209497,
+          -222.278870465054
+        ],
+        "velocityMps_canonicalXYZ": [
+          466.571141777521,
+          -1910.55021358521,
+          -2.9732131356005
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -628072.422107512,
+          -222.278870465054,
+          -121847.765209497
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          466.571141777521,
+          -2.9732131356005,
+          -1910.55021358521
+        ],
+        "trueAirSpeedMps_reported": 1780.39221191406,
+        "altitudeM": 39782.6933470782,
+        "machReported": 5.36569136650165,
+        "dynamicPressurePaReported": 1637.58508300781,
+        "angleOfAttackDeg": 22.4821949005127,
+        "sideslipDeg": 0.214859262108803,
+        "bankDeg": 1.07379150390625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.166177556027724,
+          -0.264161553648504,
+          0.321422663076588
+        ],
+        "liftForceN_reported": 55400.390092877,
+        "dragForceN_reported": 86422.0146886587,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10909,
+        "tickSequence": 10907,
+        "ut": 10517.6718261821,
+        "positionM_canonicalXYZ": [
+          -627089.820939269,
+          -125812.045689962,
+          -228.484949516575
+        ],
+        "velocityMps_canonicalXYZ": [
+          478.044159774343,
+          -1901.20072994253,
+          -3.00224737686178
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -627089.820939269,
+          -228.484949516575,
+          -125812.045689962
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          478.044159774343,
+          -3.00224737686178,
+          -1901.20072994253
+        ],
+        "trueAirSpeedMps_reported": 1774.138671875,
+        "altitudeM": 39586.0900392615,
+        "machReported": 5.34444849148317,
+        "dynamicPressurePaReported": 1680.07141113281,
+        "angleOfAttackDeg": 23.7139453887939,
+        "sideslipDeg": -1.29131984710693,
+        "bankDeg": 2.16998291015625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.842425096212487,
+          1.12590827006895,
+          1.42217468042779
+        ],
+        "liftForceN_reported": 58706.1766299215,
+        "dragForceN_reported": 96191.0300564552,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10945,
+        "tickSequence": 10943,
+        "ut": 10519.7118261822,
+        "positionM_canonicalXYZ": [
+          -626103.718921516,
+          -129680.082106943,
+          -234.840865707131
+        ],
+        "velocityMps_canonicalXYZ": [
+          488.510584077557,
+          -1890.87035511403,
+          -3.3212917076289
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -626103.718921516,
+          -234.840865707131,
+          -129680.082106943
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          488.510584077557,
+          -3.3212917076289,
+          -1890.87035511403
+        ],
+        "trueAirSpeedMps_reported": 1766.77307128906,
+        "altitudeM": 39392.5599292251,
+        "machReported": 5.32228712941101,
+        "dynamicPressurePaReported": 1715.61682128906,
+        "angleOfAttackDeg": 26.0104675292969,
+        "sideslipDeg": -2.20898389816284,
+        "bankDeg": 9.17477416992188,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.781141029100576,
+          4.14125786877769,
+          2.00880433943516
+        ],
+        "liftForceN_reported": 63607.0716538088,
+        "dragForceN_reported": 111678.654832592,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10980,
+        "tickSequence": 10978,
+        "ut": 10521.7118261822,
+        "positionM_canonicalXYZ": [
+          -625116.891301472,
+          -133450.56058195,
+          -242.452716168801
+        ],
+        "velocityMps_canonicalXYZ": [
+          498.156966096484,
+          -1879.52011205998,
+          -4.45385683684667
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -625116.891301472,
+          -242.452716168801,
+          -133450.56058195
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          498.156966096484,
+          -4.45385683684667,
+          -1879.52011205998
+        ],
+        "trueAirSpeedMps_reported": 1758.29443359375,
+        "altitudeM": 39202.8149917466,
+        "machReported": 5.2997571781291,
+        "dynamicPressurePaReported": 1745.28271484375,
+        "angleOfAttackDeg": 27.8780193328857,
+        "sideslipDeg": -1.43182587623596,
+        "bankDeg": 20.8919372558594,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.130832901695995,
+          5.29254340713976,
+          2.2211905943539
+        ],
+        "liftForceN_reported": 68597.024478038,
+        "dragForceN_reported": 127588.270452361,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      }
+    ],
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "kspInstallRoot": "/Applications/.Misc/LMPKSP",
+    "kspLogSHA256": "3988cb46de8932cf26101b55e22bcd6a1ed2e4042e425de459441356b42949fa",
+    "farApiLookupEvidence": [
+      "[LOG 01:57:42.804] [kRPC] 10/09/2026 01:57:42 - Info - Load API: FerramAerospaceResearch not found; skipping"
+    ],
+    "farPluginDirectoriesPresent": [],
+    "farAngularVelocityIgnoreWarningApplies": false,
+    "inputStateSelection": "Five distinct archived atmospheric measurements, each within 0.6 s of a predetermined anchor UT; Mach > 3, dynamic pressure > 1 kPa, thrust zero, and speedbrakes recorded stowed.",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "apiReferenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "bodyAxisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "rateUnits": "Input body angular velocity in rad/s; saved telemetry bodyPitchRate/bodyRollRate/bodyYawRate values are degrees/s and converted to rad/s before rotation into the non-rotating reference frame.",
+    "ratePerturbationsDegPerSecond": [
+      0.1,
+      1.0
+    ],
+    "surfaceStateLimit": "The live checkpoint exposes neutral control surfaces. Historical run-9 control-surface deflections and per-sample RCS state are unavailable, so the simulation does not replay historical actuation.",
+    "noFlightMutation": "The probe uses only hypothetical arguments to simulate_aerodynamic_wrench_at. It does not call setters for UT, pause, position, velocity, rotation, controls, action groups, throttle, SAS, RCS, physics, or save state.",
+    "probeSource": "Tools/probe_sts_measured_run9_aero_rate_matrix.py",
+    "probeSourceSHA256": "66c65a92c1bc8e6434ec0d3bc5ce7b229a984711c39e3292a2d2e4c6a2ba7036",
+    "helperSourceSHA256": {
+      "probe_sts_measured_run9_wrench_grid.py": "7cf7f06c1624e8ffa2db14fd2cc981f826754905123e4ef385e7b37da599dda9",
+      "probe_sts_aero_wrench_grid.py": "141d7a9b50678bab1f639e0c41f9019dea0bf54715a9d73e177c84043ca8783c",
+      "probe_sts_shadow_witness_wrench.py": "c1801078b9964fce11ab25923e07532a9abfc70183b20e000946c72e11b466d9",
+      "ksp_test_guard.py": "0f4adc8d30b23e7fcfde61c7cfe0623d01a67ce6393ded25f42829dd84e53a5d"
+    }
+  },
+  "gridDefinition": {
+    "anchorCount": 5,
+    "casesPerAnchor": 14,
+    "caseTypes": [
+      "zero_rate_reference",
+      "measured_rate_baseline",
+      "symmetric_rate_offsets_about_measured_baseline"
+    ],
+    "derivativeMatrixRows": "body torque XYZ (N m)",
+    "derivativeMatrixColumns": "body angular velocity XYZ (rad/s)",
+    "derivativeTensorUnits": "d(body torque N m)/d(body angular velocity rad/s)",
+    "derivativeMethod": "Centered finite difference about each archived measured body-rate vector, independently perturbing one body axis at a time."
+  },
+  "liveKspBefore": {
+    "ut": 9931.271826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71918.50024391653,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.324951171875,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155430.235688469,
+      70.17166374121332,
+      653694.0476092763
+    ],
+    "velocity_mps": [
+      -2238.9405092828515,
+      0.047693956067576614,
+      472.07149977792403
+    ],
+    "rotation_xyzw": [
+      0.7022775424956035,
+      -0.7022941446158054,
+      -0.08239398710990209,
+      0.0824651827795263
+    ],
+    "angular_velocity_rad_s": [
+      8.56011308478297e-06,
+      0.00025994359748438,
+      1.0342248493076439e-06
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.6200518608093262,
+    "sideslip_deg": 0.0005473786732181907,
+    "roll_deg": 0.00286865234375
+  },
+  "liveActuatorsBefore": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ],
+    "actionGroups0Through9": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "liveKspAfter": {
+    "ut": 9931.271826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71918.50024391653,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.324951171875,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155430.235688469,
+      70.17166374121332,
+      653694.0476092763
+    ],
+    "velocity_mps": [
+      -2238.9405092828515,
+      0.047693956067576614,
+      472.07149977792403
+    ],
+    "rotation_xyzw": [
+      0.7022775424956035,
+      -0.7022941446158054,
+      -0.08239398710990209,
+      0.0824651827795263
+    ],
+    "angular_velocity_rad_s": [
+      8.56011308478297e-06,
+      0.00025994359748438,
+      1.0342248493076439e-06
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.6200518608093262,
+    "sideslip_deg": 0.0005473786732181907,
+    "roll_deg": 0.00286865234375
+  },
+  "liveActuatorsAfter": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ],
+    "actionGroups0Through9": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "liveStateUnchanged": true,
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointUnchanged": true,
+  "kspProcessPIDsBefore": [
+    69877
+  ],
+  "kspProcessPIDsAfter": [
+    69877
+  ],
+  "singleKSPProcessPreserved": true,
+  "airSpeedFrameChecks": [
+    {
+      "anchorIndex": 0,
+      "ut": 10513.551826182,
+      "computedAirSpeedMps": 1786.254562393876,
+      "reportedTrueAirSpeedMps": 1786.25451660156,
+      "relativeDifference": 2.5635941385168615e-08
+    },
+    {
+      "anchorIndex": 1,
+      "ut": 10515.5918261821,
+      "computedAirSpeedMps": 1780.392206087354,
+      "reportedTrueAirSpeedMps": 1780.39221191406,
+      "relativeDifference": -3.2727092166842595e-09
+    },
+    {
+      "anchorIndex": 2,
+      "ut": 10517.6718261821,
+      "computedAirSpeedMps": 1774.138731331248,
+      "reportedTrueAirSpeedMps": 1774.138671875,
+      "relativeDifference": 3.351273997033961e-08
+    },
+    {
+      "anchorIndex": 3,
+      "ut": 10519.7118261822,
+      "computedAirSpeedMps": 1766.7731182774558,
+      "reportedTrueAirSpeedMps": 1766.77307128906,
+      "relativeDifference": 2.6595603315280325e-08
+    },
+    {
+      "anchorIndex": 4,
+      "ut": 10521.7118261822,
+      "computedAirSpeedMps": 1758.2944049657906,
+      "reportedTrueAirSpeedMps": 1758.29443359375,
+      "relativeDifference": -1.6281664129917823e-08
+    }
+  ],
+  "samples": [
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "zero_rate_reference",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.12184122503095,
+        -59875.691312009236,
+        -87047.60156343656
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27746.622467229008,
+        298.0169020766916,
+        -327.60139600087314
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "measured_rate_baseline",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -5.105860387286684e-05,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -2.4634342101628325e-05,
+        -0.0035829479564270434,
+        4.788926658815673e-05
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1167560020549,
+        -59875.22870148114,
+        -87047.43727888261
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.84875761784,
+        298.20133275259286,
+        -327.9773978154881
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyX_pitch_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.005327708802763635,
+        -5.105860387286684e-05,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        4.028475043501168e-06,
+        -0.005327899547324823,
+        7.017348081478386e-05
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1149240859013,
+        -59874.992497557534,
+        -87047.34905130327
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27782.680233638097,
+        298.1924298090562,
+        -327.9823688807719
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyX_pitch_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0018370502987749757,
+        -5.105860387286684e-05,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -5.3297159246757655e-05,
+        -0.001837996365529263,
+        2.5605052361529388e-05
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1185388015292,
+        -59875.457861840216,
+        -87047.51628526095
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27759.042296293443,
+        298.1837395042239,
+        -327.96494728658035
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyY_roll_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -0.0017963878558671965,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.0010560534442901077,
+        -0.0035819096029236185,
+        0.0014558479859154672
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1240358315408,
+        -59875.20795735504,
+        -87047.42399931299
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.83981926644,
+        303.8219941198222,
+        -328.5890374305727
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyY_roll_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        0.0016942706481214626,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0010067847600868517,
+        -0.003583986309930469,
+        -0.0013600694527391537
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1094517744932,
+        -59875.24293909797,
+        -87047.43779069222
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.840881183078,
+        292.5830987973641,
+        -327.3617791805391
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyZ_yaw_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -5.105860387286684e-05,
+        -0.0016792530510569524
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0013830329752788327,
+        -0.003546656564715023,
+        0.001079068133872388
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.16146154509624,
+        -59875.35886540869,
+        -87047.49156115337
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.416421629943,
+        297.57154244883714,
+        -319.00260566920224
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyZ_yaw_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -5.105860387286684e-05,
+        0.0018114054529317068
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.001432301659482089,
+        -0.0036192393481390634,
+        -0.000983289600696074
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.07194246815925,
+        -59875.07893707419,
+        -87047.36850477828
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27771.27046659924,
+        298.80659074215873,
+        -336.9455584411917
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyX_pitch_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0210356720707126,
+        -5.105860387286684e-05,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0002619938293496717,
+        -0.021032463865404846,
+        0.0002707314088544295
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.0988288703229,
+        -59872.92973942257,
+        -87046.61442445968
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27888.877366098404,
+        298.14647427009186,
+        -328.0509229894051
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyX_pitch_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01387091296917399,
+        -5.105860387286684e-05,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.00031126251355292553,
+        0.013866567952550757,
+        -0.00017495287567811647
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.13471769788157,
+        -59877.523273363026,
+        -87048.24921665601
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27652.814144697037,
+        298.23409436512884,
+        -327.89542005372823
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyY_roll_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -0.017504351123816164,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.010338825363986424,
+        -0.003572564421392789,
+        0.014127476459861262
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.1899291373775,
+        -59875.06481913345,
+        -87047.36415397283
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.81158833438,
+        354.3578484151112,
+        -334.08099523760575
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyY_roll_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        0.017402233916070427,
+        6.607620093737707e-05
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.010289556679783164,
+        -0.003593331491461297,
+        -0.014031697926684943
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.04361496606725,
+        -59875.38866661918,
+        -87047.50437741133
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.876051912037,
+        242.05784592637065,
+        -321.87580334873746
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyZ_yaw_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -5.105860387286684e-05,
+        -0.01738721631900592
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.01405203883170298,
+        -0.0032200340393068435,
+        0.010359677939430465
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -505.56410519609926,
+        -59876.56321709231,
+        -87047.99256008887
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27766.624491262668,
+        291.9117942847224,
+        -238.2755442792186
+      ]
+    },
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "anchorAltitudeM": 39974.323089011,
+      "case": "bodyZ_yaw_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0035823795507693053,
+        -5.105860387286684e-05,
+        0.01751936872088067
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.014101307515906237,
+        -0.0039458618735472425,
+        -0.010263899406254154
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -504.66967264509003,
+        -59873.87405258448,
+        -87046.86960227217
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27775.079076145834,
+        304.45974809365,
+        -417.6744058760505
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "zero_rate_reference",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.2867649179607,
+        -60610.92314501737,
+        -88321.00494682777
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28249.21118302105,
+        147.1823145697963,
+        -168.1237849061108
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "measured_rate_baseline",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.0046104888683500345,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.0072054186884280376,
+        -0.003010453546486348,
+        0.0003981436703947346
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.16165921034553,
+        -60610.02668640784,
+        -88320.65849952589
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.62579744735,
+        164.4010456241158,
+        -199.19302897941634
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyX_pitch_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.004645674747595463,
+        -0.0046104888683500345,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.007177953713763845,
+        -0.004755487709198758,
+        0.0004147462003338872
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.160712140103,
+        -60609.79930334535,
+        -88320.57572909864
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28282.685395857305,
+        164.3977100592674,
+        -199.19211732608528
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyX_pitch_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0011550162436068034,
+        -0.0046104888683500345,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.007232883663092229,
+        -0.0012654193837739382,
+        0.0003815411404555803
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.1626918698239,
+        -60610.2751420568,
+        -88320.75167132737
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28258.561109789098,
+        164.40497515716197,
+        -199.19190014494234
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyY_roll_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.006355818120344364,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.00824341333158422,
+        -0.0030134410144722007,
+        0.0018012589164387613
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.1696655604683,
+        -60610.01022151319,
+        -88320.6513563627
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.628441268724,
+        170.14537487462803,
+        -199.80054343024858
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyY_roll_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.002865159616355705,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.006167424045271856,
+        -0.003007466078500494,
+        -0.0010049715756492925
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.1536394290306,
+        -60610.040294902545,
+        -88320.6621186723
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.629419270528,
+        158.66408904094715,
+        -198.58598459457426
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyZ_yaw_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.0046104888683500345,
+        0.003864554509220538
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.005802569090711714,
+        -0.0029784997694213633,
+        0.001436009827558323
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.20661901120184,
+        -60610.16112050561,
+        -88320.71254493312
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.20813071272,
+        163.76089386719832,
+        -190.02903631277513
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyZ_yaw_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.0046104888683500345,
+        0.007355213013209197
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.00860826828614436,
+        -0.003042407323551331,
+        -0.0006397224867688541
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.1167628108742,
+        -60609.90475306319,
+        -88320.61188557098
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28271.052670422563,
+        165.047253305529,
+        -208.3567202479644
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyX_pitch_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.020353638015544427,
+        -0.0046104888683500345,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.0069307689417861165,
+        -0.020460795173610442,
+        0.0005641689697862651
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.1518204043532,
+        -60607.68464860764,
+        -88319.83484790815
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28391.230148660645,
+        164.3641040710645,
+        -199.20197130292036
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyX_pitch_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.014552947024342162,
+        -0.0046104888683500345,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.007480068435069958,
+        0.014439888080637748,
+        0.0002321183710032029
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.17158537475916,
+        -60612.39245786538,
+        -88321.49191125139
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28150.02502983389,
+        164.43764550328706,
+        -199.18402884476927
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyY_roll_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.02206378138829333,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.01758536511998985,
+        -0.0030403282263448805,
+        0.014429296130835004
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.24177507662534,
+        -60609.86365799721,
+        -88320.5895858819
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.600008103487,
+        221.81645964658674,
+        -205.27048445746368
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyY_roll_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        0.012842803651593262,
+        0.005609883761214868
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.003174527743133781,
+        -0.0029805788666278157,
+        -0.013633008790045536
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.08159656173666,
+        -60610.18961508247,
+        -88320.72670331052
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.657318688307,
+        106.99731900031475,
+        -193.1089989710963
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyZ_yaw_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.0046104888683500345,
+        -0.011843408758728427
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.006823077288735201,
+        -0.0026909157758365073,
+        0.010776805242030618
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -277.6115140799593,
+        -60611.42093161704,
+        -88321.23879010245
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28266.351924539078,
+        157.9695470479346,
+        -107.53244253912453
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "anchorAltitudeM": 39782.6933470782,
+      "case": "bodyZ_yaw_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.002900345495601133,
+        -0.0046104888683500345,
+        0.023063176281158164
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.021233914665591276,
+        -0.0033299913171361863,
+        -0.009980517901241152
+      ],
+      "simulatedForceN_bodyXYZ": [
+        -276.71228477723344,
+        -60608.65632289827,
+        -88320.08850551756
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28274.907570411033,
+        170.8283127605937,
+        -290.8546670419473
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "zero_rate_reference",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1853.2008562668998,
+        -67010.87856183924,
+        -97094.68852047058
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30838.238175853414,
+        -1177.2651358908406,
+        1266.683850975991
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "measured_rate_baseline",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0196508063881367,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.007959427688721456,
+        0.014783624469438754,
+        -0.030602947649039352
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.0614169805413,
+        -67014.70260155378,
+        -97096.23700069144
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.29701990735,
+        -1234.8538357723519,
+        1141.6700344930068
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyX_pitch_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01295776237834358,
+        0.0196508063881367,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.007894400421570054,
+        0.01303963177636166,
+        -0.030623807631963967
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.054757752143,
+        -67014.44086811003,
+        -97096.1304135844
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30737.92130437817,
+        -1234.8530443525742,
+        1141.7353643617716
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyX_pitch_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01644842088233224,
+        0.0196508063881367,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.008024454955872857,
+        0.016527617162515853,
+        -0.030582087666114737
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.067635134983,
+        -67014.93840341039,
+        -97096.32202664533
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30712.733881327025,
+        -1234.8752192450738,
+        1141.6131994876505
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyY_roll_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.01790547713614237,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.009035208748265876,
+        0.014727087540912976,
+        -0.029229749598681923
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.0569363123213,
+        -67014.71238745651,
+        -97096.23736029144
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.294121514282,
+        -1228.9124165057183,
+        1140.8430021871573
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyY_roll_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.021396135640131028,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.006883646629177041,
+        0.014840161397964534,
+        -0.03197614569939678
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.0659083270584,
+        -67014.68667104928,
+        -97096.22802690245
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.29477760833,
+        -1240.8122840380383,
+        1142.5101018971036
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyZ_yaw_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0196508063881367,
+        0.023076301459968765
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.006586605499099145,
+        0.01482192930038298,
+        -0.02952588396778646
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.008380687068,
+        -67014.577233688,
+        -97096.1816774326
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.786267665197,
+        -1235.5359263146202,
+        1151.0822044301076
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyZ_yaw_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0196508063881367,
+        0.026566959963957422
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.009332249878343767,
+        0.014745319638494528,
+        -0.031680011330292246
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.1146296966836,
+        -67014.83366185233,
+        -97096.29065715711
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30724.82033313775,
+        -1234.208981719068,
+        1132.2642587541977
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyX_pitch_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.0027502008896053854,
+        0.0196508063881367,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.00730915501720745,
+        -0.00265630246133218,
+        -0.030811547478285514
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1853.9977569503899,
+        -67012.2443569704,
+        -97095.29622213007
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30851.12066701142,
+        -1234.8525960427069,
+        1142.3344955158009
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyX_pitch_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.03215638415028121,
+        0.0196508063881367,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.008609700360235456,
+        0.03222355140020969,
+        -0.030394347819793187
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.1250408516426,
+        -67017.15009846145,
+        -97097.16157562268
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30599.497401169716,
+        -1234.8739757134936,
+        1141.0065970783235
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyY_roll_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0021975138681934042,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.01871723828416564,
+        0.01421825518418095,
+        -0.01687096714546505
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.0170850596915,
+        -67014.855334172,
+        -97096.31294136871
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.275252818912,
+        -1175.3491894810468,
+        1133.3483366443343
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyY_roll_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.037104098908079995,
+        0.024821630711963093
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0027983829067227198,
+        0.01534899375469656,
+        -0.044334928152613653
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.106085556763,
+        -67014.55395248329,
+        -97096.15509252645
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.33078301814,
+        -1294.3714804209194,
+        1149.9898805009616
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyZ_yaw_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0196508063881367,
+        0.007368338192019798
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.005768794207501657,
+        0.015166672778880994,
+        -0.019832310836510457
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1853.52885830999,
+        -67013.34608592872,
+        -97095.6349094717
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30730.21745320026,
+        -1241.4855456353253,
+        1235.7713362065988
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "anchorAltitudeM": 39586.0900392615,
+      "case": "bodyZ_yaw_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.01470309163033791,
+        0.0196508063881367,
+        0.04227492323190639
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        -0.021687649584944565,
+        0.014400576159996518,
+        -0.04137358446156824
+      ],
+      "simulatedForceN_bodyXYZ": [
+        1854.594324869664,
+        -67016.04991992308,
+        -97096.82137145242
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30720.424235327064,
+        -1228.2278988522557,
+        1047.5739305475272
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "zero_rate_reference",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3689.669301236885,
+        -77337.01639750457,
+        -111874.5314178228
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36744.784939794474,
+        -1925.3364016574524,
+        2191.1151682710097
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "measured_rate_baseline",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07227858498429397,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.018286704537782885,
+        0.016433941666028892,
+        -0.07768403191055151
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.0015129913954,
+        -77341.2169451323,
+        -111876.31221315768
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.446444343455,
+        -2171.6302234578616,
+        2051.8309318102183
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyX_pitch_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.011888153628227562,
+        0.07227858498429397,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.01853714233045922,
+        0.01470667356611266,
+        -0.07768417640354652
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.9904037997985,
+        -77340.97694456326,
+        -111876.21569146577
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36642.8073106698,
+        -2171.6367067579813,
+        2051.9849408232003
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyX_pitch_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.015378812132216223,
+        0.07227858498429397,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.01803626674510654,
+        0.01816120976594513,
+        -0.07768388741755652
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.013867630325,
+        -77341.48988380516,
+        -111876.4309268372
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36616.058379903014,
+        -2171.6419584164687,
+        2051.693355840889
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyY_roll_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07053325573229964,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.017162004200535732,
+        0.01627075977958866,
+        -0.07635942063881891
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.0032920893864,
+        -77341.22943955945,
+        -111876.32349020714
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.4427634537,
+        -2165.377440505952,
+        2050.5207970460706
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyY_roll_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.0740239142362883,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.019411404875030017,
+        0.01659712355246913,
+        -0.07900864318228412
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.9994237158025,
+        -77341.20072862518,
+        -111876.30430027505
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.456894989606,
+        -2177.9113086893776,
+        2053.165117398905
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyZ_yaw_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07227858498429397,
+        0.03331492049949898
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.019597621873568276,
+        0.01662391740347089,
+        -0.07654755526944192
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.9362199048774,
+        -77341.09333610002,
+        -111876.25392086002
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.97383842973,
+        -2172.2872979333915,
+        2061.44661115728
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyZ_yaw_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07227858498429397,
+        0.036805579003487646
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.016975787201997494,
+        0.016243965928586887,
+        -0.07882050855166114
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.0678399209646,
+        -77341.36548633508,
+        -111876.38690731532
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36628.880451134064,
+        -2170.9965685253446,
+        2042.2417526112367
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyX_pitch_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.003819809639721403,
+        0.07227858498429397,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.02079108246454632,
+        -0.0008387393331335258,
+        -0.07768547684050148
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.8831446126205,
+        -77338.61980195093,
+        -111875.21483465288
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36763.08353235562,
+        -2171.5654198885823,
+        2053.261242267832
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyX_pitch_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.03108677540016519,
+        0.07227858498429397,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.01578232661101946,
+        0.03370662266519131,
+        -0.07768258698060157
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.121171861603,
+        -77343.84364610202,
+        -111877.42403335759
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36495.77080280606,
+        -2171.7061872469676,
+        2050.403679113975
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyY_roll_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.05482529246435068,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0070397011653115064,
+        0.014802122801626554,
+        -0.06443791919322549
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.0214260221037,
+        -77341.36523023831,
+        -111876.4154635887
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.37859617983,
+        -2108.9638409640975,
+        2038.6158893221764
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyY_roll_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.08973187750423726,
+        0.035060249751493314
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.029533707910254264,
+        0.01806576053043122,
+        -0.09093014462787756
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.982454649522,
+        -77341.09127141503,
+        -111876.22311420983
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.48243842219,
+        -2234.29504745705,
+        2065.0551607987454
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyZ_yaw_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07227858498429397,
+        0.017606957231550018
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03139587789563677,
+        0.018333699040448875,
+        -0.06631926549945538
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3690.3453215541813,
+        -77339.88289141886,
+        -111875.66726500717
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36634.974581821305,
+        -2178.254059273575,
+        2147.890008666476
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "anchorAltitudeM": 39392.5599292251,
+      "case": "bodyZ_yaw_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.013633482880221892,
+        0.07227858498429397,
+        0.052513542271436606
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.005177531179929001,
+        0.014534184291608895,
+        -0.08904879832164768
+      ],
+      "simulatedForceN_bodyXYZ": [
+        3691.6594341427262,
+        -77342.57930212191,
+        -111876.97126548264
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36623.87694288476,
+        -2165.017708680596,
+        1955.7901290296722
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "zero_rate_reference",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2643.1978310422273,
+        -85267.5700466736,
+        -124168.30837464749
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43738.26686059687,
+        -1205.3716796406006,
+        1423.742484928025
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "measured_rate_baseline",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09237230825930759,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03279186861680377,
+        0.007066878322749909,
+        -0.09442191129421548
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.5092401992515,
+        -85270.27533761167,
+        -124169.57373302591
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.25186417546,
+        -1540.6610174596717,
+        1303.5276175967483
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyX_pitch_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0005381356525388568,
+        0.09237230825930759,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03332704785688453,
+        0.005408883950346506,
+        -0.09431793033474536
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.500477378242,
+        -85269.987347429,
+        -124169.44147427939
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43721.41619889401,
+        -1540.6230814215232,
+        1303.631433999315
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyX_pitch_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.004028794156527516,
+        0.09237230825930759,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03225668937672303,
+        0.008724872695153305,
+        -0.09452589225368559
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.517855548431,
+        -85270.56183910948,
+        -124169.70415475157
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43693.15585335136,
+        -1540.6623038033576,
+        1303.4021816076493
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyY_roll_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09062697900731326,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03165190571946304,
+        0.006779818986963802,
+        -0.09313185093582457
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.5153052878086,
+        -85270.28399710864,
+        -124169.58111734713
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.25496974925,
+        -1534.042585377043,
+        1301.7092531942544
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyY_roll_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09411763751130192,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.033931831514144514,
+        0.007353937658536015,
+        -0.09571197165260638
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.502917679507,
+        -85270.2558977967,
+        -124169.5587745831
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.26935656534,
+        -1547.257997134533,
+        1305.3226297615365
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyZ_yaw_negative_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09237230825930759,
+        0.03702175993381099
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03400027333855067,
+        0.007530371361191439,
+        -0.09325096875521405
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.4356218202884,
+        -85270.12801831959,
+        -124169.49568905453
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.883854729494,
+        -1541.2872553737616,
+        1313.2242809962809
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyZ_yaw_positive_0.1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09237230825930759,
+        0.04051241843779965
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.031583463895056875,
+        0.006603385284308365,
+        -0.09559285383321692
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.5820021282925,
+        -85270.39470439893,
+        -124169.63742311868
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43706.71520688115,
+        -1539.991464707884,
+        1293.8039354679822
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyX_pitch_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        -0.015169827615410109,
+        0.09237230825930759,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.03814366101761125,
+        -0.009513065401284132,
+        -0.0933821016995144
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.4243204446757,
+        -85267.49566053887,
+        -124168.33383365347
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43848.49565052656,
+        -1540.59034709759,
+        1304.7040112340073
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyX_pitch_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.019736757424476482,
+        0.09237230825930759,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.027440076215996322,
+        0.02364682204678395,
+        -0.09546172088891655
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.5941137322734,
+        -85273.05310141479,
+        -124170.80702297918
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43566.05587034511,
+        -1540.683745924609,
+        1302.321321721316
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyY_roll_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.0749190157393643,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.021392239643396427,
+        0.004196284964888837,
+        -0.08152130771030655
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.5708261074324,
+        -85270.40241322649,
+        -124169.65949531748
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.183332024506,
+        -1474.6258416531055,
+        1285.4628507129419
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyY_roll_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.10982560077925088,
+        0.03876708918580532
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.04419149759021114,
+        0.00993747168061096,
+        -0.10732251487812441
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2644.4473834765304,
+        -85270.13713182951,
+        -124169.46928709447
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.38372624353,
+        -1606.6654054021346,
+        1321.5691330639274
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyZ_yaw_negative_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09237230825930759,
+        0.021313796665862025
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.04487591583427275,
+        0.011701808707165279,
+        -0.08271248590420115
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2643.7761352239104,
+        -85268.89440208916,
+        -124168.8484103385
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43713.108451489024,
+        -1547.0027840141192,
+        1400.5792752341877
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "anchorAltitudeM": 39202.8149917466,
+      "case": "bodyZ_yaw_positive_1deg_s",
+      "measuredBaselineBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "hypotheticalBodyRateRadPerSecondXYZ": [
+        0.0022834649045331864,
+        0.09237230825930759,
+        0.05622038170574861
+      ],
+      "hypotheticalAngularVelocityNonrotatingRadPerSecondXYZ": [
+        0.020707821399334796,
+        0.002431947938334532,
+        -0.1061313366842298
+      ],
+      "simulatedForceN_bodyXYZ": [
+        2645.242410470084,
+        -85271.64505294542,
+        -124170.29732121181
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43701.449767154336,
+        -1534.2986845094129,
+        1206.444288723149
+      ]
+    }
+  ],
+  "anchorMatrices": [
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "ut": 10513.551826182,
+      "altitudeM": 39974.323089011,
+      "mach": 5.38293404514563,
+      "dynamicPressurePa": 1602.39282226562,
+      "angleOfAttackDeg": 22.5983066558838,
+      "sideslipDeg": 0.39592170715332,
+      "bankDeg": 1.15365600585938,
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "zeroRateTorqueNm_bodyXYZ": [
+        27746.622467229008,
+        298.0169020766916,
+        -327.60139600087314
+      ],
+      "measuredRateTorqueNm_bodyXYZ": [
+        27770.84875761784,
+        298.20133275259286,
+        -327.9773978154881
+      ],
+      "measuredRateMinusZeroRateTorqueNm_bodyXYZ": [
+        24.22629038883315,
+        0.18443067590123974,
+        -0.37600181461493776
+      ],
+      "localRateDerivativeMatrices": [
+        {
+          "centralDifferenceOffsetDegPerSecond": 0.1,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -6771.77023121685,
+              0.3042167079664964,
+              244.66586127506088
+            ],
+            [
+              -2.4895889478563844,
+              -3219.7063418308635,
+              353.8152735108143
+            ],
+            [
+              4.9909190978261675,
+              351.5835904976901,
+              -5140.277329187781
+            ]
+          ]
+        },
+        {
+          "centralDifferenceOffsetDegPerSecond": 1.0,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -6762.713142280348,
+              1.8467454659801315,
+              242.2060156702535
+            ],
+            [
+              2.510130823077122,
+              -3217.158090956738,
+              359.47239738832747
+            ],
+            [
+              4.454830958088911,
+              349.652991689729,
+              -5139.398809475027
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "ut": 10515.5918261821,
+      "altitudeM": 39782.6933470782,
+      "mach": 5.36569136650165,
+      "dynamicPressurePa": 1637.58508300781,
+      "angleOfAttackDeg": 22.4821949005127,
+      "sideslipDeg": 0.214859262108803,
+      "bankDeg": 1.07379150390625,
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "zeroRateTorqueNm_bodyXYZ": [
+        28249.21118302105,
+        147.1823145697963,
+        -168.1237849061108
+      ],
+      "measuredRateTorqueNm_bodyXYZ": [
+        28270.62579744735,
+        164.4010456241158,
+        -199.19302897941634
+      ],
+      "measuredRateMinusZeroRateTorqueNm_bodyXYZ": [
+        21.414614426299522,
+        17.218731054319505,
+        -31.069244073305526
+      ],
+      "localRateDerivativeMatrices": [
+        {
+          "centralDifferenceOffsetDegPerSecond": 0.1,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -6911.0988773725185,
+              0.280176878761373,
+              241.94280502630943
+            ],
+            [
+              2.081297235538431,
+              -3289.1461082662777,
+              368.51483376583866
+            ],
+            [
+              0.06221781440243437,
+              347.94547627231043,
+              -5250.494688680326
+            ]
+          ]
+        },
+        {
+          "centralDifferenceOffsetDegPerSecond": 1.0,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -6910.017652862265,
+              1.641827315800198,
+              245.1011997357666
+            ],
+            [
+              2.106806842849904,
+              -3289.326083175194,
+              368.3765025414487
+            ],
+            [
+              0.5140135630735784,
+              348.40089548922816,
+              -5251.794877480756
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "ut": 10517.6718261821,
+      "altitudeM": 39586.0900392615,
+      "mach": 5.34444849148317,
+      "dynamicPressurePa": 1680.07141113281,
+      "angleOfAttackDeg": 23.7139453887939,
+      "sideslipDeg": -1.29131984710693,
+      "bankDeg": 2.16998291015625,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "zeroRateTorqueNm_bodyXYZ": [
+        30838.238175853414,
+        -1177.2651358908406,
+        1266.683850975991
+      ],
+      "measuredRateTorqueNm_bodyXYZ": [
+        30725.29701990735,
+        -1234.8538357723519,
+        1141.6700344930068
+      ],
+      "measuredRateMinusZeroRateTorqueNm_bodyXYZ": [
+        -112.9411559460641,
+        -57.588699881511275,
+        -125.01381648298411
+      ],
+      "localRateDerivativeMatrices": [
+        {
+          "centralDifferenceOffsetDegPerSecond": 0.1,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -7215.665188205868,
+              0.18795709991142723,
+              -276.7198585427861
+            ],
+            [
+              -6.3526387569187435,
+              -3409.0609318334855,
+              380.14162486413215
+            ],
+            [
+              -34.99765845944543,
+              477.58888703704554,
+              -5390.944331680464
+            ]
+          ]
+        },
+        {
+          "centralDifferenceOffsetDegPerSecond": 1.0,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -7208.475580013956,
+              1.590823025645016,
+              -280.5550259931401
+            ],
+            [
+              -0.612482451728538,
+              -3409.7374694164387,
+              379.8036034725377
+            ],
+            [
+              -38.04148804473626,
+              476.74511378330436,
+              -5391.458529788139
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "ut": 10519.7118261822,
+      "altitudeM": 39392.5599292251,
+      "mach": 5.32228712941101,
+      "dynamicPressurePa": 1715.61682128906,
+      "angleOfAttackDeg": 26.0104675292969,
+      "sideslipDeg": -2.20898389816284,
+      "bankDeg": 9.17477416992188,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "zeroRateTorqueNm_bodyXYZ": [
+        36744.784939794474,
+        -1925.3364016574524,
+        2191.1151682710097
+      ],
+      "measuredRateTorqueNm_bodyXYZ": [
+        36629.446444343455,
+        -2171.6302234578616,
+        2051.8309318102183
+      ],
+      "measuredRateMinusZeroRateTorqueNm_bodyXYZ": [
+        -115.33849545101839,
+        -246.2938218004092,
+        -139.28423646079136
+      ],
+      "localRateDerivativeMatrices": [
+        {
+          "centralDifferenceOffsetDegPerSecond": 0.1,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -7663.004197122268,
+              4.048386827522398,
+              -313.232387074599
+            ],
+            [
+              -1.5044893338591332,
+              -3590.6887394179284,
+              369.76673787253225
+            ],
+            [
+              -83.53294427913644,
+              757.5419794897381,
+              -5501.786704170186
+            ]
+          ]
+        },
+        {
+          "centralDifferenceOffsetDegPerSecond": 1.0,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -7657.945606655836,
+              2.974861111171254,
+              -317.92393681206823
+            ],
+            [
+              -4.0326877643429295,
+              -3590.4745866643943,
+              379.1935125665864
+            ],
+            [
+              -81.86315420404861,
+              757.4293345040134,
+              -5503.2561740799865
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "ut": 10521.7118261822,
+      "altitudeM": 39202.8149917466,
+      "mach": 5.2997571781291,
+      "dynamicPressurePa": 1745.28271484375,
+      "angleOfAttackDeg": 27.8780193328857,
+      "sideslipDeg": -1.43182587623596,
+      "bankDeg": 20.8919372558594,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "zeroRateTorqueNm_bodyXYZ": [
+        43738.26686059687,
+        -1205.3716796406006,
+        1423.742484928025
+      ],
+      "measuredRateTorqueNm_bodyXYZ": [
+        43707.25186417546,
+        -1540.6610174596717,
+        1303.5276175967483
+      ],
+      "measuredRateMinusZeroRateTorqueNm_bodyXYZ": [
+        -31.014996421414253,
+        -335.2893378190711,
+        -120.21486733127676
+      ],
+      "localRateDerivativeMatrices": [
+        {
+          "centralDifferenceOffsetDegPerSecond": 0.1,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -8095.992635876141,
+              4.121519212514867,
+              -334.79294723639657
+            ],
+            [
+              -11.236384707810373,
+              -3785.936591158735,
+              371.21668143615847
+            ],
+            [
+              -65.67597242865108,
+              1035.156135483668,
+              -5563.519177286365
+            ]
+          ]
+        },
+        {
+          "centralDifferenceOffsetDegPerSecond": 1.0,
+          "matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ": [
+            [
+              -8091.303685499854,
+              5.740871494552496,
+              -333.99670352647206
+            ],
+            [
+              -2.675679299829795,
+              -3782.6548657839767,
+              363.9456420669579
+            ],
+            [
+              -68.25902648364674,
+              1034.3687963095822,
+              -5561.557691455843
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "rateDampingSummary": {
+    "yawRateToRollTorqueDerivativeMagnitudeRatioByAnchor": [
+      0.06883194249107195,
+      0.07018668822964988,
+      0.07051484887910807,
+      0.06720848294468784,
+      0.06672335793353394
+    ],
+    "yawRateToRollTorqueDerivativeMagnitudeRatioRange": [
+      0.06672335793353394,
+      0.07051484887910807
+    ],
+    "yawRateToRollTorqueDerivativeMagnitudeRatioMedian": 0.06883194249107195,
+    "maximumDiagonalDerivativeRelativeDifferenceBetween0_1And1DegPerSecond": 0.0013374772957816547,
+    "maximumYawRateToRollTorqueDerivativeRelativeDifferenceBetween0_1And1DegPerSecond": 0.025493841734633725,
+    "interpretation": "The simulated aerodynamic yaw-rate-to-roll-torque derivative is repeatable across these measured-state anchors. It is separate from the zero-dynamic-pressure reaction-wheel pulse and cannot identify that pulse's actuator source or establish a qualified atmospheric control gain."
+  },
+  "gridSummary": {
+    "anchorCount": 5,
+    "sampleCount": 70,
+    "elapsedWallSeconds": 7.499855582980672,
+    "maximumRelativeAirSpeedFrameError": 3.351273997033961e-08,
+    "allAttitudesReconstructedWithinDeg": 1e-05,
+    "allRatesUsedWithinDegPerSecond": 20.0
+  },
+  "output": "/Users/kyooni18/Code/KSPShuttleLander/Docs/Experiments/STS-Entry-20261009/live-measured-run9-aero-rate-matrix-20261009.json"
+}
