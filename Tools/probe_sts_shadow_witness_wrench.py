@@ -123,6 +123,11 @@ def read_actuator_snapshot(vessel, config) -> dict:
     }
 
 
+def sts_flight_roll(rotation, position, geometric_offset_deg: float) -> float:
+    """Map geometric local-+Z bank to this STS checkpoint's KSP Flight.roll."""
+    return wrap_degrees(bank_degrees(rotation, position) + geometric_offset_deg)
+
+
 def main() -> int:
     config_path = ROOT / "Configuration/sts.json"
     profile_path = ROOT / "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
@@ -175,6 +180,7 @@ def main() -> int:
             "angleOfAttackDeg": [18.0, 28.0],
             "sideslipDeg": [-5.0, 0.0, 5.0],
             "bankDeg": [-40.0, 0.0, 40.0],
+            "bankConvention": "KSP Flight.roll for the original STS, calibrated from its loaded 72 km checkpoint attitude; the checkpoint's local +Z axis is opposite radial up.",
             "nominalMachPolicy": "Mach slices use the closest recorded shadow-witness speed of sound (V/M, 1.50 s from the trace point). The trace-speed slice is exact input TAS; the API accepts velocity rather than Mach, so nominal Mach is provenance metadata, not a separate API output.",
             "dynamicPressureScaling": "The trace q is scaled by TAS squared at fixed density only for comparison metadata; KSP computes each wrench internally from the hypothetical position, velocity and explicit UT.",
             "pressureBoundPa": float(config["vehicle"].get("maximumDynamicPressure", math.inf)),
@@ -201,6 +207,12 @@ def main() -> int:
         before = state_snapshot(conn, sc, vessel, body, frame)
         actuators_before = read_actuator_snapshot(vessel, config)
         current_ut = before["ut"]
+        checkpoint_geometric_bank = bank_degrees(
+            tuple(before["rotation_xyzw"]), tuple(before["position_m"])
+        )
+        bank_offset = wrap_degrees(before["roll_deg"] - checkpoint_geometric_bank)
+        if min(abs(bank_offset), abs(abs(bank_offset) - 180.0)) > 0.2:
+            raise RuntimeError("The checkpoint STS bank convention is not aligned with local +Z or -Z")
         checkpoint_saved_ut = float(profile["savedUT"])
         if not before["paused"]:
             raise RuntimeError("Refusing to probe while KSP is unpaused")
@@ -237,13 +249,15 @@ def main() -> int:
         east = unit(tuple(east_raw[i] - dot(east_raw, radial_up) * radial_up[i] for i in range(3)))
         heading = math.radians(float(site["runwayHeading"]))
         forward = unit(tuple(north[i] * math.cos(heading) + east[i] * math.sin(heading) for i in range(3)))
-        local_up = unit(tuple(radial_up[i] - dot(radial_up, forward) * forward[i] for i in range(3)))
-        right = unit(cross(forward, local_up))
-        local_rotation = quaternion_from_basis(right, forward, local_up)
+        vessel_z_sign = -1.0 if abs(bank_offset) > 90.0 else 1.0
+        vessel_z = unit(tuple(vessel_z_sign * (radial_up[i] - dot(radial_up, forward) * forward[i]) for i in range(3)))
+        right = unit(cross(forward, vessel_z))
+        local_rotation = quaternion_from_basis(right, forward, vessel_z)
         future_position_result = rotate_by_body_spin(base_position, omega, elapsed)
         target_position, spin_rotation = future_position_result
         base_rotation = quaternion_multiply(spin_rotation, local_rotation)
-        base_bank = bank_degrees(base_rotation, target_position)
+        base_geometric_bank = bank_degrees(base_rotation, target_position)
+        base_bank = sts_flight_roll(base_rotation, target_position, bank_offset)
         if abs(wrap_degrees(base_bank)) > 0.2:
             raise RuntimeError(f"Constructed runway-aligned orientation has bank {base_bank:.3f} degrees")
         if not conn.krpc.paused or abs(float(sc.ut) - current_ut) > 1e-9:
@@ -273,7 +287,7 @@ def main() -> int:
                         delta = math.radians(wrap_degrees(base_bank - bank))
                         roll_delta = (0.0, math.sin(delta / 2.0), 0.0, math.cos(delta / 2.0))
                         rotation = quaternion_multiply(base_rotation, roll_delta)
-                        achieved_bank = bank_degrees(rotation, target_position)
+                        achieved_bank = sts_flight_roll(rotation, target_position, bank_offset)
                         bank_error = abs(wrap_degrees(achieved_bank - bank))
                         maximum_bank_error = max(maximum_bank_error, bank_error)
                         if bank_error > 0.2:
@@ -380,6 +394,11 @@ def main() -> int:
             "futureSiteLatitudeSeenInCurrentFrameDeg": future_latitude_at_current_frame,
             "futureSiteLongitudeSeenInCurrentFrameDeg": future_longitude_at_current_frame,
             "siteLongitudeAtCurrentUTDeg": float(body.longitude_at_position(base_position, frame)),
+            "checkpointFlightRollDeg": before["roll_deg"],
+            "checkpointGeometricLocalZBankDeg": checkpoint_geometric_bank,
+            "stsFlightRollGeometricOffsetDeg": bank_offset,
+            "vesselLocalZSignRelativeToRadialUp": vessel_z_sign,
+            "baseGeometricLocalZBankDeg": base_geometric_bank,
             "baseBankBeforeCounterfactualRollDeg": base_bank,
         }
         report["status"] = "complete"
