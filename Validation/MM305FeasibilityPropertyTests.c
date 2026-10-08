@@ -80,6 +80,13 @@ static TerminalDynamicState telemetry_to_terminal_state(const TerminalModel *mod
     state.attitude = model->attitude;
     state.attitude.aoa_rad = t->angle_of_attack * DEG2RAD;
     state.attitude.bank_rad = t->roll * DEG2RAD;
+    /* Match production terminal_live_state: seed command history from the
+     * observed attitude, not the model-file zero default. Otherwise replay
+     * invents a pitch-down command before tracking the candidate route. */
+    state.attitude.cmd_aoa_rad = state.attitude.requested_aoa_rad =
+        state.attitude.aoa_rad;
+    state.attitude.cmd_bank_rad = state.attitude.requested_bank_rad =
+        state.attitude.bank_rad;
     TaemFrameWorld world;
     TaemRunwayFrame runway;
     TaemVec3 position_b, velocity_b, north, east, up, position_i, velocity_i;
