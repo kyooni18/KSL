@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Matched normal-shadow-gate sensitivity check for the original STS using entryAngleOfAttack 24 degrees, from the named 72 km checkpoint. Capture the shadow trajectory and compare against the config-18 trace-only baseline.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "manualForceReentryUnset": true,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveGuidanceEngaged": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "livePropulsionOrSpeedbrakesUsed": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "candidate": {
+    "vessel": "STS",
+    "configuration": "Configuration/experiments/sts-entry-aoa-24.json",
+    "configurationSourceSHA256": "3242c3cc16f69f408f3f1360304b18429e7dc9cdf20d3c82df273509de7f26b7",
+    "configurationSnapshotSHA256": "1ba37a2ed70c5b55ba7238197aa4f446ee50eebe3c098ae92deabb4bd8c20fd0",
+    "onlyDifferenceFromProductionConfiguration": {
+      "path": "vehicle.entryAngleOfAttack",
+      "production": 18,
+      "candidate": 24
+    },
+    "maximumAngleOfAttackDeg": 28,
+    "productionConfigurationChanged": false,
+    "adopted": false
+  },
+  "instrumentation": {
+    "repositoryHEADAtAttempt": "93643a1fa62c67efc663793e930809929408e888",
+    "isolatedTraceOnlyBackend": true,
+    "productionGuidanceAndQualificationLogicChanged": false,
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendExecutableSHA256": "de043146f5e1187ca164c8abc106ad581ae5bc6b773d2d59d61762b35220271b",
+    "backendExecutable": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-1ba37a2ed70c5b55/landing_backend"
+  },
+  "run": {
+    "startedUTC": "2026-10-08T21:49:31.852249+00:00",
+    "runner": "Tools/headless_flight.py",
+    "arguments": [
+      "--live",
+      "--backend",
+      "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-1ba37a2ed70c5b55/landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/experiments/sts-entry-aoa-24.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_ENTRY_TRACE": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+      "KSP_LANDER_MANUAL_FORCE_REENTRY": "unset"
+    },
+    "expectedAdmissionRejectionExitCode": 1,
+    "backendPID": 70091,
+    "kspPID": 69877,
+    "kspProcessCount": 1,
+    "campaignIdentity": "64635833ea57a683-de043146f5e1187c-1ba37a2ed70c5b55",
+    "runManifest": {
+      "path": "Runtime/Headless/run-manifests/20261008T214931852249Z-70091.json",
+      "sha256": "20ed24f4721496feaefe10c12589326dc35948b04f2f077feac4ec0084f5b588",
+      "configurationSnapshotSHA256": "1ba37a2ed70c5b55ba7238197aa4f446ee50eebe3c098ae92deabb4bd8c20fd0",
+      "configurationSourceSHA256": "3242c3cc16f69f408f3f1360304b18429e7dc9cdf20d3c82df273509de7f26b7"
+    },
+    "capturedConsole": {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-shadow-entry-aoa24-20261009.log",
+      "sha256": "028033c8887a586ff1b25b916942b5a985f905c2404abfd45732040f40f08bce",
+      "bytes": 93704,
+      "lineCount": 202
+    },
+    "exitReason": "The unchanged normal closed-loop shadow gate rejected reentry before engagement."
+  },
+  "shadowResult": {
+    "closestMissKm": 4.3,
+    "shadowRangeErrorKm": 66.3,
+    "peakDynamicPressureKPa": 5.2,
+    "peakG": 1.87,
+    "mm305Ready": false,
+    "traceRowCount": 171,
+    "traceCadenceSeconds": 5.0,
+    "firstReversal": {
+      "ut": 10471.33,
+      "altitudeM": 42800,
+      "speedMps": 1881.7,
+      "crossTrackM": 2087,
+      "courseToSiteErrorDeg": -3.5,
+      "bankDeg": 40.0
+    },
+    "nearSite": {
+      "ut": 10516.33,
+      "altitudeM": 38051,
+      "speedMps": 1732.0,
+      "mach": 5.21,
+      "flightPathAngleDeg": -3.77,
+      "rangeM": 4441,
+      "runwayAlongTrackM": 898,
+      "runwayCrossTrackM": 4349,
+      "courseToSiteErrorDeg": -102.3,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "mm305Veto": "0x89"
+    },
+    "plus45Seconds": {
+      "ut": 10561.33,
+      "altitudeM": 32656,
+      "speedMps": 1425.6,
+      "mach": 4.45,
+      "rangeM": 68443,
+      "courseToSiteErrorDeg": -173.8,
+      "mm305Ready": false,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10825.63,
+      "altitudeM": 9395,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeM": 162776,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    },
+    "observabilityLimit": "The trace is a shadow prediction. betaDeg is the shadow model zero/default, and body p/q/r and normalized control inputs are unavailable; it cannot identify atmospheric yaw-to-roll coupling."
+  },
+  "matchedConfig18Baseline": {
+    "report": "Docs/Experiments/STS-Entry-20261009/live-shadow-entry-coordinate-trace-20261009.json",
+    "sameCheckpoint": true,
+    "sameSourceTreeSHA256": true,
+    "sameBackendExecutableSHA256": true,
+    "closestMissKm": 4.5,
+    "shadowRangeErrorKm": 64.9,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "nearSiteCourseToSiteErrorDeg": -100.3,
+    "plus45SecondsRangeKm": 68.225,
+    "plus45SecondsCourseToSiteErrorDeg": -173.6,
+    "candidateDelta": {
+      "closestMissKm": -0.2,
+      "shadowRangeErrorKm": 1.4,
+      "peakDynamicPressureKPa": -0.1,
+      "peakG": 0.24
+    }
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "physicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "savePath": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+    "expectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "actualPostRunSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "hashUnchanged": true,
+    "restoration": {
+      "method": "Tools/settle_known_checkpoint.py using the named checkpoint physics profile",
+      "ready": true,
+      "ut": 9931.23182616933,
+      "meanAltitudeM": 71922.023,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true,
+      "physicsWarpFactor": 0,
+      "sasOff": true,
+      "rcsOff": true
+    },
+    "postRunIndependentReadOnlyVerification": {
+      "method": "Fresh kRPC read-only query (no state setters), elapsed 9.797 s; UT did not advance.",
+      "vessel": "STS",
+      "ut": 9931.23182616933,
+      "utDelta": 0.0,
+      "meanAltitudeM": 71920.84887880611,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "controls": {
+        "pitch": 0.0,
+        "roll": 0.0,
+        "yaw": 0.0
+      },
+      "throttle": 0.0,
+      "actualThrustN": 0.0,
+      "brakes": false,
+      "speedbrakeActionGroupEnabled": false,
+      "allActionGroups0Through9Off": true,
+      "kspPID": 69877,
+      "kspProcessCount": 1,
+      "krpcListeningPorts": [
+        50000,
+        50001
+      ]
+    }
+  },
+  "interpretation": {
+    "finding": "The 24 degree entry-AoA candidate does not resolve the near-site course reversal or energy/range error. Closest miss improves by 0.2 km against the matched 18 degree baseline, while range error worsens by 1.4 km and peak load rises by 0.24 g. The near-site shadow still points away from KSC, MM305 veto remains 0x89, and the prediction aborts before TAEM.",
+    "decision": "Do not adopt the candidate and do not change the production entry ramp, shadow gate, checkpoint, or flight limits on this evidence.",
+    "limits": "This is a live KSP shadow-admission diagnostic. The simulated trace is not a live atmospheric flight, does not measure sideslip/body rates/control coupling, and supplies no touchdown or rollout evidence."
+  },
+  "errors": []
+}
