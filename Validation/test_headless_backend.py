@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Tools"))
 import headless_flight as flight
@@ -87,6 +87,23 @@ class PlanAdmissionTests(unittest.TestCase):
     def test_missing_qualification_fails_closed(self):
         with self.assertRaises(RuntimeError):
             flight.validate_plan_qualification({}, False)
+
+
+class StartupPhysicsTests(unittest.TestCase):
+    def test_paused_placeholder_mass_cannot_certify_restored_physics(self):
+        initial = {"paused": True, "vessel": "STS", "ut": 9934.591826,
+                   "mass": 22000.0, "dryMass": 20056.283203125,
+                   "availableThrust": 3060000.25,
+                   "railsWarpFactor": 0, "physicsWarpFactor": 0}
+        with patch.object(flight, "probe_ksp") as probe, \
+             patch.object(flight, "prepare_reentry_direct_control") as prepare:
+            for settle in (flight.wait_for_orbital_state_settle,
+                           flight.settle_restored_reentry_state):
+                with self.subTest(settle=settle.__name__):
+                    with self.assertRaisesRegex(RuntimeError, "(?i)paused.*unpacked"):
+                        settle(Path("."), initial)
+            probe.assert_not_called()
+            prepare.assert_not_called()
 
 
 if __name__ == "__main__":

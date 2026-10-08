@@ -516,7 +516,10 @@ def wait_for_orbital_state_settle(
     mass/thrust window before pausing for deterministic planning.
     """
     if bool(initial.get("paused")):
-        return initial
+        raise RuntimeError(
+            "Paused restored checkpoint has no verified unpacked mass/thrust state. "
+            "A paused atmospheric start requires a verified checkpoint physics profile."
+        )
     start_ut = BackendProcess._number(initial.get("ut"))
     vessel_name = str(initial.get("vessel") or "")
     samples: list[tuple[float, float, float, dict[str, Any]]] = []
@@ -584,7 +587,10 @@ def settle_restored_reentry_state(root: Path, initial: dict[str, Any]) -> dict[s
     a materially different state than the saved flight state.
     """
     if bool(initial.get("paused")):
-        return initial
+        raise RuntimeError(
+            "Paused restored checkpoint has no verified unpacked mass/thrust state. "
+            "A paused atmospheric start requires a verified checkpoint physics profile."
+        )
     # Atmospheric saves can retain throttle (live STS-N-transonic-stable had
     # 45%). Neutralize before measuring mass stability; otherwise fuel burn
     # makes the unpacking check fail and alters the experiment initial state.
