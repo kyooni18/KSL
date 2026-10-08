@@ -199,7 +199,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.measured_bank_rate_deg_s=controlled_roll_rate(t);
     lateral.bank_effectiveness=isfinite(t->bank_effectiveness)&&t->bank_effectiveness>0.0?
         t->bank_effectiveness:1.0;
-    lateral.lift_accel=live_lift_accel(t,aero,v);
+    lateral.lift_accel=guidance_feedback_lift_accel(g,t,aero,v);
     lateral.has_measured_lift=t->physics_sample_valid&&isfinite(t->mass)&&t->mass>DBL_MIN&&
         isfinite(t->lift_force)&&t->lift_force>0.0;
     /* Predict the feedback policy that will consume the future sensor force.

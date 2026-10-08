@@ -97,6 +97,8 @@ GuidanceResult stabilized(GuidanceMachine*g,GuidanceResult r,const Telemetry*t,c
 GuidanceCommand entry_capture(const Telemetry*t,const VehicleState*state,const VehicleProfile*v);
 void request_side(GuidanceMachine*g,double sign,double ut);
 void entry_update_s_turn_leg_capture(GuidanceMachine*g,const Telemetry*t,double bank,const VehicleProfile*v);
+double guidance_feedback_lift_accel(const GuidanceMachine*g,const Telemetry*t,
+    AerodynamicModel aero,const VehicleProfile*v);
 double live_lift_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v);
 double live_drag_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v);
 void entry_program_commit_planned_reversal(GuidanceMachine*g,EntryControlPlan*plan,

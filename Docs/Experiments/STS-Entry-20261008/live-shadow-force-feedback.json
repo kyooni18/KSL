@@ -1,0 +1,27 @@
+{
+  "base": "447fd2b",
+  "hypothesis": "Shadow flag used future sensor authority but scalar lift helper still selected fallback polar. Consume prospective force explicitly without changing measured validity or confidence.",
+  "regression": "entry-forecast-admission-test passed, including force selection, zero force, invalid fallback, real measurement cases",
+  "live_main": {
+    "MM305": false,
+    "closest_km": 4.6,
+    "range_error_km": 64,
+    "q_kpa": 5.3,
+    "g": 1.63
+  },
+  "live_isolated_recovery": {
+    "MM305": false,
+    "closest_km": 5,
+    "range_error_km": -36.4,
+    "q_kpa": 7.9,
+    "g": 2.19,
+    "witness": {
+      "altitude_m": 22758,
+      "mach": 2.73,
+      "along_m": 42590,
+      "cross_m": -6937,
+      "veto": "0x80 (flying away from site)"
+    }
+  },
+  "conclusion": "Recovery reaches physical MM305 altitude/speed/energy/range window but closure fails. Investigate early reversal undoing accumulated turn. No live descent engaged; checkpoint restored and frozen."
+}

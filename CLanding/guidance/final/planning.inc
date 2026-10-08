@@ -116,7 +116,7 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
         return plan;
     }
 
-    double measured_lift=live_lift_accel(t,aero,v);
+    double measured_lift=guidance_feedback_lift_accel(g,t,aero,v);
     double measured_drag=live_drag_accel(t,aero,v);
     if(!(measured_lift>0.0)||!(measured_drag>=0.0)){
         plan.reject_reason="measured-aero-invalid";

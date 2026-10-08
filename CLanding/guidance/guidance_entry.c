@@ -38,6 +38,16 @@ static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Teleme
     return fmax(0.0,t->dynamic_pressure)/aero.ballistic_coefficient*
         aero.lift_to_drag*fabs(lf);
 }
+/* A prospective sensor force is available inside the closed-loop rollout.
+   It is never evidence of a real measurement or aerodynamic certification. */
+double guidance_feedback_lift_accel(const GuidanceMachine*g,const Telemetry*t,
+        AerodynamicModel aero,const VehicleProfile*v){
+    if(g&&g->diagnostic_shadow&&t&&isfinite(t->mass)&&t->mass>DBL_MIN&&
+       isfinite(t->lift_force)&&t->lift_force>=0.0)
+        return t->lift_force/t->mass;
+    return live_lift_accel(t,aero,v);
+}
+
        double live_drag_accel(const Telemetry*t,AerodynamicModel aero,const VehicleProfile*v){
     if(t->physics_sample_valid&&isfinite(t->mass)&&t->mass>DBL_MIN&&
        isfinite(t->drag_force)&&t->drag_force>=0.0)

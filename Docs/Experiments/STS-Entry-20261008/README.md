@@ -106,3 +106,7 @@ A diagnostic native binary then loaded completed-attempt history and compared id
 ## Live shadow feedback parity
 
 Prospective sensor lift in the shadow now feeds the same allocator policy as measured lift, without marking synthetic telemetry measured or changing model confidence. The focused lateral regression passed. Normal live admission still rejected entry: no MM305, range error +62.1 km. The isolated mission drag feedback and physical bank execution prototype also rejected: no MM305, range error −36.4 km. Both used original STS and 60 independent historical cells; neither engaged descent. Recovery remains unadopted. See `live-shadow-feedback-comparison.json` and matching compressed runner logs and recovery source patch.
+
+## Prospective force selection and closure witness
+
+The lift feedback helper also needed to select the rollout force rather than the fallback polar. This is now explicit for shadow guidance; real telemetry validity and confidence remain unchanged. Focused forecast admission regression passed. Normal live main admission still rejects (+64.0 km range error). The isolated recovery rejects too (−36.4 km), but its witness reaches 22.758 km/Mach 2.73 with only veto `0x80`: it is flying away from the site after overflight. This identifies the heading problem independently of altitude, speed, range, and energy checks. All attempts restored/froze the original STS checkpoint. See `live-shadow-force-feedback.json` and the three matching compressed runner logs.

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "landing.h"
+#include "../CLanding/guidance/guidance_internal.h"
 #include "sim_telemetry.h"
 
 /* Compare the public forecast's initial admission opportunity with the public
@@ -57,6 +58,27 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
 }
 
 int main(void) {
+    /* Prospective feedback consumes the rollout's force, independently of the
+       fallback polar, without marking the synthetic observation measured. */
+    {
+        GuidanceMachine g={0}; Telemetry t={0}; VehicleProfile v={0};
+        AerodynamicModel a={.lift_to_drag=.4,.ballistic_coefficient=700};
+        t.mass=25000; t.lift_force=50000; t.dynamic_pressure=1000;
+        t.angle_of_attack=18; t.mach=5;
+        double fallback=live_lift_accel(&t,a,&v);
+        assert(guidance_feedback_lift_accel(&g,&t,a,&v)==fallback);
+        g.diagnostic_shadow=true;
+        assert(guidance_feedback_lift_accel(&g,&t,a,&v)==2.0);
+        assert(!t.physics_sample_valid);
+        t.lift_force=0;
+        assert(guidance_feedback_lift_accel(&g,&t,a,&v)==0.0);
+        t.lift_force=NAN;
+        assert(guidance_feedback_lift_accel(&g,&t,a,&v)==live_lift_accel(&t,a,&v));
+        t.lift_force=50000; t.physics_sample_valid=true;
+        g.diagnostic_shadow=false;
+        assert(guidance_feedback_lift_accel(&g,&t,a,&v)==2.0);
+    }
+
     LandingConfiguration cfg=landing_configuration_default();
     landing_configuration_normalize(&cfg);
     PlanetModel planet;
