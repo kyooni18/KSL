@@ -1,0 +1,57 @@
+{
+  "scope": "Read-only original STS hypersonic archived excitation audit, Mach>=5. Run9 bypassed shadow gate; telemetry does not certify admission or coordinated bank authority.",
+  "source": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+  "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+  "bins": [
+    {
+      "qMin": 1,
+      "qMax": 100,
+      "samples": 3298,
+      "maxAbsActualBank": 0.1353759765625,
+      "maxAbsCommandBank": 4.07127957740943e-25,
+      "maxAbsBeta": 0.0560280755162239,
+      "maxAbsRollRate": 0.00100994854213592,
+      "minAltitude": 59203.3677618265
+    },
+    {
+      "qMin": 100,
+      "qMax": 250,
+      "samples": 2328,
+      "maxAbsActualBank": 0.322509765625,
+      "maxAbsCommandBank": 4.07127957740943e-25,
+      "maxAbsBeta": 0.131012246012688,
+      "maxAbsRollRate": 0.00107860618817751,
+      "minAltitude": 53902.6895113189
+    },
+    {
+      "qMin": 250,
+      "qMax": 360,
+      "samples": 1067,
+      "maxAbsActualBank": 0.430023193359375,
+      "maxAbsCommandBank": 4.07127957740943e-25,
+      "maxAbsBeta": 0.171889021992683,
+      "maxAbsRollRate": 0.00102625222031557,
+      "minAltitude": 51534.6085568657
+    },
+    {
+      "qMin": 360,
+      "qMax": 1000,
+      "samples": 2373,
+      "maxAbsActualBank": 0.896484375,
+      "maxAbsCommandBank": 4.07127957740943e-25,
+      "maxAbsBeta": 0.330842107534409,
+      "maxAbsRollRate": 0.00399139180298086,
+      "minAltitude": 44007.5952467402
+    },
+    {
+      "qMin": 1000,
+      "qMax": 2000,
+      "samples": 1253,
+      "maxAbsActualBank": 52.3834075927734,
+      "maxAbsCommandBank": 40.0937549044252,
+      "maxAbsBeta": 4.30189228057861,
+      "maxAbsRollRate": 7.57394214681027,
+      "minAltitude": 37850.2778100063
+    }
+  ]
+}

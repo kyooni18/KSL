@@ -1,0 +1,199 @@
+{
+  "scope": "Fixed positive-bank plant probe with q ramp, nominal roll rate/acceleration and structural limits. Not guidance, nominal 40-degree planning, coordination validation, qualification, or landing. Original provisional STS aero; borrowed STS-N attitude dynamics.",
+  "inputs": [
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/build/shuttlesim",
+      "sha256": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/scenarios/sts72km-run9-entry-interface.ini",
+      "sha256": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+      "sha256": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/sts_aero_provisional.csv",
+      "sha256": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/stsn_attitude_identified.ini",
+      "sha256": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/tools/probe_sts_ramped_bank.py",
+      "sha256": "c31e7583edaf323ecb44c3180a0ef0401b68df3e770e3214574e1f89cbf3133c"
+    },
+    {
+      "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/tools/probe_sts_low_alpha_uncertainty.py",
+      "sha256": "6eb762be662546d9d6e182559e68e7f958e36967d545e262d44b60be17546a45"
+    }
+  ],
+  "limits": {
+    "qAuthorityPa": 360,
+    "maximumQPa": 45000,
+    "maximumG": 3.5,
+    "minimumSpeedMps": 85,
+    "maximumRollRateDegS": 4.5,
+    "maximumRollAccelerationDegS2": 1.8,
+    "controlPeriodS": 0.1,
+    "captureRule": "Reset bank reference rate at target crossing, as in entry_lateral.update_bank_command"
+  },
+  "results": [
+    {
+      "aoa": 18,
+      "incidenceTransitionAltitude": null,
+      "bankMaximum": 70,
+      "command": [
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/build/shuttlesim",
+        "--scenario",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/scenarios/sts72km-run9-entry-interface.ini",
+        "--atmosphere",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "--aero",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "--attitude",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/stsn_attitude_identified.ini",
+        "--rate",
+        "max",
+        "--lockstep",
+        "--command-port",
+        "53575",
+        "--telemetry-port",
+        "63860",
+        "--web-telemetry-port",
+        "0",
+        "--fixed-aoa",
+        "18",
+        "--fixed-bank",
+        "0",
+        "--max-sim-time",
+        "800",
+        "--record",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/sts-ramped-bank-envelope-20261008/aoa18-ramped-bank70.jsonl",
+        "--quiet"
+      ],
+      "peakQ": 9173.2225,
+      "peakG": 2.68317526957049,
+      "final": {
+        "time": 800.02,
+        "h": 3559.904,
+        "v": 55.986,
+        "fpa": -8.524601,
+        "along": 67125.663,
+        "cross": 49949.666,
+        "q": 1168.629795,
+        "g": 0.9346191333593886
+      },
+      "at25km": {
+        "time": 618.02,
+        "h": 24993.175,
+        "v": 1083.584,
+        "fpa": -10.029898,
+        "along": 44740.103,
+        "cross": 25956.37,
+        "q": 8892.741398,
+        "g": 2.205488803413721
+      },
+      "at860mps": {
+        "time": 631.72,
+        "h": 22445.501,
+        "v": 859.886,
+        "fpa": -12.270607,
+        "along": 56123.107,
+        "cross": 31205.611,
+        "q": 9171.915003,
+        "g": 2.2035724909650924
+      },
+      "rawSha256": "4bc3030c41a07d7ac4a0aef3867036f6d6b92f8b54ad778f37eb5590efb63182",
+      "retainedLog": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/sts-ramped-bank-envelope-20261008/aoa18-ramped-bank70.jsonl.gz",
+      "audit": {
+        "nondecreasingTimes": true,
+        "duplicateFinalFrames": 1,
+        "recordedFrames": 8002,
+        "throttleZero": true,
+        "airbrakesOff": true,
+        "requestedBankWithin70": true,
+        "requestedAoAWithin18To28AfterInitialSavedState": true
+      }
+    },
+    {
+      "aoa": 28,
+      "incidenceTransitionAltitude": null,
+      "bankMaximum": 70,
+      "command": [
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/build/shuttlesim",
+        "--scenario",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/scenarios/sts72km-run9-entry-interface.ini",
+        "--atmosphere",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "--aero",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "--attitude",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/stsn_attitude_identified.ini",
+        "--rate",
+        "max",
+        "--lockstep",
+        "--command-port",
+        "64882",
+        "--telemetry-port",
+        "54387",
+        "--web-telemetry-port",
+        "0",
+        "--fixed-aoa",
+        "28",
+        "--fixed-bank",
+        "0",
+        "--max-sim-time",
+        "800",
+        "--record",
+        "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/sts-ramped-bank-envelope-20261008/aoa28-ramped-bank70.jsonl",
+        "--quiet"
+      ],
+      "peakQ": 7066.50394,
+      "peakG": 2.3014421900747677,
+      "final": {
+        "time": 800.02,
+        "h": 6737.309,
+        "v": 57.84,
+        "fpa": -29.944472,
+        "along": 58342.651,
+        "cross": 55115.201,
+        "q": 812.11492,
+        "g": 0.9850107703808868
+      },
+      "at25km": {
+        "time": 626.12,
+        "h": 24992.596,
+        "v": 965.806,
+        "fpa": -10.563137,
+        "along": 46099.076,
+        "cross": 32809.309,
+        "q": 7065.423711,
+        "g": 2.280387801280614
+      },
+      "at860mps": {
+        "time": 632.82,
+        "h": 23822.179,
+        "v": 858.786,
+        "fpa": -11.57301,
+        "along": 51052.277,
+        "cross": 35759.486,
+        "q": 6991.751574,
+        "g": 2.2772031335782428
+      },
+      "rawSha256": "588243f6102b33fc0b9f7ea234cf2457a995de5940eb2b6d30ffc37eef44b2ab",
+      "retainedLog": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/sts-ramped-bank-envelope-20261008/aoa28-ramped-bank70.jsonl.gz",
+      "audit": {
+        "nondecreasingTimes": true,
+        "duplicateFinalFrames": 1,
+        "recordedFrames": 8002,
+        "throttleZero": true,
+        "airbrakesOff": true,
+        "requestedBankWithin70": true,
+        "requestedAoAWithin18To28AfterInitialSavedState": true
+      }
+    }
+  ]
+}
