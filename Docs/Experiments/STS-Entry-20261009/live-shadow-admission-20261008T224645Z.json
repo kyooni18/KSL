@@ -1,0 +1,163 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Run a current-source normal-gate STS admission from the named 72 km checkpoint while collecting the latest entry witness and reversal diagnostics.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "run": {
+    "startedUTC": "2026-10-08T22:46:45.112125Z",
+    "attemptId": "native-5945-1791499606-142095000",
+    "campaignIdentity": "14c543fae78ce900-967eaf2d3722b242-badd735f8d8c6356",
+    "runner": "Tools/headless_flight.py",
+    "arguments": [
+      "--backend", "CLanding/build/landing_backend",
+      "--config", "Configuration/sts.json",
+      "--live",
+      "--reentry-only",
+      "--initial-save", "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile", "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds", "900"
+    ],
+    "environment": {
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_TRACE_ENTRY": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1"
+    },
+    "runManifest": "Runtime/Headless/run-manifests/20261008T224645112125Z-5945.json",
+    "runManifestSHA256": "f74ec3a2f2e8c7ccdd7737954ac9077aeb215841ceb23d1cc4b924e24f49423a",
+    "campaignArtifactManifest": "Runtime/Headless/acceptance-artifacts/14c543fae78ce900-967eaf2d3722b242-badd735f8d8c6356/manifest.json",
+    "campaignArtifactManifestSHA256": "8da0f185fe44dee934ce69013b62392d527cb46ab890936198bfe75afd01ba9c",
+    "gitHeadAtStart": "34c4ec38dbc94c267dd4849082a60c51f8108de6",
+    "sourceTreeSHA256": "14c543fae78ce90025f5037a17aa3208ebdb1896f1769a97e4e2d04fe27e6745",
+    "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+    "backendPinnedInode": 156220264,
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "statusNote": "This run used its pinned backend before commit e6b3dd1 added isolated-input filtering to diagonal authority learning. The backend and configuration remained immutable for the attempt."
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "hashUnchanged": true,
+    "startupPhysicsSettle": {
+      "ut": 9931.23182616933,
+      "meanAltitudeM": 71922.0231764178,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true
+    },
+    "postRunImmediateReadback": {
+      "ut": 9930.331826169311,
+      "meanAltitudeM": 71973.62696302217,
+      "massKg": 22000.0,
+      "dryMassKg": 20056.28125,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": true,
+      "controls": [0.0, 0.0, 0.0, 0.0],
+      "note": "Paused post-load placeholder rigidbody masses; not evidence of the wrong save. The checkpoint settle helper was run before resuming campaign work."
+    },
+    "postRunSettledVerification": {
+      "method": "Tools/settle_known_checkpoint.py --profile Configuration/checkpoints/sts-campaign-72km-20261008.physics.json --save STS-campaign-72km-20261008",
+      "ut": 9931.251826169331,
+      "meanAltitudeM": 71920.85019573686,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0,
+      "sas": false,
+      "rcs": false,
+      "controls": [0.0, 0.0, 0.0, 0.0],
+      "actualThrustN": 0.0,
+      "speedbrakeActionGroupEnabled": false,
+      "allControlSurfacesNeutral": true,
+      "kspPID": 69877,
+      "singleKSPProcess": true,
+      "saveSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+    }
+  },
+  "summary": {
+    "closestMissKm": 4.5,
+    "shadowRangeErrorKm": 64.9,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "rejection": "Reentry rejected by closed-loop shadow before live engagement."
+  },
+  "witness": {
+    "firstEntry": {
+      "ut": 9980.57,
+      "altitudeM": 68998,
+      "speedMps": 2103,
+      "dragAccelMps2": 0.002,
+      "referenceDragAccelMps2": 0.040,
+      "bankDeg": 0.0,
+      "crossTrackM": 13
+    },
+    "firstSTurnReversal": {
+      "ut": 10470.87,
+      "altitudeM": 42794,
+      "speedMps": 1882.2,
+      "crossTrackM": 2270,
+      "side": -1,
+      "reversalCount": 1
+    },
+    "nearSite": {
+      "ut": 10516.27,
+      "altitudeM": 38007,
+      "speedMps": 1730.5,
+      "mach": 5.21,
+      "flightPathAngleDeg": -3.78,
+      "rangeToSiteM": 4568,
+      "runwayAlongTrackM": 775,
+      "runwayCrossTrackM": 4502,
+      "courseToSiteErrorDeg": -100.3,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "mm305Ready": false,
+      "mm305Veto": "0x89"
+    },
+    "downstreamPoint": {
+      "ut": 10561.27,
+      "altitudeM": 32613,
+      "speedMps": 1422.5,
+      "mach": 4.44,
+      "rangeToSiteM": 68225,
+      "runwayAlongTrackM": 68164,
+      "runwayCrossTrackM": 2907,
+      "courseToSiteErrorDeg": -173.6,
+      "mm305Ready": false,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.87,
+      "altitudeM": 9349,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeToSiteM": 161408,
+      "runwayAlongTrackM": 156784,
+      "runwayCrossTrackM": -38806,
+      "courseDeg": 252.3,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "nextInvestigation": "The unchanged near-site course-away state and no-control rejection mean this run cannot evaluate the new estimator filter. Continue with offline course/trajectory diagnosis; require a normal shadow-gate pass before live entry guidance can collect atmospheric control response."
+}
