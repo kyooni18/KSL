@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "title": "Original STS normal shadow-gate reentry repeat from the 72 km checkpoint",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "status": "rejected_before_engagement",
+  "objective": "Collect a fresh normal-gate STS admission trace while preserving the named checkpoint and campaign constraints.",
+  "gitHeadAtReport": "4ae43df1d866f2cedb9dcc96360c97aa56c3b4b2",
+  "attempt": {
+    "startedUTC": "2026-10-08T22:27:30.105384+00:00",
+    "runner": "run_headless.command -> Tools/headless_flight.py",
+    "arguments": [
+      "--live",
+      "--reentry-only",
+      "--config",
+      "Configuration/sts.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "diagnosticEnvironment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_ENTRY_TRACE": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset"
+    },
+    "campaignIdentity": "64635833ea57a683-967eaf2d3722b242-badd735f8d8c6356",
+    "campaignSourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T222730105384Z-94899.json",
+    "runManifestSHA256": "8c214130ea807491ba0e63ce4efbd805dd9d2b4cbf02346308bb13a3da67a87b",
+    "campaignManifest": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-967eaf2d3722b242-badd735f8d8c6356/manifest.json",
+    "campaignManifestSHA256": "f0f9f82d7e04101118376d44f07391b4df41df15d630e1061237d5ddd8cd2e2a",
+    "priorCellsUsed": 60,
+    "currentAttemptHeldOut": true,
+    "result": "rejected_by_normal_closed_loop_shadow_gate",
+    "qualification": {
+      "normalShadowGateUsed": true,
+      "gateBypassed": false,
+      "shadowPredictionEntered": true,
+      "MM305Reached": false,
+      "guidanceEngaged": false,
+      "liveControlsIssued": false,
+      "liveDescentStarted": false,
+      "touchdownVerified": false,
+      "rolloutVerified": false
+    },
+    "shadowSummary": {
+      "closestMissM": 4500,
+      "rangeErrorM": 64900,
+      "peakDynamicPressurePa": 5300,
+      "peakGLoad": 1.63,
+      "shadowAbortUT": 10832.87,
+      "shadowAbortAltitudeM": 9349,
+      "shadowAbortSpeedMps": 85.0,
+      "shadowAbortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    },
+    "shadowWitness": [
+      {
+        "kind": "near-site",
+        "ut": 10516.27,
+        "altitudeM": 38007,
+        "speedMps": 1730.5,
+        "mach": 5.21,
+        "flightPathAngleDeg": -3.78,
+        "rangeToSiteM": 4568,
+        "runwayAlongTrackM": 775,
+        "runwayCrossTrackM": 4502,
+        "courseToSiteErrorDeg": -100.3,
+        "bankCommandDeg": -40.0,
+        "bankActualDeg": -40.0,
+        "angleOfAttackDeg": 28.0,
+        "mm305Ready": false,
+        "mm305Veto": "0x89"
+      },
+      {
+        "kind": "45s-later",
+        "ut": 10561.27,
+        "altitudeM": 32613,
+        "speedMps": 1422.5,
+        "mach": 4.44,
+        "rangeToSiteM": 68225,
+        "runwayAlongTrackM": 68164,
+        "runwayCrossTrackM": 2907,
+        "courseToSiteErrorDeg": -173.6,
+        "bankCommandDeg": -40.0,
+        "bankActualDeg": -40.0,
+        "angleOfAttackDeg": 28.0,
+        "mm305Ready": false,
+        "mm305Veto": "0x89"
+      },
+      {
+        "kind": "shadow-abort",
+        "ut": 10832.87,
+        "altitudeM": 9349,
+        "speedMps": 85.0,
+        "rangeToSiteM": 161409,
+        "runwayAlongTrackM": 156784,
+        "runwayCrossTrackM": -38806,
+        "courseDeg": 252.3,
+        "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+      }
+    ],
+    "interpretation": "The result reproduces the earlier +64.9 km range error and target-behind course failure. It is a shadow forecast only; it provides no atmospheric live control response and does not support changing the bank ramp, model profile, or gates."
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "path": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+    "expectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postAttemptSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "preflightPhysics": {
+      "ut": 9931.23182616933,
+      "meanAltitudeM": 71922.02317434468,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "thrustN": 0.0,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0
+    },
+    "cleanupAndRestore": {
+      "runnerExitCode": 1,
+      "runnerCleanupTarget": "KSP quicksave",
+      "transientQuickSaveState": {
+        "ut": 9930.25182616931,
+        "meanAltitudeM": 71978.31623531238,
+        "massKg": 22000.0,
+        "dryMassKg": 20056.28125,
+        "partCount": 22,
+        "paused": true,
+        "sas": false,
+        "rcs": true,
+        "thrustN": 0.0
+      },
+      "namedSaveReload": {
+        "method": "python3 Tools/ksp_test_guard.py load-save --name STS-campaign-72km-20261008",
+        "settled": true,
+        "settledUT": 9931.63182616934,
+        "settledAltitudeM": 71898.52806836239,
+        "railsWarpFactor": 0,
+        "physicsWarpFactor": 0
+      },
+      "physicsSettle": {
+        "method": "python3 Tools/settle_known_checkpoint.py --profile Configuration/checkpoints/sts-campaign-72km-20261008.physics.json --save STS-campaign-72km-20261008",
+        "ut": 9935.711826169429,
+        "meanAltitudeM": 71658.6315892731,
+        "massKg": 25816.099609375,
+        "dryMassKg": 20348.0,
+        "partCount": 22,
+        "paused": true,
+        "railsWarpFactor": 0,
+        "physicsWarpFactor": 0
+      },
+      "independentReadOnlyVerification": {
+        "utStart": 9935.711826169429,
+        "utEnd": 9935.711826169429,
+        "vessel": "STS",
+        "vesselCount": 1,
+        "massKg": 25816.099609375,
+        "dryMassKg": 20348.0,
+        "partCount": 22,
+        "meanAltitudeM": 71657.45426304301,
+        "dynamicPressurePa": 0.0,
+        "paused": true,
+        "sas": false,
+        "rcs": false,
+        "throttle": 0.0,
+        "thrustN": 0.0,
+        "brakes": false,
+        "controls": [0.0, 0.0, 0.0],
+        "singleKSPProcess": true,
+        "kspPID": 69877,
+        "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+      }
+    }
+  },
+  "noProductionChangeJustified": true,
+  "dataLimitations": [
+    "The near-site and abort states are generated by the shadow predictor, not measured atmospheric flight telemetry.",
+    "The normal shadow gate rejected before guidance engagement, so no live entry control, descent, touchdown, or rollout occurred.",
+    "The runner's failure cleanup loaded the generic quicksave. The named campaign save was reloaded through the existing read-only-safe save loader, settled against its physics profile, and independently verified; the named save file hash never changed."
+  ]
+}
