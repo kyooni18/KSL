@@ -163,6 +163,16 @@ flight-control-quaternion-test: $(TARGET)
 		$(LDFLAGS) -lm -o $(BUILD)/flight_control_quaternion_tests
 	$(BUILD)/flight_control_quaternion_tests
 
+.PHONY: taem-tracker-allocation-test
+taem-tracker-allocation-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TAEMTrackerAllocationTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_tracker_allocation_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_tracker_allocation_tests)"
+
+test: taem-tracker-allocation-test
+
 entry-lateral-feedback-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/EntryLateralFeedbackTests.c $(BUILD)/entry_lateral.o \

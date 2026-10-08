@@ -212,7 +212,12 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *m,
         double delivered_vertical = lift * cos(radians(bank));
         double vertical_error = fabs(delivered_vertical - vertical_required);
         double lateral_error = fabs(delivered_lateral - lateral);
-        double score = vertical_error + 0.35 * lateral_error;
+        /* In saturation, minimize the unmet acceleration vector, whose
+         * orthogonal components share units. The weighted L1 cost preferred
+         * almost zero lift at a 70-degree bank when vertical demand was zero
+         * (cos(bank) > 0.35*sin(bank)), abandoning an already difficult turn.
+         * Feasible lateral solutions still take precedence below. */
+        double score = hypot(vertical_error, lateral_error);
 
         if (pass == 0 && lateral_feasible && isfinite(forces.drag_n) &&
             forces.drag_n > 1e-6 && forces.lift_n > 0.0) {
