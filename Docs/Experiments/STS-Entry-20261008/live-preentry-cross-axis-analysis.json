@@ -1,0 +1,133 @@
+{
+  "scope": "Two short original STS vacuum pulses. Body angular acceleration includes cross-axis coupling. These are local fits, not atmospheric coordination, certification, closed-loop wn/zeta identification, or a complete inertia matrix. Fit standard errors describe residuals only; streamed samples are correlated.",
+  "results": [
+    {
+      "stimulated_axis": "roll",
+      "raw_log": "Docs/Experiments/STS-Entry-20261008/live-preentry-roll-bench.json",
+      "rawSHA256": "d86cdd12636510f2333bae583303d012d8b82c16d4418e5e0cc1b609be07b52e",
+      "reported_nominal_gain": 6.596226819269496,
+      "phases": [
+        {
+          "phase": "positive",
+          "interval": [
+            0.44,
+            0.68
+          ],
+          "frames": 6,
+          "fits": [
+            {
+              "axis": "pitch",
+              "accel_deg_s2": 0.006615742882110952,
+              "gain_deg_s2_per_control": 0.044104952547406345,
+              "fit_standard_error_gain": 0.042741117733718
+            },
+            {
+              "axis": "roll",
+              "accel_deg_s2": 1.0057163260668105,
+              "gain_deg_s2_per_control": 6.70477550711207,
+              "fit_standard_error_gain": 0.009384064473648465
+            },
+            {
+              "axis": "yaw",
+              "accel_deg_s2": 0.033332509109536335,
+              "gain_deg_s2_per_control": 0.2222167273969089,
+              "fit_standard_error_gain": 0.07736286041019085
+            }
+          ]
+        },
+        {
+          "phase": "braking",
+          "interval": [
+            0.84,
+            1.06
+          ],
+          "frames": 6,
+          "fits": [
+            {
+              "axis": "pitch",
+              "accel_deg_s2": -0.0057538404433522565,
+              "gain_deg_s2_per_control": 0.038358936289015044,
+              "fit_standard_error_gain": 0.023116228698863026
+            },
+            {
+              "axis": "roll",
+              "accel_deg_s2": -1.0034974890525163,
+              "gain_deg_s2_per_control": 6.689983260350109,
+              "fit_standard_error_gain": 0.009302918648481219
+            },
+            {
+              "axis": "yaw",
+              "accel_deg_s2": -0.02643109255102644,
+              "gain_deg_s2_per_control": 0.1762072836735096,
+              "fit_standard_error_gain": 0.0837810707464417
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stimulated_axis": "yaw",
+      "raw_log": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-bench.json",
+      "rawSHA256": "03fa4c55f2c02271f970cb8a2e837d83ac22f7e9ff48aa30102770a544ab3fb1",
+      "reported_nominal_gain": 1.1683899357985872,
+      "phases": [
+        {
+          "phase": "positive",
+          "interval": [
+            0.44,
+            0.68
+          ],
+          "frames": 7,
+          "fits": [
+            {
+              "axis": "pitch",
+              "accel_deg_s2": -0.0007277485626848894,
+              "gain_deg_s2_per_control": -0.0048516570845659295,
+              "fit_standard_error_gain": 0.028850240312470993
+            },
+            {
+              "axis": "roll",
+              "accel_deg_s2": 0.07106292440091748,
+              "gain_deg_s2_per_control": 0.4737528293394499,
+              "fit_standard_error_gain": 0.0035542097186370054
+            },
+            {
+              "axis": "yaw",
+              "accel_deg_s2": 0.18893040732662936,
+              "gain_deg_s2_per_control": 1.2595360488441958,
+              "fit_standard_error_gain": 0.0182842213729621
+            }
+          ]
+        },
+        {
+          "phase": "braking",
+          "interval": [
+            0.84,
+            1.06
+          ],
+          "frames": 6,
+          "fits": [
+            {
+              "axis": "pitch",
+              "accel_deg_s2": -0.004072497347523265,
+              "gain_deg_s2_per_control": 0.027149982316821766,
+              "fit_standard_error_gain": 0.05126405888245505
+            },
+            {
+              "axis": "roll",
+              "accel_deg_s2": -0.07073674094158039,
+              "gain_deg_s2_per_control": 0.4715782729438693,
+              "fit_standard_error_gain": 0.007016219966177721
+            },
+            {
+              "axis": "yaw",
+              "accel_deg_s2": -0.1770104030330972,
+              "gain_deg_s2_per_control": 1.1800693535539815,
+              "fit_standard_error_gain": 0.037379579705909174
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
