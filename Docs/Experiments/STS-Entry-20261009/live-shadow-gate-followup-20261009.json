@@ -1,0 +1,136 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_LIVE_GATE_REJECTION",
+  "qualification": {
+    "verifiedLanding": false,
+    "verifiedTouchdown": false,
+    "verifiedRollout": false,
+    "shadowGateBypassed": false,
+    "liveDescentOccurred": false,
+    "liveControlsIssued": false,
+    "note": "Neither attempt began live descent. The second attempt reached the normal closed-loop shadow gate and was rejected before engagement."
+  },
+  "purpose": "Record the STS model-profile preflight correction and the ensuing normal shadow-gate rejection from the named 72 km checkpoint.",
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "currentSaveSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "saveHashVerified": true,
+    "vessel": "STS",
+    "parts": 22,
+    "wetMassKg": 25816.10546875,
+    "dryMassKg": 20348.0,
+    "finalSettledState": {
+      "ut": 9931.21182616933,
+      "meanAltitudeM": 71922.02317229181,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "throttle": 0.0,
+      "actualThrustN": 0.0,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0
+    },
+    "finalSettleMethod": "Tools/settle_known_checkpoint.py using the named checkpoint physics profile"
+  },
+  "liveKspProcess": {
+    "pid": 69877,
+    "count": 1,
+    "verifiedAfterAttempts": true
+  },
+  "attempts": [
+    {
+      "sessionId": "2026-10-08T20-46-23Z-30719-192300858986",
+      "startedUTC": "2026-10-08T20:46:22.989325+00:00",
+      "processPid": 30719,
+      "modelProfile": "identified (default; KSP_LANDER_MODEL_PROFILE was unset)",
+      "vehicleModelId": "STS",
+      "profileVehicleModelId": "STS-N",
+      "result": "rejected_before_shadow_gate",
+      "reason": "Aerodynamic profile identified describes STS-N, not STS; cross-vehicle model reuse is blocked.",
+      "normalShadowGateReached": false,
+      "shadowGateBypassed": false,
+      "liveDescentOccurred": false,
+      "liveControlsIssued": false,
+      "manifest": "Runtime/Headless/run-manifests/20261008T204622989325Z-30719.json",
+      "manifestSHA256": "82ae5bbcae67fd23d083ab1af4d8f50770f165227209a83ded2ac1cc3bc2321b",
+      "logFiles": [
+        {
+          "path": "FlightLogs/2026-10-08T20-46-23Z-STS-planner.jsonl",
+          "sha256": "152475030cd0797dab030e8d09f1e057c536a9cef9c8965bac24edf9af88d770"
+        },
+        {
+          "path": "FlightLogs/2026-10-08T20-46-23Z-STS-vehicle.jsonl",
+          "sha256": "249c272e6fc8c53974c590a2db8842a842e95e9bcbb4cd3608d1db483661d816"
+        }
+      ],
+      "checkpointPhysicsAtPreflight": {
+        "ut": 9931.23182616933,
+        "meanAltitudeM": 71922.02317278262,
+        "wetMassKg": 25816.10546875,
+        "dryMassKg": 20348.0,
+        "parts": 22,
+        "actualThrustN": 0.0
+      }
+    },
+    {
+      "sessionId": "2026-10-08T20-48-01Z-32001-192398981565",
+      "startedUTC": "2026-10-08T20:48:01.182852+00:00",
+      "processPid": 32001,
+      "modelProfile": "sts-provisional",
+      "profileVehicleModelId": "STS",
+      "profileCaveat": "Uses the STS provisional aero table, no certified prior file, and borrowed STS-N attitude dynamics. The live vessel and vehicle configuration remained original STS.",
+      "result": "rejected_before_engagement",
+      "normalShadowGateReached": true,
+      "shadowGateBypassed": false,
+      "shadowResult": {
+        "entered": true,
+        "mm305Reached": false,
+        "closestDistanceM": 4500.0,
+        "rangeErrorM": 64900.0,
+        "peakDynamicPressurePa": 5300.0,
+        "peakGLoad": 1.63
+      },
+      "liveDescentOccurred": false,
+      "liveControlsIssued": false,
+      "priorCells": 60,
+      "currentAttemptHeldOut": true,
+      "manifest": "Runtime/Headless/run-manifests/20261008T204801182852Z-32001.json",
+      "manifestSHA256": "bcf70973d205216be724bdaebb084e3568ae87a596e5b479841a937f5f97137a",
+      "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+      "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+      "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+      "logFiles": [
+        {
+          "path": "FlightLogs/2026-10-08T20-48-01Z-STS-planner.jsonl",
+          "sha256": "6888fdf43a51700bd548de1886c653ec8541dfdc438ea313c6d7de4fc35dc04d"
+        },
+        {
+          "path": "FlightLogs/2026-10-08T20-48-01Z-STS-vehicle.jsonl",
+          "sha256": "b907373ce1d6c7aaaf92816813df07d448fddcce9576f7c21af96db3856680b0"
+        }
+      ],
+      "checkpointPhysicsAtPreflight": {
+        "ut": 9931.271826169332,
+        "meanAltitudeM": 71919.67588002945,
+        "wetMassKg": 25816.10546875,
+        "dryMassKg": 20348.0,
+        "parts": 22,
+        "actualThrustN": 0.0
+      },
+      "disconnectLog": "event=disconnect; safe_control_release=true"
+    }
+  ],
+  "cleanup": {
+    "postRestoreReadOnlyProbeSawPlaceholderMassKg": 22000.0,
+    "postRestoreReadOnlyProbeSawRcsEnabled": true,
+    "recovery": "The existing settle helper returned KSP to the full-mass checkpoint state with SAS/RCS off and paused.",
+    "checkpointHashUnchanged": true
+  },
+  "interpretation": {
+    "finding": "The first command failed safe because the default STS-N profile did not match the STS vehicle. Explicitly selecting sts-provisional allowed the original-STS run to reach the normal shadow check, which rejected the checkpoint on recovery/MM305 criteria.",
+    "nextStep": "Use the saved STS profile selection for future attempts. Diagnose the gate forecast and aerodynamic shape offline before another live admission attempt; do not repeat this unchanged candidate.",
+    "limitations": "The shadow result is a simulated prediction from the live checkpoint. It is not measured descent, touchdown, or rollout evidence."
+  },
+  "errors": []
+}

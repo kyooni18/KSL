@@ -1,0 +1,504 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_CROSSCHECK",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "flightQualification": false,
+    "landingOrRolloutEvidence": false,
+    "note": "KSP wrench cells are hypothetical simulations. The measured comparison comes from a prior flight with a recorded shadow-gate bypass and is retained as physical diagnostic data only."
+  },
+  "purpose": "Compare the original-STS KSP wrench-grid lift-to-drag polar with the existing provisional polar, the current C stock-lifting-surface incidence factor, and nearby quality-eligible measured STS samples.",
+  "provenance": {
+    "gitHeadAtAnalysis": "1dd3aef8ad1235389e9dda230e87ce986d9efda8",
+    "analysisTool": "Tools/analyze_sts_aero_polar_crosscheck.py",
+    "analysisToolSHA256": "a33b443678337ef4361c63ab0c0311844a70fa7dd0c0aae46d27fff5f6efa174",
+    "wrenchGrid": "Docs/Experiments/STS-Entry-20261009/live-aero-envelope-grid-20261009.json",
+    "wrenchGridSHA256": "c7e9bc1607414392c9dd50ba448d39b58d41b0f3388ee118f65e729c5dac4ddf",
+    "wrenchGridClassification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+    "wrenchGridCellCount": 360,
+    "singleStateWrenchGrid": "Docs/Experiments/STS-Entry-20261009/live-aerodynamic-wrench-grid.json",
+    "singleStateWrenchGridSHA256": "157dec1d7d5b774639c836d8dbd3ba2017dcd0321dad1f07582b04f8ec6a71f9",
+    "singleStateWrenchGridClassification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+    "singleStateWrenchGridCellCount": 240,
+    "singleStateWrenchGridLiveState": {
+      "ut": 10086.871826172728,
+      "meanAltitudeM": 62836.04134578165,
+      "mach": 7.106515407562256,
+      "dynamicPressurePa": 47.14114761352539,
+      "checkpointUsed": false,
+      "liveStateUnchanged": true,
+      "checkpointUnchanged": true
+    },
+    "provisionalPolar": "ShuttleSim/reference-model/sts_aero_provisional.csv",
+    "provisionalPolarSHA256": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+    "provisionalPolarReport": "ShuttleSim/reference-model/sts_aero_provisional_report.json",
+    "provisionalPolarReportSHA256": "e4c7e8581982379249c661a98dcd53c9ab1c22aba006dbe9c043cdd868c5cfb9",
+    "provisionalPolarSupport": {
+      "status": "provisional; not STS validation",
+      "certifiedCells": 0,
+      "assumptions": [
+        "normal-force polar; no independent alpha sweep",
+        "constant endpoint parameters outside measured Mach support",
+        "single flight; residuals are in-sample, not held-out validation"
+      ],
+      "nearestMachKnots": [
+        {
+          "mach": 5.62561945097365,
+          "mach_bin": [
+            5,
+            6
+          ],
+          "alpha_support": [
+            22.4821949005127,
+            27.9828319549561
+          ],
+          "count": 1593,
+          "k": 0.38397707640614887,
+          "cd0": 0.16435485150268286,
+          "in_sample_median_relative_error": 0.02105952493527674,
+          "in_sample_p95_relative_error": 0.14033994492714486
+        },
+        {
+          "mach": 4.47490238502981,
+          "mach_bin": [
+            4,
+            5
+          ],
+          "alpha_support": [
+            26.1156444549561,
+            27.6190013885498
+          ],
+          "count": 707,
+          "k": 0.3803034857200328,
+          "cd0": 0.1965905786658885,
+          "in_sample_median_relative_error": 0.021599611750239278,
+          "in_sample_p95_relative_error": 0.04388565067953232
+        }
+      ]
+    },
+    "cStockCurveSource": "CLanding/vehicle/math.c::stock_ksp_lifting_surface_coefficients",
+    "cStockCurveSourceSHA256": "86c116af553713aa60abbe54fde3a66b7c093bbdc1964c8fd4c0f047cbea6191",
+    "physicsObservationStore": "Runtime/Physics/observations.sqlite3",
+    "physicsObservationStoreSHA256BeforeAndAfter": "88ab7657f8ebc01ba8103b8a12cca64f4130c5a9a64ff6b2b55002d45a78f740",
+    "physicsObservationStoreWalSHA256BeforeAndAfter": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "physicsContext": "sha256:600bfa014c6cd51cf0d22f98edaeed5e230750c54335e094d663d3c8b59a4bd9",
+    "priorMeasuredSessionIds": [
+      "native-29000-1791408848-554058000"
+    ],
+    "priorMeasuredSourceLog": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "priorMeasuredSourceLogSHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "priorMeasuredSourceContainsShadowGateBypassMarker": true
+  },
+  "measuredHighIncidenceWindow": {
+    "filter": "eligible=1, STS, Mach 5.0..5.5, AoA 26..28 deg, |beta|<1 deg, q 1500..3000 Pa, gear/brakes/airbrakes stowed",
+    "sampleCount": 9,
+    "sessionIds": [
+      "native-29000-1791408848-554058000"
+    ],
+    "rcsStates": [
+      -1
+    ],
+    "controlProfiles": [
+      "entry"
+    ],
+    "quality": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "mach": {
+      "min": 5.033869620393211,
+      "median": 5.2537362500674565,
+      "max": 5.28185673768215
+    },
+    "angleOfAttackDeg": {
+      "min": 26.995498657226562,
+      "median": 27.7183895111084,
+      "max": 27.90764808654785
+    },
+    "sideslipDeg": {
+      "min": -0.9238879084587097,
+      "median": -0.09115324914455414,
+      "max": 0.7349146008491516
+    },
+    "bankDeg": {
+      "min": 19.445846557617188,
+      "median": 33.911773681640625,
+      "max": 43.03038024902344
+    },
+    "dynamicPressurePa": {
+      "min": 1766.8819580078125,
+      "median": 1803.39794921875,
+      "max": 2128.582275390625
+    },
+    "liftToDrag": {
+      "min": 0.5343489915857025,
+      "median": 0.5399516994474345,
+      "max": 0.554184528027081
+    },
+    "note": "All selected samples are from one prior original-STS session. RCS state is unknown in these database rows. The archived source log contains the KSP_LANDER_BYPASS_SHADOW_GATE marker."
+  },
+  "matchedGridPoint": {
+    "targetAltitudeM": 38016.7,
+    "mach": 5.211938478487767,
+    "sideslipDeg": 0.0,
+    "bankDeg": 0.0,
+    "kspApiSimulatedLiftToDrag": {
+      "aoa18": 0.7125050219589628,
+      "aoa28": 0.5312119421493309
+    },
+    "kspApiAoA28To18Ratio": 0.7455553656152705,
+    "provisionalTableLiftToDrag": {
+      "aoa18": 0.5320785409168305,
+      "aoa28": 0.6115511536176287,
+      "aoa28To18Ratio": 1.1493625594519523,
+      "aoa18OutsideRecordedSupport": true
+    },
+    "cStockLiftingSurfaceAoA28To18Ratio": 0.45232210733436434,
+    "comparisonToMeasuredMedian": {
+      "measuredLiftToDrag": 0.5399516994474345,
+      "kspApiRelativeError": -0.01618618351798418,
+      "provisionalTableAtMeasuredMedianRelativeError": 0.1362155322003352,
+      "provisionalTableAtMachGridAoa28RelativeError": 0.1326034425735974
+    },
+    "sourceSupportNote": "The API AoA18/28 ratio is counterfactual. This measured sample window has no Mach-5 AoA18 points, so its incidence slope is not independently measured."
+  },
+  "gridIncidenceShape": {
+    "lowerAltitudeGrid": {
+      "matchedMachAltitudePairs": 20,
+      "apiRatio28To18Range": [
+        0.7421851105296838,
+        0.7506602801220607
+      ],
+      "apiRatio28To18Median": 0.7458390839855269,
+      "pairs": [
+        {
+          "altitudeM": 36265.9,
+          "mach": 4.0,
+          "ldAt18": 0.7576639964609576,
+          "ldAt28": 0.5623774228733075,
+          "ratio28To18": 0.7422517441770599
+        },
+        {
+          "altitudeM": 36265.9,
+          "mach": 5.0,
+          "ldAt18": 0.7134349994278446,
+          "ldAt28": 0.5317984616445703,
+          "ratio28To18": 0.7454056249988551
+        },
+        {
+          "altitudeM": 36265.9,
+          "mach": 5.015972443681555,
+          "ldAt18": 0.7134299740853386,
+          "ldAt28": 0.5317945978430477,
+          "ratio28To18": 0.7454054597647671
+        },
+        {
+          "altitudeM": 36265.9,
+          "mach": 6.0,
+          "ldAt18": 0.6950483323230698,
+          "ldAt28": 0.5203038409706402,
+          "ratio28To18": 0.7485865612131193
+        },
+        {
+          "altitudeM": 38016.7,
+          "mach": 4.0,
+          "ldAt18": 0.7576639146571255,
+          "ldAt28": 0.5623773757723868,
+          "ratio28To18": 0.742251762150882
+        },
+        {
+          "altitudeM": 38016.7,
+          "mach": 5.0,
+          "ldAt18": 0.7134350215686386,
+          "ldAt28": 0.531798313399093,
+          "ratio28To18": 0.7454053940747418
+        },
+        {
+          "altitudeM": 38016.7,
+          "mach": 5.211938478487767,
+          "ldAt18": 0.7125050219589628,
+          "ldAt28": 0.5312119421493309,
+          "ratio28To18": 0.7455553656152705
+        },
+        {
+          "altitudeM": 38016.7,
+          "mach": 6.0,
+          "ldAt18": 0.695048209967789,
+          "ldAt28": 0.5203038738084296,
+          "ratio28To18": 0.7485867402385545
+        },
+        {
+          "altitudeM": 40218.2,
+          "mach": 4.0,
+          "ldAt18": 0.7576638817909451,
+          "ldAt28": 0.5623773986606119,
+          "ratio28To18": 0.7422518245574536
+        },
+        {
+          "altitudeM": 40218.2,
+          "mach": 5.0,
+          "ldAt18": 0.7134349431427571,
+          "ldAt28": 0.5317984280181713,
+          "ratio28To18": 0.7454056366731107
+        },
+        {
+          "altitudeM": 40218.2,
+          "mach": 5.459362211781774,
+          "ldAt18": 0.7092005618932039,
+          "ldAt28": 0.5291507106720535,
+          "ratio28To18": 0.7461228023557834
+        },
+        {
+          "altitudeM": 40218.2,
+          "mach": 6.0,
+          "ldAt18": 0.6950482159862732,
+          "ldAt28": 0.520303939448889,
+          "ratio28To18": 0.7485868281966278
+        },
+        {
+          "altitudeM": 44192.2,
+          "mach": 4.0,
+          "ldAt18": 0.7580296483875362,
+          "ldAt28": 0.5625983183732809,
+          "ratio28To18": 0.7421851105296838
+        },
+        {
+          "altitudeM": 44192.2,
+          "mach": 5.0,
+          "ldAt18": 0.7139538096270874,
+          "ldAt28": 0.5321147409819939,
+          "ratio28To18": 0.7453069565661792
+        },
+        {
+          "altitudeM": 44192.2,
+          "mach": 5.865661725939536,
+          "ldAt18": 0.6993297511170479,
+          "ldAt28": 0.5229863113333938,
+          "ratio28To18": 0.7478393568956868
+        },
+        {
+          "altitudeM": 44192.2,
+          "mach": 6.0,
+          "ldAt18": 0.6950482849115276,
+          "ldAt28": 0.5203040097685637,
+          "ratio28To18": 0.7485868551345221
+        },
+        {
+          "altitudeM": 48070.0,
+          "mach": 4.0,
+          "ldAt18": 0.7341226970734693,
+          "ldAt28": 0.5480740824766651,
+          "ratio28To18": 0.7465701369287798
+        },
+        {
+          "altitudeM": 48070.0,
+          "mach": 5.0,
+          "ldAt18": 0.7021742131818695,
+          "ldAt28": 0.524913391715259,
+          "ratio28To18": 0.7475543559719156
+        },
+        {
+          "altitudeM": 48070.0,
+          "mach": 6.0,
+          "ldAt18": 0.6909848727023598,
+          "ldAt28": 0.5178025594880116,
+          "ratio28To18": 0.7493688790363054
+        },
+        {
+          "altitudeM": 48070.0,
+          "mach": 6.240044030345398,
+          "ldAt18": 0.6834976109290759,
+          "ldAt28": 0.5130745080827793,
+          "ratio28To18": 0.7506602801220607
+        }
+      ]
+    },
+    "singleStateGrid": {
+      "matchedMachPairs": 4,
+      "apiRatio28To18Range": [
+        0.7872855342913679,
+        0.8009222535714785
+      ],
+      "apiRatio28To18Median": 0.7990632225806994,
+      "pairs": [
+        {
+          "mach": 2.0,
+          "ldAt18": 0.6205492617940068,
+          "ldAt28": 0.4885494571256086,
+          "ratio28To18": 0.7872855342913679
+        },
+        {
+          "mach": 4.0,
+          "ldAt18": 0.5125737720745728,
+          "ldAt28": 0.4102693179823231,
+          "ratio28To18": 0.8004102830346034
+        },
+        {
+          "mach": 6.0,
+          "ldAt18": 0.5044958990887587,
+          "ldAt28": 0.40244453242979167,
+          "ratio28To18": 0.7977161621267954
+        },
+        {
+          "mach": 7.106515,
+          "ldAt18": 0.48579360034127267,
+          "ldAt28": 0.3890829051559343,
+          "ratio28To18": 0.8009222535714785
+        }
+      ]
+    },
+    "pairs": [
+      {
+        "altitudeM": 36265.9,
+        "mach": 4.0,
+        "ldAt18": 0.7576639964609576,
+        "ldAt28": 0.5623774228733075,
+        "ratio28To18": 0.7422517441770599
+      },
+      {
+        "altitudeM": 36265.9,
+        "mach": 5.0,
+        "ldAt18": 0.7134349994278446,
+        "ldAt28": 0.5317984616445703,
+        "ratio28To18": 0.7454056249988551
+      },
+      {
+        "altitudeM": 36265.9,
+        "mach": 5.015972443681555,
+        "ldAt18": 0.7134299740853386,
+        "ldAt28": 0.5317945978430477,
+        "ratio28To18": 0.7454054597647671
+      },
+      {
+        "altitudeM": 36265.9,
+        "mach": 6.0,
+        "ldAt18": 0.6950483323230698,
+        "ldAt28": 0.5203038409706402,
+        "ratio28To18": 0.7485865612131193
+      },
+      {
+        "altitudeM": 38016.7,
+        "mach": 4.0,
+        "ldAt18": 0.7576639146571255,
+        "ldAt28": 0.5623773757723868,
+        "ratio28To18": 0.742251762150882
+      },
+      {
+        "altitudeM": 38016.7,
+        "mach": 5.0,
+        "ldAt18": 0.7134350215686386,
+        "ldAt28": 0.531798313399093,
+        "ratio28To18": 0.7454053940747418
+      },
+      {
+        "altitudeM": 38016.7,
+        "mach": 5.211938478487767,
+        "ldAt18": 0.7125050219589628,
+        "ldAt28": 0.5312119421493309,
+        "ratio28To18": 0.7455553656152705
+      },
+      {
+        "altitudeM": 38016.7,
+        "mach": 6.0,
+        "ldAt18": 0.695048209967789,
+        "ldAt28": 0.5203038738084296,
+        "ratio28To18": 0.7485867402385545
+      },
+      {
+        "altitudeM": 40218.2,
+        "mach": 4.0,
+        "ldAt18": 0.7576638817909451,
+        "ldAt28": 0.5623773986606119,
+        "ratio28To18": 0.7422518245574536
+      },
+      {
+        "altitudeM": 40218.2,
+        "mach": 5.0,
+        "ldAt18": 0.7134349431427571,
+        "ldAt28": 0.5317984280181713,
+        "ratio28To18": 0.7454056366731107
+      },
+      {
+        "altitudeM": 40218.2,
+        "mach": 5.459362211781774,
+        "ldAt18": 0.7092005618932039,
+        "ldAt28": 0.5291507106720535,
+        "ratio28To18": 0.7461228023557834
+      },
+      {
+        "altitudeM": 40218.2,
+        "mach": 6.0,
+        "ldAt18": 0.6950482159862732,
+        "ldAt28": 0.520303939448889,
+        "ratio28To18": 0.7485868281966278
+      },
+      {
+        "altitudeM": 44192.2,
+        "mach": 4.0,
+        "ldAt18": 0.7580296483875362,
+        "ldAt28": 0.5625983183732809,
+        "ratio28To18": 0.7421851105296838
+      },
+      {
+        "altitudeM": 44192.2,
+        "mach": 5.0,
+        "ldAt18": 0.7139538096270874,
+        "ldAt28": 0.5321147409819939,
+        "ratio28To18": 0.7453069565661792
+      },
+      {
+        "altitudeM": 44192.2,
+        "mach": 5.865661725939536,
+        "ldAt18": 0.6993297511170479,
+        "ldAt28": 0.5229863113333938,
+        "ratio28To18": 0.7478393568956868
+      },
+      {
+        "altitudeM": 44192.2,
+        "mach": 6.0,
+        "ldAt18": 0.6950482849115276,
+        "ldAt28": 0.5203040097685637,
+        "ratio28To18": 0.7485868551345221
+      },
+      {
+        "altitudeM": 48070.0,
+        "mach": 4.0,
+        "ldAt18": 0.7341226970734693,
+        "ldAt28": 0.5480740824766651,
+        "ratio28To18": 0.7465701369287798
+      },
+      {
+        "altitudeM": 48070.0,
+        "mach": 5.0,
+        "ldAt18": 0.7021742131818695,
+        "ldAt28": 0.524913391715259,
+        "ratio28To18": 0.7475543559719156
+      },
+      {
+        "altitudeM": 48070.0,
+        "mach": 6.0,
+        "ldAt18": 0.6909848727023598,
+        "ldAt28": 0.5178025594880116,
+        "ratio28To18": 0.7493688790363054
+      },
+      {
+        "altitudeM": 48070.0,
+        "mach": 6.240044030345398,
+        "ldAt18": 0.6834976109290759,
+        "ldAt28": 0.5130745080827793,
+        "ratio28To18": 0.7506602801220607
+      }
+    ],
+    "cStockRatio28To18": 0.45232210733436434,
+    "provisionalRatioAtMachGrid": 1.1493625594519523
+  },
+  "interpretation": {
+    "finding": "At the Mach-5.2, AoA-28 witness, the KSP API simulation is close to the nearby measured L/D median, while the provisional table is higher. Both API grids show an AoA-28/AoA-18 L/D ratio around 0.75-0.80; the C stock lifting-surface fallback gives about 0.45, and the provisional table gives an increasing ratio at this Mach.",
+    "limitation": "The measured high-incidence subset is one bypassed flight session and contains no matched Mach-5 AoA18 samples. The API incidence sweep remains simulated, the provisional table has zero certified cells and no independent AoA sweep, and local observed-force cells may supersede the cold-start fallback.",
+    "decision": "Use as a diagnostic model-shape hypothesis only. Do not change the live low-q bank ramp, production aerodynamic profile, shadow criteria, or flight limits from this comparison alone."
+  },
+  "liveStateMutation": false,
+  "errors": []
+}
