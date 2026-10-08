@@ -1,0 +1,22 @@
+{
+  "base": "29563b5",
+  "vehicle": "STS",
+  "checkpoint": "STS-campaign-72km-20261008",
+  "normal_gate": true,
+  "shadow_feedback": {
+    "MM305": false,
+    "closest_km": 4.8,
+    "range_error_km": 62.1,
+    "q_kpa": 5.3,
+    "g": 1.63
+  },
+  "isolated_recovery": {
+    "MM305": false,
+    "closest_km": 5.0,
+    "range_error_km": -36.4,
+    "q_kpa": 7.9,
+    "g": 2.19
+  },
+  "result": "Both rejected; checkpoint restored and frozen; no live descent.",
+  "regression": "entry-lateral-feedback-test passed"
+}

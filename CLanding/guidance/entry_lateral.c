@@ -147,7 +147,7 @@ static bool bank_magnitude(const EntryLateralInput *input,
     /* A measured force exists independently of a model's confidence. Scaling
      * that observation by zero erased roll authority whenever no certified
      * prior was loaded. Keep confidence discounting for model-only lift. */
-    double available_lift = input->has_measured_lift ? measured_lift :
+    double available_lift = (input->has_measured_lift || input->has_simulated_lift_observation) ? measured_lift :
         measured_lift * confidence;
     if (!(available_lift > DBL_EPSILON)) return false;
 

@@ -202,6 +202,12 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.lift_accel=live_lift_accel(t,aero,v);
     lateral.has_measured_lift=t->physics_sample_valid&&isfinite(t->mass)&&t->mass>DBL_MIN&&
         isfinite(t->lift_force)&&t->lift_force>0.0;
+    /* Predict the feedback policy that will consume the future sensor force.
+       Keep physics_sample_valid false and model confidence unchanged in the
+       synthetic telemetry; uncertainty belongs to the force model, not a
+       second attenuation of the controller's usable local observation. */
+    lateral.has_simulated_lift_observation=g->diagnostic_shadow&&
+        isfinite(t->mass)&&t->mass>DBL_MIN&&isfinite(t->lift_force)&&t->lift_force>0.0;
     lateral.authority_confidence=clampd(
         fmax(t->aerodynamic_confidence,t->physics_authority_confidence[1]),0.0,1.0);
     lateral.course_to_site_error_deg=isfinite(t->course_to_site_error)?

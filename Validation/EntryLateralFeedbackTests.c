@@ -232,6 +232,15 @@ static void measured_lift_is_not_model_confidence(void){
     assert(modeled.valid&&modeled.degraded_authority);
     assert(modeled.bank_magnitude_deg==0.0);
 
+    in.has_simulated_lift_observation=true;
+    EntryLateralState simulated_state={0};
+    EntryLateralOutput simulated=entry_lateral_update(&simulated_state,&in,&l);
+    assert(simulated.valid);
+    assert(!in.has_measured_lift&&in.authority_confidence==0.0);
+    assert(fabs(simulated.bank_magnitude_deg-measured.bank_magnitude_deg)<1e-9);
+    assert(fabs(simulated.target_bank_deg-measured.target_bank_deg)<1e-9);
+    in.has_simulated_lift_observation=false;
+
     in.has_measured_lift=true;
     const double invalid_lifts[]={0.0,-1.0,NAN};
     for(size_t i=0;i<sizeof(invalid_lifts)/sizeof(invalid_lifts[0]);++i){
