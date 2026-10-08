@@ -1,0 +1,146 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_WITNESS_TRACE",
+  "missionResult": {
+    "landingVerified": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "guidanceEngaged": false,
+    "liveDescentStarted": false
+  },
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "shadowAborted": true,
+    "flightQualification": false
+  },
+  "run": {
+    "startedUTC": "2026-10-08T17:49:54.459508+00:00",
+    "campaignIdentity": "dda53837e4d1bc6d-9222d18ea1c31512-badd735f8d8c6356",
+    "attemptId": "native-31799-1791481795-851071000",
+    "runnerArgs": [
+      "Tools/headless_flight.py",
+      "--backend",
+      "CLanding/build/landing_backend",
+      "--config",
+      "Configuration/sts.json",
+      "--live",
+      "--reentry-only",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+    ],
+    "diagnosticEnvironment": {
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1"
+    },
+    "runnerLog": "Runtime/STS-Campaign-20261009/shadow-trace-course/headless-live.log",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T174954459508Z-31799.json",
+    "checkpointPhysicsSettle": {
+      "ready": true,
+      "ut": 9932.231826169353,
+      "meanAltitudeM": 71863.28074955626,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "actualThrustN": 0,
+      "paused": true
+    },
+    "aerodynamicPriorCells": 60,
+    "currentAttemptHeldOut": true,
+    "summary": {
+      "closestMissKm": 4.5,
+      "shadowRangeErrorKm": 64.0,
+      "peakDynamicPressureKPa": 5.3,
+      "peakG": 1.63
+    },
+    "witness": {
+      "firstEntry": {
+        "ut": 9980.57,
+        "altitudeM": 68998,
+        "speedMps": 2103,
+        "entryFeedbackMargin": -179397,
+        "dragAccelMps2": 0.004,
+        "referenceDragAccelMps2": 2.724,
+        "bankDeg": 0,
+        "crossTrackM": 13
+      },
+      "firstSTurnReversal": {
+        "ut": 10470.17,
+        "altitudeM": 42815,
+        "speedMps": 1883.4,
+        "crossTrackM": 2290,
+        "side": -1,
+        "reversalCount": 1
+      },
+      "nearSitePass": {
+        "ut": 10517.27,
+        "phase": 7,
+        "altitudeM": 37827,
+        "speedMps": 1723.8,
+        "mach": 5.19,
+        "flightPathAngleDeg": -3.82,
+        "rangeToSiteM": 5141,
+        "runwayAlongTrackM": 2355,
+        "runwayCrossTrackM": 4570,
+        "courseToSiteErrorDeg": -117.7,
+        "commandedAndAchievedBankDeg": -40,
+        "commandedAndAchievedAoADeg": 28,
+        "entryFeedbackMargin": 101141,
+        "mm305Veto": "0x89",
+        "mm305VetoInterpretation": [
+          "0x80: course-to-site error exceeds 90 deg; the trajectory is flying away from the site",
+          "0x08: altitude is outside the MM305 engagement band",
+          "0x01: speed or Mach is outside the MM305 window"
+        ]
+      },
+      "downstreamPoint": {
+        "ut": 10562.27,
+        "altitudeM": 32425,
+        "speedMps": 1409.4,
+        "mach": 4.41,
+        "rangeToSiteM": 69386,
+        "courseToSiteErrorDeg": -173.5,
+        "mm305Veto": "0x89"
+      },
+      "shadowAbort": {
+        "ut": 10832.27,
+        "altitudeM": 9347,
+        "speedMps": 85,
+        "mach": 0.28,
+        "rangeToSiteM": 160456,
+        "mm305Veto": "0x1b",
+        "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+      }
+    },
+    "rejection": "Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=4.5 km, range error=+64.0 km, q=5.3 kPa, g=1.63.",
+    "liveControlIssued": false
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHeadBeforeRun": "12104cdc557f0cd0917b58d9424dfac5968b848d",
+    "backendSHA256": "9222d18ea1c315124c775c20456cfed913b39383fb4540560034ff6a2c5a2ec9",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "sourceTreeSHA256": "dda53837e4d1bc6d618d384689a0fdf9e954143e4670eceb892b946443d93c15",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "expectedCheckpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUnchanged": true,
+    "vehicleModelId": "STS",
+    "checkpointPhysicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "postCleanup": {
+    "vessel": "STS",
+    "paused": true,
+    "situation": "VesselSituation.sub_orbital",
+    "onlyOneKSPProcess": true,
+    "noRunnerOrBackendProcess": true,
+    "checkpointSHA256Unchanged": true
+  },
+  "interpretation": "The closed-loop shadow gets near the site while the vehicle is still above the MM305 band and at Mach 5.19. Its course-to-site error is already -117.7 deg (a heading away from the target), and 45 seconds later it is -173.5 deg as range grows to 69 km. The handoff never becomes admissible and the predicted trajectory later aborts. This is a trajectory-control diagnostic produced by the shadow from a checkpoint-restored live KSP state; it is not an atmospheric flight observation or qualification result. Do not change the shadow gate or low-q bank ramp based on this trace alone."
+}

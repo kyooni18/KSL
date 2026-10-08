@@ -9,6 +9,7 @@ typedef struct {
 
 typedef struct {
     double ut, altitude, speed, mach, fpa, range, along, cross;
+    double course_to_site_error;
     double commanded_bank, achieved_bank, commanded_aoa, achieved_aoa, energy_margin;
     int phase;
     unsigned mm305_veto;
@@ -198,6 +199,7 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                 .ut=state.ut,.altitude=geo.altitude,.speed=at.speed,.mach=at.mach,
                 .fpa=synthetic.flight_path_angle,.range=range,
                 .along=synthetic.runway_along_track,.cross=synthetic.runway_cross_track,
+                .course_to_site_error=synthetic.course_to_site_error,
                 .commanded_bank=isfinite(r.command.target_roll)?norm_signed_deg(r.command.target_roll):response.actual_bank,
                 .achieved_bank=response.actual_bank,.commanded_aoa=command_aoa,
                 .achieved_aoa=response.actual_aoa,.energy_margin=shadow.entry_feedback.energy_margin,
@@ -276,9 +278,10 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             for(unsigned i=0;i<entry_witness_history_count;i++){
                 const EntryWitnessTracePoint*q=&entry_witness_history[(first+i)%8U];
                 fprintf(stderr,
-                    "ENTRY_WITNESS state ut=%.2f phase=%d h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f along=%.0f cross=%.0f bank=%.1f/%.1f aoa=%.1f/%.1f rangeErr=%+.0f mm305Ready=%d mm305Veto=0x%x\n",
+                    "ENTRY_WITNESS state ut=%.2f phase=%d h=%.0f V=%.1f M=%.2f fpa=%.2f range=%.0f along=%.0f cross=%.0f courseToSiteErr=%+.1f bank=%.1f/%.1f aoa=%.1f/%.1f entryFeedbackMargin=%+.0f mm305Ready=%d mm305Veto=0x%x\n",
                     q->ut,q->phase,q->altitude,q->speed,q->mach,q->fpa,q->range,
-                    q->along,q->cross,q->commanded_bank,q->achieved_bank,
+                    q->along,q->cross,q->course_to_site_error,
+                    q->commanded_bank,q->achieved_bank,
                     q->commanded_aoa,q->achieved_aoa,q->energy_margin,
                     q->mm305_ready?1:0,q->mm305_veto);
             }
@@ -630,4 +633,3 @@ typedef enum {
     DEORBIT_REJECT_ENTRY_PREDICTION,
     DEORBIT_REJECT_COUNT
 } DeorbitRejectReason;
-
