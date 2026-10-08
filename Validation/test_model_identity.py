@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sys
+import json
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -61,6 +63,30 @@ class RunnerPreflightTests(unittest.TestCase):
             reserve.assert_not_called()
             allocate.assert_not_called()
             spawn.assert_not_called()
+
+
+class AttitudeIdentificationTests(unittest.TestCase):
+    def test_log_selection_keeps_vehicle_and_transport_identity(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ShuttleSim" / "tools"))
+        from identify_stsn_attitude import _log_samples
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "vehicle.jsonl"
+            for vessel, explicit, transport, selected, accepted in [
+                ("STS", "STS", "tcp", "STS-N", False),
+                ("STS-N", "STS-N", "tcp", "STS", False),
+                ("STS", "STS-N", "tcp", "STS", False),
+                ("STS", "STS", "shuttlesim", "STS", False),
+                ("STS", "STS", "tcp", "STS", True),
+                ("STS-N", None, "tcp", "STS-N", True),
+            ]:
+                with self.subTest(vessel=vessel, explicit=explicit, transport=transport,
+                                  selected=selected):
+                    header = dict(vessel=vessel, runtime=dict(transport=transport))
+                    if explicit is not None:
+                        header["modelIdentity"] = dict(vehicleModelId=explicit)
+                    frame = dict(recordType="vehicleKeyframe", ut=1, fields={})
+                    path.write_text(json.dumps(header) + "\n" + json.dumps(frame) + "\n")
+                    self.assertEqual(bool(_log_samples(path, selected)), accepted)
 
 
 if __name__ == "__main__":

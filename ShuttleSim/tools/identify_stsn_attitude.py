@@ -26,11 +26,12 @@ import math
 import os
 import zlib
 from multiprocessing import Pool
+from functools import partial
 
 from identify_stsn_aero import _g, _merge, _f, _wls
 
 
-def _log_samples(path):
+def _log_samples(path, vehicle_model="STS-N"):
     out = []
     with open(path, encoding="utf-8") as h:
         try:
@@ -38,6 +39,13 @@ def _log_samples(path):
         except json.JSONDecodeError:
             return out
         if "shuttlesim" in str(_g(first, "runtime", "transport")):
+            return out
+        # Vessel names in legacy logs identify the model; modern explicit
+        # identity must agree. Never silently mix the two different orbiters.
+        if first.get("vessel") != vehicle_model:
+            return out
+        model = _g(first, "modelIdentity", "vehicleModelId")
+        if model is not None and model != vehicle_model:
             return out
         state = {}
         last_ut = None
@@ -162,6 +170,7 @@ def fit_axis(train, test, name, target, rate, ctrl, stiff_state, cap_grid):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--live-logs", required=True)
+    ap.add_argument("--vehicle-model", choices=["STS", "STS-N"], default="STS-N")
     ap.add_argument("--base-ini", required=True, help="closed-loop response ini to extend")
     ap.add_argument("--ini", required=True)
     ap.add_argument("--report", required=True)
@@ -177,7 +186,7 @@ def main():
     logs = sorted(glob.glob(os.path.join(args.live_logs, "*vehicle.jsonl")))
     samples = []
     with Pool(args.jobs) as pool:
-        for seq in pool.imap(_log_samples, logs, chunksize=4):
+        for seq in pool.imap(partial(_log_samples, vehicle_model=args.vehicle_model), logs, chunksize=4):
             samples.extend(pairs(seq, args))
     train = [s for s in samples if not heldout(s["log"])]
     test = [s for s in samples if heldout(s["log"])]

@@ -1,0 +1,49 @@
+{
+  "scope": "Real KSP startup and normal entry-admission tests from the preserved named72km checkpoint. User explicitly requested live tests. No full-flight engagement accepted; no landing or rollout.",
+  "runs": [
+    {
+      "test": "wrong-profile",
+      "log": "sts-live-real-test-20261008.log.gz",
+      "rawSHA256": "b589354fabcbe14dcf0a8666e362add6c11f853365123da01c13204dff9fb0dd",
+      "physics": [
+        "Known checkpoint physics frozen: {\"ready\": true, \"ut\": 9931.111826169328, \"vessel\": \"STS\", \"meanAltitude\": 71929.0594720965, \"mass\": 25816.10546875, \"dryMass\": 20348.0, \"availableThrust\": 3060000.25, \"actualThrust\": 0.0, \"partCount\": 22, \"paused\": true, \"railsWarpFactor\": 0, \"physicsWarpFactor\": 0, \"pitch\": -0.01894865185022354, \"aoa\": 1.5872039794921875, \"profile\": \"/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json\"}"
+      ],
+      "result": [
+        "headless flight failed: engageReentry rejected: Aerodynamic profile 'identified' describes STS-N, not STS; cross-vehicle model reuse is blocked."
+      ],
+      "cleanup": [
+        "test cleanup restored and froze KSP quicksave"
+      ]
+    },
+    {
+      "test": "sts-profile",
+      "log": "sts-live-real-test-profile-20261008.log.gz",
+      "rawSHA256": "43291bffe48eea6f1b3b3edda19229b117b8f81591e9d98e0c988c6675aeb9e0",
+      "physics": [
+        "Known checkpoint physics frozen: {\"ready\": true, \"ut\": 9931.111826169328, \"vessel\": \"STS\", \"meanAltitude\": 71929.05815250438, \"mass\": 25816.10546875, \"dryMass\": 20348.0, \"availableThrust\": 3060000.25, \"actualThrust\": 0.0, \"partCount\": 22, \"paused\": true, \"railsWarpFactor\": 0, \"physicsWarpFactor\": 0, \"pitch\": -0.018627634271979332, \"aoa\": 1.5875245332717896, \"profile\": \"/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json\"}"
+      ],
+      "result": [
+        "headless flight failed: engageReentry rejected: Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=0.5 km, range error=-61.1 km, q=8.4 kPa, g=3.22."
+      ],
+      "cleanup": [
+        "test cleanup restored and froze KSP quicksave"
+      ]
+    },
+    {
+      "test": "instrumented-sts-profile",
+      "log": "sts-live-admission-trace-20261008.log.gz",
+      "rawSHA256": "9feec49f8191aa4a2f28319a4bb87015a6fcf816063ebfb371e0708334b1e2dc",
+      "physics": [
+        "Known checkpoint physics frozen: {\"ready\": true, \"ut\": 9931.991826169347, \"vessel\": \"STS\", \"meanAltitude\": 71877.38224295806, \"mass\": 25816.10546875, \"dryMass\": 20348.001953125, \"availableThrust\": 3060000.25, \"actualThrust\": 0.0, \"partCount\": 22, \"paused\": true, \"railsWarpFactor\": 0, \"physicsWarpFactor\": 0, \"pitch\": 0.15087890625, \"aoa\": 1.757743239402771, \"profile\": \"/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json\"}"
+      ],
+      "result": [
+        "headless flight failed: engageReentry rejected: Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=1.5 km, range error=+85.4 km, q=5.3 kPa, g=1.63."
+      ],
+      "cleanup": [
+        "test cleanup restored and froze KSP quicksave"
+      ]
+    }
+  ],
+  "checkpoint": "STS-campaign-72km-20261008",
+  "backendSHA256": "fecf618a64b2d71d66815578fa17be0d5e36630f9e3b0f3614fc2089eb100846"
+}

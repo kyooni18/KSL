@@ -1,0 +1,66 @@
+{
+  "scope": "Original STS applied-control/angular-rate sample survey using existing pair validity filters; not a fit or certified authority model.",
+  "filters": {
+    "min_radar_alt": 120,
+    "min_q": 1,
+    "max_mach": 10,
+    "max_accel": 80,
+    "max_body_rate": 30,
+    "max_sideslip": 4
+  },
+  "results": [
+    {
+      "log": "FlightLogs/2026-10-07T18-50-21Z-STS-vehicle.jsonl",
+      "decoded": 5,
+      "accepted": 0,
+      "thin": 0,
+      "heldout": false
+    },
+    {
+      "log": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+      "decoded": 15116,
+      "accepted": 6885,
+      "thin": 4117,
+      "heldout": false,
+      "maxReportedRoll": 0.00218837079592049,
+      "maxBodyRollRate": 0.00399139180298086
+    },
+    {
+      "log": "FlightLogs/2026-10-07T18-58-28Z-STS-vehicle.jsonl",
+      "decoded": 83,
+      "accepted": 0,
+      "thin": 0,
+      "heldout": false
+    },
+    {
+      "log": "FlightLogs/2026-10-07T21-28-19Z-STS-vehicle.jsonl",
+      "decoded": 1,
+      "accepted": 0,
+      "thin": 0,
+      "heldout": false
+    },
+    {
+      "log": "FlightLogs/2026-10-07T19-07-42Z-STS-vehicle.jsonl",
+      "decoded": 3,
+      "accepted": 0,
+      "thin": 0,
+      "heldout": true
+    },
+    {
+      "log": "FlightLogs/2026-10-07T19-39-04Z-STS-vehicle.jsonl",
+      "decoded": 1,
+      "accepted": 0,
+      "thin": 0,
+      "heldout": false
+    },
+    {
+      "log": "FlightLogs/2026-10-07T19-14-13Z-STS-vehicle.jsonl",
+      "decoded": 7933,
+      "accepted": 2244,
+      "thin": 2244,
+      "heldout": false,
+      "maxReportedRoll": 0.00203707907348871,
+      "maxBodyRollRate": 0.00284292834752094
+    }
+  ]
+}

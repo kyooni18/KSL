@@ -1,0 +1,21 @@
+{
+  "scope": "All seven archived original STS live flights; Mach>=5 and q1-1000Pa; commanded bank and sideslip survey only, not authority certification.",
+  "results": [
+    {
+      "path": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+      "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+      "samples": 9066,
+      "maxActualBank": 0.896484375,
+      "maxCommandBank": 4.07127957740943e-25,
+      "maxBeta": 0.330842107534409
+    },
+    {
+      "path": "FlightLogs/2026-10-07T19-14-13Z-STS-vehicle.jsonl",
+      "sha256": "b6a028147b434dcc1d179e16ea452fcf6184feb14a4fd95a54989bd50c6edb99",
+      "samples": 5280,
+      "maxActualBank": 0.2738037109375,
+      "maxCommandBank": 3.78047389330876e-25,
+      "maxBeta": 0.111912958323956
+    }
+  ]
+}

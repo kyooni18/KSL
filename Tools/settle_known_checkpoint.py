@@ -5,6 +5,18 @@ import argparse,hashlib,json,time
 from pathlib import Path
 from ksp_test_guard import connect
 
+def resume_placeholder_physics(conn, vessel, profile):
+    sc=conn.space_center
+    sc.rails_warp_factor=0;sc.physics_warp_factor=0
+    if abs(float(vessel.thrust))>1.0:
+        raise RuntimeError('Unexpected propulsion before checkpoint unpack')
+    if conn.krpc.paused:
+        mass=float(vessel.mass);dry=float(vessel.dry_mass)
+        coherent=(abs(mass-profile['mass'])<=max(1.0,profile['mass']*.001) and
+            abs(dry-profile['dryMass'])<=max(1.0,profile['dryMass']*.001) and
+            len(vessel.parts.all)==profile['partCount'])
+        if not coherent:conn.krpc.paused=False
+
 def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile',type=Path,required=True)
@@ -24,6 +36,10 @@ def main() -> None:
         # Preserve the checkpoint's control deflections during the short unpack.
         # Zeroing the saved pitch before the controller owned it caused a
         # measured 40-degree nose-down excursion in the former startup window.
+        # A paused post-load scene can expose placeholder rigidbody masses.
+        # Let verified checkpoint physics unpack at 1x, then freeze immediately
+        # once the independently accounted mass profile agrees.
+        resume_placeholder_physics(conn,v,profile)
         deadline=time.monotonic()+20;first_coherent=None
         while time.monotonic()<deadline:
             ut=float(sc.ut);mass=float(v.mass);dry=float(v.dry_mass)
