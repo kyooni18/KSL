@@ -217,3 +217,12 @@ Not resolved, and needing STS-specific aero (lift and drag tables for the orbite
 - `vehicle.entryAngleOfAttack` 12 and 24 (default 18), offline closed loop from `ksp70km-entry-interface`: both abort with the same message, "MM304 flight recovery margin was exhausted before TAEM acquisition." No touchdown, no rollout.
 - The result does not change across entry AoA. The abort is insensitive to this knob, which points at the aero table or the MM304 range/energy plan, not the entry AoA command.
 - Not yet tested: whether `entryAngleOfAttack` is read by the offline path at all (`run_guidance.py` may take the initial AoA from the scenario `initial_aoa_deg`). Check before reading this result as a sensitivity.
+
+## Entry-AoA probe: correction (2026-10-08)
+
+The open question from the entry-AoA probe is resolved, and the probe result stands as recorded.
+
+- `vehicle.entryAngleOfAttack` does reach guidance: `CLanding/guidance/entry_alpha.c:58` uses it as the trim, and `CLanding/guidance/entry/contract.inc:35` uses it as the default AoA.
+- Several MM304/final paths clamp it to 10–18°: `guidance_terminal.c:183`, `final/recovery.inc:247,254,375`. A value of 24 is therefore clamped to 18 on those paths, so the 24° offline run cannot have tested a higher AoA there.
+- The offline plant takes its own initial AoA from `initial_aoa_deg` in the scenario (1.3° in `ksp70km-entry-interface.ini`), not from the vehicle config.
+- Result unchanged: 12° and 24° both abort with "MM304 flight recovery margin was exhausted before TAEM acquisition." The abort is not sensitive to the entry-AoA command across this range, given these clamps.
