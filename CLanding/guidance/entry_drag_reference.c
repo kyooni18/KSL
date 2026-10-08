@@ -65,8 +65,16 @@ bool entry_drag_reference_config_valid(const EntryDragReferenceConfig*c){
         c->prediction_steps>=16&&c->prediction_steps<=512;
 }
 
+static bool inertial_state_valid(const VehicleState *state){
+    if(!state)return true;
+    double radius=vmag(state->position);
+    return isfinite(radius)&&radius>0.0&&
+        isfinite(state->velocity.x)&&isfinite(state->velocity.y)&&
+        isfinite(state->velocity.z)&&isfinite(vmag(state->velocity));
+}
+
 static bool input_valid(const EntryDragReferenceInput*i){
-    return i&&phase_valid(i->phase)&&i->planet&&i->vehicle&&
+    return i&&phase_valid(i->phase)&&i->planet&&i->vehicle&&inertial_state_valid(i->state)&&
         isfinite(i->relative_velocity)&&i->relative_velocity>=0&&
         isfinite(i->latitude)&&isfinite(i->altitude)&&
         isfinite(i->range_to_site)&&i->range_to_site>=0&&
@@ -412,7 +420,19 @@ EntryDragReferenceOutput entry_drag_reference_compute(const EntryDragReferenceIn
     out.predicted_range_d_drag=-out.predicted_range_to_taem/
         fmax(c->minimum_drag_accel,out.reference_drag_accel);
 
-    double vertical=equilibrium_vertical_lift(i,i->relative_velocity,i->altitude);
+    /* Radial kinematics use body-centered inertial tangential velocity:
+       r_ddot = a_radial + |v_inertial,tangent|^2/r. Using airspeed here
+       drops planetary rotation (and incorrectly counts radial velocity),
+       overstates eastbound lift-up demand, and delays drag-producing descent.
+       Keep air-relative speed everywhere in the aerodynamic/range profile. */
+    double support_speed=i->relative_velocity,support_altitude=i->altitude;
+    if(i->state){
+        double radius=vmag(i->state->position);
+        Vector3 up=vscale(i->state->position,1.0/radius);
+        support_speed=vmag(vproject_plane(i->state->velocity,up));
+        support_altitude=radius-i->planet->radius;
+    }
+    double vertical=equilibrium_vertical_lift(i,support_speed,support_altitude);
     double range_fraction=out.predicted_range_error/out.range_error_scale;
     double correction=c->vertical_drag_gain*clampd(out.drag_error_fraction,-1.5,1.5)+
         c->vertical_range_gain*clampd(range_fraction,-1.5,1.5);

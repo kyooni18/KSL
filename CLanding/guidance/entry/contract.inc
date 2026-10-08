@@ -63,7 +63,6 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,double dt){
     const VehicleProfile*v=&cfg->vehicle;
     const GuidanceSettings*s=&cfg->guidance;
-    (void)state;
 
     /* Retire all event/waypoint ownership from live MM304.  These fields may
        survive in old checkpoints or forecast records, but they cannot command
@@ -95,6 +94,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .relative_velocity=t->true_air_speed,
         .latitude=t->latitude,
         .altitude=t->mean_altitude,
+        .state=state,
         .measured_drag_accel=measured_drag,
         .modeled_drag_accel=live_drag_accel(t,aero,v),
         .aero_confidence=clampd(fmax(aero.confidence,t->aerodynamic_confidence),0.0,1.0),

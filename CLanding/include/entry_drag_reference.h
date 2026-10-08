@@ -48,6 +48,10 @@ typedef struct {
     double relative_velocity;
     double latitude;
     double altitude;
+    /* Optional measured body-centered inertial state. Current radial support
+       depends on inertial tangential speed, not the air-relative speed used by
+       the drag-v profile. NULL preserves reduced-model callers without a state. */
+    const VehicleState *state;
 
     /* Acceleration magnitudes in m/s^2. Either drag source may be NAN. */
     double measured_drag_accel;
