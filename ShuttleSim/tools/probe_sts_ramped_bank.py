@@ -19,6 +19,8 @@ def main():
                         help='Probe 18 to 28 deg incidence transitions at 50/45/40 km')
     transitions.add_argument('--reverse-incidence-transitions', action='store_true',
                              help='Probe 28 to 18 deg incidence transitions at 50/45/40 km')
+    parser.add_argument('--counterfactual-full-bank', action='store_true',
+                        help='Diagnostic only: omit positive-q pressure ramp, preserving structural and roll motion limits')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     out = args.output.resolve()
@@ -45,6 +47,8 @@ def main():
             commands.close()
             telemetry.settimeout(5)
             label = f'aoa{alpha}-ramped-bank70' if transition is None else f'aoa{alpha}-to{transition_target}-at{transition}-ramped-bank70'
+            if args.counterfactual_full_bank:
+                label += '-counterfactual-full-bank'
             raw = out / f'{label}.jsonl'
             cmd = [str(inputs[0]), '--scenario', str(inputs[1]),
                    '--atmosphere', str(inputs[2]), '--aero', str(inputs[3]),
@@ -55,7 +59,7 @@ def main():
                    '--max-sim-time', '800', '--record', str(raw), '--quiet']
             result = dict(aoa=alpha, incidenceTransitionAltitude=transition,
                           incidenceTransitionTarget=transition_target if transition is not None else None,
-                          bankMaximum=70, command=cmd, peakQ=0, peakG=0)
+                          bankMaximum=70, counterfactualFullBank=args.counterfactual_full_bank, command=cmd, peakQ=0, peakG=0)
             process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             # The initial lockstep frame is at t=0 and needs an acknowledgment.
             previous = -.02
@@ -80,7 +84,7 @@ def main():
                         if condition and key not in result:
                             result[key] = state
                     result['final'] = state
-                    authority = 70 * min(1, max(0, state['q'] / 360)) ** 2
+                    authority = (70 if state['q'] > 0 else 0) if args.counterfactual_full_bank else 70 * min(1, max(0, state['q'] / 360)) ** 2
                     if state['v'] < 85 or state['q'] > 45000 or state['g'] > 3.5:
                         authority = 0
                     dt = now - previous
@@ -114,11 +118,13 @@ def main():
             result['retainedLog'] = str(raw) + '.gz'
             results.append(result)
             print(alpha, json.dumps(result), flush=True)
-    report = dict(scope='Fixed positive-bank plant probe with q ramp, nominal roll '
+    report = dict(counterfactualFullBank=args.counterfactual_full_bank, scope='Fixed positive-bank plant probe with q ramp, nominal roll '
                         'rate/acceleration and structural limits. Not guidance, '
                         'nominal 40-degree planning, coordination validation, '
                         'qualification, or landing. Original provisional STS aero; '
-                        'borrowed STS-N attitude dynamics.',
+                        'borrowed STS-N attitude dynamics. With counterfactual-full-bank, '
+                        'the positive-q pressure ramp is deliberately omitted only '
+                        'for diagnosis, never for live guidance or qualification.',
                   inputs=[dict(path=str(p), sha256=hashlib.sha256(p.read_bytes()).hexdigest())
                           for p in inputs],
                   limits=dict(qAuthorityPa=360, maximumQPa=45000, maximumG=3.5,

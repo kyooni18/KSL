@@ -1,0 +1,75 @@
+{
+  "scope": "Partial simulator physical/closure diagnostic. Uses simulator heading as course for these zero-sideslip, windless probes. Does not evaluate energy, stall, control authority, executive state, or native qualification. Finite cases are not a reachability proof.",
+  "configuration": "Configuration/sts.json",
+  "configuration_sha256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+  "results": [
+    {
+      "log": "ShuttleSim/runs/sts-matched-full-bank-20261008/aoa18-ramped-bank70-counterfactual-full-bank.jsonl.gz",
+      "sha256": "d1d3c543650469d23f366853666ae3d0917f8b781dc53c7636488ded4954a259",
+      "telemetry_count": 8002,
+      "physical_window_frames": 25,
+      "in_range_window_frames": 25,
+      "closing_in_range_frames": 0,
+      "best_closure_in_range": {
+        "ut": 10522.831826,
+        "altitude_m": 22438.782,
+        "mach": 2.845799,
+        "range_m": 41942.08647084639,
+        "along_m": -21295.475,
+        "cross_m": 36141.251,
+        "heading_deg": 120.5804,
+        "bearing_deg": 30.535243937364385,
+        "course_error_deg": -90.04515606263561,
+        "closure_margin_deg": -0.04515606263561267,
+        "range_margin_m": 54557.91352915361
+      },
+      "first_physical_window": {
+        "ut": 10522.831826,
+        "altitude_m": 22438.782,
+        "mach": 2.845799,
+        "range_m": 41942.08647084639,
+        "along_m": -21295.475,
+        "cross_m": 36141.251,
+        "heading_deg": 120.5804,
+        "bearing_deg": 30.535243937364385,
+        "course_error_deg": -90.04515606263561,
+        "closure_margin_deg": -0.04515606263561267,
+        "range_margin_m": 54557.91352915361
+      }
+    },
+    {
+      "log": "ShuttleSim/runs/sts-matched-full-bank-20261008/aoa28-ramped-bank70-counterfactual-full-bank.jsonl.gz",
+      "sha256": "b36fb6a71b9c63c858db9ef36bcc272ad8e3de26b3d347a6cfbb2ba8bcefb502",
+      "telemetry_count": 8002,
+      "physical_window_frames": 114,
+      "in_range_window_frames": 114,
+      "closing_in_range_frames": 109,
+      "best_closure_in_range": {
+        "ut": 10508.631826,
+        "altitude_m": 23914.04,
+        "mach": 2.84958,
+        "range_m": 68669.83105666553,
+        "along_m": -53912.632,
+        "cross_m": 42589.432,
+        "heading_deg": 124.3041,
+        "bearing_deg": 51.795164170913715,
+        "course_error_deg": -72.50893582908628,
+        "closure_margin_deg": 17.491064170913717,
+        "range_margin_m": 27830.168943334473
+      },
+      "first_physical_window": {
+        "ut": 10508.631826,
+        "altitude_m": 23914.04,
+        "mach": 2.84958,
+        "range_m": 68669.83105666553,
+        "along_m": -53912.632,
+        "cross_m": 42589.432,
+        "heading_deg": 124.3041,
+        "bearing_deg": 51.795164170913715,
+        "course_error_deg": -72.50893582908628,
+        "closure_margin_deg": 17.491064170913717,
+        "range_margin_m": 27830.168943334473
+      }
+    }
+  ]
+}

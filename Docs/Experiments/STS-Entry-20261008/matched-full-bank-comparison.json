@@ -1,0 +1,67 @@
+{
+  "scope": "Counterfactual plant diagnostic only; existing live q ramp is preserved. Same initial state/model/roll reference limits; bank pressure ramp is the changed variable. Not certification, nominal controller planning, or a landing.",
+  "results": [
+    {
+      "aoa": 18,
+      "initial_fields_match": {
+        "position": true,
+        "velocity": true,
+        "attitude": true,
+        "vehicle": true,
+        "world": true
+      },
+      "ramped_860mps": {
+        "time": 631.72,
+        "h": 22445.501,
+        "v": 859.886,
+        "fpa": -12.270607,
+        "along": 56123.107,
+        "cross": 31205.611,
+        "q": 9171.915003,
+        "g": 2.2035724909650924
+      },
+      "full_bank_860mps": {
+        "time": 590.12,
+        "h": 22493.56,
+        "v": 859.464,
+        "fpa": -12.269642,
+        "along": -21504.57,
+        "cross": 36018.487,
+        "q": 9076.880695,
+        "g": 2.1805950742494065
+      },
+      "along_delta_m": -77627.677
+    },
+    {
+      "aoa": 28,
+      "initial_fields_match": {
+        "position": true,
+        "velocity": true,
+        "attitude": true,
+        "vehicle": true,
+        "world": true
+      },
+      "ramped_860mps": {
+        "time": 632.82,
+        "h": 23822.179,
+        "v": 858.786,
+        "fpa": -11.57301,
+        "along": 51052.277,
+        "cross": 35759.486,
+        "q": 6991.751574,
+        "g": 2.2772031335782428
+      },
+      "full_bank_860mps": {
+        "time": 576.22,
+        "h": 23914.04,
+        "v": 859.549,
+        "fpa": -11.562634,
+        "along": -53912.632,
+        "cross": 42589.432,
+        "q": 6880.719895,
+        "g": 2.2409201397375837
+      },
+      "along_delta_m": -104964.909
+    }
+  ]
+}
