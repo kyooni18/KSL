@@ -110,3 +110,7 @@ Prospective sensor lift in the shadow now feeds the same allocator policy as mea
 ## Prospective force selection and closure witness
 
 The lift feedback helper also needed to select the rollout force rather than the fallback polar. This is now explicit for shadow guidance; real telemetry validity and confidence remain unchanged. Focused forecast admission regression passed. Normal live main admission still rejects (+64.0 km range error). The isolated recovery rejects too (−36.4 km), but its witness reaches 22.758 km/Mach 2.73 with only veto `0x80`: it is flying away from the site after overflight. This identifies the heading problem independently of altitude, speed, range, and energy checks. All attempts restored/froze the original STS checkpoint. See `live-shadow-force-feedback.json` and the three matching compressed runner logs.
+
+## Rejected continuous energy turn
+
+An isolated execution experiment suppressed azimuth/crossrange reversals only while measured recovery requested positive drag and range correction. It failed the provisional simulator diagnostic before TAEM: at first 860 m/s, altitude 23.833 km, along +51.127 km, cross +35.732 km, heading 123.59°. Final abort occurred at altitude 6.792 km, along +86.806 km, cross +58.192 km. Holding the energy bank side did not produce a closing MM305 state. This policy was not adopted or flown in live KSP. The diagnostic is unqualified; see `energy-turn-diagnostic.json` and `energy-turn.patch.gz`.

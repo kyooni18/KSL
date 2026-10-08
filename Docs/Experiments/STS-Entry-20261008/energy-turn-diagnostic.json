@@ -1,0 +1,36 @@
+{
+  "hypothesis": "Hold energy bank side while positive drag/range recovery demand, then resume site pursuit",
+  "run_id": "mm304-sts72km-energy-turn-20261008-20261008T143111Z-_xk_81le",
+  "qualification": "unqualified simulator diagnostic",
+  "final": {
+    "ut": 10838.631826,
+    "altitude_m": 6791.729,
+    "speed_mps": 84.892,
+    "mach": 0.273364,
+    "along_m": 86805.945,
+    "cross_m": 58191.764,
+    "heading_deg": 319.9245,
+    "bank_deg": -18.279
+  },
+  "first_25km": {
+    "ut": 10558.631826,
+    "altitude_m": 24985.392,
+    "speed_mps": 965.152,
+    "mach": 3.190342,
+    "along_m": 46245.561,
+    "cross_m": 32826.242,
+    "heading_deg": 118.2426,
+    "bank_deg": 70.0
+  },
+  "first_860mps": {
+    "ut": 10565.231826,
+    "altitude_m": 23833.428,
+    "speed_mps": 859.711,
+    "mach": 2.850746,
+    "along_m": 51126.517,
+    "cross_m": 35731.984,
+    "heading_deg": 123.5884,
+    "bank_deg": 64.8887
+  },
+  "outcome": "Rejected: no TAEM; accumulated large cross-track. No live flight with this policy."
+}
