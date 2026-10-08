@@ -1,0 +1,25 @@
+{
+  "scope": "Original STS vacuum roll response only. Atmospheric coordination and bank-envelope certification remain unproven.",
+  "positive": {
+    "frames": 6,
+    "interval": [
+      0.44,
+      0.68
+    ],
+    "accel_deg_s2": 1.0057163260668105,
+    "authority_deg_s2_per_control": 6.70477550711207
+  },
+  "braking": {
+    "frames": 6,
+    "interval": [
+      0.84,
+      1.06
+    ],
+    "accel_deg_s2": -1.0034974890525163,
+    "authority_deg_s2_per_control": 6.689983260350109
+  },
+  "reported_authority_deg_s2": 6.596226819269496,
+  "peak_roll_rate_deg_s": 0.40511249807604977,
+  "integrated_roll_excursion_deg": 0.18916790193865005,
+  "guards": "Focused pure-function mutation checks passed for atmosphere/thrust/assistance/rate/clock; identity-frame roll conversion passed."
+}
