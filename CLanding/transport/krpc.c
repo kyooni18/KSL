@@ -502,20 +502,20 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
                 command,attitude_ptr,dt,&fc);
         }
         if(!valid||!fc.valid){set_error(error,error_size,"Native %s flight-control law rejected profile %s",inertial_entry?"inertial-entry":"atmospheric",profile_string(command->control_profile));return false;}
-        /* Unpowered landing forbids main-engine energy recovery, not the brief
-           attitude-only RCS authority needed to rotate from the retrograde deorbit
-           burn attitude into entry attitude before the aerosurfaces have useful q.
-           Keep throttle hard-zero; flight_control_step()/inertial_entry_capture_step()
-           blend RCS out with aerodynamic authority and enforce the transonic cutoff. */
+        /* The unpowered campaign keeps main-engine recovery and split-rudder
+           speedbrakes off. Its separate attitude-only RCS capture may rotate from
+           the retrograde deorbit attitude before useful aerodynamic authority. */
         const char *unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
-        if(unpowered&&strcmp(unpowered,"1")==0)fc.throttle=0.0;
+        bool unpowered_only=unpowered&&strcmp(unpowered,"1")==0;
+        if(unpowered_only)fc.throttle=0.0;
+        double speedbrake_fraction=unpowered_only?0.0:command->speedbrake_fraction;
         /* Keep the transport transparent: FlightControlOutput is expressed in
            the same direct-control axis convention consumed by native kRPC. Any
            sideslip/yaw sign or coordinate correction belongs in the flight-control
            law, not at this actuator boundary. */
         double native_yaw=fc.yaw;
         if(!krpc_cnano_client_set_direct_controls(s->client,fc.pitch,fc.roll,native_yaw,fc.throttle,fc.wheel_steering,fc.rcs_requested,error,error_size))return false;
-        if(!krpc_cnano_client_set_speedbrake(s->client,command->speedbrake_fraction,error,error_size))return false;
+        if(!krpc_cnano_client_set_speedbrake(s->client,speedbrake_fraction,error,error_size))return false;
         if(result){
             fill_direct_result(result,command,&fc,native_yaw);
             if(fc.diagnostics.quaternion_attitude_control)

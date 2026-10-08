@@ -46,7 +46,7 @@ def live_unpowered_policy_error(
     if env.get("KSP_LANDER_UNPOWERED_ONLY") != "1":
         return (
             "control-capable --live runs require KSP_LANDER_UNPOWERED_ONLY=1; "
-            "the native controller only hard-zeroes atmospheric throttle when this policy is explicit"
+            "the native controller hard-zeroes throttle and keeps split-rudder speedbrakes stowed under this policy"
         )
     return None
 

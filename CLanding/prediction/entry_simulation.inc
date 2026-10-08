@@ -159,6 +159,8 @@ double hac_acquisition_speed_target(const VehicleProfile*v,const GuidanceSetting
     return clampd(nominal,envelope.minimum_speed_mps,envelope.maximum_speed_mps);
 }
 static int predictor_speedbrake_state(PredictorGuidance*g,GeoPoint geo,const AtmosState*a,const PlanetModel*p,const TrajectoryCalibrationModel*c,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*s,double mass,bool reached_taem,double dt){
+    const char *unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
+    if(unpowered&&strcmp(unpowered,"1")==0){speedbrake_controller_reset(&g->speedbrake,false);return 0;}
     if(!reached_taem){speedbrake_controller_reset(&g->speedbrake,false);return 0;}
     bool predicted_gear=geo.altitude-site->altitude<=s->gear_deployment_altitude;
     Vector3 deployed_force;double deployed_confidence=0;

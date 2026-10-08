@@ -258,9 +258,19 @@ static void test_mm305_acquisition_qualification_contract(
         .ballistic_coefficient = configuration->vehicle.estimated_ballistic_coefficient,
         .confidence = 1.0
     };
+    const char *saved_unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
+    char *saved_unpowered_copy=saved_unpowered?strdup(saved_unpowered):NULL;
+    assert(!saved_unpowered||saved_unpowered_copy);
+    assert(setenv("KSP_LANDER_UNPOWERED_ONLY","1",1)==0);
     GuidanceResult acquisition_result = taem_guidance_native(&acquisition, &telemetry,
         &vehicle, geometry.course_deg, &planet, aero, configuration, model, 0.1);
-    (void)acquisition_result;
+    assert(acquisition_result.command.speedbrake_fraction==0.0);
+    assert(acquisition.taem_speedbrake_fraction==0.0);
+    if(saved_unpowered)
+        assert(setenv("KSP_LANDER_UNPOWERED_ONLY",saved_unpowered_copy,1)==0);
+    else
+        assert(unsetenv("KSP_LANDER_UNPOWERED_ONLY")==0);
+    free(saved_unpowered_copy);
     assert(acquisition.mm305_acquisition_route_valid);
     assert(!acquisition.terminal_final_handoff_latched);
 

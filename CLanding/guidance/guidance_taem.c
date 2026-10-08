@@ -1823,11 +1823,17 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         g->taem_speedbrake_integral=0.0;
     }
 
-    double sb_open_step=sb_deploy_slew_per_s*sb_dt;
-    double sb_close_step=sb_stow_slew_per_s*sb_dt;
-    g->taem_speedbrake_fraction=clampd(sb_target,
-        g->taem_speedbrake_fraction-sb_close_step,
-        g->taem_speedbrake_fraction+sb_open_step);
+    const char *unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
+    if (unpowered&&strcmp(unpowered,"1")==0) {
+        g->taem_speedbrake_integral=0.0;
+        g->taem_speedbrake_fraction=0.0;
+    } else {
+        double sb_open_step=sb_deploy_slew_per_s*sb_dt;
+        double sb_close_step=sb_stow_slew_per_s*sb_dt;
+        g->taem_speedbrake_fraction=clampd(sb_target,
+            g->taem_speedbrake_fraction-sb_close_step,
+            g->taem_speedbrake_fraction+sb_open_step);
+    }
     command.speedbrake_fraction=g->taem_speedbrake_fraction;
     GuidanceResult result=stabilized(g,
         result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);

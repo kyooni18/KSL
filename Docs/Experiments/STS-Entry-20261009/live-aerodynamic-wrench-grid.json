@@ -1,0 +1,6206 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+  "purpose": "Check whether the live KSP Flight aerodynamic wrench API can evaluate an original-STS Mach/AoA/sideslip/bank grid without advancing or changing the live vessel.",
+  "qualification": {
+    "qualified": false,
+    "shadow_gate_evidence": false,
+    "flight_control_or_actuation": false,
+    "landing_or_rollout_evidence": false,
+    "note": "Counterfactual Flight.simulate_aerodynamic_wrench_at results are simulations, not measured aerodynamic-force cells, a shadow-gate pass, or flight qualification."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "943145cc26bd81b7d484e5982d2e40f82d895109",
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "vehicleModelId": "STS",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUsedForThisProbe": false,
+    "inputStateOrigin": "Direct read-only snapshot of the already-loaded live STS at the time recorded below; this state is not the 72 km checkpoint.",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "utPolicy": "Pass the measured current UT explicitly to every wrench call.",
+    "angularVelocityPolicy": "Zero angular velocity for the grid to isolate static aerodynamic wrench; same-state parity check also uses measured angular velocity.",
+    "controlSurfacePolicy": "No control-surface, action-group, RCS, SAS, throttle, or vessel-state setters are called. The API uses the currently loaded vessel parts and control-surface state."
+  },
+  "gridDefinition": {
+    "basis": "One directly measured live position/UT/STS configuration; position and atmosphere are fixed while velocity and orientation are counterfactually varied.",
+    "machValues": [
+      2.0,
+      4.0,
+      6.0,
+      7.106515
+    ],
+    "machIncludesMeasuredCurrentValue": true,
+    "angleOfAttackDeg": [
+      0.0,
+      5.0,
+      10.0,
+      18.0,
+      28.0
+    ],
+    "sideslipDeg": [
+      -5.0,
+      0.0,
+      5.0
+    ],
+    "bankDeg": [
+      -180.0,
+      -90.0,
+      0.0,
+      90.0
+    ],
+    "machVelocityConstruction": "Mach times the live measured local speed of sound; body rotation velocity is added so the API receives inertial velocity in the non-rotating frame.",
+    "angleConvention": "Calibrated against live Flight.angle_of_attack, Flight.sideslip_angle, Flight.roll, and Vessel.direction at the captured state.",
+    "angleOfAttack28Deg": "Diagnostic boundary sample matching the configured cap; no live command or limit change.",
+    "pressureLimitPa": 45000.0
+  },
+  "samples": [
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000271436146,
+        "angleOfAttackDeg": 2.9759187351535472e-06,
+        "sideslipDeg": -4.999981948801645,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        65.22671327339857,
+        -9.393817225774256,
+        14.71546111991212
+      ],
+      "forceMagnitudeN": 67.52268302202637,
+      "torqueNm_nonrotating": [
+        20.784635176792374,
+        42.24577376200928,
+        -23.051119033132267
+      ],
+      "torqueMagnitudeNm": 52.42194720594476
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000002991032315,
+        "angleOfAttackDeg": -7.417496662700483e-06,
+        "sideslipDeg": -4.999990699453744,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        66.5169276815859,
+        4.95833944737949,
+        10.497396998651181
+      ],
+      "forceMagnitudeN": 67.52245657572048,
+      "torqueNm_nonrotating": [
+        0.2357857355361066,
+        28.111641952710574,
+        44.25093334254239
+      ],
+      "torqueMagnitudeNm": 52.42580576277878
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003282267342,
+        "angleOfAttackDeg": 2.4952997986205016e-06,
+        "sideslipDeg": -5.000000402024307,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        62.327429081748804,
+        9.369221326351887,
+        24.224407533178372
+      ],
+      "forceMagnitudeN": 67.5226824447615,
+      "torqueNm_nonrotating": [
+        4.351758602214657,
+        -42.2618935334198,
+        30.724803910541812
+      ],
+      "torqueMagnitudeNm": 52.43108832842692
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000300559649,
+        "angleOfAttackDeg": 1.288871518324036e-05,
+        "sideslipDeg": -4.999991651372599,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        61.036105870270895,
+        -4.982782038339548,
+        28.441985893234538
+      ],
+      "forceMagnitudeN": 67.52170686675115,
+      "torqueNm_nonrotating": [
+        24.9004872464888,
+        -28.11903963243317,
+        -36.57693973082198
+      ],
+      "torqueMagnitudeNm": 52.4269699204053
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000326989456,
+        "angleOfAttackDeg": 2.7365494163777522e-06,
+        "sideslipDeg": 1.833031177105382e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        28.377917988705963,
+        -0.0056729338538444255,
+        3.4253954564059264
+      ],
+      "forceMagnitudeN": 28.583904484668754,
+      "torqueNm_nonrotating": [
+        0.15707625481993306,
+        32.2336179993521,
+        0.04500994014026193
+      ],
+      "torqueMagnitudeNm": 32.23403214263917
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000326989456,
+        "angleOfAttackDeg": -6.633677309593006e-06,
+        "sideslipDeg": 8.96196541825915e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        26.9160982304666,
+        5.004629767769033,
+        8.216527402114234
+      ],
+      "forceMagnitudeN": 28.583806352798103,
+      "torqueNm_nonrotating": [
+        -9.262740184188772,
+        0.002131556990024934,
+        30.880200195365205
+      ],
+      "torqueMagnitudeNm": 32.23949634174135
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000326989456,
+        "angleOfAttackDeg": 2.734669031785417e-06,
+        "sideslipDeg": -4.082612954427788e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        25.452178583777492,
+        -0.0047058787769691844,
+        13.008156018792327
+      ],
+      "forceMagnitudeN": 28.58365861493311,
+      "torqueNm_nonrotating": [
+        0.14405478873151087,
+        -32.24443489560144,
+        0.04702095742819275
+      ],
+      "torqueMagnitudeNm": 32.244790966748
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.0000003269894555,
+        "angleOfAttackDeg": 1.2104895739182546e-05,
+        "sideslipDeg": 8.960085025998727e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        26.91416921634323,
+        -5.014810584043911,
+        8.216949607113788
+      ],
+      "forceMagnitudeN": 28.58389565202133,
+      "torqueNm_nonrotating": [
+        9.563854023129009,
+        -0.0035942003701271725,
+        -30.78810372862851
+      ],
+      "torqueMagnitudeNm": 32.23933386251623
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000003825447052,
+        "angleOfAttackDeg": 2.4971801169628773e-06,
+        "sideslipDeg": 5.00001805246795,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        65.51424321828229,
+        9.384749465618933,
+        14.801386830452227
+      ],
+      "forceMagnitudeN": 67.81792269821722,
+      "torqueNm_nonrotating": [
+        -20.423201254977677,
+        42.375260797955505,
+        22.959124505163466
+      ],
+      "torqueMagnitudeNm": 52.343970763017815
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000353425879,
+        "angleOfAttackDeg": -5.849857965597721e-06,
+        "sideslipDeg": 5.000008351079864,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        61.31696449213788,
+        4.960080276440043,
+        28.544020500792357
+      ],
+      "forceMagnitudeN": 67.81691261940846,
+      "torqueNm_nonrotating": [
+        -24.6568200668749,
+        -27.920593949871154,
+        36.78187775202749
+      ],
+      "torqueMagnitudeNm": 52.34906754937399
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000325752072,
+        "angleOfAttackDeg": 2.974038264549877e-06,
+        "sideslipDeg": 4.999999597906531,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        62.607073850547735,
+        -9.409452501847491,
+        24.311613389759163
+      ],
+      "forceMagnitudeN": 67.81768234115331,
+      "torqueNm_nonrotating": [
+        -4.133211181324734,
+        -42.38170087420045,
+        -30.45550491091319
+      ],
+      "torqueMagnitudeNm": 52.352934808263505
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000354870899,
+        "angleOfAttackDeg": 1.1321076320727592e-05,
+        "sideslipDeg": 5.000009299294995,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        66.80322135869483,
+        -4.984569680784565,
+        10.568509184609278
+      ],
+      "forceMagnitudeN": 67.81747345033246,
+      "torqueNm_nonrotating": [
+        0.10047049246780304,
+        27.922833757411823,
+        -44.27837191598587
+      ],
+      "torqueMagnitudeNm": 52.34757834794539
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000002829594665,
+        "angleOfAttackDeg": 5.0000046295710545,
+        "sideslipDeg": -4.999982199249278,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        98.71576698046604,
+        -14.316254611408274,
+        94.03782135589228
+      ],
+      "forceMagnitudeN": 137.08708780188982,
+      "torqueNm_nonrotating": [
+        21.05872964298785,
+        -0.32975033015556837,
+        -21.393654924117655
+      ],
+      "torqueMagnitudeNm": 30.021114244293408
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000276888455,
+        "angleOfAttackDeg": 4.999992754971538,
+        "sideslipDeg": -4.999990064076581,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        120.72671104413999,
+        -61.13995083134866,
+        21.910257394484965
+      ],
+      "forceMagnitudeN": 137.08789781117656,
+      "torqueNm_nonrotating": [
+        13.387213958750923,
+        26.605768846698204,
+        3.751841525227264
+      ],
+      "torqueMagnitudeNm": 30.01933957187819
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003333668626,
+        "angleOfAttackDeg": 5.000000895786732,
+        "sideslipDeg": -5.000000136246337,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        134.41187823278898,
+        14.27141371190709,
+        -22.868940652050476
+      ],
+      "forceMagnitudeN": 137.08834635354498,
+      "torqueNm_nonrotating": [
+        5.520058861933126,
+        0.3118044374595843,
+        29.507142836905402
+      ],
+      "torqueMagnitudeNm": 30.02065539331151
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000339437874,
+        "angleOfAttackDeg": 5.000012770385597,
+        "sideslipDeg": -4.999992271419283,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        112.40099253254193,
+        61.09509584408727,
+        49.258715023032366
+      ],
+      "forceMagnitudeN": 137.08761747225412,
+      "torqueNm_nonrotating": [
+        13.191224863030728,
+        -26.613978825677563,
+        4.362778744128844
+      ],
+      "torqueMagnitudeNm": 30.0224269620375
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000337659724,
+        "angleOfAttackDeg": 5.000004251341385,
+        "sideslipDeg": 1.8022100833505223e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        63.32436481527376,
+        -0.009585830285154905,
+        79.97007315867756
+      ],
+      "forceMagnitudeN": 102.00582273650002,
+      "torqueNm_nonrotating": [
+        0.15548153008792442,
+        -10.952077582719951,
+        0.02506938678284289
+      ],
+      "torqueMagnitudeNm": 10.95320986552659
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000003068851147,
+        "angleOfAttackDeg": 4.9999934674720095,
+        "sideslipDeg": 9.708699233362586e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        80.24694743286878,
+        -58.011597637949556,
+        24.5039017465097
+      ],
+      "forceMagnitudeN": 102.00666269221614,
+      "torqueNm_nonrotating": [
+        3.346669891082358,
+        0.020459196916650997,
+        -10.422700374284888
+      ],
+      "torqueMagnitudeNm": 10.946839773685099
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000332901908,
+        "angleOfAttackDeg": 5.000001137358139,
+        "sideslipDeg": -1.6824937666803135e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        97.19240907711819,
+        -0.021384950488985657,
+        -30.967644096272895
+      ],
+      "forceMagnitudeN": 102.00666556849812,
+      "torqueNm_nonrotating": [
+        0.14685636389876736,
+        10.939729184988169,
+        0.06732484195245739
+      ],
+      "torqueMagnitudeNm": 10.940921993453905
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000363676516,
+        "angleOfAttackDeg": 5.000011921226974,
+        "sideslipDeg": 8.145152310464436e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        80.27124156882986,
+        57.98085773143615,
+        24.498981711951572
+      ],
+      "forceMagnitudeN": 102.00711833591329,
+      "torqueNm_nonrotating": [
+        -3.0443367452396335,
+        -0.022472599264430536,
+        10.515034919403742
+      ],
+      "torqueMagnitudeNm": 10.94689228011375
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000003921998166,
+        "angleOfAttackDeg": 5.000003873111735,
+        "sideslipDeg": 5.000017695858577,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        98.9966990492477,
+        14.300195560991922,
+        94.14773062891189
+      ],
+      "forceMagnitudeN": 137.36315808215858,
+      "torqueNm_nonrotating": [
+        -20.70029705148393,
+        -0.06595922890256878,
+        21.262020447472597
+      ],
+      "torqueMagnitudeNm": 29.674570968226224
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000335737403,
+        "angleOfAttackDeg": 4.9999941799724645,
+        "sideslipDeg": 5.000009186481171,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        112.65311524520334,
+        -61.16299677925319,
+        49.36593482938126
+      ],
+      "forceMagnitudeN": 137.36313941901125,
+      "torqueNm_nonrotating": [
+        -12.984930469947738,
+        -26.378254948730998,
+        -4.029232108114288
+      ],
+      "torqueMagnitudeNm": 29.675839749376724
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003323470246,
+        "angleOfAttackDeg": 5.000001378929551,
+        "sideslipDeg": 4.999999804859749,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        134.69589027878857,
+        -14.345401523868347,
+        -22.80637085418904
+      ],
+      "forceMagnitudeN": 137.36412906729055,
+      "torqueNm_nonrotating": [
+        -5.296089176823832,
+        0.05827998069329572,
+        -29.19750234393554
+      ],
+      "torqueMagnitudeNm": 29.673997038638753
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000388809437,
+        "angleOfAttackDeg": 5.00001107206838,
+        "sideslipDeg": 5.000008314237562,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        121.03947857219454,
+        61.11821683240187,
+        21.975429157403727
+      ],
+      "forceMagnitudeN": 137.36415576289653,
+      "torqueNm_nonrotating": [
+        -13.011144715425075,
+        26.380192139353607,
+        -3.907344483075097
+      ],
+      "torqueMagnitudeNm": 29.672744480825585
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000299293662,
+        "angleOfAttackDeg": 10.00000615116988,
+        "sideslipDeg": -4.999982562740465,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        129.42728875976337,
+        -19.3442239850287,
+        182.58618509069544
+      ],
+      "forceMagnitudeN": 224.64046176782094,
+      "torqueNm_nonrotating": [
+        21.13476193423954,
+        -37.3358086832076,
+        -19.500257929895206
+      ],
+      "torqueMagnitudeNm": 47.12643452860084
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000255504954,
+        "angleOfAttackDeg": 9.999993131349887,
+        "sideslipDeg": -4.999989498421503,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        175.00006350599787,
+        -136.87319653801725,
+        33.232301599910635
+      ],
+      "forceMagnitudeN": 224.6412251285712,
+      "torqueNm_nonrotating": [
+        24.79627736285719,
+        24.816666559642556,
+        -31.456343907374755
+      ],
+      "torqueMagnitudeNm": 47.119251715273
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003336097185,
+        "angleOfAttackDeg": 9.999999263554134,
+        "sideslipDeg": -4.999999893736566,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        209.34377555701798,
+        19.278998189095834,
+        -79.16695221795396
+      ],
+      "forceMagnitudeN": 224.64172021047668,
+      "torqueNm_nonrotating": [
+        6.653691461736412,
+        37.31656516966377,
+        27.98302498797894
+      ],
+      "torqueMagnitudeNm": 47.11525584784191
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000377398424,
+        "angleOfAttackDeg": 10.000012283372982,
+        "sideslipDeg": -4.99999295805549,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        163.7709277158585,
+        136.80790637859195,
+        70.18717219607475
+      ],
+      "forceMagnitudeN": 224.6409560910209,
+      "torqueNm_nonrotating": [
+        2.9917239300898615,
+        -24.825692635542282,
+        39.94070218469801
+      ],
+      "torqueMagnitudeNm": 47.122448131596805
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000003527588164,
+        "angleOfAttackDeg": 10.000005636958424,
+        "sideslipDeg": 1.7576730787785926e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        95.74148627267184,
+        -0.012583360380259225,
+        165.92258320658473
+      ],
+      "forceMagnitudeN": 191.56392136826602,
+      "torqueNm_nonrotating": [
+        0.15318046574999478,
+        -48.44335631908595,
+        0.009405912084877434
+      ],
+      "torqueMagnitudeNm": 48.44359941400096
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.00000028739276,
+        "angleOfAttackDeg": 9.999993767108908,
+        "sideslipDeg": 1.0381543987967383e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        133.88794689481816,
+        -130.76427633744575,
+        40.88697916443692
+      ],
+      "forceMagnitudeN": 191.56467146882437,
+      "torqueNm_nonrotating": [
+        14.293154584483428,
+        0.034484247715497636,
+        -46.27988381506545
+      ],
+      "torqueMagnitudeNm": 48.43679492983859
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000333883513,
+        "angleOfAttackDeg": 9.999999505489214,
+        "sideslipDeg": 7.30430129614838e-08,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        172.08744596024724,
+        -0.03910035300844164,
+        -84.1603297221604
+      ],
+      "forceMagnitudeN": 191.56474541235758,
+      "torqueNm_nonrotating": [
+        0.14944136493045443,
+        48.429920583038104,
+        0.08306584465708239
+      ],
+      "torqueMagnitudeNm": 48.43022238577352
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.0000003992495667,
+        "angleOfAttackDeg": 10.000011375337793,
+        "sideslipDeg": 7.268230143917482e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        133.9422706453655,
+        130.71286156584262,
+        40.87583813733854
+      ],
+      "forceMagnitudeN": 191.56517999834253,
+      "torqueNm_nonrotating": [
+        -13.990481381292806,
+        -0.03706217996723597,
+        46.372201661000844
+      ],
+      "torqueMagnitudeNm": 48.43672191399841
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000405834417,
+        "angleOfAttackDeg": 10.000005122747002,
+        "sideslipDeg": 5.000017182141985,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        129.69952032903305,
+        19.323087718353054,
+        182.71919159738587
+      ],
+      "forceMagnitudeN": 224.90364663685344,
+      "torqueNm_nonrotating": [
+        -20.78080954895345,
+        -36.93976406819301,
+        19.337416125635812
+      ],
+      "torqueMagnitudeNm": 46.58673499333944
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000318432327,
+        "angleOfAttackDeg": 9.999994402867916,
+        "sideslipDeg": 5.000009946071565,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        163.9886949352108,
+        -136.92081430900657,
+        70.29992706343893
+      ],
+      "forceMagnitudeN": 224.90371540443687,
+      "torqueNm_nonrotating": [
+        -2.8230878003182465,
+        -24.561176980329275,
+        -39.48052925402485
+      ],
+      "torqueMagnitudeNm": 46.58254425817974
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003340524666,
+        "angleOfAttackDeg": 9.999999747424297,
+        "sideslipDeg": 5.000000037603218,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        209.63001454473502,
+        -19.388696825468593,
+        -79.12945141294831
+      ],
+      "forceMagnitudeN": 224.90472347981023,
+      "torqueNm_nonrotating": [
+        -6.4247260827611665,
+        36.93120934020326,
+        -27.642033708270276
+      ],
+      "torqueMagnitudeNm": 46.575458732014425
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000421454555,
+        "angleOfAttackDeg": 10.000010467302646,
+        "sideslipDeg": 5.000007273674281,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        175.34083025544697,
+        136.85572379856504,
+        33.29000790661597
+      ],
+      "forceMagnitudeN": 224.90469207537922,
+      "torqueNm_nonrotating": [
+        -24.381981502147255,
+        24.562792244616933,
+        31.174457249179326
+      ],
+      "torqueMagnitudeNm": 46.57959391841211
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000334226464,
+        "angleOfAttackDeg": 18.000008205313357,
+        "sideslipDeg": -4.999983376672489,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        166.88216280166003,
+        -27.28361486789633,
+        338.5288185768396
+      ],
+      "forceMagnitudeN": 378.41222616169557,
+      "torqueNm_nonrotating": [
+        21.303102279352494,
+        -79.91441527429697,
+        -16.447065203754928
+      ],
+      "torqueMagnitudeNm": 84.32462208141764
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000002245124477,
+        "angleOfAttackDeg": 17.99999413132548,
+        "sideslipDeg": -4.999988743473492,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        255.10010603435765,
+        -275.1000518604706,
+        49.39962887417384
+      ],
+      "forceMagnitudeN": 378.4130361989135,
+      "torqueNm_nonrotating": [
+        38.24120764896148,
+        21.94498541802453,
+        -71.86874851552045
+      ],
+      "torqueMagnitudeNm": 84.31541591331577
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000323808054,
+        "angleOfAttackDeg": 17.99999670756148,
+        "sideslipDeg": -4.999999558720866,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        327.51045034638474,
+        27.18835439809671,
+        -187.60212456079356
+      ],
+      "forceMagnitudeN": 378.41360816002873,
+      "torqueNm_nonrotating": [
+        8.5135988842277,
+        79.89282084864115,
+        25.54899714705177
+      ],
+      "torqueMagnitudeNm": 84.30952167065504
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.0000004335220645,
+        "angleOfAttackDeg": 18.00001078154788,
+        "sideslipDeg": -4.999994191919156,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        239.29241464670432,
+        275.00466072025387,
+        101.52757865579983
+      ],
+      "forceMagnitudeN": 378.412833229823,
+      "torqueNm_nonrotating": [
+        -8.425151584541787,
+        -21.955351200014853,
+        80.97286790416267
+      ],
+      "torqueMagnitudeNm": 84.31859796132451
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.000000384938542,
+        "angleOfAttackDeg": 18.000007482090673,
+        "sideslipDeg": 1.658769012256249e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        136.357185763379,
+        -0.014451314666120816,
+        318.084286012245
+      ],
+      "forceMagnitudeN": 346.0793194140165,
+      "torqueNm_nonrotating": [
+        0.14441144112955426,
+        -91.46069275183628,
+        -0.008739850971169999
+      ],
+      "torqueMagnitudeNm": 91.46080717823959
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000002589430372,
+        "angleOfAttackDeg": 17.999994634490957,
+        "sideslipDeg": 1.129184903752378e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        213.5052455468547,
+        -264.45244275438523,
+        65.20645662246662
+      ],
+      "forceMagnitudeN": 346.08014438861085,
+      "torqueNm_nonrotating": [
+        26.847275693375906,
+        0.048784598999918535,
+        -87.42365637194789
+      ],
+      "torqueMagnitudeNm": 91.45312616599641
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003251799887,
+        "angleOfAttackDeg": 17.99999694625269,
+        "sideslipDeg": 4.5719181279906864e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        290.76161973090944,
+        -0.06797842259019836,
+        -187.69468465963732
+      ],
+      "forceMagnitudeN": 346.08036462516714,
+      "torqueNm_nonrotating": [
+        0.14728671371631996,
+        91.4452128248602,
+        0.09786605458894856
+      ],
+      "torqueMagnitudeNm": 91.44538380762944
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.0000004511754885,
+        "angleOfAttackDeg": 18.00000979385125,
+        "sideslipDeg": 5.753033889682881e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        213.61468424742068,
+        264.3703317533171,
+        65.1839002585136
+      ],
+      "forceMagnitudeN": 346.08069361118083,
+      "torqueNm_nonrotating": [
+        -26.55553185425535,
+        -0.05233132415328574,
+        87.51252984108184
+      ],
+      "torqueMagnitudeNm": 91.45294904931224
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000004347721845,
+        "angleOfAttackDeg": 18.000006758868025,
+        "sideslipDeg": 5.000016048044207,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        167.1363804619579,
+        27.260363862623233,
+        338.6966275060662
+      ],
+      "forceMagnitudeN": 378.67281734477575,
+      "torqueNm_nonrotating": [
+        -20.96623213931521,
+        -79.3131563790669,
+        16.247955402439622
+      ],
+      "torqueMagnitudeNm": 83.63106910526518
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000292957603,
+        "angleOfAttackDeg": 17.99999513765643,
+        "sideslipDeg": 5.000010984074475,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        239.44353425370593,
+        -275.1861172552842,
+        101.64917561062157
+      ],
+      "forceMagnitudeN": 378.67289331065626,
+      "torqueNm_nonrotating": [
+        8.524306459292742,
+        -21.660782524541816,
+        -80.31992738551303
+      ],
+      "torqueMagnitudeNm": 83.625020391038
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000326579307,
+        "angleOfAttackDeg": 17.999997184943908,
+        "sideslipDeg": 5.000000459212925,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        327.795462458664,
+        -27.35600335571124,
+        -187.60523362576185
+      ],
+      "forceMagnitudeN": 378.6739228041242,
+      "torqueNm_nonrotating": [
+        -8.289043067938778,
+        79.30306946304108,
+        -25.178319363369248
+      ],
+      "torqueMagnitudeNm": 83.61598428055414
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000468393885,
+        "angleOfAttackDeg": 18.00000880615465,
+        "sideslipDeg": 5.0000055231839315,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        255.48823813964256,
+        275.0910916621136,
+        49.442602156821145
+      ],
+      "forceMagnitudeN": 378.6738959151922,
+      "torqueNm_nonrotating": [
+        -37.77883753875977,
+        21.66181431601167,
+        71.38742142964517
+      ],
+      "torqueMagnitudeNm": 83.62199892142698
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000003895588647,
+        "angleOfAttackDeg": 28.000009924959542,
+        "sideslipDeg": -4.999984786768851,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        208.99245338155646,
+        -39.41038629594993,
+        558.9865028490673
+      ],
+      "forceMagnitudeN": 598.0776993718026,
+      "torqueNm_nonrotating": [
+        19.777256641283138,
+        -145.67154264187724,
+        -14.200827148820121
+      ],
+      "torqueMagnitudeNm": 147.69225337718328
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.000000194294902,
+        "angleOfAttackDeg": 27.99999596828332,
+        "sideslipDeg": -4.999988067807551,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        358.68623939369843,
+        -473.67580718778106,
+        68.36308060709368
+      ],
+      "forceMagnitudeN": 598.0786732826055,
+      "torqueNm_nonrotating": [
+        56.68271925912859,
+        19.35101943812794,
+        -134.98954810571905
+      ],
+      "torqueMagnitudeNm": 147.6806375720603
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.000000295052484,
+        "angleOfAttackDeg": 27.999993873496603,
+        "sideslipDeg": -4.999999236054331,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        485.57268623043586,
+        39.27652920285374,
+        -346.9519625977245
+      ],
+      "forceMagnitudeN": 598.0795463060718,
+      "torqueNm_nonrotating": [
+        8.525922311435846,
+        145.6459574004338,
+        22.84005589574882
+      ],
+      "torqueMagnitudeNm": 147.67228721622263
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000490316436,
+        "angleOfAttackDeg": 28.000007830172063,
+        "sideslipDeg": -4.999995955013833,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        335.878688225122,
+        473.5417464319317,
+        143.67229034458578
+      ],
+      "forceMagnitudeN": 598.0785950278538,
+      "torqueNm_nonrotating": [
+        -28.380667093150674,
+        -19.360945816249334,
+        143.63236118446417
+      ],
+      "torqueMagnitudeNm": 147.68399936004022
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.0000004355410783,
+        "angleOfAttackDeg": 28.00000896071997,
+        "sideslipDeg": 1.4900227505080194e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        184.10116075490134,
+        -0.015063717574025047,
+        534.9819070971727
+      ],
+      "forceMagnitudeN": 565.7728153062371,
+      "torqueNm_nonrotating": [
+        0.17022959660882234,
+        -158.209530769398,
+        -0.15127069528257853
+      ],
+      "torqueMagnitudeNm": 158.20969466885364
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000002310202216,
+        "angleOfAttackDeg": 27.999996292256004,
+        "sideslipDeg": 1.2118987353257682e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        317.70868993442355,
+        -457.9792308127126,
+        97.03783282946864
+      ],
+      "forceMagnitudeN": 565.7739199679422,
+      "torqueNm_nonrotating": [
+        46.33139429841735,
+        0.19276637605901992,
+        -151.2629832250223
+      ],
+      "torqueMagnitudeNm": 158.19963764384715
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000002976299216,
+        "angleOfAttackDeg": 27.99999410161581,
+        "sideslipDeg": 9.240022453658385e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        451.50445612494866,
+        -0.10760828835352632,
+        -340.94626111408553
+      ],
+      "forceMagnitudeN": 565.7743706177433,
+      "torqueNm_nonrotating": [
+        0.1126394700540066,
+        158.1895540112264,
+        0.23767605934530459
+      ],
+      "torqueMagnitudeNm": 158.18977266508134
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.0000005021507716,
+        "angleOfAttackDeg": 28.000006770079352,
+        "sideslipDeg": 3.70524445382661e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        317.8979664366221,
+        457.8569260700504,
+        96.99885434180047
+      ],
+      "forceMagnitudeN": 565.7745660229674,
+      "torqueNm_nonrotating": [
+        -46.04835503334667,
+        -0.19616996891335542,
+        151.34940973065952
+      ],
+      "torqueMagnitudeNm": 158.1996627991125
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 2.00000047987609,
+        "angleOfAttackDeg": 28.000007996480445,
+        "sideslipDeg": 5.000014134488055,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        209.21853746148813,
+        39.388542435865965,
+        559.1929251879836
+      ],
+      "forceMagnitudeN": 598.3482107210149,
+      "torqueNm_nonrotating": [
+        -19.391524123425498,
+        -144.83148678244413,
+        13.72378799013126
+      ],
+      "torqueMagnitudeNm": 146.76693472387012
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 2.0000002677537267,
+        "angleOfAttackDeg": 27.99999661622869,
+        "sideslipDeg": 5.000011937552985,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        335.92862544639604,
+        -473.80692126333247,
+        143.80485590902848
+      ],
+      "forceMagnitudeN": 598.3484575181583,
+      "torqueNm_nonrotating": [
+        28.401143427858717,
+        -18.786530928289636,
+        -142.75293175469739
+      ],
+      "torqueMagnitudeNm": 146.7581623518456
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 2.0000003006532916,
+        "angleOfAttackDeg": 27.99999432973499,
+        "sideslipDeg": 5.000001055983476,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        485.84738559404263,
+        -39.52285322143536,
+        -347.0054039338636
+      ],
+      "forceMagnitudeN": 598.3498043574789,
+      "torqueNm_nonrotating": [
+        -8.369664090134151,
+        144.81667506500926,
+        -22.19739980207768
+      ],
+      "torqueMagnitudeNm": 146.74687462375283
+    },
+    {
+      "mach": 2.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 2.000000512775651,
+        "angleOfAttackDeg": 28.000005709986677,
+        "sideslipDeg": 5.00000325292081,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 3.733690637803209,
+      "forceN_nonrotating": [
+        359.137100206241,
+        473.67336172722634,
+        68.38332615146143
+      ],
+      "forceMagnitudeN": 598.349554733733,
+      "torqueNm_nonrotating": [
+        -56.16134360502595,
+        18.78751185389411,
+        134.27625726516112
+      ],
+      "torqueMagnitudeNm": 146.75551227235636
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000542872292,
+        "angleOfAttackDeg": 2.9759187351535472e-06,
+        "sideslipDeg": -4.999981948801645,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        202.70188539677994,
+        -27.736707591086855,
+        47.94657654393534
+      ],
+      "forceMagnitudeN": 210.1338942048289,
+      "torqueNm_nonrotating": [
+        56.5963002756042,
+        121.96516074444945,
+        -62.039478526078206
+      ],
+      "torqueMagnitudeNm": 148.07950072880942
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000598206463,
+        "angleOfAttackDeg": -7.417496662700483e-06,
+        "sideslipDeg": -4.999990699453744,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        206.9050241487528,
+        13.288867285903995,
+        34.20355354529341
+      ],
+      "forceMagnitudeN": 210.13368622585028,
+      "torqueNm_nonrotating": [
+        -1.1768432915241434,
+        75.85251671061052,
+        127.1777493572703
+      ],
+      "torqueMagnitudeNm": 148.08500661122622
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.0000006564534685,
+        "angleOfAttackDeg": 2.4952997986205016e-06,
+        "sideslipDeg": -5.000000402024307,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        194.92878867097787,
+        27.659983110071323,
+        73.44198158870378
+      ],
+      "forceMagnitudeN": 210.13336712207246,
+      "torqueNm_nonrotating": [
+        12.254091923345303,
+        -121.99362659317308,
+        83.05844169855911
+      ],
+      "torqueMagnitudeNm": 148.09224299609107
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000601119298,
+        "angleOfAttackDeg": 1.288871518324036e-05,
+        "sideslipDeg": -4.999991651372599,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        190.7245412967893,
+        -13.365142841615272,
+        87.18443243489598
+      ],
+      "forceMagnitudeN": 210.13234628453188,
+      "torqueNm_nonrotating": [
+        70.02707096175479,
+        -75.86959416268259,
+        -106.15831033262324
+      ],
+      "torqueMagnitudeNm": 148.08636952322905
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000653978912,
+        "angleOfAttackDeg": 2.7365494163777522e-06,
+        "sideslipDeg": 1.833031177105382e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        79.48879594808545,
+        -0.015866877192476876,
+        10.222254057395705
+      ],
+      "forceMagnitudeN": 80.14339280968895,
+      "torqueNm_nonrotating": [
+        0.42152203834326746,
+        88.13032777851068,
+        0.1205679422936288
+      ],
+      "torqueMagnitudeNm": 88.13141830133706
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000653978912,
+        "angleOfAttackDeg": -6.633677309593006e-06,
+        "sideslipDeg": 8.96196541825915e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        75.56908922521855,
+        13.417954429921739,
+        23.068439767593816
+      ],
+      "forceMagnitudeN": 80.14288278271255,
+      "torqueNm_nonrotating": [
+        -25.33076244625921,
+        0.0068324325155804675,
+        84.42039272924092
+      ],
+      "torqueMagnitudeNm": 88.13881257057088
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000653978912,
+        "angleOfAttackDeg": 2.734669031785417e-06,
+        "sideslipDeg": -4.082612954427788e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        71.64368174333447,
+        -0.013273768469440799,
+        35.91576463916391
+      ],
+      "forceMagnitudeN": 80.14212038340976,
+      "torqueNm_nonrotating": [
+        0.3858868709507272,
+        -88.14470662411999,
+        0.12619348135371658
+      ],
+      "torqueMagnitudeNm": 88.14564163544384
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000653978911,
+        "angleOfAttackDeg": 1.2104895739182546e-05,
+        "sideslipDeg": 8.960085025998727e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        75.56398269915918,
+        -13.446562697186222,
+        23.0695918955796
+      ],
+      "forceMagnitudeN": 80.1431943458506,
+      "torqueNm_nonrotating": [
+        26.13812230192688,
+        -0.008952060573697037,
+        -84.17347783003775
+      ],
+      "torqueMagnitudeNm": 88.13839054358624
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.0000007650894105,
+        "angleOfAttackDeg": 2.4971801169628773e-06,
+        "sideslipDeg": 5.00001805246795,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        203.87992296223487,
+        27.73872246856028,
+        48.30070397775417
+      ],
+      "forceMagnitudeN": 211.35140812405598,
+      "torqueNm_nonrotating": [
+        -55.6052010618284,
+        122.44695066100331,
+        61.691577077623485
+      ],
+      "torqueMagnitudeNm": 147.956225937366
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000706851758,
+        "angleOfAttackDeg": -5.849857965597721e-06,
+        "sideslipDeg": 5.000008351079864,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        191.8728586364687,
+        13.2939758274265,
+        87.61752070158592
+      ],
+      "forceMagnitudeN": 211.34983702033776,
+      "torqueNm_nonrotating": [
+        -69.42435069645319,
+        -75.23395956657436,
+        106.83284504968002
+      ],
+      "torqueMagnitudeNm": 147.96332627748677
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000651504144,
+        "angleOfAttackDeg": 2.974038264549877e-06,
+        "sideslipDeg": 4.999999597906531,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        196.08352849803435,
+        -27.815810147967305,
+        73.7999572887291
+      ],
+      "forceMagnitudeN": 211.35019076936138,
+      "torqueNm_nonrotating": [
+        -11.712593120517486,
+        -122.44887602044098,
+        -82.24200742059298
+      ],
+      "torqueMagnitudeNm": 147.96844211129948
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000709741798,
+        "angleOfAttackDeg": 1.1321076320727592e-05,
+        "sideslipDeg": 5.000009299294995,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        208.0894112851522,
+        -13.370529315262685,
+        34.482630082617305
+      ],
+      "forceMagnitudeN": 211.35048124048868,
+      "torqueNm_nonrotating": [
+        2.106570421051501,
+        75.24330490643912,
+        -127.3831582729961
+      ],
+      "torqueMagnitudeNm": 147.96101372924352
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000565918933,
+        "angleOfAttackDeg": 5.0000046295710545,
+        "sideslipDeg": -4.999982199249278,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        333.16583647262013,
+        -44.85952109798471,
+        279.7754638220199
+      ],
+      "forceMagnitudeN": 437.36273433211886,
+      "torqueNm_nonrotating": [
+        57.62179045815562,
+        17.82320764564973,
+        -55.85121545439685
+      ],
+      "torqueMagnitudeNm": 82.202772058593
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.00000055377691,
+        "angleOfAttackDeg": 4.999992754971538,
+        "sideslipDeg": -4.999990064076581,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        395.94740299796075,
+        -170.38168860175878,
+        74.04806472390882
+      ],
+      "forceMagnitudeN": 437.36412934872976,
+      "torqueNm_nonrotating": [
+        31.912922048052838,
+        70.2318808754136,
+        28.395148988611666
+      ],
+      "torqueMagnitudeNm": 82.20240976412332
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000666733725,
+        "angleOfAttackDeg": 5.000000895786732,
+        "sideslipDeg": -5.000000136246337,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        432.63616724955574,
+        44.712057924804256,
+        -45.99274523541365
+      ],
+      "forceMagnitudeN": 437.3654695452606,
+      "torqueNm_nonrotating": [
+        16.598094707254976,
+        -17.855547458058798,
+        78.50830579041035
+      ],
+      "torqueMagnitudeNm": 82.20627348942764
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000678875748,
+        "angleOfAttackDeg": 5.000012770385597,
+        "sideslipDeg": -4.999992271419283,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        369.85456216530616,
+        170.23431194779474,
+        159.73491063538762
+      ],
+      "forceMagnitudeN": 437.3641043736039,
+      "torqueNm_nonrotating": [
+        42.30635721227788,
+        -70.25090007948413,
+        -5.736255340708276
+      ],
+      "torqueMagnitudeNm": 82.20657788695698
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000675319448,
+        "angleOfAttackDeg": 5.000004251341385,
+        "sideslipDeg": 1.8022100833505223e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        214.92322563704963,
+        -0.03422726397364131,
+        232.632891123629
+      ],
+      "forceMagnitudeN": 316.71762837309507,
+      "torqueNm_nonrotating": [
+        0.4199993690472835,
+        -17.656236038517818,
+        0.06491710651805269
+      ],
+      "torqueMagnitudeNm": 17.661350026217534
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000613770229,
+        "angleOfAttackDeg": 4.9999934674720095,
+        "sideslipDeg": 9.708699233362586e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        261.53264406547686,
+        -159.7938103286148,
+        79.85733995367205
+      ],
+      "forceMagnitudeN": 316.71845616524,
+      "torqueNm_nonrotating": [
+        5.55764686174901,
+        0.05912476593455221,
+        -16.754823168899364
+      ],
+      "torqueMagnitudeNm": 17.652621159446614
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000665803816,
+        "angleOfAttackDeg": 5.000001137358139,
+        "sideslipDeg": -1.6824937666803135e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        308.2076494134814,
+        -0.06671463112241109,
+        -72.93227064290548
+      ],
+      "forceMagnitudeN": 316.7192379836683,
+      "torqueNm_nonrotating": [
+        0.390943685834622,
+        17.639070333353896,
+        0.18290148122558791
+      ],
+      "torqueMagnitudeNm": 17.644350147918
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000727353032,
+        "angleOfAttackDeg": 5.000011921226974,
+        "sideslipDeg": 8.145152310464436e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        261.59982149464935,
+        159.69350175659238,
+        79.8438808428156
+      ],
+      "forceMagnitudeN": 316.71994950958947,
+      "torqueNm_nonrotating": [
+        -4.746662830280876,
+        -0.062196519874082694,
+        17.002369653398766
+      ],
+      "torqueMagnitudeNm": 17.652627290640613
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000784399633,
+        "angleOfAttackDeg": 5.000003873111735,
+        "sideslipDeg": 5.000017695858577,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        334.3155443036505,
+        44.827669444488265,
+        280.22851759963146
+      ],
+      "forceMagnitudeN": 438.5252845469202,
+      "torqueNm_nonrotating": [
+        -56.63317861845839,
+        18.765435076855294,
+        55.392720381486065
+      ],
+      "torqueMagnitudeNm": 81.41137479072188
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000671474806,
+        "angleOfAttackDeg": 4.9999941799724645,
+        "sideslipDeg": 5.000009186481171,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        370.9214634303486,
+        -170.4793191475135,
+        160.18191630983756
+      ],
+      "forceMagnitudeN": 438.52500111510517,
+      "torqueNm_nonrotating": [
+        -41.832176599844935,
+        -69.50931435194862,
+        6.8515444807827475
+      ],
+      "torqueMagnitudeNm": 81.4151057392347
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000664694049,
+        "angleOfAttackDeg": 5.000001378929551,
+        "sideslipDeg": 4.999999804859749,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        433.8100640021013,
+        -44.97609602880875,
+        -45.73639281709981
+      ],
+      "forceMagnitudeN": 438.52689594986066,
+      "torqueNm_nonrotating": [
+        -16.04697823063524,
+        -18.769051257853107,
+        -77.57918747877771
+      ],
+      "torqueMagnitudeNm": 81.41445280367448
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000777618874,
+        "angleOfAttackDeg": 5.00001107206838,
+        "sideslipDeg": 5.000008314237562,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        397.2043133021912,
+        170.33189269632663,
+        74.31029200814771
+      ],
+      "forceMagnitudeN": 438.5273533928236,
+      "torqueNm_nonrotating": [
+        -30.847445094463275,
+        69.5185993415076,
+        -29.03979680930363
+      ],
+      "torqueMagnitudeNm": 81.41075065362453
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000598587324,
+        "angleOfAttackDeg": 10.00000615116988,
+        "sideslipDeg": -4.999982562740465,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        453.1083422179424,
+        -62.30043429449802,
+        543.5553015086186
+      ],
+      "forceMagnitudeN": 710.3807990781426,
+      "torqueNm_nonrotating": [
+        58.059385005739344,
+        -69.28098338868091,
+        -49.064895383081414
+      ],
+      "torqueMagnitudeNm": 102.84994314777269
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000511009908,
+        "angleOfAttackDeg": 9.999993131349887,
+        "sideslipDeg": -4.999989498421503,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        584.3727691515029,
+        -387.6828203846782,
+        113.371669175678
+      ],
+      "forceMagnitudeN": 710.3820365964315,
+      "torqueNm_nonrotating": [
+        59.65440384068711,
+        63.868059104931774,
+        -54.20690697225664
+      ],
+      "torqueMagnitudeNm": 102.84048636076031
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000667219437,
+        "angleOfAttackDeg": 9.999999263554134,
+        "sideslipDeg": -4.999999893736566,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        679.4576711635367,
+        62.082205805020415,
+        -197.8081042325875
+      ],
+      "forceMagnitudeN": 710.3836803310475,
+      "torqueNm_nonrotating": [
+        20.782154038300632,
+        69.24590703199544,
+        73.1328367329066
+      ],
+      "torqueMagnitudeNm": 102.83630378303853
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000754796848,
+        "angleOfAttackDeg": 10.000012283372982,
+        "sideslipDeg": -4.99999295805549,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        548.1927947956835,
+        387.4646710882896,
+        232.37615095247705
+      ],
+      "forceMagnitudeN": 710.3822120091038,
+      "torqueNm_nonrotating": [
+        19.186325342176314,
+        -63.889018340335824,
+        78.27734228279859
+      ],
+      "torqueMagnitudeNm": 102.84582665079809
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000705517633,
+        "angleOfAttackDeg": 10.000005636958424,
+        "sideslipDeg": 1.7576730787785926e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        340.660658519208,
+        -0.049224012351440916,
+        487.6113931491685
+      ],
+      "forceMagnitudeN": 594.8231312033996,
+      "torqueNm_nonrotating": [
+        0.4167770847579339,
+        -106.0009421565242,
+        0.0218952485361055
+      ],
+      "torqueMagnitudeNm": 106.0017637617935
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.00000057478552,
+        "angleOfAttackDeg": 9.999993767108908,
+        "sideslipDeg": 1.0381543987967383e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        447.7116300516851,
+        -366.9855939570718,
+        136.7155731381822
+      ],
+      "forceMagnitudeN": 594.8237367439731,
+      "torqueNm_nonrotating": [
+        31.352590007648278,
+        0.09881904283114157,
+        -101.24921395651
+      ],
+      "torqueMagnitudeNm": 105.99244309007153
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000667767026,
+        "angleOfAttackDeg": 9.999999505489214,
+        "sideslipDeg": 7.30430129614838e-08,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        554.9139177837385,
+        -0.12360533895489582,
+        -214.21223352067545
+      ],
+      "forceMagnitudeN": 594.8246400564573,
+      "torqueNm_nonrotating": [
+        0.39544031675794683,
+        105.98203840742661,
+        0.22628592567428907
+      ],
+      "torqueMagnitudeNm": 105.98301771207275
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.0000007984991335,
+        "angleOfAttackDeg": 10.000011375337793,
+        "sideslipDeg": 7.268230143917482e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        447.86448340660104,
+        366.81359668676976,
+        136.68446638246257
+      ],
+      "forceMagnitudeN": 594.8255656590462,
+      "torqueNm_nonrotating": [
+        -30.54023283658467,
+        -0.10289657859717796,
+        101.49680422655945
+      ],
+      "torqueMagnitudeNm": 105.99206422003125
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000811668834,
+        "angleOfAttackDeg": 10.000005122747002,
+        "sideslipDeg": 5.000017182141985,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        454.2208710949517,
+        62.241694723294586,
+        544.103597910749
+      ],
+      "forceMagnitudeN": 711.5049919429284,
+      "torqueNm_nonrotating": [
+        -57.07684991459193,
+        -67.88560539018474,
+        48.52071236478313
+      ],
+      "torqueMagnitudeNm": 101.09639827288977
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000636864654,
+        "angleOfAttackDeg": 9.999994402867916,
+        "sideslipDeg": 5.000009946071565,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        549.1570146415744,
+        -387.8823599621457,
+        232.83774563503408
+      ],
+      "forceMagnitudeN": 711.5051424215111,
+      "torqueNm_nonrotating": [
+        -18.840688949662468,
+        -63.06625427517953,
+        -76.7282389201206
+      ],
+      "torqueMagnitudeNm": 101.09177333582909
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000668104933,
+        "angleOfAttackDeg": 9.999999747424297,
+        "sideslipDeg": 5.000000037603218,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        680.6419099707775,
+        -62.46096042791553,
+        -197.65516559588804
+      ],
+      "forceMagnitudeN": 711.5070946048139,
+      "torqueNm_nonrotating": [
+        -20.222430139391022,
+        67.88099237625404,
+        -72.11726717393022
+      ],
+      "torqueMagnitudeNm": 101.08252089933077
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.00000084290911,
+        "angleOfAttackDeg": 10.000010467302646,
+        "sideslipDeg": 5.000007273674281,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        585.7059073774092,
+        387.6642821565911,
+        113.61124645621184
+      ],
+      "forceMagnitudeN": 711.5072177554584,
+      "torqueNm_nonrotating": [
+        -58.457880473899266,
+        63.07552608176859,
+        53.129427761286564
+      ],
+      "torqueMagnitudeNm": 101.08700150976054
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000668452928,
+        "angleOfAttackDeg": 18.000008205313357,
+        "sideslipDeg": -4.999983376672489,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        603.45354846195,
+        -89.83865027809422,
+        1016.8178218880757
+      ],
+      "forceMagnitudeN": 1185.8101244062302,
+      "torqueNm_nonrotating": [
+        58.83730749429995,
+        -159.84358655565697,
+        -38.23612881631986
+      ],
+      "torqueMagnitudeNm": 174.5674725228409
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.0000004490248955,
+        "angleOfAttackDeg": 17.99999413132548,
+        "sideslipDeg": -4.999988743473492,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        862.0191048192356,
+        -796.4785288639156,
+        169.39254281120273
+      ],
+      "forceMagnitudeN": 1185.8114595392594,
+      "torqueNm_nonrotating": [
+        89.84536249573479,
+        53.73668840507332,
+        -139.6759507666115
+      ],
+      "torqueMagnitudeNm": 174.55426682063893
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000647616108,
+        "angleOfAttackDeg": 17.99999670756148,
+        "sideslipDeg": -4.999999558720866,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1068.4992148562067,
+        89.51633363635852,
+        -506.4085138225259
+      ],
+      "forceMagnitudeN": 1185.8133617934845,
+      "torqueNm_nonrotating": [
+        27.507450066245596,
+        159.8039439729009,
+        64.59456460147153
+      ],
+      "torqueMagnitudeNm": 174.54632077043252
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000867044129,
+        "angleOfAttackDeg": 18.00001078154788,
+        "sideslipDeg": -4.999994191919156,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        809.933058191283,
+        796.1562435566734,
+        341.01811072576845
+      ],
+      "forceMagnitudeN": 1185.8118209683735,
+      "torqueNm_nonrotating": [
+        -3.5016401918026716,
+        -53.76076927836417,
+        166.03774012466258
+      ],
+      "torqueMagnitudeNm": 174.55948253572288
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000769877084,
+        "angleOfAttackDeg": 18.000007482090673,
+        "sideslipDeg": 1.658769012256249e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        501.713273642328,
+        -0.0627604498764009,
+        948.0792548017662
+      ],
+      "forceMagnitudeN": 1072.6464870931372,
+      "torqueNm_nonrotating": [
+        0.3977538074946347,
+        -197.49350750201208,
+        -0.026401815012836394
+      ],
+      "torqueMagnitudeNm": 197.49390980633936
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.0000005178860745,
+        "angleOfAttackDeg": 17.999994634490957,
+        "sideslipDeg": 1.129184903752378e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        723.5410183850895,
+        -760.419181985707,
+        220.96172253169763
+      ],
+      "forceMagnitudeN": 1072.6476683616663,
+      "torqueNm_nonrotating": [
+        58.05086727344537,
+        0.13860532704782358,
+        -188.7582355706119
+      ],
+      "torqueMagnitudeNm": 197.48314839086012
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000650359977,
+        "angleOfAttackDeg": 17.99999694625269,
+        "sideslipDeg": 4.5719181279906864e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        945.6820623111437,
+        -0.21658090779868033,
+        -506.2220322070234
+      ],
+      "forceMagnitudeN": 1072.6487569452343,
+      "torqueNm_nonrotating": [
+        0.3851002857335836,
+        197.4712090645429,
+        0.26556908920102834
+      ],
+      "torqueMagnitudeNm": 197.47176314243924
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000902350977,
+        "angleOfAttackDeg": 18.00000979385125,
+        "sideslipDeg": 5.753033889682881e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        723.8556058445845,
+        760.1406327186806,
+        220.89693153371465
+      ],
+      "forceMagnitudeN": 1072.6491383409568,
+      "torqueNm_nonrotating": [
+        -57.267758165437954,
+        -0.1443654744021857,
+        188.9966159346846
+      ],
+      "torqueMagnitudeNm": 197.48249998784186
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000869544369,
+        "angleOfAttackDeg": 18.000006758868025,
+        "sideslipDeg": 5.000016048044207,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        604.4899378828471,
+        89.75834656010349,
+        1017.509778937384
+      ],
+      "forceMagnitudeN": 1186.9249327619739,
+      "torqueNm_nonrotating": [
+        -57.8918238048102,
+        -157.74595273221667,
+        37.59532970617092
+      ],
+      "torqueMagnitudeNm": 172.18785579290318
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000585915206,
+        "angleOfAttackDeg": 17.99999513765643,
+        "sideslipDeg": 5.000010984074475,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        810.6892477142358,
+        -796.8374918413219,
+        341.5024844463692
+      ],
+      "forceMagnitudeN": 1186.9250151742885,
+      "torqueNm_nonrotating": [
+        3.6174826838760694,
+        -52.855069049097445,
+        -163.82621056516064
+      ],
+      "torqueMagnitudeNm": 172.17947547049081
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000653158614,
+        "angleOfAttackDeg": 17.999997184943908,
+        "sideslipDeg": 5.000000459212925,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1069.6810600795332,
+        -90.08174025454339,
+        -506.4230132471339
+      ],
+      "forceMagnitudeN": 1186.9273602737733,
+      "torqueNm_nonrotating": [
+        -26.96852923710977,
+        157.73945799313756,
+        -63.50017885128658
+      ],
+      "torqueMagnitudeNm": 172.16652082018453
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.00000093678777,
+        "angleOfAttackDeg": 18.00000880615465,
+        "sideslipDeg": 5.0000055231839315,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        863.4814883145622,
+        796.5155665187856,
+        169.58526528192715
+      ],
+      "forceMagnitudeN": 1186.9273316296221,
+      "torqueNm_nonrotating": [
+        -88.47667556618153,
+        52.864072510400774,
+        137.91801677417286
+      ],
+      "torqueMagnitudeNm": 172.1746544429501
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000779117729,
+        "angleOfAttackDeg": 28.000009924959542,
+        "sideslipDeg": -4.999984786768851,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        760.859517740661,
+        -130.49937803204665,
+        1699.1175600963156
+      ],
+      "forceMagnitudeN": 1866.263051241962,
+      "torqueNm_nonrotating": [
+        54.59982295341616,
+        -308.2027432650061,
+        -29.440345496288664
+      ],
+      "torqueMagnitudeNm": 314.3832145098725
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000388589804,
+        "angleOfAttackDeg": 27.99999596828332,
+        "sideslipDeg": -4.999988067807551,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1208.2940122197201,
+        -1403.1538661907052,
+        232.65693949987255
+      ],
+      "forceMagnitudeN": 1866.2648374947753,
+      "torqueNm_nonrotating": [
+        131.7660026664374,
+        44.08649946791457,
+        -281.99273121158564
+      ],
+      "torqueMagnitudeNm": 314.3657095648245
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000590104968,
+        "angleOfAttackDeg": 27.999993873496603,
+        "sideslipDeg": -4.999999236054331,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1580.1516275838233,
+        130.0480164911681,
+        -984.4604695291202
+      ],
+      "forceMagnitudeN": 1866.2674162119931,
+      "torqueNm_nonrotating": [
+        28.95767485472186,
+        308.1562163488997,
+        54.94672448894231
+      ],
+      "torqueMagnitudeNm": 314.3532139799519
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000000980632872,
+        "angleOfAttackDeg": 28.000007830172063,
+        "sideslipDeg": -4.999995955013833,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1132.7164938076455,
+        1402.7024916335067,
+        482.0026000956554
+      ],
+      "forceMagnitudeN": 1866.2656407590282,
+      "torqueNm_nonrotating": [
+        -48.21025431437837,
+        -44.11024583076873,
+        307.5046938574211
+      ],
+      "torqueMagnitudeNm": 314.3709260613236
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.000000871082157,
+        "angleOfAttackDeg": 28.00000896071997,
+        "sideslipDeg": 1.4900227505080194e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        677.6415551743719,
+        -0.07053601049786684,
+        1618.284523757343
+      ],
+      "forceMagnitudeN": 1754.43520316568,
+      "torqueNm_nonrotating": [
+        0.499303964001264,
+        -348.24610737333575,
+        -0.43601238371367784
+      ],
+      "torqueMagnitudeNm": 348.24673826459326
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.000000462040443,
+        "angleOfAttackDeg": 27.999996292256004,
+        "sideslipDeg": 1.2118987353257682e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1071.5070978947094,
+        -1350.1215456098357,
+        327.2502574996724
+      ],
+      "forceMagnitudeN": 1754.436769961299,
+      "torqueNm_nonrotating": [
+        102.07148751482055,
+        0.5599584079301266,
+        -332.9367937311072
+      ],
+      "torqueMagnitudeNm": 348.23240908458905
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000595259843,
+        "angleOfAttackDeg": 27.99999410161581,
+        "sideslipDeg": 9.240022453658385e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1465.9293108907884,
+        -0.3431804023916868,
+        -963.9009105462762
+      ],
+      "forceMagnitudeN": 1754.4383225561025,
+      "torqueNm_nonrotating": [
+        0.29383501282470653,
+        348.2167202695418,
+        0.6782914216662062
+      ],
+      "torqueMagnitudeNm": 348.2175048637615
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000001004301543,
+        "angleOfAttackDeg": 28.000006770079352,
+        "sideslipDeg": 3.70524445382661e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1072.0648998118088,
+        1349.7087283811452,
+        327.1354766359027
+      ],
+      "forceMagnitudeN": 1754.438491640716,
+      "torqueNm_nonrotating": [
+        -101.27813661739549,
+        -0.5658385898468089,
+        333.1788433999827
+      ],
+      "torqueMagnitudeNm": 348.23228285061657
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 4.00000095975218,
+        "angleOfAttackDeg": 28.000007996480445,
+        "sideslipDeg": 5.000014134488055,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        761.7760960443377,
+        130.4121950302902,
+        1699.9689271952857
+      ],
+      "forceMagnitudeN": 1867.4058248133053,
+      "torqueNm_nonrotating": [
+        -53.46033180617111,
+        -305.2883166763126,
+        28.001095366770013
+      ],
+      "torqueMagnitudeNm": 311.1961193807233
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 4.0000005355074535,
+        "angleOfAttackDeg": 27.99999661622869,
+        "sideslipDeg": 5.000011937552985,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1133.1426637164723,
+        -1403.7000143233192,
+        482.5139901859292
+      ],
+      "forceMagnitudeN": 1867.406162909102,
+      "torqueNm_nonrotating": [
+        48.09744615077756,
+        -42.38493248911095,
+        -304.50795653926707
+      ],
+      "torqueMagnitudeNm": 311.1831332576584
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 4.000000601306583,
+        "angleOfAttackDeg": 27.99999432973499,
+        "sideslipDeg": 5.000001055983476,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1581.294281946298,
+        -130.86478826030597,
+        -984.682701613903
+      ],
+      "forceMagnitudeN": 1867.4092271861912,
+      "torqueNm_nonrotating": [
+        -28.59930344993426,
+        305.2742751160038,
+        -53.04998861391664
+      ],
+      "torqueMagnitudeNm": 311.1665221346276
+    },
+    {
+      "mach": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 4.000001025551302,
+        "angleOfAttackDeg": 28.000005709986677,
+        "sideslipDeg": 5.00000325292081,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 14.934762551212836,
+      "forceN_nonrotating": [
+        1209.927078777613,
+        1403.2491384418136,
+        232.7739359974103
+      ],
+      "forceMagnitudeN": 1867.4087355950614,
+      "torqueNm_nonrotating": [
+        -130.15561424549287,
+        42.39315143383841,
+        279.45418899228076
+      ],
+      "torqueMagnitudeNm": 311.17889863139385
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.0000008143084385,
+        "angleOfAttackDeg": 2.9759187369780795e-06,
+        "sideslipDeg": -4.9999819488016275,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        425.2931815651074,
+        -58.07656367951152,
+        100.77785516299588
+      ],
+      "forceMagnitudeN": 440.91195677351,
+      "torqueNm_nonrotating": [
+        117.72136258391163,
+        253.5685340184845,
+        -128.63300151827255
+      ],
+      "torqueMagnitudeNm": 307.7365264840949
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000897309691,
+        "angleOfAttackDeg": -7.417496666121483e-06,
+        "sideslipDeg": -4.999990699453748,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        434.1283524040106,
+        27.709241367661292,
+        71.89187839097627
+      ],
+      "forceMagnitudeN": 440.91231622259664,
+      "torqueNm_nonrotating": [
+        -2.296206350622626,
+        157.38349487590105,
+        264.4463173608326
+      ],
+      "torqueMagnitudeNm": 307.7445235721728
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000984680201,
+        "angleOfAttackDeg": 2.495299797081053e-06,
+        "sideslipDeg": -5.000000402024318,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        409.0850794870412,
+        57.915590377621015,
+        153.94058345491885
+      ],
+      "forceMagnitudeN": 440.9110126795973,
+      "torqueNm_nonrotating": [
+        25.71789251773251,
+        -253.61737799355782,
+        172.42296078654155
+      ],
+      "torqueMagnitudeNm": 307.7545480123374
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.0000009016789475,
+        "angleOfAttackDeg": 1.2888715177766762e-05,
+        "sideslipDeg": -4.99999165137259,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        400.2493683016565,
+        -27.869328898085893,
+        182.82601000431626
+      ],
+      "forceMagnitudeN": 440.90997522533223,
+      "torqueNm_nonrotating": [
+        145.73527360235138,
+        -157.41664776093816,
+        -220.65578173065683
+      ],
+      "torqueMagnitudeNm": 307.7462347054968
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000000980968368,
+        "angleOfAttackDeg": 2.736549417286547e-06,
+        "sideslipDeg": 1.8330311771053824e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        165.56289664515862,
+        -0.03304975259603684,
+        21.258315321706647
+      ],
+      "forceMagnitudeN": 166.9221070084449,
+      "torqueNm_nonrotating": [
+        0.8786230255227597,
+        182.0927996171408,
+        0.25144111516146794
+      ],
+      "torqueMagnitudeNm": 182.09509294174725
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000980968368,
+        "angleOfAttackDeg": -6.6336773200441436e-06,
+        "sideslipDeg": 8.961965420076741e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        157.38907268066342,
+        27.978990917561205,
+        48.04492644679959
+      ],
+      "forceMagnitudeN": 166.92051728089783,
+      "torqueNm_nonrotating": [
+        -52.3284453729944,
+        0.014769572501960683,
+        174.42506406461519
+      ],
+      "torqueMagnitudeNm": 182.105379896476
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000980968368,
+        "angleOfAttackDeg": 2.734669032580613e-06,
+        "sideslipDeg": -4.0826129544277887e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        149.20418052557983,
+        -0.027642313909830542,
+        74.83405491640866
+      ],
+      "forceMagnitudeN": 166.9192140696792,
+      "torqueNm_nonrotating": [
+        0.8049743618599987,
+        -182.1126830121247,
+        0.26310373478139226
+      ],
+      "torqueMagnitudeNm": 182.11465213203775
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000000980968366,
+        "angleOfAttackDeg": 1.2104895744180918e-05,
+        "sideslipDeg": 8.960085025998729e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        157.37852062998678,
+        -28.038577458342772,
+        48.047358348785025
+      ],
+      "forceMagnitudeN": 166.92126654763683,
+      "torqueNm_nonrotating": [
+        54.01195437415846,
+        -0.017887465450869746,
+        -173.91024505330535
+      ],
+      "torqueMagnitudeNm": 182.10454379223575
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001147634116,
+        "angleOfAttackDeg": 2.4971801160506105e-06,
+        "sideslipDeg": 5.000018052467931,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        427.83822863111504,
+        58.087835730482965,
+        101.54327798408244
+      ],
+      "forceMagnitudeN": 443.54344076067053,
+      "torqueNm_nonrotating": [
+        -115.65314126524129,
+        254.59887786795593,
+        127.8936060704903
+      ],
+      "torqueMagnitudeNm": 307.4947351904646
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000001060277635,
+        "angleOfAttackDeg": -5.849857973351983e-06,
+        "sideslipDeg": 5.000008351079864,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        402.7294639834782,
+        27.71994360305036,
+        183.7636496337568
+      ],
+      "forceMagnitudeN": 443.5408609818199,
+      "torqueNm_nonrotating": [
+        -144.4878415907073,
+        -156.07754168977314,
+        222.0861571032303
+      ],
+      "torqueMagnitudeNm": 307.5047911242114
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.0000009772562155,
+        "angleOfAttackDeg": 2.9740382693677817e-06,
+        "sideslipDeg": 4.999999597906529,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        411.58095189154346,
+        -58.24960261418765,
+        154.71396607292598
+      ],
+      "forceMagnitudeN": 443.54064916608746,
+      "torqueNm_nonrotating": [
+        -24.594673102933022,
+        -254.59238638863457,
+        -170.7079496353509
+      ],
+      "torqueMagnitudeNm": 307.5116017661861
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001064612697,
+        "angleOfAttackDeg": 1.1321076328025721e-05,
+        "sideslipDeg": 5.000009299294985,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        436.68857779987144,
+        -27.880609626221588,
+        72.49301853195264
+      ],
+      "forceMagnitudeN": 443.54197108039074,
+      "torqueNm_nonrotating": [
+        4.2399153346271845,
+        156.099378731858,
+        -264.89995560805187
+      ],
+      "torqueMagnitudeNm": 307.50118601993177
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.0000008488784,
+        "angleOfAttackDeg": 5.000004629571047,
+        "sideslipDeg": -4.999982199249282,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        704.3499456194764,
+        -94.45151012146661,
+        587.2732458446951
+      ],
+      "forceMagnitudeN": 921.9109495734111,
+      "torqueNm_nonrotating": [
+        119.86365680595401,
+        38.28858961720975,
+        -115.48325200459146
+      ],
+      "torqueMagnitudeNm": 170.79137510813186
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000830665363,
+        "angleOfAttackDeg": 4.999992754971543,
+        "sideslipDeg": -4.999990064076588,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        835.7901325095908,
+        -356.18541365749445,
+        156.55697373641283
+      ],
+      "forceMagnitudeN": 921.9128378150851,
+      "torqueNm_nonrotating": [
+        66.22674310526423,
+        145.42988891679428,
+        60.280710256457795
+      ],
+      "torqueMagnitudeNm": 170.79109497191243
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000001000100586,
+        "angleOfAttackDeg": 5.00000089578673,
+        "sideslipDeg": -5.000000136246324,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        912.2917973052399,
+        94.14005345382354,
+        -93.74754276919589
+      ],
+      "forceMagnitudeN": 921.9150041462477,
+      "torqueNm_nonrotating": [
+        34.91580320418364,
+        -38.34381035917043,
+        162.73348790677488
+      ],
+      "torqueMagnitudeNm": 170.7968067399322
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001018313619,
+        "angleOfAttackDeg": 5.000012770385584,
+        "sideslipDeg": -4.999992271419274,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        780.8515451072429,
+        355.8743595424093,
+        336.96914394710575
+      ],
+      "forceMagnitudeN": 921.9131733783469,
+      "torqueNm_nonrotating": [
+        88.5519540783932,
+        -145.4664917449446,
+        -13.027686418826253
+      ],
+      "torqueMagnitudeNm": 170.79715865643422
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001012979172,
+        "angleOfAttackDeg": 5.000004251341382,
+        "sideslipDeg": 1.8022100844183557e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        455.1260549505225,
+        -0.0726868722229065,
+        487.8962071478139
+      ],
+      "forceMagnitudeN": 667.2199338504732,
+      "torqueNm_nonrotating": [
+        0.8778122994766935,
+        -36.57028777022165,
+        0.1304650390636771
+      ],
+      "torqueMagnitudeNm": 36.58105415589269
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000920655344,
+        "angleOfAttackDeg": 4.999993467472019,
+        "sideslipDeg": 9.708699236997765e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        552.5048223734262,
+        -333.8564786520238,
+        168.70340231442725
+      ],
+      "forceMagnitudeN": 667.2200274544252,
+      "torqueNm_nonrotating": [
+        11.519162033023626,
+        0.1295211557846788,
+        -34.707128370449894
+      ],
+      "torqueMagnitudeNm": 36.569011873384504
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000998705723,
+        "angleOfAttackDeg": 5.000001137358141,
+        "sideslipDeg": -1.6824938030320957e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        650.0228450328967,
+        -0.1405603958446067,
+        -150.5180289623655
+      ],
+      "forceMagnitudeN": 667.2221488114747,
+      "torqueNm_nonrotating": [
+        0.8140614149816712,
+        36.54597575450565,
+        0.3865366316448885
+      ],
+      "torqueMagnitudeNm": 36.55708481818374
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001091029548,
+        "angleOfAttackDeg": 5.000011921226975,
+        "sideslipDeg": 8.145152301376493e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        552.6458440359951,
+        333.6446213473392,
+        168.6754878831795
+      ],
+      "forceMagnitudeN": 667.2237874183559,
+      "torqueNm_nonrotating": [
+        -9.827103181542421,
+        -0.1339862287072534,
+        35.22335056771323
+      ],
+      "torqueMagnitudeNm": 36.568761730009236
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001176599449,
+        "angleOfAttackDeg": 5.000003873111733,
+        "sideslipDeg": 5.000017695858566,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        706.8331598996069,
+        94.38951239855876,
+        588.2523731306289
+      ],
+      "forceMagnitudeN": 924.4259572720347,
+      "torqueNm_nonrotating": [
+        -117.79604357863207,
+        40.29269994471708,
+        114.50355025798758
+      ],
+      "torqueMagnitudeNm": 169.14630523099663
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.00000100721221,
+        "angleOfAttackDeg": 4.999994179972467,
+        "sideslipDeg": 5.000009186481182,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        783.161881098421,
+        -356.3969725319205,
+        337.93603737066655
+      ],
+      "forceMagnitudeN": 924.425280587525,
+      "torqueNm_nonrotating": [
+        -87.5754587981975,
+        -143.89562510697428,
+        15.390721373446986
+      ],
+      "torqueMagnitudeNm": 169.15166630286782
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000997041072,
+        "angleOfAttackDeg": 5.000001378929549,
+        "sideslipDeg": 4.999999804859739,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        914.8300123847476,
+        -94.7027667821823,
+        -93.19365804595333
+      ],
+      "forceMagnitudeN": 924.4282684427516,
+      "torqueNm_nonrotating": [
+        -33.7754792337308,
+        -40.28811233145999,
+        -160.7732958753705
+      ],
+      "torqueMagnitudeNm": 169.15072467870172
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.00000116642831,
+        "angleOfAttackDeg": 5.000011072068368,
+        "sideslipDeg": 5.0000083142375855,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        838.5012865744604,
+        356.08559303402245,
+        157.12272676559758
+      ],
+      "forceMagnitudeN": 924.4289634253535,
+      "torqueNm_nonrotating": [
+        -63.99519707636454,
+        143.91816587187697,
+        -61.662809995094264
+      ],
+      "torqueMagnitudeNm": 169.14528031623857
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.0000008978809865,
+        "angleOfAttackDeg": 10.000006151169883,
+        "sideslipDeg": -4.999982562740459,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        962.0985926907584,
+        -131.60797313990642,
+        1142.212200787491
+      ],
+      "forceMagnitudeN": 1499.200811192195,
+      "torqueNm_nonrotating": [
+        120.68605016007245,
+        -142.25600437886143,
+        -101.14003188489859
+      ],
+      "torqueMagnitudeNm": 212.20555962263683
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000766514862,
+        "angleOfAttackDeg": 9.999993131349871,
+        "sideslipDeg": -4.999989498421511,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1237.2871992098367,
+        -811.7626811383333,
+        240.35477979519698
+      ],
+      "forceMagnitudeN": 1499.2026827576767,
+      "torqueNm_nonrotating": [
+        123.72762672614864,
+        131.95015989444488,
+        -110.93299694951878
+      ],
+      "torqueMagnitudeNm": 212.1921302114117
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000001000829156,
+        "angleOfAttackDeg": 9.999999263554132,
+        "sideslipDeg": -4.999999893736558,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1436.0452058112182,
+        131.14574015080095,
+        -410.11177222945827
+      ],
+      "forceMagnitudeN": 1499.2053575192,
+      "torqueNm_nonrotating": [
+        43.6726732476504,
+        142.19637606456155,
+        151.31465005223203
+      ],
+      "torqueMagnitudeNm": 212.18679288523046
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001132195271,
+        "angleOfAttackDeg": 10.000012283372971,
+        "sideslipDeg": -4.999992958055488,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1160.856296857442,
+        811.3007707242009,
+        491.7467529945931
+      ],
+      "forceMagnitudeN": 1499.2035057362898,
+      "torqueNm_nonrotating": [
+        40.63011551665009,
+        -131.99004276305274,
+        161.11132048500235
+      ],
+      "torqueMagnitudeNm": 212.20046009353976
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.0000010582764505,
+        "angleOfAttackDeg": 10.000005636958425,
+        "sideslipDeg": 1.7576730794601878e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        725.1291458998742,
+        -0.10536869943231741,
+        1024.2883632296932
+      ],
+      "forceMagnitudeN": 1254.9816494211411,
+      "torqueNm_nonrotating": [
+        0.8730010739692617,
+        -219.65707117266194,
+        0.03829575017227663
+      ],
+      "torqueMagnitudeNm": 219.65880932389555
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000862178281,
+        "angleOfAttackDeg": 9.999993767108899,
+        "sideslipDeg": 1.0381543987967383e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        949.189463755154,
+        -768.1179811392878,
+        289.8484294502267
+      ],
+      "forceMagnitudeN": 1254.9812680307443,
+      "torqueNm_nonrotating": [
+        64.97772542194248,
+        0.21553221343435025,
+        -209.81464448169936
+      ],
+      "torqueMagnitudeNm": 219.64593393488138
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.00000100165054,
+        "angleOfAttackDeg": 9.999999505489212,
+        "sideslipDeg": 7.304300205594926e-08,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1173.5689222108153,
+        -0.26104595962807703,
+        -444.6574229164238
+      ],
+      "forceMagnitudeN": 1254.983787576048,
+      "torqueNm_nonrotating": [
+        0.8233614628303211,
+        219.62986286279718,
+        0.48005429151640133
+      ],
+      "torqueMagnitudeNm": 219.63193082371328
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.0000011977487,
+        "angleOfAttackDeg": 10.000011375337804,
+        "sideslipDeg": 7.268230140282304e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        949.5096519910608,
+        767.753330178889,
+        289.78340769920476
+      ],
+      "forceMagnitudeN": 1254.9853300348666,
+      "torqueNm_nonrotating": [
+        -63.281065014000944,
+        -0.22146751366741355,
+        210.3315792561516
+      ],
+      "torqueMagnitudeNm": 219.6449759715724
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001217503253,
+        "angleOfAttackDeg": 10.000005122747002,
+        "sideslipDeg": 5.000017182141976,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        964.5016393759324,
+        131.48718904934879,
+        1143.3973846448678
+      ],
+      "forceMagnitudeN": 1501.6357322785323,
+      "torqueNm_nonrotating": [
+        -118.62712101667469,
+        -139.29396187082907,
+        99.97680282903477
+      ],
+      "torqueMagnitudeNm": 208.49595381755603
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000955296983,
+        "angleOfAttackDeg": 9.999994402867916,
+        "sideslipDeg": 5.000009946071549,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1162.9496784789765,
+        -812.1945003923221,
+        492.7436622141211
+      ],
+      "forceMagnitudeN": 1501.6351680065543,
+      "torqueNm_nonrotating": [
+        -39.92354826046645,
+        -130.24430111165037,
+        -157.83085157178405
+      ],
+      "torqueMagnitudeNm": 208.48991674813095
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000001002157399,
+        "angleOfAttackDeg": 9.999999747424294,
+        "sideslipDeg": 5.000000037603205,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1438.6051339810688,
+        -131.95131247713545,
+        -409.7815483493114
+      ],
+      "forceMagnitudeN": 1501.6380381931879,
+      "torqueNm_nonrotating": [
+        -42.51465774225453,
+        139.29775392556752,
+        -149.1680696723693
+      ],
+      "torqueMagnitudeNm": 208.47655355322294
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001264363662,
+        "angleOfAttackDeg": 10.000010467302634,
+        "sideslipDeg": 5.000007273674284,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1240.15691382336,
+        811.7324668397412,
+        240.87269845021416
+      ],
+      "forceMagnitudeN": 1501.6385801797649,
+      "torqueNm_nonrotating": [
+        -121.21720099301788,
+        130.26735987114537,
+        108.63640944632223
+      ],
+      "torqueMagnitudeNm": 208.48276744558328
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.00000100267939,
+        "angleOfAttackDeg": 18.00000820531336,
+        "sideslipDeg": -4.999983376672481,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1286.6293050996333,
+        -190.35885205003362,
+        2140.0660510102593
+      ],
+      "forceMagnitudeN": 2504.303129411777,
+      "torqueNm_nonrotating": [
+        122.08611950962256,
+        -329.4240518824605,
+        -78.27842836079721
+      ],
+      "torqueMagnitudeNm": 359.9343535732764
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000673537342,
+        "angleOfAttackDeg": 17.999994131325476,
+        "sideslipDeg": -4.999988743473496,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1829.7854213592557,
+        -1671.4923090518998,
+        359.9201231408894
+      ],
+      "forceMagnitudeN": 2504.305037825918,
+      "torqueNm_nonrotating": [
+        186.0683222980922,
+        110.4907087748997,
+        -287.5917606949943
+      ],
+      "torqueMagnitudeNm": 359.91476505980313
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000971424164,
+        "angleOfAttackDeg": 17.999996707561476,
+        "sideslipDeg": -4.99999955872085,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2262.572800758545,
+        189.67451864475655,
+        -1056.5740443012296
+      ],
+      "forceMagnitudeN": 2504.308450020992,
+      "torqueNm_nonrotating": [
+        57.668633964371814,
+        329.3551024954897,
+        133.1528011777145
+      ],
+      "torqueMagnitudeNm": 359.90293600442214
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001300566193,
+        "angleOfAttackDeg": 18.00001078154788,
+        "sideslipDeg": -4.999994191919158,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1719.4159307257764,
+        1670.8083438880592,
+        723.5742237498494
+      ],
+      "forceMagnitudeN": 2504.306555139515,
+      "torqueNm_nonrotating": [
+        -6.3149582062954295,
+        -110.53595594607964,
+        342.4709324430822
+      ],
+      "torqueMagnitudeNm": 359.92279147408135
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001154815625,
+        "angleOfAttackDeg": 18.00000748209067,
+        "sideslipDeg": 1.6587690123698482e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1072.2845920723312,
+        -0.13547472838297256,
+        1995.1955303434268
+      ],
+      "forceMagnitudeN": 2265.0826627413658,
+      "torqueNm_nonrotating": [
+        0.834881922535427,
+        -408.6724499753175,
+        -0.06193371177623652
+      ],
+      "torqueMagnitudeNm": 408.6733074626206
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000776829113,
+        "angleOfAttackDeg": 17.999994634490964,
+        "sideslipDeg": 1.1291849044794133e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1537.708873079696,
+        -1595.4716278830674,
+        469.5978403733632
+      ],
+      "forceMagnitudeN": 2265.0828738505797,
+      "torqueNm_nonrotating": [
+        120.1346223058635,
+        0.29897886839656584,
+        -390.60075939628064
+      ],
+      "torqueMagnitudeNm": 408.65801118525417
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000975539966,
+        "angleOfAttackDeg": 17.999996946252693,
+        "sideslipDeg": 4.5719181279906864e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2003.7934130160022,
+        -0.45819594696811455,
+        -1056.1374574962404
+      ],
+      "forceMagnitudeN": 2265.0859986138425,
+      "torqueNm_nonrotating": [
+        0.8023619373077705,
+        408.639664987296,
+        0.5621551075760687
+      ],
+      "torqueMagnitudeNm": 408.6408393736154
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001353526464,
+        "angleOfAttackDeg": 18.00000979385125,
+        "sideslipDeg": 5.753033880594936e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1538.3699283521587,
+        1594.8801062083612,
+        469.4622232298159
+      ],
+      "forceMagnitudeN": 2265.0870554301664,
+      "torqueNm_nonrotating": [
+        -118.4969354245099,
+        -0.30738433217163225,
+        391.09877555915733
+      ],
+      "torqueMagnitudeNm": 408.6561763071742
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001304316552,
+        "angleOfAttackDeg": 18.000006758868036,
+        "sideslipDeg": 5.000016048044204,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1288.8675956611996,
+        190.18951421278908,
+        2141.56186917901
+      ],
+      "forceMagnitudeN": 2506.718765634365,
+      "torqueNm_nonrotating": [
+        -120.10145688166193,
+        -324.97689687367256,
+        76.91454606139092
+      ],
+      "torqueMagnitudeNm": 354.8946193485739
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000878872808,
+        "angleOfAttackDeg": 17.99999513765643,
+        "sideslipDeg": 5.000010984074464,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1721.0700834064212,
+        -1672.2690483931933,
+        724.6185430512045
+      ],
+      "forceMagnitudeN": 2506.718579167616,
+      "torqueNm_nonrotating": [
+        6.538181603050859,
+        -108.61718917562817,
+        -337.7890851775526
+      ],
+      "torqueMagnitudeNm": 354.88294924971603
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000979737921,
+        "angleOfAttackDeg": 17.999997184943908,
+        "sideslipDeg": 5.000000459212943,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2265.128374173579,
+        -190.87587690214866,
+        -1056.605878331583
+      ],
+      "forceMagnitudeN": 2506.7221892332345,
+      "torqueNm_nonrotating": [
+        -56.55245319462224,
+        324.97767360707167,
+        -130.84131715171816
+      ],
+      "torqueMagnitudeNm": 354.8635210604083
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001405181655,
+        "angleOfAttackDeg": 18.00000880615465,
+        "sideslipDeg": 5.00000552318394,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1832.9255851467879,
+        1671.585295331665,
+        360.3390426657279
+      ],
+      "forceMagnitudeN": 2506.7225267117215,
+      "torqueNm_nonrotating": [
+        -183.19075678109954,
+        108.64076387228505,
+        283.8571185009709
+      ],
+      "torqueMagnitudeNm": 354.87537624983196
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001168676593,
+        "angleOfAttackDeg": 28.00000992495954,
+        "sideslipDeg": -4.999984786768835,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1634.4648787772826,
+        -278.0515414579647,
+        3590.871532907485
+      ],
+      "forceMagnitudeN": 3955.1417756521623,
+      "torqueNm_nonrotating": [
+        111.95729433697883,
+        -647.7485473727863,
+        -60.12478783870907
+      ],
+      "torqueMagnitudeNm": 660.0966645056325
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000582884707,
+        "angleOfAttackDeg": 27.99999596828333,
+        "sideslipDeg": -4.999988067807553,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2578.462399589309,
+        -2957.6606705674894,
+        496.932860995489
+      ],
+      "forceMagnitudeN": 3955.1444040205092,
+      "torqueNm_nonrotating": [
+        274.865973755664,
+        90.1701570142934,
+        -593.3037778902244
+      ],
+      "torqueMagnitudeNm": 660.0691884972699
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000885157451,
+        "angleOfAttackDeg": 27.999993873496596,
+        "sideslipDeg": -4.99999923605434,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        3361.4199762947997,
+        277.0882311139826,
+        -2065.740789875383
+      ],
+      "forceMagnitudeN": 3955.149447974195,
+      "torqueNm_nonrotating": [
+        59.51865281100288,
+        647.6690594034457,
+        112.4700030569453
+      ],
+      "torqueMagnitudeNm": 660.0508935897367
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001470949306,
+        "angleOfAttackDeg": 28.000007830172056,
+        "sideslipDeg": -4.9999959550138255,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2417.4215366262265,
+        2956.698152557494,
+        1028.2023482255063
+      ],
+      "forceMagnitudeN": 3955.147395480685,
+      "torqueNm_nonrotating": [
+        -103.39263805149857,
+        -90.21441609843133,
+        645.6578202106912
+      ],
+      "torqueMagnitudeNm": 660.0777978954073
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001306623236,
+        "angleOfAttackDeg": 28.000008960719985,
+        "sideslipDeg": 1.4900227500990616e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1459.5756918820907,
+        -0.15470927599840528,
+        3420.9548330220578
+      ],
+      "forceMagnitudeN": 3719.313537985877,
+      "torqueNm_nonrotating": [
+        1.096485529544465,
+        -732.3509319347489,
+        -0.965440276153984
+      ],
+      "torqueMagnitudeNm": 732.3523891277604
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.000000693060665,
+        "angleOfAttackDeg": 27.999996292256018,
+        "sideslipDeg": 1.2118987365072012e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2289.8741182445337,
+        -2846.1703418000693,
+        699.3492657906228
+      ],
+      "forceMagnitudeN": 3719.314249631293,
+      "torqueNm_nonrotating": [
+        214.68361958003615,
+        1.2391853203011651,
+        -700.1558957795078
+      ],
+      "torqueMagnitudeNm": 732.3311207992248
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000892889767,
+        "angleOfAttackDeg": 27.9999941016158,
+        "sideslipDeg": 9.240022235547683e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        3121.3495052862118,
+        -0.7294254419303366,
+        -2022.501290553946
+      ],
+      "forceMagnitudeN": 3719.3191227030156,
+      "torqueNm_nonrotating": [
+        0.6292868234356618,
+        732.3055837039716,
+        1.4924835618484762
+      ],
+      "torqueMagnitudeNm": 732.3073749683961
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.000001506452312,
+        "angleOfAttackDeg": 28.00000677007935,
+        "sideslipDeg": 3.7052444629145544e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2291.050874966915,
+        2845.2888469690306,
+        699.1076048213641
+      ],
+      "forceMagnitudeN": 3719.319047553206,
+      "torqueNm_nonrotating": [
+        -212.95822246850489,
+        -1.2476446567594524,
+        700.681178219505
+      ],
+      "torqueMagnitudeNm": 732.3297581316824
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 6.000001439628269,
+        "angleOfAttackDeg": 28.000007996480456,
+        "sideslipDeg": 5.000014134488071,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        1636.444282750886,
+        277.8621673997428,
+        3592.7118365623173
+      ],
+      "forceMagnitudeN": 3957.617416476121,
+      "torqueNm_nonrotating": [
+        -109.47153429107115,
+        -641.5757049731283,
+        57.000337725704796
+      ],
+      "torqueMagnitudeNm": 653.3394527599355
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 6.00000080326118,
+        "angleOfAttackDeg": 27.999996616228696,
+        "sideslipDeg": 5.000011937552979,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2418.372462061189,
+        -2958.842161182434,
+        1029.302773019052
+      ],
+      "forceMagnitudeN": 3957.617528083196,
+      "torqueNm_nonrotating": [
+        103.1980072981458,
+        -86.46705193055259,
+        -639.2969353800845
+      ],
+      "torqueMagnitudeNm": 653.3199456363145
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 6.000000901959875,
+        "angleOfAttackDeg": 27.999994329735,
+        "sideslipDeg": 5.000001055983456,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        3363.8910241086232,
+        -278.8279137955252,
+        -2066.2215321594103
+      ],
+      "forceMagnitudeN": 3957.6229289245466,
+      "torqueNm_nonrotating": [
+        -58.7457763000307,
+        641.5625264077122,
+        -108.35025422375026
+      ],
+      "torqueMagnitudeNm": 653.2942056333357
+    },
+    {
+      "mach": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 6.00000153832695,
+        "angleOfAttackDeg": 28.000005709986677,
+        "sideslipDeg": 5.000003252920818,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 33.603215740228876,
+      "forceN_nonrotating": [
+        2581.96168411309,
+        2957.879832030341,
+        497.190381368428
+      ],
+      "forceMagnitudeN": 3957.6227099466196,
+      "torqueNm_nonrotating": [
+        -271.4125901592637,
+        86.48867740978636,
+        587.9390125651477
+      ],
+      "torqueMagnitudeNm": 653.3126111695192
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106515964482524,
+        "angleOfAttackDeg": 2.975918728648927e-06,
+        "sideslipDeg": -4.999981948801635,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        620.0855880502423,
+        -83.49643321326137,
+        148.73262550571172
+      ],
+      "forceMagnitudeN": 643.1167738107705,
+      "torqueNm_nonrotating": [
+        165.95028602684317,
+        361.7800111906783,
+        -182.47399298300505
+      ],
+      "torqueMagnitudeNm": 437.85960312031546
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516062790799,
+        "angleOfAttackDeg": -7.417496674095546e-06,
+        "sideslipDeg": -4.999990699453752,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        633.1236063968751,
+        38.682112743574386,
+        106.10156931323804
+      ],
+      "forceMagnitudeN": 643.1169021523409,
+      "torqueNm_nonrotating": [
+        -4.819088742187816,
+        222.95413767705816,
+        376.82584211514325
+      ],
+      "torqueMagnitudeNm": 437.8692572097435
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516166274105,
+        "angleOfAttackDeg": 2.4952997993862253e-06,
+        "sideslipDeg": -5.000000402024324,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        597.4572247182034,
+        83.26155722396587,
+        222.95786684979294
+      ],
+      "forceMagnitudeN": 643.1157226110613,
+      "torqueNm_nonrotating": [
+        35.614969484887595,
+        -361.8440088759899,
+        244.0090274005846
+      ],
+      "torqueMagnitudeNm": 437.8811691130782
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516067965827,
+        "angleOfAttackDeg": 1.2888715180206038e-05,
+        "sideslipDeg": -4.9999916513725875,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        584.4180021383296,
+        -38.91576191360898,
+        265.58810627595454
+      ],
+      "forceMagnitudeN": 643.1142044333346,
+      "torqueNm_nonrotating": [
+        206.38413563657411,
+        -222.99966094611665,
+        -315.29011371024546
+      ],
+      "torqueMagnitudeNm": 437.871118056396
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516161877735,
+        "angleOfAttackDeg": 2.7365494220072103e-06,
+        "sideslipDeg": 1.8330311763163492e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        239.64400391052382,
+        -0.04778170771671379,
+        32.27136308016292
+      ],
+      "forceMagnitudeN": 241.8071375464555,
+      "torqueNm_nonrotating": [
+        1.2272913259767038,
+        257.06296022734324,
+        0.35102453368794323
+      ],
+      "torqueMagnitudeNm": 257.06612959133054
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516161877735,
+        "angleOfAttackDeg": -6.633677301559178e-06,
+        "sideslipDeg": 8.96196542529426e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        228.23148911651595,
+        39.06238475125112,
+        69.67053086991515
+      ],
+      "forceMagnitudeN": 241.80460169006898,
+      "torqueNm_nonrotating": [
+        -73.88503355903673,
+        0.021085558382145462,
+        246.23206493518023
+      ],
+      "torqueMagnitudeNm": 257.07825351605214
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516161877735,
+        "angleOfAttackDeg": 2.734669027342817e-06,
+        "sideslipDeg": -4.082613013411928e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        216.80432546082795,
+        -0.040232203387546774,
+        107.07341496405115
+      ],
+      "forceMagnitudeN": 241.8032947443411,
+      "torqueNm_nonrotating": [
+        1.1233391215415072,
+        -257.0864903223127,
+        0.36739351260308983
+      ],
+      "torqueMagnitudeNm": 257.0892070372066
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516161877734,
+        "angleOfAttackDeg": 1.2104895737049862e-05,
+        "sideslipDeg": 8.960085030581772e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        228.21669286124688,
+        -39.148852491151594,
+        69.67390644468058
+      ],
+      "forceMagnitudeN": 241.80559296914691,
+      "torqueNm_nonrotating": [
+        76.23553620698466,
+        -0.02491920297965616,
+        -245.51320939211223
+      ],
+      "torqueMagnitudeNm": 257.07701878571004
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516359279844,
+        "angleOfAttackDeg": 2.497180112759618e-06,
+        "sideslipDeg": 5.000018052467947,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        623.8137819657662,
+        83.51788183291572,
+        149.85417382919456
+      ],
+      "forceMagnitudeN": 646.9738360786469,
+      "torqueNm_nonrotating": [
+        -163.04527759686692,
+        363.2867736407633,
+        181.37433148889556
+      ],
+      "torqueMagnitudeNm": 437.55878527575965
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516255813153,
+        "angleOfAttackDeg": -5.849857969658549e-06,
+        "sideslipDeg": 5.000008351079867,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        588.050425522575,
+        38.69747428800051,
+        266.9657222002308
+      ],
+      "forceMagnitudeN": 646.9710150412017,
+      "torqueNm_nonrotating": [
+        -204.6691297848398,
+        -221.06016141999658,
+        317.35020959998053
+      ],
+      "torqueMagnitudeNm": 437.570797913972
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.1065161574809945,
+        "angleOfAttackDeg": 2.974038269297435e-06,
+        "sideslipDeg": 4.99999959790653,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        601.1144527247301,
+        -83.75396238643404,
+        224.09081937153508
+      ],
+      "forceMagnitudeN": 646.9698654625159,
+      "torqueNm_nonrotating": [
+        -34.0754118200323,
+        -363.272842270684,
+        -241.55067182881243
+      ],
+      "torqueMagnitudeNm": 437.57858572269816
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 0.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516260947681,
+        "angleOfAttackDeg": 1.1321076323784958e-05,
+        "sideslipDeg": 5.000009299294987,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        636.8774640164486,
+        -38.93200834364446,
+        106.97891002186655
+      ],
+      "forceMagnitudeN": 646.9722502821578,
+      "torqueNm_nonrotating": [
+        7.548218299718371,
+        221.09193241338713,
+        -377.52563099692037
+      ],
+      "torqueMagnitudeNm": 437.5662466843265
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516005427847,
+        "angleOfAttackDeg": 5.00000462957105,
+        "sideslipDeg": -4.999982199249273,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1034.5174618023445,
+        -136.70406153315346,
+        840.5716364012194
+      ],
+      "forceMagnitudeN": 1339.9533779709834,
+      "torqueNm_nonrotating": [
+        169.052676445333,
+        63.80514072658013,
+        -163.02617945394363
+      ],
+      "torqueMagnitudeNm": 243.36688062227896
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.10651598385598,
+        "angleOfAttackDeg": 4.999992754971528,
+        "sideslipDeg": -4.999990064076578,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1220.843733715314,
+        -502.1173215021104,
+        230.00311082296997
+      ],
+      "forceMagnitudeN": 1339.9562148416067,
+      "torqueNm_nonrotating": [
+        90.49888841524259,
+        205.2562468746821,
+        94.37901897448629
+      ],
+      "torqueMagnitudeNm": 243.36716070181163
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516184538304,
+        "angleOfAttackDeg": 5.00000089578673,
+        "sideslipDeg": -5.000000136246339,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1327.6509568542863,
+        136.2489224493097,
+        -119.4528432034619
+      ],
+      "forceMagnitudeN": 1339.9588851356937,
+      "torqueNm_nonrotating": [
+        49.156261666037494,
+        -63.8776173094166,
+        229.64004763977456
+      ],
+      "torqueMagnitudeNm": 243.37468959221326
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516206110169,
+        "angleOfAttackDeg": 5.000012770385585,
+        "sideslipDeg": -4.999992271419279,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1141.325450631359,
+        501.66278944410493,
+        491.11659341417675
+      ],
+      "forceMagnitudeN": 1339.9570317358914,
+      "torqueNm_nonrotating": [
+        127.70890753771029,
+        -205.3065986311806,
+        -27.7617662709549
+      ],
+      "torqueMagnitudeNm": 243.37436219220638
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.1065161997919475,
+        "angleOfAttackDeg": 5.0000042513413705,
+        "sideslipDeg": 1.8022100853763737e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        669.4833094309133,
+        -0.10791405080305151,
+        694.9332017371744
+      ],
+      "forceMagnitudeN": 964.9559928456275,
+      "torqueNm_nonrotating": [
+        1.2268576317743014,
+        -45.78209775684133,
+        0.18153696361228125
+      ],
+      "torqueMagnitudeNm": 45.79889311254996
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516090441835,
+        "angleOfAttackDeg": 4.999993467472013,
+        "sideslipDeg": 9.708699234541263e-06,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        806.3755361989446,
+        -469.333475917299,
+        246.21907647124658
+      ],
+      "forceMagnitudeN": 964.9555692440471,
+      "torqueNm_nonrotating": [
+        14.543313152562336,
+        0.1822089299039716,
+        -43.41332955939359
+      ],
+      "torqueMagnitudeNm": 45.78491390163518
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516182886201,
+        "angleOfAttackDeg": 5.000001137358143,
+        "sideslipDeg": -1.6824939416713047e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        943.4645701621608,
+        -0.20332089950097465,
+        -202.53500352584655
+      ],
+      "forceMagnitudeN": 964.9589960945873,
+      "torqueNm_nonrotating": [
+        1.1354113279101523,
+        45.75339588180754,
+        0.5403704723365832
+      ],
+      "torqueMagnitudeNm": 45.7706717653163
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516292236307,
+        "angleOfAttackDeg": 5.0000119212269745,
+        "sideslipDeg": 8.145152303519281e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        806.5733301590392,
+        469.02418345716364,
+        246.17970634131333
+      ],
+      "forceMagnitudeN": 964.9604496588431,
+      "torqueNm_nonrotating": [
+        -12.180737290368036,
+        -0.18770017550486368,
+        44.134276588152986
+      ],
+      "torqueMagnitudeNm": 45.78471319395193
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516393586937,
+        "angleOfAttackDeg": 5.000003873111736,
+        "sideslipDeg": 5.000017695858578,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1038.1554851842345,
+        136.61409040250797,
+        842.0064901141418
+      ],
+      "forceMagnitudeN": 1343.6536572007515,
+      "torqueNm_nonrotating": [
+        -166.14695798640224,
+        66.73906036328671,
+        161.58965774863967
+      ],
+      "torqueMagnitudeNm": 241.18484885587702
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516192961443,
+        "angleOfAttackDeg": 4.999994179972485,
+        "sideslipDeg": 5.000009186481177,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1144.7168040794477,
+        -502.4275380636729,
+        492.53469895373587
+      ],
+      "forceMagnitudeN": 1343.6518977101307,
+      "torqueNm_nonrotating": [
+        -126.39142245093205,
+        -203.04188017066537,
+        31.18829304454178
+      ],
+      "torqueMagnitudeNm": 241.191845623854
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516180914557,
+        "angleOfAttackDeg": 5.000001378929552,
+        "sideslipDeg": 4.999999804859726,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1331.3698769909413,
+        -137.071675713171,
+        -118.64149865726796
+      ],
+      "forceMagnitudeN": 1343.6555357848727,
+      "torqueNm_nonrotating": [
+        -47.5939727514179,
+        -66.72709318121399,
+        -226.83790464831716
+      ],
+      "torqueMagnitudeNm": 241.1910574459927
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 5.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516381540048,
+        "angleOfAttackDeg": 5.000011072068379,
+        "sideslipDeg": 5.0000083142375695,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1224.8087055626756,
+        501.9725074649027,
+        230.83023184001797
+      ],
+      "forceMagnitudeN": 1343.6574561263876,
+      "torqueNm_nonrotating": [
+        -87.34867902779209,
+        203.07483868607747,
+        -96.43961477964162
+      ],
+      "torqueMagnitudeNm": 241.1841228898003
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516063467451,
+        "angleOfAttackDeg": 10.000006151169877,
+        "sideslipDeg": -4.9999825627404455,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1417.0722390819524,
+        -191.00846220414286,
+        1632.311511504201
+      ],
+      "forceMagnitudeN": 2170.0273809331206,
+      "torqueNm_nonrotating": [
+        170.27812298817668,
+        -184.15118276811765,
+        -141.90767691212784
+      ],
+      "torqueMagnitudeNm": 288.1737081169449
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106515907874897,
+        "angleOfAttackDeg": 9.999993131349877,
+        "sideslipDeg": -4.999989498421505,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1807.5996603738038,
+        -1147.7713896955297,
+        352.4636894473628
+      ],
+      "forceMagnitudeN": 2170.029112147103,
+      "torqueNm_nonrotating": [
+        169.9535133215508,
+        185.41351265741727,
+        -140.61483330740705
+      ],
+      "torqueMagnitudeNm": 288.1577670519583
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516185401235,
+        "angleOfAttackDeg": 9.999999263554129,
+        "sideslipDeg": -4.999999893736558,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2087.191971301749,
+        190.33297334470296,
+        -562.5368933118237
+      ],
+      "forceMagnitudeN": 2170.0333458602972,
+      "torqueNm_nonrotating": [
+        62.05534919839374,
+        184.07241558615314,
+        212.83329724328692
+      ],
+      "torqueMagnitudeNm": 288.15192687071414
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.10651634099378,
+        "angleOfAttackDeg": 10.000012283372978,
+        "sideslipDeg": -4.999992958055495,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1696.6633723987993,
+        1147.0966056805587,
+        717.3123836070081
+      ],
+      "forceMagnitudeN": 2170.0309393369243,
+      "torqueNm_nonrotating": [
+        62.378663636954634,
+        -185.46836967442425,
+        211.5447713397303
+      ],
+      "torqueMagnitudeNm": 288.16801367951996
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516253442911,
+        "angleOfAttackDeg": 10.000005636958427,
+        "sideslipDeg": 1.7576730796383426e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1070.0032453886668,
+        -0.15773653220660083,
+        1459.4131202509366
+      ],
+      "forceMagnitudeN": 1809.6390871065057,
+      "torqueNm_nonrotating": [
+        1.2210294259939942,
+        -297.38394493538806,
+        0.05269917166883059
+      ],
+      "torqueMagnitudeNm": 297.3864563079424
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516021180481,
+        "angleOfAttackDeg": 9.999993767108903,
+        "sideslipDeg": 1.0381543981010566e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1386.1083681829964,
+        -1083.6717000211224,
+        423.2637671577951
+      ],
+      "forceMagnitudeN": 1809.6389082803803,
+      "torqueNm_nonrotating": [
+        88.00740283718672,
+        0.30280582399114747,
+        -284.04987882723503
+      ],
+      "torqueMagnitudeNm": 297.3713643027533
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516186374098,
+        "angleOfAttackDeg": 9.999999505489212,
+        "sideslipDeg": 7.304302766064472e-08,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1702.662780105264,
+        -0.377342841937096,
+        -612.9788904963176
+      ],
+      "forceMagnitudeN": 1809.6418997518551,
+      "torqueNm_nonrotating": [
+        1.1475686283359043,
+        297.3515666829406,
+        0.6710551834917386
+      ],
+      "torqueMagnitudeNm": 297.3545382832004
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516418636519,
+        "angleOfAttackDeg": 10.00001137533779,
+        "sideslipDeg": 7.268230133627115e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1386.5589319843305,
+        1083.1388155946781,
+        423.1717031641402
+      ],
+      "forceMagnitudeN": 1809.6435162960158,
+      "torqueNm_nonrotating": [
+        -85.63812529935748,
+        -0.31012343307127976,
+        284.7719298446883
+      ],
+      "torqueMagnitudeNm": 297.3702014472874
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516442034187,
+        "angleOfAttackDeg": 10.000005122747002,
+        "sideslipDeg": 5.0000171821419865,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1420.592124789679,
+        190.82849064331316,
+        1634.0480628247014
+      ],
+      "forceMagnitudeN": 2173.6169325520123,
+      "torqueNm_nonrotating": [
+        -167.3826712006279,
+        -179.81333604563844,
+        140.21461945681767
+      ],
+      "torqueMagnitudeNm": 282.86027283367207
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106516131472056,
+        "angleOfAttackDeg": 9.99999440286792,
+        "sideslipDeg": 5.000009946071548,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1699.7469676409974,
+        -1148.4046052104268,
+        718.7730429355984
+      ],
+      "forceMagnitudeN": 2173.616244539082,
+      "torqueNm_nonrotating": [
+        -61.45667914612781,
+        -182.95843295490846,
+        -206.77355489822872
+      ],
+      "torqueMagnitudeNm": 282.85334469692356
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516186974432,
+        "angleOfAttackDeg": 9.999999747424294,
+        "sideslipDeg": 5.0000000376032,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2090.944305790892,
+        -191.5066963363582,
+        -562.0530947011351
+      ],
+      "forceMagnitudeN": 2173.620616833615,
+      "torqueNm_nonrotating": [
+        -60.47012495191763,
+        179.8237763216463,
+        -209.77072110047388
+      ],
+      "torqueMagnitudeNm": 282.8373772564206
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 10.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516497536557,
+        "angleOfAttackDeg": 10.000010467302634,
+        "sideslipDeg": 5.000007273674278,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1811.7885678262023,
+        1147.7293729026417,
+        353.22274964822685
+      ],
+      "forceMagnitudeN": 2173.6206750024867,
+      "torqueNm_nonrotating": [
+        -166.39466801930246,
+        182.99251507547905,
+        137.21343059318866
+      ],
+      "torqueMagnitudeNm": 282.84443012733186
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.10651618759269,
+        "angleOfAttackDeg": 18.00000820531335,
+        "sideslipDeg": -4.999983376672497,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1900.0920182964435,
+        -276.86949900728865,
+        3060.4995704464272
+      ],
+      "forceMagnitudeN": 3612.9854716255318,
+      "torqueNm_nonrotating": [
+        172.3539527491981,
+        -436.10898354561556,
+        -108.3627624027592
+      ],
+      "torqueMagnitudeNm": 481.2893296479984
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106515797750538,
+        "angleOfAttackDeg": 17.999994131325476,
+        "sideslipDeg": -4.999988743473491,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2673.0895099506215,
+        -2372.8599300505475,
+        527.0756080227984
+      ],
+      "forceMagnitudeN": 3612.9877487226754,
+      "torqueNm_nonrotating": [
+        254.8220475851479,
+        153.93259735916868,
+        -378.13675682599677
+      ],
+      "torqueMagnitudeNm": 481.26596319302524
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.1065161505734,
+        "angleOfAttackDeg": 17.99999670756148,
+        "sideslipDeg": -4.999999558720856,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3285.5407899772918,
+        275.869584835888,
+        -1477.4415276794684
+      ],
+      "forceMagnitudeN": 3612.9926346664442,
+      "torqueNm_nonrotating": [
+        82.60150507696082,
+        436.01903763058607,
+        186.19414693004828
+      ],
+      "torqueMagnitudeNm": 481.2523975714719
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516540415527,
+        "angleOfAttackDeg": 18.00001078154788,
+        "sideslipDeg": -4.999994191919156,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2512.542421223668,
+        2371.8609825087333,
+        1055.9857195570949
+      ],
+      "forceMagnitudeN": 3612.9904205110065,
+      "torqueNm_nonrotating": [
+        0.1313104835655281,
+        -153.99480712881572,
+        455.974375891101
+      ],
+      "torqueMagnitudeNm": 481.27647909944994
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516367785761,
+        "angleOfAttackDeg": 18.00000748209067,
+        "sideslipDeg": 1.6587690112161338e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1586.1936809720576,
+        -0.20486478351567988,
+        2847.993922208509
+      ],
+      "forceMagnitudeN": 3259.9202162724587,
+      "torqueNm_nonrotating": [
+        1.16892326137673,
+        -551.969348078337,
+        -0.08677535315209728
+      ],
+      "torqueMagnitudeNm": 551.9705926311449
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.10651592009129,
+        "angleOfAttackDeg": 17.999994634490964,
+        "sideslipDeg": 1.1291849037274437e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2245.816766090457,
+        -2261.1972463863312,
+        685.8382367615968
+      ],
+      "forceMagnitudeN": 3259.9202476322,
+      "torqueNm_nonrotating": [
+        162.29703165468914,
+        0.4193808958199132,
+        -527.5527437531099
+      ],
+      "torqueMagnitudeNm": 551.9532587146247
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516155448232,
+        "angleOfAttackDeg": 17.99999694625269,
+        "sideslipDeg": 4.5719181372328645e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2906.3755489531477,
+        -0.6621877416191846,
+        -1476.512306132738
+      ],
+      "forceMagnitudeN": 3259.9245175627507,
+      "torqueNm_nonrotating": [
+        1.1162688949576356,
+        551.9301658146268,
+        0.7849662434954623
+      ],
+      "torqueMagnitudeNm": 551.9318528264251
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516603142686,
+        "angleOfAttackDeg": 18.00000979385125,
+        "sideslipDeg": 5.753033888369413e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2246.7536830708855,
+        2260.3331310309513,
+        685.646099535088
+      ],
+      "forceMagnitudeN": 3259.92615705271,
+      "torqueNm_nonrotating": [
+        -160.0107496189392,
+        -0.4297329293166671,
+        528.247757546051
+      ],
+      "torqueMagnitudeNm": 551.950466995397
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516544857523,
+        "angleOfAttackDeg": 18.000006758868032,
+        "sideslipDeg": 5.000016048044202,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        1903.3707217743847,
+        276.6123600280394,
+        3062.6911381893988
+      ],
+      "forceMagnitudeN": 3616.5469041852753,
+      "torqueNm_nonrotating": [
+        -169.5598122614083,
+        -429.59483432560074,
+        106.39071066432288
+      ],
+      "torqueMagnitudeNm": 473.94222741703874
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.1065160409538,
+        "angleOfAttackDeg": 17.999995137656413,
+        "sideslipDeg": 5.000010984074478,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2514.9963394867145,
+        -2373.998533749358,
+        1057.512708200559
+      ],
+      "forceMagnitudeN": 3616.546523118617,
+      "torqueNm_nonrotating": [
+        0.08576634654977511,
+        -151.2433194715169,
+        -449.14743779876403
+      ],
+      "torqueMagnitudeNm": 473.9282328811232
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516160420373,
+        "angleOfAttackDeg": 17.999997184943904,
+        "sideslipDeg": 5.000000459212918,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3289.2854164143064,
+        -277.6150754905116,
+        -1477.4880670978805
+      ],
+      "forceMagnitudeN": 3616.5507972641653,
+      "torqueNm_nonrotating": [
+        -81.07846059755454,
+        429.6041092629223,
+        -182.90283664610212
+      ],
+      "torqueMagnitudeNm": 473.90595598878986
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 18.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516664324085,
+        "angleOfAttackDeg": 18.000008806154657,
+        "sideslipDeg": 5.0000055231839395,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2677.660627176754,
+        2372.9996841367447,
+        527.6926291445943
+      ],
+      "forceMagnitudeN": 3616.552701966229,
+      "torqueNm_nonrotating": [
+        -250.72179647263397,
+        151.27868453346514,
+        372.62919393101174
+      ],
+      "torqueMagnitudeNm": 473.9189548755316
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516384202957,
+        "angleOfAttackDeg": 28.00000992495953,
+        "sideslipDeg": -4.999984786768834,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2411.331532258754,
+        -404.2268337089976,
+        5142.74626435066
+      ],
+      "forceMagnitudeN": 5694.361968741398,
+      "torqueNm_nonrotating": [
+        158.20466980973268,
+        -869.2680647477123,
+        -81.4864791722355
+      ],
+      "torqueMagnitudeNm": 887.296868149396
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106515690379818,
+        "angleOfAttackDeg": 27.999995968283326,
+        "sideslipDeg": -4.999988067807553,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3759.042479612526,
+        -4215.307665163401,
+        725.6455454780016
+      ],
+      "forceMagnitudeN": 5694.363927006148,
+      "torqueNm_nonrotating": [
+        375.92547089488505,
+        124.0960031628858,
+        -794.0522185210813
+      ],
+      "torqueMagnitudeNm": 887.2647312988356
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.10651604839745,
+        "angleOfAttackDeg": 27.9999938734966,
+        "sideslipDeg": -4.99999923605433,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        4872.6098912288435,
+        402.82217613358705,
+        -2919.123243564005
+      ],
+      "forceMagnitudeN": 5694.372078535244,
+      "torqueNm_nonrotating": [
+        86.02868768290574,
+        869.1649813864038,
+        156.04255500457978
+      ],
+      "torqueMagnitudeNm": 887.2417815596987
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": -5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516742220552,
+        "angleOfAttackDeg": 28.00000783017206,
+        "sideslipDeg": -4.999995955013833,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3524.896396019484,
+        4213.9048943499265,
+        1497.9836381289988
+      ],
+      "forceMagnitudeN": 5694.369503412964,
+      "torqueNm_nonrotating": [
+        -131.69455210107512,
+        -124.15647423349174,
+        868.6185925812866
+      ],
+      "torqueMagnitudeNm": 887.2747852413534
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516547589603,
+        "angleOfAttackDeg": 28.000008960719985,
+        "sideslipDeg": 1.4900227495574357e-05,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2154.9129463575873,
+        -0.23518237920597354,
+        4893.276386820552
+      ],
+      "forceMagnitudeN": 5346.756368070822,
+      "torqueNm_nonrotating": [
+        1.5480893343130382,
+        -992.6216792427682,
+        -1.3602442848656295
+      ],
+      "torqueMagnitudeNm": 992.6238184467641
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106515820874334,
+        "angleOfAttackDeg": 27.99999629225601,
+        "sideslipDeg": 1.21189873597319e-05,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3336.8374874033066,
+        -4051.51798503167,
+        1019.0917457077674
+      ],
+      "forceMagnitudeN": 5346.758867439675,
+      "torqueNm_nonrotating": [
+        291.0233784140738,
+        1.747658647763961,
+        -948.974746100141
+      ],
+      "torqueMagnitudeNm": 992.5979698901854
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516057555752,
+        "angleOfAttackDeg": 27.9999941016158,
+        "sideslipDeg": 9.240022328231414e-07,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        4520.435969454171,
+        -1.053189205531176,
+        -2855.4425794568956
+      ],
+      "forceMagnitudeN": 5346.764889886035,
+      "torqueNm_nonrotating": [
+        0.8755328610414181,
+        992.5659207903385,
+        2.100642231006945
+      ],
+      "torqueMagnitudeNm": 992.5685298103834
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 0.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516784270993,
+        "angleOfAttackDeg": 28.000006770079352,
+        "sideslipDeg": 3.7052444615062025e-06,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3338.5125411143154,
+        4050.233224819654,
+        1018.7478296204333
+      ],
+      "forceMagnitudeN": 5346.765592670668,
+      "torqueNm_nonrotating": [
+        -288.6003768615744,
+        -1.7581122864987022,
+        949.7126810387069
+      ],
+      "torqueMagnitudeNm": 992.5963152305087
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -180.0,
+      "achieved": {
+        "mach": 7.106516705123315,
+        "angleOfAttackDeg": 28.000007996480466,
+        "sideslipDeg": 5.000014134488063,
+        "bankDeg": -179.99999994454913
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        2414.2292669404437,
+        403.9358333223412,
+        5145.442190050329
+      ],
+      "forceMagnitudeN": 5698.00337328292,
+      "torqueNm_nonrotating": [
+        -154.68372871679873,
+        -860.2238057698852,
+        77.03265668491522
+      ],
+      "torqueMagnitudeNm": 877.4087315150751
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": -90.0,
+      "achieved": {
+        "mach": 7.106515951397939,
+        "angleOfAttackDeg": 27.9999966162287,
+        "sideslipDeg": 5.000011937552969,
+        "bankDeg": -90.00000890596874
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3526.3375449459404,
+        -4217.039894565661,
+        1499.589334708596
+      ],
+      "forceMagnitudeN": 5698.004047561347,
+      "torqueNm_nonrotating": [
+        131.30832675647707,
+        -118.82131502083563,
+        -859.3288675466071
+      ],
+      "torqueMagnitudeNm": 877.3861659370978
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 0.0,
+      "achieved": {
+        "mach": 7.106516068298563,
+        "angleOfAttackDeg": 27.999994329735006,
+        "sideslipDeg": 5.000001055983478,
+        "bankDeg": 5.46624221442471e-08
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        4876.230870498881,
+        -405.34380747149385,
+        -2919.827546503334
+      ],
+      "forceMagnitudeN": 5698.010530525671,
+      "torqueNm_nonrotating": [
+        -84.98420825388139,
+        860.2153670528722,
+        -150.1942335800623
+      ],
+      "torqueMagnitudeNm": 877.3546040040761
+    },
+    {
+      "mach": 7.106515,
+      "angleOfAttackDeg": 28.0,
+      "sideslipDeg": 5.0,
+      "bankDeg": 90.0,
+      "achieved": {
+        "mach": 7.106516822023924,
+        "angleOfAttackDeg": 28.000005709986674,
+        "sideslipDeg": 5.00000325292081,
+        "bankDeg": 90.00000901608206
+      },
+      "estimatedDynamicPressurePa": 47.14022961274351,
+      "forceN_nonrotating": [
+        3764.122431462884,
+        4215.636634899641,
+        726.0297040878803
+      ],
+      "forceMagnitudeN": 5698.010972942046,
+      "torqueNm_nonrotating": [
+        -370.97280091504916,
+        118.85491976403029,
+        786.1581946866627
+      ],
+      "torqueMagnitudeNm": 877.3779220175667
+    }
+  ],
+  "errors": [],
+  "sameStateParity": {
+    "measuredForceN": [
+      406.5667751437759,
+      -0.6303174138657007,
+      271.86574116521604
+    ],
+    "simulatedForceN": [
+      405.29647226929274,
+      -0.6247193813323975,
+      270.322049481688
+    ],
+    "wrenchForceN": [
+      405.3855515235677,
+      -0.6246420807685532,
+      270.3343043494894
+    ],
+    "measuredTorqueNm": [
+      0.20201168402747538,
+      141.1108723657782,
+      1.9049723653157953
+    ],
+    "simulatedTorqueNm": [
+      0.20291172920797873,
+      141.6998285187435,
+      1.9071574893401544
+    ],
+    "wrenchTorqueNm": [
+      0.20291172920797873,
+      141.6998285187435,
+      1.9071574893401544
+    ],
+    "forceRelativeError": 0.004087541433933747,
+    "torqueRelativeError": 0.004173361135697293,
+    "measuredMach": 7.106515407562256,
+    "derivedAoADeg": 1.887908915705701,
+    "derivedSideslipDeg": 0.024403363320635807,
+    "derivedBankDeg": -179.64545119493556,
+    "airVelocityFrameReconstructionErrorMps": 2.2737367544323206e-13
+  },
+  "gridSummary": {
+    "sampleCount": 240,
+    "maximumAchievedBankErrorDeg": 9.016082060497865e-06,
+    "elapsedWallSeconds": 15.870410292001907
+  },
+  "liveStateBefore": {
+    "ut": 10086.871826172728,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.flying",
+    "altitude_m": 62836.04134578165,
+    "mach": 7.106515407562256,
+    "true_air_speed_mps": 2122.34814453125,
+    "speed_of_sound_mps": 298.64532470703125,
+    "dynamic_pressure_pa": 47.14114761352539,
+    "mass_kg": 25815.947265625,
+    "part_count": 22,
+    "position_m": [
+      -198047.7645967414,
+      67.38600302330633,
+      632557.267055171
+    ],
+    "velocity_mps": [
+      -2192.7854093765027,
+      -0.08602747762083839,
+      -743.960241077048
+    ],
+    "rotation_xyzw": [
+      0.6996112855363157,
+      -0.6991051188601495,
+      0.10223378176848502,
+      -0.10651055968307793
+    ],
+    "angular_velocity_rad_s": [
+      0.000162113316002015,
+      -0.014922080561518669,
+      6.259843991968372e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": true,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.887917399406433,
+    "sideslip_deg": 0.024393483996391296,
+    "roll_deg": -179.68588256835938
+  },
+  "liveStateAfter": {
+    "ut": 10086.871826172728,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.flying",
+    "altitude_m": 62836.04134578165,
+    "mach": 7.106515407562256,
+    "true_air_speed_mps": 2122.34814453125,
+    "speed_of_sound_mps": 298.64532470703125,
+    "dynamic_pressure_pa": 47.14114761352539,
+    "mass_kg": 25815.947265625,
+    "part_count": 22,
+    "position_m": [
+      -198047.7645967414,
+      67.38600302330633,
+      632557.267055171
+    ],
+    "velocity_mps": [
+      -2192.7854093765027,
+      -0.08602747762083839,
+      -743.960241077048
+    ],
+    "rotation_xyzw": [
+      0.6996112855363157,
+      -0.6991051188601495,
+      0.10223378176848502,
+      -0.10651055968307793
+    ],
+    "angular_velocity_rad_s": [
+      0.000162113316002015,
+      -0.014922080561518669,
+      6.259843991968372e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": true,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.887917399406433,
+    "sideslip_deg": 0.024393483996391296,
+    "roll_deg": -179.68588256835938
+  },
+  "liveStateUnchanged": true,
+  "checkpointUnchanged": true,
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "sourceSHA256": "141d7a9b50678bab1f639e0c41f9019dea0bf54715a9d73e177c84043ca8783c"
+}

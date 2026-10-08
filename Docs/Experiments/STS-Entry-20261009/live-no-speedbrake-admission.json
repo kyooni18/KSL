@@ -1,0 +1,82 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "LIVE_SHADOW_GATE_REJECTION",
+  "missionResult": {
+    "landingVerified": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "guidanceEngaged": false,
+    "liveDescentStarted": false
+  },
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Qualified": false,
+    "qualified": false
+  },
+  "run": {
+    "startedUTC": "2026-10-08T17:31:28.514263+00:00",
+    "campaignIdentity": "ae24309097ef5495-9ab649d0acea2fd1-badd735f8d8c6356",
+    "attemptId": "native-20948-1791480689-633313000",
+    "runnerArgs": [
+      "Tools/headless_flight.py",
+      "--backend",
+      "CLanding/build/landing_backend",
+      "--config",
+      "Configuration/sts.json",
+      "--live",
+      "--reentry-only",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+    ],
+    "runnerLog": "Runtime/STS-Campaign-20261009/no-speedbrake-live-run/headless-live.log",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T173128514263Z-20948.json",
+    "summary": {
+      "closestMissKm": 4.5,
+      "shadowRangeErrorKm": 64.0,
+      "peakDynamicPressureKPa": 5.3,
+      "peakG": 1.63,
+      "priorAerodynamicCells": 60,
+      "currentAttemptHeldOut": true
+    },
+    "rejection": "Reentry rejected by closed-loop shadow: entered=true, MM305=false, closest=4.5 km, range error=+64.0 km, q=5.3 kPa, g=1.63.",
+    "liveControlIssued": false,
+    "actuatorEngagement": "The runner remained in Idle; the rejected shadow admission did not engage guidance or start descent."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHeadBeforeRun": "943145cc26bd81b7d484e5982d2e40f82d895109",
+    "backendSHA256": "9ab649d0acea2fd1858bf4e6c32b27dd3205a0bc6c766dac72c6861f2999ff1f",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "sourceTreeSHA256": "ae24309097ef54952c0ab0f1fdf4625660b68748e5ce54d9849a38a5182fafe1",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "expectedCheckpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUnchanged": true,
+    "vehicleModelId": "STS",
+    "checkpointPhysicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "postCleanupLiveState": {
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "paused": true,
+    "ut": 9930.411826169313,
+    "meanAltitudeM": 71968.93744152249,
+    "massKg": 22000.0,
+    "dryMassKg": 20056.28125,
+    "partCount": 22,
+    "sas": false,
+    "rcs": true,
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "thrustN": 0.0
+  },
+  "notes": "This was the explicitly requested background live attempt after the no-speedbrake guard was built. Its admission result matches the already-known +64.0 km shadow rejection, so no identical attempt was launched afterward. Cleanup reloaded and paused the named save; the paused vessel reports placeholder mass until the normal checkpoint physics-settle step runs. The saved checkpoint file remained byte-for-byte unchanged."
+}
