@@ -1,0 +1,154 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_ADMISSION",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "shadowAborted": true,
+    "liveControlsIssued": false,
+    "liveDescentStarted": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "run": {
+    "startedUTC": "2026-10-08T22:59:22.518743+00:00",
+    "gitHead": "cadbf51fe3986d4962e93d727c5f3091e7538d32",
+    "sourceTreeSHA256": "3e5856b31f30875c386956d397df1e5ad0e9642863cc48f9773a0e91ab72f9ce",
+    "campaignIdentity": "3e5856b31f30875c-711f1e45d9bb332e-badd735f8d8c6356",
+    "backendSHA256": "711f1e45d9bb332e6e1783f72948736dbf60a46b03c2dbfc02d3532e8d6dfdd7",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "runnerArguments": [
+      "Tools/headless_flight.py",
+      "--live",
+      "--backend",
+      "CLanding/build/landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/sts.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_ENTRY_TRACE": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+      "manualForceReentryOverride": false
+    },
+    "runManifest": "Runtime/Headless/run-manifests/20261008T225922518743Z-13838.json",
+    "runManifestSHA256": "f445045f803da65b9a655c92887e4a48c199e10363c15f3eb297ed03f0631dbd",
+    "campaignManifest": "Runtime/Headless/acceptance-artifacts/3e5856b31f30875c-711f1e45d9bb332e-badd735f8d8c6356/manifest.json",
+    "campaignManifestSHA256": "d9500e631d121dd2a43ff16de28ee716819ce6a2cf6eeb29b31e08d4210dfa68",
+    "backendPID": 13838,
+    "kspPID": 69877,
+    "kspProcessCount": 1,
+    "vehicleLog": {
+      "path": "FlightLogs/2026-10-08T22-59-23Z-STS-vehicle.jsonl",
+      "sha256": "1af11cf1bb73659891df8107287a95826cfaf9024d2fded0c581f5994a62393d"
+    },
+    "plannerLog": {
+      "path": "FlightLogs/2026-10-08T22-59-23Z-STS-planner.jsonl",
+      "sha256": "f83b70dc0b2cf5199f70ec9eb6d95eff4e4d94d0b6f396f02ce5c19b6857777c"
+    }
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "sha256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "unchanged": true,
+    "startAfterPhysicsSettle": {
+      "ut": 9931.291826169332,
+      "meanAltitudeM": 71917.3272124813,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "actualThrustN": 0.0
+    },
+    "postRunSettle": {
+      "helper": "Tools/settle_known_checkpoint.py",
+      "ut": 9931.271826169332,
+      "meanAltitudeM": 71918.50024391653,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0,
+      "sas": false,
+      "rcs": false,
+      "controlsPitchRollYawThrottle": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "actualThrustN": 0.0,
+      "speedbrakeActionGroupEnabled": false,
+      "allActionGroups0Through9Off": true,
+      "controlSurfacesNeutral": true,
+      "vessel": "STS",
+      "vesselCount": 1,
+      "kspPID": 69877,
+      "singleKSPProcess": true
+    }
+  },
+  "shadowResult": {
+    "closestMissKm": 4.5,
+    "rangeErrorKm": 64.8,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "nearSite": {
+      "ut": 10516.33,
+      "altitudeM": 37995,
+      "speedMps": 1730.1,
+      "mach": 5.2,
+      "flightPathAngleDeg": -3.78,
+      "rangeM": 4593,
+      "runwayAlongTrackM": 869,
+      "runwayCrossTrackM": 4510,
+      "courseToSiteErrorDeg": -101.5,
+      "bankDeg": -40.0,
+      "angleOfAttackDeg": 28.0,
+      "mm305Veto": "0x89"
+    },
+    "plus45Seconds": {
+      "ut": 10561.33,
+      "altitudeM": 32601,
+      "speedMps": 1421.7,
+      "mach": 4.44,
+      "rangeM": 68293,
+      "courseToSiteErrorDeg": -173.6,
+      "bankDeg": -40.0,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.83,
+      "altitudeM": 9349,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeM": 161343,
+      "runwayAlongTrackM": 156719,
+      "runwayCrossTrackM": -38795,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "interpretation": {
+    "finding": "The current-source normal-gate attempt reproduced the prior 4.5 km closest miss, +64.8 km range error, 5.3 kPa peak q, 1.63 g, near-site course-away state, and abort before TAEM. The diagonal-authority isolation guard did not produce an observable admission change in this checkpoint trial; no live control was issued, so this run does not test atmospheric authority learning.",
+    "decision": "Keep the normal shadow gate and the low-q bank ramp unchanged. Do not repeat this identical admission until an offline trajectory change has a focused supporting result.",
+    "limits": "This is an unqualified predictor result, not live atmospheric flight, touchdown, or rollout. No propulsion, speedbrake, or live control command was issued."
+  },
+  "errors": []
+}
