@@ -1,0 +1,146 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Check whether the normal-gate shadow trace exposes the sideslip, body-rate, and control-input signals needed to analyze the yaw-to-roll coupling hypothesis.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "instrumentation": {
+    "baseGitHead": "ae17ec2b98071cb6b24cac7da92c19fa5240d9ec",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "isolatedCopyOnly": true,
+    "changedCopiedFile": "CLanding/guidance/entry/contract.inc",
+    "baseCopiedFileSHA256": "e66f6f8521d8de4e28fa9b31024883175fd4b4493cfcd9d346b332a4a2491360",
+    "instrumentedCopiedFileSHA256": "82b48f0fd6c38a48eb124c86c36d4843dd3682cbb1994adad3ca39570dcccc91",
+    "change": "Added trace-only fields for sideslip, body p/q/r, Euler-coordinate rates, normalized pitch/roll/yaw inputs, and bank cap. Production guidance and qualification logic were unchanged.",
+    "focusedTest": "entry-forecast-admission-test passed in the isolated build."
+  },
+  "run": {
+    "runner": "Tools/headless_flight.py",
+    "arguments": [
+      "--live",
+      "--backend",
+      "isolated instrumentation-only landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/sts.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_ENTRY_TRACE": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset"
+    },
+    "exitReason": "The unchanged closed-loop shadow gate rejected reentry before engagement.",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T212806370897Z-58483.json",
+    "runManifestSHA256": "92022328d622042aa0866ff972794b4e890d439b3124cc5f43b6d3638a8c12cd",
+    "campaignIdentity": "64635833ea57a683-de043146f5e1187c-badd735f8d8c6356",
+    "backendExecutableSHA256": "de043146f5e1187ca164c8abc106ad581ae5bc6b773d2d59d61762b35220271b",
+    "configurationSnapshotSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "backendPID": 58483,
+    "kspPID": 69877,
+    "kspProcessCount": 1,
+    "capturedConsole": {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-shadow-entry-coordinate-trace-20261009.log",
+      "sha256": "be577fac12cdc0b11e1d8a98e88b71cec1f56be8453b1b5a13887958b5652841",
+      "bytes": 94193,
+      "lineCount": 203
+    }
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "hashUnchanged": true,
+    "postRunIndependentReadOnlyVerification": {
+      "vessel": "STS",
+      "ut": 9931.291826169332,
+      "meanAltitudeM": 71917.32722445694,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "controls": [0.0, 0.0, 0.0],
+      "throttle": 0.0,
+      "actualThrustN": 0.0,
+      "speedbrakeActionGroupEnabled": false,
+      "allActionGroups0Through9Off": true,
+      "kspPID": 69877,
+      "singleKSPProcess": true
+    }
+  },
+  "shadowTrace": {
+    "rowCount": 171,
+    "cadenceSeconds": 5.0,
+    "firstUT": 9980.572,
+    "lastUT": 10830.572,
+    "observability": {
+      "betaDeg": "present as +0.000 in all 171 rows; this is the shadow model's zero/default value, not a measured sideslip",
+      "bodyRatePQR": "NaN in all 171 rows",
+      "normalizedControlInputs": "NaN in all 171 rows",
+      "coordinateEulerRates": "finite simulated pitch/roll/heading rates; not body-rate observations"
+    },
+    "nearSite": {
+      "ut": 10516.27,
+      "altitudeM": 38007,
+      "mach": 5.21,
+      "rangeM": 4568,
+      "alongTrackM": 775,
+      "crossTrackM": 4502,
+      "courseToSiteErrorDeg": -100.3,
+      "bankDeg": -40.0,
+      "aoaDeg": 28.0,
+      "mm305Ready": false,
+      "mm305Veto": "0x89"
+    },
+    "plus45Seconds": {
+      "ut": 10561.27,
+      "altitudeM": 32613,
+      "mach": 4.44,
+      "rangeM": 68225,
+      "courseToSiteErrorDeg": -173.6,
+      "mm305Ready": false,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.97,
+      "altitudeM": 9346,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeM": 161410,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    },
+    "gateSummary": {
+      "closestMissKm": 4.5,
+      "rangeErrorKm": 64.9,
+      "peakDynamicPressureKPa": 5.3,
+      "peakG": 1.63
+    }
+  },
+  "interpretation": {
+    "finding": "This instrumentation-only shadow trace does not provide atmospheric sideslip, body p/q/r, or normalized control inputs. It therefore cannot estimate atmospheric yaw-to-roll control coupling or reconcile the live aerodynamic wrench grid against a measured flight trajectory. The finite Euler-coordinate rates are simulated shadow outputs and cannot be substituted for body rates.",
+    "decision": "Do not infer atmospheric yaw-roll coupling from this shadow trace. The independent live vacuum pulse and full-tensor analysis remain vacuum actuator evidence only. The existing KSP API wrench grid remains an unqualified counterfactual diagnostic.",
+    "limits": "The gate rejected before guidance engagement; the trace is simulated prediction, not live atmospheric flight. No production source, bank ramp, gate, checkpoint, or flight limit was changed."
+  },
+  "errors": []
+}
