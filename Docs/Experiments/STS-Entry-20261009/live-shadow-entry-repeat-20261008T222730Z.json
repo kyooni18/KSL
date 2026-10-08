@@ -129,8 +129,10 @@
     },
     "cleanupAndRestore": {
       "runnerExitCode": 1,
-      "runnerCleanupTarget": "KSP quicksave",
-      "transientQuickSaveState": {
+      "runnerCleanupTarget": "configured --initial-save: STS-campaign-72km-20261008",
+      "runnerCleanupMessage": "test cleanup restored and froze KSP quicksave",
+      "runnerCleanupMessageAccuracy": "The message is hard-coded. Tools/headless_flight.py passes args.initial_save to secure_failed_test_state, which loads that named save.",
+      "transientPostLoadState": {
         "ut": 9930.25182616931,
         "meanAltitudeM": 71978.31623531238,
         "massKg": 22000.0,
@@ -141,7 +143,8 @@
         "rcs": true,
         "thrustN": 0.0
       },
-      "namedSaveReload": {
+      "postLoadStateInterpretation": "The low mass and RCS readback were the expected transient placeholder state before physics unpack settled; they do not indicate that a different save was selected.",
+      "verificationReload": {
         "method": "python3 Tools/ksp_test_guard.py load-save --name STS-campaign-72km-20261008",
         "settled": true,
         "settledUT": 9931.63182616934,
