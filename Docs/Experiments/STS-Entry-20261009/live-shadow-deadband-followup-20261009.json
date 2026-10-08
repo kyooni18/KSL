@@ -1,0 +1,167 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Test whether a tighter high-speed azimuth deadband advances the STS turn enough to improve the normal shadow-gate forecast, with the production worktree and gate unchanged.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "candidate": {
+    "scope": "Isolated build under the task work directory; no tracked production source or configuration changed.",
+    "baseGitHead": "18b4b48ed16b376825f51f107dd2fd859535acd7",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "changedFile": "CLanding/guidance/entry/contract.inc",
+    "changedFileSHA256": "6a71d8f66c1100c6fb3049cd2fe005f4c0c737504cad1de5b24f7445bbfd4ff6",
+    "baselineFormula": "azimuth_deadband_deg = 1.5 + 2.5*x; x=0 at low-speed end and 1 at high-speed end (4.0 deg)",
+    "candidateFormula": "azimuth_deadband_deg = 1.5 - 1.0*x; x=0 at low-speed end and 1 at high-speed end (0.5 deg)",
+    "otherGuidanceAndLimits": "Unchanged, including the low-q bank ramp, maximum bank, roll limits, AoA limits, and flight/gate criteria.",
+    "backendSHA256": "3391bcd7113f1d7bdc15718fe5c73abdb4b49443f6e6e2784a24f8cbc76625ca",
+    "backendBuild": "Isolated copy of the current CLanding working tree; focused entry-lateral-feedback-test passed.",
+    "configurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462"
+  },
+  "run": {
+    "startedUTC": "2026-10-08T21:07:37.087071+00:00",
+    "sessionId": "2026-10-08T21-07-37Z-43757-193575225518",
+    "runner": "Tools/headless_flight.py",
+    "runnerArguments": [
+      "--live",
+      "--backend",
+      "isolated entry-deadband-followup/CLanding/build-followup/landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/sts.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1"
+    },
+    "exitReason": "Expected normal qualification rejection: engageReentry rejected by closed-loop shadow gate.",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T210737087071Z-43757.json",
+    "runManifestSHA256": "6c7cae87bb6ba4047e541c1200a6d1b19d05ad8895ae3b2b0ae482e6c975e6c8",
+    "campaignIdentity": "64635833ea57a683-3391bcd7113f1d7b-badd735f8d8c6356",
+    "pinnedBackendPath": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-3391bcd7113f1d7b-badd735f8d8c6356/landing_backend",
+    "pinnedBackendSHA256": "3391bcd7113f1d7bdc15718fe5c73abdb4b49443f6e6e2784a24f8cbc76625ca",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "kspProcessPID": 69877,
+    "kspProcessCount": 1,
+    "plannerLog": {
+      "path": "FlightLogs/2026-10-08T21-07-37Z-STS-planner.jsonl",
+      "sha256": "f02532e401c61783949d5c94a9f335dd99c18a66d3cc1148fecda60f732c0351"
+    },
+    "vehicleLog": {
+      "path": "FlightLogs/2026-10-08T21-07-37Z-STS-vehicle.jsonl",
+      "sha256": "0f2e8b386402b87364f70202a1680b4671e23a91c071ca686183cbbbde992c3f"
+    },
+    "disconnectEvent": "event=disconnect; safe_control_release=true"
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "hashUnchanged": true,
+    "preflightPhysics": {
+      "ut": 9931.331826169333,
+      "meanAltitudeM": 71916.15286454826,
+      "wetMassKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "paused": true,
+      "actualThrustN": 0.0
+    },
+    "cleanup": {
+      "runnerRestoredAndFrozeQuicksave": true,
+      "postRestorePlaceholderMassKg": 22000.0,
+      "postRestoreRcsEnabled": true,
+      "settleHelper": "Tools/settle_known_checkpoint.py",
+      "finalState": {
+        "ut": 9931.271826169332,
+        "meanAltitudeM": 71918.50024346076,
+        "wetMassKg": 25816.10546875,
+        "dryMassKg": 20348.0,
+        "partCount": 22,
+        "paused": true,
+        "sas": false,
+        "rcs": false,
+        "controlsZero": true,
+        "actualThrustN": 0.0,
+        "speedbrakesStowed": true,
+        "controlSurfacesNeutral": true,
+        "kspProcessPIDs": [
+          69877
+        ]
+      }
+    }
+  },
+  "shadowResult": {
+    "entered": true,
+    "mm305Reached": false,
+    "closestMissKm": 0.7,
+    "rangeErrorKm": 69.6,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.64,
+    "firstSTurnReversal": {
+      "ut": 10408.27,
+      "altitudeM": 47899,
+      "speedMps": 1979.2,
+      "crossTrackM": -45,
+      "side": -1,
+      "reversalCount": 1
+    },
+    "nearSite": {
+      "ut": 10516.37,
+      "altitudeM": 38118,
+      "speedMps": 1732.9,
+      "mach": 5.21,
+      "flightPathAngleDeg": -3.65,
+      "rangeM": 1244,
+      "runwayAlongTrackM": 1039,
+      "runwayCrossTrackM": -684,
+      "courseToSiteErrorDeg": 147.1,
+      "commandedAndAchievedBankDeg": 40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "mm305Veto": "0x89"
+    },
+    "downstream": {
+      "ut": 10561.37,
+      "altitudeM": 32971,
+      "speedMps": 1434.6,
+      "mach": 4.47,
+      "rangeM": 68690,
+      "runwayAlongTrackM": 68685,
+      "runwayCrossTrackM": 801,
+      "courseToSiteErrorDeg": 177.1,
+      "bankDeg": 40.0,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10824.17,
+      "altitudeM": 9465,
+      "speedMps": 85.0,
+      "rangeM": 166086,
+      "runwayAlongTrackM": 161027,
+      "runwayCrossTrackM": 41179,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "interpretation": {
+    "finding": "The 0.5-degree high-speed deadband advanced the first reversal about 62 seconds relative to the 4-degree baseline and reduced the closest miss from about 4.5 km to 0.7 km. The shadow still passed the site at 38.1 km/Mach 5.21 with +147.1-degree course-to-site error, then opened to 68.7 km range in 45 seconds. The range error worsened from roughly +64.9 km to +69.6 km, and the prediction later aborted before TAEM.",
+    "decision": "Do not apply the deadband candidate to production. It improves point proximity while preserving a course-away and energy-delivery failure.",
+    "limits": "This result is a shadow prediction from a checkpoint-restored KSP state. No live control or descent began; the gate, entry limits, low-q bank ramp, and save were unchanged."
+  },
+  "errors": []
+}
