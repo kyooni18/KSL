@@ -166,6 +166,37 @@ def quickload() -> int:
     return 0
 
 
+def load_state_is_settled(
+    state: dict, *, before_ut: float, target_ut: float | None, elapsed: float,
+    load_acknowledged: bool = False, scene_transition_observed: bool = False,
+) -> bool:
+    """Require both the requested checkpoint clock and positive load evidence.
+
+    Stable telemetry from an old paused scene is not evidence that load ran.
+    Nor may a rewind to a different checkpoint override a known target UT.
+    """
+    try:
+        ut = float(state["ut"])
+        altitude = float(state["meanAltitude"])
+        if not all(math.isfinite(value) for value in (ut, altitude, before_ut, elapsed)):
+            return False
+        if (state.get("gameScene") != "flight"
+                or state.get("railsWarpFactor") != 0
+                or state.get("physicsWarpFactor") != 0):
+            return False
+        if target_ut is not None:
+            if not math.isfinite(target_ut) or not target_ut - 0.5 <= ut <= target_ut + 60.0:
+                return False
+    except (KeyError, TypeError, ValueError):
+        return False
+    rewound = ut < before_ut - 0.25
+    # A known future checkpoint must jump beyond ordinary 1x clock progress.
+    # The one-second allowance covers the RPC observation interval, not flight
+    # acceptance or trajectory limits.
+    jumped_forward = target_ut is not None and ut > before_ut + max(0.0, elapsed) + 1.0
+    return bool(rewound or jumped_forward or load_acknowledged or scene_transition_observed)
+
+
 def load_save(name: str) -> int:
     name = validated_save_name(name)
     target_ut = saved_game_ut(name)
@@ -173,96 +204,80 @@ def load_save(name: str) -> int:
     sc = conn.space_center
     vessel = sc.active_vessel
     before_ut = float(sc.ut)
-    emit(
-        {
-            "event": "load-save-requested",
-            "name": name,
-            "ut": before_ut,
-            "vessel": str(vessel.name) if vessel is not None else "",
-        }
-    )
-    # Loading invalidates the requesting RPC connection and KSP 1/kRPC 0.5.4
-    # often never returns the corresponding RPC response.  Do not let that
-    # dead response block the *verification* path: issue the load on a daemon
-    # thread, then immediately reconnect below and treat the first verified UT
-    # rewind as authoritative success.  The process exits as soon as settle is
-    # proven, so the obsolete requesting connection/thread cannot accumulate.
+    started = time.monotonic()
+    emit({"event": "load-save-requested", "name": name, "ut": before_ut,
+          "targetUT": target_ut, "vessel": str(vessel.name) if vessel is not None else ""})
+
+    # KSP 1/kRPC 0.5.4 may invalidate the requesting connection without replying.
+    # A missing reply is tolerable only if independent load evidence is observed.
+    load_acknowledged = threading.Event()
+    request_errors: list[str] = []
+
     def request_load() -> None:
         try:
             sc.load(name)
-        except Exception:
-            pass
+            load_acknowledged.set()
+        except Exception as exc:
+            request_errors.append(str(exc))
 
     threading.Thread(target=request_load, name="ksp-load-request", daemon=True).start()
-
-    # For an atmospheric checkpoint, waiting for several "stable" telemetry
-    # samples is actively harmful: KSP resumes physics as soon as the scene is
-    # live, so a 200+ m/s sink rate can consume kilometres while this helper
-    # merely proves the already-loaded vessel is still there.  The authoritative
-    # scene-change signal for a saved checkpoint is the UT rewind itself.  Poll
-    # quickly and return on the first post-load sample whose UT is older than
-    # the request state.  A stale pre-load scene cannot satisfy that condition.
     time.sleep(0.20)
-    # This mod-heavy KSP instance has repeatedly needed 35-55 s to rebuild the
-    # Flight scene before kRPC accepts a verifying client. Keep this below the
-    # headless caller's 120 s outer settle bound, but do not turn a slow valid
-    # atmospheric restore into a false scene-did-not-settle failure.
-    deadline = time.monotonic() + 75.0
-    stable: list[dict] = []
+    # Preserve the mod-heavy instance's existing wall-clock allowance; do not
+    # require repeated stable samples while an atmospheric vehicle is descending.
+    deadline = started + 75.0
+    scene_transition_observed = False
+    last_state: dict | None = None
     while time.monotonic() < deadline:
         try:
-            check = connect("KSP Lander Test Load Save Settle")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.0:
+                break
+            check = connect("KSP Lander Test Load Save Settle",
+                            timeout=min(_connect_timeout_seconds(), remaining))
             try:
                 check_sc = check.space_center
                 scene = check.krpc.current_game_scene
                 scene_name = getattr(scene, "name", str(scene)).lower()
-                in_flight_scene = scene_name == "flight"
-                active = check_sc.active_vessel
-                if active is None or not in_flight_scene:
-                    stable.clear()
+                if scene_name != "flight":
+                    scene_transition_observed = True
                 else:
-                    flight = active.flight()
-                    state = {
-                        "ut": float(check_sc.ut),
-                        "vessel": str(active.name),
-                        "meanAltitude": float(flight.mean_altitude),
-                        "railsWarpFactor": int(check_sc.rails_warp_factor),
-                        "physicsWarpFactor": int(check_sc.physics_warp_factor),
-                        "gameScene": scene_name,
-                    }
-                    rewound = state["ut"] < before_ut - 0.25
-                    loaded_target = (
-                        target_ut is not None
-                        and target_ut - 0.5 <= state["ut"] <= target_ut + 60.0
-                    )
-                    if (rewound or loaded_target) and state["railsWarpFactor"] == 0 and state["physicsWarpFactor"] == 0:
-                        try:
-                            conn.close()
-                        except Exception:
-                            pass
-                        emit({"event": "load-save-settled", "name": name, **state})
-                        return 0
-                    if state["railsWarpFactor"] == 0 and state["physicsWarpFactor"] == 0:
-                        stable.append(state)
-                        if len(stable) >= 2 and abs(stable[-1]["ut"] - stable[0]["ut"]) < 0.05:
+                    active = check_sc.active_vessel
+                    if active is not None:
+                        flight = active.flight()
+                        last_state = {
+                            "ut": float(check_sc.ut), "vessel": str(active.name),
+                            "meanAltitude": float(flight.mean_altitude),
+                            "railsWarpFactor": int(check_sc.rails_warp_factor),
+                            "physicsWarpFactor": int(check_sc.physics_warp_factor),
+                            "gameScene": scene_name,
+                        }
+                        if load_state_is_settled(
+                            last_state, before_ut=before_ut, target_ut=target_ut,
+                            elapsed=time.monotonic() - started,
+                            load_acknowledged=load_acknowledged.is_set(),
+                            scene_transition_observed=scene_transition_observed,
+                        ):
                             try:
                                 conn.close()
                             except Exception:
                                 pass
-                            emit({"event": "load-save-settled", "name": name, **state})
+                            emit({"event": "load-save-settled", "name": name, **last_state})
                             return 0
-                    else:
-                        stable.clear()
             finally:
                 check.close()
         except Exception:
-            stable.clear()
+            # A network error alone does not prove that a scene reload happened.
+            pass
         time.sleep(0.10)
     try:
         conn.close()
     except Exception:
         pass
-    emit({"event": "load-save-failed", "name": name, "reason": "scene-did-not-settle"})
+    emit({"event": "load-save-failed", "name": name, "reason": "scene-did-not-settle",
+          "targetUT": target_ut, "lastState": last_state,
+          "loadAcknowledged": load_acknowledged.is_set(),
+          "sceneTransitionObserved": scene_transition_observed,
+          "loadRequestError": request_errors[-1] if request_errors else None})
     return 2
 
 
