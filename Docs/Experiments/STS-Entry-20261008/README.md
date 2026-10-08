@@ -35,6 +35,25 @@ Standalone plant probes held AoA at 0/8/18/28° and bank at 0/40°. These are fi
 
 The zero-lift probe decelerates upstream; the nominal high-AoA cases decelerate downstream. This demonstrates sensitivity to descent timing in the provisional model. The 0°/8° cases are outside measured polar support: the identified hypersonic samples span roughly 22.5–28°, with no certified cells or independent alpha sweep. They also fall below the current thermal AoA floor. They are unsuitable as live-flight candidates.
 
+## Polar uncertainty and unused bank authority
+
+`ShuttleSim/tools/probe_sts_low_alpha_uncertainty.py` repeats fixed-control probes with CL or CD perturbed below 14° AoA. The quadratic perturbation vanishes at 14°; every table row at or above that magnitude was checked to remain exactly unchanged. Multipliers 0.5 and 2 are deliberately broad scenario brackets, not measured confidence intervals. All drag coefficients remain positive. Input digests, commands, full-duration loads, and retained compressed traces appear in [low-alpha-uncertainty-summary.json](low-alpha-uncertainty-summary.json). All ten probes completed. The baseline repeats the previous crossing locations within a metre.
+
+At 0° AoA / 40° bank, the 25 km crossing moves from along -73.7 km to +110.4 km when low-alpha drag is halved, or -216.9 km when doubled. At 8° AoA it moves from +18.3 km to +54.1 km or -38.6 km. Low-alpha lift changes also move the 8° crossing (-10.6/+22.1 km relative to baseline). Therefore the earlier upstream descent is not robust evidence for a live low-AoA policy; neither the polar nor the protective floor was changed.
+
+The same script's `--bank-authority` mode holds AoA at 18/28° and bank at 40/55/70°, retaining the original polar. These six probes are upper-bound plant experiments, not controller candidates: constant bank ignores the low-q ramp, lateral steering, and nominal 40° MM304 planning ceiling. The 70° cases stay within the configured physical maximum, but do not establish that the planner can legitimately use that bank. [bank-authority-summary.json](bank-authority-summary.json) records complete provenance and peak loads.
+
+| AoA / bank (deg) | Along at 25 km (km) | Altitude at first 860 m/s (km) | Along at first 860 m/s (km) | Cross at first 860 m/s (km) |
+|---|---:|---:|---:|---:|
+| 18 / 40 | +101.6 | 24.78 | +103.1 | +32.4 |
+| 18 / 55 | +35.1 | 23.76 | +42.1 | +36.5 |
+| 18 / 70 | -32.6 | 22.49 | -21.5 | +36.0 |
+| 28 / 40 | +105.6 | 26.46 | +95.2 | +39.9 |
+| 28 / 55 | +23.4 | 25.33 | +21.5 | +44.2 |
+| 28 / 70 | -58.4 | 23.91 | -53.9 | +42.6 |
+
+This is evidence of additional descent authority in the provisional plant, not whole-trajectory recovery. The 18°/40° uncontrolled full-duration probe reaches 5.49 g, exceeding the unchanged 3.5 g limit; it must not be described as safe. The unresolved engineering question is whether a legitimate bounded execution/recovery mechanism can use the existing physical bank authority while preserving nominal planning, coordination and qualification contracts. Production flight laws and configuration remain unchanged; no live attempt was made.
+
 ## Paused-load physics correction
 
 Read-only live audit [live-state-audit.json](live-state-audit.json) found original STS paused at UT 9934.591826 and 71,723.560 m, with 22 parts each reporting exactly 1,000 kg. Vessel mass was 22,000 kg, and resource subtraction produced an aft-fuselage dry mass of zero. These values are consistent with uninitialized part rigidbodies and do not match the preserved save or archived physical flight state. SAS, throttle, and speedbrakes were off. The named checkpoint’s SHA256 remains `bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f`. No scene or control writes were issued.
