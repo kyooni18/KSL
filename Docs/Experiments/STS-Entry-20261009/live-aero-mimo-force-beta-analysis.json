@@ -1,0 +1,3285 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DERIVED_SIMULATION_ANALYSIS",
+  "purpose": "Quantify static sideslip force/moment slopes and body-coordinate bank invariance from the retained original-STS KSP wrench grid.",
+  "qualification": {
+    "qualified": false,
+    "inputGridIsMeasuredFlightData": false,
+    "shadowGateEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "Every input wrench is a hypothetical simulate_aerodynamic_wrench_at result. This analysis makes no KSP calls and is not a flight measurement or qualification result."
+  },
+  "provenance": {
+    "sourceGrid": "Docs/Experiments/STS-Entry-20261009/live-aero-mimo-envelope-grid.json",
+    "sourceGridSHA256": "16e31a3e76f25d9f1041ad5e2a2fbab28cdcb4a7176c5e276c1ac75fad37f502",
+    "sourceGridGitHead": "bacb62c77eca066e8ca34b6e83c2412c5baa7757",
+    "analysisScript": "Tools/analyze_sts_aero_mimo_force_beta.py",
+    "analysisScriptSHA256": "e6671b67490d7e3c920bfc24cecf7efc76bcb2c0a433a8f50b09086aa77d1eff",
+    "newKSPConnectionOrSimulationCalls": false,
+    "sourceClassification": "UNQUALIFIED_DIAGNOSTIC_SIMULATION",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+  },
+  "coordinatePolicy": {
+    "forceAndTorque": "Body XYZ, as inverse-rotated from the API reference-frame outputs by the original grid probe.",
+    "rateDerivativeMatrix": "rows=body torque XYZ; columns=body angular velocity XYZ",
+    "sideslipSlopes": "Centered finite difference from hypothetical beta=-5 and +5 degree calls, per degree.",
+    "bankComparison": "Relative spread among body-coordinate zero-rate wrenches at bank -40, 0, and +40 degrees. Body-frame invariance does not mean world-frame lateral force is invariant."
+  },
+  "coverage": {
+    "sourceGridCellCount": 216,
+    "staticSideslipSlopeRows": 72,
+    "targetAltitudesM": [
+      48000.0,
+      38000.0,
+      36000.0
+    ],
+    "machPlan": [
+      4.0,
+      5.0,
+      "trace",
+      6.0
+    ],
+    "angleOfAttackDeg": [
+      18.0,
+      28.0
+    ],
+    "sideslipDeg": [
+      -5.0,
+      0.0,
+      5.0
+    ],
+    "bankDeg": [
+      -40.0,
+      0.0,
+      40.0
+    ]
+  },
+  "matchedShadowTraceCell": {
+    "requestedAltitudeM": 38000.0,
+    "machLabel": "trace",
+    "angleOfAttackDeg": 28.0,
+    "bankDeg": -40.0,
+    "centerSideslipDeg": 0.0,
+    "forceNBodyXYZAtZeroSideslip": [
+      -0.16917230829130858,
+      -97314.76938714896,
+      -144153.9596701708
+    ],
+    "torqueNmBodyXYZAtZeroSideslip": [
+      52176.941418971306,
+      -55.597660568188076,
+      82.28954714291467
+    ],
+    "dForceNBodyXYZdSideslipDeg": [
+      -2322.610628915491,
+      -9.040212867144145,
+      -4.8093626551533815
+    ],
+    "dTorqueNmBodyXYZdSideslipDeg": [
+      -22.008609655851615,
+      902.776022447136,
+      -1204.3907581874998
+    ],
+    "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+      [
+        -9496.607128603113,
+        1.131941370298798,
+        -2.158264375712282
+      ],
+      [
+        1.9759588552045662,
+        -4440.415971670428,
+        430.9526871441497
+      ],
+      [
+        -5.074174801381418,
+        1245.0420836902165,
+        -6434.600359762307
+      ]
+    ]
+  },
+  "bodyCoordinateBankSpread": {
+    "comparisonGroupCount": 72,
+    "maximumRelativeForceVectorSpread": 8.773360437585808e-07,
+    "maximumRelativeTorqueVectorSpread": 1.580021009276025e-05,
+    "interpretation": "For a fixed hypothetical position, speed, Mach, AoA, sideslip, and neutral surfaces, the simulated wrench is nearly invariant in vessel-body coordinates as the body is rolled. The inertial/world projection changes with attitude and must be transformed before comparing lateral acceleration."
+  },
+  "interpretation": [
+    "The read-only KSP API supports a useful local grid across Mach, angle of attack, sideslip, and bank, with independent body-rate perturbations for a full torque derivative matrix.",
+    "At the 38 km shadow-trace state (trace Mach, AoA 28 degrees, bank -40 degrees), the centered hypothetical sideslip slopes are reported directly in body XYZ: force and torque per degree. The nonzero roll- and yaw-axis moment slopes show why a zero-beta shadow trace cannot identify sideslip response.",
+    "The body-coordinate bank invariance check is a coordinate warning, not a claim that bank has no physical effect: world-frame force projections rotate with the vessel.",
+    "These outputs describe the neutral-surface simulated airframe only. They do not validate actual flight control, surface coordination, the entry trajectory, or the campaign gate, and they do not justify changing the bank ramp or guidance."
+  ],
+  "staticSideslipRows": [
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0968055253761122,
+        -48209.50673682403,
+        -69235.00703481481
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        24254.143728947267,
+        -43.59960553887413,
+        18.01227942427431
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1229.945151955652,
+        -7.386278602614039,
+        -2.404496587975882
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -11.949172391718093,
+        819.7833378153084,
+        -1156.9907606158392
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7263.475840228574,
+          0.5823125435848313,
+          -1.5771601584172408
+        ],
+        [
+          2.0041692570776184,
+          -3536.462389437112,
+          254.38828630121347
+        ],
+        [
+          -3.416341480562323,
+          243.51331320986216,
+          -5233.107040097799
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.08948999938002089,
+        -48209.44601382076,
+        -69234.97672157867
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        24254.402910480516,
+        -43.545650691563424,
+        17.890628710541932
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1229.9449839798995,
+        -7.3821012570544555,
+        -2.403946221349179
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -11.935991583657596,
+        819.7817168947819,
+        -1156.990948324445
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7263.671073154462,
+          1.143213862874193,
+          -2.311906988139373
+        ],
+        [
+          1.842327309767658,
+          -3536.4760854237643,
+          254.49426452809507
+        ],
+        [
+          -3.4453819441392297,
+          243.39070195719518,
+          -5233.102728011393
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0822063784544298,
+        -48209.5115859901,
+        -69235.01027484545
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        24254.157543068774,
+        -43.498911583597874,
+        17.766682054851117
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1229.9453251987718,
+        -7.379159087564039,
+        -2.401355350197991
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -11.925714227529534,
+        819.780474323204,
+        -1156.989489665194
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7262.927980544878,
+          2.044851893701308,
+          -2.7507068264661414
+        ],
+        [
+          1.6273164387320467,
+          -3536.71324888008,
+          255.18742022596658
+        ],
+        [
+          -3.4081794244493397,
+          243.39535246066998,
+          -5233.049643345809
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.14279812222230248,
+        -75443.70649583181,
+        -117752.05345526774
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        44619.68774024476,
+        -44.88801670203247,
+        65.78499977234242
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1815.8653909233994,
+        -6.862089562979236,
+        -3.65145232994837
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -17.00886221458204,
+        750.8352388803027,
+        -1032.612056358545
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8294.877078629579,
+          0.8315081135549192,
+          -1.486939711611495
+        ],
+        [
+          2.019543296462124,
+          -3835.2965134637316,
+          224.94601859087223
+        ],
+        [
+          -4.770294315875949,
+          1284.5158536873257,
+          -5155.275241549581
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.12653245315595996,
+        -75443.65642749995,
+        -117752.02550411844
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        44619.974415184945,
+        -44.83620247916406,
+        65.67270397613538
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1815.8650688931143,
+        -6.857777478860226,
+        -3.649542825766548
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -16.9910125820752,
+        750.8345284464946,
+        -1032.6168939512695
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8294.359393499444,
+          2.1654127446007183,
+          -2.2904832827195682
+        ],
+        [
+          2.187104662302794,
+          -3834.9371517901573,
+          225.6797259876572
+        ],
+        [
+          -4.629694925588971,
+          1284.1808167308184,
+          -5155.360363376481
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.11034240236040205,
+        -75443.73536236587,
+        -117752.06703046733
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        44619.68626093213,
+        -44.781926894436765,
+        65.56554040259925
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1815.865361276677,
+        -6.853043240321858,
+        -3.6459877084984327
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -16.977375501792267,
+        750.8346030613341,
+        -1032.6148045934965
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8294.76325830932,
+          2.961985485464911,
+          -2.7499546340621026
+        ],
+        [
+          2.4812363673001747,
+          -3835.5756405660964,
+          225.14072379981033
+        ],
+        [
+          -4.787627006637093,
+          1284.1965283446373,
+          -5155.276487856135
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.1409278484788956,
+        -75704.64298008954,
+        -102328.96224710235
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34072.718537245586,
+        -63.46089526937067,
+        26.58565777882177
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1906.1920772956073,
+        -11.840018237060576,
+        -3.8543069787294373
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.831699637238124,
+        1208.9883670509269,
+        -1664.2979743277392
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10328.62742238519,
+          0.8372746533403911,
+          -3.11085874529815
+        ],
+        [
+          2.057452890222269,
+          -5028.086734856907,
+          529.9323959452039
+        ],
+        [
+          -5.385681465423152,
+          295.6620460956351,
+          -7962.78068059772
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.129825992975384,
+        -75704.58401417205,
+        -102328.93660932903
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34073.007405047676,
+        -63.343696532996546,
+        26.433501265915766
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1906.1919785902778,
+        -11.833108449001156,
+        -3.852356878784485
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.80981273249199,
+        1208.990560345695,
+        -1664.300000623872
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10326.514805033941,
+          1.7841919219750162,
+          -3.5951247778506374
+        ],
+        [
+          1.6976072544524399,
+          -5028.02420782741,
+          529.9700804884206
+        ],
+        [
+          -5.275341571618297,
+          295.7502146338024,
+          -7963.037254027641
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.1187771236509434,
+        -75704.65003346566,
+        -102328.96775167667
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34072.74303417906,
+        -63.23138759725771,
+        26.279661516931355
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1906.1919878369204,
+        -11.828177351673366,
+        -3.8491811025349305
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.80099216409035,
+        1208.985349723163,
+        -1664.2985135702977
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10328.465226477234,
+          3.414053927687765,
+          -4.766713257261546
+        ],
+        [
+          2.047519953281662,
+          -5027.673689862106,
+          529.7552901008856
+        ],
+        [
+          -5.323103544875076,
+          295.6599408557293,
+          -7962.839713386463
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.20695368412998505,
+        -118448.22401768599,
+        -175632.40208388065
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        63665.98440814454,
+        -67.77267344440224,
+        100.30537793799158
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2827.3223422315086,
+        -10.997940858159563,
+        -5.851633444099571
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.777837861206354,
+        1099.5491166396573,
+        -1468.8065330482264
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11838.819962116042,
+          1.24825347250978,
+          -2.970548252336249
+        ],
+        [
+          4.5959326509157465,
+          -5528.855845539792,
+          556.4042290749053
+        ],
+        [
+          -7.035050443464066,
+          1598.5181946902028,
+          -7878.3498708170955
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.18360249215038493,
+        -118448.16282425082,
+        -175632.37026562987
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        63666.358462275086,
+        -67.65333056113013,
+        100.17741818035574
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2827.32220216312,
+        -10.992774981385447,
+        -5.848425524061895
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.76105941269343,
+        1099.5469409927075,
+        -1468.8084596471563
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11839.92768386462,
+          3.29858897341432,
+          -4.017536114937085
+        ],
+        [
+          2.246720314807913,
+          -5527.849157292871,
+          557.0144358626511
+        ],
+        [
+          -6.81013947101572,
+          1597.7316239484587,
+          -7877.6755203705425
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.16036386901396327,
+        -118448.23363756963,
+        -175632.40932849608
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        63666.00531734952,
+        -67.54491398054233,
+        100.03363426838314
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2827.322687564431,
+        -10.98482693562255,
+        -5.843851223750971
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.732513659598045,
+        1099.5491108344206,
+        -1468.8052708064668
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11838.853063047247,
+          4.5007284877340945,
+          -4.882279215083439
+        ],
+        [
+          1.4608268976901038,
+          -5528.947606117081,
+          556.9104233470891
+        ],
+        [
+          -6.223153411971033,
+          1598.6000208094536,
+          -7877.927963291765
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.20240272069349885,
+        -112603.20459922793,
+        -148355.35301204596
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        47976.73980571155,
+        -91.19672857688238,
+        38.126578013914695
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2822.0104566601863,
+        -17.693558358156587,
+        -5.759296150514274
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -28.14937504862828,
+        1758.6814786806929,
+        -2390.053583014788
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -13973.225396017917,
+          2.409857247136246,
+          -5.092524993169922
+        ],
+        [
+          3.017410971733655,
+          -6809.9235581752455,
+          622.4405200039237
+        ],
+        [
+          -7.530170592720639,
+          353.8405771857753,
+          -11294.991922731757
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.186661457963055,
+        -112603.1304591436,
+        -148355.34047467768
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        47977.1035342458,
+        -91.05884608634005,
+        37.940217118753935
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2822.0100649940114,
+        -17.691204792284406,
+        -5.758022483930108
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -28.13632805985544,
+        1758.6790017291728,
+        -2390.055208388173
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -13973.239069876334,
+          2.9499364783586004,
+          -5.93440462203904
+        ],
+        [
+          3.7258918975924114,
+          -6809.705586260457,
+          621.8980509036743
+        ],
+        [
+          -7.819606106292754,
+          353.9285465022405,
+          -11295.117162712157
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.1711069970333483,
+        -112603.22873437687,
+        -148355.3659536977
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        47976.73905102025,
+        -90.91926048224559,
+        37.75652659710249
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2822.010196133352,
+        -17.68304229926871,
+        -5.7538670616049785
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -28.11619376577364,
+        1758.6821348629105,
+        -2390.0537702509346
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -13972.774833534857,
+          4.432507008129543,
+          -6.978838770957711
+        ],
+        [
+          2.882792825554412,
+          -6809.182889402415,
+          622.7080339778822
+        ],
+        [
+          -7.694383648809576,
+          354.07801126564294,
+          -11295.096333423242
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.29614654448232614,
+        -175560.89419103228,
+        -255328.6456311071
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        89885.50294497868,
+        -97.5810197528699,
+        144.5443495234067
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -4181.167504896381,
+        -16.43751305608894,
+        -8.746205296972766
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -40.0273803519929,
+        1608.6015254316092,
+        -2096.690770355176
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -15857.313085280302,
+          2.2268255296622534,
+          -4.786639672573858
+        ],
+        [
+          2.97735307029668,
+          -7411.673267027319,
+          651.5950774156387
+        ],
+        [
+          -9.507044724592221,
+          1924.1070757385003,
+          -11204.796661685785
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.2639959075895604,
+        -175560.81536732765,
+        -255328.59501615184
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        89885.96938432657,
+        -97.47756268119701,
+        144.3726717389436
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -4181.167337520514,
+        -16.430990511522396,
+        -8.741973537520972
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -40.00478658189677,
+        1608.5975860833041,
+        -2096.696926452568
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -15857.131473827796,
+          3.598341906589591,
+          -4.936580888596101
+        ],
+        [
+          4.4475435576545985,
+          -7413.40953703953,
+          652.402910646013
+        ],
+        [
+          -9.348452381128833,
+          1924.6695130880848,
+          -11204.251104158433
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.23204291651200037,
+        -175560.9213430822,
+        -255328.67003553224
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        89885.52733259628,
+        -97.32178154304711,
+        144.22453797029266
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -4181.167586130452,
+        -16.426827610618783,
+        -8.739288814394968
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -39.98089287098119,
+        1608.5988844599092,
+        -2096.690508045409
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -15854.98604812394,
+          5.283044079780121,
+          -6.251830122534535
+        ],
+        [
+          4.901429249996511,
+          -7411.744983048523,
+          651.4768710603671
+        ],
+        [
+          -9.077943849988001,
+          1924.086916203118,
+          -11204.84748747237
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.14181813209143002,
+        -76189.72229050059,
+        -102983.94037671451
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34290.38408846044,
+        -63.8426843765119,
+        26.75185236909965
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1918.4048446611007,
+        -11.91335291724099,
+        -3.8775281836235083
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.948450411135855,
+        1216.730594507541,
+        -1674.9393893736683
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10380.711572927215,
+          0.6389875201331043,
+          -3.215557395029489
+        ],
+        [
+          2.9322516528415097,
+          -5054.543257301277,
+          531.4475119711868
+        ],
+        [
+          -5.497593608462591,
+          296.4203548836329,
+          -8011.245584945509
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.13065587232995313,
+        -76189.6722902465,
+        -102983.92212131523
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34290.70988010948,
+        -63.74645341299038,
+        26.598286879707302
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1918.4043981170485,
+        -11.910554746691195,
+        -3.877222665383306
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.933738331375935,
+        1216.727997166155,
+        -1674.942058466709
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10381.244929325885,
+          1.886397757348197,
+          -4.067756154071446
+        ],
+        [
+          2.5729687283179374,
+          -5054.010108802119,
+          531.9842559450921
+        ],
+        [
+          -5.454424723028223,
+          296.45480040963463,
+          -8011.472148282155
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.11955412741372129,
+        -76189.73175266912,
+        -102983.94418183835
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        34290.403735782624,
+        -63.64039784934903,
+        26.453457880556016
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1918.4050565989542,
+        -11.902123616830796,
+        -3.873534181987634
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -18.92019791041057,
+        1216.7280441950068,
+        -1674.9392536577639
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10381.084645084868,
+          3.1783593187379444,
+          -4.736686437287069
+        ],
+        [
+          2.3154430036801608,
+          -5055.180481827189,
+          531.7096038180345
+        ],
+        [
+          -5.36261001631351,
+          296.71827616896434,
+          -8011.312734277701
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.20824405766325071,
+        -119207.33092061018,
+        -176756.84573215124
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        64072.74169190414,
+        -68.21256097789592,
+        100.95953756711242
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2845.4406214522955,
+        -11.07052495424141,
+        -5.8906150790047835
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.951255696237787,
+        1106.5855309367842,
+        -1478.189833047262
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11898.626143544927,
+          1.8055501707204722,
+          -3.2663920511375517
+        ],
+        [
+          1.9830703550265978,
+          -5556.844978536219,
+          559.2298894786202
+        ],
+        [
+          -6.334433720615638,
+          1603.7355723451687,
+          -7927.289342679727
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.18478419276652858,
+        -119207.25226390627,
+        -176756.7926764808
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        64073.194428102826,
+        -68.08834080795714,
+        100.82011335948846
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2845.4401738702086,
+        -11.06583434681379,
+        -5.888972650913638
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.92206346007588,
+        1106.586761531157,
+        -1478.1946548477201
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11897.261644084512,
+          2.8827552448188984,
+          -3.7372765816736706
+        ],
+        [
+          3.022346604822196,
+          -5558.490209711486,
+          558.2404409636063
+        ],
+        [
+          -7.143405365599485,
+          1604.155082841634,
+          -7927.207055398424
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 36000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.16144483852258418,
+        -119207.34337005873,
+        -176756.84929292602
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        64072.7254808846,
+        -67.97326279251138,
+        100.67576466093305
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2845.4407122209827,
+        -11.05620338483568,
+        -5.881944234203547
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -26.908250865388982,
+        1106.5942329846143,
+        -1478.195746804691
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11898.100971798127,
+          4.47196247048785,
+          -5.340948922997942
+        ],
+        [
+          3.4695251817788955,
+          -5557.53662347735,
+          558.8360496254854
+        ],
+        [
+          -7.062761752343131,
+          1603.8458351340264,
+          -7927.108876727619
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.07300400291569531,
+        -36398.79523751612,
+        -52273.31768020475
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        18312.188264524135,
+        -32.90816961029395,
+        13.598726383052053
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -928.6244811385237,
+        -5.5777142833911055,
+        -1.8159957841708092
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -9.02066202081296,
+        618.9465077005732,
+        -873.5418806607355
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -5458.458352259249,
+          0.28687816874644406,
+          -0.7811859135043929
+        ],
+        [
+          1.7068356925180732,
+          -2658.3343469265997,
+          190.5539919372113
+        ],
+        [
+          -2.631059781318909,
+          181.72468285357155,
+          -3945.887968740484
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.06756383956235368,
+        -36398.75084076586,
+        -52273.29744745293
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        18312.38684023032,
+        -32.87734534959418,
+        13.5064921274261
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -928.6241818064366,
+        -5.573730790145783,
+        -1.8143612843414303
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -9.013579137070701,
+        618.9462553168385,
+        -873.5431441550411
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -5458.4937183228085,
+          0.9533880791305253,
+          -1.9057196976881308
+        ],
+        [
+          1.1811387976971583,
+          -2658.441671829976,
+          189.9487902219334
+        ],
+        [
+          -2.598845264812096,
+          181.67912725896892,
+          -3945.7730884499765
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.06216882582157268,
+        -36398.8003470624,
+        -52273.32090838835
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        18312.189980277057,
+        -32.8539839905734,
+        13.41659423386136
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -928.6244313005398,
+        -5.570815398843115,
+        -1.8139313767904242
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -9.0026961004849,
+        618.9481115510108,
+        -873.5422341422557
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -5458.380935512619,
+          1.4946585509561443,
+          -2.8978213012280767
+        ],
+        [
+          0.6139185281832495,
+          -2658.3148712362113,
+          190.37288642344234
+        ],
+        [
+          -2.5337303547147307,
+          181.7470811897714,
+          -3945.7748971180004
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.10762601437454578,
+        -56960.95798148738,
+        -88904.30617594653
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        33688.42946420264,
+        -33.86862460989141,
+        49.661771133374714
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1371.0015048316461,
+        -5.181555457915238,
+        -2.757560110889608
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -12.841098066915947,
+        566.887836124263,
+        -779.6360681643928
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -6228.585612657817,
+          0.6271433530430324,
+          -1.1564512740167106
+        ],
+        [
+          1.2890980380870831,
+          -2881.184577251637,
+          168.19653925851304
+        ],
+        [
+          -3.563471102615271,
+          959.2986276123631,
+          -3887.763937882717
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0955249422986526,
+        -56960.91993338737,
+        -88904.28357815504
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        33688.68456454214,
+        -33.84910498853242,
+        49.58017258591826
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1371.0015210806246,
+        -5.177285581410979,
+        -2.7544407330904503
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -12.829452858296644,
+        566.8913677599392,
+        -779.6398344842246
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -6229.223844533037,
+          1.1947489982581774,
+          -1.7993627595058337
+        ],
+        [
+          1.0683988752767515,
+          -2881.755108385758,
+          167.91802729901815
+        ],
+        [
+          -3.338360618471554,
+          959.1255766490424,
+          -3887.3210850584323
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0835094473513891,
+        -56960.962811957026,
+        -88904.3103523715
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        33688.44738368174,
+        -33.82636913751776,
+        49.513453081563966
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1371.0015425492056,
+        -5.1747760428334,
+        -2.753637218581571
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -12.821188724077,
+        566.8926484225407,
+        -779.6368174504432
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -6228.630684001221,
+          2.293474552685706,
+          -2.4630090144878736
+        ],
+        [
+          1.7820969912531315,
+          -2881.501496981606,
+          168.6009431456759
+        ],
+        [
+          -3.6016376818130285,
+          959.2359813054397,
+          -3887.6872668739247
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.1062844548287103,
+        -57157.973595390285,
+        -77259.67368061752
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        25725.32035941325,
+        -47.90269244025512,
+        20.07456941585042
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1439.1995007237115,
+        -8.93979613515694,
+        -2.9105154811390093
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -14.217239058974519,
+        912.8005308542104,
+        -1256.5663040221943
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7765.333387956872,
+          0.1973890963166806,
+          -2.171450427346554
+        ],
+        [
+          2.1510729589979807,
+          -3782.0652680601393,
+          395.9223267650343
+        ],
+        [
+          -3.929449009287468,
+          220.93091809110672,
+          -6005.821602658991
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0980157573503675,
+        -57157.943717042624,
+        -77259.65763288716
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        25725.545683536948,
+        -47.83066377328396,
+        19.95806026876744
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1439.1991966830683,
+        -8.936402803660894,
+        -2.9089414980102446
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -14.20471512177537,
+        912.8014147783399,
+        -1256.5678027212084
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7765.27476579017,
+          1.8272478631715674,
+          -3.5283452789957934
+        ],
+        [
+          1.7499909869067332,
+          -3782.434960013725,
+          395.4583771908504
+        ],
+        [
+          -3.9764297563255817,
+          220.80132281519397,
+          -6005.597839376301
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.08980650521698408,
+        -57157.97680906192,
+        -77259.67613387915
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        25725.340929287788,
+        -47.74222432153874,
+        19.84282393446074
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1439.199323644457,
+        -8.928556149880752,
+        -2.9056171319301938
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -14.195850331853217,
+        912.8004984155207,
+        -1256.5666606612904
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -7765.457598687295,
+          2.815195292318303,
+          -3.628151426163356
+        ],
+        [
+          2.125643211882872,
+          -3782.2460708748035,
+          396.097328203145
+        ],
+        [
+          -4.065923946251339,
+          220.82318563838012,
+          -6005.819161346116
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.1560107643599622,
+        -89429.92427829436,
+        -132604.71010973732
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        48068.63506164614,
+        -51.15950963424075,
+        75.73092836942669
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2134.6646971176438,
+        -8.302065709330781,
+        -4.417325258287019
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -20.21206826337657,
+        830.1724522000659,
+        -1108.9652332253504
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8895.734313033334,
+          1.2360963423499771,
+          -1.9323284222591681
+        ],
+        [
+          3.32542906772532,
+          -4156.467662630946,
+          416.09220353782445
+        ],
+        [
+          -5.119462259574225,
+          1194.3042794917872,
+          -5942.55969050175
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.13862764090299606,
+        -89429.87175484528,
+        -132604.68287456082
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        48068.92506193967,
+        -51.07098372137625,
+        75.63013442061128
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2134.6645888071844,
+        -8.299598155681451,
+        -4.415524962605559
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -20.194305069348776,
+        830.1736651160736,
+        -1108.9698890081413
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8895.751749475963,
+          2.2926370955793116,
+          -2.450195210664658
+        ],
+        [
+          2.2724266863040445,
+          -4156.290861927955,
+          416.413689393547
+        ],
+        [
+          -5.235390937793642,
+          1194.0921993470458,
+          -5942.574654451229
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.12132970798120368,
+        -89429.93345279353,
+        -132604.71451972023
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        48068.64115567041,
+        -50.99938626230869,
+        75.5330529519797
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2134.664680810497,
+        -8.295188302287716,
+        -4.413045163327479
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -20.183562539477133,
+        830.1740839353588,
+        -1108.9665463405436
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8894.301100123343,
+          2.7481009143013835,
+          -4.290279244715538
+        ],
+        [
+          1.9573082554150512,
+          -4156.273944170952,
+          415.87939707907736
+        ],
+        [
+          -5.095154276137602,
+          1194.0664990092343,
+          -5942.458379086298
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.15263946083723567,
+        -85016.8641308285,
+        -112010.19634849526
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        36223.04231889824,
+        -68.81022885363745,
+        28.78069219268218
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2130.6537965621656,
+        -13.361920418935188,
+        -4.349732645587937
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -21.25156405193993,
+        1327.8232658830505,
+        -1804.5217795404533
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10511.314593920524,
+          0.9605803369035824,
+          -3.0560419696758143
+        ],
+        [
+          1.999678003192846,
+          -5123.677174481049,
+          464.6620799582839
+        ],
+        [
+          -5.882537157972982,
+          264.2177279455539,
+          -8520.158774429341
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.14094059047056362,
+        -85016.81211060159,
+        -112010.1842985216
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        36223.31485264361,
+        -68.74069039034293,
+        28.63993365669012
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2130.653742362067,
+        -13.35729231941077,
+        -4.348169225733727
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -21.24043778923369,
+        1327.82370698611,
+        -1804.5224707769466
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10511.807707890768,
+          1.9287345394268205,
+          -4.09335246370169
+        ],
+        [
+          2.829240788075319,
+          -5124.317151231667,
+          464.6315174998795
+        ],
+        [
+          -5.721646241055608,
+          264.1464579154005,
+          -8520.201896708397
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.12936421746417182,
+        -85016.87769138641,
+        -112010.20096288135
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        36223.056375498876,
+        -68.66484418773689,
+        28.510367021386628
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2130.6538998431847,
+        -13.351986415039573,
+        -4.3461562063195744
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -21.22433492572018,
+        1327.825529410929,
+        -1804.5211943035981
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -10510.888086821982,
+          3.139494210423658,
+          -5.296911330434493
+        ],
+        [
+          2.5140276939389836,
+          -5124.600307490251,
+          464.59048852393664
+        ],
+        [
+          -5.761184568662666,
+          264.2405275052505,
+          -8520.051368879034
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.22325428004842252,
+        -132550.71465758685,
+        -192776.3894910682
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        67864.69400385552,
+        -73.6478682773195,
+        109.12787629713421
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -3156.834903043389,
+        -12.411716411440285,
+        -6.60418869650457
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -30.220953579018534,
+        1214.5151945018442,
+        -1583.0280300863676
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11919.250307412776,
+          1.696160786023738,
+          -3.283259717724871
+        ],
+        [
+          2.6891885897288117,
+          -5574.000118894503,
+          486.4040241864655
+        ],
+        [
+          -7.10447282052717,
+          1436.8855234734458,
+          -8452.397045396696
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.19933836616110057,
+        -132550.65005988808,
+        -192776.3511088207
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        67865.05970485957,
+        -73.56233542260816,
+        109.00609311195149
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -3156.8346260293997,
+        -12.407891411331367,
+        -6.601383923785761
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -30.199304701490473,
+        1214.5131706052132,
+        -1583.031869911655
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11919.504095550314,
+          2.592464974280908,
+          -3.862428815049855
+        ],
+        [
+          3.5205117756201356,
+          -5575.13646049255,
+          486.17811363288257
+        ],
+        [
+          -7.080791420652392,
+          1437.679107462309,
+          -8452.416030652148
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.17557480160030536,
+        -132550.73107216504,
+        -192776.40547304117
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        67864.71564063468,
+        -73.49121971744898,
+        108.88534968061049
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -3156.835267470764,
+        -12.400927604772733,
+        -6.597150568818324
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -30.182883724060957,
+        1214.515687237019,
+        -1583.0300039031997
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -11919.511726708814,
+          3.6668125369792457,
+          -4.609933091301138
+        ],
+        [
+          3.48662048670263,
+          -5575.081657313001,
+          486.3124775415388
+        ],
+        [
+          -6.8542146301407065,
+          1437.5580632864176,
+          -8452.82567909586
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.11535263466066681,
+        -62207.39899883348,
+        -83976.58732908756
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        27920.482784919186,
+        -52.024177118275475,
+        21.79886111599626
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1565.9772841465704,
+        -9.732172166052624,
+        -3.1680119312411987
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -15.478137327590229,
+        992.3343367289044,
+        -1365.1062749535326
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8310.585587118154,
+          0.6168307388348089,
+          -2.0890883913451974
+        ],
+        [
+          1.8788308253564738,
+          -4051.2663126899474,
+          410.93434495000514
+        ],
+        [
+          -4.368440461121725,
+          229.7170832189137,
+          -6500.08205282445
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.10650558453926351,
+        -62207.347172837835,
+        -83976.56700432554
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        27920.738747299765,
+        -51.957916021994606,
+        21.678309503933633
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1565.9768051838953,
+        -9.72989838749054,
+        -3.16709578215814
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -15.466783162120555,
+        992.3320357721332,
+        -1365.1085874555113
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8310.7691021873,
+          1.5897342258939544,
+          -2.9876546010805645
+        ],
+        [
+          2.5365307158336656,
+          -4050.5893384580795,
+          411.30861014176213
+        ],
+        [
+          -4.428657503987577,
+          229.8928935217548,
+          -6499.779945682722
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.09768842690391466,
+        -62207.40397720343,
+        -83976.58488379966
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        27920.506763211313,
+        -51.89027034834362,
+        21.568268295643065
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -1565.9770980735163,
+        -9.724399865917803,
+        -3.1653580179496204
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -15.455897761246524,
+        992.330404805531,
+        -1365.106816280097
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -8311.172389118212,
+          2.5063353531561545,
+          -3.8306953766994423
+        ],
+        [
+          2.141202961131248,
+          -4051.3181079306464,
+          410.5540313378292
+        ],
+        [
+          -4.402166271247062,
+          229.87732973611486,
+          -6499.758656385278
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.16917230829130858,
+        -97314.76938714896,
+        -144153.9596701708
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        52176.941418971306,
+        -55.597660568188076,
+        82.28954714291467
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2322.610628915491,
+        -9.040212867144145,
+        -4.8093626551533815
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -22.008609655851615,
+        902.776022447136,
+        -1204.3907581874998
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -9496.607128603113,
+          1.131941370298798,
+          -2.158264375712282
+        ],
+        [
+          1.9759588552045662,
+          -4440.415971670428,
+          430.9526871441497
+        ],
+        [
+          -5.074174801381418,
+          1245.0420836902165,
+          -6434.600359762307
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.15061116780270822,
+        -97314.7122195538,
+        -144153.9286810099
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        52177.25553058574,
+        -55.493838643214985,
+        82.18230487637265
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2322.610635855957,
+        -9.037427893119457,
+        -4.807967539853417
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -21.992667882009847,
+        902.7743003912503,
+        -1204.392943072691
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -9496.596251164798,
+          2.4731029597771066,
+          -2.9557989136415013
+        ],
+        [
+          2.6462461933402235,
+          -4440.880023086274,
+          431.28829558288515
+        ],
+        [
+          -5.479617855823605,
+          1245.3923338997754,
+          -6434.396019460346
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 38000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.13218417359894374,
+        -97314.77742518528,
+        -144153.96463752043
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        52176.95636948264,
+        -55.43118800227603,
+        82.08363234984608
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -2322.6105722231114,
+        -9.030094330647263,
+        -4.804111988531076
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -21.976274945258048,
+        902.773654435364,
+        -1204.3895899120428
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -9497.032084027665,
+          3.6887582728735255,
+          -3.939202203009064
+        ],
+        [
+          2.6875605956514375,
+          -4441.209062453839,
+          430.9214893576737
+        ],
+        [
+          -5.618276836876259,
+          1245.273100330811,
+          -6434.719594621754
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.014763696874069865,
+        -7682.881905032043,
+        -10685.247253785412
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        3619.647885690025,
+        -6.660481375688732,
+        2.7446564354218026
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -194.80707829005587,
+        -1.1842131710413013,
+        -0.3855538743928264
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -1.916105605182929,
+        127.09973727001234,
+        -176.71269298033553
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1132.3985662418886,
+          0.037610466745292725,
+          -0.15520382633505614
+        ],
+        [
+          0.22349944502789784,
+          -548.2942821057718,
+          40.22360907431306
+        ],
+        [
+          -0.5271368524178558,
+          38.71044267602964,
+          -806.2226499636147
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.013691579333681148,
+        -7682.873854279496,
+        -10685.244080626386
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        3619.682498223852,
+        -6.652795189142125,
+        2.7249839065418655
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -194.80704072304326,
+        -1.1835623972961913,
+        -0.38512453982384615
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -1.9143734879281056,
+        127.09976952412356,
+        -176.71281389810125
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1132.2523479652043,
+          0.1660502233547773,
+          -0.32860671082503
+        ],
+        [
+          0.24421289736164561,
+          -548.3596204907955,
+          40.20174298918422
+        ],
+        [
+          -0.5396865212112836,
+          38.727601593212974,
+          -806.2653278421003
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.012623310920844233,
+        -7682.882426073282,
+        -10685.248039667744
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        3619.6500528169568,
+        -6.6468735189062045,
+        2.705235449005613
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -194.80706904766424,
+        -1.1828457506080667,
+        -0.3850521748252504
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -1.912723175171004,
+        127.09987520198224,
+        -176.71265060788446
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1132.393107270281,
+          0.32904609206059404,
+          -0.5765602471606502
+        ],
+        [
+          0.30358464741987456,
+          -548.3934582658579,
+          40.210526580291834
+        ],
+        [
+          -0.5311196428836246,
+          38.72862046151774,
+          -806.2616781172005
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.021780822451546555,
+        -11961.815094983362,
+        -18228.084351639303
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        6671.46299197103,
+        -6.854933275859821,
+        10.050363635111353
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -287.09203281904445,
+        -1.1000386361385608,
+        -0.5853776262403698
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.7275892216101054,
+        117.32480411600254,
+        -156.64497474762612
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1296.4559646943549,
+          0.20322832137426589,
+          -0.24489739800635343
+        ],
+        [
+          0.19878521358268686,
+          -595.6549316384513,
+          35.51848274757536
+        ],
+        [
+          -0.6957430783044869,
+          203.5347745082838,
+          -795.1846923499301
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.019368850116734393,
+        -11961.803331056139,
+        -18228.076254848624
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        6671.508780133755,
+        -6.849575402502069,
+        10.033112039851858
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -287.09202742295383,
+        -1.0990038151565387,
+        -0.584683650808438
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.7252329300985365,
+        117.32474288971989,
+        -156.64554819045784
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1296.4114712430217,
+          0.3273867134250041,
+          -0.37233322685157766
+        ],
+        [
+          0.22282062376401496,
+          -595.5805698241243,
+          35.59856523622405
+        ],
+        [
+          -0.727374564791861,
+          203.4629261554605,
+          -795.2589196294705
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 4.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.016964223709692305,
+        -11961.816387592604,
+        -18228.085052997583
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        6671.465783236121,
+        -6.843002990038258,
+        10.013982148018613
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -287.0920435099979,
+        -1.0987285776911448,
+        -0.5846089956703509
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.7221199527519273,
+        117.3245915471359,
+        -156.64462658139797
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1296.5188115521555,
+          0.4861586220728779,
+          -0.4548565048637319
+        ],
+        [
+          0.3786259460481124,
+          -595.6217091427028,
+          35.482185930018304
+        ],
+        [
+          -0.7417288682985198,
+          203.53701708759974,
+          -795.1986917955836
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.021425418966828147,
+        -11813.938681460533,
+        -15720.687302233218
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        5139.629706336143,
+        -9.693752990815483,
+        4.057563249330542
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -296.6173694574114,
+        -1.8529560266568297,
+        -0.6031091826975171
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.9473708231955245,
+        186.1866240395145,
+        -254.24125317811317
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1602.5443455751847,
+          0.15659879752823244,
+          -0.44659741426747834
+        ],
+        [
+          0.3846502465798976,
+          -778.3469780052831,
+          83.76747306040681
+        ],
+        [
+          -0.8365555239773921,
+          46.967924904330125,
+          -1223.2874112667241
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.019869079036652693,
+        -11813.929035323417,
+        -15720.683892436908
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        5139.676000354109,
+        -9.679089822634069,
+        4.033206139872618
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -296.61729966712375,
+        -1.8517145243980848,
+        -0.6026576032752928
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.9446499155345918,
+        186.1866591463501,
+        -254.24153267392612
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1602.8508891417916,
+          0.2985030762483187,
+          -0.5898483871736778
+        ],
+        [
+          0.38878431239947714,
+          -778.2334242046222,
+          83.86970348585756
+        ],
+        [
+          -0.8429141722142826,
+          46.95745716911943,
+          -1223.3138322293573
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.018310784604182118,
+        -11813.941669428967,
+        -15720.688313029652
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        5139.6328874430255,
+        -9.66620010298675,
+        4.009590538238513
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -296.6173148994056,
+        -1.8513620665307826,
+        -0.6026869933437411
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -2.9425651405481403,
+        186.1861781013274,
+        -254.24117874855324
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1602.6275013756288,
+          0.4900094832428222,
+          -0.7531580558521919
+        ],
+        [
+          0.3514022315766701,
+          -778.299999221243,
+          83.76686157768624
+        ],
+        [
+          -0.7944788668591591,
+          46.96224601822972,
+          -1223.259114142548
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.03143465344328433,
+        -18437.327569567,
+        -27023.544251007974
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        9615.359527019278,
+        -10.352916014320726,
+        15.32967301973622
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -439.5240481501813,
+        -1.7209603574185166,
+        -0.9154929825490399
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.1915820458259985,
+        170.04815178231564,
+        -223.53877782019308
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1842.002605671842,
+          0.3415794449590285,
+          -0.3398023890066306
+        ],
+        [
+          0.38701333140300614,
+          -857.5773194693838,
+          88.07374178800056
+        ],
+        [
+          -1.002359554739349,
+          253.22403243179238,
+          -1210.6261597878881
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.028106922789447708,
+        -18437.31374307112,
+        -27023.538013317346
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        9615.428647314642,
+        -10.337962127058745,
+        15.308312065297287
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -439.52399807199583,
+        -1.7203855338459106,
+        -0.9152779310570622
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.188149375964531,
+        170.04751355835532,
+        -223.53962884134611
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1841.7087787568973,
+          0.45245857545579593,
+          -0.5656747746241018
+        ],
+        [
+          0.4652769096362663,
+          -857.3581347127478,
+          88.29458471482347
+        ],
+        [
+          -1.1004838919763666,
+          253.14629125474562,
+          -1210.7769909724732
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 5.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.02478093231729872,
+        -18437.329352956753,
+        -27023.545608798082
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        9615.363393003076,
+        -10.32563966769203,
+        15.286291888910455
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -439.5240390574951,
+        -1.7194297450299927,
+        -0.9147898566425283
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.18437691081308,
+        170.04701730823473,
+        -223.53851006891324
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -1842.0903707840878,
+          0.6099436210344112,
+          -0.7598534933919238
+        ],
+        [
+          0.6317965723585638,
+          -857.6177022872035,
+          88.21137549573623
+        ],
+        [
+          -1.1346207483140145,
+          253.18950720661482,
+          -1210.7832723392264
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.030696626086864853,
+        -17343.477180679565,
+        -22720.35001943238
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7296.5566551434695,
+        -13.938311856574273,
+        5.8257942817404
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -434.2099937251463,
+        -2.728280458519657,
+        -0.8880667870511388
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.339534291519522,
+        269.58082598174394,
+        -365.25701200549474
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2162.705466141998,
+          0.19667348772776821,
+          -0.6230523484676969
+        ],
+        [
+          0.2793518428916573,
+          -1052.2289790819336,
+          98.74301805787769
+        ],
+        [
+          -1.1704994900307997,
+          56.15435836415763,
+          -1732.6773606513016
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.028566933378897374,
+        -17343.46512896376,
+        -22720.348117965856
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7296.624372733152,
+        -13.917470597399188,
+        5.794852784532395
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -434.20989183496783,
+        -2.727349624405906,
+        -0.8877025692083407
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.33747576073174,
+        269.58075603007853,
+        -365.25718415624476
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2162.764618936733,
+          0.4106938389946948,
+          -0.803838171660909
+        ],
+        [
+          0.5114076639103174,
+          -1052.3860853995104,
+          98.63091865847369
+        ],
+        [
+          -1.2093975648910484,
+          56.17457392916476,
+          -1732.753531615307
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.026436535354150692,
+        -17343.478590418574,
+        -22720.351519983735
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7296.563590348251,
+        -13.897620521538101,
+        5.766124541309637
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -434.2099816645774,
+        -2.7267613551761314,
+        -0.8874498043478525
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.3343878934400895,
+        269.58046197414365,
+        -365.2568729269549
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2162.8121288812226,
+          0.6874597069698893,
+          -1.0420163893880003
+        ],
+        [
+          0.5565594383384715,
+          -1052.2279865165658,
+          98.74914873165429
+        ],
+        [
+          -1.187239809920032,
+          56.13683729504052,
+          -1732.6988057723884
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.04487972002243623,
+        -27015.78064895154,
+        -39125.29337506456
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        13676.849984410499,
+        -14.91134995358425,
+        22.096133713553172
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -643.1107480769894,
+        -2.534773298315122,
+        -1.3486589880965767
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.173010888710451,
+        246.960331726391,
+        -319.97053692610433
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2460.2709649017265,
+          0.39766910594717175,
+          -0.6088658285746746
+        ],
+        [
+          0.49970230184304787,
+          -1147.828431408793,
+          103.08605408415724
+        ],
+        [
+          -1.4155218017552291,
+          304.64165942350957,
+          -1718.657320145113
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.04041483944092761,
+        -27015.76627641113,
+        -39125.28489589946
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        13676.931733692569,
+        -14.89686707618148,
+        22.06884080558575
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -643.1107414069517,
+        -2.533047658751093,
+        -1.3473988656623987
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.1693656539790025,
+        246.95932590185157,
+        -319.9710983303262
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2460.5690643807147,
+          0.7235400151331389,
+          -0.7517481250689722
+        ],
+        [
+          0.689735905342807,
+          -1147.7898156439414,
+          103.01315842539117
+        ],
+        [
+          -1.4407733985561622,
+          304.69068281446016,
+          -1718.7099752658366
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": 6.0,
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.035959695793280844,
+        -27015.78431099742,
+        -39125.296557049835
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        13676.858893336832,
+        -14.876503538956968,
+        22.038527781267476
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -643.1107572958997,
+        -2.532211719858606,
+        -1.3470595404229244
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.164519744905556,
+        246.95860880987033,
+        -319.96930548215744
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2460.463055657689,
+          0.8524168698606212,
+          -1.142469680903423
+        ],
+        [
+          0.8776977107538975,
+          -1147.771890652794,
+          103.03630893733283
+        ],
+        [
+          -1.5417558724245706,
+          304.71760062736826,
+          -1718.6135780548045
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.033186877004482085,
+        -19009.351298116882,
+        -24641.85274385333
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7815.727421187026,
+        -15.066363581413043,
+        6.291044804616831
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -475.01194987551315,
+        -2.9955664993205575,
+        -0.9750855556165334
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.766855610480798,
+        292.77216609803014,
+        -394.5748040322122
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2310.6638302326674,
+          0.1344158458842616,
+          -0.8612033334001392
+        ],
+        [
+          0.5837734465671769,
+          -1123.9001312877886,
+          101.84243309758797
+        ],
+        [
+          -1.270149870198668,
+          58.363325166377535,
+          -1869.0792320112746
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.030874957297783112,
+        -19009.343106629094,
+        -24641.84985515246
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7815.786712175817,
+        -15.040031594431639,
+        6.259922656415256
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -475.0119020984115,
+        -2.9956812007221743,
+        -0.9749324944041291
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.7643541826324505,
+        292.7722951215302,
+        -394.57526669597985
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2310.713041148168,
+          0.42039315816097045,
+          -0.8831017092185742
+        ],
+        [
+          0.6561484256595818,
+          -1124.0336383735566,
+          101.94494662401509
+        ],
+        [
+          -1.2619787481210722,
+          58.43595887282153,
+          -1869.1063457757218
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 18.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.028558698626511614,
+        -19009.355063293136,
+        -24641.854152391676
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        7815.732463548392,
+        -15.016880984263025,
+        6.228457175009453
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -475.0119323476918,
+        -2.9941195783034344,
+        -0.9744903699789574
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -4.760764646772986,
+        292.7715965963999,
+        -394.5747719870552
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2310.531491007776,
+          0.9080388697420888,
+          -1.1946501148135378
+        ],
+        [
+          0.6618873830039372,
+          -1123.8597771813645,
+          101.94499375593942
+        ],
+        [
+          -1.2781732737568032,
+          58.41277767123733,
+          -1869.0813639288776
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": -40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.0484884658435476,
+        -29569.55090821137,
+        -42483.46289121212
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        14668.23126413203,
+        -16.12965317342332,
+        23.90490380416304
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -703.2520092470957,
+        -2.783583706703939,
+        -1.4809576130355708
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.779320677573741,
+        268.80338073967425,
+        -344.77251510187614
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2623.286016199716,
+          0.30183128560772404,
+          -0.6483728061986402
+        ],
+        [
+          0.6424172642784722,
+          -1223.3679298149734,
+          106.2076861333364
+        ],
+        [
+          -1.6214479141368567,
+          317.49295962102354,
+          -1855.172208935794
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 0.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.043680844086338766,
+        -29569.534706722407,
+        -42483.45242076824
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        14668.303752494112,
+        -16.11312896526033,
+        23.880203733779126
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -703.251952073097,
+        -2.7812396835481197,
+        -1.479522996088781
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.7742398002821576,
+        268.80249380827956,
+        -344.7735268231818
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2623.407553382468,
+          0.7410957185899288,
+          -0.9446743526346121
+        ],
+        [
+          0.7453684035291441,
+          -1223.2845146984757,
+          106.43899156849469
+        ],
+        [
+          -1.5411907084680758,
+          317.3758908027996,
+          -1855.292711924196
+        ]
+      ]
+    },
+    {
+      "requestedAltitudeM": 48000.0,
+      "machLabel": "trace",
+      "angleOfAttackDeg": 28.0,
+      "bankDeg": 40.0,
+      "centerSideslipDeg": 0.0,
+      "forceNBodyXYZAtZeroSideslip": [
+        -0.038870175052579725,
+        -29569.553486511446,
+        -42483.46708100417
+      ],
+      "torqueNmBodyXYZAtZeroSideslip": [
+        14668.240581959115,
+        -16.099302422510846,
+        23.85595018100821
+      ],
+      "dForceNBodyXYZdSideslipDeg": [
+        -703.2520486037802,
+        -2.7796636488026705,
+        -1.478749845805578
+      ],
+      "dTorqueNmBodyXYZdSideslipDeg": [
+        -6.768694033903193,
+        268.8021933204392,
+        -344.77209251030155
+      ],
+      "rateDampingDerivativeMatrixNmPerRadPerSecondAtZeroSideslip": [
+        [
+          -2623.465319911645,
+          0.8840647413736933,
+          -0.9738346897000111
+        ],
+        [
+          0.7752858459750379,
+          -1223.344972874867,
+          106.29872433961602
+        ],
+        [
+          -1.596346158909933,
+          317.351834457225,
+          -1855.2526622486942
+        ]
+      ]
+    }
+  ]
+}
