@@ -12,6 +12,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 RAW_PATH = ROOT / "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json"
 COORDINATE_PATH = ROOT / "Docs/Experiments/STS-Entry-20261008/live-body-coordinate-crosscheck.json"
+FRAME_CROSSCHECK_PATH = ROOT / "Docs/Experiments/STS-Entry-20261009/live-yaw-frame-crosscheck-20261009.json"
+CO_ROTATING_FRAME_PATH = ROOT / "Docs/Experiments/STS-Entry-20261009/live-yaw-reference-frame-caveat-20261009.json"
 PROFILE_PATH = ROOT / "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
 OUTPUT_PATH = ROOT / "Docs/Experiments/STS-Entry-20261009/live-yaw-inertia-analysis.json"
 
@@ -61,6 +63,16 @@ def cross3(a: list[float], b: list[float]) -> list[float]:
         a[1] * b[2] - a[2] * b[1],
         a[2] * b[0] - a[0] * b[2],
         a[0] * b[1] - a[1] * b[0],
+    ]
+
+
+def quaternion_transform(vector: list[float], rotation: list[float]) -> list[float]:
+    """Rotate a vector into the vessel frame using the captured quaternion."""
+    x, y, z, w = rotation
+    return [
+        (1 - 2 * (y * y + z * z)) * vector[0] + 2 * (x * y + z * w) * vector[1] + 2 * (x * z - y * w) * vector[2],
+        2 * (x * y - z * w) * vector[0] + (1 - 2 * (x * x + z * z)) * vector[1] + 2 * (y * z + x * w) * vector[2],
+        2 * (x * z + y * w) * vector[0] + 2 * (y * z - x * w) * vector[1] + (1 - 2 * (x * x + y * y)) * vector[2],
     ]
 
 
@@ -116,6 +128,39 @@ def fit_yaw_polarity(samples: list[dict], positive: bool) -> dict:
     }
 
 
+def fit_native_frame_yaw_polarity(samples: list[dict], positive: bool) -> dict:
+    selected = [
+        sample for sample in samples
+        if (float(sample["controlYaw"]) > 0.14 if positive else float(sample["controlYaw"]) < -0.14)
+        and abs(float(sample["controlPitch"])) <= 1e-9
+        and abs(float(sample["controlRoll"])) <= 1e-9
+    ]
+    if len(selected) < 3:
+        raise ValueError("Native-frame yaw pulse does not contain enough uncontaminated samples")
+    acceleration_deg = []
+    mean_rate_rad = []
+    for axis in range(3):
+        xs = [float(sample["elapsed"]) for sample in selected]
+        ys = [float(sample["vesselFrameRatesDegPerSecond"][axis]) for sample in selected]
+        acceleration_deg.append(ols_slope(
+            [{"elapsed": x, "body_rates": [y]} for x, y in zip(xs, ys)], 0
+        ))
+        mean_rate_rad.append(sum(ys) / len(ys) * math.pi / 180.0)
+    return {
+        "sampleCount": len(selected),
+        "elapsedIntervalS": [min(float(x["elapsed"]) for x in selected), max(float(x["elapsed"]) for x in selected)],
+        "yawCommand": float(selected[0]["controlYaw"]),
+        "controlInputs": {
+            key: [min(float(sample[key]) for sample in selected), max(float(sample[key]) for sample in selected)]
+            for key in ("controlPitch", "controlRoll", "controlYaw")
+        },
+        "bodyAccelerationDegPerSecondSquaredXYZ": acceleration_deg,
+        "bodyAccelerationRadPerSecondSquaredXYZ": [value * math.pi / 180.0 for value in acceleration_deg],
+        "meanBodyRateRadPerSecondXYZ": mean_rate_rad,
+        "rollToYawAccelerationRatio": abs(acceleration_deg[1] / acceleration_deg[2]) if acceleration_deg[2] else None,
+    }
+
+
 def inertia_counterfactual(flat: list[float]) -> dict:
     inertia, asymmetry = symmetric_matrix(flat)
     # STS vessel body rates use local +Y for roll and +Z for yaw. A pure yaw
@@ -134,9 +179,13 @@ def inertia_counterfactual(flat: list[float]) -> dict:
 
 def main() -> None:
     raw = json.loads(RAW_PATH.read_text())
+    frame_raw = json.loads(FRAME_CROSSCHECK_PATH.read_text())
+    co_rotating_frame_raw = json.loads(CO_ROTATING_FRAME_PATH.read_text())
     profile = json.loads(PROFILE_PATH.read_text())
     coordinate_hash = hashlib.sha256(COORDINATE_PATH.read_bytes()).hexdigest()
     raw_hash = hashlib.sha256(RAW_PATH.read_bytes()).hexdigest()
+    frame_hash = hashlib.sha256(FRAME_CROSSCHECK_PATH.read_bytes()).hexdigest()
+    co_rotating_frame_hash = hashlib.sha256(CO_ROTATING_FRAME_PATH.read_bytes()).hexdigest()
     checkpoint_hash = hashlib.sha256(Path(profile["savePath"]).read_bytes()).hexdigest()
     if checkpoint_hash != profile["saveSHA256"] or checkpoint_hash != raw["profile"]["saveSHA256"]:
         raise RuntimeError("The preserved 72 km checkpoint hash changed")
@@ -150,8 +199,60 @@ def main() -> None:
     if max(abs(float(sample["control_pitch"])) + abs(float(sample["control_roll"])) for sample in samples) > 1e-9:
         raise RuntimeError("The retained yaw pulse contains pitch or roll command contamination")
 
+    frame_samples = frame_raw.get("samples", [])
+    co_rotating_samples = co_rotating_frame_raw.get("samples", [])
+    if not frame_raw.get("completed") or not frame_samples:
+        raise RuntimeError("The native-frame yaw crosscheck did not complete")
+    if not co_rotating_samples or co_rotating_frame_raw.get("measurementAssessment", {}).get("usedForInertiaInference") is not False:
+        raise RuntimeError("The co-rotating-frame trial is missing its rejected-measurement annotation")
+    if any(max(abs(float(value)) for value in sample.get("vesselFrameRatesDegPerSecond", [math.inf])) > 1e-9 for sample in co_rotating_samples):
+        raise RuntimeError("The co-rotating-frame caveat no longer matches its retained zero-valued readbacks")
+    if frame_raw.get("checkpointSHA256After") != checkpoint_hash:
+        raise RuntimeError("The native-frame yaw crosscheck did not preserve the checkpoint")
+    preflight = frame_raw.get("preflight", {})
+    post_run = frame_raw.get("postRunVerification", {})
+    if preflight.get("vessel") != "STS" or abs(float(preflight.get("mass", 0.0)) - float(profile["mass"])) > 1.0:
+        raise RuntimeError("The native-frame crosscheck did not use the full-mass original STS")
+    if preflight.get("paused") is not True or preflight.get("sas") or preflight.get("rcs") or abs(float(preflight.get("thrust", math.inf))) > 1.0:
+        raise RuntimeError("The native-frame crosscheck did not start from a safe paused vacuum state")
+    if any(sample.get("sas") or sample.get("rcs") for sample in frame_samples):
+        raise RuntimeError("SAS or RCS became active during the native-frame crosscheck")
+    if any(abs(float(sample.get("q", 0.0))) > 1e-9 or abs(float(sample.get("thrust", 0.0))) > 1e-6 for sample in frame_samples):
+        raise RuntimeError("The native-frame crosscheck contains nonzero q or thrust")
+    if (
+        post_run.get("paused") is not True
+        or post_run.get("vessel") != "STS"
+        or post_run.get("singleKSPProcessCount") != 1
+        or post_run.get("checkpointSHA256") != checkpoint_hash
+        or abs(float(post_run.get("massKg", 0.0)) - float(profile["mass"])) > 1.0
+        or abs(float(post_run.get("thrustN", math.inf))) > 1.0
+        or post_run.get("sas")
+        or post_run.get("rcs")
+        or any(abs(float(value)) > 1e-9 for value in post_run.get("controls", [math.inf] * 3))
+    ):
+        raise RuntimeError("The post-run verification did not confirm the preserved single-KSP checkpoint state")
+
+    native_transform_error = 0.0
+    for sample in frame_samples:
+        expected = quaternion_transform(sample["angularNonRotating"], sample["rotationNonRotating"])
+        actual = sample["angularVesselFrameTransformed"]
+        native_transform_error = max(
+            native_transform_error,
+            *(abs(float(expected[i]) - float(actual[i])) for i in range(3)),
+        )
+    legacy_sign_error = 0.0
+    for sample in samples:
+        native = quaternion_transform(sample["angular"], sample["rotation"])
+        legacy = sample["body_rates"]
+        legacy_sign_error = max(
+            legacy_sign_error,
+            *(abs(float(legacy[i]) + math.degrees(native[i])) for i in range(3)),
+        )
+
     positive = fit_yaw_polarity(samples, True)
     negative = fit_yaw_polarity(samples, False)
+    native_positive = fit_native_frame_yaw_polarity(frame_samples, True)
+    native_negative = fit_native_frame_yaw_polarity(frame_samples, False)
     vessel_inertia = inertia_counterfactual(raw["inertia_tensor"])
     root_inertia = inertia_counterfactual(raw["root_inertia_tensor"])
     positive_torque = inferred_body_torque(
@@ -174,6 +275,23 @@ def main() -> None:
         ]
         roll_torque, yaw_torque = torque["totalInferredTorqueNmXYZ"][1:3]
         torque["rollToYawTorqueRatio"] = abs(roll_torque / yaw_torque) if yaw_torque else None
+    native_inertia_tensor = preflight["inertiaTensor"]
+    native_torques = []
+    for fit in (native_positive, native_negative):
+        torque = inferred_body_torque(
+            native_inertia_tensor,
+            fit["bodyAccelerationRadPerSecondSquaredXYZ"],
+            fit["meanBodyRateRadPerSecondXYZ"],
+        )
+        torque["yawCommand"] = fit["yawCommand"]
+        torque["controlInputs"] = fit["controlInputs"]
+        roll_torque, yaw_torque = torque["totalInferredTorqueNmXYZ"][1:3]
+        torque["rollToYawTorqueRatio"] = abs(roll_torque / yaw_torque) if yaw_torque else None
+        native_torques.append(torque)
+    native_measured_ratio = 0.5 * (
+        native_positive["rollToYawAccelerationRatio"] + native_negative["rollToYawAccelerationRatio"]
+    )
+    native_inertia_prediction = inertia_counterfactual(native_inertia_tensor)
     measured_ratio = 0.5 * (positive["rollToYawAccelerationRatio"] + negative["rollToYawAccelerationRatio"])
     predicted_ratio = vessel_inertia["rollToYawAngularAccelerationRatio"]
     prior_report = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else {}
@@ -196,6 +314,11 @@ def main() -> None:
             "probeSourceSHA256": hashlib.sha256((ROOT / "Tools/probe_sts_preentry_roll.py").read_bytes()).hexdigest(),
             "coordinateCrosscheck": str(COORDINATE_PATH.relative_to(ROOT)),
             "coordinateCrosscheckSHA256": coordinate_hash,
+            "nativeFrameCrosscheck": str(FRAME_CROSSCHECK_PATH.relative_to(ROOT)),
+            "nativeFrameCrosscheckSHA256": frame_hash,
+            "nativeFrameProbeSourceSHA256": frame_raw.get("sourceSHA256"),
+            "coRotatingFrameCaveat": str(CO_ROTATING_FRAME_PATH.relative_to(ROOT)),
+            "coRotatingFrameCaveatSHA256": co_rotating_frame_hash,
             "checkpointName": profile["saveName"],
             "checkpointSHA256": checkpoint_hash,
             "analysisScript": str(Path(__file__).relative_to(ROOT)),
@@ -243,7 +366,45 @@ def main() -> None:
             "meanAbsoluteRollToYawTorqueRatio": 0.5 * (
                 positive_torque["rollToYawTorqueRatio"] + negative_torque["rollToYawTorqueRatio"]
             ),
-            "interpretationLimit": "The vacuum bench rules out aerodynamic torque and has SAS/RCS, thrust, pitch input, and roll input off. Residual external or measurement effects are not independently instrumented; do not treat the inferred torque vector as a direct actuator telemetry measurement.",
+            "interpretationLimit": "These signs use the legacy probe's command-aligned body_rates convention, which is the negative of the right-handed angular-velocity vector transformed into the vessel frame. Use the native-frame result below for physical sign; the magnitude ratios are invariant. Neither inferred vector is a direct actuator telemetry measurement.",
+        },
+        "nativeVesselFrameCrosscheck": {
+            "artifact": str(FRAME_CROSSCHECK_PATH.relative_to(ROOT)),
+            "sampleCount": len(frame_samples),
+            "preflight": preflight,
+            "postRunVerification": post_run,
+            "axisOrder": ["local +X pitch", "local +Y roll", "local +Z yaw"],
+            "rateTransform": "SpaceCenter.transform_direction(angular_velocity(non_rotating_frame), non_rotating_frame, vessel.reference_frame)",
+            "maximumQuaternionVsNativeTransformDifferenceRadPerSecond": native_transform_error,
+            "legacyBodyRatesConvention": {
+                "definition": "probe_sts_preentry_roll.body_rates returns the negative of the quaternion-transformed non-rotating angular velocity, in degrees/s.",
+                "maximumLegacyValuePlusNativeQuaternionRateDegPerSecond": legacy_sign_error,
+                "effect": "This flips signed acceleration and inferred-torque components but does not change absolute roll/yaw ratios.",
+            },
+            "measuredAccelerationDegPerSecondSquaredXYZ": {
+                "positiveYaw": native_positive["bodyAccelerationDegPerSecondSquaredXYZ"],
+                "negativeYaw": native_negative["bodyAccelerationDegPerSecondSquaredXYZ"],
+            },
+            "measuredRollToYawAccelerationRatio": {
+                "positiveYaw": native_positive["rollToYawAccelerationRatio"],
+                "negativeYaw": native_negative["rollToYawAccelerationRatio"],
+                "meanAbsolute": native_measured_ratio,
+            },
+            "pureBodyYawTorqueInertiaPrediction": native_inertia_prediction["rollToYawAngularAccelerationRatio"],
+            "observedRatioDividedByInertiaPrediction": native_measured_ratio / native_inertia_prediction["rollToYawAngularAccelerationRatio"],
+            "rejectedCoRotatingFrameReadback": {
+                "artifact": str(CO_ROTATING_FRAME_PATH.relative_to(ROOT)),
+                "status": co_rotating_frame_raw.get("measurementAssessment", {}).get("status"),
+                "method": co_rotating_frame_raw.get("measurementAssessment", {}).get("method"),
+                "measurementUsedForInference": co_rotating_frame_raw.get("measurementAssessment", {}).get("usedForInertiaInference"),
+                "reason": co_rotating_frame_raw.get("measurementAssessment", {}).get("reason"),
+            },
+        },
+        "inferredBodyTorqueFromNativeFrameCrosscheck": {
+            "method": "Apply the full-vessel Euler relation τ=Iα+ω×Iω to the native right-handed vessel-frame angular rates. These are inferred net moments, not direct reaction-wheel torque measurements.",
+            "positiveYaw": native_torques[0],
+            "negativeYaw": native_torques[1],
+            "meanAbsoluteRollToYawTorqueRatio": 0.5 * (native_torques[0]["rollToYawTorqueRatio"] + native_torques[1]["rollToYawTorqueRatio"]),
         },
         "pureBodyYawTorqueCounterfactual": {
             "unitTorqueBodyVectorNm": [0.0, 0.0, 1.0],
@@ -261,8 +422,11 @@ def main() -> None:
             f"{measured_ratio / predicted_ratio:.1f} times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. "
             f"Applying the full three-axis Euler relation to the measured slopes implies an input-correlated body-roll torque of about "
             f"{100.0 * 0.5 * (positive_torque['rollToYawTorqueRatio'] + negative_torque['rollToYawTorqueRatio']):.1f}% of the yaw torque in both pulse directions; this is inferred net torque, not a direct wheel measurement, and its actuator source remains unresolved. "
-            "The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s² equivalents are provided separately. "
-            "This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification."
+            f"The independent native vessel-frame pulse gives a ratio of {native_measured_ratio:.3f}, with quaternion and SpaceCenter.transform_direction rates agreeing within {native_transform_error:.2e} rad/s. "
+            "The earlier probe's body_rates helper negates the native right-handed vector, so its inferred torque signs are reversed; magnitudes and ratios are unchanged. "
+            f"Using native signs, the inferred roll/yaw moments are about {abs(native_torques[0]['totalInferredTorqueNmXYZ'][1]):.0f}/{abs(native_torques[0]['totalInferredTorqueNmXYZ'][2]):.0f} N·m for the positive pulse and "
+            f"{abs(native_torques[1]['totalInferredTorqueNmXYZ'][1]):.0f}/{abs(native_torques[1]['totalInferredTorqueNmXYZ'][2]):.0f} N·m for the negative pulse. "
+            "These remain inferred net moments; the actuator source is unresolved. This is not atmospheric coordination or flight qualification."
         ),
     }
     report["sourceSHA256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()

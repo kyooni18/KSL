@@ -1,0 +1,1702 @@
+{
+  "scope": "Vacuum yaw reaction-wheel pulse for vessel-frame rate crosscheck; not entry qualification or aerodynamic coordination evidence.",
+  "profile": {
+    "saveName": "STS-campaign-72km-20261008",
+    "savePath": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+    "saveSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "vessel": "STS",
+    "mass": 25816.10493262963,
+    "dryMass": 20348.0004251,
+    "partCount": 22,
+    "savedUT": 9930.071826169305,
+    "evidence": "Expected checkpoint mass from preserved save dry mass/resources, crosschecked against archived live telemetry; current paused placeholders are not verified physics.",
+    "accountingArtifact": "Docs/Experiments/STS-Entry-20261008/checkpoint-mass-accounting.json",
+    "archivedCrosscheck": {
+      "path": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+      "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+      "ut": 9932.41182616936,
+      "massKg": 25816.10546875,
+      "differenceKg": 0.000536120369361015
+    }
+  },
+  "sourceSHA256": "80c258e6ca0c822d75bd7c007dda15d00c98d37dc3f16314bfed0eac271c5fc7",
+  "samples": [
+    {
+      "ut": 9931.291826169332,
+      "angularNonRotating": [
+        7.388419607356237e-07,
+        0.00023720510944258422,
+        8.817269796288795e-06
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022769191374947,
+        -0.7022951463945359,
+        -0.0823917655491519,
+        0.08246400502010348
+      ],
+      "altitude": 71918.50024415483,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.675640791,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        4.233252607732173e-05,
+        0.013590851649998867,
+        0.0005051923461555231
+      ],
+      "elapsed": 0.020000000000436557,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.331826169333,
+      "angularNonRotating": [
+        8.295032472208109e-06,
+        0.00027483675512485206,
+        -3.150184432896221e-06
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022769172764162,
+        -0.7022951861070377,
+        -0.08239153391495185,
+        0.08246350991530116
+      ],
+      "altitude": 71916.1515560752,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.717148291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.000475270351581494,
+        0.01574698612372452,
+        -0.00018049227269276616
+      ],
+      "elapsed": 0.06000000000130967,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.371826169334,
+      "angularNonRotating": [
+        -1.2266313702870522e-07,
+        0.0002651532122399658,
+        6.170045326891072e-06
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022770364196607,
+        -0.7022952398288664,
+        -0.08239113233116496,
+        0.08246309793728318
+      ],
+      "altitude": 71913.80281132157,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.760128541,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -7.028080053579698e-06,
+        0.015192159985686602,
+        0.00035351755663527484
+      ],
+      "elapsed": 0.10000000000218279,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.411826169335,
+      "angularNonRotating": [
+        -7.081277498828781e-07,
+        0.00027966912603005767,
+        2.8434984737342406e-06
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022769893333783,
+        -0.7022953766941342,
+        -0.08239075873219776,
+        0.08246267196973889
+      ],
+      "altitude": 71911.45401054516,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.80346475,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -4.057273142438449e-05,
+        0.016023860581634616,
+        0.00016292046159686316
+      ],
+      "elapsed": 0.1400000000030559,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.451826169336,
+      "angularNonRotating": [
+        -9.924776887546477e-08,
+        0.00024887447943910956,
+        -2.0527394088793125e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.702276976832666,
+        -0.7022955341521733,
+        -0.08239033657834688,
+        0.0824621143208874
+      ],
+      "altitude": 71909.10515378439,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.845854291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -5.6864782826539834e-06,
+        0.014259457300376362,
+        -0.0011761330456896402
+      ],
+      "elapsed": 0.18000000000392902,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.491826169336,
+      "angularNonRotating": [
+        4.670107881071147e-06,
+        0.0002547949261497706,
+        1.46522489640438e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022770960335465,
+        -0.7022954076892307,
+        -0.08238993500053315,
+        0.08246164720945992
+      ],
+      "altitude": 71906.75624035997,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.895160791,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.00026757747145616053,
+        0.01459867390972935,
+        0.0008395120260146424
+      ],
+      "elapsed": 0.22000000000480213,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.531826169337,
+      "angularNonRotating": [
+        3.797589849650238e-06,
+        0.00024210294941440225,
+        1.78748574790719e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022771181363493,
+        -0.7022956310239313,
+        -0.08238946429317168,
+        0.08246109985036049
+      ],
+      "altitude": 71904.40727091441,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.938338041,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.00021758587070667948,
+        0.013871477209114514,
+        0.001024153892948674
+      ],
+      "elapsed": 0.26000000000567525,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9931.571826169338,
+      "angularNonRotating": [
+        -2.3184626364142231e-07,
+        0.0002842449175659567,
+        1.4810294748096793e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022772307973114,
+        -0.7022955325846747,
+        -0.08238927752565667,
+        0.0824607989935216
+      ],
+      "altitude": 71902.0582443435,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186501.980201375,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -1.3283812402530888e-05,
+        0.016286034124573315,
+        0.000848567382410715
+      ],
+      "elapsed": 0.30000000000654836,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.61182616934,
+      "angularNonRotating": [
+        8.482523871416055e-07,
+        0.0002531841164454818,
+        2.0881437460381124e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022773047859229,
+        -0.7022956415552708,
+        -0.08238873398429314,
+        0.08246020678639066
+      ],
+      "altitude": 71899.70916239487,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186502.027296666,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        4.860128174511117e-05,
+        0.014506381312074884,
+        0.0011964182366462147
+      ],
+      "elapsed": 0.3400000000074215,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.65182616934,
+      "angularNonRotating": [
+        3.521187805570509e-05,
+        0.0002600782609079033,
+        8.681420257352723e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022777294136827,
+        -0.7022952863642369,
+        -0.0823886229246455,
+        0.0824596499892239
+      ],
+      "altitude": 71897.36002416874,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.074015833,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.0020174920013212205,
+        0.014901386693125126,
+        0.00497408740925688
+      ],
+      "elapsed": 0.3800000000082946,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.69182616934,
+      "angularNonRotating": [
+        9.112621026250301e-05,
+        0.00024517448036931455,
+        0.0001347636249093378
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022793433470098,
+        -0.7022936135114513,
+        -0.08238910232042651,
+        0.08245837476866108
+      ],
+      "altitude": 71895.01082964113,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.121781416,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.005221147251063153,
+        0.014047462969474777,
+        0.007721386939189148
+      ],
+      "elapsed": 0.4200000000091677,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.731826169342,
+      "angularNonRotating": [
+        0.00016891114291957865,
+        0.0002669375098776072,
+        0.00023752501778223628
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022827605895937,
+        -0.7022904114637318,
+        -0.0823906457634822,
+        0.08245626717132115
+      ],
+      "altitude": 71892.66157908656,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.163332291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.009677895602022915,
+        0.015294392709718618,
+        0.013609181047691968
+      ],
+      "elapsed": 0.4600000000100408,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.771826169343,
+      "angularNonRotating": [
+        0.00024696912271464133,
+        0.0002450195897836238,
+        0.00036831956357812073
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022879111797167,
+        -0.7022853575694773,
+        -0.0823928376041273,
+        0.08245306099756894
+      ],
+      "altitude": 71890.31227213482,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.20622025,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.01415028840159746,
+        0.014038588392628388,
+        0.021103156505126713
+      ],
+      "elapsed": 0.5000000000109139,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.811826169343,
+      "angularNonRotating": [
+        0.0003247844305687309,
+        0.0002689418906811625,
+        0.00046812902496056526
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7022947334278835,
+        -0.702278556355722,
+        -0.08239607286282224,
+        0.08244912333748255
+      ],
+      "altitude": 71887.96290967695,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.249171416,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.018608777123148,
+        0.015409235270299375,
+        0.026821817397814758
+      ],
+      "elapsed": 0.540000000011787,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.851826169344,
+      "angularNonRotating": [
+        0.00040350625379921936,
+        0.000289038842311129,
+        0.0005954639815974988
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023032512030981,
+        -0.7022701460625258,
+        -0.0824001124230192,
+        0.08244425998062976
+      ],
+      "altitude": 71885.61349108035,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.297237833,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.02311920534982991,
+        0.016560705779775014,
+        0.034117572997592396
+      ],
+      "elapsed": 0.5800000000126602,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.891826169345,
+      "angularNonRotating": [
+        0.00048186732340368304,
+        0.00023738543677609414,
+        0.0007188252058611537
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023135130798835,
+        -0.702260084681132,
+        -0.08240499081798663,
+        0.08243822158501035
+      ],
+      "altitude": 71883.26401724282,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.34383775,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.027608963916296556,
+        0.013601183645139833,
+        0.041185650503466675
+      ],
+      "elapsed": 0.6200000000135333,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.931826169346,
+      "angularNonRotating": [
+        0.0005566211843440834,
+        0.0002441605902276933,
+        0.0008067202848721977
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023255816315737,
+        -0.7022480924064812,
+        -0.08241082570316283,
+        0.08243150406836297
+      ],
+      "altitude": 71880.91448685422,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.385973458,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.03189204465048935,
+        0.01398937134346996,
+        0.0462216675707684
+      ],
+      "elapsed": 0.6600000000144064,
+      "issuedYaw": 0.15
+    },
+    {
+      "ut": 9931.971826169347,
+      "angularNonRotating": [
+        0.0006411392817031627,
+        0.00025079710758291185,
+        0.0009550247283749622
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.702339470873393,
+        -0.7022342761964783,
+        -0.0824177001701622,
+        0.082423854378256
+      ],
+      "altitude": 71878.56490102911,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.15000000596046448,
+      "wallTime": 186502.441585083,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.03673457492164039,
+        0.014369615778589305,
+        0.05471888626651317
+      ],
+      "elapsed": 0.7000000000152795,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.011826169348,
+      "angularNonRotating": [
+        0.0007139486678679786,
+        0.00027819612296298146,
+        0.0010495722541433664
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.702354934736181,
+        -0.702218892839071,
+        -0.08242554878039232,
+        0.08241552848014327
+      ],
+      "altitude": 71876.21525893535,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.475636166,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.040906245457822545,
+        0.015939463722681325,
+        0.06013606045644713
+      ],
+      "elapsed": 0.7400000000161526,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.051826169349,
+      "angularNonRotating": [
+        0.0006748498120553376,
+        0.00025038214516825974,
+        0.0009805060212598896
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023700060691854,
+        -0.7022040245539768,
+        -0.08243271538457203,
+        0.08240658174906274
+      ],
+      "altitude": 71873.86556088657,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.519611791,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.03866604603596767,
+        0.014345840183573181,
+        0.05617885680535624
+      ],
+      "elapsed": 0.7800000000170257,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.09182616935,
+      "angularNonRotating": [
+        0.0006152296179700455,
+        0.00023793336004018784,
+        0.0009069241964168316
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023840511573805,
+        -0.7021901521366825,
+        -0.08243937083136876,
+        0.0823986000741489
+      ],
+      "altitude": 71871.51580796158,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.56375275,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.0352500605411296,
+        0.013632577335669435,
+        0.05196292879297815
+      ],
+      "elapsed": 0.8200000000178989,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.13182616935,
+      "angularNonRotating": [
+        0.0005330285704265418,
+        0.00023268963559530675,
+        0.0007686176968482086
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7023962798845014,
+        -0.7021778994656076,
+        -0.08244539177391991,
+        0.08239173480365664
+      ],
+      "altitude": 71869.16599930567,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.607792833,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.03054028744533261,
+        0.013332134056048169,
+        0.04403855008846811
+      ],
+      "elapsed": 0.860000000018772,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.171826169351,
+      "angularNonRotating": [
+        0.00046037462785260204,
+        0.0002548313932493329,
+        0.000656147629983978
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024069168856172,
+        -0.7021674566455,
+        -0.08245046259189492,
+        0.08238571881900408
+      ],
+      "altitude": 71866.81613493629,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.649900958,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.026377523170860014,
+        0.014600763320625354,
+        0.03759448993559353
+      ],
+      "elapsed": 0.9000000000196451,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.211826169352,
+      "angularNonRotating": [
+        0.0003753468942528397,
+        0.000263579364400357,
+        0.0005277177718275738
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024156090939211,
+        -0.7021587998530142,
+        -0.08245477100352705,
+        0.08238079117708319
+      ],
+      "altitude": 71864.4662146992,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.700504291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.02150579289403093,
+        0.015101985146881235,
+        0.030236001099767755
+      ],
+      "elapsed": 0.9400000000205182,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.251826169353,
+      "angularNonRotating": [
+        0.0002977802062652089,
+        0.0002712662681005895,
+        0.0004491336484447389
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024229589131126,
+        -0.7021515924496375,
+        -0.0824580873447448,
+        0.08237660252019102
+      ],
+      "altitude": 71862.11623940233,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.744588916,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.017061549041531582,
+        0.015542412286428053,
+        0.025733462493195986
+      ],
+      "elapsed": 0.9800000000213913,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.291826169354,
+      "angularNonRotating": [
+        0.0002189792509317932,
+        0.0002562630397733301,
+        0.00031837458894273937
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.702428318625355,
+        -0.7021463406307,
+        -0.08246049937674255,
+        0.08237336673893048
+      ],
+      "altitude": 71859.76620806451,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.788805291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.01254658687932795,
+        0.014682790624204967,
+        0.018241520250631412
+      ],
+      "elapsed": 1.0200000000222644,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.331826169355,
+      "angularNonRotating": [
+        0.00014396067477078308,
+        0.0002700859622564167,
+        0.0001913900123675343
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024318684626513,
+        -0.7021428641650486,
+        -0.0824620622511163,
+        0.08237102868231067
+      ],
+      "altitude": 71857.41612151917,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.832250666,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.00824833908022134,
+        0.015474785743022324,
+        0.010965839949616344
+      ],
+      "elapsed": 1.0600000000231375,
+      "issuedYaw": -0.15
+    },
+    {
+      "ut": 9932.371826169356,
+      "angularNonRotating": [
+        6.352383405565779e-05,
+        0.00026777395396493375,
+        9.895140698004565e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024338956133183,
+        -0.7021408338552042,
+        -0.08246257802280738,
+        0.08236953692878285
+      ],
+      "altitude": 71855.065979974,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.875491166,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        0.0036396475898785984,
+        0.0153423174257211,
+        0.005669497996837971
+      ],
+      "elapsed": 1.1000000000240107,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.411826169357,
+      "angularNonRotating": [
+        -9.251662859243802e-06,
+        0.0002746393147390336,
+        -2.5204039849468727e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024339400607723,
+        -0.7021409188709571,
+        -0.08246248751220808,
+        0.0823691847563644
+      ],
+      "altitude": 71852.71578288323,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": -0.15000000596046448,
+      "wallTime": 186502.919876416,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0005300812353126056,
+        0.01573567362291169,
+        -0.0014440851100541007
+      ],
+      "elapsed": 1.1400000000248838,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.451826169357,
+      "angularNonRotating": [
+        -4.129901665462367e-05,
+        0.0003129219403490424,
+        -5.937369852267384e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024330651040416,
+        -0.7021419126043649,
+        -0.08246163297965436,
+        0.0823694060838796
+      ],
+      "altitude": 71850.36553027364,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186502.976046791,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0023662593523504326,
+        0.017929106499044632,
+        -0.0034018623394313423
+      ],
+      "elapsed": 1.180000000025757,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.491826169358,
+      "angularNonRotating": [
+        -4.8063872895648263e-05,
+        0.00024148085503838956,
+        -7.834866875077343e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024320650246985,
+        -0.7021430100402803,
+        -0.08246054309842699,
+        0.08236948171218234
+      ],
+      "altitude": 71848.01522257633,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.012354375,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0027538570639738767,
+        0.013835833826910162,
+        -0.004489048049887838
+      ],
+      "elapsed": 1.22000000002663,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.53182616936,
+      "angularNonRotating": [
+        -4.942928206169513e-05,
+        0.0002651899412740022,
+        -7.739107557934555e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024310271242069,
+        -0.7021441560646309,
+        -0.08245960919925788,
+        0.08236959188888626
+      ],
+      "altitude": 71845.66485977545,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.050145875,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0028320892464968393,
+        0.015194264404322479,
+        -0.004434182002674473
+      ],
+      "elapsed": 1.2600000000275031,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.57182616936,
+      "angularNonRotating": [
+        -5.04388868419918e-05,
+        0.0002859145461115986,
+        -0.00010886814921585192
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024296567487309,
+        -0.7021456280555272,
+        -0.08245873133804088,
+        0.0823698608398486
+      ],
+      "altitude": 71843.31444134109,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.092820125,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0028899353393840714,
+        0.01638169679359316,
+        -0.006237685473468798
+      ],
+      "elapsed": 1.3000000000283762,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.611826169361,
+      "angularNonRotating": [
+        -5.20280545350705e-05,
+        0.000261822686297819,
+        -8.437062121651228e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024285735831474,
+        -0.7021467914100439,
+        -0.08245765550884127,
+        0.08236994671148151
+      ],
+      "altitude": 71840.96396826615,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.136559916,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0029809879411360225,
+        0.015001334905642759,
+        -0.004834080510603073
+      ],
+      "elapsed": 1.3400000000292493,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.651826169362,
+      "angularNonRotating": [
+        -5.6084506488366744e-05,
+        0.0002635788987390697,
+        -9.374684596268535e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024273414640154,
+        -0.7021480691967757,
+        -0.0824565834263995,
+        0.08237007740530866
+      ],
+      "altitude": 71838.61343998939,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.176976708,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.003213405517857496,
+        0.01510195846645479,
+        -0.005371298616324912
+      ],
+      "elapsed": 1.3800000000301225,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.691826169363,
+      "angularNonRotating": [
+        -5.3925413492786394e-05,
+        0.0002625763008836657,
+        -7.287787135832537e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024264040145796,
+        -0.702149114922293,
+        -0.08245561130074447,
+        0.08237022582643794
+      ],
+      "altitude": 71836.2628569511,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.220069583,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0030896986016344836,
+        0.015044513840791272,
+        -0.004175594448729387
+      ],
+      "elapsed": 1.4200000000309956,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.731826169364,
+      "angularNonRotating": [
+        -4.95195792930949e-05,
+        0.0002696600859053433,
+        -8.879220024387251e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.7024251546403044,
+        -0.7021504931600905,
+        -0.08245456353327285,
+        0.08237031820737184
+      ],
+      "altitude": 71833.91221897257,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.275213291,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0028372628967577623,
+        0.015450384825511388,
+        -0.005087418327654374
+      ],
+      "elapsed": 1.4600000000318687,
+      "issuedYaw": 0.0
+    },
+    {
+      "ut": 9932.771826169364,
+      "angularNonRotating": [
+        -4.691584932125785e-05,
+        0.0002639457816258073,
+        -7.339077619189074e-05
+      ],
+      "angularVesselFrame": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotationNonRotating": [
+        0.702424120085754,
+        -0.7021516566147841,
+        -0.08245352232350883,
+        0.0823704040347012
+      ],
+      "altitude": 71831.56152535405,
+      "q": 0.0,
+      "thrust": 0.0,
+      "mass": 25816.10546875,
+      "sas": false,
+      "rcs": false,
+      "controlPitch": 0.0,
+      "controlRoll": 0.0,
+      "controlYaw": 0.0,
+      "wallTime": 186503.317844916,
+      "vesselFrameRatesDegPerSecond": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nonRotatingRatesDegPerSecond": [
+        -0.0026880801583797826,
+        0.015122979307440429,
+        -0.004204981730984543
+      ],
+      "elapsed": 1.5000000000327418,
+      "issuedYaw": 0.0
+    }
+  ],
+  "startup": {
+    "ready": true,
+    "ut": 9931.271826169332,
+    "vessel": "STS",
+    "meanAltitude": 71919.674566539,
+    "mass": 25816.10546875,
+    "dryMass": 20348.0,
+    "availableThrust": 3060000.25,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.009979248046875,
+    "aoa": 1.6162596940994263,
+    "profile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "preflight": {
+    "ut": 9931.271826169332,
+    "vessel": "STS",
+    "paused": true,
+    "meanAltitude": 71918.50024415483,
+    "dynamicPressure": 0.0,
+    "mass": 25816.10546875,
+    "dryMass": 20348.0,
+    "partCount": 22,
+    "thrust": 0.0,
+    "sas": false,
+    "rcs": false,
+    "speedBrakes": null,
+    "controls": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "inertiaTensor": [
+      948936.4375,
+      -55.213260650634766,
+      90.57039642333984,
+      -55.2130241394043,
+      86861.4921875,
+      -3127.496826171875,
+      90.57042694091797,
+      -3127.49951171875,
+      980765.25
+    ],
+    "momentOfInertia": [
+      948936.1875,
+      86861.4921875,
+      980765.0
+    ],
+    "reactionWheelTorque": [
+      [
+        20000.0,
+        10000.0,
+        20000.0
+      ],
+      [
+        -20000.0,
+        -10000.0,
+        -20000.0
+      ]
+    ],
+    "rootInertiaTensor": [
+      8745.5849609375,
+      -0.003957414999604225,
+      -0.028470007702708244,
+      -0.0039574159309268,
+      5145.77294921875,
+      -305.71533203125,
+      -0.02847004309296608,
+      -305.71527099609375,
+      8567.076171875
+    ],
+    "rootRotationInVessel": [
+      2.7755575615628914e-17,
+      -2.7755575615628914e-17,
+      0.0,
+      1.0000000294784175
+    ]
+  },
+  "completed": true,
+  "finalState": {
+    "ut": 9932.791826169365,
+    "paused": true,
+    "vessel": "STS",
+    "mass": 25816.10546875,
+    "thrust": 0.0,
+    "sas": false,
+    "rcs": false,
+    "controls": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "cleanup": {
+    "ready": true,
+    "ut": 9930.151826169307,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "meanAltitude": 71984.17752186558,
+    "mass": 22000.0,
+    "dryMass": 20056.28125,
+    "availableThrust": 3060000.25,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "paused": false
+  },
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "measurementAssessment": {
+    "status": "REJECTED_AS_ABSOLUTE_ANGULAR_RATE",
+    "field": "vesselFrameRatesDegPerSecond",
+    "method": "Vessel.angular_velocity(vessel.reference_frame)",
+    "finding": "The returned vessel-frame angular-rate vector was zero throughout the yaw pulse even though angular_velocity(non_rotating_frame) changed.",
+    "reason": "The vessel reference frame co-rotates with the vessel; this relative-frame getter cannot serve as the absolute body-rate measurement for this analysis.",
+    "usedForInertiaInference": false,
+    "replacement": "SpaceCenter.transform_direction(angular_velocity(non_rotating_frame), non_rotating_frame, vessel.reference_frame) in live-yaw-frame-crosscheck-20261009.json"
+  }
+}

@@ -1,0 +1,208 @@
+{
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "hypothesis": "The default local drag authority multiplier (1.85) may let the entry drag reference exceed static original-STS KSP drag across the high-AoA trace. Reducing it to 1.20 may produce a more physically grounded profile and improve normal-gate capture.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "shadowAborted": true,
+    "flightQualification": false,
+    "liveControlIssued": false,
+    "guidanceEngaged": false,
+    "liveDescentStarted": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false
+  },
+  "candidate": {
+    "scope": "Isolated diagnostic build. The production worktree was not changed.",
+    "sourceBaseGitHead": "6081b43573b9410aa20b89ce84d332f6e89f4496",
+    "campaignSourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "sourcePath": "/Users/kyooni18/Documents/Codex/2026-10-09/continue-the-autonomous-ksp-sts-landing-3/work/entry-drag-authority-candidate/CLanding/guidance/entry_drag_reference.c",
+    "sourceSHA256": "1767a6334a5db3a7bb91d48ad06c37159594c235cf4de242db14e6cb634f3bfd",
+    "productionSourcePath": "/Users/kyooni18/Code/KSPShuttleLander/CLanding/guidance/entry_drag_reference.c",
+    "productionSourceSHA256": "3f67dde2c9d84350f88034c3be0553f6fe671c1d08aab687e5181655dea9a9bf",
+    "change": "Only local_drag_authority_multiplier changed from 1.85 to 1.20 in the isolated copy of CLanding/guidance/entry_drag_reference.c. Low-q bank ramp, flight limits, configuration, qualification rules, and all other copied CLanding files were unchanged.",
+    "copiedWorkingTreeCheck": "diff -qr --exclude=build reported only entry_drag_reference.c differed between candidate CLanding and the current working tree.",
+    "backendPath": "/Users/kyooni18/Code/KSPShuttleLander/Runtime/Headless/acceptance-artifacts/64635833ea57a683-5a7cdfb064cbab80-badd735f8d8c6356/landing_backend",
+    "backendSHA256": "5a7cdfb064cbab80b475b6007739847787a646fbd8e3d74c27bd4733df6dd5c2",
+    "build": "make -j2 in the isolated candidate CLanding directory completed successfully; no tests were run."
+  },
+  "run": {
+    "startedUTC": "2026-10-08T20:14:26.705164+00:00",
+    "attemptId": "native-13726-1791490467-289770000",
+    "campaignIdentity": "64635833ea57a683-5a7cdfb064cbab80-badd735f8d8c6356",
+    "gitHead": "6081b43573b9410aa20b89ce84d332f6e89f4496",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendSHA256": "5a7cdfb064cbab80b475b6007739847787a646fbd8e3d74c27bd4733df6dd5c2",
+    "configuration": "Configuration/sts.json",
+    "configurationSourceSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "effectiveConfigurationSHA256": "badd735f8d8c6356832bde835006608c8434ab063ce7936078f8bf5f1ba15462",
+    "runManifest": "Runtime/Headless/run-manifests/20261008T201426705164Z-13726.json",
+    "runnerArgs": [
+      "Tools/headless_flight.py",
+      "--backend",
+      "/Users/kyooni18/Documents/Codex/2026-10-09/continue-the-autonomous-ksp-sts-landing-3/work/entry-drag-authority-candidate/CLanding/build/landing_backend",
+      "--config",
+      "Configuration/sts.json",
+      "--live",
+      "--reentry-only",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "liveKSPProcessId": 69877,
+    "liveKSPProcessCount": 1,
+    "diagnosticEnvironment": {
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset"
+    },
+    "exitCode": 1,
+    "exitReason": "Expected normal qualification rejection: engageReentry rejected by closed-loop shadow gate."
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "saveSHA256Expected": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "saveSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "unchanged": true,
+    "startPhysicsSettle": {
+      "ready": true,
+      "ut": 9931.351826169333,
+      "meanAltitudeM": 71914.97719274648,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0
+    },
+    "aerodynamicPriorCells": 60,
+    "currentAttemptHeldOut": true,
+    "postRunSettle": {
+      "helper": "Tools/settle_known_checkpoint.py",
+      "ready": true,
+      "ut": 9931.271826169332,
+      "meanAltitudeM": 71919.67457177013,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true,
+      "railsWarpFactor": 0,
+      "physicsWarpFactor": 0,
+      "sasOff": true,
+      "rcsOff": true
+    }
+  },
+  "summary": {
+    "closestMissKm": 3.6,
+    "shadowRangeErrorKm": 72.5,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63
+  },
+  "witness": {
+    "firstEntry": {
+      "ut": 9980.59,
+      "altitudeM": 68997,
+      "speedMps": 2103,
+      "entryFeedbackMargin": 17501008,
+      "dragAccelMps2": 0.002,
+      "referenceDragAccelMps2": 0.04,
+      "bankDeg": 0.0,
+      "crossTrackM": 13
+    },
+    "firstSTurnReversal": {
+      "ut": 10481.49,
+      "altitudeM": 42171,
+      "speedMps": 1862.3,
+      "crossTrackM": 1809,
+      "side": -1,
+      "reversalCount": 1
+    },
+    "nearSite": {
+      "ut": 10516.39,
+      "altitudeM": 38525,
+      "speedMps": 1746.9,
+      "mach": 5.26,
+      "flightPathAngleDeg": -3.65,
+      "rangeToSiteM": 3850,
+      "runwayAlongTrackM": 1325,
+      "runwayCrossTrackM": 3615,
+      "courseToSiteErrorDeg": -111.2,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": [
+        25.8,
+        27.3
+      ],
+      "entryFeedbackMargin": 107109,
+      "mm305Veto": "0x89"
+    },
+    "downstreamPoint": {
+      "ut": 10561.39,
+      "altitudeM": 33176,
+      "speedMps": 1459.4,
+      "mach": 4.54,
+      "rangeToSiteM": 69874,
+      "runwayCrossTrackM": 2730,
+      "courseToSiteErrorDeg": -174.6,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10837.59,
+      "altitudeM": 9344,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeToSiteM": 168950,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    }
+  },
+  "matchedBaseline": {
+    "artifact": "live-shadow-admission-background-20261009-1934z.json",
+    "gitHead": "177ae6a9824d8ec4ec5658e166607b182d64291c",
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "aerodynamicPriorCells": 60,
+    "currentAttemptHeldOut": true,
+    "closestMissKm": 4.5,
+    "shadowRangeErrorKm": 64.8,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "firstSTurnReversalUT": 10470.83,
+    "nearSite": {
+      "ut": 10516.33,
+      "altitudeM": 37995,
+      "speedMps": 1730.1,
+      "mach": 5.2,
+      "flightPathAngleDeg": -3.78,
+      "rangeToSiteM": 4593,
+      "runwayAlongTrackM": 869,
+      "runwayCrossTrackM": 4510,
+      "courseToSiteErrorDeg": -101.5,
+      "commandedAndAchievedBankDeg": -40.0,
+      "commandedAndAchievedAoADeg": 28.0,
+      "entryFeedbackMargin": 74767,
+      "mm305Veto": "0x89"
+    }
+  },
+  "candidateMinusMatchedBaseline": {
+    "closestMissKm": -0.8999999999999999,
+    "shadowRangeErrorKm": 7.700000000000003,
+    "peakDynamicPressureKPa": 0.0,
+    "peakG": 0.0,
+    "firstReversalSeconds": 10.659999999999854,
+    "nearSiteCrossTrackM": -895,
+    "nearSiteCourseErrorDeg": -9.700000000000003
+  },
+  "interpretation": "This isolated multiplier candidate improved near-site lateral offset and closest miss by about 0.9 km, but worsened shadow range error by 7.7 km, reversed about 10.7 s later, still pointed away from KSC at the near-site passage, and retained MM305 veto 0x89. It was rejected normally before engagement. Do not adopt the 1.20 value from this run; it does not resolve the energy/course shortfall. This is not an atmospheric flight measurement, gate pass, landing, or rollout."
+}

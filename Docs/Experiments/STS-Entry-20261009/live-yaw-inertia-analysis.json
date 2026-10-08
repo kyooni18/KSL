@@ -10,13 +10,18 @@
   },
   "provenance": {
     "gitHeadAtCapture": "943145cc26bd81b7d484e5982d2e40f82d895109",
-    "gitHeadAtAnalysis": "177ae6a9824d8ec4ec5658e166607b182d64291c",
+    "gitHeadAtAnalysis": "6081b43573b9410aa20b89ce84d332f6e89f4496",
     "rawYawPulse": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
     "rawYawPulseSHA256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
     "probeSource": "Tools/probe_sts_preentry_roll.py",
     "probeSourceSHA256": "b04f22dec10cbb4ceaa2fd64cf6bddc4c119086fa08a67fd46eb85d292fb9db4",
     "coordinateCrosscheck": "Docs/Experiments/STS-Entry-20261008/live-body-coordinate-crosscheck.json",
     "coordinateCrosscheckSHA256": "01d8f811a62269f59a4b92cdeb07f3975ce31769038dc733f4e8fd3f160354d5",
+    "nativeFrameCrosscheck": "Docs/Experiments/STS-Entry-20261009/live-yaw-frame-crosscheck-20261009.json",
+    "nativeFrameCrosscheckSHA256": "f034f821c17eeffd3227aafd39d4046fa731a7f9b885c773a198d7a14a768897",
+    "nativeFrameProbeSourceSHA256": "a0ca1f9c5fd5621d8286517e88b9cf0fabc822d239f85c520e299e0bf46ac570",
+    "coRotatingFrameCaveat": "Docs/Experiments/STS-Entry-20261009/live-yaw-reference-frame-caveat-20261009.json",
+    "coRotatingFrameCaveatSHA256": "fcc8a3e55905bd2566a224133cc72e28e0ae7711a73aa7129f3d267b4fa2eaf6",
     "checkpointName": "STS-campaign-72km-20261008",
     "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
     "analysisScript": "Tools/analyze_sts_yaw_inertia.py"
@@ -212,7 +217,209 @@
       "rollToYawTorqueRatio": 0.0309228626750464
     },
     "meanAbsoluteRollToYawTorqueRatio": 0.030937315507666773,
-    "interpretationLimit": "The vacuum bench rules out aerodynamic torque and has SAS/RCS, thrust, pitch input, and roll input off. Residual external or measurement effects are not independently instrumented; do not treat the inferred torque vector as a direct actuator telemetry measurement."
+    "interpretationLimit": "These signs use the legacy probe's command-aligned body_rates convention, which is the negative of the right-handed angular-velocity vector transformed into the vessel frame. Use the native-frame result below for physical sign; the magnitude ratios are invariant. Neither inferred vector is a direct actuator telemetry measurement."
+  },
+  "nativeVesselFrameCrosscheck": {
+    "artifact": "Docs/Experiments/STS-Entry-20261009/live-yaw-frame-crosscheck-20261009.json",
+    "sampleCount": 38,
+    "preflight": {
+      "ut": 9931.271826169332,
+      "vessel": "STS",
+      "paused": true,
+      "meanAltitude": 71918.5002419597,
+      "dynamicPressure": 0.0,
+      "mass": 25816.10546875,
+      "dryMass": 20348.0,
+      "partCount": 22,
+      "thrust": 0.0,
+      "sas": false,
+      "rcs": false,
+      "speedBrakes": null,
+      "controls": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inertiaTensor": [
+        948936.875,
+        -55.21137237548828,
+        90.57672882080078,
+        -55.210418701171875,
+        86861.4375,
+        -3126.74462890625,
+        90.57705688476562,
+        -3126.74560546875,
+        980765.5625
+      ],
+      "momentOfInertia": [
+        948936.9375,
+        86861.453125,
+        980765.6875
+      ],
+      "reactionWheelTorque": [
+        [
+          20000.0,
+          10000.0,
+          20000.0
+        ],
+        [
+          -20000.0,
+          -10000.0,
+          -20000.0
+        ]
+      ],
+      "rootInertiaTensor": [
+        8745.58984375,
+        -0.003961922135204077,
+        -0.028470110148191452,
+        -0.003961917944252491,
+        5145.77392578125,
+        -305.7156677246094,
+        -0.028470255434513092,
+        -305.7156066894531,
+        8567.0791015625
+      ],
+      "rootRotationInVessel": [
+        0.0,
+        0.0,
+        0.0,
+        0.9999999811101329
+      ],
+      "rateFrameTransform": "SpaceCenter.transform_direction(angular_velocity_nonrotating, non_rotating_frame, vessel.reference_frame)"
+    },
+    "postRunVerification": {
+      "method": "Separate bounded read-only kRPC query after settling the checkpoint",
+      "paused": true,
+      "ut": 9931.291826169332,
+      "vessel": "STS",
+      "situation": "VesselSituation.sub_orbital",
+      "meanAltitudeM": 71917.32721442869,
+      "dynamicPressurePa": 0.0,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.001953125,
+      "partCount": 22,
+      "thrustN": 0.0,
+      "sas": false,
+      "rcs": false,
+      "controls": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "kspPid": "69877",
+      "singleKSPProcessCount": 1,
+      "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+    },
+    "axisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "rateTransform": "SpaceCenter.transform_direction(angular_velocity(non_rotating_frame), non_rotating_frame, vessel.reference_frame)",
+    "maximumQuaternionVsNativeTransformDifferenceRadPerSecond": 8.285324270304421e-09,
+    "legacyBodyRatesConvention": {
+      "definition": "probe_sts_preentry_roll.body_rates returns the negative of the quaternion-transformed non-rotating angular velocity, in degrees/s.",
+      "maximumLegacyValuePlusNativeQuaternionRateDegPerSecond": 6.938893903907228e-18,
+      "effect": "This flips signed acceleration and inferred-torque components but does not change absolute roll/yaw ratios."
+    },
+    "measuredAccelerationDegPerSecondSquaredXYZ": {
+      "positiveYaw": [
+        -0.00010262711530642693,
+        -0.06906366537619704,
+        -0.1842232471881864
+      ],
+      "negativeYaw": [
+        -0.0034552856033280475,
+        0.06811866186680961,
+        0.17799131944193716
+      ]
+    },
+    "measuredRollToYawAccelerationRatio": {
+      "positiveYaw": 0.3748911520685966,
+      "negativeYaw": 0.38270777519029914,
+      "meanAbsolute": 0.37879946362944783
+    },
+    "pureBodyYawTorqueInertiaPrediction": 0.03599687102678606,
+    "observedRatioDividedByInertiaPrediction": 10.523121949893225,
+    "rejectedCoRotatingFrameReadback": {
+      "artifact": "Docs/Experiments/STS-Entry-20261009/live-yaw-reference-frame-caveat-20261009.json",
+      "status": "REJECTED_AS_ABSOLUTE_ANGULAR_RATE",
+      "method": "Vessel.angular_velocity(vessel.reference_frame)",
+      "measurementUsedForInference": false,
+      "reason": "The vessel reference frame co-rotates with the vessel; this relative-frame getter cannot serve as the absolute body-rate measurement for this analysis."
+    }
+  },
+  "inferredBodyTorqueFromNativeFrameCrosscheck": {
+    "method": "Apply the full-vessel Euler relation \u03c4=I\u03b1+\u03c9\u00d7I\u03c9 to the native right-handed vessel-frame angular rates. These are inferred net moments, not direct reaction-wheel torque measurements.",
+    "positiveYaw": {
+      "inertiaTimesAngularAccelerationNmXYZ": [
+        -1.9243992757083719,
+        -94.64823578504947,
+        -3149.688912602159
+      ],
+      "gyroscopicCorrectionNmXYZ": [
+        0.1001957530477398,
+        -0.004392174622548567,
+        -0.045843710606724604
+      ],
+      "totalInferredTorqueNmXYZ": [
+        -1.8242035226606321,
+        -94.65262795967202,
+        -3149.7347563127655
+      ],
+      "maximumCapturedTensorAsymmetryKgM2": 0.0009765625,
+      "yawCommand": 0.15000000596046448,
+      "controlInputs": {
+        "controlPitch": [
+          0.0,
+          0.0
+        ],
+        "controlRoll": [
+          0.0,
+          0.0
+        ],
+        "controlYaw": [
+          0.15000000596046448,
+          0.15000000596046448
+        ]
+      },
+      "rollToYawTorqueRatio": 0.030050983743938185
+    },
+    "negativeYaw": {
+      "inertiaTimesAngularAccelerationNmXYZ": [
+        -57.01095162800765,
+        93.55911057199613,
+        3043.059285551096
+      ],
+      "gyroscopicCorrectionNmXYZ": [
+        0.18615381363094868,
+        -0.00577092155518405,
+        -0.06322663350623714
+      ],
+      "totalInferredTorqueNmXYZ": [
+        -56.8247978143767,
+        93.55333965044095,
+        3042.99605891759
+      ],
+      "maximumCapturedTensorAsymmetryKgM2": 0.0009765625,
+      "yawCommand": -0.15000000596046448,
+      "controlInputs": {
+        "controlPitch": [
+          0.0,
+          0.0
+        ],
+        "controlRoll": [
+          0.0,
+          0.0
+        ],
+        "controlYaw": [
+          -0.15000000596046448,
+          -0.15000000596046448
+        ]
+      },
+      "rollToYawTorqueRatio": 0.030743825440154655
+    },
+    "meanAbsoluteRollToYawTorqueRatio": 0.03039740459204642
   },
   "pureBodyYawTorqueCounterfactual": {
     "unitTorqueBodyVectorNm": [
@@ -266,6 +473,6 @@
       "calculation": "Symmetrize the captured tensor at floating-point precision, then solve I * alpha = [0, 0, 1] Nm."
     }
   },
-  "interpretation": "The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of 0.385. The full-vessel inertia predicts 0.036 for a pure body-z yaw torque, about 10.7 times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. Applying the full three-axis Euler relation to the measured slopes implies an input-correlated body-roll torque of about 3.1% of the yaw torque in both pulse directions; this is inferred net torque, not a direct wheel measurement, and its actuator source remains unresolved. The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s\u00b2 equivalents are provided separately. This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification.",
-  "sourceSHA256": "69d2a65d8548096479787df5c0262dd4a579dea56488e28a0ec2a8b883a255db"
+  "interpretation": "The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of 0.385. The full-vessel inertia predicts 0.036 for a pure body-z yaw torque, about 10.7 times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. Applying the full three-axis Euler relation to the measured slopes implies an input-correlated body-roll torque of about 3.1% of the yaw torque in both pulse directions; this is inferred net torque, not a direct wheel measurement, and its actuator source remains unresolved. The independent native vessel-frame pulse gives a ratio of 0.379, with quaternion and SpaceCenter.transform_direction rates agreeing within 8.29e-09 rad/s. The earlier probe's body_rates helper negates the native right-handed vector, so its inferred torque signs are reversed; magnitudes and ratios are unchanged. Using native signs, the inferred roll/yaw moments are about 95/3150 N\u00b7m for the positive pulse and 94/3043 N\u00b7m for the negative pulse. These remain inferred net moments; the actuator source is unresolved. This is not atmospheric coordination or flight qualification.",
+  "sourceSHA256": "0994ce398c8ff16a743c026e7ced039f1520b027a9079eddbc984fa4be85ef71"
 }
