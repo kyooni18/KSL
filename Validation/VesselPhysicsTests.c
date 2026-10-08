@@ -73,6 +73,26 @@ int main(void){
     vessel_physics_observe(&m,&t,&state,&p);
     assert(m.count==2&&m.live_observations==1&&m.has_center_of_mass&&m.has_center_of_mass_root);near(m.center_of_mass_root.y,-2);near(m.center_of_mass.x,state.position.x);
     near(m.authority[0],.1*RAD2DEG);near(m.authority[1],.2*RAD2DEG);near(m.authority[2],.3*RAD2DEG);
+    /* A diagonal authority sample must be isolated from the other control
+       axes. The STS yaw/roll response is coupled, so mixed inputs cannot be
+       attributed to either diagonal channel. */
+    VesselPhysicsModel isolated_response;vessel_physics_init(&isolated_response);
+    VehicleState response_state=state;response_state.ut=0;
+    Telemetry response_t={.ut=0,.mass=1000,.physics_sample_valid=true,.has_controls=true,
+        .has_body_roll_rate=true,.has_body_yaw_rate=true,.control_roll=.3,.control_yaw=.3};
+    vessel_physics_observe(&isolated_response,&response_t,&response_state,&p);
+    response_t.ut=response_state.ut=.1;response_t.body_roll_rate=.03;response_t.body_yaw_rate=.03;
+    vessel_physics_observe(&isolated_response,&response_t,&response_state,&p);
+    near(isolated_response.authority[1],0);near(isolated_response.authority[2],0);
+    response_t.ut=response_state.ut=.2;response_t.control_yaw=0;
+    vessel_physics_observe(&isolated_response,&response_t,&response_state,&p);
+    response_t.ut=response_state.ut=.3;response_t.body_roll_rate=.06;response_t.control_yaw=.01;
+    vessel_physics_observe(&isolated_response,&response_t,&response_state,&p);
+    near(isolated_response.authority[1],.15);near(isolated_response.authority[2],0);
+    assert(isolated_response.authority_confidence[1]>.0&&isolated_response.authority_confidence[2]==0.0);
+    response_t.ut=response_state.ut=.4;response_t.body_roll_rate=.09;
+    vessel_physics_observe(&isolated_response,&response_t,&response_state,&p);
+    near(isolated_response.authority[1],.2775);
     Vector3 a;double confidence;
     assert(vessel_physics_aero(&m,100,.3,10,0,1000,&a,&confidence));near(a.x,.1);near(a.y,.2);near(confidence,.8);
     assert(vessel_physics_aero(&m,110,.3,10,0,1000,&a,&confidence));near(a.x,.11);near(a.y,.22);assert(confidence>0&&confidence<.8);

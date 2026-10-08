@@ -111,6 +111,19 @@ static void physics_diagnostics(VesselPhysicsModel *m,Telemetry *t){
         fmax(0.0,airbrake_specific.x):0.0;
     for(int i=0;i<3;i++){t->physics_authority[i]=m->authority[i];t->physics_authority_confidence[i]=m->authority_confidence[i];}
 }
+static bool physics_control_axis_isolated(const double control[3],int axis){
+    if(!control||axis<0||axis>=3)return false;
+    double selected=fabs(control[axis]);
+    if(!isfinite(selected)||selected<=.15)return false;
+    /* Diagonal authority updates assume one control axis caused the measured
+       rate change. Keep mixed roll/yaw (or pitch) samples out of that estimate;
+       the live airframe has measurable cross-axis response. */
+    double cross_limit=selected*.05;
+    for(int other=0;other<3;other++)if(other!=axis){
+        if(!isfinite(control[other])||fabs(control[other])>cross_limit)return false;
+    }
+    return true;
+}
 void vessel_physics_observe(VesselPhysicsModel *m,Telemetry *t,const VehicleState *s,const PlanetModel *p) {
     if(!isfinite(t->ut)||!isfinite(s->ut)||fabs(s->ut-t->ut)>1e-6||!isfinite(s->mass)||s->mass<=0||!finite_vector(s->position)||!finite_vector(s->velocity))return;
     if(!t->physics_sample_valid){physics_diagnostics(m,t);return;}
@@ -144,7 +157,8 @@ void vessel_physics_observe(VesselPhysicsModel *m,Telemetry *t,const VehicleStat
             m->authority[i]=clampd(fabs(torque[i])/inertia[i]*RAD2DEG,0,10000);
             m->authority_confidence[i]=.25;
         }
-        if(valid[i]&&m->previous_rate_valid[i]&&t->has_controls&&dt>.02&&dt<1&&fabs(m->previous_control[i])>.15){
+        if(valid[i]&&m->previous_rate_valid[i]&&t->has_controls&&dt>.02&&dt<1&&
+           physics_control_axis_isolated(m->previous_control,i)){
             double measured=(rate[i]-m->previous_rate[i])/dt/m->previous_control[i];
             if(isfinite(measured)&&measured>0&&measured<10000){
                 m->authority[i]+=.15*(measured-m->authority[i]);
