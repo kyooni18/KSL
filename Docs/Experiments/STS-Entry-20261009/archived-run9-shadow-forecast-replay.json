@@ -1,0 +1,177 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_ARCHIVED_TELEMETRY_AND_FORECAST_DIAGNOSTIC",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "flightQualification": false,
+    "landingOrRolloutEvidence": false
+  },
+  "purpose": "Compare the archived run 9 published entry forecast with later recorded original-STS telemetry and identify where the prediction diverges.",
+  "provenance": {
+    "vehicleLog": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "plannerLog": "FlightLogs/2026-10-07T21-34-08Z-STS-planner.jsonl",
+    "sessionId": "2026-10-07T21-34-08Z-29000-108766028242",
+    "vehicleModelId": "STS",
+    "forecastOriginUT": 9932.41182616936,
+    "firstForecastModelIdentity": {
+      "plannerSchema": "entry-predictor-v3-shadow-parity",
+      "calibrationAcceptedSamples": 0,
+      "calibrationConfidence": 0,
+      "physicsSampleCount": 0,
+      "physicsAcceptedSamples": 0,
+      "physicsCertifiedConfidence": 0,
+      "physicsCertifiedUncertainty": 1
+    },
+    "explicitBypassEvent": "event=shadow-gate-bypassed; reason=KSP_LANDER_BYPASS_SHADOW_GATE",
+    "followingArmEvent": "event=reentry-continuation-armed; deorbit-planner-skipped=true; shadow-qualified=true",
+    "warning": "The logged shadow-qualified flag follows an explicit bypass event. The archived run is physical telemetry only and cannot establish shadow qualification."
+  },
+  "datasetAudit": {
+    "recordedVehicleSamples": 15116,
+    "publishedForecastOriginsLogged": [9932.41182616936, 9980.63182617041],
+    "pointsPerPublishedForecast": 122,
+    "forecastPointArraysExactlyEqual": true,
+    "rawForecastPointArraysExactlyEqualToPublished": true,
+    "effectiveDistinctForecastTrajectories": 1,
+    "interpretation": "The two forecast origins repeat the same 122-point path; treat this as one forecast trajectory, not two independent validations."
+  },
+  "publishedForecastVsRecordedTrack": [
+    {
+      "elapsedSeconds": 60,
+      "ut": 9992.41182616936,
+      "forecastAltitudeM": 68292.76290283167,
+      "recordedAltitudeM": 68290.0362124148,
+      "altitudeErrorM": 2.726690416879137,
+      "forecastSpeedMps": 2105.7297541195594,
+      "recordedSpeedMps": 2105.672119140353,
+      "speedErrorMps": 0.057634979206341086,
+      "horizontalErrorM": 40.29419204906985
+    },
+    {
+      "elapsedSeconds": 120,
+      "ut": 10052.4118261698,
+      "forecastAltitudeM": 64768.7937644466,
+      "recordedAltitudeM": 64772.99871078381,
+      "altitudeErrorM": -4.204946337209549,
+      "forecastSpeedMps": 2116.46401923698,
+      "recordedSpeedMps": 2115.3459472653367,
+      "speedErrorMps": 1.1180719716435306,
+      "horizontalErrorM": 63.03299049517404
+    },
+    {
+      "elapsedSeconds": 180,
+      "ut": 10112.41182616936,
+      "forecastAltitudeM": 61435.50297389663,
+      "recordedAltitudeM": 61491.69641420627,
+      "altitudeErrorM": -56.19344030963839,
+      "forecastSpeedMps": 2121.095141437421,
+      "recordedSpeedMps": 2118.4156494140866,
+      "speedErrorMps": 2.6794920233342054,
+      "horizontalErrorM": 172.9152938410734
+    },
+    {
+      "elapsedSeconds": 300,
+      "ut": 10232.41182616936,
+      "forecastAltitudeM": 55406.2157152694,
+      "recordedAltitudeM": 55967.947976570635,
+      "altitudeErrorM": -561.7322613012366,
+      "forecastSpeedMps": 2101.2894976851517,
+      "recordedSpeedMps": 2098.5472412132103,
+      "speedErrorMps": 2.742256471941346,
+      "horizontalErrorM": 592.6880568972875
+    },
+    {
+      "elapsedSeconds": 400,
+      "ut": 10332.41182616936,
+      "forecastAltitudeM": 49849.75857006366,
+      "recordedAltitudeM": 51891.43138659357,
+      "altitudeErrorM": -2041.6728165299064,
+      "forecastSpeedMps": 2037.2768651918025,
+      "recordedSpeedMps": 2047.066955572513,
+      "speedErrorMps": -9.79009038071058,
+      "horizontalErrorM": 776.1815933330721
+    },
+    {
+      "elapsedSeconds": 440.3,
+      "ut": 10372.71182616936,
+      "forecastAltitudeM": 46831.502443849975,
+      "recordedAltitudeM": 50001.01561626811,
+      "altitudeErrorM": -3169.5131724181338,
+      "forecastSpeedMps": 1987.5084216010346,
+      "recordedSpeedMps": 2015.087402352458,
+      "speedErrorMps": -27.578980751423387,
+      "horizontalErrorM": 384.3814294678986
+    },
+    {
+      "elapsedSeconds": 500,
+      "ut": 10432.41182616936,
+      "forecastAltitudeM": 40750.207764411534,
+      "recordedAltitudeM": 46518.56548887424,
+      "altitudeErrorM": -5768.357724462709,
+      "forecastSpeedMps": 1863.1735121463273,
+      "recordedSpeedMps": 1948.8500366398243,
+      "speedErrorMps": -85.67652449349703,
+      "horizontalErrorM": 1900.5904279851943
+    },
+    {
+      "elapsedSeconds": 582.94,
+      "ut": 10515.35182616936,
+      "forecastAltitudeM": 28870.118982980533,
+      "recordedAltitudeM": 39805.29688471393,
+      "altitudeErrorM": -10935.177901733394,
+      "forecastSpeedMps": 1396.61748945858,
+      "recordedSpeedMps": 1781.086669958733,
+      "speedErrorMps": -384.469180500153,
+      "horizontalErrorM": 15788.561224047293,
+      "forecastRunwayCoordinatesM": {
+        "alongTrack": -15807.41105308818,
+        "crossTrack": -498.3525592909266
+      },
+      "recordedRunwayCoordinatesM": {
+        "alongTrack": -20.085238071222445,
+        "crossTrack": -301.2733090589004
+      }
+    }
+  ],
+  "recordedLiveControlNearFirstRunwayLongitudePass": {
+    "ut": 10515.3518261821,
+    "altitudeM": 39805.2968835147,
+    "trueAirSpeedMps": 1781.08666992188,
+    "mach": 5.36569136650165,
+    "angleOfAttackDeg": 22.484260559082,
+    "headingDeg": 90.206413269043,
+    "rollDeg": 1.1190185546875,
+    "commandedBankDeg": 0.696105673695066,
+    "commandedAoADeg": 22.687139608448,
+    "runwayAlongTrackM": -20.0852253908815,
+    "runwayCrossTrackM": -301.27330889334,
+    "rangeToSiteM": 301.942085178836,
+    "interpretation": "This is a high-altitude runway-longitude passage, not a runway approach or landing."
+  },
+  "controlAndGeometryComparison": {
+    "recordedRun9AtUT10517_231826": {
+      "altitudeM": 39627.7719278556,
+      "trueAirSpeedMps": 1775.54858398438,
+      "mach": 5.34868639450573,
+      "headingDeg": 91.6291046142578,
+      "rollDeg": 1.5478515625,
+      "commandedBankDeg": 4.98976400048254,
+      "commandedAoADeg": 24.3505574335536,
+      "runwayAlongTrackM": 3111.17616494453,
+      "runwayCrossTrackM": -295.954363981153
+    },
+    "currentCheckpointShadowRepeatAtUT10516_17": {
+      "altitudeM": 37953,
+      "trueAirSpeedMps": 1729.2,
+      "mach": 5.2,
+      "courseToSiteErrorDeg": -97.7,
+      "commandedAndAchievedBankDeg": -40,
+      "commandedAndAchievedAoADeg": 28,
+      "runwayAlongTrackM": 573,
+      "runwayCrossTrackM": 4555
+    },
+    "caveat": "Archived run 9 bypassed shadow admission and predates the current controller/model context. The opposite cross-track and bank states are a diagnostic discrepancy, not a causal proof or authority to change the live bank ramp."
+  },
+  "conclusion": "The archived forecast closely matches the recorded track through 180 seconds, then increasingly predicts an earlier descent and larger speed loss. At the recorded high-altitude runway-longitude passage it is 10.94 km lower, 384 m/s slower, and 15.79 km displaced horizontally. The two forecast records contain one repeated path, and the initial model identity reports no calibration or physics samples. This is a useful model-fidelity warning, not qualified trajectory evidence; the explicit historical shadow bypass bars using this run as shadow-gate evidence."
+}
