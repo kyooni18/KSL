@@ -1,0 +1,19 @@
+{
+  "saveName": "STS-campaign-72km-20261008",
+  "savePath": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+  "saveSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "vessel": "STS",
+  "mass": 25816.10493262963,
+  "dryMass": 20348.0004251,
+  "partCount": 22,
+  "savedUT": 9930.071826169305,
+  "evidence": "Expected checkpoint mass from preserved save dry mass/resources, crosschecked against archived live telemetry; current paused placeholders are not verified physics.",
+  "accountingArtifact": "Docs/Experiments/STS-Entry-20261008/checkpoint-mass-accounting.json",
+  "archivedCrosscheck": {
+    "path": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "ut": 9932.41182616936,
+    "massKg": 25816.10546875,
+    "differenceKg": 0.000536120369361015
+  }
+}

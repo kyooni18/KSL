@@ -1,0 +1,130 @@
+{
+  "observedAt": "2026-10-08T13:15:48.650395+00:00",
+  "observation": "read-only; no scene/control/physics changes",
+  "ut": 9934.591826169404,
+  "vessel": "STS",
+  "paused": true,
+  "meanAltitude": 71723.55951091507,
+  "mass": 22000.0,
+  "dryMass": 20056.283203125,
+  "partCount": 22,
+  "parts": [
+    {
+      "name": "benjee10.shuttle.forwardFuselage",
+      "mass": 1000.0,
+      "dryMass": 234.96258544921875
+    },
+    {
+      "name": "benjee10.shuttle.midFuselage",
+      "mass": 1000.0,
+      "dryMass": 821.3213500976562
+    },
+    {
+      "name": "benjee10.shuttle.ODS",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "B10.NDS",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.aftFuselage",
+      "mass": 1000.0,
+      "dryMass": 0.0
+    },
+    {
+      "name": "SSME",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "SSME",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "SSME",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.rudder",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "radialDrogue",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.bodyFlap",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.deltaWing",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.elevon2",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.elevon1",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.mainGear",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.deltaWing",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.elevon2",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.elevon1",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.mainGear",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    },
+    {
+      "name": "benjee10.shuttle.noseGear",
+      "mass": 1000.0,
+      "dryMass": 1000.0
+    }
+  ],
+  "sas": false,
+  "throttle": 0.0,
+  "speedbrakeGroup": false,
+  "checkpoint": {
+    "path": "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs",
+    "sha256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+  }
+}

@@ -1,0 +1,665 @@
+{
+  "date": "2026-10-08",
+  "mission": "original STS, KSC Runway 09; live landing and rollout remain unachieved",
+  "scenario": "ShuttleSim/scenarios/sts72km-run9-entry-interface.ini",
+  "results": [
+    {
+      "experiment": "current baseline",
+      "runId": "mm304-sts72km-current-diagnostic-baseline-20261008T131452Z-reta26wx",
+      "scope": "unqualified offline downstream-controller diagnostic; no shadow admission",
+      "sourceManifest": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-current-diagnostic-baseline-20261008T131452Z-reta26wx/manifest.json",
+      "provenance": {
+        "modelProfile": "sts-provisional",
+        "plantDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "guidanceModelDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "certifiedPriorDigest": null,
+        "guidanceModelEqualsPlant": true,
+        "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+        "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+        "scenarioDigest": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d",
+        "gitHead": "00f6f76d27d7aba87694cd45f6f874252684bd8b",
+        "gitDirty": true,
+        "gitDirtyDiffDigest": "db9eb1071112ae24b1d4fcc8da2f9f6b6393b03d7a7649511ba5e2c4eaaa0a76",
+        "backendDigest": "fecf618a64b2d71d66815578fa17be0d5e36630f9e3b0f3614fc2089eb100846",
+        "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+        "directControl": false,
+        "plantLiftScale": 1.0,
+        "plantDragScale": 1.0,
+        "engage": "engageReentry"
+      },
+      "physicsSources": {
+        "atmosphere": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "aero_book": "none",
+        "attitude": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/stsn_attitude_identified.ini"
+      },
+      "success": false,
+      "final": {
+        "ut": 10909.031826,
+        "meanAltitude": 7316.376,
+        "trueAirSpeed": 84.988,
+        "verticalSpeed": -19.857,
+        "latitude": 3.444331249,
+        "longitude": -57.478848306,
+        "runwayAlongTrack": 180645.332,
+        "runwayCrossTrack": -36555.11,
+        "situation": "flying",
+        "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+        "simulatorSummary": {},
+        "touchdownGearDown": false,
+        "rolloutValid": false,
+        "rolloutRunwayValid": true,
+        "rolloutBrakesSeen": false,
+        "rolloutAirbrakesSeen": false,
+        "rolloutMaxAbsCrossTrack": 0.0,
+        "rolloutMaxHeadingErrorDeg": 0.0,
+        "rolloutMaxLateralAccelMps2": 0.0,
+        "rolloutStabilityProxyOk": true,
+        "controlsClean": true,
+        "touchdownSpeedOk": false,
+        "touchdownSinkOk": false,
+        "engageRejected": false,
+        "fixedHacSeen": false,
+        "hacCompletedSeen": false,
+        "fixedHacGeometry": {
+          "valid": false,
+          "reason": "no-committed-geometry-record"
+        },
+        "splineSeen": false,
+        "observedPhases": [
+          "Abort",
+          "Entry Interface",
+          "Idle",
+          "MM304 Entry"
+        ],
+        "touchdownRunwayTelemetry": {}
+      },
+      "at25km": {
+        "ut": 10645.731826,
+        "elapsed": 713.32,
+        "altitude": 24989.052,
+        "speed": 799.617,
+        "fpa": -8.73827,
+        "along": 166898.587,
+        "cross": -10758.856,
+        "aoa": 19.2717,
+        "bank": -40.0,
+        "q": 4846.339977
+      },
+      "firstRunwayPassage": {
+        "ut": 10514.231826,
+        "elapsed": 581.82,
+        "altitude": 40033.216,
+        "speed": 1785.697,
+        "fpa": -3.383289,
+        "along": 83.197,
+        "cross": 3865.455,
+        "aoa": 28.0,
+        "bank": -40.0,
+        "q": 1592.088824
+      },
+      "observedCommandLimits": {
+        "maxAoA": 28,
+        "maxAbsBank": 40,
+        "maxThrottle": 0,
+        "speedbrakesSeen": false
+      },
+      "logs": {
+        "guidance-snapshots.jsonl.gz": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-current-diagnostic-baseline-20261008T131452Z-reta26wx/guidance-snapshots.jsonl.gz",
+          "sha256": "f3a00bcc99f92dc3720024ee6b96f170bca24a7446a13e8d41254356b3343f37"
+        },
+        "simulator-telemetry.jsonl.gz": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-current-diagnostic-baseline-20261008T131452Z-reta26wx/simulator-telemetry.jsonl.gz",
+          "sha256": "a42d1853620a19e7f3fe8d975e0fa99136f2431bd5c985ebaf2371efbcd27d65"
+        },
+        "backend.stderr.log": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-current-diagnostic-baseline-20261008T131452Z-reta26wx/backend.stderr.log",
+          "sha256": "f34b59b26d33b9d4c814ba84259da605ed6cff51090b37e6b53685f316aca576"
+        }
+      }
+    },
+    {
+      "experiment": "L/D 0.75",
+      "runId": "mm304-sts72km-ld075-downstream-diagnostic-20261008T124946Z-909ex7uf",
+      "scope": "unqualified offline downstream-controller diagnostic; no shadow admission",
+      "sourceManifest": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-ld075-downstream-diagnostic-20261008T124946Z-909ex7uf/manifest.json",
+      "provenance": {
+        "modelProfile": "sts-provisional",
+        "plantDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "guidanceModelDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "certifiedPriorDigest": null,
+        "guidanceModelEqualsPlant": true,
+        "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/experiments/sts-shadow-entry-ld075.json",
+        "configurationDigest": "08c16bb8107e552bc794bb55d0a4524a40a96358d046ac19fd253cce6e71867f",
+        "scenarioDigest": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d",
+        "gitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "gitDirty": true,
+        "gitDirtyDiffDigest": "db9eb1071112ae24b1d4fcc8da2f9f6b6393b03d7a7649511ba5e2c4eaaa0a76",
+        "backendDigest": "fecf618a64b2d71d66815578fa17be0d5e36630f9e3b0f3614fc2089eb100846",
+        "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+        "directControl": false,
+        "plantLiftScale": 1.0,
+        "plantDragScale": 1.0,
+        "engage": "engageReentry"
+      },
+      "physicsSources": {
+        "atmosphere": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "aero_book": "none",
+        "attitude": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/reference-model/stsn_attitude_identified.ini"
+      },
+      "success": false,
+      "final": {
+        "ut": 10908.631826,
+        "meanAltitude": 7331.659,
+        "trueAirSpeed": 84.973,
+        "verticalSpeed": -20.29,
+        "latitude": 3.445347808,
+        "longitude": -57.475469643,
+        "runwayAlongTrack": 180680.717,
+        "runwayCrossTrack": -36565.746,
+        "situation": "flying",
+        "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+        "simulatorSummary": {},
+        "touchdownGearDown": false,
+        "rolloutValid": false,
+        "rolloutRunwayValid": true,
+        "rolloutBrakesSeen": false,
+        "rolloutAirbrakesSeen": false,
+        "rolloutMaxAbsCrossTrack": 0.0,
+        "rolloutMaxHeadingErrorDeg": 0.0,
+        "rolloutMaxLateralAccelMps2": 0.0,
+        "rolloutStabilityProxyOk": true,
+        "controlsClean": true,
+        "touchdownSpeedOk": false,
+        "touchdownSinkOk": false,
+        "engageRejected": false,
+        "fixedHacSeen": false,
+        "hacCompletedSeen": false,
+        "fixedHacGeometry": {
+          "valid": false,
+          "reason": "no-committed-geometry-record"
+        },
+        "splineSeen": false,
+        "observedPhases": [
+          "Abort",
+          "Entry Interface",
+          "Idle",
+          "MM304 Entry"
+        ],
+        "touchdownRunwayTelemetry": {}
+      },
+      "at25km": {
+        "ut": 10645.831826,
+        "elapsed": 713.42,
+        "altitude": 24989.756,
+        "speed": 798.676,
+        "fpa": -8.74928,
+        "along": 166950.072,
+        "cross": -10791.689,
+        "aoa": 19.4149,
+        "bank": -40.0,
+        "q": 4834.304213
+      },
+      "firstRunwayPassage": {
+        "ut": 10514.231826,
+        "elapsed": 581.82,
+        "altitude": 40033.218,
+        "speed": 1785.697,
+        "fpa": -3.383289,
+        "along": 83.201,
+        "cross": 3865.454,
+        "aoa": 28.0,
+        "bank": -40.0,
+        "q": 1592.088461
+      },
+      "observedCommandLimits": {
+        "maxAoA": 28,
+        "maxAbsBank": 40,
+        "maxThrottle": 0,
+        "speedbrakesSeen": false
+      },
+      "logs": {
+        "guidance-snapshots.jsonl.gz": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-ld075-downstream-diagnostic-20261008T124946Z-909ex7uf/guidance-snapshots.jsonl.gz",
+          "sha256": "4d7a2d41d803f9662446eccd25e66d368519f78bb22ada31cf2cb34094a5576a"
+        },
+        "simulator-telemetry.jsonl.gz": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-ld075-downstream-diagnostic-20261008T124946Z-909ex7uf/simulator-telemetry.jsonl.gz",
+          "sha256": "dfd9fd59bd0d4a4fb120335b7ee31404873676f0bda7a1e7eb05305f5fb6cbe0"
+        },
+        "backend.stderr.log": {
+          "path": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts72km-ld075-downstream-diagnostic-20261008T124946Z-909ex7uf/backend.stderr.log",
+          "sha256": "f34b59b26d33b9d4c814ba84259da605ed6cff51090b37e6b53685f316aca576"
+        }
+      }
+    },
+    {
+      "experiment": "drag-altitude feedback",
+      "runId": "mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt",
+      "scope": "unqualified offline downstream-controller diagnostic; no shadow admission",
+      "sourceManifest": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt/manifest.json",
+      "provenance": {
+        "modelProfile": "sts-provisional",
+        "plantDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "guidanceModelDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "certifiedPriorDigest": null,
+        "guidanceModelEqualsPlant": true,
+        "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+        "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+        "scenarioDigest": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d",
+        "gitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "gitDirty": true,
+        "gitDirtyDiffDigest": "752dca0c18a6a0f5e6d7a6c4424ec31676e089175acb516a04b824b73c82153a",
+        "backendDigest": "23ae80ed50e24e95537f619f5ebf52b8a469022fd09ec21b145151721b640cc9",
+        "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+        "directControl": false,
+        "plantLiftScale": 1.0,
+        "plantDragScale": 1.0,
+        "engage": "engageReentry"
+      },
+      "physicsSources": {
+        "atmosphere": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "aero_book": "none",
+        "attitude": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/stsn_attitude_identified.ini"
+      },
+      "success": false,
+      "final": {
+        "ut": 10895.931826,
+        "meanAltitude": 7308.078,
+        "trueAirSpeed": 84.938,
+        "verticalSpeed": -19.843,
+        "latitude": 3.581398175,
+        "longitude": -60.00558639,
+        "runwayAlongTrack": 154184.396,
+        "runwayCrossTrack": -37996.654,
+        "situation": "flying",
+        "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+        "simulatorSummary": {},
+        "touchdownGearDown": false,
+        "rolloutValid": false,
+        "rolloutRunwayValid": true,
+        "rolloutBrakesSeen": false,
+        "rolloutAirbrakesSeen": false,
+        "rolloutMaxAbsCrossTrack": 0.0,
+        "rolloutMaxHeadingErrorDeg": 0.0,
+        "rolloutMaxLateralAccelMps2": 0.0,
+        "rolloutStabilityProxyOk": true,
+        "controlsClean": true,
+        "touchdownSpeedOk": false,
+        "touchdownSinkOk": false,
+        "engageRejected": false,
+        "fixedHacSeen": false,
+        "hacCompletedSeen": false,
+        "fixedHacGeometry": {
+          "valid": false,
+          "reason": "no-committed-geometry-record"
+        },
+        "splineSeen": false,
+        "observedPhases": [
+          "Abort",
+          "Entry Interface",
+          "Idle",
+          "MM304 Entry"
+        ],
+        "touchdownRunwayTelemetry": {}
+      },
+      "at25km": {
+        "ut": 10634.131826,
+        "elapsed": 701.72,
+        "altitude": 24993.115,
+        "speed": 778.748,
+        "fpa": -8.802487,
+        "along": 142293.803,
+        "cross": -11204.308,
+        "aoa": 18.4655,
+        "bank": -40.0,
+        "q": 4593.141479
+      },
+      "firstRunwayPassage": {
+        "ut": 10516.131826,
+        "elapsed": 583.72,
+        "altitude": 38343.328,
+        "speed": 1730.791,
+        "fpa": -3.779419,
+        "along": 61.419,
+        "cross": 7131.112,
+        "aoa": 28.0,
+        "bank": -40.0,
+        "q": 1935.095392
+      },
+      "observedCommandLimits": {
+        "maxAoA": 28,
+        "maxAbsBank": 40,
+        "maxThrottle": 0,
+        "speedbrakesSeen": false
+      },
+      "logs": {
+        "guidance-snapshots.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt/guidance-snapshots.jsonl.gz",
+          "sha256": "e3d1f10913c77dd9a1d048f023df2c6613b374b5c6ba1efaa310fb7c365698de"
+        },
+        "simulator-telemetry.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt/simulator-telemetry.jsonl.gz",
+          "sha256": "d0e37240e219bd1d88d919aab63e4080a28691c817584dca33c6c9e993c7f94f"
+        },
+        "backend.stderr.log": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt/backend.stderr.log",
+          "sha256": "16b7e143d4c93a64f1abd1f3d84ed8af5d80dca5be6618d15a38df1e997aecf1"
+        }
+      },
+      "sourcePatch": {
+        "path": "drag-altitude-feedback.source.patch.gz",
+        "uncompressedSHA256": "705b4a7ecfb1ac98653e47d9faaa450a38b403693d6777b482149aab00aab6d6",
+        "baseGitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "note": "Apply to the exact baseGitHead in provenance; includes the baseline 50 Hz terminal propagation changes."
+      },
+      "retainedRunPath": "ShuttleSim/runs/mm304-sts72km-drag-altitude-feedback-20261008T125940Z-0aps1uzt"
+    },
+    {
+      "experiment": "boost lift margin",
+      "runId": "mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4",
+      "scope": "unqualified offline downstream-controller diagnostic; no shadow admission",
+      "sourceManifest": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4/manifest.json",
+      "provenance": {
+        "modelProfile": "sts-provisional",
+        "plantDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "guidanceModelDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "certifiedPriorDigest": null,
+        "guidanceModelEqualsPlant": true,
+        "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+        "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+        "scenarioDigest": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d",
+        "gitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "gitDirty": true,
+        "gitDirtyDiffDigest": "e7509ef059c2e70fa35608f04af00fdfc2451ff960ec6e132aaa0cfa01047532",
+        "backendDigest": "3cf47da053999ae9fb0f41d5830313c8fb744a37ae43ade2c558a125ce48d322",
+        "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+        "directControl": false,
+        "plantLiftScale": 1.0,
+        "plantDragScale": 1.0,
+        "engage": "engageReentry"
+      },
+      "physicsSources": {
+        "atmosphere": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "aero_book": "none",
+        "attitude": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/stsn_attitude_identified.ini"
+      },
+      "success": false,
+      "final": {
+        "ut": 10903.231826,
+        "meanAltitude": 7320.674,
+        "trueAirSpeed": 84.987,
+        "verticalSpeed": -20.01,
+        "latitude": 3.207162054,
+        "longitude": -57.648810951,
+        "runwayAlongTrack": 178864.779,
+        "runwayCrossTrack": -34071.926,
+        "situation": "flying",
+        "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+        "simulatorSummary": {},
+        "touchdownGearDown": false,
+        "rolloutValid": false,
+        "rolloutRunwayValid": true,
+        "rolloutBrakesSeen": false,
+        "rolloutAirbrakesSeen": false,
+        "rolloutMaxAbsCrossTrack": 0.0,
+        "rolloutMaxHeadingErrorDeg": 0.0,
+        "rolloutMaxLateralAccelMps2": 0.0,
+        "rolloutStabilityProxyOk": true,
+        "controlsClean": true,
+        "touchdownSpeedOk": false,
+        "touchdownSinkOk": false,
+        "engageRejected": false,
+        "fixedHacSeen": false,
+        "hacCompletedSeen": false,
+        "fixedHacGeometry": {
+          "valid": false,
+          "reason": "no-committed-geometry-record"
+        },
+        "splineSeen": false,
+        "observedPhases": [
+          "Abort",
+          "Entry Interface",
+          "Idle",
+          "MM304 Entry"
+        ],
+        "touchdownRunwayTelemetry": {}
+      },
+      "at25km": {
+        "ut": 10635.431826,
+        "elapsed": 703.02,
+        "altitude": 24998.182,
+        "speed": 837.261,
+        "fpa": -6.844514,
+        "along": 161119.816,
+        "cross": -7277.577,
+        "aoa": 19.3698,
+        "bank": -40.0,
+        "q": 5304.204896
+      },
+      "firstRunwayPassage": {
+        "ut": 10513.931826,
+        "elapsed": 581.52,
+        "altitude": 39781.378,
+        "speed": 1801.927,
+        "fpa": -3.562748,
+        "along": 117.277,
+        "cross": 3730.028,
+        "aoa": 22.9209,
+        "bank": -40.0,
+        "q": 1683.527773
+      },
+      "observedCommandLimits": {
+        "maxAoA": 25.4470795035443,
+        "maxAbsBank": 40,
+        "maxThrottle": 0,
+        "speedbrakesSeen": false
+      },
+      "logs": {
+        "guidance-snapshots.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4/guidance-snapshots.jsonl.gz",
+          "sha256": "347a2ceb5ecbc48a47868c9478ab2eb28dcc8affc37c72d3c63a72bfc30e02d6"
+        },
+        "simulator-telemetry.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4/simulator-telemetry.jsonl.gz",
+          "sha256": "b8fbd421ef080dc82174862fbc3b099deaac5d49be5a04f7b4f5e311a33b382b"
+        },
+        "backend.stderr.log": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4/backend.stderr.log",
+          "sha256": "15be05479bd7bc0bb97c61a3af83816871c4302216edb476495f5f34af2426f7"
+        }
+      },
+      "sourcePatch": {
+        "path": "boost-lift-margin.source.patch.gz",
+        "uncompressedSHA256": "e4b0f0d2989440105fc0bc2a215283d29b94aa7bfdb6ba6ce9b8a2edf214ed01",
+        "baseGitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "note": "Apply to the exact baseGitHead in provenance; includes the baseline 50 Hz terminal propagation changes."
+      },
+      "retainedRunPath": "ShuttleSim/runs/mm304-sts72km-boost-lift-margin-20261008T130247Z-1zvtzyb4"
+    },
+    {
+      "experiment": "coupled feedback",
+      "runId": "mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi",
+      "scope": "unqualified offline downstream-controller diagnostic; no shadow admission",
+      "sourceManifest": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi/manifest.json",
+      "provenance": {
+        "modelProfile": "sts-provisional",
+        "plantDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "guidanceModelDigests": {
+          "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+          "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+          "aero_book": null,
+          "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+        },
+        "certifiedPriorDigest": null,
+        "guidanceModelEqualsPlant": true,
+        "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+        "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+        "scenarioDigest": "6c6fd2ddf337b4022c5ca18fc08e6b7fe4bcb316556aba638a9fa5c705ee930d",
+        "gitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "gitDirty": true,
+        "gitDirtyDiffDigest": "71ce95ec8ecc47c99655a3d86ba6d5c1a0acf24b3ad09527d945ed6a7602caba",
+        "backendDigest": "fbdb5673435f09a77944f517e148d1c05cdcac58728ca143f9d1afd70da59234",
+        "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+        "directControl": false,
+        "plantLiftScale": 1.0,
+        "plantDragScale": 1.0,
+        "engage": "engageReentry"
+      },
+      "physicsSources": {
+        "atmosphere": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/sts_aero_provisional.csv",
+        "aero_book": "none",
+        "attitude": "/private/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/reference-model/stsn_attitude_identified.ini"
+      },
+      "success": false,
+      "final": {
+        "ut": 10892.831826,
+        "meanAltitude": 7176.498,
+        "trueAirSpeed": 84.965,
+        "verticalSpeed": -20.733,
+        "latitude": 3.207035344,
+        "longitude": -59.632722638,
+        "runwayAlongTrack": 158088.349,
+        "runwayCrossTrack": -34075.483,
+        "situation": "flying",
+        "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+        "simulatorSummary": {},
+        "touchdownGearDown": false,
+        "rolloutValid": false,
+        "rolloutRunwayValid": true,
+        "rolloutBrakesSeen": false,
+        "rolloutAirbrakesSeen": false,
+        "rolloutMaxAbsCrossTrack": 0.0,
+        "rolloutMaxHeadingErrorDeg": 0.0,
+        "rolloutMaxLateralAccelMps2": 0.0,
+        "rolloutStabilityProxyOk": true,
+        "controlsClean": true,
+        "touchdownSpeedOk": false,
+        "touchdownSinkOk": false,
+        "engageRejected": false,
+        "fixedHacSeen": false,
+        "hacCompletedSeen": false,
+        "fixedHacGeometry": {
+          "valid": false,
+          "reason": "no-committed-geometry-record"
+        },
+        "splineSeen": false,
+        "observedPhases": [
+          "Abort",
+          "Entry Interface",
+          "Idle",
+          "MM304 Entry"
+        ],
+        "touchdownRunwayTelemetry": {}
+      },
+      "at25km": {
+        "ut": 10622.731826,
+        "elapsed": 690.32,
+        "altitude": 24994.535,
+        "speed": 856.152,
+        "fpa": -6.978794,
+        "along": 140071.039,
+        "cross": -6264.394,
+        "aoa": 20.819,
+        "bank": -40.0,
+        "q": 5550.091725
+      },
+      "firstRunwayPassage": {
+        "ut": 10514.631826,
+        "elapsed": 582.22,
+        "altitude": 38334.273,
+        "speed": 1761.741,
+        "fpa": -3.793442,
+        "along": 15.152,
+        "cross": 7122.986,
+        "aoa": 22.5713,
+        "bank": -40.0,
+        "q": 2007.74812
+      },
+      "observedCommandLimits": {
+        "maxAoA": 25.4458276430917,
+        "maxAbsBank": 40,
+        "maxThrottle": 0,
+        "speedbrakesSeen": false
+      },
+      "logs": {
+        "guidance-snapshots.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi/guidance-snapshots.jsonl.gz",
+          "sha256": "c6793dfe4c01eb369e8779595299c66ff69c70f00139c55bb7a9fb8f13d3bd65"
+        },
+        "simulator-telemetry.jsonl.gz": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi/simulator-telemetry.jsonl.gz",
+          "sha256": "f0b4e61572d9e69fec32d109e68c43ca06b6ebc29628dba42bb7f1b9c3d1e67d"
+        },
+        "backend.stderr.log": {
+          "path": "/tmp/KSPShuttleLander-drag-altitude-20261008/ShuttleSim/runs/mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi/backend.stderr.log",
+          "sha256": "92a1bebc9ee524ef42b7c448b030d1d5aecaa04b23906a0424b07a3cea453347"
+        }
+      },
+      "sourcePatch": {
+        "path": "coupled-drag-feedback.source.patch.gz",
+        "uncompressedSHA256": "1635a1027e61257160a5b29753aaa5977bc51e40b60aa370ab6d8b0847447afe",
+        "baseGitHead": "2161d794e628fe5ab71a422b4ebb6046a042c0b4",
+        "note": "Apply to the exact baseGitHead in provenance; includes the baseline 50 Hz terminal propagation changes."
+      },
+      "retainedRunPath": "ShuttleSim/runs/mm304-sts72km-coupled-drag-feedback-20261008T130606Z-56_9fidi"
+    }
+  ],
+  "conclusions": [
+    "L/D scalar correction does not repair the downstream controller trajectory.",
+    "Drag-altitude feedback advances atmospheric deceleration but still fails before TAEM.",
+    "Restricting AoA boost by vertical-lift demand alone or coupled to feedback does not yield MM305 acquisition.",
+    "Fixed low-AoA controls expose descent timing sensitivity but are outside the measured STS polar and current thermal schedule; they do not authorize a live flight.",
+    "Paused load-state mass is not valid unpacked physics evidence."
+  ]
+}
