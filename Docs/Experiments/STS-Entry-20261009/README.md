@@ -16,6 +16,8 @@ At the captured state, the force and torque parity checks against live telemetry
 
 This validates the API as a way to query counterfactual wrench values for the original vessel while preserving explicit input and checkpoint provenance. The retained grid is still only an upper-atmosphere slice at one position/UT (62.8 km, about 3.7–47.1 Pa). It is not a measured flight envelope or a lower-atmosphere certification set. A useful envelope needs additional altitude/UT slices and uncertainty checks against later live measurements; every simulated sample must remain labeled as unqualified diagnostic data.
 
+[`live-aero-measured-crosscheck.json`](live-aero-measured-crosscheck.json) adds a matched-state check against 96 earlier quality-eligible original-STS live samples at Mach 7.05–7.16, q 40–55 Pa, AoA 22–26°, sideslip under 0.1°, bank below 0.08°, with gear, wheel brakes, and action-group speedbrakes stowed. At the median recorded state (Mach 7.0926, q 47.38 Pa, AoA 25.2395°), the read-only API simulation produced drag/q of 98.39 m² versus a live-sample median of 89.11 m² (+10.4%), and lift/q of 38.04 m² versus 38.15 m² (−0.3%). The 96 measured samples span multiple seconds and altitude, so this is a consistency check rather than exact single-frame validation. The KSP vessel, checkpoint, and observation database were unchanged, and the wrench result remains unqualified diagnostic data.
+
 ## Live campaign
 
 The 2026-10-09 wrench-grid probe connected to a paused original STS at UT 10086.871826 and mean altitude 62,836 m, not the campaign checkpoint. The vessel remained unchanged. Independent landing attempts must still reload `STS-campaign-72km-20261008`, retain the normal shadow gate, and verify touchdown and rollout before reporting success.

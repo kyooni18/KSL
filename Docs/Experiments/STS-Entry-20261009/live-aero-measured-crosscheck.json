@@ -1,0 +1,254 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_DIAGNOSTIC_CROSSCHECK",
+  "qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "flightQualification": false,
+    "landingOrRolloutEvidence": false
+  },
+  "purpose": "Check a same-state kRPC aerodynamic wrench simulation against prior original-STS live samples at closely matched Mach, AoA, sideslip, bank, altitude, and dynamic pressure.",
+  "provenance": {
+    "gitHeadAtCapture": "f83f378e9f10f616820083a66677f2b0087c1858",
+    "vehicleModelId": "STS",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "apiInputsFrom": "Previously captured measured-state grid input at 62.8 km; only Mach/AoA/sideslip/bank are changed to the median matching live sample.",
+    "gridInput": "Docs/Experiments/STS-Entry-20261009/live-aerodynamic-wrench-grid.json",
+    "gridInputSHA256": "157dec1d7d5b774639c836d8dbd3ba2017dcd0321dad1f07582b04f8ec6a71f9",
+    "physicsObservationStore": "Runtime/Physics/observations.sqlite3",
+    "physicsObservationStoreSHA256BeforeAndAfter": "542b61cd4efd96daae8fbad3ba740eaf454a710bf8d3f777e0a4071a5da091a1",
+    "physicsContext": "sha256:600bfa014c6cd51cf0d22f98edaeed5e230750c54335e094d663d3c8b59a4bd9",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUnchanged": true,
+    "checkpointUsedForInputState": false,
+    "currentAdmissionAttemptUsedAsMeasuredInput": false
+  },
+  "currentKspPreflight": {
+    "state": {
+      "ut": 9930.411826169313,
+      "paused": true,
+      "vessel": "STS",
+      "situation": "VesselSituation.sub_orbital",
+      "altitude_m": 71968.93744152249,
+      "mach": 0.0,
+      "true_air_speed_mps": 2092.137939453125,
+      "speed_of_sound_mps": 0.0,
+      "dynamic_pressure_pa": 0.0,
+      "mass_kg": 22000.0,
+      "part_count": 22,
+      "position_m": [
+        157355.05513346352,
+        70.13035032394251,
+        653285.2628002315
+      ],
+      "velocity_mps": [
+        -2237.374897306013,
+        0.04839622747598046,
+        478.61355608441534
+      ],
+      "rotation_xyzw": [
+        0.7022685020103301,
+        -0.7022858663717079,
+        -0.08246687437925587,
+        0.08253937252996507
+      ],
+      "angular_velocity_rad_s": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controls": {
+        "pitch": 0.0,
+        "roll": 0.0,
+        "yaw": 0.0,
+        "throttle": 0.0
+      },
+      "sas": false,
+      "rcs": true,
+      "wheel_brakes": false,
+      "thrust_n": 0.0,
+      "angle_of_attack_deg": 1.4636183977127075,
+      "sideslip_deg": 0.0006124198553152382,
+      "roll_deg": 0.003082275390625
+    },
+    "airbrakeActionGroup": 1,
+    "airbrakeActionGroupOn": false
+  },
+  "matchedLiveInput": {
+    "mach": 7.092597670296049,
+    "angleOfAttackDeg": 25.239543914794922,
+    "sideslipDeg": 0.025879002176225185,
+    "bankDeg": 0.0620574951171875,
+    "estimatedDynamicPressurePa": 46.955786896825394,
+    "speedOfSoundMpsFromMeasuredInput": 298.64532470703125,
+    "positionM": [
+      -198047.7645967414,
+      67.38600302330633,
+      632557.267055171
+    ],
+    "universalTime": 10086.871826172728,
+    "angularVelocityRadS": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "note": "The simulator query is a counterfactual static wrench; zero angular velocity is used to match the grid convention."
+  },
+  "priorLiveSamples": {
+    "sampleCount": 96,
+    "sessionIds": [
+      "native-24704-1791400453-515517000",
+      "native-29000-1791408848-554058000"
+    ],
+    "controlProfiles": [
+      "entry"
+    ],
+    "conditions": {
+      "mach": [
+        7.079833697951144,
+        7.108692506407023
+      ],
+      "dynamicPressurePa": [
+        40.02325439453125,
+        54.81546401977539
+      ],
+      "angleOfAttackDeg": [
+        25.22199821472168,
+        25.253368377685547
+      ],
+      "sideslipDeg": [
+        0.02136055752635002,
+        0.030641647055745125
+      ],
+      "bankDeg": [
+        0.0511474609375,
+        0.073486328125
+      ],
+      "altitudeM": [
+        62131.80214373185,
+        63484.40129618242
+      ],
+      "massKg": [
+        25815.9375,
+        25815.962890625
+      ],
+      "gearStates": [
+        0
+      ],
+      "brakesStates": [
+        0
+      ],
+      "airbrakeStates": [
+        0
+      ],
+      "rcsStates": [
+        -1
+      ]
+    },
+    "measuredForcePerDynamicPressure": {
+      "dragM2": {
+        "median": 89.10778500444015,
+        "q25": 87.6933725700771,
+        "q75": 90.79360323134978
+      },
+      "liftM2": {
+        "median": 38.14887915389018,
+        "q25": 38.11054632241748,
+        "q75": 38.18372674423439
+      },
+      "liftToDrag": {
+        "median": 0.42780440651752805,
+        "q25": 0.42027035708053023,
+        "q75": 0.4351689740411358
+      },
+      "effectiveBallisticCoefficientKgM2": {
+        "median": 289.7160064748026,
+        "q25": 284.33674608884115,
+        "q75": 294.3887512608898
+      }
+    },
+    "warning": "These are earlier quality-eligible live telemetry observations. They are not samples from the current admission attempt and do not certify a flight envelope."
+  },
+  "simulatedWrench": {
+    "forceN_nonrotating": [
+      4315.531084237722,
+      1.0811024402416933,
+      -2431.5541022959833
+    ],
+    "torqueNm_nonrotating": [
+      -0.2637833004563589,
+      -1202.2584367662412,
+      1.3239680387239183
+    ],
+    "dragN": 4620.194068260128,
+    "liftMagnitudeN": 1786.077218882446,
+    "dragPerDynamicPressureM2": 98.39456164182592,
+    "liftPerDynamicPressureM2": 38.03742492500322,
+    "liftToDrag": 0.38658056187562845,
+    "effectiveBallisticCoefficientKgM2": 262.37168838253217,
+    "pressureLimitPa": 45000.0
+  },
+  "errors": [],
+  "comparison": {
+    "dragPerQRatioSimToLiveMedian": 1.1042195879621857,
+    "liftPerQRatioSimToLiveMedian": 0.9970784402750771,
+    "liftToDragDifference": -0.0412238446418996,
+    "note": "Comparison is descriptive: the matching telemetry spans a measured-state envelope rather than an identical single timestamp. The simulated wrench remains unqualified."
+  },
+  "liveStateAfter": {
+    "ut": 9930.411826169313,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71968.93744152249,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.137939453125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 22000.0,
+    "part_count": 22,
+    "position_m": [
+      157355.05513346352,
+      70.13035032394251,
+      653285.2628002315
+    ],
+    "velocity_mps": [
+      -2237.374897306013,
+      0.04839622747598046,
+      478.61355608441534
+    ],
+    "rotation_xyzw": [
+      0.7022685020103301,
+      -0.7022858663717079,
+      -0.08246687437925587,
+      0.08253937252996507
+    ],
+    "angular_velocity_rad_s": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": true,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.4636183977127075,
+    "sideslip_deg": 0.0006124198553152382,
+    "roll_deg": 0.003082275390625
+  },
+  "airbrakeActionGroupOnAfter": false,
+  "liveStateUnchanged": true,
+  "physicsObservationStoreUnchanged": true,
+  "checkpointUnchanged": true,
+  "physicsObservationStoreSHA256After": "542b61cd4efd96daae8fbad3ba740eaf454a710bf8d3f777e0a4071a5da091a1",
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "sourceSHA256": "6da981362616fd07b72d738d72267086c2075cda90149d08d2e9584eb40a625c"
+}
