@@ -1,0 +1,84 @@
+{
+  "vessel": "STS",
+  "ut": 9931.271826169332,
+  "mass": 25816.10546875,
+  "partCount": 22,
+  "paused": true,
+  "actualThrust": 0.0,
+  "altitude": 71918.50154832948,
+  "SAS": false,
+  "RCS": false,
+  "properties": {
+    "available_torque": [
+      [
+        20000.0,
+        10000.0,
+        20000.0
+      ],
+      [
+        -20000.0,
+        -10000.0,
+        -20000.0
+      ]
+    ],
+    "available_reaction_wheel_torque": [
+      [
+        20000.0,
+        10000.0,
+        20000.0
+      ],
+      [
+        -20000.0,
+        -10000.0,
+        -20000.0
+      ]
+    ],
+    "available_control_surface_torque": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "available_rcs_torque": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "available_engine_torque": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "moment_of_inertia": [
+      948935.625,
+      86861.3828125,
+      980764.3125
+    ]
+  },
+  "nominalAngularAccelerationDegS2": [
+    1.20757990328548,
+    6.596231565500363,
+    1.1683903825381559
+  ],
+  "interpretation": "Paused coherent original STS reports reaction-wheel torque on all axes. Nominal torque/inertia acceleration is not demonstrated tracking or coordinated hypersonic bank authority. Existing q ramp is preserved. C-Nano telemetry already supplies torque/inertia via client/telemetry.inc; entry bank envelope separately applies STS-N-derived q scaling."
+}

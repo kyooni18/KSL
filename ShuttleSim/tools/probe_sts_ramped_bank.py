@@ -14,8 +14,11 @@ from probe_sts_low_alpha_uncertainty import snapshot
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--incidence-transitions', action='store_true',
+    transitions = parser.add_mutually_exclusive_group()
+    transitions.add_argument('--incidence-transitions', action='store_true',
                         help='Probe 18 to 28 deg incidence transitions at 50/45/40 km')
+    transitions.add_argument('--reverse-incidence-transitions', action='store_true',
+                             help='Probe 28 to 18 deg incidence transitions at 50/45/40 km')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     out = args.output.resolve()
@@ -28,7 +31,11 @@ def main():
               Path(__file__).resolve(),
               Path(__file__).resolve().with_name('probe_sts_low_alpha_uncertainty.py')]
     results = []
-    cases = [(18, h) for h in [50000, 45000, 40000]] if args.incidence_transitions else [(18, None), (28, None)]
+    transition_target = 18 if args.reverse_incidence_transitions else 28
+    cases = ([(28 if args.reverse_incidence_transitions else 18, h)
+              for h in [50000, 45000, 40000]]
+             if args.incidence_transitions or args.reverse_incidence_transitions
+             else [(18, None), (28, None)])
     for alpha, transition in cases:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as telemetry, \
                 socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as commands:
@@ -37,7 +44,7 @@ def main():
             command_port = commands.getsockname()[1]
             commands.close()
             telemetry.settimeout(5)
-            label = f'aoa{alpha}-ramped-bank70' if transition is None else f'aoa18-to28-at{transition}-ramped-bank70'
+            label = f'aoa{alpha}-ramped-bank70' if transition is None else f'aoa{alpha}-to{transition_target}-at{transition}-ramped-bank70'
             raw = out / f'{label}.jsonl'
             cmd = [str(inputs[0]), '--scenario', str(inputs[1]),
                    '--atmosphere', str(inputs[2]), '--aero', str(inputs[3]),
@@ -47,6 +54,7 @@ def main():
                    '--fixed-aoa', str(alpha), '--fixed-bank', '0',
                    '--max-sim-time', '800', '--record', str(raw), '--quiet']
             result = dict(aoa=alpha, incidenceTransitionAltitude=transition,
+                          incidenceTransitionTarget=transition_target if transition is not None else None,
                           bankMaximum=70, command=cmd, peakQ=0, peakG=0)
             process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             # The initial lockstep frame is at t=0 and needs an acknowledgment.
@@ -85,7 +93,7 @@ def main():
                         rate = 0
                     bank = max(0, min(authority, next_bank))
                     # Commands use the plant protocol; no admission/guidance API.
-                    incidence = 28 if transition is not None and state['h'] <= transition else alpha
+                    incidence = transition_target if transition is not None and state['h'] <= transition else alpha
                     payload = dict(aoa_deg=incidence, bank_deg=bank, throttle=0,
                                    airbrakes=False, step=True)
                     telemetry.sendto(json.dumps(payload, separators=(',', ':')).encode(),

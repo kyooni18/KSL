@@ -1,0 +1,109 @@
+{
+  "scope": "Partial simulator physical/closure diagnostic. Uses simulator heading as course for these zero-sideslip, windless probes. Does not evaluate energy, stall, control authority, executive state, or native qualification. Finite cases are not a reachability proof.",
+  "configuration": "Configuration/sts.json",
+  "configuration_sha256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+  "results": [
+    {
+      "log": "ShuttleSim/runs/sts-reverse-incidence-20261008/aoa28-to18-at40000-ramped-bank70.jsonl.gz",
+      "sha256": "1f3220198aa3f5eccb3e4f02d3224b28ee8efe93e743625a1a47c279064281d3",
+      "telemetry_count": 8002,
+      "physical_window_frames": 13,
+      "in_range_window_frames": 13,
+      "closing_in_range_frames": 0,
+      "best_closure_in_range": {
+        "ut": 10568.931826,
+        "altitude_m": 22010.663,
+        "mach": 2.789048,
+        "range_m": 67234.59202041382,
+        "along_m": 57734.95,
+        "cross_m": 34508.614,
+        "heading_deg": 121.628,
+        "bearing_deg": 300.7705230124383,
+        "course_error_deg": 179.1425230124383,
+        "closure_margin_deg": -89.14252301243829,
+        "range_margin_m": 29265.407979586176
+      },
+      "first_physical_window": {
+        "ut": 10567.731826,
+        "altitude_m": 22234.135,
+        "mach": 2.849848,
+        "range_m": 66279.41510570757,
+        "along_m": 56915.805,
+        "cross_m": 34015.074,
+        "heading_deg": 120.5761,
+        "bearing_deg": 300.77027292254786,
+        "course_error_deg": -179.80582707745216,
+        "closure_margin_deg": -89.80582707745216,
+        "range_margin_m": 30220.584894292435
+      }
+    },
+    {
+      "log": "ShuttleSim/runs/sts-reverse-incidence-20261008/aoa28-to18-at45000-ramped-bank70.jsonl.gz",
+      "sha256": "bc00f532690bbe21adf60544864b5e18b1865ebac0a5bd3edb5c3e3bb65b235d",
+      "telemetry_count": 8002,
+      "physical_window_frames": 15,
+      "in_range_window_frames": 15,
+      "closing_in_range_frames": 0,
+      "best_closure_in_range": {
+        "ut": 10568.931826,
+        "altitude_m": 22011.445,
+        "mach": 2.776031,
+        "range_m": 67688.63471159582,
+        "along_m": 58921.878,
+        "cross_m": 33369.84,
+        "heading_deg": 121.5608,
+        "bearing_deg": 299.428120667835,
+        "course_error_deg": 177.867320667835,
+        "closure_margin_deg": -87.867320667835,
+        "range_margin_m": 28811.36528840418
+      },
+      "first_physical_window": {
+        "ut": 10567.531826,
+        "altitude_m": 22267.623,
+        "mach": 2.846267,
+        "range_m": 66577.09765329123,
+        "along_m": 57966.883,
+        "cross_m": 32797.864,
+        "heading_deg": 120.3398,
+        "bearing_deg": 299.40791900411443,
+        "course_error_deg": 179.06811900411444,
+        "closure_margin_deg": -89.06811900411444,
+        "range_margin_m": 29922.902346708768
+      }
+    },
+    {
+      "log": "ShuttleSim/runs/sts-reverse-incidence-20261008/aoa28-to18-at50000-ramped-bank70.jsonl.gz",
+      "sha256": "eb17915ca051096dc04c7ece9530657e43e8af23eb4a760825494491f4a3a7ca",
+      "telemetry_count": 8002,
+      "physical_window_frames": 19,
+      "in_range_window_frames": 19,
+      "closing_in_range_frames": 0,
+      "best_closure_in_range": {
+        "ut": 10569.831826,
+        "altitude_m": 22007.886,
+        "mach": 2.760629,
+        "range_m": 69302.7991299304,
+        "along_m": 61365.036,
+        "cross_m": 32262.094,
+        "heading_deg": 121.6358,
+        "bearing_deg": 297.6340049471717,
+        "course_error_deg": 175.99820494717173,
+        "closure_margin_deg": -85.99820494717173,
+        "range_margin_m": 27197.200870069602
+      },
+      "first_physical_window": {
+        "ut": 10568.031826,
+        "altitude_m": 22334.814,
+        "mach": 2.849826,
+        "range_m": 67878.08911251425,
+        "along_m": 60138.317,
+        "cross_m": 31530.141,
+        "heading_deg": 120.0771,
+        "bearing_deg": 297.57302962096276,
+        "course_error_deg": 177.49592962096278,
+        "closure_margin_deg": -87.49592962096278,
+        "range_margin_m": 28621.91088748575
+      }
+    }
+  ]
+}
