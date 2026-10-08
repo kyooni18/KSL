@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "status": "rejected_before_engagement",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_DIAGNOSTIC",
+  "purpose": "Test whether a measured-near scalar lift-to-drag value changes the normal STS shadow admission trajectory from the named checkpoint.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "shadowGateBypassed": false,
+    "manualForceReentryUnset": true,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "liveGuidanceEngaged": false,
+    "liveControlsIssued": false,
+    "liveDescentOccurred": false,
+    "livePropulsionOrSpeedbrakesUsed": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false,
+    "flightQualified": false
+  },
+  "candidate": {
+    "vessel": "STS",
+    "configuration": "Configuration/experiments/sts-shadow-entry-ld053.json",
+    "configurationSourceSHA256": "029067109ed1793410a4b8e5070a996f90065a297e4eff745852e23456308669",
+    "configurationSnapshotSHA256": "acc99003206389388af7cf860d721e5c830e4d3b629619ca9ccc1f49ca2364bc",
+    "onlyDifferenceFromProductionConfiguration": {
+      "path": "vehicle.estimatedLiftToDrag",
+      "production": 0.4,
+      "candidate": 0.53
+    },
+    "maximumAngleOfAttackDeg": 28,
+    "productionConfigurationChanged": false,
+    "adopted": false,
+    "rationale": {
+      "kspApiSimulatedLDAtMach5_212AoA28": 0.5312119421493309,
+      "priorMeasuredMedianLD": 0.5399516994474345,
+      "priorMeasuredSampleCount": 9,
+      "priorMeasuredMachRange": [
+        5.033869620393211,
+        5.28185673768215
+      ],
+      "priorMeasuredAoARangeDeg": [
+        26.995498657226562,
+        27.90764808654785
+      ],
+      "dataLimit": "All nine measured samples are from one original-STS session with an explicit shadow-gate bypass marker; per-sample RCS state is unknown. The API point is simulated. This is a sensitivity value, not a qualified fit."
+    }
+  },
+  "instrumentation": {
+    "repositoryHEADAtAttempt": "a83222c2f65930795354fbc416e5c0fafba0e959",
+    "isolatedTraceOnlyBackend": true,
+    "productionGuidanceAndQualificationLogicChanged": false,
+    "sourceTreeSHA256": "64635833ea57a6831dbccbeaceff3be49b765b347b9e6ff470860f88b4431ef3",
+    "backendExecutableSHA256": "de043146f5e1187ca164c8abc106ad581ae5bc6b773d2d59d61762b35220271b",
+    "backendExecutable": "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-acc9900320638938/landing_backend"
+  },
+  "run": {
+    "startedUTC": "2026-10-08T21:56:11.366426+00:00",
+    "runner": "Tools/headless_flight.py",
+    "arguments": [
+      "--live",
+      "--backend",
+      "Runtime/Headless/acceptance-artifacts/64635833ea57a683-de043146f5e1187c-1ba37a2ed70c5b55/landing_backend",
+      "--reentry-only",
+      "--config",
+      "Configuration/experiments/sts-shadow-entry-ld053.json",
+      "--initial-save",
+      "STS-campaign-72km-20261008",
+      "--checkpoint-physics-profile",
+      "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+      "--max-wall-seconds",
+      "900"
+    ],
+    "environment": {
+      "KSP_LANDER_MODEL_PROFILE": "sts-provisional",
+      "KSP_LANDER_UNPOWERED_ONLY": "1",
+      "KSP_LANDER_TAEM_DIAGNOSTICS": "2",
+      "KSP_LANDER_TRACE_ENTRY_WITNESS": "1",
+      "KSP_LANDER_ENTRY_TRACE": "1",
+      "KSP_LANDER_TRACE_ENTRY_MILESTONES": "1",
+      "KSP_LANDER_SETUP_REVERSAL_TRACE": "1",
+      "KSP_LANDER_BYPASS_SHADOW_GATE": "unset",
+      "KSP_LANDER_MANUAL_FORCE_REENTRY": "unset"
+    },
+    "expectedAdmissionRejectionExitCode": 1,
+    "backendPID": 74641,
+    "kspPID": 69877,
+    "kspProcessCount": 1,
+    "campaignIdentity": "64635833ea57a683-de043146f5e1187c-acc9900320638938",
+    "runManifest": {
+      "path": "Runtime/Headless/run-manifests/20261008T215611366426Z-74641.json",
+      "sha256": "6fc939ab758b83b8b22fa75139e6d641f7dd38551dbf8d23deeb06bc6fc05a63",
+      "configurationSourceSHA256": "029067109ed1793410a4b8e5070a996f90065a297e4eff745852e23456308669"
+    },
+    "capturedConsole": {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-shadow-entry-ld053-20261009.log",
+      "sha256": "3eab359023541e4b9cfcf938a554143f150677aa6bb4b7043ef71c33a71e94ae",
+      "bytes": 94188,
+      "lineCount": 203
+    },
+    "exitReason": "The normal closed-loop shadow gate rejected reentry before engagement."
+  },
+  "shadowResult": {
+    "closestMissKm": 4.5,
+    "shadowRangeErrorKm": 64.9,
+    "peakDynamicPressureKPa": 5.3,
+    "peakG": 1.63,
+    "traceRowCount": 171,
+    "traceCadenceSeconds": 5.0,
+    "nearSite": {
+      "ut": 10516.31,
+      "altitudeM": 38002,
+      "speedMps": 1730.3,
+      "mach": 5.21,
+      "flightPathAngleDeg": -3.78,
+      "rangeM": 4583,
+      "runwayAlongTrackM": 839,
+      "runwayCrossTrackM": 4506,
+      "courseToSiteErrorDeg": -101.1,
+      "shadowBankDeg": -40.0,
+      "shadowAoADeg": 28.0,
+      "mm305Veto": "0x89"
+    },
+    "plus45Seconds": {
+      "ut": 10561.31,
+      "altitudeM": 32607,
+      "speedMps": 1422.1,
+      "mach": 4.44,
+      "flightPathAngleDeg": -4.94,
+      "rangeM": 68278,
+      "runwayAlongTrackM": 68216,
+      "runwayCrossTrackM": 2909,
+      "courseToSiteErrorDeg": -173.6,
+      "mm305Veto": "0x89"
+    },
+    "shadowAbort": {
+      "ut": 10832.91,
+      "altitudeM": 9347,
+      "speedMps": 85.0,
+      "mach": 0.28,
+      "rangeM": 161410,
+      "reason": "MM304 flight recovery margin was exhausted before TAEM acquisition."
+    },
+    "observabilityLimit": "All trace quantities are shadow predictions; beta is the model zero/default and body p/q/r and normalized controls are unavailable."
+  },
+  "matchedProductionScalarBaseline": {
+    "report": "Docs/Experiments/STS-Entry-20261009/live-shadow-entry-coordinate-trace-20261009.json",
+    "sameCheckpoint": true,
+    "sameSourceTreeSHA256": true,
+    "sameBackendExecutableSHA256": true,
+    "baselineEstimatedLiftToDrag": 0.4,
+    "baselineGateSummary": {
+      "closestMissKm": 4.5,
+      "shadowRangeErrorKm": 64.9,
+      "peakDynamicPressureKPa": 5.3,
+      "peakG": 1.63
+    },
+    "traceComparison": {
+      "baselineRows": 171,
+      "candidateRows": 171,
+      "matchedUTRows": 171,
+      "maximumAbsoluteDifference": {
+        "altitudeM": 6.1,
+        "speedMps": 0.55,
+        "dynamicPressurePa": 5.18,
+        "flightPathAngleDeg": 0.07,
+        "referenceDragAccelMps2": 0.217,
+        "shadowBankCommandDeg": 1.08,
+        "angleOfAttackDeg": 0.82,
+        "availableEnergyJPerKg": 610,
+        "dragEnergyJPerKg": 639
+      },
+      "effect": "The pinned 0.53 override propagates into the shadow outputs, but its trajectory effect is small over this run and does not change gate metrics or target-course failure."
+    }
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "physicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "expectedSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postRunActualSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "postRunSettle": {
+      "method": "Tools/settle_known_checkpoint.py",
+      "ready": true,
+      "ut": 9931.251826169331,
+      "meanAltitudeM": 71920.85018986487,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "actualThrustN": 0.0,
+      "partCount": 22,
+      "paused": true,
+      "physicsWarpFactor": 0
+    },
+    "postRunIndependentReadOnlyVerification": {
+      "method": "Fresh read-only kRPC query after settling; UT remained constant.",
+      "vessel": "STS",
+      "ut": 9931.251826169331,
+      "utDelta": 0.0,
+      "meanAltitudeM": 71919.67588142352,
+      "massKg": 25816.10546875,
+      "dryMassKg": 20348.0,
+      "partCount": 22,
+      "paused": true,
+      "sas": false,
+      "rcs": false,
+      "controls": {
+        "pitch": 0.0,
+        "roll": 0.0,
+        "yaw": 0.0
+      },
+      "throttle": 0.0,
+      "actualThrustN": 0.0,
+      "brakes": false,
+      "actionGroups0Through9": {
+        "0": false,
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": false,
+        "6": false,
+        "7": false,
+        "8": false,
+        "9": false
+      },
+      "kspPID": 69877,
+      "kspProcessCount": 1,
+      "krpcListeningPorts": [
+        50000,
+        50001
+      ]
+    }
+  },
+  "interpretation": {
+    "finding": "The diagnostic 0.53 scalar is confirmed effective in the pinned run configuration and produces small changes in the 171-row shadow trace, but leaves the normal-gate summary unchanged (4.5 km, +64.9 km, 5.3 kPa, 1.63 g). The predicted near-site course remains away from KSC with MM305 veto 0x89, and the shadow aborts before TAEM.",
+    "decision": "Do not adopt 0.53 as the production profile or continue tuning a global L/D scalar from this narrow high-incidence point. Keep the gate, checkpoint, flight limits, and low-q bank ramp unchanged.",
+    "limits": "This uses simulated API wrench values and nine samples from one bypassed prior session; the gate output is a simulation diagnostic, not qualified flight evidence. No live control, descent, touchdown, or rollout occurred."
+  },
+  "errors": []
+}
