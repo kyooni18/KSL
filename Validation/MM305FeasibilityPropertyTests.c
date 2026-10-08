@@ -174,10 +174,12 @@ int main(int argc, char **argv) {
         profile, cfg.vehicle.model_id, mass_kg, configuration_path ? configuration_path : "native-default",
         configuration_path ? "native-atmosphere-and-forces" : "legacy-envelope-property-fixture");
     fflush(stdout);
-    cfg.site.latitude = -0.0486111111;
-    cfg.site.longitude = -74.7283333333;
-    cfg.site.altitude = 70.0;
-    cfg.site.runway_heading = 90.0;
+    if (!configuration_path) {
+        cfg.site.latitude = -0.0486111111;
+        cfg.site.longitude = -74.7283333333;
+        cfg.site.altitude = 70.0;
+        cfg.site.runway_heading = 90.0;
+    }
     PlanetModel p = test_planet();
 
     char atmosphere[512], aero[512], book[512], attitude[512];
@@ -205,14 +207,14 @@ int main(int argc, char **argv) {
     /* Downstream-feasibility contract.  The physical admission envelope is a
      * necessary lower bound: at Mach 2+ it cannot see the turn authority or the
      * energy excess the route needs, so a state inside it may have no flyable
-     * MM305 route (the vehicle's supersonic L/D is ~0.7; from 26 km / M2.5 it
-     * needs ~45+ km of path and cannot turn tightly at that speed).  Ownership
-     * therefore transfers only after MM305 has qualified a route from the
-     * measured state, and MM305 adopts that route.  Properties:
+     * MM305 route. These finite regression samples are not a proof of global
+     * reachability or impossibility for either vehicle. Ownership transfers
+     * only after the native search qualifies a route from the measured state,
+     * and MM305 adopts that route. Properties:
      *   1. the handoff gate is true exactly when a route was found;
      *   2. a found route is adopted bumplessly as the MM305 route;
      *   3. a qualified route ages out (no handoff on a stale solution);
-     *   4. the contract is not vacuous: some admitted state qualifies. */
+     *   4. this regression batch is not vacuous: at least one sample qualifies. */
     typedef struct { double alt, mach, along, cross; } AdmittedSample;
     const double mid_alt = 0.5 * (cfg.guidance.mm305_min_altitude + cfg.guidance.mm305_max_altitude);
     const AdmittedSample samples[] = {
@@ -313,7 +315,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     if (qualified == 0) {
-        fprintf(stderr, "FAIL: no physically admitted state qualifies an MM305 route; the contract would never hand over.\n");
+        fprintf(stderr, "FAIL: none of this fixture's tested states qualified an MM305 route; the non-vacuity check failed.\n");
         return EXIT_FAILURE;
     }
     puts("MM305 downstream-feasibility contract test passed.");
