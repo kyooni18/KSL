@@ -52,6 +52,34 @@ def solve3(matrix: list[list[float]], vector: list[float]) -> list[float]:
     return [augmented[row][3] for row in range(3)]
 
 
+def matvec3(matrix: list[list[float]], vector: list[float]) -> list[float]:
+    return [sum(matrix[row][column] * vector[column] for column in range(3)) for row in range(3)]
+
+
+def cross3(a: list[float], b: list[float]) -> list[float]:
+    return [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+
+
+def inferred_body_torque(flat: list[float], angular_acceleration: list[float],
+        angular_velocity: list[float]) -> dict:
+    """Estimate body torque from the rigid-body Euler equation: τ = Iα + ω×Iω."""
+    inertia, asymmetry = symmetric_matrix(flat)
+    inertia_acceleration = matvec3(inertia, angular_acceleration)
+    inertia_rate = matvec3(inertia, angular_velocity)
+    gyroscopic = cross3(angular_velocity, inertia_rate)
+    total = [inertia_acceleration[index] + gyroscopic[index] for index in range(3)]
+    return {
+        "inertiaTimesAngularAccelerationNmXYZ": inertia_acceleration,
+        "gyroscopicCorrectionNmXYZ": gyroscopic,
+        "totalInferredTorqueNmXYZ": total,
+        "maximumCapturedTensorAsymmetryKgM2": asymmetry,
+    }
+
+
 def fit_yaw_polarity(samples: list[dict], positive: bool) -> dict:
     selected = [
         sample for sample in samples
@@ -61,19 +89,30 @@ def fit_yaw_polarity(samples: list[dict], positive: bool) -> dict:
     ]
     if len(selected) < 3:
         raise ValueError("Yaw pulse does not contain enough uncontaminated samples")
-    roll_deg = ols_slope(selected, 1)
-    yaw_deg = ols_slope(selected, 2)
-    roll_rad = roll_deg * math.pi / 180.0
-    yaw_rad = yaw_deg * math.pi / 180.0
+    acceleration_deg = [ols_slope(selected, axis) for axis in range(3)]
+    acceleration_rad = [value * math.pi / 180.0 for value in acceleration_deg]
+    mean_rate_rad = [
+        sum(float(sample["body_rates"][axis]) for sample in selected) / len(selected) * math.pi / 180.0
+        for axis in range(3)
+    ]
+    input_axes = {
+        key: [min(float(sample[key]) for sample in selected), max(float(sample[key]) for sample in selected)]
+        for key in ("control_pitch", "control_roll", "control_yaw")
+    }
+    control_yaw = float(selected[0]["control_yaw"])
     return {
         "sampleCount": len(selected),
         "elapsedIntervalS": [min(float(x["elapsed"]) for x in selected), max(float(x["elapsed"]) for x in selected)],
-        "yawCommand": float(selected[0]["control_yaw"]),
-        "rollRadPerSecondSquared": roll_rad,
-        "yawRadPerSecondSquared": yaw_rad,
-        "rollDegPerSecondSquared": roll_deg,
-        "yawDegPerSecondSquared": yaw_deg,
-        "rollToYawAccelerationRatio": abs(roll_rad / yaw_rad) if yaw_rad else None,
+        "yawCommand": control_yaw,
+        "controlInputs": input_axes,
+        "bodyAccelerationDegPerSecondSquaredXYZ": acceleration_deg,
+        "bodyAccelerationRadPerSecondSquaredXYZ": acceleration_rad,
+        "meanBodyRateRadPerSecondXYZ": mean_rate_rad,
+        "rollRadPerSecondSquared": acceleration_rad[1],
+        "yawRadPerSecondSquared": acceleration_rad[2],
+        "rollDegPerSecondSquared": acceleration_deg[1],
+        "yawDegPerSecondSquared": acceleration_deg[2],
+        "rollToYawAccelerationRatio": abs(acceleration_rad[1] / acceleration_rad[2]) if acceleration_rad[2] else None,
     }
 
 
@@ -115,6 +154,26 @@ def main() -> None:
     negative = fit_yaw_polarity(samples, False)
     vessel_inertia = inertia_counterfactual(raw["inertia_tensor"])
     root_inertia = inertia_counterfactual(raw["root_inertia_tensor"])
+    positive_torque = inferred_body_torque(
+        raw["inertia_tensor"], positive["bodyAccelerationRadPerSecondSquaredXYZ"],
+        positive["meanBodyRateRadPerSecondXYZ"],
+    )
+    negative_torque = inferred_body_torque(
+        raw["inertia_tensor"], negative["bodyAccelerationRadPerSecondSquaredXYZ"],
+        negative["meanBodyRateRadPerSecondXYZ"],
+    )
+    for fit, torque in ((positive, positive_torque), (negative, negative_torque)):
+        torque["yawCommand"] = fit["yawCommand"]
+        torque["controlInputs"] = fit["controlInputs"]
+        torque["measuredAngularAccelerationRadPerSecondSquaredXYZ"] = fit[
+            "bodyAccelerationRadPerSecondSquaredXYZ"
+        ]
+        torque["meanAngularVelocityRadPerSecondXYZ"] = fit["meanBodyRateRadPerSecondXYZ"]
+        torque["inferredTorquePerUnitYawInputNmXYZ"] = [
+            value / fit["yawCommand"] for value in torque["totalInferredTorqueNmXYZ"]
+        ]
+        roll_torque, yaw_torque = torque["totalInferredTorqueNmXYZ"][1:3]
+        torque["rollToYawTorqueRatio"] = abs(roll_torque / yaw_torque) if yaw_torque else None
     measured_ratio = 0.5 * (positive["rollToYawAccelerationRatio"] + negative["rollToYawAccelerationRatio"])
     predicted_ratio = vessel_inertia["rollToYawAngularAccelerationRatio"]
     prior_report = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else {}
@@ -164,6 +223,11 @@ def main() -> None:
             "positiveYaw": {"roll": positive["rollDegPerSecondSquared"], "yaw": positive["yawDegPerSecondSquared"]},
             "negativeYaw": {"roll": negative["rollDegPerSecondSquared"], "yaw": negative["yawDegPerSecondSquared"]},
         },
+        "measuredBodyAccelerationDegPerSecondSquaredXYZ": {
+            "axisOrder": ["local +X pitch", "local +Y roll", "local +Z yaw"],
+            "positiveYaw": positive["bodyAccelerationDegPerSecondSquaredXYZ"],
+            "negativeYaw": negative["bodyAccelerationDegPerSecondSquaredXYZ"],
+        },
         "measuredRollToYawAccelerationRatio": {
             "positiveYaw": positive["rollToYawAccelerationRatio"],
             "negativeYaw": negative["rollToYawAccelerationRatio"],
@@ -171,6 +235,16 @@ def main() -> None:
         },
         "measuredVesselInertiaTensorRowMajorKgM2": raw["inertia_tensor"],
         "measuredRootInertiaTensorRowMajorKgM2": raw["root_inertia_tensor"],
+        "inferredBodyTorqueFromMeasuredAcceleration": {
+            "axisOrder": ["local +X pitch", "local +Y roll", "local +Z yaw"],
+            "method": "Symmetrize the measured full-vessel tensor and apply Euler's rigid-body relation τ=Iα+ω×Iω to each polarity's three OLS body-rate slopes. Rates and slopes are converted from the probe's degrees to radians first. This is an inferred net torque, not a directly measured wheel torque.",
+            "positiveYaw": positive_torque,
+            "negativeYaw": negative_torque,
+            "meanAbsoluteRollToYawTorqueRatio": 0.5 * (
+                positive_torque["rollToYawTorqueRatio"] + negative_torque["rollToYawTorqueRatio"]
+            ),
+            "interpretationLimit": "The vacuum bench rules out aerodynamic torque and has SAS/RCS, thrust, pitch input, and roll input off. Residual external or measurement effects are not independently instrumented; do not treat the inferred torque vector as a direct actuator telemetry measurement.",
+        },
         "pureBodyYawTorqueCounterfactual": {
             "unitTorqueBodyVectorNm": [0.0, 0.0, 1.0],
             "vesselAngularAccelerationVectorPerUnitTorqueRadPerSecondSquaredPerNmXYZ": vessel_inertia["angularAccelerationRadPerSecondSquaredPerNmXYZ"],
@@ -185,6 +259,8 @@ def main() -> None:
             f"The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of {measured_ratio:.3f}. "
             f"The full-vessel inertia predicts {predicted_ratio:.3f} for a pure body-z yaw torque, about "
             f"{measured_ratio / predicted_ratio:.1f} times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. "
+            f"Applying the full three-axis Euler relation to the measured slopes implies an input-correlated body-roll torque of about "
+            f"{100.0 * 0.5 * (positive_torque['rollToYawTorqueRatio'] + negative_torque['rollToYawTorqueRatio']):.1f}% of the yaw torque in both pulse directions; this is inferred net torque, not a direct wheel measurement, and its actuator source remains unresolved. "
             "The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s² equivalents are provided separately. "
             "This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification."
         ),

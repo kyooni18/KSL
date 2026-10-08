@@ -1,0 +1,169 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_LIVE_SHADOW_COMPARISON",
+  "purpose": "Evaluate whether runway-crossrange capture should override the point-bearing bank direction after the STS passes the site.",
+  "qualification": {
+    "normalShadowGateUsed": true,
+    "gateBypassed": false,
+    "shadowPredictionEntered": true,
+    "mm305Reached": false,
+    "guidanceEngaged": false,
+    "liveDescentStarted": false,
+    "touchdownVerified": false,
+    "rolloutVerified": false
+  },
+  "checkpoint": {
+    "name": "STS-campaign-72km-20261008",
+    "sha256BeforeAndAfter": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "physicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "expectedMassKg": 25816.10493262963,
+    "partCount": 22
+  },
+  "policy": {
+    "vehicleModelId": "STS",
+    "unpoweredOnly": true,
+    "sasOff": true,
+    "speedbrakesStowed": true,
+    "normalShadowGate": true,
+    "oneLiveKspProcess": true,
+    "independentAttemptsReloadNamedCheckpoint": true
+  },
+  "attempts": [
+    {
+      "role": "pre-change control",
+      "campaignIdentity": "68406c2aa2e2400e-de944bd860c9dbc8-badd735f8d8c6356",
+      "backendSHA256": "de944bd860c9dbc88ce1f2d6358e018312599ed96e872dcd770dd6ef5ef856f4",
+      "runManifest": "Runtime/Headless/run-manifests/20261008T190658355198Z-74981.json",
+      "checkpointPhysics": {
+        "ut": 9932.431826169357,
+        "meanAltitudeM": 71851.53150450904,
+        "pitchDeg": 0.236114501953125,
+        "angleOfAttackDeg": 1.8433239459991455,
+        "massKg": 25816.10546875,
+        "partCount": 22
+      },
+      "shadowResult": {
+        "closestMissKm": 4.5,
+        "rangeErrorKm": 64.9,
+        "peakDynamicPressureKPa": 5.3,
+        "peakG": 1.63,
+        "nearSite": {
+          "ut": 10517.51,
+          "altitudeM": 37867,
+          "mach": 5.19,
+          "rangeM": 5310,
+          "alongTrackM": 2785,
+          "crossTrackM": 4521,
+          "courseToSiteErrorDeg": -122.1,
+          "bankDeg": -40,
+          "angleOfAttackDeg": 28,
+          "mm305Veto": "0x89"
+        },
+        "afterNearSite": {
+          "ut": 10607.51,
+          "altitudeM": 27079,
+          "rangeM": 120368,
+          "alongTrackM": 120289,
+          "crossTrackM": -4387,
+          "courseToSiteErrorDeg": -168.3,
+          "bankDeg": -40
+        }
+      }
+    },
+    {
+      "role": "crossrange override in rear hemisphere",
+      "campaignIdentity": "d8289a5a57737a52-e605b174d4ee9b6f-badd735f8d8c6356",
+      "backendSHA256": "e605b174d4ee9b6ffddf46577a56c2d71a3fc90030227abeee04a66ea0965758",
+      "runManifest": "Runtime/Headless/run-manifests/20261008T190350167581Z-72539.json",
+      "checkpointPhysics": {
+        "ut": 9931.131826169329,
+        "meanAltitudeM": 71926.71105473593,
+        "pitchDeg": -0.011220293119549751,
+        "angleOfAttackDeg": 1.5949684381484985,
+        "massKg": 25816.10546875,
+        "partCount": 22
+      },
+      "shadowResult": {
+        "closestMissKm": 4.5,
+        "rangeErrorKm": 105.7,
+        "peakDynamicPressureKPa": 4.7,
+        "peakG": 1.6,
+        "nearSite": {
+          "ut": 10516.21,
+          "altitudeM": 38015,
+          "mach": 5.21,
+          "rangeM": 4552,
+          "alongTrackM": 678,
+          "crossTrackM": 4502,
+          "courseToSiteErrorDeg": -99.1,
+          "bankDeg": -40,
+          "angleOfAttackDeg": 28,
+          "mm305Veto": "0x89"
+        },
+        "afterNearSite": {
+          "ut": 10606.21,
+          "altitudeM": 27713,
+          "rangeM": 119645,
+          "alongTrackM": 119644,
+          "crossTrackM": -448,
+          "courseToSiteErrorDeg": 179.8,
+          "bankDeg": 13.4
+        }
+      }
+    },
+    {
+      "role": "rear-hemisphere turn continuity",
+      "campaignIdentity": "5aa1d336a118582c-967eaf2d3722b242-badd735f8d8c6356",
+      "backendSHA256": "967eaf2d3722b24239e20ce6cb536c648a69109a3c9ad6b276b2a1dfa911cc1b",
+      "runManifest": "Runtime/Headless/run-manifests/20261008T190847229321Z-76675.json",
+      "checkpointPhysics": {
+        "ut": 9932.371826169356,
+        "meanAltitudeM": 71855.05681277998,
+        "pitchDeg": 0.224822998046875,
+        "angleOfAttackDeg": 1.8319599628448486,
+        "massKg": 25816.10546875,
+        "partCount": 22
+      },
+      "shadowResult": {
+        "closestMissKm": 4.5,
+        "rangeErrorKm": 64.9,
+        "peakDynamicPressureKPa": 5.3,
+        "peakG": 1.63,
+        "nearSite": {
+          "ut": 10517.41,
+          "altitudeM": 37878,
+          "mach": 5.19,
+          "rangeM": 5225,
+          "alongTrackM": 2623,
+          "crossTrackM": 4519,
+          "courseToSiteErrorDeg": -120.6,
+          "bankDeg": -40,
+          "angleOfAttackDeg": 28,
+          "mm305Veto": "0x89"
+        },
+        "afterNearSite": {
+          "ut": 10607.41,
+          "altitudeM": 27091,
+          "rangeM": 120277,
+          "alongTrackM": 120199,
+          "crossTrackM": -4365,
+          "courseToSiteErrorDeg": -168.3,
+          "bankDeg": -40
+        }
+      }
+    }
+  ],
+  "interpretation": "The direct crossrange override reversed the bank after cross-track crossed the runway line while the target remained in the rear hemisphere. That run kept cross-track near zero but had a +105.7 km shadow range error. Its unpacked checkpoint state differed from the controls by about 1.3 s in UT, 75 m in altitude, and 0.25 deg in pitch, so that first comparison is not tightly matched. The revised rule holds the selected turn side while the target is behind, avoiding both the wrapped point-bearing sign change and the crossrange sign change. Its near-matched control started 0.06 s later, 3.5 m lower, and 0.011 deg higher in pitch; both rejected with the same 4.5 km closest miss and +64.9 km range error. This supports the rear-hemisphere continuity rule but does not improve admission or establish atmospheric bank authority. No live controls or descent occurred.",
+  "sourceEvidence": {
+    "nearSiteWrenchGrid": "Docs/Experiments/STS-Entry-20261009/shadow-witness-wrench.json",
+    "simulationsRemainUnqualified": true,
+    "productionLowQBankRampChanged": false
+  },
+  "postCleanup": {
+    "activeVessel": "STS",
+    "paused": true,
+    "onlyOneKspProcess": true,
+    "noHeadlessRunnerOrBackendProcess": true,
+    "checkpointSHA256Unchanged": true
+  }
+}

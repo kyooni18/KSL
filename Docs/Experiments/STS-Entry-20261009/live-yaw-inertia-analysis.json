@@ -10,7 +10,7 @@
   },
   "provenance": {
     "gitHeadAtCapture": "943145cc26bd81b7d484e5982d2e40f82d895109",
-    "gitHeadAtAnalysis": "d9f686a0c29b1e6d1b293ed87f9a414a7a19ec3f",
+    "gitHeadAtAnalysis": "aad57cd7d457860fafc102c808691679e6e938fc",
     "rawYawPulse": "Docs/Experiments/STS-Entry-20261008/live-preentry-yaw-repeat.json",
     "rawYawPulseSHA256": "d8b32ccc6b127df258b53c54a96721c894555ce19102d3b4dc2b6274b5683b88",
     "probeSource": "Tools/probe_sts_preentry_roll.py",
@@ -62,6 +62,23 @@
       "yaw": -0.17629787740910374
     }
   },
+  "measuredBodyAccelerationDegPerSecondSquaredXYZ": {
+    "axisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "positiveYaw": [
+      -0.0010936599019348528,
+      0.06948771279495972,
+      0.18045540308978059
+    ],
+    "negativeYaw": [
+      0.001431921036258236,
+      -0.06782518685422258,
+      -0.17629787740910374
+    ]
+  },
   "measuredRollToYawAccelerationRatio": {
     "positiveYaw": 0.38506861864583813,
     "negativeYaw": 0.3847192481894294,
@@ -89,6 +106,114 @@
     -305.71533203125,
     8567.078125
   ],
+  "inferredBodyTorqueFromMeasuredAcceleration": {
+    "axisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "method": "Symmetrize the measured full-vessel tensor and apply Euler's rigid-body relation \u03c4=I\u03b1+\u03c9\u00d7I\u03c9 to each polarity's three OLS body-rate slopes. Rates and slopes are converted from the probe's degrees to radians first. This is an inferred net torque, not a directly measured wheel torque.",
+    "positiveYaw": {
+      "inertiaTimesAngularAccelerationNmXYZ": [
+        -17.895063138843447,
+        95.49401979408296,
+        3085.164199389276
+      ],
+      "gyroscopicCorrectionNmXYZ": [
+        0.09056134546870932,
+        -0.004058926937338919,
+        -0.042864242330758265
+      ],
+      "totalInferredTorqueNmXYZ": [
+        -17.804501793374737,
+        95.48996086714563,
+        3085.121335146945
+      ],
+      "maximumCapturedTensorAsymmetryKgM2": 0.000732421875,
+      "yawCommand": 0.15000000596046448,
+      "controlInputs": {
+        "control_pitch": [
+          0.0,
+          0.0
+        ],
+        "control_roll": [
+          0.0,
+          0.0
+        ],
+        "control_yaw": [
+          0.15000000596046448,
+          0.15000000596046448
+        ]
+      },
+      "measuredAngularAccelerationRadPerSecondSquaredXYZ": [
+        -1.9087966185801486e-05,
+        0.0012127893779522384,
+        0.0031495409369302198
+      ],
+      "meanAngularVelocityRadPerSecondXYZ": [
+        0.00025504957589936534,
+        0.00019301379525992529,
+        0.0005205785206612552
+      ],
+      "inferredTorquePerUnitYawInputNmXYZ": [
+        -118.69667390591619,
+        636.5997138181043,
+        20567.47475036828
+      ],
+      "rollToYawTorqueRatio": 0.030951768340287147
+    },
+    "negativeYaw": {
+      "inertiaTimesAngularAccelerationNmXYZ": [
+        23.502332678583723,
+        -93.20090008650313,
+        -3014.0876560915867
+      ],
+      "gyroscopicCorrectionNmXYZ": [
+        0.13773672960969513,
+        -0.004942558688367932,
+        -0.05251665526385485
+      ],
+      "totalInferredTorqueNmXYZ": [
+        23.64006940819342,
+        -93.2058426451915,
+        -3014.1401727468506
+      ],
+      "maximumCapturedTensorAsymmetryKgM2": 0.000732421875,
+      "yawCommand": -0.15000000596046448,
+      "controlInputs": {
+        "control_pitch": [
+          0.0,
+          0.0
+        ],
+        "control_roll": [
+          0.0,
+          0.0
+        ],
+        "control_yaw": [
+          -0.15000000596046448,
+          -0.15000000596046448
+        ]
+      },
+      "measuredAngularAccelerationRadPerSecondSquaredXYZ": [
+        2.499173671127532e-05,
+        -0.0011837728263865593,
+        -0.0030769784250661903
+      ],
+      "meanAngularVelocityRadPerSecondXYZ": [
+        0.0002527981261468906,
+        0.00023858894527111724,
+        0.0006405653047308003
+      ],
+      "inferredTorquePerUnitYawInputNmXYZ": [
+        -157.60045645881,
+        621.3722596101614,
+        20094.267019837906
+      ],
+      "rollToYawTorqueRatio": 0.0309228626750464
+    },
+    "meanAbsoluteRollToYawTorqueRatio": 0.030937315507666773,
+    "interpretationLimit": "The vacuum bench rules out aerodynamic torque and has SAS/RCS, thrust, pitch input, and roll input off. Residual external or measurement effects are not independently instrumented; do not treat the inferred torque vector as a direct actuator telemetry measurement."
+  },
   "pureBodyYawTorqueCounterfactual": {
     "unitTorqueBodyVectorNm": [
       0.0,
@@ -141,6 +266,6 @@
       "calculation": "Symmetrize the captured tensor at floating-point precision, then solve I * alpha = [0, 0, 1] Nm."
     }
   },
-  "interpretation": "The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of 0.385. The full-vessel inertia predicts 0.036 for a pure body-z yaw torque, about 10.7 times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s\u00b2 equivalents are provided separately. This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification.",
-  "sourceSHA256": "8493d2a33ac950414b5806509e2b87e2d7abd10380b85d81cda2a039befee2e2"
+  "interpretation": "The repeated vacuum yaw pulses show a mean absolute roll/yaw acceleration ratio of 0.385. The full-vessel inertia predicts 0.036 for a pure body-z yaw torque, about 10.7 times smaller. The captured off-diagonal inertia alone does not explain the cross-axis response. Applying the full three-axis Euler relation to the measured slopes implies an input-correlated body-roll torque of about 3.1% of the yaw torque in both pulse directions; this is inferred net torque, not a direct wheel measurement, and its actuator source remains unresolved. The recorded body_rates values are already degrees/s, as specified by the captured probe source; radians/s\u00b2 equivalents are provided separately. This does not identify the control-frame or actuator cause and is not atmospheric coordination or flight qualification.",
+  "sourceSHA256": "69d2a65d8548096479787df5c0262dd4a579dea56488e28a0ec2a8b883a255db"
 }
