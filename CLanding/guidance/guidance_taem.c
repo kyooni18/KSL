@@ -1480,7 +1480,10 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             control_model->vehicle.touchdown_speed)));
     double direct_slope=atan2(fmax(0.0,geometry.altitude_above_runway_m),
         fmax(1.0,direct_range))*RAD2DEG;
-    bool inside_final_station=direct_range<handoff_distance;
+    /* Use the runway-frame station coordinate rather than radial range. A
+       large cross-track offset can keep radial distance above the station
+       distance even after the shuttle has passed Final along the runway axis. */
+    bool inside_final_station=geometry.runway_along_m>=-handoff_distance;
     double direct_target_aoa=NAN;
     double projected_runway_speed=NAN;
     bool direct_projection_valid=false;
