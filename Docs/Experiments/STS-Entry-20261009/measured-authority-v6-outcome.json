@@ -1,0 +1,15 @@
+{
+  "ut": 2859.9698632796076,
+  "name": "STS",
+  "situation": "VesselSituation.landed",
+  "mass": 23281.865234375,
+  "parts": 14,
+  "source": "Independent read-only kRPC",
+  "rangeFromLastConsoleKm": 23.5,
+  "attempt": "measured-authority-v6",
+  "initialParts": 22,
+  "result": "Failed terrain landing off runway with part loss; not runway touchdown or verified rollout.",
+  "parentPID": 73331,
+  "backendPID": 73668,
+  "console": "/tmp/sts-live-72km-measured-authority-v6-20261009.log"
+}
