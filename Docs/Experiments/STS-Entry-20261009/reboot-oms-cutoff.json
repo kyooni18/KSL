@@ -1,0 +1,30 @@
+{
+  "source": "live read-only kRPC",
+  "ut": 1232.9700908659215,
+  "altitude": 85440.16363119893,
+  "periapsis": 51435.94731995184,
+  "thrust": 0.0,
+  "globalThrottle": 0.0,
+  "engines": [
+    {
+      "name": "SSME",
+      "thrust": 0.0
+    },
+    {
+      "name": "SSME",
+      "thrust": 0.0
+    },
+    {
+      "name": "SSME",
+      "thrust": 0.0
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "thrust": 0.0
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "thrust": 0.0
+    }
+  ]
+}

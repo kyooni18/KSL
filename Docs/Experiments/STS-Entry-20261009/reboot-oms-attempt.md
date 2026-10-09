@@ -13,3 +13,5 @@ The new planner selected burn UT 1122.1 and delta-v 31.54 m/s, approximately 103
 Inventory measured OMS-only resultant thrust 59196 N, body axis -0.0000/0.9380/0.3467 and moment -19684/0/0 Nm. An independent read during the actual burn at UT 1091.19 verified global throttle zero, all three SSMEs at zero thrust, and both OMS engines at 5397.81 N each under independent throttle. Thus engine isolation is now live observed. Cutoff and atmospheric handling remain to be verified.
 
 Protected `86km.sfs` hash after starting this attempt remains `4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6`. It was not overwritten.
+
+The OMS burn shut down at UT 1201.0 and the controller reported post-burn strict verification passed. Independent live telemetry at UT 1232.97 verified achieved periapsis 51435.95 m, altitude 85440.16 m, global throttle zero, total thrust zero, and zero thrust on all five engines. Source: `reboot-oms-cutoff.json`. This is a live OMS-only burn/cutoff observation, substantially closer to the planned 50 km periapsis than the old all-engine attempt's 43.1 km, but not yet atmospheric control or landing validation.
