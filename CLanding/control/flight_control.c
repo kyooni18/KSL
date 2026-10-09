@@ -640,7 +640,7 @@ bool flight_control_step_attitude(FlightControlState *state,
             measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_YAW],
             observed_yaw_coordinate_rate,state->last_control[FLIGHT_CONTROL_AXIS_YAW],
-            measured_dt,0.0);
+            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
     }
 
     /* Airborne pitch guidance is an AoA loop.  Once the mains are down, control

@@ -88,7 +88,25 @@ static void heading_hold_still_damps_heading_rate(void){
     assert(out.yaw < 0.0);
 }
 
+static double yaw_identification_confidence(double roll_input){
+    FlightControlState s;
+    flight_control_init(&s,.1);
+    GuidanceCommand c=entry_command();
+    FlightControlAttitudeError e={.valid=true,.use_yaw_error=true};
+    FlightControlOutput out={0};
+    Telemetry t=sample(300,0,0);
+    assert(flight_control_step_attitude(&s,&t,&c,&e,.1,&out));
+    s.last_control[FLIGHT_CONTROL_AXIS_YAW]=.5;
+    s.last_control[FLIGHT_CONTROL_AXIS_ROLL]=roll_input;
+    t.ut+=.1;t.body_yaw_rate=.1;
+    assert(flight_control_step_attitude(&s,&t,&c,&e,.1,&out));
+    return s.authority[FLIGHT_CONTROL_AXIS_YAW].controlled_confidence;
+}
+
 int main(void){
+    /* The same yaw acceleration with simultaneous aileron excitation supplies
+       less independent evidence of rudder authority. */
+    assert(yaw_identification_confidence(.5)<yaw_identification_confidence(0));
     beta_loop_ignores_coordinated_body_yaw_rate();
     heading_hold_still_damps_heading_rate();
     puts("flight control yaw tests passed");
