@@ -1,0 +1,87 @@
+{
+  "source": "bank-governor-v5-stopping-departure.json",
+  "window": [
+    2097,
+    2108
+  ],
+  "rows": [
+    {
+      "ut": 2097.1298632803,
+      "netAcceleration": 0.04824189377543009,
+      "rollInput": -0.0364805459976196,
+      "netAccelerationPerInput": -1.3224005413344946,
+      "reportedRollAcceleration": 153.20209254087644
+    },
+    {
+      "ut": 2098.1298632803,
+      "netAcceleration": -0.07645497146965627,
+      "rollInput": -0.0399937219917774,
+      "netAccelerationPerInput": 1.9116743244195977,
+      "reportedRollAcceleration": 154.94146595634356
+    },
+    {
+      "ut": 2099.1698632803,
+      "netAcceleration": -0.0449441716434702,
+      "rollInput": -0.043788954615593,
+      "netAccelerationPerInput": 1.0263814708073857,
+      "reportedRollAcceleration": 156.29149978816423
+    },
+    {
+      "ut": 2100.1698632803,
+      "netAcceleration": -0.0764023439101198,
+      "rollInput": -0.0471817813813686,
+      "netAccelerationPerInput": 1.6193187640068625,
+      "reportedRollAcceleration": 158.21895194590977
+    },
+    {
+      "ut": 2101.1698632803,
+      "netAcceleration": -0.06830512515442022,
+      "rollInput": -0.051696639508009,
+      "netAccelerationPerInput": 1.3212681869551344,
+      "reportedRollAcceleration": 160.08283921393047
+    },
+    {
+      "ut": 2102.1698632803,
+      "netAcceleration": -0.0677287469886898,
+      "rollInput": -0.0551893897354603,
+      "netAccelerationPerInput": 1.2272059414560388,
+      "reportedRollAcceleration": 161.54182172264748
+    },
+    {
+      "ut": 2103.1698632803,
+      "netAcceleration": -0.07630656438971747,
+      "rollInput": -0.058687474578619,
+      "netAccelerationPerInput": 1.3002189127680994,
+      "reportedRollAcceleration": 163.50221159623123
+    },
+    {
+      "ut": 2104.20986328029,
+      "netAcceleration": -0.09884138652074402,
+      "rollInput": -0.0623013377189636,
+      "netAccelerationPerInput": 1.5865050437056374,
+      "reportedRollAcceleration": 164.98068894967292
+    },
+    {
+      "ut": 2105.24986328029,
+      "netAcceleration": -0.14838570290587993,
+      "rollInput": -0.0655524954199791,
+      "netAccelerationPerInput": 2.2636163879835296,
+      "reportedRollAcceleration": 167.01219402678976
+    },
+    {
+      "ut": 2106.24986328029,
+      "netAcceleration": -0.21759072450353,
+      "rollInput": -0.0674654468894005,
+      "netAccelerationPerInput": 3.2252172710015166,
+      "reportedRollAcceleration": 168.93961801198697
+    },
+    {
+      "ut": 2107.24986328029,
+      "netAcceleration": -0.3036943326611401,
+      "rollInput": -0.0694970414042473,
+      "netAccelerationPerInput": 4.369888653167614,
+      "reportedRollAcceleration": 170.41754875423663
+    }
+  ],
+  "caveat": "Net acceleration includes aerodynamic disturbance, damping and yaw coupling. These ratios are not isolated actuator gains. No fitted coefficient applied to controller. Reported acceleration is capped at100 in current roll law; still much higher than observed net response."
+}
