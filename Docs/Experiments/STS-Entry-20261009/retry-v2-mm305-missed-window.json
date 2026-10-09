@@ -1,0 +1,70 @@
+{
+  "source": "FlightLogs/2026-10-09T07-53-36Z-STS-vehicle.jsonl",
+  "limits": {
+    "altitude": [
+      22000,
+      30000
+    ],
+    "mach": [
+      2.15,
+      2.85
+    ]
+  },
+  "windowSamples": 202,
+  "phaseCounts": {
+    "Attitude Recovery": 202
+  },
+  "firstAndLast": [
+    {
+      "ut": 2150.08986328025,
+      "altitude": 28388.0647753025,
+      "mach": 2.84648761197981,
+      "phase": "Attitude Recovery",
+      "range": 72764.1534495043,
+      "attitude": {
+        "pitch": -39.211784362793,
+        "roll": -92.3568954467773,
+        "heading": 217.407836914062,
+        "angleOfAttack": -55.5771751403809,
+        "sideslip": -28.7715530395508,
+        "pitchRate": 12.8975775324355,
+        "rollRate": 25.0982059486484,
+        "yawRate": -18.8940693286104,
+        "courseRate": -0.0792322842830882,
+        "coordinatePitchRate": -19.2779509887788,
+        "coordinateRollRate": 51.9589586398746,
+        "headingRate": -11.7558494701163,
+        "angleOfAttackRate": 4.64809135500832,
+        "bodyPitchRate": 12.8975775324355,
+        "bodyRollRate": 25.0982059486484,
+        "bodyYawRate": -18.8940693286104
+      }
+    },
+    {
+      "ut": 2162.20986328024,
+      "altitude": 26045.8065962915,
+      "mach": 2.15279749084127,
+      "phase": "Attitude Recovery",
+      "range": 64487.7996742692,
+      "attitude": {
+        "pitch": 53.8409729003906,
+        "roll": -60.4441223144531,
+        "heading": 198.090576171875,
+        "angleOfAttack": -52.8560104370117,
+        "sideslip": -26.6072368621826,
+        "pitchRate": 11.8247953122224,
+        "rollRate": -67.9509420158052,
+        "yawRate": -12.4250810049154,
+        "courseRate": 0.114816181186193,
+        "coordinatePitchRate": -1.27961379634946,
+        "coordinateRollRate": -75.2028625692236,
+        "headingRate": -33.689437627848,
+        "angleOfAttackRate": -40.7135652128029,
+        "bodyPitchRate": 11.8247953122224,
+        "bodyRollRate": -67.9509420158052,
+        "bodyYawRate": -12.4250810049154
+      }
+    }
+  ],
+  "qualification": "Only altitude/Mach screening; not complete energy, closure or flight-envelope admission. Recovery inhibited progression during these states."
+}
