@@ -1,0 +1,24 @@
+{
+  "evidence": "live KSP start; not a landing success",
+  "campaignIdentity": "a040d114dd4725de-7fa34c7b07fa2fee-ca5bf70fd928a206",
+  "manifest": "/Users/kyooni18/Code/KSPShuttleLander/Runtime/Headless/acceptance-artifacts/a040d114dd4725de-7fa34c7b07fa2fee-ca5bf70fd928a206/manifest.json",
+  "startedUTC": "2026-10-09T11:27:34.659096+00:00",
+  "backendPID": 64321,
+  "backendSHA256": "7fa34c7b07fa2fee294c0c94ea0c22660d1d8dd6cab9c3b9e2dc5b67e0a7b74c",
+  "sourceTreeSHA256": "a040d114dd4725de53425d6ab3d1dbe96a35e26c017d450ae2c8bf230084644e",
+  "save": "STS-OMS-72km-20261009-v2",
+  "saveSHA256": "b59ceadeaccee30133d307b069fe408e7fb0a2f844ccc40f34aef80ef7eb2aff",
+  "checkpointProfile": "Configuration/checkpoints/sts-oms-72km-20261009-v2.physics.json",
+  "startup": {
+    "UT": 1491.8498632808517,
+    "altitudeM": 71860.55826767976,
+    "massKg": 25723.234375,
+    "dryMassKg": 20348.001953125,
+    "thrustN": 0,
+    "partCount": 22,
+    "paused": true
+  },
+  "shadowGate": "passed; live entry continuation began after normal shadow qualification",
+  "changes": "attitude recovery only after measured departure; energy estimate can release missed low-energy HAC to direct runway alignment and choose modeled best-glide AoA when projected speed falls below 80 m/s",
+  "console": "/tmp/sts-live-72km-direct-glide-v8-20261009.log"
+}
