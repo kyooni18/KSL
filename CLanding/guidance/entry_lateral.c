@@ -262,10 +262,10 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             double beta_sign=beta>DBL_EPSILON?unit_sign(input->sideslip_deg):
                 (fabs(sideslip_rate)>DBL_EPSILON?unit_sign(sideslip_rate):1.0);
             double outward_beta_rate=beta_sign*sideslip_rate;
-            double measured_roll_rate=finite_or(input->measured_bank_rate_deg_s,0.0);
-            bool roll_driving_departure=outward_beta_rate>0.0&&
-                sideslip_rate*measured_roll_rate>0.0;
-            if(roll_driving_departure){
+            /* Coordination can lag with either sign during bank reversal.
+               Outward beta consumes the available margin regardless of the
+               sign of body roll; do not assume a fixed coupling polarity. */
+            if(outward_beta_rate>0.0){
                 double beta_margin=fmax(0.0,input->maximum_sideslip_deg-beta);
                 double accel=fabs(limits->maximum_roll_accel_deg_s2);
                 double safe_rate=accel*beta_margin/outward_beta_rate;

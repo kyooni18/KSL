@@ -209,6 +209,7 @@ static void sideslip_coordination_slows_bank_reference(void){
     in.sideslip_deg=-4.0;
     EntryLateralOutput seed=entry_lateral_update(&state,&in,&l);
     assert(seed.valid);
+    EntryLateralState opposite_roll=state;
 
     in.ut+=0.1;
     in.bank_magnitude_deg=0.0;
@@ -220,6 +221,10 @@ static void sideslip_coordination_slows_bank_reference(void){
     assert(fabs(limited.sideslip_rate_deg_s+4.0)<1e-9);
     assert(fabs(limited.coordination_roll_rate_limit_deg_s-expected)<1e-9);
     assert(limited.coordination_roll_rate_limit_deg_s<l.maximum_roll_rate_deg_s);
+    in.measured_bank_rate_deg_s=4.0;
+    EntryLateralOutput opposite=entry_lateral_update(&opposite_roll,&in,&l);
+    assert(opposite.valid);
+    assert(fabs(opposite.coordination_roll_rate_limit_deg_s-expected)<1e-9);
 
     EntryLateralState recovering={0};
     entry_lateral_state_init(&recovering,100.0,1.0,40.0);
