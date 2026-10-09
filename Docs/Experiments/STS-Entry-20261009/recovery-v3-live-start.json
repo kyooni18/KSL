@@ -1,0 +1,25 @@
+{
+  "attempt": "72km recovery v3",
+  "previousAttempt": "retry v2 manually aborted at user request near UT2679 h2.1km range26.5km; no MM305/landing/rollout",
+  "runnerSession": 87689,
+  "runnerPID": 73594,
+  "backendPID": 73962,
+  "console": "/tmp/sts-live-72km-recovery-v3-20261009.log",
+  "identity": "27518065a6ef1324-bb75173a58465226-ca5bf70fd928a206",
+  "manifest": "Runtime/Headless/run-manifests/20261009T083321579939Z-73962.json",
+  "startSave": "STS-OMS-72km-20261009-v2",
+  "verifiedLoadedPhysics": {
+    "ut": 1491.569863280852,
+    "altitude": 71877.38383047015,
+    "mass": 25723.234375,
+    "dryMass": 20348.001953125,
+    "partCount": 22,
+    "thrust": 0
+  },
+  "controllerChanges": [
+    "190851a body-rate arrest recovery",
+    "3ca572f yaw identification cross-axis weighting",
+    "6196e23 measured OMS geometry retry"
+  ],
+  "qualification": "Live controller engaged; atmospheric recovery performance/MM305/landing/rollout unverified. Previous completed-attempt aerodynamic history retained, current attempt held out; no shadow bypass."
+}
