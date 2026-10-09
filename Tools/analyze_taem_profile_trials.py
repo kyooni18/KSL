@@ -13,7 +13,10 @@ def analyze(text, target_speed=None, speed_tolerance=None):
     rows = []
     reasons = collections.Counter()
     combinations = collections.Counter()
+    valid_profile_families = collections.Counter()
     for line in text.splitlines():
+        if line.startswith("TAEM profile: ") and " valid=1 " in line:
+            valid_profile_families[line.rsplit(" reason=", 1)[1]] += 1
         if not line.startswith("TAEM smooth trial: "):
             continue
         fields, reason = line.rsplit(" reason=", 1)
@@ -55,6 +58,7 @@ def analyze(text, target_speed=None, speed_tolerance=None):
         "jointFeasibleCount": sum(bool(row["feasible"]) for row in rows),
         "terminationReasons": dict(reasons), "completedRejectionCombinations": dict(combinations),
         "closestJointTrials": closest,
+        "validProfileFamilyCounts": dict(valid_profile_families),
         "targetSpeedMps": target_speed, "relativeSpeedTolerance": speed_tolerance,
         "speedCompatibleCount": len(speed_ok),
         "speedCompatibleJointFeasibleCount": sum(bool(row["feasible"]) for row in speed_ok),

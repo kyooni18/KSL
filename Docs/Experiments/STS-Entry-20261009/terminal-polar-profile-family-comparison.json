@@ -1,0 +1,17 @@
+{
+  "baseline": {
+    "logSHA256": "b1cb6ee9f57c4a5a443025fd61a56e5a0c0eed6c9751fad1895f843898e1b614",
+    "validProfileFamilyCounts": {
+      "native slope-limited dive captured the exit glide line": 2,
+      "smooth reference meets the Final alignment point altitude and speed": 14
+    },
+    "speedCompatibleJointFeasibleCount": 14
+  },
+  "positive025": {
+    "logSHA256": "4ec26b368fbc82a8540cd786af5b2788731b1dd933921625df41b053aa5c8f01",
+    "validProfileFamilyCounts": {
+      "native slope-limited dive captured the exit glide line": 2
+    },
+    "speedCompatibleJointFeasibleCount": 0
+  }
+}
