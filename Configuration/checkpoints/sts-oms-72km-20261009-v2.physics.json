@@ -1,0 +1,24 @@
+{
+  "saveName": "STS-OMS-72km-20261009-v2",
+  "savePath": "/Applications/.Misc/LMPKSP/saves/Main/STS-OMS-72km-20261009-v2.sfs",
+  "saveSHA256": "b59ceadeaccee30133d307b069fe408e7fb0a2f844ccc40f34aef80ef7eb2aff",
+  "vessel": "STS",
+  "mass": 25723.2421875,
+  "dryMass": 20348.01171875,
+  "partCount": 22,
+  "savedUT": 1489.4698632808538,
+  "evidence": "Live checkpoint-time vehicle telemetry mass, independently crosschecked during unpowered descent before any recorded part loss. Reload must still verify actual unpacked state.",
+  "archivedCrosscheck": {
+    "path": "FlightLogs/2026-10-09T07-53-36Z-STS-vehicle.jsonl",
+    "ut": 1489.44986328085,
+    "massKg": 25723.2421875
+  },
+  "liveCrosscheck": {
+    "ut": 2027.7298632803643,
+    "mass": 25722.70703125,
+    "dryMass": 20348.01171875,
+    "partCount": 22,
+    "thrust": 0.0,
+    "vessel": "STS"
+  }
+}
