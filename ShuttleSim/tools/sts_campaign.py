@@ -68,6 +68,9 @@ def stage_cases(stage: str):
     elif stage == "X2":  # X1 geometry with a later site pass so longer entry-range targets fit the first orbit
         out = [mk(0, delay=1750), mk(45, branch="desc", delay=1750), mk(90, branch="asc", delay=1750),
                mk(150, branch="desc", delay=1750)]
+    elif stage == "X3":  # X1 geometry, later pass so energy-scaled (longer) entry ranges fit the first orbit
+        out = [mk(0, delay=1950), mk(90, branch="asc", delay=1950), mk(150, branch="desc", delay=1950),
+               mk(120, branch="asc", delay=1950), mk(180, delay=1950), mk(60, branch="desc", delay=1950)]
     elif stage == "S1":  # circular 86 km, every inclination, both crossing branches
         for i in INCS:
             for br in (("asc",) if i in (0, 180) else ("asc", "desc")):
@@ -197,6 +200,8 @@ def analyze_run(run_dir: pathlib.Path, config: dict | None = None) -> dict:
     ei = None
     max_q = max_g = 0.0
     closest = None
+    atm_closest = None
+    last_atm_range = None
     prev_alt = None
     post = None
     last = None
@@ -231,6 +236,11 @@ def analyze_run(run_dir: pathlib.Path, config: dict | None = None) -> dict:
         max_q = max(max_q, a["q_pa"])
         max_g = max(max_g, math.hypot(a["lift_n"], a["drag_n"]) / m / G0)
         rng = math.hypot(r["runway"]["along_m"], r["runway"]["cross_m"])
+        if alt < 70000.0:
+            last_atm_range = rng
+            if atm_closest is None or rng < atm_closest["range_m"]:
+                atm_closest = {"range_m": rng, "t": t, "alt_m": alt, "surface_mps": r["velocity"]["surface_mps"],
+                               "mach": a["mach"]}
         if closest is None or rng < closest["range_m"]:
             closest = {"range_m": rng, "t": t, "alt_m": alt, "surface_mps": r["velocity"]["surface_mps"],
                        "mach": a["mach"], "along_m": r["runway"]["along_m"], "cross_m": r["runway"]["cross_m"]}
@@ -245,6 +255,8 @@ def analyze_run(run_dir: pathlib.Path, config: dict | None = None) -> dict:
     out["postBurn"] = post
     out["entryInterface"] = ei
     out["closestApproachToRunway"] = closest
+    out["atmosphericClosestApproach"] = atm_closest
+    out["atmosphericFinalRange_m"] = last_atm_range
     out["maxDynamicPressure_pa"] = max_q
     out["maxLoadFactor_g"] = max_g
     out["series"] = series
@@ -277,21 +289,23 @@ def classify(r: dict) -> dict:
         return {"class": "NO_BURN", "detail": r.get("finalStatus", "")}
     if r.get("entryInterface") is None:
         return {"class": "NO_ENTRY", "detail": r.get("finalStatus", "")}
-    cl = r.get("closestApproachToRunway") or {}
+    cl = r.get("atmosphericClosestApproach") or {}
     fin = r.get("final") or {}
     reason = (r.get("abortReason") or r.get("finalStatus") or "")
+    final_rng = r.get("atmosphericFinalRange_m")
     ground = fin.get("alt_m", 1e9) < 500.0
-    fast_pass = cl.get("surface_mps", 0) > 500.0 and cl.get("range_m", 1e9) < 120e3
-    if ground and fin.get("surface_mps", 1e9) < 200.0:
-        kind = "ENERGY_OVERSHOOT" if (cl.get("range_m", 0) < 60e3 and cl.get("surface_mps", 0) > 400) or \
-            abs(fin.get("along_m", 0)) > 150e3 else "SHORT_OR_LATERAL"
-        return {"class": f"MM304_{kind}", "detail": reason}
-    if fast_pass:
+    # Overshoot: the vehicle passed its closest approach to the runway while still in the atmosphere and
+    # then flew away from it.  Short: range to the runway was still decreasing when the flight ended.
+    passed = final_rng is not None and cl and final_rng > cl.get("range_m", 0) + 15e3
+    if ground or "Rollout" in (r.get("phaseSequence") or []):
+        if passed:
+            return {"class": "MM304_OVERSHOOT", "detail": f"closest {cl['range_m']/1000:.0f} km at {cl['surface_mps']:.0f} m/s, ended {final_rng/1000:.0f} km away; " + reason}
+        return {"class": "MM304_SHORT", "detail": f"ended {((final_rng or 0))/1000:.0f} km from runway; " + reason}
+    if passed:
         return {"class": "MM304_HIGH_ENERGY_PASS", "detail": reason}
     return {"class": "MM304_NO_HANDOFF", "detail": reason}
 
 
-# --------------------------------------------------------------------------- execution
 def cfg_digest(path):
     return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 
@@ -445,6 +459,18 @@ def cmd_plan(args):
               f"cross={c['geometry']['achieved_pass_crossrange_km']:.2f}km")
 
 
+def cmd_reanalyze(args):
+    camp = pathlib.Path(args.campaign).resolve()
+    for p in sorted((camp / "results").glob("*.json")):
+        r = json.loads(p.read_text())
+        if r.get("runDir"):
+            r["analysis"] = analyze_run(pathlib.Path(r["runDir"]), json.loads(pathlib.Path(r["config"]).read_text()))
+            r["outcome"] = r["analysis"]["classification"]
+            r["mm305Acquired"] = r["analysis"]["mm305Acquired"]
+            p.write_text(json.dumps(r, indent=1))
+    cmd_report(argparse.Namespace(campaign=str(camp), compare=None))
+
+
 def cmd_analyze(args):
     print(json.dumps(analyze_run(pathlib.Path(args.run_dir)), indent=1)[:12000])
 
@@ -462,6 +488,7 @@ def main():
     p.set_defaults(fn=cmd_run)
     p = sp.add_parser("report"); p.add_argument("--campaign", required=True); p.add_argument("--compare", default=None)
     p.set_defaults(fn=cmd_report)
+    p = sp.add_parser("reanalyze"); p.add_argument("--campaign", required=True); p.set_defaults(fn=cmd_reanalyze)
     p = sp.add_parser("analyze"); p.add_argument("run_dir"); p.set_defaults(fn=cmd_analyze)
     a = ap.parse_args()
     a.fn(a)

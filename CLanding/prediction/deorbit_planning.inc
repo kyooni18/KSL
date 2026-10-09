@@ -1,3 +1,17 @@
+/* The entry range that lets a drag-limited vehicle shed its entry energy by the TAEM interface grows
+   with that energy: retrograde and high-inclination orbits arrive with higher air-relative speed than
+   the prograde orbit the configured range was tuned for. */
+static double deorbit_effective_entry_range(const GuidanceSettings*s,const PlanetModel*p,double speed){
+    double ref=s->entry_range_reference_speed;
+    if(!(ref>0.0)||!isfinite(speed)||!(speed>0.0))return s->target_entry_range;
+    double vt=fmax(1.0,s->mm305_target_mach)*320.0;
+    double g=p->gravitational_parameter/((p->radius+60000.0)*(p->radius+60000.0));
+    double dh=fmax(0.0,p->atmosphere_depth-s->entry_interface_altitude_margin-s->taem_interface_altitude);
+    double pe=2.0*g*dh;
+    double scale=(speed*speed-vt*vt+pe)/fmax(1.0,ref*ref-vt*vt+pe);
+    return s->target_entry_range*clampd(scale,0.7,2.0);
+}
+
 static DeorbitEnergyMargin deorbit_energy_margin_probe(VehicleState after,const PlanetModel*p,
         AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s){
@@ -550,7 +564,7 @@ static bool deorbit_timing_probe_entry(DeorbitTimingProbe*out,VehicleState state
             out->entry_course_error=fabs(signed_error);
             out->entry_crossrange=fabs(asin(clampd(cross_sine,-1.0,1.0))*p->radius);
             out->entry_miss=hypot(out->entry_crossrange,
-                range-s->target_entry_range);
+                range-deorbit_effective_entry_range(s,p,out->entry_speed));
             out->closing=out->entry_course_error<90.0;
             out->valid=isfinite(out->entry_range)&&isfinite(out->entry_fpa)&&
                 isfinite(out->entry_speed)&&isfinite(out->entry_course_error)&&
@@ -605,7 +619,11 @@ static bool deorbit_timing_probe_better(const DeorbitTimingProbe*a,
     bool a_capture=a->entry_miss<=s->target_deorbit_capture_radius;
     bool b_capture=b->entry_miss<=s->target_deorbit_capture_radius;
     if(a_capture!=b_capture)return a_capture;
-    if(a_capture&&a->burn_start!=b->burn_start)return a->burn_start<b->burn_start;
+    /* Inside one ground-track pass the entry range varies continuously with burn time, so the earliest
+       in-radius burn only lands at the near edge of the capture radius, which is an energy error of up
+       to the radius itself.  Within a pass prefer the smaller miss; across passes keep the earlier one. */
+    if(a_capture&&a->burn_start!=b->burn_start&&fabs(a->burn_start-b->burn_start)>1200.0)
+        return a->burn_start<b->burn_start;
     if(a->entry_miss<b->entry_miss)return true;
     if(a->entry_miss>b->entry_miss)return false;
     if(a->entry_crossrange<b->entry_crossrange)return true;

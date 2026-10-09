@@ -67,6 +67,9 @@ typedef struct {
 } VehicleProfile;
 typedef struct {
     double target_deorbit_capture_radius, entry_interface_altitude_margin, target_entry_range;
+    /* Entry-interface air-relative speed for which target_entry_range was tuned. When > 0 the planner
+       scales the entry-range target with the specific energy to be shed (0 disables, legacy behavior). */
+    double entry_range_reference_speed;
     double target_entry_flight_path_angle, maximum_entry_flight_path_angle, target_post_burn_periapsis_altitude;
     double deorbit_maximum_throttle, deorbit_throttle_ramp_duration, taem_interface_altitude, taem_interface_range;
     double taem_force_handoff_speed;
