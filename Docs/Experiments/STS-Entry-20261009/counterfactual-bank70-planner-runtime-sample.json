@@ -1,0 +1,21 @@
+{
+  "classification": "offline running-process CPU sample; no trajectory or flight qualification",
+  "processPID": 98359,
+  "sampleDurationSeconds": 1,
+  "sampleSHA256": "f243dc8ec631012f4ef04c1ce8d98e95fcba5b3f0e3ec4667fca8b21359034e8",
+  "samplePath": "/tmp/sts-mm305-planner-sample.txt",
+  "observedWorkerStacks": [
+    "+     470 terminal_prediction_worker  (in landing_backend) + 2408  [0x1009d6f80]",
+    "+       470 predictor_simulate_terminal_shadow_ensemble  (in landing_backend) + 904  [0x100a0bdcc]",
+    "+                 467 mm305_acquisition_command  (in landing_backend) + 2960  [0x1009ebb88]",
+    "+                 ! 467 taem_fixed_hac_evaluate_route  (in landing_backend) + 180  [0x100a02df4]",
+    "+                 2 mm305_acquisition_command  (in landing_backend) + 2740  [0x1009ebaac]",
+    "+                 1 mm305_acquisition_command  (in landing_backend) + 2808  [0x1009ebaf0]",
+    "470 mm305_planner_worker  (in landing_backend) + 596  [0x1009d7654]"
+  ],
+  "interpretation": "Both planner and terminal shadow predictor are computing. The predictor calls native provisional acquisition profile/replay searches. This is evidence of active computation, not a dead connection or a complete run. One-second sampling does not establish total runtime proportions.",
+  "runSession": 2028,
+  "normalShadowAdmissionProven": false,
+  "landingOrRolloutProven": false,
+  "productionOrGateChanges": false
+}
