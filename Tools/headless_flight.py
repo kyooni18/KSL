@@ -1370,6 +1370,11 @@ def main() -> int:
     )
     parser.add_argument("--checkpoint-name", default="STS-N-reentry-checkpoint")
     parser.add_argument(
+        "--checkpoint-after-verified-deorbit",
+        action="store_true",
+        help="Save the altitude checkpoint only after achieved deorbit state and target capture are verified.",
+    )
+    parser.add_argument(
         "--checkpoint-at",
         action="append",
         nargs=2,
@@ -1973,6 +1978,15 @@ def main() -> int:
                 and args.checkpoint_altitude > 0
                 and altitude <= args.checkpoint_altitude
                 and vertical_speed < 0
+                and (
+                    not args.checkpoint_after_verified_deorbit
+                    or (
+                        bool(guidance_state.get("burnCompleted"))
+                        and bool(plan.get("achievedStateVerified"))
+                        and bool(plan.get("targetCaptureAchieved"))
+                        and bool(plan.get("achievedStateCaptureQualified"))
+                    )
+                )
             ):
                 backend.send("saveCheckpoint", timeout=30.0, name=args.checkpoint_name)
                 checkpoint_saved = True
