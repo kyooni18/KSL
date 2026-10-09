@@ -1,0 +1,232 @@
+{
+  "classification": "offline counterfactual scenario reconstruction; not live checkpoint",
+  "sourceSHA256": "7a84c5c5015a58343e994858f889ec4bd713c8df3d9604a9008467425aff6565",
+  "scenarioSHA256": "7d8e3f10e57d53e3bbc181a8e23175628887f870b576758f02f0cae9d1053485",
+  "sourceState": {
+    "schema": 1,
+    "type": "telemetry",
+    "source": "sim",
+    "scenario": "sts70km-run9-provisional",
+    "ut": 10520.631826,
+    "sim_time": 556.92,
+    "sim_rate": 1984.58,
+    "world": {
+      "radius_m": 600000,
+      "mu_m3_s2": 3531600000000.0,
+      "rotation_rate_rad_s": 0.000291570903037,
+      "atmosphere_top_m": 70000,
+      "rotation_phase_rad_at_ut0": 1.57079632679
+    },
+    "position": {
+      "x": -618554.049753,
+      "y": -82084.148149,
+      "z": -5211.295713,
+      "lat_deg": -0.478508747,
+      "lon_deg": -78.196212286,
+      "altitude_m": 23998.459
+    },
+    "velocity": {
+      "x_mps": 267.461983,
+      "y_mps": -948.646894,
+      "z_mps": -107.315435,
+      "inertial_mps": 991.455,
+      "surface_mps": 813.08,
+      "air_mps": 813.08,
+      "horizontal_mps": 801.034,
+      "vertical_mps": -139.442,
+      "flight_path_angle_deg": -9.874952
+    },
+    "attitude": {
+      "aoa_deg": 28.0,
+      "bank_deg": -70.0022,
+      "heading_deg": 97.7835,
+      "cmd_aoa_deg": 28.0,
+      "cmd_bank_deg": -70.0,
+      "requested_aoa_deg": 28.0,
+      "requested_bank_deg": -70.0,
+      "aoa_rate_deg_s": 0.0,
+      "bank_rate_deg_s": 0.006248,
+      "sideslip_deg": 0.0,
+      "direct_control": false,
+      "pitch_wn_s_inv": 1.5,
+      "pitch_zeta": 1.3,
+      "roll_wn_s_inv": 1.4,
+      "roll_zeta": 0.85,
+      "max_pitch_rate_deg_s": 5.858643,
+      "max_roll_rate_deg_s": 12.450661,
+      "max_pitch_accel_deg_s2": 14.360269,
+      "max_roll_accel_deg_s2": 23.324585,
+      "q_w": 0.14977898,
+      "q_x": -0.621164667,
+      "q_y": 0.765185538,
+      "q_z": -0.078815009
+    },
+    "atmosphere": {
+      "density_kg_m3": 0.0183246199334,
+      "pressure_pa": 1191.48118,
+      "temperature_k": 226.50749,
+      "speed_of_sound_mps": 301.710289
+    },
+    "aero": {
+      "mach": 2.694904,
+      "q_pa": 6057.196564,
+      "lift_n": 324470.831365,
+      "drag_n": 382817.747433
+    },
+    "vehicle": {
+      "mass_kg": 25816.072266,
+      "available_thrust_n": 0.0,
+      "current_thrust_n": 0.0,
+      "throttle": 0.0
+    },
+    "runway": {
+      "along_m": -36315.299,
+      "cross_m": 4502.81,
+      "vertical_m": 23928.459,
+      "length_m": 2500.0,
+      "width_m": 70.0,
+      "heading_deg": 90.0
+    },
+    "ground": {
+      "gear_down": false,
+      "brakes": false,
+      "airbrakes": false,
+      "wheel_steering": 0.0,
+      "steering_lateral_accel_mps2": 0.0,
+      "airbrake_decel_mps2": 0.0,
+      "on_ground": false,
+      "stopped": false,
+      "touchdown_seen": false,
+      "on_runway_touchdown": false,
+      "main_contact": false,
+      "nose_contact": false,
+      "pitch_released": false,
+      "main_load_n": 0.0,
+      "nose_load_n": 0.0,
+      "tail_load_n": 0.0,
+      "bounce_count": 0,
+      "runway_departure": false,
+      "pitch_deg": 18.125
+    }
+  },
+  "firstPublishedTelemetry": {
+    "schema": 1,
+    "type": "telemetry",
+    "source": "sim",
+    "scenario": "sts-counterfactual-bank70-24km",
+    "ut": 10520.651826,
+    "sim_time": 0.02,
+    "sim_rate": 338.98,
+    "world": {
+      "radius_m": 600000,
+      "mu_m3_s2": 3531600000000.0,
+      "rotation_rate_rad_s": 0.000291570903037,
+      "atmosphere_top_m": 70000,
+      "rotation_phase_rad_at_ut0": 1.57079632679
+    },
+    "position": {
+      "x": -618548.700288,
+      "y": -82103.116157,
+      "z": -5213.436582,
+      "lat_deg": -0.47870747,
+      "lon_deg": -78.194755198,
+      "altitude_m": 23995.67
+    },
+    "velocity": {
+      "x_mps": 267.473228,
+      "y_mps": -948.400383,
+      "z_mps": -107.04345,
+      "inertial_mps": 991.193,
+      "surface_mps": 812.815,
+      "air_mps": 812.815,
+      "horizontal_mps": 800.762,
+      "vertical_mps": -139.457,
+      "flight_path_angle_deg": -9.879283
+    },
+    "attitude": {
+      "aoa_deg": 28.0,
+      "bank_deg": -70.0022,
+      "heading_deg": 97.7665,
+      "cmd_aoa_deg": 28.0,
+      "cmd_bank_deg": -70.0022,
+      "requested_aoa_deg": 28.0,
+      "requested_bank_deg": -70.0022,
+      "aoa_rate_deg_s": 0.0,
+      "bank_rate_deg_s": 0.0,
+      "sideslip_deg": 0.0,
+      "direct_control": false,
+      "pitch_wn_s_inv": 1.5,
+      "pitch_zeta": 1.3,
+      "roll_wn_s_inv": 1.4,
+      "roll_zeta": 0.85,
+      "max_pitch_rate_deg_s": 5.858643,
+      "max_roll_rate_deg_s": 12.450661,
+      "max_pitch_accel_deg_s2": 14.360269,
+      "max_roll_accel_deg_s2": 23.324585,
+      "q_w": 0.149712387,
+      "q_x": -0.621224148,
+      "q_y": 0.765137909,
+      "q_z": -0.078935033
+    },
+    "atmosphere": {
+      "density_kg_m3": 0.0183344974361,
+      "pressure_pa": 1192.10525,
+      "temperature_k": 226.504036,
+      "speed_of_sound_mps": 301.707988
+    },
+    "aero": {
+      "mach": 2.694044,
+      "q_pa": 6056.5027,
+      "lift_n": 324487.842902,
+      "drag_n": 382746.259498
+    },
+    "vehicle": {
+      "mass_kg": 25816.072266,
+      "available_thrust_n": 0.0,
+      "current_thrust_n": 0.0,
+      "throttle": 0.0
+    },
+    "runway": {
+      "along_m": -36300.041,
+      "cross_m": 4504.89,
+      "vertical_m": 23925.67,
+      "length_m": 2500.0,
+      "width_m": 70.0,
+      "heading_deg": 90.0
+    },
+    "ground": {
+      "gear_down": false,
+      "brakes": false,
+      "airbrakes": false,
+      "wheel_steering": 0.0,
+      "steering_lateral_accel_mps2": 0.0,
+      "airbrake_decel_mps2": 0.0,
+      "on_ground": false,
+      "stopped": false,
+      "touchdown_seen": false,
+      "on_runway_touchdown": false,
+      "main_contact": false,
+      "nose_contact": false,
+      "pitch_released": false,
+      "main_load_n": 0.0,
+      "nose_load_n": 0.0,
+      "tail_load_n": 0.0,
+      "bounce_count": 0,
+      "runway_departure": false,
+      "pitch_deg": 18.1207
+    }
+  },
+  "publishedFrameDelayS": 0.019999999998617568,
+  "oneStepPositionClosureErrorM": 0.007344713518667748,
+  "sourceValuesCopiedExactly": true,
+  "angularRateResetDegS": {
+    "aoa": 0.0,
+    "bank": 0.006248
+  },
+  "limitations": [
+    "Telemetry first publishes after one0.02s integration step, not at scenario epoch.",
+    "Source Cartesian/attitude values are rounded.",
+    "Angular rates reset; bank0.006248deg/s lost.",
+    "No continuous entry/controller qualification claimed."
+  ]
+}
