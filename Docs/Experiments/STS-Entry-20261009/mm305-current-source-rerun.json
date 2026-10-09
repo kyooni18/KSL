@@ -1,0 +1,55 @@
+{
+  "classification": "offline finite-fixture rerun; not STS flight qualification",
+  "gitHead": "6f0a75ee023a981a6c4703bb545f0bec27e2c2e6",
+  "nativeWorkingTreeEditsPresent": true,
+  "runs": [
+    {
+      "fixture": "native-default",
+      "command": "make -C CLanding mm305-feasibility-test",
+      "exitCode": 2,
+      "logPath": "/tmp/sts-mm305-20261009-baseline.log",
+      "logSHA256": "15c86bad49d103e7c38cacb867e3179d1027d24162e23ff44be2af7684af1f26",
+      "fixtureIdentity": "MM305 fixture: profile=identified modelId=STS-N massKg=40000.000000 configuration=native-default state=legacy-envelope-property-fixture",
+      "summary": "MM305 downstream-feasibility contract: 5 physically admitted, 0 qualified (handoff), 5 held in MM304, 0 violations.",
+      "samples": [
+        "sample=0 altitude=26000.0 mach=2.500 along=-30000.0 cross=0.0 found=0 gate=0 solve_wall=36.394",
+        "sample=1 altitude=22500.0 mach=2.350 along=-28000.0 cross=-5000.0 found=0 gate=0 solve_wall=33.018",
+        "sample=2 altitude=26000.0 mach=2.500 along=-60000.0 cross=0.0 found=0 gate=0 solve_wall=63.497",
+        "sample=3 altitude=26000.0 mach=2.500 along=-80000.0 cross=0.0 found=0 gate=0 solve_wall=56.176",
+        "sample=4 altitude=23500.0 mach=2.400 along=-70000.0 cross=8000.0 found=0 gate=0 solve_wall=57.295"
+      ]
+    },
+    {
+      "fixture": "native-default-diagnostics",
+      "command": "KSP_LANDER_TAEM_DIAGNOSTICS=1 CLanding/build/mm305_feasibility_tests",
+      "exitCode": 1,
+      "logPath": "/tmp/sts-mm305-20261009-diagnostics.log",
+      "logSHA256": "563322fdba648326b6418d503eeddd553e7ab820891443d799a9a0568a82526f",
+      "fixtureIdentity": "MM305 fixture: profile=identified modelId=STS-N massKg=40000.000000 configuration=native-default state=legacy-envelope-property-fixture",
+      "summary": "MM305 downstream-feasibility contract: 5 physically admitted, 0 qualified (handoff), 5 held in MM304, 0 violations.",
+      "samples": [
+        "sample=0 altitude=26000.0 mach=2.500 along=-30000.0 cross=0.0 found=0 gate=0 solve_wall=42.828",
+        "sample=1 altitude=22500.0 mach=2.350 along=-28000.0 cross=-5000.0 found=0 gate=0 solve_wall=33.266",
+        "sample=2 altitude=26000.0 mach=2.500 along=-60000.0 cross=0.0 found=0 gate=0 solve_wall=56.604",
+        "sample=3 altitude=26000.0 mach=2.500 along=-80000.0 cross=0.0 found=0 gate=0 solve_wall=56.518",
+        "sample=4 altitude=23500.0 mach=2.400 along=-70000.0 cross=8000.0 found=0 gate=0 solve_wall=53.079"
+      ]
+    },
+    {
+      "fixture": "configured-STS",
+      "command": "KSP_LANDER_TAEM_DIAGNOSTICS=1 make -C CLanding -f Makefile -f ../Validation/STSRepairTests.mk sts-run9-mm305-test",
+      "exitCode": 2,
+      "logPath": "/tmp/sts-run9-mm305-20261009.log",
+      "logSHA256": "dc3eb3a8ef7411a4269c63c514e20654e9ccee4756f773e288a791a789fcd36f",
+      "fixtureIdentity": "MM305 fixture: profile=sts-provisional modelId=STS massKg=25816.072266 configuration=Configuration/sts.json state=native-atmosphere-and-forces",
+      "summary": "MM305 downstream-feasibility contract: 5 physically admitted, 0 qualified (handoff), 5 held in MM304, 0 violations.",
+      "samples": [
+        "sample=0 altitude=26000.0 mach=2.500 along=-30000.0 cross=0.0 found=0 gate=0 solve_wall=30.884",
+        "sample=1 altitude=22500.0 mach=2.350 along=-28000.0 cross=-5000.0 found=0 gate=0 solve_wall=29.084",
+        "sample=2 altitude=26000.0 mach=2.500 along=-60000.0 cross=0.0 found=0 gate=0 solve_wall=47.609",
+        "sample=3 altitude=26000.0 mach=2.500 along=-80000.0 cross=0.0 found=0 gate=0 solve_wall=68.611",
+        "sample=4 altitude=23500.0 mach=2.400 along=-70000.0 cross=8000.0 found=0 gate=0 solve_wall=70.923"
+      ]
+    }
+  ]
+}
