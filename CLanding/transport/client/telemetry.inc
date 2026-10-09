@@ -208,11 +208,14 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     client->has_previous_course = true;
     client->previous_course_ut = ut; client->previous_course = t->ground_track_heading;
 
-    if (!client->medium_valid || ut - client->last_medium_ut >= CNANO_MEDIUM_PERIOD) {
+    bool burn_active=client->cached_command_throttle>0.0||client->cached_current_thrust>0.0;
+    if (burn_active || !client->medium_valid || ut - client->last_medium_ut >= CNANO_MEDIUM_PERIOD) {
         if(!refresh_medium(client,configuration->vehicle.airbrake_action_group,error,error_size))return false;
         client->last_medium_ut=ut;
     }
-    if (!client->slow_valid || ut - client->last_slow_ut >= CNANO_SLOW_PERIOD) {
+    /* Periapsis and measured thrust close the burn loop. Their idle cache
+       cadence must not become an extra second of unobserved acceleration. */
+    if (burn_active || !client->slow_valid || ut - client->last_slow_ut >= CNANO_SLOW_PERIOD) {
         if(!refresh_slow(client,error,error_size))return false;
         client->last_slow_ut=ut;
     }

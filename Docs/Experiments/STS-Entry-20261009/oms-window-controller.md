@@ -26,3 +26,11 @@ The production backend builds with warnings treated as errors. `EngineRoleTests.
 `DeorbitWindowTests.c` exercises the actual internal orbital probe and comparator. A circular 86 km equatorial test orbit has period 1899.7 s and search horizon 2083.3 s. The cheap search selects an OMS burn at 584.9 s with predicted geometric miss 6927.3 m. Inclined and eccentric cases retain the longer horizon. A 5-degree normal burn changes entry cross-track by 302.2 m while re-solving achieved periapsis to 50000.0 m. These are offline orbital calculations, not atmospheric recovery or landing validation.
 
 The ongoing live flight entered MM304 at UT 14084.8, altitude 68.9 km, range 1133.7 km. At UT 14226.0 it remained active at 58.5 km, range 864.5 km, AoA 25.6 degrees, with no MM305 admission yet. Do not restart or replace it to apply the new orbital code mid-flight.
+
+## Burn observation cadence follow-up
+
+The native reader's `refresh_slow` updates periapsis only once per simulated second; `refresh_medium` updates current thrust every 0.25 s. Both participate in the live burn cutoff loop. The new backend now refreshes both on every reader tick while commanded or measured thrust is nonzero, retaining idle cache cadence otherwise. This removes the explicit observation delay without inventing a vehicle-specific cutoff distance. The production build passes. This has not yet been exercised in a live OMS-only burn and does not by itself prove cutoff accuracy.
+
+Reconstruction of the old live burn's logged commands shows target throttle still 6.28% at UT 13688.39. It changed to zero at UT 13688.53 while the cached measured thrust remained 192049 N through UT 13688.75. Thus thrust observation and actuator rundown both matter; a clean zero-throttle command alone is not proof of an exact achieved periapsis. Orbital periapsis is absent from the vehicle JSON fields, so the independent live read remains the authoritative achieved-periapsis observation.
+
+The current flight remained active in MM304 at UT 14364.6: altitude 50.0 km, range 598.8 km, TAS 2047.3 m/s, AoA 25.2 degrees. No MM305 admission or landing has occurred.
