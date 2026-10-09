@@ -25,7 +25,7 @@ import threading
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
 try:
@@ -1809,6 +1809,66 @@ def _open_jsonl_file(path: Path):
     return path.open("r", encoding="utf-8")
 
 
+def _iter_jsonl_dicts(path: Path):
+    """Yield valid JSON objects without retaining the source file in memory."""
+    try:
+        with _open_jsonl_file(path) as handle:
+            for raw in handle:
+                if not raw.strip():
+                    continue
+                try:
+                    value = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(value, dict):
+                    yield value
+    except (OSError, UnicodeError, EOFError):
+        return
+
+
+def _sample_jsonl_dicts(path: Path, limit: int,
+                        include: Callable[[dict[str, Any]], bool] | None = None
+                        ) -> list[dict[str, Any]]:
+    """Return evenly spaced JSONL objects using memory bounded by ``limit``."""
+    limit = max(1, int(limit))
+    selected: list[dict[str, Any]] = []
+    total = 0
+    overflow = False
+    for value in _iter_jsonl_dicts(path):
+        if include is not None and not include(value):
+            continue
+        total += 1
+        if not overflow:
+            if total <= limit:
+                selected.append(value)
+            else:
+                selected.clear()
+                overflow = True
+
+    if not overflow:
+        return selected
+
+    if limit == 1:
+        indices = {total - 1}
+    else:
+        indices = {
+            int(round(i * (total - 1) / float(limit - 1)))
+            for i in range(limit)
+        }
+    selected = []
+    index = 0
+    for value in _iter_jsonl_dicts(path):
+        if include is not None and not include(value):
+            continue
+        if index in indices:
+            selected.append(value)
+        index += 1
+        # A growing active log must not shift the sample after the count pass.
+        if index >= total:
+            break
+    return selected
+
+
 def _extract_run_timestamp(run_id: str, manifest: dict[str, Any], path: Path | None = None) -> float:
     st = manifest.get("startedAt")
     if isinstance(st, (int, float)) and st > 0:
@@ -2264,36 +2324,26 @@ def load_simulator_replay_frames(run_dir: Path, run: dict[str, Any],
     path = _simulation_run_artifact(
         run_dir, run.get("simulatorTelemetry"), "simulator-telemetry.jsonl"
     )
-    packets: list[dict[str, Any]] = []
     base = run.get("prerollFinal") if isinstance(run.get("prerollFinal"), dict) else {}
     final = run.get("final") if isinstance(run.get("final"), dict) else {}
     base_ut = optional_number(base.get("ut"))
     final_ut = optional_number(final.get("ut"))
-    try:
-        with _open_jsonl_file(path) as handle:
-            for line in handle:
-                try:
-                    packet = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if not isinstance(packet, dict) or packet.get("source") != "sim":
-                    continue
-                ut = optional_number(packet.get("ut"))
-                if base_ut is not None and ut is not None and ut + 1e-6 < base_ut:
-                    continue
-                if final_ut is not None and ut is not None and ut - 1e-6 > final_ut:
-                    continue
-                packets.append(packet)
-    except OSError:
-        return []
+    limit = max(20, min(2000, max_frames))
+
+    def in_run(packet: dict[str, Any]) -> bool:
+        if packet.get("source") != "sim":
+            return False
+        ut = optional_number(packet.get("ut"))
+        if base_ut is not None and ut is not None and ut + 1e-6 < base_ut:
+            return False
+        if final_ut is not None and ut is not None and ut - 1e-6 > final_ut:
+            return False
+        return True
+
+    packets = _sample_jsonl_dicts(path, limit, in_run)
 
     if not packets:
         return []
-    limit = max(20, min(2000, max_frames))
-    if len(packets) > limit:
-        scale = (len(packets) - 1) / float(limit - 1)
-        indices = sorted({min(len(packets) - 1, int(round(i * scale))) for i in range(limit)})
-        packets = [packets[i] for i in indices]
 
     frames: list[dict[str, Any]] = []
     for packet in packets:
@@ -3008,31 +3058,15 @@ def simulator_collector_loop(store: "SnapshotStore", root: Path, stop: threading
             sock.close()
 
 
-def load_replay_frames(path: Path, max_frames: int | None = None) -> list[dict[str, Any]]:
-    try:
-        raw_lines: list[str] = []
-        with _open_jsonl_file(path) as handle:
-            for line in handle:
-                if line.strip():
-                    raw_lines.append(line)
-    except OSError:
-        return []
-
-    if max_frames is not None and len(raw_lines) > max_frames:
-        scale = (len(raw_lines) - 1) / float(max_frames - 1)
-        indices = sorted({min(len(raw_lines) - 1, int(round(i * scale))) for i in range(max_frames)})
-        raw_lines = [raw_lines[i] for i in indices]
-
+def load_replay_frames(path: Path, max_frames: int = 2000) -> list[dict[str, Any]]:
+    max_frames = max(1, max_frames)
+    records = _sample_jsonl_dicts(
+        path,
+        max_frames,
+        lambda value: not (value.get("source") == "sim" and value.get("type") == "telemetry"),
+    )
     frames: list[dict[str, Any]] = []
-    for line in raw_lines:
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(value, dict):
-            continue
-        if value.get("source") == "sim" and value.get("type") == "telemetry":
-            continue
+    for value in records:
         snapshot = value.get("snapshot") if isinstance(value.get("snapshot"), dict) else value
         if isinstance(snapshot, dict):
             snapshot.pop("actualTrajectory", None)
@@ -3060,7 +3094,7 @@ def replay_collector_loop(store: "SnapshotStore", root: Path, stop: threading.Ev
             "guidanceSnapshots": str(replay_path),
         }
     configuration = _replay_configuration(root, run, fallback_configuration)
-    guidance_frames = load_replay_frames(replay_path)
+    guidance_frames = load_replay_frames(replay_path, max_frames=2000)
     simulator_frames = load_simulator_replay_frames(replay_path.parent, run, 2000)
     frames = hydrate_archive_replay_frames(guidance_frames, simulator_frames, configuration)
     if not frames:
