@@ -74,6 +74,10 @@ def main():
               "fraction": args.fraction, "localFractions": [0.0, 0.20, 0.55],
               "originalSourceSHA256": digest(original),
               "candidateSourceSHA256": digest(candidate), "binarySHA256": digest(binary),
+              "baselineFixtureSHA256": digest(NATIVE / "build/mm305_configured_tests"),
+              "nativeObjectSHA256": {item: digest((NATIVE / item).resolve())
+                  for item in link_cmd if item.endswith(".o")},
+              "compileCommand": compile_cmd, "linkCommand": link_cmd,
               "command": command, "configurationSHA256": digest(ROOT / command[2]),
               "aeroSHA256": digest(ROOT / command[-1]), "status": "running"}
     manifest = out / "experiment.json"
