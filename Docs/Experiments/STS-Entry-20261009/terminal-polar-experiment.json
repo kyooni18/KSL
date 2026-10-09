@@ -1,0 +1,32 @@
+{
+  "classification": "unqualified offline terminal polar sensitivity; provisional Mach mapping",
+  "certifiedCells": 0,
+  "sourceSHA256": "eb996f89c059eb2b486b48d5728827d28a2ba868c71ec50e7759b605d355e141",
+  "baselineSHA256": "e51dc06fd3b3bc25912e3beb1d1faa9598735bb19b35ec1f9da22afacafdf2f9",
+  "atmosphereSHA256": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+  "tableSHA256": "5a56177528a69b8758bcfc46981e34fdea51febd874f9a41b753d9b04bb6d6f7",
+  "sourceAltitudeM": 20000,
+  "nominalSoundSpeedMps": 298.40081268592127,
+  "insertedMachAnchors": [
+    0.40214367688838965,
+    0.5361915691845195,
+    0.8042873537767793,
+    1.3404789229612988
+  ],
+  "modifiedMachBand": [
+    0.40214367688838965,
+    1.3404789229612988
+  ],
+  "modifiedAlphaBand": [
+    0,
+    28
+  ],
+  "replacedOrInsertedCells": 84,
+  "limitations": [
+    "Mach is exact TAS divided by nominal identified-table sound speed, not live hypothetical Mach; mapping sensitivity remains unvalidated.",
+    "Single 20 km static neutral-surface polar; other altitudes are holdout comparisons, not averaged.",
+    "Perpendicular force magnitude includes any side force and positive residual lift at alpha zero.",
+    "Original nodes outside selected band preserved; neighboring interpolation blends change.",
+    "No flight qualification, normal gate admission, touchdown or rollout evidence."
+  ]
+}
