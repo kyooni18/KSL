@@ -1,0 +1,160 @@
+{
+  "classification": "provisional offline API incidence-shape experiment; not STS validation",
+  "sources": [
+    {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-aero-envelope-grid-20261009.json",
+      "sha256": "c7e9bc1607414392c9dd50ba448d39b58d41b0f3388ee118f65e729c5dac4ddf"
+    },
+    {
+      "path": "ShuttleSim/reference-model/sts_aero_provisional.csv",
+      "sha256": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5"
+    }
+  ],
+  "certified_cells": 0,
+  "modified_node_band": {
+    "mach": [
+      4,
+      6
+    ],
+    "alpha_deg": [
+      18,
+      28
+    ]
+  },
+  "replaced_nodes": 25,
+  "assumptions": [
+    "neutral controls, zero beta and bank; API forces are hypothetical",
+    "median force/q over five altitudes; q and Mach estimates inherit source epoch/temperature caveats",
+    "linear interpolation between two measured-in-API incidence points",
+    "original nodes outside the band remain; interpolation into adjacent cells is a provisional blend",
+    "sub-Mach4 aero and borrowed STS-N attitude dynamics remain unvalidated"
+  ],
+  "anchors": [
+    {
+      "mach_estimate": 4.0,
+      "alpha_deg": 18.0,
+      "count": 5,
+      "cl": 0.1281161795453765,
+      "cd": 0.16909369184133938,
+      "coefficient_ranges": [
+        [
+          0.12811617769286057,
+          0.12811621748028804
+        ],
+        [
+          0.16901209334672648,
+          0.1745160297670484
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.11982115888155764,
+        0.2243046568167799
+      ]
+    },
+    {
+      "mach_estimate": 4.0,
+      "alpha_deg": 28.0,
+      "count": 5,
+      "cl": 0.17237712252775997,
+      "cd": 0.30651505953366365,
+      "coefficient_ranges": [
+        [
+          0.17237709743390184,
+          0.17237714925240025
+        ],
+        [
+          0.30639463260793826,
+          0.3145142289067117
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.16900090738629198,
+        0.27523178325041875
+      ]
+    },
+    {
+      "mach_estimate": 5.0,
+      "alpha_deg": 18.0,
+      "count": 5,
+      "cl": 0.11897353698387485,
+      "cd": 0.16676158912909764,
+      "coefficient_ranges": [
+        [
+          0.11897352488578565,
+          0.11897356142284482
+        ],
+        [
+          0.16664036703989005,
+          0.1694359092710251
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.11226105357766557,
+        0.21835653220868428
+      ]
+    },
+    {
+      "mach_estimate": 5.0,
+      "alpha_deg": 28.0,
+      "count": 5,
+      "cl": 0.16007592944968027,
+      "cd": 0.30100868672811426,
+      "coefficient_ranges": [
+        [
+          0.16007589994657576,
+          0.16007595654366355
+        ],
+        [
+          0.3008297217142817,
+          0.3049567842487232
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.15833781358393703,
+        0.26607041472460013
+      ]
+    },
+    {
+      "mach_estimate": 6.0,
+      "alpha_deg": 18.0,
+      "count": 5,
+      "cl": 0.1187988911031402,
+      "cd": 0.1709217999549208,
+      "coefficient_ranges": [
+        [
+          0.11879885881329444,
+          0.118798920670318
+        ],
+        [
+          0.17092178524391502,
+          0.171926859047849
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.113615702712351,
+        0.21314570802832136
+      ]
+    },
+    {
+      "mach_estimate": 6.0,
+      "alpha_deg": 28.0,
+      "count": 5,
+      "cl": 0.15984094849248,
+      "cd": 0.30720693480397454,
+      "coefficient_ranges": [
+        [
+          0.15984089754996864,
+          0.15984095823932168
+        ],
+        [
+          0.3072067969646778,
+          0.3086908216676541
+        ]
+      ],
+      "baseline_cl_cd": [
+        0.16024846794588873,
+        0.26143534739660906
+      ]
+    }
+  ]
+}
