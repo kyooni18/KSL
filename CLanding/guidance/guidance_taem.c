@@ -1467,47 +1467,48 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         return terminal_abort(g,
             "MM305 crossed runway elevation before reaching the fixed-HAC exit.");
 
-    /* When the shuttle has passed inside the planned Final station, keep a
-       lower-bound energy estimate for continuing to that handoff. If the
-       current-state drag estimate leaves less specific energy than the
-       configured handoff needs, drop the HAC route and fly a direct runway
-       line. The estimate uses the live aero model and current range; it does
-       not relax Final's separate delivery contract. */
+    /* Once the shuttle is inside the Final station, estimate whether a direct
+       runway glide can still preserve the configured Final handoff speed. Use
+       the atmosphere-resolved drag projection so the energy and speed refer to
+       the same runway endpoint; a constant current-drag estimate over the
+       whole distance mixed runway energy with Final-point energy. */
     const double glide_speed_floor_mps=80.0;
     double direct_range=hypot(geometry.runway_along_m,geometry.runway_cross_m);
     double handoff_distance=fmax(500.0,control_model->guidance.final_approach_distance);
     double handoff_speed=fmax(control_model->guidance.final_alignment_speed,
         fmax(glide_speed_floor_mps,fmax(control_model->vehicle.minimum_safe_speed,
             control_model->vehicle.touchdown_speed)));
+    double direct_slope=atan2(fmax(0.0,geometry.altitude_above_runway_m),
+        fmax(1.0,direct_range))*RAD2DEG;
+    bool inside_final_station=direct_range<handoff_distance;
+    double direct_target_aoa=NAN;
+    double projected_runway_speed=NAN;
+    bool direct_projection_valid=false;
+    if (inside_final_station||g->mm305_direct_approach_degraded) {
+        direct_target_aoa=terminal_fpa_force_aoa(t,planet,aero,
+            &cfg->vehicle,-direct_slope);
+        if (!isfinite(direct_target_aoa))
+            direct_target_aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
+        double projected_drag_work=terminal_projected_drag_work_state(g,t,planet,
+            aero,&cfg->vehicle,&cfg->guidance,direct_target_aoa,direct_range,
+            direct_slope,&projected_runway_speed,NULL);
+        direct_projection_valid=!isnan(projected_drag_work)&&
+            isfinite(projected_runway_speed)&&projected_runway_speed>=0.0;
+    }
     double local_gravity=control_model->world.mu_m3_s2/
         pow(control_model->world.radius_m+control_model->site.altitude+
             geometry.altitude_above_runway_m,2.0);
-    AeroForces direct_flow=aero_compute(&control_model->world,
-        &control_model->aero,current.position_i_m,current.velocity_i_mps,
-        current.ut_s,current.mass_kg,current.attitude.aoa_rad,
-        current.attitude.bank_rad);
-    double drag_accel=current.mass_kg>1.0&&isfinite(direct_flow.drag_n)?
-        fmax(0.0,direct_flow.drag_n/current.mass_kg):0.0;
-    double available_specific_energy=0.5*geometry.airspeed_mps*
-        geometry.airspeed_mps+local_gravity*geometry.altitude_above_runway_m-
-        drag_accel*direct_range;
-    double handoff_height=handoff_distance*tan(
-        control_model->guidance.final_glide_slope*DEG2RAD);
-    double required_handoff_energy=0.5*handoff_speed*handoff_speed+
-        local_gravity*handoff_height;
-    bool direct_energy_degraded=direct_range<handoff_distance&&
-        available_specific_energy<required_handoff_energy;
+    bool direct_energy_degraded=inside_final_station&&
+        (!direct_projection_valid||projected_runway_speed<handoff_speed);
+    bool direct_degradation_started=direct_energy_degraded&&
+        !g->mm305_direct_approach_degraded;
     if (direct_energy_degraded) g->mm305_direct_approach_degraded=true;
     if (g->mm305_direct_approach_degraded) {
         HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
             &cfg->guidance,local_gravity,course);
-        double direct_slope=atan2(fmax(0.0,geometry.altitude_above_runway_m),
-            fmax(1.0,direct_range))*RAD2DEG;
-        double projected_runway_speed=sqrt(2.0*fmax(0.0,
-            available_specific_energy));
         double aoa=projected_runway_speed<glide_speed_floor_mps?
             aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle):
-            terminal_fpa_force_aoa(t,planet,aero,&cfg->vehicle,-direct_slope);
+            direct_target_aoa;
         if (!isfinite(aoa))
             aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
         GuidanceCommand command=atmospheric(t,line.heading,line.bank,
@@ -1545,15 +1546,26 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             g->hac_captured=true;
         }
         char direct_warning[256];
-        snprintf(direct_warning,sizeof(direct_warning),
-            "Inside the Final station, estimated direct-flight energy %.0f J/kg is below the HAC handoff requirement %.0f J/kg.",
-            available_specific_energy,required_handoff_energy);
+        if (direct_degradation_started&&direct_projection_valid)
+            snprintf(direct_warning,sizeof(direct_warning),
+                "Inside the Final station, projected runway speed %.1f m/s is below the configured Final handoff speed %.1f m/s.",
+                projected_runway_speed,handoff_speed);
+        else if (direct_degradation_started)
+            snprintf(direct_warning,sizeof(direct_warning),
+                "Inside the Final station, runway energy projection is unavailable; selecting the direct runway line as degraded guidance.");
+        else
+            direct_warning[0]='\0';
         char direct_status[256];
-        snprintf(direct_status,sizeof(direct_status),
-            "Energy-degraded direct runway alignment; projected runway speed %.1f m/s, glide floor %.1f m/s%s.",
-            projected_runway_speed,glide_speed_floor_mps,
-            projected_runway_speed<glide_speed_floor_mps?
-                "; using the live-model best-glide incidence":"");
+        if (direct_projection_valid)
+            snprintf(direct_status,sizeof(direct_status),
+                "Energy-degraded direct runway alignment; projected runway speed %.1f m/s, Final target %.1f m/s, glide floor %.1f m/s%s.",
+                projected_runway_speed,handoff_speed,glide_speed_floor_mps,
+                projected_runway_speed<glide_speed_floor_mps?
+                    "; using the live-model best-glide incidence":"");
+        else
+            snprintf(direct_status,sizeof(direct_status),
+                "Energy-degraded direct runway alignment; projection unavailable, using the live-model best-glide incidence with %.1f m/s glide floor.",
+                glide_speed_floor_mps);
         GuidanceResult degraded=stabilized(g,result_make(PHASE_TAEM,command,
             direct_status,direct_warning),
             t,&cfg->vehicle,&cfg->guidance,dt);
