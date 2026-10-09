@@ -145,23 +145,54 @@ bool hac_fixed_alignment_geometry(HACPoint2 *entry_out, HACPoint2 *center_out,
 
 
 HACGuidance terminal_runway_line_path_guidance(const Telemetry *t,
-        const LandingSite *site, const GuidanceSettings *s, double gravity,
-        double course) {
+        const LandingSite *site, const GuidanceSettings *s,
+        const VehicleProfile *vehicle, double gravity, double course) {
     HACGuidance out;
     memset(&out, 0, sizeof(out));
-    if (!t || !site || !s) return out;
+    if (!t || !site || !s || !vehicle) return out;
     double speed = fmax(1.0, guidance_lateral_speed(t));
     double station = -s->final_approach_distance;
     double station_gap = fmax(0.0, station - t->runway_along_track);
-    double look = clampd(fmax(speed * 5.5, station_gap * .45), 700.0, 5200.0);
-    double intercept = clampd(atan2(-t->runway_cross_track, look) * RAD2DEG, -24.0, 24.0);
-    out.heading = norm_deg(site->runway_heading + intercept);
-    out.course_error = norm_signed_deg(out.heading - course);
-    double lateral = 2.0 * speed * speed / fmax(look, 1.0) * sin(out.course_error * DEG2RAD);
-    double rate_cap = fmin(1.35, hac_course_rate_cap(t)) * DEG2RAD;
-    lateral = clampd(lateral, -speed * rate_cap, speed * rate_cap);
+    double bank_limit=terminal_lateral_bank_limit(t,vehicle);
+    double rate_cap=fmax(0.05,hac_course_rate_cap(t))*DEG2RAD;
+    double lateral_limit=fmin(speed*rate_cap,
+        fmax(0.0,gravity)*tan(clampd(bank_limit,0.0,80.0)*DEG2RAD));
+    if (!(lateral_limit>0.0) || !isfinite(lateral_limit)) {
+        out.heading=norm_deg(course);
+        out.course_error=0.0;
+        out.bank=0.0;
+        out.radial_error=t->runway_cross_track;
+        out.arc_remaining=station_gap;
+        out.distance_final=fmax(0.0,-t->runway_along_track);
+        out.desired_altitude=site->altitude+
+            out.distance_final*tan(s->taem_glide_slope*DEG2RAD);
+        return out;
+    }
+
+    /* Pure pursuit used to clamp lookahead to 5.2 km. At high TAEM speed that
+       made its acceleration demand independent of the shuttle's actual turn
+       envelope. Grow lookahead from the measured course error and live
+       bank/rate authority so the requested turn stays inside that envelope. */
+    double look=fmax(speed*5.5,station_gap*.45);
+    double intercept=0.0;
+    for (int i=0;i<3;++i) {
+        intercept=atan2(-t->runway_cross_track,fmax(1.0,look))*RAD2DEG;
+        out.heading=norm_deg(site->runway_heading+intercept);
+        out.course_error=norm_signed_deg(out.heading-course);
+        double required=2.0*speed*speed*
+            fabs(sin(out.course_error*DEG2RAD))/lateral_limit;
+        if (!isfinite(required)) return (HACGuidance){0};
+        look=fmax(look,required);
+    }
+    intercept=atan2(-t->runway_cross_track,fmax(1.0,look))*RAD2DEG;
+    out.heading=norm_deg(site->runway_heading+intercept);
+    out.course_error=norm_signed_deg(out.heading-course);
+    double lateral=2.0*speed*speed/fmax(look,1.0)*
+        sin(out.course_error*DEG2RAD);
+    lateral=clampd(lateral,-lateral_limit,lateral_limit);
     out.lateral_acceleration = lateral;
-    out.bank = clampd(atan2(lateral, fmax(gravity, .01)) * RAD2DEG, -45.0, 45.0);
+    out.bank=clampd(atan2(lateral,fmax(gravity,.01))*RAD2DEG,
+        -bank_limit,bank_limit);
     out.radial_error = t->runway_cross_track;
     out.arc_remaining = station_gap;
     out.distance_final = fmax(0.0, -t->runway_along_track);

@@ -28,7 +28,7 @@ static GuidanceResult terminal_warning_recovery(GuidanceMachine *g,
         double aoa=cfg->vehicle.terminal_maximum_lift_angle_of_attack;
         if (!grounded && !recovering && t->true_air_speed>=cfg->vehicle.minimum_safe_speed) {
             HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
-                &cfg->guidance,planet_surface_gravity(p),course);
+                &cfg->guidance,&cfg->vehicle,planet_surface_gravity(p),course);
             if (isfinite(line.heading)&&isfinite(line.bank)) {
                 heading=line.heading;
                 bank=clampd(line.bank,-cfg->vehicle.maximum_bank_angle,

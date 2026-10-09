@@ -141,13 +141,17 @@ typedef struct {
     bool entry_predictor_models_valid;
     AerodynamicEnvelope entry_predictor_envelope;
     TrajectoryCalibrationModel entry_predictor_calibration;
-    /* The committed native MM305 route is a compact deterministic descriptor;
-       it has value semantics and is regenerated from its frozen geometry when
-       queried, so predictor/preview copies remain independent and inexpensive. */
+    /* The active native MM305 route is a compact deterministic descriptor; it
+       has value semantics and is regenerated from frozen geometry when queried.
+       A separate flag distinguishes replay-qualified routes from best effort. */
     TaemRoute mm305_route;
     size_t mm305_route_cursor;
     bool mm305_route_committed, mm305_hac_exit_reached;
     bool mm305_direct_approach_degraded;
+    /* True when MM305 has frozen its best state-derived acquisition route after
+       replay qualification failed. It is flown with attitude slew limits and
+       never treated as Final-delivery evidence. */
+    bool mm305_best_effort_route_active;
     bool mm305_runway_alignment_active;
     uint64_t mm305_model_snapshot_id;
     /* While the qualified MM305 planner is still solving, guidance flies a

@@ -61,7 +61,7 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
            which is intentionally more draggy than the conditioning proof and
            could consume the preflare reserve before Final was admitted. */
         HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,s,
-            planet_surface_gravity(p),course);
+            v,planet_surface_gravity(p),course);
         double conditioning_aoa=terminal_fpa_force_aoa(t,p,aero,v,-conditioning_slope);
         GuidanceCommand command=atmospheric(t,line.heading,line.bank,v,0.0,false,PROFILE_TAEM);
         command.heading_control_enabled=true;
@@ -104,7 +104,8 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
     if(g->final_approach_captured&&g->taem_exec.taem_complete){
         result=terminal_approach_sequence(g,t,course,p,aero,cfg,&ref,dt);
     }else{
-        HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,s,planet_surface_gravity(p),course);
+        HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,s,v,
+            planet_surface_gravity(p),course);
         GuidanceCommand command=atmospheric(t,line.heading,line.bank,v,0.0,true,PROFILE_TAEM);
         command.heading_control_enabled=true;
         g->phase=PHASE_TAEM;

@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define MM305_MINIMUM_GLIDE_SPEED_MPS 80.0
+
 /* Stage-neutral energy/physics helpers and the TAEM executive bridge are shared
  * by MM304, native MM305 fixed-HAC planning/tracking, and Final admission. */
 
@@ -314,6 +316,65 @@ double mm305_final_alignment_distance(const GuidanceMachine *g,
     double distance=mm305_energy_aware_final_distance(base,state);
     if (distance>=500.0 && isfinite(distance)) return distance;
     return fmax(500.0,base->guidance.final_approach_distance);
+}
+
+bool guidance_mm305_adopt_best_effort_route(GuidanceMachine *g,
+        const TerminalModel *model, double current_airspeed_mps) {
+    if (!g || !model || g->phase!=PHASE_TAEM || g->mm305_route_committed ||
+        !g->mm305_acquisition_route_valid ||
+        !g->mm305_acquisition_route.valid ||
+        g->mm305_acquisition_route.count<3 ||
+        !isfinite(g->mm305_acquisition_route.alignment_along_m) ||
+        !isfinite(current_airspeed_mps) || !(current_airspeed_mps>0.0))
+        return false;
+
+    TaemRoute route=g->mm305_acquisition_route;
+    double final_distance=-route.alignment_along_m;
+    if (!(final_distance>=500.0) || !isfinite(final_distance)) return false;
+    double final_slope=route.profile_final_slope_deg;
+    if (!(final_slope>=3.0 && final_slope<=45.0) || !isfinite(final_slope))
+        final_slope=model->guidance.final_glide_slope;
+    double speed_floor=fmax(MM305_MINIMUM_GLIDE_SPEED_MPS,
+        fmax(model->vehicle.minimum_safe_speed,model->vehicle.touchdown_speed));
+    double speed_start=fmax(speed_floor,current_airspeed_mps);
+    double speed_finish=fmax(speed_floor,
+        mm305_final_alignment_speed_for_distance(model,final_distance));
+    if (!isfinite(speed_start) || !isfinite(speed_finish)) return false;
+    route.profile_speed_tabulated=true;
+    for (size_t i=0;i<TAEM_ROUTE_PROFILE_LUT_POINTS;++i) {
+        double fraction=(double)i/(double)(TAEM_ROUTE_PROFILE_LUT_POINTS-1);
+        route.profile_speed_lut[i]=(float)(speed_start+
+            fraction*(speed_finish-speed_start));
+    }
+
+    g->mm305_route=route;
+    g->mm305_route_cursor=g->mm305_acquisition_route_cursor<route.count?
+        g->mm305_acquisition_route_cursor:0;
+    g->mm305_route_committed=true;
+    g->mm305_best_effort_route_active=true;
+    g->mm305_direct_approach_degraded=false;
+    g->mm305_model_snapshot_id=model->snapshot_id;
+    g->mm305_last_route_ut=g->mm305_acquisition_route_ut;
+    g->mm305_acquisition_route_valid=false;
+    g->mm305_planning_needed=false;
+    g->mm305_hac_exit_reached=false;
+    g->mm305_runway_alignment_active=false;
+    g->runway_end_committed=true;
+    g->hac_side=route.side;
+    g->hac_side_selected=true;
+    g->hac_radius=route.hac.radius_m;
+    g->hac_remaining=taem_route_remaining_at_index(&route,g->mm305_route_cursor);
+    g->hac_progress_valid=isfinite(g->hac_remaining);
+    g->hac_captured=true;
+    g->hac_completed=false;
+    g->terminal_path_kind=TERMINAL_PATH_HAC;
+    g->terminal_path_committed=true;
+    g->terminal_final_handoff_latched=true;
+    g->terminal_final_handoff_distance=final_distance;
+    g->terminal_final_handoff_slope_deg=final_slope;
+    g->terminal_final_handoff_speed_mps=
+        mm305_final_alignment_speed_for_distance(model,final_distance);
+    return true;
 }
 
 /* Apply the Final delivery contract (station, capped handoff altitude, adjusted
@@ -655,6 +716,10 @@ bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
 bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *result,
         const LandingConfiguration *cfg) {
     if (!g || !result || !result->valid || !cfg) return false;
+    /* Once capture-window fallback freezes the measured-state path, a late
+       async result must not swap geometry under the shuttle. A route release
+       clears this flag and permits a fresh solve from the new measured state. */
+    if (g->mm305_best_effort_route_active) return false;
     g->mm305_planning_needed=false;
     if (g->phase!=PHASE_TAEM || g->mm305_hac_exit_reached || g->hac_completed ||
         g->final_approach_captured)
@@ -680,6 +745,8 @@ bool guidance_mm305_accept_plan(GuidanceMachine *g, const Mm305PlanResult *resul
         &handoff_model,final_distance);
     bool replan=g->mm305_route_committed;
     g->mm305_route=candidate->route;
+    g->mm305_best_effort_route_active=false;
+    g->mm305_direct_approach_degraded=false;
     g->runway_end_index=candidate->runway_end;
     g->runway_end_preview_valid=true;
     g->runway_end_committed=true;
@@ -1493,7 +1560,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        the measured capture envelope says alignment is unreachable, begin that
        check while the envelope's full heading/cross-track capture distance
        remains, so the shuttle has room to turn before the station. */
-    const double glide_speed_floor_mps=80.0;
+    const double glide_speed_floor_mps=MM305_MINIMUM_GLIDE_SPEED_MPS;
     double direct_range=hypot(geometry.runway_along_m,geometry.runway_cross_m);
     double handoff_distance=fmax(500.0,control_model->guidance.final_approach_distance);
     double handoff_speed=fmax(control_model->guidance.final_alignment_speed,
@@ -1522,7 +1589,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     bool direct_projection_valid=false;
     if (direct_window||g->mm305_direct_approach_degraded) {
         direct_line=terminal_runway_line_path_guidance(t,&cfg->site,
-            &cfg->guidance,local_gravity,course);
+            &cfg->guidance,&cfg->vehicle,local_gravity,course);
         direct_target_aoa=terminal_direct_runway_target_aoa(t,planet,aero,
             &cfg->vehicle,-direct_slope,direct_line.lateral_acceleration,
             direct_line.bank,&direct_glide_aoa,&direct_lateral_aoa);
@@ -1539,8 +1606,31 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     bool direct_degraded=direct_energy_degraded||preemptive_direct_window;
     bool direct_degradation_started=direct_degraded&&
         !g->mm305_direct_approach_degraded;
-    if (direct_degraded) g->mm305_direct_approach_degraded=true;
-    if (g->mm305_direct_approach_degraded) {
+    const char *best_effort_warning=NULL;
+    bool best_effort_started=false;
+    if (direct_degraded && guidance_mm305_adopt_best_effort_route(
+            g,model,geometry.airspeed_mps)) {
+        best_effort_started=true;
+        best_effort_warning=
+            "Native route qualification did not finish in the capture window; MM305 is holding its best route from the measured entry state. Final handoff still requires measured alignment and energy checks.";
+        if (!g->diagnostic_shadow)
+            fprintf(stderr,
+                "MM305 best-effort route held: UT=%.2f cursor=%zu/%zu along=%+.0f cross=%+.0f final=%+.0f radius=%.0f sweep=%.1f\n",
+                t->ut,g->mm305_route_cursor,g->mm305_route.count,
+                geometry.runway_along_m,geometry.runway_cross_m,
+                g->mm305_route.alignment_along_m,
+                g->mm305_route.hac.radius_m,
+                g->mm305_route.hac.arc_sweep_rad*RAD2DEG);
+    }
+    if (g->mm305_best_effort_route_active)
+        best_effort_warning=
+            "Native route qualification was unavailable; MM305 is following its best measured-state route. Final handoff still requires measured alignment and energy checks.";
+    if (direct_degraded && !best_effort_started &&
+            !g->mm305_route_committed &&
+            !g->mm305_best_effort_route_active)
+        g->mm305_direct_approach_degraded=true;
+    if (g->mm305_direct_approach_degraded &&
+            !g->mm305_best_effort_route_active) {
         HACGuidance line=direct_line;
         double aoa=direct_projection_valid&&
                 projected_runway_speed>=glide_speed_floor_mps?
@@ -1761,6 +1851,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             if (!g->diagnostic_shadow) fprintf(stderr,"MM305 route released: cross %.0f m course %.1f deg; re-planning.\n",
                 demand.cross_track_error_m,demand.course_error_deg);
             g->mm305_route_committed=false;
+            g->mm305_best_effort_route_active=false;
             g->terminal_path_committed=false;
             g->hac_captured=false;
             g->mm305_acquisition_route_valid=false;
@@ -1790,7 +1881,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         bool energy_low=isfinite(energy_ratio)&&energy_ratio<-0.06;
         bool energy_off_plan=(energy_high||energy_low)&&isfinite(route_remaining);
         double energy_replan_interval=energy_low?10.0:replan_interval_s;
-        if (g->mm305_route_committed && g->mm305_async_planning &&
+        if (g->mm305_route_committed && !g->mm305_best_effort_route_active &&
+            g->mm305_async_planning &&
             !g->mm305_planning_needed &&
             t->ut-g->mm305_last_plan_attempt_ut>=energy_replan_interval &&
             (energy_off_plan ||
@@ -1846,7 +1938,9 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         }
         status=g->mm305_runway_alignment_active?
             "MM305 native route reached the Final alignment station; verifying settled handoff state." :
-            "MM305 native tracker is following the committed route through HAC and alignment rollout.";
+            (g->mm305_best_effort_route_active?
+                "MM305 is smoothly tracking its best measured-state alignment route; native qualification was unavailable." :
+                "MM305 native tracker is following the committed route through HAC and alignment rollout.");
     }
     double acquisition_path_remaining=NAN;
     double acquisition_required_drag=NAN;
@@ -1983,7 +2077,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     }
     command.speedbrake_fraction=g->taem_speedbrake_fraction;
     GuidanceResult result=stabilized(g,
-        result_make(PHASE_TAEM,command,status,NULL),t,&cfg->vehicle,&cfg->guidance,dt);
+        result_make(PHASE_TAEM,command,status,best_effort_warning),t,
+        &cfg->vehicle,&cfg->guidance,dt);
     const TaemRoute *display_route=g->mm305_route_committed?
         &g->mm305_route:
         (g->mm305_acquisition_route_valid?&g->mm305_acquisition_route:NULL);

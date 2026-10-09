@@ -27,6 +27,7 @@ static void reset_controllers(GuidanceMachine*g){
     g->mm305_hac_exit_reached=false;
     g->mm305_runway_alignment_active=false;
     g->mm305_direct_approach_degraded=false;
+    g->mm305_best_effort_route_active=false;
     g->mm305_model_snapshot_id=0;
     g->mm305_acquisition_route=(TaemRoute){0};
     g->mm305_acquisition_route_cursor=0;
@@ -415,13 +416,12 @@ static double entry_model_best_glide_aoa(const Telemetry*t,const VehicleProfile*
     bool pitch_reference_is_aoa=r.command.has_target_aoa;
     GuidanceAttitudeLimits pitch_limits=stabilized_attitude_limits(
         t,s,r.phase,true);
-    /* A committed MM305 route was replay-qualified by applying the native
-     * tracker's commands directly to the vehicle's attitude dynamics, which
-     * already bound rate and acceleration.  A second guidance-side limiter in
-     * the loop adds lag the qualified route never had and drives a lateral
-     * limit cycle, so the committed route bypasses it (state stays seeded). */
+    /* Replay-qualified MM305 routes were checked against the vehicle's attitude
+     * dynamics, so a second guidance limiter adds lag absent from qualification.
+     * The best-effort route has no such replay evidence and keeps the slew limits. */
     bool mm305_native_window=r.phase==PHASE_TAEM&&g->mm305_route_committed&&
-        g->mm305_route.valid&&!g->mm305_hac_exit_reached;
+        g->mm305_route.valid&&!g->mm305_hac_exit_reached&&
+        !g->mm305_best_effort_route_active;
     seed_stabilized_limiter(&g->pitch_limiter,
         pitch_reference_is_aoa
             ? clampd(t->angle_of_attack,0.0,aoa_ceiling)

@@ -238,7 +238,6 @@ static void test_mm305_acquisition_qualification_contract(
     telemetry.mach = 2.545;
     telemetry.speed_of_sound = geometry.airspeed_mps / telemetry.mach;
 
-    const double trim_intercept = 0.75 - 0.047 * 13.6;
     GuidanceMachine acquisition;
     guidance_machine_init(&acquisition);
     acquisition.phase = PHASE_TAEM;
@@ -246,8 +245,6 @@ static void test_mm305_acquisition_qualification_contract(
     acquisition.mm305_lift_scale = 0.5;
     acquisition.mm305_drag_scale = 0.5;
     acquisition.hac_radius = model->guidance.hac_radius;
-    acquisition.mm305_trim_initialized = true;
-    acquisition.mm305_trim_intercept = trim_intercept;
 
     PlanetModel planet = {0};
     planet.radius = model->world.radius_m;
@@ -274,14 +271,43 @@ static void test_mm305_acquisition_qualification_contract(
     assert(acquisition.mm305_acquisition_route_valid);
     assert(!acquisition.terminal_final_handoff_latched);
 
+    /* If qualification misses the physical capture window, MM305 must retain
+     * the measured-state route it has already been tracking instead of
+     * replacing it with a discontinuous runway-line pursuit command. */
+    GuidanceMachine best_effort=acquisition;
+    size_t best_effort_cursor=best_effort.mm305_acquisition_route_cursor;
+    TaemRoute best_effort_geometry=best_effort.mm305_acquisition_route;
+    assert(guidance_mm305_adopt_best_effort_route(&best_effort,model,
+        geometry.airspeed_mps));
+    assert(best_effort.mm305_route_committed);
+    assert(best_effort.mm305_best_effort_route_active);
+    assert(!best_effort.mm305_acquisition_route_valid);
+    assert(best_effort.mm305_route_cursor==best_effort_cursor);
+    assert(best_effort.mm305_route.valid);
+    assert(fabs(best_effort.mm305_route.alignment_along_m-
+        best_effort_geometry.alignment_along_m)<1e-9);
+    assert(best_effort.terminal_final_handoff_latched);
+    assert(best_effort.terminal_final_handoff_distance>=500.0);
+    assert(!best_effort.mm305_hac_exit_reached);
+    assert(best_effort.mm305_route.profile_speed_tabulated);
+    assert(best_effort.mm305_route.profile_speed_lut[0]>=80.0f);
+    assert(best_effort.mm305_route.profile_speed_lut[
+        TAEM_ROUTE_PROFILE_LUT_POINTS-1]>=80.0f);
+    for (size_t i=0;i<TAEM_ROUTE_PROFILE_LUT_POINTS;++i)
+        assert(best_effort.mm305_route.profile_speed_lut[i]>=80.0f);
+    Mm305PlanResult late_qualified_result={0};
+    late_qualified_result.valid=late_qualified_result.found=true;
+    assert(!guidance_mm305_accept_plan(&best_effort,&late_qualified_result,
+        configuration));
+    assert(fabs(best_effort.mm305_route.alignment_along_m-
+        best_effort_geometry.alignment_along_m)<1e-9);
+
     GuidanceMachine qualifier;
     guidance_machine_init(&qualifier);
     qualifier.phase = PHASE_TAEM;
     qualifier.mm305_planning_needed = true;
     qualifier.mm305_lift_scale = 0.5;
     qualifier.mm305_drag_scale = 0.5;
-    qualifier.mm305_trim_initialized = true;
-    qualifier.mm305_trim_intercept = trim_intercept;
     /* Model the live async handoff: native qualification receives the exact
      * provisional route already being tracked, rather than searching as if it
      * had no seed. */

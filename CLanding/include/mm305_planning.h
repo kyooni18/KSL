@@ -45,6 +45,12 @@ typedef struct {
    until a qualified route is committed; an already-latched handoff is preserved. */
 double mm305_final_alignment_distance(const GuidanceMachine *g,
     const TerminalModel *base, const TerminalDynamicState *state);
+
+/* Freeze the currently tracked, state-derived acquisition route when no
+ * replay-qualified route is available before the measured capture window. This
+ * preserves the route as degraded guidance; it does not qualify Final delivery. */
+bool guidance_mm305_adopt_best_effort_route(GuidanceMachine *g,
+        const TerminalModel *model, double current_airspeed_mps);
 void mm305_apply_final_alignment(TerminalModel *out,
     const TerminalModel *base, double final_distance_m);
 void mm305_prepare_planning_model(TerminalModel *out,

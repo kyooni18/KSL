@@ -75,7 +75,8 @@ void hac_projected_local_state(const Telemetry*t,const LandingSite*site,double p
         double lift_accel,double bank_effectiveness,double drag_accel,
         double*out_e,double*out_n,double*out_course);
 HACGuidance terminal_runway_line_path_guidance(const Telemetry*t,
-        const LandingSite*site,const GuidanceSettings*s,double gravity,double course);
+        const LandingSite*site,const GuidanceSettings*s,
+        const VehicleProfile*v,double gravity,double course);
 GuidanceResult result_make(GuidancePhase phase,GuidanceCommand c,const char*status,const char*warning);
 void guidance_result_clear(GuidanceResult*r);
 void reset_limiters(GuidanceMachine*g);
