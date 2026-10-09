@@ -1,0 +1,225 @@
+{
+  "status": "provisional; recalibrated to latest live vehicle state; not certified",
+  "certified_cells": 0,
+  "vehicle_state_step": {
+    "delta_cd0": 0.04234249227810504,
+    "k_ratio": 1.1277333754846164
+  },
+  "validation": {
+    "heldout_flight": "2026-10-09T08-33-23Z-STS-vehicle.jsonl",
+    "new": {
+      "n": 6516,
+      "cl_median": 0.0015760310934271882,
+      "cl_p95": 0.023119668337906463,
+      "cd_median": 0.00863918107679873,
+      "cd_p95": 0.11178192653566232
+    },
+    "old_provisional": {
+      "n": 6516,
+      "cl_median": 0.019954565799751633,
+      "cl_p95": 0.03734964297034604,
+      "cd_median": 0.14622477533201028,
+      "cd_p95": 0.2625986383042783
+    },
+    "note": "held-out flight validates Mach>=3 only; lower-Mach latest-state coverage is absent"
+  },
+  "atmosphere_check": {
+    "q_over_half_rho_v2_median": 0.9991894611110362,
+    "p05": 0.9792807380497076,
+    "p95": 1.0036216543276801,
+    "n": 48339
+  },
+  "early_flights": [
+    "2026-10-07T19-14-13Z-STS-vehicle.jsonl",
+    "2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "2026-10-09T06-18-41Z-STS-vehicle.jsonl",
+    "2026-10-09T06-37-36Z-STS-vehicle.jsonl"
+  ],
+  "late_flights": [
+    "2026-10-09T07-22-46Z-STS-vehicle.jsonl",
+    "2026-10-09T07-53-36Z-STS-vehicle.jsonl",
+    "2026-10-09T08-33-23Z-STS-vehicle.jsonl"
+  ],
+  "source": [
+    {
+      "path": "../../FlightLogs/2026-10-07T19-14-13Z-STS-vehicle.jsonl",
+      "sha256": "b6a028147b434dcc1d179e16ea452fcf6184feb14a4fd95a54989bd50c6edb99"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+      "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-09T06-18-41Z-STS-vehicle.jsonl",
+      "sha256": "ed9b576490d8cedb4e1b00b0aaba601244bf73006f494c0456c47f510fa59279"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-09T06-37-36Z-STS-vehicle.jsonl",
+      "sha256": "5848d5fd5018c60f3bb75307aeb06f28c4ca8308d18d338836518ffeb3401015"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-09T07-22-46Z-STS-vehicle.jsonl",
+      "sha256": "813f660f3041b5c25f53e3ba01d26f5498fc1281cb3feabe1c2e1b6d21404749"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-09T07-53-36Z-STS-vehicle.jsonl",
+      "sha256": "3ddd36bdfad7381684aefbd6b39643cbf9aae612de0729505fefe3fea61cf610"
+    },
+    {
+      "path": "../../FlightLogs/2026-10-09T08-33-23Z-STS-vehicle.jsonl",
+      "sha256": "a697fe175385c113024f076b351af8e51d329f989d2fb2056db475960c7f8883"
+    }
+  ],
+  "knots": [
+    {
+      "mach": 0.203074754674054,
+      "mach_bin": [
+        0,
+        0.5
+      ],
+      "count": 4100,
+      "alpha_support": [
+        10.7407217025757,
+        17.721097946167
+      ],
+      "k": 4.01104329135318,
+      "cd0": 0.0652067887435584,
+      "source": "latest-state live fit"
+    },
+    {
+      "mach": 0.589499936263691,
+      "mach_bin": [
+        0.5,
+        1
+      ],
+      "count": 231,
+      "alpha_support": [
+        7.80694532394409,
+        17.9044322967529
+      ],
+      "k": 1.6228080010123465,
+      "cd0": 0.08229775351142155,
+      "source": "latest-state live fit"
+    },
+    {
+      "mach": 1.1935170903794,
+      "mach_bin": [
+        1,
+        1.5
+      ],
+      "count": 523,
+      "alpha_support": [
+        6.55437040328979,
+        25.1107444763184
+      ],
+      "k": 0.7036949015639617,
+      "cd0": 0.20619199913114072,
+      "source": "earlier-state fit + CD0 step +0.000 (assumed)"
+    },
+    {
+      "mach": 1.62724336187207,
+      "mach_bin": [
+        1.5,
+        2
+      ],
+      "count": 525,
+      "alpha_support": [
+        5.0090012550354,
+        18.2663879394531
+      ],
+      "k": 0.6367439289050727,
+      "cd0": 0.1381670416330785,
+      "source": "earlier-state fit + CD0 step +0.004 (assumed)"
+    },
+    {
+      "mach": 2.58129103448332,
+      "mach_bin": [
+        2,
+        3
+      ],
+      "count": 1122,
+      "alpha_support": [
+        11.5666437149048,
+        22.1219787597656
+      ],
+      "k": 0.5685069041941363,
+      "cd0": 0.15954800465792648,
+      "source": "earlier-state fit + CD0 step +0.031 (assumed)"
+    },
+    {
+      "mach": 3.51142706227468,
+      "mach_bin": [
+        3,
+        4
+      ],
+      "count": 1470,
+      "alpha_support": [
+        17.8807907104492,
+        26.1741371154785
+      ],
+      "k": 0.4890906895662359,
+      "cd0": 0.1709019118732844,
+      "source": "earlier-state fit + CD0 step +0.042 (assumed)"
+    },
+    {
+      "mach": 4.83174336146841,
+      "mach_bin": [
+        4,
+        5
+      ],
+      "count": 649,
+      "alpha_support": [
+        6.66901540756226,
+        29.1572093963623
+      ],
+      "k": 0.3878429935068203,
+      "cd0": 0.26109643841910996,
+      "source": "latest-state live fit"
+    },
+    {
+      "mach": 5.6726866873114,
+      "mach_bin": [
+        5,
+        6
+      ],
+      "count": 2375,
+      "alpha_support": [
+        23.4515724182129,
+        28.9070606231689
+      ],
+      "k": 0.3892522388442053,
+      "cd0": 0.24274784984367953,
+      "source": "latest-state live fit"
+    },
+    {
+      "mach": 6.63588690881265,
+      "mach_bin": [
+        6,
+        7
+      ],
+      "count": 10686,
+      "alpha_support": [
+        24.5555305480957,
+        28.0779628753662
+      ],
+      "k": 0.40064712547859527,
+      "cd0": 0.24662570727563166,
+      "source": "latest-state live fit"
+    },
+    {
+      "mach": 7.09923375811894,
+      "mach_bin": [
+        7,
+        8
+      ],
+      "count": 3647,
+      "alpha_support": [
+        25.6661796569824,
+        25.8570652008057
+      ],
+      "k": 0.39877704597126784,
+      "cd0": 0.27726795286383504,
+      "source": "latest-state live fit"
+    }
+  ]
+}

@@ -74,6 +74,9 @@ void robust_pid_init(RobustPID *p,double kp,double ki,double kd,double limit,dou
 double lowpass_update(LowPass *f,double value,double dt); void lowpass_reset(LowPass *f);
 double jerk_update(JerkLimiter *j,double target,double max_rate,double max_accel,double dt); double jerk_angle_update(JerkLimiter *j,double target,double max_rate,double max_accel,double dt);
 #define GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS 0.08
+/* A live-cutoff capture forecast may end the burn early only when the cutoff periapsis is within
+   this distance of the planned periapsis; the reduced predictor is not trusted to excuse a shallow entry. */
+#define GUIDANCE_BURN_CUTOFF_PERIAPSIS_TOLERANCE_M 1500.0
 double burn_fraction(double elapsed,double remaining,double max_accel,double ramp); double burn_estimated_duration(double dv,double max_accel,double ramp);
 FlightControlRegime flight_control_regime(double mach,double true_air_speed,double dynamic_pressure,double minimum_safe_speed);
 double entry_s_turn_effective_minimum_leg(double true_air_speed,double taem_speed,const GuidanceSettings *settings);

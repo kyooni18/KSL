@@ -38,7 +38,7 @@ sys.path.insert(0, str(SIM / "scripts"))
 import orbit_scenarios as orb  # noqa: E402
 
 DEFAULT_CONFIG = ROOT / "Configuration" / "sts.json"
-PROFILE = "sts-provisional"
+PROFILE = os.environ.get("STS_CAMPAIGN_PROFILE", "sts-live-20261009")
 G0 = 9.80665
 
 
@@ -63,6 +63,11 @@ def stage_cases(stage: str):
     out = []
     if stage == "S0":  # smoke: one nominal case
         out = [mk(45)]
+    elif stage == "X1":  # development triplet used for single-mechanism A/B experiments
+        out = [mk(0), mk(45, branch="desc"), mk(90, branch="asc"), mk(150, branch="desc")]
+    elif stage == "X2":  # X1 geometry with a later site pass so longer entry-range targets fit the first orbit
+        out = [mk(0, delay=1750), mk(45, branch="desc", delay=1750), mk(90, branch="asc", delay=1750),
+               mk(150, branch="desc", delay=1750)]
     elif stage == "S1":  # circular 86 km, every inclination, both crossing branches
         for i in INCS:
             for br in (("asc",) if i in (0, 180) else ("asc", "desc")):
@@ -361,6 +366,7 @@ def run_case(camp: pathlib.Path, case: dict, args) -> dict:
 
 def cmd_run(args):
     camp = pathlib.Path(args.campaign).resolve()
+    args.config = str(pathlib.Path(args.config).resolve())
     cases = json.loads((camp / "matrix.json").read_text())["cases"]
     if args.filter:
         cases = [c for c in cases if args.filter in c["id"]]

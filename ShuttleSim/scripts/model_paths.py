@@ -23,6 +23,15 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    # Recalibrated to the latest live STS vehicle state (2026-10-09 flights); still
+    # provisional: no certified cells, Mach<3 latest-state data absent, attitude borrowed.
+    "sts-live-20261009": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_live20261009.csv",
+        "aero_book": None,
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",
@@ -51,6 +60,7 @@ PROFILES = {
 PROFILE_VEHICLES = {
     "identified": "STS-N",
     "sts-provisional": "STS",
+    "sts-live-20261009": "STS",
     "fitted-legacy": "STS-N",
     "reference-b": "STS-N",
 }
