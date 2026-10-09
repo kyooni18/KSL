@@ -22,6 +22,10 @@ def main():
                     help="local altitude offset as fraction of start-to-exit drop")
     ap.add_argument("--output-dir", type=pathlib.Path, required=True)
     ap.add_argument("--base-shape", choices=("hermite", "ramp"), default="hermite")
+    ap.add_argument("--bow-steps", type=int, choices=(13, 25), default=13,
+                    help="isolated bow-grid resolution sensitivity; limits unchanged")
+    ap.add_argument("--aero", type=pathlib.Path,
+                    default=ROOT / "ShuttleSim/reference-model/experiments/sts_api_incidence.csv")
     ap.add_argument("--match-search-shape", action="store_true",
                     help="size and rank route leads with the ramp base's actual peak slope")
     args = ap.parse_args()
@@ -33,6 +37,9 @@ def main():
     out.mkdir(parents=True, exist_ok=False)
     original = NATIVE / "terminal_solver.c"
     source = original.read_text()
+    marker = "#define TERMINAL_SMOOTH_BOW_STEPS 13"
+    assert source.count(marker) == 1
+    source = source.replace(marker, f"#define TERMINAL_SMOOTH_BOW_STEPS {args.bow_steps}")
     marker = "    trial.profile_local_offset_m = 0.0;"
     assert source.count(marker) == 1
     source = source.replace(marker, f"""    trial.profile_local_offset_m = {args.fraction:.17g} * drop;
@@ -148,10 +155,11 @@ def main():
         subprocess.run(cmd, cwd=NATIVE, env=env, check=True)
     command = [str(binary), "--configuration", "Configuration/sts.json",
                "--mass-kg", "25816.072266", "--aero",
-               "ShuttleSim/reference-model/experiments/sts_api_incidence.csv"]
+               str(args.aero.resolve())]
     report = {"classification": "offline local profile shape experiment; not flight qualification",
               "fraction": args.fraction, "localFractions": [0.0, 0.20, 0.55],
               "baseShape": args.base_shape,
+              "bowSteps": args.bow_steps,
               "searchShapeMatched": args.match_search_shape,
               "candidateSearchSHA256": digest(out / "taem_candidate_search.c")
                   if args.match_search_shape else digest(NATIVE / "taem_candidate_search.c"),
