@@ -247,6 +247,9 @@ void landing_controller_engage_reentry(LandingController*c){
         reentry_guidance_shadow_recovery_qualified(
             &prediction,&cfg.vehicle,&cfg.guidance);
     bool recovery=simulator_fast_qualification||shadow_qualified;
+    const char *continue_policy=getenv("KSP_LANDER_CONTINUE_UNQUALIFIED");
+    bool warning_continuation=!recovery&&continue_policy&&strcmp(continue_policy,"1")==0;
+    char continuation_warning[768]={0};
     if(!recovery){
         char msg[768];
         snprintf(msg,sizeof(msg),
@@ -257,8 +260,11 @@ void landing_controller_engage_reentry(LandingController*c){
             prediction.taem_range_error/1000.0,
             prediction.peak_dynamic_pressure/1000.0,
             prediction.peak_g_load);
-        entry_prediction_clear(&prediction);
-        set_warning(c,msg);publish(c);pthread_mutex_unlock(&c->mutex);return;
+        snprintf(continuation_warning,sizeof(continuation_warning),"%s",msg);
+        if(!warning_continuation){
+            entry_prediction_clear(&prediction);
+            set_warning(c,msg);publish(c);pthread_mutex_unlock(&c->mutex);return;
+        }
     }
 
     DeorbitPlan plan;
@@ -282,7 +288,7 @@ void landing_controller_engage_reentry(LandingController*c){
     plan.robustness_unsafe=0;
     plan.robustness_pass_fraction=shadow_qualified?1.0:0.0;
     plan.execution_qualified=shadow_qualified;
-    plan.execution_degraded=simulator_fast_qualification;
+    plan.execution_degraded=!shadow_qualified;
     plan.recovery_passed=shadow_qualified?1:0;
     plan.recovery_pass_fraction=shadow_qualified?1.0:0.0;
     plan.worst_case_closest_distance=shadow_qualified?prediction.closest_distance:NAN;
@@ -305,7 +311,8 @@ void landing_controller_engage_reentry(LandingController*c){
     trajectory_copy(&plan.trajectory,&prediction.trajectory);
     snprintf(plan.note,sizeof(plan.note),simulator_fast_qualification?
         "Offline downstream-controller diagnostic; no shadow qualification was performed.":
-        "Reentry continuation qualified by production shadow executive from live state.");
+        (warning_continuation?"Live warning continuation; production shadow rejected this state; qualification remains false.":
+        "Reentry continuation qualified by production shadow executive from live state."));
     if(shadow_qualified){
         prediction_cache_store(c,&prediction);
         c->cached_prediction_ut=t.ut;
@@ -349,20 +356,24 @@ void landing_controller_engage_reentry(LandingController*c){
     c->snapshot.paused=false;
     snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),simulator_fast_qualification?
         "Offline downstream-controller diagnostic armed without shadow qualification.":
+        (warning_continuation?"Live reentry continuation armed under warning without shadow qualification.":
         (in_atmosphere?
         "Reentry-only guidance resumed from live atmospheric state after shadow qualification.":
-        "Reentry-only continuation armed from live post-deorbit state after shadow qualification."));
+        "Reentry-only continuation armed from live post-deorbit state after shadow qualification.")));
     set_error(c,NULL);
     set_warning(c,simulator_fast_qualification?
-        "This offline diagnostic skips shadow admission and cannot demonstrate qualification.":NULL);
+        "This offline diagnostic skips shadow admission and cannot demonstrate qualification.":
+        (warning_continuation?continuation_warning:NULL));
     reference_trajectory(&c->snapshot.reference_trajectory,&cfg.site,
         &cfg.guidance,p->radius,initial_s_turn_sign);
     c->log_reference_trajectory_dirty=true;
     log_state_event(c,simulator_fast_qualification?
         "event=offline-reentry-diagnostic-armed; simulator-fast-qualification=true; shadow-qualified=false":
+        (warning_continuation?
+        "event=reentry-warning-continuation-armed; shadow-qualified=false; shadow-rejected=true; authorized-warning-policy=true":
         (in_atmosphere?
         "event=reentry-continuation-armed; atmospheric-restart=true; shadow-qualified=true":
-        "event=reentry-continuation-armed; deorbit-planner-skipped=true; shadow-qualified=true"),true);
+        "event=reentry-continuation-armed; deorbit-planner-skipped=true; shadow-qualified=true")),true);
     publish(c);
     pthread_mutex_unlock(&c->mutex);
 }

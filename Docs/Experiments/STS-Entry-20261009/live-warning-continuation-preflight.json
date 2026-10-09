@@ -1,0 +1,16 @@
+{
+  "classification": "authorized live flight preparation, not flight result",
+  "authorization": "Human explicitly requested start actual live runs and continue aborts under warnings.",
+  "protectedSaveHashes": {
+    "/Applications/.Misc/LMPKSP/saves/Main/86km.sfs": "4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6",
+    "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+  },
+  "vehicle": "STS",
+  "unpoweredOnly": true,
+  "continueUnqualified": true,
+  "shadowGateBypassFlag": false,
+  "shadowRejectionIsQualification": false,
+  "backend": "/tmp/sts-warning-live-backend",
+  "configuration": "Configuration/sts.json",
+  "checkpointPhysicsProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+}
