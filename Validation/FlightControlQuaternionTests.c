@@ -128,7 +128,8 @@ static void quaternion_controller_commands_body_error_signs(void){
     assert(flight_control_step_attitude(&state,&t,&c,&e,0.1,&out));
     assert(out.pitch>0.0);
     assert(out.roll<0.0);
-    assert(out.yaw>0.0);
+    /* Entry yaw holds measured beta; bank-frame yaw error must not kick rudder. */
+    assert(fabs(out.yaw)<1e-9);
 }
 
 static void quaternion_damping_tracks_relative_error_not_absolute_body_rate(void){

@@ -197,7 +197,9 @@ static void update_bank_command(EntryLateralState *state, double target,
         next = target;
         state->command_bank_rate_deg_s = 0.0;
     }
-    state->command_bank_deg = clamp_value(next, -bank_limit, bank_limit);
+    /* A falling target envelope must not teleport the reference to its edge.
+       The existing rate/acceleration limits govern unloading as well. */
+    state->command_bank_deg = next;
 }
 
 static double rest_to_rest_roll_time(double span_deg,
@@ -287,6 +289,14 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         output.degraded_authority = true;
     }
 
+    /* Finish exchanging banks before accepting another sign change. Use the
+       current physical roll envelope, with the executive's minimum dwell. */
+    double reversal_span = fabs(input->measured_bank_deg) + magnitude;
+    double reversal_dwell = fmax(limits->minimum_leg_duration_s,
+        rest_to_rest_roll_time(reversal_span,
+            command_limits.maximum_roll_rate_deg_s,
+            command_limits.maximum_roll_accel_deg_s2));
+    bool reversal_ready = input->ut - state->last_reversal_ut >= reversal_dwell;
     bool reversal_requested = false;
     if (input->has_azimuth_error && isfinite(input->azimuth_error_deg)) {
         /* Heading control: steer lift toward the target azimuth. Large azimuth
@@ -352,7 +362,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         if (authority_valid && fabs(error) > deadband &&
             demanded_sign * state->bank_sign < 0.0) {
             state->reversal_armed = true;
-            if (captured_or_small) {
+            if (captured_or_small && reversal_ready) {
                 state->bank_sign = demanded_sign;
                 state->leg_captured = false;
                 state->leg_captured_ut = input->ut;
@@ -396,11 +406,9 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             double demanded_sign = unit_sign(projected);
             if (demanded_sign * state->bank_sign < 0.0) {
                 state->reversal_armed = true;
-                /* No fixed dwell is needed.  A side may change only after the
-                   current commanded leg has actually been captured, while the
-                   predicted crossrange at the end of the measured roll response
-                   lies outside the uncertainty corridor on the opposite side. */
-                if (state->leg_captured) {
+                /* Require capture and enough time for the measured physical
+                   roll response before exchanging banks again. */
+                if (state->leg_captured && reversal_ready) {
                     state->bank_sign = demanded_sign;
                     state->leg_captured = false;
                     state->leg_captured_ut = input->ut;

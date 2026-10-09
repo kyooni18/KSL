@@ -322,7 +322,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     }
     g->s_turn_sign=side;
 
-    double bank=clampd(lateral_out.target_bank_deg,-limits.maximum_bank_deg,limits.maximum_bank_deg);
+    double bank=lateral_out.target_bank_deg;
     double bank_resolution=sqrt(DBL_EPSILON)*fmax(1.0,limits.maximum_bank_deg);
     bool bank_at_limit=limits.maximum_bank_deg>DBL_EPSILON&&
         lateral_out.bank_magnitude_deg>=limits.maximum_bank_deg-bank_resolution;

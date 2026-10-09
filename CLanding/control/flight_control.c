@@ -523,7 +523,7 @@ bool flight_control_step_attitude(FlightControlState *state,
         isfinite(attitude_error->roll_error_deg) &&
         isfinite(attitude_error->yaw_error_deg);
     bool quaternion_yaw_control = quaternion_control && attitude_error->use_yaw_error &&
-        !command->heading_control_enabled;
+        !command->heading_control_enabled && profile == PROFILE_RECOVERY;
 
     double measured_dt = isfinite(sample_dt) && sample_dt > 0.0 ? sample_dt : 0.0;
     if (state->has_sample && isfinite(telemetry->ut) && telemetry->ut < state->last_ut) {
@@ -940,12 +940,12 @@ bool flight_control_step_attitude(FlightControlState *state,
     (void)roll_guard_known;
 
     double heading_error = 0.0;
-    /* A complete air-relative reference closes yaw as the third quaternion
-       error. Explicit runway-heading holds retain the validated heading law. */
+    /* Atmospheric yaw follows measured sideslip, independently of a moving
+       bank reference. Full quaternion yaw is reserved for departure recovery.
+       Explicit runway-heading holds retain their heading law. */
     double yaw_error = sideslip;
     double yaw_coordinate_rate = observed_yaw_coordinate_rate;
     double yaw_target_rate = 0.0;
-    double u_coord = 0.0;
 
     if (command->heading_control_enabled) {
         heading_error =
@@ -954,19 +954,24 @@ bool flight_control_step_attitude(FlightControlState *state,
     } else if (quaternion_yaw_control) {
         yaw_error = attitude_error->yaw_error_deg;
         yaw_coordinate_rate = -state->quaternion_yaw_error_rate;
-    } else if (fc_atmospheric_profile(profile) && q > 200.0 && telemetry->true_air_speed > 30.0) {
-        double rad_roll = roll * DEG2RAD;
-        u_coord = 0.08 * fc_clamp(q / 3000.0, 0.0, 1.0) * sin(rad_roll);
     }
 
     const double yaw_accel_max = tuning->yaw_accel_max;
-    const double yaw_wn = tuning->yaw_wn;
+    double yaw_wn = tuning->yaw_wn;
     if (!(yaw_authority > DBL_EPSILON) || yaw_authority > yaw_accel_max)
         yaw_authority = yaw_accel_max;
+    /* Keep an attitude step inside measured acceleration authority. Larger
+       errors therefore acquire more slowly instead of demanding saturated
+       rudder immediately. Reserve response time for the actuator lag. */
+    if (profile != PROFILE_RECOVERY && !command->heading_control_enabled) {
+        yaw_wn = fmin(yaw_wn, sqrt(yaw_authority /
+            fmax(fabs(yaw_error), DBL_EPSILON)));
+        if (tuning->yaw_lag_s > DBL_EPSILON)
+            yaw_wn = fmin(yaw_wn, 1.0 / (2.0 * tuning->yaw_lag_s));
+    }
     double yaw_command = fc_capped_pd_command(yaw_error, yaw_coordinate_rate,
         yaw_target_rate, yaw_authority, yaw_wn, 1.0, tuning->yaw_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
-    yaw_command=fc_clamp(yaw_command+u_coord,-1.0,1.0);
     /* Mission constraint: RCS is not used during atmospheric guidance. */
     double rcs_assist = 0.0;
     state->rcs_transonic_cutoff = true;

@@ -309,7 +309,30 @@ static void measured_lift_is_not_model_confidence(void){
     assert(level.valid&&!level.degraded_authority&&level.bank_magnitude_deg==0.0);
 }
 
+static void shrinking_limit_and_repeat_reversal_respect_response(void){
+    EntryLateralLimits l=limits();
+    EntryLateralState state={0};
+    entry_lateral_state_init(&state,90,1,50);
+    state.leg_captured=true;
+    EntryLateralInput in=azimuth_input(-10,5);
+    in.measured_bank_deg=50;
+    EntryLateralOutput first=entry_lateral_update(&state,&in,&l);
+    assert(first.reversal_requested);
+    state.leg_captured=true;
+    in.ut+=in.dt;in.azimuth_error_deg=10;
+    EntryLateralOutput second=entry_lateral_update(&state,&in,&l);
+    assert(!second.reversal_requested);
+    double previous=state.command_bank_deg;
+    l.maximum_bank_deg=0;
+    in.ut+=in.dt;
+    EntryLateralOutput unload=entry_lateral_update(&state,&in,&l);
+    assert(unload.valid);
+    assert(fabs(unload.target_bank_deg-previous)<=l.maximum_roll_rate_deg_s*in.dt+1e-9);
+    assert(fabs(unload.target_bank_deg)>1);
+}
+
 int main(void){
+    shrinking_limit_and_repeat_reversal_respect_response();
     measured_lift_is_not_model_confidence();
     initial_side_follows_crossrange_sign();
     predicts_crossing_over_physical_roll_response();
