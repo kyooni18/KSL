@@ -322,13 +322,15 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
     if(!(ground_to_preflare>0.0))return false;
 
     double time_to_preflare=ground_to_preflare/t->horizontal_speed;
-    /* A state whose current velocity vector already intersects the runway has no
-       remaining lateral-capture maneuver to reserve.  The old envelope response
-       time is still useful when alignment is incomplete, but charging it here for
-       an already aligned post-HAC state can consume the entire energy-trigger lead. */
+    /* Final owns the runway glide only after the measured velocity vector
+       projects through the physical runway envelope. The capture-time estimate
+       alone accepted a Final handoff with a large cross-track miss and a course
+       pointed away from the runway; Final then had too little energy and time to
+       recover that lateral error. Keep the aircraft in TAEM until its current
+       runway-frame intercept is actually inside the runway. */
     bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
-    double lateral_time=runway_aligned?0.0:fmax(envelope.lateral_capture_time_s,
-        envelope.heading_capture_time_s);
+    if(!runway_aligned)return false;
+    double lateral_time=0.0;
     DecisionMargin capture_time=decision_margin(time_to_preflare,lateral_time);
 
     return t->runway_along_track<0.0&&
