@@ -63,6 +63,50 @@ static bool refresh_medium(KrpcCNanoClient *client,unsigned airbrake_group,char 
     return true;
 }
 
+static bool refresh_control_surface_state(KrpcCNanoClient *client,
+        char *error,size_t error_size){
+    if(!client->surface_inventory_available){
+        client->surface_state_valid=false;
+        return true;
+    }
+    ClientBatch batch={0};
+    double sample_ut=0.0;
+    if(!batch_add(&batch,PROC_UT,BATCH_DOUBLE,&sample_ut,true)){
+        set_error(error,error_size,"Could not construct control-surface telemetry batch");
+        return false;
+    }
+    for(size_t i=0;i<client->surface_count;i++){
+        if(batch.count+3>KRPC_CNANO_BATCH_MAX){
+            if(!batch_run(client,&batch,"control-surface telemetry",error,error_size))return false;
+            memset(&batch,0,sizeof(batch));
+        }
+        CommandableSurface *surface=&client->surfaces[i];
+        if(!batch_add_object(&batch,PROC_CONTROL_SURFACE_DEPLOYED,surface->object,
+                    BATCH_BOOL,&surface->sampled_deployed,true)||
+           !batch_add_object(&batch,PROC_CONTROL_SURFACE_DEFLECTION_OVERRIDE,surface->object,
+                    BATCH_BOOL,&surface->sampled_deflection_override,true)||
+           !batch_add_object(&batch,PROC_CONTROL_SURFACE_DEFLECTION,surface->object,
+                    BATCH_FLOAT,&surface->sampled_override_deflection,true)){
+            set_error(error,error_size,"Could not construct control-surface telemetry batch");
+            return false;
+        }
+    }
+    if(batch.count&&!batch_run(client,&batch,"control-surface telemetry",error,error_size))return false;
+    client->surface_state_ut=sample_ut;
+    client->surface_state_valid=true;
+    return true;
+}
+
+static const char *surface_role_name(KrpcSurfaceRole role){
+    switch(role){
+        case KRPC_SURFACE_ROLE_ELEVATOR:return "elevator";
+        case KRPC_SURFACE_ROLE_AILERON:return "aileron";
+        case KRPC_SURFACE_ROLE_RUDDER:return "rudder";
+        case KRPC_SURFACE_ROLE_BODY_FLAP:return "body-flap";
+        default:return "unknown";
+    }
+}
+
 static bool refresh_slow(KrpcCNanoClient *client,char *error,size_t error_size){
     double apoapsis=client->cached_apoapsis,periapsis=client->cached_periapsis,period=client->cached_period;
     ClientBatch batch={0};
@@ -96,6 +140,7 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
        deliberately unsafe default so guidance can never mistake unavailable
        alignment feedback for a perfect zero-degree error. */
     float mass=0.0f,cp=0.0f,cr=0.0f,cy=0.0f,throttle=0.0f,autopilot_error=180.0f;
+    bool sas=false;
     krpc_tuple_double_double_double_t position={0},velocity={0},angular={0};
     krpc_tuple_double_double_double_double_t rotation={0};
     bool main_gear_grounded[CNANO_MAIN_WHEEL_LIMIT]={false,false};
@@ -123,6 +168,7 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     FAST(batch_add_object(&fast,PROC_CONTROL_ROLL,client->control,BATCH_FLOAT,&cr,true));
     FAST(batch_add_object(&fast,PROC_CONTROL_YAW,client->control,BATCH_FLOAT,&cy,true));
     FAST(batch_add_object(&fast,PROC_CONTROL_THROTTLE,client->control,BATCH_FLOAT,&throttle,true));
+    FAST(batch_add_object(&fast,PROC_CONTROL_SAS,client->control,BATCH_BOOL,&sas,true));
     if (client->has_autopilot_engaged && client->cached_autopilot_engaged)
         FAST(batch_add_object(&fast,PROC_AUTOPILOT_ERROR,client->autopilot,BATCH_FLOAT,&autopilot_error,true));
     FAST(batch_add_two_objects(&fast,PROC_VESSEL_ROTATION,client->vessel,client->body_nonrotating,BATCH_TUPLE4,&rotation,true));
@@ -143,6 +189,8 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     }
     client->last_radar_altitude=radar;
     t->has_controls=true;t->control_pitch=cp;t->control_roll=cr;t->control_yaw=cy;t->throttle=throttle;
+    t->has_sas_state=true;t->sas_enabled=sas;
+    client->cached_sas=sas;client->has_sas=true;
     t->autopilot_error=fabs((double)autopilot_error);
     Vector3 pos = tuple_to_canonical(position);
     Vector3 vel = tuple_to_canonical(velocity);
@@ -213,6 +261,10 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
         if(!refresh_medium(client,configuration->vehicle.airbrake_action_group,error,error_size))return false;
         client->last_medium_ut=ut;
     }
+    if(client->surface_inventory_available&&
+       (!client->surface_state_valid||ut<client->surface_state_ut||ut-client->surface_state_ut>=CNANO_MEDIUM_PERIOD)){
+        if(!refresh_control_surface_state(client,error,error_size))return false;
+    }
     /* Periapsis and measured thrust close the burn loop. Their idle cache
        cadence must not become an extra second of unobserved acceleration. */
     if (burn_active || !client->slow_valid || ut - client->last_slow_ut >= CNANO_SLOW_PERIOD) {
@@ -245,6 +297,21 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     t->brakes = client->cached_brakes;
     t->has_airbrakes = client->has_airbrakes;
     t->airbrakes = client->cached_airbrakes;
+    t->has_control_surface_state=client->surface_inventory_available&&client->surface_state_valid;
+    if(t->has_control_surface_state){
+        t->control_surface_state_ut=client->surface_state_ut;
+        t->control_surface_count=client->surface_count<LANDING_CONTROL_SURFACE_MAX?
+            client->surface_count:LANDING_CONTROL_SURFACE_MAX;
+        for(size_t i=0;i<t->control_surface_count;i++){
+            const CommandableSurface *source=&client->surfaces[i];
+            TelemetryControlSurface *target=&t->control_surfaces[i];
+            snprintf(target->part_name,sizeof(target->part_name),"%s",source->part_name);
+            snprintf(target->role,sizeof(target->role),"%s",surface_role_name(source->role));
+            target->deployed=source->sampled_deployed;
+            target->deflection_override=source->sampled_deflection_override;
+            target->override_deflection=source->sampled_override_deflection;
+        }
+    }
     t->navball_speed_mode = client->has_speed_mode ? client->cached_speed_mode : SPEED_UNCHANGED;
     if (client->cached_situation[0]) snprintf(t->vessel_situation, sizeof(t->vessel_situation), "%s", client->cached_situation);
     t->has_force_vectors = client->cached_force_vectors_valid;

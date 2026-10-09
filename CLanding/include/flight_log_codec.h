@@ -2,6 +2,7 @@
 #define KSP_LANDER_FLIGHT_LOG_CODEC_H
 
 #include "json.h"
+#include "landing_types.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,8 +19,17 @@ enum {
     VEHICLE_LOG_GROUP_GUIDANCE = 1u << 8,
     VEHICLE_LOG_GROUP_RUNTIME = 1u << 9,
     VEHICLE_LOG_GROUP_PHYSICS = 1u << 10,
-    VEHICLE_LOG_GROUP_ALL = (1u << 11) - 1u
+    VEHICLE_LOG_GROUP_SURFACES = 1u << 11,
+    VEHICLE_LOG_GROUP_ALL = (1u << 12) - 1u
 };
+
+typedef struct {
+    char part_name[64];
+    char role[16];
+    bool deployed;
+    bool deflection_override;
+    double override_deflection;
+} VehicleLogSurfaceSample;
 
 typedef struct {
     uint64_t tick_sequence;
@@ -51,8 +61,16 @@ typedef struct {
     unsigned physics_samples, physics_live_samples;
 
     double mass, available_thrust, current_thrust;
+    bool has_dry_mass;
+    double dry_mass;
     bool has_center_of_mass;
     double center_of_mass[3];
+    bool has_center_of_mass_root;
+    double center_of_mass_root[3];
+    bool has_torque;
+    double available_torque[3];
+    bool has_inertia;
+    double moment_of_inertia[3];
 
     double target_pitch, target_heading, target_roll, target_throttle;
     bool has_target_aoa;
@@ -60,11 +78,17 @@ typedef struct {
     bool target_gear, target_brakes, target_airbrakes;
 
     bool gear, brakes, has_airbrakes, airbrakes;
+    bool has_sas_state, sas_enabled;
     bool has_control_state;
     double control_state_pitch, control_state_roll, control_state_yaw;
     bool command_applied, has_actuator_feedback, has_control_diagnostics;
     double control_pitch, control_roll, control_yaw;
     double control_pitch_error, control_pitch_trim, control_pitch_authority, control_pitch_aero_fraction;
+
+    bool has_control_surface_state;
+    double control_surface_state_ut;
+    size_t control_surface_count;
+    VehicleLogSurfaceSample control_surfaces[LANDING_CONTROL_SURFACE_MAX];
 
     bool has_loop_wall_delta, has_telemetry_latency, has_guidance_compute, has_apply_latency, has_control_loop;
     double loop_wall_delta_ms, telemetry_latency_ms, guidance_compute_ms, apply_latency_ms, control_loop_ms;

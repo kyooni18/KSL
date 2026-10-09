@@ -96,6 +96,9 @@ enum {
     PROC_CONTROL_GET_ACTION_GROUP=347,
     PROC_CONTROL_RCS=361,
     PROC_CONTROL_SAS=355,
+    PROC_CONTROL_SURFACE_DEPLOYED=776,
+    PROC_CONTROL_SURFACE_DEFLECTION_OVERRIDE=778,
+    PROC_CONTROL_SURFACE_DEFLECTION=780,
     PROC_AUTOPILOT_ENGAGED=111,
     PROC_AUTOPILOT_ERROR=138,
     PROC_CONTROL_SPEED_MODE=359,
@@ -491,6 +494,8 @@ static void inventory_fin_modules(KrpcCNanoClient *client) {
 
 static void inventory_control_surfaces(KrpcCNanoClient *client) {
     client->surface_count = 0;
+    client->surface_inventory_available = false;
+    client->surface_state_valid = false;
     client->surface_roles_classified = false;
     client->has_applied_surface_allocation = false;
     krpc_SpaceCenter_Parts_t parts = KRPC_NULL;
@@ -501,6 +506,7 @@ static void inventory_control_surfaces(KrpcCNanoClient *client) {
     e = krpc_SpaceCenter_Parts_ControlSurfaces(client->connection, &surfaces, parts);
     client->total_rpc_calls++; client->total_wire_requests++;
     if (e != KRPC_OK) return;
+    client->surface_inventory_available = true;
 
     size_t elevons = 0;
     for (size_t i = 0; i < surfaces.size && client->surface_count < CNANO_CONTROL_SURFACE_LIMIT; ++i) {
@@ -514,8 +520,14 @@ static void inventory_control_surfaces(KrpcCNanoClient *client) {
         client->total_rpc_calls++; client->total_wire_requests++;
         if (e != KRPC_OK || !isfinite(position.e0) || !isfinite(position.e2)) continue;
         CommandableSurface *entry = &client->surfaces[client->surface_count++];
+        memset(entry, 0, sizeof(*entry));
         entry->object = surface;
         entry->lateral_m = position.e0;
+        char *part_name = NULL;
+        if (krpc_SpaceCenter_Part_Name(client->connection, &part_name, part) == KRPC_OK && part_name)
+            snprintf(entry->part_name, sizeof(entry->part_name), "%s", part_name);
+        if (part_name) krpc_free(part_name);
+        if (!entry->part_name[0]) snprintf(entry->part_name, sizeof(entry->part_name), "control-surface-%zu", client->surface_count - 1);
         if (fabs(position.e0) < 0.5) {
             entry->role = position.e2 < 0.0 ? KRPC_SURFACE_ROLE_RUDDER : KRPC_SURFACE_ROLE_BODY_FLAP;
         } else {

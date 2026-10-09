@@ -46,6 +46,10 @@ typedef struct {
     krpc_SpaceCenter_ControlSurface_t object;
     KrpcSurfaceRole role;
     double lateral_m;
+    char part_name[64];
+    bool sampled_deployed;
+    bool sampled_deflection_override;
+    float sampled_override_deflection;
 } CommandableSurface;
 
 struct KrpcCNanoClient {
@@ -82,6 +86,9 @@ struct KrpcCNanoClient {
 
     CommandableSurface surfaces[CNANO_CONTROL_SURFACE_LIMIT];
     size_t surface_count;
+    bool surface_inventory_available;
+    bool surface_state_valid;
+    double surface_state_ut;
     bool surface_roles_classified;
     KrpcSurfaceAllocation applied_surface_allocation;
     bool has_applied_surface_allocation;

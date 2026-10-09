@@ -21,6 +21,7 @@ static uint32_t changed_groups(const VehicleLogSample *a,const VehicleLogSample 
     if(strcmp(a->phase,b->phase)||strcmp(a->control_profile,b->control_profile)||strcmp(a->vessel_situation,b->vessel_situation)||
        a->automation_engaged!=b->automation_engaged||a->paused!=b->paused||a->constraint_active!=b->constraint_active||
        a->gear!=b->gear||a->brakes!=b->brakes||a->has_airbrakes!=b->has_airbrakes||a->airbrakes!=b->airbrakes||
+       a->has_sas_state!=b->has_sas_state||a->sas_enabled!=b->sas_enabled||
        a->entry_plan_valid!=b->entry_plan_valid||a->entry_reversal_scheduled!=b->entry_reversal_scheduled||
        a->has_plan_identity!=b->has_plan_identity||a->plan_id!=b->plan_id||a->plan_version!=b->plan_version||
        a->parent_plan_id!=b->parent_plan_id||a->parent_plan_version!=b->parent_plan_version)
@@ -68,7 +69,15 @@ static uint32_t changed_groups(const VehicleLogSample *a,const VehicleLogSample 
 
     if(changed_number(a->mass,b->mass,.25,1e-5)||changed_number(a->available_thrust,b->available_thrust,100,.002)||
        changed_number(a->current_thrust,b->current_thrust,100,.002)||a->has_center_of_mass!=b->has_center_of_mass||
-       (a->has_center_of_mass&&changed_vector(a->center_of_mass,b->center_of_mass,.002,1e-4)))
+       a->has_dry_mass!=b->has_dry_mass||
+       (a->has_dry_mass&&changed_number(a->dry_mass,b->dry_mass,.25,1e-5))||
+       (a->has_center_of_mass&&changed_vector(a->center_of_mass,b->center_of_mass,.002,1e-4))||
+       a->has_center_of_mass_root!=b->has_center_of_mass_root||
+       (a->has_center_of_mass_root&&changed_vector(a->center_of_mass_root,b->center_of_mass_root,.002,1e-4))||
+       a->has_torque!=b->has_torque||
+       (a->has_torque&&changed_vector(a->available_torque,b->available_torque,1.0,.005))||
+       a->has_inertia!=b->has_inertia||
+       (a->has_inertia&&changed_vector(a->moment_of_inertia,b->moment_of_inertia,.01,.005)))
         mask|=VEHICLE_LOG_GROUP_VEHICLE;
 
     if(changed_number(a->target_pitch,b->target_pitch,.04,1e-4)||changed_number(a->target_heading,b->target_heading,.04,1e-4)||
@@ -84,6 +93,19 @@ static uint32_t changed_groups(const VehicleLogSample *a,const VehicleLogSample 
        a->has_control_diagnostics!=b->has_control_diagnostics||
        (a->has_control_diagnostics&&(changed_number(a->control_pitch_error,b->control_pitch_error,.02,.002)||changed_number(a->control_pitch_trim,b->control_pitch_trim,.002,.002)||changed_number(a->control_pitch_authority,b->control_pitch_authority,.05,.002)||changed_number(a->control_pitch_aero_fraction,b->control_pitch_aero_fraction,.002,.002))))
         mask|=VEHICLE_LOG_GROUP_CONTROL;
+
+    bool surfaces_changed=a->has_control_surface_state!=b->has_control_surface_state||
+        a->control_surface_count!=b->control_surface_count;
+    if(!surfaces_changed&&a->has_control_surface_state){
+        surfaces_changed=changed_number(a->control_surface_state_ut,b->control_surface_state_ut,.001,0);
+        for(size_t i=0;!surfaces_changed&&i<a->control_surface_count&&i<LANDING_CONTROL_SURFACE_MAX;i++){
+            const VehicleLogSurfaceSample *x=&a->control_surfaces[i],*y=&b->control_surfaces[i];
+            surfaces_changed=strcmp(x->part_name,y->part_name)||strcmp(x->role,y->role)||
+                x->deployed!=y->deployed||x->deflection_override!=y->deflection_override||
+                (x->deflection_override&&changed_number(x->override_deflection,y->override_deflection,.002,.002));
+        }
+    }
+    if(surfaces_changed)mask|=VEHICLE_LOG_GROUP_SURFACES;
 
     if(a->has_loop_wall_delta!=b->has_loop_wall_delta||a->has_telemetry_latency!=b->has_telemetry_latency||
        a->has_guidance_compute!=b->has_guidance_compute||a->has_apply_latency!=b->has_apply_latency||a->has_control_loop!=b->has_control_loop||
@@ -141,7 +163,7 @@ static void vec3_json(JsonWriter *w,const double v[3]){jw_char(w,'[');jw_number(
 void vehicle_log_record_json(JsonWriter *w,const char *session_id,uint64_t record_sequence,const VehicleLogSample *s,const VehicleLogDecision *d){
     if(!w||!s||!d)return;
     jw_char(w,'{');
-    jw_raw(w,"\"schemaVersion\":4,\"recordType\":");jw_string(w,d->keyframe?"vehicleKeyframe":"vehicleDelta");
+    jw_raw(w,"\"schemaVersion\":5,\"recordType\":");jw_string(w,d->keyframe?"vehicleKeyframe":"vehicleDelta");
     jw_raw(w,",\"sessionId\":");jw_string(w,session_id?session_id:"");
     jw_raw(w,",\"recordSequence\":");jw_integer(w,(long long)record_sequence);
     jw_raw(w,",\"tickSequence\":");jw_integer(w,(long long)s->tick_sequence);
@@ -150,7 +172,7 @@ void vehicle_log_record_json(JsonWriter *w,const char *session_id,uint64_t recor
     if(s->event[0]){jw_raw(w,",\"event\":");jw_string(w,s->event);}
     jw_raw(w,",\"fields\":{");bool first=true;
     if(d->groups&VEHICLE_LOG_GROUP_STATE){
-        field_prefix(w,&first,"state");jw_char(w,'{');jw_raw(w,"\"phase\":");jw_string(w,s->phase);jw_raw(w,",\"controlProfile\":");jw_string(w,s->control_profile);jw_raw(w,",\"vesselSituation\":");jw_string(w,s->vessel_situation);jw_raw(w,",\"automation\":");jw_bool(w,s->automation_engaged);jw_raw(w,",\"paused\":");jw_bool(w,s->paused);jw_raw(w,",\"constraintActive\":");jw_bool(w,s->constraint_active);jw_raw(w,",\"gear\":");jw_bool(w,s->gear);jw_raw(w,",\"brakes\":");jw_bool(w,s->brakes);jw_raw(w,",\"airbrakesAvailable\":");jw_bool(w,s->has_airbrakes);jw_raw(w,",\"airbrakes\":");if(s->has_airbrakes)jw_bool(w,s->airbrakes);else jw_raw(w,"null");jw_raw(w,",\"entryPlanValid\":");jw_bool(w,s->entry_plan_valid);jw_raw(w,",\"entryReversalScheduled\":");jw_bool(w,s->entry_reversal_scheduled);jw_raw(w,",\"planId\":");if(s->has_plan_identity)jw_integer(w,(long long)s->plan_id);else jw_null(w);jw_raw(w,",\"planVersion\":");if(s->has_plan_identity)jw_integer(w,(long long)s->plan_version);else jw_null(w);jw_raw(w,",\"parentPlanId\":");if(s->has_plan_identity)jw_integer(w,(long long)s->parent_plan_id);else jw_null(w);jw_raw(w,",\"parentPlanVersion\":");if(s->has_plan_identity)jw_integer(w,(long long)s->parent_plan_version);else jw_null(w);jw_char(w,'}');
+        field_prefix(w,&first,"state");jw_char(w,'{');jw_raw(w,"\"phase\":");jw_string(w,s->phase);jw_raw(w,",\"controlProfile\":");jw_string(w,s->control_profile);jw_raw(w,",\"vesselSituation\":");jw_string(w,s->vessel_situation);jw_raw(w,",\"automation\":");jw_bool(w,s->automation_engaged);jw_raw(w,",\"paused\":");jw_bool(w,s->paused);jw_raw(w,",\"constraintActive\":");jw_bool(w,s->constraint_active);jw_raw(w,",\"gear\":");jw_bool(w,s->gear);jw_raw(w,",\"brakes\":");jw_bool(w,s->brakes);jw_raw(w,",\"airbrakesAvailable\":");jw_bool(w,s->has_airbrakes);jw_raw(w,",\"airbrakes\":");if(s->has_airbrakes)jw_bool(w,s->airbrakes);else jw_raw(w,"null");jw_raw(w,",\"sasAvailable\":");jw_bool(w,s->has_sas_state);jw_raw(w,",\"sasEnabled\":");if(s->has_sas_state)jw_bool(w,s->sas_enabled);else jw_null(w);jw_raw(w,",\"entryPlanValid\":");jw_bool(w,s->entry_plan_valid);jw_raw(w,",\"entryReversalScheduled\":");jw_bool(w,s->entry_reversal_scheduled);jw_raw(w,",\"planId\":");if(s->has_plan_identity)jw_integer(w,(long long)s->plan_id);else jw_null(w);jw_raw(w,",\"planVersion\":");if(s->has_plan_identity)jw_integer(w,(long long)s->plan_version);else jw_null(w);jw_raw(w,",\"parentPlanId\":");if(s->has_plan_identity)jw_integer(w,(long long)s->parent_plan_id);else jw_null(w);jw_raw(w,",\"parentPlanVersion\":");if(s->has_plan_identity)jw_integer(w,(long long)s->parent_plan_version);else jw_null(w);jw_char(w,'}');
     }
     if(d->groups&VEHICLE_LOG_GROUP_POSITION){
         field_prefix(w,&first,"position");jw_char(w,'{');jw_raw(w,"\"latitude\":");jw_number(w,s->latitude);jw_raw(w,",\"longitude\":");jw_number(w,s->longitude);jw_raw(w,",\"altitude\":");jw_number(w,s->altitude);jw_raw(w,",\"radarAltitude\":");jw_number(w,s->radar_altitude);jw_raw(w,",\"inertial\":");vec3_json(w,s->position);jw_char(w,'}');
@@ -168,13 +190,20 @@ void vehicle_log_record_json(JsonWriter *w,const char *session_id,uint64_t recor
         field_prefix(w,&first,"physics");jw_char(w,'{');jw_raw(w,"\"confidence\":");jw_number(w,s->physics_confidence);jw_raw(w,",\"modelResidual\":");jw_number(w,s->physics_model_residual);jw_raw(w,",\"modelResidualConfidence\":");jw_number(w,s->physics_model_residual_confidence);jw_raw(w,",\"certifiedUncertainty\":");jw_number(w,s->physics_certified_uncertainty);jw_raw(w,",\"forceResidualPerQ\":");vec3_json(w,s->physics_force_residual_per_q);jw_raw(w,",\"forceResidualSigmaPerQ\":");vec3_json(w,s->physics_force_residual_sigma_per_q);jw_raw(w,",\"forceResidualConfidence\":");jw_number(w,s->physics_force_residual_confidence);jw_raw(w,",\"airbrakeModelAvailable\":");jw_bool(w,s->physics_airbrake_model_available);jw_raw(w,",\"airbrakeModelConfidence\":");jw_number(w,s->physics_airbrake_model_confidence);jw_raw(w,",\"airbrakeDragAccel\":");jw_number(w,s->physics_airbrake_drag_accel);jw_raw(w,",\"samples\":");jw_integer(w,(long long)s->physics_samples);jw_raw(w,",\"liveSamples\":");jw_integer(w,(long long)s->physics_live_samples);jw_char(w,'}');
     }
     if(d->groups&VEHICLE_LOG_GROUP_VEHICLE){
-        field_prefix(w,&first,"vehicle");jw_char(w,'{');jw_raw(w,"\"mass\":");jw_number(w,s->mass);jw_raw(w,",\"availableThrust\":");jw_number(w,s->available_thrust);jw_raw(w,",\"currentThrust\":");jw_number(w,s->current_thrust);jw_raw(w,",\"centerOfMass\":");if(s->has_center_of_mass)vec3_json(w,s->center_of_mass);else jw_raw(w,"null");jw_char(w,'}');
+        field_prefix(w,&first,"vehicle");jw_char(w,'{');jw_raw(w,"\"mass\":");jw_number(w,s->mass);jw_raw(w,",\"dryMass\":");if(s->has_dry_mass)jw_number(w,s->dry_mass);else jw_null(w);jw_raw(w,",\"availableThrust\":");jw_number(w,s->available_thrust);jw_raw(w,",\"currentThrust\":");jw_number(w,s->current_thrust);jw_raw(w,",\"centerOfMass\":");if(s->has_center_of_mass)vec3_json(w,s->center_of_mass);else jw_raw(w,"null");jw_raw(w,",\"centerOfMassRoot\":");if(s->has_center_of_mass_root)vec3_json(w,s->center_of_mass_root);else jw_raw(w,"null");jw_raw(w,",\"availableTorque\":");if(s->has_torque)vec3_json(w,s->available_torque);else jw_raw(w,"null");jw_raw(w,",\"momentOfInertia\":");if(s->has_inertia)vec3_json(w,s->moment_of_inertia);else jw_raw(w,"null");jw_char(w,'}');
     }
     if(d->groups&VEHICLE_LOG_GROUP_COMMAND){
         field_prefix(w,&first,"command");jw_char(w,'{');jw_raw(w,"\"targetPitch\":");jw_number(w,s->target_pitch);jw_raw(w,",\"targetHeading\":");jw_number(w,s->target_heading);jw_raw(w,",\"targetRoll\":");jw_number(w,s->target_roll);jw_raw(w,",\"targetThrottle\":");jw_number(w,s->target_throttle);jw_raw(w,",\"targetAoA\":");if(s->has_target_aoa)jw_number(w,s->target_aoa);else jw_raw(w,"null");jw_raw(w,",\"gear\":");jw_bool(w,s->target_gear);jw_raw(w,",\"brakes\":");jw_bool(w,s->target_brakes);jw_raw(w,",\"airbrakes\":");jw_bool(w,s->target_airbrakes);jw_char(w,'}');
     }
     if(d->groups&VEHICLE_LOG_GROUP_CONTROL){
         field_prefix(w,&first,"appliedControl");jw_char(w,'{');jw_raw(w,"\"reportedAvailable\":");jw_bool(w,s->has_control_state);jw_raw(w,",\"reportedPitch\":");if(s->has_control_state)jw_number(w,s->control_state_pitch);else jw_raw(w,"null");jw_raw(w,",\"reportedRoll\":");if(s->has_control_state)jw_number(w,s->control_state_roll);else jw_raw(w,"null");jw_raw(w,",\"reportedYaw\":");if(s->has_control_state)jw_number(w,s->control_state_yaw);else jw_raw(w,"null");jw_raw(w,",\"applySucceeded\":");jw_bool(w,s->command_applied);jw_raw(w,",\"diagnosticPitch\":");if(s->has_actuator_feedback)jw_number(w,s->control_pitch);else jw_raw(w,"null");jw_raw(w,",\"diagnosticRoll\":");if(s->has_actuator_feedback)jw_number(w,s->control_roll);else jw_raw(w,"null");jw_raw(w,",\"diagnosticYaw\":");if(s->has_actuator_feedback)jw_number(w,s->control_yaw);else jw_raw(w,"null");jw_raw(w,",\"controlDiagnostics\":");if(s->has_control_diagnostics){jw_char(w,'{');jw_raw(w,"\"pitchError\":");jw_number(w,s->control_pitch_error);jw_raw(w,",\"pitchTrim\":");jw_number(w,s->control_pitch_trim);jw_raw(w,",\"pitchAuthority\":");jw_number(w,s->control_pitch_authority);jw_raw(w,",\"pitchAeroFraction\":");jw_number(w,s->control_pitch_aero_fraction);jw_char(w,'}');}else jw_raw(w,"null");jw_char(w,'}');
+    }
+    if(d->groups&VEHICLE_LOG_GROUP_SURFACES){
+        field_prefix(w,&first,"controlSurfaces");jw_char(w,'{');jw_raw(w,"\"stateAvailable\":");jw_bool(w,s->has_control_surface_state);jw_raw(w,",\"sampleUT\":");if(s->has_control_surface_state)jw_number(w,s->control_surface_state_ut);else jw_null(w);jw_raw(w,",\"items\":[");
+        for(size_t i=0;i<s->control_surface_count&&i<LANDING_CONTROL_SURFACE_MAX;i++){
+            if(i)jw_char(w,',');const VehicleLogSurfaceSample *surface=&s->control_surfaces[i];jw_char(w,'{');jw_raw(w,"\"partName\":");jw_string(w,surface->part_name);jw_raw(w,",\"role\":");jw_string(w,surface->role);jw_raw(w,",\"deployed\":");jw_bool(w,surface->deployed);jw_raw(w,",\"deflectionOverride\":");jw_bool(w,surface->deflection_override);jw_raw(w,",\"overrideDeflectionNormalized\":");if(surface->deflection_override)jw_number(w,surface->override_deflection);else jw_null(w);jw_char(w,'}');
+        }
+        jw_raw(w,"]}");
     }
     if(d->groups&VEHICLE_LOG_GROUP_RUNTIME){
         field_prefix(w,&first,"runtime");jw_char(w,'{');jw_raw(w,"\"loopWallDeltaMilliseconds\":");if(s->has_loop_wall_delta)jw_number(w,s->loop_wall_delta_ms);else jw_raw(w,"null");jw_raw(w,",\"telemetryLatencyMilliseconds\":");if(s->has_telemetry_latency)jw_number(w,s->telemetry_latency_ms);else jw_raw(w,"null");jw_raw(w,",\"guidanceComputeMilliseconds\":");if(s->has_guidance_compute)jw_number(w,s->guidance_compute_ms);else jw_raw(w,"null");jw_raw(w,",\"applyLatencyMilliseconds\":");if(s->has_apply_latency)jw_number(w,s->apply_latency_ms);else jw_raw(w,"null");jw_raw(w,",\"controlLoopMilliseconds\":");if(s->has_control_loop)jw_number(w,s->control_loop_ms);else jw_raw(w,"null");jw_char(w,'}');

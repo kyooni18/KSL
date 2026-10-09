@@ -163,6 +163,17 @@ typedef struct {
     double maximum_pitch_accel_deg_s2, maximum_roll_accel_deg_s2;
 } AttitudeResponseModel;
 
+#define LANDING_CONTROL_SURFACE_MAX 16
+typedef struct {
+    char part_name[64];
+    char role[16];
+    bool deployed;
+    bool deflection_override;
+    /* kRPC reports this normalized override command, not the physical hinge
+       angle produced by ordinary pitch/roll/yaw inputs. */
+    double override_deflection;
+} TelemetryControlSurface;
+
 typedef struct {
     double ut; char vessel_name[128];
     double latitude, longitude, mean_altitude, radar_altitude, vertical_speed, horizontal_speed, surface_speed, true_air_speed;
@@ -210,6 +221,11 @@ typedef struct {
     unsigned rpc_read_calls, rpc_read_wire_requests, rpc_apply_calls, rpc_apply_wire_requests;
     unsigned rpc_total_calls, rpc_total_wire_requests;
     bool gear, brakes, has_airbrakes, airbrakes;
+    bool has_sas_state, sas_enabled;
+    bool has_control_surface_state;
+    double control_surface_state_ut;
+    size_t control_surface_count;
+    TelemetryControlSurface control_surfaces[LANDING_CONTROL_SURFACE_MAX];
     /* Live kRPC wheel-contact telemetry. `main_gear_grounded` is true when
        either rear/main gear reports ModuleWheelBase.isGrounded. */
     bool has_main_gear_grounded, main_gear_grounded;
