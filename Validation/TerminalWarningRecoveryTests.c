@@ -22,12 +22,24 @@ int main(void) {
     VehicleState state={.ut=t.ut,.position={624000,0,0},.velocity={-90,650,0},.mass=t.mass};
     GuidanceResult r=guidance_update_with_terminal_model(&g,&t,&state,NULL,&p,aero,&cfg,NULL);
     assert(r.phase!=PHASE_ABORT&&r.phase!=PHASE_COMPLETE);
+    assert(r.phase==PHASE_TAEM&&!g.attitude_recovery);
+    assert(r.command.control_profile==PROFILE_TAEM&&r.command.hac_control_tuning);
     assert(r.has_warning&&g.automation_engaged&&!g.aborted);
     assert(r.command.autopilot_engaged&&r.command.target_throttle==0);
     assert(isfinite(r.command.target_pitch)&&isfinite(r.command.target_roll));
     assert(fabs(r.command.target_roll)<=cfg.vehicle.maximum_bank_angle);
     assert(!g.mm305_route_committed&&!g.hac_captured);
     guidance_result_clear(&r);
+
+    /* A real departure remains recovery even if its solution is rejected. */
+    g.attitude_recovery=true;g.recovery_duration=16;g.recovery_aoa=10;
+    t.ut+=.1;
+    r=guidance_update_with_terminal_model(&g,&t,&state,NULL,&p,aero,&cfg,NULL);
+    assert(r.phase==PHASE_ATTITUDE_RECOVERY&&g.attitude_recovery);
+    assert(r.command.control_profile==PROFILE_RECOVERY);
+    assert(!r.command.heading_control_enabled);
+    guidance_result_clear(&r);
+    g.attitude_recovery=false;
 
     g.final_approach_captured=true;g.phase=PHASE_ROLLOUT;
     t.latitude=cfg.site.latitude+1;t.mean_altitude=cfg.site.altitude;
