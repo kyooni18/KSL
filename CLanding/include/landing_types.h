@@ -130,6 +130,7 @@ typedef struct { TrajectoryPoint *points; size_t count, capacity; } Trajectory;
 typedef struct {
     double created_ut, burn_ut, delta_v, estimated_burn_duration, predicted_taem_distance, predicted_taem_range_error, predicted_closest_distance;
     double planning_mass, planning_available_thrust;
+    double burn_normal_angle;
     double predicted_entry_range, predicted_entry_flight_path_angle, predicted_post_burn_periapsis_altitude;
     bool nominal_capture_achieved, robustness_qualified, target_capture_achieved;
     unsigned robustness_scenarios, robustness_passed, robustness_unsafe;
@@ -245,7 +246,7 @@ typedef struct {
     bool has_pitch_trim_feedforward; double pitch_trim_feedforward;
     /* Split-rudder speedbrake opening, 0 (stowed) .. 1 (full). */
     double speedbrake_fraction;
-    bool gear, brakes, airbrakes, use_inertial_direction; Vector3 inertial_direction;
+    bool gear, brakes, airbrakes, use_inertial_direction, thrust_alignment; Vector3 inertial_direction;
     bool autopilot_engaged, heading_control_enabled, hac_control_tuning, terminal_pitch_tuning; NavballSpeedMode navball_speed_mode; ControlProfile control_profile;
 } GuidanceCommand;
 

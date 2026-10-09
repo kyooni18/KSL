@@ -1,0 +1,113 @@
+{
+  "source": "live read-only kRPC",
+  "ut": 14262.470141614525,
+  "vessel": "STS",
+  "engines": [
+    {
+      "name": "SSME",
+      "title": "S3 KS-25 \"Vector\" Liquid Fuel Engine",
+      "tag": "",
+      "active": true,
+      "availableThrust": 999996.875,
+      "thrusters": [
+        {
+          "direction": [
+            1.7211066821755372e-06,
+            0.9659255011055249,
+            0.25882068880940656
+          ],
+          "position": [
+            -0.7140134113747015,
+            -7.001569428170674,
+            -0.04840982600303745
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SSME",
+      "title": "S3 KS-25 \"Vector\" Liquid Fuel Engine",
+      "tag": "",
+      "active": true,
+      "availableThrust": 999996.875,
+      "thrusters": [
+        {
+          "direction": [
+            1.6317862988639493e-06,
+            0.9659254317935605,
+            0.25882085369042307
+          ],
+          "position": [
+            0.7139871770114323,
+            -7.001573067827968,
+            -0.04841025908286012
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SSME",
+      "title": "S3 KS-25 \"Vector\" Liquid Fuel Engine",
+      "tag": "",
+      "active": true,
+      "availableThrust": 999996.875,
+      "thrusters": [
+        {
+          "direction": [
+            1.4109127502615504e-06,
+            0.9659253378920502,
+            0.2588208050766778
+          ],
+          "position": [
+            -9.516645330260795e-06,
+            -6.780230046451414,
+            -1.1459316921873133
+          ]
+        }
+      ]
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "title": "KJ-10b \"Viking\" Orbital Manoeuvring Engine",
+      "tag": "",
+      "active": true,
+      "availableThrust": 29998.6015625,
+      "thrusters": [
+        {
+          "direction": [
+            0.16317640529889424,
+            0.925415494949414,
+            0.3420222532895385
+          ],
+          "position": [
+            -1.254834775407903,
+            -6.259329104570834,
+            -1.9459972330088258
+          ]
+        }
+      ]
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "title": "KJ-10b \"Viking\" Orbital Manoeuvring Engine",
+      "tag": "",
+      "active": true,
+      "availableThrust": 29998.599609375,
+      "thrusters": [
+        {
+          "direction": [
+            -0.163175536475674,
+            0.9254158153923077,
+            0.34202217945808255
+          ],
+          "position": [
+            1.254817812644553,
+            -6.25933216054832,
+            -1.9459954845769911
+          ]
+        }
+      ]
+    }
+  ],
+  "flightNotModified": true
+}

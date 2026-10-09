@@ -9,6 +9,8 @@
 #include <krpc_cnano/services/krpc.h>
 #include <krpc_cnano/services/space_center.h>
 
+#include "engine_role.h"
+#include "thrust_alignment.h"
 #include <float.h>
 #include <math.h>
 #include <stdarg.h>
@@ -30,6 +32,8 @@ typedef struct {
     bool activated_by_client;
     bool independent_owned;
     float available_thrust;
+    EngineRole role;
+    bool selected;
 } CommandableEngine;
 
 /* Field handles of one rudder-half ModuleControlSurface. */
@@ -69,6 +73,9 @@ struct KrpcCNanoClient {
     char flight_key[128];
     char cached_situation[64];
 
+    Vector3 burn_thrust_axis_body, burn_thrust_moment_body;
+    bool burn_geometry_valid, require_oms;
+    double burn_resultant_fraction;
     CommandableEngine engines[CNANO_ENGINE_LIMIT];
     size_t engine_count;
     double commandable_thrust;

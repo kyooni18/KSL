@@ -58,29 +58,29 @@ static int tier(Candidate*c,const LandingSite*site,const VehicleProfile*v,
     return 0;
 }
 
-static bool impulsive_deorbit_periapsis_plausible(VehicleState coast,double dv,
+static bool impulsive_deorbit_periapsis_plausible(VehicleState coast,double dv,double normal_angle,
         const PlanetModel*p,const GuidanceSettings*s){
     (void)s;
     VehicleState impulse=coast;
-    Vector3 direction=burn_direction(coast.position,coast.velocity,0,0);
+    Vector3 direction=burn_direction(coast.position,coast.velocity,0,normal_angle);
     impulse.velocity=vadd(impulse.velocity,vscale(direction,dv));
     double peri=predictor_postburn_periapsis(impulse,p);
     return isfinite(peri)&&peri<p->atmosphere_depth&&peri>-p->radius;
 }
 
-static bool eval_candidate(Candidate*out,VehicleState coast,double dv,
+static bool eval_candidate(Candidate*out,VehicleState coast,double dv,double normal_angle,
         const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,
         const TrajectoryCalibrationModel*cal,const LandingSite*site,
         const VehicleProfile*v,const GuidanceSettings*s,double thrust,
         DeorbitRejectReason*reject){
     memset(out,0,sizeof(*out));
     if(reject)*reject=DEORBIT_REJECT_IMPULSIVE_PERIAPSIS;
-    if(!impulsive_deorbit_periapsis_plausible(coast,dv,p,s))return false;
+    if(!impulsive_deorbit_periapsis_plausible(coast,dv,normal_angle,p,s))return false;
 
     double dur=0.0,delivered=0.0;
     VehicleState after=retro_burn_scenario(coast,dv,thrust,
         s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,
-        p,0,0,&dur,&delivered,cal?cal->physics:NULL);
+        p,0,normal_angle,&dur,&delivered,cal?cal->physics:NULL);
     double dv_tol=fmax(GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS,
         sqrt(DBL_EPSILON)*fmax(1.0,fabs(dv)));
     if(reject)*reject=DEORBIT_REJECT_FINITE_BURN;
@@ -108,6 +108,7 @@ static bool eval_candidate(Candidate*out,VehicleState coast,double dv,
     out->burn_ut=coast.ut+dur*.5;
     out->dv=dv;
     out->duration=dur;
+    out->burn_normal_angle=normal_angle;
     out->after=after;
     out->peri=peri;
     out->requested_periapsis_altitude=s->target_post_burn_periapsis_altitude;
@@ -223,7 +224,7 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
         double start=fmax(scenario_state.ut+5,nominal_start+sc.timing_offset);
         VehicleState coast=predictor_propagate_vacuum(scenario_state,start,p,3);
         double scenario_dv=fmax(.2,c->dv+sc.dv_offset),duration=0,delivered=0;
-        VehicleState after=retro_burn_scenario(coast,scenario_dv,thrust*fmax(.05,sc.thrust_scale),s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,p,sc.radial_error,sc.normal_error,&duration,&delivered,cal?cal->physics:NULL);
+        VehicleState after=retro_burn_scenario(coast,scenario_dv,thrust*fmax(.05,sc.thrust_scale),s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,p,sc.radial_error,c->burn_normal_angle+sc.normal_error,&duration,&delivered,cal?cal->physics:NULL);
         bool burn_completed=isfinite(duration)&&isfinite(delivered)&&
             delivered>=scenario_dv-.25;
         double peri=predictor_postburn_periapsis(after,p);
@@ -287,13 +288,13 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
 }
 
 
-static double deorbit_finite_burn_periapsis(VehicleState coast,double dv,
+static double deorbit_finite_burn_periapsis(VehicleState coast,double dv,double normal_angle,
         const PlanetModel*p,const GuidanceSettings*s,double thrust,
         const TrajectoryCalibrationModel*cal){
     double duration=0.0,delivered=0.0;
     VehicleState after=retro_burn_scenario(coast,dv,thrust,
         s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,
-        p,0,0,&duration,&delivered,cal?cal->physics:NULL);
+        p,0,normal_angle,&duration,&delivered,cal?cal->physics:NULL);
     double tolerance=fmax(GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS,
         sqrt(DBL_EPSILON)*fmax(1.0,fabs(dv)));
     if(!isfinite(duration)||!isfinite(delivered)||
@@ -302,7 +303,7 @@ static double deorbit_finite_burn_periapsis(VehicleState coast,double dv,
     return predictor_postburn_periapsis(after,p);
 }
 
-static bool deorbit_solve_target_periapsis(VehicleState coast,
+static bool deorbit_solve_target_periapsis(VehicleState coast,double normal_angle,
         const PlanetModel*p,const GuidanceSettings*s,double thrust,
         const TrajectoryCalibrationModel*cal,double*out_dv,
         DeorbitRejectReason*reject){
@@ -319,7 +320,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
     }
 
     double low_peri=deorbit_finite_burn_periapsis(
-        coast,low,p,s,thrust,cal);
+        coast,low,normal_angle,p,s,thrust,cal);
     double target=s->target_post_burn_periapsis_altitude;
     if(!isfinite(low_peri)){
         if(reject)*reject=DEORBIT_REJECT_TARGET_LOW_STATE;
@@ -338,7 +339,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
        bracket only when the modeled finite burn still misses the configured
        periapsis, using live thrust and mass flow. */
     double impulse_low=0.0,impulse_high=speed;
-    Vector3 direction=burn_direction(coast.position,coast.velocity,0.0,0.0);
+    Vector3 direction=burn_direction(coast.position,coast.velocity,0.0,normal_angle);
     VehicleState impulse=coast;
     impulse.velocity=vadd(impulse.velocity,vscale(direction,impulse_high));
     double impulse_high_peri=predictor_postburn_periapsis(impulse,p);
@@ -361,7 +362,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
 
     double high=impulse_high;
     double high_peri=deorbit_finite_burn_periapsis(
-        coast,high,p,s,thrust,cal);
+        coast,high,normal_angle,p,s,thrust,cal);
     if(!isfinite(high_peri)){
         if(reject)*reject=DEORBIT_REJECT_TARGET_FINITE_SEED;
         return false;
@@ -379,7 +380,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
             return false;
         }
         high_peri=deorbit_finite_burn_periapsis(
-            coast,high,p,s,thrust,cal);
+            coast,high,normal_angle,p,s,thrust,cal);
         if(!isfinite(high_peri)){
             if(reject)*reject=DEORBIT_REJECT_TARGET_FINITE_BRACKET;
             return false;
@@ -390,7 +391,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
     for(int i=0;i<48;i++){
         double mid=.5*(low+high);
         double peri=deorbit_finite_burn_periapsis(
-            coast,mid,p,s,thrust,cal);
+            coast,mid,normal_angle,p,s,thrust,cal);
         if(!isfinite(peri)){
             if(reject)*reject=DEORBIT_REJECT_TARGET_FINITE_ROOT;
             return false;
@@ -405,7 +406,7 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,
 }
 
 static bool deorbit_evaluate_start(Candidate*out,VehicleState initial,
-        double burn_start,double dv_offset,const PlanetModel*p,
+        double burn_start,double dv_offset,double normal_angle,const PlanetModel*p,
         AerodynamicModel aero,const AerodynamicEnvelope*env,
         const TrajectoryCalibrationModel*cal,const LandingSite*site,
         const VehicleProfile*v,const GuidanceSettings*s,double thrust,
@@ -416,10 +417,10 @@ static bool deorbit_evaluate_start(Candidate*out,VehicleState initial,
         initial,burn_start,p,12);
     double dv=0.0;
     if(!deorbit_solve_target_periapsis(
-            coast,p,s,thrust,cal,&dv,reject))
+            coast,normal_angle,p,s,thrust,cal,&dv,reject))
         return false;
     dv=fmax(0.0,dv+dv_offset);
-    return eval_candidate(out,coast,dv,p,aero,env,cal,site,v,s,thrust,reject);
+    return eval_candidate(out,coast,dv,normal_angle,p,aero,env,cal,site,v,s,thrust,reject);
 }
 
 static void copy_control_authority_evidence(Telemetry *destination,
@@ -519,7 +520,7 @@ static void deorbit_record_execution_witness(Candidate*c,
 
 typedef struct {
     bool valid,closing;
-    double burn_start,burn_ut,dv,duration,peri;
+    double burn_start,burn_ut,dv,duration,peri,normal_angle;
     double entry_range,entry_fpa,entry_speed,entry_course_error;
     double entry_crossrange,entry_miss;
 } DeorbitTimingProbe;
@@ -566,7 +567,7 @@ static bool deorbit_timing_probe_entry(DeorbitTimingProbe*out,VehicleState state
 }
 
 static bool deorbit_timing_probe_start(DeorbitTimingProbe*out,VehicleState initial,
-        double burn_start,const PlanetModel*p,const TrajectoryCalibrationModel*cal,
+        double burn_start,double normal_angle,const PlanetModel*p,const TrajectoryCalibrationModel*cal,
         const LandingSite*site,const GuidanceSettings*s,double thrust,
         DeorbitRejectReason*reject){
     if(reject)*reject=DEORBIT_REJECT_START;
@@ -574,11 +575,11 @@ static bool deorbit_timing_probe_start(DeorbitTimingProbe*out,VehicleState initi
     memset(out,0,sizeof(*out));
     VehicleState coast=predictor_propagate_vacuum(initial,burn_start,p,12.0);
     double dv=0.0;
-    if(!deorbit_solve_target_periapsis(coast,p,s,thrust,cal,&dv,reject))return false;
+    if(!deorbit_solve_target_periapsis(coast,normal_angle,p,s,thrust,cal,&dv,reject))return false;
     double duration=0.0,delivered=0.0;
     VehicleState after=retro_burn_scenario(coast,dv,thrust,
         s->deorbit_maximum_throttle,s->deorbit_throttle_ramp_duration,
-        p,0.0,0.0,&duration,&delivered,cal?cal->physics:NULL);
+        p,0.0,normal_angle,&duration,&delivered,cal?cal->physics:NULL);
     double tolerance=fmax(GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS,
         sqrt(DBL_EPSILON)*fmax(1.0,fabs(dv)));
     if(reject)*reject=DEORBIT_REJECT_FINITE_BURN;
@@ -587,6 +588,7 @@ static bool deorbit_timing_probe_start(DeorbitTimingProbe*out,VehicleState initi
     if(reject)*reject=DEORBIT_REJECT_POSTBURN_PERIAPSIS;
     if(!isfinite(peri)||peri>=p->atmosphere_depth||peri<=-p->radius)return false;
     out->burn_start=burn_start;
+    out->normal_angle=normal_angle;
     out->burn_ut=coast.ut+duration*.5;
     out->dv=dv;out->duration=duration;out->peri=peri;
     if(reject)*reject=DEORBIT_REJECT_ENTRY_PREDICTION;
@@ -600,6 +602,10 @@ static bool deorbit_timing_probe_better(const DeorbitTimingProbe*a,
     if(!a||!a->valid)return false;
     if(!hasb||!b||!b->valid)return true;
     if(a->closing!=b->closing)return a->closing;
+    bool a_capture=a->entry_miss<=s->target_deorbit_capture_radius;
+    bool b_capture=b->entry_miss<=s->target_deorbit_capture_radius;
+    if(a_capture!=b_capture)return a_capture;
+    if(a_capture&&a->burn_start!=b->burn_start)return a->burn_start<b->burn_start;
     if(a->entry_miss<b->entry_miss)return true;
     if(a->entry_miss>b->entry_miss)return false;
     if(a->entry_crossrange<b->entry_crossrange)return true;
@@ -613,21 +619,7 @@ static bool deorbit_timing_probe_better(const DeorbitTimingProbe*a,
     return a->burn_start<b->burn_start;
 }
 
-bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
-        double period,
-        const PlanetModel*p,AerodynamicModel aero,
-        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
-        const LandingSite*site,const VehicleProfile*v,
-        const GuidanceSettings*s,double thrust,
-        const Telemetry*authority_source){
-    if(!out||!p||!env||!cal||!site||!v||!s||
-       !isfinite(period)||!(period>0.0)||!(thrust>0.0))
-        return false;
-
-    memset(out,0,sizeof(*out));
-    trajectory_init(&out->trajectory);
-
-    double lead=fmax(0.0,s->minimum_planning_lead_time);
+static double deorbit_search_horizon(VehicleState state,double period,const PlanetModel*p,const GuidanceSettings*s){
     double search_horizon=period;
     Vector3 angular_momentum=vcross(state.position,state.velocity);
     double angular_momentum_magnitude=vmag(angular_momentum);
@@ -648,16 +640,41 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
                 search_horizon=fmax(period,target_phase_period);
         }
 
-        /* Inclined inertial planes do not repeat their body-fixed node longitude
-           after one spacecraft orbit.  Let the rotating runway sweep once under
-           the plane so deorbit timing, rather than atmospheric bank, owns the
-           large-scale crossrange. */
-        if(fabs(p->rotational_speed)>DBL_EPSILON){
+        /* Longer waits can matter when plane or apsis geometry varies by
+           more than the configured capture radius. A circular equatorial
+           orbit has neither reason to search a whole planetary day. */
+        double radius=vmag(state.position);
+        double energy=.5*vdot(state.velocity,state.velocity)-p->gravitational_parameter/fmax(radius,DBL_MIN);
+        Vector3 eccentricity=vsub(vscale(vcross(state.velocity,angular_momentum),1/p->gravitational_parameter),vnorm(state.position,v3(1,0,0)));
+        double semimajor=energy<0?-p->gravitational_parameter/(2*energy):INFINITY;
+        double apsis_span=2*semimajor*vmag(eccentricity);
+        if(fabs(p->rotational_speed)>DBL_EPSILON &&
+           (p->radius*vmag(vcross(orbit_normal,north))>s->target_deorbit_capture_radius||
+            apsis_span>s->target_deorbit_capture_radius)){
             double rotation_period=2.0*acos(-1.0)/fabs(p->rotational_speed);
             if(isfinite(rotation_period)&&rotation_period>0.0)
                 search_horizon=fmax(search_horizon,rotation_period);
         }
     }
+    return search_horizon;
+}
+
+bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
+        double period,
+        const PlanetModel*p,AerodynamicModel aero,
+        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
+        const LandingSite*site,const VehicleProfile*v,
+        const GuidanceSettings*s,double thrust,
+        const Telemetry*authority_source){
+    if(!out||!p||!env||!cal||!site||!v||!s||
+       !isfinite(period)||!(period>0.0)||!(thrust>0.0))
+        return false;
+
+    memset(out,0,sizeof(*out));
+    trajectory_init(&out->trajectory);
+
+    double lead=fmax(0.0,s->minimum_planning_lead_time);
+    double search_horizon=deorbit_search_horizon(state,period,p,s);
     /* One-degree body-rotation spacing is only the coarse numerical grid.
        The cheap orbital probe is refined below to sub-second burn timing. */
     const int time_samples=361;
@@ -677,7 +694,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         double offset=lead+search_horizon*(double)i/(double)(time_samples-1);
         DeorbitTimingProbe probe={0};
         DeorbitRejectReason rejection=DEORBIT_REJECT_NONE;
-        if(!deorbit_timing_probe_start(&probe,state,state.ut+offset,p,cal,
+        if(!deorbit_timing_probe_start(&probe,state,state.ut+offset,0.0,p,cal,
                 site,s,thrust,&rejection)){
             if(rejection>DEORBIT_REJECT_NONE&&rejection<DEORBIT_REJECT_COUNT)
                 rejection_counts[rejection]++;
@@ -725,7 +742,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             double start=timing_best.burn_start+direction*time_step;
             if(start<state.ut+lead||start>state.ut+lead+search_horizon)continue;
             DeorbitTimingProbe probe={0};
-            if(!deorbit_timing_probe_start(&probe,state,start,p,cal,site,s,
+            if(!deorbit_timing_probe_start(&probe,state,start,0.0,p,cal,site,s,
                     thrust,NULL))
                 continue;
             if(deorbit_timing_probe_better(&probe,&iteration_best,true,s))
@@ -746,10 +763,27 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
 
     /* Only now pay for atmospheric prediction.  It may reject the correctly
        targeted orbital pass, but it is not allowed to retime that pass. */
+    /* At the selected nearby pass, spend a lateral component only when the
+       finite-burn prediction improves entry geometry. Re-solve delta-v for
+       the same periapsis at each angle; do not disguise a plane correction
+       as attitude error or ask atmospheric bank to absorb it. */
+    double angle_step=45.0; /* equal normal/retro components, then refine */
+    for(int iteration=0;iteration<12;iteration++){
+        DeorbitTimingProbe improved=timing_best;
+        for(int sign=-1;sign<=1;sign+=2){
+            double angle=clampd(timing_best.normal_angle+sign*angle_step,-45.0,45.0);
+            DeorbitTimingProbe probe={0};
+            if(deorbit_timing_probe_start(&probe,state,timing_best.burn_start,angle,p,cal,site,s,thrust,NULL)&&
+               probe.closing&&probe.entry_miss<improved.entry_miss)
+                improved=probe;
+        }
+        timing_best=improved;
+        angle_step*=.5;
+    }
     Candidate selected;
     memset(&selected,0,sizeof(selected));
     trajectory_init(&selected.pred.trajectory);
-    if(!deorbit_evaluate_start(&selected,state,timing_best.burn_start,0.0,
+    if(!deorbit_evaluate_start(&selected,state,timing_best.burn_start,0.0,timing_best.normal_angle,
             p,aero,env,cal,site,v,s,thrust,NULL)){
         candidate_clear(&selected);
         return false;
@@ -785,6 +819,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     out->created_ut=state.ut;
     out->burn_ut=selected.burn_ut;
     out->delta_v=selected.dv;
+    out->burn_normal_angle=selected.burn_normal_angle;
     out->estimated_burn_duration=selected.duration;
     out->planning_mass=state.mass;
     out->planning_available_thrust=thrust;

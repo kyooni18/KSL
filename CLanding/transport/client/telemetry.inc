@@ -223,8 +223,8 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     t->static_pressure = client->cached_static_pressure;
     t->g_force = client->cached_g_force;
     t->dry_mass = client->cached_dry_mass;
-    t->available_thrust = fmax(client->cached_available_thrust, client->commandable_thrust);
-    t->current_thrust = client->cached_current_thrust;
+    t->available_thrust = client->commandable_thrust;
+    t->current_thrust = client->cached_current_thrust*client->burn_resultant_fraction;
     t->has_torque = client->cached_torque[0] > 0 || client->cached_torque[1] > 0 || client->cached_torque[2] > 0;
     t->available_pitch_torque = client->cached_torque[0];
     t->available_roll_torque = client->cached_torque[1];

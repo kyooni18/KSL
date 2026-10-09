@@ -590,6 +590,7 @@ typedef struct {
 } DeorbitEnergyMargin;
 typedef struct {
     double burn_ut,dv,duration,peri,requested_periapsis_altitude,score;
+    double burn_normal_angle;
     VehicleState after;
     EntryPrediction pred;
     DeorbitEnergyMargin energy_margin;

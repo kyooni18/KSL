@@ -3,7 +3,15 @@ static bool set_engine_throttle(KrpcCNanoClient *client, double throttle,
     bool powered = throttle > 1e-4;
     for (size_t i = 0; i < client->engine_count; ++i) {
         CommandableEngine *engine = &client->engines[i];
-        if (powered) {
+        if(powered && !engine->selected){
+            /* Global throttle stays zero; also suppress any inherited
+               independent throttle on excluded launch/main engines. */
+            if(rpc_failed(client,krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection,engine->object,true),"Excluded Engine.IndependentThrottle",error,error_size)||
+               rpc_failed(client,krpc_SpaceCenter_Engine_set_Throttle(client->connection,engine->object,0.0f),"Excluded Engine.Throttle",error,error_size))return false;
+            engine->independent_owned=true;
+            continue;
+        }
+        if (powered && engine->selected) {
             bool active = false, fuel = true;
             krpc_error_t e = krpc_SpaceCenter_Engine_Active(client->connection, &active, engine->object); client->total_rpc_calls++; client->total_wire_requests++;
             if (e != KRPC_OK) continue;
@@ -61,7 +69,7 @@ bool krpc_cnano_client_set_direct_controls(KrpcCNanoClient *client,
     WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_PITCH,client->control,(float)pitch,true));
     WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_ROLL,client->control,(float)roll,true));
     WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_YAW,client->control,(float)yaw,true));
-    if(change_throttle)WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_THROTTLE,client->control,(float)throttle,true));
+    if(change_throttle)WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_THROTTLE,client->control,0.0f,true));
     if(change_wheel)WRITE(batch_add_object_float(&batch,PROC_CONTROL_SET_WHEEL_STEERING,client->control,(float)wheel_steering,true));
     if(change_rcs)WRITE(batch_add_object_bool(&batch,PROC_CONTROL_SET_RCS,client->control,rcs,true));
 #undef WRITE
@@ -129,9 +137,12 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
     }
     RPC_REQUIRED(client, krpc_SpaceCenter_AutoPilot_set_ReferenceFrame(client->connection, client->autopilot, frame), error, error_size);
     if (command->use_inertial_direction) {
-        krpc_tuple_double_double_double_t direction = canonical_to_tuple(command->inertial_direction);
+        Vector3 target_nose=command->inertial_direction,target_roof=inertial_up_reference?*inertial_up_reference:v3(0,0,1);
+        if(command->thrust_alignment&&client->burn_geometry_valid)
+            thrust_alignment_attitude(client->burn_thrust_axis_body,target_nose,target_roof,&target_nose,&target_roof);
+        krpc_tuple_double_double_double_t direction = canonical_to_tuple(target_nose);
         if (inertial_up_reference) {
-            Vector3 normalized_up = vnorm(*inertial_up_reference, v3(1, 0, 0));
+            Vector3 normalized_up = vnorm(target_roof, v3(1, 0, 0));
             krpc_tuple_double_double_double_t up = canonical_to_tuple(normalized_up);
             RPC_REQUIRED(client, krpc_SpaceCenter_AutoPilot_SetDirectionAndUp(client->connection, client->autopilot, &direction, &up, (float)command->target_roll), error, error_size);
         } else {
@@ -162,7 +173,7 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
     }
     double throttle = clampd(command->target_throttle, 0, 1);
     if (!client->has_command_throttle || fabs(client->cached_command_throttle - throttle) > 1e-4) {
-        RPC_REQUIRED(client, krpc_SpaceCenter_Control_set_Throttle(client->connection, client->control, (float)throttle), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_Control_set_Throttle(client->connection, client->control, 0.0f), error, error_size);
         if (!set_engine_throttle(client, throttle, error, error_size)) return false;
         client->cached_command_throttle = throttle; client->has_command_throttle = true;
     }
@@ -273,4 +284,3 @@ bool krpc_cnano_client_set_speed_mode(KrpcCNanoClient *client, NavballSpeedMode 
 static const double k_stock_rails_rate_by_factor[] = {
     1.0, 5.0, 10.0, 50.0, 100.0, 1000.0, 10000.0, 100000.0
 };
-
