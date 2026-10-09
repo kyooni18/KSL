@@ -44,6 +44,22 @@ static void test_touchdown_forecast_handoff_parity(void) {
     g.terminal_vertical_stage=TERMINAL_OUTER_FINAL;
     g.terminal_vertical_stage_valid=true;
 
+    /* Final admission follows measured ground-course projection, not the
+       attitude or the optimistic capture-time estimate. */
+    AerodynamicModel gate_aero={.lift_to_drag=.4,.ballistic_coefficient=700,.confidence=1};
+    TerminalPreflarePlan gate_plan={0};
+    assert(terminal_preflare_alignment_valid(&g,&t,90.0,&cfg));
+    assert(terminal_outer_capture_admissible(&g,&t,90.0,&planet,gate_aero,
+        &cfg,&gate_plan));
+    Telemetry divergent=t;
+    divergent.runway_cross_track=6000.0;
+    assert(!terminal_preflare_alignment_valid(&g,&divergent,100.0,&cfg));
+    assert(!terminal_preflare_alignment_valid(&g,&divergent,307.0,&cfg));
+    assert(!terminal_outer_capture_admissible(&g,&divergent,100.0,&planet,
+        gate_aero,&cfg,NULL));
+    assert(!terminal_outer_capture_admissible(&g,&divergent,307.0,&planet,
+        gate_aero,&cfg,NULL));
+
     /* Cold handoff and a handoff retaining MM305's observed aero history. */
     for(int pass=0;pass<2;++pass){
         GuidanceMachine before=g;
