@@ -11,6 +11,14 @@
     }
   ],
   "certified_cells": 0,
+  "source_qualification": {
+    "qualified": false,
+    "shadowGateEvidence": false,
+    "measuredAerodynamicEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "All returned forces and torques are counterfactual KSP simulations. They are not flight measurements, a shadow-gate pass, or landing qualification."
+  },
   "modified_node_band": {
     "mach": [
       4,
@@ -22,6 +30,16 @@
     ]
   },
   "replaced_nodes": 25,
+  "adjacent_interpolation_blend_extent": {
+    "mach": [
+      3.48900964,
+      6.60386666
+    ],
+    "alpha_deg": [
+      16.0,
+      30.0
+    ]
+  },
   "assumptions": [
     "neutral controls, zero beta and bank; API forces are hypothetical",
     "median force/q over five altitudes; q and Mach estimates inherit source epoch/temperature caveats",

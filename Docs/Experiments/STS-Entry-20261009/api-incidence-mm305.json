@@ -1,0 +1,17 @@
+{
+  "classification": "offline STS incidence experiment; not flight certification",
+  "command": "KSP_LANDER_MODEL_PROFILE=sts-provisional KSP_LANDER_TAEM_DIAGNOSTICS=1 CLanding/build/mm305_configured_tests --configuration Configuration/sts.json --mass-kg 25816.072266 --aero ShuttleSim/reference-model/experiments/sts_api_incidence.csv",
+  "exitCode": 1,
+  "logSHA256": "fa74f4b392126cf329bed70afbbd98237309002f223821d2992e88e0c58e0afe",
+  "samples": [
+    "sample=0 altitude=26000.0 mach=2.500 along=-30000.0 cross=0.0 found=0 gate=0 solve_wall=27.522",
+    "sample=1 altitude=22500.0 mach=2.350 along=-28000.0 cross=-5000.0 found=0 gate=0 solve_wall=25.815",
+    "sample=2 altitude=26000.0 mach=2.500 along=-60000.0 cross=0.0 found=0 gate=0 solve_wall=42.932",
+    "sample=3 altitude=26000.0 mach=2.500 along=-80000.0 cross=0.0 found=0 gate=0 solve_wall=63.098",
+    "sample=4 altitude=23500.0 mach=2.400 along=-70000.0 cross=8000.0 found=0 gate=0 solve_wall=64.244"
+  ],
+  "summary": [
+    "MM305 downstream-feasibility contract: 5 physically admitted, 0 qualified (handoff), 5 held in MM304, 0 violations."
+  ],
+  "argumentGuards": "Missing explicit configuration/mass and incompatible STS-N configuration both rejected with exit 1."
+}

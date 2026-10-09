@@ -1,0 +1,474 @@
+{
+  "classification": "offline controlled incidence-table comparison; simulator downstream fast path skips normal shadow admission",
+  "baselineRunId": "mm304-sts-current-control-audit-20261009-20261009T030651Z-5dm0j2yc",
+  "candidateRunId": "mm304-sts-api-incidence-experiment-20261009-20261009T031413Z-9kcaccnl",
+  "matchedProvenance": {
+    "backendDigest": true,
+    "simulatorDigest": true,
+    "scenarioDigest": true,
+    "configurationDigest": true,
+    "directControl": true,
+    "plantLiftScale": true,
+    "plantDragScale": true,
+    "certifiedPriorDigest": true,
+    "gitDirtyDiffDigest": true
+  },
+  "baselineFinal": {
+    "ut": 10908.931826,
+    "meanAltitude": 7322.007,
+    "trueAirSpeed": 84.947,
+    "verticalSpeed": -20.099,
+    "latitude": 3.44226977,
+    "longitude": -57.475693801,
+    "runwayAlongTrack": 180678.362,
+    "runwayCrossTrack": -36533.514,
+    "situation": "flying",
+    "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+    "simulatorSummary": {},
+    "touchdownGearDown": false,
+    "rolloutValid": false,
+    "rolloutRunwayValid": true,
+    "rolloutBrakesSeen": false,
+    "rolloutAirbrakesSeen": false,
+    "rolloutMaxAbsCrossTrack": 0.0,
+    "rolloutMaxHeadingErrorDeg": 0.0,
+    "rolloutMaxLateralAccelMps2": 0.0,
+    "rolloutStabilityProxyOk": true,
+    "controlsClean": true,
+    "touchdownSpeedOk": false,
+    "touchdownSinkOk": false,
+    "engageRejected": false,
+    "fixedHacSeen": false,
+    "hacCompletedSeen": false,
+    "fixedHacGeometry": {
+      "valid": false,
+      "reason": "no-committed-geometry-record"
+    },
+    "splineSeen": false,
+    "observedPhases": [
+      "Abort",
+      "Entry Interface",
+      "Idle",
+      "MM304 Entry"
+    ],
+    "touchdownRunwayTelemetry": {}
+  },
+  "candidateFinal": {
+    "ut": 10896.831826,
+    "meanAltitude": 7319.914,
+    "trueAirSpeed": 84.996,
+    "verticalSpeed": -20.046,
+    "latitude": 3.250299604,
+    "longitude": -59.319272182,
+    "runwayAlongTrack": 161371.048,
+    "runwayCrossTrack": -34527.813,
+    "situation": "flying",
+    "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+    "simulatorSummary": {},
+    "touchdownGearDown": false,
+    "rolloutValid": false,
+    "rolloutRunwayValid": true,
+    "rolloutBrakesSeen": false,
+    "rolloutAirbrakesSeen": false,
+    "rolloutMaxAbsCrossTrack": 0.0,
+    "rolloutMaxHeadingErrorDeg": 0.0,
+    "rolloutMaxLateralAccelMps2": 0.0,
+    "rolloutStabilityProxyOk": true,
+    "controlsClean": true,
+    "touchdownSpeedOk": false,
+    "touchdownSinkOk": false,
+    "engageRejected": false,
+    "fixedHacSeen": false,
+    "hacCompletedSeen": false,
+    "fixedHacGeometry": {
+      "valid": false,
+      "reason": "no-committed-geometry-record"
+    },
+    "splineSeen": false,
+    "observedPhases": [
+      "Abort",
+      "Entry Interface",
+      "Idle",
+      "MM304 Entry"
+    ],
+    "touchdownRunwayTelemetry": {}
+  },
+  "candidateProvenance": {
+    "modelProfile": "sts-provisional",
+    "plantDigests": {
+      "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+      "aero": "cf32c44555bfd29c2ccbe33c04c8d577ec5a1dd8194c9fad76cecd1b75e90897",
+      "aero_book": null,
+      "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+    },
+    "guidanceModelDigests": {
+      "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+      "aero": "cf32c44555bfd29c2ccbe33c04c8d577ec5a1dd8194c9fad76cecd1b75e90897",
+      "aero_book": null,
+      "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+    },
+    "certifiedPriorDigest": null,
+    "guidanceModelEqualsPlant": true,
+    "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+    "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "scenarioDigest": "2122284798570ec204947496483204b8bdc7b987c652e749375ac780e04dd09b",
+    "gitHead": "e874025c5d186ec1f8be078689e8b10f0574ecfb",
+    "gitDirty": true,
+    "gitDirtyDiffDigest": "729d03af43baac4e41e4adb43ecb4b6d17bf77ad1b33ea5a9faf9b189bb99f53",
+    "backendDigest": "711f1e45d9bb332e6e1783f72948736dbf60a46b03c2dbfc02d3532e8d6dfdd7",
+    "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+    "directControl": false,
+    "plantLiftScale": 1.0,
+    "plantDragScale": 1.0,
+    "engage": "engageReentry"
+  },
+  "candidateManifestSHA256": "44ce6185fec7a505291a804960aed5712a5535799ef4feba5a22452784649a32",
+  "passage": {
+    "baseline": {
+      "time_s": 550.52,
+      "altitude_m": 40035.607,
+      "speed_mps": 1785.788
+    },
+    "candidate": {
+      "time_s": 551.22,
+      "altitude_m": 39725.01,
+      "speed_mps": 1745.885
+    }
+  },
+  "recordedAttitudeComparisons": [
+    {
+      "mode": "actual",
+      "baselineCheckpoints": [
+        {
+          "live_altitude_m": 70000.2161409887,
+          "time_s": 0.0,
+          "altitude_error_m": -1.190140988706844,
+          "speed_error_mps": 0.004339843750130967,
+          "longitude_error_deg": 0.0035893046760122616,
+          "latitude_error_deg": 1.4790736278021827e-07
+        },
+        {
+          "live_altitude_m": 65000.8332865228,
+          "time_s": 84.72000000186017,
+          "altitude_error_m": 2.4197134771966375,
+          "speed_error_mps": 0.98956249999992,
+          "longitude_error_deg": -0.0015090475700105799,
+          "latitude_error_deg": 0.00042565860001543034
+        },
+        {
+          "live_altitude_m": 60000.3341905475,
+          "time_s": 178.24000000385968,
+          "altitude_error_m": 64.70780945249862,
+          "speed_error_mps": 2.9164453124999454,
+          "longitude_error_deg": 0.011386977998000702,
+          "latitude_error_deg": 0.00085800433736877
+        },
+        {
+          "live_altitude_m": 55000.265952898,
+          "time_s": 292.6800000063595,
+          "altitude_error_m": 344.78004710200184,
+          "speed_error_mps": 3.414843749999818,
+          "longitude_error_deg": 0.04812377802900869,
+          "latitude_error_deg": 0.0012832689740278
+        },
+        {
+          "live_altitude_m": 49998.9887660521,
+          "time_s": 409.0400000089594,
+          "altitude_error_m": 780.7232339479015,
+          "speed_error_mps": 8.737730468749987,
+          "longitude_error_deg": 0.07816815383399955,
+          "latitude_error_deg": 0.00170673399533623
+        },
+        {
+          "live_altitude_m": 45002.0427684007,
+          "time_s": 490.16000001066095,
+          "altitude_error_m": 1065.2712315992976,
+          "speed_error_mps": 18.414620117189997,
+          "longitude_error_deg": 0.1483560997360911,
+          "latitude_error_deg": 0.0023866060085405306
+        },
+        {
+          "live_altitude_m": 39996.7925564753,
+          "time_s": 549.6000000119602,
+          "altitude_error_m": 1158.7924435246969,
+          "speed_error_mps": 32.24935449218992,
+          "longitude_error_deg": 0.2737230959003085,
+          "latitude_error_deg": 0.0037388941068901005
+        },
+        {
+          "live_altitude_m": 30004.4803307893,
+          "time_s": 641.7800000139596,
+          "altitude_error_m": 1203.6466692106987,
+          "speed_error_mps": 108.76399511719,
+          "longitude_error_deg": 0.8918349522154969,
+          "latitude_error_deg": 0.017316726197685983
+        },
+        {
+          "live_altitude_m": 19996.6954804634,
+          "time_s": 723.5000000157597,
+          "altitude_error_m": 1120.276519536601,
+          "speed_error_mps": 75.051768798828,
+          "longitude_error_deg": 1.6552685501550002,
+          "latitude_error_deg": 0.06766182007158994
+        },
+        {
+          "live_altitude_m": 10997.6333672737,
+          "time_s": 797.0200000173609,
+          "altitude_error_m": 1456.4776327263007,
+          "speed_error_mps": 32.485352905273004,
+          "longitude_error_deg": 2.2145280710238993,
+          "latitude_error_deg": -0.10303239746592041
+        }
+      ],
+      "candidateCheckpoints": [
+        {
+          "live_altitude_m": 70000.2161409887,
+          "time_s": 0.0,
+          "altitude_error_m": -1.190140988706844,
+          "speed_error_mps": 0.004339843750130967,
+          "longitude_error_deg": 0.0035893046760122616,
+          "latitude_error_deg": 1.4790736278021827e-07
+        },
+        {
+          "live_altitude_m": 65000.8332865228,
+          "time_s": 84.72000000186017,
+          "altitude_error_m": 2.4197134771966375,
+          "speed_error_mps": 0.98956249999992,
+          "longitude_error_deg": -0.0015090475700105799,
+          "latitude_error_deg": 0.00042565860001543034
+        },
+        {
+          "live_altitude_m": 60000.3341905475,
+          "time_s": 178.24000000385968,
+          "altitude_error_m": 64.70780945249862,
+          "speed_error_mps": 2.9164453124999454,
+          "longitude_error_deg": 0.011386977998000702,
+          "latitude_error_deg": 0.00085800433736877
+        },
+        {
+          "live_altitude_m": 55000.265952898,
+          "time_s": 292.6800000063595,
+          "altitude_error_m": 344.78004710200184,
+          "speed_error_mps": 3.414843749999818,
+          "longitude_error_deg": 0.04812377802900869,
+          "latitude_error_deg": 0.0012832689740278
+        },
+        {
+          "live_altitude_m": 49998.9887660521,
+          "time_s": 409.0400000089594,
+          "altitude_error_m": 780.6842339479044,
+          "speed_error_mps": 8.608730468750082,
+          "longitude_error_deg": 0.07808273383399467,
+          "latitude_error_deg": 0.0017067729953362302
+        },
+        {
+          "live_altitude_m": 45002.0427684007,
+          "time_s": 490.16000001066095,
+          "altitude_error_m": 1047.8442315993016,
+          "speed_error_mps": 15.20762011718989,
+          "longitude_error_deg": 0.13902686873609582,
+          "latitude_error_deg": 0.0023928350085405305
+        },
+        {
+          "live_altitude_m": 39996.7925564753,
+          "time_s": 549.6000000119602,
+          "altitude_error_m": 1066.1484435246966,
+          "speed_error_mps": 22.907354492190052,
+          "longitude_error_deg": 0.2330146699002995,
+          "latitude_error_deg": 0.0037501261068901004
+        },
+        {
+          "live_altitude_m": 30004.4803307893,
+          "time_s": 641.7800000139596,
+          "altitude_error_m": 740.8636692106993,
+          "speed_error_mps": 54.11699511719007,
+          "longitude_error_deg": 0.5723234702155011,
+          "latitude_error_deg": 0.011637381197685981
+        },
+        {
+          "live_altitude_m": 19996.6954804634,
+          "time_s": 723.5000000157597,
+          "altitude_error_m": 490.6255195365993,
+          "speed_error_mps": 29.699768798828018,
+          "longitude_error_deg": 0.9273984881549993,
+          "latitude_error_deg": 0.03463709807158999
+        },
+        {
+          "live_altitude_m": 10997.6333672737,
+          "time_s": 797.0200000173609,
+          "altitude_error_m": 961.1036327262991,
+          "speed_error_mps": 11.962352905273008,
+          "longitude_error_deg": 1.213471108023903,
+          "latitude_error_deg": -0.06802282046592012
+        }
+      ]
+    },
+    {
+      "mode": "command",
+      "baselineCheckpoints": [
+        {
+          "live_altitude_m": 70000.2161409887,
+          "time_s": 0.0,
+          "altitude_error_m": -1.190140988706844,
+          "speed_error_mps": 0.004339843750130967,
+          "longitude_error_deg": 0.0035893046760122616,
+          "latitude_error_deg": 1.4790736278021827e-07
+        },
+        {
+          "live_altitude_m": 65000.8332865228,
+          "time_s": 84.72000000186017,
+          "altitude_error_m": 2.1367134772008285,
+          "speed_error_mps": 0.9965624999999818,
+          "longitude_error_deg": -0.001471023569990848,
+          "latitude_error_deg": 0.0004260706000154303
+        },
+        {
+          "live_altitude_m": 60000.3341905475,
+          "time_s": 178.24000000385968,
+          "altitude_error_m": 64.78780945250037,
+          "speed_error_mps": 2.8954453125002146,
+          "longitude_error_deg": 0.011422498998001629,
+          "latitude_error_deg": 0.0008860133373687698
+        },
+        {
+          "live_altitude_m": 55000.265952898,
+          "time_s": 292.6800000063595,
+          "altitude_error_m": 349.90504710200184,
+          "speed_error_mps": 3.2298437499998727,
+          "longitude_error_deg": 0.047143442029010885,
+          "latitude_error_deg": 0.0017052109740277998
+        },
+        {
+          "live_altitude_m": 49998.9887660521,
+          "time_s": 409.0400000089594,
+          "altitude_error_m": 794.1452339479001,
+          "speed_error_mps": 8.353730468749973,
+          "longitude_error_deg": 0.07401879983400761,
+          "latitude_error_deg": 0.0042861169953362305
+        },
+        {
+          "live_altitude_m": 45002.0427684007,
+          "time_s": 490.16000001066095,
+          "altitude_error_m": 1085.6332315992986,
+          "speed_error_mps": 17.876620117189987,
+          "longitude_error_deg": 0.14056724373610052,
+          "latitude_error_deg": 0.00969004700854053
+        },
+        {
+          "live_altitude_m": 39996.7925564753,
+          "time_s": 549.6000000119602,
+          "altitude_error_m": 1187.6884435246975,
+          "speed_error_mps": 31.580354492190054,
+          "longitude_error_deg": 0.2624139589003107,
+          "latitude_error_deg": 0.0195081571068901
+        },
+        {
+          "live_altitude_m": 30004.4803307893,
+          "time_s": 641.7800000139596,
+          "altitude_error_m": 1704.9816692106979,
+          "speed_error_mps": 115.03999511719007,
+          "longitude_error_deg": 0.8879794542154968,
+          "latitude_error_deg": 0.09778742219768599
+        },
+        {
+          "live_altitude_m": 19996.6954804634,
+          "time_s": 723.5000000157597,
+          "altitude_error_m": 1749.9685195366,
+          "speed_error_mps": 118.969768798828,
+          "longitude_error_deg": 1.8878913951549947,
+          "latitude_error_deg": 0.27218786407159
+        },
+        {
+          "live_altitude_m": 10997.6333672737,
+          "time_s": 797.0200000173609,
+          "altitude_error_m": 2026.1106327263005,
+          "speed_error_mps": 35.04035290527301,
+          "longitude_error_deg": 2.6461068110238983,
+          "latitude_error_deg": 0.0703946715340793
+        }
+      ],
+      "candidateCheckpoints": [
+        {
+          "live_altitude_m": 70000.2161409887,
+          "time_s": 0.0,
+          "altitude_error_m": -1.190140988706844,
+          "speed_error_mps": 0.004339843750130967,
+          "longitude_error_deg": 0.0035893046760122616,
+          "latitude_error_deg": 1.4790736278021827e-07
+        },
+        {
+          "live_altitude_m": 65000.8332865228,
+          "time_s": 84.72000000186017,
+          "altitude_error_m": 2.1367134772008285,
+          "speed_error_mps": 0.9965624999999818,
+          "longitude_error_deg": -0.001471023569990848,
+          "latitude_error_deg": 0.0004260706000154303
+        },
+        {
+          "live_altitude_m": 60000.3341905475,
+          "time_s": 178.24000000385968,
+          "altitude_error_m": 64.78780945250037,
+          "speed_error_mps": 2.8954453125002146,
+          "longitude_error_deg": 0.011422498998001629,
+          "latitude_error_deg": 0.0008860133373687698
+        },
+        {
+          "live_altitude_m": 55000.265952898,
+          "time_s": 292.6800000063595,
+          "altitude_error_m": 349.90504710200184,
+          "speed_error_mps": 3.2298437499998727,
+          "longitude_error_deg": 0.047143442029010885,
+          "latitude_error_deg": 0.0017052109740277998
+        },
+        {
+          "live_altitude_m": 49998.9887660521,
+          "time_s": 409.0400000089594,
+          "altitude_error_m": 794.0972339479049,
+          "speed_error_mps": 8.209730468749967,
+          "longitude_error_deg": 0.07392260583399946,
+          "latitude_error_deg": 0.00428612799533623
+        },
+        {
+          "live_altitude_m": 45002.0427684007,
+          "time_s": 490.16000001066095,
+          "altitude_error_m": 1065.3812315992982,
+          "speed_error_mps": 14.179620117190098,
+          "longitude_error_deg": 0.12998165873609935,
+          "latitude_error_deg": 0.00969131400854053
+        },
+        {
+          "live_altitude_m": 39996.7925564753,
+          "time_s": 549.6000000119602,
+          "altitude_error_m": 1076.3094435246967,
+          "speed_error_mps": 20.608354492190074,
+          "longitude_error_deg": 0.21521392490031133,
+          "latitude_error_deg": 0.0195139561068901
+        },
+        {
+          "live_altitude_m": 30004.4803307893,
+          "time_s": 641.7800000139596,
+          "altitude_error_m": 1157.3226692106982,
+          "speed_error_mps": 43.19599511719002,
+          "longitude_error_deg": 0.5107596732155031,
+          "latitude_error_deg": 0.09314010419768598
+        },
+        {
+          "live_altitude_m": 19996.6954804634,
+          "time_s": 723.5000000157597,
+          "altitude_error_m": 865.901519536601,
+          "speed_error_mps": 56.52576879882804,
+          "longitude_error_deg": 0.9760236091549999,
+          "latitude_error_deg": 0.24501290507158968
+        },
+        {
+          "live_altitude_m": 10997.6333672737,
+          "time_s": 797.0200000173609,
+          "altitude_error_m": 1310.7576327262996,
+          "speed_error_mps": 6.915352905273011,
+          "longitude_error_deg": 1.3549753300238976,
+          "latitude_error_deg": 0.14236996153407944
+        }
+      ]
+    }
+  ]
+}

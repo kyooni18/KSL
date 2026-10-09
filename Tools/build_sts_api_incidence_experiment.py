@@ -46,6 +46,8 @@ def main():
     ap.add_argument('--report',type=Path,required=True)
     args=ap.parse_args()
     source=json.loads(args.grid.read_text())
+    if source['provenance'].get('vehicleModelId')!='STS' or source['liveStateBefore'].get('vessel')!='STS':
+        raise ValueError('requires exact original STS grid identity')
     if source['status']!='complete' or not source['loadedMassAssessment']['massStateMatchesSettledProfile']:
         raise ValueError('requires completed settled-mass grid')
     with args.baseline.open() as f:
@@ -90,7 +92,11 @@ def main():
             w.writerow([f'{m:.8f}',f'{a:g}',f'{cl:.8f}',f'{cd:.8f}'])
     report=dict(classification='provisional offline API incidence-shape experiment; not STS validation',
         sources=[identity(args.grid),identity(args.baseline)],certified_cells=0,
+        source_qualification=source['qualification'],
         modified_node_band=dict(mach=[4,6],alpha_deg=[18,28]),replaced_nodes=replaced,
+        adjacent_interpolation_blend_extent=dict(
+            mach=[max(m for m in ms if m<4),min(m for m in ms if m>6)],
+            alpha_deg=[max(a for a in alphas if a<18),min(a for a in alphas if a>28)]),
         assumptions=['neutral controls, zero beta and bank; API forces are hypothetical',
                      'median force/q over five altitudes; q and Mach estimates inherit source epoch/temperature caveats',
                      'linear interpolation between two measured-in-API incidence points',
