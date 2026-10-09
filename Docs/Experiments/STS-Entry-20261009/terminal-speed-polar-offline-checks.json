@@ -11,6 +11,9 @@
     "STS-N identity",
     "nonneutral controls"
   ],
-  "probeSHA256": "939211d65adb0df8b7264c12e36250911389aec077718a81a963f9da76eb4a40",
-  "finiteProjectionGuardsPassed": true
+  "probeSHA256": "a22aa6587a1b34ea70acf4e40a49fee5432506e0030c29e9e32a5d92c8cbe409",
+  "finiteProjectionGuardsPassed": true,
+  "nonfinitePreflightRejected": true,
+  "defaultModeConnectionAndLiveSaveAccessRejected": true,
+  "regressionCommand": "python3 Validation/test_sts_terminal_polar_probe.py"
 }

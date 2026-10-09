@@ -36,6 +36,11 @@ def cells():
 
 
 def require_preflight(snapshot, actuators, profile, part_count, dry_mass):
+    measurements = [snapshot["ut"], snapshot["altitude_m"], snapshot["mass_kg"],
+                    snapshot["thrust_n"], dry_mass, *snapshot["controls"].values(),
+                    *(s["deflection"] for s in actuators["controlSurfaces"])]
+    if any(not math.isfinite(v) for v in measurements):
+        raise RuntimeError("requires finite preflight telemetry")
     if snapshot["vessel"] != "STS" or not snapshot["paused"]:
         raise RuntimeError("requires paused original STS")
     if abs(snapshot["ut"] - profile["savedUT"]) > 2 or abs(snapshot["altitude_m"] - 72000) > 500:
