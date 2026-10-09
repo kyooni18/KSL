@@ -11,5 +11,16 @@
   "verifiedThrust": 0,
   "console": "/tmp/sts-live-72km-measured-authority-v6-20261009.log",
   "policy": "Human authorized abort/restart; unpowered, provisional STS, shadow performed, warning continuation, no bypass",
-  "validation": "MM305 admission/recovery monitor and focused control suites pass; live handoff and rollout pending"
+  "validation": "MM305 admission/recovery monitor and focused control suites pass; live handoff and rollout pending",
+  "backendSHA": "c6a082a90c473ac1fc42d17c4d671a2c7d9d125ed22a8f6d5818f4442f0e6941",
+  "shadowQualified": false,
+  "shadowResult": {
+    "entered": true,
+    "predictedMM305": true,
+    "closestKm": 53.8,
+    "rangeErrorKm": -42.7,
+    "peakQkPa": 4.7,
+    "peakG": 4.5
+  },
+  "qualificationNote": "Shadow rejected; continued under prior explicit warning authorization. Predicted MM305 is not live handoff."
 }
