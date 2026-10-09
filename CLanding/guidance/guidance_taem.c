@@ -1537,6 +1537,19 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     if (g->mm305_direct_approach_degraded) {
         HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
             &cfg->guidance,local_gravity,course);
+        if (direct_degradation_started&&!g->diagnostic_shadow)
+            fprintf(stderr,
+                "TAEM direct capture opened: UT=%.2f along=%+.0f cross=%+.0f range=%.0f h=%.0f V=%.1f course=%.1f target=%.1f bank=%+.1f captureTime=%.1f headingTime=%.1f lateralTime=%.1f response=%.1f available=%.1f projectedV=%.1f slope=%.1f\n",
+                t->ut,geometry.runway_along_m,geometry.runway_cross_m,direct_range,
+                geometry.altitude_above_runway_m,geometry.ground_speed_mps,course,
+                line.heading,line.bank,
+                fmax(direct_capture.control_response_time_s,
+                    fmax(direct_capture.heading_capture_time_s,
+                        direct_capture.lateral_capture_time_s)),
+                direct_capture.heading_capture_time_s,
+                direct_capture.lateral_capture_time_s,
+                direct_capture.control_response_time_s,direct_capture.time_available_s,
+                projected_runway_speed,direct_slope);
         double aoa=projected_runway_speed<glide_speed_floor_mps?
             aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle):
             direct_target_aoa;
