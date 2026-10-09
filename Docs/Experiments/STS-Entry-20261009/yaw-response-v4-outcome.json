@@ -1,0 +1,13 @@
+{
+  "attempt": "yaw-response-v4",
+  "outcome": "failed terrain impact, not KSC landing or rollout",
+  "verification": "independent read-only kRPC",
+  "ut": 2490.8098632799433,
+  "vessel": "STS",
+  "situation": "landed",
+  "mass": 0,
+  "parts": 0,
+  "lastRangeKm": 49.6,
+  "lastAltitudeM": 3615.14,
+  "note": "Controller Rollout label and landed situation do not establish success. Human warning-continuation retained until vessel destruction; exact runner stopped after verified unusable state."
+}
