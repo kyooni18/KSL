@@ -1,0 +1,27 @@
+{
+  "source": "FlightLogs/2026-10-09T10-03-45Z-STS-vehicle.jsonl",
+  "screenOnly": "Configured altitude and Mach band; not full admission proof",
+  "rows": 194,
+  "phaseCounts": {
+    "Attitude Recovery": 194
+  },
+  "first": {
+    "ut": 2140.88986328026,
+    "altitude": 28066.4776578733,
+    "mach": 2.84510469042677,
+    "phase": "Attitude Recovery",
+    "sideslip": -9.93176174163818,
+    "bodyRollRate": -140.547254747697,
+    "bodyYawRate": 3.01623205100132
+  },
+  "last": {
+    "ut": 2152.00986328025,
+    "altitude": 25570.5851589629,
+    "mach": 2.15020354117945,
+    "phase": "Attitude Recovery",
+    "sideslip": -4.45778894424438,
+    "bodyRollRate": -100.846225719968,
+    "bodyYawRate": 35.7894162889917
+  },
+  "result": "Recovery persisted through the screened MM305 inlet; no handoff in this window."
+}
