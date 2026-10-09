@@ -21,7 +21,12 @@ def main():
                   bankRate=3, dh=150, dV=10, dFpa=3)
     strict = {'cross', 'hdgErr', 'bank', 'bankRate'}
     samples = []
+    captures = []
     for line in text.splitlines():
+        if line.startswith('TAEM alignment profile compare:'):
+            values = {k: float(v) for k, v in re.findall(r'([A-Za-z]+)=([+\-\d.]+)', line)}
+            values['captureSpeedErrorMps'] = values['actualV'] - values['plannedV']
+            captures.append(values)
         if not line.startswith('TAEM alignment station sample:'):
             continue
         values = {k: float(v) for k, v in re.findall(r'([A-Za-z]+)=([+\-\d.]+)', line)}
@@ -40,6 +45,7 @@ def main():
         stationWindowSamples=len(samples), allCriteriaReadyCount=sum(not s['failedCriteria'] for s in samples),
         criterionFailureCounts=dict(Counter(k for s in samples for k in s['failedCriteria'])),
         closestSamples=sorted(samples,key=lambda s:s['maximumConstraintRatio'])[:8],
+        profileCaptureComparisons=captures,
         contractLines=[l for l in text.splitlines() if l.startswith('MM305 downstream-feasibility contract:')],
         limitations=['Logged values are rounded; boundary classification uses displayed precision.',
                      'Repeated candidate station samples are not independent flights.',

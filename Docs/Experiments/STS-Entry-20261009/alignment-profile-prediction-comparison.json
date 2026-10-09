@@ -1,0 +1,396 @@
+{
+  "classification": "offline replay Final admission diagnosis; no gate changes",
+  "logSHA256": "d4685f2df69c4796d9c04cf5113b7b2072e48495d63e2fdcd95377f7cbb85168",
+  "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+  "alignmentSourceSHA256": "c7413ac56bc9e22f2563a0903c43b211048a2dd92077a3c0080c1cbfd2320944",
+  "stationM": -8000,
+  "stationWindowM": 250,
+  "limits": {
+    "cross": 35.0,
+    "hdgErr": 2,
+    "bank": 5,
+    "bankRate": 3,
+    "dh": 150,
+    "dV": 10,
+    "dFpa": 3
+  },
+  "stationWindowSamples": 116,
+  "allCriteriaReadyCount": 0,
+  "criterionFailureCounts": {
+    "dV": 116,
+    "bank": 35,
+    "hdgErr": 10
+  },
+  "closestSamples": [
+    {
+      "t": 244.5,
+      "along": -8224.4,
+      "cross": -1.8,
+      "hdgErr": -0.77,
+      "bank": 2.39,
+      "bankRate": 0.11,
+      "h": 3021.9,
+      "dh": 110.1,
+      "V": 148.0,
+      "dV": -12.0,
+      "fpa": -20.94,
+      "dFpa": -0.94,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.2
+    },
+    {
+      "t": 245.0,
+      "along": -8186.0,
+      "cross": 2.4,
+      "hdgErr": 0.72,
+      "bank": -2.44,
+      "bankRate": -0.07,
+      "h": 3006.8,
+      "dh": 95.0,
+      "V": 147.8,
+      "dV": -12.2,
+      "fpa": -20.95,
+      "dFpa": -0.95,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.22
+    },
+    {
+      "t": 245.0,
+      "along": -8155.7,
+      "cross": -2.6,
+      "hdgErr": -0.69,
+      "bank": 2.43,
+      "bankRate": 0.05,
+      "h": 2995.5,
+      "dh": 83.7,
+      "V": 147.6,
+      "dV": -12.4,
+      "fpa": -20.9,
+      "dFpa": -0.9,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.24
+    },
+    {
+      "t": 245.5,
+      "along": -8117.4,
+      "cross": 3.2,
+      "hdgErr": 0.64,
+      "bank": -2.46,
+      "bankRate": -0.01,
+      "h": 2980.4,
+      "dh": 68.6,
+      "V": 147.4,
+      "dV": -12.6,
+      "fpa": -20.91,
+      "dFpa": -0.91,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.26
+    },
+    {
+      "t": 245.5,
+      "along": -8087.2,
+      "cross": -3.4,
+      "hdgErr": -0.61,
+      "bank": 2.43,
+      "bankRate": -0.0,
+      "h": 2969.2,
+      "dh": 57.4,
+      "V": 147.2,
+      "dV": -12.8,
+      "fpa": -20.87,
+      "dFpa": -0.87,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.28
+    },
+    {
+      "t": 246.0,
+      "along": -8049.0,
+      "cross": 3.9,
+      "hdgErr": 0.56,
+      "bank": -2.45,
+      "bankRate": 0.04,
+      "h": 2954.2,
+      "dh": 42.4,
+      "V": 147.0,
+      "dV": -13.0,
+      "fpa": -20.88,
+      "dFpa": -0.88,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.3
+    },
+    {
+      "t": 246.0,
+      "along": -8018.8,
+      "cross": -4.1,
+      "hdgErr": -0.53,
+      "bank": 2.42,
+      "bankRate": -0.05,
+      "h": 2943.0,
+      "dh": 31.3,
+      "V": 146.9,
+      "dV": -13.1,
+      "fpa": -20.83,
+      "dFpa": -0.83,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.31
+    },
+    {
+      "t": 246.5,
+      "along": -7980.7,
+      "cross": 4.5,
+      "hdgErr": 0.48,
+      "bank": -2.41,
+      "bankRate": 0.09,
+      "h": 2928.0,
+      "dh": 16.3,
+      "V": 146.7,
+      "dV": -13.3,
+      "fpa": -20.84,
+      "dFpa": -0.84,
+      "ready": 0.0,
+      "failedCriteria": [
+        "dV"
+      ],
+      "maximumConstraintRatio": 1.33
+    }
+  ],
+  "profileCaptureComparisons": [
+    {
+      "t": 216.5,
+      "station": 53527.9,
+      "remaining": 4350.5,
+      "plannedV": 165.85,
+      "actualV": 163.27,
+      "plannedExitV": 147.03,
+      "referenceH": 4748.6,
+      "actualH": 4719.8,
+      "referenceFpa": -23.91,
+      "actualFpa": -23.95,
+      "captureSpeedErrorMps": -2.579999999999984
+    },
+    {
+      "t": 216.5,
+      "station": 53496.4,
+      "remaining": 4350.5,
+      "plannedV": 165.91,
+      "actualV": 163.29,
+      "plannedExitV": 147.03,
+      "referenceH": 4761.7,
+      "actualH": 4732.7,
+      "referenceFpa": -23.91,
+      "actualFpa": -23.93,
+      "captureSpeedErrorMps": -2.6200000000000045
+    },
+    {
+      "t": 202.0,
+      "station": 58029.2,
+      "remaining": 4724.1,
+      "plannedV": 170.8,
+      "actualV": 170.34,
+      "plannedExitV": 143.34,
+      "referenceH": 4729.2,
+      "actualH": 4692.3,
+      "referenceFpa": -22.25,
+      "actualFpa": -21.9,
+      "captureSpeedErrorMps": -0.46000000000000796
+    },
+    {
+      "t": 202.0,
+      "station": 58024.2,
+      "remaining": 4724.1,
+      "plannedV": 170.91,
+      "actualV": 170.48,
+      "plannedExitV": 143.22,
+      "referenceH": 4730.5,
+      "actualH": 4692.8,
+      "referenceFpa": -22.25,
+      "actualFpa": -22.0,
+      "captureSpeedErrorMps": -0.4300000000000068
+    },
+    {
+      "t": 202.0,
+      "station": 58019.2,
+      "remaining": 4731.2,
+      "plannedV": 170.96,
+      "actualV": 170.47,
+      "plannedExitV": 143.1,
+      "referenceH": 4731.9,
+      "actualH": 4694.9,
+      "referenceFpa": -22.25,
+      "actualFpa": -22.01,
+      "captureSpeedErrorMps": -0.4900000000000091
+    },
+    {
+      "t": 202.0,
+      "station": 58013.8,
+      "remaining": 4738.2,
+      "plannedV": 170.96,
+      "actualV": 170.52,
+      "plannedExitV": 142.93,
+      "referenceH": 4733.3,
+      "actualH": 4695.4,
+      "referenceFpa": -22.25,
+      "actualFpa": -22.01,
+      "captureSpeedErrorMps": -0.4399999999999977
+    },
+    {
+      "t": 203.0,
+      "station": 58166.2,
+      "remaining": 4545.2,
+      "plannedV": 170.08,
+      "actualV": 169.66,
+      "plannedExitV": 142.75,
+      "referenceH": 4670.4,
+      "actualH": 4632.7,
+      "referenceFpa": -22.2,
+      "actualFpa": -21.94,
+      "captureSpeedErrorMps": -0.4200000000000159
+    },
+    {
+      "t": 203.0,
+      "station": 58161.1,
+      "remaining": 4552.0,
+      "plannedV": 170.09,
+      "actualV": 169.66,
+      "plannedExitV": 141.88,
+      "referenceH": 4671.8,
+      "actualH": 4635.0,
+      "referenceFpa": -22.2,
+      "actualFpa": -21.98,
+      "captureSpeedErrorMps": -0.4300000000000068
+    },
+    {
+      "t": 203.0,
+      "station": 58155.3,
+      "remaining": 4558.7,
+      "plannedV": 170.14,
+      "actualV": 169.7,
+      "plannedExitV": 142.23,
+      "referenceH": 4673.4,
+      "actualH": 4636.2,
+      "referenceFpa": -22.2,
+      "actualFpa": -21.98,
+      "captureSpeedErrorMps": -0.4399999999999977
+    },
+    {
+      "t": 202.5,
+      "station": 58002.7,
+      "remaining": 4724.1,
+      "plannedV": 170.67,
+      "actualV": 170.23,
+      "plannedExitV": 143.54,
+      "referenceH": 4736.4,
+      "actualH": 4698.8,
+      "referenceFpa": -22.26,
+      "actualFpa": -21.99,
+      "captureSpeedErrorMps": -0.4399999999999977
+    },
+    {
+      "t": 203.0,
+      "station": 58075.9,
+      "remaining": 4680.4,
+      "plannedV": 170.28,
+      "actualV": 169.86,
+      "plannedExitV": 143.5,
+      "referenceH": 4705.2,
+      "actualH": 4668.2,
+      "referenceFpa": -22.23,
+      "actualFpa": -22.07,
+      "captureSpeedErrorMps": -0.4199999999999875
+    },
+    {
+      "t": 202.5,
+      "station": 58110.8,
+      "remaining": 4622.3,
+      "plannedV": 170.27,
+      "actualV": 169.81,
+      "plannedExitV": 143.35,
+      "referenceH": 4696.4,
+      "actualH": 4659.8,
+      "referenceFpa": -22.22,
+      "actualFpa": -21.93,
+      "captureSpeedErrorMps": -0.46000000000000796
+    },
+    {
+      "t": 202.0,
+      "station": 58024.2,
+      "remaining": 4724.1,
+      "plannedV": 170.91,
+      "actualV": 170.48,
+      "plannedExitV": 143.22,
+      "referenceH": 4730.5,
+      "actualH": 4692.8,
+      "referenceFpa": -22.25,
+      "actualFpa": -22.0,
+      "captureSpeedErrorMps": -0.4300000000000068
+    },
+    {
+      "t": 202.5,
+      "station": 58094.1,
+      "remaining": 4667.9,
+      "plannedV": 170.51,
+      "actualV": 170.07,
+      "plannedExitV": 143.06,
+      "referenceH": 4700.8,
+      "actualH": 4663.4,
+      "referenceFpa": -22.22,
+      "actualFpa": -21.99,
+      "captureSpeedErrorMps": -0.4399999999999977
+    },
+    {
+      "t": 203.0,
+      "station": 58164.0,
+      "remaining": 4612.8,
+      "plannedV": 170.09,
+      "actualV": 169.65,
+      "plannedExitV": 142.07,
+      "referenceH": 4671.1,
+      "actualH": 4634.2,
+      "referenceFpa": -22.2,
+      "actualFpa": -21.96,
+      "captureSpeedErrorMps": -0.4399999999999977
+    },
+    {
+      "t": 203.0,
+      "station": 58155.3,
+      "remaining": 4558.7,
+      "plannedV": 170.14,
+      "actualV": 169.7,
+      "plannedExitV": 142.23,
+      "referenceH": 4673.4,
+      "actualH": 4636.2,
+      "referenceFpa": -22.2,
+      "actualFpa": -21.98,
+      "captureSpeedErrorMps": -0.4399999999999977
+    }
+  ],
+  "contractLines": [
+    "MM305 downstream-feasibility contract: 5 physically admitted, 0 qualified (handoff), 5 held in MM304, 0 violations."
+  ],
+  "limitations": [
+    "Logged values are rounded; boundary classification uses displayed precision.",
+    "Repeated candidate station samples are not independent flights.",
+    "Profile screening tolerance differs from actual Final readiness; neither is modified."
+  ]
+}
