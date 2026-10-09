@@ -1,0 +1,27 @@
+{
+  "source": "FlightLogs/2026-10-09T09-34-08Z-STS-vehicle.jsonl",
+  "screenOnly": "Configured altitude and Mach band; not full admission proof",
+  "rows": 231,
+  "phaseCounts": {
+    "Attitude Recovery": 231
+  },
+  "first": {
+    "ut": 2140.60986328026,
+    "altitude": 28643.4854789351,
+    "mach": 2.83506518161635,
+    "phase": "Attitude Recovery",
+    "sideslip": 4.90634918212891,
+    "bodyRollRate": 1.371128489811,
+    "bodyYawRate": 25.9997276904334
+  },
+  "last": {
+    "ut": 2152.16986328025,
+    "altitude": 26321.9650627506,
+    "mach": 2.16219403921479,
+    "phase": "Attitude Recovery",
+    "sideslip": -15.0638799667358,
+    "bodyRollRate": -10.3204392157229,
+    "bodyYawRate": 11.1706197233016
+  },
+  "result": "No MM305 ownership in screened inlet; active run continues on earlier backend."
+}
