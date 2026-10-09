@@ -34,3 +34,13 @@ The native reader's `refresh_slow` updates periapsis only once per simulated sec
 Reconstruction of the old live burn's logged commands shows target throttle still 6.28% at UT 13688.39. It changed to zero at UT 13688.53 while the cached measured thrust remained 192049 N through UT 13688.75. Thus thrust observation and actuator rundown both matter; a clean zero-throttle command alone is not proof of an exact achieved periapsis. Orbital periapsis is absent from the vehicle JSON fields, so the independent live read remains the authoritative achieved-periapsis observation.
 
 The current flight remained active in MM304 at UT 14364.6: altitude 50.0 km, range 598.8 km, TAS 2047.3 m/s, AoA 25.2 degrees. No MM305 admission or landing has occurred.
+
+## Read-only OMS moment geometry check
+
+At live UT 14508.19, both OMS engines report gimballed=true, range 5 degrees, limit 1, and unlocked. Using each thruster's initial direction and position relative to the current center of mass, the rotation needed to aim its force through COM is 3.3001 degrees, below the available geometric range. The source is retained in `oms-gimbal-authority.json`.
+
+This establishes geometric room for offset-thrust correction, not powered control performance. `Engine.AvailableTorque` is zero while these engines are off. The vessel's total available torque during atmospheric descent includes other sources and cannot certify OMS-only orbital burn authority. Gimbal tracking, RCS interaction, and the resultant thrust direction during actual powered attitude hold remain to be validated.
+
+Fuel consumption in `vessel_physics.c` is identified from measured mass loss per measured impulse rather than a hardcoded engine Isp. The new selected-engine resultant changes the reported impulse basis consistently, but historical propulsion samples are not independent OMS-only validation.
+
+At live UT 14507.1 the ongoing old-controller flight remained in equilibrium glide: altitude 41.0 km, range 341.3 km, TAS 1806.8 m/s, AoA 23.5 degrees. It has not reached MM305.

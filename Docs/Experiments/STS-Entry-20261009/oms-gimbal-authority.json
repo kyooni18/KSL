@@ -1,0 +1,87 @@
+{
+  "source": "live read-only kRPC; no control writes",
+  "ut": 14508.190141619889,
+  "vessel": "STS",
+  "oms": [
+    {
+      "name": "benjee10.AJ10.v2",
+      "gimballed": true,
+      "gimbalRangeDegrees": 5.0,
+      "gimbalLimit": 1.0,
+      "gimbalLocked": false,
+      "availableTorque": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          -0.0
+        ]
+      ],
+      "thrusters": [
+        {
+          "position": [
+            -1.2548517011950553,
+            -6.259279278521607,
+            -1.9460355277122456
+          ],
+          "direction": [
+            0.16317969062306348,
+            0.9254136070640293,
+            0.3420269288187224
+          ],
+          "rotationTowardCOMDegrees": 3.300070807114671
+        }
+      ]
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "gimballed": true,
+      "gimbalRangeDegrees": 5.0,
+      "gimbalLimit": 1.0,
+      "gimbalLocked": false,
+      "availableTorque": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.0,
+          -0.0,
+          -0.0
+        ]
+      ],
+      "thrusters": [
+        {
+          "position": [
+            1.2547999059205657,
+            -6.2592912184762035,
+            -1.9460329689926756
+          ],
+          "direction": [
+            -0.16317198067906416,
+            0.9254148637071128,
+            0.34202658782460427
+          ],
+          "rotationTowardCOMDegrees": 3.300078455018325
+        }
+      ]
+    }
+  ],
+  "vesselAvailableTorque": [
+    [
+      149866.7130616068,
+      144862.46886232402,
+      24995.813234423622
+    ],
+    [
+      -57951.37088264619,
+      -61820.82238986186,
+      -33869.46071354396
+    ]
+  ]
+}
