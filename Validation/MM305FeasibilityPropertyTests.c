@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
     LandingConfiguration cfg = landing_configuration_default();
     const char *configuration_path = NULL;
     const char *aero_override = NULL;
+    const char *attitude_override = NULL;
     double mass_kg = 40000.0;
     bool explicit_mass = false;
     for (int n = 1; n < argc; ++n) {
@@ -148,6 +149,8 @@ int main(int argc, char **argv) {
             configuration_path = argv[++n];
         } else if (!strcmp(argv[n], "--aero") && n + 1 < argc) {
             aero_override = argv[++n];
+        } else if (!strcmp(argv[n], "--attitude") && n + 1 < argc) {
+            attitude_override = argv[++n];
         } else if (!strcmp(argv[n], "--mass-kg") && n + 1 < argc) {
             char *end = NULL;
             mass_kg = strtod(argv[++n], &end);
@@ -157,12 +160,12 @@ int main(int argc, char **argv) {
             }
             explicit_mass = true;
         } else {
-            fprintf(stderr, "usage: %s [--configuration FILE --mass-kg MEASURED_MASS [--aero EXPERIMENT_CSV]]\n", argv[0]);
+            fprintf(stderr, "usage: %s [--configuration FILE --mass-kg MEASURED_MASS [--aero EXPERIMENT_CSV] [--attitude EXPERIMENT_INI]]\n", argv[0]);
             return EXIT_FAILURE;
         }
     }
-    if (aero_override && !configuration_path) {
-        fprintf(stderr, "an experimental aero override requires an explicit configuration and mass\n");
+    if ((aero_override || attitude_override) && !configuration_path) {
+        fprintf(stderr, "an experimental model override requires an explicit configuration and mass\n");
         return EXIT_FAILURE;
     }
     if (configuration_path && (!explicit_mass || !load_configuration_file(configuration_path, &cfg))) {
@@ -197,8 +200,11 @@ int main(int argc, char **argv) {
         .attitude_ini = shuttle_sim_model_path(NULL, SHUTTLE_SIM_MODEL_ATTITUDE, attitude, sizeof(attitude))
     };
     if (aero_override) files.aero_csv = aero_override;
+    if (attitude_override) files.attitude_ini = attitude_override;
     printf("MM305 aero source: %s%s\n", files.aero_csv,
         aero_override ? " (operator-supplied offline experiment; not certification)" : "");
+    printf("MM305 attitude source: %s%s\n", files.attitude_ini,
+        attitude_override ? " (operator-supplied offline experiment; not certification)" : "");
 
     TerminalModel model;
     char reason[256];
