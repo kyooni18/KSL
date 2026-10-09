@@ -62,6 +62,7 @@ def main():
     if controls['status']!='complete' or rates['status']!='complete':
         ap.error('both source probes must be complete')
     rate_by_record={a['anchorRecordSequence']:a for a in rates['anchorMatrices']}
+    measured_by_record={a['recordSequence']:a for a in controls['provenance']['inputMeasuredStates']}
     basis_amplitude=float(controls['gridDefinition']['isolatedControlAmplitude'])
     if not 0 < basis_amplitude <= 1:
         raise ValueError('invalid isolated control amplitude')
@@ -85,6 +86,23 @@ def main():
         predicted_delta=multiply(b,command)
         observed_delta=[observed[i]-neutral[i] for i in range(3)]
         residual=[predicted_delta[i]-observed_delta[i] for i in range(3)]
+        measured=measured_by_record[record]
+        alpha=math.radians(measured['angleOfAttackDeg'])
+        beta=math.radians(measured['sideslipDeg'])
+        airflow=[math.sin(beta),math.cos(beta)*math.cos(alpha),math.cos(beta)*math.sin(alpha)]
+        force_checks=[]
+        for case in ('neutral',f"run9_anchor_{anchor['anchorIndex']}_control_replay"):
+            sample=next(s for s in controls['samples'] if s['anchorIndex']==anchor['anchorIndex'] and s['caseId']==case)
+            force=sample['simulatedForceN_bodyXYZ']
+            drag=-sum(x*y for x,y in zip(force,airflow))
+            perpendicular=norm([force[i]+drag*airflow[i] for i in range(3)])
+            force_checks.append(dict(case=case,simulated_drag_n=drag,
+                simulated_perpendicular_force_n=perpendicular,
+                reported_drag_n=measured['dragForceN_reported'],
+                reported_lift_n=measured['liftForceN_reported'],
+                relative_drag_error=drag/measured['dragForceN_reported']-1,
+                relative_perpendicular_vs_lift_error=perpendicular/measured['liftForceN_reported']-1,
+                caveat='Perpendicular total force may include side force; historical surface angle/RCS state is unavailable.'))
         trim=solve(b,[-x for x in neutral])
         trim_residual=[x+y for x,y in zip(multiply(b,trim),neutral)]
         # Hold pitch input: solve the yaw-torque row for a unit roll input.
@@ -106,6 +124,7 @@ def main():
             source_control_matrix_nm_per_input=b,
             source_neutral_torque_nm=neutral,
             source_compound_torque_nm=observed,
+            force_crosschecks=force_checks,
             control_matrix_condition_inf=condition_inf(b),
             linear_zero_aerodynamic_torque_trim=trim,
             trim_within_unit_input_box=all(abs(x)<=1 for x in trim),

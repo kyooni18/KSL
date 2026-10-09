@@ -53,6 +53,28 @@
         185.69917556989822,
         -166.7627941107894
       ],
+      "force_crosschecks": [
+        {
+          "case": "neutral",
+          "simulated_drag_n": 88729.1281848152,
+          "simulated_perpendicular_force_n": 57356.06458268372,
+          "reported_drag_n": 84860.7220932568,
+          "reported_lift_n": 54322.9652577301,
+          "relative_drag_error": 0.04558535440350431,
+          "relative_perpendicular_vs_lift_error": 0.05583456850272017,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        },
+        {
+          "case": "run9_anchor_0_control_replay",
+          "simulated_drag_n": 86579.71211003463,
+          "simulated_perpendicular_force_n": 55445.93364878875,
+          "reported_drag_n": 84860.7220932568,
+          "reported_lift_n": 54322.9652577301,
+          "relative_drag_error": 0.020256603695744557,
+          "relative_perpendicular_vs_lift_error": 0.020672074613947045,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        }
+      ],
       "control_matrix_condition_inf": 39.28560945136866,
       "linear_zero_aerodynamic_torque_trim": [
         0.569424203865393,
@@ -139,6 +161,28 @@
         5353.396118026729,
         86.65086367593585,
         -1355.9110880142653
+      ],
+      "force_crosschecks": [
+        {
+          "case": "neutral",
+          "simulated_drag_n": 89777.6206722489,
+          "simulated_perpendicular_force_n": 58431.16025234069,
+          "reported_drag_n": 86422.0146886587,
+          "reported_lift_n": 55400.390092877,
+          "relative_drag_error": 0.038828138821792146,
+          "relative_perpendicular_vs_lift_error": 0.054706657378814416,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        },
+        {
+          "case": "run9_anchor_1_control_replay",
+          "simulated_drag_n": 86436.99155320015,
+          "simulated_perpendicular_force_n": 54951.495397232444,
+          "reported_drag_n": 86422.0146886587,
+          "reported_lift_n": 55400.390092877,
+          "relative_drag_error": 0.0001732991830309949,
+          "relative_perpendicular_vs_lift_error": -0.008102735285654084,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        }
       ],
       "control_matrix_condition_inf": 38.25964677268352,
       "linear_zero_aerodynamic_torque_trim": [
@@ -227,6 +271,28 @@
         -641.110308540105,
         -1336.4610185566585
       ],
+      "force_crosschecks": [
+        {
+          "case": "neutral",
+          "simulated_drag_n": 100421.8871468812,
+          "simulated_perpendicular_force_n": 61947.918801766544,
+          "reported_drag_n": 96191.0300564552,
+          "reported_lift_n": 58706.1766299215,
+          "relative_drag_error": 0.04398390461088608,
+          "relative_perpendicular_vs_lift_error": 0.05521978023335938,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        },
+        {
+          "case": "run9_anchor_2_control_replay",
+          "simulated_drag_n": 96561.98959283566,
+          "simulated_perpendicular_force_n": 58368.38847425782,
+          "reported_drag_n": 96191.0300564552,
+          "reported_lift_n": 58706.1766299215,
+          "relative_drag_error": 0.0038564878259723656,
+          "relative_perpendicular_vs_lift_error": -0.0057538776165422245,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        }
+      ],
       "control_matrix_condition_inf": 51.257253470265184,
       "linear_zero_aerodynamic_torque_trim": [
         0.5781499460914921,
@@ -314,6 +380,28 @@
         -1802.9856352964089,
         304.003037799308
       ],
+      "force_crosschecks": [
+        {
+          "case": "neutral",
+          "simulated_drag_n": 118623.58795893144,
+          "simulated_perpendicular_force_n": 66633.79838230382,
+          "reported_drag_n": 111678.654832592,
+          "reported_lift_n": 63607.0716538088,
+          "relative_drag_error": 0.062186754816755174,
+          "relative_perpendicular_vs_lift_error": 0.04758475197488177,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        },
+        {
+          "case": "run9_anchor_3_control_replay",
+          "simulated_drag_n": 113979.84260941616,
+          "simulated_perpendicular_force_n": 63773.252162059376,
+          "reported_drag_n": 111678.654832592,
+          "reported_lift_n": 63607.0716538088,
+          "relative_drag_error": 0.02060543960055461,
+          "relative_perpendicular_vs_lift_error": 0.002612610578192287,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        }
+      ],
       "control_matrix_condition_inf": 111.51542308484255,
       "linear_zero_aerodynamic_torque_trim": [
         0.6074431397710958,
@@ -400,6 +488,28 @@
         22684.815865404795,
         -490.26134090048436,
         -49.47857625848883
+      ],
+      "force_crosschecks": [
+        {
+          "case": "neutral",
+          "simulated_drag_n": 133459.28426774556,
+          "simulated_perpendicular_force_n": 69890.90655330867,
+          "reported_drag_n": 127588.270452361,
+          "reported_lift_n": 68597.024478038,
+          "relative_drag_error": 0.04601530998554204,
+          "relative_perpendicular_vs_lift_error": 0.018862072883130798,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        },
+        {
+          "case": "run9_anchor_4_control_replay",
+          "simulated_drag_n": 128664.3681004893,
+          "simulated_perpendicular_force_n": 68305.53118616468,
+          "reported_drag_n": 127588.270452361,
+          "reported_lift_n": 68597.024478038,
+          "relative_drag_error": 0.008434142451441806,
+          "relative_perpendicular_vs_lift_error": -0.00424935766662371,
+          "caveat": "Perpendicular total force may include side force; historical surface angle/RCS state is unavailable."
+        }
       ],
       "control_matrix_condition_inf": 11370.464660485466,
       "linear_zero_aerodynamic_torque_trim": [

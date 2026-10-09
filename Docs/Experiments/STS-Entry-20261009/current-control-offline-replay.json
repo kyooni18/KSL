@@ -1,0 +1,77 @@
+{
+  "classification": "offline downstream controller diagnostic, not normal shadow qualification",
+  "sourceManifest": "ShuttleSim/runs/mm304-sts-current-control-audit-20261009-20261009T030651Z-5dm0j2yc/manifest.json",
+  "sourceManifestSHA256": "702d50eeb48e911fa3fbb1904d386bab218535a17594eb4ae44339b8cb5dc177",
+  "runId": "mm304-sts-current-control-audit-20261009-20261009T030651Z-5dm0j2yc",
+  "provenance": {
+    "modelProfile": "sts-provisional",
+    "plantDigests": {
+      "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+      "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+      "aero_book": null,
+      "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+    },
+    "guidanceModelDigests": {
+      "atmosphere": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+      "aero": "d53b891e9d232ddf85b9252a4b323b06aab4565f816411813c038e61566feeb5",
+      "aero_book": null,
+      "attitude": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50"
+    },
+    "certifiedPriorDigest": null,
+    "guidanceModelEqualsPlant": true,
+    "configurationPath": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/sts.json",
+    "configurationDigest": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "scenarioDigest": "2122284798570ec204947496483204b8bdc7b987c652e749375ac780e04dd09b",
+    "gitHead": "04038d867626b1e5f5dca2e93a3a6909c8796e9a",
+    "gitDirty": true,
+    "gitDirtyDiffDigest": "729d03af43baac4e41e4adb43ecb4b6d17bf77ad1b33ea5a9faf9b189bb99f53",
+    "backendDigest": "711f1e45d9bb332e6e1783f72948736dbf60a46b03c2dbfc02d3532e8d6dfdd7",
+    "simulatorDigest": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+    "directControl": false,
+    "plantLiftScale": 1.0,
+    "plantDragScale": 1.0,
+    "engage": "engageReentry"
+  },
+  "final": {
+    "ut": 10908.931826,
+    "meanAltitude": 7322.007,
+    "trueAirSpeed": 84.947,
+    "verticalSpeed": -20.099,
+    "latitude": 3.44226977,
+    "longitude": -57.475693801,
+    "runwayAlongTrack": 180678.362,
+    "runwayCrossTrack": -36533.514,
+    "situation": "flying",
+    "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+    "simulatorSummary": {},
+    "touchdownGearDown": false,
+    "rolloutValid": false,
+    "rolloutRunwayValid": true,
+    "rolloutBrakesSeen": false,
+    "rolloutAirbrakesSeen": false,
+    "rolloutMaxAbsCrossTrack": 0.0,
+    "rolloutMaxHeadingErrorDeg": 0.0,
+    "rolloutMaxLateralAccelMps2": 0.0,
+    "rolloutStabilityProxyOk": true,
+    "controlsClean": true,
+    "touchdownSpeedOk": false,
+    "touchdownSinkOk": false,
+    "engageRejected": false,
+    "fixedHacSeen": false,
+    "hacCompletedSeen": false,
+    "fixedHacGeometry": {
+      "valid": false,
+      "reason": "no-committed-geometry-record"
+    },
+    "splineSeen": false,
+    "observedPhases": [
+      "Abort",
+      "Entry Interface",
+      "Idle",
+      "MM304 Entry"
+    ],
+    "touchdownRunwayTelemetry": {}
+  },
+  "simElapsedSeconds": 945.22,
+  "success": false
+}
