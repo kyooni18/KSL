@@ -629,6 +629,26 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
         }
         ++profiled;
     }
+    if (profiled == 0) {
+        /* Surface the underlying profile failures even in live mode. The
+           aggregate rejection alone hides whether energy, slope, propagation,
+           or input validity stopped the search. No feasibility gate changes. */
+        for (size_t i = 0; i < count; ++i) {
+            if (!tried[i]) continue;
+            const char *reason=results[i].reason?results[i].reason:"unknown";
+            bool seen=false;
+            for (size_t j=0;j<i;++j)
+                if (tried[j] && results[j].reason &&
+                        strcmp(reason,results[j].reason)==0) seen=true;
+            if (seen) continue;
+            size_t failures=0;
+            for (size_t j=i;j<count;++j)
+                if (tried[j] && results[j].reason &&
+                        strcmp(reason,results[j].reason)==0) ++failures;
+            fprintf(stderr,"TAEM profile rejection: side=%+.0f count=%zu/%zu reason=%s\n",
+                side,failures,used,reason);
+        }
+    }
     free(tried);
     free(results);
     if (profiled == 0) {

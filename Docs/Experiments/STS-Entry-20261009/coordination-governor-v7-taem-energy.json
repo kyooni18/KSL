@@ -1,0 +1,1062 @@
+{
+  "evidence": "live observations; no runway landing established",
+  "sessionId": "2026-10-09T10-46-41Z-24618-242718486034",
+  "binaryPatched": false,
+  "finding": "Speed fell during unqualified TAEM route acquisition. Recovery label was also emitted by planner-warning fallback independently of physical departure; corrected in ffe53ec for subsequent processes. No claim that all recorded recovery intervals lacked physical triggers.",
+  "samples": [
+    {
+      "ut": 2172.04986328023,
+      "phase": "MM304 Entry",
+      "profile": "entry",
+      "position": {
+        "altitude": 25995.3690138551,
+        "radarAltitude": 21461.0240278301
+      },
+      "motion": {
+        "trueAirSpeed": 774.515502929688,
+        "verticalSpeed": -98.5479854145345,
+        "flightPathAngle": -7.31002924433692
+      },
+      "attitude": {
+        "roll": 2.317138671875,
+        "angleOfAttack": 22.2709617614746,
+        "sideslip": -0.058275431394577,
+        "bodyRollRate": -2.60660865182166,
+        "bodyPitchRate": -1.12833486615255,
+        "bodyYawRate": -1.06428561019196
+      },
+      "command": {
+        "targetRoll": 0.491678280820455,
+        "targetAoA": 22.7262698755028
+      },
+      "aero": {
+        "liftForce": 186953.994926305,
+        "dragForce": 246207.778156927,
+        "stallFraction": 0.181565965924944
+      },
+      "vehicle": {
+        "mass": 25722.552734375
+      }
+    },
+    {
+      "ut": 2182.08986328022,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 24969.9866711634,
+        "radarAltitude": 23249.2226366565
+      },
+      "motion": {
+        "trueAirSpeed": 719.013916015625,
+        "verticalSpeed": -110.759191691897,
+        "flightPathAngle": -8.86130852370892
+      },
+      "attitude": {
+        "roll": -11.8921508789062,
+        "angleOfAttack": 14.2927007675171,
+        "sideslip": 0.0783931687474251,
+        "bodyRollRate": 0.689900792349873,
+        "bodyPitchRate": 0.540279851482924,
+        "bodyYawRate": -0.0467690677767246
+      },
+      "command": {
+        "targetRoll": -11.8586374582361,
+        "targetAoA": 14.9650106990566
+      },
+      "aero": {
+        "liftForce": 132822.143462379,
+        "dragForce": 153523.903155641,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.54296875
+      }
+    },
+    {
+      "ut": 2192.10986328021,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 23807.4100463446,
+        "radarAltitude": 23006.5662465176
+      },
+      "motion": {
+        "trueAirSpeed": 667.806091308594,
+        "verticalSpeed": -122.447556312531,
+        "flightPathAngle": -10.565412173788
+      },
+      "attitude": {
+        "roll": -15.8272705078125,
+        "angleOfAttack": 13.5356187820435,
+        "sideslip": -0.0240129232406616,
+        "bodyRollRate": -1.09604109823848,
+        "bodyPitchRate": 0.0293403241149313,
+        "bodyYawRate": -0.481218310558184
+      },
+      "command": {
+        "targetRoll": -17.0140443601919,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 141433.081489496,
+        "dragForce": 157921.824851218,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.53125
+      }
+    },
+    {
+      "ut": 2202.12986328021,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 22533.8378250526,
+        "radarAltitude": 21873.7861691017
+      },
+      "motion": {
+        "trueAirSpeed": 615.790893554688,
+        "verticalSpeed": -131.440834859833,
+        "flightPathAngle": -12.3246335290396
+      },
+      "attitude": {
+        "roll": -16.8981018066406,
+        "angleOfAttack": 12.001127243042,
+        "sideslip": -0.00489135971292853,
+        "bodyRollRate": 1.2352452820045,
+        "bodyPitchRate": -0.541927958121922,
+        "bodyYawRate": 0.0363626671981445
+      },
+      "command": {
+        "targetRoll": -17.4021549005224,
+        "targetAoA": 13.0735491148884
+      },
+      "aero": {
+        "liftForce": 140027.370800151,
+        "dragForce": 154300.401715627,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.525390625
+      }
+    },
+    {
+      "ut": 2212.1698632802,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 21144.1357053161,
+        "radarAltitude": 20594.0914452353
+      },
+      "motion": {
+        "trueAirSpeed": 569.46142578125,
+        "verticalSpeed": -139.958049013912,
+        "flightPathAngle": -14.2274996064404
+      },
+      "attitude": {
+        "roll": -15.984130859375,
+        "angleOfAttack": 13.5222673416138,
+        "sideslip": -0.0589737184345722,
+        "bodyRollRate": -1.14609244083524,
+        "bodyPitchRate": -0.904122351497931,
+        "bodyYawRate": -0.547583925635395
+      },
+      "command": {
+        "targetRoll": -17.6743279427282,
+        "targetAoA": 12.4568062215379
+      },
+      "aero": {
+        "liftForce": 190756.528284416,
+        "dragForce": 207932.428571752,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.515625
+      }
+    },
+    {
+      "ut": 2222.20986328019,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 19729.8135026998,
+        "radarAltitude": 19421.4868858492
+      },
+      "motion": {
+        "trueAirSpeed": 513.108154296875,
+        "verticalSpeed": -139.75991833939,
+        "flightPathAngle": -15.8058841761427
+      },
+      "attitude": {
+        "roll": -27.5314636230469,
+        "angleOfAttack": 12.9341850280762,
+        "sideslip": -0.0434559695422649,
+        "bodyRollRate": -1.16789400853897,
+        "bodyPitchRate": 0.244698004401427,
+        "bodyYawRate": -0.744667350498974
+      },
+      "command": {
+        "targetRoll": -29.7006257003475,
+        "targetAoA": 12.591466747486
+      },
+      "aero": {
+        "liftForce": 196948.656967033,
+        "dragForce": 231326.394212615,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.505859375
+      }
+    },
+    {
+      "ut": 2232.24986328018,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 18351.571260624,
+        "radarAltitude": 18096.5333112946
+      },
+      "motion": {
+        "trueAirSpeed": 443.143127441406,
+        "verticalSpeed": -135.971736003552,
+        "flightPathAngle": -17.8685843353379
+      },
+      "attitude": {
+        "roll": -38.6348571777344,
+        "angleOfAttack": 12.2531480789185,
+        "sideslip": -0.0657410621643066,
+        "bodyRollRate": -1.17119855417747,
+        "bodyPitchRate": 0.0913619501109399,
+        "bodyYawRate": -0.987275715347888
+      },
+      "command": {
+        "targetRoll": -41.7590871337246,
+        "targetAoA": 11.6850797855718
+      },
+      "aero": {
+        "liftForce": 198238.094169847,
+        "dragForce": 254806.893686128,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.494140625
+      }
+    },
+    {
+      "ut": 2242.26986328017,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 16984.8937777921,
+        "radarAltitude": 16784.5175096812
+      },
+      "motion": {
+        "trueAirSpeed": 365.949493408203,
+        "verticalSpeed": -134.473900946776,
+        "flightPathAngle": -21.5594072927295
+      },
+      "attitude": {
+        "roll": -44.3204650878906,
+        "angleOfAttack": 15.2688055038452,
+        "sideslip": -0.0832890495657921,
+        "bodyRollRate": -0.129800047197131,
+        "bodyPitchRate": 1.04921220717317,
+        "bodyYawRate": -1.05565287780286
+      },
+      "command": {
+        "targetRoll": -48.6004405851602,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 233382.928818547,
+        "dragForce": 338398.596934434,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.484375
+      }
+    },
+    {
+      "ut": 2252.32986328016,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 15677.3732392465,
+        "radarAltitude": 15418.9571528187
+      },
+      "motion": {
+        "trueAirSpeed": 293.352203369141,
+        "verticalSpeed": -131.529732197605,
+        "flightPathAngle": -26.639022487083
+      },
+      "attitude": {
+        "roll": -43.0335693359375,
+        "angleOfAttack": 13.8437738418579,
+        "sideslip": -0.154396697878838,
+        "bodyRollRate": -0.898102195721586,
+        "bodyPitchRate": 0.581307157622217,
+        "bodyYawRate": -1.33460431803414
+      },
+      "command": {
+        "targetRoll": -48.5452437390944,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 180368.924747909,
+        "dragForce": 211552.175956587,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.474609375
+      }
+    },
+    {
+      "ut": 2262.36986328015,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 14297.696453865,
+        "radarAltitude": 14109.1843662084
+      },
+      "motion": {
+        "trueAirSpeed": 268.551208496094,
+        "verticalSpeed": -143.221584687239,
+        "flightPathAngle": -32.2295062828653
+      },
+      "attitude": {
+        "roll": -42.0207824707031,
+        "angleOfAttack": 14.1897802352905,
+        "sideslip": -0.11934757232666,
+        "bodyRollRate": -0.733879855599889,
+        "bodyPitchRate": 0.728801226165428,
+        "bodyYawRate": -1.43208617476166
+      },
+      "command": {
+        "targetRoll": -48.5004505308563,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 209950.32908142,
+        "dragForce": 169315.696741076,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.462890625
+      }
+    },
+    {
+      "ut": 2272.44986328014,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 12836.3633202633,
+        "radarAltitude": 12600.2178082368
+      },
+      "motion": {
+        "trueAirSpeed": 251.877456665039,
+        "verticalSpeed": -143.795923190593,
+        "flightPathAngle": -34.8127558113281
+      },
+      "attitude": {
+        "roll": -41.2254333496094,
+        "angleOfAttack": 14.534327507019,
+        "sideslip": -0.10375289618969,
+        "bodyRollRate": -0.670379700144836,
+        "bodyPitchRate": 1.27249757531587,
+        "bodyYawRate": -1.50149854459843
+      },
+      "command": {
+        "targetRoll": -48.4583779465489,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 272244.368741253,
+        "dragForce": 187565.910208901,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.453125
+      }
+    },
+    {
+      "ut": 2282.46986328013,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 11463.9665846794,
+        "radarAltitude": 11227.1953176454
+      },
+      "motion": {
+        "trueAirSpeed": 229.097915649414,
+        "verticalSpeed": -129.639217309647,
+        "flightPathAngle": -34.4626000505298
+      },
+      "attitude": {
+        "roll": -46.0359802246094,
+        "angleOfAttack": 13.4211339950562,
+        "sideslip": -0.126208528876305,
+        "bodyRollRate": -1.85887823820332,
+        "bodyPitchRate": 1.6485000723454,
+        "bodyYawRate": -2.00303489644931
+      },
+      "command": {
+        "targetRoll": -53.8097430312691,
+        "targetAoA": 13.1988200656549
+      },
+      "aero": {
+        "liftForce": 323304.942177292,
+        "dragForce": 196653.263876462,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.443359375
+      }
+    },
+    {
+      "ut": 2292.48986328012,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 10241.4898105901,
+        "radarAltitude": 10021.8356145498
+      },
+      "motion": {
+        "trueAirSpeed": 205.177947998047,
+        "verticalSpeed": -114.432376804263,
+        "flightPathAngle": -33.8984444552243
+      },
+      "attitude": {
+        "roll": -48.2783508300781,
+        "angleOfAttack": 11.7202806472778,
+        "sideslip": -0.0626368299126625,
+        "bodyRollRate": -0.886451004448133,
+        "bodyPitchRate": 2.14251329224279,
+        "bodyYawRate": -1.95267426602656
+      },
+      "command": {
+        "targetRoll": -54.8111922505096,
+        "targetAoA": 10.775110773701
+      },
+      "aero": {
+        "liftForce": 349858.19097513,
+        "dragForce": 185176.266214128,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.431640625
+      }
+    },
+    {
+      "ut": 2302.52986328011,
+      "phase": "Attitude Recovery",
+      "profile": "recovery",
+      "position": {
+        "altitude": 9150.73913463752,
+        "radarAltitude": 8926.8294560638
+      },
+      "motion": {
+        "trueAirSpeed": 191.240020751953,
+        "verticalSpeed": -104.627829672375,
+        "flightPathAngle": -33.1684349467731
+      },
+      "attitude": {
+        "roll": -47.2690124511719,
+        "angleOfAttack": 7.10354137420654,
+        "sideslip": -0.854027569293976,
+        "bodyRollRate": 9.34579511622329,
+        "bodyPitchRate": -3.07078655812239,
+        "bodyYawRate": 1.26143260390091
+      },
+      "command": {
+        "targetRoll": 21.1123857555196,
+        "targetAoA": 0
+      },
+      "aero": {
+        "liftForce": 293440.075847304,
+        "dragForce": 158266.185078173,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.421875
+      }
+    },
+    {
+      "ut": 2312.56986328011,
+      "phase": "Attitude Recovery",
+      "profile": "recovery",
+      "position": {
+        "altitude": 8031.63376333192,
+        "radarAltitude": 7760.60495079355
+      },
+      "motion": {
+        "trueAirSpeed": 186.16926574707,
+        "verticalSpeed": -111.171219349304,
+        "flightPathAngle": -36.6661462142637
+      },
+      "attitude": {
+        "roll": -12.0272521972656,
+        "angleOfAttack": 3.74279260635376,
+        "sideslip": -11.5635528564453,
+        "bodyRollRate": 1.38465056365339,
+        "bodyPitchRate": -0.612915055942259,
+        "bodyYawRate": -0.0653578179456333
+      },
+      "command": {
+        "targetRoll": 4.19363342692655,
+        "targetAoA": 0
+      },
+      "aero": {
+        "liftForce": 183021.766215213,
+        "dragForce": 174448.19441606,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.41015625
+      }
+    },
+    {
+      "ut": 2322.5898632801,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 6973.78555860219,
+        "radarAltitude": 6722.64239601081
+      },
+      "motion": {
+        "trueAirSpeed": 172.462295532227,
+        "verticalSpeed": -93.4244710097853,
+        "flightPathAngle": -32.8000912244874
+      },
+      "attitude": {
+        "roll": -13.5111083984375,
+        "angleOfAttack": 6.74300670623779,
+        "sideslip": -2.79432678222656,
+        "bodyRollRate": -9.99110494895886,
+        "bodyPitchRate": 3.30905044175173,
+        "bodyYawRate": -5.42584884755177
+      },
+      "command": {
+        "targetRoll": -53.3447388561367,
+        "targetAoA": 11.3520161108246
+      },
+      "aero": {
+        "liftForce": 334296.643179473,
+        "dragForce": 165562.709787475,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.40625
+      }
+    },
+    {
+      "ut": 2332.62986328009,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 6372.68153352512,
+        "radarAltitude": 6103.2336662513
+      },
+      "motion": {
+        "trueAirSpeed": 133.859771728516,
+        "verticalSpeed": -27.6226603180224,
+        "flightPathAngle": -11.9088431859828
+      },
+      "attitude": {
+        "roll": -43.11083984375,
+        "angleOfAttack": 11.1536045074463,
+        "sideslip": -0.346169978380203,
+        "bodyRollRate": -1.49878065047508,
+        "bodyPitchRate": 5.12396057869116,
+        "bodyYawRate": -3.1522522871292
+      },
+      "command": {
+        "targetRoll": -53.3447388561367,
+        "targetAoA": 12.0987999999995
+      },
+      "aero": {
+        "liftForce": 472329.4394666,
+        "dragForce": 186444.942757962,
+        "stallFraction": 0
+      },
+      "vehicle": {
+        "mass": 25722.39453125
+      }
+    },
+    {
+      "ut": 2342.64986328008,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 6196.65111073607,
+        "radarAltitude": 5901.98783743137
+      },
+      "motion": {
+        "trueAirSpeed": 94.4592514038086,
+        "verticalSpeed": -17.6980171206357,
+        "flightPathAngle": -10.7988383529155
+      },
+      "attitude": {
+        "roll": -47.2260437011719,
+        "angleOfAttack": 11.0125436782837,
+        "sideslip": -0.206695064902306,
+        "bodyRollRate": 0.338876429626152,
+        "bodyPitchRate": 3.11921152234918,
+        "bodyYawRate": -4.26943408125079
+      },
+      "command": {
+        "targetRoll": -50.6847017793394,
+        "targetAoA": 10.6363463207699
+      },
+      "aero": {
+        "liftForce": 303853.443903182,
+        "dragForce": 106454.830908838,
+        "stallFraction": 0.110613398191308
+      },
+      "vehicle": {
+        "mass": 25722.384765625
+      }
+    },
+    {
+      "ut": 2352.68986328007,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5965.58874299715,
+        "radarAltitude": 5726.5562988919
+      },
+      "motion": {
+        "trueAirSpeed": 81.4304428100586,
+        "verticalSpeed": -23.814229843893,
+        "flightPathAngle": -17.0046143098919
+      },
+      "attitude": {
+        "roll": -23.7581176757812,
+        "angleOfAttack": 12.0585441589355,
+        "sideslip": 0.439598798751831,
+        "bodyRollRate": 2.79450200873305,
+        "bodyPitchRate": 2.3627897694444,
+        "bodyYawRate": -2.13612285293912
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 14.4253224672297
+      },
+      "aero": {
+        "liftForce": 289718.404750836,
+        "dragForce": 101755.217131927,
+        "stallFraction": 0.553266252790178
+      },
+      "vehicle": {
+        "mass": 25722.375
+      }
+    },
+    {
+      "ut": 2362.72986328006,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5796.20223872445,
+        "radarAltitude": 5567.36686797836
+      },
+      "motion": {
+        "trueAirSpeed": 69.5043869018555,
+        "verticalSpeed": -13.015551521464,
+        "flightPathAngle": -10.7930576741175
+      },
+      "attitude": {
+        "roll": -7.01278686523438,
+        "angleOfAttack": 12.1343870162964,
+        "sideslip": 0.110994979739189,
+        "bodyRollRate": 0.873609888913824,
+        "bodyPitchRate": 0.152082169362765,
+        "bodyYawRate": -0.825833714821134
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 12
+      },
+      "aero": {
+        "liftForce": 241048.059491586,
+        "dragForce": 79431.1007130228,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.36328125
+      }
+    },
+    {
+      "ut": 2372.76986328005,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5662.91810350411,
+        "radarAltitude": 5430.09621229337
+      },
+      "motion": {
+        "trueAirSpeed": 59.0430564880371,
+        "verticalSpeed": -16.0081106391796,
+        "flightPathAngle": -15.7312846831235
+      },
+      "attitude": {
+        "roll": -2.00433349609375,
+        "angleOfAttack": 12.5355415344238,
+        "sideslip": 0.0654706507921219,
+        "bodyRollRate": 0.256502981225469,
+        "bodyPitchRate": -0.873322470720249,
+        "bodyYawRate": -0.284234166225787
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 12.104456811386
+      },
+      "aero": {
+        "liftForce": 213891.739323355,
+        "dragForce": 68799.4713455539,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.353515625
+      }
+    },
+    {
+      "ut": 2382.80986328004,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5459.14461861248,
+        "radarAltitude": 5218.95778801152
+      },
+      "motion": {
+        "trueAirSpeed": 63.1481666564941,
+        "verticalSpeed": -22.9623851197857,
+        "flightPathAngle": -21.3231167916054
+      },
+      "attitude": {
+        "roll": -0.64593505859375,
+        "angleOfAttack": 11.6707286834717,
+        "sideslip": 0.0228814799338579,
+        "bodyRollRate": 0.104177174991316,
+        "bodyPitchRate": -0.234288834009174,
+        "bodyYawRate": -0.0960524774452674
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 12
+      },
+      "aero": {
+        "liftForce": 228488.831138238,
+        "dragForce": 72704.9760118182,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.341796875
+      }
+    },
+    {
+      "ut": 2392.84986328003,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5242.99798043782,
+        "radarAltitude": 5003.54879488063
+      },
+      "motion": {
+        "trueAirSpeed": 64.4098510742188,
+        "verticalSpeed": -18.1853996845416,
+        "flightPathAngle": -16.3998400311231
+      },
+      "attitude": {
+        "roll": 0.49102783203125,
+        "angleOfAttack": 12.6228885650635,
+        "sideslip": -0.0134108420461416,
+        "bodyRollRate": 0.0583105469405623,
+        "bodyPitchRate": 0.788252300968501,
+        "bodyYawRate": 0.0773450840085288
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 14.760636630748
+      },
+      "aero": {
+        "liftForce": 255514.998989419,
+        "dragForce": 84824.0953161421,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.33203125
+      }
+    },
+    {
+      "ut": 2402.88986328002,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 5084.22784879745,
+        "radarAltitude": 4878.37782727089
+      },
+      "motion": {
+        "trueAirSpeed": 59.3051872253418,
+        "verticalSpeed": -15.2770368636594,
+        "flightPathAngle": -14.9277224520089
+      },
+      "attitude": {
+        "roll": 0.68157958984375,
+        "angleOfAttack": 12.7590303421021,
+        "sideslip": -0.0202169790863991,
+        "bodyRollRate": 0.0173611010846958,
+        "bodyPitchRate": -0.114157896590965,
+        "bodyYawRate": 0.108365045322829
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 11.9659284584016
+      },
+      "aero": {
+        "liftForce": 230075.198658516,
+        "dragForce": 74830.6479628114,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.322265625
+      }
+    },
+    {
+      "ut": 2412.92986328001,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4915.10371111485,
+        "radarAltitude": 4699.01681948313
+      },
+      "motion": {
+        "trueAirSpeed": 57.9094886779785,
+        "verticalSpeed": -18.6485792770077,
+        "flightPathAngle": -18.7857212394183
+      },
+      "attitude": {
+        "roll": 0.739501953125,
+        "angleOfAttack": 12.4671440124512,
+        "sideslip": -0.0302214771509171,
+        "bodyRollRate": 0.0148914407441359,
+        "bodyPitchRate": -0.0442515251383526,
+        "bodyYawRate": 0.119326518735965
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 13.497957540333
+      },
+      "aero": {
+        "liftForce": 226672.759070516,
+        "dragForce": 73785.6368106846,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.310546875
+      }
+    },
+    {
+      "ut": 2422.92986328001,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4731.10200439906,
+        "radarAltitude": 4511.18628647178
+      },
+      "motion": {
+        "trueAirSpeed": 58.3084831237793,
+        "verticalSpeed": -18.1530151066097,
+        "flightPathAngle": -18.1392304169827
+      },
+      "attitude": {
+        "roll": 0.7696533203125,
+        "angleOfAttack": 12.7043056488037,
+        "sideslip": -0.0211619604378939,
+        "bodyRollRate": 0.0201422905661486,
+        "bodyPitchRate": 0.152259554048356,
+        "bodyYawRate": 0.124006922164475
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 14.7047370525576
+      },
+      "aero": {
+        "liftForce": 238393.972492284,
+        "dragForce": 78271.5313233444,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.30078125
+      }
+    },
+    {
+      "ut": 2433.00986328,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4560.35933549062,
+        "radarAltitude": 4329.49108542525
+      },
+      "motion": {
+        "trueAirSpeed": 56.423698425293,
+        "verticalSpeed": -16.6008132937997,
+        "flightPathAngle": -17.1105929867132
+      },
+      "attitude": {
+        "roll": 0.76043701171875,
+        "angleOfAttack": 12.4655303955078,
+        "sideslip": -0.0232482142746449,
+        "bodyRollRate": 0.0102903291123286,
+        "bodyPitchRate": -0.345247310083774,
+        "bodyYawRate": 0.127622594359324
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 13.0613232818591
+      },
+      "aero": {
+        "liftForce": 231231.216485009,
+        "dragForce": 74211.3477624474,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.294921875
+      }
+    },
+    {
+      "ut": 2443.04986327999,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4393.58415297593,
+        "radarAltitude": 4153.59218764561
+      },
+      "motion": {
+        "trueAirSpeed": 55.3153457641602,
+        "verticalSpeed": -16.4652788949838,
+        "flightPathAngle": -17.3172334818224
+      },
+      "attitude": {
+        "roll": 0.772979736328125,
+        "angleOfAttack": 12.7997751235962,
+        "sideslip": -0.0331678651273251,
+        "bodyRollRate": 0.0261644553352138,
+        "bodyPitchRate": 0.146962635551694,
+        "bodyYawRate": 0.132280246215561
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 14.8985365836555
+      },
+      "aero": {
+        "liftForce": 232256.12710673,
+        "dragForce": 76400.3136935559,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.28515625
+      }
+    },
+    {
+      "ut": 2453.16986327998,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4223.3721596268,
+        "radarAltitude": 3980.76203065505
+      },
+      "motion": {
+        "trueAirSpeed": 55.1574516296387,
+        "verticalSpeed": -17.1422394696223,
+        "flightPathAngle": -18.1066873987076
+      },
+      "attitude": {
+        "roll": 0.771392822265625,
+        "angleOfAttack": 12.2858762741089,
+        "sideslip": -0.0215126033872366,
+        "bodyRollRate": 0.10877809648497,
+        "bodyPitchRate": -0.3211231595338,
+        "bodyYawRate": 0.126903802174889
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 12.6457297544927
+      },
+      "aero": {
+        "liftForce": 229940.830560123,
+        "dragForce": 73205.6365074921,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.275390625
+      }
+    },
+    {
+      "ut": 2463.20986327997,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 4052.62672401511,
+        "radarAltitude": 3834.72041342407
+      },
+      "motion": {
+        "trueAirSpeed": 55.1230087280273,
+        "verticalSpeed": -16.6435265850012,
+        "flightPathAngle": -17.5738182509432
+      },
+      "attitude": {
+        "roll": 0.7608642578125,
+        "angleOfAttack": 12.6081171035767,
+        "sideslip": -0.0217523481696844,
+        "bodyRollRate": -0.00469123198064935,
+        "bodyPitchRate": 0.380023052568936,
+        "bodyYawRate": 0.127772348126579
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 13.9751976585709
+      },
+      "aero": {
+        "liftForce": 238628.045404319,
+        "dragForce": 77643.9582007147,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.263671875
+      }
+    },
+    {
+      "ut": 2473.36986327996,
+      "phase": "TAEM",
+      "profile": "taem",
+      "position": {
+        "altitude": 3893.60385964508,
+        "radarAltitude": 3686.12284660363
+      },
+      "motion": {
+        "trueAirSpeed": 52.9912300109863,
+        "verticalSpeed": -15.217460113674,
+        "flightPathAngle": -16.6885687203235
+      },
+      "attitude": {
+        "roll": 0.761962890625,
+        "angleOfAttack": 12.8869857788086,
+        "sideslip": -0.0247065145522356,
+        "bodyRollRate": -0.0211791374505896,
+        "bodyPitchRate": -0.0420748693360238,
+        "bodyYawRate": 0.13501214707466
+      },
+      "command": {
+        "targetRoll": 0,
+        "targetAoA": 15
+      },
+      "aero": {
+        "liftForce": 235357.839159636,
+        "dragForce": 76719.1959738388,
+        "stallFraction": 1
+      },
+      "vehicle": {
+        "mass": 25722.25390625
+      }
+    }
+  ]
+}
