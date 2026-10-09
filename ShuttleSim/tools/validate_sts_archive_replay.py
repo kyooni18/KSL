@@ -28,6 +28,7 @@ def main():
     ap.add_argument('--log', type=Path, default=ROOT/'FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl')
     ap.add_argument('--scenario', type=Path, default=ROOT/'ShuttleSim/scenarios/sts70km-run9-provisional.ini')
     ap.add_argument('--aero', type=Path, default=ROOT/'ShuttleSim/reference-model/sts_aero_provisional.csv')
+    ap.add_argument('--attitude', type=Path, default=ROOT/'ShuttleSim/reference-model/stsn_attitude_identified.ini')
     ap.add_argument('--report', type=Path, required=True)
     args = ap.parse_args()
     with args.log.open() as f:
@@ -42,12 +43,15 @@ def main():
         ap.error('scenario must start at an archived sample within 0.1 s')
     duration=rows[-1]['ut']-start_ut
     atmosphere=ROOT/'ShuttleSim/reference-model/kerbin_atmosphere_identified.csv'
-    attitude=ROOT/'ShuttleSim/reference-model/stsn_attitude_identified.ini'
+    attitude=args.attitude
     binary=ROOT/'ShuttleSim/build/shuttlesim'
     report=dict(evidence='offline archived-flight reconstruction; not held-out validation',
                 source=identity(args.log), scenario=identity(args.scenario), aero=identity(args.aero),
                 atmosphere=identity(atmosphere), borrowed_attitude=identity(attitude),
                 simulator=identity(binary), start_ut=start_ut, duration_s=duration,
+                attitude_source_status='borrowed STS-N baseline' if attitude.resolve()==
+                    (ROOT/'ShuttleSim/reference-model/stsn_attitude_identified.ini').resolve()
+                    else 'operator-supplied offline attitude experiment; not certification',
                 runs=[])
     with tempfile.TemporaryDirectory(prefix='sts-archive-replay-') as scratch:
         scratch=Path(scratch)
