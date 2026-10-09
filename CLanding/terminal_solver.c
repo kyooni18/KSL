@@ -421,6 +421,18 @@ static bool solve_smooth_profile(const TerminalModel *m,
 
         ok[i] = smooth_flight_ok(m,&trial,f,max_error);
         errors[i] = ok[i] ? f.exit_speed_mps-target_speed : NAN;
+        /* Separate aggregate minima can describe different flights. Keep a
+         * joint observation available when investigating a rejected envelope;
+         * this switch changes neither profile search nor admission. */
+        if (getenv("KSP_LANDER_TAEM_PROFILE_DIAGNOSTICS")) {
+            fprintf(stderr,
+                "TAEM smooth trial: route=%.3f bow=%.3f completed=%d feasible=%d speed=%.3f steep=%.3f track=%.3f endpoint=%.3f slopeLimit=%.3f trackLimit=%.3f endpointLimit=%.3f reason=%s\n",
+                route->length_m,bows[i],f.valid,ok[i],f.exit_speed_mps,
+                f.valid?f.steepest_descent_deg:NAN,max_error,
+                f.valid?fabs(f.end_altitude_m-trial.profile_final_altitude_m):NAN,
+                taem_descent_limit(m,&trial),TERMINAL_SMOOTH_TRACK_ERROR_M,
+                TERMINAL_SMOOTH_EXIT_ERROR_M,f.reason?f.reason:"unknown");
+        }
         if (ok[i] && (best<0 || fabs(errors[i])<fabs(errors[best]))) best=i;
     }
 
