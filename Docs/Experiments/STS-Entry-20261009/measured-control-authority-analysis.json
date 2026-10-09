@@ -1,0 +1,424 @@
+{
+  "classification": "offline analysis of hypothetical aerodynamic API responses; unqualified",
+  "sources": [
+    {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-measured-run9-surface-wrench-20261009.json",
+      "sha256": "2ed7432467469cc49b6ae2d442fb067727780e2352166b457d8147c1e96d7182"
+    },
+    {
+      "path": "Docs/Experiments/STS-Entry-20261009/live-measured-run9-aero-rate-matrix-20261009.json",
+      "sha256": "7a0d25e04bcfbf3d5306c3870846962668160071427330858c2daf923ec6ee2f"
+    }
+  ],
+  "conventions": "raw local +X pitch, +Y roll, +Z yaw torques; normalized vessel pitch/roll/yaw inputs",
+  "limitations": [
+    "Five anchors from one historically bypassed run; no gate or landing evidence.",
+    "Rate probe used neutral surfaces; rates with deflected surfaces are not identified.",
+    "Control matrix is an isolated-input finite difference; compound-input response may be nonlinear.",
+    "Surface angles and historical RCS state are unavailable.",
+    "Static zero-torque cancellation is not a dynamic sideslip/attitude controller."
+  ],
+  "anchors": [
+    {
+      "record_sequence": 10837,
+      "ut": 10513.551826182,
+      "mach": 5.38293404514563,
+      "alpha_deg": 22.5983066558838,
+      "beta_deg": 0.39592170715332,
+      "source_control_matrix_nm_per_input": [
+        [
+          -48742.87306225804,
+          -948.2563719352038,
+          290.1718168494578
+        ],
+        [
+          37.75810018289728,
+          -27628.180744431556,
+          3585.047702811365
+        ],
+        [
+          38.25721489988913,
+          21204.04509017573,
+          -5002.056877324994
+        ]
+      ],
+      "source_neutral_torque_nm": [
+        27770.867123168155,
+        298.23114261923183,
+        -328.0620626283526
+      ],
+      "source_compound_torque_nm": [
+        14079.299371998808,
+        185.69917556989822,
+        -166.7627941107894
+      ],
+      "control_matrix_condition_inf": 39.28560945136866,
+      "linear_zero_aerodynamic_torque_trim": [
+        0.569424203865393,
+        0.008061983132589589,
+        -0.027055035148777135
+      ],
+      "trim_within_unit_input_box": true,
+      "trim_linear_residual_nm": [
+        -3.637978807091713e-12,
+        0.0,
+        0.0
+      ],
+      "yaw_input_per_roll_input_for_zero_yaw_torque": 4.239065170629417,
+      "zero_yaw_roll_effectiveness_fraction": 0.4499366066621793,
+      "zero_pitch_and_yaw_torque_roll_effectiveness_fraction": 0.4499229672041648,
+      "zero_pitch_and_yaw_control_direction": [
+        0.00578163911917463,
+        1.0,
+        4.239109390320573
+      ],
+      "unit_box_max_roll_input_in_that_direction": 0.23589860697706064,
+      "compound_input_linear_residual_nm": [
+        -1605.6437196724073,
+        116.19777093477252,
+        -106.38988677450648
+      ],
+      "compound_input_relative_delta_residual": 0.1178234678962893,
+      "recorded_command": [
+        0.313773274421692,
+        -0.00181556597817689,
+        -0.016273831948638
+      ],
+      "rate_comparison": [
+        {
+          "offset_deg_s": 0.1,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.175241466607986,
+          "roll_input_to_yaw_torque_per_quarter_input": 5301.011272543932,
+          "neutral_surface_rate_matrix_condition_inf": 2.3476160085278823
+        },
+        {
+          "offset_deg_s": 1.0,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.27397690446378,
+          "roll_input_to_yaw_torque_per_quarter_input": 5301.011272543932,
+          "neutral_surface_rate_matrix_condition_inf": 2.34908553883338
+        }
+      ]
+    },
+    {
+      "record_sequence": 10873,
+      "ut": 10515.5918261821,
+      "mach": 5.36569136650165,
+      "alpha_deg": 22.4821949005127,
+      "beta_deg": 0.214859262108803,
+      "source_control_matrix_nm_per_input": [
+        [
+          -49629.92008507184,
+          -922.6003541260555,
+          310.23631297181663
+        ],
+        [
+          16.778495597548805,
+          -28253.474620677214,
+          3668.1178556563827
+        ],
+        [
+          -26.910713382943264,
+          21416.961410197942,
+          -5118.020602520525
+        ]
+      ],
+      "source_neutral_torque_nm": [
+        28270.632294519324,
+        164.41204270817616,
+        -199.27731255877552
+      ],
+      "source_compound_torque_nm": [
+        5353.396118026729,
+        86.65086367593585,
+        -1355.9110880142653
+      ],
+      "control_matrix_condition_inf": 38.25964677268352,
+      "linear_zero_aerodynamic_torque_trim": [
+        0.5693785286268533,
+        0.001562360729937479,
+        -0.03539233026884804
+      ],
+      "trim_within_unit_input_box": true,
+      "trim_linear_residual_nm": [
+        0.0,
+        -2.842170943040401e-14,
+        2.842170943040401e-14
+      ],
+      "yaw_input_per_roll_input_for_zero_yaw_torque": 4.184618053247091,
+      "zero_yaw_roll_effectiveness_fraction": 0.4567155931687037,
+      "zero_pitch_and_yaw_torque_roll_effectiveness_fraction": 0.45671626513532143,
+      "zero_pitch_and_yaw_control_direction": [
+        0.0075681720989683975,
+        1.0,
+        4.184578259560038
+      ],
+      "unit_box_max_roll_input_in_that_direction": 0.23897270835248735,
+      "compound_input_linear_residual_nm": [
+        6024.97168345283,
+        628.9374491833037,
+        168.14164950843508
+      ],
+      "compound_input_relative_delta_residual": 0.2640939982877741,
+      "recorded_command": [
+        0.341652363538742,
+        0.0121224150061607,
+        0.24207079410553
+      ],
+      "rate_comparison": [
+        {
+          "offset_deg_s": 0.1,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.431797191653459,
+          "roll_input_to_yaw_torque_per_quarter_input": 5354.240352549486,
+          "neutral_surface_rate_matrix_condition_inf": 2.3455757205049914
+        },
+        {
+          "offset_deg_s": 1.0,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.429382856329539,
+          "roll_input_to_yaw_torque_per_quarter_input": 5354.240352549486,
+          "neutral_surface_rate_matrix_condition_inf": 2.346510093959084
+        }
+      ]
+    },
+    {
+      "record_sequence": 10909,
+      "ut": 10517.6718261821,
+      "mach": 5.34444849148317,
+      "alpha_deg": 23.7139453887939,
+      "beta_deg": -1.29131984710693,
+      "source_control_matrix_nm_per_input": [
+        [
+          -53210.74587425211,
+          -1762.4248165571287,
+          419.8641977312582
+        ],
+        [
+          -193.0609005309331,
+          -29000.475057598913,
+          3713.2445347265702
+        ],
+        [
+          -769.5994548416942,
+          24714.781128913604,
+          -5182.889399748596
+        ]
+      ],
+      "source_neutral_torque_nm": [
+        30725.34119768691,
+        -1234.8222384422916,
+        1141.5730948075943
+      ],
+      "source_compound_torque_nm": [
+        5648.66765388907,
+        -641.110308540105,
+        -1336.4610185566585
+      ],
+      "control_matrix_condition_inf": 51.257253470265184,
+      "linear_zero_aerodynamic_torque_trim": [
+        0.5781499460914921,
+        -0.07502784421570069,
+        -0.22336334959078935
+      ],
+      "trim_within_unit_input_box": true,
+      "trim_linear_residual_nm": [
+        0.0,
+        2.2737367544323206e-13,
+        -2.2737367544323206e-13
+      ],
+      "yaw_input_per_roll_input_for_zero_yaw_torque": 4.768533384122076,
+      "zero_yaw_roll_effectiveness_fraction": 0.3894330871447965,
+      "zero_pitch_and_yaw_torque_roll_effectiveness_fraction": 0.3895485927009321,
+      "zero_pitch_and_yaw_control_direction": [
+        0.004499675599303199,
+        1.0,
+        4.767865234057296
+      ],
+      "unit_box_max_roll_input_in_that_direction": 0.2097374717844181,
+      "compound_input_linear_residual_nm": [
+        6018.529158572463,
+        -160.92765743308013,
+        1280.0595411948827
+      ],
+      "compound_input_relative_delta_residual": 0.24419981206636215,
+      "recorded_command": [
+        0.359628856182098,
+        0.013970198109746,
+        0.244356900453568
+      ],
+      "rate_comparison": [
+        {
+          "offset_deg_s": 0.1,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.634722977760248,
+          "roll_input_to_yaw_torque_per_quarter_input": 6178.695282228401,
+          "neutral_surface_rate_matrix_condition_inf": 2.379170300576391
+        },
+        {
+          "offset_deg_s": 1.0,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.628823391534752,
+          "roll_input_to_yaw_torque_per_quarter_input": 6178.695282228401,
+          "neutral_surface_rate_matrix_condition_inf": 2.376055523096169
+        }
+      ]
+    },
+    {
+      "record_sequence": 10945,
+      "ut": 10519.7118261822,
+      "mach": 5.32228712941101,
+      "alpha_deg": 26.0104675292969,
+      "beta_deg": -2.20898389816284,
+      "source_control_matrix_nm_per_input": [
+        [
+          -60429.78123690276,
+          -2987.488673545231,
+          478.3577734618545
+        ],
+        [
+          -496.4731158642462,
+          -30321.493811094722,
+          3718.808610463081
+        ],
+        [
+          -1955.3928226206153,
+          32486.683652550335,
+          -5192.543466250579
+        ]
+      ],
+      "source_neutral_torque_nm": [
+        36629.464550863515,
+        -2171.5949420852885,
+        2051.7156950013705
+      ],
+      "source_compound_torque_nm": [
+        11855.36365312634,
+        -1802.9856352964089,
+        304.003037799308
+      ],
+      "control_matrix_condition_inf": 111.51542308484255,
+      "linear_zero_aerodynamic_torque_trim": [
+        0.6074431397710958,
+        -0.26285177311328595,
+        -1.4781304597999931
+      ],
+      "trim_within_unit_input_box": false,
+      "trim_linear_residual_nm": [
+        0.0,
+        1.8189894035458565e-12,
+        9.094947017729282e-13
+      ],
+      "yaw_input_per_roll_input_for_zero_yaw_torque": 6.256410536320123,
+      "zero_yaw_roll_effectiveness_fraction": 0.23267654562104795,
+      "zero_pitch_and_yaw_torque_roll_effectiveness_fraction": 0.23268203047160868,
+      "zero_pitch_and_yaw_control_direction": [
+        8.767443496118799e-05,
+        1.0,
+        6.256377520137984
+      ],
+      "unit_box_max_roll_input_in_that_direction": 0.15983690191028388,
+      "compound_input_linear_residual_nm": [
+        4617.151855936394,
+        -220.7886472354955,
+        583.541796416888
+      ],
+      "compound_input_relative_delta_residual": 0.18757707940868695,
+      "recorded_command": [
+        0.3343386054039,
+        0.00733287259936333,
+        0.144173711538315
+      ],
+      "rate_comparison": [
+        {
+          "offset_deg_s": 0.1,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.4536470402345,
+          "roll_input_to_yaw_torque_per_quarter_input": 8121.670913137584,
+          "neutral_surface_rate_matrix_condition_inf": 2.4082192784826675
+        },
+        {
+          "offset_deg_s": 1.0,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.618175296489426,
+          "roll_input_to_yaw_torque_per_quarter_input": 8121.670913137584,
+          "neutral_surface_rate_matrix_condition_inf": 2.4134308959982076
+        }
+      ]
+    },
+    {
+      "record_sequence": 10980,
+      "ut": 10521.7118261822,
+      "mach": 5.2997571781291,
+      "alpha_deg": 27.8780193328857,
+      "beta_deg": -1.43182587623596,
+      "source_control_matrix_nm_per_input": [
+        [
+          -66012.25115362518,
+          -3171.127434055719,
+          417.4023395238813
+        ],
+        [
+          -467.581113757066,
+          -30873.574737793402,
+          3730.942698816216
+        ],
+        [
+          -2206.7936805869554,
+          43230.11894040221,
+          -5207.711504034402
+        ]
+      ],
+      "source_neutral_torque_nm": [
+        43707.311161908685,
+        -1540.608466160913,
+        1303.4026732991442
+      ],
+      "source_compound_torque_nm": [
+        22684.815865404795,
+        -490.26134090048436,
+        -49.47857625848883
+      ],
+      "control_matrix_condition_inf": 11370.464660485466,
+      "linear_zero_aerodynamic_torque_trim": [
+        0.7603251065482108,
+        22.16961025445568,
+        183.9618821920685
+      ],
+      "trim_within_unit_input_box": false,
+      "trim_linear_residual_nm": [
+        0.0,
+        7.275957614183426e-11,
+        -1.3278622645884752e-10
+      ],
+      "yaw_input_per_roll_input_for_zero_yaw_torque": 8.301173923884212,
+      "zero_yaw_roll_effectiveness_fraction": -0.0031622352110216414,
+      "zero_pitch_and_yaw_torque_roll_effectiveness_fraction": -0.0028677011750571613,
+      "zero_pitch_and_yaw_control_direction": [
+        0.004438825435286148,
+        1.0,
+        8.299292949503771
+      ],
+      "unit_box_max_roll_input_in_that_direction": 0.12049219205592589,
+      "compound_input_linear_residual_nm": [
+        4456.818793906674,
+        -748.4303264549395,
+        210.987430582883
+      ],
+      "compound_input_relative_delta_residual": 0.21449429627660502,
+      "recorded_command": [
+        0.251629710197449,
+        -0.00697497837245464,
+        0.0547399409115314
+      ],
+      "rate_comparison": [
+        {
+          "offset_deg_s": 0.1,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.478953329387878,
+          "roll_input_to_yaw_torque_per_quarter_input": 10807.529735100552,
+          "neutral_surface_rate_matrix_condition_inf": 2.4254953187515516
+        },
+        {
+          "offset_deg_s": 1.0,
+          "yaw_rate_to_roll_torque_per_one_deg_s": 6.352049752353196,
+          "roll_input_to_yaw_torque_per_quarter_input": 10807.529735100552,
+          "neutral_surface_rate_matrix_condition_inf": 2.420150743980312
+        }
+      ]
+    }
+  ],
+  "interpretation": "The isolated surface matrix predicts substantial yaw torque from roll input. Cancelling it consumes yaw input and reduces the static roll effectiveness. The final anchor is near a cancellation singularity, but compound-input residuals are too large to establish the sign of the remaining roll authority. Do not invert these matrices into flight gains or change the low-q bank ramp. A dynamic actuator model needs joint-input and surface/rate evidence first."
+}
