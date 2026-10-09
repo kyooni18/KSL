@@ -430,3 +430,7 @@ The existing offline `engageHACTest` path is running from this reconstructed sta
 ### Running downstream search CPU investigation
 
 `counterfactual-bank70-planner-runtime-sample.json` records a one-second native macOS CPU sample of the still-running backend (PID 98359, session 2028). Both MM305 planner and terminal shadow predictor were computing; the predictor stack includes provisional acquisition native profile/replay searches. Repeated lockstep frames therefore do not alone establish a dead connection. This sample is not a whole-run timing profile, terminal outcome, route qualification or landing evidence. No algorithm, timestep, retry cadence or gate changed. The run remains pending.
+
+### Original-STS neutral pitch moment evidence
+
+`terminal-polar-neutral-pitch-moment-analysis.json` rotates the already retained static API torque into vessel body coordinates (pitch body X), normalizes by sampled pressure and fits incidence dependence at 20 km/TAS 400 and 650 m/s. At 650 m/s, neutral pitch moment is about +140 kN·m at 12° and +382 kN·m at 28°. This establishes a substantial static trim demand, but no control derivative was sampled in this terminal grid. It therefore cannot replace or validate the borrowed STS-N trim line, whose 0.75 input budget gives a 13.553° ceiling. A defensible original-STS trim model needs matched incidence and elevator-effectiveness data; force-only or neutral-moment-only evidence cannot justify expanding the ceiling. No new live API calls, controller or gate changes occurred. The downstream test continues separately.

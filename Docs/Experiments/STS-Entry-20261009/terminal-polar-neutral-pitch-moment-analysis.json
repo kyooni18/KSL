@@ -1,0 +1,117 @@
+{
+  "classification": "offline analysis of hypothetical neutral-surface original-STS API moments; no flight validation",
+  "source": "Docs/Experiments/STS-Entry-20261009/live-terminal-speed-polar-20261009.json",
+  "sourceSHA256": "eb996f89c059eb2b486b48d5728827d28a2ba868c71ec50e7759b605d355e141",
+  "method": "Quaternion inverse rotation of supplied frame torque to vessel body; pitch is body X. Divide by sampled q. Ordinary least squares vs alpha on each fixed altitude/speed cell.",
+  "cells": [
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "samples": [
+        {
+          "alphaDeg": 0.0,
+          "pitchTorqueNm_bodyX": -27591.60155272401,
+          "pitchTorquePerQNmPa": -8.614953366004272,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 5.0,
+          "pitchTorqueNm_bodyX": 13878.87834789494,
+          "pitchTorquePerQNmPa": 4.333416076304461,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 8.0,
+          "pitchTorqueNm_bodyX": 37123.691685115075,
+          "pitchTorquePerQNmPa": 11.59116740759155,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 12.0,
+          "pitchTorqueNm_bodyX": 64638.976224290745,
+          "pitchTorquePerQNmPa": 20.18229223607888,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 15.0,
+          "pitchTorqueNm_bodyX": 81981.3251506236,
+          "pitchTorquePerQNmPa": 25.597111197270415,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 18.0,
+          "pitchTorqueNm_bodyX": 98285.1052342803,
+          "pitchTorquePerQNmPa": 30.687656769331458,
+          "qPa": 3202.7569251394975
+        },
+        {
+          "alphaDeg": 28.0,
+          "pitchTorqueNm_bodyX": 183174.43701828297,
+          "pitchTorquePerQNmPa": 57.19273778802452,
+          "qPa": 3202.7569251394975
+        }
+      ],
+      "linearInterceptNmPa": -7.89483229830941,
+      "linearSlopeNmPaPerDegree": 2.2817820255437544,
+      "maximumLinearResidualNmPa": 2.4895873921467135
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "samples": [
+        {
+          "alphaDeg": 0.0,
+          "pitchTorqueNm_bodyX": -59584.200738332904,
+          "pitchTorquePerQNmPa": -7.045314888470134,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 5.0,
+          "pitchTorqueNm_bodyX": 30286.91205447357,
+          "pitchTorquePerQNmPa": 3.5811646338975187,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 8.0,
+          "pitchTorqueNm_bodyX": 80460.29048736733,
+          "pitchTorquePerQNmPa": 9.51373141666717,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 12.0,
+          "pitchTorqueNm_bodyX": 139964.90611777955,
+          "pitchTorquePerQNmPa": 16.549636056467588,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 15.0,
+          "pitchTorqueNm_bodyX": 177803.13622930372,
+          "pitchTorquePerQNmPa": 21.02367854851661,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 18.0,
+          "pitchTorqueNm_bodyX": 213251.09082477656,
+          "pitchTorquePerQNmPa": 25.215091694663403,
+          "qPa": 8457.280005446486
+        },
+        {
+          "alphaDeg": 28.0,
+          "pitchTorqueNm_bodyX": 382177.01636065816,
+          "pitchTorquePerQNmPa": 45.18911708191479,
+          "qPa": 8457.280005446486
+        }
+      ],
+      "linearInterceptNmPa": -6.047960714056902,
+      "linearSlopeNmPaPerDegree": 1.818172436535526,
+      "maximumLinearResidualNmPa": 1.4640514489191645
+    }
+  ],
+  "borrowedTrimCeilingDeg": 13.553191489361703,
+  "limitations": [
+    "Neutral-surface moments do not identify elevator effectiveness, control-input trim, achievable incidence, servo response, or full travel margin.",
+    "TAS650 at20km is about Mach2.18 under identified atmosphere, below Mach2.5 fixture; no extrapolated trim model adopted.",
+    "Moment origin and loaded part state follow retained KSP hypothetical API; not an independent live flight."
+  ],
+  "controllerOrGateChanges": false
+}
