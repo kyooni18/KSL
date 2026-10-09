@@ -11,6 +11,7 @@
     }
   ],
   "conventions": "raw local +X pitch, +Y roll, +Z yaw torques; normalized vessel pitch/roll/yaw inputs",
+  "isolated_control_amplitude": 0.15,
   "limitations": [
     "Five anchors from one historically bypassed run; no gate or landing evidence.",
     "Rate probe used neutral surfaces; rates with deflected surfaces are not identified.",
@@ -88,15 +89,22 @@
         {
           "offset_deg_s": 0.1,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.175241466607986,
-          "roll_input_to_yaw_torque_per_quarter_input": 5301.011272543932,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3180.6067635263594,
           "neutral_surface_rate_matrix_condition_inf": 2.3476160085278823
         },
         {
           "offset_deg_s": 1.0,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.27397690446378,
-          "roll_input_to_yaw_torque_per_quarter_input": 5301.011272543932,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3180.6067635263594,
           "neutral_surface_rate_matrix_condition_inf": 2.34908553883338
         }
+      ],
+      "recorded_command_outside_isolated_probe_interval": [
+        true,
+        false,
+        false
       ]
     },
     {
@@ -168,15 +176,22 @@
         {
           "offset_deg_s": 0.1,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.431797191653459,
-          "roll_input_to_yaw_torque_per_quarter_input": 5354.240352549486,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3212.5442115296914,
           "neutral_surface_rate_matrix_condition_inf": 2.3455757205049914
         },
         {
           "offset_deg_s": 1.0,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.429382856329539,
-          "roll_input_to_yaw_torque_per_quarter_input": 5354.240352549486,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3212.5442115296914,
           "neutral_surface_rate_matrix_condition_inf": 2.346510093959084
         }
+      ],
+      "recorded_command_outside_isolated_probe_interval": [
+        true,
+        false,
+        true
       ]
     },
     {
@@ -248,15 +263,22 @@
         {
           "offset_deg_s": 0.1,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.634722977760248,
-          "roll_input_to_yaw_torque_per_quarter_input": 6178.695282228401,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3707.2171693370406,
           "neutral_surface_rate_matrix_condition_inf": 2.379170300576391
         },
         {
           "offset_deg_s": 1.0,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.628823391534752,
-          "roll_input_to_yaw_torque_per_quarter_input": 6178.695282228401,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 3707.2171693370406,
           "neutral_surface_rate_matrix_condition_inf": 2.376055523096169
         }
+      ],
+      "recorded_command_outside_isolated_probe_interval": [
+        true,
+        false,
+        true
       ]
     },
     {
@@ -328,15 +350,22 @@
         {
           "offset_deg_s": 0.1,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.4536470402345,
-          "roll_input_to_yaw_torque_per_quarter_input": 8121.670913137584,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 4873.00254788255,
           "neutral_surface_rate_matrix_condition_inf": 2.4082192784826675
         },
         {
           "offset_deg_s": 1.0,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.618175296489426,
-          "roll_input_to_yaw_torque_per_quarter_input": 8121.670913137584,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 4873.00254788255,
           "neutral_surface_rate_matrix_condition_inf": 2.4134308959982076
         }
+      ],
+      "recorded_command_outside_isolated_probe_interval": [
+        true,
+        false,
+        false
       ]
     },
     {
@@ -408,15 +437,22 @@
         {
           "offset_deg_s": 0.1,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.478953329387878,
-          "roll_input_to_yaw_torque_per_quarter_input": 10807.529735100552,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 6484.517841060331,
           "neutral_surface_rate_matrix_condition_inf": 2.4254953187515516
         },
         {
           "offset_deg_s": 1.0,
           "yaw_rate_to_roll_torque_per_one_deg_s": 6.352049752353196,
-          "roll_input_to_yaw_torque_per_quarter_input": 10807.529735100552,
+          "roll_input_amplitude": 0.15,
+          "roll_input_to_yaw_torque_at_probe_amplitude": 6484.517841060331,
           "neutral_surface_rate_matrix_condition_inf": 2.420150743980312
         }
+      ],
+      "recorded_command_outside_isolated_probe_interval": [
+        true,
+        false,
+        false
       ]
     }
   ],

@@ -62,9 +62,13 @@ def main():
     if controls['status']!='complete' or rates['status']!='complete':
         ap.error('both source probes must be complete')
     rate_by_record={a['anchorRecordSequence']:a for a in rates['anchorMatrices']}
+    basis_amplitude=float(controls['gridDefinition']['isolatedControlAmplitude'])
+    if not 0 < basis_amplitude <= 1:
+        raise ValueError('invalid isolated control amplitude')
     report=dict(classification='offline analysis of hypothetical aerodynamic API responses; unqualified',
                 sources=[identity(args.controls),identity(args.rates)],
                 conventions='raw local +X pitch, +Y roll, +Z yaw torques; normalized vessel pitch/roll/yaw inputs',
+                isolated_control_amplitude=basis_amplitude,
                 limitations=['Five anchors from one historically bypassed run; no gate or landing evidence.',
                              'Rate probe used neutral surfaces; rates with deflected surfaces are not identified.',
                              'Control matrix is an isolated-input finite difference; compound-input response may be nonlinear.',
@@ -94,7 +98,8 @@ def main():
             d=r['matrixNmPerRadPerSecond_bodyTorqueXYZ_by_bodyRateXYZ']
             derivatives.append(dict(offset_deg_s=r['centralDifferenceOffsetDegPerSecond'],
                                     yaw_rate_to_roll_torque_per_one_deg_s=d[1][2]*math.pi/180,
-                                    roll_input_to_yaw_torque_per_quarter_input=b[2][1]*.25,
+                                    roll_input_amplitude=basis_amplitude,
+                                    roll_input_to_yaw_torque_at_probe_amplitude=b[2][1]*basis_amplitude,
                                     neutral_surface_rate_matrix_condition_inf=condition_inf(d)))
         report['anchors'].append(dict(record_sequence=record,ut=anchor['ut'],mach=anchor['mach'],
             alpha_deg=anchor['angleOfAttackDeg'],beta_deg=anchor['sideslipDeg'],
@@ -113,6 +118,8 @@ def main():
             compound_input_linear_residual_nm=residual,
             compound_input_relative_delta_residual=norm(residual)/max(1e-12,norm(observed_delta)),
             recorded_command=command, rate_comparison=derivatives))
+        report['anchors'][-1]['recorded_command_outside_isolated_probe_interval'] = [
+            abs(x)>basis_amplitude for x in command]
     report['interpretation']=(
         'The isolated surface matrix predicts substantial yaw torque from roll input. '
         'Cancelling it consumes yaw input and reduces the static roll effectiveness. '
