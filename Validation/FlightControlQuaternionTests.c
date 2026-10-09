@@ -200,7 +200,32 @@ static void live_reported_authority_wins_over_stale_learned_authority(void){
     assert_close(out.diagnostics.roll_raw_authority,reported,1e-6);
 }
 
+static void learned_trim_transfer_preserves_elevator_demand(void) {
+    FlightControlState state;flight_control_init(&state,.1);
+    Telemetry t=atmospheric_sample();
+    GuidanceCommand c=entry_command();c.control_profile=PROFILE_TAEM;
+    FlightControlAttitudeError e={.valid=true};
+    FlightControlOutput out={0};
+    state.pitch_trim=.35;
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    FlightControlState baseline=state;
+    GuidanceCommand unchanged=c;
+    FlightControlOutput reference={0};
+    c.has_pitch_trim_feedforward=true;c.pitch_trim_feedforward=.35;
+    t.ut+=.1;
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    assert(flight_control_step_attitude(&baseline,&t,&unchanged,&e,.1,&reference));
+    assert_close(out.pitch,reference.pitch,1e-9);
+    assert_close(state.pitch_trim,0,1e-9);
+    c.has_pitch_trim_feedforward=false;t.ut+=.1;
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    assert(flight_control_step_attitude(&baseline,&t,&unchanged,&e,.1,&reference));
+    assert_close(out.pitch,reference.pitch,1e-9);
+    assert_close(state.pitch_trim,.35,1e-9);
+}
+
 int main(void){
+    learned_trim_transfer_preserves_elevator_demand();
     airframe_error_tracks_aerodynamic_coordinates();
     airframe_error_uses_shortest_roll_rotation();
     quaternion_controller_ignores_euler_roll_alias();

@@ -187,6 +187,7 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->heading_rate = 0.0;
     state->sideslip_rate = 0.0;
     state->pitch_trim = 0.0;
+    state->applied_pitch_trim_feedforward = 0.0;
     state->terminal_pitch_integral = 0.0;
     state->roll_trim = 0.0;
     state->has_terminal_pitch_authority = false;
@@ -850,6 +851,13 @@ bool flight_control_step_attitude(FlightControlState *state,
     /* Regime-wide aerodynamic pitch trim with anti-windup. Quaternion attitude
        error is the transient 3-D tracking coordinate; trim remains tied to the
        physical AoA error so bank/yaw maneuvers cannot wind elevator bias. */
+    double pitch_feedforward = profile == PROFILE_TAEM &&
+        command->has_pitch_trim_feedforward &&
+        isfinite(command->pitch_trim_feedforward) ?
+        fc_clamp(command->pitch_trim_feedforward,-0.75,0.75) : 0.0;
+    /* Transfer learned trim without counting the existing integral twice. */
+    state->pitch_trim -= pitch_feedforward-state->applied_pitch_trim_feedforward;
+    state->applied_pitch_trim_feedforward=pitch_feedforward;
     bool trim_active = !state->main_gear_contact_latched &&
                        fc_atmospheric_profile(profile) &&
                        q > 100.0;
@@ -865,10 +873,7 @@ bool flight_control_step_attitude(FlightControlState *state,
         double ki = in_approach ? tuning->pitch_trim_ki :
             (profile == PROFILE_TAEM ? 0.025 : 0.008);
         /* Anti-windup on the total elevator demand, not just its PD part. */
-        double elevator_total = pitch_command + state->pitch_trim +
-            (profile == PROFILE_TAEM && command->has_pitch_trim_feedforward &&
-             isfinite(command->pitch_trim_feedforward) ?
-             command->pitch_trim_feedforward : 0.0);
+        double elevator_total = pitch_command + state->pitch_trim + pitch_feedforward;
         bool saturated_high =
             elevator_total >= 1.0 && aerodynamic_pitch_error > 0.0;
         bool saturated_low =
@@ -894,10 +899,6 @@ bool flight_control_step_attitude(FlightControlState *state,
         state->pitch_trim *= fmax(0.0, 1.0 - control_dt);
     }
     state->terminal_pitch_integral = state->pitch_trim;
-    double pitch_feedforward = profile == PROFILE_TAEM &&
-        command->has_pitch_trim_feedforward &&
-        isfinite(command->pitch_trim_feedforward) ?
-        command->pitch_trim_feedforward : 0.0;
     pitch_command =
         fc_clamp(pitch_command + pitch_feedforward + state->pitch_trim, -1.0, 1.0);
 

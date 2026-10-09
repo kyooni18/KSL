@@ -116,7 +116,7 @@ bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
 
 /* Learn both trim coefficients from this vehicle's settled response. */
 static void mm305_trim_observe(GuidanceMachine *g, const Telemetry *t) {
-    if (!g || !t) return;
+    if (!g || !t || g->diagnostic_shadow) return;
     double rate=t->has_angle_of_attack_rate&&isfinite(t->angle_of_attack_rate)?
         t->angle_of_attack_rate:t->pitch_rate;
     double error=g->mm305_command_aoa_rad*RAD2DEG-t->angle_of_attack;

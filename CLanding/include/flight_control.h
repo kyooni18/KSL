@@ -156,6 +156,7 @@ typedef struct {
     FlightControlBetaModel beta;
 
     double pitch_trim;
+    double applied_pitch_trim_feedforward;
     double terminal_pitch_integral;
     double roll_trim;
     double terminal_pitch_authority;
