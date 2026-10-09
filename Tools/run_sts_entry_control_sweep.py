@@ -18,8 +18,10 @@ def main():
                     help='28 deg AoA, alternating +/-40 deg bank every 60/120/180 s')
     ap.add_argument('--incidence-switch-sweep',action='store_true',
                     help='18 to 28 deg at 150/300/450 s, +/-40 bank every 60 s')
+    ap.add_argument('--vehicle-bank-sweep',action='store_true',
+                    help='offline configured-vehicle authority test: +/-50/60/70 bank every 60 s')
     args=ap.parse_args()
-    if args.reversal_sweep and args.incidence_switch_sweep:
+    if sum((args.reversal_sweep,args.incidence_switch_sweep,args.vehicle_bank_sweep))>1:
         ap.error('choose one sweep family')
     binary=ROOT/'ShuttleSim/build/shuttlesim'
     scenario=ROOT/'ShuttleSim/scenarios/sts70km-run9-provisional.ini'
@@ -29,10 +31,13 @@ def main():
     cfg=json.loads((ROOT/'Configuration/sts.json').read_text())
     report=dict(classification='offline prescribed-command STS entry diagnostic; no controller, admission or landing qualification',status='running',sourceHashes={str(p.relative_to(ROOT)):sha(p) for p in (binary,scenario,aero,atmosphere,attitude,ROOT/'Configuration/sts.json')},runs=[],limits=dict(qPa=cfg['vehicle']['maximumDynamicPressure'],normalLoadG=cfg['vehicle']['maximumGLoad']),limitations=['Borrowed STS-N servo; provisional STS aero and Mach mapping.','Prescribed commands ignore guidance and lateral runway capture; this is not a proposed flight law.','Report to first 22 km descending crossing only; no downstream feasibility or rollout proof.','Published 10 Hz telemetry extrema may miss intersample peaks.'])
     with tempfile.TemporaryDirectory(prefix='sts-entry-sweep-') as directory:
-        cases = [(28,40,60,switch) for switch in (150,300,450)] if args.incidence_switch_sweep else (
+        cases = [(28,bank,60,0) for bank in (50,60,70)] if args.vehicle_bank_sweep else (
+            [(28,40,60,switch) for switch in (150,300,450)] if args.incidence_switch_sweep else (
             [(28,40,period,0) for period in (60,120,180)] if args.reversal_sweep else [
-            (alpha,bank,0,0) for alpha in (18,24,28) for bank in (0,40)])
+            (alpha,bank,0,0) for alpha in (18,24,28) for bank in (0,40)]))
         for alpha,bank,period,switch in cases:
+            if alpha>cfg['vehicle']['maximumAngleOfAttack'] or bank>cfg['vehicle']['maximumBankAngle']:
+                raise ValueError('sweep command exceeds configured vehicle authority')
             output=Path(directory)/f'a{alpha}-b{bank}.jsonl'
             cmd=[str(binary),'--scenario',str(scenario),'--aero',str(aero),'--atmosphere',str(atmosphere),'--attitude',str(attitude),'--fixed-aoa',str(alpha),'--fixed-bank',str(bank),'--rate','max','--max-sim-time','900','--command-port','0','--telemetry-port','0','--web-telemetry-port','0','--record',str(output),'--quiet']
             replay = None
@@ -69,6 +74,8 @@ def main():
             record=dict(alphaCommandDeg=alpha,bankCommandDeg=bank,recordSHA256=sha(output),reached22km=crossing is not None,maximumQPa=maxq,maximumNormalLoadG=maxg,withinPublishedQAndG=maxq<=report['limits']['qPa'] and maxg<=report['limits']['normalLoadG'],lastOrCrossingState=rows[-1])
             record.update(reversalPeriodS=period,initialAlphaDeg=18 if switch else alpha,
                           incidenceSwitchTimeS=switch,replaySHA256=sha(replay) if replay else None)
+            record['descendingMilestones']={str(h):next((r for r in rows
+                if r['position']['altitude_m']<=h),None) for h in (30000,26000,24000,22000)}
             report['runs'].append(record)
             args.report.write_text(json.dumps(report,indent=2)+'\n')
             print(alpha,bank,'period',period,'crossed',crossing is not None,'along',rows[-1]['runway']['along_m'],'V',rows[-1]['velocity']['air_mps'],flush=True)
