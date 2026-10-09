@@ -1,0 +1,28 @@
+{
+  "source": "FlightLogs/2026-10-09T08-33-23Z-STS-vehicle.jsonl",
+  "sessionId": "2026-10-09T08-33-23Z-73962-234720614273",
+  "window": [
+    1935,
+    2040
+  ],
+  "records": 2201,
+  "maxAbsolute": {
+    "sideslip": 5.88630342483521,
+    "bodyPitchRate": 1.92462540900439,
+    "bodyRollRate": 9.57585289439284,
+    "bodyYawRate": 3.1288200295183,
+    "aoaError": 1.6781769592315001
+  },
+  "last": {
+    "ut": 2039.98986328035,
+    "altitude": 42309.0565842813,
+    "phase": "MM304 Entry",
+    "angleOfAttack": 23.3706874847412,
+    "sideslip": -4.49440813064575,
+    "bodyPitchRate": 0.195502376007807,
+    "bodyRollRate": 4.49124997763402,
+    "bodyYawRate": 2.71390465708257,
+    "aoaError": -1.6781769592315001
+  },
+  "interpretation": "Live bank tracking develops oscillations before reversal. Recovery and MM305 are not yet validated. No controller change made during this active attempt."
+}
