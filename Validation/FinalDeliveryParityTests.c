@@ -125,9 +125,35 @@ static void test_plan_age_is_qualification_age(void) {
     assert(guidance.mm305_route_committed);
 }
 
+static void test_direct_runway_fallback_uses_response_window(void) {
+    GuidanceMachine guidance;
+    guidance_machine_init(&guidance);
+    RunwayCaptureEnvelope capture={
+        .valid=true,
+        .reachable=false,
+        .control_response_time_s=2.0
+    };
+    /* At 200 m/s the measured two-second response reserve opens 400 m before
+       the configured station, but does not trigger farther out. */
+    assert(terminal_direct_runway_fallback_window(&guidance,-8300.0,200.0,
+        8000.0,&capture));
+    assert(!terminal_direct_runway_fallback_window(&guidance,-8500.0,200.0,
+        8000.0,&capture));
+    capture.reachable=true;
+    assert(!terminal_direct_runway_fallback_window(&guidance,-8300.0,200.0,
+        8000.0,&capture));
+    guidance.mm305_route_committed=true;
+    capture.reachable=false;
+    assert(!terminal_direct_runway_fallback_window(&guidance,-8300.0,200.0,
+        8000.0,&capture));
+    assert(terminal_direct_runway_fallback_window(&guidance,-7900.0,200.0,
+        8000.0,&capture));
+}
+
 int main(void) {
     test_touchdown_forecast_handoff_parity();
     test_plan_age_is_qualification_age();
+    test_direct_runway_fallback_uses_response_window();
     puts("Final forecast handoff parity and plan freshness tests passed.");
     return 0;
 }

@@ -178,6 +178,9 @@ bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t
 bool terminal_outer_gate(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,
         TerminalPreflarePlan*out_plan);
+bool terminal_direct_runway_fallback_window(const GuidanceMachine*g,
+        double runway_along_m,double horizontal_speed,double final_station_distance,
+        const RunwayCaptureEnvelope*capture);
 bool terminal_outer_capture_admissible(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,
         TerminalPreflarePlan*out_plan);
