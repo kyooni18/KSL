@@ -108,6 +108,14 @@ typedef struct {
 } GuidanceResult;
 
 typedef struct { double e,n; } HACPoint2;
+/* MM305 predictive energy law state (guidance/taem/energy_law.inc). */
+typedef struct {
+    bool initialized, loop;
+    int leg, side;
+    double radius, r_turn, x_turn, turn_cx, turn_cy;
+    double k, s_req, s_go, last_geo_ut, last_pred_ut;
+    bool admit_pending; double admit_since_ut;
+} TaemEnergyLawState;
 
 typedef enum {
     TERMINAL_PATH_NONE = 0,
@@ -294,6 +302,7 @@ typedef struct {
     SpeedbrakeController speedbrake_controller;
     JerkLimiter pitch_limiter, roll_limiter, heading_limiter; SlewLimiter throttle_limiter;
     GuidancePhase last_stabilized_phase; bool has_last_stabilized_phase;
+    TaemEnergyLawState taem_energy_law;
 } GuidanceMachine;
 TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
     const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,

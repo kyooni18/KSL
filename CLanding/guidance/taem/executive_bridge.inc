@@ -17,10 +17,15 @@ static TaemExecInputs taem_exec_inputs_live_with_contract(
     bool native_route=g->mm305_route_committed&&g->mm305_route.valid;
     bool direct_route=g->mm305_direct_approach_degraded&&
         g->terminal_path_kind==TERMINAL_PATH_DIRECT&&g->terminal_path_committed;
-    inputs.terminal_path_selected=g->terminal_final_test_mode||native_route||direct_route;
-    inputs.terminal_path_captured=g->terminal_final_test_mode||native_route||direct_route;
+    /* The predictive energy law owns the path itself; it is on the runway
+       line (Runway Alignment) once its final leg is reached. */
+    bool energy_law_route=cfg&&cfg->guidance.taem_energy_law&&
+        g->taem_energy_law.initialized&&g->taem_energy_law.leg==TEL_LEG_FINAL;
+    inputs.terminal_path_selected=g->terminal_final_test_mode||native_route||direct_route||
+        energy_law_route;
+    inputs.terminal_path_captured=inputs.terminal_path_selected;
     inputs.final_intercept_ready=g->terminal_final_test_mode||
-        ((native_route||direct_route)&&g->mm305_hac_exit_reached);
+        ((native_route||direct_route||energy_law_route)&&g->mm305_hac_exit_reached);
     inputs.final_approach_ready=has_final_approach_override?
         final_approach_override:g->final_approach_captured;
     if(terminal_contract)inputs.terminal_contract=*terminal_contract;

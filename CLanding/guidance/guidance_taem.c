@@ -20,6 +20,7 @@
 
 #include "taem/state.inc"
 #include "taem/energy.inc"
+#include "taem/energy_law.inc"
 #include "taem/executive_bridge.inc"
 
 double terminal_energy_commit_tolerance = NAN;
@@ -1471,6 +1472,135 @@ bool terminal_direct_runway_fallback_window(const GuidanceMachine *g,
         runway_along_m>=-final_station_distance-capture_distance;
 }
 
+/* Runway-line capture for the energy law's final leg: the same lag-aware
+   cross-track rate closure Final uses (guidance/final/sequence.inc), so the
+   delivered track already satisfies Final's pavement-projection gate. */
+static double taem_energy_law_line_bank(const GuidanceMachine *g,const Telemetry *t,
+        const LandingConfiguration *cfg,double course) {
+    const double g0=9.81;
+    double Vh=fmax(1.0,t->horizontal_speed);
+    double track_error=norm_signed_deg(course-cfg->site.runway_heading)*DEG2RAD;
+    double cross_rate=Vh*sin(track_error);
+    double along=t->runway_along_track;
+    double align_time=fmax(6.0,fmax(0.0,-2800.0-along)/Vh);
+    double omega=clampd(2.2/align_time,.06,.18);
+    double bank_limit=fmin(30.0,terminal_lateral_bank_limit(t,&cfg->vehicle));
+    double lift_accel=isfinite(t->lift_force)&&t->lift_force>0.0&&t->mass>1.0?
+        t->lift_force/t->mass:g0;
+    lift_accel=fmax(.3*g0,lift_accel);
+    double later_bank=fmin(bank_limit,10.0);
+    double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
+    double y=clampd(t->runway_cross_track,-2000.0,2000.0);
+    GuidanceAttitudeLimits roll_limits=decision_guidance_attitude_limits(t,&cfg->guidance,
+        PHASE_FINAL,false);
+    double roll_now=g->roll_limiter.has_value?norm_signed_deg(g->roll_limiter.value):
+        norm_signed_deg(t->roll);
+    double roll_rate_now=g->roll_limiter.has_value?g->roll_limiter.rate:
+        (isfinite(t->roll_rate)?t->roll_rate:0.0);
+    double reversal_time=decision_axis_capture_time(2.0*later_bank,0.0,
+        roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
+    const double RATE_CLOSURE_TAU=2.0;
+    double omega_limit=.25/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
+    double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
+    double desired_rate=-y*rate_gain;
+    double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);
+    double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
+    double lateral_accel=0.0;
+    for (int it=0;it<3;++it) {
+        double bank_goal=asin(clampd(lateral_accel/lift_accel,-1.0,1.0))*RAD2DEG;
+        double swing=decision_axis_capture_time(bank_goal-roll_now,roll_rate_now,
+            roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
+        if (!isfinite(swing)) swing=isfinite(reversal_time)?reversal_time:10.0;
+        lateral_accel=clampd((desired_rate-cross_rate-.5*present_accel*swing)/
+            (.5*swing+RATE_CLOSURE_TAU),-lateral_limit,lateral_limit);
+    }
+    return clampd(asin(clampd(lateral_accel/lift_accel,-1.0,1.0))*RAD2DEG,
+        -bank_limit,bank_limit);
+}
+
+/* MM305 owned by the predictive energy law: no route planning, no supersonic
+   direct fallback.  Final ownership still requires Final's own measured
+   capture/delivery contract, exactly as on the direct runway line. */
+static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetry *t,
+        double course,const PlanetModel *planet,AerodynamicModel aero,
+        const LandingConfiguration *cfg,const TerminalModel *control_model,
+        const TaemGeometryState *geometry,const TerminalDynamicState *current,double dt) {
+    double aoa=NAN,bank=NAN;
+    TaemEnergyLawState *L=&g->taem_energy_law;
+    if (!taem_energy_law_step(L,control_model,geometry,current->mass_kg,
+            t->angle_of_attack,t->ut,&aoa,&bank))
+        return terminal_abort(g,"MM305 energy law could not produce a bounded command.");
+    static _Thread_local double trace_last_ut=-INFINITY;
+    if (!g->diagnostic_shadow&&(!isfinite(trace_last_ut)||t->ut<trace_last_ut||
+            t->ut-trace_last_ut>=2.0)) {
+        trace_last_ut=t->ut;
+        fprintf(stderr,
+            "TAEM_ENERGY ut=%.1f along=%+.0f cross=%+.0f h=%.0f V=%.1f M=%.2f fpa=%.1f hdgErr=%+.1f k=%.2f loop=%d leg=%d side=%+d R=%.0f xTurn=%.0f sGo=%.0f sReq=%.0f aoa=%.1f/%.1f bank=%+.1f/%+.1f\n",
+            t->ut,geometry->runway_along_m,geometry->runway_cross_m,
+            geometry->altitude_above_runway_m,geometry->airspeed_mps,t->mach,
+            geometry->flight_path_angle_deg,geometry->heading_error_deg,L->k,(int)L->loop,
+            L->leg,L->side,L->radius,L->x_turn,L->s_go,L->s_req,t->angle_of_attack,aoa,t->roll,bank);
+    }
+    double heading=course;
+    if (L->leg==TEL_LEG_FINAL) {
+        bank=taem_energy_law_line_bank(g,t,cfg,course);
+        heading=norm_deg(cfg->site.runway_heading+clampd(atan2(-t->runway_cross_track,
+            fmax(400.0,t->true_air_speed*6.0))*RAD2DEG,-20.0,20.0));
+    }
+    GuidanceCommand command=atmospheric(t,heading,bank,&cfg->vehicle,0.0,false,PROFILE_TAEM);
+    command.heading_control_enabled=false;
+    command.hac_control_tuning=true;
+    command.terminal_pitch_tuning=true;
+    command.has_target_aoa=true;
+    command.target_aoa=clampd(aoa,0.0,cfg->vehicle.maximum_angle_of_attack);
+    command.target_pitch=t->flight_path_angle+command.target_aoa;
+    command.gear=t->gear||t->radar_altitude<=cfg->guidance.gear_deployment_altitude;
+    g->terminal_path_committed=true;
+    g->terminal_path_kind=TERMINAL_PATH_DIRECT;
+    g->mm305_acquisition_route_valid=false;
+    double station=fmax(500.0,control_model->guidance.final_approach_distance);
+    if (L->leg==TEL_LEG_FINAL&&geometry->runway_along_m>=-station-2000.0) {
+        TerminalPreflarePlan final_plan={0};
+        bool final_approach=terminal_outer_capture_admissible(g,t,course,
+            planet,aero,cfg,&final_plan);
+        TaemTerminalContract final_contract=terminal_delivery_contract(g,t,
+            course,planet,cfg,&final_plan);
+        TaemTerminalEvaluation final_eval=
+            taem_exec_evaluate_terminal_contract(&final_contract);
+        bool admissible=final_approach&&final_eval.valid&&final_eval.feasible;
+        /* Final's gate must hold continuously before ownership moves: a single
+           admissible sample on a still-settling runway capture is re-evaluated
+           (and permanently aborted) by Final on the next tick. */
+        if (!admissible) L->admit_pending=false;
+        else if (!L->admit_pending) { L->admit_pending=true; L->admit_since_ut=t->ut; }
+        /* keep the TAEM executive in Runway Alignment with the live contract */
+        (void)taem_exec_sync_with_contract(g,t,&cfg->guidance,planet,aero,cfg,
+            &final_contract,false,false);
+        if (admissible&&t->ut-L->admit_since_ut>=1.0) {
+            g->taem_exec.terminal_contract=final_contract;
+            g->taem_exec.terminal_evaluation=final_eval;
+            g->terminal_predicted_touchdown_speed=terminal_delivery_touchdown_speed(
+                g,t,planet,cfg,final_plan.trigger_altitude);
+            g->mm305_hac_exit_reached=true;
+            g->hac_completed=true;
+            g->hac_captured=true;
+            /* Runway Alignment -> Final Intercept on the proved contract */
+            (void)taem_exec_sync_with_contract(g,t,&cfg->guidance,planet,aero,cfg,
+                &final_contract,false,false);
+        }
+    }
+    static const char *legs[]={"centreline","turnaround","downwind","HAC","Final line"};
+    char status[256];
+    snprintf(status,sizeof(status),
+        "MM305 energy law: %s %s, drag level %.2f, path to go %.1f km.",
+        L->loop?"overhead loop":"straight-in",legs[L->leg<0||L->leg>4?0:L->leg],
+        L->k,L->s_go/1000.0);
+    GuidanceResult r=stabilized(g,result_make(PHASE_TAEM,command,status,NULL),
+        t,&cfg->vehicle,&cfg->guidance,dt);
+    g->phase=PHASE_TAEM;
+    return r;
+}
+
 GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         const VehicleState *vehicle_state,double course,const PlanetModel *planet,
         AerodynamicModel aero,const LandingConfiguration *cfg,
@@ -1496,7 +1626,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
 
     const double replan_interval_s=20.0;
     const double retry_interval_s=2.0;
-    if (!g->mm305_route_committed) {
+    if (!g->mm305_route_committed && !cfg->guidance.taem_energy_law) {
         /* The vehicle state changes materially during each async solve.  After a
            failed solve, request the next measured-state solve promptly instead
            of exponential 10/20/40 s dead time while acquisition burns geometry. */
@@ -1554,6 +1684,9 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     if (geometry.altitude_above_runway_m<=0.0)
         return terminal_abort(g,
             "MM305 crossed runway elevation before reaching the fixed-HAC exit.");
+    if (cfg->guidance.taem_energy_law && !g->mm305_route_committed)
+        return taem_energy_law_guidance(g,t,course,planet,aero,cfg,control_model,
+            &geometry,&current,dt);
 
     /* At the Final station, estimate whether a direct runway glide can still
        preserve the configured handoff speed. If no HAC route is committed and

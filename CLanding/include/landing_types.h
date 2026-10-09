@@ -86,7 +86,10 @@ typedef struct {
     double hac_radius, hac_look_ahead_angle, final_approach_distance, final_alignment_speed, final_glide_slope, taem_glide_slope;
     double gear_deployment_altitude, flare_altitude, touchdown_sink_rate, guidance_rate, prediction_interval;
     double s_turn_minimum_leg_duration, entry_roll_rate, entry_roll_acceleration;
-    double taem_roll_rate, approach_roll_rate; bool use_time_warp; double minimum_planning_lead_time;
+    double taem_roll_rate, approach_roll_rate; bool use_time_warp;
+    /* Fly MM305 with the predictive drag-modulation/overhead-loop energy law
+       (guidance/taem_energy_law.c) instead of the route planner. */
+    bool taem_energy_law; double minimum_planning_lead_time;
 } GuidanceSettings;
 typedef struct {
     bool enable_passive_calibration, enable_trajectory_calibration, auto_apply_in_flight;

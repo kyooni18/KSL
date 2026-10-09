@@ -278,6 +278,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_acquisition_route_cursor=0;
         g->mm305_acquisition_route_valid=false;
         g->mm305_acquisition_route_ut=-INFINITY;
+        g->taem_energy_law=(TaemEnergyLawState){0};
         g->mm305_acquisition_sweep_rad=NAN;
         g->mm305_planning_needed=false;
         g->mm305_plan_request_ut=NAN;
