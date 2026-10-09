@@ -152,6 +152,37 @@
     return clampd(.5*(lo+hi),0.0,maximum_aoa);
 }
 
+/* Direct runway capture must satisfy the vertical path, the turn, and the
+   unpowered glide together. A radial descent command alone can drive AoA to
+   zero while the bank is asking for a course change, leaving no lift to turn. */
+double terminal_direct_runway_target_aoa(const Telemetry*t,const PlanetModel*p,
+        AerodynamicModel aero,const VehicleProfile*v,double reference_fpa,
+        double lateral_accel,double bank_deg,double*glide_aoa_out,
+        double*lateral_aoa_out){
+    if(glide_aoa_out)*glide_aoa_out=NAN;
+    if(lateral_aoa_out)*lateral_aoa_out=NAN;
+    if(!t||!p||!v||!isfinite(reference_fpa)||!isfinite(lateral_accel)||
+       !isfinite(bank_deg))return NAN;
+    double upper=v->maximum_angle_of_attack;
+    if(t->mach<1.0&&isfinite(v->terminal_maximum_lift_angle_of_attack)&&
+       v->terminal_maximum_lift_angle_of_attack>0.0)
+        upper=fmin(upper,v->terminal_maximum_lift_angle_of_attack);
+    upper=fmax(0.0,upper);
+    double glide=isfinite(t->calibrated_best_glide_angle_of_attack)&&
+            t->calibrated_best_glide_angle_of_attack>=0.0?
+        clampd(t->calibrated_best_glide_angle_of_attack,0.0,upper):
+        aerodynamic_best_glide_aoa(t->mach,v);
+    glide=clampd(isfinite(glide)?glide:0.0,0.0,upper);
+    double vertical=terminal_fpa_force_aoa(t,p,aero,v,reference_fpa);
+    if(!isfinite(vertical))vertical=glide;
+    double lateral=terminal_required_aoa_for_lateral_limit(t,aero,v,
+        lateral_accel,bank_deg,upper);
+    if(!isfinite(lateral))lateral=glide;
+    if(glide_aoa_out)*glide_aoa_out=glide;
+    if(lateral_aoa_out)*lateral_aoa_out=lateral;
+    return clampd(fmax(glide,fmax(vertical,lateral)),0.0,upper);
+}
+
 
 static double terminal_atmosphere_vertical_resolution(const PlanetModel*p,
         double lower_altitude,double upper_altitude){

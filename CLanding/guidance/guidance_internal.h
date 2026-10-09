@@ -136,6 +136,10 @@ double fixed_hac_projected_drag_accel(const Telemetry*t,
         AerodynamicModel aero,const VehicleProfile*v,double aoa);
 double terminal_required_aoa_for_lateral_limit(const Telemetry*t,AerodynamicModel aero,
         const VehicleProfile*v,double lateral_accel,double bank_deg,double maximum_aoa);
+double terminal_direct_runway_target_aoa(const Telemetry*t,const PlanetModel*p,
+        AerodynamicModel aero,const VehicleProfile*v,double reference_fpa,
+        double lateral_accel,double bank_deg,double*glide_aoa_out,
+        double*lateral_aoa_out);
 bool terminal_quadratic_drag_energy_step(double speed,double drag,
         double air_distance,double potential_drop,double*next_speed,double*work);
 double terminal_projected_drag_work_state_anchored(const GuidanceMachine*g,const Telemetry*t,const PlanetModel*p,

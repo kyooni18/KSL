@@ -77,6 +77,27 @@ static void test_touchdown_forecast_handoff_parity(void) {
     assert(fabs(oblique.runway_cross_track+cross_rate*threshold_time)<1e-6);
     assert(!terminal_preflare_alignment_valid(&g,&oblique,oblique_course,&reciprocal));
 
+    /* Direct runway guidance must reserve enough modelled lift for its lateral
+       turn even when the radial vertical solution wants a steeper dive. */
+    Telemetry turn={0};
+    turn.true_air_speed=732.0;turn.horizontal_speed=731.9;turn.mach=2.7;
+    turn.mean_altitude=24787.0;turn.flight_path_angle=-9.3;
+    turn.angle_of_attack=13.4;turn.roll=6.4;turn.dynamic_pressure=25000.0;
+    turn.mass=25722.0;turn.lift_force=139693.7;
+    AerodynamicModel turn_aero=gate_aero;
+    turn_aero.lift_to_drag=1.2;
+    double reference_fpa=-29.4*DEG2RAD;
+    double glide_aoa=NAN,lateral_aoa=NAN;
+    double turn_aoa=terminal_direct_runway_target_aoa(&turn,&planet,turn_aero,
+        &cfg.vehicle,reference_fpa,-30.0,-45.0,&glide_aoa,&lateral_aoa);
+    double vertical_aoa=terminal_fpa_force_aoa(&turn,&planet,turn_aero,
+        &cfg.vehicle,reference_fpa);
+    double lateral=terminal_required_aoa_for_lateral_limit(&turn,
+        turn_aero,&cfg.vehicle,-30.0,-45.0,cfg.vehicle.maximum_angle_of_attack);
+    assert(isfinite(turn_aoa)&&isfinite(glide_aoa)&&isfinite(lateral_aoa));
+    assert(lateral_aoa>vertical_aoa);
+    assert(fabs(turn_aoa-lateral)<1e-6);
+
     /* Cold handoff and a handoff retaining MM305's observed aero history. */
     for(int pass=0;pass<2;++pass){
         GuidanceMachine before=g;

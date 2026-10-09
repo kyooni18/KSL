@@ -1511,12 +1511,21 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         geometry.runway_along_m,geometry.ground_speed_mps,handoff_distance,
         &direct_capture);
     bool preemptive_direct_window=direct_window&&!inside_final_station;
+    double local_gravity=control_model->world.mu_m3_s2/
+        pow(control_model->world.radius_m+control_model->site.altitude+
+            geometry.altitude_above_runway_m,2.0);
+    HACGuidance direct_line={0};
     double direct_target_aoa=NAN;
+    double direct_glide_aoa=NAN;
+    double direct_lateral_aoa=NAN;
     double projected_runway_speed=NAN;
     bool direct_projection_valid=false;
     if (direct_window||g->mm305_direct_approach_degraded) {
-        direct_target_aoa=terminal_fpa_force_aoa(t,planet,aero,
-            &cfg->vehicle,-direct_slope);
+        direct_line=terminal_runway_line_path_guidance(t,&cfg->site,
+            &cfg->guidance,local_gravity,course);
+        direct_target_aoa=terminal_direct_runway_target_aoa(t,planet,aero,
+            &cfg->vehicle,-direct_slope,direct_line.lateral_acceleration,
+            direct_line.bank,&direct_glide_aoa,&direct_lateral_aoa);
         if (!isfinite(direct_target_aoa))
             direct_target_aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
         double projected_drag_work=terminal_projected_drag_work_state(g,t,planet,
@@ -1525,9 +1534,6 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         direct_projection_valid=!isnan(projected_drag_work)&&
             isfinite(projected_runway_speed)&&projected_runway_speed>=0.0;
     }
-    double local_gravity=control_model->world.mu_m3_s2/
-        pow(control_model->world.radius_m+control_model->site.altitude+
-            geometry.altitude_above_runway_m,2.0);
     bool direct_energy_degraded=inside_final_station&&
         (!direct_projection_valid||projected_runway_speed<handoff_speed);
     bool direct_degraded=direct_energy_degraded||preemptive_direct_window;
@@ -1535,8 +1541,12 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         !g->mm305_direct_approach_degraded;
     if (direct_degraded) g->mm305_direct_approach_degraded=true;
     if (g->mm305_direct_approach_degraded) {
-        HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
-            &cfg->guidance,local_gravity,course);
+        HACGuidance line=direct_line;
+        double aoa=direct_projection_valid&&
+                projected_runway_speed>=glide_speed_floor_mps?
+            direct_target_aoa:fmax(direct_glide_aoa,direct_lateral_aoa);
+        if (!isfinite(aoa))
+            aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
         const char *direct_trace=getenv("KSP_LANDER_DIRECT_TRACE");
         static _Thread_local double direct_trace_last_ut=-INFINITY;
         if (direct_trace&&strcmp(direct_trace,"1")==0&&
@@ -1544,11 +1554,12 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 (!isfinite(direct_trace_last_ut)||t->ut<direct_trace_last_ut||
                  t->ut-direct_trace_last_ut>=5.0)){
             fprintf(stderr,
-                "TAEM_DIRECT_TRACE ut=%.2f along=%+.0f cross=%+.0f range=%.0f h=%.0f V=%.1f fpa=%.1f course=%.1f target=%.1f courseErr=%+.1f bankCmd=%+.1f roll=%+.1f rollRate=%+.1f aoa=%.1f beta=%+.1f projectedV=%.1f\n",
+                "TAEM_DIRECT_TRACE ut=%.2f along=%+.0f cross=%+.0f range=%.0f h=%.0f V=%.1f fpa=%.1f course=%.1f target=%.1f courseErr=%+.1f bankCmd=%+.1f latAccel=%+.1f roll=%+.1f rollRate=%+.1f aoa=%.1f aoaCmd=%.1f beta=%+.1f projectedV=%.1f\n",
                 t->ut,geometry.runway_along_m,geometry.runway_cross_m,direct_range,
                 geometry.altitude_above_runway_m,geometry.ground_speed_mps,
                 t->flight_path_angle,course,line.heading,line.course_error,line.bank,
-                t->roll,t->roll_rate,t->angle_of_attack,t->sideslip,
+                line.lateral_acceleration,t->roll,t->roll_rate,t->angle_of_attack,
+                aoa,t->sideslip,
                 projected_runway_speed);
             direct_trace_last_ut=t->ut;
         }
@@ -1565,11 +1576,6 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                 direct_capture.lateral_capture_time_s,
                 direct_capture.control_response_time_s,direct_capture.time_available_s,
                 projected_runway_speed,direct_slope);
-        double aoa=projected_runway_speed<glide_speed_floor_mps?
-            aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle):
-            direct_target_aoa;
-        if (!isfinite(aoa))
-            aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
         GuidanceCommand command=atmospheric(t,line.heading,line.bank,
             &cfg->vehicle,0.0,false,PROFILE_TAEM);
         command.heading_control_enabled=false;
@@ -1625,7 +1631,7 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                     "Energy-degraded direct runway alignment",
                 projected_runway_speed,handoff_speed,glide_speed_floor_mps,
                 projected_runway_speed<glide_speed_floor_mps?
-                    "; using the live-model best-glide incidence":"");
+                    "; prioritizing live-model turn/glide incidence":"");
         else
             snprintf(direct_status,sizeof(direct_status),
                 "%s; projection unavailable, using the live-model best-glide incidence with %.1f m/s glide floor.",
