@@ -59,6 +59,17 @@ def optional_number(value: Any) -> float | None:
     return result if math.isfinite(result) else None
 
 
+def json_safe(value: Any) -> Any:
+    """Replace non-finite numbers before strict JSON serialization."""
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    return value
+
+
 def signed_degrees(value: float) -> float:
     wrapped = value % 360.0
     return wrapped - 360.0 if wrapped > 180.0 else wrapped
@@ -3607,7 +3618,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def send_json(self, value: Any, status: int = 200) -> None:
-        body = json.dumps(value, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        body = json.dumps(json_safe(value), separators=(",", ":"), allow_nan=False).encode("utf-8")
         self.send_bytes(body, "application/json; charset=utf-8", status)
 
     def do_GET(self) -> None:  # noqa: N802
@@ -3739,7 +3750,7 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             while True:
                 next_version, snapshot = self.server.store.wait_after(version, 10.0)
                 if next_version != version:
-                    payload = json.dumps(snapshot, separators=(",", ":"), allow_nan=False)
+                    payload = json.dumps(json_safe(snapshot), separators=(",", ":"), allow_nan=False)
                     self.wfile.write(f"event: snapshot\ndata: {payload}\n\n".encode("utf-8"))
                     version = next_version
                 else:
