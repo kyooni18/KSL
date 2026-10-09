@@ -545,6 +545,13 @@ static const struct {
                          "none",
                          "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                          "none"}},
+    /* sts-live-20261009 with its Mach 0.2-1.5 rows refitted to the live
+       2026-10-09 terminal flights; provisional, no certified cells. */
+    {"sts-live-20261010", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_live20261010.csv",
+                         "none",
+                         "ShuttleSim/reference-model/stsn_attitude_identified.ini",
+                         "none"}},
     {"fitted-legacy", "STS-N", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",

@@ -150,7 +150,7 @@ static TerminalFlarePlan terminal_flare_plan(const GuidanceMachine*g,const Telem
     double pull=L*fmax(t->dynamic_pressure,1.0)*g->terminal_lift_ratio/
         fmax(t->mass,1.0)-gravity*cos(t->flight_path_angle*DEG2RAD);
     return (TerminalFlarePlan){
-        .arrest_accel=clampd(.4*pull,.12*gravity,.15*gravity),
+        .arrest_accel=clampd(.4*pull,.12*gravity,.35*gravity),
         .sgs_height=25.0,.sgs_sink=3.5,.final_accel=.1*gravity,
         .float_height=1.5,.float_sink=1.0,.lift_ratio=g->terminal_lift_ratio,
         .aoa_max=limit,.g0=gravity,.planet=p,.site_altitude=cfg->site.altitude,
@@ -495,11 +495,37 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            latch.  Returning half of that reserve immediately after latching
            makes the closed-loop arc relax its pull and recreates the very
            response loss the admission trigger was sized to cover. */
-        double room=fmax(3.0,height-SGS_HEIGHT-fmax(0.0,sink)*response);
-        arc_accel=sink>SGS_SINK?(sink*sink-SGS_SINK*SGS_SINK)/(2.0*room):
-            (sink-SGS_SINK)/PREFLARE_TAU;
-        double arc_goal=sink>SGS_SINK?fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU):SGS_SINK;
-        reference_fpa=fmax(glide_fpa,-asin(clampd(arc_goal/V,0.0,.95)));
+        /* The full incidence-response reserve sizes the latch.  Once the pull
+           is established only the residual incidence lag remains; reserving
+           the whole latch response for the rest of the arc (sink x ~4 s, a
+           few hundred metres at outer-glide sink) ends the arc that far above
+           the shallow-glide height, and the long high-incidence float that
+           follows bleeds the touchdown speed away. */
+        const double ARC_RESIDUAL_LAG=1.0;
+        double arc_lag=fmin(response,fmax(ARC_RESIDUAL_LAG,
+            fabs(aoa_pull-t->angle_of_attack)/FLARE_SLEW));
+        double room=fmax(0.0,height-SGS_HEIGHT-fmax(0.0,sink)*arc_lag);
+        /* A latch above the design arc (the admission trigger is a ceiling on
+           when to start, not a demand to spread the pull over all of it) holds
+           the outer glide until the design-deceleration arc reaches the present
+           sink; a gentle arc stretched over hundreds of metres is a long
+           high-incidence float.  Once on the arc it is never pushed back. */
+        double design_sink=sqrt(SGS_SINK*SGS_SINK+2.0*arrest_accel*room);
+        /* Onset keeps the full incidence-response reserve; once the sink is
+           already coming off the outer glide only the residual lag applies. */
+        double glide_sink=fmax(SGS_SINK,-V*sin(glide_fpa));
+        double onset_room=fmax(0.0,height-SGS_HEIGHT-fmax(0.0,sink)*(response+1.0));
+        double onset_sink=sqrt(SGS_SINK*SGS_SINK+2.0*arrest_accel*onset_room);
+        bool on_arc=sink<.92*glide_sink||onset_sink<sink;
+        if(sink>SGS_SINK&&!on_arc){
+            arc_accel=NAN;
+            reference_fpa=glide_fpa;
+        }else{
+            arc_accel=sink>SGS_SINK?arrest_accel+(sink-design_sink)/PREFLARE_TAU:
+                (sink-SGS_SINK)/PREFLARE_TAU;
+            double arc_goal=sink>SGS_SINK?fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU):SGS_SINK;
+            reference_fpa=fmax(glide_fpa,-asin(clampd(arc_goal/V,0.0,.95)));
+        }
     }else if(flaring){
         /* Shallow glide blending into the float.  It is tracked both ways
            (its sink never exceeds the shallow-glide sink): a vehicle that
@@ -565,6 +591,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         touchdown_attitude_floor=TOUCHDOWN_PITCH*u;
         touchdown_aoa_floor=clampd(touchdown_attitude_floor-t->flight_path_angle,
             0.0,aoa_max);
+        /* The attitude floor must not become a lift command: on a vehicle
+           with a steep low-Mach lift slope the full pitch floor exceeds the
+           1-g incidence, balloons the shuttle off the shallow glide and
+           bleeds the touchdown speed.  Above the sink law's own demand, raise
+           incidence only to a modest lift margin. */
+        double floor_lift_cap=terminal_aoa_for_lift(g,t,v,
+            1.0*t->mass*g0/fmax(.3,lift_div)/fmax(.3,g->terminal_lift_ratio),aoa_max);
+        touchdown_aoa_floor=fmin(touchdown_aoa_floor,fmax(aoa,floor_lift_cap));
         aoa=fmax(aoa,touchdown_aoa_floor);
     }
 

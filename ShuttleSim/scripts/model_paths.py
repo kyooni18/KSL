@@ -32,6 +32,15 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    # sts-live-20261009 with Mach 0.2-1.5 rows refitted to live 2026-10-09 terminal
+    # flights (Tools/fit_sts_terminal_polar_live.py); still provisional/uncertified.
+    "sts-live-20261010": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_live20261010.csv",
+        "aero_book": None,
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",
@@ -61,6 +70,7 @@ PROFILE_VEHICLES = {
     "identified": "STS-N",
     "sts-provisional": "STS",
     "sts-live-20261009": "STS",
+    "sts-live-20261010": "STS",
     "fitted-legacy": "STS-N",
     "reference-b": "STS-N",
 }
