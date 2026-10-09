@@ -1,0 +1,77 @@
+{
+  "source": "FlightLogs/2026-10-09T10-46-41Z-STS-vehicle.jsonl",
+  "sessionId": "2026-10-09T10-46-41Z-24618-242718486034",
+  "ut": 2172.36986328023,
+  "state": {
+    "phase": "TAEM",
+    "controlProfile": "taem",
+    "vesselSituation": "flying",
+    "automation": true,
+    "paused": false,
+    "constraintActive": false,
+    "gear": false,
+    "brakes": false,
+    "airbrakesAvailable": true,
+    "airbrakes": false,
+    "sasAvailable": true,
+    "sasEnabled": false,
+    "entryPlanValid": false,
+    "entryReversalScheduled": false,
+    "planId": null,
+    "planVersion": null,
+    "parentPlanId": null,
+    "parentPlanVersion": null
+  },
+  "position": {
+    "latitude": -0.00168721003769974,
+    "longitude": -79.6582513658479,
+    "altitude": 25963.8730014592,
+    "radarAltitude": 21345.8281447766,
+    "inertial": [
+      429830.841314777,
+      455056.279835629,
+      -18.4329899791603
+    ]
+  },
+  "motion": {
+    "velocity": [
+      -743.265850438474,
+      566.832523722397,
+      -167.426559270363
+    ],
+    "trueAirSpeed": 771.863464355469,
+    "horizontalSpeed": 765.577872317323,
+    "verticalSpeed": -98.3040759403772,
+    "flightPathAngle": -7.31702950066134
+  },
+  "attitude": {
+    "pitch": 14.6170349121094,
+    "roll": 1.384765625,
+    "heading": 103.208274841309,
+    "angleOfAttack": 21.9414234161377,
+    "sideslip": -0.0537157654762268,
+    "pitchRate": -1.12008987683948,
+    "rollRate": -2.63011287919648,
+    "yawRate": -1.06445382726124,
+    "courseRate": 0.0209451569708597,
+    "coordinatePitchRate": -1.0073601559936,
+    "coordinateRollRate": -2.90693804564353,
+    "headingRate": -1.146861223087,
+    "angleOfAttackRate": -1.03856140246864,
+    "bodyPitchRate": -1.12008987683948,
+    "bodyRollRate": -2.63011287919648,
+    "bodyYawRate": -1.06445382726124
+  },
+  "guidance": {
+    "rangeToSite": 51628.312993503,
+    "bearingToSite": 90.5460818958096,
+    "runwayAlongTrack": -51625.9981138387,
+    "runwayCrossTrack": -489.502725534175,
+    "specificMechanicalEnergy": -5360628.00929118,
+    "entryReversalTimeRemaining": 0,
+    "entryReversalUT": null,
+    "entryReversalRange": null,
+    "entryReversalSign": null
+  },
+  "result": "Verified live TAEM ownership after controlled entry reversal. Provisional acquisition route; qualified route, touchdown and rollout not proven."
+}
