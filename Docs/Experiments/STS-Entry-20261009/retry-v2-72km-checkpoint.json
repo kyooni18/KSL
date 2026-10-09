@@ -1,0 +1,16 @@
+{
+  "checkpoint": "/Applications/.Misc/LMPKSP/saves/Main/STS-OMS-72km-20261009-v2.sfs",
+  "sha256": "b59ceadeaccee30133d307b069fe408e7fb0a2f844ccc40f34aef80ef7eb2aff",
+  "savedUT": 1489.4698632808538,
+  "vessel": "STS",
+  "savedAltitude": 71995.28255384602,
+  "orbit86sha256": "4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6",
+  "postBurnVerified": true,
+  "independentPostBurnPeriapsis": 54329.08461768506,
+  "runnerSession": 31462,
+  "backendPID": 21083,
+  "console": "/tmp/sts-live-oms-72checkpoint-20261009-v2.log",
+  "runManifest": "Runtime/Headless/run-manifests/20261009T075335115977Z-21083.json",
+  "continuation": "Live flight continued after save; no terminal/landing/rollout validation yet.",
+  "backendGeometry": "At startup geometry unavailable; refresh fix6196e23 is built separately and not in this pinned attempt."
+}
