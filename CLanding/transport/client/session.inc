@@ -324,6 +324,41 @@ static bool load_planet(KrpcCNanoClient *client, char *error, size_t error_size)
     return true;
 }
 
+/* Thruster objects may be absent while a restored vessel is paused/unpacked.
+   Retry after ignition without rebuilding engine ownership or assuming a craft axis. */
+static void refresh_burn_geometry(KrpcCNanoClient *client) {
+    Vector3 force=v3(0,0,0),moment=v3(0,0,0);
+    double selected_thrust=0;
+    for(size_t i=0;i<client->engine_count;i++)
+        if(client->engines[i].selected)selected_thrust+=client->engines[i].available_thrust;
+    bool geometry_ok=selected_thrust>0;
+    for(size_t i=0;i<client->engine_count;i++){
+        CommandableEngine *entry=&client->engines[i];
+        if(!entry->selected)continue;
+        krpc_list_object_t thrusters=KRPC_NULL_LIST;
+        if(krpc_SpaceCenter_Engine_Thrusters(client->connection,&thrusters,entry->object)!=KRPC_OK||!thrusters.size){geometry_ok=false;continue;}
+        for(size_t j=0;j<thrusters.size;j++){
+            krpc_tuple_double_double_double_t d={0},r={0};
+            krpc_SpaceCenter_Thruster_t thruster=thrusters.items[j];
+            if(krpc_SpaceCenter_Thruster_InitialThrustDirection(client->connection,&d,thruster,client->vessel_frame)!=KRPC_OK||
+               krpc_SpaceCenter_Thruster_InitialThrustPosition(client->connection,&r,thruster,client->vessel_frame)!=KRPC_OK){geometry_ok=false;continue;}
+            Vector3 direction=v3(d.e0,d.e1,d.e2);
+            if(!isfinite(vmag(direction))||vmag(direction)<=1e-8){geometry_ok=false;continue;}
+            Vector3 f=vscale(vnorm(direction,v3(0,1,0)),entry->available_thrust/thrusters.size);
+            force=vadd(force,f);moment=vadd(moment,vcross(v3(r.e0,r.e1,r.e2),f));
+        }
+        KRPC_FREE_LIST(thrusters);
+    }
+    client->burn_geometry_valid=geometry_ok&&vmag(force)>0;
+    client->burn_thrust_axis_body=vnorm(force,v3(0,1,0));
+    client->burn_thrust_moment_body=moment;
+    client->burn_resultant_fraction=client->burn_geometry_valid?vmag(force)/selected_thrust:1.0;
+    client->commandable_thrust=client->burn_geometry_valid?vmag(force):selected_thrust;
+    fprintf(stderr,"Selected burn thrust %.0f N; body axis %.4f/%.4f/%.4f; moment %.0f/%.0f/%.0f Nm; geometry=%s\n",
+        client->commandable_thrust,client->burn_thrust_axis_body.x,client->burn_thrust_axis_body.y,client->burn_thrust_axis_body.z,
+        moment.x,moment.y,moment.z,client->burn_geometry_valid?"measured":"unavailable");
+}
+
 static void inventory_engines(KrpcCNanoClient *client) {
     client->engine_count = 0;
     client->commandable_thrust = 0.0;
@@ -373,31 +408,7 @@ static void inventory_engines(KrpcCNanoClient *client) {
         entry->selected=engine_role_selected(entry->role,has_oms||client->require_oms);
         if(entry->selected)client->commandable_thrust+=entry->available_thrust;
     }
-    Vector3 force=v3(0,0,0),moment=v3(0,0,0);
-    bool geometry_ok=client->commandable_thrust>0;
-    for(size_t i=0;i<client->engine_count;i++){
-        CommandableEngine *entry=&client->engines[i];
-        if(!entry->selected)continue;
-        krpc_list_object_t thrusters=KRPC_NULL_LIST;
-        if(krpc_SpaceCenter_Engine_Thrusters(client->connection,&thrusters,entry->object)!=KRPC_OK||!thrusters.size){geometry_ok=false;continue;}
-        for(size_t j=0;j<thrusters.size;j++){
-            krpc_tuple_double_double_double_t d={0},r={0};
-            krpc_SpaceCenter_Thruster_t thruster=thrusters.items[j];
-            if(krpc_SpaceCenter_Thruster_InitialThrustDirection(client->connection,&d,thruster,client->vessel_frame)!=KRPC_OK||
-               krpc_SpaceCenter_Thruster_InitialThrustPosition(client->connection,&r,thruster,client->vessel_frame)!=KRPC_OK){geometry_ok=false;continue;}
-            Vector3 f=vscale(vnorm(v3(d.e0,d.e1,d.e2),v3(0,1,0)),entry->available_thrust/thrusters.size);
-            force=vadd(force,f);moment=vadd(moment,vcross(v3(r.e0,r.e1,r.e2),f));
-        }
-        KRPC_FREE_LIST(thrusters);
-    }
-    client->burn_geometry_valid=geometry_ok&&vmag(force)>0;
-    client->burn_thrust_axis_body=vnorm(force,v3(0,1,0));
-    client->burn_thrust_moment_body=moment;
-    client->burn_resultant_fraction=client->burn_geometry_valid?vmag(force)/client->commandable_thrust:1.0;
-    if(client->burn_geometry_valid)client->commandable_thrust=vmag(force);
-    fprintf(stderr,"Selected burn thrust %.0f N; body axis %.4f/%.4f/%.4f; moment %.0f/%.0f/%.0f Nm; geometry=%s\n",
-        client->commandable_thrust,client->burn_thrust_axis_body.x,client->burn_thrust_axis_body.y,client->burn_thrust_axis_body.z,
-        moment.x,moment.y,moment.z,client->burn_geometry_valid?"measured":"unavailable");
+    refresh_burn_geometry(client);
     KRPC_FREE_LIST(engines);
 }
 

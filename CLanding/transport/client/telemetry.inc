@@ -220,6 +220,8 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
         client->last_slow_ut=ut;
     }
 
+    if(burn_active && !client->burn_geometry_valid)refresh_burn_geometry(client);
+
     t->speed_of_sound = client->cached_speed_of_sound > 1.0
         ? client->cached_speed_of_sound : planet_atmospheric_speed_of_sound(&client->planet, t->mean_altitude);
     t->mach = t->true_air_speed / fmax(1.0, t->speed_of_sound);
