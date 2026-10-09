@@ -331,7 +331,32 @@ static void shrinking_limit_and_repeat_reversal_respect_response(void){
     assert(fabs(unload.target_bank_deg)>1);
 }
 
+static void bank_reference_waits_for_measured_response(void){
+    EntryLateralLimits l=limits();
+    EntryLateralState state={0};
+    entry_lateral_state_init(&state,90,1,0);
+    EntryLateralInput in=azimuth_input(10,5);
+    in.measured_bank_deg=0;
+    double reserve=l.maximum_roll_rate_deg_s*l.maximum_roll_rate_deg_s /
+        (2*l.maximum_roll_accel_deg_s2);
+    for(int i=0;i<500;i++){
+        in.ut+=in.dt;
+        EntryLateralOutput o=entry_lateral_update(&state,&in,&l);
+        assert(o.valid);
+    }
+    /* A nonresponding vessel must not be handed the full distant target. */
+    assert(state.command_bank_deg < 2*reserve);
+    double held=state.command_bank_deg;
+    for(int i=0;i<500;i++){
+        in.measured_bank_deg=state.command_bank_deg;
+        in.ut+=in.dt;
+        entry_lateral_update(&state,&in,&l);
+    }
+    assert(state.command_bank_deg>held+reserve);
+}
+
 int main(void){
+    bank_reference_waits_for_measured_response();
     shrinking_limit_and_repeat_reversal_respect_response();
     measured_lift_is_not_model_confidence();
     initial_side_follows_crossrange_sign();

@@ -170,7 +170,7 @@ static bool bank_magnitude(const EntryLateralInput *input,
 }
 
 static void update_bank_command(EntryLateralState *state, double target,
-        const EntryLateralLimits *limits, double dt) {
+        const EntryLateralLimits *limits, double dt, double measured_bank) {
     double bank_limit = fabs(limits->maximum_bank_deg);
     double rate_limit = fabs(limits->maximum_roll_rate_deg_s);
     double accel_limit = fabs(limits->maximum_roll_accel_deg_s2);
@@ -186,6 +186,18 @@ static void update_bank_command(EntryLateralState *state, double target,
     if (fabs(error) > DBL_EPSILON) {
         double stopping_rate = sqrt(2.0 * accel_limit * fabs(error));
         desired_rate = unit_sign(error) * fmin(rate_limit, stopping_rate);
+        /* Do not let the reference outrun the measured airframe by more than
+           the distance reserved for braking at the physical roll envelope.
+           As tracking lag consumes that reserve, decelerate the reference;
+           motion resumes as the vessel catches up. */
+        if (isfinite(measured_bank)) {
+            double lead = unit_sign(error) *
+                (state->command_bank_deg - measured_bank);
+            double braking_reserve = rate_limit * rate_limit / (2.0 * accel_limit);
+            double headroom = fmax(0.0, braking_reserve - fmax(0.0, lead));
+            desired_rate = unit_sign(error) * fmin(fabs(desired_rate),
+                sqrt(2.0 * accel_limit * headroom));
+        }
     }
 
     double rate_delta = desired_rate - state->command_bank_rate_deg_s;
@@ -425,7 +437,8 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     }
 
     double raw_target = state->bank_sign * magnitude;
-    update_bank_command(state, raw_target, &command_limits, input->dt);
+    update_bank_command(state, raw_target, &command_limits, input->dt,
+        input->measured_bank_deg);
 
     /*
      * Capture is a kinematic state, not a tuned angle band. Once the measured
