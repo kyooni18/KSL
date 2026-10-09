@@ -22,9 +22,13 @@ def main():
                     help="local altitude offset as fraction of start-to-exit drop")
     ap.add_argument("--output-dir", type=pathlib.Path, required=True)
     ap.add_argument("--base-shape", choices=("hermite", "ramp"), default="hermite")
+    ap.add_argument("--match-search-shape", action="store_true",
+                    help="size and rank route leads with the ramp base's actual peak slope")
     args = ap.parse_args()
     if not -0.1 <= args.fraction <= 0.1:
         ap.error("use a finite local offset within +/-10%% of altitude drop")
+    if args.match_search_shape and args.base_shape != "ramp":
+        ap.error("matching experimental search requires the ramp base shape")
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
     original = NATIVE / "terminal_solver.c"
@@ -113,6 +117,33 @@ def main():
             str(planner_obj) if item == "build/taem_planner.o" else item
             for item in planner_commands[0]])
         link_cmd = [str(planner_obj) if item == "build/taem_planner.o" else item for item in link_cmd]
+    if args.match_search_shape:
+        search = (NATIVE / "taem_candidate_search.c").read_text()
+        start = search.index("static double hermite_peak_descent_deg(")
+        end = search.index("static double minimum_vertical_profile_length(", start)
+        search = search[:start] + """static double hermite_peak_descent_deg(const TaemRoute *route,
+        double length_m) {
+    if (!route || !(length_m > 0.0)) return INFINITY;
+    const double rad=3.14159265358979323846/180.0;
+    const double ramp=0.10;
+    double m0=tan(route->profile_start_fpa_deg*rad);
+    double m1=-tan(route->profile_final_slope_deg*rad);
+    double middle=((route->profile_final_altitude_m-
+        route->profile_start_altitude_m)/length_m-
+        0.5*ramp*(m0+m1))/(1.0-ramp);
+    return fmax(0.0,-atan(fmin(middle,fmin(m0,m1)))/rad);
+}
+
+""" + search[end:]
+        search_source = out / "taem_candidate_search.c"
+        search_source.write_text(search)
+        search_obj = out / "taem_candidate_search.o"
+        search_commands = [cmd for cmd in commands if "taem_candidate_search.c" in cmd and "-c" in cmd]
+        assert search_commands
+        compilation.append([str(search_source) if item == "taem_candidate_search.c" else
+            str(search_obj) if item == "build/taem_candidate_search.o" else item
+            for item in search_commands[0]])
+        link_cmd = [str(search_obj) if item == "build/taem_candidate_search.o" else item for item in link_cmd]
     for cmd in compilation + [link_cmd]:
         subprocess.run(cmd, cwd=NATIVE, env=env, check=True)
     command = [str(binary), "--configuration", "Configuration/sts.json",
@@ -121,6 +152,9 @@ def main():
     report = {"classification": "offline local profile shape experiment; not flight qualification",
               "fraction": args.fraction, "localFractions": [0.0, 0.20, 0.55],
               "baseShape": args.base_shape,
+              "searchShapeMatched": args.match_search_shape,
+              "candidateSearchSHA256": digest(out / "taem_candidate_search.c")
+                  if args.match_search_shape else digest(NATIVE / "taem_candidate_search.c"),
               "candidatePlannerSHA256": digest(out / "taem_planner.c")
                   if args.base_shape == "ramp" else digest(NATIVE / "taem_planner.c"),
               "originalSourceSHA256": digest(original),
