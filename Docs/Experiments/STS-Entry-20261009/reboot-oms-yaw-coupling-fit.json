@@ -1,0 +1,78 @@
+{
+  "source": "FlightLogs/2026-10-09T07-22-46Z-STS-vehicle.jsonl",
+  "basis": [
+    "yawInput*q_kPa",
+    "sideslipDeg*q_kPa",
+    "yawRateDegPerSec*q_kPa",
+    "pitchRate*rollRate",
+    "rollInput*q_kPa",
+    "constant"
+  ],
+  "method": "Centered physical yaw-rate derivative over two records on each side; input aligned to earliest derivative record. Ordinary least squares with column scaling. Chronological 70/30 split per window.",
+  "qualification": "Observational closed-loop regression, not causal identification, controller validation, or landing evidence. Coefficients change with flight regime and must not be hardcoded.",
+  "windows": [
+    {
+      "utRange": [
+        1935,
+        2035
+      ],
+      "samples": 1792,
+      "fullWindowCoefficients": [
+        1.917888700111676,
+        0.05287291064188356,
+        0.1691548071922271,
+        -0.06603084288105068,
+        -10.81482810140549,
+        -0.011904785799673136
+      ],
+      "scaledConditionNumber": 10.747093353017004,
+      "fitR2": 0.8921060967198816,
+      "fitRMSE": 0.21149361849715914,
+      "heldoutFraction": 0.3,
+      "heldoutFullRMSE": 0.5185593789553858,
+      "heldoutWithoutRollRMSE": 0.4795357359346734
+    },
+    {
+      "utRange": [
+        2035,
+        2090
+      ],
+      "samples": 1025,
+      "fullWindowCoefficients": [
+        1.0684174924376073,
+        0.05568489700748476,
+        0.1575680788502463,
+        -0.02629723229414043,
+        -4.843626415750978,
+        -0.03290834768644785
+      ],
+      "scaledConditionNumber": 8.40546804157923,
+      "fitR2": 0.8573808998059994,
+      "fitRMSE": 0.29988154400810396,
+      "heldoutFraction": 0.3,
+      "heldoutFullRMSE": 0.4558860517153463,
+      "heldoutWithoutRollRMSE": 0.46600528209306397
+    },
+    {
+      "utRange": [
+        2090,
+        2110
+      ],
+      "samples": 377,
+      "fullWindowCoefficients": [
+        0.7305508410978818,
+        -0.06271069122180167,
+        -0.07809362117992717,
+        -0.062008263411831036,
+        -7.539010686284064,
+        0.44514145087886053
+      ],
+      "scaledConditionNumber": 32.887985996909116,
+      "fitR2": 0.9390585686782988,
+      "fitRMSE": 0.1929492783381417,
+      "heldoutFraction": 0.3,
+      "heldoutFullRMSE": 0.5440462682435742,
+      "heldoutWithoutRollRMSE": 2.3426846766822553
+    }
+  ]
+}
