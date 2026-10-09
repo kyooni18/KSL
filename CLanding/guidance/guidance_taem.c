@@ -1537,6 +1537,21 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     if (g->mm305_direct_approach_degraded) {
         HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
             &cfg->guidance,local_gravity,course);
+        const char *direct_trace=getenv("KSP_LANDER_DIRECT_TRACE");
+        static _Thread_local double direct_trace_last_ut=-INFINITY;
+        if (direct_trace&&strcmp(direct_trace,"1")==0&&
+                !g->diagnostic_shadow&&
+                (!isfinite(direct_trace_last_ut)||t->ut<direct_trace_last_ut||
+                 t->ut-direct_trace_last_ut>=5.0)){
+            fprintf(stderr,
+                "TAEM_DIRECT_TRACE ut=%.2f along=%+.0f cross=%+.0f range=%.0f h=%.0f V=%.1f fpa=%.1f course=%.1f target=%.1f courseErr=%+.1f bankCmd=%+.1f roll=%+.1f rollRate=%+.1f aoa=%.1f beta=%+.1f projectedV=%.1f\n",
+                t->ut,geometry.runway_along_m,geometry.runway_cross_m,direct_range,
+                geometry.altitude_above_runway_m,geometry.ground_speed_mps,
+                t->flight_path_angle,course,line.heading,line.course_error,line.bank,
+                t->roll,t->roll_rate,t->angle_of_attack,t->sideslip,
+                projected_runway_speed);
+            direct_trace_last_ut=t->ut;
+        }
         if (direct_degradation_started&&!g->diagnostic_shadow)
             fprintf(stderr,
                 "TAEM direct capture opened: UT=%.2f along=%+.0f cross=%+.0f range=%.0f h=%.0f V=%.1f course=%.1f target=%.1f bank=%+.1f captureTime=%.1f headingTime=%.1f lateralTime=%.1f response=%.1f available=%.1f projectedV=%.1f slope=%.1f\n",
