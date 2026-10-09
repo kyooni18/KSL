@@ -1,0 +1,100 @@
+{
+  "classification": "offline archived-state MM304 allocator diagnosis; no control change",
+  "guidanceLogSHA256": "0d174356260609acde28e292ec797d2ee6b15291acf1fdf2eb091e3cf6c6451e",
+  "source": "ShuttleSim/runs/mm304-sts-archive70-terminal-polar-20261009-20261009T052557Z-xfjhlf0g-guidance.jsonl.gz",
+  "samples": [
+    {
+      "altitudeM": 64957.048,
+      "ut": 10049.211826,
+      "qPa": 25.749882,
+      "measuredLiftAccel": 0.03785069990243728,
+      "requestedVerticalLiftAccel": 0.574266615461202,
+      "predictedRangeM": 4553427.26774458,
+      "requiredRangeM": 775692.219539886,
+      "rangeErrorM": 3777735.0482047,
+      "bankDeg": 0,
+      "dragAccel": 0.0744042434576597,
+      "referenceDragAccel": 0.13764785039667
+    },
+    {
+      "altitudeM": 59960.591,
+      "ut": 10144.111826,
+      "qPa": 86.28054,
+      "measuredLiftAccel": 0.12725122916263842,
+      "requestedVerticalLiftAccel": 0.526739604745203,
+      "predictedRangeM": 1784615.79134295,
+      "requiredRangeM": 593533.978703265,
+      "rangeErrorM": 1191081.81263968,
+      "bankDeg": 0,
+      "dragAccel": 0.251940256557384,
+      "referenceDragAccel": 0.46608947463116
+    },
+    {
+      "altitudeM": 54997.669,
+      "ut": 10266.111826,
+      "qPa": 210.176047,
+      "measuredLiftAccel": 0.3072814226061634,
+      "requestedVerticalLiftAccel": 0.534752065064991,
+      "predictedRangeM": 893947.477676775,
+      "requiredRangeM": 358847.53251378,
+      "rangeErrorM": 535099.945162995,
+      "bankDeg": 0,
+      "dragAccel": 0.583562930595029,
+      "referenceDragAccel": 1.0795914216008
+    },
+    {
+      "altitudeM": 50019.56,
+      "ut": 10388.531826,
+      "qPa": 447.075662,
+      "measuredLiftAccel": 0.6402799476111445,
+      "requestedVerticalLiftAccel": 0.542974118781948,
+      "predictedRangeM": 485430.881032588,
+      "requiredRangeM": 127784.428069793,
+      "rangeErrorM": 357646.452962795,
+      "bankDeg": 32.0023761736095,
+      "dragAccel": 1.14124978948879,
+      "referenceDragAccel": 2.11131211055427
+    },
+    {
+      "altitudeM": 45061.438,
+      "ut": 10461.331826,
+      "qPa": 869.332644,
+      "measuredLiftAccel": 1.345826704078378,
+      "requestedVerticalLiftAccel": 0.910168366296326,
+      "predictedRangeM": 226300.675513367,
+      "requiredRangeM": 0,
+      "rangeErrorM": 226300.675513367,
+      "bankDeg": 40,
+      "dragAccel": 2.58089277259075,
+      "referenceDragAccel": 4.7746516292929
+    },
+    {
+      "altitudeM": 41139.079,
+      "ut": 10501.931826,
+      "qPa": 1364.379584,
+      "measuredLiftAccel": 2.1137348354833585,
+      "requestedVerticalLiftAccel": 1.3436710874623,
+      "predictedRangeM": 140481.959443205,
+      "requiredRangeM": 0,
+      "rangeErrorM": 140481.959443205,
+      "bankDeg": 40,
+      "dragAccel": 4.01054135339396,
+      "referenceDragAccel": 7.41950150377883
+    },
+    {
+      "altitudeM": 29840.296,
+      "ut": 10593.331826,
+      "qPa": 4019.83729,
+      "measuredLiftAccel": 6.891994748648415,
+      "requestedVerticalLiftAccel": 3.86699890904609,
+      "predictedRangeM": 24793.6900749723,
+      "requiredRangeM": 14299.8663187326,
+      "rangeErrorM": 10493.8237562396,
+      "bankDeg": 40,
+      "dragAccel": 11.1745476136947,
+      "referenceDragAccel": 20.6729130853352
+    }
+  ],
+  "explanation": "Bank allocation clamps requiredVerticalLift/measuredLift to [cos(bankLimit),1]; when support request exceeds measured lift it chooses wings-level despite positive range excess. Measured lift bypasses confidence scaling. This demonstrates conflicting local support and long-horizon braking demands, not proof that forced banking is safe or sufficient.",
+  "nextHypothesis": "Predict prospective aero/density and runway overshoot while choosing entry incidence/bank jointly; validate any change against unchanged q/g/coordination and recovery constraints."
+}
