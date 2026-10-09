@@ -728,7 +728,6 @@ bool taem_route_limit_initial_vertical_authority(const TerminalModel *m,
     double local_radius = m->world.radius_m + altitude;
     if (!(local_radius > 1.0)) return false;
     double gravity = m->world.mu_m3_s2 / (local_radius * local_radius);
-    double gamma = radians(geometry->flight_path_angle_deg);
 
     double aoa_max = fmin(m->vehicle.maximum_angle_of_attack,
         m->aero.alpha_deg[m->aero.alpha_count - 1]);
@@ -769,9 +768,9 @@ bool taem_route_limit_initial_vertical_authority(const TerminalModel *m,
        on the identified trim/lift ceiling from its first sample. */
     vertical_available *= 0.95;
 
-    double radial_required = (gravity -
-        geometry->airspeed_mps * geometry->airspeed_mps / local_radius) *
-        cos(gamma);
+    double radial_required = taem_tracker_vertical_lift_demand(
+        m, state, geometry, 0.0);
+    if (!isfinite(radial_required)) return false;
     double gamma_rate_max =
         (vertical_available - radial_required) / geometry->airspeed_mps;
     double curvature_max = gamma_rate_max / geometry->ground_speed_mps;

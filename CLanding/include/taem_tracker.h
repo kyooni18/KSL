@@ -44,4 +44,11 @@ TaemTrackerOutput taem_tracker_update(const TerminalModel *model,
 double taem_tracker_lateral_demand(const TerminalModel *model,
         const TaemGeometryState *geometry, const TaemPathReference *reference);
 
+/* Signed lift acceleration normal to air-relative velocity for a desired
+ * gamma rate (rad/s), including rotating-atmosphere terms. Do not clamp here:
+ * planners need the free-flight rate even when positive lift is unnecessary. */
+double taem_tracker_vertical_lift_demand(const TerminalModel *model,
+        const TerminalDynamicState *state, const TaemGeometryState *geometry,
+        double desired_gamma_rate_rad_s);
+
 #endif

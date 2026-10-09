@@ -77,7 +77,16 @@ int main(void) {
         };
         TaemTrackerOutput command = taem_tracker_update(&model, &state, &geometry, &reference, 0.1);
         assert(command.valid);
-        double expected = fmax(0.0, -geometry.airspeed_mps * gravity_only_gamma_rate(&model, state));
+        double free_rate = gravity_only_gamma_rate(&model, state);
+        double expected = fmax(0.0, -geometry.airspeed_mps * free_rate);
+        /* The profile initializer uses the signed support, including cases
+           where free flight already curves upward. Verify against the same
+           independent oracle rather than just comparing the two callers. */
+        double support = taem_tracker_vertical_lift_demand(&model, &state, &geometry, 0.0);
+        assert(fabs(support + geometry.airspeed_mps * free_rate) < 0.00002);
+        double rate = deg2rad(0.5);
+        assert(fabs(taem_tracker_vertical_lift_demand(&model, &state, &geometry, rate) -
+            geometry.airspeed_mps * (rate - free_rate)) < 0.00002);
         if (fabs(command.required_vertical_lift_mps2 - expected) > 0.00002) {
             fprintf(stderr, "rotating=%d lat=%.0f course=%.0f airspeed=%.0f gamma=%.0f: support %.9f != propagated %.9f\n",
                 rotating, latitudes[i], courses[j], speed, gammas[k],
