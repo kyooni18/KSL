@@ -725,7 +725,9 @@ bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t
     const LandingSite*site=&cfg->site;
     const VehicleProfile*v=&cfg->vehicle;
     if(!isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track)||
-       !isfinite(course)||!isfinite(t->horizontal_speed)||!(t->horizontal_speed>0.0))
+       !isfinite(course)||!isfinite(t->horizontal_speed)||!(t->horizontal_speed>0.0)||
+       !isfinite(site->runway_width)||!(site->runway_width>0.0)||
+       !isfinite(site->runway_length)||!(site->runway_length>0.0))
         return false;
 
     /*
@@ -740,11 +742,19 @@ bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t
 
     double time_to_threshold=fmax(0.0,-t->runway_along_track)/along_rate;
     double projected_cross=t->runway_cross_track+cross_rate*time_to_threshold;
+    /* Hitting the threshold is not enough: a diagonal track can cross the
+       centerline there and still leave the pavement before the runway end.
+       Extend the measured ground-track line across the configured runway and
+       require both endpoints to remain inside its physical width. */
+    double projected_runway_end_cross=projected_cross+
+        site->runway_length*(cross_rate/along_rate);
+    double half_width=site->runway_width*.5;
     double minimum=g&&g->terminal_preflare_plan_valid?
         g->preflare_minimum_speed:v->minimum_safe_speed;
 
     return t->runway_along_track<site->runway_length&&
-        fabs(projected_cross)<=site->runway_width*.5&&
+        fabs(projected_cross)<=half_width&&
+        fabs(projected_runway_end_cross)<=half_width&&
         t->true_air_speed>=minimum;
 }
 

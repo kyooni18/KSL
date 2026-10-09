@@ -12,6 +12,8 @@ static void test_touchdown_forecast_handoff_parity(void) {
     LandingConfiguration cfg=landing_configuration_default();
     cfg.site.altitude=70.0;
     cfg.site.runway_heading=90.0;
+    cfg.site.runway_length=2500.0;
+    cfg.site.runway_width=70.0;
     cfg.vehicle.maximum_angle_of_attack=28.0;
     cfg.vehicle.terminal_maximum_lift_angle_of_attack=15.0;
     cfg.vehicle.touchdown_speed=75.0;
@@ -59,6 +61,21 @@ static void test_touchdown_forecast_handoff_parity(void) {
         gate_aero,&cfg,NULL));
     assert(!terminal_outer_capture_admissible(&g,&divergent,307.0,&planet,
         gate_aero,&cfg,NULL));
+
+    /* A 37-degree ground-track angle can still be arranged to cross the
+       threshold centerline exactly. It must not enter Final because its
+       projected lateral drift carries it far outside the runway by the end. */
+    LandingConfiguration reciprocal=cfg;
+    reciprocal.site.runway_heading=270.0;
+    Telemetry oblique=t;
+    const double oblique_course=307.0;
+    double error=(oblique_course-reciprocal.site.runway_heading)*DEG2RAD;
+    double along_rate=oblique.horizontal_speed*cos(error);
+    double cross_rate=oblique.horizontal_speed*sin(error);
+    double threshold_time=-oblique.runway_along_track/along_rate;
+    oblique.runway_cross_track=-cross_rate*threshold_time;
+    assert(fabs(oblique.runway_cross_track+cross_rate*threshold_time)<1e-6);
+    assert(!terminal_preflare_alignment_valid(&g,&oblique,oblique_course,&reciprocal));
 
     /* Cold handoff and a handoff retaining MM305's observed aero history. */
     for(int pass=0;pass<2;++pass){
