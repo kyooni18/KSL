@@ -1,0 +1,155 @@
+{
+  "classification": "live hypothetical original-STS API polar; unqualified static force evidence",
+  "sourceSHA256": "eb996f89c059eb2b486b48d5728827d28a2ba868c71ec50e7759b605d355e141",
+  "completedCalls": 119,
+  "pressureSkippedCalls": 21,
+  "invariancePassed": true,
+  "certifiedCells": 0,
+  "shadowGateEvidence": false,
+  "landingOrRolloutEvidence": false,
+  "alpha18Summary": [
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "qPa": 5029.702978559796,
+      "clPerpendicularMagnitude": 0.8506276353967659,
+      "cd": 0.3573213179830019,
+      "liftToDragMagnitude": 2.380567832331882
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "qPa": 8941.694184106304,
+      "clPerpendicularMagnitude": 0.6691179748871569,
+      "cd": 0.2985258510800582,
+      "liftToDragMagnitude": 2.241407142685656
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "qPa": 20118.811914239184,
+      "clPerpendicularMagnitude": 0.3746823963248588,
+      "cd": 0.19766617920219073,
+      "liftToDragMagnitude": 1.8955311315123866
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "qPa": 1681.8243214955542,
+      "clPerpendicularMagnitude": 0.7906501229450434,
+      "cd": 0.3379809361076436,
+      "liftToDragMagnitude": 2.339333490375413
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "qPa": 2989.9099048809853,
+      "clPerpendicularMagnitude": 0.5965336939442637,
+      "cd": 0.2759393640193088,
+      "liftToDragMagnitude": 2.161828907826726
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "qPa": 6727.297285982217,
+      "clPerpendicularMagnitude": 0.3098439048813331,
+      "cd": 0.18844365950290573,
+      "liftToDragMagnitude": 1.6442256836800362
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "qPa": 18686.936905506158,
+      "clPerpendicularMagnitude": 0.22100458342450255,
+      "cd": 0.28473558648696823,
+      "liftToDragMagnitude": 0.7761747878135966
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "qPa": 288.24812326255477,
+      "clPerpendicularMagnitude": 0.7930944160035509,
+      "cd": 0.3387679078829546,
+      "liftToDragMagnitude": 2.3411143663512766
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "qPa": 512.4411080223197,
+      "clPerpendicularMagnitude": 0.5994386774634735,
+      "cd": 0.2768592849048708,
+      "liftToDragMagnitude": 2.1651384300491907
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "qPa": 1152.992493050219,
+      "clPerpendicularMagnitude": 0.31215099878746183,
+      "cd": 0.18908842639072737,
+      "liftToDragMagnitude": 1.6508202259954354
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "qPa": 3202.7569251394975,
+      "clPerpendicularMagnitude": 0.22126196015521626,
+      "cd": 0.2857644634226603,
+      "liftToDragMagnitude": 0.7742808798026032
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "qPa": 8457.280005446486,
+      "clPerpendicularMagnitude": 0.18374855146847383,
+      "cd": 0.1952134480665098,
+      "liftToDragMagnitude": 0.9412699447113405
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "qPa": 90.02950537910014,
+      "clPerpendicularMagnitude": 0.8039010926708733,
+      "cd": 0.3422485562305073,
+      "liftToDragMagnitude": 2.34888088798668
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "qPa": 160.05245400728913,
+      "clPerpendicularMagnitude": 0.6123397135531295,
+      "cd": 0.28094861501642354,
+      "liftToDragMagnitude": 2.179543449670801
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "qPa": 360.1180215164006,
+      "clPerpendicularMagnitude": 0.3227085990752071,
+      "cd": 0.19206947740609398,
+      "liftToDragMagnitude": 1.6801659661566206
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "qPa": 1000.3278375455571,
+      "clPerpendicularMagnitude": 0.22239944092150907,
+      "cd": 0.29044678569285487,
+      "liftToDragMagnitude": 0.7657149325683869
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "qPa": 2641.490696018737,
+      "clPerpendicularMagnitude": 0.18534064387332566,
+      "cd": 0.19615713500664483,
+      "liftToDragMagnitude": 0.9448580285751381
+    }
+  ],
+  "nextStep": "Construct a separately labelled offline terminal-aero experiment with explicit sound-speed/Mach mapping provenance; compare against configured STS MM305 without changing gates.",
+  "limitations": [
+    "Perpendicular force magnitude may include side force.",
+    "Static neutral surfaces and current loaded parts do not identify actuator response.",
+    "Exact airspeed samples do not establish Mach without sound-speed mapping.",
+    "No trajectory, touchdown or rollout was flown."
+  ]
+}

@@ -1,0 +1,6416 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_HYPOTHETICAL_API_POLAR",
+  "qualified": false,
+  "shadowGateEvidence": false,
+  "landingOrRolloutEvidence": false,
+  "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+  "profileSHA256": "62dfa52c564e744d0db6c90109e5bfcf41397f6c451525caf241b5b303d22755",
+  "plan": [
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    }
+  ],
+  "maximumCalls": 140,
+  "pressureBoundPa": 45000,
+  "referenceAreaM2": 250,
+  "settersUsed": false,
+  "limitations": [
+    "Hypothetical neutral-surface static API forces; not flight measurements or certified cells.",
+    "Exact airspeed is supplied; no nominal Mach or temperature-scaling assumption is needed.",
+    "Perpendicular force may include side force; zero sideslip is requested.",
+    "Current loaded part state is retained; actual flight actuator response is not identified."
+  ],
+  "liveStateBefore": {
+    "ut": 9931.291826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71917.32722419954,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.329345703125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155385.45653189288,
+      70.17262482295193,
+      653703.4875218964
+    ],
+    "velocity_mps": [
+      -2238.976694053683,
+      0.04767761782868239,
+      471.9192942389901
+    ],
+    "rotation_xyzw": [
+      0.7022770182113638,
+      -0.7022951465904063,
+      -0.08238999199090147,
+      0.08246516944263865
+    ],
+    "angular_velocity_rad_s": [
+      -1.8789001927048757e-05,
+      0.0002513979561626911,
+      -2.316621171842591e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.623641014099121,
+    "sideslip_deg": 0.0006996739539317787,
+    "roll_deg": 0.00323486328125
+  },
+  "liveActuatorsBefore": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "saveSHA256Before": {
+    "/Applications/.Misc/LMPKSP/saves/Main/86km.sfs": "4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6",
+    "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+  },
+  "samples": [
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.1587841163615424,
+          -8.883880958876489e-06,
+          -296.1008911417593
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        10879.914549553127,
+        8.940548385328464,
+        45977.93051951469
+      ],
+      "torqueNm": [
+        -65.80557952081503,
+        63935.109068132406,
+        942.2268736522013
+      ],
+      "dragN": 45897.38846992952,
+      "perpendicularForceN": 11214.831565239114,
+      "clPerpendicularMagnitude": 0.008918881781325678,
+      "cd": 0.036501072660216426
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          12.61386288897705,
+          0.008292324820814656,
+          -295.56801788659703
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -316736.4286054159,
+        -250.74622775487637,
+        58082.08670673547
+      ],
+      "torqueNm": [
+        194.47287556103925,
+        -153488.29929209428,
+        943.36490591199
+      ],
+      "dragN": 87727.68014029888,
+      "perpendicularForceN": 309837.71722111985,
+      "clPerpendicularMagnitude": 0.24640637313326103,
+      "cd": 0.06976768251664738
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          18.85059303928516,
+          0.01324678637905663,
+          -294.8113333064575
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -513374.9687074721,
+        -406.6135503667483,
+        65371.506880522385
+      ],
+      "torqueNm": [
+        345.1039082474782,
+        -278621.4752603488,
+        940.9619376322428
+      ],
+      "dragN": 139819.7180885965,
+      "perpendicularForceN": 498274.92830307333,
+      "clPerpendicularMagnitude": 0.39626588721209083,
+      "cd": 0.11119520869093742
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          27.08839827899458,
+          0.019793921693015193,
+          -293.2967790866631
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -774253.9116330567,
+        -613.4037690876914,
+        74777.35193078403
+      ],
+      "torqueNm": [
+        537.3239530680012,
+        -436677.39610864135,
+        934.0618711230579
+      ],
+      "dragN": 239521.56574221732,
+      "perpendicularForceN": 740061.1919628336,
+      "clPerpendicularMagnitude": 0.5885526005153828,
+      "cd": 0.19048565433245673
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          33.18642416107047,
+          0.024642716519096552,
+          -291.7856682704111
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -968110.0053093131,
+        -767.0691360847545,
+        81446.27976177755
+      ],
+      "torqueNm": [
+        674.1794437354979,
+        -547663.3722464419,
+        906.5634788857919
+      ],
+      "dragN": 335891.53856777446,
+      "perpendicularForceN": 911618.3091517331,
+      "clPerpendicularMagnitude": 0.7249877879769081,
+      "cd": 0.26712634125679807
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          39.19700750447545,
+          0.029423967372082416,
+          -289.9574822623979
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1156768.530069867,
+        -916.6129232262566,
+        88358.47264683229
+      ],
+      "torqueNm": [
+        805.5699547670039,
+        -654706.9001519482,
+        902.1345646499203
+      ],
+      "dragN": 449305.0243405041,
+      "perpendicularForceN": 1069601.0878500973,
+      "clPerpendicularMagnitude": 0.8506276353967659,
+      "cd": 0.3573213179830019
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 5029.702978559796,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          58.39145207635568,
+          0.04470711600576038,
+          -281.6442532116142
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1692830.3042766892,
+        -1341.474672919865,
+        121162.95549289684
+      ],
+      "torqueNm": [
+        1274.6578300532024,
+        -981609.3378052401,
+        500.5760490667326
+      ],
+      "dragN": 912174.794863301,
+      "perpendicularForceN": 1431186.1667972042,
+      "clPerpendicularMagnitude": 1.1381874221185202,
+      "cd": 0.7254303474790815
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.450404549785657,
+          -1.1845174597624464e-05,
+          -336.0998280966685
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.088887490341626e-15,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        19350.97758503086,
+        15.880822067355322,
+        80608.05651945905
+      ],
+      "torqueNm": [
+        -114.26816320008504,
+        113509.06120582938,
+        1317.415354157375
+      ],
+      "dragN": 80464.83575890251,
+      "perpendicularForceN": 19938.143540310466,
+      "clPerpendicularMagnitude": 0.008919179354512101,
+      "cd": 0.03599534231529737
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          16.3905095799397,
+          0.011056433094424278,
+          -335.38933042311885
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000115,
+        "achievedBetaDeg": -5.088887490341625e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -442882.1196156248,
+        -350.481661786106,
+        103167.58594750232
+      ],
+      "torqueNm": [
+        263.9617108538316,
+        -203834.45227580136,
+        1318.8812887888932
+      ],
+      "dragN": 144521.97359890217,
+      "perpendicularForceN": 431163.1299751143,
+      "clPerpendicularMagnitude": 0.1928776006414976,
+      "cd": 0.06465082371337964
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          24.706149780350497,
+          0.01766238183876112,
+          -334.3804176495995
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000005,
+        "achievedBetaDeg": -1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -720568.4172451324,
+        -570.5745064489441,
+        116901.92265862663
+      ],
+      "torqueNm": [
+        481.1375886861422,
+        -385076.8549293243,
+        1315.3266040225692
+      ],
+      "dragN": 221125.84524948403,
+      "perpendicularForceN": 695692.8845190293,
+      "clPerpendicularMagnitude": 0.3112130073764368,
+      "cd": 0.09891899261888475
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          35.68989009996303,
+          0.026391895590720083,
+          -332.36101202320685
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000005,
+        "achievedBetaDeg": -1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1089126.885442913,
+        -862.695121691277,
+        134754.45047558082
+      ],
+      "torqueNm": [
+        755.4858349682785,
+        -611588.8509762486,
+        1305.5476183265673
+      ],
+      "dragN": 365805.02329470025,
+      "perpendicularForceN": 1034670.7513469165,
+      "clPerpendicularMagnitude": 0.46285222019157163,
+      "cd": 0.16364014056526868
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          43.82059127606423,
+          0.03285695535876698,
+          -330.3461976015376
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 14.999999999999993,
+        "achievedBetaDeg": 1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1363038.4839304655,
+        -1079.8019981733737,
+        147482.159149429
+      ],
+      "torqueNm": [
+        948.7029344770716,
+        -768495.8320389433,
+        1267.125724148064
+      ],
+      "dragN": 504544.450393381,
+      "perpendicularForceN": 1274778.7884540737,
+      "clPerpendicularMagnitude": 0.5702627543312628,
+      "cd": 0.2257041853612929
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          51.834702400604215,
+          0.03923195649609568,
+          -327.90861625751995
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000007,
+        "achievedBetaDeg": 1.0177774980683255e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1629984.5920527407,
+        -1291.3853282963237,
+        160575.12376879132
+      ],
+      "torqueNm": [
+        1133.536742983025,
+        -919636.8822385101,
+        1260.555352083178
+      ],
+      "dragN": 667331.7166019852,
+      "perpendicularForceN": 1495762.0761323695,
+      "clPerpendicularMagnitude": 0.6691179748871569,
+      "cd": 0.2985258510800582
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 8941.694184106304,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.42729516311117,
+          0.05960948800765209,
+          -316.8243108564751
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000007,
+        "achievedBetaDeg": 1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -2398858.997997073,
+        -1900.6853456097722,
+        223979.02321361494
+      ],
+      "torqueNm": [
+        1849.4152686188859,
+        -1397404.4826138918,
+        721.360415178564
+      ],
+      "dragN": 1338598.1686434613,
+      "perpendicularForceN": 2003209.8368918821,
+      "clPerpendicularMagnitude": 0.8961209344209292,
+      "cd": 0.5988118766230207
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          3.0336454166338997,
+          -1.7767761917752978e-05,
+          -416.0977020064869
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        43715.20122295125,
+        35.682369628662016,
+        157295.00984304235
+      ],
+      "torqueNm": [
+        -240.4259633909581,
+        250593.78160043297,
+        1658.8563522055347
+      ],
+      "dragN": 156972.12340528698,
+      "perpendicularForceN": 44860.814597516684,
+      "clPerpendicularMagnitude": 0.00891917769075941,
+      "cd": 0.03120902448403312
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          23.943802961864915,
+          0.016584649641629312,
+          -415.03195549616237
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -555495.648695343,
+        -439.13863763599943,
+        207936.27544325887
+      ],
+      "torqueNm": [
+        308.9138289981256,
+        -210075.42269638713,
+        1661.2264958732103
+      ],
+      "dragN": 259455.18573556087,
+      "perpendicularForceN": 533381.7674071203,
+      "clPerpendicularMagnitude": 0.10604637484177024,
+      "cd": 0.051584593929610775
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          36.41726326248114,
+          0.02649357275811326,
+          -413.51858633588336
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -916448.7790086507,
+        -725.1508171699949,
+        240495.95554579195
+      ],
+      "torqueNm": [
+        616.3258584539042,
+        -468543.188182902,
+        1657.3596949323078
+      ],
+      "dragN": 372063.1444228451,
+      "perpendicularForceN": 871370.3068077447,
+      "clPerpendicularMagnitude": 0.17324488354921758,
+      "cd": 0.07397318410427918
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          52.892873741899976,
+          0.039587843386030386,
+          -410.4894778962945
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1396194.052680473,
+        -1105.2916621838265,
+        284147.94952580606
+      ],
+      "torqueNm": [
+        992.2474829995276,
+        -782303.4943421925,
+        1645.5051663860067
+      ],
+      "dragN": 577734.5176504703,
+      "perpendicularForceN": 1302429.245197174,
+      "clPerpendicularMagnitude": 0.2589475463559304,
+      "cd": 0.11486453973787109
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          65.08892550605175,
+          0.049285433038193105,
+          -407.4672562637906
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1752925.071703456,
+        -1387.964557484452,
+        315892.3064051941
+      ],
+      "torqueNm": [
+        1246.3368836314166,
+        -990900.774333833,
+        1596.997174974761
+      ],
+      "dragN": 770547.1025061007,
+      "perpendicularForceN": 1605862.1813585453,
+      "clPerpendicularMagnitude": 0.31927574813142695,
+      "cd": 0.15319932524658522
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.11009219286171,
+          0.05884793474416483,
+          -403.8108842477642
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -2102121.8844160764,
+        -1664.6642805612205,
+        347870.90885647445
+      ],
+      "torqueNm": [
+        1485.5588674432006,
+        -1190709.3811985569,
+        1587.8020263581336
+      ],
+      "dragN": 994202.1702937931,
+      "perpendicularForceN": 1884541.164809064,
+      "clPerpendicularMagnitude": 0.3746823963248588,
+      "cd": 0.19766617920219073
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.698569858133305,
+      "qPa": 20118.811914239184,
+      "state": {
+        "position": [
+          -603983.7306772388,
+          -512.4024490785365,
+          -4403.466922193242
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          115.49898133662217,
+          0.08941423201152077,
+          -387.18442614619676
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -3164719.210257869,
+        -2506.259814884361,
+        527756.2214579028
+      ],
+      "torqueNm": [
+        2773.13582494791,
+        -1916045.8449770813,
+        1062.1509060168912
+      ],
+      "dragN": 1970240.7485662154,
+      "perpendicularForceN": 2532218.7865763516,
+      "clPerpendicularMagnitude": 0.5034529468977563,
+      "cd": 0.39172109306748243
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.1736640165480283,
+          -8.883880958876489e-06,
+          -298.14183246947323
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        3638.2414594612464,
+        2.9886493560739575,
+        15339.143631361527
+      ],
+      "torqueNm": [
+        -21.84239100310542,
+        21373.098016620686,
+        292.8316666052087
+      ],
+      "dragN": 15312.211337766681,
+      "perpendicularForceN": 3749.976151987646,
+      "clPerpendicularMagnitude": 0.008918829640073222,
+      "cd": 0.03641809942229964
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          12.628742789163535,
+          0.008292324820814656,
+          -297.60895921431097
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -98442.78348721223,
+        -77.92458090529217,
+        19455.667329239473
+      ],
+      "torqueNm": [
+        59.91472391279508,
+        -47028.68459025176,
+        293.16943261199566
+      ],
+      "dragN": 28663.35093055874,
+      "perpendicularForceN": 96166.12188087928,
+      "clPerpendicularMagnitude": 0.22871859004955766,
+      "cd": 0.06817204523495056
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          18.865472939471648,
+          0.01324678637905663,
+          -296.85227463417147
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -159728.33981581195,
+        -126.50200752425617,
+        21941.42894346075
+      ],
+      "torqueNm": [
+        107.13636184775355,
+        -86305.51161364761,
+        292.41062370703946
+      ],
+      "dragN": 45087.52920005487,
+      "perpendicularForceN": 154795.67034574493,
+      "clPerpendicularMagnitude": 0.36816133140016344,
+      "cd": 0.10723481311047044
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          27.103278179181064,
+          0.019793921693015193,
+          -295.33772041437703
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -241044.6949885671,
+        -190.95738188617298,
+        25155.142577143124
+      ],
+      "torqueNm": [
+        167.20789463271814,
+        -135762.85874427375,
+        290.2393648592126
+      ],
+      "dragN": 76400.2895387327,
+      "perpendicularForceN": 229996.4312838946,
+      "clPerpendicularMagnitude": 0.5470165423208326,
+      "cd": 0.18170813339360942
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          33.201304061256955,
+          0.024642716519096552,
+          -293.82660959812506
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -301472.13529964996,
+        -238.85580528276066,
+        27437.26724479212
+      ],
+      "torqueNm": [
+        209.8710565498207,
+        -170356.00349265969,
+        281.6848292280116
+      ],
+      "dragN": 106597.56444169706,
+      "perpendicularForceN": 283328.9048141516,
+      "clPerpendicularMagnitude": 0.6738608811702823,
+      "cd": 0.25352841692027783
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          39.21188740466194,
+          0.029423967372082416,
+          -291.9984235901119
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -360303.10275314224,
+        -285.48830112733066,
+        29797.320492008424
+      ],
+      "torqueNm": [
+        250.7520174000889,
+        -203709.0178293205,
+        280.32165284580594
+      ],
+      "dragN": 142106.1396369175,
+      "perpendicularForceN": 332433.65164060605,
+      "clPerpendicularMagnitude": 0.7906501229450434,
+      "cd": 0.3379809361076436
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 1681.8243214955542,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          58.40633197654216,
+          0.04470711600576038,
+          -283.68519453932817
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -528088.1380818645,
+        -418.46347774818804,
+        41034.0158007415
+      ],
+      "torqueNm": [
+        400.04676807888734,
+        -306527.663336477,
+        156.7423857371686
+      ],
+      "dragN": 287404.7052467968,
+      "perpendicularForceN": 444926.49117487925,
+      "clPerpendicularMagnitude": 1.058199683494244,
+      "cd": 0.6835546414056458
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.4652844499721427,
+          -1.1845174597624464e-05,
+          -338.14076942438237
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.088887490341626e-15,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        6469.876247718795,
+        5.308378409320789,
+        27036.91569954201
+      ],
+      "torqueNm": [
+        -37.901884791999876,
+        37935.42598344804,
+        392.6907441664598
+      ],
+      "dragN": 26989.028460533376,
+      "perpendicularForceN": 6666.819342110429,
+      "clPerpendicularMagnitude": 0.00891909061370303,
+      "cd": 0.03610681166877192
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          16.405389480126185,
+          0.011056433094424278,
+          -337.43027175083273
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000115,
+        "achievedBetaDeg": -5.088887490341625e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -132049.21970232867,
+        -104.475356990833,
+        34823.64896156528
+      ],
+      "torqueNm": [
+        77.40795131889269,
+        -58969.71676953822,
+        393.1194914228867
+      ],
+      "dragN": 47135.673659370215,
+      "perpendicularForceN": 128171.45600627997,
+      "clPerpendicularMagnitude": 0.17147199759704052,
+      "cd": 0.06305965752669926
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          24.721029680536983,
+          0.01766238183876112,
+          -336.4213589773134
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000005,
+        "achievedBetaDeg": -1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -215316.97566474692,
+        -170.46964251820282,
+        39592.328759935204
+      ],
+      "torqueNm": [
+        143.3170297323923,
+        -114093.23995849071,
+        392.05594584687964
+      ],
+      "dragN": 70685.84292719422,
+      "perpendicularForceN": 207201.57618999682,
+      "clPerpendicularMagnitude": 0.2772010967310329,
+      "cd": 0.09456585004357568
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          35.704770000149516,
+          0.026391895590720083,
+          -334.40195335092085
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000005,
+        "achievedBetaDeg": -1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -325873.5305718824,
+        -258.0925888608926,
+        45813.481688587635
+      ],
+      "torqueNm": [
+        226.12997905115049,
+        -182591.67910084515,
+        389.08924353782277
+      ],
+      "dragN": 114816.71827723492,
+      "perpendicularForceN": 308398.47737569106,
+      "clPerpendicularMagnitude": 0.4125856459717866,
+      "cd": 0.15360558937217242
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          43.835471176250714,
+          0.03285695535876698,
+          -332.3871389292516
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 14.999999999999993,
+        "achievedBetaDeg": 1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -408055.7517730838,
+        -323.2283838271182,
+        50259.25942662798
+      ],
+      "torqueNm": [
+        284.04278200490666,
+        -229683.5053481889,
+        377.6280836440442
+      ],
+      "dragN": 156933.98397364278,
+      "perpendicularForceN": 380009.6299621343,
+      "clPerpendicularMagnitude": 0.5083894057700856,
+      "cd": 0.20995145534980877
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          51.8495823007907,
+          0.03923195649609568,
+          -329.94955758523395
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000007,
+        "achievedBetaDeg": 1.0177774980683255e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -488221.65015617514,
+        -386.7652711661021,
+        54816.236236800556
+      ],
+      "torqueNm": [
+        339.3567223408991,
+        -275014.25258741184,
+        375.6218213754486
+      ],
+      "dragN": 206258.45940697278,
+      "perpendicularForceN": 445895.50002979906,
+      "clPerpendicularMagnitude": 0.5965336939442637,
+      "cd": 0.2759393640193088
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 2989.9099048809853,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.44217506329765,
+          0.05960948800765209,
+          -318.865252184189
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000007,
+        "achievedBetaDeg": 1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -721071.0234513007,
+        -571.2730218217455,
+        77137.05418388141
+      ],
+      "torqueNm": [
+        564.3062383368353,
+        -421245.1268772447,
+        219.3249788815028
+      ],
+      "dragN": 410997.23457229853,
+      "perpendicularForceN": 597473.9705761765,
+      "clPerpendicularMagnitude": 0.7993203669459188,
+      "cd": 0.5498456443805901
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          3.0485253168203856,
+          -1.7767761917752978e-05,
+          -418.1386433342009
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        14304.434925641548,
+        11.721693577677364,
+        59802.25398621155
+      ],
+      "torqueNm": [
+        -80.66872034797555,
+        82936.94581674584,
+        458.56053478857535
+      ],
+      "dragN": 59696.37803694379,
+      "perpendicularForceN": 14740.048407032584,
+      "clPerpendicularMagnitude": 0.008764321111687259,
+      "cd": 0.03549501411887008
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          23.9586828620514,
+          0.016584649641629312,
+          -417.0728968238763
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -154567.79302195398,
+        -122.06224513512768,
+        80015.56742697049
+      ],
+      "torqueNm": [
+        82.48321037408613,
+        -52952.30208366497,
+        459.2374050571858
+      ],
+      "dragN": 94251.82999338857,
+      "perpendicularForceN": 146322.59262474382,
+      "clPerpendicularMagnitude": 0.08700230502947369,
+      "cd": 0.0560414240588313
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          36.43214316266763,
+          0.02649357275811326,
+          -415.55952766359735
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -256726.65385945668,
+        -202.99033601181327,
+        93063.25654248976
+      ],
+      "torqueNm": [
+        172.6765567779339,
+        -128658.17862604524,
+        458.3340764937626
+      ],
+      "dragN": 129642.65580795814,
+      "perpendicularForceN": 240337.6115390647,
+      "clPerpendicularMagnitude": 0.14290292301478055,
+      "cd": 0.07708454096601126
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          52.90775364208646,
+          0.039587843386030386,
+          -412.5304192240084
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -392973.7041252367,
+        -310.9227605503899,
+        110579.46800359964
+      ],
+      "torqueNm": [
+        281.2589242052699,
+        -219443.29836442965,
+        455.19002133399226
+      ],
+      "dragN": 192496.60623602173,
+      "perpendicularForceN": 360001.8112988395,
+      "clPerpendicularMagnitude": 0.21405434961168218,
+      "cd": 0.11445702370675973
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          65.10380540623824,
+          0.049285433038193105,
+          -409.50819759150454
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -494592.26094287325,
+        -391.4259965510752,
+        123300.13309604899
+      ],
+      "torqueNm": [
+        353.09314445551104,
+        -278686.7638653886,
+        441.9233027365907
+      ],
+      "dragN": 250352.45926744334,
+      "perpendicularForceN": 444013.76865941955,
+      "clPerpendicularMagnitude": 0.2640072229806871,
+      "cd": 0.14885767560122964
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.1249720930482,
+          0.05884793474416483,
+          -405.8518255754781
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -594542.4438235478,
+        -470.6070329322532,
+        136056.9243717143
+      ],
+      "torqueNm": [
+        420.2085866456088,
+        -335387.3916705349,
+        439.2463009027923
+      ],
+      "dragN": 316929.12978361367,
+      "perpendicularForceN": 521103.01509658113,
+      "clPerpendicularMagnitude": 0.3098439048813331,
+      "cd": 0.18844365950290573
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 6727.297285982217,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          115.51386123680865,
+          0.08941423201152077,
+          -389.22536747391075
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -909260.8177890701,
+        -719.7804469285899,
+        207009.7074734345
+      ],
+      "torqueNm": [
+        842.9360579283733,
+        -554494.8466206625,
+        321.9954798198397
+      ],
+      "dragN": 614779.2605191225,
+      "perpendicularForceN": 701181.312268188,
+      "clPerpendicularMagnitude": 0.41691709609994576,
+      "cd": 0.365543090714988
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          4.2150070505169,
+          -2.961293651537744e-05,
+          -578.1343911538377
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.22133299768199e-14,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        27925.803288801784,
+        23.037726800488375,
+        143101.9181972806
+      ],
+      "torqueNm": [
+        -186.53154748254747,
+        161030.0628496282,
+        908.3658010630089
+      ],
+      "dragN": 142894.5217327256,
+      "perpendicularForceN": 28968.356366533906,
+      "clPerpendicularMagnitude": 0.0062007714828850955,
+      "cd": 0.030587040017376277
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          39.06526962590192,
+          0.0276410827360678,
+          -576.3581469699634
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000005,
+        "achievedBetaDeg": 4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -325512.1296834976,
+        -255.95082328309837,
+        360398.5381582726
+      ],
+      "torqueNm": [
+        168.66730796984785,
+        -80437.58207870906,
+        912.0667608760614
+      ],
+      "dragN": 389522.19601548277,
+      "perpendicularForceN": 290030.64872493356,
+      "clPerpendicularMagnitude": 0.06208200952173713,
+      "cd": 0.08337850081801454
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          59.854370126928956,
+          0.04415595459681754,
+          -573.835865036165
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": 4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -554986.872521853,
+        -437.1283148395297,
+        497030.5043257688
+      ],
+      "torqueNm": [
+        357.2026705886112,
+        -215657.71234202053,
+        914.5211739363356
+      ],
+      "dragN": 572920.0249890157,
+      "perpendicularForceN": 476248.4508632704,
+      "clPerpendicularMagnitude": 0.10194253949087664,
+      "cd": 0.12263540630250712
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          87.3137209259603,
+          0.06597973897675047,
+          -568.7873509701836
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000002,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -879823.1174953951,
+        -693.6795084241728,
+        678700.2634240403
+      ],
+      "torqueNm": [
+        572.5530186421373,
+        -375610.5218357486,
+        915.4207564097537
+      ],
+      "dragN": 852017.5277601314,
+      "perpendicularForceN": 713294.7351775084,
+      "clPerpendicularMagnitude": 0.15268307241243678,
+      "cd": 0.18237714015271966
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          107.6404738662133,
+          0.08214238839696009,
+          -563.7503149160104
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000005,
+        "achievedBetaDeg": 4.0711099922733e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1135954.5894729896,
+        -896.0481432449197,
+        809979.530237779
+      ],
+      "torqueNm": [
+        704.6493160985628,
+        -476364.11558389524,
+        893.2064651561346
+      ],
+      "dragN": 1082829.4433299822,
+      "perpendicularForceN": 879739.09104286,
+      "clPerpendicularMagnitude": 0.18831103149572737,
+      "cd": 0.2317831860417795
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          127.67575167756327,
+          0.09807989124027472,
+          -557.6563615559664
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.0,
+        "achievedBetaDeg": -4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -1399858.6931025235,
+        -1104.622733869755,
+        935870.8886974705
+      ],
+      "torqueNm": [
+        819.6733044975833,
+        -571074.5779558801,
+        890.3997166826683
+      ],
+      "dragN": 1330208.9848585667,
+      "perpendicularForceN": 1032474.6765703377,
+      "clPerpendicularMagnitude": 0.22100458342450255,
+      "cd": 0.28473558648696823
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.23358671131882697,
+      "qPa": 18686.936905506158,
+      "state": {
+        "position": [
+          -610983.5421254849,
+          -518.3408880579235,
+          -4454.500479238603
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          191.65723358383067,
+          0.14902372001907338,
+          -529.9455980533542
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000007,
+        "achievedBetaDeg": 1.6284439969093197e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -2384703.3891725074,
+        -1882.6521315573266,
+        1488103.642712573
+      ],
+      "torqueNm": [
+        2315.6048490126996,
+        -1062212.2499038454,
+        1002.9327088566516
+      ],
+      "dragN": 2443660.9878220004,
+      "perpendicularForceN": 1389167.8180699148,
+      "clPerpendicularMagnitude": 0.2973559176861335,
+      "cd": 0.523073631634507
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.1927953167877705,
+          -8.883880958876489e-06,
+          -300.76589989081975
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        623.5570473214417,
+        0.5122339874836271,
+        2629.2303716246724
+      ],
+      "torqueNm": [
+        -3.7447570019653753,
+        3663.1860947943305,
+        50.34369954093712
+      ],
+      "dragN": 2624.6144474915022,
+      "perpendicularForceN": 642.7091120720029,
+      "clPerpendicularMagnitude": 0.008918831523306503,
+      "cd": 0.036421599804843635
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          12.647874089403278,
+          0.008292324820814656,
+          -300.2330266356575
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -16924.278215172602,
+        -13.396846860926043,
+        3334.2639102761077
+      ],
+      "torqueNm": [
+        10.30478869760403,
+        -8090.231285114783,
+        50.40371083856658
+      ],
+      "dragN": 4917.295539973693,
+      "perpendicularForceN": 16533.87108259878,
+      "clPerpendicularMagnitude": 0.2294394273303029,
+      "cd": 0.06823698255956667
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          18.88460423971139,
+          0.01324678637905663,
+          -299.476342055518
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -27459.210446060802,
+        -21.747276156454262,
+        3759.9456129624177
+      ],
+      "torqueNm": [
+        18.417767625086107,
+        -14839.797016791548,
+        50.27158288127476
+      ],
+      "dragN": 7739.166648596826,
+      "perpendicularForceN": 26612.98934473083,
+      "clPerpendicularMagnitude": 0.36930667986330684,
+      "cd": 0.1073958999073517
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          27.122409479420806,
+          0.019793921693015193,
+          -297.96178783572356
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -41437.34611912729,
+        -32.82705164583717,
+        4310.240755027255
+      ],
+      "torqueNm": [
+        28.743257706599707,
+        -23339.976782767317,
+        49.90450659061747
+      ],
+      "dragN": 13119.98647963279,
+      "perpendicularForceN": 39541.10343872846,
+      "clPerpendicularMagnitude": 0.54870925772116,
+      "cd": 0.18206517816849438
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          33.2204353614967,
+          0.024642716519096552,
+          -296.4506770194716
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -51824.695527231415,
+        -41.06070086505201,
+        4700.990856314302
+      ],
+      "torqueNm": [
+        36.0750898739508,
+        -29286.46354662886,
+        48.430310057844174
+      ],
+      "dragN": 18309.637650072935,
+      "perpendicularForceN": 48709.92954855896,
+      "clPerpendicularMagnitude": 0.6759444467111532,
+      "cd": 0.2540816216644762
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          39.23101870490168,
+          0.029423967372082416,
+          -294.62249101145835
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -61937.43872965826,
+        -49.076589256360734,
+        5105.1228682019355
+      ],
+      "torqueNm": [
+        43.10853354236502,
+        -35019.86676148232,
+        48.185033688922815
+      ],
+      "dragN": 24412.303417210922,
+      "perpendicularForceN": 57151.994245758855,
+      "clPerpendicularMagnitude": 0.7930944160035509,
+      "cd": 0.3387679078829546
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 288.24812326255477,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          58.425463276781905,
+          0.04470711600576038,
+          -286.3092619606747
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -90774.09272723454,
+        -71.93062700199934,
+        7028.9371401467
+      ],
+      "torqueNm": [
+        68.74570151211537,
+        -52687.12988414805,
+        26.938698752269907
+      ],
+      "dragN": 49381.0217801914,
+      "perpendicularForceN": 76490.92579994096,
+      "clPerpendicularMagnitude": 1.0614594805915618,
+      "cd": 0.6852571488933792
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          2.484415750211885,
+          -1.1845174597624464e-05,
+          -340.76483684572895
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.088887490341626e-15,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        1108.8686626886067,
+        0.9098171138272736,
+        4634.521810261829
+      ],
+      "torqueNm": [
+        -6.498454226430827,
+        6502.087578781914,
+        67.63136937710286
+      ],
+      "dragN": 4626.314423687128,
+      "perpendicularForceN": 1142.6275866777498,
+      "clPerpendicularMagnitude": 0.008919093872757624,
+      "cd": 0.036111969561080766
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          16.424520780365928,
+          0.011056433094424278,
+          -340.0543391721793
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000115,
+        "achievedBetaDeg": -5.088887490341625e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -22742.116342014677,
+        -17.993403385998604,
+        5967.707714958867
+      ],
+      "torqueNm": [
+        13.340755609624754,
+        -10169.743785482344,
+        67.70419126032257
+      ],
+      "dragN": 8088.2735552065315,
+      "perpendicularForceN": 22077.081911874648,
+      "clPerpendicularMagnitude": 0.17232873449265174,
+      "cd": 0.06313524366865776
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          24.740160980776725,
+          0.01766238183876112,
+          -339.04542639865997
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000005,
+        "achievedBetaDeg": -1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -37079.23794367389,
+        -29.356379045417107,
+        6783.929137128482
+      ],
+      "torqueNm": [
+        24.68330644112693,
+        -19654.9466418922,
+        67.51834591718197
+      ],
+      "dragN": 12138.839388136848,
+      "perpendicularForceN": 35686.7065043438,
+      "clPerpendicularMagnitude": 0.27856240216223593,
+      "cd": 0.09475304926245795
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          35.72390130038926,
+          0.026391895590720083,
+          -337.0260207722673
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000005,
+        "achievedBetaDeg": -1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -56114.67416030426,
+        -44.44317918668389,
+        7848.576644814639
+      ],
+      "torqueNm": [
+        38.93632263985792,
+        -31444.464738102804,
+        67.00803164257518
+      ],
+      "dragN": 19731.720758361498,
+      "perpendicularForceN": 53114.19756126295,
+      "clPerpendicularMagnitude": 0.41459747650806755,
+      "cd": 0.15402137298869528
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          43.854602476490456,
+          0.03285695535876698,
+          -335.01120635059806
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 14.999999999999993,
+        "achievedBetaDeg": 1.0177774980683252e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -70264.54917827251,
+        -55.65808092444805,
+        8609.312956239657
+      ],
+      "torqueNm": [
+        48.908304775052144,
+        -39552.284825817434,
+        65.03922680833293
+      ],
+      "dragN": 26979.6270045036,
+      "perpendicularForceN": 65447.153989491286,
+      "clPerpendicularMagnitude": 0.510865759712944,
+      "cd": 0.21059689850899696
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          51.86871360103044,
+          0.03923195649609568,
+          -332.5736250065804
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000007,
+        "achievedBetaDeg": 1.0177774980683255e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -84066.71180471733,
+        -66.59725218419213,
+        9389.197154979927
+      ],
+      "torqueNm": [
+        58.4322211631451,
+        -47357.14691022162,
+        64.69403174209502
+      ],
+      "dragN": 35468.51968072977,
+      "perpendicularForceN": 76794.25501770407,
+      "clPerpendicularMagnitude": 0.5994386774634735,
+      "cd": 0.2768592849048708
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 512.4411080223197,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.46130636353739,
+          0.05960948800765209,
+          -321.48931960553557
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000007,
+        "achievedBetaDeg": 1.017777498068325e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -124141.3076535462,
+        -98.35211225988047,
+        13206.666151879843
+      ],
+      "torqueNm": [
+        97.0859383919756,
+        -72511.48751173518,
+        37.73898699111578
+      ],
+      "dragN": 70693.67988192182,
+      "perpendicularForceN": 102897.49071124117,
+      "clPerpendicularMagnitude": 0.8031946625699624,
+      "cd": 0.5518189604635912
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          3.067656617060128,
+          -1.7767761917752978e-05,
+          -420.76271075554735
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.0177774980683252e-14,
+        "achievedBetaDeg": 3.3925916602277503e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        2470.5416409995105,
+        2.024024300083709,
+        10251.425969801072
+      ],
+      "torqueNm": [
+        -13.913263698825821,
+        14320.284969184331,
+        79.17810688652135
+      ],
+      "dragN": 10233.142016146126,
+      "perpendicularForceN": 2545.2149198611,
+      "clPerpendicularMagnitude": 0.008829944462614094,
+      "cd": 0.035501157476141236
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          23.977814162291143,
+          0.016584649641629312,
+          -419.69696424522283
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0000000000000036,
+        "achievedBetaDeg": 1.3570366640911001e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -26678.54908563753,
+        -21.068640734334355,
+        13710.028958273702
+      ],
+      "torqueNm": [
+        14.210763218934524,
+        -9129.83081592704,
+        79.29301124718164
+      ],
+      "dragN": 16167.671509803555,
+      "perpendicularForceN": 25264.93057956391,
+      "clPerpendicularMagnitude": 0.08764993955069397,
+      "cd": 0.056089425064797416
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          36.45127446290737,
+          0.02649357275811326,
+          -418.1835950849438
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": -6.785183320455501e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -44308.96117621738,
+        -35.03518695132898,
+        15940.119876167528
+      ],
+      "torqueNm": [
+        29.76183068805806,
+        -22191.366273544536,
+        79.13108926903736
+      ],
+      "dragN": 22254.743470652003,
+      "perpendicularForceN": 41498.18167946551,
+      "clPerpendicularMagnitude": 0.1439668755160162,
+      "cd": 0.07720689806670819
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          52.926884942326204,
+          0.039587843386030386,
+          -415.15448664535495
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000009,
+        "achievedBetaDeg": 6.7851833204555e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -67817.8997393835,
+        -53.65872218064101,
+        18932.492972537475
+      ],
+      "torqueNm": [
+        48.49323941917501,
+        -37852.549113294925,
+        78.58285414997931
+      ],
+      "dragN": 33072.96948777742,
+      "perpendicularForceN": 62160.18326658362,
+      "clPerpendicularMagnitude": 0.2156481803351211,
+      "cd": 0.11473784846693505
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          65.12293670647799,
+          0.049285433038193105,
+          -412.13226501285106
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000009,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -85348.55400696099,
+        -67.5467776175577,
+        21105.32774799791
+      ],
+      "torqueNm": [
+        60.88446826117219,
+        -48072.07655855623,
+        76.29027768110859
+      ],
+      "dragN": 43036.09877120422,
+      "perpendicularForceN": 76666.22004215329,
+      "clPerpendicularMagnitude": 0.2659730067776393,
+      "cd": 0.14930226876795377
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          77.14410339328793,
+          0.05884793474416483,
+          -408.47589299682465
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -102588.3897024784,
+        -81.20437753829587,
+        23285.04324083513
+      ],
+      "torqueNm": [
+        72.4662662185226,
+        -57852.42281439254,
+        75.83521110061957
+      ],
+      "dragN": 54504.384037796895,
+      "perpendicularForceN": 89976.93957501788,
+      "clPerpendicularMagnitude": 0.31215099878746183,
+      "cd": 0.18908842639072737
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 1152.992493050219,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          115.53299253704839,
+          0.08941423201152077,
+          -391.8494348952572
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -156803.3003936743,
+        -124.12885350556277,
+        35382.346798812425
+      ],
+      "torqueNm": [
+        144.94912586751317,
+        -95573.69640124279,
+        55.350601780472815
+      ],
+      "dragN": 105740.94678965998,
+      "perpendicularForceN": 121070.44668018226,
+      "clPerpendicularMagnitude": 0.42002163035734175,
+      "cd": 0.36684001822049817
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          4.234138350756642,
+          -2.961293651537744e-05,
+          -580.7584585751841
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.22133299768199e-14,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        4790.867282959006,
+        3.9530462352040177,
+        24680.269905210673
+      ],
+      "torqueNm": [
+        -31.99624929235577,
+        27591.58576214673,
+        155.8663028588685
+      ],
+      "dragN": 24644.686129670918,
+      "perpendicularForceN": 4970.673305856569,
+      "clPerpendicularMagnitude": 0.006207993203405617,
+      "cd": 0.030779340056969834
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          39.08440092614166,
+          0.0276410827360678,
+          -578.98221439131
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000005,
+        "achievedBetaDeg": 4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -55873.499289527215,
+        -43.93242266569006,
+        62040.5692602113
+      ],
+      "torqueNm": [
+        29.172236397526376,
+        -13878.858648595078,
+        156.5187116078327
+      ],
+      "dragN": 67038.7871523217,
+      "perpendicularForceN": 49766.28481403188,
+      "clPerpendicularMagnitude": 0.06215430765088648,
+      "cd": 0.0837263504153089
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          59.8735014271687,
+          0.04415595459681754,
+          -576.4599324575116
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000004,
+        "achievedBetaDeg": 4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -95269.74451480428,
+        -75.03663524607038,
+        85553.5227461689
+      ],
+      "torqueNm": [
+        61.62544643462532,
+        -37123.65354731104,
+        156.95975887251151
+      ],
+      "dragN": 98578.30708601825,
+      "perpendicularForceN": 81719.35191095578,
+      "clPerpendicularMagnitude": 0.1020612601218826,
+      "cd": 0.12311681390772374
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          87.33285222620003,
+          0.06597973897675047,
+          -571.4114183915302
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000002,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -151050.75086209824,
+        -119.09127016400102,
+        116830.9854252481
+      ],
+      "torqueNm": [
+        98.68334972581863,
+        -64638.917339979256,
+        157.1374454513666
+      ],
+      "dragN": 146579.38531776052,
+      "perpendicularForceN": 122394.0622499161,
+      "clPerpendicularMagnitude": 0.15286088218460123,
+      "cd": 0.1830665126875043
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          107.65960516645303,
+          0.08214238839696009,
+          -566.374382337357
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000005,
+        "achievedBetaDeg": 4.0711099922733e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -195043.1709988739,
+        -153.84924106542744,
+        139437.49379351272
+      ],
+      "torqueNm": [
+        121.3972235424007,
+        -81981.25372345609,
+        153.33852876069568
+      ],
+      "dragN": 186272.66270195637,
+      "perpendicularForceN": 150954.20506969668,
+      "clPerpendicularMagnitude": 0.18853033008506795,
+      "cd": 0.23264039957555405
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          127.694882977803,
+          0.09807989124027472,
+          -560.2804289773129
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.0,
+        "achievedBetaDeg": -4.071109992273301e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -240377.79155041737,
+        -189.6787988960269,
+        161115.55699115287
+      ],
+      "torqueNm": [
+        141.1495098468972,
+        -98285.02326810888,
+        152.88250325951856
+      ],
+      "dragN": 228808.5285464245,
+      "perpendicularForceN": 177162.06878926462,
+      "clPerpendicularMagnitude": 0.22126196015521626,
+      "cd": 0.2857644634226603
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 3202.7569251394975,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          191.6763648840704,
+          0.14902372001907338,
+          -532.5696654747006
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000007,
+        "achievedBetaDeg": 1.6284439969093197e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -409857.1037946655,
+        -323.5655378006103,
+        256574.987983555
+      ],
+      "torqueNm": [
+        400.5525280964299,
+        -183174.1757854662,
+        173.42262927444997
+      ],
+      "dragN": 420707.5801303067,
+      "perpendicularForceN": 238366.95808201152,
+      "clPerpendicularMagnitude": 0.297702215501889,
+      "cd": 0.5254317951237996
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          6.056766059657353,
+          -4.8121021848146484e-05,
+          -830.7518145433667
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.0105969135671395e-15,
+        "achievedBetaDeg": 5.0105969135671395e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        10634.634191958143,
+        8.667725413241389,
+        36509.528280100996
+      ],
+      "torqueNm": [
+        -62.91740871214211,
+        59584.17157327871,
+        341.857357323202
+      ],
+      "dragN": 36431.0260830634,
+      "perpendicularForceN": 10900.528120090214,
+      "clPerpendicularMagnitude": 0.005155571584750784,
+      "cd": 0.017230611288547536
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          62.68844274465799,
+          0.04491675944603912,
+          -827.865417744571
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000005,
+        "achievedBetaDeg": 1.002119382713428e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -119134.0945445481,
+        -93.85785502858657,
+        100283.15776249854
+      ],
+      "torqueNm": [
+        62.53960197564305,
+        -30286.86994659484,
+        343.1204575489535
+      ],
+      "dragN": 111083.36526963857,
+      "perpendicularForceN": 109133.58320625463,
+      "clPerpendicularMagnitude": 0.05161639824433985,
+      "cd": 0.0525385775086557
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          96.47073105882698,
+          0.07175342621985692,
+          -823.7667096021489
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000005,
+        "achievedBetaDeg": 5.010596913567139e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -201919.8062412613,
+        -159.2714776277837,
+        140313.11128995562
+      ],
+      "torqueNm": [
+        129.92350188031904,
+        -80460.2106985387,
+        343.64964001357254
+      ],
+      "dragN": 168360.3730237488,
+      "perpendicularForceN": 179204.31779140737,
+      "clPerpendicularMagnitude": 0.08475742445608983,
+      "cd": 0.0796286148337644
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          141.09217610725298,
+          0.10721707583724083,
+          -815.5628742449289
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 11.999999999999998,
+        "achievedBetaDeg": 5.0105969135671395e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -317443.25616166583,
+        -250.5728248730761,
+        193529.30719431912
+      ],
+      "torqueNm": [
+        208.1168598180488,
+        -139964.78301438814,
+        343.0685953434031
+      ],
+      "dragN": 257264.0290263987,
+      "perpendicularForceN": 268400.9981007504,
+      "clPerpendicularMagnitude": 0.12694435938169255,
+      "cd": 0.12167695942937716
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          174.123149635164,
+          0.13348138114497488,
+          -807.3776906568976
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 14.999999999999998,
+        "achievedBetaDeg": 1.0021193827134279e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -407377.5226278574,
+        -321.67028538556184,
+        232030.09341998416
+      ],
+      "torqueNm": [
+        257.256826245105,
+        -177802.98609453917,
+        334.21472349670506
+      ],
+      "dragN": 331983.1629954664,
+      "perpendicularForceN": 331031.25706524326,
+      "clPerpendicularMagnitude": 0.15656629878734496,
+      "cd": 0.1570165172640231
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          206.6804760786077,
+          0.15937982326539668,
+          -797.475016446826
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 5.010596913567139e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -499006.56737370044,
+        -394.12472013836276,
+        268857.61298670946
+      ],
+      "torqueNm": [
+        300.807458097825,
+        -213250.91729784387,
+        332.88251909538116
+      ],
+      "dragN": 412743.6977817899,
+      "perpendicularForceN": 388503.23759101954,
+      "clPerpendicularMagnitude": 0.18374855146847383,
+      "cd": 0.1952134480665098
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.04003446156424372,
+      "qPa": 8457.280005446486,
+      "state": {
+        "position": [
+          -619983.2997018015,
+          -525.976023888564,
+          -4520.115052582551
+        ],
+        "rotation": [
+          -0.49837316710341323,
+          0.4979748307606568,
+          -0.5016215937611578,
+          0.5020169627738934
+        ],
+        "velocity": [
+          310.6503841762923,
+          0.2421635450311328,
+          -752.445025755081
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 1.0021193827134277e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -826866.2313792531,
+        -653.2518886380641,
+        429735.1526257701
+      ],
+      "torqueNm": [
+        767.5516093163415,
+        -382176.5256183326,
+        328.6548160825237
+      ],
+      "dragN": 771455.325266816,
+      "perpendicularForceN": 522720.933054267,
+      "clPerpendicularMagnitude": 0.24722886446594408,
+      "cd": 0.3648716016355135
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          2.2055495169475643,
+          -8.883880973087344e-06,
+          -302.51527817171745
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 2.035554996136649e-14,
+        "achievedBetaDeg": 1.696295830113874e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        194.75536205518932,
+        0.15999583246315327,
+        821.5418246910872
+      ],
+      "torqueNm": [
+        -1.1711698870478848,
+        1144.1978288475013,
+        15.93841971015823
+      ],
+      "dragN": 820.1001252254862,
+      "perpendicularForceN": 200.73970949918467,
+      "clPerpendicularMagnitude": 0.008918840935708853,
+      "cd": 0.036436949054520426
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          12.660628289563075,
+          0.008292324820800445,
+          -301.9824049165552
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.00000000000001,
+        "achievedBetaDeg": 2.0355549961366497e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -5358.03679727222,
+        -4.241377103868214,
+        1041.0645326841636
+      ],
+      "torqueNm": [
+        3.267680291291718,
+        -2568.249600875578,
+        15.957093008574223
+      ],
+      "dragN": 1542.299494770093,
+      "perpendicularForceN": 5235.809769257063,
+      "clPerpendicularMagnitude": 0.2326263927457954,
+      "cd": 0.06852417941321398
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          18.89735843987119,
+          0.013246786379042419,
+          -301.22572033641575
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000023,
+        "achievedBetaDeg": 6.785183320455498e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -8691.52126377189,
+        -6.883648400304452,
+        1173.536969303852
+      ],
+      "torqueNm": [
+        5.83273033532432,
+        -4701.090731454678,
+        15.915310826502461
+      ],
+      "dragN": 2433.2377409944506,
+      "perpendicularForceN": 8426.098289085958,
+      "clPerpendicularMagnitude": 0.3743705245788024,
+      "cd": 0.10810845758836363
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          27.1351636795806,
+          0.019793921693000982,
+          -299.71116611662126
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000021,
+        "achievedBetaDeg": 2.0355549961366485e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -13114.412056818159,
+        -10.389469281399753,
+        1344.7249577694324
+      ],
+      "torqueNm": [
+        9.097519554956252,
+        -7388.683952448881,
+        15.798443398826858
+      ],
+      "dragN": 4133.355639471696,
+      "perpendicularForceN": 12518.449101497557,
+      "clPerpendicularMagnitude": 0.5561931746168917,
+      "cd": 0.18364448952892867
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          33.233189561656495,
+          0.02464271651908234,
+          -298.2000553003693
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000018,
+        "achievedBetaDeg": 1.3570366640910997e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -16401.09920954664,
+        -12.994709977799902,
+        1466.246130368474
+      ],
+      "torqueNm": [
+        11.417869630882379,
+        -9270.23944542913,
+        15.333212896964312
+      ],
+      "dragN": 5773.7840880571675,
+      "perpendicularForceN": 15421.073865434832,
+      "clPerpendicularMagnitude": 0.6851564406801572,
+      "cd": 0.25652852645339624
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          39.243772905061476,
+          0.029423967372068205,
+          -296.3718692923561
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000014,
+        "achievedBetaDeg": 6.785183320455497e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -19600.650696848796,
+        -15.530852741127159,
+        1591.9810657146481
+      ],
+      "torqueNm": [
+        13.642512524923267,
+        -11084.49192171585,
+        15.257028663223878
+      ],
+      "dragN": 7703.117058535929,
+      "perpendicularForceN": 18093.704436719217,
+      "clPerpendicularMagnitude": 0.8039010926708733,
+      "cd": 0.3422485562305073
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 90.02950537910014,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          58.43821747694171,
+          0.04470711600574617,
+          -288.05864024157245
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 120.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 1.3570366640910993e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -28717.738316294188,
+        -22.756506628157144,
+        2190.087765337439
+      ],
+      "torqueNm": [
+        21.721955377526427,
+        -16664.98717770541,
+        8.516868240749346
+      ],
+      "dragN": 15592.852833832118,
+      "perpendicularForceN": 24215.045669667437,
+      "clPerpendicularMagnitude": 1.075871540899916,
+      "cd": 0.692788559402745
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          2.4971699503716787,
+          -1.1845174626046173e-05,
+          -342.5142151266267
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.5266662471024873e-14,
+        "achievedBetaDeg": 1.5266662471024873e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        346.3306940291934,
+        0.28418286857406255,
+        1448.4243881430398
+      ],
+      "torqueNm": [
+        -2.0331132397269354,
+        2031.2587058234608,
+        21.578552753381004
+      ],
+      "dragN": 1445.8609669756763,
+      "perpendicularForceN": 356.88135665840895,
+      "clPerpendicularMagnitude": 0.008919109897362918,
+      "cd": 0.036134677870289414
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          16.43727498052571,
+          0.011056433094395857,
+          -341.803717453077
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000011,
+        "achievedBetaDeg": 1.526666247102487e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -7255.944159999337,
+        -5.741092607110779,
+        1862.929299700615
+      ],
+      "torqueNm": [
+        4.269612756677684,
+        -3263.642794383175,
+        21.60114009175651
+      ],
+      "dragN": 2539.6860811873626,
+      "perpendicularForceN": 7047.642073621432,
+      "clPerpendicularMagnitude": 0.17613330872891125,
+      "cd": 0.06347134374013909
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          24.75291518093652,
+          0.0176623818387327,
+          -340.79480467955767
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000016,
+        "achievedBetaDeg": 1.0177774980683249e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -11825.238627168403,
+        -9.362551377708444,
+        2116.3879946274055
+      ],
+      "torqueNm": [
+        7.875625692335813,
+        -6278.315081737532,
+        21.544146946933697
+      ],
+      "dragN": 3824.673304037156,
+      "perpendicularForceN": 11388.03444445232,
+      "clPerpendicularMagnitude": 0.28460755606867943,
+      "cd": 0.09558549608650103
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          35.73665550054908,
+          0.02639189559067745,
+          -338.7753990531651
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000028,
+        "achievedBetaDeg": 1.0177774980683242e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -17891.516176898458,
+        -14.17051106932194,
+        2446.740385026106
+      ],
+      "torqueNm": [
+        12.412531802995993,
+        -10029.382774612233,
+        21.38073971529478
+      ],
+      "dragN": 6236.846497322196,
+      "perpendicularForceN": 16946.823778872567,
+      "clPerpendicularMagnitude": 0.4235317448641124,
+      "cd": 0.15587006237438025
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          43.86735667665027,
+          0.03285695535878119,
+          -336.7605846314958
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000018,
+        "achievedBetaDeg": 1.0177774980683245e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -22400.685809741895,
+        -17.744418451704586,
+        2682.6745171924977
+      ],
+      "torqueNm": [
+        15.590678634085473,
+        -12612.722985518194,
+        20.75142584808087
+      ],
+      "dragN": 8541.45328885557,
+      "perpendicularForceN": 20881.363889618187,
+      "clPerpendicularMagnitude": 0.5218630109518272,
+      "cd": 0.2134663499371668
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          51.88146780119024,
+          0.039231956496081466,
+          -334.3230032874782
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000014,
+        "achievedBetaDeg": 1.0177774980683249e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -26798.304671463862,
+        -21.22987011687255,
+        2924.712248486334
+      ],
+      "torqueNm": [
+        18.627011622210098,
+        -15099.87394760842,
+        20.641821765035807
+      ],
+      "dragN": 11241.628820831927,
+      "perpendicularForceN": 24501.61846007472,
+      "clPerpendicularMagnitude": 0.6123397135531295,
+      "cd": 0.28094861501642354
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 160.05245400728913,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          77.47406056369722,
+          0.0596094880076663,
+          -323.23869788643333
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 160.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000014,
+        "achievedBetaDeg": 0.0,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -39546.05552373189,
+        -31.331271941191236,
+        4106.097443452052
+      ],
+      "torqueNm": [
+        30.83198838529589,
+        -23083.990506121347,
+        11.99429780214118
+      ],
+      "dragN": 22431.142982905225,
+      "perpendicularForceN": 32826.74747565272,
+      "clPerpendicularMagnitude": 0.820399729057768,
+      "cd": 0.5605947905524438
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          3.0804108172199216,
+          -1.7767761946174687e-05,
+          -422.5120890364451
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 2.035554996136649e-14,
+        "achievedBetaDeg": 1.696295830113874e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        779.6396104350324,
+        0.6385701111720147,
+        3204.411983229432
+      ],
+      "torqueNm": [
+        -4.388388222700038,
+        4520.562224187149,
+        25.56740888164805
+      ],
+      "dragN": 3198.6428513882724,
+      "perpendicularForceN": 802.9809446419982,
+      "clPerpendicularMagnitude": 0.00891908648460048,
+      "cd": 0.035528828442623214
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          23.99056836245094,
+          0.01658464964160089,
+          -421.4463425261206
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.00000000000001,
+        "achievedBetaDeg": 2.0355549961366497e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -8609.575973477959,
+        -6.800039379268718,
+        4276.099170786439
+      ],
+      "torqueNm": [
+        4.588814705913832,
+        -2983.412778769138,
+        25.602287695360626
+      ],
+      "dragN": 5069.880673098008,
+      "perpendicularForceN": 8167.385062709622,
+      "clPerpendicularMagnitude": 0.09071898183065699,
+      "cd": 0.05631354578423523
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          36.464028663067175,
+          0.026493572758084838,
+          -419.9329733658416
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000023,
+        "achievedBetaDeg": 6.785183320455498e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -14285.191598762163,
+        -11.296339362439653,
+        4964.44661852715
+      ],
+      "torqueNm": [
+        9.561196973792239,
+        -7164.508383782966,
+        25.54765914513608
+      ],
+      "dragN": 7002.160170228325,
+      "perpendicularForceN": 13404.563021572236,
+      "clPerpendicularMagnitude": 0.1488907771416462,
+      "cd": 0.0777762816839138
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          52.939639142485994,
+          0.039587843386001964,
+          -416.9038649262527
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000021,
+        "achievedBetaDeg": 2.0355549961366485e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -21849.38983431369,
+        -17.28882966986286,
+        5886.338767193734
+      ],
+      "torqueNm": [
+        15.563425288769835,
+        -12183.680959646665,
+        25.368492041085663
+      ],
+      "dragN": 10447.06926923279,
+      "perpendicularForceN": 20072.465289581683,
+      "clPerpendicularMagnitude": 0.22295429931620392,
+      "cd": 0.11604050500157496
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          65.13569090663779,
+          0.04928543303816468,
+          -413.88164329374877
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000018,
+        "achievedBetaDeg": 1.3570366640910997e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -27487.45114230809,
+        -21.755550798480826,
+        6555.192284191275
+      ],
+      "torqueNm": [
+        19.548885512875824,
+        -15465.75807192312,
+        24.6224854671471
+      ],
+      "dragN": 13626.950301588811,
+      "perpendicularForceN": 24755.549175195334,
+      "clPerpendicularMagnitude": 0.2749715115167366,
+      "cd": 0.1513609371084275
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          77.15685759344775,
+          0.05884793474413641,
+          -410.2252712777224
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000014,
+        "achievedBetaDeg": 6.785183320455497e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -33028.379356905796,
+        -26.145285706770064,
+        7227.029483443581
+      ],
+      "torqueNm": [
+        23.278264942167116,
+        -18607.4747867732,
+        24.47131955371721
+      ],
+      "dragN": 17291.92004929289,
+      "perpendicularForceN": 29053.295556323228,
+      "clPerpendicularMagnitude": 0.3227085990752071,
+      "cd": 0.19206947740609398
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 360.1180215164006,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          115.54574673720822,
+          0.08941423201149235,
+          -393.59881317615503
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 240.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000004,
+        "achievedBetaDeg": 1.3570366640910993e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -50351.07253016479,
+        -39.86134145642924,
+        10923.637262511202
+      ],
+      "torqueNm": [
+        45.94310801071876,
+        -30587.43566659452,
+        17.540904920379973
+      ],
+      "dragN": 33569.24746373237,
+      "perpendicularForceN": 39085.337015638994,
+      "clPerpendicularMagnitude": 0.4341391952677821,
+      "cd": 0.3728693978976951
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          4.2468925509164075,
+          -2.961293657222086e-05,
+          -582.5078368560819
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.6284439969093197e-14,
+        "achievedBetaDeg": 1.2213329976819897e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        1502.7021360437884,
+        1.2410335591179897,
+        7931.597510157527
+      ],
+      "torqueNm": [
+        -10.02151647892467,
+        8598.357508413548,
+        48.93270416701545
+      ],
+      "dragN": 7920.431252899008,
+      "perpendicularForceN": 1560.4880906538797,
+      "clPerpendicularMagnitude": 0.006239906686922772,
+      "cd": 0.031671341956584484
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          39.09715512630148,
+          0.027641082736010958,
+          -580.7315926722077
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000023,
+        "achievedBetaDeg": 1.6284439969093193e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -17567.845567258042,
+        -13.811843419755036,
+        19761.36583425996
+      ],
+      "torqueNm": [
+        9.521015594212365,
+        -4479.160160034065,
+        49.164848302140946
+      ],
+      "dragN": 21331.777726024186,
+      "perpendicularForceN": 15623.579209803429,
+      "clPerpendicularMagnitude": 0.06247383557029881,
+      "cd": 0.08529914664122376
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          59.886255627328524,
+          0.044155954596760694,
+          -578.2093107384095
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000025,
+        "achievedBetaDeg": 2.035554996136649e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -29965.42184115002,
+        -23.599559236171046,
+        27240.602928907592
+      ],
+      "torqueNm": [
+        19.875987216806188,
+        -11843.591518753972,
+        49.33043316949187
+      ],
+      "dragN": 31333.751172972574,
+      "perpendicularForceN": 25654.893264597995,
+      "clPerpendicularMagnitude": 0.10258594153511044,
+      "cd": 0.12529392863785244
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          87.34560642635984,
+          0.06597973897669362,
+          -573.160796672428
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.00000000000001,
+        "achievedBetaDeg": 1.6284439969093193e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -47538.295467355754,
+        -37.47758826913132,
+        37211.759542423104
+      ],
+      "torqueNm": [
+        31.67266123102523,
+        -20591.071838007592,
+        49.42635153147852
+      ],
+      "dragN": 46563.73374163161,
+      "perpendicularForceN": 38424.27213094341,
+      "clPerpendicularMagnitude": 0.15364671736107108,
+      "cd": 0.18619389361744515
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          107.67235936661285,
+          0.08214238839696009,
+          -568.1237606182548
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000012,
+        "achievedBetaDeg": 1.6284439969093197e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -61411.23589244987,
+        -48.43798710563643,
+        44426.02256111395
+      ],
+      "torqueNm": [
+        38.8786887661535,
+        -26121.543241825835,
+        48.26748855479261
+      ],
+      "dragN": 59153.71722832327,
+      "perpendicularForceN": 47390.41526246519,
+      "clPerpendicularMagnitude": 0.18949953598709854,
+      "cd": 0.23653732309785602
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          127.70763717796281,
+          0.09807989124021788,
+          -562.0298072582107
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000014,
+        "achievedBetaDeg": 1.6284439969093197e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -75717.85363924518,
+        -59.74461407130888,
+        51342.8750860336
+      ],
+      "torqueNm": [
+        45.11434455501103,
+        -31323.353801572448,
+        48.14451103683071
+      ],
+      "dragN": 72635.50126354785,
+      "perpendicularForceN": 55618.087952088514,
+      "clPerpendicularMagnitude": 0.22239944092150907,
+      "cd": 0.29044678569285487
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 1000.3278375455571,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          191.68911908423027,
+          0.14902372001913022,
+          -534.3190437555984
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 400.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.000000000000025,
+        "achievedBetaDeg": 8.142219984546597e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -129662.2136330892,
+        -102.35649836859746,
+        82382.35406194995
+      ],
+      "torqueNm": [
+        130.75237856978347,
+        -58936.84768955309,
+        56.553388325568136
+      ],
+      "dragN": 134161.17607935515,
+      "perpendicularForceN": 74832.6881441417,
+      "clPerpendicularMagnitude": 0.2992326528780967,
+      "cd": 0.5364688296930261
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          6.069520259817147,
+          -4.812102196183332e-05,
+          -832.5011928242645
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 1.503179074070141e-14,
+        "achievedBetaDeg": 2.0042387654268548e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        3350.334782069523,
+        2.7306881573465085,
+        11501.380846444641
+      ],
+      "torqueNm": [
+        -19.806237294284678,
+        18758.471062515368,
+        107.69868892752504
+      ],
+      "dragN": 11476.649532454068,
+      "perpendicularForceN": 3434.097769835347,
+      "clPerpendicularMagnitude": 0.005200242083019608,
+      "cd": 0.017379049715755896
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          62.701196944817895,
+          0.04491675944603912,
+          -829.6147960254689
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 5.000000000000012,
+        "achievedBetaDeg": 2.0042387654268548e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -37518.397730782264,
+        -29.559005253229774,
+        31450.242964632293
+      ],
+      "torqueNm": [
+        19.769882642388062,
+        -9598.816531114597,
+        108.09818862445192
+      ],
+      "dragN": 34852.09421971593,
+      "perpendicularForceN": 34381.395449492826,
+      "clPerpendicularMagnitude": 0.05206362528751295,
+      "cd": 0.05277640276718766
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          96.48348525898686,
+          0.07175342621980008,
+          -825.5160878830467
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 8.000000000000025,
+        "achievedBetaDeg": 5.010596913567136e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -63579.53391307074,
+        -50.151781994263764,
+        43979.86950137722
+      ],
+      "torqueNm": [
+        41.02807083553107,
+        -25438.44205911802,
+        108.25885960576753
+      ],
+      "dragN": 52813.42388872064,
+      "perpendicularForceN": 56456.45070594708,
+      "clPerpendicularMagnitude": 0.08549180323222554,
+      "cd": 0.07997518063314961
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          141.10493030741273,
+          0.10721707583712714,
+          -817.3122525258268
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 12.000000000000018,
+        "achievedBetaDeg": 2.0042387654268548e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -99935.11550855779,
+        -78.88505337916419,
+        60642.07546903772
+      ],
+      "torqueNm": [
+        65.70701500190869,
+        -44234.64664046409,
+        108.08191338515114
+      ],
+      "dragN": 80713.19402584697,
+      "perpendicularForceN": 84556.93444004982,
+      "clPerpendicularMagnitude": 0.12804426616757622,
+      "cd": 0.1222237036798928
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          174.13590383532392,
+          0.13348138114497488,
+          -809.1270689377955
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 15.000000000000021,
+        "achievedBetaDeg": 1.5031790740701407e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -128229.73486104669,
+        -101.25365870245288,
+        72698.69508769715
+      ],
+      "torqueNm": [
+        81.222317157878,
+        -56195.994144573466,
+        105.29150033402175
+      ],
+      "dragN": 104172.93564023035,
+      "perpendicularForceN": 104287.9422674938,
+      "clPerpendicularMagnitude": 0.15792286139743278,
+      "cd": 0.1577487072693311
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          206.69323027876746,
+          0.15937982326533984,
+          -799.2243947277238
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 18.000000000000004,
+        "achievedBetaDeg": 5.010596913567137e-15,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -157050.8102069625,
+        -124.04379846592747,
+        84232.29282114925
+      ],
+      "torqueNm": [
+        94.95955673180188,
+        -67405.8347002571,
+        104.87581477927691
+      ],
+      "dragN": 129536.8117694359,
+      "perpendicularForceN": 122393.89659637795,
+      "clPerpendicularMagnitude": 0.18534064387332566,
+      "cd": 0.19615713500664483
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0,
+      "densityKgM3": 0.012504097969319464,
+      "qPa": 2641.490696018737,
+      "state": {
+        "position": [
+          -625983.1380860126,
+          -531.0661144423242,
+          -4563.8581014783995
+        ],
+        "rotation": [
+          -0.4983731671034133,
+          0.49797483076065685,
+          -0.5016215937611578,
+          0.5020169627738935
+        ],
+        "velocity": [
+          310.66313837645214,
+          0.24216354503107596,
+          -754.194404035979
+        ],
+        "targetUT": 9931.291826169332,
+        "speedMps": 650.0,
+        "achievedMach": null,
+        "achievedAoADeg": 28.0,
+        "achievedBetaDeg": 2.0042387654268536e-14,
+        "achievedBankDeg": 0.0
+      },
+      "forceN": [
+        -260162.88541485515,
+        -205.53975968432889,
+        134768.713068487
+      ],
+      "torqueNm": [
+        242.346618018252,
+        -120811.24595208133,
+        103.6552025905928
+      ],
+      "dragN": 242339.85053144436,
+      "perpendicularForceN": 164677.78253458856,
+      "clPerpendicularMagnitude": 0.24937098250285938,
+      "cd": 0.366974376849708
+    }
+  ],
+  "skipped": [
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0,
+      "qPa": 55885.588650664395,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0,
+      "qPa": 147572.8825306607,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0,
+      "qPa": 49345.1927661022,
+      "reason": "existing pressure bound"
+    }
+  ],
+  "liveStateAfter": {
+    "ut": 9931.291826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71917.32722419954,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.329345703125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155385.45653189288,
+      70.17262482295193,
+      653703.4875218964
+    ],
+    "velocity_mps": [
+      -2238.976694053683,
+      0.04767761782868239,
+      471.9192942389901
+    ],
+    "rotation_xyzw": [
+      0.7022770182113638,
+      -0.7022951465904063,
+      -0.08238999199090147,
+      0.08246516944263865
+    ],
+    "angular_velocity_rad_s": [
+      -1.8789001927048757e-05,
+      0.0002513979561626911,
+      -2.316621171842591e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.623641014099121,
+    "sideslip_deg": 0.0006996739539317787,
+    "roll_deg": 0.00323486328125
+  },
+  "liveActuatorsAfter": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ]
+  },
+  "saveSHA256After": {
+    "/Applications/.Misc/LMPKSP/saves/Main/86km.sfs": "4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6",
+    "/Applications/.Misc/LMPKSP/saves/Main/STS-campaign-72km-20261008.sfs": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f"
+  },
+  "liveStateUnchanged": true,
+  "actuatorsUnchanged": true,
+  "savesUnchanged": true
+}
