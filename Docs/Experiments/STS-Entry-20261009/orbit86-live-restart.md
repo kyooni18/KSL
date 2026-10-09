@@ -15,3 +15,11 @@ A one-second process sample at 15:40:23 KST confirms the control worker was insi
 Protected `86km.sfs` SHA-256 after restart: `4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6`, unchanged. Never save over it.
 
 Status at this checkpoint: live coast active; burn, MM305 acquisition, touchdown, and rollout remain unverified.
+
+## Executed burn and live descent
+
+The warp completed, retrograde setup ran, and the deorbit burn actually executed. Console observations: UT 13684.8 delivered 4.8/31.4 m/s; UT 13688.3 delivered 34.5/31.4 m/s; UT 13688.5 transitioned to Entry Interface. An independent live read at UT 13701.11 verified throttle zero, thrust zero, altitude 86674.65 m, and achieved periapsis 43128.66 m. The achieved orbit is deeper than the planned 50 km periapsis. This is an observed cutoff discrepancy, not evidence of successful targeting.
+
+The burn path in `guidance_terminal.c` adds an 8 m/s delta-v allowance when periapsis closure is active and scales throttle against a fixed 8 km periapsis remainder. Those constants merit replacement by a measured periapsis/delta-v sensitivity and observed response delay, rather than a case-specific tweak. Live available thrust changed from 60 kN during checkpoint settling to about 3.06 MN during execution, so this vehicle can close periapsis quickly even at small throttle. This is a hypothesis for follow-up, not yet a validated cause or fix.
+
+At UT 13747.3 the active run remained in Entry Interface, altitude 86.1 km, range 1747.1 km, TAS 2032.3 m/s. No MM305, touchdown, or rollout has been demonstrated. Continue monitoring the existing process; do not duplicate it.
