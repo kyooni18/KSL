@@ -1,0 +1,149 @@
+{
+  "classification": "offline archived original-STS Mach2 API polar crosscheck; unqualified",
+  "sourceSHA256": "157dec1d7d5b774639c836d8dbd3ba2017dcd0321dad1f07582b04f8ec6a71f9",
+  "sourceProvenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "943145cc26bd81b7d484e5982d2e40f82d895109",
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "vehicleModelId": "STS",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "checkpointUsedForThisProbe": false,
+    "inputStateOrigin": "Direct read-only snapshot of the already-loaded live STS at the time recorded below; this state is not the 72 km checkpoint.",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "utPolicy": "Pass the measured current UT explicitly to every wrench call.",
+    "angularVelocityPolicy": "Zero angular velocity for the grid to isolate static aerodynamic wrench; same-state parity check also uses measured angular velocity.",
+    "controlSurfacePolicy": "No control-surface, action-group, RCS, SAS, throttle, or vessel-state setters are called. The API uses the currently loaded vessel parts and control-surface state."
+  },
+  "sourceQualification": {
+    "qualified": false,
+    "shadow_gate_evidence": false,
+    "flight_control_or_actuation": false,
+    "landing_or_rollout_evidence": false,
+    "note": "Counterfactual Flight.simulate_aerodynamic_wrench_at results are simulations, not measured aerodynamic-force cells, a shadow-gate pass, or flight qualification."
+  },
+  "capturedState": {
+    "ut": 10086.871826172728,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.flying",
+    "altitude_m": 62836.04134578165,
+    "mach": 7.106515407562256,
+    "true_air_speed_mps": 2122.34814453125,
+    "speed_of_sound_mps": 298.64532470703125,
+    "dynamic_pressure_pa": 47.14114761352539,
+    "mass_kg": 25815.947265625,
+    "part_count": 22,
+    "position_m": [
+      -198047.7645967414,
+      67.38600302330633,
+      632557.267055171
+    ],
+    "velocity_mps": [
+      -2192.7854093765027,
+      -0.08602747762083839,
+      -743.960241077048
+    ],
+    "rotation_xyzw": [
+      0.6996112855363157,
+      -0.6991051188601495,
+      0.10223378176848502,
+      -0.10651055968307793
+    ],
+    "angular_velocity_rad_s": [
+      0.000162113316002015,
+      -0.014922080561518669,
+      6.259843991968372e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": true,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.887917399406433,
+    "sideslip_deg": 0.024393483996391296,
+    "roll_deg": -179.68588256835938
+  },
+  "referenceAreaM2": 250,
+  "cells": [
+    {
+      "mach": 2,
+      "alphaDeg": 0.0,
+      "qPa": 3.733690637803209,
+      "clNormalMagnitude": 0.005367236198450005,
+      "cd": 0.030148391774900404,
+      "liftToDrag": 0.17802728047730948,
+      "sideCoefficient": -1.4080172248277192e-08,
+      "baselineCLCD": [
+        0.0,
+        0.14271309151263809
+      ]
+    },
+    {
+      "mach": 2,
+      "alphaDeg": 5.0,
+      "qPa": 3.733690637803209,
+      "clNormalMagnitude": 0.05406095049305934,
+      "cd": 0.09497399191551233,
+      "liftToDrag": 0.5692184713174032,
+      "sideCoefficient": -8.141873579635592e-08,
+      "baselineCLCD": [
+        0.05186268329385572,
+        0.1474325393326492
+      ]
+    },
+    {
+      "mach": 2,
+      "alphaDeg": 10.0,
+      "qPa": 3.733690637803209,
+      "clNormalMagnitude": 0.1118880108945676,
+      "cd": 0.1720457430674696,
+      "liftToDrag": 0.650338734918245,
+      "sideCoefficient": -1.482625495472171e-07,
+      "baselineCLCD": [
+        0.10221180434507363,
+        0.16073579211519218
+      ]
+    },
+    {
+      "mach": 2,
+      "alphaDeg": 18.0,
+      "qPa": 3.733690637803209,
+      "clNormalMagnitude": 0.19548489239974867,
+      "cd": 0.31504332831635107,
+      "liftToDrag": 0.6205016098720628,
+      "sideCoefficient": -2.5240562081031255e-07,
+      "baselineCLCD": [
+        0.1756580577053675,
+        0.1997878580060387
+      ]
+    },
+    {
+      "mach": 2,
+      "alphaDeg": 28.0,
+      "qPa": 3.733690637803209,
+      "clNormalMagnitude": 0.2660325487976956,
+      "cd": 0.5446272900679087,
+      "liftToDrag": 0.48846716580163374,
+      "sideCoefficient": -3.5900982203854707e-07,
+      "baselineCLCD": [
+        0.24775567443672192,
+        0.2744471211912335
+      ]
+    }
+  ],
+  "limitations": [
+    "Hypothetical static API forces at a single 62.8km altitude and low q, not held-out terminal-altitude flight data.",
+    "Current controls were zero but actual historical surface angles are unavailable; RCS was enabled in captured state.",
+    "Normal force magnitude is used; side force is listed separately.",
+    "Mach derived from captured local speed of sound; no certified cells or production adoption."
+  ]
+}
