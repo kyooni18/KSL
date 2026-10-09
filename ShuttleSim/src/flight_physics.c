@@ -27,8 +27,9 @@ void flight_physics_airborne_step(const KerbinWorld *world,
         accel = v3_add(accel, retro);
     }
     if (input->engine_thrust_n > 0.0 && input->mass_kg > 0.0) {
-        Vec3 retro = v3_scale(v3_normalized(v), -input->engine_thrust_n / input->mass_kg);
-        accel = v3_add(accel, retro);
+        Vec3 axis = input->engine_thrust_dir_i;
+        Vec3 dir = v3_norm(axis) > 0.5 ? v3_normalized(axis) : v3_scale(v3_normalized(v), -1.0);
+        accel = v3_add(accel, v3_scale(dir, input->engine_thrust_n / input->mass_kg));
     }
     state->velocity_i_mps = v3_add(v, v3_scale(accel, dt));
     state->position_i_m = v3_add(p, v3_scale(state->velocity_i_mps, dt));

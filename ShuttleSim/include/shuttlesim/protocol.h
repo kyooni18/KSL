@@ -25,6 +25,8 @@ typedef struct {
     bool airbrakes;
     bool has_wheel_steering;
     double wheel_steering;
+    bool has_thrust_dir;         /* commanded inertial thrust axis (unit, sim frame) */
+    double thrust_dir[3];
     bool has_throttle;
     double throttle;
     bool has_inputs;             /* direct-control stick inputs in [-1, 1] */

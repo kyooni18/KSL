@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -30,6 +31,13 @@ bool protocol_parse_command(const char *json,SimCommand *cmd){
     if(!hb) hb=json_number(json,"bank",&bank);
     if(ha&&hb){ cmd->has_attitude=true; cmd->aoa_deg=aoa; cmd->bank_deg=bank; }
     if(json_number(json,"throttle",&throttle)){cmd->has_throttle=true;cmd->throttle=throttle;}
+    {const char *td=strstr(json,"\"thrust_dir\"");
+        if(td){td=strchr(td,'[');
+            if(td){char *e1=NULL,*e2=NULL,*e3=NULL;double x=strtod(td+1,&e1);
+                if(e1&&*e1==','){double y=strtod(e1+1,&e2);
+                    if(e2&&*e2==','){double z=strtod(e2+1,&e3);
+                        double n=sqrt(x*x+y*y+z*z);
+                        if(e3&&*e3==']'&&n>1e-9&&isfinite(n)){cmd->has_thrust_dir=true;cmd->thrust_dir[0]=x/n;cmd->thrust_dir[1]=y/n;cmd->thrust_dir[2]=z/n;}}}}}}
     bool gear=false; if(json_bool(json,"gear_down",&gear)){cmd->has_gear=true;cmd->gear_down=gear;}
     bool brakes=false; if(json_bool(json,"brakes",&brakes)){cmd->has_brakes=true;cmd->brakes=brakes;}
     bool airbrakes=false; if(json_bool(json,"airbrakes",&airbrakes)){cmd->has_airbrakes=true;cmd->airbrakes=airbrakes;}

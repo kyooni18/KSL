@@ -23,6 +23,10 @@ typedef struct {
     double deorbit_duration_s;
     double deorbit_delay_s;
     double orbital_engine_available_thrust_n;
+    /* Vacuum specific impulse of the orbital engines. 0 keeps mass constant (legacy). */
+    double orbital_engine_isp_s;
+    /* Maximum thrust-axis slew rate toward the commanded inertial direction; 0 = ideal pointing. */
+    double orbital_attitude_slew_dps;
     bool runway_override;
     double runway_latitude_deg;
     double runway_longitude_deg;

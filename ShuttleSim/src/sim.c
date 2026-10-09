@@ -184,6 +184,7 @@ void sim_apply_command(Simulation *sim,const SimCommand *c){
     if(c->has_airbrakes) sim->state.airbrakes=c->airbrakes;
     if(c->has_wheel_steering) sim->state.wheel_steering=fmin(1.0,fmax(-1.0,c->wheel_steering));
     if(c->has_throttle) sim->commanded_throttle=fmin(1.0,fmax(0.0,c->throttle));
+    if(c->has_thrust_dir){sim->has_thrust_dir_command=true;sim->thrust_dir_command=v3_normalized(ss_v3(c->thrust_dir[0],c->thrust_dir[1],c->thrust_dir[2]));}
     if(c->pause) sim->paused=true;
     if(c->resume) sim->paused=false;
 }
@@ -451,9 +452,39 @@ void sim_step(Simulation *sim,double dt){
         .dt_s=dt,
         .burn_accel_mps2=(sim->deorbit_burn_remaining_s>0)
             ? sim->deorbit_burn_accel_mps2 : 0.0,
-        .engine_thrust_n=engine_thrust
+        .engine_thrust_n=engine_thrust,
+        .engine_thrust_dir_i=ss_v3(0,0,0)
     };
+    if(engine_thrust>0.0){
+        /* Slew the thrust axis toward the commanded inertial direction. */
+        if(!sim->has_thrust_dir_command){sim->thrust_axis=v3_scale(v3_normalized(s->velocity_i_mps),-1.0);sim->has_thrust_axis=true;}
+        else if(!sim->has_thrust_axis){sim->thrust_axis=v3_scale(v3_normalized(s->velocity_i_mps),-1.0);sim->has_thrust_axis=true;}
+        if(sim->has_thrust_dir_command){
+            double slew=sim->scenario.orbital_attitude_slew_dps;
+            double cosang=fmax(-1.0,fmin(1.0,v3_dot(sim->thrust_axis,sim->thrust_dir_command)));
+            double ang=acos(cosang);
+            double step_rad=slew>0.0?slew*3.14159265358979323846/180.0*dt:ang;
+            if(ang<=step_rad||ang<1e-12)sim->thrust_axis=sim->thrust_dir_command;
+            else{
+                Vec3 perp=v3_sub(sim->thrust_dir_command,v3_scale(sim->thrust_axis,cosang));
+                double pn=v3_norm(perp);
+                if(pn>1e-12){
+                    perp=v3_scale(perp,1.0/pn);
+                    sim->thrust_axis=v3_normalized(v3_add(v3_scale(sim->thrust_axis,cos(step_rad)),v3_scale(perp,sin(step_rad))));
+                }else sim->thrust_axis=sim->thrust_dir_command;
+            }
+        }
+        step_input.engine_thrust_dir_i=sim->thrust_axis;
+    }
     flight_physics_airborne_step(&sim->world,&sim->aero,&step_input,&airborne);
+    if(engine_thrust>0.0&&s->mass_kg>0.0){
+        sim->delivered_dv_mps+=engine_thrust/s->mass_kg*dt;
+        if(sim->scenario.orbital_engine_isp_s>0.0){
+            double dm=engine_thrust/(sim->scenario.orbital_engine_isp_s*9.80665)*dt;
+            dm=fmin(dm,0.5*s->mass_kg);
+            s->mass_kg-=dm;sim->propellant_used_kg+=dm;
+        }
+    }
     s->position_i_m=airborne.position_i_m;
     s->velocity_i_mps=airborne.velocity_i_mps;
     s->attitude=airborne.attitude;
@@ -505,7 +536,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"q_w\":%.9f,\"q_x\":%.9f,\"q_y\":%.9f,\"q_z\":%.9f},"
              "\"atmosphere\":{\"density_kg_m3\":%.12g,\"pressure_pa\":%.9g,\"temperature_k\":%.6f,\"speed_of_sound_mps\":%.6f},"
              "\"aero\":{\"mach\":%.6f,\"q_pa\":%.6f,\"lift_n\":%.6f,\"drag_n\":%.6f},"
-             "\"vehicle\":{\"mass_kg\":%.6f,\"available_thrust_n\":%.6f,\"current_thrust_n\":%.6f,\"throttle\":%.9f},"
+             "\"vehicle\":{\"mass_kg\":%.6f,\"available_thrust_n\":%.6f,\"current_thrust_n\":%.6f,\"throttle\":%.9f,\"propellant_used_kg\":%.6f,\"engine_dv_mps\":%.6f},"
              "\"runway\":{\"along_m\":%.3f,\"cross_m\":%.3f,\"vertical_m\":%.3f,\"length_m\":%.3f,\"width_m\":%.3f,\"heading_deg\":%.6f},"
              "\"ground\":{\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.6f,\"steering_lateral_accel_mps2\":%.6f,\"airbrake_decel_mps2\":%.6f,\"on_ground\":%s,\"stopped\":%s,\"touchdown_seen\":%s,\"on_runway_touchdown\":%s,"
              "\"main_contact\":%s,\"nose_contact\":%s,\"pitch_released\":%s,\"main_load_n\":%.1f,\"nose_load_n\":%.1f,\"tail_load_n\":%.1f,\"bounce_count\":%d,\"runway_departure\":%s,\"pitch_deg\":%.4f}}",
@@ -522,7 +553,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              s->aero.mach,s->aero.dynamic_pressure_pa,s->aero.lift_n,s->aero.drag_n,s->mass_kg,
              sim->scenario.orbital_engine_available_thrust_n,
              sim->scenario.orbital_engine_available_thrust_n*sim->commanded_throttle,
-             sim->commanded_throttle,
+             sim->commanded_throttle,sim->propellant_used_kg,sim->delivered_dv_mps,
              along,cross,vertical,sim->runway.length_m,sim->runway.width_m,rad2deg(sim->runway.heading_rad),
              s->gear_down?"true":"false",s->brakes?"true":"false",s->airbrakes?"true":"false",s->wheel_steering,
              s->ground_lateral_accel_mps2,s->ground_airbrake_decel_mps2,s->on_ground?"true":"false",stopped?"true":"false",

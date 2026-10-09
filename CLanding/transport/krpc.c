@@ -194,7 +194,7 @@ static bool sim_session_open(KRPCSession *s,const LandingConfiguration *cfg,char
     const char*configured=getenv("KSP_LANDER_TERMINAL_ATMOSPHERE");
     if(!shuttle_sim_load_planet(configured&&*configured?configured:atmosphere,
             &s->sim_planet,error,error_size))return false;
-    snprintf(s->sim_vessel,sizeof(s->sim_vessel),"STS-N");
+    snprintf(s->sim_vessel,sizeof(s->sim_vessel),"%s",cfg->vehicle.model_id[0]?cfg->vehicle.model_id:"STS-N");
     int ports[]={8796,8795};
     const char*names[]={"KSP_LANDER_SIM_TELEMETRY_PORT","KSP_LANDER_SIM_COMMAND_PORT"};
     for(size_t i=0;i<sizeof(ports)/sizeof(ports[0]);i++){
@@ -282,11 +282,15 @@ static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command
     bool airbrakes=false;double wheel_steering=0.0;
     if(command){if(command->has_target_aoa&&isfinite(command->target_aoa))aoa=command->target_aoa;if(isfinite(command->target_roll))bank=command->target_roll;gear=command->gear;brakes=command->brakes;airbrakes=command->airbrakes;wheel_steering=clampd(command->wheel_steering,-1.0,1.0);}
     if(fc)wheel_steering=clampd(fc->wheel_steering,-1.0,1.0);
+    char thrust_dir[120]="";
+    if(command&&command->control_profile==PROFILE_ORBITAL&&command->use_inertial_direction&&throttle>0.0&&
+       isfinite(command->inertial_direction.x)&&isfinite(command->inertial_direction.y)&&isfinite(command->inertial_direction.z))
+        snprintf(thrust_dir,sizeof(thrust_dir),",\"thrust_dir\":[%.9f,%.9f,%.9f]",command->inertial_direction.x,command->inertial_direction.y,command->inertial_direction.z);
     char inputs[160]="";
     if(fc)snprintf(inputs,sizeof(inputs),",\"pitch_input\":%.9f,\"roll_input\":%.9f,\"yaw_input\":%.9f",
         clampd(fc->pitch,-1.0,1.0),clampd(fc->roll,-1.0,1.0),clampd(fc->yaw,-1.0,1.0));
-    char msg[800];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.9f,\"throttle\":%.9f%s,\"step\":%s}",
-        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",wheel_steering,throttle,inputs,step?"true":"false");
+    char msg[800];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.9f,\"throttle\":%.9f%s%s,\"step\":%s}",
+        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",wheel_steering,throttle,thrust_dir,inputs,step?"true":"false");
     ssize_t n=sendto(s->sim_tx_fd,msg,strlen(msg),0,(struct sockaddr*)&s->sim_command_addr,sizeof(s->sim_command_addr));
     if(n<0){set_error(error,error_size,"Could not send ShuttleSim command: %s",strerror(errno));return false;}
     if(step)s->sim_need_packet=true;return true;

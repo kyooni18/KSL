@@ -250,6 +250,9 @@ def main():
     ap.add_argument("--direct-control",action="store_true",
                     help="run the backend's atmospheric FCS against ShuttleSim's surface-moment "
                          "attitude plant (stick inputs) instead of the ideal AoA/bank servo")
+    ap.add_argument("--stop-at-phase",default=None,
+                    help="end the run (cleanly, as an unfinished flight) once the production state machine "
+                         "reports this phase, e.g. TAEM for MM305 acquisition campaigns")
     ap.add_argument("--backend-build-dir",type=pathlib.Path,default=CLANDING/"build")
     ap.add_argument("--sim-build-dir",type=pathlib.Path,default=SIM/"build")
     ap.add_argument("--skip-build",action="store_true")
@@ -504,7 +507,10 @@ def main():
         # Admission is published before the response; rejected lockstep runs
         # cannot advance and must be closed out from the latest snapshot.
         admitted=backend.latest if isinstance(backend.latest,dict) else {}
-        engage_rejected=(str(admitted.get("phase") or "") in ("Idle","Fault") or
+        # A freshly engaged lockstep run legitimately still reports phase "Idle"
+        # until the first control tick advances physics; only a Fault or an
+        # un-armed automation flag is a rejection.
+        engage_rejected=(str(admitted.get("phase") or "")=="Fault" or
                          admitted.get("automationEngaged") is not True)
         if engage_rejected:
             print("engagement rejected:",admitted.get("statusMessage") or
@@ -512,6 +518,7 @@ def main():
                   admitted.get("phase"),flush=True)
             sim_proc.terminate()
 
+    stopped_at_phase=None
     last_print=0.0
     last_ut=None
     last_progress=time.monotonic()
@@ -530,6 +537,10 @@ def main():
             # forever for the next guidance command, so stop this run at the
             # terminal snapshot instead of leaving both processes resident.
             if snap.get("phase") in ("Abort","Fault"):
+                sim_proc.terminate()
+                break
+            if args.stop_at_phase and snap.get("phase")==args.stop_at_phase:
+                stopped_at_phase=snap.get("phase")
                 sim_proc.terminate()
                 break
             if not args.quiet_progress and now-last_print>.5:
@@ -703,6 +714,7 @@ def main():
     final["touchdownSpeedOk"]=touchdown_speed_ok
     final["touchdownSinkOk"]=touchdown_sink_ok
     final["engageRejected"]=engage_rejected
+    final["stoppedAtPhase"]=stopped_at_phase
     final["fixedHacSeen"]=fixed_hac_seen
     final["hacCompletedSeen"]=hac_completed_seen
     final["fixedHacGeometry"]=fixed_hac_geometry

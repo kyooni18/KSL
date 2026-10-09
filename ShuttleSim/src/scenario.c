@@ -77,6 +77,8 @@ bool scenario_load(const char *path, Scenario *destination) {
         {"deorbit_duration_s", &s->deorbit_duration_s, 0},
         {"deorbit_delay_s", &s->deorbit_delay_s, 0},
         {"orbital_engine_available_thrust_n", &s->orbital_engine_available_thrust_n, 0},
+        {"orbital_engine_isp_s", &s->orbital_engine_isp_s, 0},
+        {"orbital_attitude_slew_dps", &s->orbital_attitude_slew_dps, 0},
         {"runway_latitude_deg", &s->runway_latitude_deg, RUNWAY},
         {"runway_longitude_deg", &s->runway_longitude_deg, RUNWAY},
         {"runway_elevation_m", &s->runway_elevation_m, RUNWAY},
@@ -131,7 +133,8 @@ bool scenario_load(const char *path, Scenario *destination) {
         fabs(s->latitude_deg)>90 || fabs(s->runway_latitude_deg)>90 ||
         fabs(s->flight_path_angle_deg)>90 || s->surface_speed_mps<0 ||
         s->deorbit_duration_s<0 || s->deorbit_delay_s<0 ||
-        s->orbital_engine_available_thrust_n<0) return false;
+        s->orbital_engine_available_thrust_n<0 ||
+        s->orbital_engine_isp_s<0 || s->orbital_attitude_slew_dps<0) return false;
     s->has_cartesian_state=cartesian==CARTESIAN;
     s->has_surface_flight_state=(seen&SURFACE)!=0;
     s->runway_override=(seen&RUNWAY)!=0;

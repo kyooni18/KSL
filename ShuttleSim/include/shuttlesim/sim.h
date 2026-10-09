@@ -92,6 +92,15 @@ typedef struct {
     double deorbit_impulse_pending_mps;
     double deorbit_burn_accel_mps2;
     double commanded_throttle;
+    /* Orbital-engine thrust axis (unit, inertial).  Follows the guidance-commanded
+       inertial direction (rate-limited if the scenario sets a slew rate);
+       until one is commanded the engine thrusts retrograde. */
+    bool has_thrust_axis;
+    Vec3 thrust_axis;
+    bool has_thrust_dir_command;
+    Vec3 thrust_dir_command;
+    double propellant_used_kg;
+    double delivered_dv_mps;
 } Simulation;
 
 void sim_init(Simulation *sim, const Scenario *scenario);

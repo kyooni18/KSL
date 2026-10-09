@@ -28,6 +28,9 @@ static const char *environment_warning(LandingController*c,const Telemetry*t,
 }
 
 static bool should_time_warp(const LandingController*c,const GuidanceResult*r,const Telemetry*t){
+    /* ShuttleSim lockstep integrates the coast at its fixed physics step; it has no
+       warp rail, so the coast simply runs in simulated time. */
+    if(c->session&&krpc_session_is_simulator(c->session))return false;
     if(c->time_warp_issued||!c->configuration.guidance.use_time_warp||r->phase!=PHASE_COAST||!c->has_plan||!c->guidance.automation_engaged||c->guidance.paused)return false;
     double burn_start=c->plan.burn_ut-c->plan.estimated_burn_duration*.5;
     double lead=fmax(0.0,c->configuration.guidance.minimum_planning_lead_time);

@@ -22,6 +22,8 @@ typedef struct {
     double dt_s;
     double burn_accel_mps2;
     double engine_thrust_n;
+    /* Unit inertial thrust direction; zero vector keeps the legacy retrograde thrust. */
+    Vec3 engine_thrust_dir_i;
 } FlightAirborneStepInput;
 
 /* One discrete KSP-like native airborne tick. Force and attitude authority
