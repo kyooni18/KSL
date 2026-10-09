@@ -96,6 +96,8 @@ static double yaw_identification_confidence(double roll_input){
     FlightControlOutput out={0};
     Telemetry t=sample(300,0,0);
     assert(flight_control_step_attitude(&s,&t,&c,&e,.1,&out));
+    t.ut+=.1;
+    assert(flight_control_step_attitude(&s,&t,&c,&e,.1,&out));
     s.last_control[FLIGHT_CONTROL_AXIS_YAW]=.5;
     s.last_control[FLIGHT_CONTROL_AXIS_ROLL]=roll_input;
     t.ut+=.1;t.body_yaw_rate=.1;
