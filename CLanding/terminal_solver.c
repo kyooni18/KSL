@@ -887,6 +887,16 @@ TerminalSolverResult terminal_solver_replay(const TerminalModel *m,
             out.final_target_flight_path_angle_deg = reference.flight_path_angle_deg;
             if (diagnostics)
                 fprintf(stderr,
+                    "TAEM alignment profile compare: t=%.1f station=%.1f remaining=%.1f plannedV=%.2f actualV=%.2f plannedExitV=%.2f referenceH=%.1f actualH=%.1f referenceFpa=%.2f actualFpa=%.2f\n",
+                    elapsed,reference.station_m,route_remaining,
+                    taem_route_planned_speed(route,reference.station_m),
+                    geometry.airspeed_mps,
+                    taem_route_planned_speed(route,route->length_m),
+                    reference.altitude_m-m->site.altitude,
+                    geometry.altitude_above_runway_m,
+                    reference.flight_path_angle_deg,geometry.flight_path_angle_deg);
+            if (diagnostics)
+                fprintf(stderr,
                     "TAEM alignment gate entry: t=%.1f along=%.1f cross=%.1f courseErr=%.2f bank=%.2f bankRate=%.2f h=%.1f V=%.1f fpa=%.2f\n",
                     elapsed,geometry.runway_along_m,geometry.runway_cross_m,
                     geometry.heading_error_deg,state.attitude.bank_rad*57.29577951308232,
