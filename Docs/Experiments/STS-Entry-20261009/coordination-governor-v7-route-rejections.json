@@ -1,0 +1,32 @@
+{
+  "console": "/tmp/sts-live-72km-coordination-governor-v7-20261009.log",
+  "result": "Live MM305 ownership continues with provisional acquisition; native qualified route not established.",
+  "rejections": [
+    "MM305 route rejected scale=1.003/1.011: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;",
+    "MM305 route rejected scale=1.041/1.002: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;",
+    "MM305 route rejected scale=1.037/0.895: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;",
+    "MM305 route rejected scale=1.033/0.863: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;",
+    "MM305 route rejected scale=1.058/0.981: [CONF L] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R] no HAC join has an energy-feasible native vertical profile t0.0;",
+    "MM305 route rejected scale=0.976/1.060: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.982/1.064: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.986/1.073: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.984/1.078: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.976/1.078: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.965/1.075: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.952/1.068: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.939/1.061: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.927/1.054: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.915/1.046: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.904/1.038: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.898/1.032: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.890/1.024: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.887/1.017: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.884/1.007: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;",
+    "MM305 route rejected scale=0.881/0.997: [CONF L] fixed-HAC candidate is infeasible t0.0; [CONF R] finite lead exceeds live curvature authority at every HAC join t0.0;"
+  ],
+  "latestStatus": [
+    "[TAEM] UT 2294.7 | alt 10.0 km | range 7.1 km | TAS 200.8 m/s | MM305 acquisition: tracking the displayed provisional TAEM route while qualification runs.",
+    "[TAEM] UT 2297.1 | alt 9.7 km | range 7.4 km | TAS 197.0 m/s | MM305 acquisition: tracking the displayed provisional TAEM route while qualification runs.",
+    "[TAEM] UT 2299.5 | alt 9.5 km | range 7.8 km | TAS 194.4 m/s | MM305 acquisition: tracking the displayed provisional TAEM route while qualification runs."
+  ]
+}
