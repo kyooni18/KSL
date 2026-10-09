@@ -1,0 +1,30 @@
+{
+  "attempt": "bank-governor-v5",
+  "parentPID": 71278,
+  "backendPID": 71573,
+  "runnerSession": 81283,
+  "identity": "c1ddb7884efd7299-faaee53ac81a2b42-ca5bf70fd928a206",
+  "backendSHA": "faaee53ac81a2b42ebff5b3ad411a0e723666d50eb260ccad05348f50dc93627",
+  "console": "/tmp/sts-live-72km-bank-governor-v5-20261009.log",
+  "vehicleLogs": [
+    {
+      "path": "FlightLogs/2026-10-09T09-34-08Z-STS-vehicle.jsonl",
+      "sessionId": "2026-10-09T09-34-08Z-71573-238365851155"
+    }
+  ],
+  "checkpoint": "STS-OMS-72km-20261009-v2",
+  "verifiedMass": 25723.234375,
+  "verifiedParts": 22,
+  "verifiedThrust": 0,
+  "shadowQualified": false,
+  "shadowResult": {
+    "entered": true,
+    "MM305": true,
+    "closestKm": 52.7,
+    "rangeErrorKm": -43.8,
+    "peakQkPa": 3.6,
+    "peakG": 4.09
+  },
+  "policy": "unpowered-only, shadow performed, warning continuation authorized, no bypass",
+  "validation": "Live reversal and landing pending; predicted MM305 is not live ownership."
+}
