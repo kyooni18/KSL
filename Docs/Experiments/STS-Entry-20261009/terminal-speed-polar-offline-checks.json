@@ -1,0 +1,16 @@
+{
+  "classification": "offline probe preparation checks; no KSP calls",
+  "hypotheticalStateCasesChecked": 280,
+  "exactAirspeedAndAltitudePassed": true,
+  "bothSTSBankConventionsPassed": true,
+  "forceProjectionKnownCasePassed": true,
+  "preflightRejections": [
+    "unpaused",
+    "RCS enabled",
+    "placeholder mass",
+    "STS-N identity",
+    "nonneutral controls"
+  ],
+  "probeSHA256": "939211d65adb0df8b7264c12e36250911389aec077718a81a963f9da76eb4a40",
+  "finiteProjectionGuardsPassed": true
+}

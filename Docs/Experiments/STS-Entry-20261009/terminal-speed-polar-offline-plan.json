@@ -1,0 +1,721 @@
+{
+  "status": "offline-plan",
+  "classification": "UNQUALIFIED_HYPOTHETICAL_API_POLAR",
+  "qualified": false,
+  "shadowGateEvidence": false,
+  "landingOrRolloutEvidence": false,
+  "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+  "profileSHA256": "62dfa52c564e744d0db6c90109e5bfcf41397f6c451525caf241b5b303d22755",
+  "plan": [
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 4000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 11000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 20000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 120.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 160.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 240.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 400.0,
+      "alphaDeg": 28.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 0.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 5.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 8.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 12.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 15.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 18.0
+    },
+    {
+      "altitudeM": 26000.0,
+      "airspeedMps": 650.0,
+      "alphaDeg": 28.0
+    }
+  ],
+  "maximumCalls": 140,
+  "pressureBoundPa": 45000,
+  "referenceAreaM2": 250,
+  "settersUsed": false,
+  "limitations": [
+    "Hypothetical neutral-surface static API forces; not flight measurements or certified cells.",
+    "Exact airspeed is supplied; no nominal Mach or temperature-scaling assumption is needed.",
+    "Perpendicular force may include side force; zero sideslip is requested.",
+    "Current loaded part state is retained; actual flight actuator response is not identified."
+  ]
+}
