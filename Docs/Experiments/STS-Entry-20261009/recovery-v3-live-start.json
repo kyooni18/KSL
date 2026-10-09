@@ -21,5 +21,9 @@
     "3ca572f yaw identification cross-axis weighting",
     "6196e23 measured OMS geometry retry"
   ],
-  "qualification": "Live controller engaged; atmospheric recovery performance/MM305/landing/rollout unverified. Previous completed-attempt aerodynamic history retained, current attempt held out; no shadow bypass."
+  "qualification": "Live controller engaged; atmospheric recovery performance/MM305/landing/rollout unverified. Previous completed-attempt aerodynamic history retained, current attempt held out; no shadow bypass.",
+  "vehicleLog": "FlightLogs/2026-10-09T08-33-23Z-STS-vehicle.jsonl",
+  "plannerLog": "FlightLogs/2026-10-09T08-33-23Z-STS-planner.jsonl",
+  "logSessionId": "2026-10-09T08-33-23Z-73962-234720614273",
+  "logSelection": "Match backend PID/session ID; concurrent offline experiments also write FlightLogs, so latest file modification time alone does not identify this live flight."
 }
