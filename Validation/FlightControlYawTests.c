@@ -105,7 +105,26 @@ static double yaw_identification_confidence(double roll_input){
     return s.authority[FLIGHT_CONTROL_AXIS_YAW].controlled_confidence;
 }
 
+static void sustained_weak_beta_response_reduces_yaw_authority(void){
+    FlightControlState s;flight_control_init(&s,.1);
+    GuidanceCommand c=entry_command();FlightControlOutput out={0};
+    Telemetry t=sample(400,0,0);
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    t.ut+=.1;assert(flight_control_step(&s,&t,&c,.1,&out));
+    double reported=out.diagnostics.yaw_authority,rate=0;
+    for(int i=0;i<100;i++){
+        s.last_control[FLIGHT_CONTROL_AXIS_YAW]=.2;
+        s.last_control[FLIGHT_CONTROL_AXIS_ROLL]=0;
+        rate+=.01;t.sideslip-=rate*.1;t.ut+=.1;
+        assert(flight_control_step(&s,&t,&c,.1,&out));
+        if(i==0)assert(s.authority[FLIGHT_CONTROL_AXIS_YAW].live_response_confidence<.2);
+    }
+    assert(out.diagnostics.yaw_authority<reported/2);
+    assert(out.diagnostics.yaw_authority>=.5-1e-6);
+}
+
 int main(void){
+    sustained_weak_beta_response_reduces_yaw_authority();
     /* The same yaw acceleration with simultaneous aileron excitation supplies
        less independent evidence of rudder authority. */
     assert(yaw_identification_confidence(.5)<yaw_identification_confidence(0));

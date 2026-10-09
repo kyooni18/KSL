@@ -646,7 +646,7 @@ bool flight_control_step_attitude(FlightControlState *state,
             measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_YAW],tuning->roll_lag_s);
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_YAW],
             observed_yaw_coordinate_rate,state->last_control[FLIGHT_CONTROL_AXIS_YAW],
-            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_ROLL],0.0);
+            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_ROLL],tuning->yaw_lag_s);
     }
 
     /* Airborne pitch guidance is an AoA loop.  Once the mains are down, control
@@ -751,6 +751,12 @@ bool flight_control_step_attitude(FlightControlState *state,
         fc_reported_axis_accel(telemetry,FLIGHT_CONTROL_AXIS_YAW);
     double yaw_authority=reported_yaw_authority>DBL_EPSILON?
         reported_yaw_authority:observed_yaw_authority;
+    if (reported_yaw_authority > DBL_EPSILON && observed_yaw_authority > DBL_EPSILON) {
+        double confidence=fc_clamp(
+            state->authority[FLIGHT_CONTROL_AXIS_YAW].live_response_confidence,0.0,1.0);
+        yaw_authority=1.0/((1.0-confidence)/reported_yaw_authority +
+            confidence/observed_yaw_authority);
+    }
 
     double pitch_authority = raw_pitch_authority;
     double roll_authority = raw_roll_authority;
