@@ -1551,6 +1551,13 @@ def main() -> int:
             orbital_preplan_hold = True
             print("test preflight: orbital physics frozen after live-state settle", flush=True)
 
+    if args.no_quickload and args.live and not args.connect_only and not args.reentry_only and not args.hac_only:
+        # Adopt the user's already-loaded orbit without replacing the scene.
+        # Planning owns this hold and releases it after producing the plan.
+        set_ksp_paused(root, True)
+        orbital_preplan_hold = True
+        print("orbital planning hold: using the already-loaded live orbit", flush=True)
+
     skip_reentry_handoff = (
         args.reentry_only
         and os.environ.get("KSP_LANDER_SKIP_REENTRY_HANDOFF") == "1"
