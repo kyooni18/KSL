@@ -1,0 +1,720 @@
+{
+  "classification": "offline constant-command STS entry diagnostic; no controller, admission or landing qualification",
+  "status": "complete",
+  "sourceHashes": {
+    "ShuttleSim/build/shuttlesim": "ca79ebd90e48f3802febb26148fb43f9f18cb32af2ca8454b367f95935b69ee7",
+    "ShuttleSim/scenarios/sts70km-run9-provisional.ini": "2122284798570ec204947496483204b8bdc7b987c652e749375ac780e04dd09b",
+    "ShuttleSim/reference-model/experiments/sts_api_terminal_polar.csv": "5a56177528a69b8758bcfc46981e34fdea51febd874f9a41b753d9b04bb6d6f7",
+    "ShuttleSim/reference-model/kerbin_atmosphere_identified.csv": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+    "ShuttleSim/reference-model/stsn_attitude_identified.ini": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50",
+    "Configuration/sts.json": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f"
+  },
+  "runs": [
+    {
+      "alphaCommandDeg": 18,
+      "bankCommandDeg": 0,
+      "recordSHA256": "42d951990ded8c5337971a9b17011c8ba6d6b0e3b245881bcba21e8ab35b0b3c",
+      "reached22km": true,
+      "maximumQPa": 4272.468427,
+      "maximumNormalLoadG": 0.7283020916047467,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10746.231826,
+        "sim_time": 782.52,
+        "sim_rate": 1784.05,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -460849.561522,
+          "y": -417731.863403,
+          "z": -32.732551,
+          "lat_deg": -0.003015179,
+          "lon_deg": -47.333829969,
+          "altitude_m": 21998.576
+        },
+        "velocity": {
+          "x_mps": 522.694837,
+          "y_mps": -432.434298,
+          "z_mps": -0.046367,
+          "inertial_mps": 678.387,
+          "surface_mps": 499.56,
+          "air_mps": 499.56,
+          "horizontal_mps": 490.081,
+          "vertical_mps": -96.852,
+          "flight_path_angle_deg": -11.179047
+        },
+        "attitude": {
+          "aoa_deg": 18.0,
+          "bank_deg": -0.0,
+          "heading_deg": 90.006,
+          "cmd_aoa_deg": 18.0,
+          "cmd_bank_deg": 0.0,
+          "requested_aoa_deg": 18.0,
+          "requested_bank_deg": 0.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.628291144,
+          "q_x": -0.62823029,
+          "q_y": 0.324510111,
+          "q_z": -0.324453585
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.027084587579,
+          "pressure_pa": 1741.79939,
+          "temperature_k": 224.030043,
+          "speed_of_sound_mps": 300.05576
+        },
+        "aero": {
+          "mach": 1.66489,
+          "q_pa": 3379.615421,
+          "lift_n": 162726.951615,
+          "drag_n": 190878.321148
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 286874.644,
+          "cross_m": -420.394,
+          "vertical_m": 21928.576,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 6.821
+        }
+      }
+    },
+    {
+      "alphaCommandDeg": 18,
+      "bankCommandDeg": 40,
+      "recordSHA256": "b3680e37d39320242f67dd1ae0495b9ac16a2200ce6fbbf1dc0812ad3a87f635",
+      "reached22km": true,
+      "maximumQPa": 5675.000213,
+      "maximumNormalLoadG": 0.8579322945762273,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10663.431826,
+        "sim_time": 699.72,
+        "sim_rate": 1786.51,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -539092.045519,
+          "y": -304812.037093,
+          "z": -57840.110572,
+          "lat_deg": -5.335728425,
+          "lon_deg": -58.656394849,
+          "altitude_m": 21993.641
+        },
+        "velocity": {
+          "x_mps": 416.184921,
+          "y_mps": -462.263054,
+          "z_mps": -321.536785,
+          "inertial_mps": 700.202,
+          "surface_mps": 550.992,
+          "air_mps": 550.992,
+          "horizontal_mps": 541.034,
+          "vertical_mps": -104.279,
+          "flight_path_angle_deg": -10.909434
+        },
+        "attitude": {
+          "aoa_deg": 18.0,
+          "bank_deg": 40.0,
+          "heading_deg": 127.9438,
+          "cmd_aoa_deg": 18.0,
+          "cmd_bank_deg": 40.0,
+          "requested_aoa_deg": 18.0,
+          "requested_bank_deg": 40.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.797360692,
+          "q_x": -0.167359353,
+          "q_y": 0.461772291,
+          "q_z": -0.350675242
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.0271108485542,
+          "pressure_pa": 1743.44062,
+          "temperature_k": 224.023927,
+          "speed_of_sound_mps": 300.051664
+        },
+        "aero": {
+          "mach": 1.836322,
+          "q_pa": 4115.313397,
+          "lift_n": 193410.230123,
+          "drag_n": 250262.151626
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 168291.842,
+          "cross_m": 55386.458,
+          "vertical_m": 21923.641,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 7.0906
+        }
+      }
+    },
+    {
+      "alphaCommandDeg": 24,
+      "bankCommandDeg": 0,
+      "recordSHA256": "fa6aa1bff70d1155a90a001bebabe19c00d97f89120b7a696c7b29605282f6e0",
+      "reached22km": true,
+      "maximumQPa": 3702.439665,
+      "maximumNormalLoadG": 0.7130788333923779,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10726.931826,
+        "sim_time": 763.22,
+        "sim_rate": 1904.54,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -496249.381592,
+          "y": -374989.534364,
+          "z": -27.041934,
+          "lat_deg": -0.00249099,
+          "lon_deg": -52.125364876,
+          "altitude_m": 21997.267
+        },
+        "velocity": {
+          "x_mps": 429.964457,
+          "y_mps": -392.833806,
+          "z_mps": -0.038397,
+          "inertial_mps": 582.398,
+          "surface_mps": 405.434,
+          "air_mps": 405.434,
+          "horizontal_mps": 391.276,
+          "vertical_mps": -106.208,
+          "flight_path_angle_deg": -15.186442
+        },
+        "attitude": {
+          "aoa_deg": 24.0,
+          "bank_deg": -0.0,
+          "heading_deg": 90.0063,
+          "cmd_aoa_deg": 24.0,
+          "cmd_bank_deg": 0.0,
+          "requested_aoa_deg": 24.0,
+          "requested_bank_deg": 0.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.60697147,
+          "q_x": -0.606913788,
+          "q_y": 0.362825845,
+          "q_z": -0.362765343
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.0270915523254,
+          "pressure_pa": 1742.23467,
+          "temperature_k": 224.02842,
+          "speed_of_sound_mps": 300.054673
+        },
+        "aero": {
+          "mach": 1.351202,
+          "q_pa": 2226.614055,
+          "lift_n": 148206.393617,
+          "drag_n": 236592.138539
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 236697.8,
+          "cross_m": -443.868,
+          "vertical_m": 21927.267,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 8.8136
+        }
+      }
+    },
+    {
+      "alphaCommandDeg": 24,
+      "bankCommandDeg": 40,
+      "recordSHA256": "3a1d469ab7e4db8b35aa912c1a0b6672cd395f288eec08745f286ab0108fc359",
+      "reached22km": true,
+      "maximumQPa": 4762.996432,
+      "maximumNormalLoadG": 0.8993118176978298,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10644.731826,
+        "sim_time": 681.02,
+        "sim_rate": 1930.31,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -562135.031231,
+          "y": -260873.829908,
+          "z": -53220.398355,
+          "lat_deg": -4.908424049,
+          "lon_deg": -62.933650092,
+          "altitude_m": 21999.485
+        },
+        "velocity": {
+          "x_mps": 340.19183,
+          "y_mps": -419.849707,
+          "z_mps": -292.942188,
+          "inertial_mps": 614.67,
+          "surface_mps": 470.2,
+          "air_mps": 470.2,
+          "horizontal_mps": 458.028,
+          "vertical_mps": -106.295,
+          "flight_path_angle_deg": -13.065414
+        },
+        "attitude": {
+          "aoa_deg": 24.0,
+          "bank_deg": 40.0,
+          "heading_deg": 131.4416,
+          "cmd_aoa_deg": 24.0,
+          "cmd_bank_deg": 40.0,
+          "requested_aoa_deg": 24.0,
+          "requested_bank_deg": 40.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.758738478,
+          "q_x": -0.136872245,
+          "q_y": 0.506908318,
+          "q_z": -0.385520256
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.0270797561135,
+          "pressure_pa": 1741.49743,
+          "temperature_k": 224.031169,
+          "speed_of_sound_mps": 300.056513
+        },
+        "aero": {
+          "mach": 1.567039,
+          "q_pa": 2993.506803,
+          "lift_n": 185983.388163,
+          "drag_n": 249703.056914
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 123504.742,
+          "cross_m": 50902.589,
+          "vertical_m": 21929.485,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 10.9346
+        }
+      }
+    },
+    {
+      "alphaCommandDeg": 28,
+      "bankCommandDeg": 0,
+      "recordSHA256": "57e3c415641dab65ef9cfc78f725f314accf33a8e1be7a248151e7e7974c27a6",
+      "reached22km": true,
+      "maximumQPa": 3449.68255,
+      "maximumNormalLoadG": 0.7276780637676089,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10714.231826,
+        "sim_time": 750.52,
+        "sim_rate": 1936.59,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -515890.472842,
+          "y": -347471.198852,
+          "z": -23.480219,
+          "lat_deg": -0.002162903,
+          "lon_deg": -55.027907557,
+          "altitude_m": 21996.153
+        },
+        "velocity": {
+          "x_mps": 383.232047,
+          "y_mps": -369.963603,
+          "z_mps": -0.034022,
+          "inertial_mps": 532.672,
+          "surface_mps": 357.321,
+          "air_mps": 357.321,
+          "horizontal_mps": 339.584,
+          "vertical_mps": -111.181,
+          "flight_path_angle_deg": -18.128596
+        },
+        "attitude": {
+          "aoa_deg": 28.0,
+          "bank_deg": -0.0,
+          "heading_deg": 90.0064,
+          "cmd_aoa_deg": 28.0,
+          "cmd_bank_deg": 0.0,
+          "requested_aoa_deg": 28.0,
+          "requested_bank_deg": 0.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.593360859,
+          "q_x": -0.593305102,
+          "q_y": 0.384681827,
+          "q_z": -0.384619083
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.027097479435,
+          "pressure_pa": 1742.6051,
+          "temperature_k": 224.02704,
+          "speed_of_sound_mps": 300.053748
+        },
+        "aero": {
+          "mach": 1.190858,
+          "q_pa": 1729.884436,
+          "lift_n": 143508.898907,
+          "drag_n": 208095.495704
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 206302.438,
+          "cross_m": -456.609,
+          "vertical_m": 21926.153,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 9.8714
+        }
+      }
+    },
+    {
+      "alphaCommandDeg": 28,
+      "bankCommandDeg": 40,
+      "recordSHA256": "ccb150c9a7a21b40567033540dbf121549b6de0d89eeac8df98a93b845454c74",
+      "reached22km": true,
+      "maximumQPa": 4380.429554,
+      "maximumNormalLoadG": 0.9301434432106515,
+      "withinPublishedQAndG": true,
+      "lastOrCrossingState": {
+        "schema": 1,
+        "type": "telemetry",
+        "source": "sim",
+        "scenario": "sts70km-run9-provisional",
+        "ut": 10633.531826,
+        "sim_time": 669.82,
+        "sim_rate": 1921.41,
+        "world": {
+          "radius_m": 600000,
+          "mu_m3_s2": 3531600000000.0,
+          "rotation_rate_rad_s": 0.000291570903037,
+          "atmosphere_top_m": 70000,
+          "rotation_phase_rad_at_ut0": 1.57079632679
+        },
+        "position": {
+          "x": -574246.687476,
+          "y": -233363.652838,
+          "z": -51516.827448,
+          "lat_deg": -4.751010501,
+          "lon_deg": -65.525515104,
+          "altitude_m": 21990.222
+        },
+        "velocity": {
+          "x_mps": 299.164246,
+          "y_mps": -390.53524,
+          "z_mps": -267.145114,
+          "inertial_mps": 559.807,
+          "surface_mps": 417.802,
+          "air_mps": 417.802,
+          "horizontal_mps": 403.722,
+          "vertical_mps": -107.55,
+          "flight_path_angle_deg": -14.916915
+        },
+        "attitude": {
+          "aoa_deg": 28.0,
+          "bank_deg": 40.0,
+          "heading_deg": 133.3244,
+          "cmd_aoa_deg": 28.0,
+          "cmd_bank_deg": 40.0,
+          "requested_aoa_deg": 28.0,
+          "requested_bank_deg": 40.0,
+          "aoa_rate_deg_s": 0.0,
+          "bank_rate_deg_s": 0.0,
+          "sideslip_deg": 0.0,
+          "direct_control": false,
+          "pitch_wn_s_inv": 1.5,
+          "pitch_zeta": 1.3,
+          "roll_wn_s_inv": 1.4,
+          "roll_zeta": 0.85,
+          "max_pitch_rate_deg_s": 5.858643,
+          "max_roll_rate_deg_s": 12.450661,
+          "max_pitch_accel_deg_s2": 14.360269,
+          "max_roll_accel_deg_s2": 23.324585,
+          "q_w": 0.735284846,
+          "q_x": -0.117855445,
+          "q_y": 0.530555713,
+          "q_z": -0.404940643
+        },
+        "atmosphere": {
+          "density_kg_m3": 0.0271290595633,
+          "pressure_pa": 1744.57873,
+          "temperature_k": 224.019689,
+          "speed_of_sound_mps": 300.048826
+        },
+        "aero": {
+          "mach": 1.392446,
+          "q_pa": 2367.801413,
+          "lift_n": 173451.098086,
+          "drag_n": 293463.682622
+        },
+        "vehicle": {
+          "mass_kg": 25816.072266,
+          "available_thrust_n": 0.0,
+          "current_thrust_n": 0.0,
+          "throttle": 0.0
+        },
+        "runway": {
+          "along_m": 96364.955,
+          "cross_m": 49249.963,
+          "vertical_m": 21920.222,
+          "length_m": 2500.0,
+          "width_m": 70.0,
+          "heading_deg": 90.0
+        },
+        "ground": {
+          "gear_down": false,
+          "brakes": false,
+          "airbrakes": false,
+          "wheel_steering": 0.0,
+          "steering_lateral_accel_mps2": 0.0,
+          "airbrake_decel_mps2": 0.0,
+          "on_ground": false,
+          "stopped": false,
+          "touchdown_seen": false,
+          "on_runway_touchdown": false,
+          "main_contact": false,
+          "nose_contact": false,
+          "pitch_released": false,
+          "main_load_n": 0.0,
+          "nose_load_n": 0.0,
+          "tail_load_n": 0.0,
+          "bounce_count": 0,
+          "runway_departure": false,
+          "pitch_deg": 13.0831
+        }
+      }
+    }
+  ],
+  "limits": {
+    "qPa": 45000,
+    "normalLoadG": 3.5
+  },
+  "limitations": [
+    "Borrowed STS-N servo; provisional STS aero and Mach mapping.",
+    "Constant commands ignore guidance and lateral runway capture; this is not a proposed flight law.",
+    "Report to first 22 km descending crossing only; no downstream feasibility or rollout proof.",
+    "Published 10 Hz telemetry extrema may miss intersample peaks."
+  ]
+}
