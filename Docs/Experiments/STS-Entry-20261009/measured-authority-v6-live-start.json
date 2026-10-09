@@ -1,0 +1,15 @@
+{
+  "attempt": "measured-authority-v6",
+  "parentPID": 73331,
+  "backendPID": 73668,
+  "runnerSession": 40333,
+  "manifest": "Runtime/Headless/run-manifests/20261009T100340917463Z-73668.json",
+  "identity": "266f28158d46d26b-c6a082a90c473ac1-ca5bf70fd928a206",
+  "checkpoint": "STS-OMS-72km-20261009-v2",
+  "verifiedParts": 22,
+  "verifiedMass": 25723.234375,
+  "verifiedThrust": 0,
+  "console": "/tmp/sts-live-72km-measured-authority-v6-20261009.log",
+  "policy": "Human authorized abort/restart; unpowered, provisional STS, shadow performed, warning continuation, no bypass",
+  "validation": "MM305 admission/recovery monitor and focused control suites pass; live handoff and rollout pending"
+}
