@@ -70,6 +70,14 @@ class BackendEngagementTests(unittest.TestCase):
 
 
 class PlanAdmissionTests(unittest.TestCase):
+    def test_warning_policy_preserves_rejection_and_strict_requirement(self):
+        plan = {"executionQualified": False, "targetCaptureAchieved": False}
+        with patch.dict(flight.os.environ, {"KSP_LANDER_CONTINUE_UNQUALIFIED": "1"}):
+            flight.validate_plan_qualification(plan, False)
+            self.assertIs(plan["executionQualified"], False)
+            with self.assertRaises(RuntimeError):
+                flight.validate_plan_qualification(plan, True)
+
     def test_unqualified_plan_cannot_be_called_validated(self):
         with self.assertRaisesRegex(RuntimeError, "entry-stage"):
             flight.validate_plan_qualification({"executionQualified": False}, False)

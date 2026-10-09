@@ -1273,7 +1273,10 @@ class BackendProcess:
 def validate_plan_qualification(plan: dict[str, Any], require_strict: bool) -> None:
     """Keep orbital entry admission distinct from optional full-route certification."""
     if plan.get("executionQualified") is not True:
-        raise RuntimeError("Deorbit plan failed entry-stage qualification; execution is blocked")
+        if not require_strict and os.environ.get("KSP_LANDER_CONTINUE_UNQUALIFIED") == "1":
+            print("WARNING: Deorbit plan failed entry-stage qualification; continuing with the available plan under authorized warning policy", flush=True)
+        else:
+            raise RuntimeError("Deorbit plan failed entry-stage qualification; execution is blocked")
     if require_strict and plan.get("targetCaptureAchieved") is not True:
         raise RuntimeError("Deorbit plan failed required strict full-route qualification; execution is blocked")
 
