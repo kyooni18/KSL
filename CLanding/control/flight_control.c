@@ -104,7 +104,7 @@ static void fc_axis_observe(FlightControlAxisAuthority *axis,
                             double rate,
                             double previous_input,
                             double dt,
-                            double cross_axis_input) {
+                            double cross_axis_input, double response_time) {
     if (!axis || !isfinite(rate) || !isfinite(dt) || !(dt > 0.0)) return;
     if (!axis->has_last_rate) {
         axis->last_rate = rate;
@@ -128,6 +128,9 @@ static void fc_axis_observe(FlightControlAxisAuthority *axis,
 
     double excitation_weight = magnitude /
         (magnitude + interference + DBL_EPSILON);
+    if (response_time > DBL_EPSILON)
+        excitation_weight *= fmin(1.0, magnitude) *
+            (1.0 - exp(-dt / response_time));
     double controlled = (acceleration - axis->drift_accel) / input;
     if (!isfinite(controlled) || !(controlled > 0.0)) return;
 
@@ -142,6 +145,8 @@ static void fc_axis_observe(FlightControlAxisAuthority *axis,
     else
         axis->controlled_accel += excitation_weight *
             (controlled - axis->controlled_accel);
+    axis->live_response_confidence = 1.0 -
+        (1.0-axis->live_response_confidence)*(1.0-excitation_weight);
     axis->controlled_confidence =
         1.0 - (1.0 - axis->controlled_confidence) *
         (1.0 - excitation_weight);
@@ -631,16 +636,17 @@ bool flight_control_step_attitude(FlightControlState *state,
             (isfinite(telemetry->heading_rate)?telemetry->heading_rate:state->heading_rate):
             -state->sideslip_rate);
 
+    const FlightControlTuning *tuning=fc_tuning();
     if (sample_valid) {
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_PITCH],
             observed_pitch_rate,state->last_control[FLIGHT_CONTROL_AXIS_PITCH],
-            measured_dt,0.0);
+            measured_dt,0.0,0.0);
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_ROLL],
             observed_roll_rate,state->last_control[FLIGHT_CONTROL_AXIS_ROLL],
-            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
+            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_YAW],tuning->roll_lag_s);
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_YAW],
             observed_yaw_coordinate_rate,state->last_control[FLIGHT_CONTROL_AXIS_YAW],
-            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
+            measured_dt,state->last_control[FLIGHT_CONTROL_AXIS_ROLL],0.0);
     }
 
     /* Airborne pitch guidance is an AoA loop.  Once the mains are down, control
@@ -678,7 +684,6 @@ bool flight_control_step_attitude(FlightControlState *state,
     state->last_target_roll = roll_target;
     state->has_last_target_roll = true;
 
-    const FlightControlTuning *tuning=fc_tuning();
     if(quaternion_control){
         bool continuous_error=state->has_quaternion_error_sample&&sample_valid&&
             state->has_last_profile&&state->last_profile==profile;
@@ -729,6 +734,16 @@ bool flight_control_step_attitude(FlightControlState *state,
         fc_reported_axis_accel(telemetry,FLIGHT_CONTROL_AXIS_ROLL);
     double raw_roll_authority=reported_roll_authority>DBL_EPSILON?
         reported_roll_authority:observed_roll_authority;
+    if (reported_roll_authority > DBL_EPSILON && observed_roll_authority > DBL_EPSILON) {
+        /* Blend inverse authority: it is the conversion from demanded
+           acceleration to control input. Only current-flight excitation can
+           displace the report; a seeded model does not count as live evidence.
+           Small inputs and simultaneous rudder reduce observation weight. */
+        double confidence=fc_clamp(
+            state->authority[FLIGHT_CONTROL_AXIS_ROLL].live_response_confidence,0.0,1.0);
+        raw_roll_authority=1.0/((1.0-confidence)/reported_roll_authority +
+            confidence/observed_roll_authority);
+    }
 
     double observed_yaw_authority=
         fc_axis_available(&state->authority[FLIGHT_CONTROL_AXIS_YAW], q);

@@ -24,6 +24,7 @@ typedef struct {
        for those coordinates. */
     double controlled_accel;
     double controlled_confidence;
+    double live_response_confidence; /* excludes seeded/offline authority */
     double aero_per_q;
     double confidence;
     double drift_accel;

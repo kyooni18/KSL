@@ -247,7 +247,27 @@ static void recovery_arrests_body_rotation_before_chasing_attitude(void){
     assert(!out.diagnostics.recovery_rate_first);
 }
 
+static void live_weak_roll_response_displaces_report_gradually(void){
+    FlightControlState state;flight_control_init(&state,.1);
+    Telemetry t=atmospheric_sample();GuidanceCommand c=entry_command();
+    FlightControlAttitudeError e={.valid=true};FlightControlOutput out={0};
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    t.ut+=.1;
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    double report=out.diagnostics.roll_raw_authority;
+    for(int i=0;i<100;i++){
+        state.last_control[FLIGHT_CONTROL_AXIS_ROLL]=.2;
+        state.last_control[FLIGHT_CONTROL_AXIS_YAW]=0;
+        t.ut+=.1;t.body_roll_rate+=.01; /* effective gain .5 deg/s2/input */
+        assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+        if(i==0)assert(state.authority[FLIGHT_CONTROL_AXIS_ROLL].live_response_confidence<.2);
+    }
+    assert(out.diagnostics.roll_raw_authority<report/2);
+    assert(out.diagnostics.roll_raw_authority>=.5-1e-6);
+}
+
 int main(void){
+    live_weak_roll_response_displaces_report_gradually();
     recovery_arrests_body_rotation_before_chasing_attitude();
     learned_trim_transfer_preserves_elevator_demand();
     airframe_error_tracks_aerodynamic_coordinates();
