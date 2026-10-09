@@ -3,6 +3,7 @@
 
 #include "landing_types.h"
 #include "taem_route.h"
+#include "adaptive_trim.h"
 
 typedef struct { double kp, ki, kd, integral_limit, derivative_tc, integral, previous_error, filtered_derivative; bool has_previous; } RobustPID;
 typedef struct { double value; bool has_value; } SlewLimiter;
@@ -171,11 +172,8 @@ typedef struct {
     double mm305_command_aoa_rad;
     double mm305_command_ut;
     bool mm305_command_valid;
-    /* Online TAEM elevator trim line u = a + b*AoA (exponentially weighted
-       least squares over quasi-steady samples, seeded by a prior). */
-    bool mm305_trim_initialized;
-    double mm305_trim_intercept;   /* a in u = a + b*AoA, adapted when settled */
-    double mm305_trim_last_ut;
+    /* Both coefficients are identified from quasi-steady flight samples. */
+    AdaptiveTrim mm305_trim; /* Passive measured incidence/input identification. */
     /* MM304 -> MM305 downstream-feasibility contract.  The physical admission
        envelope is necessary, not sufficient: ownership transfers only after
        MM305 has found a replay-qualified route from a recent measured MM304

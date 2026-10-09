@@ -114,56 +114,16 @@ bool guidance_begin_hac_test(GuidanceMachine *g, const Telemetry *t,
         message, message_size);
 }
 
-/* TAEM elevator trim model.  With the body flap removed from pitch the
- * elevators alone balance the static pitching moment; both scale with q, so
- * the trim input is a q-independent line u = a + b*AoA.  The slope is the
- * clean live identification at the STS-N MM305 checkpoint (M2.3-2.5,
- * elevator-only: u 0.00 held AoA -2.4 deg, u 0.44 held 7.0 deg for 10 s).
- * The intercept drifts with Mach and is re-identified only from settled
- * tracking (AoA steady and on its command), where the input is pure trim.
- * The highest AoA the elevators can hold while keeping a quarter of their
- * travel for manoeuvring bounds what TAEM may plan and command. */
-static const double mm305_trim_slope_per_deg = 0.047;
-static const double mm305_trim_prior_intercept = 0.113;
-static const double mm305_trim_intercept_memory_s = 10.0;
-static const double mm305_trim_input_budget = 0.75;
-
-static double mm305_trim_intercept(const GuidanceMachine *g) {
-    return g && g->mm305_trim_initialized && isfinite(g->mm305_trim_intercept) ?
-        g->mm305_trim_intercept : mm305_trim_prior_intercept;
-}
-
+/* Learn both trim coefficients from this vehicle's settled response. */
 static void mm305_trim_observe(GuidanceMachine *g, const Telemetry *t) {
     if (!g || !t) return;
-    if (!g->mm305_trim_initialized) {
-        g->mm305_trim_intercept = mm305_trim_prior_intercept;
-        g->mm305_trim_initialized = true;
-        g->mm305_trim_last_ut = t->ut;
-        return;
-    }
-    double dt = isfinite(g->mm305_trim_last_ut) ? t->ut - g->mm305_trim_last_ut : 0.0;
-    g->mm305_trim_last_ut = t->ut;
-    if (!(dt > 0.0) || dt > 2.0 || !g->mm305_command_valid) return;
-    double aoa_rate = t->has_angle_of_attack_rate && isfinite(t->angle_of_attack_rate) ?
-        t->angle_of_attack_rate : t->pitch_rate;
-    double command_error = g->mm305_command_aoa_rad * RAD2DEG - t->angle_of_attack;
-    bool settled = t->has_controls && isfinite(t->control_pitch) &&
-        fabs(t->control_pitch) < 0.95 && isfinite(aoa_rate) && fabs(aoa_rate) < 0.3 &&
-        fabs(command_error) < 0.5 && t->dynamic_pressure > 2000.0;
-    if (!settled) return;
-    double observed = t->control_pitch - mm305_trim_slope_per_deg * t->angle_of_attack;
-    double alpha = 1.0 - exp(-dt / mm305_trim_intercept_memory_s);
-    g->mm305_trim_intercept += alpha * (observed - g->mm305_trim_intercept);
-}
-
-static double mm305_trim_input(const GuidanceMachine *g, double aoa_deg) {
-    return mm305_trim_intercept(g) + mm305_trim_slope_per_deg * aoa_deg;
-}
-
-/* Trim-limited AoA ceiling in degrees. */
-static double mm305_trim_aoa_ceiling_deg(const GuidanceMachine *g) {
-    return fmax(4.0, (mm305_trim_input_budget - mm305_trim_intercept(g)) /
-                     mm305_trim_slope_per_deg);
+    double rate=t->has_angle_of_attack_rate&&isfinite(t->angle_of_attack_rate)?
+        t->angle_of_attack_rate:t->pitch_rate;
+    double error=g->mm305_command_aoa_rad*RAD2DEG-t->angle_of_attack;
+    bool settled=g->mm305_command_valid&&t->has_controls&&
+        isfinite(rate)&&fabs(rate)<0.3&&isfinite(error)&&fabs(error)<0.5;
+    adaptive_trim_observe(&g->mm305_trim,t->ut,t->mach,t->dynamic_pressure,
+        t->angle_of_attack,t->control_pitch,settled);
 }
 
 static TerminalDynamicState terminal_live_state(const GuidanceMachine *g,
@@ -190,7 +150,9 @@ static TerminalDynamicState terminal_live_state(const GuidanceMachine *g,
         attitude.cmd_aoa_rad = attitude.requested_aoa_rad =
             g->mm305_command_aoa_rad;
     }
-    double trim_ceiling = mm305_trim_aoa_ceiling_deg(g);
+    double trim_ceiling = adaptive_trim_ceiling(g?&g->mm305_trim:NULL,
+        model->vehicle.terminal_maximum_lift_angle_of_attack,
+        model->vehicle.maximum_angle_of_attack);
     return (TerminalDynamicState){
         .trim_aoa_ceiling_rad = isfinite(trim_ceiling) ? trim_ceiling * DEG2RAD : 0.0,
         .position_i_m = {state->position.x,state->position.y,state->position.z},
@@ -1843,9 +1805,9 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     if (display_route)
         mm305_route_to_reference_trajectory(&result.reference,display_route,
             control_model,t);
-    result.command.has_pitch_trim_feedforward=true;
-    result.command.pitch_trim_feedforward=clampd(
-        mm305_trim_input(g,result.command.target_aoa),-0.9,0.9);
+    result.command.has_pitch_trim_feedforward=adaptive_trim_input(
+        &g->mm305_trim,result.command.target_aoa,
+        &result.command.pitch_trim_feedforward);
     g->mm305_command_bank_rad = result.command.target_roll * DEG2RAD;
     g->mm305_command_aoa_rad = result.command.target_aoa * DEG2RAD;
     g->mm305_command_ut = t->ut;
