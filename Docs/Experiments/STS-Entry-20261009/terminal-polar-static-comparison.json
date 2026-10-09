@@ -1,0 +1,69 @@
+{
+  "classification": "offline static API reconstruction using provisional nominal-atmosphere Mach mapping; not flight validation",
+  "sourceSHA256": "eb996f89c059eb2b486b48d5728827d28a2ba868c71ec50e7759b605d355e141",
+  "models": {
+    "sts_api_mach2_polar": {
+      "SHA256": "e51dc06fd3b3bc25912e3beb1d1faa9598735bb19b35ec1f9da22afacafdf2f9",
+      "altitudes": {
+        "4000": {
+          "count": 21,
+          "meanAbsoluteCL": 0.02905097388009528,
+          "meanAbsoluteCD": 0.026504249272437223,
+          "role": "other-altitude static comparison"
+        },
+        "11000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.01767232283774385,
+          "meanAbsoluteCD": 0.04126506943046824,
+          "role": "other-altitude static comparison"
+        },
+        "20000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.017880532002775548,
+          "meanAbsoluteCD": 0.04138209233583637,
+          "role": "source altitude"
+        },
+        "26000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.01870688103035497,
+          "meanAbsoluteCD": 0.04188884795545663,
+          "role": "other-altitude static comparison"
+        }
+      }
+    },
+    "sts_api_terminal_polar": {
+      "SHA256": "5a56177528a69b8758bcfc46981e34fdea51febd874f9a41b753d9b04bb6d6f7",
+      "altitudes": {
+        "4000": {
+          "count": 21,
+          "meanAbsoluteCL": 0.02486746882133171,
+          "meanAbsoluteCD": 0.016420822375198957,
+          "role": "other-altitude static comparison"
+        },
+        "11000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.0007358846248944168,
+          "meanAbsoluteCD": 0.0009388984923091396,
+          "role": "other-altitude static comparison"
+        },
+        "20000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.00033316912603942203,
+          "meanAbsoluteCD": 0.0004939833500759918,
+          "role": "source altitude"
+        },
+        "26000": {
+          "count": 28,
+          "meanAbsoluteCL": 0.004271674012218928,
+          "meanAbsoluteCD": 0.004002977497598036,
+          "role": "other-altitude static comparison"
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Sound speed uses offline identified table, not live hypothetical Mach.",
+    "Other altitudes share same paused vessel and API; not independent flight validation.",
+    "Table alpha interpolation cannot necessarily reproduce every source alpha exactly."
+  ]
+}
