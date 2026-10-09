@@ -224,7 +224,30 @@ static void learned_trim_transfer_preserves_elevator_demand(void) {
     assert_close(state.pitch_trim,.35,1e-9);
 }
 
+static void recovery_arrests_body_rotation_before_chasing_attitude(void){
+    FlightControlState state;
+    flight_control_init(&state,.1);
+    Telemetry t=atmospheric_sample();
+    t.body_pitch_rate=50.0;t.body_roll_rate=-45.0;t.body_yaw_rate=35.0;
+    GuidanceCommand c=entry_command();c.control_profile=PROFILE_RECOVERY;
+    c.has_pitch_trim_feedforward=true;c.pitch_trim_feedforward=.4;
+    /* The attitude target requests acceleration in the direction of each
+       existing spin. Recovery must oppose the measured rates instead. */
+    FlightControlAttitudeError e={.valid=true,.use_yaw_error=true,
+        .pitch_error_deg=150,.roll_error_deg=-150,.yaw_error_deg=150};
+    FlightControlOutput out={0};
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    assert(out.diagnostics.recovery_rate_first);
+    assert(out.pitch<0&&out.roll>0&&out.yaw<0);
+    assert_close(state.pitch_trim,0,1e-9);
+    /* Resume attitude acquisition once physical rotation is arrested. */
+    t.ut+=.1;t.body_pitch_rate=t.body_roll_rate=t.body_yaw_rate=0;
+    assert(flight_control_step_attitude(&state,&t,&c,&e,.1,&out));
+    assert(!out.diagnostics.recovery_rate_first);
+}
+
 int main(void){
+    recovery_arrests_body_rotation_before_chasing_attitude();
     learned_trim_transfer_preserves_elevator_demand();
     airframe_error_tracks_aerodynamic_coordinates();
     airframe_error_uses_shortest_roll_rotation();

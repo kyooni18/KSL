@@ -1,0 +1,9 @@
+# Recovery body-rate arrest
+
+The previous OMS entry departed after its bank reversal, before MM305. At UT 2134.73 the measured pitch/yaw body rates were 49.98/18.71 deg/s, while the quaternion pitch error was about -145 degrees. A large rotating attitude reference can make the ordinary attitude-position demand compete with damping during a departure. The control loop itself was still timely.
+
+The revised recovery law switches to physical body-rate damping when damping demand alone exhausts any axis's currently available acceleration. Its boundary uses measured/identified authority and the scheduled loop bandwidth; no STS-specific rate threshold or fitted flight coefficient is introduced. All three axes then oppose physical rotation, pitch trim is cleared, and attitude acquisition resumes when damping no longer exhausts authority. The switch requires valid quaternion control and finite physical rates on all axes. Entry tracking is unchanged.
+
+Production build: `/tmp/sts-recovery-rate-backend`. Existing quaternion and yaw suites pass; one necessary quaternion regression checks opposing all three measured spin directions despite a conflicting attitude target, then returning to attitude acquisition after arrest. This is a controller-law regression, not live stability or landing evidence. The active retry PID 21083 uses its immutable earlier backend and does not contain this change.
+
+The accompanying adaptive yaw backtest predicts each acceleration interval using only observations completed at or before the forecast origin. A coupled model with five-second exponential forgetting lowers reversal prediction RMSE from 0.205 to 0.157 deg/s²; longer forgetting adapts less effectively. These are correlated closed-loop observations and do not establish a causal actuator Jacobian or a safe controller allocator. The fitted gains remain experimental data, not hardcoded control values.

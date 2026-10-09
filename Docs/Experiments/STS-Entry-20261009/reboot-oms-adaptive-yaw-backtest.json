@@ -1,0 +1,64 @@
+{
+  "classification": "OFFLINE_PREQUENTIAL_OBSERVATIONAL_BACKTEST",
+  "source": "FlightLogs/2026-10-09T07-22-46Z-STS-vehicle.jsonl",
+  "method": "Predict physical yaw acceleration over two subsequent records from measured state/control at forecast origin. Fit only samples whose acceleration interval has ended at/before forecast origin, excluding overlap and future leakage. Exponential forgetting; reject scaled normal matrix condition >=1e5. No control applied.",
+  "limitations": "Closed-loop correlated observations; predictor performance does not establish causal actuator Jacobian or controller stability. Forgetting choices exploratory, not qualified gains.",
+  "results": [
+    {
+      "forgetSeconds": 5,
+      "coupled": false,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.25218692138941756,
+      "reversalRMSE": 0.20533685068771906
+    },
+    {
+      "forgetSeconds": 5,
+      "coupled": true,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.22740681211416544,
+      "reversalRMSE": 0.15737933415415511
+    },
+    {
+      "forgetSeconds": 10,
+      "coupled": false,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.27777205324832777,
+      "reversalRMSE": 0.2602659255759514
+    },
+    {
+      "forgetSeconds": 10,
+      "coupled": true,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.25718516326875795,
+      "reversalRMSE": 0.208300293847892
+    },
+    {
+      "forgetSeconds": 20,
+      "coupled": false,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.30328918343113287,
+      "reversalRMSE": 0.35588306951184256
+    },
+    {
+      "forgetSeconds": 20,
+      "coupled": true,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.2894848778364713,
+      "reversalRMSE": 0.289142274119391
+    },
+    {
+      "forgetSeconds": 40,
+      "coupled": false,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.3293036897445823,
+      "reversalRMSE": 0.5067678306961129
+    },
+    {
+      "forgetSeconds": 40,
+      "coupled": true,
+      "validPredictions": 1402,
+      "beforeReversalRMSE": 0.32145545599946246,
+      "reversalRMSE": 0.4371992768770105
+    }
+  ]
+}

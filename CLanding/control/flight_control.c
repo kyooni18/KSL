@@ -971,6 +971,29 @@ bool flight_control_step_attitude(FlightControlState *state,
     double rcs_assist = 0.0;
     state->rcs_transonic_cutoff = true;
 
+    /* During a departure, a moving/aliased attitude reference must not defeat
+       damping of the physical rotation. Switch to body-rate arrest when the
+       damping demand alone exhausts an axis's available acceleration. This
+       boundary follows measured authority and the scheduled loop bandwidth,
+       rather than a vessel-specific angular-rate threshold. */
+    bool recovery_rate_first = profile == PROFILE_RECOVERY && quaternion_control &&
+        body_pitch_rate_valid && body_roll_rate_valid && body_yaw_rate_valid &&
+        pitch_authority > DBL_EPSILON && roll_authority > DBL_EPSILON &&
+        yaw_authority > DBL_EPSILON &&
+        (2.0*pitch_zeta*pitch_wn_used*fabs(telemetry->body_pitch_rate) >= pitch_authority ||
+         2.0*roll_zeta*roll_wn_used*fabs(telemetry->body_roll_rate) >= roll_authority ||
+         2.0*yaw_wn*fabs(telemetry->body_yaw_rate) >= yaw_authority);
+    if (recovery_rate_first) {
+        pitch_command = fc_capped_pd_command(0.0, telemetry->body_pitch_rate,
+            0.0, pitch_authority, pitch_wn_used, pitch_zeta, 0.0, 0.0);
+        roll_command = fc_capped_pd_command(0.0, telemetry->body_roll_rate,
+            0.0, roll_authority, roll_wn_used, roll_zeta, 0.0, 0.0);
+        yaw_command = fc_capped_pd_command(0.0, telemetry->body_yaw_rate,
+            0.0, yaw_authority, yaw_wn, 1.0, 0.0, 0.0);
+        state->pitch_trim = 0.0;
+        state->terminal_pitch_integral = 0.0;
+    }
+
     state->last_control[FLIGHT_CONTROL_AXIS_PITCH] =
         fc_clamp(pitch_command,-1.0,1.0);
     state->last_control[FLIGHT_CONTROL_AXIS_ROLL] =
@@ -1002,7 +1025,7 @@ bool flight_control_step_attitude(FlightControlState *state,
     d->target_roll_rate = state->target_roll_rate;
     d->commanded_roll_rate = commanded_roll_rate;
     d->relative_roll_rate = relative_rate;
-    d->recovery_rate_first = false;
+    d->recovery_rate_first = recovery_rate_first;
     d->heading_error = heading_error;
     d->sideslip = sideslip;
     d->sideslip_rate = state->sideslip_rate;
