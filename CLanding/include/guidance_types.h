@@ -173,6 +173,7 @@ typedef struct {
     double mm305_command_ut;
     bool mm305_command_valid;
     /* Both coefficients are identified from quasi-steady flight samples. */
+    bool terminal_landing_warning_latched; /* Rejected contact cannot become success. */
     AdaptiveTrim mm305_trim; /* Passive measured incidence/input identification. */
     /* MM304 -> MM305 downstream-feasibility contract.  The physical admission
        envelope is necessary, not sufficient: ownership transfers only after

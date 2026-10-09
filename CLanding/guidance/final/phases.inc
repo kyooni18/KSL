@@ -94,11 +94,11 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
     GuidanceResult r=result_make(phase,c,status,NULL);trajectory_copy(&r.reference,ref);return r;
 }
 
-/* A terminal abort is latched. No unvalidated recovery orbit is synthesized. */
+/* Internal rejected-solution signal. The public update selects bounded
+ * recovery and publishes a warning; explicit human abort remains latched. */
 GuidanceResult terminal_abort(GuidanceMachine *g, const char *reason) {
-    guidance_abort(g);
     snprintf(g->abort_reason, sizeof(g->abort_reason), "%s", reason);
     GuidanceCommand c;
     guidance_command_init(&c);
-    return result_make(PHASE_ABORT, c, reason, "Nominal landing terminated. Manual control restored.");
+    return result_make(PHASE_ABORT, c, reason, reason);
 }

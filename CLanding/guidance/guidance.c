@@ -5,7 +5,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
+
+/* Keep flying after a rejected terminal solution. This command is recovery,
+ * never a route/Final qualification. All values come from current state/config. */
+static GuidanceResult terminal_warning_recovery(GuidanceMachine *g,
+        const Telemetry *t,const PlanetModel *p,AerodynamicModel aero,
+        const LandingConfiguration *cfg,const char *reason) {
+    GuidanceCommand c; guidance_command_init(&c);
+    bool grounded=t->main_gear_grounded||t->nose_gear_grounded||
+        !strcasecmp(t->vessel_situation,"landed");
+    if (grounded) g->terminal_landing_warning_latched=true;
+    GuidancePhase phase=grounded?PHASE_ROLLOUT:PHASE_ATTITUDE_RECOVERY;
+    bool usable=isfinite(t->heading)&&isfinite(t->flight_path_angle)&&
+        isfinite(t->true_air_speed)&&isfinite(t->mean_altitude);
+    if (usable) {
+        double course=isfinite(t->ground_track_heading)?t->ground_track_heading:t->heading;
+        double bank=0,heading=course;
+        double aoa=cfg->vehicle.terminal_maximum_lift_angle_of_attack;
+        if (!grounded && t->true_air_speed>=cfg->vehicle.minimum_safe_speed) {
+            HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
+                &cfg->guidance,planet_surface_gravity(p),course);
+            if (isfinite(line.heading)&&isfinite(line.bank)) {
+                heading=line.heading;
+                bank=clampd(line.bank,-cfg->vehicle.maximum_bank_angle,
+                    cfg->vehicle.maximum_bank_angle);
+            }
+            double distance=fmax(1.0,fabs(t->runway_along_track));
+            double slope=atan2(fmax(0,t->mean_altitude-cfg->site.altitude),distance)*RAD2DEG;
+            double candidate=terminal_fpa_force_aoa(t,p,aero,&cfg->vehicle,-slope);
+            if (isfinite(candidate)) aoa=candidate;
+        }
+        aoa=clampd(aoa,0,cfg->vehicle.maximum_angle_of_attack);
+        c=atmospheric(t,heading,bank,&cfg->vehicle,0,false,
+            grounded?PROFILE_ROLLOUT:PROFILE_RECOVERY);
+        c.has_target_aoa=true;c.target_aoa=aoa;
+        c.target_pitch=t->flight_path_angle+aoa;
+        c.heading_control_enabled=!grounded;
+    }
+    c.target_throttle=0;
+    c.gear=grounded||t->gear||t->radar_altitude<=cfg->guidance.gear_deployment_altitude;
+    c.brakes=grounded;
+    /* Release a rejected route so the next tick can price a fresh solution. */
+    g->mm305_route_committed=false;g->terminal_path_committed=false;
+    g->mm305_acquisition_route_valid=false;g->hac_captured=false;
+    g->phase=phase;
+    return result_make(phase,c,"Continuing bounded recovery while guidance replans.",reason);
+}
 
 GuidanceResult guidance_update_with_terminal_model(GuidanceMachine*g,
         const Telemetry*t,const VehicleState*state,const DeorbitPlan*plan,
@@ -17,6 +64,15 @@ GuidanceResult guidance_update_with_terminal_model(GuidanceMachine*g,
        appear as a new primary runway on the next preview and aliases the stored
        runway_end_index, causing the MM304/MM305 inlet to flip ends every cycle. */
     GuidanceResult r=guidance_update_impl(g,t,state,plan,p,aero,cfg,terminal_model);
+    if ((r.phase==PHASE_ABORT ||
+            (r.phase==PHASE_COMPLETE&&g->terminal_landing_warning_latched)) &&
+            g->automation_engaged && !g->aborted) {
+        char warning[sizeof(r.status)];
+        snprintf(warning,sizeof(warning),"%s",
+            r.phase==PHASE_COMPLETE?g->abort_reason:r.status);
+        guidance_result_clear(&r);
+        return terminal_warning_recovery(g,t,p,aero,cfg,warning);
+    }
     if(plan&&r.phase==PHASE_DEORBIT_BURN&&g->has_burn_command_started&&!g->deorbit_burn_completed&&r.command.target_throttle<=0){
         bool has_peri=plan->predicted_post_burn_periapsis_altitude>10000&&plan->predicted_post_burn_periapsis_altitude<p->atmosphere_depth&&isfinite(t->periapsis_altitude)&&t->periapsis_altitude>-p->radius*.5;
         double target=plan->delta_v+(has_peri?8:0),remaining=target-g->delivered_delta_v;

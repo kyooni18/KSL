@@ -244,9 +244,12 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             bool handoff_lost=t->true_air_speed<v->minimum_safe_speed||
                 t->mean_altitude<cfg->site.altitude+100.0;
             (void)low;(void)high;(void)mach;(void)minimum_mach;
-            if (handoff_lost)
-                return terminal_abort(g,
-                    "MM304 flight recovery margin was exhausted before TAEM acquisition.");
+            if (handoff_lost) {
+                /* Retain the best current MM304 command and keep replanning. */
+                entry.has_warning=true;
+                snprintf(entry.warning,sizeof(entry.warning),
+                    "MM304 recovery margin exhausted; continuing the best available entry command.");
+            }
             return entry;
         }
 
