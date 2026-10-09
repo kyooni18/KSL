@@ -1,0 +1,153 @@
+{
+  "classification": "offline heavy-mass inherited entry diagnostic; not original STS flight validation",
+  "result": {
+    "success": false,
+    "simulatorSummary": {},
+    "abortReason": "MM304 flight recovery margin was exhausted before TAEM acquisition.",
+    "touchdownGearDown": false,
+    "rolloutValid": false,
+    "rolloutRunwayValid": true,
+    "rolloutBrakesSeen": false,
+    "rolloutAirbrakesSeen": false,
+    "rolloutMaxHeadingErrorDeg": 0.0,
+    "rolloutMaxLateralAccelMps2": 0.0,
+    "rolloutStabilityProxyOk": true,
+    "touchdownSpeedOk": false,
+    "touchdownSinkOk": false,
+    "engageRejected": false,
+    "controlsClean": true,
+    "fixedHacSeen": false,
+    "splineSeen": false,
+    "observedPhases": [
+      "Abort",
+      "Entry Interface",
+      "Idle",
+      "MM304 Entry"
+    ],
+    "sim": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts-terminal-polar-entry-20261009-20261009T052302Z-im6gfmjp-sim.jsonl.gz",
+    "guidance": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts-terminal-polar-entry-20261009-20261009T052302Z-im6gfmjp-guidance.jsonl.gz",
+    "backendStderr": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts-terminal-polar-entry-20261009-20261009T052302Z-im6gfmjp-backend.stderr.log",
+    "simStderr": "/Users/kyooni18/Code/KSPShuttleLander/ShuttleSim/runs/mm304-sts-terminal-polar-entry-20261009-20261009T052302Z-im6gfmjp-sim.stderr.log",
+    "runId": null,
+    "manifest": null,
+    "discardedZeroSecondRun": false,
+    "recordedSimTime": 1049.72
+  },
+  "scenarioSHA256": "3740d7371ef105d97d21d3f3aa9951b9c805a18fd427e9e32873acc5dc5e3a92",
+  "simLogSHA256": "de44483fcfa65e62c866669e44390a2835118ed23836936778c8515d654b7830",
+  "initialMassKg": 40252.917969,
+  "finalTelemetry": {
+    "schema": 1,
+    "type": "telemetry",
+    "source": "sim",
+    "scenario": "ksp70km-entry-interface",
+    "ut": 68034.439981,
+    "sim_time": 1049.72,
+    "sim_rate": 39.07,
+    "world": {
+      "radius_m": 600000,
+      "mu_m3_s2": 3531600000000.0,
+      "rotation_rate_rad_s": 0.000291570903037,
+      "atmosphere_top_m": 70000,
+      "rotation_phase_rad_at_ut0": 1.57079632679
+    },
+    "position": {
+      "x": -41908.043433,
+      "y": 601213.807155,
+      "z": 37371.968233,
+      "lat_deg": 3.548390283,
+      "lon_deg": -52.581140555,
+      "altitude_m": 3830.266
+    },
+    "velocity": {
+      "x_mps": -93.488654,
+      "y_mps": -24.904617,
+      "z_mps": -19.20093,
+      "inertial_mps": 98.636,
+      "surface_mps": 84.983,
+      "air_mps": 84.983,
+      "horizontal_mps": 82.716,
+      "vertical_mps": -19.497,
+      "flight_path_angle_deg": -13.262801
+    },
+    "attitude": {
+      "aoa_deg": 12.6357,
+      "bank_deg": 0.0,
+      "heading_deg": 257.4108,
+      "cmd_aoa_deg": 11.2161,
+      "cmd_bank_deg": 0.0,
+      "requested_aoa_deg": 11.2161,
+      "requested_bank_deg": 0.0,
+      "aoa_rate_deg_s": -1.035324,
+      "bank_rate_deg_s": -0.0,
+      "sideslip_deg": 0.0,
+      "direct_control": false,
+      "pitch_wn_s_inv": 1.5,
+      "pitch_zeta": 1.3,
+      "roll_wn_s_inv": 1.4,
+      "roll_zeta": 0.85,
+      "max_pitch_rate_deg_s": 5.858643,
+      "max_roll_rate_deg_s": 12.450661,
+      "max_pitch_accel_deg_s2": 14.360269,
+      "max_roll_accel_deg_s2": 23.324585,
+      "q_w": 0.683511294,
+      "q_x": 0.720757691,
+      "q_y": 0.101300503,
+      "q_z": -0.055307055
+    },
+    "atmosphere": {
+      "density_kg_m3": 0.703327391573,
+      "pressure_pa": 55595.7497,
+      "temperature_k": 275.368599,
+      "speed_of_sound_mps": 332.664183
+    },
+    "aero": {
+      "mach": 0.255462,
+      "q_pa": 2539.754687,
+      "lift_n": 345403.113336,
+      "drag_n": 118265.564805
+    },
+    "vehicle": {
+      "mass_kg": 40252.917969,
+      "available_thrust_n": 0.0,
+      "current_thrust_n": 0.0,
+      "throttle": 0.0
+    },
+    "runway": {
+      "along_m": 231936.837,
+      "cross_m": -37630.15,
+      "vertical_m": 3760.266,
+      "length_m": 2500.0,
+      "width_m": 70.0,
+      "heading_deg": 90.0
+    },
+    "ground": {
+      "gear_down": false,
+      "brakes": false,
+      "airbrakes": false,
+      "wheel_steering": 0.0,
+      "steering_lateral_accel_mps2": 0.0,
+      "airbrake_decel_mps2": 0.0,
+      "on_ground": false,
+      "stopped": false,
+      "touchdown_seen": false,
+      "on_runway_touchdown": false,
+      "main_contact": false,
+      "nose_contact": false,
+      "pitch_released": false,
+      "main_load_n": 0.0,
+      "nose_load_n": 0.0,
+      "tail_load_n": 0.0,
+      "bounce_count": 0,
+      "runway_departure": false,
+      "pitch_deg": -0.6271
+    }
+  },
+  "shadowAdmissionQualified": false,
+  "limitations": [
+    "Configuration modelId STS does not override scenario mass.",
+    "Scenario uses40252.91796875kg and inherited prior simulator entry state/epoch.",
+    "No normal shadow admission, TAEM, touchdown or rollout.",
+    "No archive manifest requested; exact retained simulator log hash provided."
+  ]
+}
