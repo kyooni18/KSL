@@ -1,0 +1,30 @@
+{
+  "attempt": "coordination-governor-v7",
+  "parentPID": 24337,
+  "backendPID": 24618,
+  "runnerSession": 75314,
+  "identity": "f2931bd83129e5ca-4a8bd6f605af4653-ca5bf70fd928a206",
+  "backendSHA": "4a8bd6f605af4653dc73844693a5f10711ad0778275e0988b639691b31fe2c28",
+  "console": "/tmp/sts-live-72km-coordination-governor-v7-20261009.log",
+  "manifest": "/Users/kyooni18/Code/KSPShuttleLander/Runtime/Headless/run-manifests/20261009T104636868093Z-24618.json",
+  "checkpoint": "STS-OMS-72km-20261009-v2",
+  "verifiedPhysics": {
+    "ready": true,
+    "ut": 1491.9098632808516,
+    "vessel": "STS",
+    "meanAltitude": 71858.31770907016,
+    "mass": 25723.234375,
+    "dryMass": 20348.001953125,
+    "availableThrust": 59999.99609375,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.313446044921875,
+    "aoa": 1.845569133758545,
+    "profile": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-oms-72km-20261009-v2.physics.json"
+  },
+  "shadowQualified": true,
+  "validation": "Startup verified and shadow qualified; live reversal, MM305, runway touchdown and rollout pending."
+}
