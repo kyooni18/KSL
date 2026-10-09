@@ -1074,8 +1074,8 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
         current->mass_kg,current->attitude.aoa_rad,current->attitude.bank_rad);
     double available_drag=current->mass_kg>1.0&&modeled.drag_n>0.0?
         modeled.drag_n/current->mass_kg:0.0;
-    /* Scalar path length only seeds the shortlist. Native profile propagation
-       below remains the provisional energy/turn-cost authority. */
+    /* Scalar path length seeds provisional live selection. Full native replay
+       remains the background commitment authority and offline shadow check. */
     double planning_drag=fmax(0.75,available_drag);
     double required_path=energy_excess/planning_drag;
 
@@ -1211,18 +1211,25 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
                propagation that qualification uses, but on a bounded shortlist
                and a coarser time step. It therefore prices sustained turn lift,
                AoA and drag instead of extrapolating one inlet drag sample. */
+            Mm305AcquisitionProfileClass profile_class=MM305_ACQ_PROFILE_INVALID;
+            double predicted_speed=NAN,replay_quality=NAN;
+            const char *classification_reason="provisional geometry only; background replay pending";
+            /* Live control must keep servicing attitude while the existing
+               background planner qualifies this exact seed route. A full
+               profile/replay here blocks actuator updates for seconds. Never
+               promote the cheap ranking to a feasibility certificate. */
+            if(g->diagnostic_shadow){
             TaemRoute profile_route=trial;
             TerminalProfileResult profile=terminal_solver_generate_profile(
                 planning_model,current,&profile_route,0.75,420.0);
-            Mm305AcquisitionProfileClass profile_class=
-                mm305_acquisition_profile_class(&profile);
-            double predicted_speed=profile.exit_speed_mps;
-            const char *classification_reason=profile.reason;
+            profile_class=mm305_acquisition_profile_class(&profile);
+            predicted_speed=profile.exit_speed_mps;
+            classification_reason=profile.reason;
             /* The profile integration is a cheap provisional filter, not the
              * admission authority. Let native replay overrule its coarse-step
              * failure when replay accepts this exact route, and reject every
              * coarse-step success which replay does not qualify. */
-            double replay_quality=NAN;
+
             TaemFixedHacCandidate replay=taem_fixed_hac_evaluate_route(
                 planning_model,current,&trial,0,0.5,420.0);
             if (mm305_candidate_ok(&replay)) {
@@ -1235,6 +1242,7 @@ static bool mm305_acquisition_command(GuidanceMachine *g,
                 predicted_speed=replay.replay.final_geometry.airspeed_mps;
                 classification_reason=replay.reason ? replay.reason :
                     "native replay did not satisfy Final alignment";
+            }
             }
             bool speed_is_prediction=profile_class==MM305_ACQ_PROFILE_FEASIBLE ||
                 (predicted_speed>0.0 && classification_reason &&
