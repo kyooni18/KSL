@@ -1,0 +1,403 @@
+Analysis of sampling landing_backend (pid 79338) every 1 millisecond
+Process:         landing_backend [79338]
+Path:            /Users/USER/*/landing_backend
+Load Address:    0x100bf8000
+Identifier:      landing_backend
+Version:         0
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  Python [78871]
+Target Type:     live task
+
+Date/Time:       2026-10-09 15:40:23.251 +0900
+Launch Time:     2026-10-09 15:37:35.022 +0900
+OS Version:      macOS 27.2 (26B5101f)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         3744K
+Physical footprint (peak):  4944K
+Idle exit:                  untracked
+----
+
+Call graph:
+    775 Thread_15676240   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 775 start  (in dyld) + 6652  [0x19f884d7c]
+    +   775 main  (in landing_backend) + 1656  [0x100c044a0]
+    +     775 getdelim  (in libsystem_c.dylib) + 272  [0x19f99deac]
+    +       775 __srefill1  (in libsystem_c.dylib) + 36  [0x19f97d49c]
+    +         775 _sread  (in libsystem_c.dylib) + 32  [0x19f97d508]
+    +           775 __sread  (in libsystem_c.dylib) + 24  [0x19f9a0e8c]
+    +             775 __read_nocancel  (in libsystem_kernel.dylib) + 8  [0x19f915ca8]
+    775 Thread_15677248
+    + 775 thread_start  (in libsystem_pthread.dylib) + 8  [0x19f953cd0]
+    +   775 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19f958ce4]
+    +     775 control_thread  (in landing_backend) + 340  [0x100bfec90]
+    +       775 tick_locked  (in landing_backend) + 3672  [0x100bffe88]
+    +         775 krpc_warp  (in landing_backend) + 80  [0x100c65268]
+    +           775 krpc_cnano_client_warp  (in landing_backend) + 1040  [0x100c6b86c]
+    +             340 read_warp_state  (in landing_backend) + 580  [0x100c6bf2c]
+    +             ! 331 krpc_invoke  (in landing_backend) + 312  [0x100c89544]
+    +             ! : 321 pb_decode_ex  (in landing_backend) + 56  [0x100c8b998]
+    +             ! : | 321 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! : |   321 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! : |     321 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! : |       318 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! : |       + 318 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             ! : |       +   318 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             ! : |       3 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! : |         3 __recvfrom  (in libsystem_kernel.dylib) + 8,4  [0x19f9183c8,0x19f9183c4]
+    +             ! : 10 pb_decode_ex  (in landing_backend) + 156  [0x100c8b9fc]
+    +             ! :   10 pb_decode_inner  (in landing_backend) + 660  [0x100c8bce8]
+    +             ! :     9 decode_basic_field  (in landing_backend) + 1560  [0x100c8ced8]
+    +             ! :     + 9 pb_decode_inner  (in landing_backend) + 428  [0x100c8bc00]
+    +             ! :     +   8 decode_callback_field  (in landing_backend) + 408  [0x100c8c778]
+    +             ! :     +   ! 8 krpc_return_value_decoder  (in landing_backend) + 56  [0x100c87ca4]
+    +             ! :     +   !   8 pb_read  (in landing_backend) + 96  [0x100c8b250]
+    +             ! :     +   !     8 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :     +   !       8 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :     +   !         8 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! :     +   !           8 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! :     +   1 decode_callback_field  (in landing_backend) + 80  [0x100c8c630]
+    +             ! :     +     1 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! :     +       1 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :     +         1 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :     +           1 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! :     +             1 serial_wait  (in landing_backend) + 116  [0x100c70bf4]
+    +             ! :     +               1 clock_gettime  (in libsystem_c.dylib) + 300  [0x19f9801f0]
+    +             ! :     +                 1 _mach_boottime_usec  (in libsystem_c.dylib) + 64  [0x19f9a6be4]
+    +             ! :     +                   1 gettimeofday  (in libsystem_c.dylib) + 56  [0x19f977efc]
+    +             ! :     +                     1 __commpage_gettimeofday_internal  (in libsystem_kernel.dylib) + 44  [0x19f915c20]
+    +             ! :     +                       1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x19f9140f8]
+    +             ! :     1 decode_basic_field  (in landing_backend) + 184  [0x100c8c978]
+    +             ! :       1 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! :         1 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :           1 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :             1 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! :               1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             ! :                 1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             ! 9 krpc_invoke  (in landing_backend) + 188  [0x100c894c8]
+    +             !   5 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +             !   | 5 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +             !   |   5 encode_field  (in landing_backend) + 580  [0x100c8a214]
+    +             !   |     4 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +             !   |     + 4 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +             !   |     +   4 encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+    +             !   |     +     4 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |     +       4 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |     +         4 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |     +           3 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !   |     +           ! 3 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !   |     +           1 tcp_write  (in landing_backend) + 108  [0x100c70aec]
+    +             !   |     +             1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             !   |     +               1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             !   |     1 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +             !   |       1 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |         1 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |           1 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |             1 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !   |               1 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !   4 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +             !     4 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !       4 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !         4 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !           3 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !           + 3 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !           1 tcp_write  (in landing_backend) + 108  [0x100c70aec]
+    +             !             1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             !               1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             292 read_warp_state  (in landing_backend) + 416  [0x100c6be88]
+    +             ! 273 krpc_invoke  (in landing_backend) + 312  [0x100c89544]
+    +             ! : 261 pb_decode_ex  (in landing_backend) + 56  [0x100c8b998]
+    +             ! : | 261 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! : |   261 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! : |     261 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! : |       259 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! : |       + 259 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             ! : |       +   259 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             ! : |       2 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! : |         2 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! : 12 pb_decode_ex  (in landing_backend) + 156  [0x100c8b9fc]
+    +             ! :   12 pb_decode_inner  (in landing_backend) + 660  [0x100c8bce8]
+    +             ! :     10 decode_basic_field  (in landing_backend) + 1560  [0x100c8ced8]
+    +             ! :     + 9 pb_decode_inner  (in landing_backend) + 428  [0x100c8bc00]
+    +             ! :     + ! 6 decode_callback_field  (in landing_backend) + 408  [0x100c8c778]
+    +             ! :     + ! : 6 krpc_return_value_decoder  (in landing_backend) + 56  [0x100c87ca4]
+    +             ! :     + ! :   6 pb_read  (in landing_backend) + 96  [0x100c8b250]
+    +             ! :     + ! :     6 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :     + ! :       6 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :     + ! :         6 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! :     + ! :           6 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! :     + ! 3 decode_callback_field  (in landing_backend) + 80  [0x100c8c630]
+    +             ! :     + !   3 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! :     + !     3 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :     + !       3 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :     + !         2 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! :     + !         | 2 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             ! :     + !         |   2 poll  (in libsystem_kernel.dylib) + 4,8  [0x19f91c75c,0x19f91c760]
+    +             ! :     + !         1 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! :     + !           1 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! :     + 1 pb_decode_inner  (in landing_backend) + 156  [0x100c8baf0]
+    +             ! :     +   1 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! :     +     1 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :     +       1 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :     +         1 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! :     +           1 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! :     2 decode_basic_field  (in landing_backend) + 184  [0x100c8c978]
+    +             ! :       2 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +             ! :         2 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +             ! :           2 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +             ! :             1 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +             ! :             ! 1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             ! :             !   1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             ! :             1 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +             ! :               1 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +             ! 19 krpc_invoke  (in landing_backend) + 188  [0x100c894c8]
+    +             !   12 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +             !   | 12 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +             !   |   12 encode_field  (in landing_backend) + 580  [0x100c8a214]
+    +             !   |     5 encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+    +             !   |     + 5 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |     +   5 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |     +     5 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |     +       5 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !   |     +         5 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !   |     5 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +             !   |     + 5 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +             !   |     +   4 encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+    +             !   |     +   ! 4 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |     +   !   4 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |     +   !     4 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |     +   !       4 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !   |     +   !         4 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !   |     +   1 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |     +     1 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |     +       1 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |     +         1 tcp_write  (in landing_backend) + 108  [0x100c70aec]
+    +             !   |     +           1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +             !   |     +             1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +             !   |     2 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +             !   |       2 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !   |         2 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !   |           2 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !   |             2 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !   |               2 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !   7 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +             !     7 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +             !       7 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +             !         6 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +             !         + 6 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +             !         +   6 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +             !         1 krpc_write  (in landing_backend) + 220  [0x100c70414]
+    +             !           1 clock_gettime  (in libsystem_c.dylib) + 0  [0x19f9800c4]
+    +             143 read_warp_state  (in landing_backend) + 196  [0x100c6bdac]
+    +               130 krpc_invoke  (in landing_backend) + 312  [0x100c89544]
+    +               : 123 pb_decode_ex  (in landing_backend) + 56  [0x100c8b998]
+    +               : | 123 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +               : |   123 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +               : |     123 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +               : |       123 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +               : |         123 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +               : |           123 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +               : 7 pb_decode_ex  (in landing_backend) + 156  [0x100c8b9fc]
+    +               :   7 pb_decode_inner  (in landing_backend) + 660  [0x100c8bce8]
+    +               :     6 decode_basic_field  (in landing_backend) + 1560  [0x100c8ced8]
+    +               :     + 6 pb_decode_inner  (in landing_backend) + 428  [0x100c8bc00]
+    +               :     +   5 decode_callback_field  (in landing_backend) + 408  [0x100c8c778]
+    +               :     +   ! 5 krpc_return_value_decoder  (in landing_backend) + 56  [0x100c87ca4]
+    +               :     +   !   5 pb_read  (in landing_backend) + 96  [0x100c8b250]
+    +               :     +   !     5 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +               :     +   !       4 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +               :     +   !       : 3 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +               :     +   !       : | 3 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +               :     +   !       : 1 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +               :     +   !       :   1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +               :     +   !       :     1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +               :     +   !       1 krpc_read  (in landing_backend) + 220  [0x100c70240]
+    +               :     +   !         1 clock_gettime  (in libsystem_c.dylib) + 300  [0x19f9801f0]
+    +               :     +   !           1 _mach_boottime_usec  (in libsystem_c.dylib) + 64  [0x19f9a6be4]
+    +               :     +   !             1 gettimeofday  (in libsystem_c.dylib) + 56  [0x19f977efc]
+    +               :     +   !               1 __commpage_gettimeofday_internal  (in libsystem_kernel.dylib) + 44  [0x19f915c20]
+    +               :     +   !                 1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x19f9140f8]
+    +               :     +   1 decode_callback_field  (in landing_backend) + 80  [0x100c8c630]
+    +               :     +     1 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +               :     +       1 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +               :     +         1 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +               :     +           1 tcp_read  (in landing_backend) + 108  [0x100c709ec]
+    +               :     +             1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +               :     +               1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +               :     1 decode_basic_field  (in landing_backend) + 184  [0x100c8c978]
+    +               :       1 pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+    +               :         1 read_callback  (in landing_backend) + 24  [0x100c897e4]
+    +               :           1 krpc_read  (in landing_backend) + 328  [0x100c702ac]
+    +               :             1 tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+    +               :               1 __recvfrom  (in libsystem_kernel.dylib) + 8  [0x19f9183c8]
+    +               13 krpc_invoke  (in landing_backend) + 188  [0x100c894c8]
+    +                 9 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +                 | 9 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +                 |   9 encode_field  (in landing_backend) + 580  [0x100c8a214]
+    +                 |     4 pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+    +                 |     + 4 pb_encode  (in landing_backend) + 52  [0x100c89f24]
+    +                 |     +   3 encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+    +                 |     +   ! 3 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +                 |     +   !   3 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +                 |     +   !     3 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +                 |     +   !       2 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +                 |     +   !       : 2 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +                 |     +   !       1 tcp_write  (in landing_backend) + 108  [0x100c70aec]
+    +                 |     +   !         1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +                 |     +   !           1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +                 |     +   1 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +                 |     +     1 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +                 |     +       1 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +                 |     +         1 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +                 |     +           1 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +                 |     3 encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+    +                 |     + 3 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +                 |     +   3 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +                 |     +     3 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +                 |     +       3 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +                 |     +         3 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    +                 |     1 pb_encode_submessage  (in landing_backend) + 60  [0x100c8a49c]
+    +                 |     + 1 pb_encode  (in landing_backend) + 64  [0x100c89f30]
+    +                 |     +   1 pb_field_iter_next  (in landing_backend) + 44  [0x100c89af0]
+    +                 |     1 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +                 |       1 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +                 |         1 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +                 |           1 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +                 |             1 tcp_write  (in landing_backend) + 108  [0x100c70aec]
+    +                 |               1 serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+    +                 |                 1 poll  (in libsystem_kernel.dylib) + 8  [0x19f91c760]
+    +                 4 pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+    +                   4 pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+    +                     4 write_callback  (in landing_backend) + 16  [0x100c897bc]
+    +                       4 krpc_write  (in landing_backend) + 328  [0x100c70480]
+    +                         4 tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+    +                           4 __sendto  (in libsystem_kernel.dylib) + 8  [0x19f91839c]
+    775 Thread_15677249
+    + 775 thread_start  (in libsystem_pthread.dylib) + 8  [0x19f953cd0]
+    +   775 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19f958ce4]
+    +     775 terminal_prediction_worker  (in landing_backend) + 504  [0x100c0289c]
+    +       775 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x19f95399c]
+    +         775 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x19f955f60]
+    +           775 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x19f9169dc]
+    775 Thread_15677250
+      775 thread_start  (in libsystem_pthread.dylib) + 8  [0x19f953cd0]
+        775 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19f958ce4]
+          775 mm305_planner_worker  (in landing_backend) + 256  [0x100c0358c]
+            775 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x19f95399c]
+              775 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x19f955f60]
+                775 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x19f9169dc]
+
+Total number in stack (recursive counted multiple, when >=5):
+        13       krpc_read  (in landing_backend) + 328  [0x100c702ac]
+        13       krpc_write  (in landing_backend) + 328  [0x100c70480]
+        13       pb_encode_varint  (in landing_backend) + 92  [0x100c8a610]
+        13       poll  (in libsystem_kernel.dylib) + 0  [0x19f91c758]
+        13       read_callback  (in landing_backend) + 24  [0x100c897e4]
+        13       serial_wait  (in landing_backend) + 288  [0x100c70ca0]
+        13       write_callback  (in landing_backend) + 16  [0x100c897bc]
+        11       __sendto  (in libsystem_kernel.dylib) + 0  [0x19f918394]
+        11       tcp_write  (in landing_backend) + 156  [0x100c70b1c]
+        10       pb_decode_varint32_eof  (in landing_backend) + 64  [0x100c8b3b0]
+        9       __recvfrom  (in libsystem_kernel.dylib) + 0  [0x19f9183c0]
+        9       tcp_read  (in landing_backend) + 108  [0x100c709ec]
+        9       tcp_read  (in landing_backend) + 156  [0x100c70a1c]
+        6       pb_encode  (in landing_backend) + 52  [0x100c89f24]
+        6       pb_encode_submessage  (in landing_backend) + 212  [0x100c8a534]
+        6       pb_encode_submessage  (in landing_backend) + 80  [0x100c8a4b0]
+        5       encode_basic_field  (in landing_backend) + 96  [0x100c8abf4]
+        5       tcp_write  (in landing_backend) + 108  [0x100c70aec]
+
+Sort by top of stack, same collapsed (when >= 5):
+        __psynch_mutexwait  (in libsystem_kernel.dylib)        1550
+        __read_nocancel  (in libsystem_kernel.dylib)        775
+        poll  (in libsystem_kernel.dylib)        711
+        __sendto  (in libsystem_kernel.dylib)        34
+        __recvfrom  (in libsystem_kernel.dylib)        26
+
+Binary Images:
+       0x100bf8000 -        0x100ca0d2f +landing_backend (0) <D01EF3D5-F4A5-371B-A80F-345EDD5D32A2> /Users/*/landing_backend
+       0x19f7d0000 -        0x19f81f657  libobjc.A.dylib (973.1) <1FF743DE-675D-30F9-82EC-A3B6801513D7> /usr/lib/libobjc.A.dylib
+       0x19f820000 -        0x19f82a23f  libsharedcache.dylib (0) <7A6F51BC-AB92-3B44-BC9A-2B1F9B904341> /usr/lib/libsharedcache.dylib
+       0x19f82b000 -        0x19f852d23  libdyld.dylib (27104) <DA5BCA09-2A6E-3913-B73D-10B49F46AB08> /usr/lib/system/libdyld.dylib
+       0x19f853000 -        0x19f912c87  dyld (1.0.0 - 27104) <AAEB7EB8-2C6B-3597-A14F-7D05D6F641F9> /usr/lib/dyld
+       0x19f913000 -        0x19f951a6b  libsystem_kernel.dylib (13432.40.177.0.3) <EA1DF724-0264-3BD8-BEB2-CE75AA5534CD> /usr/lib/system/libsystem_kernel.dylib
+       0x19f952000 -        0x19f95e8ab  libsystem_pthread.dylib (553.40.2) <3AAB1736-E768-37E9-A828-2309E16CF6B2> /usr/lib/system/libsystem_pthread.dylib
+       0x19f95f000 -        0x19f970b8b  libsystem_notify.dylib (368.40.2) <DA7D39D2-8E4E-3688-BF68-E530AE101375> /usr/lib/system/libsystem_notify.dylib
+       0x19f971000 -        0x19f9f3cd3  libsystem_c.dylib (1786.40.6) <AF204963-E350-39A8-9E50-1681DBC4133D> /usr/lib/system/libsystem_c.dylib
+       0x1a1244000 -        0x1a129a0d7  libsystem_malloc.dylib (886.40.15) <797C4277-18A2-365F-8FC9-957C371A02A4> /usr/lib/system/libsystem_malloc.dylib
+       0x1a129b000 -        0x1a12a4b13  libsystem_darwin.dylib (1786.40.6) <525D5889-0AE7-3A11-ABBD-630E01268031> /usr/lib/system/libsystem_darwin.dylib
+       0x1a3f30000 -        0x1a3f85127  libxpc.dylib (3298.40.28) <33C03C79-7E2B-3C8A-B991-36D35984D2D4> /usr/lib/system/libxpc.dylib
+       0x1a3f86000 -        0x1a403b6b7  libcorecrypto.dylib (2109.40.22) <08BA5720-BF4B-3DBB-96BD-89E3F26FE674> /usr/lib/system/libcorecrypto.dylib
+       0x1a403c000 -        0x1a406a9d3  libsystem_info.dylib (603.40.2) <9815B68B-155E-38E0-A837-2882DF15E45D> /usr/lib/system/libsystem_info.dylib
+       0x1a406b000 -        0x1a4084eff  libc++abi.dylib (2200.32) <ECCA13DD-489F-3DCE-9FCF-22EA88CDA312> /usr/lib/libc++abi.dylib
+       0x1a4732000 -        0x1a47381e7  libsystem_coreservices.dylib (203.1.1) <0A55E1E2-2430-3F53-8301-468C0D169623> /usr/lib/system/libsystem_coreservices.dylib
+       0x1a48b2000 -        0x1a48d205b  libsystem_trace.dylib (1966.40.15.0.2) <19B7EC63-876A-3369-8903-C136C72F8EB9> /usr/lib/system/libsystem_trace.dylib
+       0x1a48d3000 -        0x1a48d601f  libsystem_blocks.dylib (98.1) <2CBFEAFC-84E1-3AC3-AA9E-8C42C7E4407E> /usr/lib/system/libsystem_blocks.dylib
+       0x1a48d7000 -        0x1a491d1df  libdispatch.dylib (1605.40.4) <AD67F6EB-837B-303A-B2AF-CEB742BC2BE0> /usr/lib/system/libdispatch.dylib
+       0x1a491e000 -        0x1a49274f3  libsystem_platform.dylib (402.40.3) <B4DC35D3-E0F0-3D32-85B4-CD3436C0819B> /usr/lib/system/libsystem_platform.dylib
+       0x1a4928000 -        0x1a492ad2b  libsystem_featureflags.dylib (111) <B31355F4-2A15-3855-A1DD-47129AEFEAA2> /usr/lib/system/libsystem_featureflags.dylib
+       0x1a492b000 -        0x1a49c0033  libc++.1.dylib (2200.32) <B6241B10-CA25-30DD-9734-B30D1A2CDDD5> /usr/lib/libc++.1.dylib
+       0x1a6275000 -        0x1a646f0af  libsqlite3.dylib (408) <36AF1D09-C97F-3FD7-B948-67DDC28C0CBD> /usr/lib/libsqlite3.dylib
+       0x1a6470000 -        0x1a64abbdb  libsystem_containermanager.dylib (833.40.18.0.1) <F733767B-59D1-3577-AB7B-A0302E005EE2> /usr/lib/system/libsystem_containermanager.dylib
+       0x1a6a53000 -        0x1a6a6a277  libsystem_asl.dylib (409.40.3) <6713E1C7-EED8-36BF-91C2-F34942B76523> /usr/lib/system/libsystem_asl.dylib
+       0x1a73cc000 -        0x1a73ccf2f  libobjcMsgSend.dylib (973.1) <0B3C2D50-F0C7-3E78-8175-ADD879E8B1A1> /usr/lib/objc/libobjcMsgSend.dylib
+       0x1aef5f000 -        0x1aef79e13  libsystem_networkextension.dylib (2365.40.3.0.1) <D7CB0A81-2F12-330A-969F-843E28DF0565> /usr/lib/system/libsystem_networkextension.dylib
+       0x1af1e8000 -        0x1af1eee03  libsystem_sandbox.dylib (3051.40.80) <A94674D6-5106-3174-8713-E55038C8AFE9> /usr/lib/system/libsystem_sandbox.dylib
+       0x1af3cc000 -        0x1af3ccf2f  libobjcMsgSend1.dylib (973.1) <670BD0AE-0137-3BFE-A1FF-7072BFCBC81C> /usr/lib/objc/libobjcMsgSend1.dylib
+       0x1b2e93000 -        0x1b2e9aedf  libsystem_symptoms.dylib (2394.40.16) <C657625E-DA11-3E3F-B365-269F187990D7> /usr/lib/system/libsystem_symptoms.dylib
+       0x1b73cc000 -        0x1b73ccf2f  libobjcMsgSend2.dylib (973.1) <6EA207E5-CF66-3C48-8E3C-1AA3019AA361> /usr/lib/objc/libobjcMsgSend2.dylib
+       0x1bbf5b000 -        0x1bbf5f27f  libsystem_configuration.dylib (1453.40.1) <29598CE2-7D5B-3DB2-80F3-3E00BAD8046D> /usr/lib/system/libsystem_configuration.dylib
+       0x1bf3cc000 -        0x1bf3ccf2f  libobjcMsgSend3.dylib (973.1) <BCB340D6-66C2-37A7-885E-389E166E39DF> /usr/lib/objc/libobjcMsgSend3.dylib
+       0x1c73cc000 -        0x1c73ccf2f  libobjcMsgSend4.dylib (973.1) <CBCE5322-7B74-37F3-AECE-7B6CFC07E0D8> /usr/lib/objc/libobjcMsgSend4.dylib
+       0x1cf3cc000 -        0x1cf3ccf2f  libobjcMsgSend5.dylib (973.1) <F928C2E1-E53A-3FEA-A87D-9E08A74C5185> /usr/lib/objc/libobjcMsgSend5.dylib
+       0x1d70df000 -        0x1d70e7af7  libsystem_dnssd.dylib (3111.40.45) <0634339B-8ABC-3671-881B-D9D97E87013B> /usr/lib/system/libsystem_dnssd.dylib
+       0x1d73cc000 -        0x1d73ccf2f  libobjcMsgSend6.dylib (973.1) <2D3B1A7D-6831-374A-8B66-40B27CB9A62D> /usr/lib/objc/libobjcMsgSend6.dylib
+       0x1dd620000 -        0x1dd622f73  libquarantine.dylib (217.40.5) <0590809C-2463-3CC4-89AA-C22E569E35FC> /usr/lib/system/libquarantine.dylib
+       0x1df0ac000 -        0x1df0b6837  libcopyfile.dylib (260.40.4) <9997A346-47B5-3C0D-87CB-9AFAC4E3AB33> /usr/lib/system/libcopyfile.dylib
+       0x1df3cc000 -        0x1df3ccf2f  libobjcMsgSend7.dylib (973.1) <AF8B3B4F-4E02-3956-9060-D971ECF3FF75> /usr/lib/objc/libobjcMsgSend7.dylib
+       0x1e3173000 -        0x1e3179fe5  libRosetta.dylib (385) <5C834D15-B729-3F75-AFDA-30B19B63DC44> /usr/lib/libRosetta.dylib
+       0x1e73cc000 -        0x1e73ccf2f  libobjcMsgSend8.dylib (973.1) <658E3612-5716-3180-9EE8-83D96DE6E7F2> /usr/lib/objc/libobjcMsgSend8.dylib
+       0x1ef3cc000 -        0x1ef3ccf2f  libobjcMsgSend9.dylib (973.1) <AD31DFEA-A911-3B57-AB36-83C141C0D8BF> /usr/lib/objc/libobjcMsgSend9.dylib
+       0x1f73cc000 -        0x1f73ccf2f  libobjcMsgSend10.dylib (973.1) <23386B45-C079-3D2E-BAED-B398BF97A29F> /usr/lib/objc/libobjcMsgSend10.dylib
+       0x1ff3cc000 -        0x1ff3ccf2f  libobjcMsgSend11.dylib (973.1) <82969568-5718-3C22-B36A-B348DF322515> /usr/lib/objc/libobjcMsgSend11.dylib
+       0x2273cc000 -        0x2273ccf2f  libobjcMsgSend12.dylib (973.1) <17C2F368-D514-3BD8-B246-BC090B818B06> /usr/lib/objc/libobjcMsgSend12.dylib
+       0x22f3cc000 -        0x22f3ccf2f  libobjcMsgSend13.dylib (973.1) <C332A9C4-E29E-32B8-97D4-29A70A65D4F8> /usr/lib/objc/libobjcMsgSend13.dylib
+       0x2373cc000 -        0x2373ccf2f  libobjcMsgSend14.dylib (973.1) <A497729E-0C57-35FC-B013-50AA706E031E> /usr/lib/objc/libobjcMsgSend14.dylib
+       0x23f3cc000 -        0x23f3ccf2f  libobjcMsgSend15.dylib (973.1) <5156CA8E-B192-394C-A66D-4B47F4219FFC> /usr/lib/objc/libobjcMsgSend15.dylib
+       0x2473cc000 -        0x2473ccf2f  libobjcMsgSend16.dylib (973.1) <C81F7E7F-1CD7-36DC-A83B-BCDFF4EEA863> /usr/lib/objc/libobjcMsgSend16.dylib
+       0x24f3cc000 -        0x24f3ccf2f  libobjcMsgSend17.dylib (973.1) <6226B8A9-985F-3275-8A2E-D88F748F7B59> /usr/lib/objc/libobjcMsgSend17.dylib
+       0x2573cc000 -        0x2573ccf2f  libobjcMsgSend18.dylib (973.1) <BF6781B2-12A7-3658-AC63-EC81A1879CAE> /usr/lib/objc/libobjcMsgSend18.dylib
+       0x25f3cc000 -        0x25f3ccf2f  libobjcMsgSend19.dylib (973.1) <B2368B3C-7008-357E-B973-AD4D0F30F24B> /usr/lib/objc/libobjcMsgSend19.dylib
+       0x2673cc000 -        0x2673ccf2f  libobjcMsgSend20.dylib (973.1) <FA79D27E-71FE-39C7-9379-8FA044F0E812> /usr/lib/objc/libobjcMsgSend20.dylib
+       0x26f3cc000 -        0x26f3ccf2f  libobjcMsgSend21.dylib (973.1) <B8FDD041-87E1-353B-871E-F960D33C8EFC> /usr/lib/objc/libobjcMsgSend21.dylib
+       0x2773cc000 -        0x2773ccf2f  libobjcMsgSend22.dylib (973.1) <6B1DA446-7FCF-36A1-9179-D1D824DDDB90> /usr/lib/objc/libobjcMsgSend22.dylib
+       0x27f3cc000 -        0x27f3ccf2f  libobjcMsgSend23.dylib (973.1) <60FB2667-7C9D-3311-8D3A-CCDE42F1C951> /usr/lib/objc/libobjcMsgSend23.dylib
+       0x2873cc000 -        0x2873ccf2f  libobjcMsgSend24.dylib (973.1) <19CCC5A5-0A8B-36C0-8F48-0CECB87241A7> /usr/lib/objc/libobjcMsgSend24.dylib
+       0x2a73cc000 -        0x2a73ccf2f  libobjcMsgSend25.dylib (973.1) <2A8B86D1-94AD-3956-AB1A-2B05E082FF00> /usr/lib/objc/libobjcMsgSend25.dylib
+       0x2af3cc000 -        0x2af3ccf2f  libobjcMsgSend26.dylib (973.1) <FC71F8AA-332D-37B3-8455-B0EE8A59CF5B> /usr/lib/objc/libobjcMsgSend26.dylib
+       0x2b73cc000 -        0x2b73ccf2f  libobjcMsgSend27.dylib (973.1) <FD74E202-C0E6-3368-9609-69DA09F23711> /usr/lib/objc/libobjcMsgSend27.dylib
+       0x2bf3cc000 -        0x2bf3ccf2f  libobjcMsgSend28.dylib (973.1) <43791422-EA8E-34A9-B3FB-429DA1C13635> /usr/lib/objc/libobjcMsgSend28.dylib
+       0x2c73cc000 -        0x2c73ccf2f  libobjcMsgSend29.dylib (973.1) <0DEC0355-9D46-39AB-BA10-6D12BC54E809> /usr/lib/objc/libobjcMsgSend29.dylib
+       0x2cf3cc000 -        0x2cf3ccf2f  libobjcMsgSend30.dylib (973.1) <135A8216-EDAA-375D-9CFE-6D060E9B76FD> /usr/lib/objc/libobjcMsgSend30.dylib
+       0x2d73cc000 -        0x2d73ccf2f  libobjcMsgSend31.dylib (973.1) <B17E30B3-B38A-3606-8B49-06D5DD6340B8> /usr/lib/objc/libobjcMsgSend31.dylib
+       0x2df3cc000 -        0x2df3ccf2f  libobjcMsgSend32.dylib (973.1) <F3EF7513-6B57-3613-92EB-9A6CCE530CB1> /usr/lib/objc/libobjcMsgSend32.dylib
+       0x2e73cc000 -        0x2e73ccf2f  libobjcMsgSend33.dylib (973.1) <1B0D5975-9F13-30A1-B356-02C655CFE91A> /usr/lib/objc/libobjcMsgSend33.dylib
+       0x2ea5ee000 -        0x2ea5ef8f3  libSystem.B.dylib (1359.40.3) <74F3FC55-9EB4-3987-92F7-6242C72219A3> /usr/lib/libSystem.B.dylib
+       0x2ec387000 -        0x2ec38bf1b  libcache.dylib (95) <2F0981FD-50C9-3F88-8B2F-3166B0EBAC12> /usr/lib/system/libcache.dylib
+       0x2ec38c000 -        0x2ec398737  libcommonCrypto.dylib (600041.40.3) <93367F24-212F-396E-A1DA-0E2DCE9EA0CF> /usr/lib/system/libcommonCrypto.dylib
+       0x2ec399000 -        0x2ec39c8bf  libcompiler_rt.dylib (103.4) <AF87E116-3BE9-34E1-BA42-9BC9A85A78E6> /usr/lib/system/libcompiler_rt.dylib
+       0x2ec506000 -        0x2ec506e27  libkeymgr.dylib (31) <D83FBF5C-BCDC-3C06-88A0-C8D2A6BF9EF5> /usr/lib/system/libkeymgr.dylib
+       0x2ec521000 -        0x2ec5244f7  libmacho.dylib (27104) <BF990742-DDA1-3570-9CCA-1F516FE9F0ED> /usr/lib/system/libmacho.dylib
+       0x2ec525000 -        0x2ec527987  libremovefile.dylib (96.40.3) <35CA4254-BA14-33F2-A653-70D54E84C1EF> /usr/lib/system/libremovefile.dylib
+       0x2ec528000 -        0x2ec52d07f  libsystem_collections.dylib (1786.40.6) <D80F3936-3B38-31E4-9190-DBF848661C20> /usr/lib/system/libsystem_collections.dylib
+       0x2ec52e000 -        0x2ec53175b  libsystem_darwindirectory.dylib (129.0.1) <10E6110F-1B4E-35B8-A507-AC020D1910EC> /usr/lib/system/libsystem_darwindirectory.dylib
+       0x2ec532000 -        0x2ec53cf0f  libsystem_eligibility.dylib (446.40.44) <400A8698-A200-32FA-97AA-F3CBBE8688A2> /usr/lib/system/libsystem_eligibility.dylib
+       0x2ec53d000 -        0x2ec57ab67  libsystem_m.dylib (3326.40.2) <EC3ACD9F-7F32-303D-B988-E12E4019D418> /usr/lib/system/libsystem_m.dylib
+       0x2ec57b000 -        0x2ec58442b  libsystem_sanitizers.dylib (32) <E962B809-60F6-3EAC-A3A5-A7479E3D50C0> /usr/lib/system/libsystem_sanitizers.dylib
+       0x2ec585000 -        0x2ec587f1f  libsystem_secinit.dylib (182.40.2) <460DB9B7-B301-36A7-97A0-0949F5204DC2> /usr/lib/system/libsystem_secinit.dylib
+       0x2ec588000 -        0x2ec588a1b  libsystem_trial.dylib (511.1.2) <ECAF1168-2C14-35B1-9929-642D274A24B1> /usr/lib/system/libsystem_trial.dylib
+       0x2ec58a000 -        0x2ec593c87  libunwind.dylib (2200.5) <38E91C7A-8129-347B-88EE-76EDD5E5396E> /usr/lib/system/libunwind.dylib
+       0x2ef3cc000 -        0x2ef3ccf2f  libobjcMsgSend34.dylib (973.1) <12502285-E2B1-3E0A-8475-278D2BF6DEB8> /usr/lib/objc/libobjcMsgSend34.dylib
+       0x2f73cc000 -        0x2f73ccf2f  libobjcMsgSend35.dylib (973.1) <3F84A789-91E0-36FF-8D95-884F84961AFE> /usr/lib/objc/libobjcMsgSend35.dylib
