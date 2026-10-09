@@ -1,0 +1,22 @@
+{
+  "attempt": "yaw-response-v4",
+  "parentPID": 59823,
+  "backendPID": 60094,
+  "runnerSession": 26276,
+  "console": "/tmp/sts-live-72km-yaw-response-v4-20261009.log",
+  "vehicleLog": "FlightLogs/2026-10-09T09-01-14Z-STS-vehicle.jsonl",
+  "sessionId": "2026-10-09T09-01-14Z-60094-236392098593",
+  "identity": "db0e3296a55c88fc-e1f04e5ba4aab425-ca5bf70fd928a206",
+  "backendSHA": "e1f04e5ba4aab4250164b34e6536e74eef50ccd654f10aaa40f837e21bb64b6b",
+  "checkpoint": "STS-OMS-72km-20261009-v2",
+  "verifiedStartup": {
+    "ut": 1490.6898632808527,
+    "altitude": 71926.72979796934,
+    "mass": 25723.234375,
+    "dryMass": 20348,
+    "parts": 22,
+    "thrust": 0
+  },
+  "policy": "unpowered-only, normal shadow qualification, no bypass",
+  "status": "Live entry capture; yaw and bank-reversal stability unverified."
+}
