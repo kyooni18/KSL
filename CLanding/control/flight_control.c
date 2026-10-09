@@ -636,6 +636,20 @@ bool flight_control_step_attitude(FlightControlState *state,
             (isfinite(telemetry->heading_rate)?telemetry->heading_rate:state->heading_rate):
             -state->sideslip_rate);
 
+    int yaw_frame=quaternion_yaw_control?2:(command->heading_control_enabled?1:0);
+    if (state->has_yaw_observation_frame && state->yaw_observation_frame != yaw_frame) {
+        /* A beta response is not body-yaw or heading authority. Do not carry
+           its gain, disturbance, or derivative sample across that boundary. */
+        FlightControlAxisAuthority *axis=&state->authority[FLIGHT_CONTROL_AXIS_YAW];
+        axis->controlled_accel=0.0;
+        axis->controlled_confidence=0.0;
+        axis->live_response_confidence=0.0;
+        axis->drift_accel=0.0;
+        axis->has_last_rate=false;
+    }
+    state->yaw_observation_frame=yaw_frame;
+    state->has_yaw_observation_frame=true;
+
     const FlightControlTuning *tuning=fc_tuning();
     if (sample_valid) {
         fc_axis_observe(&state->authority[FLIGHT_CONTROL_AXIS_PITCH],

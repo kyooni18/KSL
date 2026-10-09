@@ -7,3 +7,5 @@ Yaw now uses the same gradual inverse-authority blend as roll. Live observation 
 Backend build and FlightControlYawTests, FlightControlQuaternionTests, and EntryLateralFeedbackTests pass. One regression verifies gradual reduction under sustained weak beta-coordinate response. The existing test verifies cross-axis excitation reduces identification confidence.
 
 This is a candidate correction, not a demonstrated cure for coupled departure. Net-response identification includes aerodynamic disturbances and cannot isolate rudder effectiveness. The active v6 still runs its pinned earlier backend. Candidate binary: /tmp/sts-measured-yaw-authority-backend.
+
+Follow-up: yaw identification now resets its learned gain, live confidence, disturbance estimate, and derivative sample when switching among beta, heading, and body-yaw coordinates. Reported physical authority remains available. The weak-response regression also verifies beta observations cannot survive a switch to heading hold. All three focused suites and the backend build pass after this change.

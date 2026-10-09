@@ -121,6 +121,10 @@ static void sustained_weak_beta_response_reduces_yaw_authority(void){
     }
     assert(out.diagnostics.yaw_authority<reported/2);
     assert(out.diagnostics.yaw_authority>=.5-1e-6);
+    c.heading_control_enabled=true;t.ut+=.1;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(s.authority[FLIGHT_CONTROL_AXIS_YAW].live_response_confidence==0);
+    assert(s.authority[FLIGHT_CONTROL_AXIS_YAW].controlled_confidence==0);
 }
 
 int main(void){

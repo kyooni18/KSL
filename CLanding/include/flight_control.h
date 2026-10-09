@@ -154,6 +154,8 @@ typedef struct {
 
     double last_control[FLIGHT_CONTROL_AXIS_COUNT];
     FlightControlAxisAuthority authority[FLIGHT_CONTROL_AXIS_COUNT];
+    bool has_yaw_observation_frame;
+    int yaw_observation_frame; /* beta, heading, or body yaw */
     FlightControlBetaModel beta;
 
     double pitch_trim;
