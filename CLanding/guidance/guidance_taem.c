@@ -1393,9 +1393,15 @@ bool terminal_direct_runway_fallback_window(const GuidanceMachine *g,
     if(!g||g->mm305_route_committed||!capture||!capture->valid||
        capture->reachable||!isfinite(capture->control_response_time_s)||
        !(capture->control_response_time_s>0.0))return false;
-    double response_distance=horizontal_speed*capture->control_response_time_s;
-    return isfinite(response_distance)&&response_distance>0.0&&
-        runway_along_m>=-final_station_distance-response_distance;
+    /* Opening only one actuator-response distance before the station leaves no
+       room for the measured heading/cross-track capture itself.  Use the full
+       capture time from the live envelope so an unreachable HAC/direct capture
+       is degraded while there is still runway-relative distance to turn. */
+    double capture_time=fmax(capture->control_response_time_s,
+        fmax(capture->heading_capture_time_s,capture->lateral_capture_time_s));
+    double capture_distance=horizontal_speed*capture_time;
+    return isfinite(capture_distance)&&capture_distance>0.0&&
+        runway_along_m>=-final_station_distance-capture_distance;
 }
 
 GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
@@ -1485,8 +1491,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     /* At the Final station, estimate whether a direct runway glide can still
        preserve the configured handoff speed. If no HAC route is committed and
        the measured capture envelope says alignment is unreachable, begin that
-       check one measured control-response distance before the station so the
-       shuttle cannot turn away just short of the geometric boundary. */
+       check while the envelope's full heading/cross-track capture distance
+       remains, so the shuttle has room to turn before the station. */
     const double glide_speed_floor_mps=80.0;
     double direct_range=hypot(geometry.runway_along_m,geometry.runway_cross_m);
     double handoff_distance=fmax(500.0,control_model->guidance.final_approach_distance);

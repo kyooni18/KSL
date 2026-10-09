@@ -133,12 +133,22 @@ static void test_direct_runway_fallback_uses_response_window(void) {
         .reachable=false,
         .control_response_time_s=2.0
     };
-    /* At 200 m/s the measured two-second response reserve opens 400 m before
-       the configured station, but does not trigger farther out. */
+    /* With no separate heading/lateral solve in this fixture, the measured
+       two-second response reserve opens 400 m before the station. */
     assert(terminal_direct_runway_fallback_window(&guidance,-8300.0,200.0,
         8000.0,&capture));
     assert(!terminal_direct_runway_fallback_window(&guidance,-8500.0,200.0,
         8000.0,&capture));
+    capture.heading_capture_time_s=12.0;
+    capture.lateral_capture_time_s=20.0;
+    /* Full capture time opens 4 km before the station, while farther-out
+       states remain on the provisional route. */
+    assert(terminal_direct_runway_fallback_window(&guidance,-12000.0,200.0,
+        8000.0,&capture));
+    assert(!terminal_direct_runway_fallback_window(&guidance,-12500.0,200.0,
+        8000.0,&capture));
+    capture.heading_capture_time_s=0.0;
+    capture.lateral_capture_time_s=0.0;
     capture.reachable=true;
     assert(!terminal_direct_runway_fallback_window(&guidance,-8300.0,200.0,
         8000.0,&capture));
