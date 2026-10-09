@@ -15,10 +15,12 @@ static TaemExecInputs taem_exec_inputs_live_with_contract(
        Final-only tests own the runway line directly.  Do not infer ownership from
        legacy HAC transition/candidate latches. */
     bool native_route=g->mm305_route_committed&&g->mm305_route.valid;
-    inputs.terminal_path_selected=g->terminal_final_test_mode||native_route;
-    inputs.terminal_path_captured=g->terminal_final_test_mode||native_route;
+    bool direct_route=g->mm305_direct_approach_degraded&&
+        g->terminal_path_kind==TERMINAL_PATH_DIRECT&&g->terminal_path_committed;
+    inputs.terminal_path_selected=g->terminal_final_test_mode||native_route||direct_route;
+    inputs.terminal_path_captured=g->terminal_final_test_mode||native_route||direct_route;
     inputs.final_intercept_ready=g->terminal_final_test_mode||
-        (native_route&&g->mm305_hac_exit_reached);
+        ((native_route||direct_route)&&g->mm305_hac_exit_reached);
     inputs.final_approach_ready=has_final_approach_override?
         final_approach_override:g->final_approach_captured;
     if(terminal_contract)inputs.terminal_contract=*terminal_contract;

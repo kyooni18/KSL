@@ -111,6 +111,7 @@ typedef struct { double e,n; } HACPoint2;
 
 typedef enum {
     TERMINAL_PATH_NONE = 0,
+    TERMINAL_PATH_DIRECT = 1,
     /* Value 2 is retained for telemetry compatibility with earlier logs. */
     TERMINAL_PATH_HAC = 2
 } TerminalPathKind;
@@ -146,6 +147,7 @@ typedef struct {
     TaemRoute mm305_route;
     size_t mm305_route_cursor;
     bool mm305_route_committed, mm305_hac_exit_reached;
+    bool mm305_direct_approach_degraded;
     bool mm305_runway_alignment_active;
     uint64_t mm305_model_snapshot_id;
     /* While the qualified MM305 planner is still solving, guidance flies a

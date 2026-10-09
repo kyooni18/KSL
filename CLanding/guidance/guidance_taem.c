@@ -1467,6 +1467,100 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
         return terminal_abort(g,
             "MM305 crossed runway elevation before reaching the fixed-HAC exit.");
 
+    /* When the shuttle has passed inside the planned Final station, keep a
+       lower-bound energy estimate for continuing to that handoff. If the
+       current-state drag estimate leaves less specific energy than the
+       configured handoff needs, drop the HAC route and fly a direct runway
+       line. The estimate uses the live aero model and current range; it does
+       not relax Final's separate delivery contract. */
+    const double glide_speed_floor_mps=80.0;
+    double direct_range=hypot(geometry.runway_along_m,geometry.runway_cross_m);
+    double handoff_distance=fmax(500.0,control_model->guidance.final_approach_distance);
+    double handoff_speed=fmax(control_model->guidance.final_alignment_speed,
+        fmax(glide_speed_floor_mps,fmax(control_model->vehicle.minimum_safe_speed,
+            control_model->vehicle.touchdown_speed)));
+    double local_gravity=control_model->world.mu_m3_s2/
+        pow(control_model->world.radius_m+control_model->site.altitude+
+            geometry.altitude_above_runway_m,2.0);
+    AeroForces direct_flow=aero_compute(&control_model->world,
+        &control_model->aero,current.position_i_m,current.velocity_i_mps,
+        current.ut_s,current.mass_kg,current.attitude.aoa_rad,
+        current.attitude.bank_rad);
+    double drag_accel=current.mass_kg>1.0&&isfinite(direct_flow.drag_n)?
+        fmax(0.0,direct_flow.drag_n/current.mass_kg):0.0;
+    double available_specific_energy=0.5*geometry.airspeed_mps*
+        geometry.airspeed_mps+local_gravity*geometry.altitude_above_runway_m-
+        drag_accel*direct_range;
+    double handoff_height=handoff_distance*tan(
+        control_model->guidance.final_glide_slope*DEG2RAD);
+    double required_handoff_energy=0.5*handoff_speed*handoff_speed+
+        local_gravity*handoff_height;
+    bool direct_energy_degraded=direct_range<handoff_distance&&
+        available_specific_energy<required_handoff_energy;
+    if (direct_energy_degraded) g->mm305_direct_approach_degraded=true;
+    if (g->mm305_direct_approach_degraded) {
+        HACGuidance line=terminal_runway_line_path_guidance(t,&cfg->site,
+            &cfg->guidance,local_gravity,course);
+        double direct_slope=atan2(fmax(0.0,geometry.altitude_above_runway_m),
+            fmax(1.0,direct_range))*RAD2DEG;
+        double projected_runway_speed=sqrt(2.0*fmax(0.0,
+            available_specific_energy));
+        double aoa=projected_runway_speed<glide_speed_floor_mps?
+            aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle):
+            terminal_fpa_force_aoa(t,planet,aero,&cfg->vehicle,-direct_slope);
+        if (!isfinite(aoa))
+            aoa=aerodynamic_best_glide_aoa(t->mach,&cfg->vehicle);
+        GuidanceCommand command=atmospheric(t,line.heading,line.bank,
+            &cfg->vehicle,0.0,false,PROFILE_TAEM);
+        command.heading_control_enabled=false;
+        command.hac_control_tuning=true;
+        command.terminal_pitch_tuning=true;
+        command.has_target_aoa=true;
+        command.target_aoa=clampd(aoa,0.0,cfg->vehicle.maximum_angle_of_attack);
+        command.target_pitch=t->flight_path_angle+command.target_aoa;
+        command.gear=t->gear||t->radar_altitude<=cfg->guidance.gear_deployment_altitude;
+        g->mm305_route_committed=false;
+        g->terminal_path_committed=true;
+        g->terminal_path_kind=TERMINAL_PATH_DIRECT;
+        g->mm305_acquisition_route_valid=false;
+        g->hac_captured=false;
+        g->hac_side_selected=false;
+
+        /* A direct line still has to pass the same measured Final delivery
+           contract before ownership changes to Final. */
+        TerminalPreflarePlan final_plan={0};
+        bool final_approach=terminal_outer_capture_admissible(g,t,course,
+            planet,aero,cfg,&final_plan);
+        TaemTerminalContract final_contract=terminal_delivery_contract(g,t,
+            course,planet,cfg,&final_plan);
+        TaemTerminalEvaluation final_eval=
+            taem_exec_evaluate_terminal_contract(&final_contract);
+        if (final_approach&&final_eval.valid&&final_eval.feasible) {
+            g->taem_exec.terminal_contract=final_contract;
+            g->taem_exec.terminal_evaluation=final_eval;
+            g->terminal_predicted_touchdown_speed=terminal_delivery_touchdown_speed(
+                g,t,planet,cfg,final_plan.trigger_altitude);
+            g->mm305_hac_exit_reached=true;
+            g->hac_completed=true;
+            g->hac_captured=true;
+        }
+        char direct_warning[256];
+        snprintf(direct_warning,sizeof(direct_warning),
+            "Inside the Final station, estimated direct-flight energy %.0f J/kg is below the HAC handoff requirement %.0f J/kg.",
+            available_specific_energy,required_handoff_energy);
+        char direct_status[256];
+        snprintf(direct_status,sizeof(direct_status),
+            "Energy-degraded direct runway alignment; projected runway speed %.1f m/s, glide floor %.1f m/s%s.",
+            projected_runway_speed,glide_speed_floor_mps,
+            projected_runway_speed<glide_speed_floor_mps?
+                "; using the live-model best-glide incidence":"");
+        GuidanceResult degraded=stabilized(g,result_make(PHASE_TAEM,command,
+            direct_status,direct_warning),
+            t,&cfg->vehicle,&cfg->guidance,dt);
+        g->phase=PHASE_TAEM;
+        return degraded;
+    }
+
     TaemPathReference reference;
     TaemTrackerOutput demand;
     const char *status;

@@ -500,7 +500,8 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
 
     contract.valid=true;
     contract.path_committed=g->terminal_final_test_mode||
-        (g->terminal_path_committed&&g->mm305_route_committed);
+        (g->terminal_path_committed&&(g->mm305_route_committed||
+         g->terminal_path_kind==TERMINAL_PATH_DIRECT));
     contract.range_to_go=distance;
     contract.range_margin=(response_available-response_required)*t->horizontal_speed;
     contract.dynamic_pressure=t->dynamic_pressure;
