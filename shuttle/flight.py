@@ -15,7 +15,7 @@ BOOSTER_MIN_G = 1.20
 BOOSTER_PAD_CAP = 1.00
 OUTER_SKIPPER_PAD_CAP = 0.45
 THROTTLE_SLEW_PER_SECOND = 0.25
-PITCH_SLEW_DEG_PER_SECOND = 4.0
+PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
@@ -1452,7 +1452,7 @@ def run(args):
                                 flight.dynamic_pressure, initial_pitch)
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
-                            PITCH_SLEW_DEG_PER_SECOND, 1/args.hz)
+                            args.pitch_slew, 1/args.hz)
                         pitch = commanded_pitch
                         if (v.orbit.apoapsis_altitude >= args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
@@ -1685,6 +1685,9 @@ def main():
                         help='Altitude in m where the post-roll gravity turn begins')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
+    parser.add_argument('--pitch-slew', type=float,
+                        default=PITCH_SLEW_DEG_PER_SECOND,
+                        help='Maximum pitch-command change in deg/s')
     parser.add_argument('--meco-periapsis', type=float, default=50000,
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--meco-pitch', type=float, default=0,
@@ -1725,6 +1728,7 @@ def main():
     args = parser.parse_args()
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
             args.timeout <= 0 or args.ssme_lead_time < 0 or
+            not 0 < args.pitch_slew <= 20 or
             args.roll_reset_delay < 0 or args.roll_start < 0 or
             not 0 < args.roll_rate <= 30 or not 0 < args.roll_attenuation <= 90 or
             args.roll_time_to_peak <= 0 or not 0 <= args.roll_overshoot <= 1 or

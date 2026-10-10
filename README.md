@@ -42,7 +42,10 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
 The turn biases 20° below velocity direction at low dynamic pressure, tapering
 to 8° by 25 kPa to build horizontal speed earlier without pitching far below
-prograde in the dense atmosphere. The pitch command can change at up to 4°/s.
+prograde in the dense atmosphere. The pitch command changes at up to 0.8°/s by
+default; `--pitch-slew` tunes this rate. The slower slew keeps the shuttle higher
+through SRB separation so the low post-booster TWR can continue building orbit
+without dropping the nose to horizontal too early.
 The Orbiter controller also supports two Size2 liquid side boosters, but the
 active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
