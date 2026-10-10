@@ -1010,8 +1010,8 @@ class Shuttle:
         engines = [e for group in self.groups for e in group] + self.boosters
         result = []
         for engine in engines:
-            name = engine.part.name
             try:
+                name = engine.part.name
                 if engine.gimballed:
                     position = tuple(round(x, 3) for x in
                                      engine.part.position(self.vessel.reference_frame))
