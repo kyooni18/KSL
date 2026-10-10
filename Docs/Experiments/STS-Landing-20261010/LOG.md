@@ -366,3 +366,21 @@ vertical rays. Exact collider results are still pending. L5 remains live at
 UT1741.7 /59.1km /782.5km range; checkpoint observerPID25435 still waiting.
 L5-72km/README.md records the prepared singular MM305→Final→rollout restart
 command, required profile/provenance checks and normal gates. Not yet executed.
+
+## 18. Runway plane hypothesis while L5 remains live
+
+Historical a36fce5 controller source confirms the pinned live backend already
+supports late-terminal engageReentry→MM305 continuation with normal gates.
+Native sim runway_plane_at uses the origin's radial-up normal, making its
+contact plane tangent at the configured threshold, rather than at runway middle.
+A height-only adjustment can therefore leave a longitudinal mismatch.
+
+Binned L4 landed terrain elevations in10m bins (68 bins, along404–1403m).
+Fit y = b + m*x + x²/(2*600000) yields origin69.0407m, slope−0.00213456
+(−0.12230°), RMSE0.01837m, maximum residual0.03673m; extrapolated height at
+the fixed flare's375m touchdown target is68.3574m. This is a coherent tilted
+plane hypothesis, not a certified collider height: source terrainElevation and
+extrapolation remain indirect. Pending raycasts must verify the deck and its
+shape before either guidance config or native simulator contact plane changes.
+Artifact L5-72km/runway-plane-hypothesis.json. Shared source/config/backend
+unchanged. L5 and both read-only observers remain active.

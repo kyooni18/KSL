@@ -1,0 +1,15 @@
+{
+  "source": "L4 landed terrain elevation (not independently verified collider)",
+  "binWidthMeters": 10,
+  "bins": 68,
+  "radialCurvatureRadius": 600000,
+  "fit": {
+    "originElevation": 69.04068423887453,
+    "slope": -0.0021345623919043918,
+    "slopeDegrees": -0.12230123041435768,
+    "rmse": 0.01836828671700362,
+    "maxAbsError": 0.03673313142689949,
+    "estimatedElevationAt375": 68.35741084191038
+  },
+  "limitations": "Terrain fit over landed along404\u20131403m only; extrapolated origin/375m not certified deck targets. Raycast evidence required before config or native ground changes."
+}
