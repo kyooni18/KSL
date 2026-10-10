@@ -1418,6 +1418,7 @@ def run(args):
         liftoff_ut = None
         baseline_part_count = None
         meco_ut = None
+        peg_dv = None
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -1592,7 +1593,8 @@ def run(args):
                                  'roll_control_oscillation',
                                  'actual_pitch_deg', 'actual_heading_deg', 'target_pitch_deg',
                                  'control_moment_budget_Nm', 'engine_limit_state',
-                                 'engine_gimbal_actuation', 'available_torque_Nm'])
+                                 'engine_gimbal_actuation', 'available_torque_Nm',
+                                 'orbit_inclination_deg', 'guidance_dv_mps'])
                 while True:
                     tick = time.monotonic()
                     if conn.space_center.active_vessel != v:
@@ -1675,6 +1677,12 @@ def run(args):
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
                         peg_dv = None
                         peg_phase_g = None
+                        if (shuttle.separated and
+                                v.orbit.apoapsis_altitude > args.orbit+40000.0 and
+                                v.orbit.periapsis_altitude > 0):
+                            control.throttle = 0
+                            raise RuntimeError(
+                                f'Guidance runaway: Ap {v.orbit.apoapsis_altitude/1000:.0f} km; engines cut')
                         if shuttle.separated and flight.speed > 1400.0:
                             try:
                                 sc = conn.space_center
@@ -1956,7 +1964,9 @@ def run(args):
                                          actual_pitch, actual_heading,
                                          '' if target_pitch is None else target_pitch,
                                          shuttle.control_moment_budget, engine_limits,
-                                         gimbal_actuation, available_torque])
+                                         gimbal_actuation, available_torque,
+                                         round(math.degrees(v.orbit.inclination), 3),
+                                         '' if peg_dv is None else round(peg_dv, 2)])
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
                         next_report = conn.space_center.ut+2
