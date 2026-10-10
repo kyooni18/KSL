@@ -384,3 +384,23 @@ extrapolation remain indirect. Pending raycasts must verify the deck and its
 shape before either guidance config or native simulator contact plane changes.
 Artifact L5-72km/runway-plane-hypothesis.json. Shared source/config/backend
 unchanged. L5 and both read-only observers remain active.
+
+## 19. L5 MM305 ownership checkpoint verified
+
+L5 transferred normally to TAEM/MM305 at UT2162.6 /27.1km /59.8km range /
+872.6m/s. New save STS-L5-MM305-Final-20261010T075356Z captured at UT2162.649863.
+Read-only observer completed: crosscheckUT2163.629863, STS flying, mass25722.5625kg,
+dryMass20348.001953125kg, 22parts, zero thrust. Saved file SHA256 independently
+verified6cc91ce92ace6d2017df7528e27c2bc7b97875c219cae5383478d7e4221e7093.
+Physics profile mm305-final.physics.json and deterministic compressed archive
+mm305-final.sfs.gz retain the exact checkpoint. Reload still must verify coherent
+unpacked physics and native route/Final gates. This proves checkpoint capture,
+not a qualified completed landing or repeatability. Protected Steam86km hash
+still4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6.
+
+L5 remains live in MM305 overhead loop; no stop, reload, or second flight. Runway
+raycast observerPID35303 still waits near KSC. Combined MM305→Final→rollout test
+can now use the verified checkpoint after L5 completes naturally. Entry tracking
+sampleUT1977.829863: AoA24.90199° vs command24.93600°, pitchinput−0.06549; the
+weak-pitch concern is not evident at this entry sample and terminal evidence
+remains necessary.

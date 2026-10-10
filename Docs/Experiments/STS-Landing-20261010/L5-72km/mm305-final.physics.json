@@ -1,0 +1,21 @@
+{
+  "saveName": "STS-L5-MM305-Final-20261010T075356Z",
+  "savePath": "/Users/kyooni18/Library/Application Support/Steam/steamapps/common/Kerbal Space Program/saves/Main/STS-L5-MM305-Final-20261010T075356Z.sfs",
+  "saveSHA256": "6cc91ce92ace6d2017df7528e27c2bc7b97875c219cae5383478d7e4221e7093",
+  "vessel": "STS",
+  "mass": 25722.5625,
+  "dryMass": 20348.001953125,
+  "partCount": 22,
+  "savedUT": 2162.649863280242,
+  "liveCrosscheck": {
+    "ut": 2163.629863280241,
+    "vessel": "STS",
+    "mass": 25722.5625,
+    "dryMass": 20348.001953125,
+    "partCount": 22,
+    "thrust": 0.0,
+    "meanAltitude": 26979.429563870654,
+    "situation": "VesselSituation.flying"
+  },
+  "evidence": "Read-only intact unpowered STS observation within 15 s of new MM305 ownership save; reload must verify coherent unpacked physics and normal route/Final gates."
+}
