@@ -1419,6 +1419,7 @@ def run(args):
         baseline_part_count = None
         meco_ut = None
         peg_dv = None
+        peg_hold = None
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -1641,11 +1642,15 @@ def run(args):
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
                             heading_goal = target_heading
-                            if flight.speed > 400.0:
-                                # Close the loop on the measured plane: a high
-                                # inclination needs a more easterly heading.
-                                inc_error = math.degrees(v.orbit.inclination)-args.inclination
-                                heading_goal += max(-8.0, min(8.0, 0.7*inc_error))
+                            if flight.horizontal_speed > 120.0:
+                                # The velocity vector lags the nose heading by many
+                                # degrees at speed, so steer on the measured surface
+                                # velocity azimuth: lead the nose past the target by a
+                                # gain times the azimuth error.
+                                svel = v.velocity(v.surface_reference_frame)
+                                vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
+                                azimuth_error = wrap_roll(target_heading-vel_azimuth)
+                                heading_goal += max(-35.0, min(35.0, 3.0*azimuth_error))
                             args.heading = slew_value(args.heading, heading_goal,
                                                       args.heading_slew, 1/args.hz)
                         if roll_requires_authority or altitude < turn_start_altitude:
@@ -1698,11 +1703,13 @@ def run(args):
                                     args.inclination, accel)
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
-                                raw_pitch = max(-45.0, min(25.0, peg_pitch))
-                                args.heading = slew_value(
-                                    args.heading,
-                                    max(target_heading-25.0, min(target_heading+25.0, peg_heading)),
-                                    3.0, 1/args.hz)
+                                if peg_tgo > 4.0 or peg_hold is None:
+                                    peg_hold = (max(-45.0, min(25.0, peg_pitch)),
+                                                max(target_heading-40.0,
+                                                    min(target_heading+40.0, peg_heading)))
+                                raw_pitch = peg_hold[0]
+                                args.heading = slew_value(args.heading, peg_hold[1],
+                                                          3.0, 1/args.hz)
                                 pitch_slew_rate = max(pitch_slew_rate, 4.0)
                                 peg_phase_g = max(0.5, min(args.upper_g, peg_dv/5.0/G0))
                             except Exception:
@@ -2013,7 +2020,7 @@ def main():
     parser.add_argument('--orbit', type=float, default=90000, help='Target apoapsis altitude in m')
     parser.add_argument('--inclination', type=float, default=34.0,
                         help='Target orbital inclination in degrees (sets launch azimuth unless --heading is given)')
-    parser.add_argument('--heading-slew', type=float, default=0.7,
+    parser.add_argument('--heading-slew', type=float, default=2.0,
                         help='Launch-azimuth turn rate in deg/s after the roll settles')
     parser.add_argument('--heading', type=float, default=None,
                         help='Explicit final launch heading; default derives from --inclination')
