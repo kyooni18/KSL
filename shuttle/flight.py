@@ -1693,7 +1693,7 @@ def run(args):
                         peg_dv = None
                         peg_phase_g = None
                         if (shuttle.separated and
-                                v.orbit.apoapsis_altitude > args.orbit+40000.0 and
+                                v.orbit.apoapsis_altitude > args.orbit+90000.0 and
                                 v.orbit.periapsis_altitude > 0):
                             control.throttle = 0
                             raise RuntimeError(
@@ -1714,7 +1714,7 @@ def run(args):
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
                                 if peg_tgo > 4.0 or peg_hold is None:
-                                    peg_hold = (max(-45.0, min(25.0, peg_pitch)),
+                                    peg_hold = (max(-60.0, min(25.0, peg_pitch)),
                                                 max(target_heading-40.0,
                                                     min(target_heading+40.0, peg_heading)))
                                 raw_pitch = peg_hold[0]
