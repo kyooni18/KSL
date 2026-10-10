@@ -1745,7 +1745,10 @@ def run(args):
                         # roll loop instead of the pad calibration.
                         live_roll_accel = roll_accel_authority_deg_s2(v)
                         if live_roll_accel > 1.0:
-                            roll_accel_reference = live_roll_accel
+                            # available_torque overstates what the roll axis really
+                            # delivers (gimbal roll, elevons at low q), so bound the
+                            # live estimate between 8 and 40 deg/s^2.
+                            roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
                         if shuttle.separated and not upper_autotune:
                             # Pad-frozen pitch/yaw gains are wrong once the boosters are
                             # gone; let kRPC retune from the live inertia and torque.
