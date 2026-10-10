@@ -438,7 +438,7 @@ def final_phase_g(periapsis_altitude, target_periapsis, max_g, ramp=30000.0, flo
     return max(floor, floor + (max_g-floor)*remaining/ramp)
 
 
-def aoa_limit_deg(dynamic_pressure, q_alpha=40000.0, floor=1.0, ceiling=8.0):
+def aoa_limit_deg(dynamic_pressure, q_alpha=50000.0, floor=1.5, ceiling=20.0):
     """Bound angle of attack so q*alpha (wing/tank-attach load) stays within q_alpha Pa*deg."""
     return max(floor, min(ceiling, q_alpha/max(1.0, dynamic_pressure)))
 
