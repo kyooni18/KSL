@@ -35,8 +35,8 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 # Read-only inspection of the active vessel; no ignition or control writes.
 .venv/bin/python -m shuttle.flight
 
-# Fly an eastward STS suborbit with a 100 km apoapsis and 45 km periapsis.
-.venv/bin/python -m shuttle.flight --launch --orbit 100000 --heading 90 --meco-periapsis 45000
+# Fly an eastward STS suborbit with a 75 km apoapsis and 50 km periapsis.
+.venv/bin/python -m shuttle.flight --launch --orbit 75000 --heading 90 --meco-periapsis 50000
 ```
 
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
@@ -52,7 +52,7 @@ while the clamps still hold, then remain lit for a 3-second lead interval by
 default; `--ssme-lead-time` changes that interval. The next staging action then
 lights both SRBs and releases the clamps. The four-Skipper profile described
 below applies only to that separate vehicle variant.
-`--meco-periapsis 45000` with a 100 km apoapsis target aims for a suborbit whose
+`--meco-periapsis 50000` with a 75 km apoapsis target aims for a suborbit whose
 periapsis is positive and below the 70 km atmosphere boundary. Reaching target
 apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build

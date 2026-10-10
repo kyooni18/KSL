@@ -1223,8 +1223,8 @@ def run(args):
             return
         if body.name != 'Kerbin':
             raise ValueError('Default ascent guidance is designed for Kerbin')
-        if args.orbit <= body.atmosphere_depth + 10000:
-            raise ValueError('Target orbit must be at least 10 km above the atmosphere')
+        if args.orbit < body.atmosphere_depth + 5000:
+            raise ValueError('Target apoapsis must clear the atmosphere by at least 5 km')
         flight = v.flight(body.reference_frame)
         ap = v.auto_pilot
         control = v.control
@@ -1667,13 +1667,13 @@ def main():
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
     parser.add_argument('--stream-port', type=int, default=50001)
-    parser.add_argument('--orbit', type=float, default=100000, help='Target altitude in m')
+    parser.add_argument('--orbit', type=float, default=75000, help='Target apoapsis altitude in m')
     parser.add_argument('--heading', type=float, default=90)
     parser.add_argument('--turn-start', type=float, default=3000,
                         help='Altitude in m where the post-roll gravity turn begins')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
-    parser.add_argument('--meco-periapsis', type=float, default=45000,
+    parser.add_argument('--meco-periapsis', type=float, default=50000,
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--meco-pitch', type=float, default=0,
                         help='Surface pitch used to build horizontal energy after target apoapsis')
