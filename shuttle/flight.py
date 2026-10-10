@@ -1641,7 +1641,7 @@ def run(args):
                     if state == 'ASCENT':
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
-                            heading_goal = target_heading
+                            heading_goal = target_heading - 6.0
                             if flight.horizontal_speed > 450.0:
                                 # The velocity vector lags the nose heading by many
                                 # degrees at speed, so steer on the measured surface
@@ -1653,8 +1653,8 @@ def run(args):
                                 vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
                                 azimuth_error = wrap_roll(target_heading-vel_azimuth)
                                 # Keep side loads small while the air is thick.
-                                lead_limit = (4.0 if flight.dynamic_pressure > 8000.0
-                                              else 12.0 if flight.dynamic_pressure > 1500.0
+                                lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
+                                              else 20.0 if flight.dynamic_pressure > 1500.0
                                               else 30.0)
                                 heading_goal += max(-lead_limit,
                                                     min(lead_limit, 2.0*azimuth_error))
