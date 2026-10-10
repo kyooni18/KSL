@@ -404,3 +404,24 @@ can now use the verified checkpoint after L5 completes naturally. Entry tracking
 sampleUT1977.829863: AoA24.90199° vs command24.93600°, pitchinput−0.06549; the
 weak-pitch concern is not evident at this entry sample and terminal evidence
 remains necessary.
+
+## 20. Native continuous MM305 replay from exact L5 save-time frame
+
+Reconstructed vehicle delta telemetry at checkpointUT2162.64986328024
+(difference<2e−12s). Surface speed derives from logged horizontal/vertical
+components; heading approximates surface course, initial body-rate/control
+state is not fully reconstructed. Snapshot and mm305-continuous.ini retained.
+Rebuilt isolated baseline FCS source after the rejected lag experiment; shared
+live executable untouched. Native simulator uses real flight_control.c and
+applied stick feedback with existing att-live plant and terminal attitude
+fixture, vehicleModelSTS and explicit sts-live-20261010 aero profile. Initial
+invocation omitted explicit profile and was blocked by STS/STS-N guard; corrected
+profile invocation ran without bypassing that guard.
+
+Continuous engageReentry replay passes: MM305→Final→Flare→Touchdown→Rollout→Complete,
+touchdown71.163m/s, sink1.291m/s, along58.107m, cross−3.319m, stopalong941.935m,
+cross−1.866m; runway rollout valid, no bounce/departure/tail strike. This is
+one offline diagnostic using baseline70m runway plane, not live repeatability
+or confirmation of deck alignment. Result and manifest retained as
+native-baseline-result.json /native-baseline-manifest.json. L5 remains active
+atUT2263 /14.1km, near the overhead-turn leg; collider observer still waiting.
