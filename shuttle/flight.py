@@ -1601,19 +1601,22 @@ def run(args):
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
                         pitch_slew_rate = args.pitch_slew
-                        if (v.orbit.apoapsis_altitude >= args.orbit and
+                        if (v.orbit.apoapsis_altitude >= 0.8*args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
-                            # Apoapsis is already at target: spend the remaining
+                            # Apoapsis is approaching target: spend the remaining
                             # energy on horizontal speed. Damp the climb with
-                            # vertical speed and hold altitude near the target
-                            # band instead of letting Ap run away.
-                            band_center = 0.5*(args.orbit+args.meco_periapsis)
+                            # vertical speed and keep the burnout altitude low in the
+                            # target band (the insertion point of a low-perigee ellipse
+                            # lies below the mid-altitude), instead of letting Ap run away.
+                            band_center = (args.meco_periapsis +
+                                           0.4*(args.orbit-args.meco_periapsis))
+                            ap_excess = max(0.0, v.orbit.apoapsis_altitude-args.orbit)
                             hold = args.meco_pitch + 5.0 \
                                 - 0.2*flight.vertical_speed \
-                                + max(-5.0, min(5.0, (altitude-band_center)/-3000.0)) \
-                                + max(-15.0, min(15.0, -1.5*(v.orbit.apoapsis_altitude-args.orbit)/1000.0))
+                                + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
+                                - min(15.0, 1.5*ap_excess/1000.0)
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
-                            pitch_slew_rate = max(args.pitch_slew, 5.0)
+                            pitch_slew_rate = max(args.pitch_slew, 3.0)
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
                             pitch_slew_rate, 1/args.hz)
