@@ -18,7 +18,7 @@ import krpc
 MIN_BURN_ALTITUDE = 74000.0
 
 
-def solve(make_node, error, lo, hi, iterations=40):
+def solve(make_node, error, lo, hi, iterations=26):
     """Bisection on a node component; error(orbit) must change sign over [lo, hi]."""
     def value(x):
         node = make_node(x)
@@ -116,7 +116,7 @@ def main():
     def high_enough(orbit, ut):
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
-    def plan(d_ap, d_pe):
+    def plan(d_ap, d_pe, min_lead=45.0):
         """Chain up to three nodes in time order: plane change at the first high node
         after MECO, apoapsis set shortly after, periapsis raised at apoapsis."""
         for stale in list(vessel.control.nodes):
@@ -126,7 +126,7 @@ def main():
         now = sc.ut
         candidates = sorted(
             o0.ut_at_true_anomaly(nu) for nu in ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
-        usable = [c for c in candidates if c > now+45 and c < now+900 and
+        usable = [c for c in candidates if c > now+min_lead and c < now+900 and
                   o0.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE+3000.0]
         target = math.radians(args.inclination)
         nodes = []
@@ -155,8 +155,16 @@ def main():
         return tuple(nodes), n2.orbit
 
     d_ap = d_pe = 0.0
-    for iteration in range(6):
-        nodes, final = plan(d_ap, d_pe)
+    min_lead = 45.0
+    t_start = sc.ut
+    for iteration in range(8):
+        nodes, final = plan(d_ap, d_pe, min_lead)
+        elapsed = sc.ut-t_start
+        if nodes[0].ut-sc.ut < 40.0:
+            # Planning takes game time; leave room for it before the first burn.
+            min_lead = elapsed+60.0
+            print(f'planning took {elapsed:.0f} s; re-planning with lead {min_lead:.0f} s')
+            continue
         e_ap = final.apoapsis_altitude-args.apoapsis
         e_pe = final.periapsis_altitude-args.periapsis
         print(f'plan {iteration}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
