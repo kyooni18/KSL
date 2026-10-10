@@ -1144,7 +1144,7 @@ class Shuttle:
             # late in the burn. Preserve the SSME limiter reached at ignition
             # instead of letting the allocator wind the core engines to zero.
             target_throttles = list(target_throttles)
-            target_throttles[0] = max(target_throttles[0], current[0])
+            target_throttles[0] = current[0]
             target_throttles = tuple(target_throttles)
         elif (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
               self.separated and self.et_attached):
@@ -1354,11 +1354,13 @@ def run(args):
                 bool(shuttle.solid_boosters))
             for group, u in zip(shuttle.core_groups, result.throttles[:core_group_count]):
                 for e in group:
-                    e.thrust_limit = 1.0 if full_ssme_before_srb else u
+                    e.thrust_limit = args.ssme_limit if full_ssme_before_srb else u
                     e.active = True
             control.throttle = 1
             core_engines = [engine for group in shuttle.core_groups for engine in group]
             expected_core_thrust = sum(engine.max_thrust for engine in core_engines)
+            if full_ssme_before_srb:
+                expected_core_thrust *= args.ssme_limit
             if not full_ssme_before_srb:
                 expected_core_thrust = sum(
                     engine.max_thrust * throttle
@@ -1382,7 +1384,7 @@ def run(args):
                     f'Core engines did not reach {ignition_fraction:.0%} of required thrust; '
                     'boosters remain unignited and clamps remain attached')
             if full_ssme_before_srb:
-                print(f'SSMEs verified at full limiter on clamps: '
+                print(f'SSMEs verified at fixed limiter on clamps: '
                       f'{core_thrust/1000:.0f}/{expected_core_thrust/1000:.0f} kN; '
                       f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
             else:
@@ -1768,6 +1770,8 @@ def main():
                         help='Maximum dynamic pressure in Pa; reduces liquid throttle above this value')
     parser.add_argument('--launch-g', type=float, default=LAUNCH_TARGET_G,
                         help='Gentle initial thrust-acceleration target in Earth g')
+    parser.add_argument('--ssme-limit', type=float, default=0.7,
+                        help='Fixed SSME thrust limiter held through SRB burn')
     parser.add_argument('--ssme-lead-time', type=float, default=3.0,
                         help='Seconds to hold verified SSME thrust before booster ignition')
     parser.add_argument('--booster-min-g', type=float, default=BOOSTER_MIN_G,
