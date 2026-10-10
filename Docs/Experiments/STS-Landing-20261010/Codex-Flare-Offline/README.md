@@ -5,7 +5,7 @@ Experiments ran from an isolated `/tmp/sts-codex-flare/CLanding` source snapshot
 shared `CLanding/build` and `CLanding/build-dev` were not rebuilt or replaced.
 The snapshot also preserved the existing local terminal-propagator and Makefile changes.
 `patches/` contains each variant relative to the committed flare files at `b3dfb34`.
-`results.json` retains all 114 completed replay manifests' outcome and provenance fields.
+`results.json` retains all 228 completed replay manifests' outcome and provenance fields.
 No live KSP calls were issued. No flight restrictions or acceptance gates were changed.
 
 ## Reproduction

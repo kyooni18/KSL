@@ -1,0 +1,10 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -200,6 +200,7 @@
+     double model_rate=(M->gain*s->cmd+M->bias-s->aoa)/fmax(M->tau,.1);
+     double surge=s->h<P->sgs_height+5.0&&isfinite(s->aoa_rate)&&isfinite(model_rate)?
+         clampd((s->aoa_rate-model_rate)*AF_SURGE_T,-2.0,2.0):0.0;
++    if(surge<0.0&&s->aoa_rate<0.0)surge=fmax(-3.0,3.0*surge);
+     double lq=0.0,dq=0.0;af_aero(M,s->aoa+surge,&lq,&dq);
+     double a_now=lq*q/m-g0*cos(s->gamma);
+     /* Only a deceleration already building is read ahead; an unloaded glide

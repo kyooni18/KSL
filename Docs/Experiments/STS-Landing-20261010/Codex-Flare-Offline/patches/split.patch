@@ -1,0 +1,31 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -252,7 +252,7 @@
+ }
+ 
+ /* Forward prediction from the present state to main-gear contact. */
+-static AfOutcome af_predict(const AfModel*M,const AfParams*P,AfState s){
++static AfOutcome af_predict(const AfModel*M,const AfModel*response,const AfParams*P,AfState s){
+     AfOutcome r={0};
+     const double DT=.1;
+     double peak=0.0,climb=-INFINITY;
+@@ -265,7 +265,7 @@
+         if(o.on_arc&&!started){started=true;s.engaged=true;s.glide_sink=s.sink;}
+         s.cmd=o.cmd;
+         double V=s.V,q=.5*M->rho*V*V;
+-        s.aoa+=(M->gain*s.cmd+M->bias-s.aoa)/M->tau*DT;
++        s.aoa+=(response->gain*s.cmd+response->bias-s.aoa)/response->tau*DT;
+         s.aoa=clampd(s.aoa,-2.0,M->aoa_max+3.0);
+         double lq=0.0,dq=0.0;af_aero(M,s.aoa,&lq,&dq);
+         double L=lq*q,D=dq*q;
+@@ -318,8 +318,8 @@
+     for(size_t i=0;i<sizeof(AF_ARC)/sizeof(AF_ARC[0]);i++)
+         for(size_t j=0;j<sizeof(AF_SGS)/sizeof(AF_SGS[0]);j++){
+             AfParams P={AF_ARC[i]*M->g0,AF_SGS[j]};
+-            AfOutcome o=af_predict(M,&P,*s0);
+-            AfOutcome w=af_predict(&W,&P,*s0);
++            AfOutcome o=af_predict(M,M,&P,*s0);
++            AfOutcome w=af_predict(M,&W,&P,*s0);
+             if(w.cost>o.cost)o=w;
+             double c=o.cost;
+             if(F->plan_valid&&fabs(P.arc_accel-F->arc_accel)<1e-6&&fabs(P.sgs_height-F->sgs_height)<1e-6)

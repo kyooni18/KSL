@@ -1,0 +1,12 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -208,7 +208,8 @@
+        (~0.6): carrying the full pull through the lag predicts the sink gone,
+        unloads, and the sink comes back at contact. */
+     double a_lead=.6*fmax(0.0,a_now);
+-    double h_l=fmax(0.0,s->h-s->sink*T+.5*a_lead*T*T);
++    double height_lead=.6*T;
++    double h_l=fmax(0.0,s->h-s->sink*height_lead+.5*a_lead*height_lead*height_lead);
+     double s_l=s->sink-a_lead*T;
+     double ref=af_profile(P,g0,h_l);
+     double ref_lo=af_profile(P,g0,fmax(0.0,h_l-.5));

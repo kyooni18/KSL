@@ -206,3 +206,40 @@ Each score is the runner's unchanged complete success check, including runway co
 a 64 m/s pass does not meet the planner's stricter 66 m/s objective. No code variant has yet
 met both ≥10/12 and ≥6/7. Adaptive remains off by default. Source patches, portable inputs,
 exact run IDs, outcome fields, and provenance are retained in `Codex-Flare-Offline/`.
+
+### 12a. Further response-model experiments (all rejected)
+
+| isolated variant | matrix | chains |
+|---|---:|---:|
+| falling-incidence surge ×3, ±2° cap | 11/12 | 5/7 |
+| above, falling correction cap −3° | 11/12 | 5/7 |
+| height look-ahead 0.6·tau, sink lead unchanged | 9/12 | 2/7 |
+| pessimistic tau floor 1.5 s | 10/12 | 3/7 |
+| pessimistic aircraft response, nominal controller compensation | 0/12 | 0/7 |
+| above, gain fixed at 1; lag and offset uncertainty only | 10/12 | 5/7 |
+
+The 13-02-48 onset already identifies tau=1.62 s, so the pessimistic 1.5 s floor
+cannot address that case. Enlarging the falling correction cap changes no outcomes.
+The current pessimistic predictor alters both response and controller compensation;
+splitting them reveals that permanent 20% gain loss with frozen controller estimates
+is excessively pessimistic. Removing gain uncertainty recovers results but still fails
+the chain threshold. Neither model change is adopted. All 228 offline replays are retained.
+Shared source/builds remain unchanged, including the other session's pending AF_SLEW=3 edit.
+
+User subsequently authorized L4 from the full 86 km orbit, replacing the earlier stop-before-L4
+instruction. L4 will use the existing fixed-flare/ki0.025 live backend with adaptive off,
+normal orbital planning/deorbit admission, and unchanged flight restrictions.
+
+## 13. L4 full 86 km orbit launch (user authorized)
+
+Initial save is an exact new copy `STS-L4-full86-20261010T062914Z` of the Steam `86km.sfs`.
+Protected original SHA-256: `4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6`. The `/Applications/.Misc/LMPKSP`
+protected path was absent at preflight; it was not created or modified. Exactly one KSP
+instance (PID 6313) and no prior headless runner were found before launch.
+Backend SHA-256: `8beafeebca9aa957a167469a413d0553e255204fb229802f72f8fbbbb3530c27`; existing fixed flare + trim ki0.025,
+model profile sts-live-20261010, modelId STS, runway 09 only, adaptive explicitly false.
+Full orbital mode uses normal createPlan → qualification → engage, rather than reentry-only.
+No unqualified-continuation override is inherited. Original campaign no-crash-guard policy,
+1× preentry physics warp, unpowered approach restriction, and 3600 s wall limit retained.
+Runner PID 59125; immutable backend/config pin enabled; launch details in
+`L4-full86/launch.json`, live progress in `L4-full86/live.log`. Launch is not landing evidence.
