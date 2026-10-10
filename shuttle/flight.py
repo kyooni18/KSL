@@ -1739,7 +1739,9 @@ def run(args):
                                 d_n, peg_dv, peg_tgo = terminal_guidance(
                                     pos_n, vel_n, rot_vel, body.gravitational_parameter,
                                     body.equatorial_radius, args.orbit, args.meco_periapsis,
-                                    args.inclination, accel)
+                                    args.inclination + max(-4.0, min(6.0, 2.0*(
+                                        args.inclination-math.degrees(v.orbit.inclination)))),
+                                    accel)
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
                                 if peg_tgo > 4.0 or peg_hold is None:
