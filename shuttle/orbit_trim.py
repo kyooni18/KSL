@@ -46,46 +46,61 @@ def execute(conn, vessel, node, done, tolerance=0.03):
     engines = [e for e in vessel.parts.engines if e.active]
     thrust = sum(e.available_thrust for e in engines)
     isp = sum(e.specific_impulse*e.available_thrust for e in engines)/max(thrust, 1.0)
+    if thrust <= 0.0:
+        raise RuntimeError('No OMS thrust available (fuel exhausted or engines inactive)')
     dv = node.delta_v
     mass = vessel.mass
     burn_time = isp*9.80665*mass*(1.0-math.exp(-dv/(isp*9.80665)))/thrust
     start = node.ut - 0.5*burn_time
     print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s, T-{node.time_to:.0f} s')
-    ap.reference_frame = node.reference_frame
-    ap.target_direction = (0.0, 1.0, 0.0)
-    ap.target_roll = float('nan')
-    ap.engaged = True
-    if start-sc.ut > 90:
-        sc.warp_to(start-60)
-    while sc.ut < start-30:
-        time.sleep(0.2)
-    ap.reference_frame = node.reference_frame
-    ap.target_direction = (0.0, 1.0, 0.0)
-    ctl.rcs = True
-    while sc.ut < start:
-        time.sleep(0.02)
-    # Never burn unless the nose is on the burn vector.
-    aligned_wait = time.time()
-    while ap.error > 3.0 and time.time()-aligned_wait < 120:
-        time.sleep(0.1)
-    ctl.throttle = 1.0
-    mass_start = vessel.mass
-    while True:
-        remaining = node.remaining_delta_v
-        spent = isp*9.80665*math.log(mass_start/vessel.mass)
-        if remaining <= tolerance or done(vessel.orbit) or spent > 1.25*dv+1.0:
-            break
-        if ap.error > 10.0:
-            ctl.throttle = 0.0
-            while ap.error > 3.0:
-                time.sleep(0.05)
-        accel = thrust/vessel.mass
-        ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
-        time.sleep(0.02)
-    ctl.rcs = False
-    ctl.throttle = 0.0
-    ap.engaged = False
-    node.remove()
+    # Whatever happens below, the engines must never be left running.
+    try:
+        ap.reference_frame = node.reference_frame
+        ap.target_direction = (0.0, 1.0, 0.0)
+        ap.target_roll = float('nan')
+        ap.engaged = True
+        if start-sc.ut > 90:
+            sc.warp_to(start-60)
+        while sc.ut < start-30:
+            time.sleep(0.2)
+        ap.reference_frame = node.reference_frame
+        ap.target_direction = (0.0, 1.0, 0.0)
+        ctl.rcs = True
+        while sc.ut < start:
+            time.sleep(0.02)
+        # Never burn unless the nose is on the burn vector.
+        aligned_wait = time.time()
+        while ap.error > 3.0 and time.time()-aligned_wait < 120:
+            time.sleep(0.1)
+        ctl.throttle = 1.0
+        mass_start = vessel.mass
+        while True:
+            spent = isp*9.80665*math.log(mass_start/vessel.mass)
+            try:
+                remaining = node.remaining_delta_v
+            except RuntimeError:
+                # KSP can drop the node mid-burn; fall back to our own accounting.
+                remaining = dv-spent
+            if remaining <= tolerance or done(vessel.orbit) or spent > 1.1*dv+0.5:
+                break
+            if vessel.available_thrust <= 0.0:
+                print('OMS thrust lost; stopping burn')
+                break
+            if ap.error > 10.0:
+                ctl.throttle = 0.0
+                while ap.error > 3.0:
+                    time.sleep(0.05)
+            accel = thrust/vessel.mass
+            ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
+            time.sleep(0.02)
+    finally:
+        ctl.throttle = 0.0
+        ctl.rcs = False
+        ap.engaged = False
+        try:
+            node.remove()
+        except RuntimeError:
+            pass
 
 
 def main():
