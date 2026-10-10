@@ -1283,6 +1283,12 @@ class Shuttle:
             requested_thrust = requested_g * G0 * self.vessel.mass
             core_throttle = (min(1.0, requested_thrust / available_core_thrust)
                              if available_core_thrust > 0 else 0.0)
+            # The CoM jump at booster separation momentarily needs more pitch
+            # authority than the gimbals have at a high SSME limiter. Ride a
+            # lower limiter (smaller off-axis moment) briefly, then ramp up.
+            since_sep = self.sc.ut - self.booster_separation_ut
+            sep_cap = 0.25 + 0.75*min(1.0, max(0.0, (since_sep-3.0)/5.0))
+            core_throttle = min(core_throttle, sep_cap)
             target_throttles = tuple(core_throttle for _ in self.groups)
         applied = slew_vector(current, target_throttles, throttle_slew, dt)
         for group, throttle in zip(self.groups, applied):
