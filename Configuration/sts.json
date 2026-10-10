@@ -74,7 +74,8 @@
     "targetEntryRange": 1030000,
     "targetPostBurnPeriapsisAltitude": 50000,
     "touchdownSinkRate": -1.5,
-    "useTimeWarp": true
+    "useTimeWarp": true,
+    "taemEnergyLaw": true
   },
   "site": {
     "altitude": 70,

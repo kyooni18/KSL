@@ -659,6 +659,7 @@ def main():
     observed_phases=set()
     fixed_hac_seen=False
     hac_completed_seen=False
+    path_committed_seen=False
     spline_seen=False
     with guidance_log.open(encoding="utf-8") as records:
         for line in records:
@@ -676,6 +677,7 @@ def main():
                 isinstance(radius,(int,float)) and math.isfinite(radius) and
                 abs(radius-fixed_hac_geometry["radius"]) <= .01)
             hac_completed_seen=hac_completed_seen or state.get("hacCompleted") is True
+            path_committed_seen=path_committed_seen or state.get("terminalPathCommitted") is True
             spline_seen=spline_seen or "spline" in status.lower()
             command=snap.get("command") or {}
             controls_clean=controls_clean and command.get("targetThrottle")==0 and command.get("airbrakes") is False
@@ -692,7 +694,11 @@ def main():
     rollout_controls_ok=rollout_brakes_seen and not rollout_airbrakes_seen
     rollout_heading_ok=rollout_max_heading_error<=8.0
     rollout_stability_proxy_ok=rollout_max_lateral_accel<=1.25
-    hac_requirement_ok=(args.engage=="engageFinalTest" or (fixed_hac_seen and hac_completed_seen))
+    # The TAEM energy law sizes its own HAC in flight (no fixed geometry to
+    # match); it must still commit a terminal path and complete the HAC.
+    energy_law=bool((config.get("guidance") or {}).get("taemEnergyLaw"))
+    hac_requirement_ok=(args.engage=="engageFinalTest" or
+                        ((fixed_hac_seen or (energy_law and path_committed_seen)) and hac_completed_seen))
     success=bool(not engage_rejected and runway_contact and touchdown_gear and rollout_valid and
                  rollout_runway_valid and touchdown_speed_ok and touchdown_sink_ok and
                  rollout_controls_ok and rollout_heading_ok and rollout_stability_proxy_ok and
