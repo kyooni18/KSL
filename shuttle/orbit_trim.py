@@ -15,6 +15,9 @@ import time
 import krpc
 
 
+MIN_BURN_ALTITUDE = 74000.0
+
+
 def solve(make_node, error, lo, hi, iterations=40):
     """Bisection on a node component; error(orbit) must change sign over [lo, hi]."""
     def value(x):
@@ -121,7 +124,10 @@ def main():
         candidates = []
         for anomaly in ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)):
             candidates.append(o.ut_at_true_anomaly(anomaly))
-        ut = min(c for c in candidates if c > sc.ut+120)
+        body_radius = o.body.equatorial_radius
+        usable = [c for c in candidates if c > sc.ut+120 and
+                  o.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE]
+        ut = min(usable) if usable else max(candidates, key=lambda c: o.radius_at(c) if c > sc.ut+120 else 0)
         target = math.radians(args.inclination)
         make = lambda x: vessel.control.add_node(ut, normal=x)
         dv = solve(make, lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
@@ -129,15 +135,20 @@ def main():
         return ut, dict(normal=dv), lambda orb: abs(math.degrees(orb.inclination)-target_deg) < 0.01
 
     def step_apoapsis():
+        # Set the apoapsis from the first point above the atmosphere (a burn at the
+        # low periapsis would sit in the air at ~2.3 km/s).
         o = vessel.orbit
-        ut = sc.ut + o.time_to_periapsis
+        body_radius = o.body.equatorial_radius
+        flight = vessel.flight(o.body.reference_frame)
+        lead = max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude)/max(flight.vertical_speed, 20.0))
+        ut = sc.ut + lead
         make = lambda x: vessel.control.add_node(ut, prograde=x)
-        dv = solve(make, lambda orb: orb.apoapsis_altitude-args.apoapsis, -150.0, 150.0)
+        dv = solve(make, lambda orb: orb.apoapsis_altitude-args.apoapsis, -250.0, 250.0)
         return ut, dict(prograde=dv), lambda orb: orb.apoapsis_altitude <= args.apoapsis+30.0 if dv < 0 else orb.apoapsis_altitude >= args.apoapsis-30.0
 
-    for name, planner in (('periapsis', step_periapsis),
-                          ('inclination', step_inclination),
-                          ('apoapsis', step_apoapsis)):
+    for name, planner in (('apoapsis', step_apoapsis),
+                          ('periapsis', step_periapsis),
+                          ('inclination', step_inclination)):
         ut, comps, done = planner()
         node = vessel.control.add_node(ut, **comps)
         print(f'{name}: node at T+{ut-sc.ut:.0f} s, components {comps}, '
