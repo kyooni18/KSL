@@ -397,11 +397,11 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
     flight_path_pitch = math.degrees(math.atan2(vertical, horizontal))
     q = max(0.0, dynamic_pressure)
     if q <= 5000:
-        pitch_under = 7.0
+        pitch_under = 20.0
     elif q < 25000:
-        pitch_under = 7.0 - 4.0 * (q - 5000.0) / 20000.0
+        pitch_under = 20.0 - 12.0 * (q - 5000.0) / 20000.0
     else:
-        pitch_under = 3.0
+        pitch_under = 8.0
     return min(initial_pitch, max(minimum_pitch, flight_path_pitch - pitch_under))
 
 

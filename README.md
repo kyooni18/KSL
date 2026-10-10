@@ -35,11 +35,14 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 # Read-only inspection of the active vessel; no ignition or control writes.
 .venv/bin/python -m shuttle.flight
 
-# Ignite and fly an eastward launch to a nominal 100 km orbit.
-.venv/bin/python -m shuttle.flight --launch --orbit 100000 --heading 90
+# Fly an eastward STS suborbit with a 100 km apoapsis and 45 km periapsis.
+.venv/bin/python -m shuttle.flight --launch --orbit 100000 --heading 90 --meco-periapsis 45000
 ```
 
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
+The turn biases 20° below velocity direction at low dynamic pressure, tapering
+to 8° by 25 kPa to build horizontal speed earlier without pitching far below
+prograde in the dense atmosphere.
 The Orbiter controller also supports two Size2 liquid side boosters, but the
 active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
@@ -49,11 +52,13 @@ while the clamps still hold, then remain lit for a 3-second lead interval by
 default; `--ssme-lead-time` changes that interval. The next staging action then
 lights both SRBs and releases the clamps. The four-Skipper profile described
 below applies only to that separate vehicle variant.
-`--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
-target apoapsis alone cannot discard the ET with insufficient horizontal energy.
+`--meco-periapsis 45000` with a 100 km apoapsis target aims for a suborbit whose
+periapsis is positive and below the 70 km atmosphere boundary. Reaching target
+apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
-segment until the periapsis gate is met. ET propellant exhaustion still triggers
-the existing early separation/orbiter-recovery path.
+segment until the periapsis gate is met. If ET propellant runs low first, the
+program separates the tank and hands off to the AJ10s rather than allowing an
+SSME fuel-out.
 The shuttle preserves its measured pad roll through the first 30 m of climb, then
 performs a dedicated rate-damped body roll to twice the launch heading, wrapped to
 -180°..180° (heading 90° targets roll 180°). During that initial roll, pitch stays
