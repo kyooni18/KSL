@@ -27,6 +27,8 @@
 #define TEL_BANK_TURN 55.0
 #define TEL_BANK_ARC 60.0
 #define TEL_R_MIN 2200.0
+/* floor for resizing a HAC already being flown (bank-limited, not planned) */
+#define TEL_R_SPIRAL_MIN 1600.0
 #define TEL_R_MAX 10000.0
 #define TEL_R_TURN 2600.0
 #define TEL_K_PLAN 0.5
@@ -345,7 +347,7 @@ static double tel_entry_arc(TaemEnergyLawState *L,const TelContext *c,const TelP
     TelSegment none[1]={{rem*r,r}};
     double excess=tel_predict_range(c,s,1.0,1e9,none,1)-rem*r;
     double vg=s->v*cos(s->g);
-    double r_small=fmax(TEL_R_MIN,vg*vg/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD)));
+    double r_small=fmax(TEL_R_SPIRAL_MIN,vg*vg/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD)));
     double turn=rem+2.0*TEL_PI;
     TelSegment small[1]={{turn*r_small,r_small}};
     double shortfall=turn*r_small-tel_predict_range(c,s,0.0,1e9,small,1);
@@ -478,7 +480,10 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         TelSegment arc1[1]={{L->hac_left_rad*L->radius,L->radius}};
         double need=tel_predict_range(&c,&s,TEL_K_PLAN,1e9,arc1,1);
         double r_fly=gnd*gnd/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD));
-        double r_new=clampd(need/L->hac_left_rad,fmax(TEL_R_MIN,r_fly),TEL_R_MAX);
+        /* below the planning floor only while an added circle is still far
+           from the exit: a tight HAC exit leaves Final a lateral offset */
+        double r_floor=L->hac_left_rad>1.5*TEL_PI?TEL_R_SPIRAL_MIN:fmin(TEL_R_MIN,L->radius);
+        double r_new=clampd(need/L->hac_left_rad,fmax(r_floor,r_fly),TEL_R_MAX);
         L->radius=clampd(r_new,L->radius-250.0,L->radius+250.0);
     }
     TelSegment segs[5];
