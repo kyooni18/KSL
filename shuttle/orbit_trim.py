@@ -111,54 +111,57 @@ def main():
         stale.remove()
     report('start')
 
-    def step_periapsis():
-        o = vessel.orbit
-        ut = sc.ut + o.time_to_apoapsis
-        make = lambda x: vessel.control.add_node(ut, prograde=x)
-        dv = solve(make, lambda orb: orb.periapsis_altitude-args.periapsis, -150.0, 150.0)
-        return ut, dict(prograde=dv), lambda orb: orb.periapsis_altitude >= args.periapsis-30.0 if dv > 0 else orb.periapsis_altitude <= args.periapsis+30.0
+    body_radius = vessel.orbit.body.equatorial_radius
 
-    def step_inclination():
-        o = vessel.orbit
-        omega = o.argument_of_periapsis
-        candidates = []
-        for anomaly in ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)):
-            candidates.append(o.ut_at_true_anomaly(anomaly))
-        body_radius = o.body.equatorial_radius
-        usable = [c for c in candidates if c > sc.ut+120 and
-                  o.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE]
-        ut = min(usable) if usable else max(candidates, key=lambda c: o.radius_at(c) if c > sc.ut+120 else 0)
+    def high_enough(orbit, ut):
+        return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
+
+    def plan(d_ap, d_pe):
+        """Chain three nodes; return (nodes, final orbit) with Ap/Pe targets offset."""
+        for stale in list(vessel.control.nodes):
+            stale.remove()
+        flight = vessel.flight(vessel.orbit.body.reference_frame)
+        lead = max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
+                   max(flight.vertical_speed, 20.0))
+        ut1 = sc.ut + lead
+        x1 = solve(lambda x: vessel.control.add_node(ut1, prograde=x),
+                   lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
+        n1 = vessel.control.add_node(ut1, prograde=x1)
+        ut2 = n1.orbit.ut_at_true_anomaly(math.pi)
+        x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
+                   lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
+        n2 = vessel.control.add_node(ut2, prograde=x2)
+        o2 = n2.orbit
+        omega = o2.argument_of_periapsis
+        candidates = [o2.ut_at_true_anomaly((-omega) % (2*math.pi)),
+                      o2.ut_at_true_anomaly((math.pi-omega) % (2*math.pi))]
+        usable = [c for c in candidates if c > ut2+120 and high_enough(o2, c)]
+        ut3 = min(usable) if usable else max(candidates, key=lambda c: o2.radius_at(c) if c > ut2+120 else 0)
         target = math.radians(args.inclination)
-        make = lambda x: vessel.control.add_node(ut, normal=x)
-        dv = solve(make, lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
-        target_deg = args.inclination
-        return ut, dict(normal=dv), lambda orb: abs(math.degrees(orb.inclination)-target_deg) < 0.01
+        x3 = solve(lambda x: vessel.control.add_node(ut3, normal=x),
+                   lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
+        n3 = vessel.control.add_node(ut3, normal=x3)
+        return (n1, n2, n3), n3.orbit
 
-    def step_apoapsis():
-        # Set the apoapsis from the first point above the atmosphere (a burn at the
-        # low periapsis would sit in the air at ~2.3 km/s).
-        o = vessel.orbit
-        body_radius = o.body.equatorial_radius
-        flight = vessel.flight(o.body.reference_frame)
-        lead = max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude)/max(flight.vertical_speed, 20.0))
-        ut = sc.ut + lead
-        make = lambda x: vessel.control.add_node(ut, prograde=x)
-        dv = solve(make, lambda orb: orb.apoapsis_altitude-args.apoapsis, -250.0, 250.0)
-        return ut, dict(prograde=dv), lambda orb: orb.apoapsis_altitude <= args.apoapsis+30.0 if dv < 0 else orb.apoapsis_altitude >= args.apoapsis-30.0
-
-    for name, planner in (('apoapsis', step_apoapsis),
-                          ('periapsis', step_periapsis),
-                          ('inclination', step_inclination)):
-        ut, comps, done = planner()
-        node = vessel.control.add_node(ut, **comps)
-        print(f'{name}: node at T+{ut-sc.ut:.0f} s, components {comps}, '
-              f'predicted Ap {node.orbit.apoapsis_altitude/1000:.2f} Pe '
-              f'{node.orbit.periapsis_altitude/1000:.2f} inc {math.degrees(node.orbit.inclination):.3f}')
-        if args.dry_run:
-            node.remove()
-            continue
-        execute(conn, vessel, node, done)
-        report(f'after {name}')
+    d_ap = d_pe = 0.0
+    for iteration in range(6):
+        nodes, final = plan(d_ap, d_pe)
+        e_ap = final.apoapsis_altitude-args.apoapsis
+        e_pe = final.periapsis_altitude-args.periapsis
+        print(f'plan {iteration}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
+              f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
+              f'(dv {[round(n.delta_v, 1) for n in nodes]})')
+        if abs(e_ap) < 100.0 and abs(e_pe) < 100.0:
+            break
+        d_ap -= e_ap
+        d_pe -= e_pe
+    if args.dry_run:
+        for stale in list(vessel.control.nodes):
+            stale.remove()
+        return
+    for index, node in enumerate(nodes):
+        execute(conn, vessel, node, lambda orb: False)
+        report(f'after burn {index+1}')
 
 
 if __name__ == '__main__':
