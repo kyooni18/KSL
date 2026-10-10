@@ -1582,7 +1582,7 @@ def run(args):
                         if not mission_roll_settled:
                             if roll_attitude_settled(
                                     roll_error, body_roll_rate,
-                                    settle_nose_error):
+                                    settle_nose_error, angle_limit=3.0):
                                 if roll_settle_since is None:
                                     roll_settle_since = conn.space_center.ut
                                 elif (conn.space_center.ut-roll_settle_since >=

@@ -67,8 +67,9 @@ The shuttle preserves its measured pad roll through the first 30 m of climb, the
 performs a dedicated rate-damped body roll to twice the launch heading, wrapped to
 -180°..180° (heading 90° targets roll 180°). During that initial roll, pitch stays
 at 89° and the gravity turn is held. The roll axis is driven directly from measured
-roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; once settled, the
-gravity turn is released. The 180° roll is held through booster separation, then
+roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; the turn is
+released after roll error stays within 3° for the configured settle interval.
+The 180° roll is held through booster separation, then
 targets 0° after 180 seconds; use `--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.
 `--address`, `--rpc-port`, and `--stream-port` configure the server connection.
