@@ -742,14 +742,27 @@ class Shuttle:
                               if part_engine(p) is not None]
             lfb_engines = [e for e in branch_engines
                            if e.part.name == 'Size2LFB.v2']
-            if len(lfb_engines) != 1:
+            srb_engines = [e for e in branch_engines
+                           if e.part.name == 'Clydesdale']
+            lf = resource_total(subtree, 'LiquidFuel', maximum=True)
+            ox = resource_total(subtree, 'Oxidizer', maximum=True)
+            sf = resource_total(subtree, 'SolidFuel', maximum=True)
+            if len(lfb_engines) == 1 and not srb_engines and lf > 0 and ox > 0:
+                branch_engines = lfb_engines
+                kind = 'liquid'
+            elif len(srb_engines) == 1 and not lfb_engines and sf > 0:
+                # The attached Mite motors are on the decoupler stage. Keep them
+                # under stock staging; only the Clydesdale motors burn on launch.
+                branch_engines = srb_engines
+                kind = 'solid'
+            else:
                 continue
             self.booster_decouplers.append(part.decoupler)
             self.booster_branch_parts.append(subtree)
             self.booster_branches.append(branch_engines)
-            self.booster_kinds.append('liquid')
+            self.booster_kinds.append(kind)
         if len(self.booster_branches) != 2:
-            raise ValueError(f'Expected two liquid side boosters, found {len(self.booster_branches)}')
+            raise ValueError(f'Expected two supported side boosters, found {len(self.booster_branches)}')
         booster_parts = {p for branch in self.booster_branch_parts for p in branch}
         self.tanks = [p for p in et_subtree if p not in booster_parts and
                       (has_resource(p, 'LiquidFuel') or has_resource(p, 'Oxidizer'))]
@@ -758,15 +771,17 @@ class Shuttle:
         self.shuttle_tank = None
         self.transfer_resources = ()
 
-        self.boosters = [e for branch in self.booster_branches for e in branch
-                         if e.part.name == 'Size2LFB.v2']
-        self.liquid_boosters = list(self.boosters)
-        # Mite motors are staged later in this craft. Keep them out of the launch
-        # controller so the launch command cannot ignite them prematurely.
-        self.solid_boosters = []
+        self.boosters = [e for branch in self.booster_branches for e in branch]
+        self.liquid_boosters = [e for branch, kind in
+                                zip(self.booster_branches, self.booster_kinds)
+                                if kind == 'liquid' for e in branch]
+        self.solid_boosters = [e for branch, kind in
+                               zip(self.booster_branches, self.booster_kinds)
+                               if kind == 'solid' for e in branch]
         self.liquid_booster_group = list(self.liquid_boosters)
         self.core_groups = [ssmes]
-        self.groups = self.core_groups + [self.liquid_booster_group]
+        self.groups = self.core_groups + ([self.liquid_booster_group]
+                                          if self.liquid_booster_group else [])
         self.inner_skippers = []
         self.outer_skippers = []
         self.sepmotors = []
@@ -843,10 +858,8 @@ class Shuttle:
             return self.liquid_booster_nominal_burn_time()
         if not self.solid_boosters or self.separated:
             return 0.0
-        propellant_mass = sum(resource_mass(parts, ('SolidFuel',))
-                              for parts, kind in zip(self.booster_branch_parts,
-                                                     self.booster_kinds)
-                              if kind == 'solid')
+        propellant_mass = sum(resource_mass([engine.part], ('SolidFuel',))
+                              for engine in self.solid_boosters)
         mass_flow = sum(self._engine_mass_flow(engine)
                         for engine in self.solid_boosters)
         return propellant_mass/mass_flow if mass_flow > 0 else math.inf
@@ -974,11 +987,23 @@ class Shuttle:
         thrust = sum(engine_thrust(e) for e in self.boosters)
         lf = sum(resource_total(parts, 'LiquidFuel') for parts in self.booster_branch_parts)
         ox = sum(resource_total(parts, 'Oxidizer') for parts in self.booster_branch_parts)
-        sf = sum(resource_total(parts, 'SolidFuel') for parts in self.booster_branch_parts)
-        current_mass = sum(resource_mass(parts, ('LiquidFuel', 'Oxidizer', 'SolidFuel'))
-                           for parts in self.booster_branch_parts)
-        max_mass = sum(resource_mass(parts, ('LiquidFuel', 'Oxidizer', 'SolidFuel'), maximum=True)
-                       for parts in self.booster_branch_parts)
+        sf = sum(resource_total([engine.part], 'SolidFuel')
+                 for engine in self.solid_boosters)
+        current_mass = sum(
+            resource_mass(parts, ('LiquidFuel', 'Oxidizer')) if kind == 'liquid'
+            else resource_mass([engine.part], ('SolidFuel',))
+            for parts, branch, kind in zip(self.booster_branch_parts,
+                                           self.booster_branches,
+                                           self.booster_kinds)
+            for engine in branch[:1])
+        max_mass = sum(
+            resource_mass(parts, ('LiquidFuel', 'Oxidizer'), maximum=True)
+            if kind == 'liquid' else
+            resource_mass([engine.part], ('SolidFuel',), maximum=True)
+            for parts, branch, kind in zip(self.booster_branch_parts,
+                                           self.booster_branches,
+                                           self.booster_kinds)
+            for engine in branch[:1])
         return thrust, lf, ox, sf, current_mass/max_mass if max_mass > 0 else 0.0
 
     def gimbal_telemetry(self):
@@ -1044,14 +1069,11 @@ class Shuttle:
         return any(not engine_has_fuel(engine) for engine in self.liquid_boosters)
 
     def _solid_boosters_depleted(self):
-        solid = [(parts, kind) for parts, kind in
-                 zip(self.booster_branch_parts, self.booster_kinds) if kind == 'solid']
-        return bool(solid) and all(resource_total(parts, 'SolidFuel') < .1
-                                   for parts, _ in solid)
+        return bool(self.solid_boosters) and all(
+            not engine_has_fuel(engine) for engine in self.solid_boosters)
 
     def _separate_boosters(self):
-        # The four liquid boosters are one stage: common cutoff, then simultaneous
-        # decoupler command. No branch is allowed to detach early.
+        # Cut every controlled booster motor before detaching the full pair.
         for engine in self.liquid_boosters + getattr(self, 'solid_boosters', []):
             try:
                 engine.thrust_limit = 0.0
@@ -1141,10 +1163,15 @@ def run(args):
                          for parts in shuttle.booster_branch_parts)
         booster_ox = sum(resource_total(parts, 'Oxidizer', maximum=True)
                          for parts in shuttle.booster_branch_parts)
-        booster_sf = sum(resource_total(parts, 'SolidFuel', maximum=True)
-                         for parts in shuttle.booster_branch_parts)
+        booster_sf = sum(resource_total([engine.part], 'SolidFuel', maximum=True)
+                         for engine in shuttle.solid_boosters)
         if shuttle.vehicle_kind == 'nuclear-solid':
             print(f'{v.name}: {v.mass/1000:.2f} t; engine groups Orbiter-J-N500 / ET-2xRhino / fixed twin-RSRM')
+        elif shuttle.vehicle_kind == 'orbiter-shuttle':
+            booster_type = ('Clydesdale SRB' if shuttle.solid_boosters else
+                            'Size2 liquid booster')
+            print(f'{v.name}: {v.mass/1000:.2f} t; engine groups '
+                  f'Orbiter-3xSSME / Booster-2x{booster_type}')
         else:
             print(f'{v.name}: {v.mass/1000:.2f} t; engine groups '
                   'Orbiter-Skiff / ET-Wolfhound / ET-Skipper-inner2 / ET-Skipper-outer2 / '

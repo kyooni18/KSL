@@ -5,11 +5,12 @@ configurable Kerbin ascent, discovers attached booster branches from separator
 topology, controls engine thrust and pitch moment, and handles booster and ET
 separation followed by orbital insertion.
 
-The current `craft_manifest.json` describes the 46-part Orbiter craft: three
-SSMEs fed from its external tank, two detachable Size2 liquid boosters, two AJ10
-orbital engines, and two Mite motors left under KSP staging. The controller
-throttles the SSMEs and paired liquid boosters during ascent, then disables the
-SSMEs and enables both AJ10s when the ET is released. The documented
+The active STS observed over kRPC has three SSMEs fed from its external tank,
+two Clydesdale solid boosters, two AJ10 orbital engines, and one Mite motor
+attached to each booster. The controller throttles the SSMEs, accounts for the
+fixed booster thrust, separates both Clydesdales after burnout, then disables
+the SSMEs and enables both AJ10s when the ET is released. The Mites remain under
+stock staging. The documented
 four-Skipper and J-N500 layouts remain separate supported variants; their
 variant-specific allocation notes below do not describe this Orbiter craft.
 The ascent also applies a 25 kPa default dynamic-pressure cap and a measured-G
@@ -39,10 +40,12 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 ```
 
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
-The current STS has two Size2 liquid side boosters. They receive one shared
-throttle command and separate together as soon as either branch runs dry; the
-staged Mite motors are left out of launch control. The four-Skipper profile
-described below applies only to that separate vehicle variant.
+The Orbiter controller also supports two Size2 liquid side boosters, but the
+active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
+SSME group is allocated around it, and both boosters separate together when
+their Clydesdale motors run out of fuel. Mite motors attached at the nose are
+left out of launch control. The four-Skipper profile described below applies
+only to that separate vehicle variant.
 `--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
 target apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
@@ -127,11 +130,12 @@ tuning. This program covers launch and insertion, not rendezvous or landing.
 
 ## Source and validation
 
-`craft_manifest.json` records the source craft SHA-256, engine positions, and
-resource amounts. The current craft has **46 parts**. Its editor mass is not
-present in the supplied craft file, so use the live vessel mass in KSP for launch
-predictions. The older report describes a different 60-part vehicle; its mass,
-engine layout, and burn schedule do not apply to the current craft.
+`craft_manifest.json` records the last saved craft-file SHA-256, engine positions,
+and resource amounts. That 46-part liquid-booster snapshot does not match the
+active KSP vessel observed for this update, which has 41 parts and two Clydesdale
+boosters; no matching saved craft file was available to hash. Use live vessel
+mass in KSP for launch predictions. The older report describes a different
+60-part vehicle; its mass, engine layout, and burn schedule do not apply here.
 
 Inspect an updated craft without running KSP:
 
