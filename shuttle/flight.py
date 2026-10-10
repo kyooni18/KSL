@@ -1749,12 +1749,26 @@ def run(args):
                             # delivers (gimbal roll, elevons at low q), so bound the
                             # live estimate between 8 and 40 deg/s^2.
                             roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
-                        if shuttle.separated and not upper_autotune:
+                        if shuttle.separated:
                             # Pad-frozen pitch/yaw gains are wrong once the boosters are
-                            # gone; let kRPC retune from the live inertia and torque.
-                            ap.auto_tune = True
-                            upper_autotune = True
-                            print('Autopilot auto-tune re-enabled after booster separation')
+                            # gone. Periodically let kRPC retune from the live inertia,
+                            # torque and centre of mass, then freeze the tuned pitch/yaw
+                            # gains again and keep the autopilot roll loop inert so it
+                            # cannot fight the direct roll command.
+                            if upper_autotune == 'sampling':
+                                gains_pitch = ap.pitch_pid_gains
+                                gains_yaw = ap.yaw_pid_gains
+                                ap.auto_tune = False
+                                ap.pitch_pid_gains = gains_pitch
+                                ap.yaw_pid_gains = gains_yaw
+                                ap.roll_pid_gains = (0.0, 0.0, 0.0)
+                                upper_autotune = conn.space_center.ut
+                            elif (upper_autotune is False or
+                                  conn.space_center.ut-upper_autotune >= 1.0):
+                                if upper_autotune is False:
+                                    print('Pitch/yaw gains now retuned from live inertia and torque')
+                                ap.auto_tune = True
+                                upper_autotune = 'sampling'
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
                             (min(args.roll_rate, 5.0) if shuttle.separated else
