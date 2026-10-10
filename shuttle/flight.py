@@ -1516,12 +1516,21 @@ def run(args):
                         # Apply the MECO energy-build pitch through the same
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
+                        pitch_slew_rate = args.pitch_slew
                         if (v.orbit.apoapsis_altitude >= args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
-                            raw_pitch = min(raw_pitch, args.meco_pitch)
+                            # Apoapsis is already at target: spend the remaining
+                            # energy on horizontal speed. Damp the climb with
+                            # vertical speed and hold altitude near the target
+                            # band instead of letting Ap run away.
+                            hold = args.meco_pitch + 5.0 \
+                                - 0.1*flight.vertical_speed \
+                                + max(-5.0, min(5.0, (altitude-62000.0)/-3000.0))
+                            raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
+                            pitch_slew_rate = max(args.pitch_slew, 5.0)
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
-                            args.pitch_slew, 1/args.hz)
+                            pitch_slew_rate, 1/args.hz)
                         pitch = commanded_pitch
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
