@@ -56,6 +56,9 @@ thrust limiter while the clamps still hold. The controller verifies at least
 default; `--ssme-lead-time` changes that interval. Only then does the next
 staging action light both SRBs and release the clamps. The four-Skipper profile described
 below applies only to that separate vehicle variant.
+The controller reads each SRB's configured thrust limiter for pad acceleration
+and burn-time estimates. With both live Clydesdales at 70%, the current 520.7 t
+STS has an estimated 1.36 G at ignition with the three SSMEs at full thrust.
 `--meco-periapsis 50000` with a 75 km apoapsis target aims for a suborbit whose
 periapsis is positive and below the 70 km atmosphere boundary. Reaching target
 apoapsis alone cannot discard the ET with insufficient horizontal energy.
@@ -78,7 +81,8 @@ It includes mass, vertical/horizontal speed, dynamic pressure, booster elapsed t
 live booster thrust, booster LF/Ox/SolidFuel, booster propellant fraction, commanded
 G, ET LF/Ox remaining, orbit shape, engine allocation, actual/target roll, measured
 roll rate, direct roll-control input, and pitch/yaw attitude errors. Read-only
-preflight also prints the current-pressure full-throttle physical thrust acceleration.
+preflight also prints current-pressure acceleration using the configured SRB limits
+and the expected full-thrust ignition acceleration.
 Ctrl-C and SIGTERM return liquid throttle to zero and release autopilot to SAS.
 Legacy solid boosters, if present, still burn to depletion. Liquid booster stages
 are throttleable and separate together on propellant depletion.

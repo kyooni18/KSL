@@ -813,7 +813,11 @@ class Shuttle:
         thrust_total = 0.0
         moment = 0.0
         for engine in self.solid_boosters:
-            thrust = engine.thrust if engine.active else (engine.max_thrust if engine.has_fuel else 0.0)
+            # kRPC's max_thrust ignores the part's thrust limiter. Before SRB
+            # ignition, use the configured limiter so pad estimates match the
+            # thrust the motors will actually deliver after staging.
+            thrust = (engine.thrust if engine.active else
+                      engine.max_thrust * engine.thrust_limit if engine.has_fuel else 0.0)
             thrust_total += thrust
             moment += thrust * self.project(engine.part.position(frame))
         return thrust_total, moment
@@ -860,7 +864,7 @@ class Shuttle:
             return 0.0
         propellant_mass = sum(resource_mass([engine.part], ('SolidFuel',))
                               for engine in self.solid_boosters)
-        mass_flow = sum(self._engine_mass_flow(engine)
+        mass_flow = sum(self._engine_mass_flow(engine) * engine.thrust_limit
                         for engine in self.solid_boosters)
         return propellant_mass/mass_flow if mass_flow > 0 else math.inf
 
@@ -1178,7 +1182,7 @@ def run(args):
         result = shuttle.allocation(
             max_g=args.max_g, target_g=preflight_target_g, altitude=preflight_altitude)
         booster_names = ', '.join(sorted({e.part.title for e in shuttle.boosters}))
-        booster_max_thrust = sum(e.max_thrust for e in shuttle.boosters)
+        booster_max_thrust = sum(e.max_thrust * e.thrust_limit for e in shuttle.boosters)
         kinds = ','.join(shuttle.booster_kinds)
         booster_lf = sum(resource_total(parts, 'LiquidFuel', maximum=True)
                          for parts in shuttle.booster_branch_parts)
@@ -1204,6 +1208,11 @@ def run(args):
         full_thrust = (sum(engine.max_thrust for group in shuttle.groups for engine in group) +
                        fixed_thrust)
         full_throttle_g = full_thrust / (v.mass * G0) if v.mass > 0 else 0.0
+        if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
+            ignition_thrust = (sum(engine.max_thrust for engine in shuttle.core_groups[0]) +
+                               fixed_thrust)
+            ignition_g = ignition_thrust / (v.mass * G0) if v.mass > 0 else 0.0
+            print(f'SSMEs at full limiter plus configured SRB thrust: {ignition_g:.2f} G')
         if shuttle.vehicle_kind == 'nuclear-solid':
             print(f"Orbiter J-N500 / ET Rhino thrust: {shuttle.skiff.max_thrust/1000:.0f}/"
                   f"{sum(e.max_thrust for e in shuttle.et_engines)/1000:.0f} kN; "
