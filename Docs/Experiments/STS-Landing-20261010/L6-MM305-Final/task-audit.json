@@ -1,0 +1,27 @@
+{
+  "objective": "L5 from72km, additional combined live MM305/Final test, newcheckpoint and exactrunwaytargetsurvey",
+  "requirements": [
+    {
+      "requirement": "L5 from verified72km checkpoint completed",
+      "evidence": "../L5-72km/launch.json, live.log, landing-result.json",
+      "complete": true
+    },
+    {
+      "requirement": "Newcheckpoint and singular MM305\u2192Final\u2192touchdown\u2192rollout live test completed",
+      "evidence": "../L5-72km/mm305-final.physics.json, mm305-final.sfs.gz; L6 launch.json, live.log, landing-result.json",
+      "complete": true
+    },
+    {
+      "requirement": "Search official altitude/raycast references and measure targeted runway deck",
+      "evidence": "../L5-72km/runway-height-evidence.json, runway-deck-raycasts.json, touchdown-target-raycasts.json, runway-survey-summary.json; LOG\u00a716\u201321",
+      "complete": true
+    },
+    {
+      "requirement": "Keep native replay/live reference consistent and preserve gates/saves",
+      "evidence": "runway-reference.json; commit e3901e2; passing runway_collision and simulator_execution; protected86km hash verified after both flights; native corrected replay failure retained without gate relaxation",
+      "complete": true
+    }
+  ],
+  "protected86kmSHA256": "4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6",
+  "scopeLimitation": "Requested testing and survey work complete. Accepted landing performance, weak-pitch correction, and overall STS campaign reliability remain unresolved: L5/L6 touchdown too slow and corrected native replay short."
+}

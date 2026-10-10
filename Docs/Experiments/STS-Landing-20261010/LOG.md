@@ -525,3 +525,27 @@ AoA fit rejected for adoption because held-out explanatory power is weak.
 No live gain, source or plant coefficient change. Reusable experiment script
 fit-pitch-response.py and report pitch-response-L4-L5.json retained underL6.
 L6 remains active inMM305 nearFinal-line handoff; landing still unverified.
+
+## 26. L6 completed; requested test/survey deliverables audited
+
+L6 runnerPID14072 exited naturally at CompleteUT2528.209863. Live phase
+transitions: MM305UT2163.9899 →FinalUT2414.1299 →FlareUT2469.1899 →
+TouchdownUT2483.6099 →RolloutUT2484.2499 →CompleteUT2528.2099. First landed
+frameUT2483.3699: speed52.8154m/s, sink1.5724m/s, along640.029m, cross10.846m.
+Runner verifies stopped surface-speed1.50m/s, along1759.2m, cross10.6m.
+Physical runway contact and completed rollout proven; speed acceptance fails.
+Late live aero residual warning91%. No manual stop or gate bypass.
+Protected86km hash and newMM305 checkpoint hash reverified unchanged; no
+headless runner remains. Landing-result.json retains primary frames/transitions.
+
+Active test/survey objective audit inL6/task-audit.json: L5 ranfrom72km to
+rollout; a newintactMM305checkpoint was saved/archived/physics-crosschecked;
+L6 exercisedMM305/Final/touchdown/rollout together asonecontinuouslive test;
+officialaltitude/raycastreferencessearched and actualcollider target measured
+68.442mASL at375m; nativeplane/radar alignedto measuredslope with focusedtests
+passing and accurate correctedreplayfailure retained. These requested tests
+and surveydeliverables are complete. This does NOT declare the broaderSTS
+landingcampaign successful: weakpitchcorrection, acceptedtouchdownspeed,
+live/native response agreement and campaignrepeatability remain unresolved.
+Nextdevelopment should resolve that measuredlive/native response mismatch
+beforeclaiming reliable acceptedlandings or enablingadaptiveflarebydefault.
