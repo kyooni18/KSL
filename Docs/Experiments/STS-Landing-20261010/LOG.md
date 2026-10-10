@@ -356,3 +356,13 @@ is independent of guidance site.altitude; both references must be reconciled
 when a measured deck correction is adopted, rather than masking their mismatch.
 Observers are running; output profiles, collider values, checkpoint and landing
 are not yet verified.
+
+§17 observer refinement: original read-only runway observerPID29897 was
+terminated and replaced withPID35303; no live flight/controller was stopped.
+New sampling waits for<3km longitudinal separation and<1500m altitude. It also
+requires centerline±20m heights to agree<15cm and stand>25cm above at least one
+±70m outside-runway point. This avoids certifying bare terrain from two matching
+vertical rays. Exact collider results are still pending. L5 remains live at
+UT1741.7 /59.1km /782.5km range; checkpoint observerPID25435 still waiting.
+L5-72km/README.md records the prepared singular MM305→Final→rollout restart
+command, required profile/provenance checks and normal gates. Not yet executed.
