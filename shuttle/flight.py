@@ -133,28 +133,32 @@ def part_engine(part):
         return None
 
 
-def isolate_aero_roll(vessel):
-    """Disable only aerodynamic roll channels and return restorable states."""
+def limit_aero_roll(vessel, authority_limit=35.0):
+    """Enable shuttle elevon roll at limited authority and return prior states."""
     states = []
     for part in vessel.parts.all:
+        if 'elevon' not in getattr(part, 'name', '').lower():
+            continue
         try:
             surface = part.control_surface
             if surface is None:
                 continue
             enabled = surface.roll_enabled
-            states.append((surface, enabled))
-            if enabled:
-                surface.roll_enabled = False
+            authority = surface.authority_limiter
+            states.append((surface, enabled, authority))
+            surface.roll_enabled = True
+            surface.authority_limiter = min(authority, authority_limit)
         except Exception:
             continue
     return states
 
 
 def restore_aero_roll(states):
-    """Restore control-surface roll-channel states captured by isolate_aero_roll."""
-    for surface, enabled in states:
+    """Restore control-surface states captured by limit_aero_roll."""
+    for surface, enabled, authority in states:
         try:
             surface.roll_enabled = enabled
+            surface.authority_limiter = authority
         except Exception:
             pass
 
@@ -1480,14 +1484,14 @@ def run(args):
                     if roll_allowed and not mission_roll_commanded:
                         saved_auto_tune = ap.auto_tune
                         saved_roll_pid = ap.roll_pid_gains
-                        roll_surface_states = isolate_aero_roll(v)
+                        roll_surface_states = limit_aero_roll(v)
                         ap.auto_tune = False
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                         control.roll = 0
                         mission_roll_commanded = True
                         print(f'Physical orbiter-side roll started: earthward; '
-                              f'aerodynamic roll surfaces isolated for a low-load roll')
+                              f'elevon roll enabled at 35% authority')
                     roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
                     if recovered_autopilot and roll_active:
                         ap.auto_tune = False
@@ -1637,9 +1641,7 @@ def run(args):
                                 elif (conn.space_center.ut-roll_settle_since >=
                                       args.roll_settle_time):
                                     mission_roll_settled = True
-                                    restore_aero_roll(roll_surface_states)
-                                    roll_surface_states = []
-                                    print('Aerodynamic roll surfaces restored after roll')
+                                    print('Limited elevon roll authority retained for ascent attitude hold')
                                     print('Physical heads-down roll settled; gravity turn released')
                             else:
                                 roll_settle_since = None
