@@ -823,8 +823,9 @@ class Shuttle:
         self.solid_boosters = [e for branch, kind in
                                zip(self.booster_branches, self.booster_kinds)
                                if kind == 'solid' for e in branch]
-        if self.solid_boosters and len(self.sepmotors) != len(self.solid_boosters):
-            raise ValueError(f'Expected one separation motor per solid booster, '
+        if self.solid_boosters and (not self.sepmotors or
+                                    len(self.sepmotors) % len(self.solid_boosters)):
+            raise ValueError(f'Expected an equal number of separation motors per solid booster, '
                              f'found {len(self.sepmotors)} for {len(self.solid_boosters)} boosters')
         self.liquid_booster_group = list(self.liquid_boosters)
         self.core_groups = [ssmes]
@@ -1460,7 +1461,7 @@ def run(args):
                 for engine in shuttle.sepmotors:
                     engine.thrust_limit = 0.0
                     engine.active = False
-                print(f'{len(shuttle.sepmotors)} Mite separator motors inhibited until SRB separation')
+                print(f'{len(shuttle.sepmotors)} separator motors inhibited until SRB separation')
                 # The next stage ignites the Clydesdales and releases the clamps;
                 # Mites share that stage, so they are disabled again immediately.
                 control.activate_next_stage()
