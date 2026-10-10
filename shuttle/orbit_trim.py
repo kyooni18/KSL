@@ -66,9 +66,11 @@ def execute(conn, vessel, node, done, tolerance=0.03):
     while ap.error > 3.0 and time.time()-aligned_wait < 120:
         time.sleep(0.1)
     ctl.throttle = 1.0
+    mass_start = vessel.mass
     while True:
         remaining = node.remaining_delta_v
-        if remaining <= tolerance or done(vessel.orbit):
+        spent = isp*9.80665*math.log(mass_start/vessel.mass)
+        if remaining <= tolerance or done(vessel.orbit) or spent > 1.25*dv+1.0:
             break
         if ap.error > 10.0:
             ctl.throttle = 0.0
@@ -133,9 +135,9 @@ def main():
         dv = solve(make, lambda orb: orb.apoapsis_altitude-args.apoapsis, -150.0, 150.0)
         return ut, dict(prograde=dv), lambda orb: orb.apoapsis_altitude <= args.apoapsis+30.0 if dv < 0 else orb.apoapsis_altitude >= args.apoapsis-30.0
 
-    for name, planner in (('inclination', step_inclination),
-                          ('apoapsis', step_apoapsis),
-                          ('periapsis', step_periapsis)):
+    for name, planner in (('periapsis', step_periapsis),
+                          ('inclination', step_inclination),
+                          ('apoapsis', step_apoapsis)):
         ut, comps, done = planner()
         node = vessel.control.add_node(ut, **comps)
         print(f'{name}: node at T+{ut-sc.ut:.0f} s, components {comps}, '
