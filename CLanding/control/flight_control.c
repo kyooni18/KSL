@@ -38,7 +38,7 @@ static void fc_tuning_init(void) {
         .pitch_lag_s = fc_tuning_override(on, "KSP_LANDER_PITCH_LAG", 0.12),
         .pitch_wn = fc_tuning_override(on, "KSP_LANDER_PITCH_WN", 1.05),
         .pitch_zeta = fc_tuning_override(on, "KSP_LANDER_PITCH_ZETA", 1.15),
-        .pitch_trim_ki = fc_tuning_override(on, "KSP_LANDER_PITCH_TRIM_KI", 0.004),
+        .pitch_trim_ki = fc_tuning_override(on, "KSP_LANDER_PITCH_TRIM_KI", 0.025),
         .roll_lag_s = fc_tuning_override(on, "KSP_LANDER_ROLL_LAG", 0.12),
         .roll_wn = fc_tuning_override(on, "KSP_LANDER_ROLL_WN", 0.65),
         .roll_zeta = fc_tuning_override(on, "KSP_LANDER_ROLL_ZETA", 1.15),
@@ -905,6 +905,11 @@ bool flight_control_step_attitude(FlightControlState *state,
            alone carry the static-stability trim moment (live MM305: ~0.036
            input per degree of AoA at M2.5).  The Entry gain left a 2-3 deg
            AoA deficit decaying over ~7 s; TAEM closes it in ~2 s. */
+        /* Final/flare: live STS L1/L3 (2026-10-10) carried a 2-3 deg AoA
+           deficit through the whole preflare pull at 0.004 -- the airframe
+           is statically stiff (~0.07 input/deg) against the capped PD -- so
+           the arrest came late: a balloon and float (L1), a touchdown 221 m
+           short (L3).  The TAEM gain closes it within the pull. */
         double ki = in_approach ? tuning->pitch_trim_ki :
             (profile == PROFILE_TAEM ? 0.025 : 0.008);
         /* Anti-windup on the total elevator demand, not just its PD part. */

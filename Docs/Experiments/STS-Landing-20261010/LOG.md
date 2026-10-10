@@ -122,3 +122,18 @@ Flare, live vs sim replay of the same Final state (sim: 67.4 m/s, 1.5 m/s sink, 
   lands 73.8/102 m. identify_stsn_attitude.py on STS logs gives pitch R² ≈ 0 (unusable).
 - Rejected: floor lift cap reduced by the sink deficit when floating — off-runway/hard (77 m/s at −2 m,
   66 m/s at 5.6 m/s sink, 48 m/s), nominal sink 1.5→3.9. The floor carries the last metres.
+
+### L3 result (FlightLogs/2026-10-10T05-12-03Z) and flare fix
+- MM304 → TAEM handoff UT 2163, 27.1 km, 872 m/s, 59.3 km (L1: 2164/27.1/873/58 — repeatable); overhead loop;
+  Final at UT 2413, 6.2 km, cross +9 m.
+- Same pitch-lag signature as L1 (AoA 2–3° below command through the pull, trim 0.12→0.24), pull from ~240 m at
+  38 m/s sink, 1.6 g only at 34 m → first main contact 221 m short of the threshold at 87 m/s, bounces (one at
+  23° pitch / 11.6 m/s sink), rollout stopped on the runway ~1.2 km along. Run flags "touchdown outside runway
+  envelope" and never completes.
+- Sim with a live-like direct plant (att-live: pitch ctrl 23.3°/s²/kPa, stiffness 1.63/kPa, trim AoA 1.6°)
+  reproduces it (L3 replay lands 23 m short at ki 0.004).
+- Approach/flare pitch-trim ki 0.004 → 0.025 (TAEM's live value): L1 replay 70.3 m/s/0.73/320 m, L3 69.9/1.27/269 m;
+  plant bracket (stiffness 1.2/1.63/2.2) 5/6 vs 3/8 at 0.004; 7 handoff chains (direct FCS) 6/7, 12-33-31 short
+  (−382 m; −838 m at 0.004 — pre-existing): admission-trigger latch at 1357 m freezes an unconverged aim (−1154 m).
+  Unfreezing the aim while latched rejected (speed loop is off when latched: 49 m/s, 5 m/s sink).
+  The STS-N borrowed plant is not representative (baseline also fails).
