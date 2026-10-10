@@ -1641,7 +1641,7 @@ def run(args):
                     if state == 'ASCENT':
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
-                            heading_goal = target_heading - 3.0
+                            heading_goal = target_heading
                             if flight.horizontal_speed > 450.0:
                                 # The velocity vector lags the nose heading by many
                                 # degrees at speed, so steer on the measured surface
@@ -1651,13 +1651,29 @@ def run(args):
                                     v.velocity(body.reference_frame), body.reference_frame,
                                     v.surface_reference_frame)
                                 vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
-                                azimuth_error = wrap_roll(target_heading-vel_azimuth)
+                                # Desired surface azimuth at the current speed so the
+                                # *inertial* velocity azimuth equals the one that gives
+                                # the target inclination.
+                                lat_now = math.radians(flight.latitude)
+                                v_rot_now = (body.rotational_speed*
+                                             (body.equatorial_radius+flight.mean_altitude)*
+                                             math.cos(lat_now))
+                                east_in = svel[2]+v_rot_now
+                                vh_in = math.hypot(east_in, svel[1])
+                                a_inertial = math.asin(max(-1.0, min(1.0,
+                                    math.cos(math.radians(args.inclination))/
+                                    max(0.05, math.cos(lat_now)))))
+                                desired = math.degrees(math.atan2(
+                                    vh_in*math.sin(a_inertial)-v_rot_now,
+                                    vh_in*math.cos(a_inertial))) % 360
+                                heading_goal = desired
+                                azimuth_error = wrap_roll(desired-vel_azimuth)
                                 # Keep side loads small while the air is thick.
                                 lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
                                               else 20.0 if flight.dynamic_pressure > 1500.0
                                               else 30.0)
                                 heading_goal += max(-lead_limit,
-                                                    min(lead_limit, 1.2*azimuth_error))
+                                                    min(lead_limit, 1.5*azimuth_error))
                             args.heading = slew_value(
                                 args.heading, heading_goal,
                                 3.0 if flight.dynamic_pressure < 1500.0
