@@ -50,7 +50,8 @@ The Orbiter controller also supports two Size2 liquid side boosters, but the
 active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
 their Clydesdale motors run out of fuel. Mite motors attached at the nose are
-left out of launch control. On the live STS, all three SSMEs ignite at a 100%
+held inactive during the Clydesdale burn and ignite immediately before booster
+separation. On the live STS, all three SSMEs ignite at a 100%
 thrust limiter while the clamps still hold. The controller verifies at least
 95% of their combined maximum thrust and holds for a 3-second lead interval by
 default; `--ssme-lead-time` changes that interval. Only then does the next
@@ -74,6 +75,7 @@ roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; the turn is
 released after roll error stays within 3° for the configured settle interval.
 The roll settle check also requires body roll rate below 1.5°/s to tolerate
 the small residual oscillation measured on the active STS.
+The body roll is rate-capped at 3°/s and pauses if nose error exceeds 5°.
 The 180° roll is held through booster separation, then
 targets 0° after 180 seconds; use `--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.

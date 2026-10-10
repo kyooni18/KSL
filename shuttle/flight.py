@@ -183,6 +183,12 @@ def is_cub_engine(engine):
     return name == 'LiquidEngineRV-1' or 'Cub' in title
 
 
+def is_separator_motor(engine):
+    part = engine.part
+    return (getattr(part, 'name', '') in ('sepMotor1', 'Mite') or
+            'Mite' in getattr(part, 'title', ''))
+
+
 def meco_ready(apoapsis_altitude, periapsis_altitude, target_apoapsis, minimum_periapsis):
     """Normal MECO requires both the target apoapsis and a near-orbital periapsis."""
     return (apoapsis_altitude >= target_apoapsis and
@@ -660,6 +666,9 @@ class Shuttle:
             raise ValueError(f'Expected two RSRM booster branches, found {len(self.booster_branches)}')
 
         booster_parts = {p for branch in self.booster_branch_parts for p in branch}
+        self.sepmotors = [engine for part in booster_parts
+                          if (engine := part_engine(part)) is not None and
+                          is_separator_motor(engine)]
         self.tanks = [p for p in et_subtree if p not in booster_parts and
                       has_resource(p, 'LiquidFuel') and has_resource(p, 'Oxidizer') and
                       p.resources.max('LiquidFuel') > 0 and p.resources.max('Oxidizer') > 0]
@@ -764,6 +773,9 @@ class Shuttle:
         if len(self.booster_branches) != 2:
             raise ValueError(f'Expected two supported side boosters, found {len(self.booster_branches)}')
         booster_parts = {p for branch in self.booster_branch_parts for p in branch}
+        self.sepmotors = [engine for part in booster_parts
+                          if (engine := part_engine(part)) is not None and
+                          is_separator_motor(engine)]
         self.tanks = [p for p in et_subtree if p not in booster_parts and
                       (has_resource(p, 'LiquidFuel') or has_resource(p, 'Oxidizer'))]
         if not self.tanks:
@@ -778,13 +790,15 @@ class Shuttle:
         self.solid_boosters = [e for branch, kind in
                                zip(self.booster_branches, self.booster_kinds)
                                if kind == 'solid' for e in branch]
+        if self.solid_boosters and len(self.sepmotors) != len(self.solid_boosters):
+            raise ValueError(f'Expected one separation motor per solid booster, '
+                             f'found {len(self.sepmotors)} for {len(self.solid_boosters)} boosters')
         self.liquid_booster_group = list(self.liquid_boosters)
         self.core_groups = [ssmes]
         self.groups = self.core_groups + ([self.liquid_booster_group]
                                           if self.liquid_booster_group else [])
         self.inner_skippers = []
         self.outer_skippers = []
-        self.sepmotors = []
         self.transfers = {}
         self.separated = False
         self.booster_separation_ut = None
@@ -813,13 +827,18 @@ class Shuttle:
         thrust_total = 0.0
         moment = 0.0
         for engine in self.solid_boosters:
-            # kRPC's max_thrust ignores the part's thrust limiter. Before SRB
-            # ignition, use the configured limiter so pad estimates match the
-            # thrust the motors will actually deliver after staging.
-            thrust = (engine.thrust if engine.active else
-                      engine.max_thrust * engine.thrust_limit if engine.has_fuel else 0.0)
+            try:
+                # kRPC's max_thrust ignores the part's thrust limiter. Before
+                # SRB ignition, honor that limiter in pad estimates.
+                thrust = (engine.thrust if engine.active else
+                          engine.max_thrust * engine.thrust_limit
+                          if engine.has_fuel else 0.0)
+                arm = self.project(engine.part.position(frame))
+            except Exception:
+                # A separated or destroyed booster invalidates its part handle.
+                continue
             thrust_total += thrust
-            moment += thrust * self.project(engine.part.position(frame))
+            moment += thrust * arm
         return thrust_total, moment
 
     @staticmethod
@@ -1085,9 +1104,12 @@ class Shuttle:
                 pass
         for engine in self.sepmotors:
             try:
+                engine.thrust_limit = 1.0
                 engine.active = True
             except Exception:
                 pass
+        if self.sepmotors:
+            print(f'Igniting {len(self.sepmotors)} separator motors with booster separation')
         for decoupler in self.booster_decouplers:
             try:
                 decoupler.decouple()
@@ -1197,6 +1219,8 @@ def run(args):
                             'Size2 liquid booster')
             print(f'{v.name}: {v.mass/1000:.2f} t; engine groups '
                   f'Orbiter-3xSSME / Booster-2x{booster_type}')
+            if shuttle.solid_boosters:
+                print(f'SRB separation motors detected: {len(shuttle.sepmotors)}')
         else:
             print(f'{v.name}: {v.mass/1000:.2f} t; engine groups '
                   'Orbiter-Skiff / ET-Wolfhound / ET-Skipper-inner2 / ET-Skipper-outer2 / '
@@ -1377,11 +1401,21 @@ def run(args):
                 time.sleep(min(.05, max(0.0, lead_deadline - time.monotonic())))
 
             if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
-                # These solid motors cannot be started by Engine.active. The next
-                # stage ignites them and releases the clamps; SSMEs are already lit.
+                for engine in shuttle.sepmotors:
+                    engine.thrust_limit = 0.0
+                    engine.active = False
+                print(f'{len(shuttle.sepmotors)} Mite separator motors inhibited until SRB separation')
+                # The next stage ignites the Clydesdales and releases the clamps;
+                # Mites share that stage, so they are disabled again immediately.
                 control.activate_next_stage()
                 if conn.space_center.active_vessel != v:
                     raise RuntimeError('Active vessel changed during booster ignition staging')
+                # They share the Clydesdale ignition stage on this craft, so
+                # immediately shut them down while the configured zero limiter
+                # protects their propellant until booster separation.
+                for engine in shuttle.sepmotors:
+                    engine.thrust_limit = 0.0
+                    engine.active = False
                 booster_deadline = time.monotonic() + 5.0
                 expected_booster_thrust = sum(engine.max_thrust
                                               for engine in shuttle.solid_boosters)
@@ -1588,9 +1622,13 @@ def run(args):
                             roll_error_signed, body_roll_rate, roll_accel_reference,
                             args.roll_rate, args.roll_control_limit,
                             args.roll_response_time)
-                        control.roll = roll_control
                         settle_nose_error = direction_error_deg(
                             actual_direction, target_direction)
+                        # Pause roll whenever the nose is being pulled away from
+                        # the commanded ascent vector; resume once pitch/yaw recover.
+                        if settle_nose_error > 5.0:
+                            roll_control = 0.0
+                        control.roll = roll_control
                         if not mission_roll_settled:
                             if roll_attitude_settled(
                                     roll_error, body_roll_rate,
@@ -1737,7 +1775,7 @@ def main():
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
-    parser.add_argument('--roll-rate', type=float, default=6.0,
+    parser.add_argument('--roll-rate', type=float, default=3.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
@@ -1747,9 +1785,9 @@ def main():
                         help='AutoTune target roll overshoot fraction')
     parser.add_argument('--roll-settle-time', type=float, default=2.0,
                         help='Seconds roll/pitch/yaw errors must remain settled')
-    parser.add_argument('--roll-control-limit', type=float, default=1.0,
+    parser.add_argument('--roll-control-limit', type=float, default=.25,
                         help='Maximum direct roll-control magnitude during physical roll')
-    parser.add_argument('--roll-response-time', type=float, default=.20,
+    parser.add_argument('--roll-response-time', type=float, default=.5,
                         help='Rate-controller response horizon in seconds for physical roll')
     parser.add_argument('--hz', type=float, default=10)
     parser.add_argument('--timeout', type=float, default=1800)
