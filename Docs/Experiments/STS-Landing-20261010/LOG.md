@@ -449,3 +449,20 @@ changing every altitude to one constant.
 
 Artifacts: runway-deck-raycasts.json, touchdown-target-raycasts.json,
 runway-survey-summary.json. No live control, stop, or reload issued by survey.
+
+## 22. L5 completed naturally; low-speed touchdown remains unresolved
+
+L5 runnerPID17952 exited after native Complete atUT2525.0. Runner verifies
+landed surface-speed1.49m/s, along1764.2m, cross12.1m: physical runway touchdown
+and completed in-envelope rollout. First reported Touchdown phaseUT2480.6 /
+55.4m/s is below63.75m/s acceptance floor. This is not a campaign success or
+repeatability proof despite one passing native checkpoint replay. Late live
+aerodynamic residual warning reached104%; native/live mismatch needs investigation
+beyond measured runway-height correction. Reconstructed landing-result.json
+retains first landed frame and final frame as primary evidence. No manual stop.
+
+All L5/read-only observers have completed. The verified new MM305 checkpoint
+is ready for a subsequent singular MM305→Final→rollout live test. Exact survey
+now supports68.442m deck at375m target,69.166m atconfiguredorigin, and fitted
+plane slope−0.12742°. Next-run guidance target and native contact plane still
+need these references applied and verified; no second live test launched yet.
