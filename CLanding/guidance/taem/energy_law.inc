@@ -222,7 +222,6 @@ static bool tel_hac_tangent(const TaemEnergyLawState *L,const TelContext *c,
     double end=-L->side*TEL_PI/2.0;
     *arc=fmod(L->side*(end-ang),2.0*TEL_PI);
     if (*arc<0.0) *arc+=2.0*TEL_PI;
-    if (*arc>1.95*TEL_PI) *arc=0.0;
     *arc*=r;
     return true;
 }
@@ -484,7 +483,11 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
                 double cx=-D,cy=side*r,ang=atan2(s.y-cy,s.x-cx),end=-side*TEL_PI/2.0;
                 double rem=fmod(side*(end-ang),2.0*TEL_PI);
                 if (rem<0.0) rem+=2.0*TEL_PI;
-                if (rem>1.9*TEL_PI&&fabs(tel_wrap(s.psi))<0.3) rem=0.0; /* already aligned */
+                if (rem>1.9*TEL_PI) {
+                    /* just past the exit: fly the full circle only if the energy needs it */
+                    TelSegment full[1]={{rem*r,r}};
+                    if (tel_predict_range(&c,&s,TEL_K_PLAN,1e9,full,1)<0.5*rem*r) rem=0.0;
+                }
                 L->hac_left_rad=rem;
             }
             L->hac_last_ang=NAN;
@@ -517,7 +520,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         double r_err=hypot(s.x-cx,s.y-cy)-r;
         course_cmd=ang+side*(TEL_PI/2.0+clampd(r_err/1500.0,-0.6,0.6));
         bank_ff=side*atan(gnd*gnd/(TEL_G0*r))*RAD2DEG;
-        if (L->hac_left_rad<0.3&&fabs(tel_wrap(s.psi))<0.15) {
+        if (L->hac_left_rad<0.3&&fabs(tel_wrap(s.psi))<0.35) {
             L->leg=TEL_LEG_FINAL;
             bank_ff=0.0;
             course_cmd=atan2(-s.y,3000.0);
