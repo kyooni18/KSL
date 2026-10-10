@@ -303,3 +303,28 @@ reference temporary build paths; the terminal variant requires replacing the
 pitch_lag_s declaration with a 0.24 s Approach/Flare-only selection. The shared
 live backend remains unchanged. A validated correction of weak live pitch
 response is still outstanding; these results do not authorize a new live run.
+
+## 16. L5 authorized 72 km launch and runway-height investigation
+
+Active goal explicitly authorizes L5 from 72 km and additional combined MM305/Final
+live tests. Preflight found exactly one KSP (PID11553), no headless runner, active
+STS in the 86.7 km orbit. Protected Steam86km hash unchanged; 72km checkpoint
+STS-OMS-72km-20261009-v2 hash matches the independently measured physics profile.
+L5 runner PID17952, existing fixed-flare ki0.025 backend, adaptive OFF,
+modelId STS, original gates/restrictions and no-crash-guard policy preserved.
+No unqualified continuation override inherited. Coherent checkpoint physics was
+frozen, then entry continuation engaged normally at UT1490.7 / 71.9km.
+MM305 ownership capture requested as `STS-L5-MM305-Final-20261010T075356Z`; this is
+for one continuous MM305 → Final → touchdown → rollout restart, not separate
+stage tests. Capture and landing remain unverified until observed.
+
+Runway research: official kRPC Flight implementation defines MeanAltitude at COM;
+SurfaceAltitude = min(MeanAltitude - terrainAltitude, MeanAltitude). Thus their
+difference measures terrain elevation, not independently certified runway collider
+height. L4 landed samples show terrain elevation67.6526–68.3162m along404–1403m;
+nominal measured main-gear geometry implies deck estimates68.4075m at first landed
+sample and67.7034m at rollout end, with suspension compression unaccounted.
+Configured site70m is higher, but neither these estimates nor historical generic
+wiki numbers justify an exact universal deck value. L5 retains70m pending direct
+contact/geometry verification. Evidence and official source links are retained
+in L5-72km/runway-height-evidence.json. Exact deck/target correction remains open.

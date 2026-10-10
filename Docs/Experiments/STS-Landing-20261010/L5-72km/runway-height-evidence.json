@@ -1,0 +1,31 @@
+{
+  "source": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+  "samples": 684,
+  "first": {
+    "ut": 2496.64508788936,
+    "along": 404.049424210275,
+    "cross": -0.180312891817587,
+    "meanAltitude": 71.6026271174196,
+    "terrainElevation": 68.31617543438914,
+    "pitch": 2.88461303710938,
+    "estimatedDeckFromGear": 68.40753875230095
+  },
+  "last": {
+    "ut": 2539.00508788933,
+    "along": 1403.12823344952,
+    "cross": -1.94854226861421,
+    "meanAltitude": 70.7777607045136,
+    "terrainElevation": 67.65733795065894,
+    "pitch": -4.41721105575562,
+    "estimatedDeckFromGear": 67.70339105001747
+  },
+  "terrainElevationRange": [
+    67.65261313493832,
+    68.31617543438914
+  ],
+  "limitations": "terrain elevation is not independently verified collider height; gear-based estimate uses measured nominal gear geometry but excludes suspension compression. Do not label either exact runway deck.",
+  "references": [
+    "https://krpc.github.io/krpc/latest/lua/api/space-center/flight.html",
+    "https://raw.githubusercontent.com/krpc/krpc/master/service/SpaceCenter/src/Services/Flight.cs"
+  ]
+}
