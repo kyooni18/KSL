@@ -30,6 +30,9 @@
 #define AF_FLOAT_HEIGHT 1.5
 #define AF_FLOAT_SINK 1.0
 #define AF_SGS_SINK 3.0
+#ifndef AF_SURGE_T
+#define AF_SURGE_T .5
+#endif
 #define AF_SLEW 5.0          /* deg/s incidence command slew, as the executed flare */
 #define AF_TD_PITCH 8.0
 #define AF_FLOOR_START 10.0  /* wheel height where the mains-first attitude floor begins */
@@ -50,6 +53,7 @@ typedef struct {
     double h, sink, V, gamma, aoa, cmd, x;
     bool engaged;                   /* the flare has started (glide hold until then) */
     double glide_sink;              /* sink when it started: the profile never asks for more */
+    double aoa_rate;                /* measured incidence rate (NAN: as the lag model says) */
 } AfState;
 
 typedef struct {
@@ -187,9 +191,17 @@ static double af_profile(const AfParams*P,double g0,double h){
 static AfLawOut af_law(const AfModel*M,const AfParams*P,const AfState*s,double dt){
     AfLawOut o={0};
     double V=fmax(s->V,1.0),q=.5*M->rho*V*V,m=M->mass,g0=M->g0;
-    double lq=0.0,dq=0.0;af_aero(M,s->aoa,&lq,&dq);
-    double a_now=lq*q/m-g0*cos(s->gamma);
     double T=clampd(M->tau,.3,3.0);
+    /* Incidence still rising faster than the lag model allows is pitch-rate
+       momentum the first-order model does not carry: it keeps rising after
+       the command drops (live-like plants: ~1 deg past a reduced command at
+       the shallow glide, a balloon and a float).  Read the pull at where
+       that momentum takes the incidence. */
+    double model_rate=(M->gain*s->cmd+M->bias-s->aoa)/fmax(M->tau,.1);
+    double surge=s->h<P->sgs_height+5.0&&isfinite(s->aoa_rate)&&isfinite(model_rate)?
+        clampd((s->aoa_rate-model_rate)*AF_SURGE_T,-2.0,2.0):0.0;
+    double lq=0.0,dq=0.0;af_aero(M,s->aoa+surge,&lq,&dq);
+    double a_now=lq*q/m-g0*cos(s->gamma);
     /* Only a deceleration already building is read ahead; an unloaded glide
        is not extrapolated into a steeper dive.  The law itself unloads it
        over about one lag, so it is carried at its first-order-decayed mean
@@ -213,7 +225,11 @@ static AfLawOut af_law(const AfModel*M,const AfParams*P,const AfState*s,double d
        and a 1-g hold there floats for seconds, bleeding the touchdown speed. */
     if(s->h<=P->sgs_height){
         bool floating=s->h>5.0&&s->sink<.5*af_profile(P,g0,s->h);
-        a_d=fmax(a_d,floating?-.05*g0:0.0);
+        /* Incidence surging past its command is also let unload below 1 g,
+           in proportion: the momentum, not the command, carries the balloon. */
+        double floor_a=floating?-.05*g0:0.0;
+        floor_a=fmin(floor_a,-.08*g0*clampd(surge,0.0,1.0));
+        a_d=fmax(a_d,floor_a);
     }
     a_d=clampd(a_d,-.12*g0,1.2*g0);
     o.accel=a_d;
@@ -245,6 +261,7 @@ static AfOutcome af_predict(const AfModel*M,const AfParams*P,AfState s){
         if(s.h<=0.0){r.landed=true;break;}
         if(s.V<.6*M->v_floor)break;
         AfLawOut o=af_law(M,P,&s,DT);
+        s.aoa_rate=NAN;
         if(o.on_arc&&!started){started=true;s.engaged=true;s.glide_sink=s.sink;}
         s.cmd=o.cmd;
         double V=s.V,q=.5*M->rho*V*V;

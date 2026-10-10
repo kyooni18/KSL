@@ -163,3 +163,19 @@ Sim (direct FCS, live-like plant att-live and ±stiffness, trim ki 0.025 and the
 |---|---|---|
 | L1/L3 live Final states × 3 plants × 2 trim gains | 7/12 | 10/12 (L1 nominal 62.4 m/s; L1 stiff/ki0.004 102 m short) |
 | 7 live handoff chains | 6/7 | 5/7 (13-02-48 4.9 m/s sink; 12-33-31 51 m/s) |
+
+### 11a. Incidence surge (second-order pitch momentum)
+The trace of the L1 nominal float (62.4 m/s) shows the incidence still rising ~0.5 s after the command drops at the
+shallow glide (5.2 -> 5.9 deg with the command at 4.2): pitch-rate momentum that the first-order lag model does not
+carry. 13-02-48 shows the mirror (incidence still falling after the command rises: sink rebounds to 4.6 m/s).
+Change: the law reads the pull at aoa + (measured aoa rate - model rate)*0.5 s (signed, ±2 deg), only below
+SGS+5 m, and below the shallow glide may unload to -0.08 g in proportion to a positive surge.
+| variant | matrix | ki0.025 subset | chains |
+|---|---|---|---|
+| m9 (before) | 10/12 | 5/6 | 5/7 |
+| surge 0.5 s everywhere | 9/12 | | |
+| surge 0.25 s everywhere | 10/12 | | |
+| surge near SGS only | 9/12 | | |
+| + unload below SGS on surge | 8/12 | 6/6 | 5/7 |
+| + signed surge (kept) | 11/12 | 6/6 | 5/7 (12-33-31 51 m/s; 13-02-48 4.3 m/s sink) |
+Applying the surge on the whole arc weakens the main pull (short landings on soft plants).

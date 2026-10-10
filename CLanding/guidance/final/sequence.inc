@@ -622,7 +622,8 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         af_model(g,t,v,g0,aoa_max,v_td,100.0,touchdown_target+500.0,&M);
         AfState s0={.h=height,.sink=sink,.V=V,.gamma=gamma,.aoa=t->angle_of_attack,
             .cmd=g->terminal_aoa_cmd_ut>0.0?g->terminal_aoa_cmd_last:t->angle_of_attack,.x=along,
-            .engaged=g->terminal_pull_latch,.glide_sink=F->active?F->glide_sink:NAN};
+            .engaged=g->terminal_pull_latch,.glide_sink=F->active?F->glide_sink:NAN,
+            .aoa_rate=t->has_angle_of_attack_rate?t->angle_of_attack_rate:NAN};
         if(!F->plan_valid||t->ut-F->plan_ut>=.2)af_solve(F,&M,&s0,t->ut);
         if(F->plan_valid){
             AfParams P={F->arc_accel,F->sgs_height};
