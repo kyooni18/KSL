@@ -63,7 +63,7 @@ STS has an estimated 1.36 G at ignition with the three SSMEs at full thrust.
 periapsis is positive and below the 70 km atmosphere boundary. Reaching target
 apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
-segment until the periapsis gate is met. If ET propellant runs low first, the
+segment through the configured pitch slew until the periapsis gate is met. If ET propellant runs low first, the
 program separates the tank and hands off to the AJ10s rather than allowing an
 SSME fuel-out.
 The shuttle preserves its measured pad roll through the first 30 m of climb, then
@@ -72,6 +72,8 @@ performs a dedicated rate-damped body roll to twice the launch heading, wrapped 
 at 89° and the gravity turn is held. The roll axis is driven directly from measured
 roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; the turn is
 released after roll error stays within 3° for the configured settle interval.
+The roll settle check also requires body roll rate below 1.5°/s to tolerate
+the small residual oscillation measured on the active STS.
 The 180° roll is held through booster separation, then
 targets 0° after 180 seconds; use `--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.

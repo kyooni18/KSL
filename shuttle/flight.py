@@ -1475,13 +1475,16 @@ def run(args):
                             raw_pitch = gravity_turn_pitch(
                                 flight.vertical_speed, flight.horizontal_speed,
                                 flight.dynamic_pressure, initial_pitch)
+                        # Apply the MECO energy-build pitch through the same
+                        # slew limiter as the gravity turn. A post-slew clamp
+                        # can command an instantaneous 89-to-0 degree jump.
+                        if (v.orbit.apoapsis_altitude >= args.orbit and
+                                v.orbit.periapsis_altitude < args.meco_periapsis):
+                            raw_pitch = min(raw_pitch, args.meco_pitch)
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
                             args.pitch_slew, 1/args.hz)
                         pitch = commanded_pitch
-                        if (v.orbit.apoapsis_altitude >= args.orbit and
-                                v.orbit.periapsis_altitude < args.meco_periapsis):
-                            pitch = min(pitch, args.meco_pitch)
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if (shuttle.separated and
@@ -1591,7 +1594,8 @@ def run(args):
                         if not mission_roll_settled:
                             if roll_attitude_settled(
                                     roll_error, body_roll_rate,
-                                    settle_nose_error, angle_limit=3.0):
+                                    settle_nose_error, angle_limit=3.0,
+                                    rate_limit=1.5):
                                 if roll_settle_since is None:
                                     roll_settle_since = conn.space_center.ut
                                 elif (conn.space_center.ut-roll_settle_since >=
