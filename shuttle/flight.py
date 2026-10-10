@@ -1317,7 +1317,17 @@ def run(args):
                     'Core engines did not reach 50% of allocated thrust; '
                     'boosters remain unignited and clamps remain attached')
             print(f'Core engines ignited on clamps: {core_thrust/1000:.0f} kN; '
-                  'starting boosters only after verified core thrust')
+                  f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
+
+            # Make the liquid-engine-first sequence observable and give the
+            # SSMEs a real lead interval while the launch clamps still hold.
+            lead_deadline = time.monotonic() + args.ssme_lead_time
+            while time.monotonic() < lead_deadline:
+                if conn.space_center.active_vessel != v:
+                    raise RuntimeError('Active vessel changed during SSME lead interval')
+                if not all(engine.active for engine in core_engines):
+                    raise RuntimeError('SSME shut down during lead interval; boosters remain unignited')
+                time.sleep(min(.05, max(0.0, lead_deadline - time.monotonic())))
 
             if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
                 # These solid motors cannot be started by Engine.active. The next
@@ -1658,6 +1668,8 @@ def main():
                         help='Maximum dynamic pressure in Pa; reduces liquid throttle above this value')
     parser.add_argument('--launch-g', type=float, default=LAUNCH_TARGET_G,
                         help='Gentle initial thrust-acceleration target in Earth g')
+    parser.add_argument('--ssme-lead-time', type=float, default=3.0,
+                        help='Seconds to hold verified SSME thrust before booster ignition')
     parser.add_argument('--booster-min-g', type=float, default=BOOSTER_MIN_G,
                         help='Hard minimum thrust acceleration while boosters are attached and burning')
     parser.add_argument('--throttle-slew', type=float, default=THROTTLE_SLEW_PER_SECOND,
@@ -1685,7 +1697,8 @@ def main():
     parser.add_argument('--telemetry', default='telemetry.csv')
     args = parser.parse_args()
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
-            args.timeout <= 0 or args.roll_reset_delay < 0 or args.roll_start < 0 or
+            args.timeout <= 0 or args.ssme_lead_time < 0 or
+            args.roll_reset_delay < 0 or args.roll_start < 0 or
             not 0 < args.roll_rate <= 30 or not 0 < args.roll_attenuation <= 90 or
             args.roll_time_to_peak <= 0 or not 0 <= args.roll_overshoot <= 1 or
             args.roll_settle_time < 0 or not 0 < args.roll_control_limit <= 1 or
