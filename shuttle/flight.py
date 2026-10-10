@@ -455,21 +455,6 @@ def _combine(*terms):
     return tuple(sum(c*v[i] for c, v in terms) for i in range(3))
 
 
-HEADING_SCHEDULE = ((450.0, 53.4), (560.0, 46.0), (620.0, 41.0), (1035.0, 41.0),
-                    (1130.0, 44.4), (1250.0, 48.1), (1370.0, 50.7), (1540.0, 51.4),
-                    (1750.0, 53.6), (2000.0, 54.7))
-
-
-def _interp(x, table):
-    """Piecewise-linear interpolation, clamped to the table ends."""
-    if x <= table[0][0]:
-        return table[0][1]
-    for (x0, y0), (x1, y1) in zip(table, table[1:]):
-        if x <= x1:
-            return y0 + (y1-y0)*(x-x0)/(x1-x0)
-    return table[-1][1]
-
-
 def tanks_empty(shuttle):
     """True when the stack propellant is exhausted; tolerant of transient null part handles."""
     try:
@@ -1701,12 +1686,6 @@ def run(args):
                                               else 30.0)
                                 heading_goal += max(-lead_limit,
                                                     min(lead_limit, 1.5*azimuth_error))
-                            if flight.horizontal_speed > 450.0:
-                                # Repeatable open-loop plane schedule replayed from the
-                                # best flown ascent (live_i34_w); the closed azimuth loop
-                                # above oscillates with the nose/velocity lag.
-                                heading_goal = _interp(
-                                    flight.horizontal_speed, HEADING_SCHEDULE)
                             args.heading = slew_value(
                                 args.heading, heading_goal,
                                 3.0 if flight.dynamic_pressure < 1500.0
