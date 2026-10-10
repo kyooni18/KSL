@@ -438,6 +438,61 @@ def final_phase_g(periapsis_altitude, target_periapsis, max_g, ramp=30000.0, flo
     return max(floor, floor + (max_g-floor)*remaining/ramp)
 
 
+def _dot(a, b):
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+
+def _norm(a):
+    return math.sqrt(_dot(a, a))
+
+
+def _unit(a):
+    n = _norm(a)
+    return (a[0]/n, a[1]/n, a[2]/n) if n > 0 else (0.0, 0.0, 0.0)
+
+
+def _combine(*terms):
+    return tuple(sum(c*v[i] for c, v in terms) for i in range(3))
+
+
+def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
+                      apoapsis_altitude, periapsis_altitude, inclination_deg,
+                      acceleration):
+    """Velocity-to-be-gained guidance to an exact apoapsis/periapsis/inclination.
+
+    All vectors are in a non-rotating body frame whose +y axis points to the north
+    pole. Returns (thrust direction, remaining delta-v magnitude, time-to-go).
+    The target velocity at the current radius is the point on the target orbit
+    (ascending branch) in the plane of the requested inclination, so apoapsis,
+    periapsis and inclination are reached together, not one at a time.
+    """
+    r = _norm(position)
+    rh = _unit(position)
+    vr = _dot(velocity, rh)
+    vh = _combine((1.0, velocity), (-vr, rh))
+    rp = body_radius + periapsis_altitude
+    ra = body_radius + apoapsis_altitude
+    h_target = math.sqrt(2.0*mu*ra*rp/(ra+rp))
+    vh_target = h_target/r
+    energy = -mu/(ra+rp)
+    vr_target = math.sqrt(max(0.0, 2.0*(energy+mu/r) - vh_target**2))
+    north = _unit(_combine((1.0, (0.0, 1.0, 0.0)), (-rh[1], rh)))
+    east = _unit(rotation_velocity)
+    east = _unit(_combine((1.0, east), (-_dot(east, rh), rh)))
+    sin_lat = max(-1.0, min(1.0, rh[1]))
+    cos_lat = math.sqrt(1.0 - sin_lat*sin_lat)
+    cos_i = math.cos(math.radians(inclination_deg))
+    azimuth = math.asin(max(-1.0, min(1.0, cos_i/max(cos_lat, 1e-6))))
+    horizontal = _combine((math.cos(azimuth), north), (math.sin(azimuth), east))
+    v_target = _combine((vr_target, rh), (vh_target, horizontal))
+    dv = _combine((1.0, v_target), (-1.0, velocity))
+    dv_mag = _norm(dv)
+    time_to_go = dv_mag/max(acceleration, 0.5)
+    g_eff = mu/(r*r) - _dot(vh, vh)/r
+    command = _combine((1.0/max(time_to_go, 0.5), dv), (g_eff, rh))
+    return _unit(command), dv_mag, time_to_go
+
+
 def aoa_limit_deg(dynamic_pressure, q_alpha=50000.0, floor=1.5, ceiling=20.0):
     """Bound angle of attack so q*alpha (wing/tank-attach load) stays within q_alpha Pa*deg."""
     return max(floor, min(ceiling, q_alpha/max(1.0, dynamic_pressure)))
@@ -1363,6 +1418,7 @@ def run(args):
         liftoff_ut = None
         baseline_part_count = None
         meco_ut = None
+        nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
         roll_reset_ut = None
@@ -1617,6 +1673,32 @@ def run(args):
                                 - min(15.0, 1.5*ap_excess/1000.0)
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
+                        peg_dv = None
+                        peg_phase_g = None
+                        if shuttle.separated and flight.speed > 1400.0:
+                            try:
+                                sc = conn.space_center
+                                pos_n = v.position(nrf)
+                                vel_n = v.velocity(nrf)
+                                surf_vel = sc.transform_direction(
+                                    v.velocity(body.reference_frame), body.reference_frame, nrf)
+                                rot_vel = _combine((1.0, vel_n), (-1.0, surf_vel))
+                                accel = max(flight.g_force, 0.3)*G0
+                                d_n, peg_dv, peg_tgo = terminal_guidance(
+                                    pos_n, vel_n, rot_vel, body.gravitational_parameter,
+                                    body.equatorial_radius, args.orbit, args.meco_periapsis,
+                                    args.inclination, accel)
+                                d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
+                                peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
+                                raw_pitch = max(-45.0, min(25.0, peg_pitch))
+                                args.heading = slew_value(
+                                    args.heading,
+                                    max(target_heading-25.0, min(target_heading+25.0, peg_heading)),
+                                    3.0, 1/args.hz)
+                                pitch_slew_rate = max(pitch_slew_rate, 4.0)
+                                peg_phase_g = max(0.5, min(args.upper_g, peg_dv/5.0/G0))
+                            except Exception:
+                                peg_dv = None
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
                             pitch_slew_rate, 1/args.hz)
@@ -1624,9 +1706,11 @@ def run(args):
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if (shuttle.separated and
-                                meco_ready(v.orbit.apoapsis_altitude,
-                                           v.orbit.periapsis_altitude,
-                                           args.orbit-3000.0, args.meco_periapsis-300.0)):
+                                ((peg_dv is not None and peg_dv < 1.5) or
+                                 (peg_dv is None and
+                                  meco_ready(v.orbit.apoapsis_altitude,
+                                             v.orbit.periapsis_altitude,
+                                             args.orbit-3000.0, args.meco_periapsis-300.0)))):
                             control.throttle = 0
                             state = 'COAST'
                             print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
@@ -1694,6 +1778,8 @@ def run(args):
                             phase_max_g = final_phase_g(
                                 v.orbit.periapsis_altitude, args.meco_periapsis,
                                 min(args.max_g, args.upper_g))
+                            if peg_phase_g is not None:
+                                phase_max_g = peg_phase_g
                             target_g = min(target_g, phase_max_g)
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
