@@ -1651,12 +1651,15 @@ def run(args):
                                 vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
                                 azimuth_error = wrap_roll(target_heading-vel_azimuth)
                                 # Keep side loads small while the air is thick.
-                                lead_limit = 4.0 if flight.dynamic_pressure > 8000.0 else 12.0
+                                lead_limit = (4.0 if flight.dynamic_pressure > 8000.0
+                                              else 12.0 if flight.dynamic_pressure > 1500.0
+                                              else 30.0)
                                 heading_goal += max(-lead_limit,
                                                     min(lead_limit, 2.0*azimuth_error))
                             args.heading = slew_value(
                                 args.heading, heading_goal,
-                                args.heading_slew if flight.dynamic_pressure < 5000.0
+                                3.0 if flight.dynamic_pressure < 1500.0
+                                else args.heading_slew if flight.dynamic_pressure < 5000.0
                                 else min(args.heading_slew, 0.7), 1/args.hz)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
