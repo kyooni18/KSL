@@ -82,6 +82,7 @@ bool scenario_load(const char *path, Scenario *destination) {
         {"runway_latitude_deg", &s->runway_latitude_deg, RUNWAY},
         {"runway_longitude_deg", &s->runway_longitude_deg, RUNWAY},
         {"runway_elevation_m", &s->runway_elevation_m, RUNWAY},
+        {"runway_slope_deg", &s->runway_slope_deg, RUNWAY},
         {"runway_heading_deg", &s->runway_heading_deg, RUNWAY},
         {"runway_length_m", &s->runway_length_m, RUNWAY},
         {"runway_width_m", &s->runway_width_m, RUNWAY},
@@ -130,6 +131,7 @@ bool scenario_load(const char *path, Scenario *destination) {
     if (!valid || (cartesian && cartesian!=CARTESIAN) ||
         (cartesian && (seen&SURFACE)) || s->mass_kg<=0 ||
         s->runway_length_m<=0 || s->runway_width_m<=0 ||
+        fabs(s->runway_slope_deg)>=90 ||
         fabs(s->latitude_deg)>90 || fabs(s->runway_latitude_deg)>90 ||
         fabs(s->flight_path_angle_deg)>90 || s->surface_speed_mps<0 ||
         s->deorbit_duration_s<0 || s->deorbit_delay_s<0 ||

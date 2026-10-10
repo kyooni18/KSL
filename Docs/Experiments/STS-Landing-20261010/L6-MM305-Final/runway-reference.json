@@ -1,0 +1,12 @@
+{
+  "guidanceTouchdownDeck": 68.44215901692708,
+  "nativePlane": {
+    "originElevation": 69.17486487494574,
+    "slope": -0.002223903656005859,
+    "slopeDegrees": -0.1274200834706079,
+    "rmse": 0.008418079076705196,
+    "maxAbsError": 0.015899234347884317
+  },
+  "evidence": "../L5-72km/runway-survey-summary.json",
+  "note": "Guidance scalar uses measured deck at375m aim; native contact uses surveyed origin and longitudinal slope; fit error at target about1.6cm."
+}

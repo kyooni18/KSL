@@ -20,6 +20,12 @@ static RunwayPlane runway_plane_at(const Simulation *sim,double ut){
     p.forward_i=v3_normalized(v3_add(v3_scale(lf.north,cos(r->heading_rad)),
                                      v3_scale(lf.east,sin(r->heading_rad))));
     p.normal_i=lf.up;
+    if(sim->scenario.runway_slope_deg!=0.0){
+        double slope=deg2rad(sim->scenario.runway_slope_deg);
+        Vec3 forward=p.forward_i;
+        p.forward_i=v3_add(v3_scale(forward,cos(slope)),v3_scale(lf.up,sin(slope)));
+        p.normal_i=v3_sub(v3_scale(lf.up,cos(slope)),v3_scale(forward,sin(slope)));
+    }
     p.right_i=v3_normalized(v3_cross(p.normal_i,p.forward_i));
     return p;
 }
@@ -524,6 +530,10 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
     double fpa=atan2(vu,fmax(horizontal,1e-9));
     AtmosphereSample atm=world_atmosphere_sample_state(&sim->world,s->position_i_m,s->ut);
     double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
+    if(sim->scenario.runway_slope_deg!=0.0){
+        RunwayPlane plane=runway_plane_at(sim,s->ut);
+        runway_plane_coords(&plane,s->position_i_m,NULL,NULL,&vertical);
+    }
     snprintf(out,n,"{\"schema\":1,\"type\":\"telemetry\",\"source\":\"sim\",\"scenario\":\"%s\",\"ut\":%.6f,\"sim_time\":%.6f,\"sim_rate\":%.2f,"
              "\"world\":{\"radius_m\":%.9g,\"mu_m3_s2\":%.12g,\"rotation_rate_rad_s\":%.12g,\"atmosphere_top_m\":%.9g,\"rotation_phase_rad_at_ut0\":%.12g},"
              "\"position\":{\"x\":%.6f,\"y\":%.6f,\"z\":%.6f,\"lat_deg\":%.9f,\"lon_deg\":%.9f,\"altitude_m\":%.3f},"

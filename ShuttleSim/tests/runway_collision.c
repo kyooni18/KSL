@@ -15,7 +15,14 @@ static Plane plane_at(const Simulation *sim,double ut){
     p.origin=world_lla_to_inertial(&sim->world,sim->runway.lat_rad,sim->runway.lon_rad,sim->runway.elevation_m,ut);
     LocalFrame lf=world_local_frame_i(&sim->world,p.origin,ut);
     p.forward=v3_normalized(v3_add(v3_scale(lf.north,cos(sim->runway.heading_rad)),v3_scale(lf.east,sin(sim->runway.heading_rad))));
-    p.normal=lf.up;p.right=v3_normalized(v3_cross(p.normal,p.forward));return p;
+    p.normal=lf.up;
+    if(sim->scenario.runway_slope_deg!=0.0){
+        double slope=deg2rad(sim->scenario.runway_slope_deg);
+        Vec3 forward=p.forward;
+        p.forward=v3_add(v3_scale(forward,cos(slope)),v3_scale(lf.up,sin(slope)));
+        p.normal=v3_sub(v3_scale(lf.up,cos(slope)),v3_scale(forward,sin(slope)));
+    }
+    p.right=v3_normalized(v3_cross(p.normal,p.forward));return p;
 }
 static double pitch_deg(const Simulation *sim){
     Plane p=plane_at(sim,sim->state.ut);
@@ -54,6 +61,18 @@ int main(void){
     if(!initial_state_is_preserved()){fputs("Authored initial state changed\n",stderr);return 4;}
     static Scenario sc;static Simulation sim;
     AeroTable *aero=&sim.aero;(void)aero;
+
+    /* Measured KSC deck: radar height and physical contact must use the same
+       tilted plane, rather than reporting height above an elevated threshold. */
+    seed(&sc);sc.runway_slope_deg=-0.1274200834706079;
+    sim_init(&sim,&sc);sim.state.gear_down=true;
+    place(&sim,1400.0,0.0,3.40,70.0,1.5,8.0);
+    char packet[8192];sim_build_telemetry_json(&sim,1.0,packet,sizeof(packet));
+    const char *height=strstr(packet,"\"vertical_m\":");
+    if(!height||fabs(strtod(height+13,NULL)-3.40)>.002)return 6;
+    for(int i=0;i<200&&!sim.state.touchdown_seen;i++)sim_step(&sim,.02);
+    if(!sim.state.touchdown_seen||!sim.state.on_runway_at_touchdown||
+       fabs(sim.state.touchdown_sink_mps-1.5)>.6)return 7;
 
     /* 1. Gentle gear-down landing at 8 deg: mains first, sink recorded, the
           released nose comes down to the measured stance, brakes stop it on

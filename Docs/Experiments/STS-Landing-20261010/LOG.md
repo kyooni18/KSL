@@ -466,3 +466,24 @@ is ready for a subsequent singular MM305→Final→rollout live test. Exact surv
 now supports68.442m deck at375m target,69.166m atconfiguredorigin, and fitted
 plane slope−0.12742°. Next-run guidance target and native contact plane still
 need these references applied and verified; no second live test launched yet.
+
+## 23. Measured runway references for combined L6 test
+
+Added optional native scenario runway_slope_deg (default0) to tilt the actual
+contact plane; radar telemetry uses that same plane when slope is nonzero.
+Legacy zero-slope contact and telemetry paths retain their formulas. Existing
+runway_collision test extended with one tilted-plane height/contact regression;
+it passes, including legacy landing/rollout/departure cases. Initial ctest
+invocation found no tests because isolated build had BUILD_TESTING off: that
+was not accepted as validation. Enabled tests and built/ran runway_collision.
+
+Separate L6-MM305-Final config uses measured deck68.442159m at375m aim. Native
+scenario uses fitted origin69.174865m and slope−0.127420° (fit at target within
+1.6cm), retaining accurate geometry rather than moving the contact plane to
+the guidance scalar. Corrected native continuous replay touches down72.721m/s,
+sink0.601m/s, but along−9.902m: runway acceptance fails. Stopsalong901.019m
+without bounce/tail strike. Accurate reference exposes a short-contact margin,
+not a validated landing solution. Result and manifest retained. No gate relaxed
+or adaptive default enabled. Additional authorized live combined checkpoint
+test remains diagnostic; live/replay divergence (L5 slowfloat vs nativefastshort)
+requires observation. Shared live fixed-flare backend remains unchanged.

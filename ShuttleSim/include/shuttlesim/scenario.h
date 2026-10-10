@@ -31,6 +31,8 @@ typedef struct {
     double runway_latitude_deg;
     double runway_longitude_deg;
     double runway_elevation_m;
+    /* Longitudinal deck angle relative to the origin's horizon; negative descends. */
+    double runway_slope_deg;
     double runway_heading_deg;
     double runway_length_m;
     double runway_width_m;
