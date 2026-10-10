@@ -1,0 +1,24 @@
+{
+  "pid": 14072,
+  "kspPID": 11553,
+  "command": [
+    "python3",
+    "Tools/headless_flight.py",
+    "--config",
+    "/Users/kyooni18/Code/KSPShuttleLander/Docs/Experiments/STS-Landing-20261010/L6-MM305-Final/configuration.json",
+    "--live",
+    "--reentry-only",
+    "--initial-save",
+    "STS-L5-MM305-Final-20261010T075356Z",
+    "--checkpoint-physics-profile",
+    "/Users/kyooni18/Code/KSPShuttleLander/Docs/Experiments/STS-Landing-20261010/L5-72km/mm305-final.physics.json",
+    "--no-crash-guard",
+    "--preentry-physics-warp",
+    "1",
+    "--max-wall-seconds",
+    "3600"
+  ],
+  "backendSHA256": "8beafeebca9aa957a167469a413d0553e255204fb229802f72f8fbbbb3530c27",
+  "startedUTC": "2026-10-10T08:28:02.846561+00:00",
+  "purpose": "One continuous MM305 through Final touchdown and rollout test from measured checkpoint; corrected surveyed deck reference; diagnostic, offline short-contact failure recorded"
+}

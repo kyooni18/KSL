@@ -487,3 +487,23 @@ not a validated landing solution. Result and manifest retained. No gate relaxed
 or adaptive default enabled. Additional authorized live combined checkpoint
 test remains diagnostic; live/replay divergence (L5 slowfloat vs nativefastshort)
 requires observation. Shared live fixed-flare backend remains unchanged.
+
+## 24. Authorized live L6: singular MM305 → Final → rollout test
+
+L5 runner was authoritatively absent after natural Complete; exactly one KSP
+PID11553 remained. Verified new MM305 save hash and protected Steam86km hash
+unchanged before launch. L6 runnerPID14072, shared validated fixed-flare
+backendSHA8beafeebca9aa957a167469a413d0553e255204fb229802f72f8fbbbb3530c27,
+modelIdSTS, adaptiveOFF, unpowered-only, no unqualified continuation override
+or FCS experiment override inherited. Existing startup physics freeze verified
+checkpoint coherency. Native MM305 continuation admitted atUT2164.0 /26.9km
+/58.6km range /868.4m/s, explicitly retaining route and Final qualification.
+No HAC-only or Final-only engagements: one uninterrupted MM305 through touchdown
+and rollout test. New measured site altitude68.442159m, all other baseline
+guidance/config policy retained. Corrected offline replay short-contact failure
+is recorded in §23; this live run is diagnostic, not an accepted milestone.
+L6 prior96cells vs L5 prior102: live learned-prior evolution is a material
+comparison limit, not a pure height-only controlled A/B. Native simulator contact
+plane/sloped-radar fix and scenario execution tests pass. Immutable runner pin
+and normal gates remain enabled. Launch/config/replay artifacts underL6-MM305-Final.
+Landing and rollout are not yet verified; runner stays untouched while active.
