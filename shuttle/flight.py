@@ -1647,7 +1647,9 @@ def run(args):
                                 # degrees at speed, so steer on the measured surface
                                 # velocity azimuth: lead the nose past the target by a
                                 # gain times the azimuth error.
-                                svel = v.velocity(v.surface_reference_frame)
+                                svel = conn.space_center.transform_direction(
+                                    v.velocity(body.reference_frame), body.reference_frame,
+                                    v.surface_reference_frame)
                                 vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
                                 azimuth_error = wrap_roll(target_heading-vel_azimuth)
                                 # Keep side loads small while the air is thick.
