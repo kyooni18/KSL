@@ -1429,6 +1429,7 @@ def run(args):
         meco_ut = None
         peg_dv = None
         peg_hold = None
+        heading_trim = 0.0
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -1678,8 +1679,13 @@ def run(args):
                                 desired = math.degrees(math.atan2(
                                     vh_in*math.sin(a_inertial)-v_rot_now,
                                     vh_in*math.cos(a_inertial))) % 360
-                                heading_goal = desired
                                 azimuth_error = wrap_roll(desired-vel_azimuth)
+                                # Integral trim removes the steady lag between nose and
+                                # velocity azimuth (thin air only; side loads stay low).
+                                if flight.dynamic_pressure < 8000.0:
+                                    heading_trim = max(-25.0, min(
+                                        25.0, heading_trim + 0.4*azimuth_error/args.hz))
+                                heading_goal = desired + heading_trim
                                 # Keep side loads small while the air is thick.
                                 lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
                                               else 20.0 if flight.dynamic_pressure > 1500.0
