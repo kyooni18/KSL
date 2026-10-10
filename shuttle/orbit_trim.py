@@ -51,7 +51,7 @@ def execute(conn, vessel, node, tolerance=0.03):
     ap.reference_frame = node.reference_frame
     ap.target_direction = (0.0, 1.0, 0.0)
     ap.target_roll = float('nan')
-    ap.engage()
+    ap.engaged = True
     if start-sc.ut > 90:
         sc.warp_to(start-60)
     while sc.ut < start-30:
@@ -69,7 +69,7 @@ def execute(conn, vessel, node, tolerance=0.03):
         ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
         time.sleep(0.02)
     ctl.throttle = 0.0
-    ap.disengage()
+    ap.engaged = False
     node.remove()
 
 
@@ -93,6 +93,8 @@ def main():
         print(f'{tag}: Ap {o.apoapsis_altitude/1000:.2f} km, Pe {o.periapsis_altitude/1000:.2f} km, '
               f'inc {math.degrees(o.inclination):.3f} deg')
 
+    for stale in list(vessel.control.nodes):
+        stale.remove()
     report('start')
 
     def step_periapsis():
