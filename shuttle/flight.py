@@ -1106,7 +1106,17 @@ class Shuttle:
         current = tuple(
             sum(engine.thrust_limit for engine in group) / len(group)
             for group in self.groups)
-        applied = slew_vector(current, target.throttles, throttle_slew, dt)
+        target_throttles = target.throttles
+        if (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
+                not self.separated and any(engine.active and engine.has_fuel
+                                           for engine in self.solid_boosters)):
+            # The fixed-thrust Clydesdales can meet the G target by themselves
+            # late in the burn. Preserve the SSME limiter reached at ignition
+            # instead of letting the allocator wind the core engines to zero.
+            target_throttles = list(target_throttles)
+            target_throttles[0] = max(target_throttles[0], current[0])
+            target_throttles = tuple(target_throttles)
+        applied = slew_vector(current, target_throttles, throttle_slew, dt)
         for group, throttle in zip(self.groups, applied):
             for engine in group:
                 engine.thrust_limit = throttle
@@ -1496,10 +1506,15 @@ def run(args):
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=1/args.hz, throttle_slew=args.throttle_slew)
                         if state == 'ASCENT':
-                            control.throttle = g_force_throttle(
-                                control.throttle, flight.g_force, args.max_g)
-                            control.throttle = dynamic_pressure_throttle(
-                                control.throttle, flight.dynamic_pressure, args.max_q)
+                            solid_boosters_burning = (
+                                bool(shuttle.solid_boosters) and not shuttle.separated and
+                                any(engine.active and engine.has_fuel
+                                    for engine in shuttle.solid_boosters))
+                            if not solid_boosters_burning:
+                                control.throttle = g_force_throttle(
+                                    control.throttle, flight.g_force, args.max_g)
+                                control.throttle = dynamic_pressure_throttle(
+                                    control.throttle, flight.dynamic_pressure, args.max_q)
                     else:
                         shuttle.skiff.thrust_limit = 1
                     actual_roll = ''
