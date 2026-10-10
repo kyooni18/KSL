@@ -455,6 +455,15 @@ def _combine(*terms):
     return tuple(sum(c*v[i] for c, v in terms) for i in range(3))
 
 
+def tanks_empty(shuttle):
+    """True when the stack propellant is exhausted; tolerant of transient null part handles."""
+    try:
+        return any(sum(t.resources.amount(r) for t in shuttle.tanks) < 1
+                   for r in ('LiquidFuel', 'Oxidizer'))
+    except Exception:
+        return False
+
+
 def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
                       apoapsis_altitude, periapsis_altitude, inclination_deg,
                       acceleration):
@@ -1766,7 +1775,7 @@ def run(args):
                             state = 'COAST'
                             print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
                                   f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
-                        elif shuttle.separated and any(sum(t.resources.amount(r) for t in shuttle.tanks) < 1 for r in ('LiquidFuel', 'Oxidizer')):
+                        elif shuttle.separated and tanks_empty(shuttle):
                             if shuttle.release_et():
                                 state = 'ORBITER_ASCENT'
                     elif state == 'ORBITER_ASCENT':
