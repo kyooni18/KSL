@@ -1341,6 +1341,7 @@ def run(args):
         roll_settle_since = None
         initial_roll_set = False
         liftoff_ut = None
+        baseline_part_count = None
         roll_reset = False
         roll_reset_ut = None
         roll_rate = 0.0
@@ -1675,7 +1676,10 @@ def run(args):
                         # AutoPilot owns pitch/yaw only. Direct roll control keeps the
                         # real orbiter-mounted side (-Z) on the requested Earth/space side.
                         if roll_surface_states:
-                            schedule_roll_authority(roll_surface_states, flight.dynamic_pressure)
+                            schedule_roll_authority(
+                                roll_surface_states, flight.dynamic_pressure,
+                                low_q_limit=60.0 if mission_roll_settled else 35.0,
+                                high_q_limit=30.0)
                         ap.target_direction = target_direction
                         ap.target_roll = float('nan')
                         surface_frame = v.surface_reference_frame
@@ -1700,7 +1704,8 @@ def run(args):
                             actual_direction, target_pitch, args.heading)
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
-                            max(args.roll_rate, 8.0) if roll_reset else args.roll_rate,
+                            (max(args.roll_rate, 8.0) if roll_reset else
+                             (args.roll_rate if mission_roll_settled else min(args.roll_rate, 3.0))),
                             args.roll_control_limit,
                             args.roll_response_time)
                         settle_nose_error = direction_error_deg(
@@ -1800,6 +1805,16 @@ def run(args):
                         next_report = conn.space_center.ut+2
                     since_roll_reset = (None if roll_reset_ut is None else
                                         conn.space_center.ut-roll_reset_ut)
+                    if liftoff_ut is not None:
+                        part_count = len(v.parts.all)
+                        if baseline_part_count is None:
+                            baseline_part_count = part_count
+                        elif (not shuttle.separated and
+                              part_count < baseline_part_count):
+                            control.roll = 0
+                            raise RuntimeError(
+                                f'Part loss detected before booster separation: '
+                                f'{baseline_part_count} -> {part_count} parts')
                     if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
                         raise RuntimeError(f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
                     orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])
