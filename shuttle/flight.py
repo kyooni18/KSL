@@ -1633,7 +1633,8 @@ def run(args):
                             actual_direction, target_pitch, args.heading)
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
-                            args.roll_rate, args.roll_control_limit,
+                            max(args.roll_rate, 8.0) if roll_reset else args.roll_rate,
+                            args.roll_control_limit,
                             args.roll_response_time)
                         settle_nose_error = direction_error_deg(
                             actual_direction, target_direction)
@@ -1762,7 +1763,7 @@ def main():
     parser.add_argument('--stream-port', type=int, default=50001)
     parser.add_argument('--orbit', type=float, default=75000, help='Target apoapsis altitude in m')
     parser.add_argument('--heading', type=float, default=90)
-    parser.add_argument('--turn-start', type=float, default=3000,
+    parser.add_argument('--turn-start', type=float, default=1500,
                         help='Altitude in m where the post-roll gravity turn begins')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
@@ -1787,11 +1788,11 @@ def main():
                         help='Hard minimum thrust acceleration while boosters are attached and burning')
     parser.add_argument('--throttle-slew', type=float, default=THROTTLE_SLEW_PER_SECOND,
                         help='Maximum per-second change of each engine-group thrust limiter')
-    parser.add_argument('--roll-reset-delay', type=float, default=180,
+    parser.add_argument('--roll-reset-delay', type=float, default=2.0,
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
-    parser.add_argument('--roll-rate', type=float, default=3.0,
+    parser.add_argument('--roll-rate', type=float, default=6.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
@@ -1801,7 +1802,7 @@ def main():
                         help='AutoTune target roll overshoot fraction')
     parser.add_argument('--roll-settle-time', type=float, default=2.0,
                         help='Seconds roll/pitch/yaw errors must remain settled')
-    parser.add_argument('--roll-control-limit', type=float, default=.25,
+    parser.add_argument('--roll-control-limit', type=float, default=0.5,
                         help='Maximum direct roll-control magnitude during physical roll')
     parser.add_argument('--roll-response-time', type=float, default=.5,
                         help='Rate-controller response horizon in seconds for physical roll')
