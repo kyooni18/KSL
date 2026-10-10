@@ -346,7 +346,9 @@ static double tel_entry_arc(TaemEnergyLawState *L,const TelContext *c,const TelP
     if (rem>TEL_PI) return rem;
     TelSegment none[1]={{rem*r,r}};
     double excess=tel_predict_range(c,s,1.0,1e9,none,1)-rem*r;
-    double vg=s->v*cos(s->g);
+    /* airspeed, not the diving horizontal speed: the vehicle accelerates
+       into the circle and a radius sized for the dive cannot be held */
+    double vg=s->v;
     double r_small=fmax(TEL_R_SPIRAL_MIN,vg*vg/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD)));
     double turn=rem+2.0*TEL_PI;
     TelSegment small[1]={{turn*r_small,r_small}};
