@@ -130,14 +130,14 @@ def main():
                   o0.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE+3000.0]
         target = math.radians(args.inclination)
         nodes = []
-        if usable:
+        if usable and abs(math.degrees(o0.inclination)-args.inclination) > 0.15:
             ut_p = usable[0]
             xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
                        lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
             nodes.append(vessel.control.add_node(ut_p, normal=xp))
             ut1 = ut_p + 0.5*abs(xp)/2.7*1.0 + 70.0
         else:
-            print('No safe plane-change node; skipping the inclination burn')
+            print('Inclination already on target or no safe plane node; skipping plane burn')
             flight = vessel.flight(o0.body.reference_frame)
             ut1 = now + max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
                             max(flight.vertical_speed, 20.0))
