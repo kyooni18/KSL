@@ -24,6 +24,8 @@
 #define TEL_AIM 9000.0
 #define TEL_BANK_MAX 50.0
 #define TEL_BANK_SUP 45.0
+#define TEL_BANK_TURN 55.0
+#define TEL_BANK_ARC 60.0
 #define TEL_R_MIN 2200.0
 #define TEL_R_MAX 10000.0
 #define TEL_R_TURN 2600.0
@@ -101,7 +103,10 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
     double ld=drag>0.0?fmax(0.3,lift/drag):1.0;
     double g_cmd=-atan(1.0/ld)-0.6*clampd((q_ref-q)/q_ref,-0.6,0.6);
     if (along>0.0&&along<TEL_AIM) {
-        double g_aim=-atan2(p->h-c->h_station,fmax(500.0,along));
+        /* aim at the station point, but never shallower than the equilibrium
+           glide: a glider below the station cannot climb to it, and trying to
+           only bleeds the speed it needs */
+        double g_aim=fmin(-atan2(p->h-c->h_station,fmax(500.0,along)),-atan(1.0/ld));
         double w=fmin(1.0,(TEL_AIM-along)/3000.0);
         g_cmd=(1.0-w)*g_cmd+w*g_aim;
     } else if (live&&along<=0.0) {
@@ -129,8 +134,18 @@ static void tel_servo(double *v,double *r,double cmd,double dt) {
 }
 
 /* Path distance flown at level k until the Final station energy is reached. */
+static double tel_predict_range_ex(const TelContext *c,const TelPoint *s,double k,
+        double along,const TelSegment *segs,int nseg,double *bank_over_deg);
+
 static double tel_predict_range(const TelContext *c,const TelPoint *s,double k,
         double along,const TelSegment *segs,int nseg) {
+    return tel_predict_range_ex(c,s,k,along,segs,nseg,NULL);
+}
+
+/* Also reports the largest bank, beyond TEL_BANK_TURN, that a planned arc
+   (other than the leading capture turn) would need at the predicted speed. */
+static double tel_predict_range_ex(const TelContext *c,const TelPoint *s,double k,
+        double along,const TelSegment *segs,int nseg,double *bank_over_deg) {
     TelPoint p=*s;
     p.x=0.0;p.y=0.0;p.psi=0.0;
     double dt=1.0,dist=0.0,used=0.0,t=0.0;
@@ -142,7 +157,9 @@ static double tel_predict_range(const TelContext *c,const TelPoint *s,double k,
         while (i<nseg&&used>=segs[i].length) { used-=segs[i].length; ++i; }
         double rad=i<nseg?segs[i].radius:0.0;
         double gnd=p.v*cos(p.g);
-        double bank=rad>0.0?fmin(TEL_BANK_MAX,atan(gnd*gnd/(TEL_G0*rad))*RAD2DEG):0.0;
+        double need=rad>0.0?atan(gnd*gnd/(TEL_G0*rad))*RAD2DEG:0.0;
+        if (bank_over_deg&&i>0&&i<nseg) *bank_over_deg=fmax(*bank_over_deg,need-TEL_BANK_TURN);
+        double bank=fmin(TEL_BANK_MAX,need);
         double aoa_cmd=tel_vertical(c,&p,bank,k,along-dist,false);
         tel_servo(&p.aoa,&p.aoa_rate,aoa_cmd,dt);
         double q,mach,lift,drag;
@@ -262,7 +279,7 @@ static int tel_segments_path(const TaemEnergyLawState *L,const TelContext *c,
         out[n++]=(TelSegment){arc,r};
         return n;
     }
-    out[0]=(TelSegment){tel_hac_remaining(L,c,s->x,s->y),r};
+    out[0]=(TelSegment){fmax(0.0,L->hac_left_rad)*r,r};
     return 1;
 }
 
@@ -327,12 +344,22 @@ static bool tel_plan_open(const TaemEnergyLawState *L,const TelContext *c,const 
     return false;
 }
 
-/* Score a pattern: distance between the range flown at K_PLAN and its path.
-   The loop can lengthen its downwind, so only a shortfall counts against it. */
+/* Score a pattern by how far its path lies outside the range the drag level
+   can reach (shortfall at maximum range, excess at maximum drag), plus a mild
+   preference for a pattern flown near mid-range drag.  The loop can lengthen
+   its downwind, so excess does not count against it. */
 static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint *s) {
-    double ext=tel_pattern_excess(P,c,s);
-    if (P->loop&&P->leg==TEL_LEG_OUT) return ext>=0.0?2000.0:2000.0-ext;
-    return fabs(ext);
+    TelSegment segs[5];
+    int n=tel_segments(P,c,s,segs);
+    double path=tel_sum(segs,n);
+    double r_max=tel_predict_range(c,s,0.0,1e9,segs,n);
+    double r_min=tel_predict_range(c,s,1.0,1e9,segs,n);
+    double over=0.0;
+    double r_mid=tel_predict_range_ex(c,s,TEL_K_PLAN,1e9,segs,n,&over);
+    bool stretch=P->loop&&P->leg==TEL_LEG_OUT;
+    double outside=fmax(0.0,path-r_max)+(stretch?0.0:fmax(0.0,r_min-path));
+    return outside+0.15*(stretch?fmax(0.0,path-r_mid):fabs(r_mid-path))+(stretch?1000.0:0.0)+
+        500.0*fmax(0.0,over);   /* an arc the vehicle cannot hold is not a plan */
 }
 
 static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
@@ -405,8 +432,27 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         L->side=s.y<=0.0?1:-1;
         L->r_turn=fmax(TEL_R_TURN,gnd*gnd/(TEL_G0*tan(45.0*DEG2RAD)));
     }
+    if (L->leg==TEL_LEG_HAC&&L->hac_left_rad>0.5&&ut>=L->last_geo_ut+TEL_UPDATE_S) {
+        /* HAC spiral: resize the circle (still tangent to the runway line at
+           the station) so the remaining arc matches the range at mid drag. */
+        L->last_geo_ut=ut;
+        TelSegment arc1[1]={{L->hac_left_rad*L->radius,L->radius}};
+        double need=tel_predict_range(&c,&s,TEL_K_PLAN,1e9,arc1,1);
+        double r_fly=gnd*gnd/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD));
+        double r_new=clampd(need/L->hac_left_rad,fmax(TEL_R_MIN,r_fly),TEL_R_MAX);
+        L->radius=clampd(r_new,L->radius-250.0,L->radius+250.0);
+    }
     TelSegment segs[5];
-    L->s_go=tel_sum(segs,tel_segments(L,&c,&s,segs));
+    int nseg=tel_segments(L,&c,&s,segs);
+    L->s_go=tel_sum(segs,nseg);
+    if (getenv("KSP_LANDER_TEL_TRACE")&&(L->leg!=L->trace_leg||L->side!=L->trace_side||
+            fabs(L->radius-L->trace_radius)>1.0||L->loop!=L->trace_loop)) {
+        L->trace_leg=L->leg;L->trace_side=L->side;L->trace_radius=L->radius;L->trace_loop=L->loop;
+        fprintf(stderr,"TEL_PLAN ut=%.1f loop=%d leg=%d side=%+d R=%.0f D=%.0f x=%.0f y=%.0f psi=%.1f xturn=%.0f segs:",
+            ut,(int)L->loop,L->leg,L->side,L->radius,D,s.x,s.y,s.psi*RAD2DEG,L->x_turn);
+        for (int i=0;i<nseg;++i) fprintf(stderr," [%.0f r%.0f]",segs[i].length,segs[i].radius);
+        fprintf(stderr,"\n");
+    }
     if (ut>=L->last_pred_ut+TEL_UPDATE_S) {
         L->last_pred_ut=ut;
         L->k=tel_solve_k(L,&c,&s,&L->s_req);
@@ -426,6 +472,8 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         double tx,ty,arc;
         if (!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) {
             L->leg=TEL_LEG_HAC;
+            L->hac_left_rad=tel_hac_remaining(L,&c,s.x,s.y)/fmax(1.0,L->radius);
+            L->hac_last_ang=NAN;
             course_cmd=s.psi;
         } else {
             double brg=atan2(ty-s.y,tx-s.x);
@@ -439,17 +487,23 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
                     course_cmd=s.psi;
                 } else L->leg=TEL_LEG_DOWN;
             }
-            if (L->leg==TEL_LEG_DOWN&&hypot(tx-s.x,ty-s.y)<fmax(300.0,2.0*gnd))
+            if (L->leg==TEL_LEG_DOWN&&hypot(tx-s.x,ty-s.y)<fmax(300.0,2.0*gnd)) {
                 L->leg=TEL_LEG_HAC;
+                L->hac_left_rad=arc/fmax(1.0,L->radius);
+                L->hac_last_ang=NAN;
+            }
         }
     }
     if (L->leg==TEL_LEG_HAC) {
         double cx=-D,cy=side*r;
         double ang=atan2(s.y-cy,s.x-cx);
+        if (isfinite(L->hac_last_ang))
+            L->hac_left_rad-=side*tel_wrap(ang-L->hac_last_ang);
+        L->hac_last_ang=ang;
         double r_err=hypot(s.x-cx,s.y-cy)-r;
         course_cmd=ang+side*(TEL_PI/2.0+clampd(r_err/1500.0,-0.6,0.6));
         bank_ff=side*atan(gnd*gnd/(TEL_G0*r))*RAD2DEG;
-        if (fabs(tel_wrap(s.psi))<0.15&&side*(s.y-cy)<0.0) {
+        if (L->hac_left_rad<0.3&&fabs(tel_wrap(s.psi))<0.15) {
             L->leg=TEL_LEG_FINAL;
             bank_ff=0.0;
             course_cmd=atan2(-s.y,3000.0);
@@ -459,6 +513,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     double omega=clampd(cerr/6.0,-0.12,0.12);
     double bank_left=bank_ff+atan(gnd*omega/TEL_G0)*RAD2DEG;
     double lim=mach>1.1?TEL_BANK_SUP:TEL_BANK_MAX;
+    if (L->leg==TEL_LEG_HAC||(L->leg==TEL_LEG_TURN&&bank_ff!=0.0)) lim=TEL_BANK_ARC;
     lim=fmin(lim,model->vehicle.maximum_bank_angle);
     *bank_cmd=-clampd(bank_left,-lim,lim);
     /* on the runway line the vertical reference is the signed distance to the station */

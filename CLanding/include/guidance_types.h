@@ -115,6 +115,8 @@ typedef struct {
     double radius, r_turn, x_turn, turn_cx, turn_cy;
     double k, s_req, s_go, last_geo_ut, last_pred_ut;
     bool admit_pending; double admit_since_ut;
+    int trace_leg, trace_side; double trace_radius; bool trace_loop;
+    double hac_left_rad, hac_last_ang;
 } TaemEnergyLawState;
 
 typedef enum {
