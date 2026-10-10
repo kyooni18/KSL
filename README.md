@@ -45,9 +45,10 @@ active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
 their Clydesdale motors run out of fuel. Mite motors attached at the nose are
 left out of launch control. On the live STS, the SSMEs ignite and verify thrust
-while the clamps still hold; the next staging action then lights both SRBs and
-releases the clamps. The four-Skipper profile described below applies only to
-that separate vehicle variant.
+while the clamps still hold, then remain lit for a 3-second lead interval by
+default; `--ssme-lead-time` changes that interval. The next staging action then
+lights both SRBs and releases the clamps. The four-Skipper profile described
+below applies only to that separate vehicle variant.
 `--meco-periapsis 45000` requires a 45 km periapsis before normal MECO, so reaching
 target apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
