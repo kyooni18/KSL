@@ -1660,8 +1660,11 @@ def run(args):
                                              math.cos(lat_now))
                                 east_in = svel[2]+v_rot_now
                                 vh_in = math.hypot(east_in, svel[1])
+                                orbit_inc = math.degrees(v.orbit.inclination)
+                                aim_inclination = args.inclination + max(-6.0, min(
+                                    8.0, 2.0*(args.inclination-orbit_inc)))
                                 a_inertial = math.asin(max(-1.0, min(1.0,
-                                    math.cos(math.radians(args.inclination))/
+                                    math.cos(math.radians(aim_inclination))/
                                     max(0.05, math.cos(lat_now)))))
                                 desired = math.degrees(math.atan2(
                                     vh_in*math.sin(a_inertial)-v_rot_now,
