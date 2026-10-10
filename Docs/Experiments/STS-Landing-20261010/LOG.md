@@ -507,3 +507,21 @@ comparison limit, not a pure height-only controlled A/B. Native simulator contac
 plane/sloped-radar fix and scenario execution tests pass. Immutable runner pin
 and normal gates remain enabled. Launch/config/replay artifacts underL6-MM305-Final.
 Landing and rollout are not yet verified; runner stays untouched while active.
+
+## 25. Passive L4→L5 pitch fit: weaker response evidence, no coefficient adopted
+
+While L6 runs, fit original STS L4 training and held-out L5 samples using the
+existing identifier with |bank|<5°, Mach<=0.9, q>=500Pa, radar>=15m, unpowered
+flying records and adjacent dt0.05–0.15s. Fits use actual reported stick and
+body pitch /AoA coordinates separately. Body fit: control3.975deg/s²/kPa,
+stiffness0.2053/s²/kPa, damping−0.7575/s, trainR²0.449, heldoutR²0.335.
+AoA fit (native direct plant's coordinate): control0.8315, stiffness0.04683,
+damping−0.1410, trainR²0.0864, heldoutR²0.0910. Existing att-live surrogate
+uses23.3 control and1.63 stiffness from historical STS-N identification.
+These comparisons flag optimistic surrogate dynamics but do not identify
+replacement physical coefficients: body and AoA coordinates differ and
+finite-difference noise, actuator lag and flight-path coupling remain.
+AoA fit rejected for adoption because held-out explanatory power is weak.
+No live gain, source or plant coefficient change. Reusable experiment script
+fit-pitch-response.py and report pitch-response-L4-L5.json retained underL6.
+L6 remains active inMM305 nearFinal-line handoff; landing still unverified.

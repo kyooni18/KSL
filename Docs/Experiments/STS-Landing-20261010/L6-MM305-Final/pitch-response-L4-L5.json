@@ -1,0 +1,71 @@
+{
+  "trainLog": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+  "heldoutLog": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+  "vehicleModel": "STS",
+  "selection": "unpowered flying; radar>=15m, q>=500Pa, Mach<=.9, |bank|<5deg, |beta|<2deg; adjacent dt .05-.15s",
+  "fits": {
+    "body": {
+      "axis": "pitch",
+      "q_cap_kpa": 8.0,
+      "control_per_kpa": 3.975406389053827,
+      "control_max": 31.803251112430615,
+      "rate_damping": -0.7574697898209283,
+      "train_r2": 0.44924162087464303,
+      "heldout_r2": 0.3351397248903195,
+      "train_n": 815,
+      "heldout_n": 838,
+      "stiffness_per_kpa": 0.20533549199806614,
+      "trim": 1.2609944092679035,
+      "heldout_by_q": [
+        {
+          "q_kpa": [
+            4,
+            7
+          ],
+          "n": 559,
+          "r2": 0.5018553173097887
+        },
+        {
+          "q_kpa": [
+            7,
+            12
+          ],
+          "n": 208,
+          "r2": 0.6432556393446118
+        }
+      ]
+    },
+    "aoa": {
+      "axis": "pitch",
+      "q_cap_kpa": 7.5,
+      "control_per_kpa": 0.8315290411389384,
+      "control_max": 6.236467808542038,
+      "rate_damping": -0.14103310050870033,
+      "train_r2": 0.08638797503180007,
+      "heldout_r2": 0.09098091447103596,
+      "train_n": 815,
+      "heldout_n": 838,
+      "stiffness_per_kpa": 0.046832403860892116,
+      "trim": 1.3118334716490323,
+      "heldout_by_q": [
+        {
+          "q_kpa": [
+            4,
+            7
+          ],
+          "n": 559,
+          "r2": 0.0911290190339934
+        },
+        {
+          "q_kpa": [
+            7,
+            12
+          ],
+          "n": 208,
+          "r2": 0.27516257597166405
+        }
+      ]
+    }
+  },
+  "limitations": "Passive closed-loop regression with finite-difference noise and actuator/kinematic lag; body and AoA coordinates fitted separately. No coefficient adopted without replay and held-out checks."
+}
