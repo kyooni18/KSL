@@ -1642,7 +1642,7 @@ def run(args):
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
                             heading_goal = target_heading
-                            if flight.horizontal_speed > 120.0:
+                            if flight.horizontal_speed > 450.0:
                                 # The velocity vector lags the nose heading by many
                                 # degrees at speed, so steer on the measured surface
                                 # velocity azimuth: lead the nose past the target by a
@@ -1650,9 +1650,14 @@ def run(args):
                                 svel = v.velocity(v.surface_reference_frame)
                                 vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
                                 azimuth_error = wrap_roll(target_heading-vel_azimuth)
-                                heading_goal += max(-35.0, min(35.0, 3.0*azimuth_error))
-                            args.heading = slew_value(args.heading, heading_goal,
-                                                      args.heading_slew, 1/args.hz)
+                                # Keep side loads small while the air is thick.
+                                lead_limit = 4.0 if flight.dynamic_pressure > 8000.0 else 12.0
+                                heading_goal += max(-lead_limit,
+                                                    min(lead_limit, 2.0*azimuth_error))
+                            args.heading = slew_value(
+                                args.heading, heading_goal,
+                                args.heading_slew if flight.dynamic_pressure < 5000.0
+                                else min(args.heading_slew, 0.7), 1/args.hz)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
                         else:
