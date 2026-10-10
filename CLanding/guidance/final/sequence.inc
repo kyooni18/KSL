@@ -151,7 +151,7 @@ static TerminalFlarePlan terminal_flare_plan(const GuidanceMachine*g,const Telem
         fmax(t->mass,1.0)-gravity*cos(t->flight_path_angle*DEG2RAD);
     return (TerminalFlarePlan){
         .arrest_accel=clampd(.4*pull,.12*gravity,.35*gravity),
-        .sgs_height=25.0,.sgs_sink=3.5,.final_accel=.1*gravity,
+        .sgs_height=12.0,.sgs_sink=3.5,.final_accel=.1*gravity,
         .float_height=1.5,.float_sink=1.0,.lift_ratio=g->terminal_lift_ratio,
         .aoa_max=limit,.g0=gravity,.planet=p,.site_altitude=cfg->site.altitude,
         .preflare_trigger_altitude=trigger_altitude
@@ -265,7 +265,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double S_FLOAT=1.0;       /* a third of the 3 m/s touchdown sink gate */
     const double FINAL_FLARE_ACCEL=.1*g0;
     const double TOUCHDOWN_ALONG=75.0;
-    const double SGS_HEIGHT=25.0;   /* shallow-glide segment below this wheel height */
+    const double SGS_HEIGHT=12.0;   /* shallow-glide segment below this wheel height */
     const double SGS_SINK=3.5;      /* ~ -2..-2.5 deg at touchdown speeds */
     const double TOUCHDOWN_PITCH=8.0;
     const double TOUCHDOWN_ATTITUDE_START=26.0;
@@ -395,8 +395,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double arc_distance=Vh*sink_now/arrest_accel*.6;
     double float_distance=ld_float*(energy_height+SGS_HEIGHT);
     double preflare_height=pull_height+SGS_HEIGHT;
-    double aim=touchdown_target-arc_distance-float_distance+preflare_height/glide_tan;
-    aim=clampd(aim,touchdown_target-6000.0,touchdown_target);
+    /* The arc and float dissipate energy faster than this point-mass sizing
+       (incidence above the float L/D during the pull): with the short shallow
+       glide the full-chain cases touch down ~250-300 m short of the target; part of that is kept as speed margin. */
+    const double AIM_BIAS=150.0;
+    double aim=touchdown_target+AIM_BIAS-arc_distance-float_distance+preflare_height/glide_tan;
+    aim=clampd(aim,touchdown_target-6000.0,touchdown_target+AIM_BIAS);
     if(!g->terminal_pull_latch){
         if(!g->terminal_aim_valid){
             double seed_distance=height/fmax(tan(4.0*DEG2RAD),tan(handoff_slope*DEG2RAD));
@@ -459,7 +463,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double predicted_touchdown_speed=NAN;
     if(!g->terminal_pull_latch){
         predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&flare_plan);
-        speed_ref=fmax(station_speed,fmax(1.3*fmax(speed_1g,v_td),
+        speed_ref=fmax(station_speed,fmax(1.5*fmax(speed_1g,v_td),
             sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed))));
     }
     g->terminal_predicted_touchdown_speed=predicted_touchdown_speed;
@@ -521,7 +525,19 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             arc_accel=NAN;
             reference_fpa=glide_fpa;
         }else{
-            arc_accel=sink>SGS_SINK?arrest_accel+(sink-design_sink)/PREFLARE_TAU:
+            /* Close the arc on the sink one residual lag ahead (measured
+               lift deceleration): a late, hard catch-up pull behind the
+               incidence lag otherwise overshoots, ends the arc a hundred
+               metres high, and the re-descent repeats the balloon. */
+            double arc_sink=sink;
+            if(isfinite(t->lift_force))
+                arc_sink=fmax(0.0,sink-ARC_RESIDUAL_LAG*fmax(0.0,
+                    t->lift_force*cos(bank*DEG2RAD)/fmax(t->mass,1.0)-g0*cos(gamma)));
+            /* Never a push while on the arc: above the design arc the sink
+               is held until the arc reaches it.  Pushing back to the design
+               sink at -0.3 g chatters with the on-arc test, builds a steep
+               late dive and turns the catch-up into a hard pull. */
+            arc_accel=sink>SGS_SINK?fmax(0.0,arrest_accel+(arc_sink-design_sink)/PREFLARE_TAU):
                 (sink-SGS_SINK)/PREFLARE_TAU;
             double arc_goal=sink>SGS_SINK?fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU):SGS_SINK;
             reference_fpa=fmax(glide_fpa,-asin(clampd(arc_goal/V,0.0,.95)));
