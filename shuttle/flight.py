@@ -2089,7 +2089,7 @@ def main():
     parser.add_argument('--pitch-slew', type=float,
                         default=PITCH_SLEW_DEG_PER_SECOND,
                         help='Maximum pitch-command change in deg/s')
-    parser.add_argument('--meco-periapsis', type=float, default=50000,
+    parser.add_argument('--meco-periapsis', type=float, default=60000,
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--meco-pitch', type=float, default=0,
                         help='Surface pitch used to build horizontal energy after target apoapsis')

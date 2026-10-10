@@ -106,7 +106,7 @@ def execute(conn, vessel, node, done, tolerance=0.03):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--apoapsis', type=float, default=90000.0)
-    parser.add_argument('--periapsis', type=float, default=50000.0)
+    parser.add_argument('--periapsis', type=float, default=60000.0)
     parser.add_argument('--inclination', type=float, default=34.0)
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
@@ -154,7 +154,7 @@ def main():
         else:
             print('Inclination already on target or no safe plane node; skipping plane burn')
             flight = vessel.flight(o0.body.reference_frame)
-            ut1 = now + max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
+            ut1 = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
                             max(flight.vertical_speed, 20.0))
         base_orbit = nodes[-1].orbit if nodes else o0
         ut1 = max(ut1, now + 15.0)
