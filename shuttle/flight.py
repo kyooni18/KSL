@@ -1524,8 +1524,8 @@ def run(args):
                             # vertical speed and hold altitude near the target
                             # band instead of letting Ap run away.
                             hold = args.meco_pitch + 5.0 \
-                                - 0.1*flight.vertical_speed \
-                                + max(-5.0, min(5.0, (altitude-62000.0)/-3000.0))
+                                - 0.2*flight.vertical_speed \
+                                + max(-5.0, min(5.0, (altitude-64000.0)/-3000.0))
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 5.0)
                         commanded_pitch = slew_value(
