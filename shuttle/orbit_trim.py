@@ -117,37 +117,42 @@ def main():
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
     def plan(d_ap, d_pe):
-        """Chain three nodes; return (nodes, final orbit) with Ap/Pe targets offset."""
+        """Chain up to three nodes in time order: plane change at the first high node
+        after MECO, apoapsis set shortly after, periapsis raised at apoapsis."""
         for stale in list(vessel.control.nodes):
             stale.remove()
-        flight = vessel.flight(vessel.orbit.body.reference_frame)
-        lead = max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
-                   max(flight.vertical_speed, 20.0))
-        ut1 = sc.ut + lead
+        o0 = vessel.orbit
+        omega = o0.argument_of_periapsis
+        now = sc.ut
+        candidates = sorted(
+            o0.ut_at_true_anomaly(nu) for nu in ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
+        usable = [c for c in candidates if c > now+45 and c < now+900 and
+                  o0.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE+3000.0]
+        target = math.radians(args.inclination)
+        nodes = []
+        if usable:
+            ut_p = usable[0]
+            xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
+                       lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
+            nodes.append(vessel.control.add_node(ut_p, normal=xp))
+            ut1 = ut_p + 0.5*abs(xp)/2.7*1.0 + 70.0
+        else:
+            print('No safe plane-change node; skipping the inclination burn')
+            flight = vessel.flight(o0.body.reference_frame)
+            ut1 = now + max(10.0, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
+                            max(flight.vertical_speed, 20.0))
+        base_orbit = nodes[-1].orbit if nodes else o0
+        ut1 = max(ut1, now + 15.0)
         x1 = solve(lambda x: vessel.control.add_node(ut1, prograde=x),
                    lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
         n1 = vessel.control.add_node(ut1, prograde=x1)
+        nodes.append(n1)
         ut2 = n1.orbit.ut_at_true_anomaly(math.pi)
         x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
                    lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
         n2 = vessel.control.add_node(ut2, prograde=x2)
-        o2 = n2.orbit
-        omega = o2.argument_of_periapsis
-        candidates = [o2.ut_at_true_anomaly((-omega) % (2*math.pi)),
-                      o2.ut_at_true_anomaly((math.pi-omega) % (2*math.pi))]
-        usable = [c for c in candidates if c > ut2+120 and c < ut2+900 and high_enough(o2, c)]
-        if not usable:
-            usable = [c for c in candidates if c > ut2+120 and c < ut2+900 and
-                      o2.radius_at(c)-body_radius >= 68000.0]
-        if not usable:
-            print('No safe plane-change node within reach; skipping the inclination burn')
-            return (n1, n2), n2.orbit
-        ut3 = min(usable)
-        target = math.radians(args.inclination)
-        x3 = solve(lambda x: vessel.control.add_node(ut3, normal=x),
-                   lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
-        n3 = vessel.control.add_node(ut3, normal=x3)
-        return (n1, n2, n3), n3.orbit
+        nodes.append(n2)
+        return tuple(nodes), n2.orbit
 
     d_ap = d_pe = 0.0
     for iteration in range(6):
