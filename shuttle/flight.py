@@ -1745,7 +1745,7 @@ def run(args):
                                 sma_now = v.orbit.semi_major_axis
                                 energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
                                              / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
-                                energy_done = sma_now >= target_sma-150.0
+                                energy_done = sma_now >= target_sma+3000.0
                                 peg_phase_g = max(0.5, min(args.upper_g,
                                                            min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
