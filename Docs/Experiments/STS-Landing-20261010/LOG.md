@@ -40,7 +40,41 @@ Physics (Tools/sts_terminal_bench.py point mass): on a 20° glide the vehicle se
 
 Live v8 Final showed the same float signature (preflare ~600 m, 48 m/s at 160 m).
 
-## 5. Next steps
-- Touchdown speed 65 < 75 target: shorten shallow-glide segment / steeper OGS energy.
-- TAEM: replace provisional acquisition + Mach-2 direct fallback with an energy-managed law that dissipates the measured excess (S-turns/HAC sizing) and holds AoA ≤ 15°.
-- Repeatability across station dispersions, then full chain from live-derived 30 km state, then live.
+## 5. TAEM energy law (commits a2d254b..1707db8)
+
+`guidance.taemEnergyLaw` (CLanding/guidance/taem/energy_law.inc) replaces MM305 acquisition with a
+predictive drag-modulation law: level k in [0,1] (supersonic AoA 15→8, subsonic q 3500→11000 Pa) solved
+by bisection on a point-mass predictor over the planned segments; pattern chosen among straight-in,
+direct HAC (either side, R 2.2–10 km, flyable-radius floor) and overhead loop; HAC spiral resizes R in
+flight; handover to Final after the outer-gate + delivery contract holds 1 s.
+
+Full chain (engageReentry, profile sts-live-20261010) from the seven live MM305 handoffs + v7: all on the
+runway after 1707db8, but touchdown 59.8–66.9 m/s (below the 63.75 band).
+
+## 6. Flare: short shallow glide, no-push arc (b2f6140)
+
+| change | handoff cases (7) | note |
+|---|---|---|
+| baseline (SGS 25 m) | 59.8–66.9 m/s | ~7 s at 25 m bleeds 88→66 m/s |
+| SGS 12 m (guidance + admission plan) | 66–67, but 11-27-40 44 m/s / 8.3 m/s sink | late hard pull (5.4 s incidence lag) overshoots, arc ends 130 m high, push back, second balloon |
+| + arc closed on sink one residual lag ahead | 10-46-41 also balloons | root cause: on-arc test `sink<.92 glide_sink` chatters; arc pushes −0.3 g toward the design sink, builds a 45–50 m/s dive |
+| + never push on the arc (arc_accel ≥ 0 above SGS sink) | all clean, 61–66 m/s, sink ≤ 2.9 | slower: approaches arrive at latch ~110 m/s |
+| + outer-glide speed floor 1.3→1.5 v_td | 67.0–68.7, sink ≤ 1.44, but 54–104 m along | too close to threshold |
+| + aim bias 250 m | 63.7–66.5, 257–329 m along | float costs speed |
+| **aim bias 150 m (committed)** | **66.0–66.7 m/s, sink ≤ 1.75, 199–222 m along, cross ≤ 5.2 m** | Final-only stations 66.1–70.9 m/s |
+| arrest cap .35→.5 g | worse (64–67 Final-only) | rejected |
+
+Runner: with `taemEnergyLaw` the HAC requirement is committed path + HAC completion (law sizes its own HAC);
+`Configuration/sts.json` now enables the law (637d5ee). **7/7 handoff cases succeed on all runner criteria.**
+
+## 7. Open issues
+- v7 (pre-TAEM 30 km, M3.65 — more energetic than the current M2.9/27 km MM304 handoff): k=0 supersonic plan
+  is an overhead loop with a near-full-circle HAC (40.8 km to go, predicted 6.6 km short); at M1 it flips to
+  a direct HAC (13.7 km, 4.6 km excess). No intermediate pattern; spiral (±250 m/2 s) cannot absorb it; Final
+  admitted at 4.4 km / 1.9 km high → lands 1669 m along, 30 m cross (rollout off the centre band).
+  Faster spiral (±500) made it worse (2342 m) — rejected.
+- `make test`: pre-existing failures unchanged (mm305_admission link error, mm305-feasibility non-vacuity,
+  touchdown-quality). touchdown-quality improved from a gear assertion abort to an on-runway 1.58 m/s
+  touchdown at 91.75 m/s (default model, limit 75).
+- Live: KSP running but kRPC server not listening (ports 50000/50001 closed) and screen control of KSP was
+  not granted, so no live flight with the energy law yet.
