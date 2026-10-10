@@ -885,11 +885,18 @@ class Shuttle:
             return self.liquid_booster_nominal_burn_time()
         if not self.solid_boosters or self.separated:
             return 0.0
-        propellant_mass = sum(resource_mass([engine.part], ('SolidFuel',))
-                              for engine in self.solid_boosters)
-        mass_flow = sum(self._engine_mass_flow(engine) * engine.thrust_limit
-                        for engine in self.solid_boosters)
-        return propellant_mass/mass_flow if mass_flow > 0 else math.inf
+        try:
+            propellant_mass = sum(resource_mass([engine.part], ('SolidFuel',))
+                                  for engine in self.solid_boosters)
+            mass_flow = sum(self._engine_mass_flow(engine) * engine.thrust_limit
+                            for engine in self.solid_boosters)
+        except Exception:
+            # kRPC can briefly return null engine handles around liftoff;
+            # keep the last good estimate instead of aborting the ascent.
+            return getattr(self, '_last_solid_burn_time', math.inf)
+        burn_time = propellant_mass/mass_flow if mass_flow > 0 else math.inf
+        self._last_solid_burn_time = burn_time
+        return burn_time
 
     def et_skipper_upper_bound(self):
         """Let Wolfhound pressure recovery replace ET Skipper thrust continuously."""
