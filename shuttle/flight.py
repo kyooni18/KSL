@@ -438,14 +438,20 @@ def final_phase_g(periapsis_altitude, target_periapsis, max_g, ramp=30000.0, flo
     return max(floor, floor + (max_g-floor)*remaining/ramp)
 
 
-def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
-                         initial_pitch=89.0, minimum_pitch=5.0, max_lead=6.0):
-    """Altitude-scheduled gravity turn scaled to the target orbit.
+def aoa_limit_deg(dynamic_pressure, q_alpha=40000.0, floor=1.0, ceiling=8.0):
+    """Bound angle of attack so q*alpha (wing/tank-attach load) stays within q_alpha Pa*deg."""
+    return max(floor, min(ceiling, q_alpha/max(1.0, dynamic_pressure)))
 
-    Passes through 45 deg at 20% of the target apoapsis altitude (15 km for a
-    75 km orbit) and reaches the minimum pitch near the target altitude. The
-    schedule is not allowed to lead surface prograde by more than max_lead
-    degrees so angle of attack stays bounded early in the climb.
+
+def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
+                         dynamic_pressure=0.0, initial_pitch=89.0, minimum_pitch=5.0):
+    """Drag- and load-aware gravity turn scaled to the target orbit.
+
+    The reference passes through 45 deg at 20% of the target apoapsis altitude
+    (15 km for a 75 km orbit) and flattens near the target altitude. The nose
+    follows the surface velocity vector, i.e. a zero-lift gravity turn, and may
+    lead it only by an angle of attack allowed by a q*alpha bound, so the stack
+    turns fastest in thin air and nearly zero-lift through max-Q.
     """
     reference = 1.05 * max(1000.0, target_apoapsis)
     exponent = math.log(0.5) / math.log(0.2 / 1.05)
@@ -453,7 +459,9 @@ def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_s
     scheduled = initial_pitch * (1.0 - fraction)
     prograde = math.degrees(math.atan2(max(0.0, vertical_speed),
                                        max(0.5, horizontal_speed)))
-    return min(initial_pitch, max(minimum_pitch, scheduled, prograde - max_lead))
+    alpha = aoa_limit_deg(dynamic_pressure)
+    pitch = min(prograde + 1.0, max(scheduled, prograde - alpha))
+    return min(initial_pitch, max(minimum_pitch, pitch))
 
 
 def attitude_error_exceeded(error, altitude, since_roll_reset=None):
@@ -1354,6 +1362,8 @@ def run(args):
         initial_roll_set = False
         liftoff_ut = None
         baseline_part_count = None
+        meco_ut = None
+        upper_autotune = False
         roll_reset = False
         roll_reset_ut = None
         roll_rate = 0.0
@@ -1585,7 +1595,8 @@ def run(args):
                         else:
                             raw_pitch = scheduled_turn_pitch(
                                 altitude, args.orbit, flight.vertical_speed,
-                                flight.horizontal_speed, initial_pitch)
+                                flight.horizontal_speed, flight.dynamic_pressure,
+                                initial_pitch)
                         # Apply the MECO energy-build pitch through the same
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
@@ -1632,6 +1643,11 @@ def run(args):
                         control.throttle = 0
                         if not shuttle.separated:
                             raise RuntimeError('Target reached before booster separation')
+                        if meco_ut is None:
+                            meco_ut = conn.space_center.ut
+                        if shuttle.et_attached and conn.space_center.ut-meco_ut < args.et_sep_delay:
+                            time.sleep(1/args.hz)
+                            continue
                         if shuttle.et_attached and not shuttle.release_et():
                             time.sleep(1/args.hz)
                             continue
@@ -1673,7 +1689,8 @@ def run(args):
                         phase_max_g = args.max_g
                         if state == 'ASCENT' and shuttle.separated:
                             phase_max_g = final_phase_g(
-                                v.orbit.periapsis_altitude, args.meco_periapsis, args.max_g)
+                                v.orbit.periapsis_altitude, args.meco_periapsis,
+                                min(args.max_g, args.upper_g))
                             target_g = min(target_g, phase_max_g)
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
@@ -1722,12 +1739,26 @@ def run(args):
                         roll_rate = body_roll_rate
                         pitch_error, heading_error = surface_axis_errors(
                             actual_direction, target_pitch, args.heading)
+                        # Feed the live torque authority and moment of inertia
+                        # (centre-of-mass movement, propellant burn, booster
+                        # separation, thrust-dependent gimbal torque) into the
+                        # roll loop instead of the pad calibration.
+                        live_roll_accel = roll_accel_authority_deg_s2(v)
+                        if live_roll_accel > 1.0:
+                            roll_accel_reference = live_roll_accel
+                        if shuttle.separated and not upper_autotune:
+                            # Pad-frozen pitch/yaw gains are wrong once the boosters are
+                            # gone; let kRPC retune from the live inertia and torque.
+                            ap.auto_tune = True
+                            upper_autotune = True
+                            print('Autopilot auto-tune re-enabled after booster separation')
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
-                            (max(args.roll_rate, 8.0) if roll_reset else
+                            (min(args.roll_rate, 5.0) if shuttle.separated else
                              args.roll_rate),
                             args.roll_control_limit,
-                            args.roll_response_time)
+                            max(args.roll_response_time, 0.6) if shuttle.separated
+                            else args.roll_response_time)
                         settle_nose_error = direction_error_deg(
                             actual_direction, target_direction)
                         # Pause roll whenever the nose is being pulled away from
@@ -1889,6 +1920,10 @@ def main():
                         help='Gentle initial thrust-acceleration target in Earth g')
     parser.add_argument('--ssme-limit', type=float, default=0.7,
                         help='Fixed SSME thrust limiter held through SRB burn')
+    parser.add_argument('--upper-g', type=float, default=1.8,
+                        help='Acceleration cap for the SSME-only phase after booster separation')
+    parser.add_argument('--et-sep-delay', type=float, default=10.0,
+                        help='Seconds to hold attitude after MECO before external-tank separation')
     parser.add_argument('--ssme-lead-time', type=float, default=3.0,
                         help='Seconds to hold verified SSME thrust before booster ignition')
     parser.add_argument('--booster-min-g', type=float, default=BOOSTER_MIN_G,
