@@ -1312,34 +1312,45 @@ def run(args):
                       f'moment budget {budget/1000:.0f} kN m; spool {spool*100:.0f}%; '
                       f'roll accel {roll_accel_reference:.1f} deg/s^2')
             core_group_count = len(shuttle.core_groups)
+            full_ssme_before_srb = (
+                shuttle.vehicle_kind == 'orbiter-shuttle' and
+                bool(shuttle.solid_boosters))
             for group, u in zip(shuttle.core_groups, result.throttles[:core_group_count]):
                 for e in group:
-                    e.thrust_limit = u
+                    e.thrust_limit = 1.0 if full_ssme_before_srb else u
                     e.active = True
             control.throttle = 1
             core_engines = [engine for group in shuttle.core_groups for engine in group]
-            expected_core_thrust = sum(
-                engine.max_thrust * throttle
-                for group, throttle in zip(shuttle.core_groups,
-                                           result.throttles[:core_group_count])
-                for engine in group)
+            expected_core_thrust = sum(engine.max_thrust for engine in core_engines)
+            if not full_ssme_before_srb:
+                expected_core_thrust = sum(
+                    engine.max_thrust * throttle
+                    for group, throttle in zip(shuttle.core_groups,
+                                               result.throttles[:core_group_count])
+                    for engine in group)
             if expected_core_thrust <= 0:
                 raise RuntimeError('Launch allocation leaves the core engines at zero thrust')
+            ignition_fraction = .95 if full_ssme_before_srb else .5
             ignition_deadline = time.monotonic() + 8.0
             while time.monotonic() < ignition_deadline:
                 if conn.space_center.active_vessel != v:
                     raise RuntimeError('Active vessel changed during core-engine ignition')
                 core_thrust = sum(engine_thrust(engine) for engine in core_engines)
                 if (all(engine.active for engine in core_engines) and
-                        core_thrust >= expected_core_thrust * .5):
+                        core_thrust >= expected_core_thrust * ignition_fraction):
                     break
                 time.sleep(.05)
             else:
                 raise RuntimeError(
-                    'Core engines did not reach 50% of allocated thrust; '
+                    f'Core engines did not reach {ignition_fraction:.0%} of required thrust; '
                     'boosters remain unignited and clamps remain attached')
-            print(f'Core engines ignited on clamps: {core_thrust/1000:.0f} kN; '
-                  f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
+            if full_ssme_before_srb:
+                print(f'SSMEs verified at full limiter on clamps: '
+                      f'{core_thrust/1000:.0f}/{expected_core_thrust/1000:.0f} kN; '
+                      f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
+            else:
+                print(f'Core engines ignited on clamps: {core_thrust/1000:.0f} kN; '
+                      f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
 
             # Make the liquid-engine-first sequence observable and give the
             # SSMEs a real lead interval while the launch clamps still hold.
@@ -1349,6 +1360,11 @@ def run(args):
                     raise RuntimeError('Active vessel changed during SSME lead interval')
                 if not all(engine.active for engine in core_engines):
                     raise RuntimeError('SSME shut down during lead interval; boosters remain unignited')
+                if (full_ssme_before_srb and
+                        sum(engine_thrust(engine) for engine in core_engines) <
+                        expected_core_thrust * .95):
+                    raise RuntimeError('SSMEs fell below 95% thrust during lead interval; '
+                                       'boosters remain unignited')
                 time.sleep(min(.05, max(0.0, lead_deadline - time.monotonic())))
 
             if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:

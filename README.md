@@ -50,10 +50,11 @@ The Orbiter controller also supports two Size2 liquid side boosters, but the
 active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
 their Clydesdale motors run out of fuel. Mite motors attached at the nose are
-left out of launch control. On the live STS, the SSMEs ignite and verify thrust
-while the clamps still hold, then remain lit for a 3-second lead interval by
-default; `--ssme-lead-time` changes that interval. The next staging action then
-lights both SRBs and releases the clamps. The four-Skipper profile described
+left out of launch control. On the live STS, all three SSMEs ignite at a 100%
+thrust limiter while the clamps still hold. The controller verifies at least
+95% of their combined maximum thrust and holds for a 3-second lead interval by
+default; `--ssme-lead-time` changes that interval. Only then does the next
+staging action light both SRBs and release the clamps. The four-Skipper profile described
 below applies only to that separate vehicle variant.
 `--meco-periapsis 50000` with a 75 km apoapsis target aims for a suborbit whose
 periapsis is positive and below the 70 km atmosphere boundary. Reaching target
