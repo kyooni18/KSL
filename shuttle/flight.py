@@ -521,6 +521,11 @@ def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_s
     exponent = math.log(0.5) / math.log(0.2 / 1.05)
     fraction = min(1.0, max(0.0, altitude) / reference) ** exponent
     scheduled = initial_pitch * (1.0 - fraction)
+    x = max(0.0, altitude) / reference
+    if x > 0.2:
+        # Past the 45-degree point, flatten faster so the climb is spent before the
+        # terminal burn instead of arriving with a large vertical speed to cancel.
+        scheduled = min(scheduled, 45.0 * max(0.0, 1.0 - (x-0.2)/0.3) ** 1.2)
     prograde = math.degrees(math.atan2(max(0.0, vertical_speed),
                                        max(0.5, horizontal_speed)))
     alpha = aoa_limit_deg(dynamic_pressure)
