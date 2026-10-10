@@ -243,3 +243,10 @@ No unqualified-continuation override is inherited. Original campaign no-crash-gu
 1× preentry physics warp, unpowered approach restriction, and 3600 s wall limit retained.
 Runner PID 59125; immutable backend/config pin enabled; launch details in
 `L4-full86/launch.json`, live progress in `L4-full86/live.log`. Launch is not landing evidence.
+
+L4 startup confirmed: copied save loads at UT81.2, orbit86.7km, vesselSTS.
+Orbital admission passes executionQualified=true; selected burnUT1161.6, deltaV31.49m/s,
+strict=false, nominal=true, recovery7/15, downstream shadow TAEMrange12.9km. Normal
+entry-stage policy admits execution and guidance engagement is logged. Touchdown/rollout
+are not yet verified. Immutable campaign identity:
+`ddcb9a0d4ff48e57-8beafeebca9aa957-1ddd6e9ced45dd2b`.
