@@ -36,7 +36,7 @@ def solve(make_node, error, lo, hi, iterations=40):
     return 0.5*(lo+hi)
 
 
-def execute(conn, vessel, node, tolerance=0.03):
+def execute(conn, vessel, node, done, tolerance=0.03):
     sc = conn.space_center
     ctl = vessel.control
     ap = vessel.auto_pilot
@@ -58,16 +58,26 @@ def execute(conn, vessel, node, tolerance=0.03):
         time.sleep(0.2)
     ap.reference_frame = node.reference_frame
     ap.target_direction = (0.0, 1.0, 0.0)
+    ctl.rcs = True
     while sc.ut < start:
         time.sleep(0.02)
+    # Never burn unless the nose is on the burn vector.
+    aligned_wait = time.time()
+    while ap.error > 3.0 and time.time()-aligned_wait < 120:
+        time.sleep(0.1)
     ctl.throttle = 1.0
     while True:
         remaining = node.remaining_delta_v
-        if remaining <= tolerance:
+        if remaining <= tolerance or done(vessel.orbit):
             break
+        if ap.error > 10.0:
+            ctl.throttle = 0.0
+            while ap.error > 3.0:
+                time.sleep(0.05)
         accel = thrust/vessel.mass
         ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
         time.sleep(0.02)
+    ctl.rcs = False
     ctl.throttle = 0.0
     ap.engaged = False
     node.remove()
@@ -83,7 +93,6 @@ def main():
     conn = krpc.connect(name='orbit-trim')
     sc = conn.space_center
     vessel = sc.active_vessel
-    vessel.control.rcs = False
     vessel.control.sas = False
     for engine in vessel.parts.engines:
         engine.active = 'Viking' in engine.part.title or 'Orbital' in engine.part.title
@@ -102,7 +111,7 @@ def main():
         ut = sc.ut + o.time_to_apoapsis
         make = lambda x: vessel.control.add_node(ut, prograde=x)
         dv = solve(make, lambda orb: orb.periapsis_altitude-args.periapsis, -150.0, 150.0)
-        return ut, dict(prograde=dv)
+        return ut, dict(prograde=dv), lambda orb: orb.periapsis_altitude >= args.periapsis-30.0 if dv > 0 else orb.periapsis_altitude <= args.periapsis+30.0
 
     def step_inclination():
         o = vessel.orbit
@@ -114,19 +123,20 @@ def main():
         target = math.radians(args.inclination)
         make = lambda x: vessel.control.add_node(ut, normal=x)
         dv = solve(make, lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
-        return ut, dict(normal=dv)
+        target_deg = args.inclination
+        return ut, dict(normal=dv), lambda orb: abs(math.degrees(orb.inclination)-target_deg) < 0.01
 
     def step_apoapsis():
         o = vessel.orbit
         ut = sc.ut + o.time_to_periapsis
         make = lambda x: vessel.control.add_node(ut, prograde=x)
         dv = solve(make, lambda orb: orb.apoapsis_altitude-args.apoapsis, -150.0, 150.0)
-        return ut, dict(prograde=dv)
+        return ut, dict(prograde=dv), lambda orb: orb.apoapsis_altitude <= args.apoapsis+30.0 if dv < 0 else orb.apoapsis_altitude >= args.apoapsis-30.0
 
-    for name, planner in (('periapsis', step_periapsis),
-                          ('inclination', step_inclination),
-                          ('apoapsis', step_apoapsis)):
-        ut, comps = planner()
+    for name, planner in (('inclination', step_inclination),
+                          ('apoapsis', step_apoapsis),
+                          ('periapsis', step_periapsis)):
+        ut, comps, done = planner()
         node = vessel.control.add_node(ut, **comps)
         print(f'{name}: node at T+{ut-sc.ut:.0f} s, components {comps}, '
               f'predicted Ap {node.orbit.apoapsis_altitude/1000:.2f} Pe '
@@ -134,7 +144,7 @@ def main():
         if args.dry_run:
             node.remove()
             continue
-        execute(conn, vessel, node)
+        execute(conn, vessel, node, done)
         report(f'after {name}')
 
 
