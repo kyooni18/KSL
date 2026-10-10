@@ -328,3 +328,31 @@ Configured site70m is higher, but neither these estimates nor historical generic
 wiki numbers justify an exact universal deck value. L5 retains70m pending direct
 contact/geometry verification. Evidence and official source links are retained
 in L5-72km/runway-height-evidence.json. Exact deck/target correction remains open.
+
+## 17. Read-only checkpoint and collider measurement observers
+
+L5 PID17952 remains live; verified MM304 descent at UT1642.7 /63.6km, not yet
+MM305-admissible. No interruption or second flight. Added two experiment scripts
+under L5-72km; both compile with py_compile. Read-only checkpoint observerPID25435
+waits for the unique new save, checks stable bytes and savedUT, then records intact
+STS mass/dryMass/22 parts and zero thrust within15s of savedUT. It writes a new
+physics profile exclusively and does not pause, command controls, or reload.
+
+Read-only runway observerPID29897 waits until the existing flight approaches KSC.
+It uses native SpaceCenter.RaycastDistance, which official source implements via
+Unity Physics.Raycast, and RaycastPart to reject vessel-part hits. For each of
+six configured centerline positions, two origins200/400m ASL must agree within
+3cm. These collider measurements, once available, can distinguish the actual
+contact surface from terrainElevation. Static hit identity still requires review
+of centerline position and shape; no altitude correction adopted before evidence.
+Official implementation:
+https://raw.githubusercontent.com/krpc/krpc/master/service/SpaceCenter/src/Services/SpaceCenter.cs
+
+Code inspection confirms engageReentry classifies late terminal starts into
+guidance_begin_mm305_continuation, retaining native route qualification and
+Final handoff gates. This supports the requested singular MM305-through-rollout
+test without HAC/Final test-mode overrides. Native simulator runway_elevation_m
+is independent of guidance site.altitude; both references must be reconciled
+when a measured deck correction is adopted, rather than masking their mismatch.
+Observers are running; output profiles, collider values, checkpoint and landing
+are not yet verified.
