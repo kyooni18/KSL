@@ -330,7 +330,7 @@ static void tel_size_hac(TaemEnergyLawState *L,const TelContext *c,const TelPoin
         if (set_turn&&ext<=0.0) break;
     }
     L->radius=best_r;
-    if (set_turn) L->x_turn=-c->d_station+fmax(0.0,best_e)/2.0;
+    if (set_turn) L->x_turn=-c->d_station+L->radius+500.0+fmax(0.0,best_e)/2.0;
 }
 
 /* One guidance tick.  Returns false when the inputs are unusable. */
@@ -357,9 +357,17 @@ static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint
     double over=0.0;
     double r_mid=tel_predict_range_ex(c,s,TEL_K_PLAN,1e9,segs,n,&over);
     bool stretch=P->loop&&P->leg==TEL_LEG_OUT;
-    double outside=fmax(0.0,path-r_max)+(stretch?0.0:fmax(0.0,r_min-path));
+    /* a directly intercepted HAC can still spiral between its flyable minimum
+       and TEL_R_MAX, scaling its arc */
+    double path_lo=path,path_hi=path;
+    if (P->loop&&P->leg==TEL_LEG_DOWN&&n>0&&segs[n-1].radius>0.0) {
+        double theta=segs[n-1].length/segs[n-1].radius;
+        path_lo=path-theta*fmax(0.0,segs[n-1].radius-TEL_R_MIN)*0.5;
+        path_hi=path+theta*fmax(0.0,TEL_R_MAX-segs[n-1].radius)*0.5;
+    }
+    double outside=fmax(0.0,path_lo-r_max)+(stretch?0.0:fmax(0.0,r_min-path_hi));
     return outside+0.15*(stretch?fmax(0.0,path-r_mid):fabs(r_mid-path))+(stretch?1000.0:0.0)+
-        500.0*fmax(0.0,over);   /* an arc the vehicle cannot hold is not a plan */
+        1000.0*fmax(0.0,over);   /* an arc the vehicle cannot hold is not a plan */
 }
 
 static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
@@ -425,7 +433,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     } else if (L->loop&&L->leg==TEL_LEG_OUT&&ut>=L->last_geo_ut+TEL_UPDATE_S) {
         L->last_geo_ut=ut;
         double ext=tel_pattern_excess(L,&c,&s);
-        L->x_turn=fmax(-D,fmax(s.x,L->x_turn+0.5*ext));
+        L->x_turn=fmax(-D+L->radius+500.0,fmax(s.x,L->x_turn+0.5*ext));
     }
     if (L->loop&&L->leg==TEL_LEG_OUT&&s.x>=L->x_turn) {
         L->leg=TEL_LEG_TURN;
@@ -472,7 +480,13 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         double tx,ty,arc;
         if (!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) {
             L->leg=TEL_LEG_HAC;
-            L->hac_left_rad=tel_hac_remaining(L,&c,s.x,s.y)/fmax(1.0,L->radius);
+            {
+                double cx=-D,cy=side*r,ang=atan2(s.y-cy,s.x-cx),end=-side*TEL_PI/2.0;
+                double rem=fmod(side*(end-ang),2.0*TEL_PI);
+                if (rem<0.0) rem+=2.0*TEL_PI;
+                if (rem>1.9*TEL_PI&&fabs(tel_wrap(s.psi))<0.3) rem=0.0; /* already aligned */
+                L->hac_left_rad=rem;
+            }
             L->hac_last_ang=NAN;
             course_cmd=s.psi;
         } else {
