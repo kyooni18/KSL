@@ -1,0 +1,14 @@
+import concurrent.futures,json,os,subprocess
+from pathlib import Path
+root=Path('/Users/kyooni18/Code/KSPShuttleLander')
+inputs=root/'Docs/Experiments/STS-Landing-20261010/Codex-Flare-Offline/inputs'
+cfg=root/'Docs/Experiments/STS-Landing-20261010/L4-full86/configuration.json'
+env=os.environ.copy();env.update(KSP_LANDER_MODEL_PROFILE='sts-live-20261010',KSP_LANDER_FINAL_TRACE='1')
+cases=['10-46-41','11-27-40','12-33-31','13-02-48','13-27-33','13-52-53','14-21-19']
+def run(case):
+ cmd=['python3','ShuttleSim/scripts/run_guidance.py','--scenario',str(root/'ShuttleSim/scenarios'/('sts-live-handoff-'+case+'.ini')),'--configuration',str(cfg),'--engage','engageReentry','--max-sim-time','700','--label','pitch-terminal-lag024-'+case,'--command-port','0','--telemetry-port','0','--no-mirror','--quiet-progress','--skip-build','--backend-build-dir','/tmp/sts-codex-flare/CLanding/build','--sim-build-dir','/tmp/sts-codex-flare/sim-build','--direct-control','--attitude',str(inputs/'att-live.ini'),'--terminal-attitude',str(root/'ShuttleSim/reference-model/stsn_attitude_identified.ini')]
+ r=subprocess.run(cmd,cwd=root,env=env,capture_output=True,text=True,timeout=1500)
+ try:d=json.loads(r.stdout.strip().splitlines()[-1])
+ except Exception:d={'error':r.stdout[-600:]+r.stderr[-600:]}
+ print(json.dumps({'case':case,'result':d}),flush=True)
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(run,cases))

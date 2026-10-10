@@ -282,3 +282,24 @@ passes; existing quaternion FCS tests pass. Feedback-only handoff replay stays6/
 but is not a completed correction of live pitch weakness. See `Pitch-Response-L4/` for
 trace, snapshots, portable Final station, rejected patch, all28 comparison outcomes,
 and verification instructions. Shared live backend and L4 pinned executable stay untouched.
+
+## 15. Weak-pitch follow-up: slower lag rejected
+
+Read-only process inspection found no running headless_flight.py: L4 had already
+finished naturally as recorded in §14. No live KSP calls, stops, launches, or save
+reloads were made. Existing shared backend and unrelated modifications preserved.
+Foundation recall retried successfully; Jev is not exposed in this session.
+
+Hypothesis: the assumed 0.12 s actuator response is too fast; test 0.24 s via
+the existing tuning override across the seven complete handoff replays, then
+only for Approach/Flare in an isolated source/build. Both variants fail 0/7,
+with hard or off-runway touchdowns. Neither is retained. The isolated FCS source
+was restored after the experiments. Actual simulator control feedback is enabled
+as in §14; same STS/L4 config, plant, gates, and runway criteria are used.
+
+Artifacts in Pitch-Response-L4: lag024-results.jsonl and
+terminal-lag024-results.jsonl, plus the two exact runner scripts. The scripts
+reference temporary build paths; the terminal variant requires replacing the
+pitch_lag_s declaration with a 0.24 s Approach/Flare-only selection. The shared
+live backend remains unchanged. A validated correction of weak live pitch
+response is still outstanding; these results do not authorize a new live run.
