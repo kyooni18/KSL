@@ -139,7 +139,10 @@ def main():
         if not usable:
             usable = [c for c in candidates if c > ut2+120 and c < ut2+900 and
                       o2.radius_at(c)-body_radius >= 68000.0]
-        ut3 = min(usable) if usable else max(candidates, key=lambda c: o2.radius_at(c) if c > ut2+120 else 0)
+        if not usable:
+            print('No safe plane-change node within reach; skipping the inclination burn')
+            return (n1, n2), n2.orbit
+        ut3 = min(usable)
         target = math.radians(args.inclination)
         x3 = solve(lambda x: vessel.control.add_node(ut3, normal=x),
                    lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
