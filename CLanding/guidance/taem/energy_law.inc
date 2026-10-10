@@ -559,6 +559,30 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
             course_cmd=atan2(-s.y,3000.0);
         }
     }
+    /* S-turns: with drag saturated (k=1) and range still in excess of the
+       path, weave off the direct course so the flown path absorbs the excess,
+       psi_w = acos(d/(d+E)).  Only on legs steered by course (the downwind to
+       the HAC tangent and a straight-in centreline), subsonic, and ending
+       3 km before the leg's end so the vehicle is realigned. */
+    {
+        double E=L->s_req-L->s_go,tx=-D,ty=0.0,arc=0.0;
+        bool leg_ok=L->leg==TEL_LEG_DOWN||(L->leg==TEL_LEG_OUT&&!L->loop);
+        if (L->leg==TEL_LEG_DOWN&&!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) leg_ok=false;
+        double d=hypot(tx-s.x,ty-s.y);
+        if (L->leg==TEL_LEG_OUT) d=fmax(0.0,-D-6000.0-s.x);
+        if (leg_ok&&L->k>0.999&&E>300.0&&mach<0.95&&d>3000.0) {
+            double brg=atan2(ty-s.y,tx-s.x);
+            if (!L->weave_on) { L->weave_on=true; L->weave_sign=1; L->weave_brg=brg; }
+            double ux=cos(L->weave_brg),uy=sin(L->weave_brg);
+            double off=-(s.x-tx)*uy+(s.y-ty)*ux;
+            double ymax=clampd(0.25*d,800.0,2500.0);
+            if (L->weave_sign>0&&off>ymax) L->weave_sign=-1;
+            else if (L->weave_sign<0&&off<-ymax) L->weave_sign=1;
+            double psi_w=fmin(acos(d/(d+E)),50.0*DEG2RAD);
+            course_cmd=brg+L->weave_sign*psi_w;
+            bank_ff=0.0;
+        } else L->weave_on=false;
+    }
     double cerr=tel_wrap(course_cmd-s.psi);
     double omega=clampd(cerr/6.0,-0.12,0.12);
     double bank_left=bank_ff+atan(gnd*omega/TEL_G0)*RAD2DEG;

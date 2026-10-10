@@ -117,6 +117,10 @@ typedef struct {
     bool admit_pending; double admit_since_ut;
     int trace_leg, trace_side; double trace_radius; bool trace_loop;
     double hac_left_rad, hac_last_ang;
+    /* S-turn weave while drag is saturated with excess energy */
+    bool weave_on;
+    int weave_sign;
+    double weave_brg;
 } TaemEnergyLawState;
 
 typedef enum {
