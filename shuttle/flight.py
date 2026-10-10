@@ -133,7 +133,7 @@ def part_engine(part):
         return None
 
 
-def limit_aero_roll(vessel, authority_limit=35.0):
+def limit_aero_roll(vessel, authority_limit=60.0):
     """Enable shuttle elevon roll at limited authority and return prior states."""
     states = []
     for part in vessel.parts.all:
@@ -413,6 +413,24 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
     else:
         pitch_under = 8.0
     return min(initial_pitch, max(minimum_pitch, flight_path_pitch - pitch_under))
+
+
+def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
+                         initial_pitch=89.0, minimum_pitch=5.0, max_lead=10.0):
+    """Altitude-scheduled gravity turn scaled to the target orbit.
+
+    Passes through 45 deg at 20% of the target apoapsis altitude (15 km for a
+    75 km orbit) and reaches the minimum pitch near the target altitude. The
+    schedule is not allowed to lead surface prograde by more than max_lead
+    degrees so angle of attack stays bounded early in the climb.
+    """
+    reference = 1.05 * max(1000.0, target_apoapsis)
+    exponent = math.log(0.5) / math.log(0.2 / 1.05)
+    fraction = min(1.0, max(0.0, altitude) / reference) ** exponent
+    scheduled = initial_pitch * (1.0 - fraction)
+    prograde = math.degrees(math.atan2(max(0.0, vertical_speed),
+                                       max(0.5, horizontal_speed)))
+    return min(initial_pitch, max(minimum_pitch, scheduled, prograde - max_lead))
 
 
 def attitude_error_exceeded(error, altitude, since_roll_reset=None):
@@ -1500,7 +1518,7 @@ def run(args):
                         control.roll = 0
                         mission_roll_commanded = True
                         print(f'Physical orbiter-side roll started: earthward; '
-                              f'elevon roll enabled at 35% authority')
+                              f'elevon roll enabled at 60% authority')
                     roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
                     if recovered_autopilot and roll_active:
                         ap.auto_tune = False
@@ -1517,9 +1535,9 @@ def run(args):
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
                         else:
-                            raw_pitch = gravity_turn_pitch(
-                                flight.vertical_speed, flight.horizontal_speed,
-                                flight.dynamic_pressure, initial_pitch)
+                            raw_pitch = scheduled_turn_pitch(
+                                altitude, args.orbit, flight.vertical_speed,
+                                flight.horizontal_speed, initial_pitch)
                         # Apply the MECO energy-build pitch through the same
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
@@ -1811,7 +1829,7 @@ def main():
                         help='Seconds roll/pitch/yaw errors must remain settled')
     parser.add_argument('--roll-control-limit', type=float, default=0.5,
                         help='Maximum direct roll-control magnitude during physical roll')
-    parser.add_argument('--roll-response-time', type=float, default=.5,
+    parser.add_argument('--roll-response-time', type=float, default=.3,
                         help='Rate-controller response horizon in seconds for physical roll')
     parser.add_argument('--hz', type=float, default=10)
     parser.add_argument('--timeout', type=float, default=1800)
