@@ -137,3 +137,29 @@ Flare, live vs sim replay of the same Final state (sim: 67.4 m/s, 1.5 m/s sink, 
   (−382 m; −838 m at 0.004 — pre-existing): admission-trigger latch at 1357 m freezes an unconverged aim (−1154 m).
   Unfreezing the aim while latched rejected (speed loop is off when latched: 49 m/s, 5 m/s sink).
   The STS-N borrowed plant is not representative (baseline also fails).
+
+## 11. Adaptive flare (guidance.adaptiveFlare, CLanding/guidance/final/adaptive_flare.inc)
+Predictive flare replacing latch/arc/SGS/floor when the flag is on (default off; flag off is bit-identical):
+- Response ID every Final cycle: decayed (5 s) least squares of d(aoa)/dt = (cmd + bias − aoa)/tau, firm prior
+  tau 0.8 s, weak offset prior. A gain term was dropped: over a flare it is collinear with the offset and both ran
+  to their clamps (chattering inverted command). An offset/lag split must lean on physics: a steady
+  command/incidence gap with the incidence still is trim/stiffness, not lag.
+- One law shared by predictor and execution: sink-vs-height profile (constant-decel arc to the shallow-glide sink,
+  then sink proportional to height to 1 m/s at 1.5 m), read 0.6·tau ahead (only building deceleration), loop
+  TC = tau, capped at the sink when the flare started, never a push below the shallow glide except out of a real
+  float, offset-compensated command, mains-first floor ≤ 1 g.
+- Solver: 6 arcs × shallow-glide heights {10,14,18} m on the forward predictor, scored on the identified response
+  and on a weaker one (tau×1.3, gain 0.8, offset −0.3), worst counts; touchdown before the threshold near-hard;
+  speed below 66 m/s weighted. Onset when the chosen plan's lead-read sink reaches its arc, below 600 m; plan locked
+  once engaged. Outer-glide aim corrected by integrating the forecast touchdown error before onset.
+- Rejected along the way: overdrive lag compensation and a 1 s sink loop behind a 2-3 s lag (limit cycle);
+  two-sided tracking up to the profile (dives from 900 m); full-pull lead extrapolation (unloads, sink returns);
+  short shallow-glide heights 5/8 m (stiff plants trail a rising command by 3°: hits at arc sink); an incidence
+  integral on the command (fights the online offset estimate: 10-19 m/s sink); a −0.08 g push below the
+  shallow glide (8/12).
+
+Sim (direct FCS, live-like plant att-live and ±stiffness, trim ki 0.025 and the old 0.004):
+| set | fixed flare | adaptive |
+|---|---|---|
+| L1/L3 live Final states × 3 plants × 2 trim gains | 7/12 | 10/12 (L1 nominal 62.4 m/s; L1 stiff/ki0.004 102 m short) |
+| 7 live handoff chains | 6/7 | 5/7 (13-02-48 4.9 m/s sink; 12-33-31 51 m/s) |

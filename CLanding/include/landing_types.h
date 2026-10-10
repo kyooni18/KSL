@@ -90,6 +90,9 @@ typedef struct {
     /* Fly MM305 with the predictive drag-modulation/overhead-loop energy law
        (guidance/taem_energy_law.c) instead of the route planner. */
     bool taem_energy_law; double minimum_planning_lead_time;
+    /* Fly the flare from the predictive adaptive flare law
+       (guidance/final/adaptive_flare.inc) instead of the fixed arc. */
+    bool adaptive_flare;
 } GuidanceSettings;
 typedef struct {
     bool enable_passive_calibration, enable_trajectory_calibration, auto_apply_in_flight;

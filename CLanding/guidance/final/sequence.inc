@@ -255,6 +255,8 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
     return height<=0.0&&isfinite(V)&&V>0.0?V:NAN;
 }
 
+#include "adaptive_flare.inc"
+
 static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,const LandingConfiguration*cfg,const Trajectory*ref,double dt){
     const GuidanceSettings*s=&cfg->guidance;
@@ -277,6 +279,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double aoa_max=final_lift_aoa_limit(t,v);
     double v_td=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
     terminal_observe_landing_aero(g,t,v,g0,dt);
+    af_observe(g,t);
 
     TerminalVerticalStage stage=g->terminal_vertical_stage;
     if(stage<TERMINAL_OUTER_FINAL)stage=TERMINAL_OUTER_FINAL;
@@ -401,6 +404,18 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double AIM_BIAS=150.0;
     double aim=touchdown_target+AIM_BIAS-arc_distance-float_distance+preflare_height/glide_tan;
     aim=clampd(aim,touchdown_target-6000.0,touchdown_target+AIM_BIAS);
+    if(s->adaptive_flare&&!g->terminal_pull_latch){
+        /* The aim above is sized for the fixed flare's float.  Correct it with
+           the adaptive predictor's own touchdown forecast (previous cycle):
+           integrate the forecast error into an aim shift. */
+        AdaptiveFlareState*F=&g->adaptive_flare;
+        if(F->plan_valid&&isfinite(F->pred_along)&&F->cost<1e5){
+            double err=clampd(touchdown_target-F->pred_along,-300.0,300.0);
+            F->aim_shift=clampd(F->aim_shift+clampd(dt,0.0,.5)*err/6.0,-1500.0,1500.0);
+        }
+        aim=clampd(aim+F->aim_shift,touchdown_target-6000.0,
+            touchdown_target+AIM_BIAS+fmax(0.0,F->aim_shift));
+    }
     if(!g->terminal_pull_latch){
         if(!g->terminal_aim_valid){
             double seed_distance=height/fmax(tan(4.0*DEG2RAD),tan(handoff_slope*DEG2RAD));
@@ -442,7 +457,8 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        optimistic after handoff. */
     double preflare_latch_height=fmax(preflare_height+response_height,
         planned_preflare_trigger);
-    if(height<=preflare_latch_height)
+    /* The adaptive flare starts itself from its predicted response. */
+    if(!s->adaptive_flare&&height<=preflare_latch_height)
         g->terminal_pull_latch=true;
 
     /* Outer-glide speed closure.  The flare needs speed in hand: the arc is
@@ -599,8 +615,30 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        pitch step.  The smoothstep begins gently at 26 m main-wheel height and
        reaches the full 8 deg only near 5 m, so the incidence floor assists sink
        arrest without exciting the live pitch loop. */
+    bool af_flying=false;
+    if(s->adaptive_flare&&height<1500.0&&V>20.0&&isfinite(gamma)){
+        AdaptiveFlareState*F=&g->adaptive_flare;
+        AfModel M;
+        af_model(g,t,v,g0,aoa_max,v_td,100.0,touchdown_target+500.0,&M);
+        AfState s0={.h=height,.sink=sink,.V=V,.gamma=gamma,.aoa=t->angle_of_attack,
+            .cmd=g->terminal_aoa_cmd_ut>0.0?g->terminal_aoa_cmd_last:t->angle_of_attack,.x=along,
+            .engaged=g->terminal_pull_latch,.glide_sink=F->active?F->glide_sink:NAN};
+        if(!F->plan_valid||t->ut-F->plan_ut>=.2)af_solve(F,&M,&s0,t->ut);
+        if(F->plan_valid){
+            AfParams P={F->arc_accel,F->sgs_height};
+            AfLawOut o=af_law(&M,&P,&s0,0.0);
+            if(!g->terminal_pull_latch&&o.on_arc){g->terminal_pull_latch=true;F->active=true;F->glide_sink=sink;}
+            if(g->terminal_pull_latch){aoa=o.cmd;af_flying=true;flaring=true;}
+            if(getenv("KSP_LANDER_AFLARE_TRACE"))
+                fprintf(stderr,"AFLARE ut=%.2f h=%.1f x=%.0f V=%.1f sink=%.2f aoa=%.2f cmd=%.2f acc=%.2f on=%d fly=%d "
+                    "tau=%.2f bias=%.2f gain=%.2f shift=%.0f w=%.1f arc=%.2f sgs=%.0f cost=%.2f pV=%.1f pS=%.2f pX=%.0f pN=%.2f pC=%.2f\n",
+                    t->ut,height,along,V,sink,t->angle_of_attack,o.cmd,o.accel,o.on_arc,af_flying,
+                    F->tau,F->bias,F->gain,F->aim_shift,F->weight,F->arc_accel/g0,F->sgs_height,F->cost,
+                    F->pred_speed,F->pred_sink,F->pred_along,F->pred_peak_n,F->pred_climb);
+        }
+    }
     double touchdown_attitude_floor=NAN,touchdown_aoa_floor=NAN;
-    if(flaring&&height<=TOUCHDOWN_ATTITUDE_START){
+    if(!af_flying&&flaring&&height<=TOUCHDOWN_ATTITUDE_START){
         double u=clampd((TOUCHDOWN_ATTITUDE_START-height)/
             (TOUCHDOWN_ATTITUDE_START-TOUCHDOWN_ATTITUDE_FULL),0.0,1.0);
         u=u*u*(3.0-2.0*u);

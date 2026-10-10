@@ -123,6 +123,22 @@ typedef struct {
     double weave_brg;
 } TaemEnergyLawState;
 
+/* Adaptive flare (guidance/final/adaptive_flare.inc): online incidence-response
+   identification and the flare plan chosen on its forward predictor. */
+typedef struct {
+    double sxx[3][3], sxy[3];       /* decayed regression sums, AoA response */
+    double last_aoa, last_gamma, last_ut;
+    bool has_last;
+    double tau, bias, gain;         /* identified lag (s), steady offset (deg), steady gain */
+    double glide_sink;              /* sink when the flare started, m/s */
+    double aim_shift;               /* outer-glide aim correction from the forecast, m */
+    double weight;                  /* decayed sample weight, s */
+    bool plan_valid, active;
+    double arc_accel, sgs_height;   /* chosen profile */
+    double cost, pred_speed, pred_sink, pred_along, pred_peak_n, pred_climb;
+    double plan_ut;
+} AdaptiveFlareState;
+
 typedef enum {
     TERMINAL_PATH_NONE = 0,
     TERMINAL_PATH_DIRECT = 1,
@@ -309,6 +325,7 @@ typedef struct {
     JerkLimiter pitch_limiter, roll_limiter, heading_limiter; SlewLimiter throttle_limiter;
     GuidancePhase last_stabilized_phase; bool has_last_stabilized_phase;
     TaemEnergyLawState taem_energy_law;
+    AdaptiveFlareState adaptive_flare;
 } GuidanceMachine;
 TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
     const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,
