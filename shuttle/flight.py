@@ -1691,6 +1691,7 @@ def run(args):
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
                         peg_dv = None
+                        energy_done = False
                         peg_phase_g = None
                         if (shuttle.separated and
                                 v.orbit.apoapsis_altitude > args.orbit+90000.0 and
@@ -1721,7 +1722,13 @@ def run(args):
                                 args.heading = slew_value(args.heading, peg_hold[1],
                                                           3.0, 1/args.hz)
                                 pitch_slew_rate = max(pitch_slew_rate, 4.0)
-                                peg_phase_g = max(0.5, min(args.upper_g, peg_dv/5.0/G0))
+                                target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
+                                sma_now = v.orbit.semi_major_axis
+                                energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
+                                             / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
+                                energy_done = sma_now >= target_sma-150.0
+                                peg_phase_g = max(0.5, min(args.upper_g,
+                                                           min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
                                 peg_dv = None
                         commanded_pitch = slew_value(
@@ -1731,7 +1738,7 @@ def run(args):
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if (shuttle.separated and
-                                ((peg_dv is not None and peg_dv < 1.5) or
+                                ((peg_dv is not None and (peg_dv < 1.5 or energy_done)) or
                                  (peg_dv is None and
                                   meco_ready(v.orbit.apoapsis_altitude,
                                              v.orbit.periapsis_altitude,
