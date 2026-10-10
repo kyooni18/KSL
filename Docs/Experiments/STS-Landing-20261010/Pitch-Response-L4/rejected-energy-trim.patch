@@ -1,0 +1,29 @@
+--- a/CLanding/guidance/guidance_taem.c
++++ b/CLanding/guidance/guidance_taem.c
+@@ -124,7 +124,9 @@
+         t->angle_of_attack_rate:t->pitch_rate;
+     double error=g->mm305_command_aoa_rad*RAD2DEG-t->angle_of_attack;
+     bool settled=g->mm305_command_valid&&t->has_controls&&
+-        isfinite(rate)&&fabs(rate)<0.3&&isfinite(error)&&fabs(error)<0.5;
++        isfinite(rate)&&fabs(rate)<0.3&&isfinite(error)&&fabs(error)<0.5&&
++        isfinite(t->roll_rate)&&fabs(t->roll_rate)<0.3&&
++        isfinite(t->heading_rate)&&fabs(t->heading_rate)<0.3;
+     adaptive_trim_observe(&g->mm305_trim,t->ut,t->mach,t->dynamic_pressure,
+         t->angle_of_attack,t->control_pitch,settled);
+ }
+@@ -1597,6 +1599,15 @@
+         L->k,L->s_go/1000.0);
+     GuidanceResult r=stabilized(g,result_make(PHASE_TAEM,command,status,NULL),
+         t,&cfg->vehicle,&cfg->guidance,dt);
++    /* The energy-law branch returns before the fixed-HAC command bookkeeping.
++       Keep its settled-response trim observer and elevator feedforward active
++       too: a torque report alone does not include aerodynamic restoring trim. */
++    r.command.has_pitch_trim_feedforward=adaptive_trim_input(
++        &g->mm305_trim,r.command.target_aoa,&r.command.pitch_trim_feedforward);
++    g->mm305_command_bank_rad=r.command.target_roll*DEG2RAD;
++    g->mm305_command_aoa_rad=r.command.target_aoa*DEG2RAD;
++    g->mm305_command_ut=t->ut;
++    g->mm305_command_valid=true;
+     g->phase=PHASE_TAEM;
+     return r;
+ }

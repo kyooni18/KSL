@@ -41,6 +41,12 @@ Guidance has no protocol operation for setting position, velocity, forces, aero 
 
 Representative telemetry:
 
+Direct-control telemetry also includes `attitude.input_pitch`, `input_roll`, and
+`input_yaw`: the normalized stick inputs held by the simulated plant. Guidance
+uses these for passive response and trim observations only when `direct_control`
+is true and all three inputs are finite and within [-1, 1]. Legacy packets or
+high-level attitude control leave applied stick feedback unavailable.
+
 ```json
 {
   "schema": 1,

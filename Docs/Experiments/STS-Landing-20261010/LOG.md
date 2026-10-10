@@ -250,3 +250,35 @@ strict=false, nominal=true, recovery7/15, downstream shadow TAEMrange12.9km. Nor
 entry-stage policy admits execution and guidance engagement is logged. Touchdown/rollout
 are not yet verified. Immutable campaign identity:
 `ddcb9a0d4ff48e57-8beafeebca9aa957-1ddd6e9ced45dd2b`.
+
+## 14. L4 completed naturally; atmospheric pitch investigation
+
+L4 (vehicle log 2026-10-10T06-29-47Z) reached touchdown at UT2496.9 at about49m/s,
+following balloon/float near the threshold. Rollout completed at UT2539.0: runner
+verified landed surface-speed1.50m/s, along1404.3m, cross−2.0m. This verifies physical
+runway landing and completed rollout, but speed is below63.75m/s and repeatability
+is unproven. The prior-flight aerodynamic uncertainty warning reached residual77%.
+No manual stop, save reload, live control change, or additional launch was issued.
+Protected Steam86km SHA remains4ea194a07422eece54135f2f7586dc92b556b2c9380b785c4754ef868eb662a6.
+
+User reports weak atmospheric pitch and requests a next-run correction while monitoring.
+Final positive-gap samples (gap>1°): median AoA deficit1.34°, AoA rate0.44°/s, input0.267;
+these are unsaturated commands. The command15/actual12° high-bank TAEM trace also shows
+tracking deficit; entry overall tracks much more closely. This is evidence of tracking
+shortfall/lag and restoring trim, not a justified new full-stick torque estimate.
+
+Found two implementation issues: energy-law early return omits command bookkeeping and
+learned trim feedforward; native direct-control simulator telemetry omits actual stick
+feedback, so its has_controls never enables the live passive response/trim observations.
+Restoring the former passed a regression that fails on old code, but replay with genuine
+input feedback regresses to5/7 chains. Filtering roll/heading motion in trim learning gives3/7.
+Both trim proposals are rejected; guidance source restored. Increasing pitch wn1.05→1.20
+also rejected (matrix4/12, chains1/7). No stronger live gain is adopted.
+
+Adopted: simulator publishes actual pitch/roll/yaw inputs and backend decodes them only
+in direct mode with complete finite normalized inputs. Native round-trip/fallback test
+passes; existing quaternion FCS tests pass. Feedback-only handoff replay stays6/7
+(12-33-31 short/slow). Applied feedback now permits honest offline response identification,
+but is not a completed correction of live pitch weakness. See `Pitch-Response-L4/` for
+trace, snapshots, portable Final station, rejected patch, all28 comparison outcomes,
+and verification instructions. Shared live backend and L4 pinned executable stay untouched.

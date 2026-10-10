@@ -356,6 +356,20 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     if (has_published_bank_rate)
         t->roll_rate = published_bank_rate;
 
+    /* Passive trim identification needs the inputs actually held by the plant,
+       just as live kRPC telemetry does. Older/high-level packets do not prove
+       that a stick input was applied, so leave their controls unavailable. */
+    double pitch_input=number_value(&doc,attitude,"input_pitch",NAN);
+    double roll_input=number_value(&doc,attitude,"input_roll",NAN);
+    double yaw_input=number_value(&doc,attitude,"input_yaw",NAN);
+    if (bool_value(&doc,attitude,"direct_control",false)&&
+            isfinite(pitch_input)&&fabs(pitch_input)<=1.0&&
+            isfinite(roll_input)&&fabs(roll_input)<=1.0&&
+            isfinite(yaw_input)&&fabs(yaw_input)<=1.0) {
+        t->has_controls=true;
+        t->control_pitch=pitch_input;t->control_roll=roll_input;t->control_yaw=yaw_input;
+    }
+
     AttitudeResponseModel *response = &t->attitude_response;
     response->pitch_natural_frequency_s_inv =
         number_value(&doc, attitude, "pitch_wn_s_inv", NAN);

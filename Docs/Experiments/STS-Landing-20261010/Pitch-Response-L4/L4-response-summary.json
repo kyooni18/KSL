@@ -1,0 +1,287 @@
+{
+  "source": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+  "traceSamples": 6870,
+  "firstTouchdownPhase": {
+    "ut": 2496.86508788936,
+    "fields": {
+      "state": {
+        "phase": "Touchdown",
+        "controlProfile": "rollout",
+        "vesselSituation": "landed",
+        "automation": true,
+        "paused": false,
+        "constraintActive": true,
+        "gear": true,
+        "brakes": false,
+        "airbrakesAvailable": true,
+        "airbrakes": false,
+        "sasAvailable": true,
+        "sasEnabled": false,
+        "entryPlanValid": false,
+        "entryReversalScheduled": false,
+        "planId": null,
+        "planVersion": null,
+        "parentPlanId": null,
+        "parentPlanVersion": null
+      },
+      "position": {
+        "latitude": -0.0485915915635772,
+        "longitude": -74.6885266921518,
+        "altitude": 71.5659037757432,
+        "radarAltitude": 3.26631470792927,
+        "inertial": [
+          326615.336609578,
+          503396.51082187,
+          -508.910589781084
+        ]
+      },
+      "motion": {
+        "velocity": [
+          -188.468334303642,
+          121.255650108284,
+          0.0784028347771007
+        ],
+        "trueAirSpeed": 49.1480484008789,
+        "horizontalSpeed": 49.1404958294414,
+        "verticalSpeed": -0.861592510448225,
+        "flightPathAngle": -1.00447820143179
+      },
+      "attitude": {
+        "pitch": 1.57257080078125,
+        "roll": 0.403656005859375,
+        "heading": 89.939697265625,
+        "angleOfAttack": 2.57721471786499,
+        "sideslip": -0.0121071292087436,
+        "pitchRate": -5.69070172026461,
+        "rollRate": -0.0145516628526355,
+        "yawRate": 0.0400918800670041,
+        "courseRate": 0.10935492633874,
+        "coordinatePitchRate": -4.20119679385765,
+        "coordinateRollRate": 0.431733473913717,
+        "headingRate": 0.0181678413854584,
+        "angleOfAttackRate": -4.10643556612596,
+        "bodyPitchRate": -5.69070172026461,
+        "bodyRollRate": -0.0145516628526355,
+        "bodyYawRate": 0.0400918800670041
+      },
+      "aero": {
+        "dynamicPressure": 1358.06042480469,
+        "staticPressure": 100254.6640625,
+        "density": 1.114178058603,
+        "mach": 0.139109964732477,
+        "stallFraction": 1,
+        "stallFractionMeasured": false,
+        "liftForce": 26446.8651750277,
+        "dragForce": 21319.6569929748,
+        "gForce": 0.104539133650133,
+        "energyExcessRange": 0,
+        "liftVector": [
+          14772.7739095268,
+          21936.0943750986,
+          -97.9396286925008
+        ],
+        "dragVector": [
+          17683.3599860862,
+          -11909.0000083789,
+          -47.6728540672159
+        ],
+        "aeroAcceleration": [
+          1.25812026385626,
+          0.388687409626261,
+          -0.00564448051082207
+        ]
+      },
+      "physics": {
+        "confidence": 0.452394181019697,
+        "modelResidual": 0.225313854649509,
+        "modelResidualConfidence": 1,
+        "certifiedUncertainty": 0.501596739029671,
+        "forceResidualPerQ": [
+          -0.839475364944628,
+          -5.78518580317807,
+          -0.116979043492187
+        ],
+        "forceResidualSigmaPerQ": [
+          4.4259263084117,
+          16.8044976446482,
+          0.398474940705092
+        ],
+        "forceResidualConfidence": 0.95,
+        "airbrakeModelAvailable": false,
+        "airbrakeModelConfidence": 0,
+        "airbrakeDragAccel": 0,
+        "samples": 179,
+        "liveSamples": 1756
+      },
+      "vehicle": {
+        "mass": 25797.322265625,
+        "dryMass": 20348.009765625,
+        "availableThrust": 59999.99609375,
+        "currentThrust": 0,
+        "centerOfMass": [
+          326656.732045142,
+          503369.69384271,
+          -508.930016573944
+        ],
+        "centerOfMassRoot": [
+          0,
+          0,
+          0
+        ],
+        "availableTorque": [
+          926018.768310547,
+          702315.490722656,
+          158810.005187988
+        ],
+        "momentOfInertia": [
+          948497.8125,
+          86819.640625,
+          980321.0625
+        ]
+      },
+      "command": {
+        "targetPitch": 0,
+        "targetHeading": 90,
+        "targetRoll": 0,
+        "targetThrottle": 0,
+        "targetAoA": null,
+        "gear": true,
+        "brakes": false,
+        "airbrakes": false
+      },
+      "appliedControl": {
+        "reportedAvailable": true,
+        "reportedPitch": 0,
+        "reportedRoll": -0.0054384502582252,
+        "reportedYaw": 0.00197433889843524,
+        "applySucceeded": true,
+        "diagnosticPitch": 0,
+        "diagnosticRoll": 0,
+        "diagnosticYaw": 0.00234186858242079,
+        "controlDiagnostics": {
+          "pitchError": -1.5727365164332,
+          "pitchTrim": 0,
+          "pitchAuthority": 55.9378909206469,
+          "pitchAeroFraction": 0
+        }
+      },
+      "controlSurfaces": {
+        "stateAvailable": true,
+        "sampleUT": 2496.80508788936,
+        "items": [
+          {
+            "partName": "benjee10.shuttle.rudder",
+            "role": "rudder",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          },
+          {
+            "partName": "benjee10.shuttle.bodyFlap",
+            "role": "body-flap",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          },
+          {
+            "partName": "benjee10.shuttle.elevon2",
+            "role": "elevator",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          },
+          {
+            "partName": "benjee10.shuttle.elevon1",
+            "role": "aileron",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          },
+          {
+            "partName": "benjee10.shuttle.elevon2",
+            "role": "elevator",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          },
+          {
+            "partName": "benjee10.shuttle.elevon1",
+            "role": "aileron",
+            "deployed": false,
+            "deflectionOverride": false,
+            "overrideDeflectionNormalized": null
+          }
+        ]
+      },
+      "runtime": {
+        "loopWallDeltaMilliseconds": 42.5279999617487,
+        "telemetryLatencyMilliseconds": 3.80100001348183,
+        "guidanceComputeMilliseconds": 0.0109999673441052,
+        "applyLatencyMilliseconds": 0.302000029478222,
+        "controlLoopMilliseconds": 4.11800004076213
+      },
+      "guidance": {
+        "rangeToSite": 404.049464489637,
+        "bearingToSite": 269.974398200859,
+        "runwayAlongTrack": 404.049424210275,
+        "runwayCrossTrack": -0.180312891817587,
+        "specificMechanicalEnergy": -5899380.89221759,
+        "entryReversalTimeRemaining": 0,
+        "entryReversalUT": null,
+        "entryReversalRange": null,
+        "entryReversalSign": null
+      }
+    }
+  },
+  "last": {
+    "ut": 2539.00508788933,
+    "phase": "Complete",
+    "position": {
+      "latitude": -0.0484247592691775,
+      "longitude": -74.5942350886195,
+      "altitude": 70.7777607045136,
+      "radarAltitude": 3.12042275385465,
+      "inertial": [
+        319569.874485038,
+        507897.407386569,
+        -507.162652206102
+      ]
+    },
+    "motion": {
+      "velocity": [
+        -149.848441182662,
+        94.325916084117,
+        0.0029295579273299
+      ],
+      "trueAirSpeed": 2.10166096687317,
+      "horizontalSpeed": 2.10166055637957,
+      "verticalSpeed": 0.00134884107422301,
+      "flightPathAngle": 0.0367722989048952
+    },
+    "guidance": {
+      "rangeToSite": 1403.12958643922,
+      "bearingToSite": 269.920319129165,
+      "runwayAlongTrack": 1403.12823344952,
+      "runwayCrossTrack": -1.94854226861421,
+      "specificMechanicalEnergy": -5900609.59902534,
+      "entryReversalTimeRemaining": 0,
+      "entryReversalUT": null,
+      "entryReversalRange": null,
+      "entryReversalSign": null
+    }
+  },
+  "metrics": {
+    "TAEM-command14plus": {
+      "samples": 2378,
+      "medianAoAGap": 0.7543640090152994,
+      "medianPitchInput": 0.3495917320251465,
+      "medianAoARate": -0.0110133612531968
+    },
+    "Final-positive-gap": {
+      "samples": 217,
+      "medianAoAGap": 1.3422366967096098,
+      "medianPitchInput": 0.267429113388062,
+      "medianAoARate": 0.44003741219937
+    }
+  }
+}
