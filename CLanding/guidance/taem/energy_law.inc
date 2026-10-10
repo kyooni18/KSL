@@ -332,6 +332,38 @@ static void tel_size_hac(TaemEnergyLawState *L,const TelContext *c,const TelPoin
     if (set_turn) L->x_turn=-c->d_station+L->radius+500.0+fmax(0.0,best_e)/2.0;
 }
 
+/* A HAC met at its exit is ambiguous: the arc left is that small remainder
+   or a full circle more.  A downwind leg that rejoins the centreline west of
+   the station meets it this way with the pattern's energy still to lose.
+   Every circle of the family is tangent to the runway line at the station,
+   so on entry there the radius is free: fly the circle when its worst
+   shortfall (smallest flyable radius at maximum range) is less than the
+   excess without it, sized for the mid-drag range. */
+static double tel_entry_arc(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s,double rem) {
+    double r=L->radius;
+    if (rem>TEL_PI) return rem;
+    TelSegment none[1]={{rem*r,r}};
+    double excess=tel_predict_range(c,s,1.0,1e9,none,1)-rem*r;
+    double vg=s->v*cos(s->g);
+    double r_small=fmax(TEL_R_MIN,vg*vg/(TEL_G0*tan(TEL_BANK_TURN*DEG2RAD)));
+    double turn=rem+2.0*TEL_PI;
+    TelSegment small[1]={{turn*r_small,r_small}};
+    double shortfall=turn*r_small-tel_predict_range(c,s,0.0,1e9,small,1);
+    TelSegment mid[1]={{turn*r,r}};
+    double reach=tel_predict_range(c,s,TEL_K_PLAN,1e9,mid,1);
+    /* away from the exit the radius cannot be chosen freely: demand the
+       planner's switching margin before committing to the longer turn */
+    bool circle=excess>fmax(0.0,shortfall)+(rem>0.35?2000.0:0.0);
+    if (getenv("KSP_LANDER_TEL_TRACE"))
+        fprintf(stderr,"TEL_ENTRY rem=%.2f r=%.0f excess=%.0f shortfall=%.0f r_small=%.0f reach=%.0f circle=%d\n",
+            rem,r,excess,shortfall,r_small,reach,(int)circle);
+    if (!circle) return rem;
+    /* only at the exit is the vehicle on every circle of the family; earlier
+       the spiral resizes it in flight */
+    if (rem<=0.35) L->radius=clampd(reach/turn,r_small,TEL_R_MAX);
+    return turn;
+}
+
 /* One guidance tick.  Returns false when the inputs are unusable. */
 /* Pattern choice is open while the first leg is still far from its end. */
 static bool tel_plan_open(const TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
@@ -488,7 +520,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
                     TelSegment full[1]={{rem*r,r}};
                     if (tel_predict_range(&c,&s,TEL_K_PLAN,1e9,full,1)<0.5*rem*r) rem=0.0;
                 }
-                L->hac_left_rad=rem;
+                L->hac_left_rad=tel_entry_arc(L,&c,&s,rem);
             }
             L->hac_last_ang=NAN;
             course_cmd=s.psi;
@@ -506,12 +538,13 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
             }
             if (L->leg==TEL_LEG_DOWN&&hypot(tx-s.x,ty-s.y)<fmax(300.0,2.0*gnd)) {
                 L->leg=TEL_LEG_HAC;
-                L->hac_left_rad=arc/fmax(1.0,L->radius);
+                L->hac_left_rad=tel_entry_arc(L,&c,&s,arc/fmax(1.0,L->radius));
                 L->hac_last_ang=NAN;
             }
         }
     }
     if (L->leg==TEL_LEG_HAC) {
+        r=L->radius;   /* an exit entry may have resized the circle */
         double cx=-D,cy=side*r;
         double ang=atan2(s.y-cy,s.x-cx);
         if (isfinite(L->hac_last_ang))
