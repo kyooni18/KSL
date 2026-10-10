@@ -42,7 +42,7 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
 The turn biases 20° below velocity direction at low dynamic pressure, tapering
 to 8° by 25 kPa to build horizontal speed earlier without pitching far below
-prograde in the dense atmosphere.
+prograde in the dense atmosphere. The pitch command can change at up to 4°/s.
 The Orbiter controller also supports two Size2 liquid side boosters, but the
 active STS uses two Clydesdale SRBs. Their thrust is treated as fixed while the
 SSME group is allocated around it, and both boosters separate together when
@@ -98,6 +98,10 @@ and Cheetah. The four liquid-booster Skippers are deliberately collapsed
 into one additional throttle group, so all four always receive exactly the same
 throttle. Their collective pitching moment is still included and is compensated by
 the core-engine allocation rather than by differential booster throttling.
+
+After the STS Clydesdales separate, SSME throttle is allocated against the G
+target without the pad-calibrated moment cap; the autopilot gimbals steer the
+engines. This avoids the observed post-separation throttle stall near 0.30.
 
 For the liquid boosters, `Engine.max_thrust` is read every control tick, so the
 pressure-corrected thrust available at the current altitude is used directly. The

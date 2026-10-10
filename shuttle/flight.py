@@ -15,7 +15,7 @@ BOOSTER_MIN_G = 1.20
 BOOSTER_PAD_CAP = 1.00
 OUTER_SKIPPER_PAD_CAP = 0.45
 THROTTLE_SLEW_PER_SECOND = 0.25
-PITCH_SLEW_DEG_PER_SECOND = 2.0
+PITCH_SLEW_DEG_PER_SECOND = 4.0
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
@@ -1116,6 +1116,18 @@ class Shuttle:
             target_throttles = list(target_throttles)
             target_throttles[0] = max(target_throttles[0], current[0])
             target_throttles = tuple(target_throttles)
+        elif (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
+              self.separated and self.et_attached):
+            # Pad control authority is not representative after SRB separation.
+            # Do not let that stale moment envelope trap the three SSMEs at a
+            # low throttle: use the G target directly and rely on gimbal control.
+            available_core_thrust = sum(
+                engine.max_thrust for group in self.core_groups for engine in group)
+            requested_g = max_g if target_g is None else min(max_g, target_g)
+            requested_thrust = requested_g * G0 * self.vessel.mass
+            core_throttle = (min(1.0, requested_thrust / available_core_thrust)
+                             if available_core_thrust > 0 else 0.0)
+            target_throttles = tuple(core_throttle for _ in self.groups)
         applied = slew_vector(current, target_throttles, throttle_slew, dt)
         for group, throttle in zip(self.groups, applied):
             for engine in group:
