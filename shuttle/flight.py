@@ -1705,7 +1705,7 @@ def run(args):
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
                             (max(args.roll_rate, 8.0) if roll_reset else
-                             (args.roll_rate if mission_roll_settled else min(args.roll_rate, 3.0))),
+                             args.roll_rate),
                             args.roll_control_limit,
                             args.roll_response_time)
                         settle_nose_error = direction_error_deg(
@@ -1879,7 +1879,7 @@ def main():
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
-    parser.add_argument('--roll-rate', type=float, default=6.0,
+    parser.add_argument('--roll-rate', type=float, default=8.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
