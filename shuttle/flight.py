@@ -911,8 +911,8 @@ class Shuttle:
         return min(along(axis), along(tuple(-x for x in axis)))
 
     def calibrate_control_authority(self, control, timeout=2.0):
-        """Measure full-thrust gimbal/control torque while launch clamps still hold."""
-        engines = [engine for group in self.groups for engine in group]
+        """Light only the core engines and measure their control authority on clamps."""
+        engines = [engine for group in self.core_groups for engine in group]
         control.throttle = 0
         for engine in engines:
             engine.thrust_limit = 1.0
@@ -928,7 +928,6 @@ class Shuttle:
             time.sleep(.02)
         authority = self.control_moment_authority()
         roll_accel = roll_accel_authority_deg_s2(self.vessel)
-        control.throttle = 0
         self.cruise_control_moment_budget = authority * CONTROL_TORQUE_FRACTION
         self.control_moment_budget = self.cruise_control_moment_budget
         fraction = actual_thrust / target_thrust if target_thrust > 0 else 0.0
@@ -1269,6 +1268,17 @@ def run(args):
                   f'+{args.roll_start:.0f} m climb; manual roll cap {args.roll_rate:.1f} deg/s; '
                   f'gravity turn uses prograde-AoA guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
             clamps = list(v.parts.launch_clamps)
+            if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
+                if control.stage_lock:
+                    raise RuntimeError('Staging is locked; cannot ignite Clydesdales and release clamps')
+                next_stage = control.current_stage - 1
+                if next_stage < 0 or any(engine.part.stage != next_stage
+                                         for engine in shuttle.solid_boosters):
+                    raise RuntimeError(
+                        'Clydesdales are not in the next stage; refusing to release the clamps')
+                if any(not engine.can_restart for group in shuttle.core_groups
+                       for engine in group):
+                    raise RuntimeError('Core engine cannot be ignited independently before booster staging')
             if clamps:
                 authority, budget, spool, roll_accel_reference = shuttle.calibrate_control_authority(control)
                 launch_target_g = ascent_target_g(
@@ -1279,15 +1289,67 @@ def run(args):
                 print(f'Launch control authority: {authority/1000:.0f} kN m; '
                       f'moment budget {budget/1000:.0f} kN m; spool {spool*100:.0f}%; '
                       f'roll accel {roll_accel_reference:.1f} deg/s^2')
-            for group, u in zip(shuttle.groups, result.throttles):
+            core_group_count = len(shuttle.core_groups)
+            for group, u in zip(shuttle.core_groups, result.throttles[:core_group_count]):
                 for e in group:
                     e.thrust_limit = u
                     e.active = True
-            for e in shuttle.boosters:
-                e.active = True
-            for clamp in clamps:
-                clamp.release()
             control.throttle = 1
+            core_engines = [engine for group in shuttle.core_groups for engine in group]
+            expected_core_thrust = sum(
+                engine.max_thrust * throttle
+                for group, throttle in zip(shuttle.core_groups,
+                                           result.throttles[:core_group_count])
+                for engine in group)
+            if expected_core_thrust <= 0:
+                raise RuntimeError('Launch allocation leaves the core engines at zero thrust')
+            ignition_deadline = time.monotonic() + 8.0
+            while time.monotonic() < ignition_deadline:
+                if conn.space_center.active_vessel != v:
+                    raise RuntimeError('Active vessel changed during core-engine ignition')
+                core_thrust = sum(engine_thrust(engine) for engine in core_engines)
+                if (all(engine.active for engine in core_engines) and
+                        core_thrust >= expected_core_thrust * .5):
+                    break
+                time.sleep(.05)
+            else:
+                raise RuntimeError(
+                    'Core engines did not reach 50% of allocated thrust; '
+                    'boosters remain unignited and clamps remain attached')
+            print(f'Core engines ignited on clamps: {core_thrust/1000:.0f} kN; '
+                  'starting boosters only after verified core thrust')
+
+            if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
+                # These solid motors cannot be started by Engine.active. The next
+                # stage ignites them and releases the clamps; SSMEs are already lit.
+                control.activate_next_stage()
+                if conn.space_center.active_vessel != v:
+                    raise RuntimeError('Active vessel changed during booster ignition staging')
+                booster_deadline = time.monotonic() + 5.0
+                expected_booster_thrust = sum(engine.max_thrust
+                                              for engine in shuttle.solid_boosters)
+                while time.monotonic() < booster_deadline:
+                    booster_thrust = sum(engine_thrust(engine)
+                                         for engine in shuttle.solid_boosters)
+                    if (all(engine.active for engine in shuttle.solid_boosters) and
+                            booster_thrust >= expected_booster_thrust * .5):
+                        break
+                    time.sleep(.05)
+                else:
+                    raise RuntimeError('Clydesdale ignition failed after stage activation')
+                print(f'Clydesdales ignited; clamps released; booster thrust '
+                      f'{booster_thrust/1000:.0f} kN')
+            else:
+                for group, u in zip(shuttle.groups[core_group_count:],
+                                    result.throttles[core_group_count:]):
+                    for engine in group:
+                        engine.thrust_limit = u
+                        engine.active = True
+                for engine in shuttle.boosters:
+                    if engine not in shuttle.solid_boosters:
+                        engine.active = True
+                for clamp in clamps:
+                    clamp.release()
             with open(args.telemetry, 'w', newline='') as log:
                 writer = csv.writer(log)
                 writer.writerow(['ut', 'state', 'altitude_m', 'apoapsis_m', 'periapsis_m',
