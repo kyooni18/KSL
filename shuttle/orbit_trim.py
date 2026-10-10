@@ -174,6 +174,10 @@ def main():
             break
         d_ap -= e_ap
         d_pe -= e_pe
+    if nodes[0].ut-sc.ut < 20.0:
+        for stale in list(vessel.control.nodes):
+            stale.remove()
+        raise RuntimeError('Trim plan arrived too late to burn safely; aborting without burning')
     if args.dry_run:
         for stale in list(vessel.control.nodes):
             stale.remove()
