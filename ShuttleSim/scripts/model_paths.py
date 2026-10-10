@@ -41,6 +41,15 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    # sts-live-20261010 with Mach 1.6-7.1 rows scaled to live 2026-10-09 entry
+    # drag/lift ratios; still provisional/uncertified.
+    "sts-live-20261011": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_live20261011.csv",
+        "aero_book": None,
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",
@@ -71,6 +80,7 @@ PROFILE_VEHICLES = {
     "sts-provisional": "STS",
     "sts-live-20261009": "STS",
     "sts-live-20261010": "STS",
+    "sts-live-20261011": "STS",
     "fitted-legacy": "STS-N",
     "reference-b": "STS-N",
 }

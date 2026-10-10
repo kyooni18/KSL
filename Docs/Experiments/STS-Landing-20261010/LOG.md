@@ -78,3 +78,47 @@ Runner: with `taemEnergyLaw` the HAC requirement is committed path + HAC complet
   touchdown at 91.75 m/s (default model, limit 75).
 - Live: KSP running but kRPC server not listening (ports 50000/50001 closed) and screen control of KSP was
   not granted, so no live flight with the energy law yet.
+
+## 8. TAEM robustness and dispersions (f609663..61f8b30)
+
+12 handoff dispersions around 12-33-31 (±1.5 km alt, ±60 m/s, ±8° heading, ±11 km range, ±5 km cross, ±2° FPA):
+- baseline 9/12: lo / steep overflew the runway by 13 km (HAC met at its exit took the ~0 arc, not a circle); slow
+  reached the station 2.2 km high, dove 30°+, never admitted to Final, crashed at 121 m/s.
+- f609663 full-circle decision on exit entry; a8b989e S-turns when k=1 with excess range; a5fe47c added circle may
+  tighten to 1600 m (global 1600 m floor rejected: ~32 m touchdown offsets); e981c17 size from airspeed;
+  61f8b30 Final lateral position loop 0.25→0.35 (touchdown cross roughly halved, no overshoot).
+- now 11/12 (lo 61.6 m/s), live handoffs 7/7 with |cross| ≤ 2.7 m, Final-only stations unchanged.
+
+0.5° dive-AoA experiment (terminal_solver.c): MM305 feasibility A/B identical (0/5 qualified either way), full chain
+bit-identical → reverted; patch kept as rejected-dive-aoa-0p5.patch.
+
+## 9. Entry-interface full chain (offline)
+
+- sts72km-run9 entry interface: MM304 range margin positive throughout (+559 km at 10202), bank saturated at the 40°
+  restriction → over the runway at M4.3, lands 60–65 km long. Not representative of the current OMS checkpoint.
+- New scenario sts-live-oms72-entry-20261009 (the 2026-10-09 checkpoint): sim MM304 hands off 27 km out (live 46–59 km).
+  Live/table aero at AoA 18–30: CD ×1.51 (M2), ×1.16 (M3), ×1.09 (M4), ≈1 (M5–7); CL ×0.90–0.96 (M2–4).
+  Provisional profile sts-live-20261011 scales M1.6–7.1 rows; handoff moved only 29→27 km, so the gap is MM304 targeting.
+- Close-in supersonic handoff exposes a TAEM bug: a 10 km HAC met at its exit at M2.3 (flyable radius 35–48 km) falls
+  through to the Final line and dives over the runway. Overhead-loop fallback drafted (not committed, not regression-tested).
+
+## 10. Live (2026-10-10)
+kRPC came up; L1 started from STS-OMS-72km-20261009-v2 (Steam save, SHA identical to the certified profile),
+taemEnergyLaw on, runway 09 only, profile sts-live-20261010, KSP_LANDER_UNPOWERED_ONLY=1.
+
+### L1 result (FlightLogs/2026-10-10T04-39-07Z)
+Entry → MM304 → TAEM (handoff UT 2164, 27.1 km, 873 m/s, 58 km out) → Final (UT 2425, 5.7 km, cross −20 m,
+121 m/s) → flare → touchdown ≈UT 2488, ~59 m/s, ~3.4 m/s sink, ~552 m along → rollout stopped on the runway
+(1831 m along, 6.4 m cross). Physically landed, but outside the runner band (speed < 63.75, sink > 3).
+
+Flare, live vs sim replay of the same Final state (sim: 67.4 m/s, 1.5 m/s sink, 426 m):
+- Live preflare latched ~350–440 m wheel height (sim direct-control: trigger 817 m, arc starts ~250 m).
+- Live pitch loop tracks AoA ~2.5° below command throughout the pull (FCS diagnostics pitchError 2.4–2.7°,
+  elevator 0.2–0.5, not saturated; approach trim integrator ki 0.004 climbs 0.12→0.31). Sim lag ≤0.5°.
+- Late arc → 1.8 g pull at 20 m → vs +1.8 m/s balloon at 14 m radar; then the mains-first attitude floor
+  (lift capped at 1 g) holds the level float ~8 s at 12 m radar ("sink −0.2 / −3.5") and bleeds 78→59 m/s.
+- Sim with a stiffer pitch plant (stiffness 0.92/kPa, trim AoA 1.6°; live elevator-vs-AoA slope ≈0.07/°)
+  reproduces the float only with faster trim (ki 0.025: 62.5 m/s/401 m; 0.2: 57.8/519 m); nominal ki 0.004
+  lands 73.8/102 m. identify_stsn_attitude.py on STS logs gives pitch R² ≈ 0 (unusable).
+- Rejected: floor lift cap reduced by the sink deficit when floating — off-runway/hard (77 m/s at −2 m,
+  66 m/s at 5.6 m/s sink, 48 m/s), nominal sink 1.5→3.9. The floor carries the last metres.

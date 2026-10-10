@@ -1,0 +1,17 @@
+diff --git a/CLanding/terminal_solver.c b/CLanding/terminal_solver.c
+index ca16260..3c994bc 100644
+--- a/CLanding/terminal_solver.c
++++ b/CLanding/terminal_solver.c
+@@ -63,9 +63,9 @@ static void record_turn_demand(const TerminalModel *m,
+  * exit glide line, as an excess over the Final glide slope.  Steeper
+  * descents are not flown: the route is rejected so a longer one is chosen. */
+ #define TERMINAL_PROFILE_MAX_DESCENT_EXCESS_DEG 3.0
+-/* Incidence of the late energy-building dive: low enough to accelerate,
+- * with dynamic pressure and load still checked by the full replay. */
+-#define TERMINAL_PROFILE_DIVE_AOA_DEG 3.0
++/* Minimum incidence of the late energy-building dive.  The lateral allocator
++ * raises it as needed for turn authority; the full replay still checks q/load. */
++#define TERMINAL_PROFILE_DIVE_AOA_DEG 0.5
+ #define TERMINAL_PROFILE_PULLOUT_M 1000.0
+ #define TERMINAL_PROFILE_TURN_MARGIN 1.3
+ 
