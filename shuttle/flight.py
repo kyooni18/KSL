@@ -426,6 +426,18 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
     return min(initial_pitch, max(minimum_pitch, flight_path_pitch - pitch_under))
 
 
+def final_phase_g(periapsis_altitude, target_periapsis, max_g, ramp=30000.0, floor=0.5):
+    """Taper acceleration as periapsis nears target so cutoff resolution is fine.
+
+    Near orbital speed 1 m/s of delta-v moves apoapsis by roughly 1.2 km, so the
+    last part of the burn is flown at low G to keep cutoff timing error small.
+    """
+    remaining = max(0.0, target_periapsis-periapsis_altitude)
+    if remaining >= ramp:
+        return max_g
+    return max(floor, floor + (max_g-floor)*remaining/ramp)
+
+
 def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
                          initial_pitch=89.0, minimum_pitch=5.0, max_lead=6.0):
     """Altitude-scheduled gravity turn scaled to the target orbit.
@@ -1560,7 +1572,13 @@ def run(args):
                     if state == 'ASCENT':
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
-                            args.heading = slew_value(args.heading, target_heading,
+                            heading_goal = target_heading
+                            if flight.speed > 400.0:
+                                # Close the loop on the measured plane: a high
+                                # inclination needs a more easterly heading.
+                                inc_error = math.degrees(v.orbit.inclination)-args.inclination
+                                heading_goal += max(-8.0, min(8.0, 0.7*inc_error))
+                            args.heading = slew_value(args.heading, heading_goal,
                                                       args.heading_slew, 1/args.hz)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
@@ -1594,7 +1612,7 @@ def run(args):
                         if (shuttle.separated and
                                 meco_ready(v.orbit.apoapsis_altitude,
                                            v.orbit.periapsis_altitude,
-                                           args.orbit, args.meco_periapsis)):
+                                           args.orbit-3000.0, args.meco_periapsis-300.0)):
                             control.throttle = 0
                             state = 'COAST'
                             print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
@@ -1652,9 +1670,11 @@ def run(args):
                         target_g = ascent_target_g(
                             altitude, body.atmosphere_depth, args.max_g, args.launch_g,
                             args.booster_min_g if not shuttle.separated else 0.0)
-                        if (state == 'ASCENT' and shuttle.separated and
-                                v.orbit.periapsis_altitude > args.meco_periapsis-15000):
-                            target_g = min(target_g, 1.5)  # finer cutoff resolution
+                        phase_max_g = args.max_g
+                        if state == 'ASCENT' and shuttle.separated:
+                            phase_max_g = final_phase_g(
+                                v.orbit.periapsis_altitude, args.meco_periapsis, args.max_g)
+                            target_g = min(target_g, phase_max_g)
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=1/args.hz, throttle_slew=args.throttle_slew)
@@ -1665,7 +1685,7 @@ def run(args):
                                     for engine in shuttle.solid_boosters))
                             if not solid_boosters_burning:
                                 control.throttle = g_force_throttle(
-                                    control.throttle, flight.g_force, args.max_g)
+                                    control.throttle, flight.g_force, min(args.max_g, phase_max_g))
                                 control.throttle = dynamic_pressure_throttle(
                                     control.throttle, flight.dynamic_pressure, args.max_q)
                     else:
