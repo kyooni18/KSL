@@ -153,6 +153,17 @@ def limit_aero_roll(vessel, authority_limit=60.0):
     return states
 
 
+def schedule_roll_authority(states, dynamic_pressure, low_q_limit=60.0, high_q_limit=30.0):
+    """Reduce elevon roll authority as dynamic pressure builds to protect the wings."""
+    fraction = min(1.0, max(0.0, (dynamic_pressure-6000.0)/14000.0))
+    limit = low_q_limit + (high_q_limit-low_q_limit)*fraction
+    for surface, _, authority in states:
+        try:
+            surface.authority_limiter = min(authority, limit)
+        except Exception:
+            pass
+
+
 def restore_aero_roll(states):
     """Restore control-surface states captured by limit_aero_roll."""
     for surface, enabled, authority in states:
@@ -416,7 +427,7 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
 
 
 def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
-                         initial_pitch=89.0, minimum_pitch=5.0, max_lead=10.0):
+                         initial_pitch=89.0, minimum_pitch=5.0, max_lead=6.0):
     """Altitude-scheduled gravity turn scaled to the target orbit.
 
     Passes through 45 deg at 20% of the target apoapsis altitude (15 km for a
@@ -1306,6 +1317,20 @@ def run(args):
         state = 'ASCENT'
         next_report = 0
         mission_roll = 0.0
+        if args.heading is None:
+            lat = math.radians(flight.latitude)
+            cos_i = math.cos(math.radians(args.inclination))
+            if abs(cos_i) > math.cos(lat):
+                raise ValueError('Target inclination is below the launch latitude')
+            r_mid = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
+            v_orb = math.sqrt(body.gravitational_parameter/r_mid)
+            v_rot = body.rotational_speed*body.equatorial_radius*math.cos(lat)
+            azimuth = math.asin(cos_i/math.cos(lat))
+            args.heading = math.degrees(math.atan2(v_orb*math.sin(azimuth)-v_rot,
+                                                   v_orb*math.cos(azimuth))) % 360
+            print(f'Launch heading {args.heading:.1f} deg for {args.inclination:.1f} deg inclination')
+        target_heading = args.heading
+        args.heading = 90.0  # pad orientation; slewed to target_heading after the roll settles
         post_booster_roll = roll_for_heading(args.heading)
         initial_pitch = 89.0
         commanded_pitch = initial_pitch
@@ -1532,6 +1557,9 @@ def run(args):
                     roll_requires_authority = False
                     if state == 'ASCENT':
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
+                        if mission_roll_settled:
+                            args.heading = slew_value(args.heading, target_heading,
+                                                      args.heading_slew, 1/args.hz)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
                         else:
@@ -1548,9 +1576,11 @@ def run(args):
                             # energy on horizontal speed. Damp the climb with
                             # vertical speed and hold altitude near the target
                             # band instead of letting Ap run away.
+                            band_center = 0.5*(args.orbit+args.meco_periapsis)
                             hold = args.meco_pitch + 5.0 \
                                 - 0.2*flight.vertical_speed \
-                                + max(-5.0, min(5.0, (altitude-64000.0)/-3000.0))
+                                + max(-5.0, min(5.0, (altitude-band_center)/-3000.0)) \
+                                + max(-15.0, min(15.0, -1.5*(v.orbit.apoapsis_altitude-args.orbit)/1000.0))
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 5.0)
                         commanded_pitch = slew_value(
@@ -1585,6 +1615,12 @@ def run(args):
                         if shuttle.et_attached and not shuttle.release_et():
                             time.sleep(1/args.hz)
                             continue
+                        if args.meco_periapsis < args.orbit-5000:
+                            o = v.orbit
+                            print(f'Target orbit reached: Ap {o.apoapsis_altitude/1000:.1f} km; '
+                                  f'Pe {o.periapsis_altitude/1000:.1f} km; '
+                                  f'inclination {math.degrees(o.inclination):.2f} deg')
+                            return
                         ap.reference_frame = v.orbital_reference_frame
                         # Orbital-frame x points anti-radially (toward the body).
                         roll_up_reference = (-1, 0, 0)
@@ -1614,6 +1650,9 @@ def run(args):
                         target_g = ascent_target_g(
                             altitude, body.atmosphere_depth, args.max_g, args.launch_g,
                             args.booster_min_g if not shuttle.separated else 0.0)
+                        if (state == 'ASCENT' and shuttle.separated and
+                                v.orbit.periapsis_altitude > args.meco_periapsis-15000):
+                            target_g = min(target_g, 1.5)  # finer cutoff resolution
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=1/args.hz, throttle_slew=args.throttle_slew)
@@ -1634,6 +1673,8 @@ def run(args):
                     if roll_active and state in ('ASCENT', 'ORBITER_ASCENT'):
                         # AutoPilot owns pitch/yaw only. Direct roll control keeps the
                         # real orbiter-mounted side (-Z) on the requested Earth/space side.
+                        if roll_surface_states:
+                            schedule_roll_authority(roll_surface_states, flight.dynamic_pressure)
                         ap.target_direction = target_direction
                         ap.target_roll = float('nan')
                         surface_frame = v.surface_reference_frame
@@ -1786,8 +1827,13 @@ def main():
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
     parser.add_argument('--stream-port', type=int, default=50001)
-    parser.add_argument('--orbit', type=float, default=75000, help='Target apoapsis altitude in m')
-    parser.add_argument('--heading', type=float, default=90)
+    parser.add_argument('--orbit', type=float, default=90000, help='Target apoapsis altitude in m')
+    parser.add_argument('--inclination', type=float, default=34.0,
+                        help='Target orbital inclination in degrees (sets launch azimuth unless --heading is given)')
+    parser.add_argument('--heading-slew', type=float, default=0.7,
+                        help='Launch-azimuth turn rate in deg/s after the roll settles')
+    parser.add_argument('--heading', type=float, default=None,
+                        help='Explicit final launch heading; default derives from --inclination')
     parser.add_argument('--turn-start', type=float, default=1500,
                         help='Altitude in m where the post-roll gravity turn begins')
     parser.add_argument('--turn-end', type=float, default=55000,
