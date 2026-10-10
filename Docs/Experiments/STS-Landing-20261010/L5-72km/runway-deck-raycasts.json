@@ -1,0 +1,151 @@
+{
+  "ut": 2445.6898632799844,
+  "vessel": "STS",
+  "samples": [
+    {
+      "along": 0,
+      "latitude": -0.0486111111,
+      "longitude": -74.7283333333,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 130.84263610839844,
+          "colliderAltitude": 69.15736389160156,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 330.8245849609375,
+          "colliderAltitude": 69.1754150390625,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    },
+    {
+      "along": 400,
+      "latitude": -0.0486111111,
+      "longitude": -74.69013613321033,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 131.5845947265625,
+          "colliderAltitude": 68.4154052734375,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 331.5845642089844,
+          "colliderAltitude": 68.41543579101562,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    },
+    {
+      "along": 1000,
+      "latitude": -0.0486111111,
+      "longitude": -74.63284033307583,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 132.19981384277344,
+          "colliderAltitude": 67.80018615722656,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 332.1997985839844,
+          "colliderAltitude": 67.80020141601562,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    },
+    {
+      "along": 1400,
+      "latitude": -0.0486111111,
+      "longitude": -74.59464313298616,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 132.29949951171875,
+          "colliderAltitude": 67.70050048828125,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 332.2994079589844,
+          "colliderAltitude": 67.70059204101562,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    },
+    {
+      "along": 2000,
+      "latitude": -0.0486111111,
+      "longitude": -74.53734733285165,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 131.94277954101562,
+          "colliderAltitude": 68.05722045898438,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 331.94293212890625,
+          "colliderAltitude": 68.05706787109375,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    },
+    {
+      "along": 2400,
+      "latitude": -0.0486111111,
+      "longitude": -74.49915013276198,
+      "hits": [
+        {
+          "originAltitude": 200,
+          "distance": 131.36923217773438,
+          "colliderAltitude": 68.63076782226562,
+          "vesselPartHit": false
+        },
+        {
+          "originAltitude": 400,
+          "distance": 331.36932373046875,
+          "colliderAltitude": 68.63067626953125,
+          "vesselPartHit": false
+        }
+      ],
+      "consistent": true
+    }
+  ],
+  "configuredSiteAltitude": 70,
+  "lateralSamples": [
+    {
+      "cross": -70,
+      "colliderAltitude": 67.80039978027344
+    },
+    {
+      "cross": -20,
+      "colliderAltitude": 67.74128723144531
+    },
+    {
+      "cross": 0,
+      "colliderAltitude": 67.75773620605469
+    },
+    {
+      "cross": 20,
+      "colliderAltitude": 67.7750244140625
+    },
+    {
+      "cross": 70,
+      "colliderAltitude": 64.73750305175781
+    }
+  ],
+  "deckShapeVerified": true,
+  "method": "Two vertical ray origins per point; static collider hits only, agreement <3 cm. Loaded within 3 km/1500m; lateral deck samples agree <15cm and stand >25cm above at least one outside-runway sample. Review coordinates before adopting target."
+}

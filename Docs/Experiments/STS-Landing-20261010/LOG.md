@@ -425,3 +425,27 @@ one offline diagnostic using baseline70m runway plane, not live repeatability
 or confirmation of deck alignment. Result and manifest retained as
 native-baseline-result.json /native-baseline-manifest.json. L5 remains active
 atUT2263 /14.1km, near the overhead-turn leg; collider observer still waiting.
+
+## 21. Direct runway collider survey completed during L5 Final
+
+Read-only observer completed at UT2445.69: six centerline points, two ray
+origins200/400m per point agreeing<3cm, no vessel-part hits. Lateral samples
+±20m show the deck, with the +70m outside point at64.74m vs center67.76m.
+Collider deck ASL: configured threshold69.1664m, along400m68.4154m,
+1000m67.8002m, 1400m67.7005m, 2000m68.0571m, 2400m68.6307m.
+
+Additional exact375m touchdown-target raycasts atUT2471.85, three repetitions
+of100/200/400m origins, return68.44214–68.44217m ASL. Practical precision is
+centimeters, not the apparent decimal resolution. Baseline70m reference is
+1.5578m higher here and2.30m higher near runway middle. Nominal level-pitch
+COM at initial mains contact is71.5957m ASL; add measured pitch geometry and
+allow for strut compression when comparing settled COM. A universal65.75/70m
+height is not an exact target for this installed runway. Deck is a tilted
+plane whose radial ASL varies along its length. Summary retains fitted slope
+and residuals for native contact-plane alignment. L5 configuration/executable
+remain untouched while airborne. New references for next live/replay tests must
+use measured deck at aim point and matching physical plane rather than simply
+changing every altitude to one constant.
+
+Artifacts: runway-deck-raycasts.json, touchdown-target-raycasts.json,
+runway-survey-summary.json. No live control, stop, or reload issued by survey.

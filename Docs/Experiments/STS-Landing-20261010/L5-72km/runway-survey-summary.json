@@ -1,0 +1,21 @@
+{
+  "targetAlong": 375,
+  "targetLatitude": -0.0486111111,
+  "targetLongitude": -74.69252345821593,
+  "measuredTargetDeckAltitude": 68.44215901692708,
+  "measurementPrecisionMeters": 0.03,
+  "configuredBaseline": 70,
+  "baselineExcessAtTarget": 1.5578409830729214,
+  "thresholdDeckAltitude": 69.16638946533203,
+  "midRunwayDeckAltitude": 67.70054626464844,
+  "planeFit": {
+    "originElevation": 69.17486487494574,
+    "slope": -0.002223903656005859,
+    "slopeDegrees": -0.1274200834706079,
+    "rmse": 0.008418079076705196,
+    "maxAbsError": 0.015899234347884317
+  },
+  "nominalContactCOMAltitudeAtZeroPitch": 71.59565901692707,
+  "contactFormula": "deckAltitude + 3.1535*cos(pitchRadians) + 0.9058*sin(pitchRadians), before strut compression",
+  "limitations": "Do not use 68.44m as a universal deck height: tilted-plane geometry and radial altitude change along the runway. Measurements are static collider hits with verified lateral deck step; independent absolute survey datum precision not established."
+}

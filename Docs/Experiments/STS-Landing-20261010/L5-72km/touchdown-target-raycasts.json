@@ -1,0 +1,71 @@
+{
+  "along": 375,
+  "latitude": -0.0486111111,
+  "longitude": -74.69252345821593,
+  "measurements": [
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 100,
+      "distance": 31.557830810546875,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 200,
+      "distance": 131.55783081054688,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 400,
+      "distance": 331.557861328125,
+      "deckAltitude": 68.442138671875
+    },
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 100,
+      "distance": 31.557830810546875,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 200,
+      "distance": 131.55783081054688,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8498632799606,
+      "originAltitude": 400,
+      "distance": 331.557861328125,
+      "deckAltitude": 68.442138671875
+    },
+    {
+      "ut": 2471.8698632799606,
+      "originAltitude": 100,
+      "distance": 31.557830810546875,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8698632799606,
+      "originAltitude": 200,
+      "distance": 131.55783081054688,
+      "deckAltitude": 68.44216918945312
+    },
+    {
+      "ut": 2471.8698632799606,
+      "originAltitude": 400,
+      "distance": 331.557861328125,
+      "deckAltitude": 68.442138671875
+    }
+  ],
+  "deckAltitudeMean": 68.44215901692708,
+  "deckAltitudeRange": [
+    68.442138671875,
+    68.44216918945312
+  ],
+  "mainGearGeometry": {
+    "down": 3.1535,
+    "aft": 0.9058
+  },
+  "limitations": "Floating-origin/raycast precision is centimeters; COM target additionally depends on touchdown pitch, gear compression and wheel contact geometry. No live configuration change."
+}
