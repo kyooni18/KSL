@@ -1,0 +1,24 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -257,15 +257,19 @@
+     const double DT=.1;
+     double peak=0.0,climb=-INFINITY;
+     bool started=false;
++    double model_rate=(M->gain*s.cmd+M->bias-s.aoa)/fmax(M->tau,.1);
++    double residual=isfinite(s.aoa_rate)?clampd(s.aoa_rate-model_rate,-4.0,4.0):0.0;
+     for(int i=0;i<450;i++){
+         if(s.h<=0.0){r.landed=true;break;}
+         if(s.V<.6*M->v_floor)break;
+         AfLawOut o=af_law(M,P,&s,DT);
+-        s.aoa_rate=NAN;
++
+         if(o.on_arc&&!started){started=true;s.engaged=true;s.glide_sink=s.sink;}
+         s.cmd=o.cmd;
+         double V=s.V,q=.5*M->rho*V*V;
+-        s.aoa+=(M->gain*s.cmd+M->bias-s.aoa)/M->tau*DT;
++        s.aoa_rate=(M->gain*s.cmd+M->bias-s.aoa)/M->tau+residual;
++        s.aoa+=s.aoa_rate*DT;
++        residual*=exp(-DT/AF_SURGE_T);
+         s.aoa=clampd(s.aoa,-2.0,M->aoa_max+3.0);
+         double lq=0.0,dq=0.0;af_aero(M,s.aoa,&lq,&dq);
+         double L=lq*q,D=dq*q;

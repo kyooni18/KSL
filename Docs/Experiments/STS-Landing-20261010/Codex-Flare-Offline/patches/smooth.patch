@@ -1,0 +1,24 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -176,8 +176,19 @@
+ static double af_profile(const AfParams*P,double g0,double h){
+     (void)g0;
+     h=fmax(0.0,h);
+-    if(h>P->sgs_height)
+-        return sqrt(AF_SGS_SINK*AF_SGS_SINK+2.0*P->arc_accel*(h-P->sgs_height));
++    if(h>P->sgs_height){
++        const double span=10.0;
++        double z=h-P->sgs_height;
++        if(z>=span)return sqrt(AF_SGS_SINK*AF_SGS_SINK+2.0*P->arc_accel*z);
++        /* Join the arc and shallow flare with continuous sink and slope so
++           crossing the SGS does not abruptly unload a lagging pitch plant. */
++        double u=z/span,u2=u*u,u3=u2*u;
++        double end=sqrt(AF_SGS_SINK*AF_SGS_SINK+2.0*P->arc_accel*span);
++        double d0=(AF_SGS_SINK-AF_FLOAT_SINK)/fmax(.1,P->sgs_height-AF_FLOAT_HEIGHT);
++        double d1=P->arc_accel/end;
++        return (2*u3-3*u2+1)*AF_SGS_SINK+(u3-2*u2+u)*span*d0+
++            (-2*u3+3*u2)*end+(u3-u2)*span*d1;
++    }
+     if(h<=AF_FLOAT_HEIGHT)return AF_FLOAT_SINK;
+     return AF_FLOAT_SINK+(AF_SGS_SINK-AF_FLOAT_SINK)*
+         (h-AF_FLOAT_HEIGHT)/fmax(.1,P->sgs_height-AF_FLOAT_HEIGHT);

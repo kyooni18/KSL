@@ -179,3 +179,30 @@ SGS+5 m, and below the shallow glide may unload to -0.08 g in proportion to a po
 | + unload below SGS on surge | 8/12 | 6/6 | 5/7 |
 | + signed surge (kept) | 11/12 | 6/6 | 5/7 (12-33-31 51 m/s; 13-02-48 4.3 m/s sink) |
 Applying the surge on the whole arc weakens the main pull (short landings on soft plants).
+
+## 12. Codex offline continuation: predictor/execution consistency
+
+User requires offline FLARE refinement before L4, and stopping before its launch.
+Foundation recall succeeded; Jev was not exposed. Another session committed the signed
+surge experiment as b3dfb34; its remaining uncommitted AF_SLEW=3 edit was preserved.
+All experiments here used an isolated source copy and backend, without touching live KSP,
+protected saves, shared backend builds, existing flight restrictions, or unrelated edits.
+
+The pending slew edit changed only the predictor: execution still used FLARE_SLEW=5.
+Tested shared slew rates, then targeted the observed 13-02-48 command drop and sink rebound.
+The predictor discards measured pitch momentum after its first step; execution uses it.
+Also, the sink profile has a slope discontinuity at SGS, causing a deceleration reduction.
+
+| isolated variant | matrix | chains | decision |
+|---|---:|---:|---|
+| shared slew 3°/s | 10/12 | 4/7 | reject; 13-02-48 improves to 2.65 m/s, other cases float |
+| shared slew 4°/s | 11/12 | 4/7 | reject; 13-02-48 still 4.32 m/s |
+| shared slew up 5/down 3°/s | 9/12 | 5/7 | reject; 13-02-48 1.57, 14-21-19 3.18 m/s |
+| predictor momentum residual decays over 0.5 s | 9/12 | 5/7 | reject; 13-02-48 1.85, short/slow matrix regressions |
+| C1 Hermite profile join over SGS…SGS+10 m | 10/12 | 4/7 | reject; 13-02-48 2.62, two other chains too slow |
+| falling-incidence surge ×2, existing ±2° cap | 10/12 | 5/7 | reject; 13-02-48 improves to 3.53, still hard |
+
+Each score is the runner's unchanged complete success check, including runway contact and rollout;
+a 64 m/s pass does not meet the planner's stricter 66 m/s objective. No code variant has yet
+met both ≥10/12 and ≥6/7. Adaptive remains off by default. Source patches, portable inputs,
+exact run IDs, outcome fields, and provenance are retained in `Codex-Flare-Offline/`.

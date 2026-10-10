@@ -1,0 +1,33 @@
+--- a/CLanding/guidance/final/adaptive_flare.inc
++++ b/CLanding/guidance/final/adaptive_flare.inc
+@@ -34,6 +34,7 @@
+ #define AF_SURGE_T .5
+ #endif
+ #define AF_SLEW 5.0          /* deg/s incidence command slew, as the executed flare */
++#define AF_SLEW_DOWN 3.0
+ #define AF_TD_PITCH 8.0
+ #define AF_FLOOR_START 10.0  /* wheel height where the mains-first attitude floor begins */
+ #define AF_FLOOR_FULL 3.0
+@@ -246,7 +247,7 @@
+         cmd=fmax(cmd,(floor_aoa-M->bias)/M->gain);
+     }
+     cmd=clampd(cmd,0.0,M->aoa_max+1.0);
+-    if(isfinite(s->cmd)&&dt>0.0)cmd=clampd(cmd,s->cmd-AF_SLEW*dt,s->cmd+AF_SLEW*dt);
++    if(isfinite(s->cmd)&&dt>0.0)cmd=clampd(cmd,s->cmd-AF_SLEW_DOWN*dt,s->cmd+AF_SLEW*dt);
+     o.cmd=cmd;
+     return o;
+ }
+--- a/CLanding/guidance/final/sequence.inc
++++ b/CLanding/guidance/final/sequence.inc
+@@ -674,9 +674,9 @@
+     double aoa_command_elapsed=t->ut-g->terminal_aoa_cmd_ut;
+     if(g->terminal_aoa_cmd_ut>0.0&&isfinite(aoa_command_elapsed)&&
+        aoa_command_elapsed>=0.0&&aoa_command_elapsed<2.0){
+-        double rate=flaring?FLARE_SLEW:6.0;
++        double rate=af_flying?AF_SLEW:(flaring?FLARE_SLEW:6.0);
+         double allowance=rate*aoa_command_elapsed;
+-        aoa=clampd(aoa,g->terminal_aoa_cmd_last-allowance,
++        aoa=clampd(aoa,g->terminal_aoa_cmd_last-(af_flying?AF_SLEW_DOWN*aoa_command_elapsed:allowance),
+             g->terminal_aoa_cmd_last+allowance);
+     }else aoa=t->angle_of_attack;
+     g->terminal_aoa_cmd_last=aoa;
