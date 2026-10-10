@@ -75,7 +75,8 @@ roll angle/rate while kRPC AutoPilot continues to hold pitch/yaw; the turn is
 released after roll error stays within 3° for the configured settle interval.
 The roll settle check also requires body roll rate below 1.5°/s to tolerate
 the small residual oscillation measured on the active STS.
-The body roll is rate-capped at 3°/s and pauses if nose error exceeds 5°.
+The body roll is rate-capped at 3°/s, isolates aerodynamic roll inputs until
+settled, and pauses if nose error exceeds 5°.
 The 180° roll is held through booster separation, then
 targets 0° after 180 seconds; use `--roll-reset-delay` to change that wait.
 `--hz 10` is the requested control frequency; actual RPC latency may reduce it.

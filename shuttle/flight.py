@@ -1480,16 +1480,14 @@ def run(args):
                     if roll_allowed and not mission_roll_commanded:
                         saved_auto_tune = ap.auto_tune
                         saved_roll_pid = ap.roll_pid_gains
+                        roll_surface_states = isolate_aero_roll(v)
                         ap.auto_tune = False
-                        # Keep the craft's aerodynamic roll authority. The prior
-                        # isolation left direct roll with too little authority once
-                        # pitch-over coupling and dynamic pressure increased.
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                         control.roll = 0
                         mission_roll_commanded = True
                         print(f'Physical orbiter-side roll started: earthward; '
-                              f'aerodynamic roll surfaces remain enabled')
+                              f'aerodynamic roll surfaces isolated for a low-load roll')
                     roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
                     if recovered_autopilot and roll_active:
                         ap.auto_tune = False
@@ -1639,6 +1637,9 @@ def run(args):
                                 elif (conn.space_center.ut-roll_settle_since >=
                                       args.roll_settle_time):
                                     mission_roll_settled = True
+                                    restore_aero_roll(roll_surface_states)
+                                    roll_surface_states = []
+                                    print('Aerodynamic roll surfaces restored after roll')
                                     print('Physical heads-down roll settled; gravity turn released')
                             else:
                                 roll_settle_since = None
