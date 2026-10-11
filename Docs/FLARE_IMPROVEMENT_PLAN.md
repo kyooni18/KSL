@@ -78,7 +78,7 @@ pitch response matches live.
 | Plan item | State |
 |---|---|
 | 1. Flare ownership backstop + visible block reason | **Done** (all MM305 paths; status shows `Final blocked: …`) |
-| 2. TAEM energy | **Partly.** The executed law no longer dives for the 160 m/s station speed at k=0. Root cause found upstream: the deorbit plan flew unqualified (`robustnessQualified false`, predicted TAEM range error −20.5 km, worst case 40.6 km), and MM304 handed over 87 km out (L5: ~60 km) at the same Mach/altitude. Open. |
+| 2. TAEM energy | **Partly.** The executed law no longer dives for the 160 m/s station speed at k=0. Upstream targeting and lateral geometry remain under investigation: the plan had `robustnessQualified false`, and L7 reached TAEM much farther laterally displaced than L5. Scalar range and `k=0` alone do not establish the root cause. Open. |
 | 3. Preflare floor | **Done** as a fallback floor (nominal flights unchanged) |
 | 4. Touchdown speed / float | Open. Low-speed flare sink is sensitive: 0.8–4.5 m/s across small stretch-threshold changes on L7. |
 | 5. Sim/live gap | Open. Blocks trustworthy flare tuning. |
@@ -92,7 +92,7 @@ live. Grounded warning recovery also failed to terminate; operator abort was
 needed after stopping. Offline follow-up `9fdfa0a` now terminates a failed
 grounded landing with Abort after braking below 1.5 m/s, while preserving
 simulator contact evidence on termination. The regression and unchanged L5
-golden pass; this termination fix has not flown live. No landing acceptance
+golden pass; the repeat approved flight below now verifies automatic low-speed failure termination live. No landing acceptance
 gates were weakened.
 
 ## Plan, in priority order
@@ -155,6 +155,12 @@ gates were weakened.
   fixed flare on the matrix and on replays of the L5/L6 live data.
 
 ### 5. Close the sim/live gap first
+- [Integral identification and kinematic check](Experiments/STS-Landing-20261011/Pitch-Integral-Crosscheck/README.md)
+  includes both L7 continuations. Longer intervals and sqrt(Q) damping still
+  do not produce a transferable L4–L7 fit. Subtracting measured FPA rotation
+  improves near-level AoA-increment RMSE by 55–76% on every flight, supporting
+  preserving body rotational state and deriving incidence from the changing
+  flight frame before fitting moments. No new plant coefficients were adopted.
 - [L4/L5/L7 cross-check](Experiments/STS-Landing-20261011/Pitch-Plant-Crosscheck/README.md)
   rejects direct adoption of the existing pitch regression: held-out L7 R²
   is negative for both body and AoA coordinates, including a 0–400 ms delay
