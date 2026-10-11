@@ -149,7 +149,7 @@ def execute(conn, vessel, node, done, tolerance=0.03):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--apoapsis', type=float, default=90000.0)
-    parser.add_argument('--periapsis', type=float, default=60000.0)
+    parser.add_argument('--periapsis', type=float, default=90000.0)
     parser.add_argument('--inclination', type=float, default=34.0)
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()

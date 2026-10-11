@@ -426,6 +426,26 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
     return min(initial_pitch, max(minimum_pitch, flight_path_pitch - pitch_under))
 
 
+def vertical_profile_pitch(altitude, vertical_speed, inertial_horizontal_speed,
+                           radius, mu, accel, insertion_altitude, insertion_speed,
+                           min_pitch=-20.0, max_pitch=35.0):
+    """Pitch that brings the climb to the insertion altitude with ~zero vertical speed
+    exactly when horizontal speed reaches the insertion speed.
+
+    Linear-in-time vertical acceleration a(t) = a0 + a1 t meeting h(tgo) = target and
+    v(tgo) = 0 gives a0 = (6 dh - 4 v tgo)/tgo^2. Thrust supplies a0 plus the
+    effective gravity (gravity minus centrifugal), so the loft and the gravity loss
+    are planned instead of being burned off later by pitching nose-down.
+    """
+    accel = max(accel, 0.5)
+    g_eff = max(0.0, mu/(radius*radius) - inertial_horizontal_speed**2/radius)
+    dh = insertion_altitude - altitude
+    tgo = max(20.0, (insertion_speed - inertial_horizontal_speed)/accel)
+    a0 = (6.0*dh - 4.0*vertical_speed*tgo)/(tgo*tgo)
+    s = max(-1.0, min(1.0, (a0 + g_eff)/accel))
+    return max(min_pitch, min(max_pitch, math.degrees(math.asin(s))))
+
+
 def final_phase_g(periapsis_altitude, target_periapsis, max_g, ramp=30000.0, floor=0.5):
     """Taper acceleration as periapsis nears target so cutoff resolution is fine.
 
@@ -517,7 +537,9 @@ def thrust_axis_offset(conn, vessel, frame):
             try:
                 direction = thruster.thrust_direction(vessel.reference_frame)
             except Exception:
-                continue
+                # Some engine transforms are not exposed; the canted part axis is
+                # the thrust axis for an ungimballed engine.
+                direction = engine.part.direction(vessel.reference_frame)
             for i in range(3):
                 total[i] += engine.thrust/len(thrusters)*direction[i]
     norm = math.sqrt(sum(c*c for c in total))
@@ -1314,7 +1336,13 @@ class Shuttle:
             # authority than the gimbals have at a high SSME limiter. Ride a
             # lower limiter (smaller off-axis moment) briefly, then ramp up.
             since_sep = self.sc.ut - self.booster_separation_ut
-            sep_cap = 0.25 + 0.75*min(1.0, max(0.0, (since_sep-3.0)/20.0))
+            roll_done = getattr(self, 'post_sep_roll_done_ut', None)
+            # Hold a low, steady limiter (small thrust-line moment, gimbals free)
+            # until the upright roll is finished, then ramp over 15 s.
+            if roll_done is None:
+                sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (since_sep-30.0)/15.0))
+            else:
+                sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (self.sc.ut-roll_done)/15.0))
             core_throttle = min(core_throttle, sep_cap)
             target_throttles = tuple(core_throttle for _ in self.groups)
         applied = slew_vector(current, target_throttles, throttle_slew, dt)
@@ -1471,6 +1499,8 @@ def run(args):
         upper_autotune = False
         roll_reset = False
         roll_reset_ut = None
+        upright_since = None
+        shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
         last_roll_angle = None
@@ -1480,6 +1510,9 @@ def run(args):
         roll_surface_states = []
         roll_accel_reference = 0.0
         turn_start_altitude = args.turn_start
+        # Burnout altitude for the post-separation climb profile: low in the target
+        # band, where the insertion point of a low-perigee ellipse lies.
+        insertion_altitude = args.meco_periapsis + 0.4*(args.orbit-args.meco_periapsis)
         turn_end_altitude = args.turn_end
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
         signal.signal(signal.SIGTERM, _terminate_as_exception)
@@ -1756,6 +1789,23 @@ def run(args):
                                 - min(15.0, 1.5*ap_excess/1000.0)
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
+                        if shuttle.separated and shuttle.post_sep_roll_done_ut is None:
+                            # Hold attitude while rolling upright.
+                            raw_pitch = commanded_pitch
+                        elif shuttle.separated:
+                            r_now = body.equatorial_radius+altitude
+                            lat_now = math.radians(flight.latitude)
+                            v_rot = body.rotational_speed*r_now*math.cos(lat_now)
+                            vh_inertial = flight.horizontal_speed+v_rot
+                            r_ins = body.equatorial_radius+insertion_altitude
+                            ra = body.equatorial_radius+args.orbit
+                            rp = body.equatorial_radius+args.meco_periapsis
+                            vh_ins = math.sqrt(2.0*body.gravitational_parameter*ra*rp/(ra+rp))/r_ins
+                            raw_pitch = vertical_profile_pitch(
+                                altitude, flight.vertical_speed, vh_inertial, r_now,
+                                body.gravitational_parameter, max(flight.g_force, 0.3)*G0,
+                                insertion_altitude, vh_ins)
+                            pitch_slew_rate = max(args.pitch_slew, 2.0)
                         peg_dv = None
                         energy_done = False
                         peg_phase_g = None
@@ -1816,8 +1866,10 @@ def run(args):
                             print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
                                   f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                         elif shuttle.separated and tanks_empty(shuttle):
-                            if shuttle.release_et():
-                                state = 'ORBITER_ASCENT'
+                            control.throttle = 0
+                            state = 'COAST'
+                            print(f'MECO (propellant depleted): Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
+                                  f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                     elif state == 'ORBITER_ASCENT':
                         target_pitch = 5
                         target_direction = direction_for_pitch_heading(5, args.heading)
@@ -1898,6 +1950,7 @@ def run(args):
                         shuttle.skiff.thrust_limit = 1
                     actual_roll = ''
                     roll_control = 0.0
+                    aim_direction = target_direction
                     if roll_active and state in ('ASCENT', 'ORBITER_ASCENT'):
                         # AutoPilot owns pitch/yaw only. Direct roll control keeps the
                         # real orbiter-mounted side (-Z) on the requested Earth/space side.
@@ -1907,8 +1960,9 @@ def run(args):
                                 low_q_limit=60.0 if mission_roll_settled else 35.0,
                                 high_q_limit=30.0)
                         aim_direction = target_direction
-                        if state == 'ASCENT' and shuttle.separated and peg_dv is not None:
-                            # Guidance wants the resultant thrust (not the nose) on target.
+                        if state == 'ASCENT' and shuttle.separated:
+                            # Guidance pitch is a thrust pitch: the SSMEs are canted ~15 deg
+                            # off the nose, so aim the resultant thrust (not the nose).
                             try:
                                 offset = thrust_axis_offset(conn, v, ap.reference_frame)
                                 raw = tuple(target_direction[i]-offset[i] for i in range(3))
@@ -1965,23 +2019,50 @@ def run(args):
                             elif (upper_autotune is False or
                                   conn.space_center.ut-upper_autotune >= 1.0):
                                 if upper_autotune is False:
+                                    # Gentle pitch/yaw: the pad tuning (1 s to peak) is
+                                    # integral-heavy on the light post-separation stack
+                                    # and limit-cycles at ~3 Hz against the gimbals.
+                                    ap.time_to_peak = (3.0, args.roll_time_to_peak, 3.0)
+                                    ap.overshoot = (0.03, args.roll_overshoot, 0.03)
                                     print('Pitch/yaw gains now retuned from live inertia and torque')
                                 ap.auto_tune = True
                                 upper_autotune = 'sampling'
-                        roll_control = manual_roll_command(
-                            roll_error_signed, body_roll_rate, roll_accel_reference,
-                            (min(args.roll_rate, 3.0) if shuttle.separated else
-                             args.roll_rate),
-                            args.roll_control_limit,
-                            max(args.roll_response_time, 1.0) if shuttle.separated
-                            else args.roll_response_time)
+                        upright_phase = (shuttle.separated and roll_reset and
+                                         shuttle.post_sep_roll_done_ut is None)
+                        if upright_phase:
+                            # Quick upright roll at the low post-separation limiter:
+                            # RCS adds roll authority the in-line SSME gimbals lack.
+                            control.rcs = True
+                            roll_control = manual_roll_command(
+                                roll_error_signed, body_roll_rate, roll_accel_reference,
+                                args.upright_roll_rate, 1.0, 0.6)
+                        elif shuttle.separated:
+                            roll_control = manual_roll_command(
+                                roll_error_signed, body_roll_rate, roll_accel_reference,
+                                min(args.roll_rate, 3.0), min(args.roll_control_limit, 0.4), 1.0)
+                        else:
+                            roll_control = manual_roll_command(
+                                roll_error_signed, body_roll_rate, roll_accel_reference,
+                                args.roll_rate, args.roll_control_limit,
+                                args.roll_response_time)
                         settle_nose_error = direction_error_deg(
-                            actual_direction, target_direction)
+                            actual_direction, aim_direction)
                         # Pause roll whenever the nose is being pulled away from
                         # the commanded ascent vector; resume once pitch/yaw recover.
                         if settle_nose_error > 5.0:
                             roll_control = 0.0
                         control.roll = roll_control
+                        if upright_phase:
+                            if roll_error < 4.0 and abs(body_roll_rate) < 1.5:
+                                if upright_since is None:
+                                    upright_since = conn.space_center.ut
+                                elif conn.space_center.ut-upright_since >= 1.0:
+                                    shuttle.post_sep_roll_done_ut = conn.space_center.ut
+                                    control.rcs = False
+                                    print(f'Upright after {conn.space_center.ut-roll_reset_ut:.1f} s; '
+                                          f'SSME limiter ramp released')
+                            else:
+                                upright_since = None
                         if not mission_roll_settled:
                             if roll_attitude_settled(
                                     roll_error, body_roll_rate,
@@ -2027,7 +2108,7 @@ def run(args):
                         roll_error = 0.0
                         pitch_error = 0.0
                         heading_error = 0.0
-                    nose_error = direction_error_deg(v.direction(ap.reference_frame), target_direction)
+                    nose_error = direction_error_deg(v.direction(ap.reference_frame), aim_direction)
                     try:
                         autopilot_error = ap.error
                     except Exception:
@@ -2140,7 +2221,7 @@ def main():
                         help='Fixed SSME thrust limiter held through SRB burn')
     parser.add_argument('--upper-g', type=float, default=1.4,
                         help='Acceleration cap for the SSME-only phase after booster separation')
-    parser.add_argument('--et-sep-delay', type=float, default=10.0,
+    parser.add_argument('--et-sep-delay', type=float, default=5.0,
                         help='Seconds to hold attitude after MECO before external-tank separation')
     parser.add_argument('--ssme-lead-time', type=float, default=3.0,
                         help='Seconds to hold verified SSME thrust before booster ignition')
@@ -2152,6 +2233,8 @@ def main():
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
+    parser.add_argument('--upright-roll-rate', type=float, default=15.0,
+                        help='Roll rate limit (deg/s) for the upright roll after booster separation')
     parser.add_argument('--roll-rate', type=float, default=8.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
