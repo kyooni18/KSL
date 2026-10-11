@@ -205,3 +205,11 @@ first landed flag followed a bounce. KSP paused landed at about 2810 m along
 and 1.37 m/s, brakes on. Grounded failure termination is live-verified; slow,
 long delivery, phase oscillations, flare sensitivity and the plant gap remain
 open. Universal terminal backstop and full deorbit/MM304 route were not tested.
+
+### Third approved continuation, 2026-10-11
+
+[Current-backend live verification](Experiments/STS-Landing-20261011/L7-Live-Current-Verification/README.md)
+again reached Final and flare, then automatically failed after a 130 m overrun.
+The last pre-ground-response sample was 50.81 m/s with 3.59 m/s sink,
+1567 m along. STS is paused landed at 1.36 m/s, gear/brakes on. Phase
+oscillations recur; no backstop, adaptive flare or full entry route was tested.
