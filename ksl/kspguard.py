@@ -34,11 +34,12 @@ def _number(value: Any) -> float:
 
 
 def run_guard(mode: str, python: Path | str | None = None, script: Path = GUARD_SCRIPT,
-              env: dict[str, str] | None = None, timeout: float = 15.0) -> dict[str, Any]:
+              env: dict[str, str] | None = None, timeout: float = 15.0,
+              args: list[str] | None = None) -> dict[str, Any]:
     """Run one guard mode and return its final JSON payload line."""
     process_env = os.environ.copy()
     process_env.update(env or {})
-    completed = subprocess.run([str(python or sys.executable), str(script), mode], capture_output=True,
+    completed = subprocess.run([str(python or sys.executable), str(script), mode, *(args or [])], capture_output=True,
                                text=True, timeout=timeout, check=False, env=process_env)
     lines = [line for line in completed.stdout.splitlines() if line.strip()]
     if completed.returncode != 0 or not lines:
@@ -81,3 +82,12 @@ def set_ksp_paused(paused: bool, python: Path | str | None = None, script: Path 
     payload = run_guard("pause" if paused else "resume", python, script, env)
     if payload.get("event") != "pause-state" or bool(payload.get("paused")) != paused:
         raise GuardError(f"KSP pause state did not change as requested: {payload}")
+
+
+def load_save_verified(name: str, env: dict[str, str] | None = None) -> dict[str, Any]:
+    """Load a checkpoint and require independent scene/UT settling evidence."""
+    payload = run_guard("load-save", env=env, timeout=90.0, args=["--name", name])
+    if payload.get("event") != "load-save-settled" or payload.get("name") != name or \
+            payload.get("gameScene") != "flight":
+        raise GuardError(f"KSP save {name!r} did not confirm a settled flight scene: {payload}")
+    return payload

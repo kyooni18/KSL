@@ -19,9 +19,9 @@ from typing import Any
 from . import __version__
 from .config import ConfigError, available_profiles, config_from_snapshot, load_config
 from .controller import (EXIT_ABORTED, EXIT_CONNECTION, EXIT_FAILED, EXIT_OK, EXIT_USAGE, MissionController,
-                         continue_phase)
+                         continue_phase, holdable)
 from .paths import BACKEND
-from .phases import ENTRY_PHASES, SEQUENCE, Phase, PhaseTransitionError
+from .phases import ENTRY_PHASES, SEQUENCE, Phase, PhaseTransitionError, validate_range
 from .runlog import Event, list_runs, read_status, resolve_run
 from .scenarios import SCENARIOS, resolve_scenario
 
@@ -103,12 +103,17 @@ def cmd_run(args: argparse.Namespace) -> int:
     config = _profile(args)
     start = Phase.parse(args.start) if args.start else Phase.PRELAUNCH
     stop = Phase.parse(args.stop) if args.stop else Phase.COMPLETE
+    validate_range(start, stop)
+    if not holdable(stop, _mode(args)):
+        raise PhaseTransitionError(f"cannot stop at {stop.value} in {_mode(args)} mode")
+    problems = config.validate()
+    if problems:
+        raise ConfigError("invalid mission profile:\n  " + "\n  ".join(problems))
     if args.load_save and not args.dry_run:
-        from .krpc_link import load_game, wait_for_flight_scene
+        from .krpc_link import krpc_env
+        from .kspguard import load_save_verified
         print(f"Loading KSP save {args.load_save!r}")
-        load_game(config, args.load_save)
-        time.sleep(3.0)
-        wait_for_flight_scene(config)
+        load_save_verified(args.load_save, krpc_env(config))
     controller = MissionController(config, _mode(args), start, stop, label=args.label)
     return _fly(args, controller)
 
@@ -144,10 +149,12 @@ def cmd_continue(args: argparse.Namespace) -> int:
         args.load_save = checkpoint["kspSave"]
     print(f"Continuing {run_dir.name} ({status.state} at {Phase(status.phase).title}) from {start.title}")
     if args.load_save and not args.dry_run:
-        from .krpc_link import load_game, wait_for_flight_scene
-        load_game(config, args.load_save)
-        time.sleep(3.0)
-        wait_for_flight_scene(config)
+        from .krpc_link import krpc_env
+        from .kspguard import load_save_verified
+        problems = config.validate()
+        if problems:
+            raise ConfigError("invalid mission profile:\n  " + "\n  ".join(problems))
+        load_save_verified(args.load_save, krpc_env(config))
     controller = MissionController(config, _mode(args), start, Phase.COMPLETE,
                                    label=f"continue-{status.profile}", resumed_from=run_dir.name)
     return _fly(args, controller)

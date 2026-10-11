@@ -93,3 +93,16 @@ This log is updated at implementation/validation checkpoints.
   exits while a descendant keeps its stdout pipe open, the mission fails and
   kills the owned process group rather than waiting forever. A real spawned
   descendant test passes; all five process-lifecycle tests pass (6.97 s).
+
+## Connection and checkpoint handoff
+
+- Python kRPC connections now obey `connection.timeoutSeconds` for the handshake.
+  A timeout returns an actionable connection failure and closes any client that
+  arrives late. The stalled-connection test uses a delayed fake kRPC client and
+  verifies cleanup; five subprocess tests and this test pass.
+- `ksl run/continue --load-save` now calls the independent guard's `load-save`
+  mode and requires its settled-flight confirmation. That guard checks scene,
+  warp, target save UT and independent load evidence. The CLI validates profile
+  and phase range before any save load. Ten targeted CLI/guard/connection cases
+  plus seven subtests pass. The earlier direct `space_center.load` call could
+  report a disconnect mid-load and proceed without confirming the target scene.

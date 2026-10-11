@@ -223,6 +223,13 @@ class CliTests(unittest.TestCase):
             saved = json.loads((Path(result["runDirectory"]) / "config.json").read_text())
             self.assertEqual(saved["configuration"]["ascent"]["inclinationDeg"], 12)
 
+    def test_bad_profile_cannot_load_a_save(self):
+        with mock.patch("ksl.kspguard.load_save_verified") as load:
+            code, _, err = self.run_cli("run", "--from", "mm305", "--load-save", "example",
+                                        "--set", "connection.rpcPort=NaN")
+        self.assertEqual(code, 2, err)
+        load.assert_not_called()
+
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):
     def test_poll_ignores_stopped_app(self):

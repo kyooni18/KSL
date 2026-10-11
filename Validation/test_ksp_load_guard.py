@@ -15,6 +15,7 @@ try:
 except ModuleNotFoundError:
     sys.modules["krpc"] = types.ModuleType("krpc")
 import ksp_test_guard as guard
+from ksl.kspguard import GuardError, load_save_verified
 
 
 def sample(ut):
@@ -56,6 +57,14 @@ class LoadEvidenceTests(unittest.TestCase):
             state[key] = value
             self.assertFalse(guard.load_state_is_settled(state, before_ut=1000.0,
                                                         target_ut=2000.0, elapsed=5.0))
+
+    def test_cli_load_requires_the_requested_settled_flight(self):
+        with patch("ksl.kspguard.run_guard", return_value={"event": "load-save-settled",
+                                                       "name": "other", "gameScene": "flight"}) as invoke:
+            with self.assertRaises(GuardError):
+                load_save_verified("STS-test")
+            invoke.assert_called_once_with("load-save", env=None, timeout=90.0,
+                                           args=["--name", "STS-test"])
 
 
 class LoadLoopTests(unittest.TestCase):

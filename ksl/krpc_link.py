@@ -8,6 +8,7 @@ profile's ``connection`` block (and ``KSL_KRPC_*`` for child processes).
 from __future__ import annotations
 
 import time
+import threading
 from contextlib import contextmanager
 from typing import Any, Iterator
 
@@ -37,11 +38,39 @@ def connect(config: MissionConfig, name: str) -> Iterator[Any]:
     except ImportError as exc:
         raise ConnectionFailure("the krpc Python package is not installed (run `make setup`)") from exc
     c = config["connection"]
-    try:
-        conn = krpc.connect(name=name, address=str(c["address"]), rpc_port=int(c["rpcPort"]),
-                            stream_port=int(c["streamPort"]))
-    except Exception as exc:  # krpc raises ConnectionRefusedError, socket errors, protobuf errors
-        raise ConnectionFailure(f"cannot reach kRPC at {c['address']}:{c['rpcPort']}: {exc}") from exc
+    timeout = float(c["timeoutSeconds"])
+    finished = threading.Event()
+    lock = threading.Lock()
+    result: dict[str, Any] = {}
+
+    def open_connection() -> None:
+        try:
+            value = krpc.connect(name=name, address=str(c["address"]), rpc_port=int(c["rpcPort"]),
+                                 stream_port=int(c["streamPort"]))
+        except Exception as exc:
+            value = exc
+        with lock:
+            if result.get("abandoned"):
+                if not isinstance(value, Exception):
+                    value.close()
+                return
+            result["value"] = value
+            finished.set()
+
+    threading.Thread(target=open_connection, name=f"krpc-connect-{name}", daemon=True).start()
+    if not finished.wait(timeout):
+        with lock:
+            result["abandoned"] = True
+            # A reply arriving exactly at the deadline also belongs to the
+            # timed-out attempt. Do not leave its connection unowned.
+            late = result.pop("value", None)
+        if late is not None and not isinstance(late, Exception):
+            late.close()
+        raise ConnectionFailure(f"kRPC handshake at {c['address']}:{c['rpcPort']} timed out after {timeout:.1f} s")
+    value = result["value"]
+    if isinstance(value, Exception):
+        raise ConnectionFailure(f"cannot reach kRPC at {c['address']}:{c['rpcPort']}: {value}") from value
+    conn = value
     try:
         yield conn
     finally:
