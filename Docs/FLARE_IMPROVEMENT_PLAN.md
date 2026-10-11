@@ -380,3 +380,12 @@ recorded drag work versus frozen 32 s / 11.48 kJ/kg; future plan/controller
 changes remain absent. Both main replay summaries are unchanged. Compare a
 complete native Final control replay, not another scalar correction; no
 production gates or unqualified plant have been adopted.
+
+[Native Final checkpoint audit](Experiments/STS-Landing-20261011/Final-Checkpoint-Audit/README.md)
+finds the existing terminal shadow copies guidance but bypasses native FCS,
+estimator updates and ground contact; it cannot certify a complete Final tail.
+Controller, transport FCS and simulator state have separate owners. Require
+unchanged warmed-tail parity at a defined lockstep boundary before comparing a
+new forecast. Reexecuting the original prefix is a valid initial alternative
+to implementing a restart. No checkpoint support or flight qualification is
+claimed by this source audit.
