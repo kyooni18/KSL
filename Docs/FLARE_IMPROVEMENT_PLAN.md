@@ -160,6 +160,11 @@ gates were weakened.
   fixed flare on the matrix and on replays of the L5/L6 live data.
 
 ### 5. Close the sim/live gap first
+- [Measured pitch authority/inertia cross-check](Experiments/STS-Landing-20261011/Pitch-Authority-Crosscheck/README.md)
+  expands held-out checks to L6 and the third L7 continuation. Replacing
+  capped Q control authority with native torque/inertia still gives negative
+  held-out R² on every flight. Maximum available torque is not validated as
+  net aerodynamic moment; no coefficients are adopted.
 - [Measured-state restarts and matrix](Experiments/STS-Landing-20261011/Measured-State-Replay/README.md)
   correct course/body-heading confusion and preserve measured body pose/rates.
   Independent L6 and a synthetic high-energy inlet now join L5/L7. The pinned
