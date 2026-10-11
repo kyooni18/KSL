@@ -50,6 +50,7 @@ typedef struct {
     double response_time;
     double plan_source_ut;
     DecisionMargin height;
+    bool degraded_floor;   /* solved against the low-energy speed floor */
 } TerminalPreflarePlan;
 
 

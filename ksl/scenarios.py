@@ -50,7 +50,7 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
         model_profile="sts-live-20261010",
         attitude=f"{L5}/Codex-Flare-Offline/inputs/att-live.ini",
         direct_control=True,
-        baseline="Complete on runway; touchdown 60.7 m/s, sink 4.94 m/s (fails sink gate), stop 989 m",
+        baseline="Complete on runway, all gates pass: touchdown 66.1 m/s, sink 1.84 m/s, stop 1102 m",
     ),
     Scenario(
         name="l7-mm305",
@@ -61,7 +61,7 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
         model_profile="sts-live-20261010",
         attitude=f"{L5}/Codex-Flare-Offline/inputs/att-live.ini",
         direct_control=True,
-        baseline="live L7: energy law reached the Final line but Final admission never passed; impact short in TAEM",
+        baseline="Final + flare: 55.5 m/s, sink 0.91 m/s, gear down, 226 m short (live L7 had no flare)",
     ),
     Scenario(
         name="entry-70km-sts",

@@ -77,8 +77,48 @@ static void terminal_observe_response(GuidanceMachine*g,const Telemetry*t,double
     g->terminal_response_sample_ut=t->ut;
 }
 
+static TerminalPreflarePlan terminal_preflare_plan_floor(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double speed_floor);
+
+static void terminal_aero_q(const GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v,double aoa,double*L,double*D);
+static double final_lift_aoa_limit(const Telemetry *t, const VehicleProfile *v);
+
+/* Lowest pull-up exit speed a low-energy vehicle may plan to: the touchdown
+   speed it is landing at, and a 1.25 margin over the learned 1-g speed at the
+   lift-incidence limit.  The configured minimumSafeSpeed (85 m/s for the STS)
+   sits above the 53-56 m/s controlled live touchdowns of L5/L6, so a slow
+   but flyable vehicle otherwise gets no preflare plan at all (live L7). */
+static double terminal_low_energy_speed_floor(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,const VehicleProfile*v){
+    double v_td=v->touchdown_speed>1.0?v->touchdown_speed:65.0;
+    double rho=isfinite(t->atmospheric_density)&&t->atmospheric_density>0.0?
+        t->atmospheric_density:planet_atmospheric_density(p,t->mean_altitude);
+    double L=0.0,D=0.0;
+    terminal_aero_q(g,t,v,final_lift_aoa_limit(t,v),&L,&D);
+    double ratio=g->terminal_lift_ratio>0.0?g->terminal_lift_ratio:1.0;
+    double speed_1g=rho>0.0&&L>0.0?
+        sqrt(2.0*t->mass*planet_surface_gravity(p)/(rho*L*ratio)):NAN;
+    double floor=isfinite(speed_1g)?fmax(v_td,1.25*speed_1g):v->minimum_safe_speed;
+    if(isfinite(t->calibrated_stall_speed)&&t->calibrated_stall_speed>0.0)
+        floor=fmax(floor,t->calibrated_stall_speed);
+    return fmin(floor,v->minimum_safe_speed);
+}
+
 static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg){
+    TerminalPreflarePlan plan=terminal_preflare_plan_floor(g,t,p,aero,cfg,NAN);
+    if(plan.feasible||!plan.reject_reason||
+       strcmp(plan.reject_reason,"preflare-speed-aoa-or-stall-gate")!=0)return plan;
+    double floor=terminal_low_energy_speed_floor(g,t,p,&cfg->vehicle);
+    if(!(floor<plan.minimum_speed-0.5))return plan;
+    TerminalPreflarePlan degraded=terminal_preflare_plan_floor(g,t,p,aero,cfg,floor);
+    if(!degraded.feasible)return plan;
+    degraded.degraded_floor=true;
+    return degraded;
+}
+
+static TerminalPreflarePlan terminal_preflare_plan_floor(const GuidanceMachine*g,const Telemetry*t,
+        const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double speed_floor){
     const VehicleProfile*v=&cfg->vehicle;
     const GuidanceSettings*s=&cfg->guidance;
     TerminalPreflarePlan plan={0};
@@ -105,7 +145,7 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
        AoA that can capture the inner-final sink while preserving the
        aerodynamic speed floor.  Extra altitude is therefore spent on a gentler
        pull-up instead of being thrown away and then paid for as induced drag. */
-    double minimum_speed=v->minimum_safe_speed;
+    double minimum_speed=isfinite(speed_floor)?speed_floor:v->minimum_safe_speed;
     if(isfinite(t->calibrated_stall_speed)&&t->calibrated_stall_speed>0.0)
         minimum_speed=fmax(minimum_speed,t->calibrated_stall_speed);
 
@@ -276,6 +316,11 @@ static TerminalPreflarePlan terminal_preflare_plan(const GuidanceMachine*g,const
 }
 
        void terminal_store_preflare_plan(GuidanceMachine*g,const TerminalPreflarePlan*p){
+    /* A degraded-floor plan only proves Final can still fly the vehicle; its
+       trigger is sized for an exit speed the nominal flare is not built for.
+       Final flies such a vehicle in low-energy mode and sizes the pull-up from
+       the measured sink instead. */
+    if(p&&p->feasible&&p->degraded_floor){g->terminal_final_low_energy=true;p=NULL;}
     g->terminal_preflare_plan_valid=p&&p->feasible;
     if(!p||!p->feasible)return;
     g->preflare_trigger_altitude=p->trigger_altitude;

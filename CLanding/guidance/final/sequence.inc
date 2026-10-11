@@ -500,7 +500,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        vehicle does not have into speed it does not need. */
     if(g->terminal_final_low_energy&&!g->terminal_pull_latch){
         double best_glide=-atan(1.0/terminal_learned_max_lift_to_drag(g,t,v,aoa_max));
-        double stretch=clampd((V-1.1*v_td)/(.15*v_td),0.0,1.0);
+        double stretch=clampd((V-1.0*v_td)/(.15*v_td),0.0,1.0);
         glide_fpa+=stretch*(fmax(glide_fpa,best_glide)-glide_fpa);
     }
 

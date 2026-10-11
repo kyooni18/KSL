@@ -1560,6 +1560,7 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
     g->terminal_path_kind=TERMINAL_PATH_DIRECT;
     g->mm305_acquisition_route_valid=false;
     double station=fmax(500.0,control_model->guidance.final_approach_distance);
+    const char *final_blocked=NULL;
     if (L->leg==TEL_LEG_FINAL&&geometry->runway_along_m>=-station-2000.0) {
         TerminalPreflarePlan final_plan={0};
         bool final_approach=terminal_outer_capture_admissible(g,t,course,
@@ -1572,7 +1573,12 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
         /* Final's gate must hold continuously before ownership moves: a single
            admissible sample on a still-settling runway capture is re-evaluated
            (and permanently aborted) by Final on the next tick. */
-        if (!admissible) L->admit_pending=false;
+        if (!admissible) {
+            L->admit_pending=false;
+            final_blocked=!final_approach?(final_plan.reject_reason&&
+                strcmp(final_plan.reject_reason,"none")!=0?final_plan.reject_reason:
+                "runway capture gate"):taem_terminal_block_reason_string(final_eval.block_reason);
+        }
         else if (!L->admit_pending) { L->admit_pending=true; L->admit_since_ut=t->ut; }
         /* keep the TAEM executive in Runway Alignment with the live contract */
         (void)taem_exec_sync_with_contract(g,t,&cfg->guidance,planet,aero,cfg,
@@ -1584,7 +1590,7 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
            Final sizes its pull-up from the measured sink and flares a slow
            vehicle firmly, whereas staying in TAEM flies the glide into the
            ground with no flare at all (live L7, 2026-10-11). */
-        bool energy_short=!admissible&&L->k<=0.05&&
+        bool energy_short=!admissible&&L->k<=TEL_K_SHORT&&
             geometry->runway_along_m<0.0&&
             terminal_preflare_alignment_valid(g,t,course,cfg);
         if (!energy_short) L->low_energy_pending=false;
@@ -1630,10 +1636,13 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
     }
     static const char *legs[]={"centreline","turnaround","downwind","HAC","Final line"};
     char status[256];
-    snprintf(status,sizeof(status),
+    int n=snprintf(status,sizeof(status),
         "MM305 energy law: %s %s, drag level %.2f, path to go %.1f km.",
         L->loop?"overhead loop":"straight-in",legs[L->leg<0||L->leg>4?0:L->leg],
         L->k,L->s_go/1000.0);
+    /* Make a withheld Final handoff visible in the live status line. */
+    if (final_blocked&&n>0&&(size_t)n<sizeof(status))
+        snprintf(status+n,sizeof(status)-(size_t)n," Final blocked: %s.",final_blocked);
     GuidanceResult r=stabilized(g,result_make(PHASE_TAEM,command,status,NULL),
         t,&cfg->vehicle,&cfg->guidance,dt);
     g->phase=PHASE_TAEM;
