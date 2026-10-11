@@ -278,3 +278,24 @@ placeholder for elapsed time, retains its entry phase at T+0, and appends
 the recorded Complete event after the last telemetry frame. The same live
 run now reports 1659 s and a monotonic Orbit → Complete timeline. Four
 focused replay tests pass, including the clock regression.
+
+## Full pad-to-runway flight in progress
+
+- A separate `quicksave` held a 41-part STS stack on the launch pad at
+  UT 2682.93. The completed orbit-to-runway scene was already saved, so
+  `bin/ksl run -p sts-85km-10deg --load-save quicksave --json --label
+  live-pad-chain` began a full mission without overwriting either save.
+  Run record: `runs/20261011T171716Z-live-pad-chain/`.
+- Preflight measured a 520.7 t stack and identified three SSMEs, two
+  Clydesdale SRBs and two AJ10 OMS engines. Liftoff, heads-down roll and
+  SRB separation completed. PEG MECO yielded Ap 86.9 km / Pe 53.2 km;
+  ET separated and the orbiter transferred to OMS trim.
+- OMS trim corrected the orbit in two burns to Ap 85.001 km / Pe 84.975 km /
+  inclination 9.99993°. The first burn over-raised apoapsis to 94.59 km;
+  closed-loop replanning corrected it with a 7.88 m/s second burn. The
+  `aim error` log values (17.7° and 86.1°) require separate diagnosis because
+  the measured final orbit is on target. The automatic orbit save is
+  `ksl-20261011T171716Z-live-pad-chain-orbit`.
+- The deorbit search selected a strict 13/15-stress-case plan, burn UT
+  3933.12, 30.04 m/s. Burn completed and MM304 entry began. The rest of
+  the flight remains in progress; no touchdown result is claimed yet.
