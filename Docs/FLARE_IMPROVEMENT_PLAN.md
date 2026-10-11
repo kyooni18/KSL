@@ -323,3 +323,13 @@ still fails slope, tracking and speed requirements. Prefix curvature limits
 are rejected as an admission remedy. A reshaped cubic is not a true straight
 initial descent; any composite-path experiment must propagate that prefix and
 qualify the combined path against unchanged endpoint/energy constraints.
+
+[Propagated unbanked prefix](Experiments/STS-Landing-20261011/MM305-Unbanked-Prefix/README.md)
+checks actual 4/8/12 km descent prefixes before planning the turn from their
+complete exit states. All four variants and the reproduced baseline find no
+feasible downstream route; best tracking remains 3.2–3.85 km in the variants.
+The longest prefix loses 82 kJ/kg and its best tracked route exits at 64 m/s.
+Pressure/load limits pass for the prefixes, but no combined route is qualified
+or adopted. Fixed-incidence delay is rejected. Trace the later authority/energy
+failure before making further composite-path changes; live aim/drogue approval
+remains pending, and production gates are unchanged.
