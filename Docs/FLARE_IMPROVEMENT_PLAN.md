@@ -238,3 +238,14 @@ parachute deployment. The actual Mk12-R drogue was found stowed after the
 third flight. The measured L7 replay moves contact only 31 m earlier and
 still overruns; drogue braking is not modeled offline. Both changes await
 approved live verification; no live controls were changed for this work.
+
+### STS admission diagnostics, 2026-10-11
+
+[STS admission diagnostics](Experiments/STS-Landing-20261011/MM305-Admission-Diagnostics/README.md)
+confirm that the measured-mass STS fixture qualifies 0/5 physically admitted
+states, just as the distinct legacy STS-N fixture qualifies none. Focused
+sample 0 has no jointly feasible profile among 2,184 smooth trials; longer
+constant profiles often lose speed before completing the route. Direct pitch
+moment coefficient changes cannot affect this command-servo predictor.
+Timeout evidence and focused selection were added without changing gates or
+production guidance. Predictor/control parity and non-vacuity remain open.

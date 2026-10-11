@@ -201,7 +201,7 @@ mm305-feasibility-test: $(TARGET)
 		$(VALIDATION_ROOT)/MM305FeasibilityPropertyTests.c \
 		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/mm305_feasibility_tests
-	cd $(REPO_ROOT) && "$(abspath $(BUILD)/mm305_feasibility_tests)"
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/mm305_feasibility_tests)" $(MM305_FEASIBILITY_ARGS)
 
 mm305-recovery-monitor-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \

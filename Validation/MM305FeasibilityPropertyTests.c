@@ -144,6 +144,7 @@ int main(int argc, char **argv) {
     const char *attitude_override = NULL;
     double mass_kg = 40000.0;
     bool explicit_mass = false;
+    int sample_index = -1;
     for (int n = 1; n < argc; ++n) {
         if (!strcmp(argv[n], "--configuration") && n + 1 < argc) {
             configuration_path = argv[++n];
@@ -159,8 +160,15 @@ int main(int argc, char **argv) {
                 return EXIT_FAILURE;
             }
             explicit_mass = true;
+        } else if (!strcmp(argv[n], "--sample-index") && n + 1 < argc) {
+            char *end=NULL;long value=strtol(argv[++n],&end,10);
+            if(!end||end==argv[n]||*end||value<0||value>4){
+                fprintf(stderr,"sample index must be an integer from 0 through 4\n");
+                return EXIT_FAILURE;
+            }
+            sample_index=(int)value;
         } else {
-            fprintf(stderr, "usage: %s [--configuration FILE --mass-kg MEASURED_MASS [--aero EXPERIMENT_CSV] [--attitude EXPERIMENT_INI]]\n", argv[0]);
+            fprintf(stderr, "usage: %s [--configuration FILE --mass-kg MEASURED_MASS [--aero EXPERIMENT_CSV] [--attitude EXPERIMENT_INI]] [--sample-index 0..4]\n", argv[0]);
             return EXIT_FAILURE;
         }
     }
@@ -183,6 +191,7 @@ int main(int argc, char **argv) {
     printf("MM305 fixture: profile=%s modelId=%s massKg=%.6f configuration=%s state=%s\n",
         profile, cfg.vehicle.model_id, mass_kg, configuration_path ? configuration_path : "native-default",
         configuration_path ? "native-atmosphere-and-forces" : "legacy-envelope-property-fixture");
+    if(sample_index>=0)printf("Focused diagnostic sample=%d; not the complete qualification batch.\n",sample_index);
     fflush(stdout);
     if (!configuration_path) {
         cfg.site.latitude = -0.0486111111;
@@ -243,6 +252,7 @@ int main(int argc, char **argv) {
 
     int total_admitted = 0, qualified = 0, contract_violations = 0;
     for (size_t i = 0; i < sizeof(samples)/sizeof(samples[0]); ++i) {
+        if(sample_index>=0 && (int)i!=sample_index)continue;
         Telemetry t = create_telemetry(&p, &cfg, samples[i].alt, samples[i].mach,
                                       samples[i].along, samples[i].cross, mass_kg);
         TerminalDynamicState state = telemetry_to_terminal_state(&model, &t, cfg.site.runway_heading);
