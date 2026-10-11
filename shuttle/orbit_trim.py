@@ -173,44 +173,42 @@ def main():
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
     def plan(d_ap, d_pe, min_lead=45.0):
-        """Chain nodes in an atmosphere-safe order: raise the periapsis at the first
-        apoapsis, lower the apoapsis at that new periapsis, then change the plane at
-        the next node. Lowering the apoapsis first would drop the periapsis into the
-        atmosphere for the whole coast to the next burn."""
+        """Finish everything before the first periapsis passage: a Pe of ~60 km sits in
+        the upper atmosphere and a single pass bleeds tens of km of apoapsis.
+
+          A. soon after MECO  -- small prograde/retrograde burn that sets the apoapsis
+          B. at that apoapsis -- one burn with prograde (periapsis) and normal
+                                 (inclination) components solved together
+        """
         for stale in list(vessel.control.nodes):
             stale.remove()
         o0 = vessel.orbit
         now = sc.ut
-        ut1 = o0.ut_at_true_anomaly(math.pi)
-        if ut1 < now+max(30.0, min_lead):
-            ut1 += o0.period
-        x1 = solve(lambda x: vessel.control.add_node(ut1, prograde=x),
-                   lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
-        n1 = vessel.control.add_node(ut1, prograde=x1)
-        nodes = [n1]
-        ut2 = n1.orbit.ut_at_true_anomaly(0.0)
-        if ut2 < ut1+120.0:
-            ut2 += n1.orbit.period
-        final = n1.orbit
-        if abs(final.apoapsis_altitude-(args.apoapsis+d_ap)) > 800.0:
-            # A burn at periapsis (inside the upper atmosphere) only when needed.
-            x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
+        flight = vessel.flight(o0.body.reference_frame)
+        nodes = []
+        base = o0
+        if abs(o0.apoapsis_altitude-(args.apoapsis+d_ap)) > 300.0:
+            ut_a = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
+                             max(flight.vertical_speed, 20.0))
+            xa = solve(lambda x: vessel.control.add_node(ut_a, prograde=x),
                        lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
-            n2 = vessel.control.add_node(ut2, prograde=x2)
-            nodes.append(n2)
-            final = n2.orbit
+            na = vessel.control.add_node(ut_a, prograde=xa)
+            nodes.append(na)
+            base = na.orbit
+        ut_b = base.ut_at_true_anomaly(math.pi)
+        if ut_b < now+max(30.0, min_lead):
+            ut_b += base.period
         target = math.radians(args.inclination)
-        if abs(math.degrees(final.inclination)-args.inclination) > 0.15:
-            omega = final.argument_of_periapsis
-            cands = sorted(final.ut_at_true_anomaly(nu) for nu in
-                           ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
-            ut_p = next((c for c in cands if c > nodes[-1].ut+150.0), cands[0]+final.period)
-            xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
-                       lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
-            n3 = vessel.control.add_node(ut_p, normal=xp)
-            nodes.append(n3)
-            final = n3.orbit
-        return tuple(nodes), final
+        x = y = 0.0
+        for _ in range(4):
+            x = solve(lambda v: vessel.control.add_node(ut_b, prograde=v, normal=y),
+                      lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
+            if abs(math.degrees(base.inclination)-args.inclination) > 0.02:
+                y = solve(lambda v: vessel.control.add_node(ut_b, prograde=x, normal=v),
+                          lambda orb: math.degrees(orb.inclination-target), -300.0, 300.0)
+        nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
+        nodes.append(nb)
+        return tuple(nodes), nb.orbit
 
     d_ap = d_pe = 0.0
     min_lead = 45.0
