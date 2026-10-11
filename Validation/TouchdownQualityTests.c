@@ -94,6 +94,32 @@ static AerodynamicModel envelope_at_mach(const AerodynamicEnvelope *e, double ma
 
 int main(void) {
     test_body_coordinate_kinematics();
+    {
+        Telemetry t={0};GuidanceCommand c={0};
+        c.control_profile=PROFILE_ROLLOUT;c.gear=t.gear=true;t.surface_speed=50;
+        strcpy(t.vessel_situation,"flying");
+        assert(!flight_control_rollout_parachutes_ready(&t,&c));
+        t.main_gear_grounded=true;
+        assert(!flight_control_rollout_parachutes_ready(&t,&c));
+        t.has_main_gear_grounded=true;
+        assert(flight_control_rollout_parachutes_ready(&t,&c));
+        t.surface_speed=NAN;assert(!flight_control_rollout_parachutes_ready(&t,&c));
+        t.surface_speed=101;assert(!flight_control_rollout_parachutes_ready(&t,&c));
+        t.surface_speed=50;c.control_profile=PROFILE_APPROACH;
+        assert(!flight_control_rollout_parachutes_ready(&t,&c));
+    }
+    {
+        LandingConfiguration cfg=landing_configuration_default();
+        JsonDoc doc;JsonToken tokens[2048];
+        assert(cfg.guidance.touchdown_aim_along==0&&!cfg.guidance.rollout_parachutes);
+        assert(json_parse("{\"guidance\":{\"touchdownAimAlong\":150,\"rolloutParachutes\":true}}",tokens,2048,&doc)>0);
+        assert(landing_configuration_from_json(&cfg,&doc,0));
+        JsonWriter w;jw_init(&w);landing_configuration_json(&w,&cfg);
+        assert(!w.failed&&json_parse(w.data,tokens,2048,&doc)>0);
+        LandingConfiguration restored=landing_configuration_default();assert(landing_configuration_from_json(&restored,&doc,0));
+        assert(restored.guidance.touchdown_aim_along==150&&restored.guidance.rollout_parachutes);
+        jw_free(&w);
+    }
     setenv("KSP_LANDER_FINAL_APPROACH_TEST", "1", 1);
     const char *scenario_path = "ShuttleSim/scenarios/final-mm305-ideal-3p5km-185mps-aoa3.ini";
     Scenario sc;

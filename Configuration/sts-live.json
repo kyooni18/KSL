@@ -76,7 +76,9 @@
     "touchdownSinkRate": -1.5,
     "useTimeWarp": false,
     "taemEnergyLaw": true,
-    "adaptiveFlare": false
+    "adaptiveFlare": false,
+    "touchdownAimAlong": 150,
+    "rolloutParachutes": true
   },
   "site": {
     "altitude": 68.44215901692708,

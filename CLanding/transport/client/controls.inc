@@ -284,3 +284,9 @@ bool krpc_cnano_client_set_speed_mode(KrpcCNanoClient *client, NavballSpeedMode 
 static const double k_stock_rails_rate_by_factor[] = {
     1.0, 5.0, 10.0, 50.0, 100.0, 1000.0, 10000.0, 100000.0
 };
+
+bool krpc_cnano_client_deploy_parachutes(KrpcCNanoClient *client,char *error,size_t error_size) {
+    if(!client||!client->connected) return false;
+    RPC_REQUIRED(client,krpc_SpaceCenter_Control_set_Parachutes(client->connection,client->control,true),error,error_size);
+    return true;
+}

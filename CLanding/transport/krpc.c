@@ -32,6 +32,7 @@ struct KRPCSession {
     char last_control_profile[24];
     Telemetry last_telemetry;
     bool has_last_telemetry;
+    bool rollout_parachutes_enabled, rollout_parachutes_deployed;
     VehicleState last_state;
     bool has_last_state;
     double last_control_ut;
@@ -299,6 +300,7 @@ static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command
 KRPCSession *krpc_session_open(const LandingConfiguration *cfg,char *error,size_t error_size){
     if(!cfg){set_error(error,error_size,"Landing configuration is missing");return NULL;}
     KRPCSession *session=calloc(1,sizeof(*session));if(!session){set_error(error,error_size,"Out of memory opening native kRPC session");return NULL;}
+    session->rollout_parachutes_enabled=cfg->guidance.rollout_parachutes;
     session->sim_rx_fd=session->sim_tx_fd=-1;
     const char *sim=getenv("KSP_LANDER_SIMULATOR");
     if(sim&&strcmp(sim,"1")==0){if(!sim_session_open(session,cfg,error,error_size)){krpc_session_close(session);return NULL;}return session;}
@@ -545,6 +547,13 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
        !krpc_cnano_client_set_brakes(s->client,command->brakes,error,error_size)||
        !krpc_cnano_client_set_airbrakes(s->client,airbrake_group,command->airbrakes,error,error_size)||
        !krpc_cnano_client_set_speed_mode(s->client,command->navball_speed_mode,error,error_size))return false;
+    if(s->rollout_parachutes_enabled&&!s->rollout_parachutes_deployed&&
+       s->has_last_telemetry&&flight_control_rollout_parachutes_ready(&s->last_telemetry,command)){
+        if(!krpc_cnano_client_deploy_parachutes(s->client,error,error_size))return false;
+        s->rollout_parachutes_deployed=true;
+        fprintf(stderr,"Rollout parachutes deployment requested at UT %.3f, speed %.2f m/s.\n",
+            s->last_telemetry.ut,s->last_telemetry.surface_speed);
+    }
     snprintf(s->last_control_profile,sizeof(s->last_control_profile),"%s",profile_string(command->control_profile));
     return true;
 }

@@ -93,6 +93,9 @@ typedef struct {
     /* Fly the flare from the predictive adaptive flare law
        (guidance/final/adaptive_flare.inc) instead of the fixed arc. */
     bool adaptive_flare;
+    /* Zero retains the historical runway-fraction aim. */
+    double touchdown_aim_along;
+    bool rollout_parachutes;
 } GuidanceSettings;
 typedef struct {
     bool enable_passive_calibration, enable_trajectory_calibration, auto_apply_in_flight;

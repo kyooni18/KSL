@@ -373,7 +373,8 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
      * short instead of both aiming at a fixed point.
      */
     double runway_length=site->runway_length>100.0?site->runway_length:2500.0;
-    double touchdown_target=clampd(.15*runway_length,TOUCHDOWN_ALONG,600.0);
+    double touchdown_target=clampd(s->touchdown_aim_along>0.0?
+        s->touchdown_aim_along:.15*runway_length,TOUCHDOWN_ALONG,600.0);
     double ld_float=.8*terminal_learned_max_lift_to_drag(g,t,v,aoa_max);
     double planned_preflare_trigger=g->terminal_preflare_plan_valid&&
         isfinite(g->preflare_trigger_altitude)&&g->preflare_trigger_altitude>0.0?

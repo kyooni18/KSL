@@ -85,6 +85,7 @@ const char *krpc_cnano_client_surface_layout(const KrpcCNanoClient *client,
                                              char *buffer, size_t buffer_size);
 bool krpc_cnano_client_set_gear(KrpcCNanoClient *client, bool value,
                                 char *error, size_t error_size);
+bool krpc_cnano_client_deploy_parachutes(KrpcCNanoClient *client, char *error, size_t error_size);
 bool krpc_cnano_client_set_brakes(KrpcCNanoClient *client, bool value,
                                   char *error, size_t error_size);
 bool krpc_cnano_client_set_airbrakes(KrpcCNanoClient *client, unsigned group, bool value,

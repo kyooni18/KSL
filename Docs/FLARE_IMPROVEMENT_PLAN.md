@@ -213,3 +213,12 @@ again reached Final and flare, then automatically failed after a 130 m overrun.
 The last pre-ground-response sample was 50.81 m/s with 3.59 m/s sink,
 1567 m along. STS is paused landed at 1.36 m/s, gear/brakes on. Phase
 oscillations recur; no backstop, adaptive flare or full entry route was tested.
+
+### User-requested earlier aim and drogue
+
+[Earlier aim and drogue deployment](Experiments/STS-Landing-20261011/Earlier-Aim-Drogue/README.md)
+sets the STS touchdown aim to 150 m (previously 375 m) and enables ground-only
+parachute deployment. The actual Mk12-R drogue was found stowed after the
+third flight. The measured L7 replay moves contact only 31 m earlier and
+still overruns; drogue braking is not modeled offline. Both changes await
+approved live verification; no live controls were changed for this work.
