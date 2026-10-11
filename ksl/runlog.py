@@ -109,10 +109,15 @@ class RunLog:
 
     @classmethod
     def create(cls, status: MissionStatus, root: Path | None = None) -> "RunLog":
-        base, run_id, n = root or RUNS_DIR, status.run_id, 1
-        while (base / run_id).exists():   # two runs started within the same second
-            n += 1
-            run_id = f"{status.run_id}-{n}"
+        base, original, n = root or RUNS_DIR, status.run_id, 1
+        base.mkdir(parents=True, exist_ok=True)
+        while True:
+            run_id = original if n == 1 else f"{original}-{n}"
+            try:
+                (base / run_id).mkdir(exist_ok=False)
+                break
+            except FileExistsError:
+                n += 1
         status.run_id = run_id
         return cls(base / run_id, status)
 

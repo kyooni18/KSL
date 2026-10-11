@@ -8,6 +8,7 @@ import re
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -18,7 +19,7 @@ from ksl.config import ConfigError, config_from_snapshot, load_config
 from ksl.controller import MissionController, continue_phase
 from ksl.paths import BACKEND, CLANDING, ROOT
 from ksl.phases import BACKEND_PHASES, BACKEND_FAILURE_PHASES, Phase, PhaseMachine, PhaseTransitionError
-from ksl.runlog import read_events, read_telemetry
+from ksl.runlog import MissionStatus, RunLog, read_events, read_telemetry
 from ksl.scenarios import SCENARIOS
 
 FAKES = Path(__file__).resolve().parent / "fakes"
@@ -100,6 +101,17 @@ class ControllerTestCase(unittest.TestCase):
 
 
 class ControllerTests(ControllerTestCase):
+    def test_parallel_runs_get_separate_directories(self):
+        def create(_):
+            log = RunLog.create(MissionStatus(run_id="same-second", profile="test", mode="dry-run"), self.runs)
+            try:
+                return log.directory
+            finally:
+                log.close()
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            directories = list(pool.map(create, range(16)))
+        self.assertEqual(len(set(directories)), 16)
+
     def test_dry_run_plans_every_program_without_flying(self):
         c = self.controller(mode="dry-run")
         self.assertEqual([p.name for p, _ in c.plan()], ["ascent", "orbit-trim", "landing"])

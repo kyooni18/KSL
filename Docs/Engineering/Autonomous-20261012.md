@@ -146,3 +146,10 @@ subtests in 24.22 s. This includes the current clean-build L5 exact replay,
 L7 low-energy replay, mission/CLI/TUI integration, guard load verification,
 connection deadline, and process cleanup. It is offline evidence only; the
 ongoing live flight and end-to-end orbital mission remain separate gates.
+
+## Parallel run records
+
+- Run IDs created in the same second now reserve their directories with an
+  exclusive `mkdir`; concurrent CLI/TUI runs cannot select the same path and
+  intermingle telemetry or overwrite status. A 16-run concurrent creation test
+  passes with 16 distinct directories.
