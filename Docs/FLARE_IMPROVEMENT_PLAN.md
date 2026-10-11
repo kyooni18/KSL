@@ -265,3 +265,10 @@ overpredicts Mach 1.5–2.5 drag on all three flights. No polar is newly qualifi
 or adopted. Investigate an energy-aware vertical reference rather than
 artificially lowering transonic drag; atmosphere/state/attitude fidelity and
 full-route feasibility remain separate unresolved checks.
+
+[Offline local lead-profile search](Experiments/STS-Landing-20261011/MM305-Lead-Profile-Search/README.md)
+rejects simply activating the existing local bow: five signed offsets produce
+0 jointly feasible profiles among 10,920 sample-0 trials. The baseline's best
+tracking case still misses altitude by 3 km and exits at 70 m/s, despite a
+slope-compliant reference. Production files and acceptance gates are unchanged.
+Trace the location of authority/energy loss before designing a new profile.
