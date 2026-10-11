@@ -64,7 +64,9 @@ activated.
 
 `--load-save` and `continue --use-save` require a verified KSP scene/clock
 transition before guidance begins. A missing or stale load fails with a
-diagnostic. On rollout, completion requires the vehicle to stop inside the
+diagnostic. Orbital checkpoints also advance five simulation seconds after
+loading so KSP can refresh part resources and vessel mass before deorbit
+planning. On rollout, completion requires the vehicle to stop inside the
 configured runway length and width; the wider touchdown contact envelope
 retains braking authority but does not count as a successful stop.
 
