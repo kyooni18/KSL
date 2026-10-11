@@ -212,7 +212,14 @@ class AttitudeController:
                 roll_on = max(0.0, min(1.0, (start-self.error_deg)/max(1e-3, start-full)))
                 phi[1] = roll_angle*roll_on
                 self.roll_error_deg = math.degrees(roll_angle)
-        w_des = [max(-self.max_rate[i], min(self.max_rate[i], phi[i]/self.tau[i])) for i in range(3)]
+        # Time-optimal-ish slew: fast while far, but never faster than the speed
+        # that can still be braked to zero over the remaining angle (alpha = T/I).
+        w_des = []
+        for i in range(3):
+            alpha = self._torque[i]/self._moi[i]
+            brake = math.sqrt(2.0*0.6*alpha*abs(phi[i]))
+            mag = min(self.max_rate[i], abs(phi[i])/self.tau[i], brake)
+            w_des.append(math.copysign(mag, phi[i]))
         torque_cmd = [0.0, 0.0, 0.0]
         inputs = [0.0, 0.0, 0.0]
         for i in range(3):

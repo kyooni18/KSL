@@ -231,7 +231,8 @@ def main():
     # RCS is off: the reaction wheels are the only actuator, so allow their full
     # rate authority (the wheel torque limit is the real bound), and feed the OMS
     # thrust-line moment forward using the measured thrust axis.
-    CUSTOM_AP['ap'].time_to_peak = (2.0, 2.0, 2.0)
+    CUSTOM_AP['ap'].ctrl.tau = (0.8, 0.8, 0.8)
+    CUSTOM_AP['ap'].ctrl.rate_tau = 0.4
     CUSTOM_AP['ap'].ctrl.max_rate = (math.radians(10.0),)*3
     CUSTOM_AP['ap'].ctrl.deadband = 0.03
     CUSTOM_AP['ap'].ctrl.axis_override = {'Viking': MEASURED_AXIS['axis']}
