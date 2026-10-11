@@ -70,6 +70,20 @@ simulator disagrees with live on sink (4.94 vs 1.13 m/s for the same L5
 state). Offline flare tuning is therefore not trustworthy until the plant's
 pitch response matches live.
 
+## Status after 8a42d22
+
+| Plan item | State |
+|---|---|
+| 1. Flare ownership backstop + visible block reason | **Done** (all MM305 paths; status shows `Final blocked: …`) |
+| 2. TAEM energy | **Partly.** The executed law no longer dives for the 160 m/s station speed at k=0. Root cause found upstream: the deorbit plan flew unqualified (`robustnessQualified false`, predicted TAEM range error −20.5 km, worst case 40.6 km), and MM304 handed over 87 km out (L5: ~60 km) at the same Mach/altitude. Open. |
+| 3. Preflare floor | **Done** as a fallback floor (nominal flights unchanged) |
+| 4. Touchdown speed / float | Open. Low-speed flare sink is sensitive: 0.8–4.5 m/s across small stretch-threshold changes on L7. |
+| 5. Sim/live gap | Open. Blocks trustworthy flare tuning. |
+
+ShuttleSim now: L5 passes every acceptance gate (66.1 m/s, 1.84 m/s sink).
+L7 lands with a flare (55.5 m/s, 0.91 m/s sink) but 226 m short. Nothing
+here has flown live.
+
 ## Plan, in priority order
 
 ### 1. Guarantee flare ownership (safety backstop)
