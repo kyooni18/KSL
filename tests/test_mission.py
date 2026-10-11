@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest import mock
 
 from ksl import cli, programs
-from ksl.config import ConfigError, load_config
+from ksl.config import ConfigError, config_from_snapshot, load_config
 from ksl.controller import MissionController, continue_phase
 from ksl.paths import BACKEND, CLANDING, ROOT
 from ksl.phases import BACKEND_PHASES, BACKEND_FAILURE_PHASES, Phase, PhaseMachine, PhaseTransitionError
@@ -64,6 +64,25 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             load_config("sts-kerbin", ["ascent.unknownKey=1"])
         self.assertTrue(load_config("sts-kerbin", ["ascent.targetAltitudeKm=60"]).validate())
+
+    def test_invalid_types_and_nonfinite_limits_report_diagnostics(self):
+        for override in ("ascent=null", "ascent.targetAltitudeKm=NaN", "connection.rpcPort=1.5",
+                         "landing.autoWarp=\"false\"", "orbit.extraArgs=[1]",
+                         "landing.flightTimeoutSeconds=-1", "checkpoints.kspSaveOnPhases=\"orbit\""):
+            with self.subTest(override=override):
+                self.assertTrue(load_config("defaults", [override]).validate())
+        config = load_config()
+        config.data["landing"]["typoTimeout"] = 10
+        self.assertIn("unknown configuration key landing.typoTimeout", config.validate())
+
+    def test_snapshot_restores_resolved_values_and_explicit_overrides(self):
+        original = load_config("sts-kerbin", ["ascent.inclinationDeg=12", "connection.rpcPort=50010"])
+        restored = config_from_snapshot(original.name, original.data, ["orbit.trim=false"])
+        self.assertEqual(restored["ascent"]["inclinationDeg"], 12)
+        self.assertEqual(restored["connection"]["rpcPort"], 50010)
+        self.assertFalse(restored["orbit"]["trim"])
+        self.assertTrue(original["orbit"]["trim"])
+        self.assertEqual(restored.validate(), [])
 
 
 class ControllerTestCase(unittest.TestCase):
@@ -191,6 +210,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(timeline[:2], ["launch", "ascent"])
         code, out, _ = self.run_cli("export", str(csv_path), "-f", "csv")
         self.assertTrue(out.startswith("ut,state,altitude"))
+
+    def test_continue_uses_saved_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            original = MissionController(load_config(overrides=["ascent.inclinationDeg=12"]),
+                                         mode="dry-run", start=Phase.ORBIT, runs_root=Path(tmp))
+            original.run()
+            with mock.patch("ksl.runlog.RUNS_DIR", Path(tmp)):
+                code, out, err = self.run_cli("continue", str(original.run_dir), "--dry-run", "--json")
+            self.assertEqual(code, 0, err)
+            result = json.loads(out.strip().splitlines()[-1])
+            saved = json.loads((Path(result["runDirectory"]) / "config.json").read_text())
+            self.assertEqual(saved["configuration"]["ascent"]["inclinationDeg"], 12)
 
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):

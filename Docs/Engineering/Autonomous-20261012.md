@@ -52,3 +52,16 @@ This log is updated at implementation/validation checkpoints.
   isolated package reproduces the current result, so this is not introduced by
   process supervision. Evidence: `runs/20261011T160713Z-baseline-305a296/`.
   Preserve the expected values while investigating the baseline discrepancy.
+
+## Configuration checkpoint
+
+- Mission profile validation now checks structure/types, finite numbers, unknown
+  nested keys, port integers, positive timeouts and rates, and orbit consistency.
+  Invalid configurations return field-specific diagnostics rather than tracebacks
+  or coercing strings like `"false"` into true. Backend JSON shape is checked.
+- `continue` restores the resolved mission configuration saved with the run,
+  preserving original overrides; explicit new profiles and overrides still work.
+- Config/CLI tests: 8 passed + 7 subtests (including actual continue/dry-run).
+  Mission/lifecycle subset before the continuation test: 23 passed + 7 subtests.
+- Investigating the L5 golden with a forced native rebuild; initial make reported
+  the existing backend up to date, so stale build artifacts remain a hypothesis.

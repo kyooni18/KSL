@@ -99,6 +99,12 @@ The native backend keeps its own detailed configuration
 (`Configuration/sts-live.json` for the STS, `default.json` for STS-N). The
 profile references it and overrides its kRPC endpoint.
 
+Profiles reject unknown keys, invalid types, nonfinite numbers and invalid
+timeouts before flight. `continue` restores the run's resolved mission profile,
+including its original `--set` values. New `--set` values override that snapshot;
+an explicit `--profile` selects a different profile. Referenced native model and
+configuration files must still be present and should be kept with flight evidence.
+
 ## Runs, telemetry and replay
 
 Every run (live, simulated or dry-run) writes `runs/<run-id>/`:

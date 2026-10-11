@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -150,6 +151,9 @@ class MissionConfig:
             landing = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError) as exc:
             raise ConfigError(f"cannot read landing configuration {path}: {exc}") from exc
+        if not isinstance(landing, dict) or any(
+                key in landing and not isinstance(landing[key], dict) for key in ("connection", "guidance")):
+            raise ConfigError(f"{path}: landing configuration, connection and guidance must be objects")
         conn = self.data["connection"]
         landing.setdefault("connection", {}).update({
             "rpcHost": conn["address"],
@@ -160,20 +164,37 @@ class MissionConfig:
 
     def validate(self) -> list[str]:
         """Return a list of problems; empty when the profile is usable."""
-        problems: list[str] = []
+        problems = _schema_problems(self.data, DEFAULTS)
+        if problems:
+            return problems
         a, c = self.data["ascent"], self.data["connection"]
-        if float(a["targetAltitudeKm"]) < 80.0:
+        if a["targetAltitudeKm"] < 80.0:
             problems.append("ascent.targetAltitudeKm must be at least 80 (Kerbin atmosphere ends at 70 km)")
-        if not -180.0 <= float(a["inclinationDeg"]) <= 180.0:
+        if not -180.0 <= a["inclinationDeg"] <= 180.0:
             problems.append("ascent.inclinationDeg must be within [-180, 180]")
         for key in ("srbThrustLimit", "ssmeThrustLimit"):
-            if not 0.0 < float(a[key]) <= 1.0:
+            if not 0.0 < a[key] <= 1.0:
                 problems.append(f"ascent.{key} must be within (0, 1]")
-        if not 0 < int(c["rpcPort"]) < 65536 or not 0 < int(c["streamPort"]) < 65536:
-            problems.append("connection ports must be within 1-65535")
-        for key in ("extraArgs",):
-            if not isinstance(a[key], list) or not isinstance(self.data["orbit"][key], list):
-                problems.append(f"ascent/orbit {key} must be lists of strings")
+        for key in ("rpcPort", "streamPort"):
+            if not isinstance(c[key], int) or not 0 < c[key] < 65536:
+                problems.append(f"connection.{key} must be an integer within 1-65535")
+        if c["rpcPort"] == c["streamPort"]:
+            problems.append("connection RPC and stream ports must differ")
+        for section, key in (("connection", "timeoutSeconds"), ("landing", "planTimeoutSeconds"),
+                             ("landing", "flightTimeoutSeconds"), ("simulation", "telemetryHz"),
+                             ("simulation", "maxSimTimeSeconds")):
+            if self.data[section][key] <= 0:
+                problems.append(f"{section}.{key} must be positive")
+        for section, key in (("ascent", "padSettleSeconds"), ("ascent", "insertionOffsetKm"),
+                             ("ascent", "minimumInsertionPeriapsisKm"), ("orbit", "minBurnDeltaV")):
+            if self.data[section][key] < 0:
+                problems.append(f"{section}.{key} must be nonnegative")
+        if self.insertion_periapsis_m > self.target_altitude_m:
+            problems.append("ascent insertion periapsis must not exceed target altitude")
+        for section, key in (("connection", "address"), ("landing", "backendConfiguration"),
+                             ("landing", "modelProfile"), ("simulation", "scenario")):
+            if not self.data[section][key].strip():
+                problems.append(f"{section}.{key} must not be empty")
         landing_path = repo_path(self.data["landing"]["backendConfiguration"])
         if not landing_path.is_file():
             problems.append(f"landing.backendConfiguration not found: {landing_path}")
@@ -189,6 +210,44 @@ class MissionConfig:
             except ValueError as exc:
                 problems.append(f"checkpoints.kspSaveOnPhases: {exc}")
         return problems
+
+
+def _schema_problems(data: Any, schema: Any, prefix: str = "") -> list[str]:
+    """Validate structure before conversions or flight-side effects."""
+    if isinstance(schema, dict):
+        if not isinstance(data, dict):
+            return [f"{prefix.rstrip('.') or 'profile'} must be an object"]
+        problems = []
+        for key in data.keys() - schema.keys() - ({"name"} if not prefix else set()):
+            problems.append(f"unknown configuration key {prefix + key}")
+        for key, default in schema.items():
+            if key not in data:
+                problems.append(f"missing configuration key {prefix + key}")
+            else:
+                problems.extend(_schema_problems(data[key], default, prefix + key + "."))
+        return problems
+    name = prefix.rstrip(".")
+    if isinstance(schema, bool):
+        valid, expected = isinstance(data, bool), "a boolean"
+    elif isinstance(schema, (int, float)):
+        valid = (isinstance(data, (int, float)) and not isinstance(data, bool)
+                 and math.isfinite(data))
+        expected = "a finite number"
+    elif isinstance(schema, list):
+        valid = isinstance(data, list) and all(isinstance(item, str) for item in data)
+        expected = "a list of strings"
+    else:
+        valid, expected = isinstance(data, str), "a string"
+    return [] if valid else [f"{name} must be {expected}"]
+
+
+def config_from_snapshot(name: str, data: dict[str, Any], overrides: list[str] | None = None) -> MissionConfig:
+    """Restore the actual run configuration, independent of later profile edits."""
+    resolved = deep_merge(DEFAULTS, data)
+    for text in overrides or []:
+        path, value = parse_override(text)
+        apply_override(resolved, path, value)
+    return MissionConfig(name=name, data=resolved)
 
 
 def load_config(profile: str | None = None, overrides: list[str] | None = None,

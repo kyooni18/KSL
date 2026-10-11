@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import ConfigError, available_profiles, load_config
+from .config import ConfigError, available_profiles, config_from_snapshot, load_config
 from .controller import (EXIT_ABORTED, EXIT_CONNECTION, EXIT_FAILED, EXIT_OK, EXIT_USAGE, MissionController,
                          continue_phase)
 from .paths import BACKEND
@@ -134,7 +134,10 @@ def cmd_continue(args: argparse.Namespace) -> int:
     phase = Phase.parse(checkpoint.get("phase") or status.phase)
     start = continue_phase(phase)
     saved = json.loads((run_dir / "config.json").read_text())
-    config = load_config(args.profile or saved.get("profile"), args.set)
+    if args.profile or not isinstance(saved.get("configuration"), dict):
+        config = load_config(args.profile or saved.get("profile"), args.set)
+    else:
+        config = config_from_snapshot(saved.get("profile") or status.profile, saved["configuration"], args.set)
     if args.use_save:
         if not checkpoint.get("kspSave"):
             raise ConfigError(f"run {run_dir.name} has no KSP save to load")
