@@ -79,6 +79,10 @@ Live holds: `prelaunch` (read-only preflight), `orbit`, `complete`.
 Continuation (`ksl continue`): orbit → deorbit; MM304/MM305/Final resume
 their own phase through `engageReentry`/`engageFinalTest` after the guard's
 verified direct-control handoff. An interrupted ascent cannot be resumed.
+Continuation restores the resolved configuration recorded with the original
+run. An explicit profile or new overrides replace its values. Save loading
+uses the independent guard's settled-scene/UT verification before a program
+starts; profile and phase validation precede the load.
 
 ## Live landing sequence (LandingProgram)
 
@@ -97,6 +101,10 @@ This mirrors the safety steps of the headless live harness:
    KSP saves at configured phases through the backend's `saveCheckpoint`.
 4. On operator abort or error, send `abort` and then `shutdown`. The native
    safe-control path then runs.
+
+The native rollout program keeps its wider contact envelope to retain braking
+control near the runway edge. `Complete` requires a stopped speed inside the
+configured runway bounds; an overrun becomes a failed landing after braking.
 
 ## Shared infrastructure
 

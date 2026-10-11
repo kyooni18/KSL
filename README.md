@@ -35,6 +35,8 @@ bin/ksl tui                             # dashboard / mission setup / replay
 ```
 
 `bin/ksl` runs from a checkout. `pip install -e .` installs the same CLI as `ksl`.
+The `connection.timeoutSeconds` profile setting bounds Python kRPC handshakes;
+`validate --connect` checks the game without sending controls.
 
 ## Flying a mission (live KSP)
 
@@ -59,6 +61,12 @@ runs the owning program's safe-release path. The ascent programs release
 throttle and autopilot. The landing backend disengages autopilot/SAS,
 neutralizes axes, throttle and wheel steering, and restores engines it
 activated.
+
+`--load-save` and `continue --use-save` require a verified KSP scene/clock
+transition before guidance begins. A missing or stale load fails with a
+diagnostic. On rollout, completion requires the vehicle to stop inside the
+configured runway length and width; the wider touchdown contact envelope
+retains braking authority but does not count as a successful stop.
 
 ## Commands
 
