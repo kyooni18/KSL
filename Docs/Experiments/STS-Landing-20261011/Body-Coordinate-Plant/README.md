@@ -1,5 +1,10 @@
 # Body-coordinate plant implementation and offline comparison
 
+**Superseded comparison:** the initial decoder mixed body and geometric
+angles when calculating rates. [Corrected reruns](../Body-Coordinate-Rate-Fix/README.md)
+remove that artifact; the large L5 departures and isolated Final results
+below must not be used as current physical model-validation evidence.
+
 Commit `0951e4a` implements an opt-in `direct_body_coordinates=1` direct
 plant. Aerodynamic moments advance body p/q/r and the inertial quaternion;
 incidence, sideslip and wind-axis bank are derived from the new air-relative

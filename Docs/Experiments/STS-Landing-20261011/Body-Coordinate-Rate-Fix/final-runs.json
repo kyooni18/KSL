@@ -1,0 +1,98 @@
+[
+  {
+    "label": "body-ratefix-final-legacy-l5",
+    "exitCode": 0,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/.venv/bin/python",
+      "/Users/kyooni18/Code/KSL-integration/ShuttleSim/scripts/run_guidance.py",
+      "--scenario",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Plant/l5-live-final.ini",
+      "--configuration",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
+      "--attitude",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/Codex-Flare-Offline/inputs/att-live.ini",
+      "--direct-control",
+      "--engage",
+      "engageFinalTest",
+      "--max-sim-time",
+      "600",
+      "--skip-build",
+      "--no-mirror",
+      "--quiet-progress",
+      "--label",
+      "body-ratefix-final-legacy-l5"
+    ]
+  },
+  {
+    "label": "body-ratefix-final-existing-l5",
+    "exitCode": 0,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/.venv/bin/python",
+      "/Users/kyooni18/Code/KSL-integration/ShuttleSim/scripts/run_guidance.py",
+      "--scenario",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Plant/l5-live-final.ini",
+      "--configuration",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
+      "--attitude",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Rate-Fix/att-body-existing.ini",
+      "--direct-control",
+      "--engage",
+      "engageFinalTest",
+      "--max-sim-time",
+      "600",
+      "--skip-build",
+      "--no-mirror",
+      "--quiet-progress",
+      "--label",
+      "body-ratefix-final-existing-l5"
+    ]
+  },
+  {
+    "label": "body-ratefix-final-l4-l5",
+    "exitCode": 2,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/.venv/bin/python",
+      "/Users/kyooni18/Code/KSL-integration/ShuttleSim/scripts/run_guidance.py",
+      "--scenario",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Plant/l5-live-final.ini",
+      "--configuration",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
+      "--attitude",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Rate-Fix/att-body-l4.ini",
+      "--direct-control",
+      "--engage",
+      "engageFinalTest",
+      "--max-sim-time",
+      "600",
+      "--skip-build",
+      "--no-mirror",
+      "--quiet-progress",
+      "--label",
+      "body-ratefix-final-l4-l5"
+    ]
+  },
+  {
+    "label": "body-ratefix-final-l7a-l5",
+    "exitCode": 2,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/.venv/bin/python",
+      "/Users/kyooni18/Code/KSL-integration/ShuttleSim/scripts/run_guidance.py",
+      "--scenario",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Plant/l5-live-final.ini",
+      "--configuration",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
+      "--attitude",
+      "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Rate-Fix/att-body-l7a.ini",
+      "--direct-control",
+      "--engage",
+      "engageFinalTest",
+      "--max-sim-time",
+      "600",
+      "--skip-build",
+      "--no-mirror",
+      "--quiet-progress",
+      "--label",
+      "body-ratefix-final-l7a-l5"
+    ]
+  }
+]
