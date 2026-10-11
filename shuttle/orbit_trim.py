@@ -224,7 +224,7 @@ def main():
             if ut_c < (nodes[-1].ut if nodes else now)+max(60.0, min_lead):
                 ut_c += base.period
             xc = solve(lambda q: vessel.control.add_node(ut_c, prograde=q),
-                       lambda orb: orb.apoapsis_altitude-args.apoapsis, -300.0, 300.0)
+                       lambda orb: orb.apoapsis_altitude-args.apoapsis, -80.0, 80.0)
             nodes.append(vessel.control.add_node(ut_c, prograde=xc))
             base = nodes[-1].orbit
         return nodes, base
