@@ -55,10 +55,12 @@ def solve(make_node, error, lo, hi, iterations=26):
     return 0.5*(lo+hi)
 
 
-# OMS resultant thrust axis in the body frame, measured in flight (run a1):
-# ~20 deg off the nose toward -z (the part axis says +z, which is wrong).
-# Refined live during every burn.
-MEASURED_AXIS = {'axis': (0.0, 0.940, -0.342)}
+# OMS resultant thrust axis in the body frame. The pods (x +-1.13, y -5.49,
+# z -1.68 from the CoM) are canted so the thrust line passes the CoM: about
+# (0, 0.95, +0.30), which matches the part axis and the run-b2 in-flight
+# measurement (0.07, 0.94, 0.35). Refined live from >= 2 m/s windows; shorter
+# windows are dominated by gravity-integration error (run a1 read the sign wrong).
+MEASURED_AXIS = {'axis': (0.0, 0.940, 0.342)}
 CUSTOM_AP = {}
 
 
@@ -187,18 +189,18 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 window[i] += (v_now[i]-v_prev[i]) + mu*r[i]/rn**3*dt
             v_prev, t_prev = v_now, t_now
             wn = math.sqrt(sum(c*c for c in window))
-            if wn > 0.25 and ap.error < 2.0:
+            if wn > 2.0 and ap.error < 2.0:
                 axis = sc.transform_direction(tuple(c/wn for c in window), nrf,
                                               vessel.reference_frame)
                 old = MEASURED_AXIS.get('axis')
                 if old is not None:
-                    axis = tuple(0.5*a+0.5*b for a, b in zip(axis, old))
+                    axis = tuple(0.3*a+0.7*b for a, b in zip(axis, old))
                     an = math.sqrt(sum(c*c for c in axis))
                     axis = tuple(c/an for c in axis)
                 MEASURED_AXIS['axis'] = axis
                 ap.ctrl.axis_override = {'Viking': axis}
                 window = [0.0, 0.0, 0.0]
-            elif wn > 0.25:
+            elif wn > 2.0:
                 window = [0.0, 0.0, 0.0]
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
