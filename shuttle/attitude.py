@@ -121,6 +121,9 @@ class AttitudeController:
         self.feedforward = True
         self.axis_override = {}
         self.deadband = 0.0
+        # Fraction of the reported torque trusted for braking. available_torque
+        # overstates roll (in-line SSME gimbals give little roll), so roll brakes early.
+        self.brake_fraction = (0.6, 0.25, 0.6)
         self.roll_gate = (8.0, 5.0)        # nose error (deg) above which roll is suppressed / fully on
         # telemetry
         self.error_deg = 0.0
@@ -217,7 +220,7 @@ class AttitudeController:
         w_des = []
         for i in range(3):
             alpha = self._torque[i]/self._moi[i]
-            brake = math.sqrt(2.0*0.6*alpha*abs(phi[i]))
+            brake = math.sqrt(2.0*self.brake_fraction[i]*alpha*abs(phi[i]))
             mag = min(self.max_rate[i], abs(phi[i])/self.tau[i], brake)
             w_des.append(math.copysign(mag, phi[i]))
         torque_cmd = [0.0, 0.0, 0.0]
