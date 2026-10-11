@@ -1356,6 +1356,13 @@ class Shuttle:
                     trim = current[0] - m_total/per_limit
                     target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
                     self.pitch_moment = m_total
+                solid = sum(resource_total([e.part], 'SolidFuel') for e in self.solid_boosters)
+                solid_max = sum(resource_total([e.part], 'SolidFuel', maximum=True)
+                                for e in self.solid_boosters)
+                if solid_max > 0 and solid/solid_max < 0.05:
+                    # Arrive at separation on the post-separation limiter so the
+                    # CoM jump does not meet a high canted-SSME moment.
+                    target_throttles[0] = SSME_TRIM_MIN
             except Exception:
                 pass
             target_throttles = tuple(target_throttles)
@@ -1760,10 +1767,19 @@ def run(args):
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                     target_roll = launch_roll if not mission_roll_commanded else None
+                    if (reset_due and not roll_reset and
+                            flight.dynamic_pressure > args.upright_max_q):
+                        # Rolling a winged orbiter in thick air snaps a wing:
+                        # wait for the air to thin before the upright roll.
+                        reset_due = False
+                        earthward_mode = True
+                    elif roll_reset:
+                        earthward_mode = False
                     if reset_due and not roll_reset:
                         roll_reset = True
                         roll_reset_ut = conn.space_center.ut
-                        print('Post-booster physical roll: orbiter side now targets spaceward')
+                        print(f'Post-booster physical roll: orbiter side now targets spaceward '
+                              f'(q {flight.dynamic_pressure:.0f} Pa)')
                     roll_requires_authority = False
                     if state == 'ASCENT':
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
@@ -2060,7 +2076,7 @@ def run(args):
                             # continuously from the live inertia, CoM and torque.
                             if not ap_owns_roll:
                                 ap.auto_tune = True
-                                ap.time_to_peak = (3.0, 1.5, 3.0)
+                                ap.time_to_peak = (3.0, 2.0, 3.0)
                                 ap.overshoot = (0.03, 0.02, 0.03)
                                 ap.max_angular_velocity = (
                                     1.0, math.radians(args.upright_roll_rate), 1.0)
@@ -2273,7 +2289,9 @@ def main():
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
-    parser.add_argument('--upright-roll-rate', type=float, default=30.0,
+    parser.add_argument('--upright-max-q', type=float, default=800.0,
+                        help='Start the post-separation upright roll only below this dynamic pressure (Pa)')
+    parser.add_argument('--upright-roll-rate', type=float, default=15.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
     parser.add_argument('--roll-rate', type=float, default=8.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
