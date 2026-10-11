@@ -389,3 +389,14 @@ unchanged warmed-tail parity at a defined lockstep boundary before comparing a
 new forecast. Reexecuting the original prefix is a valid initial alternative
 to implementing a restart. No checkpoint support or flight qualification is
 claimed by this source audit.
+
+[Warmed native Final tails](Experiments/STS-Landing-20261011/Final-Warmed-Tail/README.md)
+reexecute each original prefix with passive tracing and verify exact published
+actuator/state/contact and Final trace parity, beyond unchanged summaries.
+On the actual future incidences, the frozen learned force model underpredicts
+drag work by 3.77% in L5 / 7.31% in L7; updating learning reduces those biases
+to 0.62% / 1.53%. L5 also spends 6.2 s below 12 m versus roughly 4 s in the
+frozen profile. Its plan becomes valid and response changes at the next tick;
+pull latch is not immediate ideal arc tracking. No causal speed correction or
+new forecast is established. Preserve native onset/stage/force history in the
+next forecast experiment; production, goldens and live qualification unchanged.
