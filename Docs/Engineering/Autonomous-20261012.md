@@ -153,3 +153,49 @@ ongoing live flight and end-to-end orbital mission remain separate gates.
   exclusive `mkdir`; concurrent CLI/TUI runs cannot select the same path and
   intermingle telemetry or overwrite status. A 16-run concurrent creation test
   passes with 16 distinct directories.
+
+## Live MM305 continuation: runway overrun
+
+- The guarded live continuation from the existing 26.9 km MM305 checkpoint
+  finished **failed**, with the STS safely landed and paused. Run evidence is
+  `runs/20261011T161341Z-live-runway-bound/`; the postflight scene is preserved
+  as `ksl-autonomous-20261012-overrun`. The prior landed scene is preserved as
+  `ksl-autonomous-20261012-pretest-landed`. Neither existing checkpoint was
+  overwritten.
+- Native TAEM delivered Final at UT 6926.5, 2307 m height, 94.6 m/s,
+  7730 m before the threshold, and reported low energy. Final warned of a
+  37-38% aerodynamic-model residual and a long landing. The first landed
+  telemetry appeared at UT 7053.77, about 1720 m down runway 09 and
+  55.6 m/s. Rollout began near 1736 m; the backend requested parachute
+  deployment at UT 7053.990, 55.27 m/s. It later aborted outside the
+  2500 m runway's +80 m contact envelope. Last telemetry at UT 7100.77
+  showed 1.49 m/s and 2770.93 m along, 12.09 m cross. This is an overrun,
+  not a completed runway landing. The earlier live flight from the same save
+  touched near 1674 m at 51.0 m/s and stopped at 2556 m; it had incorrectly
+  qualified as complete under the wider contact envelope. The new strict
+  completion check is covered by native regression, but this flight hit the
+  pre-existing contact-envelope abort first.
+- Read-only save comparison shows 67 parts in the pretest landed scene and
+  66 after this overrun. The missing part is `benjee10.shuttle.bodyFlap`;
+  dry mass is 230 kg lower. The trace does not establish when or why it
+  separated. The radial drogue offered `Cut Parachute` after flight and the
+  backend logged a deploy request, but kRPC's parachute state RPC raised a
+  null-reference error, so inflation is not independently confirmed.
+- The backend briefly reported Touchdown again after Rollout, producing
+  backward-transition warnings in the mission event stream. This may reflect
+  contact oscillation near the runway end; do not silently treat it as an
+  ordinary phase progression.
+
+## Early-flare hypothesis matrix
+
+- Re-ran the scratch `Early-Latch-Arc/run.py` four-variant experiment against
+  four measured-state replay cases with freshly built source executables.
+  Evidence: `Docs/Experiments/STS-Landing-20261011/Early-Latch-Arc/matrix-20261012.json`.
+  Baseline succeeds in 0/4; the `on_arc` shortcut removal alone succeeds in
+  1/4 (L5), leaving L6/L7/high unqualified. Forcing the live 1820 m early
+  latch drives L5, L6 and high off the approach end and L7 off the far end;
+  combining it with the shortcut change does not recover the matrix. These
+  are unqualified replay plants, not live predictions. No experimental law
+  change is applied. Next investigation must address TAEM delivery energy,
+  preflare timing and live aerodynamic residual together, then recheck all
+  cases and a guarded live continuation.

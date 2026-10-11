@@ -33,7 +33,12 @@ Forcing 1820 m on L5 is not realistic (L5's own trigger is ~816 m) and fails reg
 
 Not adopted. "Fix only" changes the accepted L5 golden (touchdown 297.6 to 32.4 m, 66.1 to 70.9 m/s,
 stop 1101.6 to 913.4 m), which needs a deliberate decision. The four-scenario matrix check
-(`EARLYLATCH_MATRIX=1 run.py`) was started and interrupted by the user, so **robustness across
-L6/high-energy is untested**. The early-latch cause (why the live planner stored 1820 m) is also
-unexplained. No gate, golden or production code changed. Live-flight results here are single
-samples in an unqualified simulated plant.
+(`EARLYLATCH_MATRIX=1 run.py`) was started and interrupted by the user. It was completed on
+2026-10-12 against freshly rebuilt executables; results are in
+[`matrix-20261012.json`](matrix-20261012.json). Baseline succeeds in 0/4,
+`fix only` in 1/4 (L5), and both forced-early-latch variants in 0/4.
+Forcing 1820 m sends three cases before the runway and one beyond it. This
+rules out adopting that change from the previous two-case study. The live
+planner's 1820 m latch and TAEM's low-energy delivery remain unexplained.
+No gate, golden or production code changed. Live-flight results here are
+single samples in an unqualified simulated plant.
