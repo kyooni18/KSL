@@ -279,7 +279,7 @@ the recorded Complete event after the last telemetry frame. The same live
 run now reports 1659 s and a monotonic Orbit → Complete timeline. Four
 focused replay tests pass, including the clock regression.
 
-## Full pad-to-runway flight in progress
+## Full pad-to-runway flight: structural abort
 
 - A separate `quicksave` held a 41-part STS stack on the launch pad at
   UT 2682.93. The completed orbit-to-runway scene was already saved, so
@@ -297,5 +297,22 @@ focused replay tests pass, including the clock regression.
   the measured final orbit is on target. The automatic orbit save is
   `ksl-20261011T171716Z-live-pad-chain-orbit`.
 - The deorbit search selected a strict 13/15-stress-case plan, burn UT
-  3933.12, 30.04 m/s. Burn completed and MM304 entry began. The rest of
-  the flight remains in progress; no touchdown result is claimed yet.
+  3933.12, 30.04 m/s. Burn completed and MM304 entry began. At about
+  UT 4697 / 50 km the damaged orbiter entered attitude recovery; roll
+  approached 180° and heading diverged. KSP was paused at UT 4729 / 47 km,
+  the controller was interrupted, and safe control was independently
+  confirmed (zero throttle, SAS off). This failed scene is preserved as
+  `ksl-autonomous-20261012-pad-entry-departure`. No touchdown is claimed.
+- Save-file comparison found the pad save had 41 parts, including both
+  `benjee10.shuttle.deltaWing` assemblies, four elevons, and two main gear;
+  the new orbit checkpoint had only 14 orbiter parts and none of those eight.
+  The earlier successful orbit-start and landed saves each retained all 22
+  orbiter parts. KSP.log at 02:17:45 records both deltaWing assemblies
+  becoming separate four-part vessels at clamp release; at 02:17:50 Collision
+  Enhancer exploded a detached main gear. The wing loss preceded SRB separation
+  and was not an entry-guidance-only failure. The existing ascent part-loss
+  check began after liftoff, so it missed the loss at staging. The wings had
+  node parents on the mid fuselage with Heaviest autostruts in `quicksave`,
+  while the clamps attached to the aft fuselage and ET. Physical joint failure
+  at release is the leading hypothesis; the exact joint stressor remains to
+  be tested. The new orbit save is unsuitable as a reusable flight checkpoint.
