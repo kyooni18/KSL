@@ -1,0 +1,514 @@
+{
+  "status": "error",
+  "classification": "UNQUALIFIED_COUNTERFACTUAL_SIMULATION_FROM_BYPASSED_MEASUREMENTS",
+  "purpose": "Evaluate current original-STS control-surface aero wrench at five archived measured run-9 states, using isolated bounded surface commands and the logged command vector for each matching anchor.",
+  "qualification": {
+    "qualified": false,
+    "inputRunShadowGateBypassed": true,
+    "measuredFlightStatesUsedAsInputs": true,
+    "simulatedWrenchIsMeasuredFlightData": false,
+    "shadowGateEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "Every atmospheric wrench is a KSP simulation at archived measured kinematics. The source run explicitly bypassed the shadow gate, and historical surface deflections were not recorded."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "5d34507892c220a391f1ad67b3b437e935cfd126",
+    "inputTelemetry": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "inputTelemetrySHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "inputGateBypassEvents": [
+      {
+        "recordSequence": 2,
+        "tickSequence": 1,
+        "ut": 9932.41182616936,
+        "event": "event=shadow-gate-bypassed; reason=KSP_LANDER_BYPASS_SHADOW_GATE"
+      }
+    ],
+    "inputMeasuredStates": [
+      {
+        "recordSequence": 10837,
+        "tickSequence": 10835,
+        "ut": 10513.551826182,
+        "positionM_canonicalXYZ": [
+          -629012.673255966,
+          -117941.274903211,
+          -216.265638162211
+        ],
+        "velocityMps_canonicalXYZ": [
+          455.126814338905,
+          -1919.39601165314,
+          -2.91287473218452
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -629012.673255966,
+          -216.265638162211,
+          -117941.274903211
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          455.126814338905,
+          -2.91287473218452,
+          -1919.39601165314
+        ],
+        "trueAirSpeedMps_reported": 1786.25451660156,
+        "altitudeM": 39974.323089011,
+        "machReported": 5.38293404514563,
+        "dynamicPressurePaReported": 1602.39282226562,
+        "angleOfAttackDeg": 22.5983066558838,
+        "sideslipDeg": 0.39592170715332,
+        "bankDeg": 1.15365600585938,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.205255228873053,
+          -0.00292544250974559,
+          0.00378588743997008
+        ],
+        "liftForceN_reported": 54322.9652577301,
+        "dragForceN_reported": 84860.7220932568,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10873,
+        "tickSequence": 10871,
+        "ut": 10515.5918261821,
+        "positionM_canonicalXYZ": [
+          -628072.422107512,
+          -121847.765209497,
+          -222.278870465054
+        ],
+        "velocityMps_canonicalXYZ": [
+          466.571141777521,
+          -1910.55021358521,
+          -2.9732131356005
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -628072.422107512,
+          -222.278870465054,
+          -121847.765209497
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          466.571141777521,
+          -2.9732131356005,
+          -1910.55021358521
+        ],
+        "trueAirSpeedMps_reported": 1780.39221191406,
+        "altitudeM": 39782.6933470782,
+        "machReported": 5.36569136650165,
+        "dynamicPressurePaReported": 1637.58508300781,
+        "angleOfAttackDeg": 22.4821949005127,
+        "sideslipDeg": 0.214859262108803,
+        "bankDeg": 1.07379150390625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.166177556027724,
+          -0.264161553648504,
+          0.321422663076588
+        ],
+        "liftForceN_reported": 55400.390092877,
+        "dragForceN_reported": 86422.0146886587,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10909,
+        "tickSequence": 10907,
+        "ut": 10517.6718261821,
+        "positionM_canonicalXYZ": [
+          -627089.820939269,
+          -125812.045689962,
+          -228.484949516575
+        ],
+        "velocityMps_canonicalXYZ": [
+          478.044159774343,
+          -1901.20072994253,
+          -3.00224737686178
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -627089.820939269,
+          -228.484949516575,
+          -125812.045689962
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          478.044159774343,
+          -3.00224737686178,
+          -1901.20072994253
+        ],
+        "trueAirSpeedMps_reported": 1774.138671875,
+        "altitudeM": 39586.0900392615,
+        "machReported": 5.34444849148317,
+        "dynamicPressurePaReported": 1680.07141113281,
+        "angleOfAttackDeg": 23.7139453887939,
+        "sideslipDeg": -1.29131984710693,
+        "bankDeg": 2.16998291015625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.842425096212487,
+          1.12590827006895,
+          1.42217468042779
+        ],
+        "liftForceN_reported": 58706.1766299215,
+        "dragForceN_reported": 96191.0300564552,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10945,
+        "tickSequence": 10943,
+        "ut": 10519.7118261822,
+        "positionM_canonicalXYZ": [
+          -626103.718921516,
+          -129680.082106943,
+          -234.840865707131
+        ],
+        "velocityMps_canonicalXYZ": [
+          488.510584077557,
+          -1890.87035511403,
+          -3.3212917076289
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -626103.718921516,
+          -234.840865707131,
+          -129680.082106943
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          488.510584077557,
+          -3.3212917076289,
+          -1890.87035511403
+        ],
+        "trueAirSpeedMps_reported": 1766.77307128906,
+        "altitudeM": 39392.5599292251,
+        "machReported": 5.32228712941101,
+        "dynamicPressurePaReported": 1715.61682128906,
+        "angleOfAttackDeg": 26.0104675292969,
+        "sideslipDeg": -2.20898389816284,
+        "bankDeg": 9.17477416992188,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.781141029100576,
+          4.14125786877769,
+          2.00880433943516
+        ],
+        "liftForceN_reported": 63607.0716538088,
+        "dragForceN_reported": 111678.654832592,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10980,
+        "tickSequence": 10978,
+        "ut": 10521.7118261822,
+        "positionM_canonicalXYZ": [
+          -625116.891301472,
+          -133450.56058195,
+          -242.452716168801
+        ],
+        "velocityMps_canonicalXYZ": [
+          498.156966096484,
+          -1879.52011205998,
+          -4.45385683684667
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -625116.891301472,
+          -242.452716168801,
+          -133450.56058195
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          498.156966096484,
+          -4.45385683684667,
+          -1879.52011205998
+        ],
+        "trueAirSpeedMps_reported": 1758.29443359375,
+        "altitudeM": 39202.8149917466,
+        "machReported": 5.2997571781291,
+        "dynamicPressurePaReported": 1745.28271484375,
+        "angleOfAttackDeg": 27.8780193328857,
+        "sideslipDeg": -1.43182587623596,
+        "bankDeg": 20.8919372558594,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.130832901695995,
+          5.29254340713976,
+          2.2211905943539
+        ],
+        "liftForceN_reported": 68597.024478038,
+        "dragForceN_reported": 127588.270452361,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      }
+    ],
+    "loggedControlReadbacks": [
+      {
+        "anchorIndex": 0,
+        "recordSequence": 10837,
+        "ut": 10513.551826182,
+        "pitchRollYaw": [
+          0.313773274421692,
+          -0.00181556597817689,
+          -0.016273831948638
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 1,
+        "recordSequence": 10873,
+        "ut": 10515.5918261821,
+        "pitchRollYaw": [
+          0.341652363538742,
+          0.0121224150061607,
+          0.24207079410553
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 2,
+        "recordSequence": 10909,
+        "ut": 10517.6718261821,
+        "pitchRollYaw": [
+          0.359628856182098,
+          0.013970198109746,
+          0.244356900453568
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 3,
+        "recordSequence": 10945,
+        "ut": 10519.7118261822,
+        "pitchRollYaw": [
+          0.3343386054039,
+          0.00733287259936333,
+          0.144173711538315
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 4,
+        "recordSequence": 10980,
+        "ut": 10521.7118261822,
+        "pitchRollYaw": [
+          0.251629710197449,
+          -0.00697497837245464,
+          0.0547399409115314
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      }
+    ],
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "bodyAxisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "pulsePolicy": "Apply controls only at the paused 72 km vacuum checkpoint, briefly advance under watchdog for surface positioning, then pause before each simulated atmospheric wrench call. Pitch/roll/yaw only; SAS/RCS/throttle/speedbrake action group remain off.",
+    "surfaceStateCaveat": "The KSP API evaluates current checkpoint control-surface deflections. Replayed logged control axes estimate current-model surface positions; historical run-9 deflections and per-sample RCS state are unavailable, so this is not an exact actuator-state replay.",
+    "noEntryPolicy": "No atmospheric flight or entry guidance is engaged. The checkpoint is restored and settled after the vacuum control-surface bench.",
+    "probeSource": "Tools/probe_sts_measured_run9_surface_wrench.py",
+    "probeSourceSHA256": "8eef87348f06320c54e54666f726fbeeb7b6d2c281bdf07ee6b5b34e5a7282de",
+    "helperSourceSHA256": {
+      "probe_sts_measured_run9_wrench_grid.py": "7cf7f06c1624e8ffa2db14fd2cc981f826754905123e4ef385e7b37da599dda9",
+      "probe_sts_aero_wrench_grid.py": "141d7a9b50678bab1f639e0c41f9019dea0bf54715a9d73e177c84043ca8783c",
+      "probe_sts_shadow_witness_wrench.py": "c1801078b9964fce11ab25923e07532a9abfc70183b20e000946c72e11b466d9",
+      "headless_flight.py": "95cbad6f38ad4d61f0b4064f304b51c88e9fad52f335d1fb63b2c01bd4e89d50",
+      "ksp_test_guard.py": "0f4adc8d30b23e7fcfde61c7cfe0623d01a67ce6393ded25f42829dd84e53a5d"
+    }
+  },
+  "gridDefinition": {
+    "anchorCount": 5,
+    "isolatedControlAmplitude": 0.15,
+    "controlAxes": {
+      "pitch": "local +X",
+      "roll": "local +Y",
+      "yaw": "local +Z"
+    },
+    "basisCasesPerAxis": [
+      "negative",
+      "positive"
+    ],
+    "recordedControlCases": "One actual archived pitch/roll/yaw readback vector per corresponding measured-state anchor.",
+    "derivativeMatrixRows": "body torque XYZ (N m)",
+    "derivativeMatrixColumns": "normalized kRPC pitch/roll/yaw control input",
+    "derivativeUnits": "d(body torque N m)/d(normalized control input)",
+    "callCountExpected": 40,
+    "controlStateCount": 12
+  },
+  "startup": {
+    "ready": true,
+    "ut": 9931.291826169332,
+    "vessel": "STS",
+    "meanAltitude": 71918.50155638577,
+    "mass": 25816.10546875,
+    "dryMass": 20348.0,
+    "availableThrust": 3060000.25,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.013458251953125,
+    "aoa": 1.6197501420974731,
+    "profile": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "controlCases": [],
+  "samples": [],
+  "anchorControlMatrices": [],
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointUnchanged": true,
+  "postRunState": {
+    "ready": true,
+    "ut": 9931.311826169333,
+    "vessel": "STS",
+    "meanAltitude": 71917.32852513355,
+    "mass": 25816.10546875,
+    "dryMass": 20348.001953125,
+    "availableThrust": 3060000.25,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.016998291015625,
+    "aoa": 1.6233210563659668,
+    "profile": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "liveStateRestored": false,
+  "kspProcessPIDsBefore": [
+    69877
+  ],
+  "kspProcessPIDsAfter": [
+    69877
+  ],
+  "singleKSPProcessPreserved": true,
+  "errors": [
+    "'axis'",
+    "Post-run settle did not verify paused full-mass original STS and unchanged checkpoint"
+  ],
+  "prePulseState": {
+    "ut": 9931.291826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71917.3272190562,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.329345703125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155385.45651934523,
+      70.17262163667965,
+      653703.4875195926
+    ],
+    "velocity_mps": [
+      -2238.9766940464833,
+      0.04767761768911191,
+      471.91929423823615
+    ],
+    "rotation_xyzw": [
+      0.7022773518838428,
+      -0.702294772438465,
+      -0.082391995696452,
+      0.08246338830716077
+    ],
+    "angular_velocity_rad_s": [
+      5.3015593569278455e-06,
+      0.0002899613755289465,
+      6.291290325110894e-06
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.6236604452133179,
+    "sideslip_deg": 0.0006131317350082099,
+    "roll_deg": 0.003143310546875
+  },
+  "prePulseActuators": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0
+      }
+    ],
+    "actionGroups0Through9": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "cleanup": {
+    "ready": true,
+    "ut": 9930.231826169309,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "meanAltitude": 71979.48853910912,
+    "mass": 22000.0,
+    "dryMass": 20056.28125,
+    "availableThrust": 3060000.25,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "paused": false
+  },
+  "elapsedWallSeconds": 25.356652124988614,
+  "sourceSHA256": "8eef87348f06320c54e54666f726fbeeb7b6d2c281bdf07ee6b5b34e5a7282de",
+  "output": "/Users/kyooni18/Code/KSPShuttleLander/Docs/Experiments/STS-Entry-20261009/live-measured-run9-surface-wrench-20261009.json"
+}

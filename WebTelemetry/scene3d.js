@@ -13,39 +13,51 @@ const num = (v, fallback = 0) => finite(v) ? Number(v) : fallback;
 const isTerminalPhase = (value) => /TAEM|HAC|FINAL|PREFLARE|FLARE|TOUCHDOWN|ROLLOUT/.test(String(value || "").toUpperCase());
 const entryPlanDisplayable = (source) => { const g = source?.guidanceState || {}; return g.entryPlanValid === true && g.entryPlanTerminalReady === true && !isTerminalPhase(source?.phase); };
 const terminalReferenceDisplayable = (source) => { const g = source?.guidanceState || {}; return g.terminalPathCommitted === true || g.terminalPathCaptured === true || g.terminalPathComplete === true; };
-const displayablePlannedTrajectory = (source) => { const allowed = isTerminalPhase(source?.phase) ? terminalReferenceDisplayable(source) : entryPlanDisplayable(source); return allowed && Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : []; };
-const displayableReferenceTrajectory = (source) => terminalReferenceDisplayable(source) && Array.isArray(source?.referenceTrajectory) ? source.referenceTrajectory : [];
-const displayableProjectedTAEMTrajectory = (source) => entryPlanDisplayable(source) && Array.isArray(source?.projectedTAEMTrajectory) ? source.projectedTAEMTrajectory : [];
-
-const futurePredictionTrajectory = (source) => {
-  const trajectory=Array.isArray(source?.predictedTrajectory)?source.predictedTrajectory:[];
-  const currentUt=source?.telemetry?.ut;
-  if(!trajectory.length||!finite(currentUt))return trajectory;
-  const now=num(currentUt);
-  let firstFuture=-1,timed=0;
-  for(let i=0;i<trajectory.length;i++){
-    const point=trajectory[i];
-    if(!point||!finite(point.ut))continue;
-    timed+=1;
-    if(firstFuture<0&&num(point.ut)>=now-.25)firstFuture=i;
+const completeTrajectory = (points) => {
+  if(!Array.isArray(points)||points.length<2)return false;
+  let previousUT=-Infinity,distinct=false,previous=null;
+  for(const point of points){
+    if(!point||![point.ut,point.latitude,point.longitude,point.altitude].every(finite))return false;
+    const ut=num(point.ut),latitude=num(point.latitude),longitude=num(point.longitude),altitude=num(point.altitude);
+    if(latitude < -90 || latitude > 90 || longitude < -360 || longitude > 360 || altitude < -10000 || ut < previousUT)return false;
+    if(previous&&(Math.abs(latitude-num(previous.latitude))>1e-8||Math.abs(longitude-num(previous.longitude))>1e-8||Math.abs(altitude-num(previous.altitude))>1e-3))distinct=true;
+    previousUT=ut;previous=point;
   }
-  if(!timed)return trajectory;
-  if(firstFuture<0)return [];
-  return trajectory.slice(Math.max(0,firstFuture-1));
+  return distinct;
 };
+const completeInertialTrajectory = (points) => completeTrajectory(points) && points.every((point)=>finite(point?.inertialLatitude)&&finite(point?.inertialLongitude));
+const displayableCommittedTAEMExecution = (source) => {
+  if(!isTerminalPhase(source?.phase)||!terminalReferenceDisplayable(source)||source?.automationEngaged!==true)return [];
+  if(source?.executingTrajectorySource!=="selected-plan")return [];
+  const points=source?.executingTrajectory,telemetry=source?.telemetry||{},first=Array.isArray(points)?points[0]:null;
+  if(!completeTrajectory(points)||!first||!/CURRENT GUIDANCE/i.test(String(first.phase||"")))return [];
+  if(!points.slice(1).every((point)=>point?.kind==="planned"&&isTerminalPhase(point?.phase)))return [];
+  if(finite(telemetry.ut)&&Math.abs(num(first.ut)-num(telemetry.ut))>5)return [];
+  if(finite(telemetry.latitude)&&finite(telemetry.longitude)&&greatCircleMeters(first,telemetry)>2000)return [];
+  if(finite(telemetry.meanAltitude)&&Math.abs(num(first.altitude)-num(telemetry.meanAltitude))>2000)return [];
+  return points;
+};
+const displayablePlannedTrajectory = (source) => {
+  const deorbitPath=source?.deorbitPlan?.trajectory;
+  if(isOrbitMode(source)&&source?.deorbitPlan?.executionQualified===true&&completeTrajectory(deorbitPath))return deorbitPath;
+  if(isTerminalPhase(source?.phase)){
+    if(terminalReferenceDisplayable(source)&&completeTrajectory(source?.referenceTrajectory))return source.referenceTrajectory;
+    return displayableCommittedTAEMExecution(source);
+  }
+  const allowed=entryPlanDisplayable(source);
+  if(allowed&&completeTrajectory(source?.plannedTrajectory))return source.plannedTrajectory;
+  return [];
+};
+const displayableReferenceTrajectory = (source) => terminalReferenceDisplayable(source) && completeTrajectory(source?.referenceTrajectory) ? source.referenceTrajectory : [];
 const trajectoryFingerprint = (points) => {
   if(!Array.isArray(points)||!points.length)return "0";
-  const indices=[0,Math.floor((points.length-1)/2),points.length-1];
-  const sample=indices.map((index)=>{
-    const p=points[index]||{};
-    return [
-      finite(p.ut)?num(p.ut).toFixed(2):"",
-      finite(p.latitude)?num(p.latitude).toFixed(5):"",
-      finite(p.longitude)?num(p.longitude).toFixed(5):"",
-      finite(p.altitude)?num(p.altitude).toFixed(0):"",
-    ].join(",");
-  }).join("|");
-  return `${points.length}:${sample}`;
+  let hash=2166136261;
+  for(const p of points){
+    const sample=[finite(p?.ut)?num(p.ut).toFixed(1):"",finite(p?.latitude)?num(p.latitude).toFixed(4):"",finite(p?.longitude)?num(p.longitude).toFixed(4):"",finite(p?.altitude)?(Math.round(num(p.altitude)/10)*10).toFixed(0):""].join(",");
+    for(let i=0;i<sample.length;i++){hash^=sample.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    hash^=124;hash=Math.imul(hash,16777619);
+  }
+  return `${points.length}:${hash>>>0}`;
 };
 const isEntryFlightPhase = (value) => /ENTRY|MM304|TAEM|HAC|FINAL|PREFLARE|FLARE|TOUCHDOWN|ROLLOUT|ATTITUDE RECOVERY/.test(String(value || "").toUpperCase());
 const isOrbitMode = (source) => Boolean(source) && !isEntryFlightPhase(source?.phase) && (Array.isArray(source?.orbitalTrajectory) && source.orbitalTrajectory.length >= 2 || String(source?.command?.controlProfile || "").toLowerCase() === "orbital");
@@ -144,6 +156,26 @@ function greatCircleMeters(a, b) {
   const dLat = lat2 - lat1, dLon = (num(b.longitude) - num(a.longitude)) * DEG;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return KERBIN_RADIUS * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+}
+
+function trailForZoom(points,current,distance){
+  if(!completeTrajectory(points)||!finite(current?.latitude)||!finite(current?.longitude))return [];
+  const radius=Math.max(250,Math.min(600000,num(distance)*.6));
+  const origin=planetPoint({latitude:num(current.latitude),longitude:num(current.longitude),altitude:num(current.meanAltitude,num(current.altitude))});
+  const range=(point)=>vLength(vSub(planetPoint(point),origin));
+  const kept=[points[points.length-1]];
+  let previous=kept[0],previousRange=range(previous);
+  for(let i=points.length-2;i>=0;i--){
+    const point=points[i],pointRange=range(point);
+    if(pointRange<=radius){kept.push(point);previous=point;previousRange=pointRange;continue;}
+    if(kept.length>=2&&previousRange<radius&&pointRange>previousRange){
+      const fraction=Math.max(0,Math.min(1,(radius-previousRange)/(pointRange-previousRange)));
+      const edge=interpolateOrbitPoint([point,previous],num(previous.ut)+(num(point.ut)-num(previous.ut))*fraction);
+      if(edge)kept.push(edge);
+    }
+    break;
+  }
+  return kept.length>=2?kept.reverse():[];
 }
 
 function destinationPoint(origin, bearingDegrees, meters, altitude = null) {
@@ -338,7 +370,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   context.configure({device,format,alphaMode:"opaque"});
 
   const MSAA_SAMPLES=4;
-  let visible=false,snapshot=null,frame=0,yaw=.78,pitch=.36,distance=110,autoCamera=true,lastCameraTarget=null,depthTexture=null,msaaTexture=null,depthWidth=0,depthHeight=0;
+  let visible=false,snapshot=null,frame=0,yaw=.78,pitch=.36,distance=110,autoCamera=true,lastCameraTarget=null,autoCameraTarget=null,autoCameraDistance=null,lastRenderTime=0,depthTexture=null,msaaTexture=null,depthWidth=0,depthHeight=0;
   const pointers=new Map(); let lastPointer=null,pinchDistance=0;
   const wrapAngle=(value)=>{let angle=num(value)%360;if(angle>180)angle-=360;if(angle<-180)angle+=360;return angle;};
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -426,7 +458,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   function lineState(color) {
     const uniform=device.createBuffer({size:80,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
     const bind=device.createBindGroup({layout:lineBindGroupLayout,entries:[{binding:0,resource:{buffer:uniform}}]});
-    return {color,uniform,bind,buffer:null,capacity:0,count:0,geometryKey:null};
+    return {color,uniform,bind,buffer:null,capacity:0,count:0,geometryKey:null,positions:null,animationFrom:null,animationTo:null,animationStart:0};
   }
   const lines={
     actual:lineState([.40,.84,.94,1]),
@@ -462,7 +494,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   function cameraFrame(t, width, height, visualLift=0) {
     if (!finite(t?.latitude) || !finite(t?.longitude)) return null;
     const orbital=snapshot?.orbitalTrajectory||[];
-    if(Array.isArray(orbital)&&orbital.length>=8){const ow=orbital.filter((q)=>finite(q?.inertialLatitude)&&finite(q?.inertialLongitude)).map((q)=>planetPoint({latitude:num(q.inertialLatitude),longitude:num(q.inertialLongitude),altitude:q.altitude},0));if(ow.length>=8){const vf=47*DEG,hf=2*Math.atan(Math.tan(vf/2)*(width/Math.max(1,height))),lf=Math.max(8*DEG,Math.min(vf,hf)/2),extent=ow.reduce((m,q)=>Math.max(m,vLength(q)),KERBIN_RADIUS*1.03),fit=extent/Math.max(.1,Math.sin(lf))*1.08;return{target:[0,0,0],distance:Math.max(900000,Math.min(2400000,fit)),horizon:null,focusCount:ow.length,mode:"ORBIT"};}}
+    if(!snapshot?.orbitalTrajectoryMeta?.underThrust&&completeInertialTrajectory(orbital)&&orbital.length>=8){const ow=orbital.map((q)=>planetPoint({latitude:num(q.inertialLatitude),longitude:num(q.inertialLongitude),altitude:q.altitude},0));if(ow.length>=8){const vf=47*DEG,hf=2*Math.atan(Math.tan(vf/2)*(width/Math.max(1,height))),lf=Math.max(8*DEG,Math.min(vf,hf)/2),extent=ow.reduce((m,q)=>Math.max(m,vLength(q)),KERBIN_RADIUS*1.03),fit=extent/Math.max(.1,Math.sin(lf))*1.08;return{target:[0,0,0],distance:Math.max(900000,Math.min(2400000,fit)),horizon:null,focusCount:ow.length,mode:"ORBIT"};}}
     const phase=String(snapshot?.phase||"").toUpperCase();
     const finalApproach=/PREFLARE|FINAL|FLARE|TOUCHDOWN|ROLLOUT/.test(phase);
     const terminalApproach=finalApproach||/TAEM|HAC/.test(phase);
@@ -487,12 +519,9 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     append(t);
     if(terminalApproach){
       appendTrajectory(displayableReferenceTrajectory(snapshot));
-      appendTrajectory(futurePredictionTrajectory(snapshot));
       appendTrajectory(displayablePlannedTrajectory(snapshot));
     }else{
-      appendTrajectory(futurePredictionTrajectory(snapshot));
       appendTrajectory(displayablePlannedTrajectory(snapshot));
-      appendTrajectory(displayableProjectedTAEMTrajectory(snapshot));
       appendTrajectory(displayableReferenceTrajectory(snapshot));
     }
     const site=snapshot?.site;
@@ -622,18 +651,51 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     return positions;
   }
 
+  function resampleLinePositions(positions,targetCount){
+    const sourceCount=Math.floor(positions.length/3),count=Math.max(0,targetCount);
+    if(!sourceCount||!count)return [];
+    if(sourceCount===count)return Array.from(positions);
+    const output=new Array(count*3);
+    for(let i=0;i<count;i++){
+      const sourcePosition=count===1?0:i*(sourceCount-1)/(count-1),a=Math.floor(sourcePosition),b=Math.min(sourceCount-1,a+1),f=sourcePosition-a;
+      for(let axis=0;axis<3;axis++)output[i*3+axis]=positions[a*3+axis]+(positions[b*3+axis]-positions[a*3+axis])*f;
+    }
+    return output;
+  }
+
   function updateLine(state,points,vp,smooth=false,geometryKey=null,useInertial=false){
     // PLAN/PRED geometry changes only on authoritative planner trajectory records;
     // telemetry and camera updates are much more frequent. Keep uniforms live but
-    // avoid rebuilding/smoothing/uploading identical trajectory vertex buffers.
+    // avoid rebuilding identical paths. Ease a changed path into place so it does
+    // not jump when planner geometry changes between telemetry snapshots.
     if(geometryKey===null||state.geometryKey!==geometryKey){
       const positions=trajectoryPositions(points,smooth,useInertial);
-      state.count=positions.length/3;
-      const bytes=Math.max(12,positions.length*4);
-      if(bytes>state.capacity){state.buffer?.destroy();state.capacity=2**Math.ceil(Math.log2(bytes));state.buffer=device.createBuffer({size:state.capacity,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});}
-      if(positions.length)device.queue.writeBuffer(state.buffer,0,new Float32Array(positions));
+      if(smooth&&state.positions?.length&&positions.length){
+        const targetCount=Math.max(state.positions.length/3,positions.length/3);
+        state.animationFrom=resampleLinePositions(state.positions,targetCount);
+        state.animationTo=resampleLinePositions(positions,targetCount);
+        state.animationStart=performance.now();
+        state.positions=state.animationFrom.slice();
+      }else{
+        state.positions=positions;
+        state.animationFrom=null;
+        state.animationTo=null;
+      }
       state.geometryKey=geometryKey;
     }
+    if(state.animationTo){
+      const progress=Math.min(1,Math.max(0,(performance.now()-state.animationStart)/240));
+      const eased=progress*progress*(3-2*progress),current=new Array(state.animationTo.length);
+      for(let i=0;i<current.length;i++)current[i]=state.animationFrom[i]+(state.animationTo[i]-state.animationFrom[i])*eased;
+      state.positions=current;
+      if(progress>=1){state.positions=state.animationTo;state.animationFrom=null;state.animationTo=null;}
+      else requestRender();
+    }
+    const current=state.positions||[];
+    state.count=current.length/3;
+    const bytes=Math.max(12,current.length*4);
+    if(bytes>state.capacity){state.buffer?.destroy();state.capacity=2**Math.ceil(Math.log2(bytes));state.buffer=device.createBuffer({size:state.capacity,usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});}
+    if(current.length)device.queue.writeBuffer(state.buffer,0,new Float32Array(current));
     const u=new Float32Array(20);u.set(vp,0);u.set(state.color,16);device.queue.writeBuffer(state.uniform,0,u);
   }
 
@@ -682,10 +744,23 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     const visualLift=0;
     const frameState=hasPose?cameraFrame(t,width,height,visualLift):null;
     const craftTarget=hasPose?planetPoint({latitude:num(t.latitude),longitude:num(t.longitude),altitude:num(t.meanAltitude)},visualLift):null;
-    if(autoCamera&&frameState)distance=frameState.distance;
+    if(autoCamera&&frameState){
+      const now=performance.now(),dt=lastRenderTime?Math.max(.001,Math.min(.05,(now-lastRenderTime)/1000)):.05;
+      const blend=1-Math.exp(-dt/.28);
+      if(!autoCameraTarget||autoCameraDistance===null){autoCameraTarget=frameState.target;autoCameraDistance=frameState.distance;}
+      else{
+        autoCameraTarget=vAdd(vScale(autoCameraTarget,1-blend),vScale(frameState.target,blend));
+        autoCameraDistance+=(frameState.distance-autoCameraDistance)*blend;
+      }
+      lastRenderTime=now;
+      const targetError=vLength(vSub(frameState.target,autoCameraTarget));
+      const distanceError=Math.abs(frameState.distance-autoCameraDistance);
+      if(targetError>Math.max(80,autoCameraDistance*.00025)||distanceError>Math.max(30,frameState.distance*.0005))requestRender();
+      distance=autoCameraDistance;
+    }
     // Manual interaction changes only orbit angle/distance. Keep the live shuttle as
     // the pivot so dragging the view never leaves a moving orbiter behind in world space.
-    let target=autoCamera?(frameState?.target||craftTarget):(craftTarget||lastCameraTarget);
+    let target=autoCamera?(autoCameraTarget||frameState?.target||craftTarget):(craftTarget||lastCameraTarget);
     if(target)lastCameraTarget=target;
     const cam=camera(t,target,distance,visualLift),near=Math.max(.05,Math.min(1000,distance*.008)),projection=matPerspective(47*DEG,width/Math.max(1,height),near,4000000),view=matLookAt(cam.eye,cam.target,cam.up),vp=matMul(projection,view);
     const lightDir=sunDirection(t);
@@ -697,15 +772,15 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
     const craftModel=hasPose?bodyMatrix(t,visualLift):matIdentity();
     if(hasPose)for(const group of craftGroups)writeSolid(group.state,matMul(vp,craftModel),craftModel,group.color||[1,1,1,1],group.uvScale||[1,1],group.uvOffset||[0,0],Boolean(group.translucent),lightDir);
 
-    const planned=displayablePlannedTrajectory(snapshot),predicted=futurePredictionTrajectory(snapshot),reference=displayableReferenceTrajectory(snapshot),projected=displayableProjectedTAEMTrajectory(snapshot),actual=snapshot?.actualTrajectory||[],orbital=snapshot?.orbitalTrajectory||[];
+    const planned=displayablePlannedTrajectory(snapshot),reference=displayableReferenceTrajectory(snapshot),actual=trailForZoom(snapshot?.actualTrajectory||[],t,distance),orbital=!snapshot?.orbitalTrajectoryMeta?.underThrust&&completeInertialTrajectory(snapshot?.orbitalTrajectory)?snapshot.orbitalTrajectory:[];
     const orbitMode=isOrbitMode(snapshot),burn=burnWindow3D(snapshot),apoapsis=orbitPOI(snapshot,"ap"),periapsis=orbitPOI(snapshot,"pe");
     const orbitEpoch=num(snapshot?.orbitalTrajectoryMeta?.generatedAtUT,-1).toFixed(2);
-    updateLine(lines.orbit,orbital,vp,true,`orbit:${orbitEpoch}:${orbital.length}`,true);
-    updateLine(lines.planned,planned,vp,true,`plan:${trajectoryFingerprint(planned)}`);
-    updateLine(lines.predicted,predicted,vp,true,`pred:${trajectoryFingerprint(predicted)}`);
-    updateLine(lines.reference,reference,vp,true,`ref:${trajectoryFingerprint(reference)}`);
-    updateLine(lines.projected,projected,vp,true,`proj:${trajectoryFingerprint(projected)}`);
-    updateLine(lines.actual,actual,vp,false);
+    updateLine(lines.orbit,orbital,vp,false,`orbit:${orbitEpoch}:${trajectoryFingerprint(orbital)}`,true);
+    updateLine(lines.planned,planned,vp,false,`plan:${trajectoryFingerprint(planned)}`);
+    updateLine(lines.predicted,[],vp,false,"pred:hidden");
+    updateLine(lines.reference,reference,vp,false,`ref:${trajectoryFingerprint(reference)}`);
+    updateLine(lines.projected,[],vp,false,"proj:hidden");
+    updateLine(lines.actual,actual,vp,false,`actual:${trajectoryFingerprint(actual)}`);
     updateLine(lines.burn,orbitMode?burn.points:[],vp,true,`burn:${orbitEpoch}:${num(snapshot?.deorbitPlan?.burnUT,-1).toFixed(2)}:${burn.points.length}`,true);
     const poiSize=Math.max(3500,Math.min(30000,distance*.012));
     updateLine(lines.apoapsis,orbitMode?poiSpike(apoapsis,poiSize):[],vp,false,`ap:${orbitEpoch}:${num(apoapsis?.ut,-1).toFixed(2)}:${poiSize.toFixed(0)}`,true);
@@ -765,7 +840,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
       const orbitLabel=orbital.length>=2?(snapshot?.orbitalTrajectoryMeta?.endReason==="atmosphere-interface"?" · VAC ARC":" · OSC ORBIT"):"";
       statusEl.textContent=`${phase} · ${cameraMode}`;
       metaEl.textContent=`ALT ${altitude.toUpperCase()} · VIEW ${formatDistance(distance).toUpperCase()}${orbitLabel}`;
-      metaEl.title=`${autoCamera?"Auto-framing flight corridor":"Manual orbit locked to live shuttle"} · predicted ${predicted.length} · plan ${planned.length} · reference ${reference.length} · projected TAEM ${projected.length} · actual trail ${actual.length} · ${num(craft.metadata?.partCount)} real parts · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m · model scale 1:1${kerbin.real?"":" · map fallback"}`;
+      metaEl.title=`${autoCamera?"Auto-framing flight corridor":"Manual orbit locked to live shuttle"} · qualified plan / committed TAEM route ${planned.length} · committed reference ${reference.length} · zoom-limited actual trail ${actual.length} · ${num(craft.metadata?.partCount)} real parts · ${craftLength.toFixed(1)}m × ${craftSpan.toFixed(1)}m · model scale 1:1${kerbin.real?"":" · map fallback"}`;
     }
     statusEl.parentElement?.classList.remove("alert");
     if(orbitMode&&lines.plume.count>1)requestRender();
@@ -775,7 +850,7 @@ export async function createTelemetry3D({canvas,statusEl,metaEl}) {
   function enterManualCamera(){autoCamera=false;}
   canvas.title="3D flight corridor · drag to orbit around shuttle · wheel/pinch to zoom · double-click to restore auto-frame";
   canvas.addEventListener("wheel",event=>{if(!visible)return;event.preventDefault();enterManualCamera();distance=Math.max(8,Math.min(2400000,distance*Math.exp(event.deltaY*.0022)));requestRender();},{passive:false});
-  canvas.addEventListener("dblclick",()=>{autoCamera=true;yaw=.78;pitch=.36;distance=110;requestRender();});
+  canvas.addEventListener("dblclick",()=>{autoCamera=true;autoCameraTarget=null;autoCameraDistance=null;lastRenderTime=0;yaw=.78;pitch=.36;distance=110;requestRender();});
   canvas.addEventListener("pointerdown",event=>{if(event.pointerType==="mouse"&&event.button!==0)return;event.preventDefault();enterManualCamera();canvas.setPointerCapture(event.pointerId);const p=point(event);pointers.set(event.pointerId,p);lastPointer=p;canvas.style.cursor="grabbing";if(pointers.size===2){const[a,b]=[...pointers.values()];pinchDistance=Math.hypot(a.x-b.x,a.y-b.y);}});
   canvas.addEventListener("pointermove",event=>{if(!pointers.has(event.pointerId))return;event.preventDefault();const p=point(event);pointers.set(event.pointerId,p);if(pointers.size>=2){const[a,b]=[...pointers.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinchDistance>0)distance=Math.max(8,Math.min(2400000,distance*pinchDistance/d));pinchDistance=d;}else if(lastPointer){yaw-=(p.x-lastPointer.x)*.006;pitch=Math.max(-1.15,Math.min(1.15,pitch+(p.y-lastPointer.y)*.005));lastPointer=p;}requestRender();});
   function release(event){pointers.delete(event.pointerId);if(pointers.size===1)lastPointer=[...pointers.values()][0];else if(!pointers.size){lastPointer=null;pinchDistance=0;canvas.style.cursor="grab";}requestRender();}

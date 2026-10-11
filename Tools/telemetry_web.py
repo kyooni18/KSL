@@ -1094,9 +1094,9 @@ class PlannerFollower:
         except OSError:
             return
 
-    def current_guidance_path(self, telemetry: dict[str, Any]) -> list[dict[str, Any]]:
-        """Return the best available path guidance is presently trying to fly."""
-        source = self.planned if len(self.planned) >= 2 else self.feasible
+    @staticmethod
+    def _path_at_telemetry(source: list[dict[str, Any]],
+                           telemetry: dict[str, Any]) -> list[dict[str, Any]]:
         if len(source) < 2:
             return []
 
@@ -1134,6 +1134,23 @@ class PlannerFollower:
 
         return future if len(future) >= 2 else []
 
+    def current_plan_path(self, telemetry: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return only the explicitly selected executable plan segment."""
+        return self._path_at_telemetry(self.planned, telemetry)
+
+    def current_guidance_path(self, telemetry: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return the selected segment or, if absent, the live command projection."""
+        source = self.planned if len(self.planned) >= 2 else self.feasible
+        return self._path_at_telemetry(source, telemetry)
+
+    @property
+    def guidance_path_source(self) -> str | None:
+        if len(self.planned) >= 2:
+            return "selected-plan"
+        if len(self.feasible) >= 2:
+            return "live-predictor"
+        return None
+
     @property
     def fresh(self) -> bool:
         if self.path is None:
@@ -1160,6 +1177,8 @@ class SnapshotStore:
             "orbitalTrajectory": [],
             "orbitalTrajectoryMeta": {},
             "predictedTrajectory": [],
+            "executingTrajectory": [],
+            "executingTrajectorySource": None,
             "projectedTAEMTrajectory": [],
             "plannedTrajectory": [],
             "referenceTrajectory": [],
@@ -2253,7 +2272,7 @@ def normalize_replay_snapshot(snapshot: dict[str, Any],
     )
 
     for key in (
-        "predictedTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
+        "predictedTrajectory", "executingTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
         "referenceTrajectory", "orbitalTrajectory", "replayCandidatePrediction",
         "replayCandidateTrajectory",
     ):
@@ -2272,6 +2291,7 @@ def compact_replay_snapshot(snapshot: dict[str, Any], run: dict[str, Any],
         "connectionStatus", "phase", "statusMessage", "warningMessage", "lastError",
         "automationEngaged", "plannerFresh", "tickSequence", "trajectoryRevision",
         "trajectoryLineage", "telemetry", "command", "guidanceState", "deorbitPlan",
+        "executingTrajectorySource",
         "site", "orbitalTrajectoryMeta",
     )
     out: dict[str, Any] = {}
@@ -2279,7 +2299,7 @@ def compact_replay_snapshot(snapshot: dict[str, Any], run: dict[str, Any],
         if key in snapshot:
             out[key] = copy.deepcopy(snapshot[key])
     for key in (
-        "predictedTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
+        "predictedTrajectory", "executingTrajectory", "projectedTAEMTrajectory", "plannedTrajectory",
         "referenceTrajectory", "orbitalTrajectory", "replayCandidatePrediction",
         "replayCandidateTrajectory",
     ):
@@ -2922,6 +2942,7 @@ def merge_simulator_packet(snapshot: dict[str, Any] | None, packet: dict[str, An
         out["command"] = existing_cmd
     out.setdefault("guidanceState", {})
     out.setdefault("predictedTrajectory", [])
+    out.setdefault("executingTrajectory", [])
     out.setdefault("projectedTAEMTrajectory", [])
     out.setdefault("plannedTrajectory", [])
     out.setdefault("referenceTrajectory", [])
@@ -3497,12 +3518,20 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 },
                 "guidanceState": guidance_state(current, terminal, ut),
                 "predictedTrajectory": follower.prediction if follower.fresh else [],
+                "executingTrajectory": (
+                    follower.current_guidance_path(telemetry)
+                    if follower.fresh and has_current_command else []
+                ),
+                "executingTrajectorySource": (
+                    follower.guidance_path_source
+                    if follower.fresh and has_current_command else None
+                ),
                 "projectedTAEMTrajectory": (
                     projected_taem_trajectory(follower.prediction, terminal, display_configuration, guidance_state(current, terminal, ut))
                     if follower.fresh and _entry_plan_displayable(current) and not _terminal_phase(phase)
                     else []
                 ),
-                "plannedTrajectory": follower.current_guidance_path(telemetry) if follower.fresh else [],
+                "plannedTrajectory": follower.current_plan_path(telemetry) if follower.fresh else [],
                 "referenceTrajectory": [],
                 "deorbitPlan": None,
                 "actualTrajectory": actual,
@@ -3537,6 +3566,14 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                     "source": "exact-controller-snapshot",
                     "reconnectDelay": 0.0,
                 }
+            # The exact controller mirror is authoritative for whether guidance
+            # is active. It can disagree with the sparse planner-log currentPlan
+            # record, so attach the live predictor after that mirror is merged.
+            if follower.fresh and snapshot.get("automationEngaged") is True:
+                current_path = follower.current_guidance_path(snapshot.get("telemetry", {}))
+                if len(current_path) >= 2:
+                    snapshot["executingTrajectory"] = current_path
+                    snapshot["executingTrajectorySource"] = follower.guidance_path_source
             store.publish(snapshot)
             retry_delay = 0.5
             stop.wait(0.12)

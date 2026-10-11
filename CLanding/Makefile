@@ -173,6 +173,16 @@ taem-tracker-allocation-test: $(TARGET)
 
 test: taem-tracker-allocation-test
 
+.PHONY: terminal-propagation-convergence-test
+terminal-propagation-convergence-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TerminalPropagationConvergenceTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/terminal_propagation_convergence_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/terminal_propagation_convergence_tests)"
+
+test: terminal-propagation-convergence-test
+
 entry-lateral-feedback-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/EntryLateralFeedbackTests.c $(BUILD)/entry_lateral.o \

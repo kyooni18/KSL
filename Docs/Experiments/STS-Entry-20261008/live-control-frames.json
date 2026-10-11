@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "root",
+    "name": "benjee10.shuttle.forwardFuselage",
+    "rotation_in_vessel": [
+      2.7755575615628914e-17,
+      2.7755575615628914e-17,
+      0.0,
+      1.0000000282626438
+    ]
+  },
+  {
+    "kind": "controlling",
+    "name": "benjee10.shuttle.forwardFuselage",
+    "rotation_in_vessel": [
+      2.7755575615628914e-17,
+      2.7755575615628914e-17,
+      0.0,
+      1.0000000282626438
+    ]
+  }
+]

@@ -95,12 +95,14 @@ def main():
         # Target acceleration uses only 1 deg/s² (below the existing 1.8 deg/s²
         # reference limit). Commands remain small, with a symmetric brake pulse.
         amplitude=min(.15,1.0/nominal,config['guidance']['entryRollAcceleration']/nominal)
-        report.update(torque=torque,inertia=inertia,nominal_axis_accel=nominal,amplitude=amplitude)
+        report.update(torque=torque,inertia=inertia,inertia_tensor=v.inertia_tensor,root_inertia_tensor=v.parts.root.inertia_tensor,nominal_axis_accel=nominal,amplitude=amplitude)
         flight=v.flight();frame=v.orbit.body.non_rotating_reference_frame
         definitions={'ut':(getattr,sc,'ut'),'angular':(v.angular_velocity,frame),'rotation':(v.rotation,frame),
                      'altitude':(getattr,flight,'mean_altitude'),'q':(getattr,flight,'dynamic_pressure'),
                      'thrust':(getattr,v,'thrust'),'mass':(getattr,v,'mass'),
-                     'SAS':(getattr,v.control,'sas'),'RCS':(getattr,v.control,'rcs'),'control_input':(getattr,v.control,args.axis)}
+                     'SAS':(getattr,v.control,'sas'),'RCS':(getattr,v.control,'rcs'),'control_input':(getattr,v.control,args.axis),
+                     'control_pitch':(getattr,v.control,'pitch'),'control_roll':(getattr,v.control,'roll'),
+                     'control_yaw':(getattr,v.control,'yaw')}
         streams={k:conn.add_stream(*definition) for k,definition in definitions.items()}
         for stream in streams.values():stream.rate=50;stream.start()
         def read():
@@ -115,7 +117,8 @@ def main():
         initial=read();start=initial['ut'];validate_sample(initial,start,config)
         if abs(initial['axis_rate'])>.1:
             raise RuntimeError('Initial roll rate too large for small pulse bench')
-        setattr(v.control,args.axis,0)
+        v.control.roll=0;v.control.yaw=0
+        report['unselected_pitch_control']=v.control.pitch
         ready_path=args.output.with_suffix('.guard-ready')
         ready_path.unlink(missing_ok=True)
         guard=subprocess.Popen([sys.executable,str(Path(__file__).resolve()),'--watchdog',str(start),str(os.getpid()),str(ready_path)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -149,6 +152,7 @@ def main():
             if conn:
                 try:
                     conn.krpc.paused=True
+                    report['inertia_tensor_after']=sc.active_vessel.inertia_tensor
                     setattr(sc.active_vessel.control,args.axis,0)
                 finally:conn.close()
         finally:

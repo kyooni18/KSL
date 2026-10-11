@@ -18,7 +18,6 @@
   let reconnectTimer = null;
   let reconnectDelay = 350;
   let lastSnapshotAt = 0;
-  let rlPollInFlight = false;
   const mapView = { zoom: 1, offsetX: 0, offsetY: 0, minZoom: 1, maxZoom: 360, autoFocus: true };
 
   // Exact outer silhouette traced from the user's supplied pure-white marker.
@@ -83,13 +82,51 @@
     const g = source?.guidanceState || {};
     return g.terminalPathCommitted === true || g.terminalPathCaptured === true || g.terminalPathComplete === true;
   };
+  const completeTrajectory = (points) => {
+    if (!Array.isArray(points) || points.length < 2) return false;
+    let previousUt = -Infinity, distinct = false, previous = null;
+    for (const point of points) {
+      if (!point || ![point.ut, point.latitude, point.longitude, point.altitude].every(finite)) return false;
+      if (n(point.latitude) < -90 || n(point.latitude) > 90 || n(point.longitude) < -360 || n(point.longitude) > 360 || n(point.altitude) < -10000 || n(point.ut) < previousUt) return false;
+      if (previous && (Math.abs(n(point.latitude) - n(previous.latitude)) > 1e-8 || Math.abs(n(point.longitude) - n(previous.longitude)) > 1e-8 || Math.abs(n(point.altitude) - n(previous.altitude)) > 1e-3)) distinct = true;
+      previousUt = n(point.ut);
+      previous = point;
+    }
+    return distinct;
+  };
+  const displayableCommittedTAEMExecution = (source) => {
+    if (!isTerminalPhase(source?.phase) || !terminalReferenceDisplayable(source) || source?.automationEngaged !== true) return [];
+    if (source?.executingTrajectorySource !== "selected-plan") return [];
+    const points = source?.executingTrajectory, telemetry = source?.telemetry || {}, first = Array.isArray(points) ? points[0] : null;
+    if (!completeTrajectory(points) || !first || !/CURRENT GUIDANCE/i.test(String(first.phase || ""))) return [];
+    if (!points.slice(1).every((point) => point?.kind === "planned" && isTerminalPhase(point?.phase))) return [];
+    if (finite(telemetry.ut) && Math.abs(n(first.ut) - n(telemetry.ut)) > 5) return [];
+    if (finite(telemetry.latitude) && finite(telemetry.longitude) && greatCircleMeters(first, telemetry) > 2000) return [];
+    if (finite(telemetry.meanAltitude) && Math.abs(n(first.altitude) - n(telemetry.meanAltitude)) > 2000) return [];
+    return points;
+  };
   const displayablePlannedTrajectory = (source) => {
     if (isReplaySnapshot(source)) return replayAwarePlannedTrajectory(source);
+    const deorbitPath = source?.deorbitPlan?.trajectory;
+    if (isOrbitMode(source) && trajectoryCount(deorbitPath) >= 2) return deorbitPath;
+    if (isTerminalPhase(source?.phase)) {
+      const reference = source?.referenceTrajectory;
+      if (terminalReferenceDisplayable(source) && completeTrajectory(reference)) return reference;
+      return displayableCommittedTAEMExecution(source);
+    }
     // The backend already curates plannedTrajectory as the best path guidance is
     // presently trying to fly. It is allowed to be provisional and to change;
     // certification status must not hide operator intent.
-    return Array.isArray(source?.plannedTrajectory) ? source.plannedTrajectory : [];
+    if (Array.isArray(source?.plannedTrajectory) && trajectoryCount(source.plannedTrajectory) >= 2) return source.plannedTrajectory;
+    return [];
   };
+  const displayableGuidanceTrajectory = (source) => {
+    return displayablePlannedTrajectory(source);
+  };
+  const mapUsesLiveProjection = (source) => source?.automationEngaged === true
+    && source?.executingTrajectorySource === "selected-plan"
+    && trajectoryCount(source?.plannedTrajectory) < 2
+    && trajectoryCount(source?.deorbitPlan?.trajectory) < 2;
   const displayableReferenceTrajectory = (source) => {
     if (isReplaySnapshot(source)) {
       const committed = Array.isArray(source?.referenceTrajectory) ? source.referenceTrajectory : [];
@@ -302,12 +339,11 @@
     };
 
     append(craft);
-    const orbital = snapshot?.orbitalTrajectory;
+    const hasDeorbitPlan = trajectoryCount(snapshot?.deorbitPlan?.trajectory) >= 2;
+    const orbital = hasDeorbitPlan ? [] : snapshot?.orbitalTrajectory;
     if (Array.isArray(orbital)) for (const point of orbital) append(point);
-    appendTrajectory(futurePredictionTrajectory(snapshot));
-    appendTrajectory(displayablePlannedTrajectory(snapshot));
-    appendTrajectory(displayableReferenceTrajectory(snapshot));
-    appendTrajectory(displayableProjectedTAEMTrajectory(snapshot));
+    appendTrajectory(snapshot?.actualTrajectory);
+    appendTrajectory(displayableGuidanceTrajectory(snapshot));
 
     const site = snapshot?.site;
     const siteRange = greatCircleMeters(craft, site);
@@ -1166,8 +1202,11 @@
     const t = snapshot?.telemetry || {};
     const g = snapshot?.guidanceState || {};
     const predicted = futurePredictionTrajectory(snapshot);
-    const planned = displayablePlannedTrajectory(snapshot);
-    const orbital = snapshot?.orbitalTrajectory || [];
+    const planned = displayableGuidanceTrajectory(snapshot);
+    const planLabel = $("map-plan-label");
+    if (planLabel) planLabel.textContent = mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    const orbital = trajectoryCount(snapshot?.deorbitPlan?.trajectory) >= 2
+      ? [] : (snapshot?.orbitalTrajectory || []);
     const orbitMeta = snapshot?.orbitalTrajectoryMeta || {};
     const orbitCount = trajectoryCount(orbital);
     const energy = entryPlanDisplayable(snapshot) && finite(g.entryPlanTAEMEnergyError) ? g.entryPlanTAEMEnergyError : t.predictedTAEMEnergyError;
@@ -1366,8 +1405,6 @@
     const actual = snapshot?.actualTrajectory || [];
     const orbital = snapshot?.orbitalTrajectory || [];
     const orbitMeta = snapshot?.orbitalTrajectoryMeta || {};
-    const predicted = futurePredictionTrajectory(snapshot);
-    const projectedTaem = displayableProjectedTAEMTrajectory(snapshot);
     const planned = displayablePlannedTrajectory(snapshot);
     const site = snapshot?.site || {};
     const t = snapshot?.telemetry || {};
@@ -1382,57 +1419,26 @@
       drawRunwayAxis(site, width, height, c.orange);
 
       drawPhysicalRunway(site, width, height);
-      if (finite(t.latitude) && finite(t.longitude) && finite(site.latitude) && finite(site.longitude)) {
-        drawPath([t, site], width, height, c.cyan, .8, [3, 6], 0, .24);
-      }
     }
 
-    const predFreshness = predictionFreshness(snapshot);
-    const predAlpha = predFreshness.stale ? .38 : 1;
-    const predDash = predFreshness.stale ? [7, 6] : [];
     const orbitalSegments = drawPath(orbital, width, height, c.cyan, 1.45, [8,6], 1.2, .58);
-    const predictedSegments = drawPath(predicted, width, height, c.green, predFreshness.stale ? 1.45 : 2.2, predDash, predFreshness.stale ? .8 : 2.4, predAlpha);
-    // Draw the selected/committed plan above the forecast so an Entry Interface
-    // plan remains visibly orange even when both streams share the same geometry.
-    const plannedSegments = drawPath(planned, width, height, c.orange, 1.8, [5,5], 1.5, .94);
-    const projectedSegments = drawPath(projectedTaem, width, height, c.green, 1.6, [7,5], 1.4, .72);
+    // Keep the map focused on what the vehicle has flown and the path guidance
+    // selected. Raw forecasts can change on every planner update and obscure the
+    // selected route with several plausible-looking alternatives.
+    const plannedSegments = drawPath(planned, width, height, c.orange, 2.8, [], 1.4, 1);
     const burnSegments = orbitMode && burn.points.length >= 2 ? drawPath(burn.points, width, height, c.orange, 3.0, [], 3.2, 1) : [];
     drawPath(actual, width, height, c.cyan, 2.0, [], 1.8, .90);
 
     drawChevrons(orbitalSegments, c.cyan, 120, .42);
     if (burnSegments.length) drawChevrons(burnSegments, c.orange, 46, .92);
-    drawChevrons(plannedSegments, c.orange, 96, .50);
-    drawChevrons(predictedSegments, c.green, 76, predFreshness.stale ? .24 : .78);
-    drawChevrons(projectedSegments, c.green, 88, .45);
-
-
-    drawTrajectoryLadder(predicted, width, height, c.green, t.ut);
-    if (!orbitMode) {
-      if (entryPlanDisplayable(snapshot)) drawPhaseGates(predicted, width, height, c.green, false);
-      drawPhaseGates(projectedTaem, width, height, c.green, true);
-      drawTerminalCue(projectedTaem, width, height, c.green, t.ut);
-    }
-
-    if (predicted.length >= 5 && width >= 600) {
-      drawTrajectoryTag(
-        predicted[Math.floor((predicted.length - 1) * .55)],
-        width, height, c.green,
-        predFreshness.stale ? "STALE FORECAST" : "PRED",
-        t.ut, 9, -7
-      );
-    }
+    drawChevrons(plannedSegments, c.orange, 96, .82);
     if (orbital.length >= 2) drawEndpointMarker(orbital[orbital.length - 1], width, height, c.cyan, orbitMeta.endReason === "atmosphere-interface" ? "ENTRY INTERFACE" : "1 ORBIT", t.ut);
     if (orbitMode && apoapsis) drawEndpointMarker(apoapsis, width, height, c.cyan, "AP", t.ut);
     if (orbitMode && periapsis) drawEndpointMarker(periapsis, width, height, c.orange, "PE", t.ut);
     if (orbitMode && burn.start) drawTrajectoryTag(burn.start, width, height, c.orange, burn.startIsLive ? "BURN NOW" : "DEORBIT START", t.ut, 10, -12);
     if (orbitMode && burn.mid) drawEndpointMarker(burn.mid, width, height, c.orange, "BURN CENTER", t.ut);
     if (orbitMode && burn.end) drawTrajectoryTag(burn.end, width, height, c.orange, "CUTOFF", t.ut, 10, 18);
-    if (planned.length >= 2) drawEndpointMarker(planned[planned.length - 1], width, height, c.orange, "PLAN END", t.ut);
-    if (predicted.length >= 2) drawEndpointMarker(
-      predicted[predicted.length - 1], width, height, c.green,
-      predFreshness.stale ? "FORECAST END" : "PRED END", t.ut
-    );
-    if (projectedTaem.length >= 2) drawEndpointMarker(projectedTaem[projectedTaem.length - 1], width, height, c.green, "TAEM / FINAL", t.ut);
+    if (planned.length >= 2) drawEndpointMarker(planned[planned.length - 1], width, height, c.orange, mapUsesLiveProjection(snapshot) ? "GUIDANCE END" : "PLAN END", t.ut);
 
     if (finite(site.latitude) && finite(site.longitude)) {
       const p = mapPoint(site, width, height);
@@ -1479,77 +1485,17 @@
     }
   }
 
-  function updateRLMonitor() {
-    const rl = snapshot?.rlTraining && typeof snapshot.rlTraining === "object" ? snapshot.rlTraining : {};
-    const queue = rl.queue && typeof rl.queue === "object" ? rl.queue : {};
-    const queueAvailable = queue.available === true;
-    const available = rl.available === true || queueAvailable;
-    const state = String(rl.state || queue.state || "idle").toLowerCase();
-    const condition = rl.latestCondition && typeof rl.latestCondition === "object" ? rl.latestCondition : {};
-    const screen = condition.mm304_taem_screen && typeof condition.mm304_taem_screen === "object"
-      ? condition.mm304_taem_screen : {};
-    const prettyStatus = String(rl.status || (available ? "LAST RUN" : "NO RUN"))
-      .replaceAll("_", " ").toUpperCase();
-    const queueLeft = finite(queue.remainingSeconds) ? duration(queue.remainingSeconds) : "—";
-    const queuePrefix = queueAvailable ? `6H ${String(queue.state || state).toUpperCase()} · LEFT ${queueLeft}` : null;
-    const statusText = available
-      ? `${queuePrefix ? queuePrefix + " · " : ""}${prettyStatus} · ${n(rl.episodes, 0).toFixed(0)} EP · ${n(rl.activeSteps, 0).toFixed(0)} ACTIVE`
-      : "NO OFFLINE TRAINING RUN DETECTED";
-    $("rl-status").textContent = statusText;
-    $("rl-run").textContent = available ? String(queue.currentRunId || queue.sessionName || rl.runId || "—") : "—";
-    $("rl-state").textContent = available ? (queueAvailable ? `Q ${String(queue.state || state).toUpperCase()}` : state.toUpperCase()) : "—";
-    $("rl-policy").textContent = available ? String(rl.curriculum || rl.latestPolicy || "—").slice(0, 12) : "—";
-    $("rl-seed").textContent = finite(rl.latestSeed) ? String(Math.trunc(n(rl.latestSeed))) : "—";
-    const curriculumCase = condition.stage || rl.curriculum || "—";
-    const hasLocalCase = finite(condition.altitude_m) || finite(condition.runway_along_m) || finite(condition.speed_mps);
-    if (hasLocalCase) {
-      $("rl-ap").textContent = String(curriculumCase).toUpperCase().replaceAll("-", " ");
-      $("rl-pe").textContent = distance(condition.altitude_m);
-      $("rl-inc").textContent = speed(condition.speed_mps);
-      $("rl-post-pe").textContent = fmtSigned(condition.flight_path_angle_deg, 1, "°");
-      $("rl-fpa").textContent = signedDistance(condition.runway_along_m);
-      $("rl-entry-speed").textContent = signedDistance(condition.runway_cross_m);
-    } else {
-      $("rl-ap").textContent = distance(condition.apoapsis_altitude_m);
-      $("rl-pe").textContent = distance(condition.periapsis_altitude_m);
-      $("rl-inc").textContent = fmt(condition.inclination_deg, 1, "°");
-      $("rl-post-pe").textContent = distance(condition.target_post_deorbit_periapsis_altitude_m);
-      $("rl-fpa").textContent = fmtSigned(screen.entry_fpa_deg, 2, "°");
-      $("rl-entry-speed").textContent = speed(screen.entry_speed_mps);
+  function selectTelemetryPage() {
+    const launching = location.hash === "#launch";
+    document.body.classList.toggle("launch-page", launching);
+    $("launch-panel").hidden = !launching;
+    for (const [id, active] of [["landing-page-link", !launching], ["launch-page-link", launching]]) {
+      if (active) $(id).setAttribute("aria-current", "page");
+      else $(id).removeAttribute("aria-current");
     }
-    $("rl-upstream").textContent = queueAvailable ? queueLeft : (finite(screen.entry_along_m) ? distance(-n(screen.entry_along_m)) : "—");
-    $("rl-crossrange").textContent = queueAvailable && finite(queue.runsCompleted)
-      ? `${Math.trunc(n(queue.runsCompleted))}/${Math.trunc(n(queue.runsDiscovered, 0))}`
-      : signedDistance(screen.entry_cross_m);
-    $("rl-episodes").textContent = finite(rl.episodes) ? String(Math.trunc(n(rl.episodes))) : "—";
-    $("rl-eligible").textContent = finite(rl.eligibleSteps) ? String(Math.trunc(n(rl.eligibleSteps))) : "—";
-    $("rl-active").textContent = finite(rl.activeSteps) ? String(Math.trunc(n(rl.activeSteps))) : "—";
-    $("rl-fallback").textContent = finite(rl.fallbacks) ? String(Math.trunc(n(rl.fallbacks))) : "—";
-    const handoffs = finite(rl.handoffs) ? Math.trunc(n(rl.handoffs)) : null;
-    const touchdowns = finite(rl.touchdowns) ? Math.trunc(n(rl.touchdowns)) : null;
-    $("rl-touchdowns").textContent = handoffs !== null ? `${handoffs}/${touchdowns ?? 0}` : touchdowns !== null ? String(touchdowns) : "—";
-    $("rl-success").textContent = finite(rl.successes) ? String(Math.trunc(n(rl.successes))) : "—";
-    $("rl-valid").textContent = finite(rl.validRollouts) ? String(Math.trunc(n(rl.validRollouts))) : "—";
-    $("rl-return").textContent = finite(rl.meanReturn) ? n(rl.meanReturn).toFixed(1) : "—";
-    const age = finite(rl.fileAgeSeconds) ? ` · artifact ${n(rl.fileAgeSeconds).toFixed(0)}s old` : "";
-    const queuePath = queueAvailable ? ` · queue ${queue.session || queue.sessionName || "active"}` : "";
-    const currentLog = queue.currentRunLog || queue.masterLog || null;
-    const blockers = Array.isArray(rl.blockers) && rl.blockers.length ? ` · blockers ${rl.blockers.join(",")}` : "";
-    const unsafe = rl.unsafe_reasons && typeof rl.unsafe_reasons === "object"
-      ? Object.entries(rl.unsafe_reasons).map(([k,v]) => `${k}:${v}`).join(",") : "";
-    $("rl-note").textContent = available
-      ? `Offline simulator artifact: ${rl.output || rl.runId || queue.currentRun || "pending"}${queuePath}${age}${blockers}${unsafe ? " · unsafe " + unsafe : ""} · ${currentLog ? "log " + currentLog + " · " : ""}read-only; cannot command this vessel.`
-      : "Reads ShuttleSim/rl/results and Runtime/SlowRuns queues when a training run exists; this monitor cannot command the live vessel.";
-    document.body.classList.remove("rl-running", "rl-finished", "rl-stale");
-    if (available && ["running", "finished", "stale"].includes(state)) document.body.classList.add(`rl-${state}`);
-    setTone("rl-status", !available ? "" : state === "running" ? "good" : state === "finished" ? "warn" : "bad");
-    setTone("rl-state", state === "running" ? "good" : state === "finished" ? "warn" : state === "stale" ? "bad" : "");
-    setTitle("rl-run", available ? `${rl.output || rl.runId || queue.currentRun || queue.session || "—"}${age}` : "No RL output selected or discovered");
-    setTitle("rl-policy", available ? `Curriculum ${rl.curriculum || "unknown"}; latest policy ${rl.latestPolicy || "—"}` : "No policy observed");
-    setTitle("rl-active", available ? `${rl.activeSteps || 0} action-dependent residual steps` : "No training data");
-    setTitle("rl-touchdowns", available ? `${rl.handoffs || 0} curriculum handoffs / ${rl.touchdowns || 0} touchdowns` : "No handoff data");
-    setTitle("rl-note", available ? "RL is simulator-only. The live telemetry server only reads JSONL/report artifacts and queue pid/log metadata." : "No simulator-only RL output is currently available.");
+    render();
   }
+  window.addEventListener("hashchange", selectTelemetryPage);
 
   function updateText() {
     if (!snapshot) return;
@@ -1577,6 +1523,18 @@
     $("phase").textContent = orbitMode && phase === "IDLE" ? "ORBIT" : phase;
     const vesselName = t.vesselName || "—";
     $("vessel").textContent = t.vesselName ? `${vesselName} · ${snapshot.automationEngaged ? "AUTO" : "MAN"}` : vesselName;
+    $("launch-situation").textContent = String(t.vesselSituation || "—").toUpperCase();
+    $("launch-status").textContent = snapshot.statusMessage || "Waiting for telemetry";
+    $("launch-warning").textContent = [snapshot.warningMessage, snapshot.lastError].filter(Boolean).join(" · ");
+    const launchValues = {
+      altitude: distance(t.meanAltitude), radar: distance(t.radarAltitude),
+      speed: speed(t.surfaceSpeed), vertical: speed(t.verticalSpeed),
+      mach: fmt(t.mach, 2, ""), pressure: pressure(t.dynamicPressure),
+      g: fmt(t.gForce, 2, " g"), "orbit-speed": speed(t.orbitalSpeed),
+      ap: distance(t.apoapsisAltitude), pe: distance(t.periapsisAltitude),
+      mass: fmt(t.mass, 0, " kg"), thrust: fmt(t.availableThrust, 0, " N"),
+    };
+    for (const [key, value] of Object.entries(launchValues)) $("launch-" + key).textContent = value;
     setTitle("connection", `${source}${tick !== null ? ` · tick ${tick}` : ""}`);
     setTitle("vessel", `${vesselName}${finite(t.ut) ? ` · UT ${n(t.ut).toFixed(1)} s` : ""}${tick !== null ? ` · controller tick ${tick}` : ""}`);
 
@@ -1663,7 +1621,6 @@
       $("sim-traces")?.setAttribute("hidden", "");
       $("sim-status-line")?.setAttribute("hidden", "");
     }
-    updateRLMonitor();
 
     const retroErr = retrogradeError(t);
     $("pitch-label").textContent = orbitMode ? "ATT PITCH" : "PITCH";
@@ -1906,7 +1863,7 @@
         const overlay = $("scene3d-status").parentElement;
         overlay?.classList.remove("alert");
         $("scene3d-status").textContent = "3D LOADING";
-        scene3dLoading = import("/scene3d.js?v=20260924-ksc-runway-1")
+        scene3dLoading = import("/scene3d.js?v=20261010-authoritative-taem-4")
           .then((module) => module.createTelemetry3D({
             canvas: $("scene3d-canvas"),
             statusEl: $("scene3d-status"),
@@ -1929,7 +1886,55 @@
 
   scene3dToggle.addEventListener("click", () => setScene3DVisible(scene3dPanel.hidden));
 
-  function render() { updateText(); drawNavball(); drawMap(); }
+  function drawLaunchAltitude() {
+    if (!document.body.classList.contains("launch-page")) return;
+    const canvas = $("launch-altitude-chart"), ctx = canvas.getContext("2d");
+    const { width, height } = resizeCanvas(canvas, ctx);
+    ctx.clearRect(0, 0, width, height);
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut) && finite(p.altitude ?? p.meanAltitude));
+    ctx.font = "11px sans-serif";
+    ctx.fillStyle = "#899fb5";
+    if (points.length < 2) {
+      ctx.fillText("Waiting for altitude history…", 24, height / 2);
+      return;
+    }
+    const start = n(points[0].ut), span = Math.max(1, n(points[points.length - 1].ut) - start);
+    const maxAlt = Math.max(1000, ...points.map(p => n(p.altitude ?? p.meanAltitude)));
+    const left = 65, right = width - 24, top = 24, bottom = height - 35;
+    ctx.strokeStyle = "#28415c";
+    for (let i = 0; i <= 4; i++) {
+      const y = bottom - (bottom - top) * i / 4;
+      ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+      ctx.fillText((maxAlt * i / 4000).toFixed(1) + " km", 8, y + 4);
+      ctx.fillText(Math.round(span * i / 4) + " s", left + (right - left) * i / 4 - 10, height - 10);
+    }
+    ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.beginPath();
+    points.forEach((p, i) => {
+      const x = left + (n(p.ut) - start) / span * (right - left);
+      const y = bottom - Math.max(0, n(p.altitude ?? p.meanAltitude)) / maxAlt * (bottom - top);
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  function drawLaunchMap() {
+    const { width, height } = resizeCanvas(map, mapCtx);
+    mapCtx.fillStyle = "#0b1726"; mapCtx.fillRect(0, 0, width, height);
+    if (!snapshot) return;
+    drawWrappedKerbin(width, height);
+    const path = displayableGuidanceTrajectory(snapshot);
+    const planLabel = $("map-plan-label");
+    if (planLabel) planLabel.textContent = mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    drawPath(path, width, height, "#ff9b52", 2.8);
+    drawPath(snapshot.actualTrajectory || [], width, height, "#66d8ef", 2);
+    drawShuttleMapIndicator(snapshot.telemetry || {}, width, height, { cyan: "#66d8ef", green: "#72f19a", orange: "#ff9b52", text: "#eef2f4" });
+  }
+
+  function render() {
+    updateText(); drawNavball();
+    if (document.body.classList.contains("launch-page")) { drawLaunchMap(); drawLaunchAltitude(); }
+    else drawMap();
+  }
 
   function accept(data, source = "live") {
     if (source === "live") {
@@ -1941,27 +1946,6 @@
     snapshot = data;
     render();
     if (scene3dViewer && !scene3dPanel.hidden) scene3dViewer.update(data);
-  }
-
-  async function pollRLTraining() {
-    if (rlPollInFlight || archiveReplay.active) return;
-    rlPollInFlight = true;
-    try {
-      const response = await fetch("/api/rl-training", { cache: "no-store" });
-      if (!response.ok) throw new Error(`RL status ${response.status}`);
-      const rl = await response.json();
-      if (!snapshot) snapshot = {
-        connectionStatus: "waiting", phase: "Offline", statusMessage: "Waiting for telemetry",
-        telemetry: {}, command: {}, guidanceState: {}, actualTrajectory: [], predictedTrajectory: [],
-        projectedTAEMTrajectory: [], plannedTrajectory: [], referenceTrajectory: [], orbitalTrajectory: [],
-      };
-      snapshot = { ...snapshot, rlTraining: rl };
-      render();
-    } catch (_) {
-      // Leave the last good RL panel visible; the SSE connection handles global status.
-    } finally {
-      rlPollInFlight = false;
-    }
   }
 
   const replayTime = (frame, fallback = null) => {
@@ -2533,7 +2517,6 @@
     }
   }, 2000);
   connect();
-  pollRLTraining();
-  setInterval(pollRLTraining, 5000);
   render();
+  selectTelemetryPage();
 })();

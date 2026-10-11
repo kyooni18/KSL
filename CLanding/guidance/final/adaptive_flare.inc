@@ -33,7 +33,7 @@
 #ifndef AF_SURGE_T
 #define AF_SURGE_T .5
 #endif
-#define AF_SLEW 5.0          /* deg/s incidence command slew, as the executed flare */
+#define AF_SLEW 3.0          /* deg/s incidence command slew, as the executed flare */
 #define AF_TD_PITCH 8.0
 #define AF_FLOOR_START 10.0  /* wheel height where the mains-first attitude floor begins */
 #define AF_FLOOR_FULL 3.0

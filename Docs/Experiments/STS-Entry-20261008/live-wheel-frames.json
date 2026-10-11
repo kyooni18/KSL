@@ -1,0 +1,45 @@
+{
+  "vessel": "STS",
+  "ut": 9931.23182616933,
+  "mass": 25816.10546875,
+  "paused": true,
+  "wheels": [
+    {
+      "part": "benjee10.shuttle.forwardFuselage",
+      "rotation_in_vessel": [
+        2.7755575615628914e-17,
+        2.7755575615628914e-17,
+        0.0,
+        1.0000000282626438
+      ],
+      "wheel_properties": {
+        "active": true,
+        "broken": false,
+        "available_torque": [
+          [
+            20000.0,
+            10000.0,
+            20000.0
+          ],
+          [
+            -20000.0,
+            -10000.0,
+            -20000.0
+          ]
+        ],
+        "state": {
+          "error": "'ReactionWheel' object has no attribute 'state'"
+        },
+        "pitch_torque": {
+          "error": "'ReactionWheel' object has no attribute 'pitch_torque'"
+        },
+        "roll_torque": {
+          "error": "'ReactionWheel' object has no attribute 'roll_torque'"
+        },
+        "yaw_torque": {
+          "error": "'ReactionWheel' object has no attribute 'yaw_torque'"
+        }
+      }
+    }
+  ]
+}

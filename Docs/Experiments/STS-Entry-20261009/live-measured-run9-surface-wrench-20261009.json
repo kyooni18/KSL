@@ -1,0 +1,4121 @@
+{
+  "status": "complete",
+  "classification": "UNQUALIFIED_COUNTERFACTUAL_SIMULATION_FROM_BYPASSED_MEASUREMENTS",
+  "purpose": "Evaluate current original-STS control-surface aero wrench at five archived measured run-9 states, using isolated bounded surface commands and the logged command vector for each matching anchor.",
+  "qualification": {
+    "qualified": false,
+    "inputRunShadowGateBypassed": true,
+    "measuredFlightStatesUsedAsInputs": true,
+    "simulatedWrenchIsMeasuredFlightData": false,
+    "shadowGateEvidence": false,
+    "flightControlOrActuation": false,
+    "landingOrRolloutEvidence": false,
+    "note": "Every atmospheric wrench is a KSP simulation at archived measured kinematics. The source run explicitly bypassed the shadow gate, and historical surface deflections were not recorded."
+  },
+  "provenance": {
+    "repository": "/Users/kyooni18/Code/KSPShuttleLander",
+    "gitHead": "5d34507892c220a391f1ad67b3b437e935cfd126",
+    "inputTelemetry": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+    "inputTelemetrySHA256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330",
+    "inputGateBypassEvents": [
+      {
+        "recordSequence": 2,
+        "tickSequence": 1,
+        "ut": 9932.41182616936,
+        "event": "event=shadow-gate-bypassed; reason=KSP_LANDER_BYPASS_SHADOW_GATE"
+      }
+    ],
+    "inputMeasuredStates": [
+      {
+        "recordSequence": 10837,
+        "tickSequence": 10835,
+        "ut": 10513.551826182,
+        "positionM_canonicalXYZ": [
+          -629012.673255966,
+          -117941.274903211,
+          -216.265638162211
+        ],
+        "velocityMps_canonicalXYZ": [
+          455.126814338905,
+          -1919.39601165314,
+          -2.91287473218452
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -629012.673255966,
+          -216.265638162211,
+          -117941.274903211
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          455.126814338905,
+          -2.91287473218452,
+          -1919.39601165314
+        ],
+        "trueAirSpeedMps_reported": 1786.25451660156,
+        "altitudeM": 39974.323089011,
+        "machReported": 5.38293404514563,
+        "dynamicPressurePaReported": 1602.39282226562,
+        "angleOfAttackDeg": 22.5983066558838,
+        "sideslipDeg": 0.39592170715332,
+        "bankDeg": 1.15365600585938,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.205255228873053,
+          -0.00292544250974559,
+          0.00378588743997008
+        ],
+        "liftForceN_reported": 54322.9652577301,
+        "dragForceN_reported": 84860.7220932568,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10873,
+        "tickSequence": 10871,
+        "ut": 10515.5918261821,
+        "positionM_canonicalXYZ": [
+          -628072.422107512,
+          -121847.765209497,
+          -222.278870465054
+        ],
+        "velocityMps_canonicalXYZ": [
+          466.571141777521,
+          -1910.55021358521,
+          -2.9732131356005
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -628072.422107512,
+          -222.278870465054,
+          -121847.765209497
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          466.571141777521,
+          -2.9732131356005,
+          -1910.55021358521
+        ],
+        "trueAirSpeedMps_reported": 1780.39221191406,
+        "altitudeM": 39782.6933470782,
+        "machReported": 5.36569136650165,
+        "dynamicPressurePaReported": 1637.58508300781,
+        "angleOfAttackDeg": 22.4821949005127,
+        "sideslipDeg": 0.214859262108803,
+        "bankDeg": 1.07379150390625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          -0.166177556027724,
+          -0.264161553648504,
+          0.321422663076588
+        ],
+        "liftForceN_reported": 55400.390092877,
+        "dragForceN_reported": 86422.0146886587,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10909,
+        "tickSequence": 10907,
+        "ut": 10517.6718261821,
+        "positionM_canonicalXYZ": [
+          -627089.820939269,
+          -125812.045689962,
+          -228.484949516575
+        ],
+        "velocityMps_canonicalXYZ": [
+          478.044159774343,
+          -1901.20072994253,
+          -3.00224737686178
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -627089.820939269,
+          -228.484949516575,
+          -125812.045689962
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          478.044159774343,
+          -3.00224737686178,
+          -1901.20072994253
+        ],
+        "trueAirSpeedMps_reported": 1774.138671875,
+        "altitudeM": 39586.0900392615,
+        "machReported": 5.34444849148317,
+        "dynamicPressurePaReported": 1680.07141113281,
+        "angleOfAttackDeg": 23.7139453887939,
+        "sideslipDeg": -1.29131984710693,
+        "bankDeg": 2.16998291015625,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.842425096212487,
+          1.12590827006895,
+          1.42217468042779
+        ],
+        "liftForceN_reported": 58706.1766299215,
+        "dragForceN_reported": 96191.0300564552,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10945,
+        "tickSequence": 10943,
+        "ut": 10519.7118261822,
+        "positionM_canonicalXYZ": [
+          -626103.718921516,
+          -129680.082106943,
+          -234.840865707131
+        ],
+        "velocityMps_canonicalXYZ": [
+          488.510584077557,
+          -1890.87035511403,
+          -3.3212917076289
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -626103.718921516,
+          -234.840865707131,
+          -129680.082106943
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          488.510584077557,
+          -3.3212917076289,
+          -1890.87035511403
+        ],
+        "trueAirSpeedMps_reported": 1766.77307128906,
+        "altitudeM": 39392.5599292251,
+        "machReported": 5.32228712941101,
+        "dynamicPressurePaReported": 1715.61682128906,
+        "angleOfAttackDeg": 26.0104675292969,
+        "sideslipDeg": -2.20898389816284,
+        "bankDeg": 9.17477416992188,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.781141029100576,
+          4.14125786877769,
+          2.00880433943516
+        ],
+        "liftForceN_reported": 63607.0716538088,
+        "dragForceN_reported": 111678.654832592,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      },
+      {
+        "recordSequence": 10980,
+        "tickSequence": 10978,
+        "ut": 10521.7118261822,
+        "positionM_canonicalXYZ": [
+          -625116.891301472,
+          -133450.56058195,
+          -242.452716168801
+        ],
+        "velocityMps_canonicalXYZ": [
+          498.156966096484,
+          -1879.52011205998,
+          -4.45385683684667
+        ],
+        "positionM_nonrotatingKrpcXYZ": [
+          -625116.891301472,
+          -242.452716168801,
+          -133450.56058195
+        ],
+        "velocityMps_nonrotatingKrpcXYZ": [
+          498.156966096484,
+          -4.45385683684667,
+          -1879.52011205998
+        ],
+        "trueAirSpeedMps_reported": 1758.29443359375,
+        "altitudeM": 39202.8149917466,
+        "machReported": 5.2997571781291,
+        "dynamicPressurePaReported": 1745.28271484375,
+        "angleOfAttackDeg": 27.8780193328857,
+        "sideslipDeg": -1.43182587623596,
+        "bankDeg": 20.8919372558594,
+        "bodyRatesDegPerSecond_pitchRollYaw": [
+          0.130832901695995,
+          5.29254340713976,
+          2.2211905943539
+        ],
+        "liftForceN_reported": 68597.024478038,
+        "dragForceN_reported": 127588.270452361,
+        "engineThrustN": 0.0,
+        "speedbrakeCommanded": false,
+        "speedbrakeState": false,
+        "rcsStateRecorded": false
+      }
+    ],
+    "loggedControlReadbacks": [
+      {
+        "anchorIndex": 0,
+        "recordSequence": 10837,
+        "ut": 10513.551826182,
+        "pitchRollYaw": [
+          0.313773274421692,
+          -0.00181556597817689,
+          -0.016273831948638
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 1,
+        "recordSequence": 10873,
+        "ut": 10515.5918261821,
+        "pitchRollYaw": [
+          0.341652363538742,
+          0.0121224150061607,
+          0.24207079410553
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 2,
+        "recordSequence": 10909,
+        "ut": 10517.6718261821,
+        "pitchRollYaw": [
+          0.359628856182098,
+          0.013970198109746,
+          0.244356900453568
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 3,
+        "recordSequence": 10945,
+        "ut": 10519.7118261822,
+        "pitchRollYaw": [
+          0.3343386054039,
+          0.00733287259936333,
+          0.144173711538315
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      },
+      {
+        "anchorIndex": 4,
+        "recordSequence": 10980,
+        "ut": 10521.7118261822,
+        "pitchRollYaw": [
+          0.251629710197449,
+          -0.00697497837245464,
+          0.0547399409115314
+        ],
+        "readbackSource": "appliedControl.reportedPitch/reportedRoll/reportedYaw"
+      }
+    ],
+    "configuration": "Configuration/sts.json",
+    "configurationSHA256": "8381b3731d2db4918629516ccdfc7da87f8b3c764ddb8323f3a2025743958d5f",
+    "checkpointProfile": "Configuration/checkpoints/sts-campaign-72km-20261008.physics.json",
+    "checkpointName": "STS-campaign-72km-20261008",
+    "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+    "api": "SpaceCenter.Flight.simulate_aerodynamic_wrench_at",
+    "referenceFrame": "CelestialBody.non_rotating_reference_frame",
+    "bodyAxisOrder": [
+      "local +X pitch",
+      "local +Y roll",
+      "local +Z yaw"
+    ],
+    "pulsePolicy": "Apply controls only at the paused 72 km vacuum checkpoint, briefly advance under watchdog for surface positioning, then pause before each simulated atmospheric wrench call. Pitch/roll/yaw only; SAS/RCS/throttle/speedbrake action group remain off.",
+    "surfaceStateCaveat": "Each case sets the corresponding normalized vessel pitch/roll/yaw inputs and records the simulated aerodynamic wrench. kRPC ControlSurface.deflection is only an override command, not actual surface angle; its override was disabled on the six checkpoint surfaces. The API result is a current-model command response, not a measured historical surface deflection. Historical run-9 deflections and per-sample RCS state are unavailable, so this is not an exact actuator-state replay.",
+    "controlSurfaceAPIReference": "https://krpc.github.io/krpc/0.6.0/python/api/space-center/parts.html",
+    "noEntryPolicy": "No atmospheric flight or entry guidance is engaged. The checkpoint is restored and settled after the vacuum control-surface bench.",
+    "probeSource": "Tools/probe_sts_measured_run9_surface_wrench.py",
+    "probeSourceSHA256": "03887a919b5db4621d666a3d12e2b3d65b2b8eec93ace5315266a5d155826f82",
+    "helperSourceSHA256": {
+      "probe_sts_measured_run9_wrench_grid.py": "7cf7f06c1624e8ffa2db14fd2cc981f826754905123e4ef385e7b37da599dda9",
+      "probe_sts_aero_wrench_grid.py": "141d7a9b50678bab1f639e0c41f9019dea0bf54715a9d73e177c84043ca8783c",
+      "probe_sts_shadow_witness_wrench.py": "c1801078b9964fce11ab25923e07532a9abfc70183b20e000946c72e11b466d9",
+      "headless_flight.py": "95cbad6f38ad4d61f0b4064f304b51c88e9fad52f335d1fb63b2c01bd4e89d50",
+      "ksp_test_guard.py": "0f4adc8d30b23e7fcfde61c7cfe0623d01a67ce6393ded25f42829dd84e53a5d"
+    }
+  },
+  "gridDefinition": {
+    "anchorCount": 5,
+    "isolatedControlAmplitude": 0.15,
+    "controlAxes": {
+      "pitch": "local +X",
+      "roll": "local +Y",
+      "yaw": "local +Z"
+    },
+    "basisCasesPerAxis": [
+      "negative",
+      "positive"
+    ],
+    "recordedControlCases": "One actual archived pitch/roll/yaw readback vector per corresponding measured-state anchor.",
+    "derivativeMatrixRows": "body torque XYZ (N m)",
+    "derivativeMatrixColumns": "normalized kRPC pitch/roll/yaw control input",
+    "derivativeUnits": "d(body torque N m)/d(normalized control input)",
+    "callCountExpected": 40,
+    "controlStateCount": 12
+  },
+  "startup": {
+    "ready": true,
+    "ut": 9931.291826169332,
+    "vessel": "STS",
+    "meanAltitude": 71918.50156295858,
+    "mass": 25816.10546875,
+    "dryMass": 20348.0,
+    "availableThrust": 3060000.25,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.013458251953125,
+    "aoa": 1.6197580099105835,
+    "profile": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "controlCases": [
+    {
+      "caseId": "neutral",
+      "kind": "neutral_reference",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "actualControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "liveUT": 9931.291826169332,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.291826169332,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71917.32722627907,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.329345703125,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          155385.45652455997,
+          70.17262172663703,
+          653703.4875257772
+        ],
+        "velocity_mps": [
+          -2238.976694030307,
+          0.04767761742424047,
+          471.9192942310549
+        ],
+        "rotation_xyzw": [
+          0.7022775008466074,
+          -0.7022947165352202,
+          -0.08239169200396773,
+          0.08246335210093969
+        ],
+        "angular_velocity_rad_s": [
+          -2.419024787503044e-06,
+          0.0002548537158872932,
+          -1.731457460993393e-05
+        ],
+        "controls": {
+          "pitch": 0.0,
+          "roll": 0.0,
+          "yaw": 0.0,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.6236350536346436,
+        "sideslip_deg": 0.0006022140150889754,
+        "roll_deg": 0.0030517578125
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true."
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "pitch",
+      "requestedControlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "actualControlsPitchRollYaw": [
+        -0.15000000596046448,
+        0.0,
+        0.0
+      ],
+      "liveUT": 9931.411826169335,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.411826169335,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71911.45533013192,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.35107421875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          155157.73597609898,
+          70.17738481081007,
+          653751.5398419813
+        ],
+        "velocity_mps": [
+          -2239.160229418387,
+          0.04759592003855925,
+          471.1451696278249
+        ],
+        "rotation_xyzw": [
+          0.702278804900395,
+          -0.7022954796169122,
+          -0.08238272679643183,
+          0.08245422616938314
+        ],
+        "angular_velocity_rad_s": [
+          1.2320415548831504e-06,
+          -4.557240754365921e-05,
+          2.067071562106517e-05
+        ],
+        "controls": {
+          "pitch": -0.15000000596046448,
+          "roll": 0.0,
+          "yaw": 0.0,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.6420762538909912,
+        "sideslip_deg": 0.000555650913156569,
+        "roll_deg": 0.00286865234375
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          -0.15000000596046448,
+          0.0,
+          0.0
+        ],
+        "maximumBodyRateDegPerSecond": 0.00261122816057359
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "pitch",
+      "requestedControlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "actualControlsPitchRollYaw": [
+        0.15000000596046448,
+        0.0,
+        0.0
+      ],
+      "liveUT": 9931.531826169337,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.531826169337,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71904.40858902282,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.37744140625,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          154889.0219011144,
+          70.18308962851843,
+          653808.0148256173
+        ],
+        "velocity_mps": [
+          -2239.376831727733,
+          0.04749787310893415,
+          470.2317890639217
+        ],
+        "rotation_xyzw": [
+          0.7022796591586885,
+          -0.7022973480801824,
+          -0.08237159411532752,
+          0.08244289163721069
+        ],
+        "angular_velocity_rad_s": [
+          -6.208459448205766e-06,
+          0.0001548677682876587,
+          -2.2919898896250994e-05
+        ],
+        "controls": {
+          "pitch": 0.15000000596046448,
+          "roll": 0.0,
+          "yaw": 0.0,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.6637487411499023,
+        "sideslip_deg": 0.0006392546929419041,
+        "roll_deg": 0.00323486328125
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.15000000596046448,
+          0.0,
+          0.0
+        ],
+        "maximumBodyRateDegPerSecond": 0.008873401795363412
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "roll",
+      "requestedControlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "actualControlsPitchRollYaw": [
+        0.0,
+        -0.15000000596046448,
+        0.0
+      ],
+      "liveUT": 9931.65182616934,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.65182616934,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71897.36134221323,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.403564453125,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          154620.28185924212,
+          70.18878271121092,
+          653864.3801966368
+        ],
+        "velocity_mps": [
+          -2239.593065415759,
+          0.04739981515151274,
+          469.31830092767984
+        ],
+        "rotation_xyzw": [
+          0.7022827309653713,
+          -0.7022947133310298,
+          -0.08233947613969972,
+          0.08247050027175945
+        ],
+        "angular_velocity_rad_s": [
+          -0.0014954913216651173,
+          0.00023754333960823715,
+          0.00031541102595033724
+        ],
+        "controls": {
+          "pitch": 0.0,
+          "roll": -0.15000000596046448,
+          "yaw": 0.0,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.690779447555542,
+        "sideslip_deg": 0.0006071283132769167,
+        "roll_deg": -0.00299072265625
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.0,
+          -0.15000000596046448,
+          0.0
+        ],
+        "maximumBodyRateDegPerSecond": 0.08754184897077016
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "roll",
+      "requestedControlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "actualControlsPitchRollYaw": [
+        0.0,
+        0.15000000596046448,
+        0.0
+      ],
+      "liveUT": 9931.771826169343,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.771826169343,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71890.31359007105,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.4296875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          154351.51589504562,
+          70.19446398806674,
+          653920.6359412454
+        ],
+        "velocity_mps": [
+          -2239.8089304048804,
+          0.04730174605279725,
+          468.404705379009
+        ],
+        "rotation_xyzw": [
+          0.702287434580339,
+          -0.7022902397732914,
+          -0.08228200326468987,
+          0.08252542709452454
+        ],
+        "angular_velocity_rad_s": [
+          -0.0005708831102622751,
+          0.00024870000197552145,
+          9.04980063083748e-05
+        ],
+        "controls": {
+          "pitch": 0.0,
+          "roll": 0.15000000596046448,
+          "yaw": 0.0,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.7140556573867798,
+        "sideslip_deg": 0.0006262651877477765,
+        "roll_deg": -0.00927734375
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.0,
+          0.15000000596046448,
+          0.0
+        ],
+        "maximumBodyRateDegPerSecond": 0.03302167464069314
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "yaw",
+      "requestedControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "actualControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15000000596046448
+      ],
+      "liveUT": 9931.891826169345,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9931.891826169345,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71883.2653344241,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.455810546875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          154082.72405221997,
+          70.20013373292373,
+          653976.7820473725
+        ],
+        "velocity_mps": [
+          -2240.0244266687587,
+          0.04720366559703048,
+          467.49100252723497
+        ],
+        "rotation_xyzw": [
+          0.7022823158635508,
+          -0.7022958391397198,
+          -0.0822748437727095,
+          0.08252916128714921
+        ],
+        "angular_velocity_rad_s": [
+          -0.00017626217423023766,
+          0.0002466040023136884,
+          -0.00025947178330699386
+        ],
+        "controls": {
+          "pitch": 0.0,
+          "roll": 0.0,
+          "yaw": -0.15000000596046448,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.7334022521972656,
+        "sideslip_deg": 0.001585163176059723,
+        "roll_deg": -0.00421142578125
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.0,
+          0.0,
+          -0.15000000596046448
+        ],
+        "maximumBodyRateDegPerSecond": 0.016795577313210103
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "kind": "isolated_control_basis",
+      "axis": "yaw",
+      "requestedControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "actualControlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15000000596046448
+      ],
+      "liveUT": 9932.011826169348,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.011826169348,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71876.2165757704,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.48193359375,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          153813.9063753587,
+          70.20579161342306,
+          654032.8185013889
+        ],
+        "velocity_mps": [
+          -2240.239554110529,
+          0.04710557498221519,
+          466.57719253506366
+        ],
+        "rotation_xyzw": [
+          0.7022733100664252,
+          -0.7023048946733412,
+          -0.08226929647014197,
+          0.08253367172215342
+        ],
+        "angular_velocity_rad_s": [
+          -7.12802405464969e-05,
+          0.00027279104688204825,
+          -9.591806241872179e-05
+        ],
+        "controls": {
+          "pitch": 0.0,
+          "roll": 0.0,
+          "yaw": 0.15000000596046448,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.7568159103393555,
+        "sideslip_deg": 0.003103915834799409,
+        "roll_deg": 0.00018310546875
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.0,
+          0.0,
+          0.15000000596046448
+        ],
+        "maximumBodyRateDegPerSecond": 0.015631840813460855
+      },
+      "anchorIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "caseId": "run9_anchor_0_control_replay",
+      "kind": "archived_actual_control_readback_replay",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.313773274421692,
+        -0.00181556597817689,
+        -0.016273831948638
+      ],
+      "actualControlsPitchRollYaw": [
+        0.3137732744216919,
+        -0.0018155659781768918,
+        -0.016273831948637962
+      ],
+      "liveUT": 9932.13182616935,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.13182616935,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71867.9923904197,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.512451171875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          153504.06747541417,
+          70.2123775115609,
+          654097.1606248254
+        ],
+        "velocity_mps": [
+          -2240.4873552923123,
+          0.04699112130130852,
+          465.5240109014421
+        ],
+        "rotation_xyzw": [
+          0.7022690452588318,
+          -0.7023050643615668,
+          -0.08228570163211413,
+          0.08255247733654136
+        ],
+        "angular_velocity_rad_s": [
+          -5.3144013836411236e-05,
+          0.0010029412806034088,
+          -4.415846973570799e-05
+        ],
+        "controls": {
+          "pitch": 0.3137732744216919,
+          "roll": -0.0018155659781768918,
+          "yaw": -0.016273831948637962,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.786777138710022,
+        "sideslip_deg": 0.0034713891800493,
+        "roll_deg": 0.00164794921875
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.3137732744216919,
+          -0.0018155659781768918,
+          -0.016273831948637962
+        ],
+        "maximumBodyRateDegPerSecond": 0.05746524468958508
+      },
+      "anchorIndices": [
+        0
+      ]
+    },
+    {
+      "caseId": "run9_anchor_1_control_replay",
+      "kind": "archived_actual_control_readback_replay",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.341652363538742,
+        0.0121224150061607,
+        0.24207079410553
+      ],
+      "actualControlsPitchRollYaw": [
+        0.34165236353874207,
+        0.012122415006160736,
+        0.24207079410552979
+      ],
+      "liveUT": 9932.251826169353,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.251826169353,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71862.11755566718,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.5341796875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          153276.1936941978,
+          70.21707201531842,
+          654144.5624038824
+        ],
+        "velocity_mps": [
+          -2240.668702357991,
+          0.04690935974045459,
+          464.7492517316208
+        ],
+        "rotation_xyzw": [
+          0.7022719558060185,
+          -0.7022930145933438,
+          -0.08233015437382601,
+          0.08258608636021725
+        ],
+        "angular_velocity_rad_s": [
+          0.0003415990558881907,
+          0.001736558973789215,
+          0.0003244190338440063
+        ],
+        "controls": {
+          "pitch": 0.34165236353874207,
+          "roll": 0.012122415006160736,
+          "yaw": 0.24207079410552979,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.8130682706832886,
+        "sideslip_deg": 0.0021836061496287584,
+        "roll_deg": -0.00311279296875
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.34165236353874207,
+          0.012122415006160736,
+          0.24207079410552979
+        ],
+        "maximumBodyRateDegPerSecond": 0.09949051117452386
+      },
+      "anchorIndices": [
+        1
+      ]
+    },
+    {
+      "caseId": "run9_anchor_2_control_replay",
+      "kind": "archived_actual_control_readback_replay",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.359628856182098,
+        0.013970198109746,
+        0.244356900453568
+      ],
+      "actualControlsPitchRollYaw": [
+        0.3596288561820984,
+        0.01397019810974598,
+        0.2443569004535675
+      ],
+      "liveUT": 9932.371826169356,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.371826169356,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71855.06729630497,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.560546875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          153007.29877992492,
+          70.2226941584321,
+          654200.2698261187
+        ],
+        "velocity_mps": [
+          -2240.8827230385227,
+          0.04681123446079672,
+          463.8351212130831
+        ],
+        "rotation_xyzw": [
+          0.7022927835527966,
+          -0.7022523986964035,
+          -0.0824395492824519,
+          0.08264511456522
+        ],
+        "angular_velocity_rad_s": [
+          0.0009042147445883278,
+          0.00269109383225441,
+          0.0008372733620284469
+        ],
+        "controls": {
+          "pitch": 0.3596288561820984,
+          "roll": 0.01397019810974598,
+          "yaw": 0.2443569004535675,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.857161045074463,
+        "sideslip_deg": -0.0044336686842143536,
+        "roll_deg": -0.027099609375
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.3596288561820984,
+          0.01397019810974598,
+          0.2443569004535675
+        ],
+        "maximumBodyRateDegPerSecond": 0.15417010070935877
+      },
+      "anchorIndices": [
+        2
+      ]
+    },
+    {
+      "caseId": "run9_anchor_3_control_replay",
+      "kind": "archived_actual_control_readback_replay",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.3343386054039,
+        0.00733287259936333,
+        0.144173711538315
+      ],
+      "actualControlsPitchRollYaw": [
+        0.33433860540390015,
+        0.007332872599363327,
+        0.14417371153831482
+      ],
+      "liveUT": 9932.491826169358,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.491826169358,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71848.01653896214,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.586669921875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          152738.37820785271,
+          70.22830472081215,
+          654255.8675455328
+        ],
+        "velocity_mps": [
+          -2241.0963746659622,
+          0.04671309787973183,
+          462.92088412784096
+        ],
+        "rotation_xyzw": [
+          0.7023301627012019,
+          -0.7021861525666143,
+          -0.08260595255409953,
+          0.08272452473021735
+        ],
+        "angular_velocity_rad_s": [
+          0.0012953150578917344,
+          0.0035846568644046783,
+          0.0012084695020344342
+        ],
+        "controls": {
+          "pitch": 0.33433860540390015,
+          "roll": 0.007332872599363327,
+          "yaw": 0.14417371153831482,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.8938733339309692,
+        "sideslip_deg": -0.012094694189727306,
+        "roll_deg": -0.05474853515625
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.33433860540390015,
+          0.007332872599363327,
+          0.14417371153831482
+        ],
+        "maximumBodyRateDegPerSecond": 0.2053593928675162
+      },
+      "anchorIndices": [
+        3
+      ]
+    },
+    {
+      "caseId": "run9_anchor_4_control_replay",
+      "kind": "archived_actual_control_readback_replay",
+      "axis": null,
+      "requestedControlsPitchRollYaw": [
+        0.251629710197449,
+        -0.00697497837245464,
+        0.0547399409115314
+      ],
+      "actualControlsPitchRollYaw": [
+        0.25162971019744873,
+        -0.006974978372454643,
+        0.05473994091153145
+      ],
+      "liveUT": 9932.611826169361,
+      "livePaused": true,
+      "liveState": {
+        "ut": 9932.611826169361,
+        "paused": true,
+        "vessel": "STS",
+        "situation": "VesselSituation.sub_orbital",
+        "altitude_m": 71840.96528512519,
+        "mach": 0.0,
+        "true_air_speed_mps": 2092.61279296875,
+        "speed_of_sound_mps": 0.0,
+        "dynamic_pressure_pa": 0.0,
+        "mass_kg": 25816.10546875,
+        "part_count": 22,
+        "position_m": [
+          152469.4320234555,
+          70.23390354020778,
+          654311.3555493995
+        ],
+        "velocity_mps": [
+          -2241.309657196615,
+          0.04661495276366282,
+          462.00654061904754
+        ],
+        "rotation_xyzw": [
+          0.7023758291147248,
+          -0.7021034510611817,
+          -0.08281454599314358,
+          0.08282991993441241
+        ],
+        "angular_velocity_rad_s": [
+          0.0013906522640996272,
+          0.004309023730456829,
+          0.0014398656366403817
+        ],
+        "controls": {
+          "pitch": 0.25162971019744873,
+          "roll": -0.006974978372454643,
+          "yaw": 0.05473994091153145,
+          "throttle": 0.0
+        },
+        "sas": false,
+        "rcs": false,
+        "wheel_brakes": false,
+        "thrust_n": 0.0,
+        "angle_of_attack_deg": 1.9429930448532104,
+        "sideslip_deg": -0.02316351979970932,
+        "roll_deg": -0.0948486328125
+      },
+      "actuatorState": {
+        "speedbrakeActionGroup": 1,
+        "speedbrakeActionGroupEnabled": false,
+        "controlSurfaces": [
+          {
+            "part": "benjee10.shuttle.rudder",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 0.4000000059604645
+          },
+          {
+            "part": "benjee10.shuttle.bodyFlap",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon2",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          },
+          {
+            "part": "benjee10.shuttle.elevon1",
+            "deployed": false,
+            "deflection": 0.0,
+            "authorityLimiter": 100.0,
+            "deflectionOverrideEnabled": false,
+            "deflectionOverrideCommandNormalized": 0.0,
+            "pitchEnabled": true,
+            "rollEnabled": true,
+            "yawEnabled": true,
+            "inverted": false,
+            "surfaceAreaM2": 1.0
+          }
+        ],
+        "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+        "actualControlsPitchRollYaw": [
+          0.25162971019744873,
+          -0.006974978372454643,
+          0.05473994091153145
+        ],
+        "maximumBodyRateDegPerSecond": 0.24686014675767687
+      },
+      "anchorIndices": [
+        4
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "caseId": "neutral",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -505.1393638337104,
+        -59875.31526534246,
+        -87047.50305981962
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.867123168155,
+        298.23114261923183,
+        -328.0620626283526
+      ]
+    },
+    {
+      "caseId": "neutral",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -277.1844987410441,
+        -60610.15298796336,
+        -88320.74606531733
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.632294519324,
+        164.41204270817616,
+        -199.27731255877552
+      ]
+    },
+    {
+      "caseId": "neutral",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1854.037832135873,
+        -67014.74035689617,
+        -97096.27789274935
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30725.34119768691,
+        -1234.8222384422916,
+        1141.5730948075943
+      ]
+    },
+    {
+      "caseId": "neutral",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3690.978050499507,
+        -77341.28585985184,
+        -111876.364303097
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36629.464550863515,
+        -2171.5949420852885,
+        2051.7156950013705
+      ]
+    },
+    {
+      "caseId": "neutral",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2644.486148241682,
+        -85270.34999462993,
+        -124169.61577176324
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43707.311161908685,
+        -1540.608466160913,
+        1303.4026732991442
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -513.2769432213972,
+        -61777.521408151944,
+        -88867.57587966505
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        38462.338359463014,
+        288.5414735967497,
+        -338.3691584843782
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -281.59578229719773,
+        -62522.24564095141,
+        -90179.65520597764
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        39152.95762243305,
+        160.0458838007071,
+        -193.18159736609778
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1889.519554386614,
+        -69339.45315960296,
+        -99025.45659357923
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        42433.031948083466,
+        -1186.7233047290429,
+        1331.4763685193539
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3786.0496303372347,
+        -80497.5803027417,
+        -113946.08446309327
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        49995.1971849455,
+        -2050.7127409998357,
+        2521.3702705738615
+      ]
+    },
+    {
+      "caseId": "pitch_negative_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        -0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2740.2713040033414,
+        -89618.22320614495,
+        -126164.46350109029
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        58174.53701579558,
+        -1425.8449561168163,
+        1850.6257305404506
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -503.7117518239975,
+        -59432.72553840175,
+        -86365.5885094329
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        23839.476440785602,
+        299.8689036516189,
+        -326.89199401441147
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -276.4130783358414,
+        -60166.76184843824,
+        -87623.88173678292
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        24263.9815969115,
+        165.07943247997173,
+        -201.25481138098075
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1847.1601666797578,
+        -66454.99071730449,
+        -96378.08444720648
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        26469.808185807833,
+        -1244.6415748883228,
+        1100.5965320668456
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3669.3028824650173,
+        -76526.08886017764,
+        -111118.87330675732
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        31866.262813874673,
+        -2199.6546757591095,
+        1934.752423787677
+      ]
+    },
+    {
+      "caseId": "pitch_positive_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.15,
+        0.0,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2623.7665544404517,
+        -84201.57866728565,
+        -123359.13649095867
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        38370.86166970802,
+        -1566.1192902439361,
+        1188.587626364364
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -747.6090158600928,
+        -60115.57093639768,
+        -86629.87658953482
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        26230.859385132888,
+        8564.832620082161,
+        -6659.945592281483
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -524.6043012870723,
+        -60848.880800876796,
+        -87892.36723992454
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        26689.03812686695,
+        8617.453287809203,
+        -6595.772698845947
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1612.0767690115463,
+        -67293.61481935684,
+        -96671.74397658455
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        29266.668061042437,
+        7435.46493185297,
+        -6263.164767656864
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3457.576162283549,
+        -77634.9833869236,
+        -111463.4225851193
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        35274.39819642994,
+        6884.592154629041,
+        -7721.454791244215
+      ]
+    },
+    {
+      "caseId": "roll_negative_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        -0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2411.5349536537324,
+        -85700.27669424955,
+        -123664.39965560542
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        42115.61155248438,
+        7683.301777628756,
+        -11692.61588009656
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -498.7495167965244,
+        -59621.384909552115,
+        -86669.02267987192
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        25946.382473552327,
+        276.37839675269424,
+        -298.73206522876535
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -271.0509805387701,
+        -60355.76498413914,
+        -87933.98371976978
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        26412.258020629135,
+        141.41090160603926,
+        -170.6842757865652
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1855.789654287968,
+        -66694.43861731193,
+        -96697.57376581326
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28737.9406160753,
+        -1264.6775854267034,
+        1151.2695710172175
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3684.2757552678668,
+        -76876.96040550379,
+        -111455.46238747616
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        34378.15159436637,
+        -2211.8559886993753,
+        2024.5503045208861
+      ]
+    },
+    {
+      "caseId": "roll_positive_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2638.4172918048134,
+        -84663.45146620844,
+        -123718.7943039885
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        41164.27332226766,
+        -1578.7706437092638,
+        1276.419802024102
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -236.6669936218459,
+        -59904.77774681646,
+        -87051.09357188852
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27683.64779878754,
+        -800.0061193380752,
+        1204.3544066566283
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -2.480182247061748,
+        -60642.025583217925,
+        -88324.72785030468
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28177.3353546202,
+        -959.2526191151228,
+        1368.65995220902
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        2132.377128736167,
+        -67061.30894642587,
+        -97103.30806824933
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30598.408281082233,
+        -2372.3598980034258,
+        2729.433137314996
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3969.9828278118293,
+        -77396.03910560568,
+        -111885.6127777809
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36484.5145479353,
+        -3310.873525842475,
+        3642.5731534887764
+      ]
+    },
+    {
+      "caseId": "yaw_negative_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        -0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2924.181203634129,
+        -85317.98792030347,
+        -124177.96722489095
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43580.93480090664,
+        -2683.5715462535445,
+        2898.865967811318
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -499.57070552890946,
+        -59874.994048436274,
+        -87047.24696207643
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        27770.699343842378,
+        275.50819150533425,
+        -296.26265654087
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -271.48716485973273,
+        -60609.86106340856,
+        -88320.49646375021
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        28270.406248511747,
+        141.18273758179203,
+        -166.74622854713743
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1859.8073308765306,
+        -67014.61674105657,
+        -97096.0240315559
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        30724.36754040161,
+        -1258.3865375854548,
+        1174.5663173904177
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3696.756877295338,
+        -77341.29830394182,
+        -111876.14703593831
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        36628.02187997386,
+        -2195.2309427035507,
+        2084.810113613603
+      ]
+    },
+    {
+      "caseId": "yaw_positive_0p15",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.0,
+        0.0,
+        0.15
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2650.2749278669,
+        -85270.12133243865,
+        -124169.33987886847
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        43706.1555027638,
+        -1564.2887366086798,
+        1336.5525166009975
+      ]
+    },
+    {
+      "caseId": "run9_anchor_0_control_replay",
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "anchorUT": 10513.551826182,
+      "controlsPitchRollYaw": [
+        0.313773274421692,
+        -0.00181556597817689,
+        -0.016273831948638
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.598306655883825,
+        "sideslip": 0.395921707153309,
+        "bank": 1.153656004521963
+      },
+      "simulatedForceN_bodyXYZ": [
+        -473.5317326225704,
+        -58625.09936564091,
+        -84458.10558678953
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        14079.299371998808,
+        185.69917556989822,
+        -166.7627941107894
+      ]
+    },
+    {
+      "caseId": "run9_anchor_1_control_replay",
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "anchorUT": 10515.5918261821,
+      "controlsPitchRollYaw": [
+        0.341652363538742,
+        0.0121224150061607,
+        0.24207079410553
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 22.482194900512688,
+        "sideslip": 0.21485926210880613,
+        "bank": 1.0737914969492124
+      },
+      "simulatedForceN_bodyXYZ": [
+        -515.3699901891669,
+        -58853.29664586396,
+        -83827.4669952946
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        5353.396118026729,
+        86.65086367593585,
+        -1355.9110880142653
+      ]
+    },
+    {
+      "caseId": "run9_anchor_2_control_replay",
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "anchorUT": 10517.6718261821,
+      "controlsPitchRollYaw": [
+        0.359628856182098,
+        0.013970198109746,
+        0.244356900453568
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 23.71394538879392,
+        "sideslip": -1.2913198471069363,
+        "bank": 2.16998291015625
+      },
+      "simulatedForceN_bodyXYZ": [
+        1373.2475110984597,
+        -64931.03966770551,
+        -92266.7918926029
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        5648.66765388907,
+        -641.110308540105,
+        -1336.4610185566585
+      ]
+    },
+    {
+      "caseId": "run9_anchor_3_control_replay",
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "anchorUT": 10519.7118261822,
+      "controlsPitchRollYaw": [
+        0.3343386054039,
+        0.00733287259936333,
+        0.144173711538315
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 26.01046752929692,
+        "sideslip": -2.2089838981628396,
+        "bank": 9.17477416991386
+      },
+      "simulatedForceN_bodyXYZ": [
+        3351.2506232210435,
+        -74432.19070221574,
+        -107270.92019332286
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        11855.36365312634,
+        -1802.9856352964089,
+        304.003037799308
+      ]
+    },
+    {
+      "caseId": "run9_anchor_4_control_replay",
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "anchorUT": 10521.7118261822,
+      "controlsPitchRollYaw": [
+        0.251629710197449,
+        -0.00697497837245464,
+        0.0547399409115314
+      ],
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "achievedAnglesDeg": {
+        "aoa": 27.878019332885714,
+        "sideslip": -1.4318258762359686,
+        "bank": 20.89193725477699
+      },
+      "simulatedForceN_bodyXYZ": [
+        2461.5700819547783,
+        -81776.28097483414,
+        -120526.95031393984
+      ],
+      "simulatedTorqueNm_bodyXYZ": [
+        22684.815865404795,
+        -490.26134090048436,
+        -49.47857625848883
+      ]
+    }
+  ],
+  "anchorControlMatrices": [
+    {
+      "anchorIndex": 0,
+      "anchorRecordSequence": 10837,
+      "ut": 10513.551826182,
+      "mach": 5.38293404514563,
+      "dynamicPressurePa": 1602.39282226562,
+      "angleOfAttackDeg": 22.5983066558838,
+      "sideslipDeg": 0.39592170715332,
+      "bankDeg": 1.15365600585938,
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.205255228873053,
+        -0.00292544250974559,
+        0.00378588743997008
+      ],
+      "neutralSurfaceTorqueNm_bodyXYZ": [
+        27770.867123168155,
+        298.23114261923183,
+        -328.0620626283526
+      ],
+      "controlEffectivenessMatrixNmPerControl_bodyTorqueXYZ_by_pitchRollYaw": [
+        [
+          -48742.87306225804,
+          -948.2563719352038,
+          290.1718168494578
+        ],
+        [
+          37.75810018289728,
+          -27628.180744431556,
+          3585.047702811365
+        ],
+        [
+          38.25721489988913,
+          21204.04509017573,
+          -5002.056877324994
+        ]
+      ],
+      "recordedControlReadbackPitchRollYaw": [
+        0.313773274421692,
+        -0.00181556597817689,
+        -0.016273831948638
+      ],
+      "replayedRecordedControlTorqueNm_bodyXYZ": [
+        14079.299371998808,
+        185.69917556989822,
+        -166.7627941107894
+      ],
+      "replayedMinusNeutralTorqueNm_bodyXYZ": [
+        -13691.567751169347,
+        -112.53196704933362,
+        161.29926851756318
+      ]
+    },
+    {
+      "anchorIndex": 1,
+      "anchorRecordSequence": 10873,
+      "ut": 10515.5918261821,
+      "mach": 5.36569136650165,
+      "dynamicPressurePa": 1637.58508300781,
+      "angleOfAttackDeg": 22.4821949005127,
+      "sideslipDeg": 0.214859262108803,
+      "bankDeg": 1.07379150390625,
+      "measuredBodyRateDegPerSecondXYZ": [
+        -0.166177556027724,
+        -0.264161553648504,
+        0.321422663076588
+      ],
+      "neutralSurfaceTorqueNm_bodyXYZ": [
+        28270.632294519324,
+        164.41204270817616,
+        -199.27731255877552
+      ],
+      "controlEffectivenessMatrixNmPerControl_bodyTorqueXYZ_by_pitchRollYaw": [
+        [
+          -49629.92008507184,
+          -922.6003541260555,
+          310.23631297181663
+        ],
+        [
+          16.778495597548805,
+          -28253.474620677214,
+          3668.1178556563827
+        ],
+        [
+          -26.910713382943264,
+          21416.961410197942,
+          -5118.020602520525
+        ]
+      ],
+      "recordedControlReadbackPitchRollYaw": [
+        0.341652363538742,
+        0.0121224150061607,
+        0.24207079410553
+      ],
+      "replayedRecordedControlTorqueNm_bodyXYZ": [
+        5353.396118026729,
+        86.65086367593585,
+        -1355.9110880142653
+      ],
+      "replayedMinusNeutralTorqueNm_bodyXYZ": [
+        -22917.236176492595,
+        -77.7611790322403,
+        -1156.6337754554897
+      ]
+    },
+    {
+      "anchorIndex": 2,
+      "anchorRecordSequence": 10909,
+      "ut": 10517.6718261821,
+      "mach": 5.34444849148317,
+      "dynamicPressurePa": 1680.07141113281,
+      "angleOfAttackDeg": 23.7139453887939,
+      "sideslipDeg": -1.29131984710693,
+      "bankDeg": 2.16998291015625,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.842425096212487,
+        1.12590827006895,
+        1.42217468042779
+      ],
+      "neutralSurfaceTorqueNm_bodyXYZ": [
+        30725.34119768691,
+        -1234.8222384422916,
+        1141.5730948075943
+      ],
+      "controlEffectivenessMatrixNmPerControl_bodyTorqueXYZ_by_pitchRollYaw": [
+        [
+          -53210.74587425211,
+          -1762.4248165571287,
+          419.8641977312582
+        ],
+        [
+          -193.0609005309331,
+          -29000.475057598913,
+          3713.2445347265702
+        ],
+        [
+          -769.5994548416942,
+          24714.781128913604,
+          -5182.889399748596
+        ]
+      ],
+      "recordedControlReadbackPitchRollYaw": [
+        0.359628856182098,
+        0.013970198109746,
+        0.244356900453568
+      ],
+      "replayedRecordedControlTorqueNm_bodyXYZ": [
+        5648.66765388907,
+        -641.110308540105,
+        -1336.4610185566585
+      ],
+      "replayedMinusNeutralTorqueNm_bodyXYZ": [
+        -25076.673543797842,
+        593.7119299021865,
+        -2478.034113364253
+      ]
+    },
+    {
+      "anchorIndex": 3,
+      "anchorRecordSequence": 10945,
+      "ut": 10519.7118261822,
+      "mach": 5.32228712941101,
+      "dynamicPressurePa": 1715.61682128906,
+      "angleOfAttackDeg": 26.0104675292969,
+      "sideslipDeg": -2.20898389816284,
+      "bankDeg": 9.17477416992188,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.781141029100576,
+        4.14125786877769,
+        2.00880433943516
+      ],
+      "neutralSurfaceTorqueNm_bodyXYZ": [
+        36629.464550863515,
+        -2171.5949420852885,
+        2051.7156950013705
+      ],
+      "controlEffectivenessMatrixNmPerControl_bodyTorqueXYZ_by_pitchRollYaw": [
+        [
+          -60429.78123690276,
+          -2987.488673545231,
+          478.3577734618545
+        ],
+        [
+          -496.4731158642462,
+          -30321.493811094722,
+          3718.808610463081
+        ],
+        [
+          -1955.3928226206153,
+          32486.683652550335,
+          -5192.543466250579
+        ]
+      ],
+      "recordedControlReadbackPitchRollYaw": [
+        0.3343386054039,
+        0.00733287259936333,
+        0.144173711538315
+      ],
+      "replayedRecordedControlTorqueNm_bodyXYZ": [
+        11855.36365312634,
+        -1802.9856352964089,
+        304.003037799308
+      ],
+      "replayedMinusNeutralTorqueNm_bodyXYZ": [
+        -24774.100897737175,
+        368.6093067888796,
+        -1747.7126572020625
+      ]
+    },
+    {
+      "anchorIndex": 4,
+      "anchorRecordSequence": 10980,
+      "ut": 10521.7118261822,
+      "mach": 5.2997571781291,
+      "dynamicPressurePa": 1745.28271484375,
+      "angleOfAttackDeg": 27.8780193328857,
+      "sideslipDeg": -1.43182587623596,
+      "bankDeg": 20.8919372558594,
+      "measuredBodyRateDegPerSecondXYZ": [
+        0.130832901695995,
+        5.29254340713976,
+        2.2211905943539
+      ],
+      "neutralSurfaceTorqueNm_bodyXYZ": [
+        43707.311161908685,
+        -1540.608466160913,
+        1303.4026732991442
+      ],
+      "controlEffectivenessMatrixNmPerControl_bodyTorqueXYZ_by_pitchRollYaw": [
+        [
+          -66012.25115362518,
+          -3171.127434055719,
+          417.4023395238813
+        ],
+        [
+          -467.581113757066,
+          -30873.574737793402,
+          3730.942698816216
+        ],
+        [
+          -2206.7936805869554,
+          43230.11894040221,
+          -5207.711504034402
+        ]
+      ],
+      "recordedControlReadbackPitchRollYaw": [
+        0.251629710197449,
+        -0.00697497837245464,
+        0.0547399409115314
+      ],
+      "replayedRecordedControlTorqueNm_bodyXYZ": [
+        22684.815865404795,
+        -490.26134090048436,
+        -49.47857625848883
+      ],
+      "replayedMinusNeutralTorqueNm_bodyXYZ": [
+        -21022.49529650389,
+        1050.3471252604286,
+        -1352.881249557633
+      ]
+    }
+  ],
+  "checkpointSHA256Before": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointSHA256After": "bb27c762add826731df3ad57332efd77d3d3a5d0928caa2ca361907ae0b1703f",
+  "checkpointUnchanged": true,
+  "postRunState": {
+    "ready": true,
+    "ut": 9931.291826169332,
+    "vessel": "STS",
+    "meanAltitude": 71918.50156118278,
+    "mass": 25816.10546875,
+    "dryMass": 20348.0,
+    "availableThrust": 3060000.25,
+    "actualThrust": 0.0,
+    "partCount": 22,
+    "paused": true,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "pitch": 0.013458251953125,
+    "aoa": 1.6197701692581177,
+    "profile": "/Users/kyooni18/Code/KSPShuttleLander/Configuration/checkpoints/sts-campaign-72km-20261008.physics.json"
+  },
+  "postRunLiveReadback": {
+    "ut": 9931.291826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71917.32722419954,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.329345703125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155385.45653189288,
+      70.17262482295193,
+      653703.4875218964
+    ],
+    "velocity_mps": [
+      -2238.976694053683,
+      0.04767761782868239,
+      471.9192942389901
+    ],
+    "rotation_xyzw": [
+      0.7022770182113638,
+      -0.7022951465904063,
+      -0.08238999199090147,
+      0.08246516944263865
+    ],
+    "angular_velocity_rad_s": [
+      -1.8789001927048757e-05,
+      0.0002513979561626911,
+      -2.316621171842591e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.623641014099121,
+    "sideslip_deg": 0.0006996739539317787,
+    "roll_deg": 0.00323486328125,
+    "actionGroups0Through9": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "actuators": {
+      "speedbrakeActionGroup": 1,
+      "speedbrakeActionGroupEnabled": false,
+      "controlSurfaces": [
+        {
+          "part": "benjee10.shuttle.rudder",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 0.4000000059604645
+        },
+        {
+          "part": "benjee10.shuttle.bodyFlap",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 1.0
+        },
+        {
+          "part": "benjee10.shuttle.elevon2",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 1.0
+        },
+        {
+          "part": "benjee10.shuttle.elevon1",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 1.0
+        },
+        {
+          "part": "benjee10.shuttle.elevon2",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 1.0
+        },
+        {
+          "part": "benjee10.shuttle.elevon1",
+          "deployed": false,
+          "deflection": 0.0,
+          "authorityLimiter": 100.0,
+          "deflectionOverrideEnabled": false,
+          "deflectionOverrideCommandNormalized": 0.0,
+          "pitchEnabled": true,
+          "rollEnabled": true,
+          "yawEnabled": true,
+          "inverted": false,
+          "surfaceAreaM2": 1.0
+        }
+      ],
+      "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true."
+    }
+  },
+  "liveStateRestored": true,
+  "kspProcessPIDsBefore": [
+    69877
+  ],
+  "kspProcessPIDsAfter": [
+    69877
+  ],
+  "singleKSPProcessPreserved": true,
+  "errors": [],
+  "prePulseState": {
+    "ut": 9931.291826169332,
+    "paused": true,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "altitude_m": 71917.32722627907,
+    "mach": 0.0,
+    "true_air_speed_mps": 2092.329345703125,
+    "speed_of_sound_mps": 0.0,
+    "dynamic_pressure_pa": 0.0,
+    "mass_kg": 25816.10546875,
+    "part_count": 22,
+    "position_m": [
+      155385.45652455997,
+      70.17262172663703,
+      653703.4875257772
+    ],
+    "velocity_mps": [
+      -2238.976694030307,
+      0.04767761742424047,
+      471.9192942310549
+    ],
+    "rotation_xyzw": [
+      0.7022775008466074,
+      -0.7022947165352202,
+      -0.08239169200396773,
+      0.08246335210093969
+    ],
+    "angular_velocity_rad_s": [
+      -2.419024787503044e-06,
+      0.0002548537158872932,
+      -1.731457460993393e-05
+    ],
+    "controls": {
+      "pitch": 0.0,
+      "roll": 0.0,
+      "yaw": 0.0,
+      "throttle": 0.0
+    },
+    "sas": false,
+    "rcs": false,
+    "wheel_brakes": false,
+    "thrust_n": 0.0,
+    "angle_of_attack_deg": 1.6236350536346436,
+    "sideslip_deg": 0.0006022140150889754,
+    "roll_deg": 0.0030517578125
+  },
+  "prePulseActuators": {
+    "speedbrakeActionGroup": 1,
+    "speedbrakeActionGroupEnabled": false,
+    "controlSurfaces": [
+      {
+        "part": "benjee10.shuttle.rudder",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 0.4000000059604645
+      },
+      {
+        "part": "benjee10.shuttle.bodyFlap",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 1.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 1.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 1.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon2",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 1.0
+      },
+      {
+        "part": "benjee10.shuttle.elevon1",
+        "deployed": false,
+        "deflection": 0.0,
+        "authorityLimiter": 100.0,
+        "deflectionOverrideEnabled": false,
+        "deflectionOverrideCommandNormalized": 0.0,
+        "pitchEnabled": true,
+        "rollEnabled": true,
+        "yawEnabled": true,
+        "inverted": false,
+        "surfaceAreaM2": 1.0
+      }
+    ],
+    "deflectionReadbackSemantics": "kRPC ControlSurface.deflection is a normalized override command, not an actual surface-angle readback; it is applied only while deflectionOverrideEnabled is true.",
+    "actionGroups0Through9": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "cleanup": {
+    "ready": true,
+    "ut": 9930.27182616931,
+    "vessel": "STS",
+    "situation": "VesselSituation.sub_orbital",
+    "meanAltitude": 71977.14394851262,
+    "mass": 22000.0,
+    "dryMass": 20056.28125,
+    "availableThrust": 3060000.25,
+    "railsWarpFactor": 0,
+    "physicsWarpFactor": 0,
+    "paused": false
+  },
+  "elapsedWallSeconds": 29.95478520798497,
+  "sourceSHA256": "03887a919b5db4621d666a3d12e2b3d65b2b8eec93ace5315266a5d155826f82",
+  "output": "/Users/kyooni18/Code/KSPShuttleLander/Docs/Experiments/STS-Entry-20261009/live-measured-run9-surface-wrench-20261009.json"
+}

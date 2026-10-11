@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="/styles.css?v=20260920-live-replay-view">
+  <link rel="stylesheet" href="/styles.css?v=launch-views-map-plan-1">
 </head>
 <body>
+  <nav class="telemetry-pages" aria-label="Telemetry views">
+    <a id="landing-page-link" href="#landing" aria-current="page">Landing telemetry</a>
+    <a id="launch-page-link" href="#launch">Launching</a>
+  </nav>
   <main class="grid">
     <section class="panel nav-panel">
       <div class="strip">
@@ -39,9 +43,7 @@
           <span><i class="swatch actual"></i>ACTUAL</span>
           <span class="orbit-only"><i class="swatch orbit"></i>ORBIT</span>
           <span class="orbit-only"><i class="swatch burn"></i>DEORBIT BURN</span>
-          <span><i class="swatch predicted"></i>PREDICTED</span>
-          <span class="entry-only"><i class="swatch taem-projected"></i>TAEM PROJ</span>
-          <span class="entry-only"><i class="swatch planned"></i>PLAN</span>
+          <span><i class="swatch planned"></i><b id="map-plan-label">PLAN</b></span>
         </div>
         <div id="coordinates" class="muted">—</div>
       </div>
@@ -128,49 +130,29 @@
       </div>
     </section>
 
-    <section class="panel rl-panel" aria-label="Offline reinforcement learning monitor">
-      <div class="rl-head">
-        <div class="mode-line"><span>RL / OFFLINE MONITOR</span><span id="rl-boundary" class="chip">NOT LIVE CONTROL</span></div>
-        <div id="rl-status" class="muted one-line">No offline training run detected</div>
+    <section id="launch-panel" class="panel launch-panel" aria-label="Launching telemetry" hidden>
+      <div class="guidance-head">
+        <div class="mode-line"><span>LAUNCHING / LIVE STATUS</span><span id="launch-situation" class="chip">—</span></div>
+        <div id="launch-status" class="muted">Waiting for telemetry</div>
       </div>
-      <div class="rl-grid">
-        <div class="rl-block">
-          <div class="rl-block-head">RUN</div>
-          <div class="rl-values rl-run-values">
-            <div><small>RUN</small><b id="rl-run">—</b></div>
-            <div><small>STATE</small><b id="rl-state">—</b></div>
-            <div><small>POLICY</small><b id="rl-policy">—</b></div>
-            <div><small>LAST SEED</small><b id="rl-seed">—</b></div>
-          </div>
-        </div>
-        <div class="rl-block">
-          <div class="rl-block-head">LATEST CASE / QUEUE</div>
-          <div class="rl-values rl-condition-values">
-            <div><small>CASE</small><b id="rl-ap">—</b></div>
-            <div><small>ALT / AP</small><b id="rl-pe">—</b></div>
-            <div><small>SPEED / INC</small><b id="rl-inc">—</b></div>
-            <div><small>FPA / POST PE</small><b id="rl-post-pe">—</b></div>
-            <div><small>ALONG / ENTRY FPA</small><b id="rl-fpa">—</b></div>
-            <div><small>CROSS / ENTRY SPEED</small><b id="rl-entry-speed">—</b></div>
-            <div><small>QUEUE LEFT</small><b id="rl-upstream">—</b></div>
-            <div><small>RUNS DONE</small><b id="rl-crossrange">—</b></div>
-          </div>
-        </div>
-        <div class="rl-block">
-          <div class="rl-block-head">LEARNER / VALIDATION</div>
-          <div class="rl-values rl-learning-values">
-            <div><small>EPISODES</small><b id="rl-episodes">—</b></div>
-            <div><small>ELIGIBLE</small><b id="rl-eligible">—</b></div>
-            <div><small>ACTIVE</small><b id="rl-active">—</b></div>
-            <div><small>FALLBACKS</small><b id="rl-fallback">—</b></div>
-            <div><small>HANDOFFS / TD</small><b id="rl-touchdowns">—</b></div>
-            <div><small>SUCCESS</small><b id="rl-success">—</b></div>
-            <div><small>VALID ROLLOUTS</small><b id="rl-valid">—</b></div>
-            <div><small>MEAN RETURN</small><b id="rl-return">—</b></div>
-          </div>
-        </div>
+      <div class="metric-grid">
+        <div><small>ALT MSL</small><b id="launch-altitude">—</b></div>
+        <div><small>RADAR</small><b id="launch-radar">—</b></div>
+        <div><small>SURFACE V</small><b id="launch-speed">—</b></div>
+        <div><small>VERT</small><b id="launch-vertical">—</b></div>
+        <div><small>MACH</small><b id="launch-mach">—</b></div>
+        <div><small>Q</small><b id="launch-pressure">—</b></div>
+        <div><small>G</small><b id="launch-g">—</b></div>
+        <div><small>ORBIT V</small><b id="launch-orbit-speed">—</b></div>
+        <div><small>APOAPSIS</small><b id="launch-ap">—</b></div>
+        <div><small>PERIAPSIS</small><b id="launch-pe">—</b></div>
+        <div><small>MASS</small><b id="launch-mass">—</b></div>
+        <div><small>AVAILABLE THRUST</small><b id="launch-thrust">—</b></div>
       </div>
-      <div id="rl-note" class="rl-note">Reads the simulator training artifact only; it cannot command this vessel.</div>
+      <div class="launch-chart-head"><span>ALTITUDE HISTORY</span><span class="muted">Actual trajectory · km / elapsed seconds</span></div>
+      <canvas id="launch-altitude-chart" aria-label="Altitude versus elapsed time" role="img"></canvas>
+      <div id="launch-warning" class="launch-note"></div>
+      <div class="launch-note">Display only — launch controls remain in KSP.</div>
     </section>
   </main>
 
@@ -222,6 +204,6 @@
   </aside>
 
   <script src="/runway-geometry.js?v=20260924-ksc-runway-1"></script>
-  <script src="/app.js?v=20260924-ksc-runway-1"></script>
+  <script src="/app.js?v=launch-views-authoritative-route-5"></script>
 </body>
 </html>

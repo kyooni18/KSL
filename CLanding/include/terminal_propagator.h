@@ -17,9 +17,8 @@ typedef enum {
     TERMINAL_STEP_INVALID_RESULT
 } TerminalStepStatus;
 
-/* Advances exactly one ShuttleSim native airborne tick. Forces are evaluated
- * from the pre-step state, then velocity/position and attitude advance in the
- * same order as ShuttleSim. */
+/* Holds one command for no more than the 0.5 s solver tick, advancing the
+ * native 50 Hz airborne kernel in substeps no larger than 0.02 s. */
 TerminalStepStatus terminal_propagator_step(const TerminalModel *model,
         TerminalDynamicState *state, const TerminalControl *control);
 
