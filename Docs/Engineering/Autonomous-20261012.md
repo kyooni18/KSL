@@ -460,3 +460,13 @@ focused replay tests pass, including the clock regression.
   derivative from the original 41-part quicksave, refusing unexpected craft
   topology and writing a new file only. Its output byte-matches the derivative
   already loaded successfully in KSP; the original quicksave remains intact.
+- The low-q trial separated boosters around UT 2807 with q below 1 kPa. It
+  retained two wings at the one-second check but had only one wing/25 parts
+  by UT 2821, during the post-separation upright roll. The existing one-shot
+  integrity check therefore missed a delayed structural loss. The controller
+  was stopped, KSP paused at UT 2822, throttle verified zero, and the damaged
+  scene saved as `ksl-autonomous-20261012-lowq-srb-failure-safe`; the intact
+  pre-SRB scene is `ksl-autonomous-20261012-pre-srb-lowq` (37 parts). The
+  integrity check now runs on every ascent tick after SRB separation. Low q
+  alone does not preserve the wing; the roll or sustained post-separation
+  engine loading remains to be isolated.

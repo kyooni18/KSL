@@ -185,7 +185,6 @@ def run(args):
         initial_roll_set = False
         liftoff_ut = None
         baseline_part_count = None
-        booster_integrity_checked = False
         meco_ut = None
         peg_dv = None
         peg_hold = None
@@ -966,13 +965,14 @@ def run(args):
                                 f'Part loss detected before booster separation: '
                                 f'{baseline_part_count} -> {part_count} parts')
                     if (shuttle.vehicle_kind == 'orbiter-shuttle' and
-                            shuttle.separated and not booster_integrity_checked and
+                            shuttle.separated and
                             conn.space_center.ut - shuttle.booster_separation_ut >= 1.0):
+                        # A wing can detach several seconds after the impulse,
+                        # once the damaged joint sees sustained engine/aero load.
                         check_orbiter_integrity({
                             "ready": True,
                             "partNames": [part.name for part in v.parts.all],
                         })
-                        booster_integrity_checked = True
                     if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
                         raise RuntimeError(f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
                     orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])
