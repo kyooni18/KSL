@@ -106,3 +106,12 @@ This log is updated at implementation/validation checkpoints.
   and phase range before any save load. Ten targeted CLI/guard/connection cases
   plus seven subtests pass. The earlier direct `space_center.load` call could
   report a disconnect mid-load and proceed without confirming the target scene.
+
+## Golden replay provenance lead
+
+- The archived forecast study pins source commit `dc12311` and exact backend /
+  simulator SHA-256 `83b74e87…` / `985b0d56…`. Those **exact binaries still
+  exist** in `/Users/kyooni18/Code/KSL-integration/`. The model, attitude,
+  scenario and configuration file digests are identical to the current fresh
+  replay. This enables a binary A/B after the live flight; the discrepancy is
+  now narrowed to executable builds rather than inputs or mission Python.
