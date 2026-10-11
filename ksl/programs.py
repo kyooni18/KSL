@@ -15,6 +15,7 @@ apply the safe-stop path when the operator aborts.
 from __future__ import annotations
 
 import json
+import math
 import os
 import queue
 import re
@@ -202,6 +203,9 @@ class AscentProgram(Program):
         def on_event(event: dict[str, Any]) -> None:
             name = str(event.pop("event", ""))
             if name == "telemetry":
+                vs, hs = event.get("verticalSpeed"), event.get("horizontalSpeed")
+                if isinstance(vs, (int, float)) and isinstance(hs, (int, float)):
+                    event["speed"] = math.hypot(vs, hs)
                 ctx.log.telemetry(event, "ascent")
                 return
             seen.add(name)
