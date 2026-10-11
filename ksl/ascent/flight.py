@@ -4,7 +4,7 @@ import csv
 import math
 import signal
 import time
-from ..kspguard import check_orbiter_integrity
+from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
@@ -58,6 +58,28 @@ def release_controls(control, autopilot):
             set_autopilot_engaged(autopilot, False)
         finally:
             control.sas = True
+
+
+def pause_structural_failure(conn, control, autopilot):
+    """Freeze a damaged ascent after handing controls back to KSP."""
+    try:
+        release_controls(control, autopilot)
+    except Exception as exc:
+        print(f'WARNING: control release during structural failure: {exc}')
+    # A write made while paused may not take effect until a physics frame.
+    # Leave the game running briefly so the throttle-zero handoff can settle.
+    for _ in range(10):
+        try:
+            if control.throttle <= 0.01:
+                break
+        except Exception:
+            break
+        time.sleep(0.1)
+    try:
+        conn.krpc.paused = True
+        print('Structural failure: KSP paused for inspection')
+    except Exception as exc:
+        print(f'WARNING: could not pause KSP after structural failure: {exc}')
 
 
 def _terminate_as_exception(signum, _frame):
@@ -963,6 +985,7 @@ def run(args):
                         elif (not shuttle.separated and
                               part_count < baseline_part_count):
                             control.roll = 0
+                            pause_structural_failure(conn, control, ap)
                             raise RuntimeError(
                                 f'Part loss detected before booster separation: '
                                 f'{baseline_part_count} -> {part_count} parts')
@@ -971,10 +994,14 @@ def run(args):
                             conn.space_center.ut - shuttle.booster_separation_ut >= 1.0):
                         # A wing can detach several seconds after the impulse,
                         # once the damaged joint sees sustained engine/aero load.
-                        check_orbiter_integrity({
-                            "ready": True,
-                            "partNames": [part.name for part in v.parts.all],
-                        })
+                        try:
+                            check_orbiter_integrity({
+                                "ready": True,
+                                "partNames": [part.name for part in v.parts.all],
+                            })
+                        except GuardError:
+                            pause_structural_failure(conn, control, ap)
+                            raise
                     if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
                         raise RuntimeError(f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
                     orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])

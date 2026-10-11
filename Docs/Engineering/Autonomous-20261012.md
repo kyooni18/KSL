@@ -487,3 +487,8 @@ focused replay tests pass, including the clock regression.
   post-separation thrust/joint loading are still candidates. Full offline
   suite with the guard and roll cap passed: 127 Python tests, 51 subtests,
   native checks.
+- A structural abort now releases throttle, roll and autopilot, waits for the
+  throttle write to take effect, then pauses KSP automatically. This applies
+  to both liftoff part loss and a later post-SRB orbiter-inventory failure,
+  preserving the damaged scene for inspection during unattended flights.
+  A focused fake-kRPC test verifies the safe handoff and pause.

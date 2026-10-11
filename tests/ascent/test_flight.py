@@ -14,7 +14,8 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             limit_aero_roll, restore_aero_roll,
                             mission_roll_allowed, maneuver_roll_rate, manual_roll_command,
                             roll_attitude_settled, roll_delta, roll_for_roof, slew_roll,
-                            ensure_autopilot_engaged, release_controls, roll_for_heading,
+                            ensure_autopilot_engaged, pause_structural_failure,
+                            release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel)
 from ksl.ascent.vehicle import delay_booster_separation
 
@@ -132,6 +133,17 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(maneuver_roll_rate(180, 10, 15), 15)
         self.assertEqual(maneuver_roll_rate(180, 10, 5), 5)
         self.assertEqual(maneuver_roll_rate(20, 10, 15), 3)
+
+    def test_structural_abort_releases_controls_and_pauses_ksp(self):
+        conn = SimpleNamespace(krpc=SimpleNamespace(paused=False))
+        control = SimpleNamespace(throttle=1.0, roll=0.5, sas=False)
+        autopilot = MagicMock()
+        pause_structural_failure(conn, control, autopilot)
+        self.assertEqual(control.throttle, 0)
+        self.assertEqual(control.roll, 0)
+        self.assertTrue(control.sas)
+        self.assertTrue(conn.krpc.paused)
+        autopilot.disengage.assert_called_once()
 
     def test_mission_roll_starts_after_climbing_above_the_pad(self):
         self.assertFalse(mission_roll_allowed(False, 100, 30))
