@@ -370,3 +370,13 @@ point-mass integration, not future controller/actuator replay; post-latch NaN
 is intentional. Freeze a common late state/plan and compare native response,
 drag work and sink history before tuning. No shared scalar correction or
 production change is supported; plant and live qualification remain open.
+
+[Frozen response diagnostic](Experiments/STS-Landing-20261011/Frozen-Flare-Response/README.md)
+reproduces the same late-state forecast exactly, then isolates achieved lift
+and ideal AoA-servo response. Servo alone leaves L5 ~9.8 m/s high at dt 0.05;
+its counterfactual stored trigger still leaves ~9 m/s error. Timing-only and
+servo-only substitutions are rejected. Actual L5 flies 36.42 s / 12.08 kJ/kg
+recorded drag work versus frozen 32 s / 11.48 kJ/kg; future plan/controller
+changes remain absent. Both main replay summaries are unchanged. Compare a
+complete native Final control replay, not another scalar correction; no
+production gates or unqualified plant have been adopted.
