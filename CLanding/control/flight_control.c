@@ -1131,3 +1131,12 @@ bool flight_control_step(FlightControlState *state,
     return flight_control_step_attitude(state, telemetry, command, NULL,
         sample_dt, output);
 }
+
+bool flight_control_rollout_parachutes_ready(const Telemetry *t,const GuidanceCommand *c) {
+    if(!t||!c||c->control_profile!=PROFILE_ROLLOUT||!c->gear||!t->gear) return false;
+    bool grounded=(t->has_main_gear_grounded&&t->main_gear_grounded)||
+        (t->has_nose_gear_grounded&&t->nose_gear_grounded)||
+        strcmp(t->vessel_situation,"landed")==0;
+    return grounded&&isfinite(t->surface_speed)&&t->surface_speed>=5.0&&
+        t->surface_speed<=100.0;
+}

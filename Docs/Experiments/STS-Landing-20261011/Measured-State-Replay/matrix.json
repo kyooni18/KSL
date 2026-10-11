@@ -1,0 +1,186 @@
+[
+  {
+    "scenario": "l5-measured-mm305",
+    "exitCode": 1,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/bin/ksl",
+      "simulate",
+      "l5-measured-mm305",
+      "--label",
+      "matrix-l5-measured-mm305",
+      "--no-color"
+    ],
+    "runDirectory": "/Users/kyooni18/Code/KSL-integration/runs/20261011T092457Z-matrix-l5-measured-mm305",
+    "status": {
+      "run_id": "20261011T092457Z-matrix-l5-measured-mm305",
+      "profile": "sts-kerbin",
+      "mode": "sim",
+      "state": "failed",
+      "phase": "complete",
+      "start_phase": "mm305",
+      "stop_phase": "complete",
+      "program": "simulation",
+      "connection": "simulator",
+      "status_message": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "warning": null,
+      "error": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "telemetry": {
+        "altitude": 74.0,
+        "speed": 55.9,
+        "rangeToSite": 840.0,
+        "runwayAlongTrack": 840.0,
+        "runwayCrossTrack": 4.0,
+        "angleOfAttack": 0.3,
+        "roll": -0.0,
+        "backendPhase": "Rollout"
+      },
+      "phase_history": [
+        "mm305",
+        "final-approach",
+        "rollout",
+        "complete"
+      ],
+      "started_at": 1791710697.265362,
+      "updated_at": 1791710702.408461,
+      "finished_at": 1791710702.4080791
+    }
+  },
+  {
+    "scenario": "l6-measured-mm305",
+    "exitCode": 1,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/bin/ksl",
+      "simulate",
+      "l6-measured-mm305",
+      "--label",
+      "matrix-l6-measured-mm305",
+      "--no-color"
+    ],
+    "runDirectory": "/Users/kyooni18/Code/KSL-integration/runs/20261011T092502Z-matrix-l6-measured-mm305",
+    "status": {
+      "run_id": "20261011T092502Z-matrix-l6-measured-mm305",
+      "profile": "sts-kerbin",
+      "mode": "sim",
+      "state": "failed",
+      "phase": "complete",
+      "start_phase": "mm305",
+      "stop_phase": "complete",
+      "program": "simulation",
+      "connection": "simulator",
+      "status_message": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "warning": null,
+      "error": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "telemetry": {
+        "altitude": 73.0,
+        "speed": 57.0,
+        "rangeToSite": 336.0,
+        "runwayAlongTrack": 336.0,
+        "runwayCrossTrack": 6.0,
+        "angleOfAttack": -0.1,
+        "roll": -0.0,
+        "backendPhase": "Rollout"
+      },
+      "phase_history": [
+        "mm305",
+        "final-approach",
+        "rollout",
+        "complete"
+      ],
+      "started_at": 1791710702.4999092,
+      "updated_at": 1791710707.317256,
+      "finished_at": 1791710707.3167381
+    }
+  },
+  {
+    "scenario": "l7-measured-mm305",
+    "exitCode": 1,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/bin/ksl",
+      "simulate",
+      "l7-measured-mm305",
+      "--label",
+      "matrix-l7-measured-mm305",
+      "--no-color"
+    ],
+    "runDirectory": "/Users/kyooni18/Code/KSL-integration/runs/20261011T092507Z-matrix-l7-measured-mm305",
+    "status": {
+      "run_id": "20261011T092507Z-matrix-l7-measured-mm305",
+      "profile": "sts-kerbin",
+      "mode": "sim",
+      "state": "failed",
+      "phase": "rollout",
+      "start_phase": "mm305",
+      "stop_phase": "complete",
+      "program": "simulation",
+      "connection": "simulator",
+      "status_message": "simulation did not pass acceptance (Touchdown occurred outside the runway 09 contact envelope.)",
+      "warning": null,
+      "error": "simulation did not pass acceptance (Touchdown occurred outside the runway 09 contact envelope.)",
+      "telemetry": {
+        "altitude": 76.0,
+        "speed": 63.7,
+        "rangeToSite": 2019.0,
+        "runwayAlongTrack": 2019.0,
+        "runwayCrossTrack": 1.0,
+        "angleOfAttack": 0.2,
+        "roll": -0.0,
+        "backendPhase": "Rollout"
+      },
+      "phase_history": [
+        "mm305",
+        "final-approach",
+        "touchdown",
+        "rollout"
+      ],
+      "started_at": 1791710707.410869,
+      "updated_at": 1791710715.540448,
+      "finished_at": 1791710715.5400379
+    }
+  },
+  {
+    "scenario": "high-measured-mm305",
+    "exitCode": 1,
+    "args": [
+      "/Users/kyooni18/Code/KSL-integration/bin/ksl",
+      "simulate",
+      "high-measured-mm305",
+      "--label",
+      "matrix-high-measured-mm305",
+      "--no-color"
+    ],
+    "runDirectory": "/Users/kyooni18/Code/KSL-integration/runs/20261011T092515Z-matrix-high-measured-mm305",
+    "status": {
+      "run_id": "20261011T092515Z-matrix-high-measured-mm305",
+      "profile": "sts-kerbin",
+      "mode": "sim",
+      "state": "failed",
+      "phase": "complete",
+      "start_phase": "mm305",
+      "stop_phase": "complete",
+      "program": "simulation",
+      "connection": "simulator",
+      "status_message": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "warning": null,
+      "error": "simulation did not pass acceptance (failed gates: touchdownSpeedOk)",
+      "telemetry": {
+        "altitude": 74.0,
+        "speed": 53.2,
+        "rangeToSite": 899.0,
+        "runwayAlongTrack": 899.0,
+        "runwayCrossTrack": 2.0,
+        "angleOfAttack": -0.0,
+        "roll": -0.0,
+        "backendPhase": "Rollout"
+      },
+      "phase_history": [
+        "mm305",
+        "final-approach",
+        "rollout",
+        "complete"
+      ],
+      "started_at": 1791710715.636958,
+      "updated_at": 1791710720.3632052,
+      "finished_at": 1791710720.3629398
+    }
+  }
+]

@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -12,6 +13,11 @@
 #include "shuttlesim/protocol.h"
 #include "shuttlesim/math3.h"
 #include "shuttlesim/replay.h"
+
+/* Backend Abort releases lockstep control. Termination must still preserve
+ * the measured touchdown/rollout summary instead of losing flight evidence. */
+static volatile sig_atomic_t stop_requested=0;
+static void request_stop(int signal_number){(void)signal_number;stop_requested=1;}
 
 static double monotonic_s(void){struct timespec ts;clock_gettime(CLOCK_MONOTONIC,&ts);return ts.tv_sec+ts.tv_nsec*1e-9;}
 static void sleep_s(double sec){if(sec<=0)return;struct timespec ts;ts.tv_sec=(time_t)sec;ts.tv_nsec=(long)((sec-ts.tv_sec)*1e9);nanosleep(&ts,NULL);}
@@ -52,6 +58,8 @@ static int parse_port(const char *text){
     return !errno&&end!=text&&*end=='\0'&&value>=0&&value<=UINT16_MAX?(int)value:-1;
 }
 int main(int argc,char **argv){
+    signal(SIGTERM,request_stop);
+    signal(SIGINT,request_stop);
     double plant_lift_scale=1.0,plant_drag_scale=1.0;
     const char *scenario_path=NULL,*atm_path=NULL,*aero_path=NULL,*aero_book_path=NULL,*attitude_path=NULL,*record_path=NULL,*thost="127.0.0.1",*replay_path=NULL,*replay_mode="command";
     double dt=0.02,rate=0.0,telemetry_hz=10.0,max_time=2400.0,fixed_aoa=0,fixed_bank=0;
@@ -103,6 +111,12 @@ int main(int argc,char **argv){
     if(aero_book_path&&!aero_load_book_csv(&sim.aero,aero_book_path)){fprintf(stderr,"Failed to load aero data book: %s\n",aero_book_path);return 3;}
     if(attitude_path&&!attitude_load_ini(&sim.state.attitude,attitude_path)){fprintf(stderr,"Failed to load attitude model: %s\n",attitude_path);return 3;}
     if(has_fixed_aoa||has_fixed_bank){double a=has_fixed_aoa?fixed_aoa:rad2deg(sim.state.attitude.cmd_aoa_rad);double b=has_fixed_bank?fixed_bank:rad2deg(sim.state.attitude.cmd_bank_rad);sim_set_attitude(&sim,a,b);}
+    if(sim.state.attitude.direct_body_coordinates&&!scenario.has_body_attitude){
+        Vec3 air_velocity=v3_sub(sim.state.velocity_i_mps,
+            world_atmosphere_velocity_i(&sim.world,sim.state.position_i_m));
+        sim.state.body_q_i=attitude_body_quat_wind(sim.state.position_i_m,air_velocity,
+            sim.state.attitude.aoa_rad,sim.state.attitude.bank_rad);
+    }
     /* The first lockstep packet is a real state, not an uninitialized force
        sample. Refresh after loading the selected atmosphere and aero models,
        without advancing position, velocity, attitude or simulator time. */
@@ -131,7 +145,7 @@ int main(int argc,char **argv){
         if(record){fprintf(record,"%s\n",json);fflush(record);}
         protocol_send_telemetry(&proto,json,strlen(json));next_pub+=pub_period;
         bool advance=false;double resend_at=monotonic_s()+0.02;
-        while(!advance){
+        while(!advance&&!stop_requested){
             SimCommand lc;
             while(protocol_poll_command(&proto,&lc)){
                 sim_apply_command(&sim,&lc);
@@ -145,7 +159,7 @@ int main(int argc,char **argv){
             if(!advance)sleep_s(0.0002);
         }
     }
-    while(sim.state.sim_elapsed_s<max_time){
+    while(sim.state.sim_elapsed_s<max_time&&!stop_requested){
         SimCommand cmd;while(protocol_poll_command(&proto,&cmd))sim_apply_command(&sim,&cmd);
         if(sim.paused){sleep_s(0.005);continue;}
         if(replay_path){
@@ -173,7 +187,7 @@ int main(int argc,char **argv){
             protocol_send_telemetry(&proto,json,strlen(json));next_pub+=pub_period;
             if(lockstep){
                 bool advance=false;double resend_at=monotonic_s()+0.02;
-                while(!advance){
+                while(!advance&&!stop_requested){
                     SimCommand lc;
                     while(protocol_poll_command(&proto,&lc)){
                         sim_apply_command(&sim,&lc);

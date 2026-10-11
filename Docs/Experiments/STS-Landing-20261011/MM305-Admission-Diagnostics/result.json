@@ -1,0 +1,2559 @@
+{
+  "sourceLogs": {
+    "full-sts.log": "f3606bc1a7d371334d5983f83dc2db41cc42017f10f43a9874868fc6d028c185",
+    "focused-sts.log": "f4fdc6569c7977f30cb7d9ff1255267ff8c469e4ae24150a5e3d5e368828d503"
+  },
+  "fullBatchCommand": [
+    "CLanding/build/mm305_feasibility_tests",
+    "--configuration",
+    "Configuration/sts-live.json",
+    "--mass-kg",
+    "25123.15"
+  ],
+  "fullBatchSourceCommit": "2cc042c",
+  "binaryHashScope": "focused diagnostic build; not the original full-batch binary",
+  "fullBatchEnvironment": {
+    "KSP_LANDER_MODEL_PROFILE": "sts-live-20261010"
+  },
+  "fullBatchResult": "5 physically admitted; 0 qualified; 0 gate/adoption violations; failed non-vacuity, exit 1",
+  "focusedCommand": [
+    "make",
+    "-C",
+    "CLanding",
+    "mm305-feasibility-test",
+    "MM305_FEASIBILITY_ARGS=--configuration Configuration/sts-live.json --mass-kg 25123.15 --sample-index 0"
+  ],
+  "focusedEnvironment": {
+    "KSP_LANDER_MODEL_PROFILE": "sts-live-20261010",
+    "KSP_LANDER_TAEM_PROFILE_DIAGNOSTICS": "1"
+  },
+  "focusedScope": "sample 0 only; not full qualification; expected failure remains",
+  "smoothTrialCount": 2184,
+  "completed": 1287,
+  "jointlyFeasible": 0.0,
+  "closestAltitudeCompletedTrials": [
+    {
+      "route": 48536.527,
+      "bow": -4603.959,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 95.251,
+      "steep": 36.587,
+      "track": 8036.088,
+      "endpoint": 2.016,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -4603.959,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 95.251,
+      "steep": 36.587,
+      "track": 8036.088,
+      "endpoint": 2.016,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -3452.969,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 103.976,
+      "steep": 34.224,
+      "track": 6904.23,
+      "endpoint": 2.385,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -3452.969,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 103.976,
+      "steep": 34.224,
+      "track": 6904.23,
+      "endpoint": 2.385,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -4603.959,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 97.677,
+      "steep": 36.587,
+      "track": 8036.466,
+      "endpoint": 5.519,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -4603.959,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 97.677,
+      "steep": 36.587,
+      "track": 8036.466,
+      "endpoint": 5.519,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -2301.98,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 112.026,
+      "steep": 32.04,
+      "track": 5777.237,
+      "endpoint": 13.706,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -2301.98,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 112.026,
+      "steep": 32.04,
+      "track": 5777.237,
+      "endpoint": 13.706,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -5754.949,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 111.999,
+      "steep": 38.946,
+      "track": 9171.539,
+      "endpoint": 13.957,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    },
+    {
+      "route": 48536.527,
+      "bow": -5754.949,
+      "completed": 1.0,
+      "feasible": 0.0,
+      "speed": 111.999,
+      "steep": 38.946,
+      "track": 9171.539,
+      "endpoint": 13.957,
+      "slopeLimit": 24.0,
+      "trackLimit": 300.0,
+      "endpointLimit": 150.0,
+      "reason": "completed"
+    }
+  ],
+  "constantProfileTimeouts": [
+    {
+      "length": 63632.756,
+      "station": 44624.3,
+      "elapsed": 420.0,
+      "altitude": 1357.356,
+      "speed": 62.957,
+      "fpa": -14.472,
+      "aoa": 8.0
+    },
+    {
+      "length": 63632.756,
+      "station": 40609.317,
+      "elapsed": 420.0,
+      "altitude": 2067.779,
+      "speed": 58.541,
+      "fpa": -15.244,
+      "aoa": 10.0
+    },
+    {
+      "length": 63632.756,
+      "station": 30702.561,
+      "elapsed": 420.0,
+      "altitude": 1774.428,
+      "speed": 51.864,
+      "fpa": -16.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 59524.943,
+      "station": 43512.731,
+      "elapsed": 420.0,
+      "altitude": 1645.092,
+      "speed": 58.626,
+      "fpa": -14.96,
+      "aoa": 8.0
+    },
+    {
+      "length": 59524.943,
+      "station": 40717.319,
+      "elapsed": 420.0,
+      "altitude": 2019.22,
+      "speed": 58.62,
+      "fpa": -15.227,
+      "aoa": 10.0
+    },
+    {
+      "length": 59524.943,
+      "station": 31665.199,
+      "elapsed": 420.0,
+      "altitude": 1758.107,
+      "speed": 51.829,
+      "fpa": -16.509,
+      "aoa": 12.0
+    },
+    {
+      "length": 72623.888,
+      "station": 51852.85,
+      "elapsed": 420.0,
+      "altitude": 1422.531,
+      "speed": 61.522,
+      "fpa": -14.605,
+      "aoa": 8.0
+    },
+    {
+      "length": 72623.888,
+      "station": 49651.472,
+      "elapsed": 420.0,
+      "altitude": 2299.107,
+      "speed": 59.052,
+      "fpa": -15.245,
+      "aoa": 10.0
+    },
+    {
+      "length": 72623.888,
+      "station": 46876.581,
+      "elapsed": 420.0,
+      "altitude": 2737.118,
+      "speed": 54.518,
+      "fpa": -16.598,
+      "aoa": 12.0
+    },
+    {
+      "length": 72623.888,
+      "station": 43250.411,
+      "elapsed": 420.0,
+      "altitude": 2897.102,
+      "speed": 49.193,
+      "fpa": -18.77,
+      "aoa": 14.0
+    },
+    {
+      "length": 63440.422,
+      "station": 46498.064,
+      "elapsed": 420.0,
+      "altitude": 1247.957,
+      "speed": 63.041,
+      "fpa": -14.441,
+      "aoa": 8.0
+    },
+    {
+      "length": 63440.422,
+      "station": 40754.227,
+      "elapsed": 420.0,
+      "altitude": 2325.793,
+      "speed": 56.824,
+      "fpa": -15.806,
+      "aoa": 10.0
+    },
+    {
+      "length": 63440.422,
+      "station": 34749.484,
+      "elapsed": 420.0,
+      "altitude": 1911.472,
+      "speed": 49.552,
+      "fpa": -17.446,
+      "aoa": 12.0
+    },
+    {
+      "length": 63440.422,
+      "station": 27673.517,
+      "elapsed": 420.0,
+      "altitude": 862.973,
+      "speed": 43.546,
+      "fpa": -18.684,
+      "aoa": 14.0
+    },
+    {
+      "length": 57287.737,
+      "station": 45554.525,
+      "elapsed": 420.0,
+      "altitude": 1539.882,
+      "speed": 59.926,
+      "fpa": -14.724,
+      "aoa": 8.0
+    },
+    {
+      "length": 57287.737,
+      "station": 42780.04,
+      "elapsed": 420.0,
+      "altitude": 2171.826,
+      "speed": 58.695,
+      "fpa": -15.205,
+      "aoa": 10.0
+    },
+    {
+      "length": 57287.737,
+      "station": 37956.033,
+      "elapsed": 420.0,
+      "altitude": 2557.802,
+      "speed": 52.253,
+      "fpa": -17.221,
+      "aoa": 12.0
+    },
+    {
+      "length": 64685.634,
+      "station": 53394.941,
+      "elapsed": 420.0,
+      "altitude": 1341.144,
+      "speed": 63.364,
+      "fpa": -14.423,
+      "aoa": 8.0
+    },
+    {
+      "length": 64685.634,
+      "station": 50865.27,
+      "elapsed": 420.0,
+      "altitude": 2304.03,
+      "speed": 59.181,
+      "fpa": -15.204,
+      "aoa": 10.0
+    },
+    {
+      "length": 64685.634,
+      "station": 46553.783,
+      "elapsed": 420.0,
+      "altitude": 2899.061,
+      "speed": 52.014,
+      "fpa": -17.524,
+      "aoa": 12.0
+    },
+    {
+      "length": 64685.634,
+      "station": 44848.5,
+      "elapsed": 420.0,
+      "altitude": 2997.277,
+      "speed": 49.413,
+      "fpa": -18.705,
+      "aoa": 14.0
+    },
+    {
+      "length": 57856.401,
+      "station": 46996.6,
+      "elapsed": 420.0,
+      "altitude": 653.701,
+      "speed": 64.529,
+      "fpa": -14.43,
+      "aoa": 6.0
+    },
+    {
+      "length": 57856.401,
+      "station": 44192.611,
+      "elapsed": 420.0,
+      "altitude": 1806.127,
+      "speed": 59.201,
+      "fpa": -14.951,
+      "aoa": 8.0
+    },
+    {
+      "length": 57856.401,
+      "station": 42718.663,
+      "elapsed": 420.0,
+      "altitude": 2125.005,
+      "speed": 58.557,
+      "fpa": -15.215,
+      "aoa": 10.0
+    },
+    {
+      "length": 57856.401,
+      "station": 34492.324,
+      "elapsed": 420.0,
+      "altitude": 1911.669,
+      "speed": 49.133,
+      "fpa": -17.603,
+      "aoa": 12.0
+    },
+    {
+      "length": 57856.401,
+      "station": 27460.563,
+      "elapsed": 420.0,
+      "altitude": 840.65,
+      "speed": 43.499,
+      "fpa": -18.69,
+      "aoa": 14.0
+    },
+    {
+      "length": 70936.056,
+      "station": 59907.814,
+      "elapsed": 420.0,
+      "altitude": 1575.807,
+      "speed": 64.242,
+      "fpa": -14.393,
+      "aoa": 8.0
+    },
+    {
+      "length": 70936.056,
+      "station": 57303.642,
+      "elapsed": 420.0,
+      "altitude": 2545.089,
+      "speed": 60.045,
+      "fpa": -15.196,
+      "aoa": 10.0
+    },
+    {
+      "length": 70936.056,
+      "station": 53198.653,
+      "elapsed": 420.0,
+      "altitude": 3275.558,
+      "speed": 53.347,
+      "fpa": -17.486,
+      "aoa": 12.0
+    },
+    {
+      "length": 70936.056,
+      "station": 51705.955,
+      "elapsed": 420.0,
+      "altitude": 3446.892,
+      "speed": 50.766,
+      "fpa": -18.709,
+      "aoa": 14.0
+    },
+    {
+      "length": 63340.467,
+      "station": 58407.976,
+      "elapsed": 420.0,
+      "altitude": 797.079,
+      "speed": 63.748,
+      "fpa": -14.353,
+      "aoa": 6.0
+    },
+    {
+      "length": 63340.467,
+      "station": 57982.993,
+      "elapsed": 420.0,
+      "altitude": 1641.196,
+      "speed": 62.472,
+      "fpa": -14.556,
+      "aoa": 8.0
+    },
+    {
+      "length": 63340.467,
+      "station": 55714.07,
+      "elapsed": 420.0,
+      "altitude": 2559.361,
+      "speed": 59.57,
+      "fpa": -15.274,
+      "aoa": 10.0
+    },
+    {
+      "length": 63340.467,
+      "station": 53157.291,
+      "elapsed": 420.0,
+      "altitude": 3051.016,
+      "speed": 55.432,
+      "fpa": -16.575,
+      "aoa": 12.0
+    },
+    {
+      "length": 63340.467,
+      "station": 50070.472,
+      "elapsed": 420.0,
+      "altitude": 3333.782,
+      "speed": 50.402,
+      "fpa": -18.688,
+      "aoa": 14.0
+    },
+    {
+      "length": 64185.369,
+      "station": 59704.182,
+      "elapsed": 420.0,
+      "altitude": 415.12,
+      "speed": 62.422,
+      "fpa": -14.387,
+      "aoa": 6.0
+    },
+    {
+      "length": 64185.369,
+      "station": 59222.482,
+      "elapsed": 420.0,
+      "altitude": 1588.938,
+      "speed": 64.296,
+      "fpa": -14.376,
+      "aoa": 8.0
+    },
+    {
+      "length": 64185.369,
+      "station": 56382.066,
+      "elapsed": 420.0,
+      "altitude": 2521.255,
+      "speed": 59.335,
+      "fpa": -15.294,
+      "aoa": 10.0
+    },
+    {
+      "length": 64185.369,
+      "station": 53862.229,
+      "elapsed": 420.0,
+      "altitude": 2997.529,
+      "speed": 55.266,
+      "fpa": -16.573,
+      "aoa": 12.0
+    },
+    {
+      "length": 64185.369,
+      "station": 50792.229,
+      "elapsed": 420.0,
+      "altitude": 3267.089,
+      "speed": 50.201,
+      "fpa": -18.688,
+      "aoa": 14.0
+    },
+    {
+      "length": 62448.284,
+      "station": 56606.815,
+      "elapsed": 420.0,
+      "altitude": 1414.196,
+      "speed": 63.041,
+      "fpa": -14.465,
+      "aoa": 8.0
+    },
+    {
+      "length": 62448.284,
+      "station": 54076.207,
+      "elapsed": 420.0,
+      "altitude": 2439.968,
+      "speed": 59.674,
+      "fpa": -15.199,
+      "aoa": 10.0
+    },
+    {
+      "length": 62448.284,
+      "station": 49646.721,
+      "elapsed": 420.0,
+      "altitude": 2842.566,
+      "speed": 51.849,
+      "fpa": -17.535,
+      "aoa": 12.0
+    },
+    {
+      "length": 62448.284,
+      "station": 48222.15,
+      "elapsed": 420.0,
+      "altitude": 3125.939,
+      "speed": 51.661,
+      "fpa": -17.941,
+      "aoa": 14.0
+    },
+    {
+      "length": 62366.501,
+      "station": 60731.758,
+      "elapsed": 420.0,
+      "altitude": 1511.359,
+      "speed": 63.97,
+      "fpa": -14.319,
+      "aoa": 8.0
+    },
+    {
+      "length": 62366.501,
+      "station": 57245.948,
+      "elapsed": 420.0,
+      "altitude": 2563.0,
+      "speed": 60.044,
+      "fpa": -15.183,
+      "aoa": 10.0
+    },
+    {
+      "length": 62366.501,
+      "station": 55495.932,
+      "elapsed": 420.0,
+      "altitude": 2885.014,
+      "speed": 55.342,
+      "fpa": -16.428,
+      "aoa": 12.0
+    },
+    {
+      "length": 62366.501,
+      "station": 52385.152,
+      "elapsed": 420.0,
+      "altitude": 3103.942,
+      "speed": 49.708,
+      "fpa": -18.679,
+      "aoa": 14.0
+    },
+    {
+      "length": 52566.676,
+      "station": 51827.233,
+      "elapsed": 420.0,
+      "altitude": 1314.504,
+      "speed": 63.135,
+      "fpa": -14.448,
+      "aoa": 8.0
+    },
+    {
+      "length": 52566.676,
+      "station": 49103.21,
+      "elapsed": 420.0,
+      "altitude": 2461.257,
+      "speed": 55.676,
+      "fpa": -15.939,
+      "aoa": 10.0
+    },
+    {
+      "length": 52566.676,
+      "station": 43123.087,
+      "elapsed": 420.0,
+      "altitude": 2783.557,
+      "speed": 51.68,
+      "fpa": -17.531,
+      "aoa": 12.0
+    },
+    {
+      "length": 52566.676,
+      "station": 40492.658,
+      "elapsed": 420.0,
+      "altitude": 2960.198,
+      "speed": 51.112,
+      "fpa": -17.984,
+      "aoa": 14.0
+    },
+    {
+      "length": 75187.37,
+      "station": 64265.852,
+      "elapsed": 420.0,
+      "altitude": 1825.896,
+      "speed": 62.381,
+      "fpa": -14.621,
+      "aoa": 8.0
+    },
+    {
+      "length": 75187.37,
+      "station": 60519.495,
+      "elapsed": 420.0,
+      "altitude": 3106.166,
+      "speed": 57.497,
+      "fpa": -16.076,
+      "aoa": 10.0
+    },
+    {
+      "length": 75187.37,
+      "station": 60101.562,
+      "elapsed": 420.0,
+      "altitude": 3325.185,
+      "speed": 56.838,
+      "fpa": -16.431,
+      "aoa": 12.0
+    },
+    {
+      "length": 75187.37,
+      "station": 56008.038,
+      "elapsed": 420.0,
+      "altitude": 3456.05,
+      "speed": 50.792,
+      "fpa": -18.7,
+      "aoa": 14.0
+    },
+    {
+      "length": 73020.742,
+      "station": 64975.188,
+      "elapsed": 420.0,
+      "altitude": 707.687,
+      "speed": 63.416,
+      "fpa": -14.368,
+      "aoa": 6.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62752.283,
+      "elapsed": 420.0,
+      "altitude": 2207.943,
+      "speed": 60.684,
+      "fpa": -14.923,
+      "aoa": 8.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62250.337,
+      "elapsed": 420.0,
+      "altitude": 2663.147,
+      "speed": 60.444,
+      "fpa": -15.18,
+      "aoa": 10.0
+    },
+    {
+      "length": 73020.742,
+      "station": 58124.845,
+      "elapsed": 420.0,
+      "altitude": 3367.618,
+      "speed": 53.453,
+      "fpa": -17.507,
+      "aoa": 12.0
+    },
+    {
+      "length": 73020.742,
+      "station": 57461.712,
+      "elapsed": 420.0,
+      "altitude": 3631.295,
+      "speed": 50.49,
+      "fpa": -19.007,
+      "aoa": 14.0
+    },
+    {
+      "length": 48536.527,
+      "station": 46936.844,
+      "elapsed": 420.0,
+      "altitude": 2663.665,
+      "speed": 51.179,
+      "fpa": -17.384,
+      "aoa": 12.0
+    },
+    {
+      "length": 48536.527,
+      "station": 45282.459,
+      "elapsed": 420.0,
+      "altitude": 2713.209,
+      "speed": 48.544,
+      "fpa": -18.673,
+      "aoa": 14.0
+    },
+    {
+      "length": 63632.756,
+      "station": 44617.747,
+      "elapsed": 420.0,
+      "altitude": 1357.266,
+      "speed": 62.955,
+      "fpa": -14.472,
+      "aoa": 8.0
+    },
+    {
+      "length": 63632.756,
+      "station": 40602.271,
+      "elapsed": 420.0,
+      "altitude": 2067.68,
+      "speed": 58.539,
+      "fpa": -15.244,
+      "aoa": 10.0
+    },
+    {
+      "length": 63632.756,
+      "station": 30686.56,
+      "elapsed": 420.0,
+      "altitude": 1774.357,
+      "speed": 51.862,
+      "fpa": -16.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 59524.943,
+      "station": 43510.479,
+      "elapsed": 420.0,
+      "altitude": 1645.237,
+      "speed": 58.625,
+      "fpa": -14.96,
+      "aoa": 8.0
+    },
+    {
+      "length": 59524.943,
+      "station": 40715.913,
+      "elapsed": 420.0,
+      "altitude": 2019.376,
+      "speed": 58.619,
+      "fpa": -15.227,
+      "aoa": 10.0
+    },
+    {
+      "length": 59524.943,
+      "station": 31669.778,
+      "elapsed": 420.0,
+      "altitude": 1758.303,
+      "speed": 51.828,
+      "fpa": -16.509,
+      "aoa": 12.0
+    },
+    {
+      "length": 72623.888,
+      "station": 51848.48,
+      "elapsed": 420.0,
+      "altitude": 1422.512,
+      "speed": 61.52,
+      "fpa": -14.604,
+      "aoa": 8.0
+    },
+    {
+      "length": 72623.888,
+      "station": 49647.47,
+      "elapsed": 420.0,
+      "altitude": 2299.285,
+      "speed": 59.051,
+      "fpa": -15.245,
+      "aoa": 10.0
+    },
+    {
+      "length": 72623.888,
+      "station": 46872.433,
+      "elapsed": 420.0,
+      "altitude": 2737.241,
+      "speed": 54.517,
+      "fpa": -16.597,
+      "aoa": 12.0
+    },
+    {
+      "length": 72623.888,
+      "station": 43245.703,
+      "elapsed": 420.0,
+      "altitude": 2897.165,
+      "speed": 49.191,
+      "fpa": -18.77,
+      "aoa": 14.0
+    },
+    {
+      "length": 63440.422,
+      "station": 46085.929,
+      "elapsed": 420.0,
+      "altitude": 1368.263,
+      "speed": 60.973,
+      "fpa": -14.638,
+      "aoa": 8.0
+    },
+    {
+      "length": 63440.422,
+      "station": 40744.683,
+      "elapsed": 420.0,
+      "altitude": 2325.541,
+      "speed": 56.821,
+      "fpa": -15.805,
+      "aoa": 10.0
+    },
+    {
+      "length": 63440.422,
+      "station": 34737.924,
+      "elapsed": 420.0,
+      "altitude": 1911.303,
+      "speed": 49.549,
+      "fpa": -17.446,
+      "aoa": 12.0
+    },
+    {
+      "length": 63440.422,
+      "station": 27648.942,
+      "elapsed": 420.0,
+      "altitude": 862.689,
+      "speed": 43.543,
+      "fpa": -18.684,
+      "aoa": 14.0
+    },
+    {
+      "length": 57287.737,
+      "station": 45569.919,
+      "elapsed": 420.0,
+      "altitude": 1541.886,
+      "speed": 59.931,
+      "fpa": -14.723,
+      "aoa": 8.0
+    },
+    {
+      "length": 57287.737,
+      "station": 42795.418,
+      "elapsed": 420.0,
+      "altitude": 2173.214,
+      "speed": 58.698,
+      "fpa": -15.204,
+      "aoa": 10.0
+    },
+    {
+      "length": 57287.737,
+      "station": 37977.376,
+      "elapsed": 420.0,
+      "altitude": 2558.5,
+      "speed": 52.255,
+      "fpa": -17.222,
+      "aoa": 12.0
+    },
+    {
+      "length": 64685.634,
+      "station": 53389.262,
+      "elapsed": 420.0,
+      "altitude": 1340.968,
+      "speed": 63.361,
+      "fpa": -14.423,
+      "aoa": 8.0
+    },
+    {
+      "length": 64685.634,
+      "station": 50860.527,
+      "elapsed": 420.0,
+      "altitude": 2303.998,
+      "speed": 59.179,
+      "fpa": -15.203,
+      "aoa": 10.0
+    },
+    {
+      "length": 64685.634,
+      "station": 46549.419,
+      "elapsed": 420.0,
+      "altitude": 2899.042,
+      "speed": 52.012,
+      "fpa": -17.524,
+      "aoa": 12.0
+    },
+    {
+      "length": 64685.634,
+      "station": 44844.304,
+      "elapsed": 420.0,
+      "altitude": 2997.354,
+      "speed": 49.412,
+      "fpa": -18.705,
+      "aoa": 14.0
+    },
+    {
+      "length": 57856.401,
+      "station": 46989.964,
+      "elapsed": 420.0,
+      "altitude": 653.584,
+      "speed": 64.527,
+      "fpa": -14.43,
+      "aoa": 6.0
+    },
+    {
+      "length": 57856.401,
+      "station": 44186.254,
+      "elapsed": 420.0,
+      "altitude": 1805.931,
+      "speed": 59.199,
+      "fpa": -14.951,
+      "aoa": 8.0
+    },
+    {
+      "length": 57856.401,
+      "station": 42711.836,
+      "elapsed": 420.0,
+      "altitude": 2124.891,
+      "speed": 58.554,
+      "fpa": -15.215,
+      "aoa": 10.0
+    },
+    {
+      "length": 57856.401,
+      "station": 34482.701,
+      "elapsed": 420.0,
+      "altitude": 1911.531,
+      "speed": 49.131,
+      "fpa": -17.603,
+      "aoa": 12.0
+    },
+    {
+      "length": 57856.401,
+      "station": 27441.697,
+      "elapsed": 420.0,
+      "altitude": 840.527,
+      "speed": 43.497,
+      "fpa": -18.69,
+      "aoa": 14.0
+    },
+    {
+      "length": 70936.056,
+      "station": 59903.593,
+      "elapsed": 420.0,
+      "altitude": 1575.568,
+      "speed": 64.239,
+      "fpa": -14.393,
+      "aoa": 8.0
+    },
+    {
+      "length": 70936.056,
+      "station": 57298.877,
+      "elapsed": 420.0,
+      "altitude": 2545.112,
+      "speed": 60.044,
+      "fpa": -15.196,
+      "aoa": 10.0
+    },
+    {
+      "length": 70936.056,
+      "station": 53194.652,
+      "elapsed": 420.0,
+      "altitude": 3275.531,
+      "speed": 53.346,
+      "fpa": -17.485,
+      "aoa": 12.0
+    },
+    {
+      "length": 70936.056,
+      "station": 51701.658,
+      "elapsed": 420.0,
+      "altitude": 3446.891,
+      "speed": 50.764,
+      "fpa": -18.708,
+      "aoa": 14.0
+    },
+    {
+      "length": 63340.467,
+      "station": 59614.606,
+      "elapsed": 420.0,
+      "altitude": 238.566,
+      "speed": 64.225,
+      "fpa": -14.396,
+      "aoa": 6.0
+    },
+    {
+      "length": 63340.467,
+      "station": 58294.454,
+      "elapsed": 420.0,
+      "altitude": 1605.223,
+      "speed": 63.604,
+      "fpa": -14.443,
+      "aoa": 8.0
+    },
+    {
+      "length": 63340.467,
+      "station": 55710.873,
+      "elapsed": 420.0,
+      "altitude": 2559.629,
+      "speed": 59.569,
+      "fpa": -15.273,
+      "aoa": 10.0
+    },
+    {
+      "length": 63340.467,
+      "station": 53154.199,
+      "elapsed": 420.0,
+      "altitude": 3051.284,
+      "speed": 55.432,
+      "fpa": -16.574,
+      "aoa": 12.0
+    },
+    {
+      "length": 63340.467,
+      "station": 50067.459,
+      "elapsed": 420.0,
+      "altitude": 3334.053,
+      "speed": 50.401,
+      "fpa": -18.688,
+      "aoa": 14.0
+    },
+    {
+      "length": 64185.369,
+      "station": 59694.579,
+      "elapsed": 420.0,
+      "altitude": 413.855,
+      "speed": 62.416,
+      "fpa": -14.387,
+      "aoa": 6.0
+    },
+    {
+      "length": 64185.369,
+      "station": 59212.962,
+      "elapsed": 420.0,
+      "altitude": 1587.632,
+      "speed": 64.289,
+      "fpa": -14.376,
+      "aoa": 8.0
+    },
+    {
+      "length": 64185.369,
+      "station": 56373.652,
+      "elapsed": 420.0,
+      "altitude": 2520.019,
+      "speed": 59.329,
+      "fpa": -15.294,
+      "aoa": 10.0
+    },
+    {
+      "length": 64185.369,
+      "station": 53859.083,
+      "elapsed": 420.0,
+      "altitude": 2997.763,
+      "speed": 55.265,
+      "fpa": -16.572,
+      "aoa": 12.0
+    },
+    {
+      "length": 64185.369,
+      "station": 50789.066,
+      "elapsed": 420.0,
+      "altitude": 3267.277,
+      "speed": 50.2,
+      "fpa": -18.687,
+      "aoa": 14.0
+    },
+    {
+      "length": 62448.284,
+      "station": 54897.578,
+      "elapsed": 420.0,
+      "altitude": 1968.729,
+      "speed": 59.782,
+      "fpa": -14.938,
+      "aoa": 8.0
+    },
+    {
+      "length": 62448.284,
+      "station": 54242.168,
+      "elapsed": 420.0,
+      "altitude": 2409.248,
+      "speed": 59.555,
+      "fpa": -15.199,
+      "aoa": 10.0
+    },
+    {
+      "length": 62448.284,
+      "station": 48545.814,
+      "elapsed": 420.0,
+      "altitude": 2846.237,
+      "speed": 51.866,
+      "fpa": -17.543,
+      "aoa": 12.0
+    },
+    {
+      "length": 62448.284,
+      "station": 48219.98,
+      "elapsed": 420.0,
+      "altitude": 3125.899,
+      "speed": 51.66,
+      "fpa": -17.941,
+      "aoa": 14.0
+    },
+    {
+      "length": 62366.501,
+      "station": 60741.19,
+      "elapsed": 420.0,
+      "altitude": 1513.068,
+      "speed": 63.972,
+      "fpa": -14.315,
+      "aoa": 8.0
+    },
+    {
+      "length": 62366.501,
+      "station": 57251.89,
+      "elapsed": 420.0,
+      "altitude": 2564.071,
+      "speed": 60.046,
+      "fpa": -15.183,
+      "aoa": 10.0
+    },
+    {
+      "length": 62366.501,
+      "station": 55500.869,
+      "elapsed": 420.0,
+      "altitude": 2885.849,
+      "speed": 55.343,
+      "fpa": -16.427,
+      "aoa": 12.0
+    },
+    {
+      "length": 62366.501,
+      "station": 52389.729,
+      "elapsed": 420.0,
+      "altitude": 3104.475,
+      "speed": 49.708,
+      "fpa": -18.679,
+      "aoa": 14.0
+    },
+    {
+      "length": 52566.676,
+      "station": 51822.661,
+      "elapsed": 420.0,
+      "altitude": 1314.121,
+      "speed": 63.129,
+      "fpa": -14.443,
+      "aoa": 8.0
+    },
+    {
+      "length": 52566.676,
+      "station": 49099.993,
+      "elapsed": 420.0,
+      "altitude": 2461.148,
+      "speed": 55.675,
+      "fpa": -15.939,
+      "aoa": 10.0
+    },
+    {
+      "length": 52566.676,
+      "station": 43118.935,
+      "elapsed": 420.0,
+      "altitude": 2783.518,
+      "speed": 51.679,
+      "fpa": -17.531,
+      "aoa": 12.0
+    },
+    {
+      "length": 52566.676,
+      "station": 40487.256,
+      "elapsed": 420.0,
+      "altitude": 2960.242,
+      "speed": 51.11,
+      "fpa": -17.984,
+      "aoa": 14.0
+    },
+    {
+      "length": 75187.37,
+      "station": 64271.516,
+      "elapsed": 420.0,
+      "altitude": 1827.25,
+      "speed": 62.385,
+      "fpa": -14.62,
+      "aoa": 8.0
+    },
+    {
+      "length": 75187.37,
+      "station": 60523.398,
+      "elapsed": 420.0,
+      "altitude": 3107.196,
+      "speed": 57.499,
+      "fpa": -16.076,
+      "aoa": 10.0
+    },
+    {
+      "length": 75187.37,
+      "station": 60104.512,
+      "elapsed": 420.0,
+      "altitude": 3325.972,
+      "speed": 56.839,
+      "fpa": -16.43,
+      "aoa": 12.0
+    },
+    {
+      "length": 75187.37,
+      "station": 56009.942,
+      "elapsed": 420.0,
+      "altitude": 3456.499,
+      "speed": 50.791,
+      "fpa": -18.7,
+      "aoa": 14.0
+    },
+    {
+      "length": 73020.742,
+      "station": 64984.919,
+      "elapsed": 420.0,
+      "altitude": 709.897,
+      "speed": 63.422,
+      "fpa": -14.367,
+      "aoa": 6.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62760.538,
+      "elapsed": 420.0,
+      "altitude": 2209.876,
+      "speed": 60.69,
+      "fpa": -14.923,
+      "aoa": 8.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62256.816,
+      "elapsed": 420.0,
+      "altitude": 2664.573,
+      "speed": 60.447,
+      "fpa": -15.18,
+      "aoa": 10.0
+    },
+    {
+      "length": 73020.742,
+      "station": 58129.177,
+      "elapsed": 420.0,
+      "altitude": 3368.691,
+      "speed": 53.455,
+      "fpa": -17.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 73020.742,
+      "station": 57339.078,
+      "elapsed": 420.0,
+      "altitude": 3683.472,
+      "speed": 53.315,
+      "fpa": -17.984,
+      "aoa": 14.0
+    },
+    {
+      "length": 48536.527,
+      "station": 46944.009,
+      "elapsed": 420.0,
+      "altitude": 2664.493,
+      "speed": 51.182,
+      "fpa": -17.385,
+      "aoa": 12.0
+    },
+    {
+      "length": 48536.527,
+      "station": 45290.647,
+      "elapsed": 420.0,
+      "altitude": 2713.916,
+      "speed": 48.545,
+      "fpa": -18.674,
+      "aoa": 14.0
+    },
+    {
+      "length": 78715.025,
+      "station": 44435.405,
+      "elapsed": 420.0,
+      "altitude": 1725.582,
+      "speed": 59.064,
+      "fpa": -15.018,
+      "aoa": 8.0
+    },
+    {
+      "length": 78715.025,
+      "station": 41280.706,
+      "elapsed": 420.0,
+      "altitude": 2027.678,
+      "speed": 58.298,
+      "fpa": -15.277,
+      "aoa": 10.0
+    },
+    {
+      "length": 78715.025,
+      "station": 39352.626,
+      "elapsed": 420.0,
+      "altitude": 2626.44,
+      "speed": 54.591,
+      "fpa": -16.507,
+      "aoa": 12.0
+    },
+    {
+      "length": 78996.752,
+      "station": 53036.902,
+      "elapsed": 420.0,
+      "altitude": 1389.855,
+      "speed": 63.697,
+      "fpa": -14.407,
+      "aoa": 8.0
+    },
+    {
+      "length": 78996.752,
+      "station": 50203.031,
+      "elapsed": 420.0,
+      "altitude": 2241.447,
+      "speed": 59.173,
+      "fpa": -15.344,
+      "aoa": 10.0
+    },
+    {
+      "length": 78996.752,
+      "station": 47398.908,
+      "elapsed": 420.0,
+      "altitude": 2652.933,
+      "speed": 54.68,
+      "fpa": -16.514,
+      "aoa": 12.0
+    },
+    {
+      "length": 78996.752,
+      "station": 43481.128,
+      "elapsed": 420.0,
+      "altitude": 2804.626,
+      "speed": 48.076,
+      "fpa": -19.069,
+      "aoa": 14.0
+    },
+    {
+      "length": 86531.797,
+      "station": 49200.017,
+      "elapsed": 420.0,
+      "altitude": 1993.961,
+      "speed": 60.0,
+      "fpa": -15.034,
+      "aoa": 8.0
+    },
+    {
+      "length": 86531.797,
+      "station": 48617.101,
+      "elapsed": 420.0,
+      "altitude": 2267.744,
+      "speed": 59.157,
+      "fpa": -15.286,
+      "aoa": 10.0
+    },
+    {
+      "length": 86531.797,
+      "station": 44254.508,
+      "elapsed": 420.0,
+      "altitude": 2775.242,
+      "speed": 51.663,
+      "fpa": -17.567,
+      "aoa": 12.0
+    },
+    {
+      "length": 86531.797,
+      "station": 41759.476,
+      "elapsed": 420.0,
+      "altitude": 2840.36,
+      "speed": 48.963,
+      "fpa": -18.737,
+      "aoa": 14.0
+    },
+    {
+      "length": 100058.273,
+      "station": 60992.876,
+      "elapsed": 420.0,
+      "altitude": 417.45,
+      "speed": 62.733,
+      "fpa": -14.516,
+      "aoa": 6.0
+    },
+    {
+      "length": 100058.273,
+      "station": 60712.512,
+      "elapsed": 420.0,
+      "altitude": 1611.878,
+      "speed": 64.607,
+      "fpa": -14.506,
+      "aoa": 8.0
+    },
+    {
+      "length": 100058.273,
+      "station": 57953.695,
+      "elapsed": 420.0,
+      "altitude": 2571.401,
+      "speed": 59.828,
+      "fpa": -15.346,
+      "aoa": 10.0
+    },
+    {
+      "length": 100058.273,
+      "station": 55397.598,
+      "elapsed": 420.0,
+      "altitude": 3081.566,
+      "speed": 55.596,
+      "fpa": -16.657,
+      "aoa": 12.0
+    },
+    {
+      "length": 100058.273,
+      "station": 52267.32,
+      "elapsed": 420.0,
+      "altitude": 3379.405,
+      "speed": 50.574,
+      "fpa": -18.749,
+      "aoa": 14.0
+    },
+    {
+      "length": 68489.257,
+      "station": 38673.712,
+      "elapsed": 420.0,
+      "altitude": 1802.291,
+      "speed": 59.293,
+      "fpa": -15.026,
+      "aoa": 8.0
+    },
+    {
+      "length": 68489.257,
+      "station": 36436.125,
+      "elapsed": 420.0,
+      "altitude": 2022.07,
+      "speed": 58.274,
+      "fpa": -15.279,
+      "aoa": 10.0
+    },
+    {
+      "length": 96171.147,
+      "station": 60413.575,
+      "elapsed": 420.0,
+      "altitude": 1882.065,
+      "speed": 62.153,
+      "fpa": -14.821,
+      "aoa": 8.0
+    },
+    {
+      "length": 96171.147,
+      "station": 58927.746,
+      "elapsed": 420.0,
+      "altitude": 2588.005,
+      "speed": 60.329,
+      "fpa": -15.283,
+      "aoa": 10.0
+    },
+    {
+      "length": 96171.147,
+      "station": 56306.026,
+      "elapsed": 420.0,
+      "altitude": 3123.253,
+      "speed": 55.734,
+      "fpa": -16.662,
+      "aoa": 12.0
+    },
+    {
+      "length": 96171.147,
+      "station": 53173.293,
+      "elapsed": 420.0,
+      "altitude": 3436.253,
+      "speed": 50.751,
+      "fpa": -18.751,
+      "aoa": 14.0
+    },
+    {
+      "length": 73282.25,
+      "station": 41648.753,
+      "elapsed": 420.0,
+      "altitude": 1323.222,
+      "speed": 62.815,
+      "fpa": -14.642,
+      "aoa": 8.0
+    },
+    {
+      "length": 73282.25,
+      "station": 36023.497,
+      "elapsed": 420.0,
+      "altitude": 2026.96,
+      "speed": 58.278,
+      "fpa": -15.278,
+      "aoa": 10.0
+    },
+    {
+      "length": 76818.864,
+      "station": 48308.001,
+      "elapsed": 420.0,
+      "altitude": 832.335,
+      "speed": 64.051,
+      "fpa": -14.445,
+      "aoa": 6.0
+    },
+    {
+      "length": 76818.864,
+      "station": 45882.17,
+      "elapsed": 420.0,
+      "altitude": 1878.939,
+      "speed": 59.903,
+      "fpa": -14.993,
+      "aoa": 8.0
+    },
+    {
+      "length": 76818.864,
+      "station": 44675.418,
+      "elapsed": 420.0,
+      "altitude": 2384.095,
+      "speed": 55.556,
+      "fpa": -16.014,
+      "aoa": 10.0
+    },
+    {
+      "length": 76818.864,
+      "station": 39347.234,
+      "elapsed": 420.0,
+      "altitude": 2713.538,
+      "speed": 51.473,
+      "fpa": -17.57,
+      "aoa": 12.0
+    },
+    {
+      "length": 62632.693,
+      "station": 44537.393,
+      "elapsed": 420.0,
+      "altitude": 1242.58,
+      "speed": 62.966,
+      "fpa": -14.438,
+      "aoa": 8.0
+    },
+    {
+      "length": 62632.693,
+      "station": 40216.856,
+      "elapsed": 420.0,
+      "altitude": 2008.713,
+      "speed": 58.455,
+      "fpa": -15.44,
+      "aoa": 10.0
+    },
+    {
+      "length": 62632.693,
+      "station": 27622.01,
+      "elapsed": 420.0,
+      "altitude": 1742.1,
+      "speed": 51.774,
+      "fpa": -16.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 65973.685,
+      "station": 42286.056,
+      "elapsed": 420.0,
+      "altitude": 1497.782,
+      "speed": 64.095,
+      "fpa": -14.418,
+      "aoa": 8.0
+    },
+    {
+      "length": 65973.685,
+      "station": 35382.289,
+      "elapsed": 420.0,
+      "altitude": 2305.158,
+      "speed": 54.89,
+      "fpa": -16.163,
+      "aoa": 10.0
+    },
+    {
+      "length": 76869.827,
+      "station": 50552.145,
+      "elapsed": 420.0,
+      "altitude": 1879.898,
+      "speed": 59.864,
+      "fpa": -14.96,
+      "aoa": 8.0
+    },
+    {
+      "length": 76869.827,
+      "station": 50016.163,
+      "elapsed": 420.0,
+      "altitude": 2320.78,
+      "speed": 59.259,
+      "fpa": -15.221,
+      "aoa": 10.0
+    },
+    {
+      "length": 76869.827,
+      "station": 45495.331,
+      "elapsed": 420.0,
+      "altitude": 2862.731,
+      "speed": 51.982,
+      "fpa": -17.594,
+      "aoa": 12.0
+    },
+    {
+      "length": 76869.827,
+      "station": 43654.023,
+      "elapsed": 420.0,
+      "altitude": 2949.85,
+      "speed": 49.317,
+      "fpa": -18.757,
+      "aoa": 14.0
+    },
+    {
+      "length": 63440.422,
+      "station": 46498.064,
+      "elapsed": 420.0,
+      "altitude": 1247.957,
+      "speed": 63.041,
+      "fpa": -14.441,
+      "aoa": 8.0
+    },
+    {
+      "length": 63440.422,
+      "station": 40754.227,
+      "elapsed": 420.0,
+      "altitude": 2325.793,
+      "speed": 56.824,
+      "fpa": -15.806,
+      "aoa": 10.0
+    },
+    {
+      "length": 63440.422,
+      "station": 34749.484,
+      "elapsed": 420.0,
+      "altitude": 1911.472,
+      "speed": 49.552,
+      "fpa": -17.446,
+      "aoa": 12.0
+    },
+    {
+      "length": 63440.422,
+      "station": 27673.517,
+      "elapsed": 420.0,
+      "altitude": 862.973,
+      "speed": 43.546,
+      "fpa": -18.684,
+      "aoa": 14.0
+    },
+    {
+      "length": 57287.737,
+      "station": 45554.525,
+      "elapsed": 420.0,
+      "altitude": 1539.882,
+      "speed": 59.926,
+      "fpa": -14.724,
+      "aoa": 8.0
+    },
+    {
+      "length": 57287.737,
+      "station": 42780.04,
+      "elapsed": 420.0,
+      "altitude": 2171.826,
+      "speed": 58.695,
+      "fpa": -15.205,
+      "aoa": 10.0
+    },
+    {
+      "length": 57287.737,
+      "station": 37956.033,
+      "elapsed": 420.0,
+      "altitude": 2557.802,
+      "speed": 52.253,
+      "fpa": -17.221,
+      "aoa": 12.0
+    },
+    {
+      "length": 62909.693,
+      "station": 55492.116,
+      "elapsed": 420.0,
+      "altitude": 1593.042,
+      "speed": 63.511,
+      "fpa": -14.455,
+      "aoa": 8.0
+    },
+    {
+      "length": 62909.693,
+      "station": 52942.122,
+      "elapsed": 420.0,
+      "altitude": 2434.518,
+      "speed": 59.63,
+      "fpa": -15.189,
+      "aoa": 10.0
+    },
+    {
+      "length": 62909.693,
+      "station": 48773.74,
+      "elapsed": 420.0,
+      "altitude": 3053.401,
+      "speed": 52.473,
+      "fpa": -17.517,
+      "aoa": 12.0
+    },
+    {
+      "length": 62909.693,
+      "station": 47250.319,
+      "elapsed": 420.0,
+      "altitude": 3177.891,
+      "speed": 49.941,
+      "fpa": -18.695,
+      "aoa": 14.0
+    },
+    {
+      "length": 64005.006,
+      "station": 57340.178,
+      "elapsed": 420.0,
+      "altitude": 427.51,
+      "speed": 62.349,
+      "fpa": -14.38,
+      "aoa": 6.0
+    },
+    {
+      "length": 64005.006,
+      "station": 56343.881,
+      "elapsed": 420.0,
+      "altitude": 1605.331,
+      "speed": 61.596,
+      "fpa": -14.614,
+      "aoa": 8.0
+    },
+    {
+      "length": 64005.006,
+      "station": 52817.251,
+      "elapsed": 420.0,
+      "altitude": 2751.618,
+      "speed": 58.271,
+      "fpa": -15.735,
+      "aoa": 10.0
+    },
+    {
+      "length": 64005.006,
+      "station": 50161.673,
+      "elapsed": 420.0,
+      "altitude": 3108.512,
+      "speed": 52.645,
+      "fpa": -17.515,
+      "aoa": 12.0
+    },
+    {
+      "length": 64005.006,
+      "station": 48679.301,
+      "elapsed": 420.0,
+      "altitude": 3241.736,
+      "speed": 50.131,
+      "fpa": -18.694,
+      "aoa": 14.0
+    },
+    {
+      "length": 62326.028,
+      "station": 60733.235,
+      "elapsed": 420.0,
+      "altitude": 2214.218,
+      "speed": 60.595,
+      "fpa": -14.842,
+      "aoa": 8.0
+    },
+    {
+      "length": 62326.028,
+      "station": 60189.398,
+      "elapsed": 420.0,
+      "altitude": 2502.333,
+      "speed": 59.853,
+      "fpa": -15.179,
+      "aoa": 10.0
+    },
+    {
+      "length": 62326.028,
+      "station": 56128.028,
+      "elapsed": 420.0,
+      "altitude": 3079.556,
+      "speed": 52.527,
+      "fpa": -17.49,
+      "aoa": 12.0
+    },
+    {
+      "length": 62326.028,
+      "station": 54525.854,
+      "elapsed": 420.0,
+      "altitude": 3226.285,
+      "speed": 50.063,
+      "fpa": -18.67,
+      "aoa": 14.0
+    },
+    {
+      "length": 58701.639,
+      "station": 58096.357,
+      "elapsed": 420.0,
+      "altitude": 1511.326,
+      "speed": 63.908,
+      "fpa": -14.411,
+      "aoa": 8.0
+    },
+    {
+      "length": 58701.639,
+      "station": 53967.008,
+      "elapsed": 420.0,
+      "altitude": 2525.245,
+      "speed": 55.989,
+      "fpa": -15.997,
+      "aoa": 10.0
+    },
+    {
+      "length": 58701.639,
+      "station": 51086.409,
+      "elapsed": 420.0,
+      "altitude": 2868.617,
+      "speed": 51.885,
+      "fpa": -17.497,
+      "aoa": 12.0
+    },
+    {
+      "length": 58701.639,
+      "station": 49550.107,
+      "elapsed": 420.0,
+      "altitude": 2957.758,
+      "speed": 49.253,
+      "fpa": -18.686,
+      "aoa": 14.0
+    },
+    {
+      "length": 73020.742,
+      "station": 64975.188,
+      "elapsed": 420.0,
+      "altitude": 707.687,
+      "speed": 63.416,
+      "fpa": -14.368,
+      "aoa": 6.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62752.283,
+      "elapsed": 420.0,
+      "altitude": 2207.943,
+      "speed": 60.684,
+      "fpa": -14.923,
+      "aoa": 8.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62250.337,
+      "elapsed": 420.0,
+      "altitude": 2663.147,
+      "speed": 60.444,
+      "fpa": -15.18,
+      "aoa": 10.0
+    },
+    {
+      "length": 73020.742,
+      "station": 58124.845,
+      "elapsed": 420.0,
+      "altitude": 3367.618,
+      "speed": 53.453,
+      "fpa": -17.507,
+      "aoa": 12.0
+    },
+    {
+      "length": 73020.742,
+      "station": 57461.712,
+      "elapsed": 420.0,
+      "altitude": 3631.295,
+      "speed": 50.49,
+      "fpa": -19.007,
+      "aoa": 14.0
+    },
+    {
+      "length": 48536.527,
+      "station": 46936.844,
+      "elapsed": 420.0,
+      "altitude": 2663.665,
+      "speed": 51.179,
+      "fpa": -17.384,
+      "aoa": 12.0
+    },
+    {
+      "length": 48536.527,
+      "station": 45282.459,
+      "elapsed": 420.0,
+      "altitude": 2713.209,
+      "speed": 48.544,
+      "fpa": -18.673,
+      "aoa": 14.0
+    },
+    {
+      "length": 78715.025,
+      "station": 45793.876,
+      "elapsed": 420.0,
+      "altitude": 1951.427,
+      "speed": 59.858,
+      "fpa": -15.01,
+      "aoa": 8.0
+    },
+    {
+      "length": 78715.025,
+      "station": 44446.096,
+      "elapsed": 420.0,
+      "altitude": 2295.004,
+      "speed": 58.863,
+      "fpa": -15.343,
+      "aoa": 10.0
+    },
+    {
+      "length": 78715.025,
+      "station": 39336.018,
+      "elapsed": 420.0,
+      "altitude": 2618.682,
+      "speed": 54.564,
+      "fpa": -16.507,
+      "aoa": 12.0
+    },
+    {
+      "length": 78996.752,
+      "station": 53034.707,
+      "elapsed": 420.0,
+      "altitude": 1390.173,
+      "speed": 63.697,
+      "fpa": -14.407,
+      "aoa": 8.0
+    },
+    {
+      "length": 78996.752,
+      "station": 50200.756,
+      "elapsed": 420.0,
+      "altitude": 2241.669,
+      "speed": 59.172,
+      "fpa": -15.343,
+      "aoa": 10.0
+    },
+    {
+      "length": 78996.752,
+      "station": 47396.658,
+      "elapsed": 420.0,
+      "altitude": 2653.085,
+      "speed": 54.679,
+      "fpa": -16.514,
+      "aoa": 12.0
+    },
+    {
+      "length": 78996.752,
+      "station": 43478.857,
+      "elapsed": 420.0,
+      "altitude": 2804.734,
+      "speed": 48.075,
+      "fpa": -19.069,
+      "aoa": 14.0
+    },
+    {
+      "length": 86531.797,
+      "station": 49194.597,
+      "elapsed": 420.0,
+      "altitude": 1993.754,
+      "speed": 59.996,
+      "fpa": -15.034,
+      "aoa": 8.0
+    },
+    {
+      "length": 86531.797,
+      "station": 48612.084,
+      "elapsed": 420.0,
+      "altitude": 2267.641,
+      "speed": 59.154,
+      "fpa": -15.286,
+      "aoa": 10.0
+    },
+    {
+      "length": 86531.797,
+      "station": 44249.572,
+      "elapsed": 420.0,
+      "altitude": 2775.169,
+      "speed": 51.661,
+      "fpa": -17.568,
+      "aoa": 12.0
+    },
+    {
+      "length": 86531.797,
+      "station": 41753.516,
+      "elapsed": 420.0,
+      "altitude": 2840.381,
+      "speed": 48.961,
+      "fpa": -18.737,
+      "aoa": 14.0
+    },
+    {
+      "length": 100058.273,
+      "station": 60988.075,
+      "elapsed": 420.0,
+      "altitude": 417.462,
+      "speed": 62.73,
+      "fpa": -14.516,
+      "aoa": 6.0
+    },
+    {
+      "length": 100058.273,
+      "station": 60707.842,
+      "elapsed": 420.0,
+      "altitude": 1611.877,
+      "speed": 64.604,
+      "fpa": -14.506,
+      "aoa": 8.0
+    },
+    {
+      "length": 100058.273,
+      "station": 57949.204,
+      "elapsed": 420.0,
+      "altitude": 2571.363,
+      "speed": 59.826,
+      "fpa": -15.346,
+      "aoa": 10.0
+    },
+    {
+      "length": 100058.273,
+      "station": 55393.299,
+      "elapsed": 420.0,
+      "altitude": 3081.529,
+      "speed": 55.593,
+      "fpa": -16.657,
+      "aoa": 12.0
+    },
+    {
+      "length": 100058.273,
+      "station": 52263.251,
+      "elapsed": 420.0,
+      "altitude": 3379.383,
+      "speed": 50.572,
+      "fpa": -18.749,
+      "aoa": 14.0
+    },
+    {
+      "length": 68489.257,
+      "station": 38667.718,
+      "elapsed": 420.0,
+      "altitude": 1802.211,
+      "speed": 59.291,
+      "fpa": -15.026,
+      "aoa": 8.0
+    },
+    {
+      "length": 68489.257,
+      "station": 36429.947,
+      "elapsed": 420.0,
+      "altitude": 2022.055,
+      "speed": 58.272,
+      "fpa": -15.28,
+      "aoa": 10.0
+    },
+    {
+      "length": 96171.147,
+      "station": 60409.101,
+      "elapsed": 420.0,
+      "altitude": 1882.115,
+      "speed": 62.151,
+      "fpa": -14.821,
+      "aoa": 8.0
+    },
+    {
+      "length": 96171.147,
+      "station": 58923.417,
+      "elapsed": 420.0,
+      "altitude": 2588.041,
+      "speed": 60.327,
+      "fpa": -15.283,
+      "aoa": 10.0
+    },
+    {
+      "length": 96171.147,
+      "station": 56301.919,
+      "elapsed": 420.0,
+      "altitude": 3123.275,
+      "speed": 55.732,
+      "fpa": -16.662,
+      "aoa": 12.0
+    },
+    {
+      "length": 96171.147,
+      "station": 53169.331,
+      "elapsed": 420.0,
+      "altitude": 3436.277,
+      "speed": 50.75,
+      "fpa": -18.751,
+      "aoa": 14.0
+    },
+    {
+      "length": 73282.25,
+      "station": 41639.875,
+      "elapsed": 420.0,
+      "altitude": 1323.117,
+      "speed": 62.811,
+      "fpa": -14.641,
+      "aoa": 8.0
+    },
+    {
+      "length": 73282.25,
+      "station": 36011.555,
+      "elapsed": 420.0,
+      "altitude": 2026.949,
+      "speed": 58.276,
+      "fpa": -15.278,
+      "aoa": 10.0
+    },
+    {
+      "length": 76818.864,
+      "station": 48308.638,
+      "elapsed": 420.0,
+      "altitude": 831.816,
+      "speed": 64.047,
+      "fpa": -14.445,
+      "aoa": 6.0
+    },
+    {
+      "length": 76818.864,
+      "station": 45881.888,
+      "elapsed": 420.0,
+      "altitude": 1877.995,
+      "speed": 59.898,
+      "fpa": -14.993,
+      "aoa": 8.0
+    },
+    {
+      "length": 76818.864,
+      "station": 43051.788,
+      "elapsed": 420.0,
+      "altitude": 2509.731,
+      "speed": 55.794,
+      "fpa": -16.118,
+      "aoa": 10.0
+    },
+    {
+      "length": 76818.864,
+      "station": 39363.068,
+      "elapsed": 420.0,
+      "altitude": 2714.15,
+      "speed": 51.474,
+      "fpa": -17.57,
+      "aoa": 12.0
+    },
+    {
+      "length": 62632.693,
+      "station": 44533.825,
+      "elapsed": 420.0,
+      "altitude": 1242.658,
+      "speed": 62.964,
+      "fpa": -14.437,
+      "aoa": 8.0
+    },
+    {
+      "length": 62632.693,
+      "station": 40213.846,
+      "elapsed": 420.0,
+      "altitude": 2008.8,
+      "speed": 58.453,
+      "fpa": -15.439,
+      "aoa": 10.0
+    },
+    {
+      "length": 62632.693,
+      "station": 27627.357,
+      "elapsed": 420.0,
+      "altitude": 1742.231,
+      "speed": 51.773,
+      "fpa": -16.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 65973.685,
+      "station": 42279.492,
+      "elapsed": 420.0,
+      "altitude": 1497.782,
+      "speed": 64.094,
+      "fpa": -14.417,
+      "aoa": 8.0
+    },
+    {
+      "length": 65973.685,
+      "station": 35373.204,
+      "elapsed": 420.0,
+      "altitude": 2305.232,
+      "speed": 54.889,
+      "fpa": -16.163,
+      "aoa": 10.0
+    },
+    {
+      "length": 76869.827,
+      "station": 50546.267,
+      "elapsed": 420.0,
+      "altitude": 1879.61,
+      "speed": 59.86,
+      "fpa": -14.959,
+      "aoa": 8.0
+    },
+    {
+      "length": 76869.827,
+      "station": 50010.571,
+      "elapsed": 420.0,
+      "altitude": 2320.565,
+      "speed": 59.256,
+      "fpa": -15.22,
+      "aoa": 10.0
+    },
+    {
+      "length": 76869.827,
+      "station": 45489.804,
+      "elapsed": 420.0,
+      "altitude": 2862.421,
+      "speed": 51.979,
+      "fpa": -17.593,
+      "aoa": 12.0
+    },
+    {
+      "length": 76869.827,
+      "station": 43648.457,
+      "elapsed": 420.0,
+      "altitude": 2949.604,
+      "speed": 49.314,
+      "fpa": -18.757,
+      "aoa": 14.0
+    },
+    {
+      "length": 63440.422,
+      "station": 46085.929,
+      "elapsed": 420.0,
+      "altitude": 1368.263,
+      "speed": 60.973,
+      "fpa": -14.638,
+      "aoa": 8.0
+    },
+    {
+      "length": 63440.422,
+      "station": 40744.683,
+      "elapsed": 420.0,
+      "altitude": 2325.541,
+      "speed": 56.821,
+      "fpa": -15.805,
+      "aoa": 10.0
+    },
+    {
+      "length": 63440.422,
+      "station": 34737.924,
+      "elapsed": 420.0,
+      "altitude": 1911.303,
+      "speed": 49.549,
+      "fpa": -17.446,
+      "aoa": 12.0
+    },
+    {
+      "length": 63440.422,
+      "station": 27648.942,
+      "elapsed": 420.0,
+      "altitude": 862.689,
+      "speed": 43.543,
+      "fpa": -18.684,
+      "aoa": 14.0
+    },
+    {
+      "length": 57287.737,
+      "station": 45569.919,
+      "elapsed": 420.0,
+      "altitude": 1541.886,
+      "speed": 59.931,
+      "fpa": -14.723,
+      "aoa": 8.0
+    },
+    {
+      "length": 57287.737,
+      "station": 42795.418,
+      "elapsed": 420.0,
+      "altitude": 2173.214,
+      "speed": 58.698,
+      "fpa": -15.204,
+      "aoa": 10.0
+    },
+    {
+      "length": 57287.737,
+      "station": 37977.376,
+      "elapsed": 420.0,
+      "altitude": 2558.5,
+      "speed": 52.255,
+      "fpa": -17.222,
+      "aoa": 12.0
+    },
+    {
+      "length": 62909.693,
+      "station": 55487.429,
+      "elapsed": 420.0,
+      "altitude": 1593.072,
+      "speed": 63.51,
+      "fpa": -14.455,
+      "aoa": 8.0
+    },
+    {
+      "length": 62909.693,
+      "station": 52937.611,
+      "elapsed": 420.0,
+      "altitude": 2434.484,
+      "speed": 59.628,
+      "fpa": -15.189,
+      "aoa": 10.0
+    },
+    {
+      "length": 62909.693,
+      "station": 48769.359,
+      "elapsed": 420.0,
+      "altitude": 3053.309,
+      "speed": 52.471,
+      "fpa": -17.516,
+      "aoa": 12.0
+    },
+    {
+      "length": 62909.693,
+      "station": 47245.738,
+      "elapsed": 420.0,
+      "altitude": 3177.716,
+      "speed": 49.939,
+      "fpa": -18.695,
+      "aoa": 14.0
+    },
+    {
+      "length": 64005.006,
+      "station": 57336.143,
+      "elapsed": 420.0,
+      "altitude": 427.672,
+      "speed": 62.348,
+      "fpa": -14.38,
+      "aoa": 6.0
+    },
+    {
+      "length": 64005.006,
+      "station": 56339.928,
+      "elapsed": 420.0,
+      "altitude": 1605.458,
+      "speed": 61.595,
+      "fpa": -14.614,
+      "aoa": 8.0
+    },
+    {
+      "length": 64005.006,
+      "station": 52813.211,
+      "elapsed": 420.0,
+      "altitude": 2751.625,
+      "speed": 58.269,
+      "fpa": -15.734,
+      "aoa": 10.0
+    },
+    {
+      "length": 64005.006,
+      "station": 50158.023,
+      "elapsed": 420.0,
+      "altitude": 3108.599,
+      "speed": 52.643,
+      "fpa": -17.515,
+      "aoa": 12.0
+    },
+    {
+      "length": 64005.006,
+      "station": 48675.764,
+      "elapsed": 420.0,
+      "altitude": 3241.857,
+      "speed": 50.13,
+      "fpa": -18.694,
+      "aoa": 14.0
+    },
+    {
+      "length": 62326.028,
+      "station": 60128.675,
+      "elapsed": 420.0,
+      "altitude": 2472.683,
+      "speed": 59.755,
+      "fpa": -15.178,
+      "aoa": 10.0
+    },
+    {
+      "length": 62326.028,
+      "station": 55958.004,
+      "elapsed": 420.0,
+      "altitude": 3092.652,
+      "speed": 52.581,
+      "fpa": -17.488,
+      "aoa": 12.0
+    },
+    {
+      "length": 62326.028,
+      "station": 54530.037,
+      "elapsed": 420.0,
+      "altitude": 3226.871,
+      "speed": 50.063,
+      "fpa": -18.669,
+      "aoa": 14.0
+    },
+    {
+      "length": 58701.639,
+      "station": 58098.959,
+      "elapsed": 420.0,
+      "altitude": 1511.363,
+      "speed": 63.908,
+      "fpa": -14.41,
+      "aoa": 8.0
+    },
+    {
+      "length": 58701.639,
+      "station": 53968.318,
+      "elapsed": 420.0,
+      "altitude": 2524.698,
+      "speed": 55.985,
+      "fpa": -15.996,
+      "aoa": 10.0
+    },
+    {
+      "length": 58701.639,
+      "station": 51088.751,
+      "elapsed": 420.0,
+      "altitude": 2868.072,
+      "speed": 51.881,
+      "fpa": -17.497,
+      "aoa": 12.0
+    },
+    {
+      "length": 58701.639,
+      "station": 49555.356,
+      "elapsed": 420.0,
+      "altitude": 2958.37,
+      "speed": 49.254,
+      "fpa": -18.686,
+      "aoa": 14.0
+    },
+    {
+      "length": 73020.742,
+      "station": 64984.919,
+      "elapsed": 420.0,
+      "altitude": 709.897,
+      "speed": 63.422,
+      "fpa": -14.367,
+      "aoa": 6.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62760.538,
+      "elapsed": 420.0,
+      "altitude": 2209.876,
+      "speed": 60.69,
+      "fpa": -14.923,
+      "aoa": 8.0
+    },
+    {
+      "length": 73020.742,
+      "station": 62256.816,
+      "elapsed": 420.0,
+      "altitude": 2664.573,
+      "speed": 60.447,
+      "fpa": -15.18,
+      "aoa": 10.0
+    },
+    {
+      "length": 73020.742,
+      "station": 58129.177,
+      "elapsed": 420.0,
+      "altitude": 3368.691,
+      "speed": 53.455,
+      "fpa": -17.506,
+      "aoa": 12.0
+    },
+    {
+      "length": 73020.742,
+      "station": 57339.078,
+      "elapsed": 420.0,
+      "altitude": 3683.472,
+      "speed": 53.315,
+      "fpa": -17.984,
+      "aoa": 14.0
+    },
+    {
+      "length": 48536.527,
+      "station": 46944.009,
+      "elapsed": 420.0,
+      "altitude": 2664.493,
+      "speed": 51.182,
+      "fpa": -17.385,
+      "aoa": 12.0
+    },
+    {
+      "length": 48536.527,
+      "station": 45290.647,
+      "elapsed": 420.0,
+      "altitude": 2713.916,
+      "speed": 48.545,
+      "fpa": -18.674,
+      "aoa": 14.0
+    }
+  ],
+  "attitudeComparison": {
+    "ShuttleSim/reference-model/stsn_attitude_identified.ini": {
+      "pitch_wn": 1.5,
+      "pitch_zeta": 1.3,
+      "roll_wn": 1.4,
+      "roll_zeta": 0.85,
+      "max_pitch_rate_deg_s": 5.858643,
+      "max_roll_rate_deg_s": 12.450661,
+      "max_pitch_accel_deg_s2": 14.360269,
+      "max_roll_accel_deg_s2": 23.324585,
+      "pitch_full_authority_q_pa": 15.0,
+      "roll_full_authority_q_pa": 10.0
+    },
+    "Docs/Experiments/STS-Landing-20261010/Codex-Flare-Offline/inputs/att-live.ini": {
+      "pitch_wn": 1.5,
+      "pitch_zeta": 1.3,
+      "roll_wn": 1.4,
+      "roll_zeta": 0.85,
+      "max_pitch_rate_deg_s": 5.858643,
+      "max_roll_rate_deg_s": 12.450661,
+      "max_pitch_accel_deg_s2": 14.360269,
+      "max_roll_accel_deg_s2": 23.324585,
+      "pitch_full_authority_q_pa": 15.0,
+      "roll_full_authority_q_pa": 10.0
+    }
+  },
+  "inputHashes": {
+    "Configuration/sts-live.json": "2b6dfa351b69f5489d311e7ae9164c611cbe9a514f7cc67e38c4392a7c359f61",
+    "ShuttleSim/reference-model/stsn_attitude_identified.ini": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50",
+    "Docs/Experiments/STS-Landing-20261010/Codex-Flare-Offline/inputs/att-live.ini": "9881a0dc048f3c6c1b719bd9d38b2e163dfc156e34ec36d681284bca69584ca1",
+    "CLanding/build/mm305_feasibility_tests": "231863673850437a75a280fc47b7c84c2d02e418dc148a4b6bfaa84c649fab57"
+  }
+}

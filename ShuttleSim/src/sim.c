@@ -146,12 +146,27 @@ void sim_init(Simulation *sim,const Scenario *scenario){
         sim->state.attitude.requested_aoa_rad=deg2rad(scenario->initial_aoa_deg);
     sim->state.attitude.bank_rad=sim->state.attitude.cmd_bank_rad=
         sim->state.attitude.requested_bank_rad=deg2rad(scenario->initial_bank_deg);
+    sim->state.attitude.sideslip_rad=deg2rad(scenario->initial_sideslip_deg);
     derive_initial_orbit(sim);
     /* The scenario is authoritative. In particular, Cartesian checkpoints
      * must retain their recorded velocity instead of being redirected to KSC. */
     sim_apply_deorbit_initial(sim);
     Vec3 vair=v3_sub(sim->state.velocity_i_mps,world_atmosphere_velocity_i(&sim->world,sim->state.position_i_m));
     sim->state.body_q_i=attitude_body_quat(sim->state.position_i_m,vair,sim->state.attitude.aoa_rad,sim->state.attitude.bank_rad);
+    if(scenario->has_body_attitude){
+        LocalFrame frame=world_local_frame_i(&sim->world,sim->state.position_i_m,sim->state.ut);
+        sim->state.body_q_i=attitude_body_quat_euler(frame,deg2rad(scenario->initial_body_pitch_deg),
+            deg2rad(scenario->initial_body_heading_deg),deg2rad(scenario->initial_body_roll_deg));
+        /* Preserve the recorded orientation on the first direct body tick.
+           Rates remain zero only when no measured rate group was supplied. */
+        sim->state.attitude.body_rates_initialized=true;
+    }
+    if(scenario->has_body_rates){
+        sim->state.attitude.body_pitch_rate_rad_s=deg2rad(scenario->initial_body_pitch_rate_deg_s);
+        sim->state.attitude.body_roll_rate_rad_s=deg2rad(scenario->initial_body_roll_rate_deg_s);
+        sim->state.attitude.body_yaw_rate_rad_s=deg2rad(scenario->initial_body_yaw_rate_deg_s);
+        sim->state.attitude.body_rates_initialized=true;
+    }
 }
 void sim_apply_deorbit_initial(Simulation *sim){
     /* Recorded delta-v metadata is a legacy open-loop fallback. When a scenario
@@ -385,7 +400,8 @@ static void contact_step(Simulation *sim,double dt){
         s->pitch_released=true;
         s->released_pitch_rad=body_pitch(s,up);
         s->released_prev_fpa_rad=surface_fpa(sim,up);
-        s->released_pitch_rate_rad_s=s->attitude.aoa_rate_rad_s;
+        s->released_pitch_rate_rad_s=s->attitude.direct_body_coordinates&&s->attitude.body_rates_initialized?
+            s->attitude.body_pitch_rate_rad_s:s->attitude.aoa_rate_rad_s;
         Vec3 fwd=quat_rotate(s->body_q_i,ss_v3(1,0,0));
         s->released_heading_i=v3_normalized(v3_sub(fwd,v3_scale(up,v3_dot(fwd,up))));
     }
@@ -528,6 +544,15 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
     double horizontal=hypot(vn,ve),surface_speed=v3_norm(surf),heading=atan2(ve,vn);if(heading<0)heading+=2*3.14159265358979323846;
     bool stopped=s->stopped;(void)surface_speed;
     double fpa=atan2(vu,fmax(horizontal,1e-9));
+    bool body_rates_available=s->attitude.direct&&s->attitude.direct_body_coordinates&&
+        s->attitude.body_rates_initialized&&!s->pitch_released;
+    Vec3 body_forward=quat_rotate(s->body_q_i,ss_v3(1,0,0));
+    Vec3 body_right=quat_rotate(s->body_q_i,ss_v3(0,1,0));
+    Vec3 body_up=quat_rotate(s->body_q_i,ss_v3(0,0,-1));
+    double body_pitch=asin(ss_clampd(v3_dot(body_forward,lf.up),-1.0,1.0));
+    double body_heading=atan2(v3_dot(body_forward,lf.east),v3_dot(body_forward,lf.north));
+    if(body_heading<0.0)body_heading+=2.0*3.14159265358979323846;
+    double body_roll=atan2(-v3_dot(body_right,lf.up),v3_dot(body_up,lf.up));
     AtmosphereSample atm=world_atmosphere_sample_state(&sim->world,s->position_i_m,s->ut);
     double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
     if(sim->scenario.runway_slope_deg!=0.0){
@@ -540,6 +565,8 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"velocity\":{\"x_mps\":%.6f,\"y_mps\":%.6f,\"z_mps\":%.6f,\"inertial_mps\":%.3f,\"surface_mps\":%.3f,\"air_mps\":%.3f,\"horizontal_mps\":%.3f,\"vertical_mps\":%.3f,\"flight_path_angle_deg\":%.6f},"
              "\"attitude\":{\"aoa_deg\":%.4f,\"bank_deg\":%.4f,\"heading_deg\":%.4f,\"cmd_aoa_deg\":%.4f,\"cmd_bank_deg\":%.4f,\"requested_aoa_deg\":%.4f,\"requested_bank_deg\":%.4f,"
              "\"aoa_rate_deg_s\":%.6f,\"bank_rate_deg_s\":%.6f,\"sideslip_deg\":%.6f,\"direct_control\":%s,"
+             "\"body_attitude_available\":%s,\"body_rates_available\":%s,\"body_pitch_rate_deg_s\":%.6f,\"body_roll_rate_deg_s\":%.6f,\"body_yaw_rate_deg_s\":%.6f,"
+             "\"body_pitch_deg\":%.6f,\"body_roll_deg\":%.6f,\"body_heading_deg\":%.6f,"
              "\"input_pitch\":%.9f,\"input_roll\":%.9f,\"input_yaw\":%.9f,"
              "\"pitch_wn_s_inv\":%.9g,\"pitch_zeta\":%.9g,\"roll_wn_s_inv\":%.9g,\"roll_zeta\":%.9g,"
              "\"max_pitch_rate_deg_s\":%.9g,\"max_roll_rate_deg_s\":%.9g,"
@@ -556,6 +583,9 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              rad2deg(s->attitude.aoa_rad),rad2deg(s->attitude.bank_rad),rad2deg(heading),rad2deg(s->attitude.cmd_aoa_rad),rad2deg(s->attitude.cmd_bank_rad),rad2deg(s->attitude.requested_aoa_rad),rad2deg(s->attitude.requested_bank_rad),
              rad2deg(s->attitude.aoa_rate_rad_s),rad2deg(s->attitude.bank_rate_rad_s),
              rad2deg(s->attitude.sideslip_rad),s->attitude.direct?"true":"false",
+             s->attitude.direct_body_coordinates?"true":"false",body_rates_available?"true":"false",rad2deg(s->attitude.body_pitch_rate_rad_s),
+             rad2deg(s->attitude.body_roll_rate_rad_s),rad2deg(s->attitude.body_yaw_rate_rad_s),
+             rad2deg(body_pitch),rad2deg(body_roll),rad2deg(body_heading),
              s->attitude.input_pitch,s->attitude.input_roll,s->attitude.input_yaw,
              s->attitude.pitch_wn,s->attitude.pitch_zeta,s->attitude.roll_wn,s->attitude.roll_zeta,
              rad2deg(s->attitude.max_pitch_rate_rad_s),rad2deg(s->attitude.max_roll_rate_rad_s),

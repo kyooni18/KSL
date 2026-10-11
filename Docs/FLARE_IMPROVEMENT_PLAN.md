@@ -1,0 +1,409 @@
+# Flare improvement plan (after live L7, 2026-10-11)
+
+## What happened in L7
+
+Live mission `20261011T062628Z-live-85km-10deg` / `…-landing`: 85 × 85 km at
+10°, deorbit 30.1 m/s, entry, MM304 and TAEM all ran. **No flare.**
+
+| UT | State |
+|---|---|
+| 6566 | TAEM entry, Mach 2.85, 26.9 km. Energy law at drag level `k = 0` (maximum range) from the first sample. |
+| 6566–6900 | `k = 0` throughout. Initially `loop = 0`; at UT 6605.4 the law selects `loop = 1`, `leg = 2` (direct HAC intercept/downwind). Speed decays to ~100 m/s by 3 km. |
+| 6900–7004 | On the Final line: cross-track 3–13 m, FPA −17.5°, 96 → 85 m/s. |
+| 7005 | "MM305 crossed runway elevation before reaching the fixed-HAC exit." Contact ~75 m short, ~78 m/s, ~25 m/s sink. |
+
+**Cause chain** (reproduced offline with `ksl simulate l7-mm305`):
+
+1. TAEM delivered the orbiter to the Final line ~60 m/s below
+   `finalAlignmentSpeed` (160 m/s). The energy law was saturated at maximum
+   range for all of TAEM.
+2. Final admission (`terminal_outer_capture_admissible`) needs a feasible
+   preflare plan. Every candidate pull-up predicted an exit below
+   `minimumSafeSpeed` (85 m/s): `preflare-speed-aoa-or-stall-gate` on every
+   tick.
+3. The energy law's Final-line handoff had no other exit. TAEM kept the
+   vehicle and flew the min-drag glide into the ground. TAEM has no flare.
+
+## What was fixed (d52a719)
+
+- **Low-energy Final delivery.** On the Final line, if the vehicle is
+  runway-aligned, the law is at `k ≤ 0.05`, and the nominal contract has
+  failed for 3 s, TAEM hands off to Final through a logged
+  `TAEM_TRANSITION_LOW_ENERGY_DELIVERY`.
+- **Final, low-energy mode only:**
+  - The aim is seeded on the energy-sized aim, not a geometric 20° seed (which
+    pointed 3.6 km short).
+  - The 160 m/s station-speed schedule is dropped from the speed closure. It
+    was steepening the glide by up to 12°.
+  - The glide is blended toward the learned best-glide angle while speed
+    still covers a flare.
+- **Data root.** Live landings now write to the canonical evidence store and
+  FlightLogs (`KSP_LANDER_ROOT` = main checkout), even from a worktree.
+
+Offline L7, same initial state:
+
+| | Phase path | Touchdown | Sink | Gear | Along |
+|---|---|---|---|---|---|
+| before | TAEM → impact | 70.8 m/s | 13.2 m/s | up | −960 m |
+| after | TAEM → Final → flare → rollout | 63.3 m/s | **1.25 m/s** | down | −962 m |
+
+The L5 golden replay is unchanged and `make test` passes. The vehicle still
+lands short: from that energy state the runway is out of reach at the learned
+L/D (~3.8). **This fix makes the flare happen. It does not make L7 reach the
+runway.** That needs the TAEM energy work below.
+
+**Live follow-up:** the approved MM305 continuation on 2026-10-11 verified
+low-energy Final delivery and flare, but landed slow/long and stopped beyond
+the configured runway. See [live verification](Experiments/STS-Landing-20261011/L7-Live-Flare-Verification/README.md).
+
+## Evidence on flare quality
+
+| Flight | Source | Touchdown speed | Sink | Along (target 375 m) |
+|---|---|---|---|---|
+| L5 | live | 55.7 m/s | 1.13 m/s | 621 m |
+| L6 | live | 52.8 m/s | 1.57 m/s | 640 m |
+| L5 golden | ShuttleSim | 60.7 m/s | 4.94 m/s | on runway |
+| L7 | live | no flare | ~25 m/s | −75 m |
+| L7 (fixed) | ShuttleSim | 63.3 m/s | 1.25 m/s | −962 m |
+| L7 (fixed, MM305 continuation) | live | 52.77 m/s before contact | 2.11 m/s before contact | 1531 m; stopped 2646 m, beyond runway |
+
+The touchdown gate is 75 ± 15 % (63.75–86.25 m/s), so live L5 and L6 both
+landed **slow and long**: the float bleeds ~20 m/s past the aim point. The
+simulator disagrees with live on sink (4.94 vs 1.13 m/s for the same L5
+state). Offline flare tuning is therefore not trustworthy until the plant's
+pitch response matches live.
+
+## Status after 8a42d22
+
+| Plan item | State |
+|---|---|
+| 1. Flare ownership backstop + visible block reason | **Done** (all MM305 paths; status shows `Final blocked: …`) |
+| 2. TAEM energy | **Partly.** The executed law no longer dives for the 160 m/s station speed at k=0. Upstream targeting and lateral geometry remain under investigation: the plan had `robustnessQualified false`, and L7 reached TAEM much farther laterally displaced than L5. Scalar range and `k=0` alone do not establish the root cause. Open. |
+| 3. Preflare floor | **Done** as a fallback floor (nominal flights unchanged) |
+| 4. Touchdown speed / float | Open. Low-speed flare sink is sensitive: 0.8–4.5 m/s across small stretch-threshold changes on L7. |
+| 5. Sim/live gap | Open. Blocks trustworthy flare tuning. |
+
+ShuttleSim now: L5 passes every acceptance gate (66.1 m/s, 1.84 m/s sink).
+L7 lands with a flare (55.5 m/s, 0.91 m/s sink) but 226 m short. The subsequent
+live MM305 check verified Final delivery and flare but landed 1531 m along
+and stopped 146 m beyond the configured runway, with a 230 kg mass loss during
+overrun. The universal backstop and full deorbit/MM304 route remain unverified
+live. Grounded warning recovery also failed to terminate; operator abort was
+needed after stopping. Offline follow-up `9fdfa0a` now terminates a failed
+grounded landing with Abort after braking below 1.5 m/s, while preserving
+simulator contact evidence on termination. The regression and unchanged L5
+golden pass; the repeat approved flight below now verifies automatic low-speed failure termination live. No landing acceptance
+gates were weakened.
+
+## Plan, in priority order
+
+### 1. Guarantee flare ownership (safety backstop)
+- Add one terminal backstop that applies to every TAEM path (energy law,
+  native HAC route, direct). Below a height set by time-to-impact (for
+  example `h < max(300 m, 10 s × sink)`), Final owns the vehicle. The native
+  HAC path can still abort with "crossed runway elevation before reaching
+  the fixed-HAC exit". That is the same failure on a different path.
+- Publish the Final-admission block reason (preflare reject, terminal block)
+  in the snapshot status and the vehicle log. In L7 it was visible only with
+  `KSP_LANDER_GATE_TRACE`.
+- Acceptance: no scenario reaches runway elevation in TAEM. A
+  `ksl simulate` matrix (L5, L6, L7, plus a high-energy case) asserts the
+  Final → Flare phase path.
+
+### 2. Fix TAEM energy delivery (root cause of L7)
+- [Measured entry lateral history](Experiments/STS-Landing-20261011/Entry-Lateral-History/README.md)
+  shows L7 reversing bank near centreline crossing but needing about 150 s
+  to arrest its lateral velocity. An [experimental arrest projection](Experiments/STS-Landing-20261011/Entry-Lateral-Arrest/README.md)
+  improves the provisional TAEM crossrange by 4–5 km, but its full chain still
+  misses Final/flare and contacts short with gear up. It remains off by
+  default and is not accepted as a production energy/entry fix.
+- [Corrected MM304 inlet comparison](Experiments/STS-Landing-20261011/MM304-Measured-Inlet/README.md)
+  finds less than 0.1° heading/course difference at entry. The large L7
+  lateral handoff error survives corrected geometry and both provisional
+  coordinate plants, narrowing the inquiry toward lateral/range prediction
+  and model/history error. No targeting change is justified yet.
+- [Current MM304 replay investigation](Experiments/STS-Landing-20261011/MM304-Range-Control/README.md)
+  rejects lowering the coupled acquisition/drag-sizing range from 96.5 km to
+  60 km: L7 then misses the Mach/altitude handoff window. L5 also begins its
+  golden MM305 replay at `k=0`, so saturation alone does not establish L7's
+  cause. Compare lateral path and longitudinal model error. A candidate aligning the range predictor
+  with execution preserved L5/L7 touchdown outcomes, but was set aside after
+  the broader MM305 admission qualification failed. The unchanged baseline
+  also fails the same 0/5 non-vacuity assertion; admission coverage remains open.
+- Investigate why the law sat at `k = 0` from TAEM entry and still selected
+  a HAC intercept. `loop = 1` alone does not prove an overhead circuit or
+  excess energy: `tel_plan` also sets it on direct `TEL_LEG_DOWN` candidates.
+  The original live trace first selects that mode at UT 6605.4, at `k = 0`.
+  `tel_plan_open` permits replanning on the downwind leg while the tangent
+  remains more than 5 km away; the 8 km freeze applies to straight-in selection.
+  - Check `tel_solve_k` and the loop selection against the L7 entry state,
+    which is now a scenario.
+  - Check whether MM304 handed over short. TAEM entry was at −80 km along,
+    −33 km cross, Mach 2.85.
+- Reconcile the energy targets. The subsonic dynamic-pressure band
+  (`TEL_Q_LO`/`TEL_Q_HI` = 3.5/11 kPa, ≲135 m/s near the ground) cannot
+  deliver `finalAlignmentSpeed` = 160 m/s. Either the station energy target
+  should come from Final's speed schedule, or `finalAlignmentSpeed` should
+  match what this vehicle can hold.
+- Allow a mode change while unfrozen. If energy turns short after the loop
+  decision, shorten or abandon the loop (straight-in).
+
+### 3. Make the preflare planner model the actual vehicle
+- `minimumSafeSpeed` = 85 m/s is used as the pull-up exit floor, but live
+  touchdowns at 53–56 m/s were controlled. Derive the floor from the learned
+  1-g speed at the incidence limit (`speed_1g`) with a margin. Then a slow
+  but flyable state gets a real preflare plan instead of degraded mode.
+- Keep low-energy mode as the fallback, not the normal path.
+
+### 4. Touchdown speed and float length
+- L5 and L6 floated ~250 m past the aim and lost ~20 m/s. Candidates:
+  - start the arc later;
+  - shorten the shallow-glide segment (`SGS_HEIGHT` = 12 m);
+  - size `AIM_BIAS` from live data.
+- Evaluate the adaptive flare (`adaptiveFlare`, off in `sts-live.json`). It
+  predicts touchdown speed and along-track from the identified incidence
+  response, which is the missing feedback. Enable it only after it beats the
+  fixed flare on the matrix and on replays of the L5/L6 live data.
+
+### 5. Close the sim/live gap first
+- [Measured pitch authority/inertia cross-check](Experiments/STS-Landing-20261011/Pitch-Authority-Crosscheck/README.md)
+  expands held-out checks to L6 and the third L7 continuation. Replacing
+  capped Q control authority with native torque/inertia still gives negative
+  held-out R² on every flight. Maximum available torque is not validated as
+  net aerodynamic moment; no coefficients are adopted.
+- [Measured-state restarts and matrix](Experiments/STS-Landing-20261011/Measured-State-Replay/README.md)
+  correct course/body-heading confusion and preserve measured body pose/rates.
+  Independent L6 and a synthetic high-energy inlet now join L5/L7. The pinned
+  L4-fit CLI matrix reaches Final and flare with gear down in all four cases,
+  but every landing fails acceptance. No plant is qualified; earlier MM304
+  comparisons also need corrected inlet geometry before targeting changes.
+- [Body-coordinate plant experiment](Experiments/STS-Landing-20261011/Body-Coordinate-Plant/README.md)
+  adds opt-in body moment/quaternion state with incidence derived from the
+  changing flight frame, plus actual body-rate telemetry. Conservation/sign
+  checks and unchanged baseline goldens pass.
+  [Corrected coordinate-rate decoding](Experiments/STS-Landing-20261011/Body-Coordinate-Rate-Fix/README.md)
+  removes false recovery triggers: all six body-model replays now flare, and
+  the L4 fit passes L5 acceptance. The L7 fit isolated Final case is close to
+  live L5 speed/sink/position, but full-route and held-out response validation
+  remain incomplete. Roll/yaw identification and predictor/control parity
+  remain open. No production model switch or flare tuning was accepted.
+- [Integral identification and kinematic check](Experiments/STS-Landing-20261011/Pitch-Integral-Crosscheck/README.md)
+  includes both L7 continuations. Longer intervals and sqrt(Q) damping still
+  do not produce a transferable L4–L7 fit. Subtracting measured FPA rotation
+  improves near-level AoA-increment RMSE by 55–76% on every flight, supporting
+  preserving body rotational state and deriving incidence from the changing
+  flight frame before fitting moments. No new plant coefficients were adopted.
+- [L4/L5/L7 cross-check](Experiments/STS-Landing-20261011/Pitch-Plant-Crosscheck/README.md)
+  rejects direct adoption of the existing pitch regression: held-out L7 R²
+  is negative for both body and AoA coordinates, including a 0–400 ms delay
+  sweep. The active direct plant integrates AoA using body-pitch coefficients;
+  address that coordinate/kinematic mismatch before accepting a refit.
+- Refit the ShuttleSim attitude plant (`att-live.ini`) from the L4–L7 pitch
+  responses (`L6-MM305-Final/fit-pitch-response.py`,
+  `pitch-response-L4-L5.json`). The acceptance check is that the L5 replay
+  reproduces the live touchdown (≈56 m/s, ≈1.1 m/s sink, ≈620 m) within
+  tolerance before any flare tuning depends on the simulator.
+
+### Verification for each step
+1. Run the `ksl simulate` matrix (L5 golden, L7, plus new L6 and
+   high-energy scenarios). Phase path and touchdown gates are recorded per
+   scenario.
+2. Run `make test`, plus `make -C CLanding qualification` for any TAEM change.
+3. Then a live flight from an MM305 save (`ksl-…-mm305` saves exist for L7)
+   before a full mission.
+
+### Repeat live verification, 2026-10-11
+
+[The approved repeat MM305 flight](Experiments/STS-Landing-20261011/L7-Live-Rollout-Verification/README.md)
+exercised flare and automatically ended FAILED after runway overrun. Initial
+ground response followed telemetry near 47.85 m/s and 4.03 m/s downward;
+first landed flag followed a bounce. KSP paused landed at about 2810 m along
+and 1.37 m/s, brakes on. Grounded failure termination is live-verified; slow,
+long delivery, phase oscillations, flare sensitivity and the plant gap remain
+open. Universal terminal backstop and full deorbit/MM304 route were not tested.
+
+### Third approved continuation, 2026-10-11
+
+[Current-backend live verification](Experiments/STS-Landing-20261011/L7-Live-Current-Verification/README.md)
+again reached Final and flare, then automatically failed after a 130 m overrun.
+The last pre-ground-response sample was 50.81 m/s with 3.59 m/s sink,
+1567 m along. STS is paused landed at 1.36 m/s, gear/brakes on. Phase
+oscillations recur; no backstop, adaptive flare or full entry route was tested.
+
+### User-requested earlier aim and drogue
+
+[Earlier aim and drogue deployment](Experiments/STS-Landing-20261011/Earlier-Aim-Drogue/README.md)
+sets the STS touchdown aim to 150 m (previously 375 m) and enables ground-only
+parachute deployment. The actual Mk12-R drogue was found stowed after the
+third flight. The measured L7 replay moves contact only 31 m earlier and
+still overruns; drogue braking is not modeled offline. Both changes await
+approved live verification; no live controls were changed for this work.
+
+### STS admission diagnostics, 2026-10-11
+
+[STS admission diagnostics](Experiments/STS-Landing-20261011/MM305-Admission-Diagnostics/README.md)
+confirm that the measured-mass STS fixture qualifies 0/5 physically admitted
+states, just as the distinct legacy STS-N fixture qualifies none. Focused
+sample 0 has no jointly feasible profile among 2,184 smooth trials; longer
+constant profiles often lose speed before completing the route. Direct pitch
+moment coefficient changes cannot affect this command-servo predictor.
+Timeout evidence and focused selection were added without changing gates or
+production guidance. Predictor/control parity and non-vacuity remain open.
+
+[Provisional aerodynamic comparison](Experiments/STS-Landing-20261011/MM305-Aero-Comparison/README.md)
+finds that the October 11 supersonic polar also qualifies none of 2,184 focused
+sample-0 profiles. Both tables predict L/D below 1 near Mach 1.5–2.6, implying
+strong speed loss while tracking a shallow reference. This narrows the next
+check to held-out aerodynamic force fidelity and energy-aware profile design;
+steady glide estimates do not prove physical unreachability. No table was
+adopted and no acceptance gate changed.
+
+[Held-out native force check](Experiments/STS-Landing-20261011/Aero-Heldout-Crosscheck/README.md)
+confirms measured L/D below 1 in Mach 1–2.5 on L5/L6/L7. The October 10 polar
+is fairly close at matched measured states, while the October 11 correction
+overpredicts Mach 1.5–2.5 drag on all three flights. No polar is newly qualified
+or adopted. Investigate an energy-aware vertical reference rather than
+artificially lowering transonic drag; atmosphere/state/attitude fidelity and
+full-route feasibility remain separate unresolved checks.
+
+[Offline local lead-profile search](Experiments/STS-Landing-20261011/MM305-Lead-Profile-Search/README.md)
+rejects simply activating the existing local bow: five signed offsets produce
+0 jointly feasible profiles among 10,920 sample-0 trials. The baseline's best
+tracking case still misses altitude by 3 km and exits at 70 m/s, despite a
+slope-compliant reference. Production files and acceptance gates are unchanged.
+Trace the location of authority/energy loss before designing a new profile.
+
+[Profile authority trace](Experiments/STS-Landing-20261011/MM305-Profile-Authority-Trace/README.md)
+shows the best slope-compliant trial first staying above its reference,
+then losing 3 km of altitude in a heavily banked transonic turn. Combined
+turn/pull-up demand exceeds the incidence envelope before Mach 1; the subsonic
+ceiling discontinuity compounds it. Plan lateral and vertical curvature
+jointly against the evolving energy/authority envelope. Neither cap removal
+nor a local bow is validated as a fix; production guidance remains unchanged.
+
+[Expanded radius search](Experiments/STS-Landing-20261011/MM305-Expanded-Radius-Search/README.md)
+adds 24/27/36 km upper families beyond the existing outer planner's 12/18 km
+bands. All 2,808 focused smooth trials remain infeasible; larger routes commonly
+time out or exhaust energy. Radius expansion alone is rejected. Check the
+inlet's lower vertical-curvature bound when lateral lift prevents following a
+rapidly descending reference, while retaining full downstream qualification.
+
+[Turn-aware inlet bounds](Experiments/STS-Landing-20261011/MM305-Inlet-Curvature-Bounds/README.md)
+change the analytic reference but leave all 2,184 focused trial outcomes and
+selected-profile early commands unchanged. The ~4 m local correction is too
+small to address the later 3 km departure. The experiment is rejected as an
+admission remedy; full-path propagated authority/energy constraints are needed.
+
+[Measured TAEM envelope](Experiments/STS-Landing-20261011/Live-TAEM-Envelope/README.md)
+shows L5/L6 spent about 130 seconds with actual FPA steeper than −24° and
+reached −35° before recovering for Final. Near the aligned 8 km station they
+had 141–142 m/s, versus original L7's 101 m/s; their later 129–131 m/s Final
+handoff is a different station. Investigate a steep-segment/recovery profile
+under propagated load/q/incidence/response limits. No reference ceiling or
+acceptance gate is changed by this evidence, and slow live touchdown does
+not constitute current nominal landing acceptance.
+
+[Sustained descent/recovery experiment](Experiments/STS-Landing-20261011/MM305-Descent-Recovery-Profile/README.md)
+finds no feasible focused route under either the existing 24° bound or explicit
+temporary 36° variants. Best tracking improves only from 3.04 to 2.90 km and
+exits at 74 m/s. The broader-bound experiment is rejected; production gates
+remain unchanged. A station-only geometric shape and steeper scalar bound
+are insufficient; tie the reference to propagated Mach/q/lateral lift reserve.
+
+[Propagated-authority reference](Experiments/STS-Landing-20261011/MM305-Propagated-Reference/README.md)
+reduces a tracking error to 0.53 km but needs a 54° reference descent and still
+misses endpoint altitude by 1.31 km. A slower variant can track a short route
+while ending 17 km above Final. Neither qualifies under unchanged gates.
+Local authority following alone does not solve the endpoint/energy problem;
+next investigate lateral turn timing with the altitude/density history.
+
+[Gentler opening geometry](Experiments/STS-Landing-20261011/MM305-Late-Turn-Geometry/README.md)
+changes selected cubic leads and reduces best tracking error to 2.15 km, but
+still fails slope, tracking and speed requirements. Prefix curvature limits
+are rejected as an admission remedy. A reshaped cubic is not a true straight
+initial descent; any composite-path experiment must propagate that prefix and
+qualify the combined path against unchanged endpoint/energy constraints.
+
+[Propagated unbanked prefix](Experiments/STS-Landing-20261011/MM305-Unbanked-Prefix/README.md)
+checks actual 4/8/12 km descent prefixes before planning the turn from their
+complete exit states. All four variants and the reproduced baseline find no
+feasible downstream route; best tracking remains 3.2–3.85 km in the variants.
+The longest prefix loses 82 kJ/kg and its best tracked route exits at 64 m/s.
+Pressure/load limits pass for the prefixes, but no combined route is qualified
+or adopted. Fixed-incidence delay is rejected. Trace the later authority/energy
+failure before making further composite-path changes; live aim/drogue approval
+remains pending, and production gates are unchanged.
+
+[Prefix authority comparison](Experiments/STS-Landing-20261011/MM305-Prefix-Authority-Comparison/README.md)
+passively reproduces every smooth-trial row for baseline and the 12 km prefix.
+The prefix candidate exceeds the permitted-incidence lift envelope after only
+1.5 s of its remaining lead, then repeats the banked transonic pull-up deficit.
+Including its prefix, Mach 1 still occurs near 58–59 s, but 1.82 km higher with
+30% lower pressure/lift availability. Delayed turn alone is rejected; couple
+lateral curvature with propagated altitude/energy and preserved endpoint/speed
+constraints. No production changes, cap removal or qualification is supported.
+
+[Zero-turn vertical diagnostic](Experiments/STS-Landing-20261011/MM305-Zero-Turn-Vertical/README.md)
+removes lateral demand while retaining native vertical shaping/servo/forces.
+Of 448 finite Hermite/bow profiles, 149 meet unchanged slope/tracking/endpoint
+checks, but their fastest arrival is 127.814 m/s, below the 140.8 m/s speed
+floor. A 68 km profile tracks within 15 m. Thus turning is not the sole failure
+in this profile family. No gate reduction or physical impossibility is proven;
+inspect live/planner arrival contracts and a coupled energy-aware profile.
+Production and goldens remain unchanged; live approval remains pending.
+
+[Final arrival-contract audit](Experiments/STS-Landing-20261011/Final-Arrival-Contract-Audit/README.md)
+confirms production sample0 resolves 9 km / 165 m/s (145.2 floor), while the
+zero-turn diagnostic used raw configured 8 km / 160 m/s (140.8 floor). Neither
+is equivalent to the shared Final gate. In 216 synthetic snapshots, six pass
+Final, five outside the planner band; none at 125–130 m/s passes. The 127.814
+case fails upper energy at lower AoA and measured load at higher AoA. No scalar
+speed-floor reduction is supported. Compare forecasts against an actual exit
+and flown Final tail with retained state/history; no production gates changed.
+
+[Forecast versus flown Final](Experiments/STS-Landing-20261011/Final-Forecast-Replay-Comparison/README.md)
+uses unmodified closed-loop L5/L7 states/history. L5 reproduces its golden but
+last pre-pull touchdown forecast is 10.47 m/s high; L7's is 0.13 m/s low.
+Current L7 with 150 m aim lands 376 m short at 61.929 m/s / 3.353 m/s sink,
+not the older scenario-description numbers. The forecast is conditional
+point-mass integration, not future controller/actuator replay; post-latch NaN
+is intentional. Freeze a common late state/plan and compare native response,
+drag work and sink history before tuning. No shared scalar correction or
+production change is supported; plant and live qualification remain open.
+
+[Frozen response diagnostic](Experiments/STS-Landing-20261011/Frozen-Flare-Response/README.md)
+reproduces the same late-state forecast exactly, then isolates achieved lift
+and ideal AoA-servo response. Servo alone leaves L5 ~9.8 m/s high at dt 0.05;
+its counterfactual stored trigger still leaves ~9 m/s error. Timing-only and
+servo-only substitutions are rejected. Actual L5 flies 36.42 s / 12.08 kJ/kg
+recorded drag work versus frozen 32 s / 11.48 kJ/kg; future plan/controller
+changes remain absent. Both main replay summaries are unchanged. Compare a
+complete native Final control replay, not another scalar correction; no
+production gates or unqualified plant have been adopted.
+
+[Native Final checkpoint audit](Experiments/STS-Landing-20261011/Final-Checkpoint-Audit/README.md)
+finds the existing terminal shadow copies guidance but bypasses native FCS,
+estimator updates and ground contact; it cannot certify a complete Final tail.
+Controller, transport FCS and simulator state have separate owners. Require
+unchanged warmed-tail parity at a defined lockstep boundary before comparing a
+new forecast. Reexecuting the original prefix is a valid initial alternative
+to implementing a restart. No checkpoint support or flight qualification is
+claimed by this source audit.
+
+[Warmed native Final tails](Experiments/STS-Landing-20261011/Final-Warmed-Tail/README.md)
+reexecute each original prefix with passive tracing and verify exact published
+actuator/state/contact and Final trace parity, beyond unchanged summaries.
+On the actual future incidences, the frozen learned force model underpredicts
+drag work by 3.77% in L5 / 7.31% in L7; updating learning reduces those biases
+to 0.62% / 1.53%. L5 also spends 6.2 s below 12 m versus roughly 4 s in the
+frozen profile. Its plan becomes valid and response changes at the next tick;
+pull latch is not immediate ideal arc tracking. No causal speed correction or
+new forecast is established. Preserve native onset/stage/force history in the
+next forecast experiment; production, goldens and live qualification unchanged.
+
+[Native-stage forecast](Experiments/STS-Landing-20261011/Final-Native-Stage-Forecast/README.md)
+reproduces native latch/onset/arc logic and incidence slew in a passive point-mass
+forecast with unchanged-tail parity. It cuts L5's last pre-pull error from +10.5 to
+−3.0 m/s but moves L7 from −0.13 to −18.6 m/s, so it is rejected. The L7 deficit
+points to unmodelled below-12 m lift/sink behaviour; test that next. No production
+change.

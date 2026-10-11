@@ -214,6 +214,8 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.has_crossrange_error=isfinite(t->runway_cross_track);
     lateral.crossrange_error_m=lateral.has_crossrange_error?-t->runway_cross_track:0.0;
 
+    const char *arrest_test=getenv("KSP_LANDER_ENTRY_LATERAL_ARREST_TEST");
+    lateral.crossrange_arrest_prediction=arrest_test&&strcmp(arrest_test,"1")==0;
     double map_radius=p->radius+fmax(0.0,t->mean_altitude);
     double map_scale=map_radius>DBL_EPSILON?p->radius/map_radius:1.0;
     double map_speed=fmax(0.0,t->horizontal_speed)*map_scale;

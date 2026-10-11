@@ -38,7 +38,9 @@ int main(void) {
     assert(!deorbit_runway_capture_qualified(&entry, &cfg.site, &cfg.vehicle,
         &cfg.guidance, 30000.0));
     assert(deorbit_entry_stage_robustness_qualified(13, 15, 0, 0.80));
-    assert(!deorbit_entry_stage_robustness_qualified(12, 15, 0, 0.80));
+    /* Exactly the required fraction qualifies (1e-9 tolerance for 12/15 == 0.80). */
+    assert(deorbit_entry_stage_robustness_qualified(12, 15, 0, 0.80));
+    assert(!deorbit_entry_stage_robustness_qualified(11, 15, 0, 0.80));
     assert(!deorbit_entry_stage_robustness_qualified(15, 15, 1, 0.80));
 
     /* Each stage-local physical prerequisite independently rejects admission. */

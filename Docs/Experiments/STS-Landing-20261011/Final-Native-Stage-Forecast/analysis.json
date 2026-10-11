@@ -1,0 +1,104 @@
+{
+  "l5": {
+    "actualTouchdownSpeed": 66.129,
+    "packets": 3654,
+    "finalTraceRecords": 725,
+    "prelatch": {
+      "existing": {
+        "count": 360,
+        "of": 360,
+        "first": 21.44916699999999,
+        "last": 10.466369,
+        "meanAbs": 17.837924763888882
+      },
+      "native0": {
+        "count": 360,
+        "of": 360,
+        "first": 9.943764999999999,
+        "last": 3.7104319999999973,
+        "meanAbs": 7.634438258333328
+      },
+      "native05": {
+        "count": 360,
+        "of": 360,
+        "first": 10.759599999999992,
+        "last": 4.261364999999998,
+        "meanAbs": 8.378145416666662
+      }
+    },
+    "postlatch": {
+      "existing": {
+        "count": 0,
+        "of": 301,
+        "first": null,
+        "last": null,
+        "meanAbs": null
+      },
+      "native0": {
+        "count": 301,
+        "of": 301,
+        "first": 3.2047740000000005,
+        "last": -2.8955960000000047,
+        "meanAbs": 1.562748558139535
+      },
+      "native05": {
+        "count": 301,
+        "of": 301,
+        "first": 4.305211,
+        "last": -0.9016160000000042,
+        "meanAbs": 1.4776378471760794
+      }
+    }
+  },
+  "l7": {
+    "actualTouchdownSpeed": 61.929,
+    "packets": 4928,
+    "finalTraceRecords": 930,
+    "prelatch": {
+      "existing": {
+        "count": 816,
+        "of": 816,
+        "first": 8.690825000000004,
+        "last": -0.13280500000000472,
+        "meanAbs": 1.5345055306372553
+      },
+      "native0": {
+        "count": 816,
+        "of": 816,
+        "first": -0.5333120000000022,
+        "last": -7.276344000000002,
+        "meanAbs": 7.180643661764708
+      },
+      "native05": {
+        "count": 816,
+        "of": 816,
+        "first": -0.1793350000000018,
+        "last": -6.317483000000003,
+        "meanAbs": 6.440530405637257
+      }
+    },
+    "postlatch": {
+      "existing": {
+        "count": 0,
+        "of": 79,
+        "first": null,
+        "last": null,
+        "meanAbs": null
+      },
+      "native0": {
+        "count": 79,
+        "of": 79,
+        "first": -7.153053,
+        "last": -9.122385999999999,
+        "meanAbs": 8.00225907594937
+      },
+      "native05": {
+        "count": 79,
+        "of": 79,
+        "first": -6.206248000000002,
+        "last": -8.185981000000005,
+        "meanAbs": 6.657313974683547
+      }
+    }
+  }
+}

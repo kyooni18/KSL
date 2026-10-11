@@ -1,0 +1,164 @@
+{
+  "sources": {
+    "L4": {
+      "path": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+      "sha256": "b715b99d7afc7ef9f2998ee539dfbf1d9a496c43051df79bd48f9358054aa972",
+      "windows": 180
+    },
+    "L5": {
+      "path": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+      "sha256": "83cac6ef7eae878290bf9b569f701efea086d2d6a344691b939d83642e7a7f8e",
+      "windows": 144
+    },
+    "L7a": {
+      "path": "FlightLogs/2026-10-11T07-55-25Z-STS-vehicle.jsonl",
+      "sha256": "7d9049ac1dcd4c57b2be525f8c12882ea07ad7bb67fd33648720c96de655a670",
+      "windows": 714
+    },
+    "L7b": {
+      "path": "FlightLogs/2026-10-11T08-34-41Z-STS-vehicle.jsonl",
+      "sha256": "ffca474a8a6ee89e69c26917926d53c1b8431dfe8c02579528845961ceb1a93d",
+      "windows": 659
+    },
+    "L6": {
+      "path": "FlightLogs/2026-10-10T08-28-20Z-STS-vehicle.jsonl",
+      "sha256": "e55dc83df09fca8a1b335cad2e579915e15619ed99360c6dbb34f56e8a1ebbbe",
+      "windows": 164
+    },
+    "L7c": {
+      "path": "FlightLogs/2026-10-11T09-29-11Z-STS-vehicle.jsonl",
+      "sha256": "67de0e14c5a277bde6bf5a6ac62507e16a5620c63647a7cb688e823a61d56c98",
+      "windows": 715
+    }
+  },
+  "policy": "L4 training only; .5s zero-delay nonoverlap wings-level windows. L5/L6/all L7 continuations held out. No coefficients adopted.",
+  "model": "Pitch angular acceleration from native available pitch torque/inertia * input, sqrt(Q) damping, Q AoA stiffness and Q trim. Optional 1e6/I scaling of passive terms. AvailableTorque is maximum authority, not actual net moment.",
+  "fits": [
+    {
+      "model": "authority",
+      "coefficients": [
+        0.028448261029643294,
+        -0.10685416327997285,
+        -0.007572959058732679,
+        -0.02748329195577886
+      ],
+      "physicalSigns": true,
+      "train": {
+        "n": 180,
+        "r2": 0.05219049827447719,
+        "rmseDegPerSecond2": 0.7946832438836533
+      },
+      "heldout": {
+        "L5": {
+          "n": 144,
+          "r2": -0.01656765562180751,
+          "rmseDegPerSecond2": 0.6943167365377688
+        },
+        "L7a": {
+          "n": 714,
+          "r2": -0.9755695736962564,
+          "rmseDegPerSecond2": 0.4220121738512081
+        },
+        "L7b": {
+          "n": 659,
+          "r2": -0.48266201945307463,
+          "rmseDegPerSecond2": 0.4326708629627151
+        },
+        "L6": {
+          "n": 164,
+          "r2": -0.04118889508548196,
+          "rmseDegPerSecond2": 0.7441661464660329
+        },
+        "L7c": {
+          "n": 715,
+          "r2": -1.0497448867324883,
+          "rmseDegPerSecond2": 0.40395095697663647
+        }
+      }
+    },
+    {
+      "model": "authority-inertia",
+      "coefficients": [
+        0.028448349772686135,
+        -0.101350598108539,
+        -0.007182944513453596,
+        -0.026067694602083583
+      ],
+      "physicalSigns": true,
+      "train": {
+        "n": 180,
+        "r2": 0.05219076310124904,
+        "rmseDegPerSecond2": 0.7946831328627084
+      },
+      "heldout": {
+        "L5": {
+          "n": 144,
+          "r2": -0.01632315783490057,
+          "rmseDegPerSecond2": 0.6942332353988663
+        },
+        "L7a": {
+          "n": 714,
+          "r2": -0.9250046955070663,
+          "rmseDegPerSecond2": 0.4165764469357533
+        },
+        "L7b": {
+          "n": 659,
+          "r2": -0.45292881860775114,
+          "rmseDegPerSecond2": 0.42831051605773746
+        },
+        "L6": {
+          "n": 164,
+          "r2": -0.04097835137436734,
+          "rmseDegPerSecond2": 0.7440909019909772
+        },
+        "L7c": {
+          "n": 715,
+          "r2": -0.9955270398728873,
+          "rmseDegPerSecond2": 0.3985726957017412
+        }
+      }
+    }
+  ],
+  "previousQModel": {
+    "capKPa": 8.0,
+    "controlPerKPa": 3.466587989688298,
+    "sqrtQDamping": -0.296710990627106,
+    "stiffnessPerKPa": 0.17872328663979767,
+    "trimDeg": 1.2992229852603754,
+    "physicalSigns": true,
+    "constantControlTorque": false,
+    "controlConstant": 0.0,
+    "train": {
+      "n": 180,
+      "r2": 0.37157153466740445,
+      "rmseDegPerSecond2": 0.6470851765993423
+    },
+    "heldout": {
+      "L5": {
+        "n": 144,
+        "r2": 0.263323726551036,
+        "rmseDegPerSecond2": 0.5910549128762094
+      },
+      "L7a": {
+        "n": 714,
+        "r2": -2.090300733935201,
+        "rmseDegPerSecond2": 0.5278119119548631
+      },
+      "L7b": {
+        "n": 659,
+        "r2": -1.2319330096277943,
+        "rmseDegPerSecond2": 0.5308565082843585
+      },
+      "L6": {
+        "n": 164,
+        "r2": 0.16256868858152196,
+        "rmseDegPerSecond2": 0.6673900738356023
+      },
+      "L7c": {
+        "n": 715,
+        "r2": -2.492105706199559,
+        "rmseDegPerSecond2": 0.5272570872877842
+      }
+    }
+  }
+}

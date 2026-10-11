@@ -1,0 +1,378 @@
+{
+  "scope": "focused sample 0 only, not a complete qualification batch",
+  "sourceCommit": "7eb7bdd",
+  "massKg": 25123.15,
+  "environment": {
+    "KSP_LANDER_MODEL_PROFILE": "sts-live-20261010",
+    "KSP_LANDER_TAEM_PROFILE_DIAGNOSTICS": "1"
+  },
+  "command": [
+    "CLanding/build/mm305_feasibility_tests",
+    "--configuration",
+    "Configuration/sts-live.json",
+    "--mass-kg",
+    "25123.15",
+    "--sample-index",
+    "0"
+  ],
+  "alternativeArguments": [
+    "--aero",
+    "ShuttleSim/reference-model/sts_aero_live20261011.csv"
+  ],
+  "runs": {
+    "baseline.log": {
+      "sha256": "f4fdc6569c7977f30cb7d9ff1255267ff8c469e4ae24150a5e3d5e368828d503",
+      "trials": 2184,
+      "completed": 1287,
+      "jointlyFeasible": 0.0,
+      "closestAltitudeCompletedTrial": {
+        "route": 48536.527,
+        "bow": -4603.959,
+        "completed": 1.0,
+        "feasible": 0.0,
+        "speed": 95.251,
+        "steep": 36.587,
+        "track": 8036.088,
+        "endpoint": 2.016,
+        "slopeLimit": 24.0,
+        "trackLimit": 300.0,
+        "endpointLimit": 150.0,
+        "reason": "completed"
+      },
+      "qualificationExitCode": 1
+    },
+    "aero11.log": {
+      "sha256": "4948b249f37e1b119df0774de70dd2a933ac355964b2fdad8dca82aeeea89066",
+      "trials": 2184,
+      "completed": 1368,
+      "jointlyFeasible": 0.0,
+      "closestAltitudeCompletedTrial": {
+        "route": 46858.522,
+        "bow": -2301.98,
+        "completed": 1.0,
+        "feasible": 0.0,
+        "speed": 109.673,
+        "steep": 33.138,
+        "track": 4868.963,
+        "endpoint": 0.003,
+        "slopeLimit": 24.0,
+        "trackLimit": 300.0,
+        "endpointLimit": 150.0,
+        "reason": "completed"
+      },
+      "qualificationExitCode": 1
+    }
+  },
+  "polars": {
+    "sts_aero_live20261010.csv": [
+      {
+        "mach": 0.0,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 3.8684893276499976,
+        "unbankedSteadyGlideAngleDeg": 14.493622729541945
+      },
+      {
+        "mach": 0.2,
+        "alphaDeg": 6.0,
+        "maximumTabulatedLD_0to30deg": 3.933793552809626,
+        "unbankedSteadyGlideAngleDeg": 14.262911572067685
+      },
+      {
+        "mach": 0.3,
+        "alphaDeg": 6.0,
+        "maximumTabulatedLD_0to30deg": 3.418802216072257,
+        "unbankedSteadyGlideAngleDeg": 16.304203434969153
+      },
+      {
+        "mach": 0.4,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 3.257753523410664,
+        "unbankedSteadyGlideAngleDeg": 17.06439140925179
+      },
+      {
+        "mach": 0.5,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 2.766977660225241,
+        "unbankedSteadyGlideAngleDeg": 19.870117125917353
+      },
+      {
+        "mach": 0.6,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 2.276013260363335,
+        "unbankedSteadyGlideAngleDeg": 23.718993827962674
+      },
+      {
+        "mach": 0.7,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 2.010618726407402,
+        "unbankedSteadyGlideAngleDeg": 26.443884371944968
+      },
+      {
+        "mach": 0.8,
+        "alphaDeg": 12.0,
+        "maximumTabulatedLD_0to30deg": 1.6917610180935772,
+        "unbankedSteadyGlideAngleDeg": 30.58733515250409
+      },
+      {
+        "mach": 0.9,
+        "alphaDeg": 12.0,
+        "maximumTabulatedLD_0to30deg": 1.4712616273196197,
+        "unbankedSteadyGlideAngleDeg": 34.203506445235284
+      },
+      {
+        "mach": 1.0,
+        "alphaDeg": 20.0,
+        "maximumTabulatedLD_0to30deg": 1.0873521859886992,
+        "unbankedSteadyGlideAngleDeg": 42.603666014030345
+      },
+      {
+        "mach": 1.1,
+        "alphaDeg": 22.0,
+        "maximumTabulatedLD_0to30deg": 0.8149289448305759,
+        "unbankedSteadyGlideAngleDeg": 50.82241227917357
+      },
+      {
+        "mach": 1.2,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.7500149580004845,
+        "unbankedSteadyGlideAngleDeg": 53.129553858703574
+      },
+      {
+        "mach": 1.3,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.7992162449619712,
+        "unbankedSteadyGlideAngleDeg": 51.36758383577616
+      },
+      {
+        "mach": 1.4,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.8494412247480958,
+        "unbankedSteadyGlideAngleDeg": 49.65405517890618
+      },
+      {
+        "mach": 1.5,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 0.8937841956338509,
+        "unbankedSteadyGlideAngleDeg": 48.21015882302494
+      },
+      {
+        "mach": 1.62724336,
+        "alphaDeg": 22.0,
+        "maximumTabulatedLD_0to30deg": 0.9720394188888973,
+        "unbankedSteadyGlideAngleDeg": 45.81231436671095
+      },
+      {
+        "mach": 2.58129103,
+        "alphaDeg": 25.0,
+        "maximumTabulatedLD_0to30deg": 0.8340166180710895,
+        "unbankedSteadyGlideAngleDeg": 50.1713321468466
+      },
+      {
+        "mach": 3.51142706,
+        "alphaDeg": 28.0,
+        "maximumTabulatedLD_0to30deg": 0.7274410938472597,
+        "unbankedSteadyGlideAngleDeg": 53.96631766078757
+      },
+      {
+        "mach": 4.83174336,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.469033843448305,
+        "unbankedSteadyGlideAngleDeg": 64.87183322619508
+      },
+      {
+        "mach": 5.67268669,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4956499116584732,
+        "unbankedSteadyGlideAngleDeg": 63.634688932006284
+      },
+      {
+        "mach": 6.63588691,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.5002639801107012,
+        "unbankedSteadyGlideAngleDeg": 63.422850143651274
+      },
+      {
+        "mach": 7.09923376,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 10.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 16.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 25.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      }
+    ],
+    "sts_aero_live20261011.csv": [
+      {
+        "mach": 0.0,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 3.8684893276499976,
+        "unbankedSteadyGlideAngleDeg": 14.493622729541945
+      },
+      {
+        "mach": 0.2,
+        "alphaDeg": 6.0,
+        "maximumTabulatedLD_0to30deg": 3.933793552809626,
+        "unbankedSteadyGlideAngleDeg": 14.262911572067685
+      },
+      {
+        "mach": 0.3,
+        "alphaDeg": 6.0,
+        "maximumTabulatedLD_0to30deg": 3.418802216072257,
+        "unbankedSteadyGlideAngleDeg": 16.304203434969153
+      },
+      {
+        "mach": 0.4,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 3.257753523410664,
+        "unbankedSteadyGlideAngleDeg": 17.06439140925179
+      },
+      {
+        "mach": 0.5,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 2.766977660225241,
+        "unbankedSteadyGlideAngleDeg": 19.870117125917353
+      },
+      {
+        "mach": 0.6,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 2.276013260363335,
+        "unbankedSteadyGlideAngleDeg": 23.718993827962674
+      },
+      {
+        "mach": 0.7,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 2.010618726407402,
+        "unbankedSteadyGlideAngleDeg": 26.443884371944968
+      },
+      {
+        "mach": 0.8,
+        "alphaDeg": 12.0,
+        "maximumTabulatedLD_0to30deg": 1.6917610180935772,
+        "unbankedSteadyGlideAngleDeg": 30.58733515250409
+      },
+      {
+        "mach": 0.9,
+        "alphaDeg": 12.0,
+        "maximumTabulatedLD_0to30deg": 1.4712616273196197,
+        "unbankedSteadyGlideAngleDeg": 34.203506445235284
+      },
+      {
+        "mach": 1.0,
+        "alphaDeg": 20.0,
+        "maximumTabulatedLD_0to30deg": 1.0873521859886992,
+        "unbankedSteadyGlideAngleDeg": 42.603666014030345
+      },
+      {
+        "mach": 1.1,
+        "alphaDeg": 22.0,
+        "maximumTabulatedLD_0to30deg": 0.8149289448305759,
+        "unbankedSteadyGlideAngleDeg": 50.82241227917357
+      },
+      {
+        "mach": 1.2,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.7500149580004845,
+        "unbankedSteadyGlideAngleDeg": 53.129553858703574
+      },
+      {
+        "mach": 1.3,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.7992162449619712,
+        "unbankedSteadyGlideAngleDeg": 51.36758383577616
+      },
+      {
+        "mach": 1.4,
+        "alphaDeg": 10.0,
+        "maximumTabulatedLD_0to30deg": 0.8494412247480958,
+        "unbankedSteadyGlideAngleDeg": 49.65405517890618
+      },
+      {
+        "mach": 1.5,
+        "alphaDeg": 8.0,
+        "maximumTabulatedLD_0to30deg": 0.8937841956338509,
+        "unbankedSteadyGlideAngleDeg": 48.21015882302494
+      },
+      {
+        "mach": 1.62724336,
+        "alphaDeg": 22.0,
+        "maximumTabulatedLD_0to30deg": 0.5806487057995103,
+        "unbankedSteadyGlideAngleDeg": 59.85846256871435
+      },
+      {
+        "mach": 2.58129103,
+        "alphaDeg": 25.0,
+        "maximumTabulatedLD_0to30deg": 0.5956572328728599,
+        "unbankedSteadyGlideAngleDeg": 59.219551569009184
+      },
+      {
+        "mach": 3.51142706,
+        "alphaDeg": 28.0,
+        "maximumTabulatedLD_0to30deg": 0.6127608231539898,
+        "unbankedSteadyGlideAngleDeg": 58.501664721553716
+      },
+      {
+        "mach": 4.83174336,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4664611758150928,
+        "unbankedSteadyGlideAngleDeg": 64.99277551557194
+      },
+      {
+        "mach": 5.67268669,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.5246835859787039,
+        "unbankedSteadyGlideAngleDeg": 62.31474104695349
+      },
+      {
+        "mach": 6.63588691,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.5205679319324215,
+        "unbankedSteadyGlideAngleDeg": 62.49996026768704
+      },
+      {
+        "mach": 7.09923376,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 10.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 16.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      },
+      {
+        "mach": 25.0,
+        "alphaDeg": 30.0,
+        "maximumTabulatedLD_0to30deg": 0.4580711949879538,
+        "unbankedSteadyGlideAngleDeg": 65.38884847828665
+      }
+    ]
+  },
+  "hashes": {
+    "ShuttleSim/reference-model/sts_aero_live20261010.csv": "a60dc45f59307e0ee7c3d622cf67cf57bd9163aebe346c96d72af202c861fd55",
+    "ShuttleSim/reference-model/sts_aero_live20261011.csv": "06d1f9441183449373be44c586adbae40a66192cf216d27656c3d250c357fe9d",
+    "Configuration/sts-live.json": "2b6dfa351b69f5489d311e7ae9164c611cbe9a514f7cc67e38c4392a7c359f61",
+    "CLanding/build/mm305_feasibility_tests": "231863673850437a75a280fc47b7c84c2d02e418dc148a4b6bfaa84c649fab57"
+  }
+}

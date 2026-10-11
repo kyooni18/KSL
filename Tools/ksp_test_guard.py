@@ -98,7 +98,9 @@ def connect(name: str, timeout: float | None = None):
 
     def connect_worker() -> None:
         try:
-            client = krpc.connect(name=name, address="127.0.0.1", rpc_port=50000, stream_port=50001)
+            client = krpc.connect(name=name, address=os.environ.get("KSL_KRPC_ADDRESS", "127.0.0.1"),
+                                  rpc_port=int(os.environ.get("KSL_KRPC_RPC_PORT", "50000")),
+                                  stream_port=int(os.environ.get("KSL_KRPC_STREAM_PORT", "50001")))
             outcome.put((True, client))
         except Exception as exc:
             outcome.put((False, exc))

@@ -5,19 +5,15 @@ native C guidance stack without opening KSP, a serial device, or a kRPC server.
 
 - `make -C CLanding clean all` builds the C17 backend with the vendored kRPC
   C-Nano 0.6.0 and nanopb 0.4.9.1 sources plus SQLite.
-- `make -C CLanding test` runs eleven targets: architecture/ownership
-  contracts, MM305 admissible-state tests, TAEM frame/energy algebra, the TAEM
-  native stack (model capture, route descriptor, Final interface, replay gate)
-  against the tracked reference plant in `ShuttleSim/reference-model/`, vessel
-  physics, MM304 lateral feedback (crossrange and azimuth logic), and the
-  backend NDJSON protocol, MM304 energy-law checks, admission/planner feasibility,
-  Final touchdown quality, and reduced-entry forecast/admission parity. Admission/planner and touchdown failures return
-  nonzero by default; there are no opt-in strict flags. The current effective
-  worktree fails both physical contract gates (see
-  `Audit/2026-09-26-closed-loop/ENGINEERING_LOG.md`). A green build alone does not
-  qualify landing or rollout. Model selection follows the explicit
-  `KSP_LANDER_MODEL_PROFILE` profile; record its effective files and hashes.
-- `make -C CLanding qualification` is an alias of `test`.
+- `make test` (repo root, ~25 s) is the offline gate. It runs
+  `make -C CLanding test` (16 fast native targets, listed in
+  `Validation/README.md`) and pytest over `tests/` (mission layer, ascent,
+  CLI, TUI, one closed-loop ShuttleSim golden replay) and `Validation/`.
+- `make -C CLanding qualification` adds `taem-native-stack-test` (passing) and
+  `mm305-feasibility-test`, an open physical gate that currently fails its
+  non-vacuity check. A green build alone does not qualify landing or rollout.
+  Model selection follows the explicit `KSP_LANDER_MODEL_PROFILE` profile;
+  record its effective files and hashes.
 - Closed-loop evidence comes from ShuttleSim (`ShuttleSim/scripts/run_guidance.py`).
   Use `--terminal-atmosphere/--terminal-aero/--terminal-aero-book/--terminal-attitude`
   to give guidance a different model from the plant; without them guidance has

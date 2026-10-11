@@ -1,0 +1,184 @@
+{
+  "run": "runs/20261011T075525Z-live-l7-flare-verification",
+  "save": "ksl-20261011T064053Z-live-85km-10deg-landing-mm305",
+  "guidanceCommit": "8a42d22",
+  "sourceLog": "FlightLogs/2026-10-11T07-55-25Z-STS-vehicle.jsonl",
+  "sourceLogSHA256": "7d9049ac1dcd4c57b2be525f8c12882ea07ad7bb67fd33648720c96de655a670",
+  "status": {
+    "run_id": "20261011T075525Z-live-l7-flare-verification",
+    "profile": "sts-85km-10deg",
+    "mode": "live",
+    "state": "aborted",
+    "phase": "rollout",
+    "start_phase": "mm305",
+    "stop_phase": "complete",
+    "program": "landing",
+    "connection": "disconnected",
+    "status_message": "landing aborted by operator; backend safe-control path applied",
+    "warning": null,
+    "error": "landing aborted by operator; backend safe-control path applied",
+    "telemetry": {
+      "ut": 7130.25009770486,
+      "altitude": 61.3684074706398,
+      "speed": 0.0237830802798271,
+      "verticalSpeed": 0.0192537651347507,
+      "mach": 6.7470385507791e-05,
+      "dynamicPressure": 0.000319954502629116,
+      "angleOfAttack": -57.7600402832031,
+      "roll": -0.21173095703125,
+      "heading": 90.5470657348633,
+      "flightPathAngle": 10.8982323062502,
+      "rangeToSite": 2646.43529057046,
+      "runwayAlongTrack": 2646.40390345469,
+      "runwayCrossTrack": 12.8890653813919,
+      "latitude": -0.0498414533398195,
+      "longitude": -74.475620280149,
+      "gForce": 3.31505416470662e-07,
+      "situation": "landed",
+      "targetRoll": 0,
+      "targetHeading": 0,
+      "targetThrottle": 0,
+      "backendPhase": "Abort"
+    },
+    "phase_history": [
+      "mm305",
+      "final-approach",
+      "rollout"
+    ],
+    "started_at": 1791705325.4415302,
+    "updated_at": 1791706241.586174,
+    "finished_at": 1791706241.58528
+  },
+  "phaseTransitions": [
+    {
+      "ut": 6571.03009769265,
+      "phase": "Idle",
+      "situation": "flying",
+      "gear": false,
+      "speed": 839.376892089844,
+      "verticalSpeed": -133.112047132961,
+      "altitude": 26368.4407227796,
+      "along": -77235.5465484071,
+      "cross": -31934.6455552156,
+      "mass": 25123.298828125
+    },
+    {
+      "ut": 6571.27009769266,
+      "phase": "TAEM",
+      "situation": "flying",
+      "gear": false,
+      "speed": 837.989318847656,
+      "verticalSpeed": -133.662409851979,
+      "altitude": 26336.4208707644,
+      "along": -77048.0490093147,
+      "cross": -31900.3688702451,
+      "mass": 25123.298828125
+    },
+    {
+      "ut": 6930.95009770051,
+      "phase": "Final Approach",
+      "situation": "flying",
+      "gear": false,
+      "speed": 94.2147216796875,
+      "verticalSpeed": -26.6041071815509,
+      "altitude": 2302.98153127218,
+      "along": -7690.33121939721,
+      "cross": -13.0282942712886,
+      "mass": 25122.9375
+    },
+    {
+      "ut": 7049.5500977031,
+      "phase": "Flare",
+      "situation": "flying",
+      "gear": true,
+      "speed": 63.2003746032715,
+      "verticalSpeed": -6.46153707269732,
+      "altitude": 86.4352651421214,
+      "along": 1240.39087442806,
+      "cross": 11.8380160030516,
+      "mass": 25122.8203125
+    },
+    {
+      "ut": 7054.83009770321,
+      "phase": "Rollout",
+      "situation": "landed",
+      "gear": true,
+      "speed": 52.3840370178223,
+      "verticalSpeed": -0.484604307925784,
+      "altitude": 70.8919831460807,
+      "along": 1542.18075887275,
+      "cross": 11.8434493418385,
+      "mass": 25122.81640625
+    },
+    {
+      "ut": 7130.11009770486,
+      "phase": "Abort",
+      "situation": "landed",
+      "gear": true,
+      "speed": 0.0232124570757151,
+      "verticalSpeed": -0.0218750189664819,
+      "altitude": 61.3684085352579,
+      "along": 2646.40251097668,
+      "cross": 12.8896571890855,
+      "mass": 24892.736328125
+    }
+  ],
+  "contactBracket": {
+    "lastFlying": {
+      "ut": 7054.53009770321,
+      "phase": "Flare",
+      "situation": "flying",
+      "gear": true,
+      "speed": 52.7661781311035,
+      "verticalSpeed": -2.10504318963102,
+      "altitude": 70.9274589716224,
+      "along": 1530.62192211594,
+      "cross": 11.848530560821,
+      "mass": 25122.81640625
+    },
+    "firstLanded": {
+      "ut": 7054.59009770321,
+      "phase": "Flare",
+      "situation": "landed",
+      "gear": true,
+      "speed": 52.6453247070312,
+      "verticalSpeed": -1.2499273627457,
+      "altitude": 70.836799092358,
+      "along": 1533.78121904193,
+      "cross": 11.8479108336141,
+      "mass": 25122.81640625
+    }
+  },
+  "finalNativeSample": {
+    "ut": 7130.25009770486,
+    "phase": "Abort",
+    "situation": "landed",
+    "gear": true,
+    "speed": 0.0237830802798271,
+    "verticalSpeed": 0.0192537651347507,
+    "altitude": 61.3684074706398,
+    "along": 2646.40251097668,
+    "cross": 12.8896571890855,
+    "mass": 24892.736328125
+  },
+  "runwayLengthM": 2500,
+  "stopOverrunM": 146.40251097667988,
+  "massDropsOver50Kg": [
+    {
+      "ut": 7098.51009770417,
+      "beforeKg": 25122.76953125,
+      "afterKg": 24892.76953125,
+      "along": 2580.54284372585,
+      "phase": "Rollout"
+    }
+  ],
+  "nativeInvariantViolations": {
+    "sasEnabled": 0,
+    "airbrakes": 0,
+    "nonzeroThrust": 0,
+    "nonzeroThrottle": 0
+  },
+  "nativeSamples": 8602,
+  "rcsObservation": "false at UT 6608.830 and 7095.230 (independent kRPC observations); not asserted continuously",
+  "result": "Final delivery and flare verified live; low touchdown speed, long touchdown, runway overrun; operator aborted the stopped controller because warning recovery did not terminate."
+}

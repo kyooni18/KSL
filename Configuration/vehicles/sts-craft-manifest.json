@@ -1,0 +1,105 @@
+{
+  "ship": "STS",
+  "parts": 46,
+  "sha256": "2fc5ace6210d61fa36ea157415610877e03c962c234a7969eb20ae429ccf3037",
+  "editor_mass_t": null,
+  "engines": [
+    {
+      "name": "SSME",
+      "id": "SSME_4293588236",
+      "position": [
+        -0.889326751,
+        4.86501884,
+        0.671552002
+      ],
+      "stage": 6
+    },
+    {
+      "name": "SSME",
+      "id": "SSME_4293587360",
+      "position": [
+        0.538673222,
+        4.86501884,
+        0.671552002
+      ],
+      "stage": 6
+    },
+    {
+      "name": "SSME",
+      "id": "SSME_4293586904",
+      "position": [
+        -0.175326765,
+        5.08635902,
+        -0.425968826
+      ],
+      "stage": 6
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "id": "benjee10.AJ10.v2_4293583528",
+      "position": [
+        -1.30370855,
+        4.77887344,
+        -1.37511694
+      ],
+      "stage": 2
+    },
+    {
+      "name": "benjee10.AJ10.v2",
+      "id": "benjee10.AJ10.v2_4293582864",
+      "position": [
+        0.953055084,
+        4.77887344,
+        -1.37511694
+      ],
+      "stage": 2
+    },
+    {
+      "name": "Size2LFB.v2",
+      "id": "Size2LFB.v2_4293302178",
+      "position": [
+        3.75381351,
+        7.39665604,
+        4.59497738
+      ],
+      "stage": 6
+    },
+    {
+      "name": "Mite",
+      "id": "Mite_4293293794",
+      "position": [
+        3.60052562,
+        16.6737976,
+        4.37452841
+      ],
+      "stage": 2
+    },
+    {
+      "name": "Size2LFB.v2",
+      "id": "Size2LFB.v2_4293272126",
+      "position": [
+        -4.10446692,
+        7.39665699,
+        4.59497738
+      ],
+      "stage": 6
+    },
+    {
+      "name": "Mite",
+      "id": "Mite_4293271850",
+      "position": [
+        -3.95117831,
+        16.6737976,
+        4.37452841
+      ],
+      "stage": 2
+    }
+  ],
+  "resources": {
+    "ElectricCharge": 210.0,
+    "MonoPropellant": 400.0,
+    "LiquidFuel": 32778.0,
+    "Oxidizer": 40062.0,
+    "SolidFuel": 80.0
+  }
+}

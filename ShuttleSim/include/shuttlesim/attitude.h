@@ -36,6 +36,11 @@ typedef struct {
        damping), not a KSP identification.  Below direct_min_q_pa the servo
        stands in for RCS/reaction-wheel attitude hold. */
     bool direct;
+    /* Opt-in rigid-body direct plant. Legacy INIs retain their AoA-coordinate
+       coefficients until a body-coordinate fit has been validated. */
+    bool direct_body_coordinates;
+    bool body_rates_initialized;
+    double body_pitch_rate_rad_s, body_roll_rate_rad_s, body_yaw_rate_rad_s;
     double input_pitch, input_roll, input_yaw;
     double sideslip_rad, sideslip_rate_rad_s;
     double direct_min_q_pa;
@@ -57,5 +62,9 @@ bool attitude_load_ini(AttitudeModel *a, const char *path);
 void attitude_set_command(AttitudeModel *a, double aoa_rad, double bank_rad);
 void attitude_set_inputs(AttitudeModel *a, double pitch, double roll, double yaw);
 void attitude_step(AttitudeModel *a, double dynamic_pressure_pa, double dt);
+bool attitude_step_body(AttitudeModel *a, Quat *body_q_i, Vec3 position_i,
+                        Vec3 air_velocity_i, double dynamic_pressure_pa, double dt);
 Quat attitude_body_quat(Vec3 position_i, Vec3 air_velocity_i, double aoa_rad, double bank_rad);
+Quat attitude_body_quat_wind(Vec3 position_i, Vec3 air_velocity_i, double aoa_rad, double bank_rad);
+Quat attitude_body_quat_euler(LocalFrame frame, double pitch_rad, double heading_rad, double roll_rad);
 #endif

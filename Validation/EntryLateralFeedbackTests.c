@@ -361,6 +361,11 @@ static void bank_reference_waits_for_measured_response(void){
 }
 
 int main(void){
+    assert(fabs(entry_lateral_crossrange_arrest_distance(100,.5,10,30)-1333.333333333333)<1e-8);
+    assert(fabs(entry_lateral_crossrange_arrest_distance(-100,.5,10,-30)+1333.333333333333)<1e-8);
+    assert(entry_lateral_crossrange_arrest_distance(0,1,10,30)==0);
+    assert(isnan(entry_lateral_crossrange_arrest_distance(100,.5,0,30)));
+    assert(isnan(entry_lateral_crossrange_arrest_distance(100,-.5,10,30)));
     bank_reference_waits_for_measured_response();
     shrinking_limit_and_repeat_reversal_respect_response();
     measured_lift_is_not_model_confidence();

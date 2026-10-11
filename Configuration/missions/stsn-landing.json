@@ -1,0 +1,5 @@
+{
+  "description": "STS-N orbiter landing only (legacy Lander vehicle); start from deorbit or later.",
+  "landing": {"backendConfiguration": "Configuration/default.json", "modelProfile": "identified"},
+  "simulation": {"scenario": "postburn-86km"}
+}

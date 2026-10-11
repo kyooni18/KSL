@@ -342,6 +342,18 @@ bool shuttle_sim_decode_telemetry(const char *packet,
     t->ground_track_heading = t->heading;
     t->pitch = t->flight_path_angle + t->angle_of_attack;
     t->sideslip = number_value(&doc, attitude, "sideslip_deg", 0.0);
+    bool body_attitude_available=bool_value(&doc,attitude,"body_attitude_available",false)&&
+        required_number(&doc,attitude,"body_pitch_deg")&&
+        required_number(&doc,attitude,"body_roll_deg")&&
+        required_number(&doc,attitude,"body_heading_deg");
+    /* Select the coordinate system before validation and differentiation.
+       Comparing geometric angles against previous body Euler angles invents
+       large rotation rates during an otherwise steady banked glide. */
+    if(body_attitude_available){
+        t->pitch=number_value(&doc,attitude,"body_pitch_deg",t->pitch);
+        t->roll=number_value(&doc,attitude,"body_roll_deg",t->roll);
+        t->heading=number_value(&doc,attitude,"body_heading_deg",t->heading);
+    }
 
     double published_aoa_rate =
         number_value(&doc, attitude, "aoa_rate_deg_s", NAN);
@@ -503,7 +515,7 @@ bool shuttle_sim_decode_telemetry(const char *packet,
            do not describe this transport. */
         if (isfinite(dt) && dt > 0.0) {
             t->pitch_rate = (t->pitch - previous->pitch) / dt;
-            if (!has_published_bank_rate)
+            if (!has_published_bank_rate || body_attitude_available)
                 t->roll_rate = signed_degrees(t->roll - previous->roll) / dt;
             t->heading_rate =
                 signed_degrees(t->heading - previous->heading) / dt;
@@ -512,18 +524,28 @@ bool shuttle_sim_decode_telemetry(const char *packet,
                     signed_degrees(t->angle_of_attack - previous->angle_of_attack) / dt;
                 t->has_angle_of_attack_rate = true;
             }
-            /* In ShuttleSim heading is already ground-track azimuth. */
-            t->course_rate = t->heading_rate;
+            t->course_rate=signed_degrees(t->ground_track_heading-previous->ground_track_heading)/dt;
             t->has_course_rate = true;
         }
     }
 
-    /* ShuttleSim currently exposes controlled AoA/bank response, but not a
-       rigid-body angular-velocity vector.  Do not manufacture body p/q/r from
-       coordinate derivatives; telemetry_init deliberately leaves these false. */
+    /* Only the opt-in quaternion plant identifies body angular velocity.
+       Legacy incidence/servo derivatives cannot establish body p/q/r. */
     t->has_body_pitch_rate = false;
     t->has_body_roll_rate = false;
     t->has_body_yaw_rate = false;
+    if(body_attitude_available&&bool_value(&doc,attitude,"body_rates_available",false)&&
+       required_number(&doc,attitude,"body_pitch_rate_deg_s")&&
+       required_number(&doc,attitude,"body_roll_rate_deg_s")&&
+       required_number(&doc,attitude,"body_yaw_rate_deg_s")&&
+       required_number(&doc,attitude,"body_pitch_deg")&&
+       required_number(&doc,attitude,"body_roll_deg")&&
+       required_number(&doc,attitude,"body_heading_deg")){
+        t->body_pitch_rate=number_value(&doc,attitude,"body_pitch_rate_deg_s",0.0);
+        t->body_roll_rate=number_value(&doc,attitude,"body_roll_rate_deg_s",0.0);
+        t->body_yaw_rate=number_value(&doc,attitude,"body_yaw_rate_deg_s",0.0);
+        t->has_body_pitch_rate=t->has_body_roll_rate=t->has_body_yaw_rate=true;
+    }
 
     fill_orbit_fields(planet, state, t);
     if (error && error_size) error[0] = '\0';

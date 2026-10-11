@@ -6,6 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Terminal backstop: Final owns an aligned vehicle below this height, or
+   below this many seconds of sink, if TAEM still has it. */
+#define TERMINAL_BACKSTOP_HEIGHT_M 300.0
+#define TERMINAL_BACKSTOP_TIME_S 12.0
+/* Lateral alignment only: a short vehicle's velocity vector never projects
+   onto the runway, so the preflare runway-intercept test cannot gate this. */
+#define TERMINAL_BACKSTOP_COURSE_DEG 15.0
+
 /* Translation-unit private helpers. */
 static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,double dt);
@@ -87,6 +95,7 @@ static GuidanceResult terminal_final_test_guidance(GuidanceMachine*g,const Telem
         (void)taem_exec_sync_with_contract(g,t,s,p,aero,cfg,&contract,true,true);
         if(g->taem_exec.taem_complete){
             g->final_approach_captured=true;
+            if(approach_plan.degraded_floor)g->terminal_final_low_energy=true;
             terminal_store_preflare_plan(g,&approach_plan);
             /* engageFinalTest admits only a runway-aligned post-HAC state and TAEM
                completion has already proved the final-intercept contract.  Do not
@@ -323,6 +332,33 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
 
     if (g->hac_completed || g->final_approach_captured)
         return terminal_final_test_guidance(g,t,course,p,aero,cfg,dt);
+    /* Terminal backstop for every MM305 path (energy law, native HAC route,
+       direct): TAEM has no flare.  Once the ground is close in time and the
+       vehicle is runway-aligned short of the threshold, Final owns it in
+       low-energy mode whatever the nominal contract says. */
+    if (!g->diagnostic_shadow && taem_exec_owns_vehicle(&g->taem_exec) &&
+        isfinite(t->radar_altitude) && isfinite(t->vertical_speed) &&
+        t->runway_along_track<0.0 &&
+        t->radar_altitude<fmax(TERMINAL_BACKSTOP_HEIGHT_M,
+            TERMINAL_BACKSTOP_TIME_S*fmax(0.0,-t->vertical_speed)) &&
+        fabs(t->runway_cross_track)<=fmax(150.0,2.0*cfg->site.runway_width) &&
+        fabs(norm_signed_deg(course-cfg->site.runway_heading))<=TERMINAL_BACKSTOP_COURSE_DEG) {
+        TaemExecObservation observation={.ut=t->ut,
+            .relative_velocity=t->true_air_speed,.checkpoint_restart=false};
+        if (taem_exec_deliver_low_energy(&g->taem_exec,&observation)) {
+            g->mm305_hac_exit_reached=g->hac_completed=g->hac_captured=true;
+            g->final_approach_captured=true;
+            g->terminal_final_low_energy=true;
+            terminal_set_stage(g,TERMINAL_OUTER_FINAL,t->ut);
+            robust_pid_reset(&g->final_altitude_pid);
+            robust_pid_reset(&g->speed_pid);
+            robust_pid_reset(&g->flare_sink_pid);
+            fprintf(stderr,"MM305 terminal backstop: Final takes over at radar %.0f m, "
+                "sink %.1f m/s, along %.0f m.\n",t->radar_altitude,-t->vertical_speed,
+                t->runway_along_track);
+            return terminal_final_test_guidance(g,t,course,p,aero,cfg,dt);
+        }
+    }
     if (!taem_exec_owns_vehicle(&g->taem_exec))
         return terminal_abort(g,
             "MM305 lost TAEM executive ownership before the HAC exit.");

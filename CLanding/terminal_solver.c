@@ -221,6 +221,10 @@ static ProfileFlight fly_profile(const TerminalModel *m,
             return out;
         }
     }
+    if(getenv("KSP_LANDER_TAEM_PROFILE_DIAGNOSTICS"))
+        fprintf(stderr,"TAEM constant profile timeout: length=%.3f station=%.3f elapsed=%.3f altitude=%.3f speed=%.3f fpa=%.3f aoa=%.3f\n",
+            route->length_m,station,max_elapsed,geometry.altitude_above_runway_m,
+            geometry.airspeed_mps,geometry.flight_path_angle_deg,aoa_deg);
     out.reason = "profile exceeded propagation time before route completion";
     return out;
 }

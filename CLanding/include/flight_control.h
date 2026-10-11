@@ -232,6 +232,10 @@ bool flight_control_step(FlightControlState *state,
                          double sample_dt,
                          FlightControlOutput *output);
 
+/* Deployment requires actual wheel/landed telemetry, never phase alone. */
+bool flight_control_rollout_parachutes_ready(const Telemetry *telemetry,
+                                           const GuidanceCommand *command);
+
 const char *flight_control_revision(void);
 
 #endif

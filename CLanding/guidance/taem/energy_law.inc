@@ -35,6 +35,10 @@
 #define TEL_K_LOOP 0.25
 #define TEL_MODE_FREEZE 8000.0
 #define TEL_UPDATE_S 2.0
+/* on-final energy shortfall must persist this long before low-energy delivery */
+#define TEL_LOW_ENERGY_DWELL_S 3.0
+/* drag level at or below which the law is energy-short (flying maximum range) */
+#define TEL_K_SHORT 0.05
 #define TEL_PI 3.14159265358979323846
 #define TEL_G0 9.81
 
@@ -93,7 +97,9 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
         return c->aoa_max-(c->aoa_max-TEL_AOA_SUP_MIN)*k;
     }
     double q_ref=TEL_Q_LO+(TEL_Q_HI-TEL_Q_LO)*k;
-    if (along<TEL_BLEND) {
+    /* At maximum range (k=0) the station speed is already out of reach;
+       blending toward it dives away range Final now needs more (live L7). */
+    if (along<TEL_BLEND&&(!live||k>TEL_K_SHORT)) {
         double q_sta,m_sta;
         tel_air(c,p->h,c->v_station,&q_sta,&m_sta);
         double w=fmax(0.0,along)/TEL_BLEND;

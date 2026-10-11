@@ -62,6 +62,7 @@ static void reset_controllers(GuidanceMachine*g){
 
     g->airbrakes_deployed=false;
     g->final_approach_captured=false;
+    g->terminal_final_low_energy=false;
     g->hac_side_selected=false;
     g->hac_progress_valid=false;
     g->hac_captured=false;
@@ -254,7 +255,7 @@ void guidance_initialize_reentry_continuation(GuidanceMachine*g,const Telemetry*
 void guidance_set_engaged(GuidanceMachine*g,bool e){g->automation_engaged=e;if(e){g->aborted=false;g->abort_reason[0]=0;g->paused=false;if(g->phase==PHASE_IDLE||g->phase==PHASE_PAUSED||g->phase==PHASE_ABORT)g->phase=PHASE_COAST;}else{g->phase=PHASE_IDLE;reset_controllers(g);reset_taem_handoff_state(g);reset_entry_s_turn_program(g);speedbrake_controller_reset(&g->speedbrake_controller,false);}}
 void guidance_set_paused(GuidanceMachine*g,bool p){g->paused=p;if(p){g->phase=PHASE_PAUSED;reset_limiters(g);}}
 void guidance_abort(GuidanceMachine*g){g->aborted=true;g->paused=false;g->automation_engaged=false;g->phase=PHASE_ABORT;reset_controllers(g);reset_taem_handoff_state(g);reset_entry_s_turn_program(g);speedbrake_controller_reset(&g->speedbrake_controller,false);}
-void guidance_reset_plan(GuidanceMachine*g){g->delivered_delta_v=0;g->has_burn_command_started=false;g->has_burn_progress_watch=false;g->burn_active_elapsed=0;g->burn_progress_watch_ut=0;g->burn_progress_watch_delta_v=0;g->deorbit_burn_completed=false;g->atmospheric_interface_crossed=false;g->has_previous_ut=false;g->hac_side_selected=false;g->final_approach_captured=false;g->has_s_turn_leg_started=false;g->has_s_turn_reversal_requested=false;g->airbrakes_deployed=false;reset_controllers(g);reset_taem_handoff_state(g);reset_entry_s_turn_program(g);speedbrake_controller_reset(&g->speedbrake_controller,false);if(g->automation_engaged)g->phase=PHASE_COAST;}
+void guidance_reset_plan(GuidanceMachine*g){g->delivered_delta_v=0;g->has_burn_command_started=false;g->has_burn_progress_watch=false;g->burn_active_elapsed=0;g->burn_progress_watch_ut=0;g->burn_progress_watch_delta_v=0;g->deorbit_burn_completed=false;g->atmospheric_interface_crossed=false;g->has_previous_ut=false;g->hac_side_selected=false;g->final_approach_captured=false;g->terminal_final_low_energy=false;g->has_s_turn_leg_started=false;g->has_s_turn_reversal_requested=false;g->airbrakes_deployed=false;reset_controllers(g);reset_taem_handoff_state(g);reset_entry_s_turn_program(g);speedbrake_controller_reset(&g->speedbrake_controller,false);if(g->automation_engaged)g->phase=PHASE_COAST;}
 double guidance_entry_leg_elapsed(const GuidanceMachine*g,double ut){return g->phase==PHASE_ENTRY_ENERGY&&g->has_s_turn_leg_started?fmax(0,ut-g->s_turn_leg_started_ut):0;}
 
 double dynamic_bank_limit(const Telemetry*t,const VehicleProfile*v){

@@ -1,0 +1,11 @@
+#!/bin/sh
+# KSL entry point: runs the unified mission controller from this checkout.
+# Uses the project virtualenv when present (`make setup`), else python3.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="$ROOT/.venv/bin/python"
+[ -x "$PY" ] || PY="$(command -v python3)"
+if [ ! -x "$ROOT/CLanding/build/landing_backend" ]; then
+  make -s -C "$ROOT/CLanding" >&2 || exit 2
+fi
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m ksl "$@"

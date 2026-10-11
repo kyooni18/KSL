@@ -1,0 +1,27 @@
+{
+  "selection": "native snapshots with body rates, airspeed>=100m/s and |pitch|<=60deg; finite-difference coordinate rates compared to instantaneous ZYX kinematics. A diagnostic, not moment fitting.",
+  "before": {
+    "pitchEulerRate": {
+      "n": 13,
+      "medianAbsoluteErrorDegPerSecond": 0.7187599868664014,
+      "p95AbsoluteErrorDegPerSecond": 21.477947222670334
+    },
+    "headingEulerRate": {
+      "n": 13,
+      "medianAbsoluteErrorDegPerSecond": 0.05917332547101485,
+      "p95AbsoluteErrorDegPerSecond": 71.54644516395908
+    }
+  },
+  "after": {
+    "pitchEulerRate": {
+      "n": 35,
+      "medianAbsoluteErrorDegPerSecond": 0.31139888122977966,
+      "p95AbsoluteErrorDegPerSecond": 0.6291868284066734
+    },
+    "headingEulerRate": {
+      "n": 35,
+      "medianAbsoluteErrorDegPerSecond": 0.15909715049794104,
+      "p95AbsoluteErrorDegPerSecond": 0.5646195262408895
+    }
+  }
+}

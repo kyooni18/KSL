@@ -58,7 +58,7 @@ NANOPB_SOURCE_NAMES := pb_common pb_encode pb_decode
 NANOPB_OBJECTS := $(NANOPB_SOURCE_NAMES:%=$(BUILD)/nanopb/%.o)
 CNANO_HEADERS := $(CNANO_COMPAT)/pb.h $(CNANO_COMPAT)/pb_common.h $(CNANO_COMPAT)/pb_encode.h $(CNANO_COMPAT)/pb_decode.h
 
-.PHONY: all clean debug test qualification architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test backend-protocol-test mm305-recovery-monitor-test
+.PHONY: all clean debug test qualification deorbit-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test backend-protocol-test mm305-recovery-monitor-test
 .SECONDARY: $(CNANO_HEADERS)
 
 all: $(TARGET)
@@ -115,7 +115,7 @@ mm305-admission-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/MM305AdmissionTests.c \
 		$(BUILD)/decision_envelope.o $(BUILD)/math.o $(BUILD)/models.o $(BUILD)/json.o \
-		$(BUILD)/taem_planner.o $(BUILD)/taem_geometry.o $(BUILD)/taem_frames_energy.o $(BUILD)/taem_reachability.o \
+		$(BUILD)/taem_planner.o $(BUILD)/taem_geometry.o $(BUILD)/taem_frames_energy.o $(BUILD)/taem_reachability.o $(BUILD)/taem_tracker.o \
 		$(BUILD)/flight_physics/math3.o $(BUILD)/flight_physics/world.o $(BUILD)/flight_physics/aero.o \
 		$(BUILD)/entry_exec.o $(BUILD)/taem_exec.o $(LDFLAGS) $(LDLIBS) \
 		-o $(BUILD)/mm305_admission_tests
@@ -211,7 +211,7 @@ mm305-feasibility-test: $(TARGET)
 		$(VALIDATION_ROOT)/MM305FeasibilityPropertyTests.c \
 		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/mm305_feasibility_tests
-	cd $(REPO_ROOT) && "$(abspath $(BUILD)/mm305_feasibility_tests)"
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/mm305_feasibility_tests)" $(MM305_FEASIBILITY_ARGS)
 
 mm305-recovery-monitor-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
@@ -235,8 +235,28 @@ entry-forecast-admission-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_forecast_admission_tests
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/entry_forecast_admission_tests)"
 
-contract-tests: mm305-feasibility-test touchdown-quality-test
+deorbit-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/DeorbitStageAdmissionTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/deorbit_stage_admission_tests
+	# DeorbitWindowTests includes predictor.c directly (white-box), so omit predictor.o.
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/DeorbitWindowTests.c \
+		$(filter-out $(BUILD)/main.o $(BUILD)/predictor.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/deorbit_window_tests
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/EngineRoleTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/engine_role_tests
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/ThrustAlignmentTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/thrust_alignment_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/deorbit_stage_admission_tests)" && \
+		"$(abspath $(BUILD)/deorbit_window_tests)" && "$(abspath $(BUILD)/engine_role_tests)" && \
+		"$(abspath $(BUILD)/thrust_alignment_tests)"
+	@echo "Deorbit planning, admission, engine-role and thrust-alignment tests passed."
 
-test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-feasibility-test mm305-recovery-monitor-test touchdown-quality-test
+# Fast offline regression gate (~10 s); must pass on every commit.
+test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-recovery-monitor-test touchdown-quality-test deorbit-test
 
-qualification: test
+# Slow physical gates (~4 min). mm305-feasibility-test is a documented open
+# gate: it currently fails its non-vacuity check (see VALIDATION.md).
+qualification: test taem-native-stack-test mm305-feasibility-test

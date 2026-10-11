@@ -17,6 +17,16 @@ static GuidanceResult terminal_warning_recovery(GuidanceMachine *g,
     bool grounded=t->main_gear_grounded||t->nose_gear_grounded||
         !strcasecmp(t->vessel_situation,"landed");
     if (grounded) g->terminal_landing_warning_latched=true;
+    /* A failed landing can still brake to a stop, but cannot replan its way
+       back into a successful mission. Match touchdown's rollout stop gate. */
+    if (grounded && isfinite(t->surface_speed) &&
+            t->surface_speed>=0.0 && t->surface_speed<1.5) {
+        c.control_profile=PROFILE_ROLLOUT;
+        c.gear=true;
+        c.brakes=true;
+        guidance_abort(g);
+        return result_make(PHASE_ABORT,c,reason,reason);
+    }
     bool recovering=!grounded&&g->attitude_recovery;
     GuidancePhase phase=grounded?PHASE_ROLLOUT:recovering?PHASE_ATTITUDE_RECOVERY:
         g->terminal_region_entered?PHASE_TAEM:PHASE_ENTRY_ENERGY;

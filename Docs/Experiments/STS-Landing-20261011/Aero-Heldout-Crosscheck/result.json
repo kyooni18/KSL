@@ -1,0 +1,919 @@
+{
+  "policy": "No fitting; Oct10 L5/L6 and Oct11 L7 held out from Oct9 table sources. Uses measured q/Mach/AoA to isolate polar error from atmosphere or state propagation. 250m2 normalization; no force-book/scales. Bilinear interpolation matches aero_coefficients. Duration weighted on unique UT, excludes gaps >0.5s.",
+  "filters": "MM304 Entry or TAEM; q>=300Pa; Mach[0.5,3.5); AoA[0,30]; |sideslip|<=5deg; positive native lift/drag; no airbrakes; thrust<=1N. Native logged forces, not derived from trajectory.",
+  "sources": {
+    "L5": {
+      "path": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+      "sha256": "83cac6ef7eae878290bf9b569f701efea086d2d6a344691b939d83642e7a7f8e",
+      "repeatedOrBackwardUTExcluded": 9
+    },
+    "L6": {
+      "path": "FlightLogs/2026-10-10T08-28-20Z-STS-vehicle.jsonl",
+      "sha256": "e55dc83df09fca8a1b335cad2e579915e15619ed99360c6dbb34f56e8a1ebbbe",
+      "repeatedOrBackwardUTExcluded": 11
+    },
+    "L7": {
+      "path": "FlightLogs/2026-10-11T06-40-54Z-STS-vehicle.jsonl",
+      "sha256": "1ea62b9ece2cb68c51d0b4696719e042b1e803b65ea0374fa2dba509c1890db1",
+      "repeatedOrBackwardUTExcluded": 1319
+    }
+  },
+  "tables": {
+    "sts_aero_live20261010.csv": {
+      "sha256": "a60dc45f59307e0ee7c3d622cf67cf57bd9163aebe346c96d72af202c861fd55"
+    },
+    "sts_aero_live20261011.csv": {
+      "sha256": "06d1f9441183449373be44c586adbae40a66192cf216d27656c3d250c357fe9d"
+    }
+  },
+  "results": {
+    "L5": {
+      "sts_aero_live20261010.csv": {
+        "0.5-1": {
+          "samples": 852,
+          "durationSeconds": 53.39999999995962,
+          "aoaDegRange": [
+            2.5252799987793,
+            14.3237934112549
+          ],
+          "qPaRange": [
+            3138.04516601562,
+            5650.869140625
+          ],
+          "medianMeasuredLD": 1.6613147447041838,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9354864776313867,
+            "p05MeasuredOverPredicted": 0.8834329369125544,
+            "p95MeasuredOverPredicted": 0.9801572557145946,
+            "biasN": 23571.887240322696,
+            "rmseN": 25118.602931818736,
+            "relativeRmsError": 0.07308927623617689
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0365671941455648,
+            "p05MeasuredOverPredicted": 0.97796173738768,
+            "p95MeasuredOverPredicted": 1.0894689522842276,
+            "biasN": -6836.982572131359,
+            "rmseN": 10118.413044026232,
+            "relativeRmsError": 0.04960649683353376
+          }
+        },
+        "1-1.5": {
+          "samples": 572,
+          "durationSeconds": 35.67999999996027,
+          "aoaDegRange": [
+            1.40844058990479,
+            15.7990818023682
+          ],
+          "qPaRange": [
+            3122.66162109375,
+            5094.84326171875
+          ],
+          "medianMeasuredLD": 0.6815232616365989,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9983446411486229,
+            "p05MeasuredOverPredicted": 0.8768769474054001,
+            "p95MeasuredOverPredicted": 1.1624614301554383,
+            "biasN": 786.4626489512266,
+            "rmseN": 6741.157146561763,
+            "relativeRmsError": 0.0454157769793482
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0741654308015989,
+            "p05MeasuredOverPredicted": 0.5909926885770337,
+            "p95MeasuredOverPredicted": 1.2162073879705428,
+            "biasN": -3451.9301152724656,
+            "rmseN": 29844.009877733286,
+            "relativeRmsError": 0.14279069435886121
+          }
+        },
+        "1.5-2": {
+          "samples": 267,
+          "durationSeconds": 16.879999999990105,
+          "aoaDegRange": [
+            14.3404512405396,
+            15.8025703430176
+          ],
+          "qPaRange": [
+            5062.7451171875,
+            6083.427734375
+          ],
+          "medianMeasuredLD": 0.8475380259311831,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0352909628343672,
+            "p05MeasuredOverPredicted": 1.0096910065787832,
+            "p95MeasuredOverPredicted": 1.0669582962408277,
+            "biasN": -8412.068750289141,
+            "rmseN": 9482.264455374901,
+            "relativeRmsError": 0.039322711622722446
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0477153981896243,
+            "p05MeasuredOverPredicted": 0.895821614603135,
+            "p95MeasuredOverPredicted": 1.1895456914493203,
+            "biasN": -11061.127935933204,
+            "rmseN": 28185.211005458284,
+            "relativeRmsError": 0.09790804905066558
+          }
+        },
+        "2-2.5": {
+          "samples": 378,
+          "durationSeconds": 23.91999999997961,
+          "aoaDegRange": [
+            11.7421531677246,
+            16.8568515777588
+          ],
+          "qPaRange": [
+            4629.9619140625,
+            6027.02783203125
+          ],
+          "medianMeasuredLD": 0.8762743488534438,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9897972224361878,
+            "p05MeasuredOverPredicted": 0.9407329603144724,
+            "p95MeasuredOverPredicted": 1.0119931707970813,
+            "biasN": 2229.24626171799,
+            "rmseN": 4038.5911910916707,
+            "relativeRmsError": 0.020461712104656613
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.8826366028840495,
+            "p05MeasuredOverPredicted": 0.6979706525287459,
+            "p95MeasuredOverPredicted": 0.9315578160741831,
+            "biasN": 34828.27737089699,
+            "rmseN": 37557.889213748735,
+            "relativeRmsError": 0.1660033986954257
+          }
+        },
+        "2.5-3.5": {
+          "samples": 635,
+          "durationSeconds": 38.87999999996009,
+          "aoaDegRange": [
+            9.36713886260986,
+            27.4888706207275
+          ],
+          "qPaRange": [
+            3804.12451171875,
+            4604.29541015625
+          ],
+          "medianMeasuredLD": 0.6169376425294325,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9382212318385373,
+            "p05MeasuredOverPredicted": 0.8900974794188276,
+            "p95MeasuredOverPredicted": 0.9978897489760038,
+            "biasN": 9361.845014977287,
+            "rmseN": 10693.47741170016,
+            "relativeRmsError": 0.06184559251236203
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.194700907556632,
+            "p05MeasuredOverPredicted": 0.5961462267638411,
+            "p95MeasuredOverPredicted": 1.225180077514181,
+            "biasN": -14825.324147916519,
+            "rmseN": 51631.35748887215,
+            "relativeRmsError": 0.1923047652373262
+          }
+        }
+      },
+      "sts_aero_live20261011.csv": {
+        "0.5-1": {
+          "samples": 852,
+          "durationSeconds": 53.39999999995962,
+          "aoaDegRange": [
+            2.5252799987793,
+            14.3237934112549
+          ],
+          "qPaRange": [
+            3138.04516601562,
+            5650.869140625
+          ],
+          "medianMeasuredLD": 1.6613147447041838,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9354864776313867,
+            "p05MeasuredOverPredicted": 0.8834329369125544,
+            "p95MeasuredOverPredicted": 0.9801572557145946,
+            "biasN": 23571.887240322696,
+            "rmseN": 25118.602931818736,
+            "relativeRmsError": 0.07308927623617689
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0365671941455648,
+            "p05MeasuredOverPredicted": 0.97796173738768,
+            "p95MeasuredOverPredicted": 1.0894689522842276,
+            "biasN": -6836.982572131359,
+            "rmseN": 10118.413044026232,
+            "relativeRmsError": 0.04960649683353376
+          }
+        },
+        "1-1.5": {
+          "samples": 572,
+          "durationSeconds": 35.67999999996027,
+          "aoaDegRange": [
+            1.40844058990479,
+            15.7990818023682
+          ],
+          "qPaRange": [
+            3122.66162109375,
+            5094.84326171875
+          ],
+          "medianMeasuredLD": 0.6815232616365989,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9983446411486229,
+            "p05MeasuredOverPredicted": 0.8768769474054001,
+            "p95MeasuredOverPredicted": 1.1624614301554383,
+            "biasN": 786.4626489512266,
+            "rmseN": 6741.157146561763,
+            "relativeRmsError": 0.0454157769793482
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0741654308015989,
+            "p05MeasuredOverPredicted": 0.5909926885770337,
+            "p95MeasuredOverPredicted": 1.2162073879705428,
+            "biasN": -3451.9301152724656,
+            "rmseN": 29844.009877733286,
+            "relativeRmsError": 0.14279069435886121
+          }
+        },
+        "1.5-2": {
+          "samples": 267,
+          "durationSeconds": 16.879999999990105,
+          "aoaDegRange": [
+            14.3404512405396,
+            15.8025703430176
+          ],
+          "qPaRange": [
+            5062.7451171875,
+            6083.427734375
+          ],
+          "medianMeasuredLD": 0.8475380259311831,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.1318898273457232,
+            "p05MeasuredOverPredicted": 1.040666604556837,
+            "p95MeasuredOverPredicted": 1.1800148152762484,
+            "biasN": -27398.108728457286,
+            "rmseN": 28552.042001978574,
+            "relativeRmsError": 0.11840459830744852
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.7249101743935679,
+            "p05MeasuredOverPredicted": 0.6263686598543148,
+            "p95MeasuredOverPredicted": 0.9855732988207621,
+            "biasN": 101741.92110379168,
+            "rmseN": 111176.78424558092,
+            "relativeRmsError": 0.3861990617385697
+          }
+        },
+        "2-2.5": {
+          "samples": 378,
+          "durationSeconds": 23.91999999997961,
+          "aoaDegRange": [
+            11.7421531677246,
+            16.8568515777588
+          ],
+          "qPaRange": [
+            4629.9619140625,
+            6027.02783203125
+          ],
+          "medianMeasuredLD": 0.8762743488534438,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0709397241988896,
+            "p05MeasuredOverPredicted": 1.0109675867792587,
+            "p95MeasuredOverPredicted": 1.1058174248477466,
+            "biasN": -13126.53388727145,
+            "rmseN": 14501.0627342605,
+            "relativeRmsError": 0.07347031596921738
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.636152294125281,
+            "p05MeasuredOverPredicted": 0.5264469094935855,
+            "p95MeasuredOverPredicted": 0.688308750924677,
+            "biasN": 131220.69485570153,
+            "rmseN": 131741.36273585868,
+            "relativeRmsError": 0.5822881535875483
+          }
+        },
+        "2.5-3.5": {
+          "samples": 635,
+          "durationSeconds": 38.87999999996009,
+          "aoaDegRange": [
+            9.36713886260986,
+            27.4888706207275
+          ],
+          "qPaRange": [
+            3804.12451171875,
+            4604.29541015625
+          ],
+          "medianMeasuredLD": 0.6169376425294325,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.999021689231779,
+            "p05MeasuredOverPredicted": 0.9513910873178888,
+            "p95MeasuredOverPredicted": 1.06688613900461,
+            "biasN": -1522.9048031998825,
+            "rmseN": 5508.259252915328,
+            "relativeRmsError": 0.03185694831463502
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.9784874395858113,
+            "p05MeasuredOverPredicted": 0.46547627756827675,
+            "p95MeasuredOverPredicted": 1.0483186257481896,
+            "biasN": 42186.811117886566,
+            "rmseN": 67594.38549698658,
+            "relativeRmsError": 0.2517602299563958
+          }
+        }
+      }
+    },
+    "L6": {
+      "sts_aero_live20261010.csv": {
+        "0.5-1": {
+          "samples": 828,
+          "durationSeconds": 53.27999999995973,
+          "aoaDegRange": [
+            1.84285187721252,
+            14.3730173110962
+          ],
+          "qPaRange": [
+            3200.533203125,
+            5527.70361328125
+          ],
+          "medianMeasuredLD": 1.667632639602825,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9360179883772038,
+            "p05MeasuredOverPredicted": 0.8828933906763407,
+            "p95MeasuredOverPredicted": 0.9815817484549457,
+            "biasN": 22830.400941540323,
+            "rmseN": 24622.94843410321,
+            "relativeRmsError": 0.0737011413520083
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0359968145020897,
+            "p05MeasuredOverPredicted": 0.9761779159073718,
+            "p95MeasuredOverPredicted": 1.0843790084361056,
+            "biasN": -6087.135467604288,
+            "rmseN": 10106.626882319513,
+            "relativeRmsError": 0.050847698141852166
+          }
+        },
+        "1-1.5": {
+          "samples": 535,
+          "durationSeconds": 34.55999999995993,
+          "aoaDegRange": [
+            1.41970634460449,
+            15.8562631607056
+          ],
+          "qPaRange": [
+            3190.49389648438,
+            5146.32470703125
+          ],
+          "medianMeasuredLD": 0.6838647234950616,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0029865531885802,
+            "p05MeasuredOverPredicted": 0.8903476005345614,
+            "p95MeasuredOverPredicted": 1.1665200191431215,
+            "biasN": 771.4897186207174,
+            "rmseN": 6954.585184664428,
+            "relativeRmsError": 0.045465907327311136
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0768426537134812,
+            "p05MeasuredOverPredicted": 0.5881764134478865,
+            "p95MeasuredOverPredicted": 1.208289881822136,
+            "biasN": -4122.6702812548665,
+            "rmseN": 30009.763550435247,
+            "relativeRmsError": 0.1396911099394854
+          }
+        },
+        "1.5-2": {
+          "samples": 261,
+          "durationSeconds": 16.91999999999007,
+          "aoaDegRange": [
+            14.3848161697388,
+            15.8562631607056
+          ],
+          "qPaRange": [
+            5189.4580078125,
+            6125.04833984375
+          ],
+          "medianMeasuredLD": 0.8531831938821764,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.03530351352273,
+            "p05MeasuredOverPredicted": 1.0090856308535117,
+            "p95MeasuredOverPredicted": 1.0651824378692965,
+            "biasN": -8553.197680891315,
+            "rmseN": 9596.132498426046,
+            "relativeRmsError": 0.03925879747168583
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0492880584699271,
+            "p05MeasuredOverPredicted": 0.8969106390867478,
+            "p95MeasuredOverPredicted": 1.1859359390385753,
+            "biasN": -11026.267370371634,
+            "rmseN": 28038.093303798036,
+            "relativeRmsError": 0.09616215274998516
+          }
+        },
+        "2-2.5": {
+          "samples": 350,
+          "durationSeconds": 22.679999999980282,
+          "aoaDegRange": [
+            12.2590265274048,
+            17.057523727417
+          ],
+          "qPaRange": [
+            4828.60302734375,
+            6034.00439453125
+          ],
+          "medianMeasuredLD": 0.8763268157618272,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9899826929698219,
+            "p05MeasuredOverPredicted": 0.9538456846937885,
+            "p95MeasuredOverPredicted": 1.0105394657640991,
+            "biasN": 1986.3485533115313,
+            "rmseN": 3669.79645515847,
+            "relativeRmsError": 0.018206688651760186
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.8950893517752712,
+            "p05MeasuredOverPredicted": 0.7627313273759126,
+            "p95MeasuredOverPredicted": 0.9329766749963646,
+            "biasN": 33334.09023218938,
+            "rmseN": 35721.949687511675,
+            "relativeRmsError": 0.15445378896190523
+          }
+        },
+        "2.5-3.5": {
+          "samples": 310,
+          "durationSeconds": 19.859999999979664,
+          "aoaDegRange": [
+            9.74879264831543,
+            26.4049701690674
+          ],
+          "qPaRange": [
+            3919.35302734375,
+            4803.49755859375
+          ],
+          "medianMeasuredLD": 0.8156875296359659,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9675763889924401,
+            "p05MeasuredOverPredicted": 0.8663353390484626,
+            "p95MeasuredOverPredicted": 1.004043704289918,
+            "biasN": 5477.267390294791,
+            "rmseN": 6900.475762266211,
+            "relativeRmsError": 0.04541361940174392
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.8339594119215427,
+            "p05MeasuredOverPredicted": 0.5903260093084746,
+            "p95MeasuredOverPredicted": 1.1314223416202627,
+            "biasN": 32619.04769620524,
+            "rmseN": 47128.823025658574,
+            "relativeRmsError": 0.24474118749683424
+          }
+        }
+      },
+      "sts_aero_live20261011.csv": {
+        "0.5-1": {
+          "samples": 828,
+          "durationSeconds": 53.27999999995973,
+          "aoaDegRange": [
+            1.84285187721252,
+            14.3730173110962
+          ],
+          "qPaRange": [
+            3200.533203125,
+            5527.70361328125
+          ],
+          "medianMeasuredLD": 1.667632639602825,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9360179883772038,
+            "p05MeasuredOverPredicted": 0.8828933906763407,
+            "p95MeasuredOverPredicted": 0.9815817484549457,
+            "biasN": 22830.400941540323,
+            "rmseN": 24622.94843410321,
+            "relativeRmsError": 0.0737011413520083
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0359968145020897,
+            "p05MeasuredOverPredicted": 0.9761779159073718,
+            "p95MeasuredOverPredicted": 1.0843790084361056,
+            "biasN": -6087.135467604288,
+            "rmseN": 10106.626882319513,
+            "relativeRmsError": 0.050847698141852166
+          }
+        },
+        "1-1.5": {
+          "samples": 535,
+          "durationSeconds": 34.55999999995993,
+          "aoaDegRange": [
+            1.41970634460449,
+            15.8562631607056
+          ],
+          "qPaRange": [
+            3190.49389648438,
+            5146.32470703125
+          ],
+          "medianMeasuredLD": 0.6838647234950616,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0029865531885802,
+            "p05MeasuredOverPredicted": 0.8903476005345614,
+            "p95MeasuredOverPredicted": 1.1665200191431215,
+            "biasN": 771.4897186207174,
+            "rmseN": 6954.585184664428,
+            "relativeRmsError": 0.045465907327311136
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0768426537134812,
+            "p05MeasuredOverPredicted": 0.5881764134478865,
+            "p95MeasuredOverPredicted": 1.208289881822136,
+            "biasN": -4122.6702812548665,
+            "rmseN": 30009.763550435247,
+            "relativeRmsError": 0.1396911099394854
+          }
+        },
+        "1.5-2": {
+          "samples": 261,
+          "durationSeconds": 16.91999999999007,
+          "aoaDegRange": [
+            14.3848161697388,
+            15.8562631607056
+          ],
+          "qPaRange": [
+            5189.4580078125,
+            6125.04833984375
+          ],
+          "medianMeasuredLD": 0.8531831938821764,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.13206339868281,
+            "p05MeasuredOverPredicted": 1.04503537329026,
+            "p95MeasuredOverPredicted": 1.1799394449420957,
+            "biasN": -27920.490244738212,
+            "rmseN": 28997.603146051726,
+            "relativeRmsError": 0.11863227495680015
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.7160137301214143,
+            "p05MeasuredOverPredicted": 0.6277255623581358,
+            "p95MeasuredOverPredicted": 0.9801311305763607,
+            "biasN": 104057.22148320636,
+            "rmseN": 112917.42148534868,
+            "relativeRmsError": 0.3872724944366199
+          }
+        },
+        "2-2.5": {
+          "samples": 350,
+          "durationSeconds": 22.679999999980282,
+          "aoaDegRange": [
+            12.2590265274048,
+            17.057523727417
+          ],
+          "qPaRange": [
+            4828.60302734375,
+            6034.00439453125
+          ],
+          "medianMeasuredLD": 0.8763268157618272,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0711048016956481,
+            "p05MeasuredOverPredicted": 1.0252796158656923,
+            "p95MeasuredOverPredicted": 1.104295108381904,
+            "biasN": -13744.256130503507,
+            "rmseN": 14788.97904833886,
+            "relativeRmsError": 0.07337146359494293
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.6395272526452482,
+            "p05MeasuredOverPredicted": 0.5748651827604562,
+            "p95MeasuredOverPredicted": 0.6938001335123695,
+            "biasN": 131504.89071312148,
+            "rmseN": 132093.7936834209,
+            "relativeRmsError": 0.5711442715538334
+          }
+        },
+        "2.5-3.5": {
+          "samples": 310,
+          "durationSeconds": 19.859999999979664,
+          "aoaDegRange": [
+            9.74879264831543,
+            26.4049701690674
+          ],
+          "qPaRange": [
+            3919.35302734375,
+            4803.49755859375
+          ],
+          "medianMeasuredLD": 0.8156875296359659,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.035110127424588,
+            "p05MeasuredOverPredicted": 0.9256478651192995,
+            "p95MeasuredOverPredicted": 1.0725686725267563,
+            "biasN": -4534.357849957594,
+            "rmseN": 7281.16027651615,
+            "relativeRmsError": 0.04791899181922587
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.6450296578532262,
+            "p05MeasuredOverPredicted": 0.4621975167749056,
+            "p95MeasuredOverPredicted": 0.8956777012894424,
+            "biasN": 96181.89188320184,
+            "rmseN": 101290.08629467565,
+            "relativeRmsError": 0.5260020176595386
+          }
+        }
+      }
+    },
+    "L7": {
+      "sts_aero_live20261010.csv": {
+        "0.5-1": {
+          "samples": 1302,
+          "durationSeconds": 82.26000000181011,
+          "aoaDegRange": [
+            1.49147272109985,
+            14.6390361785889
+          ],
+          "qPaRange": [
+            3189.51049804688,
+            5365.61181640625
+          ],
+          "medianMeasuredLD": 2.113677328421328,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9816031481357603,
+            "p05MeasuredOverPredicted": 0.8971361698217786,
+            "p95MeasuredOverPredicted": 1.0279507211554306,
+            "biasN": 7135.603181517514,
+            "rmseN": 13149.108436286435,
+            "relativeRmsError": 0.055612602311294945
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0153120964359756,
+            "p05MeasuredOverPredicted": 0.9599261689039079,
+            "p95MeasuredOverPredicted": 1.0586553513710335,
+            "biasN": -977.9226430244111,
+            "rmseN": 7676.816272013876,
+            "relativeRmsError": 0.05613616116392705
+          }
+        },
+        "1-1.5": {
+          "samples": 315,
+          "durationSeconds": 31.960000000690343,
+          "aoaDegRange": [
+            1.16984403133392,
+            15.6170902252197
+          ],
+          "qPaRange": [
+            3192.83959960938,
+            5278.93359375
+          ],
+          "medianMeasuredLD": 0.6903883841622555,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0113838588681359,
+            "p05MeasuredOverPredicted": 0.9255077763199402,
+            "p95MeasuredOverPredicted": 1.2395332045864298,
+            "biasN": -881.9691062667047,
+            "rmseN": 7134.352585925696,
+            "relativeRmsError": 0.045528254356338914
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0753274240843345,
+            "p05MeasuredOverPredicted": 0.5531992456150258,
+            "p95MeasuredOverPredicted": 1.201652773749724,
+            "biasN": -1989.3705995832452,
+            "rmseN": 30786.169564980435,
+            "relativeRmsError": 0.14174679364588028
+          }
+        },
+        "1.5-2": {
+          "samples": 155,
+          "durationSeconds": 15.82000000033986,
+          "aoaDegRange": [
+            13.5634851455688,
+            16.7337741851807
+          ],
+          "qPaRange": [
+            5317.798828125,
+            6340.1181640625
+          ],
+          "medianMeasuredLD": 0.8635834953655416,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0438493802972382,
+            "p05MeasuredOverPredicted": 1.023093692067074,
+            "p95MeasuredOverPredicted": 1.0876465813911633,
+            "biasN": -12219.043916752767,
+            "rmseN": 13589.021898016654,
+            "relativeRmsError": 0.052918978926575364
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0289957514254622,
+            "p05MeasuredOverPredicted": 0.896732624787915,
+            "p95MeasuredOverPredicted": 1.22879981558413,
+            "biasN": -12148.300670640123,
+            "rmseN": 34388.86591035148,
+            "relativeRmsError": 0.11321322020759625
+          }
+        },
+        "2-2.5": {
+          "samples": 330,
+          "durationSeconds": 22.400000000489854,
+          "aoaDegRange": [
+            10.2205467224121,
+            18.2536754608154
+          ],
+          "qPaRange": [
+            4791.8369140625,
+            6259.8349609375
+          ],
+          "medianMeasuredLD": 0.8798179855629475,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9958284877120587,
+            "p05MeasuredOverPredicted": 0.9340550258826218,
+            "p95MeasuredOverPredicted": 1.0347307144567561,
+            "biasN": 404.54979999458044,
+            "rmseN": 5547.689444385348,
+            "relativeRmsError": 0.026693829086171635
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.8529809433633424,
+            "p05MeasuredOverPredicted": 0.6267354010802888,
+            "p95MeasuredOverPredicted": 0.9959996586554477,
+            "biasN": 39457.554964806804,
+            "rmseN": 48332.313957875645,
+            "relativeRmsError": 0.20371233222067825
+          }
+        },
+        "2.5-3.5": {
+          "samples": 479,
+          "durationSeconds": 35.86000000078002,
+          "aoaDegRange": [
+            8.18042469024658,
+            27.4972515106201
+          ],
+          "qPaRange": [
+            3860.8173828125,
+            4767.37451171875
+          ],
+          "medianMeasuredLD": 0.6175724386157968,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9513859984848676,
+            "p05MeasuredOverPredicted": 0.8791000615168915,
+            "p95MeasuredOverPredicted": 1.0196028592672997,
+            "biasN": 7551.078892999721,
+            "rmseN": 9382.876379437137,
+            "relativeRmsError": 0.05151079643220353
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.2131488694220178,
+            "p05MeasuredOverPredicted": 0.5351019979409901,
+            "p95MeasuredOverPredicted": 1.2675059911327105,
+            "biasN": -22250.82539085623,
+            "rmseN": 57431.79792195047,
+            "relativeRmsError": 0.2024595232767993
+          }
+        }
+      },
+      "sts_aero_live20261011.csv": {
+        "0.5-1": {
+          "samples": 1302,
+          "durationSeconds": 82.26000000181011,
+          "aoaDegRange": [
+            1.49147272109985,
+            14.6390361785889
+          ],
+          "qPaRange": [
+            3189.51049804688,
+            5365.61181640625
+          ],
+          "medianMeasuredLD": 2.113677328421328,
+          "lift": {
+            "medianMeasuredOverPredicted": 0.9816031481357603,
+            "p05MeasuredOverPredicted": 0.8971361698217786,
+            "p95MeasuredOverPredicted": 1.0279507211554306,
+            "biasN": 7135.603181517514,
+            "rmseN": 13149.108436286435,
+            "relativeRmsError": 0.055612602311294945
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0153120964359756,
+            "p05MeasuredOverPredicted": 0.9599261689039079,
+            "p95MeasuredOverPredicted": 1.0586553513710335,
+            "biasN": -977.9226430244111,
+            "rmseN": 7676.816272013876,
+            "relativeRmsError": 0.05613616116392705
+          }
+        },
+        "1-1.5": {
+          "samples": 315,
+          "durationSeconds": 31.960000000690343,
+          "aoaDegRange": [
+            1.16984403133392,
+            15.6170902252197
+          ],
+          "qPaRange": [
+            3192.83959960938,
+            5278.93359375
+          ],
+          "medianMeasuredLD": 0.6903883841622555,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0113838588681359,
+            "p05MeasuredOverPredicted": 0.9255077763199402,
+            "p95MeasuredOverPredicted": 1.2395332045864298,
+            "biasN": -881.9691062667047,
+            "rmseN": 7134.352585925696,
+            "relativeRmsError": 0.045528254356338914
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 1.0753274240843345,
+            "p05MeasuredOverPredicted": 0.5531992456150258,
+            "p95MeasuredOverPredicted": 1.201652773749724,
+            "biasN": -1989.3705995832452,
+            "rmseN": 30786.169564980435,
+            "relativeRmsError": 0.14174679364588028
+          }
+        },
+        "1.5-2": {
+          "samples": 155,
+          "durationSeconds": 15.82000000033986,
+          "aoaDegRange": [
+            13.5634851455688,
+            16.7337741851807
+          ],
+          "qPaRange": [
+            5317.798828125,
+            6340.1181640625
+          ],
+          "medianMeasuredLD": 0.8635834953655416,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.1395571961959254,
+            "p05MeasuredOverPredicted": 1.0438935433103917,
+            "p95MeasuredOverPredicted": 1.2048639295472807,
+            "biasN": -32052.50574525991,
+            "rmseN": 33653.40291646154,
+            "relativeRmsError": 0.13105459194261102
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.7170592045834094,
+            "p05MeasuredOverPredicted": 0.6184784842792496,
+            "p95MeasuredOverPredicted": 0.974223005796118,
+            "biasN": 105724.16447001361,
+            "rmseN": 116097.63030235136,
+            "relativeRmsError": 0.38221052765347985
+          }
+        },
+        "2-2.5": {
+          "samples": 330,
+          "durationSeconds": 22.400000000489854,
+          "aoaDegRange": [
+            10.2205467224121,
+            18.2536754608154
+          ],
+          "qPaRange": [
+            4791.8369140625,
+            6259.8349609375
+          ],
+          "medianMeasuredLD": 0.8798179855629475,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.0805204154800854,
+            "p05MeasuredOverPredicted": 1.0046873564835321,
+            "p95MeasuredOverPredicted": 1.1316374131654665,
+            "biasN": -15342.127318826811,
+            "rmseN": 17899.372230255518,
+            "relativeRmsError": 0.08612644738933208
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.6223922822194146,
+            "p05MeasuredOverPredicted": 0.4711765044742645,
+            "p95MeasuredOverPredicted": 0.7294797803126488,
+            "biasN": 139687.90804114685,
+            "rmseN": 140928.36500275074,
+            "relativeRmsError": 0.5939886498250168
+          }
+        },
+        "2.5-3.5": {
+          "samples": 479,
+          "durationSeconds": 35.86000000078002,
+          "aoaDegRange": [
+            8.18042469024658,
+            27.4972515106201
+          ],
+          "qPaRange": [
+            3860.8173828125,
+            4767.37451171875
+          ],
+          "medianMeasuredLD": 0.6175724386157968,
+          "lift": {
+            "medianMeasuredOverPredicted": 1.013144016403896,
+            "p05MeasuredOverPredicted": 0.9396352195966137,
+            "p95MeasuredOverPredicted": 1.090968728746522,
+            "biasN": -3753.0238678982573,
+            "rmseN": 7478.554575738032,
+            "relativeRmsError": 0.04105631224154262
+          },
+          "drag": {
+            "medianMeasuredOverPredicted": 0.9892246798767718,
+            "p05MeasuredOverPredicted": 0.41717701401841845,
+            "p95MeasuredOverPredicted": 1.0907685635369886,
+            "biasN": 36573.42568782712,
+            "rmseN": 67499.75899043288,
+            "relativeRmsError": 0.237951266040354
+          }
+        }
+      }
+    }
+  }
+}
