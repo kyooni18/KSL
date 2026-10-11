@@ -53,7 +53,10 @@ def solve(make_node, error, lo, hi, iterations=26):
     return 0.5*(lo+hi)
 
 
-MEASURED_AXIS = {}
+# OMS resultant thrust axis in the body frame, measured in flight (run a1):
+# ~20 deg off the nose toward -z (the part axis says +z, which is wrong).
+# Refined live during every burn.
+MEASURED_AXIS = {'axis': (0.0, 0.940, -0.342)}
 CUSTOM_AP = {}
 
 
