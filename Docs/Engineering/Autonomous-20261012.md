@@ -347,6 +347,22 @@ focused replay tests pass, including the clock regression.
   attempt stopped in preflight. The launch validator now accepts a nearly
   motionless landed STS still held by at least two launch clamps. This is
   bounded to pad-like conditions and does not permit a free landed craft.
-  A second no-aft-clamp ascent is being tested from
+  The second no-aft-clamp ascent ran from
   `ksl-autonomous-20261012-pad-no-aft-clamps`. The full offline gate passed
   again (122 Python tests, 51 subtests, native checks).
+- This ascent cleared liftoff with 37 parts and retained both wings and both
+  main gear at 1.1 km. It reached SRB separation at about UT 2793 / 25 km.
+  An independent check at UT 2805 / 35 km found 21 parts with zero wings,
+  elevons, or main gear. KSP.log records a deltaWing vessel split at
+  03:04:46, coincident with booster separation, then the second split about
+  0.3 s later. The mission was paused and aborted before orbit. Throttle had
+  remained at 1.0 despite the abort while paused, so an independent guard
+  briefly resumed physics, commanded zero throttle, paused again, and saved
+  `ksl-autonomous-20261012-srb-wing-loss-safe` at UT 2807.21.
+- Removing aft clamps therefore resolves only the liftoff wing collision;
+  the booster separation is a second structural failure. The booster-mounted
+  Mite separator motors, booster trajectory, and wing `Heaviest` autostruts
+  are candidates; none is yet proven causal. Ascent now checks the essential
+  orbiter inventory one simulation second after booster separation and again
+  after ET clearance, so neither damaged vehicle can be certified as an
+  orbital checkpoint.
