@@ -39,5 +39,29 @@ aligned and does not reproduce the original live −32.53 km handoff.
 Instantaneous lift held constant over a long arrest does not forecast rapidly
 changing density, drag, flight-path rotation or energy allocation. This is not
 a qualified entry guidance change. Full-chain comparison is recorded separately
-in `chain-result.json` when complete; do not infer landing success from a
-TAEM stop. Adaptive flare remains off and ground drogue drag is not modeled.
+in `chain-result.json`; do not infer landing success from a TAEM stop.
+Adaptive flare remains off and ground drogue drag is not modeled.
+
+## Full MM304-to-contact comparison
+
+`run_chain.py` holds the corrected L7 MM304 inlet and existing-coefficient
+body plant fixed, changing only the experimental flag. Both cases exit 2
+and fail acceptance. Neither observes Final Approach or Flare.
+
+| Case | Contact speed | Sink | Along | Cross | Gear | Backend failure |
+|---|---:|---:|---:|---:|---|---|
+| Baseline | 33.064 m/s | 24.203 m/s | −9794.148 m | +644.938 m | Up | MM305 crossed runway elevation before fixed-HAC exit |
+| Arrest projection | 37.007 m/s | 14.784 m/s | −7066.021 m | −637.338 m | Up | Recovery exceeded 15 s |
+
+The candidate is **not accepted for production**: a better TAEM crossrange
+outlet did not produce the required downstream phase path or touchdown.
+The simulator continues after backend failure, so contact is its subsequent
+physical outcome, not a guidance success. These surrogate-chain failures
+also differ sharply from the observed live MM305 continuations that reached
+flare. Do not tune or rebaseline successful landing around them.
+
+`make`, `make test` (104 tests, 44 subtests) and the native TAEM stack check
+pass with the experiment off by default. The analytic mirror/zero/invalid
+authority cases cover the new projection formula; the six retained replay
+runs exercise the opt-in behavior. Native stack success does not qualify this
+experimental full flight. No new live flight was authorized or performed.

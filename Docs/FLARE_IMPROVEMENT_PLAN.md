@@ -111,6 +111,12 @@ gates were weakened.
   Final → Flare phase path.
 
 ### 2. Fix TAEM energy delivery (root cause of L7)
+- [Measured entry lateral history](Experiments/STS-Landing-20261011/Entry-Lateral-History/README.md)
+  shows L7 reversing bank near centreline crossing but needing about 150 s
+  to arrest its lateral velocity. An [experimental arrest projection](Experiments/STS-Landing-20261011/Entry-Lateral-Arrest/README.md)
+  improves the provisional TAEM crossrange by 4–5 km, but its full chain still
+  misses Final/flare and contacts short with gear up. It remains off by
+  default and is not accepted as a production energy/entry fix.
 - [Corrected MM304 inlet comparison](Experiments/STS-Landing-20261011/MM304-Measured-Inlet/README.md)
   finds less than 0.1° heading/course difference at entry. The large L7
   lateral handoff error survives corrected geometry and both provisional
