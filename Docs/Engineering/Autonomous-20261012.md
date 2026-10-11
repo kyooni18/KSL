@@ -366,3 +366,17 @@ focused replay tests pass, including the clock regression.
   orbiter inventory one simulation second after booster separation and again
   after ET clearance, so neither damaged vehicle can be certified as an
   orbital checkpoint.
+
+## Root-autostrut SRB replay
+
+- A derived ET-clamp-only pad save changed only the two wing autostruts from
+  `Heaviest` to `Root`. It retained both wings through liftoff. A clean
+  pre-SRB checkpoint was saved at UT 2787.05 / 20.9 km with 37 intact parts:
+  `ksl-autonomous-20261012-pre-srb-rootwing`.
+- The unchanged booster-separation program still detached one four-part wing
+  assembly. The new one-second post-SRB inventory guard aborted automatically
+  at about UT 2794 / 26 km; a paused, zero-throttle scene is preserved as
+  `ksl-autonomous-20261012-rootwing-srb-failure`. Root autostruts improved the
+  loss from two assemblies to one in this trial but did not solve it. The
+  pre-SRB checkpoint now allows targeted separation tests without replaying
+  the entire climb.
