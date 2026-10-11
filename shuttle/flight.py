@@ -2375,7 +2375,7 @@ def main():
                         help='Start the post-separation upright roll only below this dynamic pressure (Pa)')
     parser.add_argument('--upright-roll-rate', type=float, default=15.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
-    parser.add_argument('--roll-rate', type=float, default=8.0,
+    parser.add_argument('--roll-rate', type=float, default=15.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
