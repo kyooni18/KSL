@@ -1554,6 +1554,7 @@ def run(args):
         roll_reset_ut = None
         upright_since = None
         ap_owns_roll = False
+        upright_configured = False
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
@@ -2028,7 +2029,17 @@ def run(args):
                             # off the nose, so aim the resultant thrust (not the nose).
                             try:
                                 offset = thrust_axis_offset(conn, v, ap.reference_frame)
-                                raw = tuple(target_direction[i]-offset[i] for i in range(3))
+                                # The canted thrust axis sweeps a cone about the nose while
+                                # rolling, so hold the nose itself on target during the upright
+                                # roll and blend the thrust correction back in over 6 s after.
+                                if roll_reset and shuttle.post_sep_roll_done_ut is None:
+                                    blend = 0.0
+                                elif shuttle.post_sep_roll_done_ut is not None:
+                                    blend = min(1.0, (conn.space_center.ut -
+                                                      shuttle.post_sep_roll_done_ut)/6.0)
+                                else:
+                                    blend = 1.0
+                                raw = tuple(target_direction[i]-blend*offset[i] for i in range(3))
                                 n = math.sqrt(sum(c*c for c in raw)) or 1.0
                                 aim_direction = tuple(c/n for c in raw)
                             except Exception:
@@ -2083,6 +2094,14 @@ def run(args):
                                 ap_owns_roll = True
                                 print('Autopilot owns pitch/yaw/roll after separation '
                                       '(auto-tuned, 3 s time-to-peak)')
+                            if upright_phase and not upright_configured:
+                                # Pitch/yaw keep priority during the roll: roll is suppressed
+                                # whenever the nose is more than 4 deg off and fully engaged
+                                # only inside 2 deg; stiffer pitch/yaw while rolling.
+                                ap.roll_start_angle = 4.0
+                                ap.roll_engage_angle = 2.0
+                                ap.time_to_peak = (2.0, 2.0, 2.0)
+                                upright_configured = True
                             if upright_phase:
                                 control.rcs = True
                             ap.set_direction_and_up(aim_direction, target_side, 0.0)
