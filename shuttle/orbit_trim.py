@@ -4,8 +4,8 @@ Three small burns planned on kRPC maneuver nodes (each solved against the node's
 predicted orbit, so no sign or frame conventions are assumed):
 
   1. at apoapsis      -- prograde burn that sets the periapsis
-  2. at the next node -- normal burn that sets the inclination
-  3. at periapsis     -- retrograde/prograde burn that sets the apoapsis
+  2. at periapsis     -- retrograde burn that sets the apoapsis
+  3. at the next node -- normal burn that sets the inclination
 """
 
 import argparse
@@ -132,42 +132,41 @@ def main():
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
     def plan(d_ap, d_pe, min_lead=45.0):
-        """Chain up to three nodes in time order: plane change at the first high node
-        after MECO, apoapsis set shortly after, periapsis raised at apoapsis."""
+        """Chain nodes in an atmosphere-safe order: raise the periapsis at the first
+        apoapsis, lower the apoapsis at that new periapsis, then change the plane at
+        the next node. Lowering the apoapsis first would drop the periapsis into the
+        atmosphere for the whole coast to the next burn."""
         for stale in list(vessel.control.nodes):
             stale.remove()
         o0 = vessel.orbit
-        omega = o0.argument_of_periapsis
         now = sc.ut
-        candidates = sorted(
-            o0.ut_at_true_anomaly(nu) for nu in ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
-        usable = [c for c in candidates if c > now+min_lead and c < now+900 and
-                  o0.radius_at(c)-body_radius >= MIN_BURN_ALTITUDE+3000.0]
-        target = math.radians(args.inclination)
-        nodes = []
-        if usable and abs(math.degrees(o0.inclination)-args.inclination) > 0.15:
-            ut_p = usable[0]
-            xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
-                       lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
-            nodes.append(vessel.control.add_node(ut_p, normal=xp))
-            ut1 = ut_p + 0.5*abs(xp)/2.7*1.0 + 70.0
-        else:
-            print('Inclination already on target or no safe plane node; skipping plane burn')
-            flight = vessel.flight(o0.body.reference_frame)
-            ut1 = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
-                            max(flight.vertical_speed, 20.0))
-        base_orbit = nodes[-1].orbit if nodes else o0
-        ut1 = max(ut1, now + 15.0)
+        ut1 = o0.ut_at_true_anomaly(math.pi)
+        if ut1 < now+max(30.0, min_lead):
+            ut1 += o0.period
         x1 = solve(lambda x: vessel.control.add_node(ut1, prograde=x),
-                   lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
-        n1 = vessel.control.add_node(ut1, prograde=x1)
-        nodes.append(n1)
-        ut2 = n1.orbit.ut_at_true_anomaly(math.pi)
-        x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
                    lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
+        n1 = vessel.control.add_node(ut1, prograde=x1)
+        nodes = [n1]
+        ut2 = n1.orbit.ut_at_true_anomaly(0.0)
+        if ut2 < ut1+120.0:
+            ut2 += n1.orbit.period
+        x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
+                   lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
         n2 = vessel.control.add_node(ut2, prograde=x2)
         nodes.append(n2)
-        return tuple(nodes), n2.orbit
+        final = n2.orbit
+        target = math.radians(args.inclination)
+        if abs(math.degrees(final.inclination)-args.inclination) > 0.15:
+            omega = final.argument_of_periapsis
+            cands = sorted(final.ut_at_true_anomaly(nu) for nu in
+                           ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
+            ut_p = next((c for c in cands if c > ut2+150.0), cands[0]+final.period)
+            xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
+                       lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
+            n3 = vessel.control.add_node(ut_p, normal=xp)
+            nodes.append(n3)
+            final = n3.orbit
+        return tuple(nodes), final
 
     d_ap = d_pe = 0.0
     min_lead = 45.0
