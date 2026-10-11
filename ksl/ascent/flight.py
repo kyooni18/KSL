@@ -4,6 +4,7 @@ import csv
 import math
 import signal
 import time
+from datetime import datetime, timezone
 from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
@@ -80,6 +81,12 @@ def pause_structural_failure(conn, control, autopilot):
         print('Structural failure: KSP paused for inspection')
     except Exception as exc:
         print(f'WARNING: could not pause KSP after structural failure: {exc}')
+    try:
+        name = 'ksl-structural-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+        conn.space_center.save(name)
+        print(f'Structural failure checkpoint: {name}')
+    except Exception as exc:
+        print(f'WARNING: could not save structural failure checkpoint: {exc}')
 
 
 def _terminate_as_exception(signum, _frame):

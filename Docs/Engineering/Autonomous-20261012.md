@@ -490,5 +490,6 @@ focused replay tests pass, including the clock regression.
 - A structural abort now releases throttle, roll and autopilot, waits for the
   throttle write to take effect, then pauses KSP automatically. This applies
   to both liftoff part loss and a later post-SRB orbiter-inventory failure,
-  preserving the damaged scene for inspection during unattended flights.
-  A focused fake-kRPC test verifies the safe handoff and pause.
+  preserving the damaged scene for inspection during unattended flights. It
+  also writes a uniquely named `ksl-structural-*` save. A focused fake-kRPC
+  test verifies the safe handoff, pause and checkpoint call.

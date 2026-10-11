@@ -135,7 +135,7 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(maneuver_roll_rate(20, 10, 15), 3)
 
     def test_structural_abort_releases_controls_and_pauses_ksp(self):
-        conn = SimpleNamespace(krpc=SimpleNamespace(paused=False))
+        conn = SimpleNamespace(krpc=SimpleNamespace(paused=False), space_center=MagicMock())
         control = SimpleNamespace(throttle=1.0, roll=0.5, sas=False)
         autopilot = MagicMock()
         pause_structural_failure(conn, control, autopilot)
@@ -144,6 +144,7 @@ class FlightTests(unittest.TestCase):
         self.assertTrue(control.sas)
         self.assertTrue(conn.krpc.paused)
         autopilot.disengage.assert_called_once()
+        self.assertTrue(conn.space_center.save.call_args.args[0].startswith('ksl-structural-'))
 
     def test_mission_roll_starts_after_climbing_above_the_pad(self):
         self.assertFalse(mission_roll_allowed(False, 100, 30))
