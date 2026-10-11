@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-ROOT="${1:-/Users/kyooni18/Code/C/KSPShuttleLander}"
+ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 KEEP_FLIGHTLOGS="${KEEP_FLIGHTLOGS:-8}"
 cd "$ROOT" || exit 1
 printf 'cleanup_started=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')"

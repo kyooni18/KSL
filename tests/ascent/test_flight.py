@@ -11,7 +11,7 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             direction_for_pitch_heading, direction_error_deg,
                             pitch_heading_for_direction, surface_axis_errors,
                             surface_up_for_pitch_heading, hold_turn_for_roll,
-                            isolate_aero_roll, restore_aero_roll,
+                            limit_aero_roll, restore_aero_roll,
                             mission_roll_allowed, manual_roll_command,
                             roll_attitude_settled, roll_delta, roll_for_roof, slew_roll,
                             ensure_autopilot_engaged, release_controls, roll_for_heading,
@@ -172,23 +172,28 @@ class FlightTests(unittest.TestCase):
         self.assertAlmostEqual(ratios[0], ratios[1])
         self.assertAlmostEqual(ratios[1], ratios[2])
 
-    def test_aero_roll_isolation_preserves_pitch_yaw_and_restores_original_states(self):
-        a = SimpleNamespace(roll_enabled=True, pitch_enabled=True, yaw_enabled=False)
-        b = SimpleNamespace(roll_enabled=False, pitch_enabled=False, yaw_enabled=True)
+    def test_elevon_roll_is_enabled_at_limited_authority_and_restored(self):
+        elevon = SimpleNamespace(roll_enabled=False, pitch_enabled=True, authority_limiter=100.0)
+        small = SimpleNamespace(roll_enabled=True, pitch_enabled=True, authority_limiter=20.0)
+        rudder = SimpleNamespace(roll_enabled=False, pitch_enabled=False, authority_limiter=100.0)
         vessel = SimpleNamespace(parts=SimpleNamespace(all=[
-            SimpleNamespace(control_surface=a),
-            SimpleNamespace(control_surface=b),
+            SimpleNamespace(name='benjee10.shuttle.elevon1', control_surface=elevon),
+            SimpleNamespace(name='benjee10.shuttle.ELEVON2', control_surface=small),
+            SimpleNamespace(name='benjee10.shuttle.rudder', control_surface=rudder),
         ]))
-        states = isolate_aero_roll(vessel)
-        self.assertFalse(a.roll_enabled)
-        self.assertFalse(b.roll_enabled)
-        self.assertTrue(a.pitch_enabled)
-        self.assertTrue(b.yaw_enabled)
+        states = limit_aero_roll(vessel, authority_limit=35.0)
+        self.assertEqual(len(states), 2)
+        self.assertTrue(elevon.roll_enabled)
+        self.assertEqual(elevon.authority_limiter, 35.0)
+        self.assertEqual(small.authority_limiter, 20.0)  # never raised above its own setting
+        self.assertTrue(elevon.pitch_enabled)
+        self.assertFalse(rudder.roll_enabled)  # non-elevon surfaces untouched
+        self.assertEqual(rudder.authority_limiter, 100.0)
         restore_aero_roll(states)
-        self.assertTrue(a.roll_enabled)
-        self.assertFalse(b.roll_enabled)
-        self.assertTrue(a.pitch_enabled)
-        self.assertTrue(b.yaw_enabled)
+        self.assertFalse(elevon.roll_enabled)
+        self.assertEqual(elevon.authority_limiter, 100.0)
+        self.assertTrue(small.roll_enabled)
+        self.assertEqual(small.authority_limiter, 20.0)
 
     def test_gravity_turn_waits_for_dedicated_roll_phase(self):
         self.assertTrue(hold_turn_for_roll(True, False))
@@ -198,8 +203,11 @@ class FlightTests(unittest.TestCase):
     def test_gravity_turn_follows_prograde_with_q_limited_pitch_under(self):
         low_q = gravity_turn_pitch(100, 100, 0)
         high_q = gravity_turn_pitch(100, 100, 30000)
-        self.assertAlmostEqual(low_q, 38.0, places=1)
-        self.assertAlmostEqual(high_q, 42.0, places=1)
+        # Prograde is 45 deg here; bias is 20 deg at low q and 8 deg above 25 kPa
+        # (f5d8830 "Bias STS gravity turn toward horizontal suborbit").
+        self.assertAlmostEqual(low_q, 25.0, places=1)
+        self.assertAlmostEqual(high_q, 37.0, places=1)
+        self.assertAlmostEqual(gravity_turn_pitch(100, 100, 15000), 31.0, places=1)
         self.assertLess(low_q, high_q)
         self.assertLess(gravity_turn_pitch(100, .5, 0), 89)
 

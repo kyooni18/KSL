@@ -115,7 +115,7 @@ mm305-admission-test: $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
 		$(VALIDATION_ROOT)/MM305AdmissionTests.c \
 		$(BUILD)/decision_envelope.o $(BUILD)/math.o $(BUILD)/models.o $(BUILD)/json.o \
-		$(BUILD)/taem_planner.o $(BUILD)/taem_geometry.o $(BUILD)/taem_frames_energy.o $(BUILD)/taem_reachability.o \
+		$(BUILD)/taem_planner.o $(BUILD)/taem_geometry.o $(BUILD)/taem_frames_energy.o $(BUILD)/taem_reachability.o $(BUILD)/taem_tracker.o \
 		$(BUILD)/flight_physics/math3.o $(BUILD)/flight_physics/world.o $(BUILD)/flight_physics/aero.o \
 		$(BUILD)/entry_exec.o $(BUILD)/taem_exec.o $(LDFLAGS) $(LDLIBS) \
 		-o $(BUILD)/mm305_admission_tests
