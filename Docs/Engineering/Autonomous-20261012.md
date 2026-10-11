@@ -476,3 +476,14 @@ focused replay tests pass, including the clock regression.
   near 28 deg/s. The schedule now respects the configured cap for both roll
   maneuvers, with a focused regression test. This is a justified control fix,
   but live structural benefit still needs a retest.
+- The controlled no-upright-roll comparison used the same four-ET pad and
+  q <= 1,000 Pa separation, with upright roll deferred to q <= 0.1 Pa. An
+  independent 0.4-s wall-time witness saw 37 parts/two wings through UT
+  2807.29, 29 parts/two wings at UT 2807.53 after booster departure, then
+  21 parts/zero wings at UT 2809.67 while physical roll stayed near 180 deg.
+  The continuous guard stopped at ~UT 2810; the zero-throttle paused scene is
+  `ksl-autonomous-20261012-lowq-no-roll-failure`. Thus the upright roll is
+  not required for this failure. Booster clearance, Mite plume/collision, and
+  post-separation thrust/joint loading are still candidates. Full offline
+  suite with the guard and roll cap passed: 127 Python tests, 51 subtests,
+  native checks.
