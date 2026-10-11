@@ -396,3 +396,14 @@ focused replay tests pass, including the clock regression.
   the Mites under the nominal controlled geometry. The next controlled test
   must retain the normal ascent program and inhibit Mite thrust in the pad
   save, changing only that variable.
+- That controlled no-Mite-pad trial did not reach launch. During the 25-second
+  settle, an ET clamp and a booster branch detached from the two-clamp pad
+  stack; preflight correctly rejected the moving `LANDED` vessel. The scene
+  was paused and saved as `ksl-autonomous-20261012-no-mite-pad-failure`.
+  The only save-file difference was two Mite `SolidFuel` amounts changed from
+  40 to 0, so this result indicates the ET-only pad support is not reliably
+  stable across reloads; it does not assess Mite influence at separation.
+- The next controlled full ascent uses the original four-clamp quicksave with
+  both wing joints set to `rigidAttachment=True` and `autostrutMode=Root` in a
+  new derivative save, `ksl-autonomous-20261012-pad-fourclamp-rootrigid`.
+  Neither original quicksave nor prior experiment is overwritten.
