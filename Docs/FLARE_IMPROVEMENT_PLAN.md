@@ -89,7 +89,11 @@ live MM305 check verified Final delivery and flare but landed 1531 m along
 and stopped 146 m beyond the configured runway, with a 230 kg mass loss during
 overrun. The universal backstop and full deorbit/MM304 route remain unverified
 live. Grounded warning recovery also failed to terminate; operator abort was
-needed after stopping. No landing acceptance gates were weakened.
+needed after stopping. Offline follow-up `9fdfa0a` now terminates a failed
+grounded landing with Abort after braking below 1.5 m/s, while preserving
+simulator contact evidence on termination. The regression and unchanged L5
+golden pass; this termination fix has not flown live. No landing acceptance
+gates were weakened.
 
 ## Plan, in priority order
 
@@ -143,6 +147,11 @@ needed after stopping. No landing acceptance gates were weakened.
   fixed flare on the matrix and on replays of the L5/L6 live data.
 
 ### 5. Close the sim/live gap first
+- [L4/L5/L7 cross-check](Experiments/STS-Landing-20261011/Pitch-Plant-Crosscheck/README.md)
+  rejects direct adoption of the existing pitch regression: held-out L7 R²
+  is negative for both body and AoA coordinates, including a 0–400 ms delay
+  sweep. The active direct plant integrates AoA using body-pitch coefficients;
+  address that coordinate/kinematic mismatch before accepting a refit.
 - Refit the ShuttleSim attitude plant (`att-live.ini`) from the L4–L7 pitch
   responses (`L6-MM305-Final/fit-pitch-response.py`,
   `pitch-response-L4-L5.json`). The acceptance check is that the L5 replay

@@ -1,0 +1,782 @@
+{
+  "logs": {
+    "L4": {
+      "path": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+      "sha256": "b715b99d7afc7ef9f2998ee539dfbf1d9a496c43051df79bd48f9358054aa972"
+    },
+    "L5": {
+      "path": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+      "sha256": "83cac6ef7eae878290bf9b569f701efea086d2d6a344691b939d83642e7a7f8e"
+    },
+    "L7": {
+      "path": "FlightLogs/2026-10-11T07-55-25Z-STS-vehicle.jsonl",
+      "sha256": "7d9049ac1dcd4c57b2be525f8c12882ea07ad7bb67fd33648720c96de655a670"
+    }
+  },
+  "selection": "Existing L4/L5 fitter: unpowered flying, radar >=15m, q>=500Pa, Mach<=.9, |bank|<5deg, |beta|<2deg, adjacent dt .05-.15s",
+  "model": "acceleration = min(Q,cap)*control_gain*applied_pitch + rate_damping*rate - Q*stiffness*(AoA-trim); Q in kPa, angles in degrees",
+  "selectionPolicy": "All cap choices fit L4 only; L5/L7 are held out. Delay sweep is diagnostic, not a selected production model.",
+  "limitations": "Closed-loop passive regression, finite-difference noise and limited excitation. Body pitch acceleration and AoA acceleration differ through flight-path dynamics. Simulator direct_step integrates AoA acceleration; body-fit coefficients cannot be substituted without that kinematic term. The INI damping ratio scales damping with sqrt(Q), unlike this fitted constant rate coefficient. No plant or golden changed.",
+  "fits": {
+    "body": [
+      {
+        "controlDelaySeconds": 0.0,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": 3.975406389053827,
+          "control_max": 31.803251112430615,
+          "rate_damping": -0.7574697898209283,
+          "train_r2": 0.44924162087464303,
+          "heldout_r2": 0.3351397248903195,
+          "train_n": 815,
+          "heldout_n": 838,
+          "stiffness_per_kpa": 0.20533549199806614,
+          "trim": 1.2609944092679035,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.5018553173097887
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 208,
+              "r2": 0.6432556393446118
+            }
+          ]
+        },
+        "L7HeldoutR2": -2.170685985203437,
+        "L7HeldoutN": 4233,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3665,
+            "r2": -0.8840633573973424
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 568,
+            "r2": -29.399422022121975
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.04,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": 3.6437397425167934,
+          "control_max": 29.149917940134348,
+          "rate_damping": -0.7078401982779795,
+          "train_r2": 0.30389688770580026,
+          "heldout_r2": 0.21219344697214104,
+          "train_n": 765,
+          "heldout_n": 835,
+          "stiffness_per_kpa": 0.18884062794775316,
+          "trim": 1.2697742823620957,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.3623165612387347
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 207,
+              "r2": 0.4513377590214216
+            }
+          ]
+        },
+        "L7HeldoutR2": -1.8926162553539445,
+        "L7HeldoutN": 4229,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3662,
+            "r2": -0.739941930709664
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 567,
+            "r2": -26.286439463567074
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.08,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": 3.48656174880541,
+          "control_max": 27.89249399044328,
+          "rate_damping": -0.6906573900214316,
+          "train_r2": 0.25757396508541175,
+          "heldout_r2": 0.17287243909509997,
+          "train_n": 785,
+          "heldout_n": 835,
+          "stiffness_per_kpa": 0.18069932196710037,
+          "trim": 1.2803631819325225,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.3147331499142737
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 207,
+              "r2": 0.3923537357155794
+            }
+          ]
+        },
+        "L7HeldoutR2": -1.7759163331732322,
+        "L7HeldoutN": 4231,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3664,
+            "r2": -0.7119165559110663
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 567,
+            "r2": -24.293143280513295
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.12,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": 3.4375460249327854,
+          "control_max": 27.500368199462283,
+          "rate_damping": -0.6791283934995409,
+          "train_r2": 0.24323502949804054,
+          "heldout_r2": 0.13080740319049833,
+          "train_n": 787,
+          "heldout_n": 833,
+          "stiffness_per_kpa": 0.17802752840686448,
+          "trim": 1.2810101791489226,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.27063408148073087
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 206,
+              "r2": 0.36960483348442064
+            }
+          ]
+        },
+        "L7HeldoutR2": -1.7478626980875491,
+        "L7HeldoutN": 4229,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3663,
+            "r2": -0.7298683938441588
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 566,
+            "r2": -23.291488451614487
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.2,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 5.5,
+          "control_per_kpa": 1.9415012175063984,
+          "control_max": 10.67825669628519,
+          "rate_damping": -0.4001912833365504,
+          "train_r2": 0.10196979110413196,
+          "heldout_r2": -0.009698452242298261,
+          "train_n": 765,
+          "heldout_n": 831,
+          "stiffness_per_kpa": 0.1038908500384454,
+          "trim": 1.6688835999491727,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.08133589170090116
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 205,
+              "r2": -0.12268126239470667
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.8891028594312025,
+        "L7HeldoutN": 4227,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3662,
+            "r2": -0.5365624458770653
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 565,
+            "r2": -8.349785389616898
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.3,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 5.5,
+          "control_per_kpa": 1.3102194359734616,
+          "control_max": 7.206206897854039,
+          "rate_damping": -0.2893011941658909,
+          "train_r2": 0.045867167044388646,
+          "heldout_r2": -0.04740849076246212,
+          "train_n": 769,
+          "heldout_n": 826,
+          "stiffness_per_kpa": 0.07025307320512018,
+          "trim": 1.7030289952802242,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 558,
+              "r2": 0.004093189707362499
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 204,
+              "r2": -0.08523236512975685
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.4512160145212527,
+        "L7HeldoutN": 4224,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3661,
+            "r2": -0.2732001859912412
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 563,
+            "r2": -4.218496458982411
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.4,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 1.0,
+          "control_per_kpa": 2.5359936977938786,
+          "control_max": 2.5359936977938786,
+          "rate_damping": -0.1523225998197015,
+          "train_r2": 0.027231169912906084,
+          "heldout_r2": -0.06877361272946803,
+          "train_n": 757,
+          "heldout_n": 822,
+          "stiffness_per_kpa": 0.026928158902152353,
+          "trim": 1.9010380297755085,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 558,
+              "r2": -0.022506799435638714
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 202,
+              "r2": -0.01358243934706449
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.8376738753701467,
+        "L7HeldoutN": 4222,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3660,
+            "r2": -0.7730571617680277
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 562,
+            "r2": -2.2051301871365427
+          }
+        ]
+      }
+    ],
+    "aoa": [
+      {
+        "controlDelaySeconds": 0.0,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 7.5,
+          "control_per_kpa": 0.8315290411389384,
+          "control_max": 6.236467808542038,
+          "rate_damping": -0.14103310050870033,
+          "train_r2": 0.08638797503180007,
+          "heldout_r2": 0.09098091447103596,
+          "train_n": 815,
+          "heldout_n": 838,
+          "stiffness_per_kpa": 0.046832403860892116,
+          "trim": 1.3118334716490323,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.0911290190339934
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 208,
+              "r2": 0.27516257597166405
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.13068750836627152,
+        "L7HeldoutN": 4233,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3665,
+            "r2": 0.10411031212875466
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 568,
+            "r2": -3.6777589319874275
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.04,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 1.0,
+          "control_per_kpa": 1.8252043232412303,
+          "control_max": 1.8252043232412303,
+          "rate_damping": 0.0143536255201084,
+          "train_r2": 0.058140325614348676,
+          "heldout_r2": 0.022015503576830908,
+          "train_n": 765,
+          "heldout_n": 835,
+          "stiffness_per_kpa": 0.021767352821113452,
+          "trim": 1.6364825455935377,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.03809390773671295
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 207,
+              "r2": 0.04301456214695443
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.5668751588083556,
+        "L7HeldoutN": 4229,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3662,
+            "r2": -0.5146113725031778
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 567,
+            "r2": -1.363286793111817
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.08,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 1.0,
+          "control_per_kpa": 1.617993149596627,
+          "control_max": 1.617993149596627,
+          "rate_damping": 0.026373007678091392,
+          "train_r2": 0.046409560427321694,
+          "heldout_r2": 0.01878120578819875,
+          "train_n": 785,
+          "heldout_n": 835,
+          "stiffness_per_kpa": 0.019661336486091315,
+          "trim": 1.7317184816357025,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.029678944753846137
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 207,
+              "r2": 0.05053577146822419
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.4622251825817485,
+        "L7HeldoutN": 4231,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3664,
+            "r2": -0.4156584891845858
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 567,
+            "r2": -1.17216630538215
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.12,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 1.0,
+          "control_per_kpa": 1.511124521086913,
+          "control_max": 1.511124521086913,
+          "rate_damping": 0.05022206377402194,
+          "train_r2": 0.04287114868935116,
+          "heldout_r2": 0.011802892529257147,
+          "train_n": 787,
+          "heldout_n": 833,
+          "stiffness_per_kpa": 0.018395369291001235,
+          "trim": 1.7443228114356952,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": 0.01963652488715928
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 206,
+              "r2": 0.04991211044995891
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.4156367429270018,
+        "L7HeldoutN": 4229,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3663,
+            "r2": -0.37482882206384915
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 566,
+            "r2": -1.038503945762359
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.2,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 1.0,
+          "control_per_kpa": 1.080383400978595,
+          "control_max": 1.080383400978595,
+          "rate_damping": 0.0934567445992902,
+          "train_r2": 0.029359415206771877,
+          "heldout_r2": -0.0033837610638129956,
+          "train_n": 765,
+          "heldout_n": 831,
+          "stiffness_per_kpa": 0.01360614543554675,
+          "trim": 1.7134342579815611,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 559,
+              "r2": -0.001507108915583144
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 205,
+              "r2": 0.019171358576219766
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.2236796893992936,
+        "L7HeldoutN": 4227,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3662,
+            "r2": -0.18864229603512372
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 565,
+            "r2": -0.7585174959550398
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.3,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": -0.419599860035805,
+          "control_max": -3.35679888028644,
+          "rate_damping": 0.21960765401667354,
+          "train_r2": 0.028326950717166954,
+          "heldout_r2": -0.026032589389771266,
+          "train_n": 769,
+          "heldout_n": 826,
+          "stiffness_per_kpa": -0.02105921525883244,
+          "trim": 1.0906730642866134,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 558,
+              "r2": -0.009309849911296242
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 204,
+              "r2": -0.04155000217358529
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.07416372393944637,
+        "L7HeldoutN": 4224,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3661,
+            "r2": -0.05163293003988967
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 563,
+            "r2": -0.4196170856834882
+          }
+        ]
+      },
+      {
+        "controlDelaySeconds": 0.4,
+        "fit": {
+          "axis": "pitch",
+          "q_cap_kpa": 8.0,
+          "control_per_kpa": -0.698665130414318,
+          "control_max": -5.589321043314544,
+          "rate_damping": 0.28526020555589754,
+          "train_r2": 0.06185135645760853,
+          "heldout_r2": -0.013398997129116186,
+          "train_n": 757,
+          "heldout_n": 822,
+          "stiffness_per_kpa": -0.035982746295545466,
+          "trim": 1.1009605466852428,
+          "heldout_by_q": [
+            {
+              "q_kpa": [
+                4,
+                7
+              ],
+              "n": 558,
+              "r2": 0.017349541355301534
+            },
+            {
+              "q_kpa": [
+                7,
+                12
+              ],
+              "n": 202,
+              "r2": -0.005362534433510868
+            }
+          ]
+        },
+        "L7HeldoutR2": -0.11994322805405266,
+        "L7HeldoutN": 4222,
+        "L7HeldoutByQ": [
+          {
+            "q_kpa": [
+              2,
+              4
+            ],
+            "n": 3660,
+            "r2": -0.055133720304993306
+          },
+          {
+            "q_kpa": [
+              4,
+              7
+            ],
+            "n": 562,
+            "r2": -1.1033244262964352
+          }
+        ]
+      }
+    ]
+  }
+}
