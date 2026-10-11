@@ -19,6 +19,11 @@ MIN_BURN_ALTITUDE = 74000.0
 ALIGN_LEAD = 90.0  # s of attitude alignment before every burn
 
 
+def oms_propellant_mass(vessel):
+    res = vessel.resources
+    return 5.0*(res.amount('LiquidFuel')+res.amount('Oxidizer'))
+
+
 def other_apsis(orbit, burn_ut, body_radius):
     """Altitude of the apsis opposite the burn point (which may be Ap or Pe after the burn)."""
     r_b = orbit.radius_at(burn_ut)-body_radius
@@ -130,8 +135,11 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             time.sleep(0.1)
         ctl.throttle = 1.0
         mass_start = vessel.mass
+        prop_start = oms_propellant_mass(vessel)
         while True:
-            spent = isp*9.80665*math.log(mass_start/vessel.mass)
+            # Count only OMS propellant: RCS monopropellant use is not burn delta-v.
+            burned = max(0.0, prop_start-oms_propellant_mass(vessel))
+            spent = isp*9.80665*math.log(mass_start/max(1.0, mass_start-burned))
             try:
                 remaining = node.remaining_delta_v
             except RuntimeError:
@@ -233,16 +241,16 @@ def main():
             ut_b = base.ut_at_true_anomaly(math.pi)
             if ut_b < now+max(30.0, min_lead):
                 ut_b += base.period
-            pe_goal = min(args.periapsis, base.apoapsis_altitude)
+            pe_goal = args.periapsis
             x = y = 0.0
             for _ in range(4):
                 x = solve(lambda q: vessel.control.add_node(ut_b, prograde=q, normal=y),
-                          lambda orb: orb.periapsis_altitude-pe_goal, -250.0, 400.0)
+                          lambda orb: other_apsis(orb, ut_b, body_radius)-pe_goal, -150.0, 150.0)
                 if not inc_ok:
                     y = solve(lambda q: vessel.control.add_node(ut_b, prograde=x, normal=q),
                               lambda orb: math.degrees(orb.inclination-target_inc), -300.0, 300.0)
             nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
-            nb.goal = ('pe', pe_goal) if inc_ok else None
+            nb.goal = ('other', pe_goal, ut_b) if inc_ok else None
             nodes.append(nb)
             base = nb.orbit
         if abs(base.apoapsis_altitude-args.apoapsis) > TOL:
