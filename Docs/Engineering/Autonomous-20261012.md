@@ -138,3 +138,11 @@ This log is updated at implementation/validation checkpoints.
   runway/contact/gear acceptance gates. The archived golden remains in the
   experiment documents with its original binary hashes. This change reflects
   tested source behavior, not a relaxation of a failing constraint.
+
+## Full offline gate after integration changes
+
+`nice -n 15 make test` passed: native C gates plus 117 Python tests and 51
+subtests in 24.22 s. This includes the current clean-build L5 exact replay,
+L7 low-energy replay, mission/CLI/TUI integration, guard load verification,
+connection deadline, and process cleanup. It is offline evidence only; the
+ongoing live flight and end-to-end orbital mission remain separate gates.
