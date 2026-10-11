@@ -264,7 +264,7 @@ def main():
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
     target_inc = math.radians(args.inclination)
-    TOL = 50.0  # m
+    TOL = 300.0  # m: below this the OMS minimum impulse cannot improve the orbit
 
     def plan(min_lead=45.0):
         """Next burns from the measured orbit, in an order that never lowers the periapsis
