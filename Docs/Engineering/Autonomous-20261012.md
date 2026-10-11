@@ -454,4 +454,5 @@ focused replay tests pass, including the clock regression.
   ascent to coast after booster burnout until q <= 1,000 Pa. The new
   `--booster-separation-max-q` option is opt-in; its default preserves
   immediate separation. A 30-second wait limit aborts if pressure fails
-  to fall. Focused flight tests pass, and the full offline suite is running.
+  to fall. Focused flight tests and the full offline suite pass (126 Python
+  tests, 51 subtests, native checks).
