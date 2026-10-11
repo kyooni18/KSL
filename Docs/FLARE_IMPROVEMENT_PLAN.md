@@ -333,3 +333,12 @@ Pressure/load limits pass for the prefixes, but no combined route is qualified
 or adopted. Fixed-incidence delay is rejected. Trace the later authority/energy
 failure before making further composite-path changes; live aim/drogue approval
 remains pending, and production gates are unchanged.
+
+[Prefix authority comparison](Experiments/STS-Landing-20261011/MM305-Prefix-Authority-Comparison/README.md)
+passively reproduces every smooth-trial row for baseline and the 12 km prefix.
+The prefix candidate exceeds the permitted-incidence lift envelope after only
+1.5 s of its remaining lead, then repeats the banked transonic pull-up deficit.
+Including its prefix, Mach 1 still occurs near 58–59 s, but 1.82 km higher with
+30% lower pressure/lift availability. Delayed turn alone is rejected; couple
+lateral curvature with propagated altitude/energy and preserved endpoint/speed
+constraints. No production changes, cap removal or qualification is supported.
