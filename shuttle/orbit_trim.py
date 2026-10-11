@@ -121,6 +121,8 @@ def execute(conn, vessel, node, done, tolerance=0.03):
                 # KSP can drop the node mid-burn; fall back to our own accounting.
                 remaining = dv-spent
             if remaining <= tolerance or done(vessel.orbit) or spent > 1.1*dv+0.5:
+                print(f'burn end: spent {spent:.2f} of {dv:.2f} m/s, remaining {remaining:.2f}, '
+                      f'aim error {ap.error:.1f} deg')
                 break
             if vessel.available_thrust <= 0.0:
                 print('OMS thrust lost; stopping burn')
@@ -239,7 +241,10 @@ def main():
             stale.remove()
         return
     if len(nodes) == 2:
-        execute(conn, vessel, nodes[0], lambda orb: False)
+        ap_goal = nodes[0].orbit.apoapsis_altitude
+        sign = 1.0 if nodes[0].prograde >= 0.0 else -1.0
+        execute(conn, vessel, nodes[0],
+                lambda orb: sign*(orb.apoapsis_altitude-ap_goal) >= 0.0)
         report('after burn 1')
         # Re-plan the apoapsis burn from the orbit that was actually achieved.
         d_ap = d_pe = 0.0
