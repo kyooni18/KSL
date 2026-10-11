@@ -53,6 +53,9 @@ def solve(make_node, error, lo, hi, iterations=26):
     return 0.5*(lo+hi)
 
 
+MEASURED_AXIS = {}
+
+
 def thrust_axis_offset(conn, vessel, engines, frame):
     """Net thrust direction of the active engines minus the vessel's forward axis, in `frame`.
 
@@ -77,6 +80,10 @@ def thrust_axis_offset(conn, vessel, engines, frame):
     if norm <= 0.0:
         return (0.0, 0.0, 0.0)
     thrust_body = tuple(c/norm for c in total)
+    if MEASURED_AXIS:
+        # The modelled axis is only a first guess: once a burn has run, use the
+        # thrust axis measured from the vessel's own acceleration.
+        thrust_body = MEASURED_AXIS['axis']
     forward_body = (0.0, 1.0, 0.0)
     conn_sc = conn.space_center
     t = conn_sc.transform_direction(thrust_body, vessel.reference_frame, frame)
@@ -134,6 +141,11 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.1)
         ctl.throttle = 1.0
+        body = vessel.orbit.body
+        nrf = body.non_rotating_reference_frame
+        mu = body.gravitational_parameter
+        v_prev, t_prev = vessel.velocity(nrf), sc.ut
+        window = [0.0, 0.0, 0.0]
         mass_start = vessel.mass
         prop_start = oms_propellant_mass(vessel)
         while True:
@@ -147,7 +159,8 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 remaining = dv-spent
             if done(vessel.orbit) or (remaining <= tolerance and not orbit_cutoff) or spent > 1.3*dv+0.5:
                 print(f'burn end: spent {spent:.2f} of {dv:.2f} m/s, remaining {remaining:.2f}, '
-                      f'aim error {ap.error:.1f} deg')
+                      f'aim error {ap.error:.1f} deg; measured thrust axis '
+                      f'{tuple(round(c, 3) for c in MEASURED_AXIS.get("axis", ()))}')
                 break
             if vessel.available_thrust <= 0.0:
                 print('OMS thrust lost; stopping burn')
@@ -157,6 +170,27 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 while ap.error > 3.0:
                     aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
                     time.sleep(0.05)
+            # Measure the real thrust axis: velocity change minus gravity, in the body frame.
+            v_now, t_now = vessel.velocity(nrf), sc.ut
+            r = vessel.position(nrf)
+            rn = math.sqrt(sum(c*c for c in r))
+            dt = t_now-t_prev
+            for i in range(3):
+                window[i] += (v_now[i]-v_prev[i]) + mu*r[i]/rn**3*dt
+            v_prev, t_prev = v_now, t_now
+            wn = math.sqrt(sum(c*c for c in window))
+            if wn > 0.25 and ap.error < 2.0:
+                axis = sc.transform_direction(tuple(c/wn for c in window), nrf,
+                                              vessel.reference_frame)
+                old = MEASURED_AXIS.get('axis')
+                if old is not None:
+                    axis = tuple(0.5*a+0.5*b for a, b in zip(axis, old))
+                    an = math.sqrt(sum(c*c for c in axis))
+                    axis = tuple(c/an for c in axis)
+                MEASURED_AXIS['axis'] = axis
+                window = [0.0, 0.0, 0.0]
+            elif wn > 0.25:
+                window = [0.0, 0.0, 0.0]
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
             # Fine trims fly at a low throttle so cutoff resolution is ~1 cm/s.
