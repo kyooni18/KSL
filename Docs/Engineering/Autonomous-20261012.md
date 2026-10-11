@@ -115,3 +115,10 @@ This log is updated at implementation/validation checkpoints.
   scenario and configuration file digests are identical to the current fresh
   replay. This enables a binary A/B after the live flight; the discrepancy is
   now narrowed to executable builds rather than inputs or mission Python.
+
+## TUI abort ownership
+
+- TUI quit now yields to the UI event loop while waiting for a running mission
+  to abort. After 30 s it remains open if the controller still owns flight;
+  it no longer exits and kills its daemon mission thread mid-flight. TUI
+  targeted tests pass (3 cases), including abort-to-exit behavior.

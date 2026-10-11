@@ -7,6 +7,7 @@ import json
 import re
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -232,6 +233,18 @@ class CliTests(unittest.TestCase):
 
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):
+    async def test_quit_waits_for_control_release(self):
+        from ksl.tui import KSLApp
+        app = KSLApp()
+        app.controller = mock.Mock()
+        app.controller.status.state = "running"
+        app.quit_armed_at = time.monotonic()
+        app.controller.abort.side_effect = lambda: setattr(app.controller.status, "state", "aborted")
+        with mock.patch.object(app, "exit") as exit_app:
+            await app.action_quit_safe()
+        app.controller.abort.assert_called_once()
+        exit_app.assert_called_once_with(0)
+
     def test_poll_ignores_stopped_app(self):
         from ksl.tui import KSLApp
         app = KSLApp()

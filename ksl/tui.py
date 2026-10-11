@@ -15,6 +15,7 @@ instead of silently freezing the display.
 from __future__ import annotations
 
 import json
+import asyncio
 import time
 from pathlib import Path
 from typing import Any
@@ -445,7 +446,7 @@ class KSLApp(App[int]):
         self.verbose = not self.verbose
         self.notify(f"Raw program output {'shown' if self.verbose else 'hidden'} (new lines).")
 
-    def action_quit_safe(self) -> None:
+    async def action_quit_safe(self) -> None:
         running = self.controller is not None and self.controller.status.state == MissionState.RUNNING.value
         if running and time.monotonic() - self.quit_armed_at > 3.0:
             self.quit_armed_at = time.monotonic()
@@ -456,7 +457,11 @@ class KSLApp(App[int]):
             self.controller.abort()
             deadline = time.monotonic() + 30.0
             while self.controller.status.state == MissionState.RUNNING.value and time.monotonic() < deadline:
-                time.sleep(0.2)
+                await asyncio.sleep(0.2)
+            if self.controller.status.state == MissionState.RUNNING.value:
+                self.notify("Mission is still stopping; the TUI remains open until controls are released.",
+                            severity="warning")
+                return
         self.exit(0)
 
 
