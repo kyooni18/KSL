@@ -542,3 +542,8 @@ focused replay tests pass, including the clock regression.
   attitude reacquisition. It turns RCS off before thrust and raises a clear
   error if alignment still fails, including when attitude is lost mid-burn;
   focused tests cover recovery and timeout.
+- `Configuration/missions/sts-85km-10deg-four-et.json` now captures the
+  successful launch parameters, and README documents deriving the four-ET
+  pad save with `Tools/repair_sts_pad_clamps.py`. Profile validation and an
+  orbit dry run pass. The complete orbit-to-runway continuation is underway
+  from the intact orbital checkpoint.

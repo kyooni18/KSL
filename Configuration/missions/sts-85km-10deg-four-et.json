@@ -1,0 +1,15 @@
+{
+  "description": "Validated four-ET-clamp STS ascent to 85 km / 10 deg: low-q SRB release, five-second engine-off clearance, then delayed upright roll. Requires a 41-part four-ET-clamp pad save.",
+  "ascent": {
+    "targetAltitudeKm": 85,
+    "inclinationDeg": 10,
+    "extraArgs": [
+      "--booster-separation-max-q", "1000",
+      "--post-booster-coast-seconds", "5",
+      "--roll-reset-delay", "10"
+    ]
+  },
+  "orbit": {"trim": true, "minBurnDeltaV": 0.1},
+  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261010"},
+  "checkpoints": {"kspSaveOnPhases": ["orbit", "mm305"]}
+}

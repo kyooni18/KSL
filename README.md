@@ -70,6 +70,22 @@ planning. On rollout, completion requires the vehicle to stop inside the
 configured runway length and width; the wider touchdown contact envelope
 retains braking authority but does not count as a successful stop.
 
+For the supplied 41-part STS pad quicksave, use the validated four-ET-clamp
+derivative and ascent profile. The repair tool writes a new save and refuses
+an unexpected vessel layout; keep the original quicksave as a backup.
+
+```sh
+python3 Tools/repair_sts_pad_clamps.py \
+  "<KSP saves>/<campaign>/quicksave.sfs" \
+  "<KSP saves>/<campaign>/ksl-four-et-pad.sfs"
+bin/ksl run -p sts-85km-10deg-four-et --load-save ksl-four-et-pad
+```
+
+This stack reached an intact 85.08 × 84.95 km orbit at 10.001° in the live
+2026-10-12 campaign. Both wings, four elevons and both main gears remained on
+the 22-part orbiter. The named profile keeps the tested booster-clearance
+timing together; other craft still need their own structural flight test.
+
 ## Commands
 
 | Command | Purpose |
