@@ -226,6 +226,8 @@ def main():
     parser.add_argument('--periapsis', type=float, default=90000.0)
     parser.add_argument('--inclination', type=float, default=34.0)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--min-burn-dv', type=float, default=0.0,
+                        help='Skip planned burns at or below this delta-v (m/s)')
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
     parser.add_argument('--stream-port', type=int, default=50001)
@@ -354,6 +356,16 @@ def main():
         if not nodes:
             print('Orbit on target; no burn needed')
             break
+        tiny = [n for n in nodes if n.delta_v <= args.min_burn_dv]
+        if tiny:
+            print(f'Skipping {len(tiny)} correction(s) at or below {args.min_burn_dv} m/s: '
+                  f'{[round(n.delta_v, 3) for n in tiny]}')
+            nodes = [n for n in nodes if n.delta_v > args.min_burn_dv]
+            for n in tiny:
+                n.remove()
+            if not nodes:
+                print('Remaining corrections are below the minimum burn; orbit accepted')
+                break
         print(f'plan {burn}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
               f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
               f'(dv {[round(n.delta_v, 1) for n in nodes]})')

@@ -28,6 +28,8 @@ from clanding_layout import build_artifact as clanding_build_artifact
 sys.path.insert(0, str(TOOLS_DIR.parent))
 from ksl.backend import TERMINAL_PHASES, BackendClient
 from ksl.backend import validate_plan_qualification as shared_validate_plan_qualification
+from ksl.kspguard import prepare_reentry_direct_control as shared_prepare_reentry
+from ksl.kspguard import set_ksp_paused as shared_set_ksp_paused
 from campaign_provenance import (
     load_pinned_campaign_artifacts,
     pin_campaign_artifacts,
@@ -696,34 +698,7 @@ def restore_quicksave(root: Path, save_name: str = "quicksave", settle_timeout: 
 
 
 def prepare_reentry_direct_control(root: Path) -> dict[str, Any]:
-    completed = subprocess.run(
-        [str(guard_python(root)), str(guard_script(root)), "prepare-reentry"],
-        capture_output=True,
-        text=True,
-        timeout=15.0,
-        check=False,
-    )
-    lines = [line for line in completed.stdout.splitlines() if line.strip()]
-    if completed.returncode != 0 or not lines:
-        detail = (completed.stderr or completed.stdout or "no response").strip()
-        raise RuntimeError(f"Could not prepare direct reentry handoff: {detail[:300]}")
-    payload = json.loads(lines[-1])
-    if payload.get("event") != "reentry-direct-control-ready":
-        raise RuntimeError(f"Reentry handoff confirmation is invalid: {payload}")
-    if payload.get("sas") is not False:
-        raise RuntimeError(f"Reentry handoff did not disable SAS: {payload}")
-    throttle = BackendProcess._number(payload.get("throttle"), float("nan"))
-    if not math.isfinite(throttle) or abs(throttle) > 1e-4:
-        raise RuntimeError(f"Reentry handoff did not confirm zero throttle: {payload}")
-    actual_thrust = BackendProcess._number(payload.get("actualThrust"), float("nan"))
-    if not math.isfinite(actual_thrust) or abs(actual_thrust) > 1.0:
-        raise RuntimeError(f"Reentry handoff did not confirm zero actual thrust: {payload}")
-    rails_warp = BackendProcess._number(payload.get("railsWarpFactor"), float("nan"))
-    physics_warp = BackendProcess._number(payload.get("physicsWarpFactor"), float("nan"))
-    if not math.isfinite(rails_warp) or rails_warp != 0.0:
-        raise RuntimeError(f"Reentry handoff did not confirm 1x rails warp: {payload}")
-    if not math.isfinite(physics_warp) or physics_warp != 0.0:
-        raise RuntimeError(f"Reentry handoff did not confirm 1x physics warp: {payload}")
+    payload = shared_prepare_reentry(guard_python(root), guard_script(root))
     print(
         f"reentry handoff: SAS off, throttle/thrust zero, 1x, direct controls neutral at "
         f"{BackendProcess._number(payload.get('meanAltitude')) / 1000:.1f} km",
@@ -733,21 +708,7 @@ def prepare_reentry_direct_control(root: Path) -> dict[str, Any]:
 
 
 def set_ksp_paused(root: Path, paused: bool) -> None:
-    mode = "pause" if paused else "resume"
-    completed = subprocess.run(
-        [str(guard_python(root)), str(guard_script(root)), mode],
-        capture_output=True,
-        text=True,
-        timeout=15.0,
-        check=False,
-    )
-    lines = [line for line in completed.stdout.splitlines() if line.strip()]
-    if completed.returncode != 0 or not lines:
-        detail = (completed.stderr or completed.stdout or "no response").strip()
-        raise RuntimeError(f"Could not {'pause' if paused else 'resume'} KSP: {detail[:300]}")
-    payload = json.loads(lines[-1])
-    if payload.get("event") != "pause-state" or bool(payload.get("paused")) != paused:
-        raise RuntimeError(f"KSP pause state did not change as requested: {payload}")
+    shared_set_ksp_paused(paused, guard_python(root), guard_script(root))
 
 
 def start_crash_guard(root: Path, recovery_save: str = "quicksave") -> subprocess.Popen[str]:

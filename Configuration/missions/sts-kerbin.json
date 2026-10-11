@@ -1,5 +1,5 @@
 {
   "description": "STS to a 90 km circular orbit at 34 deg (KSC latitude band), then unpowered return to KSC runway 09.",
   "ascent": {"targetAltitudeKm": 90, "inclinationDeg": 34},
-  "landing": {"backendConfiguration": "Configuration/sts.json", "modelProfile": "sts-live-20261010"}
+  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261010"}
 }

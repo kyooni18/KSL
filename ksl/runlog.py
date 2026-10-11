@@ -109,7 +109,12 @@ class RunLog:
 
     @classmethod
     def create(cls, status: MissionStatus, root: Path | None = None) -> "RunLog":
-        return cls((root or RUNS_DIR) / status.run_id, status)
+        base, run_id, n = root or RUNS_DIR, status.run_id, 1
+        while (base / run_id).exists():   # two runs started within the same second
+            n += 1
+            run_id = f"{status.run_id}-{n}"
+        status.run_id = run_id
+        return cls(base / run_id, status)
 
     def subscribe(self, callback: Callable[[Event], None]) -> None:
         with self._lock:

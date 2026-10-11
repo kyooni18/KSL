@@ -45,10 +45,11 @@ DEFAULTS: dict[str, Any] = {
     },
     "orbit": {
         "trim": True,             # run OMS trim to the circular target after insertion
+        "minBurnDeltaV": 0.1,     # m/s; planned corrections at or below this are not flown
         "extraArgs": [],
     },
     "landing": {
-        "backendConfiguration": "Configuration/sts.json",
+        "backendConfiguration": "Configuration/sts-live.json",
         "modelProfile": "sts-live-20261010",
         "autoWarp": True,
         "requireStrictPlan": False,

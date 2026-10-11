@@ -35,25 +35,25 @@ vessel and disable competing MechJeb guidance. Run from this repository:
 in degrees; logs and telemetry go to `runs/`):
 
 ```sh
-.venv/bin/python -m shuttle.mission --altitude 90 --inclination 34
-.venv/bin/python -m shuttle.mission --altitude 90 --inclination 90 --revert   # revert first
+bin/ksl launch --set ascent.targetAltitudeKm=90 --set ascent.inclinationDeg=34
+bin/ksl launch -p sts-polar --set ascent.revertToLaunch=true   # revert first
 ```
 
 It sets the Clydesdale limiters to 0.9, launches with the SSME limiter at 0.38,
 flies to an `altitude` x `altitude-30` km insertion orbit (PEG), separates the ET
 5 s after MECO and translates clear on RCS, then circularizes with the OMS at
 apoapsis (reaction wheels only, closed-loop re-planning). Attitude is flown by
-`shuttle/attitude.py` (own controller, not the kRPC AutoPilot), which feeds
+`ksl/ascent/attitude.py` (own controller, not the kRPC AutoPilot), which feeds
 forward the canted-engine thrust moment about the live centre of mass.
 
 Lower-level entry points:
 
 ```sh
 # Read-only inspection of the active vessel; no ignition or control writes.
-.venv/bin/python -m shuttle.flight
+.venv/bin/python -m ksl.ascent.flight
 
 # Fly an eastward STS suborbit with a 75 km apoapsis and 50 km periapsis.
-.venv/bin/python -m shuttle.flight --launch --orbit 75000 --heading 90 --meco-periapsis 50000
+.venv/bin/python -m ksl.ascent.flight --launch --orbit 75000 --heading 90 --meco-periapsis 50000
 ```
 
 `--turn-start 3000` sets the minimum altitude before the post-roll gravity turn can begin.
@@ -186,7 +186,7 @@ mass in KSP for launch predictions. The older report describes a different
 Inspect an updated craft without running KSP:
 
 ```sh
-.venv/bin/python -m shuttle.craft /path/to/STS.craft --meta /path/to/STS.loadmeta
+.venv/bin/python -m ksl.ascent.craft /path/to/STS.craft --meta /path/to/STS.loadmeta
 .venv/bin/python -m unittest discover -s tests -v
 ```
 

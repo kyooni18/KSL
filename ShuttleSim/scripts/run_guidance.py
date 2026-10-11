@@ -520,6 +520,7 @@ def main():
 
     stopped_at_phase=None
     last_print=0.0
+    last_print_phase=None
     last_ut=None
     last_progress=time.monotonic()
     while sim_proc.poll() is None and be_proc.poll() is None:
@@ -543,7 +544,8 @@ def main():
                 stopped_at_phase=snap.get("phase")
                 sim_proc.terminate()
                 break
-            if not args.quiet_progress and now-last_print>.5:
+            if not args.quiet_progress and (now-last_print>.5 or snap.get("phase")!=last_print_phase):
+                last_print_phase=snap.get("phase")
                 print("phase=%s alt=%.0f speed=%.1f range=%.0f along=%.0f cross=%.0f aoa=%.1f bank=%.1f" % (
                     snap.get("phase","?"),tel.get("meanAltitude") or 0,tel.get("trueAirSpeed") or 0,
                     tel.get("rangeToSite") or 0,tel.get("runwayAlongTrack") or 0,tel.get("runwayCrossTrack") or 0,
