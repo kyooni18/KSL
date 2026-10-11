@@ -122,3 +122,19 @@ This log is updated at implementation/validation checkpoints.
   to abort. After 30 s it remains open if the controller still owns flight;
   it no longer exits and kills its daemon mission thread mid-flight. TUI
   targeted tests pass (3 cases), including abort-to-exit behavior.
+
+## L5 golden replay resolved
+
+- Executable A/B with identical scenario/config/model hashes isolates the exact
+  golden change to ShuttleSim. Archived backend + archived simulator reproduced
+  66.129 m/s touchdown, 1.844 m/s sink, 1101.616 m stop. Archived backend +
+  newly built simulator produced 66.735 / 2.055 / 1068.915. Newly built backend
+  + archived simulator returned the archived numbers. All variants passed the
+  simulator acceptance gates. Archived simulator SHA-256 `985b0d56…` was built
+  2026-10-11 18:20, before the 18:24 measured body-state restart commit
+  `61fb088`; it was an out-of-date executable at the study's later commit.
+- Updated the L5 exact regression and named scenario baseline to the current
+  clean-build values; retained the same tight numerical tolerances and all
+  runway/contact/gear acceptance gates. The archived golden remains in the
+  experiment documents with its original binary hashes. This change reflects
+  tested source behavior, not a relaxation of a failing constraint.

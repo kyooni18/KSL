@@ -287,13 +287,14 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertIn("complete", status.phase_history)
         result = json.loads((c.run_dir / "simulation-result.json").read_text())
         s = result["simulatorSummary"]
-        # Baseline since the energy-short TAEM speed-blend change: every simulator
-        # acceptance gate passes (integration baseline 47bada6 was 60.704 m/s,
-        # 4.944 m/s sink, failing). Any change here is a behavior change.
+        # Clean-build baseline after measured body-state restart support. The
+        # archived 66.129/1.844/1101.616 values came from an older simulator
+        # executable left in the integration checkout; swapping only that
+        # executable reproduces them. Keep exact checks on the current plant.
         self.assertTrue(s["on_runway"] and s["touchdown_gear"] and not s["crashed"])
-        self.assertAlmostEqual(s["touchdown_speed_mps"], 66.129, places=2)
-        self.assertAlmostEqual(s["touchdown_sink_mps"], 1.844, places=2)
-        self.assertAlmostEqual(s["stop_along_m"], 1101.616, places=1)
+        self.assertAlmostEqual(s["touchdown_speed_mps"], 66.735, places=2)
+        self.assertAlmostEqual(s["touchdown_sink_mps"], 2.055, places=2)
+        self.assertAlmostEqual(s["stop_along_m"], 1068.915, places=1)
         self.assertEqual(status.state, "complete")
 
     def test_l7_low_energy_final_still_flares(self):
