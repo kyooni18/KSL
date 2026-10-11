@@ -27,7 +27,7 @@ for run in report['runs']:
     old = [{k: v for k, v in r.items() if k != 'g'} for r in trace(prior['backendStderr'], 'FINAL_TRACE')]
     assert json.dumps(cur, sort_keys=True) == json.dumps(old, sort_keys=True), 'Final trace changed'
     actual = result['simulatorSummary']['touchdown_speed_mps']
-    rows = trace(result['backendStderr'], 'NSF')
+    rows = trace(result['backendStderr'], 'NSF ')
     assert rows
     pre = [r for r in rows if not r['latch']]
     post = [r for r in rows if r['latch']]

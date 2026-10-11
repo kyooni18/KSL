@@ -15,6 +15,9 @@ static double experiment_native_stage_forecast(const GuidanceMachine*g,const Tel
     double glide_gamma=-asin(clampd(sink/fmax(V,1.0),-.95,.95));
     double aoa=t->angle_of_attack,cmd=isfinite(cmd0)?cmd0:aoa;
     Telemetry tc=*t;
+    const char*dump_env=getenv("KSL_NSF_DUMP_UT");
+    bool dump=dump_env&&aoa_lag>0.0&&fabs(t->ut-strtod(dump_env,NULL))<.015;
+    double sim_t=0.0;
     for(int i=0;i<6000&&height>0.0&&V>5.0;++i){
         double rho=rho_now,a=sound;
         if(rho_m>0.0&&snd_m>0.0){
@@ -42,7 +45,7 @@ static double experiment_native_stage_forecast(const GuidanceMachine*g,const Tel
                 isfinite(p->preflare_trigger_altitude)?p->preflare_trigger_altitude:0.0);
             if(height<=lh)latched=true;
         }
-        double vertical_accel,target;
+        double vertical_accel,target,dbg_lr=0.0;
         if(!latched){
             sink=V*sin(-glide_gamma);gamma=glide_gamma;
             vertical_accel=0.0;target=aoa;
@@ -74,11 +77,18 @@ static double experiment_native_stage_forecast(const GuidanceMachine*g,const Tel
                 vertical_accel=clampd(ff+(sink-ref)/FTAU,-.3*g0,1.5*g0);
             }
             double lr=m*(vertical_accel+g0*cos(gamma))/fmax(.3,lift_div)/p->lift_ratio;
-            target=terminal_aoa_for_lift(g,&tc,v,fmax(0.0,lr),p->aoa_max);
+            dbg_lr=lr;target=terminal_aoa_for_lift(g,&tc,v,fmax(0.0,lr),p->aoa_max);
+            /* Native flare: local Newton step on measured lift, trusting only the table slope. */
+            if(q>100.0&&slope>1e-3){
+                double need=m*(vertical_accel+g0*cos(gamma))/fmax(.3,lift_div);
+                target=clampd(a0+(need-p->lift_ratio*L*q)/(q*slope),0.0,p->aoa_max);
+            }
         }
         double rate=latched?SLEW:6.0;
         cmd=clampd(target,cmd-rate*DT,cmd+rate*DT);
         aoa=aoa_lag>0.0?aoa+(cmd-aoa)*DT/aoa_lag:cmd;
+        if(dump&&i%5==0)fprintf(stderr,"NSFT t=%.2f h=%.3f V=%.3f sink=%.3f aoa=%.3f cmd=%.3f target=%.3f liftAcc=%.3f vAcc=%.3f latch=%d lr=%.0f Lq=%.0f lq45=%.0f lq5=%.0f lq55=%.0f\n",sim_t,height,V,sink,aoa,cmd,target,lift_acc,vertical_accel,latched,dbg_lr,L*q,({double l2=0,d2=0;terminal_aero_q(g,&tc,v,4.5,&l2,&d2);l2*q;}),({double l2=0,d2=0;terminal_aero_q(g,&tc,v,5.0,&l2,&d2);l2*q;}),({double l2=0,d2=0;terminal_aero_q(g,&tc,v,5.5,&l2,&d2);l2*q;}));
+        sim_t+=DT;
         V+=(-D*q/m-g0*sin(gamma))*DT;
         if(latched)sink-=(lift_acc-g0*cos(gamma))*DT;
         height-=sink*DT;

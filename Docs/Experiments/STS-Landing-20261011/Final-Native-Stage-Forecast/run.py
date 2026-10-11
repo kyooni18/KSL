@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='ksl-native-stage-') as temp:
         ('l5', 2462.65, 'Docs/Experiments/STS-Landing-20261010/L5-72km/mm305-continuous.ini', 'Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json'),
         ('l7', 7021.45, 'Docs/Experiments/STS-Landing-20261011/L7-85km-10deg/mm305-taem.ini', 'Configuration/sts-live.json'),
     ]:
-        env = dict(os.environ, KSL_DATA_ROOT=str(ROOT), KSP_LANDER_MODEL_PROFILE='sts-live-20261010', KSP_LANDER_FINAL_TRACE='1', KSL_WARMED_UT=str(ut))
+        env = dict(os.environ, KSL_DATA_ROOT=str(ROOT), KSP_LANDER_MODEL_PROFILE='sts-live-20261010', KSP_LANDER_FINAL_TRACE='1', KSL_WARMED_UT=str(ut), KSL_NSF_DUMP_UT=str(ut))
         args = [str(ROOT / '.venv/bin/python'), 'ShuttleSim/scripts/run_guidance.py', '--scenario', scenario, '--configuration', configuration,
                 '--attitude', 'Docs/Experiments/STS-Landing-20261010/Codex-Flare-Offline/inputs/att-live.ini', '--engage', 'engageReentry',
                 '--direct-control', '--skip-build', '--backend-build-dir', str(temp), '--no-mirror', '--quiet-progress',

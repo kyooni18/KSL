@@ -1,9 +1,9 @@
 {
-  "sourceCommit": "efae6ea86da17ac729da2ac843d969639d27c46d",
+  "sourceCommit": "c538b78ef5fa99b51691681760626d1b97e7dfe3",
   "policy": "Original native controller/FCS/plant prefix and tail, with passive Final trace. Native-stage forecast printed passively each tick; no command substitution, restart, or live plant qualification. No controller state reset or command substitution.",
   "hashes": {
     "sequenceOriginal": "11d5d10d93febd0b657b2ae49b981c1d7cfbd0e9a4434aa02e6e1bab5f3ef129",
-    "sequenceInstrumented": "21ec015019f42cdc1b3afb2d384adc53d9bb4c7e82868096e224763582ada59a"
+    "sequenceInstrumented": "a8b1b3b5232d861094a0b762d415e174c35618e365cfc43854cf9dae85afcd77"
   },
   "runs": [
     {
@@ -67,12 +67,12 @@
           "TAEM",
           "Touchdown"
         ],
-        "sim": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T115924Z-i_snnas6/simulator-telemetry.jsonl.gz",
-        "guidance": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T115924Z-i_snnas6/guidance-events.jsonl.gz",
-        "backendStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T115924Z-i_snnas6/backend.stderr.log",
-        "simStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T115924Z-i_snnas6/simulator.stderr.log",
-        "runId": "mm304-native-stage-l5-20261011T115924Z-i_snnas6",
-        "manifest": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T115924Z-i_snnas6/manifest.json",
+        "sim": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T141137Z-egh0w3oq/simulator-telemetry.jsonl.gz",
+        "guidance": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T141137Z-egh0w3oq/guidance-events.jsonl.gz",
+        "backendStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T141137Z-egh0w3oq/backend.stderr.log",
+        "simStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T141137Z-egh0w3oq/simulator.stderr.log",
+        "runId": "mm304-native-stage-l5-20261011T141137Z-egh0w3oq",
+        "manifest": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l5-20261011T141137Z-egh0w3oq/manifest.json",
         "discardedZeroSecondRun": false,
         "recordedSimTime": 365.26
       },
@@ -145,7 +145,7 @@
       },
       "identicalFlightSummary": true,
       "manifest": {
-        "runId": "mm304-native-stage-l5-20261011T115924Z-i_snnas6",
+        "runId": "mm304-native-stage-l5-20261011T141137Z-egh0w3oq",
         "state": "complete",
         "mode": "closed-loop",
         "mission": "MM304",
@@ -154,10 +154,10 @@
         ],
         "scenario": "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/mm305-continuous.ini",
         "config": "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
-        "startedAt": 1791719964.040531,
-        "finishedAt": 1791719969.016351,
-        "wallSeconds": 4.975820064544678,
-        "runnerPid": 21984,
+        "startedAt": 1791727897.459479,
+        "finishedAt": 1791727901.898335,
+        "wallSeconds": 4.438855886459351,
+        "runnerPid": 77471,
         "terminalPhase": "Complete",
         "final": {
           "ut": 2527.169863,
@@ -249,9 +249,9 @@
         "rateMode": "max",
         "physicsDt": 0.02,
         "telemetryHz": 10.0,
-        "commandPort": 56755,
-        "telemetryPort": 64038,
-        "backendPid": 21985,
+        "commandPort": 64457,
+        "telemetryPort": 65418,
+        "backendPid": 77472,
         "physicsSources": {
           "atmosphere": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
           "aero": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/reference-model/sts_aero_live20261010.csv",
@@ -283,17 +283,17 @@
           "configurationPath": "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261010/L5-72km/configuration.json",
           "configurationDigest": "ee987188f4353cc9f0d3c198b827a0ec9da03c1d6e2464e9b26960e40a005536",
           "scenarioDigest": "7bff619c4958c095234d87bf251098f20f777dbbfa9ebe57cc25abcaea91e303",
-          "gitHead": "efae6ea86da17ac729da2ac843d969639d27c46d",
-          "gitDirty": false,
-          "gitDirtyDiffDigest": null,
-          "backendDigest": "7e5640a55747cd2a59ed15710a7f269ec6368cfaa8a14e5ba620d490e2b0d647",
+          "gitHead": "c538b78ef5fa99b51691681760626d1b97e7dfe3",
+          "gitDirty": true,
+          "gitDirtyDiffDigest": "ec7b8387dad25f2a02885d34770a813a357774b07b2952e6adc78e81cfac84ed",
+          "backendDigest": "2584095fc83ed9b4396c4f790cc9d6a81a484acd924a5168dc1c519a6a5670f5",
           "simulatorDigest": "985b0d56dab473a467830a42f5a36420e7790048c9a35543698b952d62a9b0ec",
           "directControl": true,
           "plantLiftScale": 1.0,
           "plantDragScale": 1.0,
           "engage": "engageReentry"
         },
-        "simulatorPid": 21994,
+        "simulatorPid": 77476,
         "simElapsedSeconds": 365.26,
         "success": true
       }
@@ -358,12 +358,12 @@
           "Rollout",
           "TAEM"
         ],
-        "sim": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T115929Z-e8nt6z96/simulator-telemetry.jsonl.gz",
-        "guidance": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T115929Z-e8nt6z96/guidance-events.jsonl.gz",
-        "backendStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T115929Z-e8nt6z96/backend.stderr.log",
-        "simStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T115929Z-e8nt6z96/simulator.stderr.log",
-        "runId": "mm304-native-stage-l7-20261011T115929Z-e8nt6z96",
-        "manifest": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T115929Z-e8nt6z96/manifest.json",
+        "sim": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T141142Z-3_dugoj_/simulator-telemetry.jsonl.gz",
+        "guidance": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T141142Z-3_dugoj_/guidance-events.jsonl.gz",
+        "backendStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T141142Z-3_dugoj_/backend.stderr.log",
+        "simStderr": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T141142Z-3_dugoj_/simulator.stderr.log",
+        "runId": "mm304-native-stage-l7-20261011T141142Z-3_dugoj_",
+        "manifest": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/runs/mm304-native-stage-l7-20261011T141142Z-3_dugoj_/manifest.json",
         "discardedZeroSecondRun": false,
         "recordedSimTime": 492.62
       },
@@ -435,7 +435,7 @@
       },
       "identicalFlightSummary": true,
       "manifest": {
-        "runId": "mm304-native-stage-l7-20261011T115929Z-e8nt6z96",
+        "runId": "mm304-native-stage-l7-20261011T141142Z-3_dugoj_",
         "state": "aborted",
         "mode": "closed-loop",
         "mission": "MM304",
@@ -444,10 +444,10 @@
         ],
         "scenario": "/Users/kyooni18/Code/KSL-integration/Docs/Experiments/STS-Landing-20261011/L7-85km-10deg/mm305-taem.ini",
         "config": "/Users/kyooni18/Code/KSL-integration/Configuration/sts-live.json",
-        "startedAt": 1791719969.3470268,
-        "finishedAt": 1791719975.244608,
-        "wallSeconds": 5.897581100463867,
-        "runnerPid": 22022,
+        "startedAt": 1791727902.225309,
+        "finishedAt": 1791727907.555564,
+        "wallSeconds": 5.330255031585693,
+        "runnerPid": 77518,
         "terminalPhase": "Abort",
         "final": {
           "ut": 7059.650098,
@@ -538,9 +538,9 @@
         "rateMode": "max",
         "physicsDt": 0.02,
         "telemetryHz": 10.0,
-        "commandPort": 59234,
-        "telemetryPort": 49513,
-        "backendPid": 22026,
+        "commandPort": 61906,
+        "telemetryPort": 64471,
+        "backendPid": 77519,
         "physicsSources": {
           "atmosphere": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
           "aero": "/Users/kyooni18/Code/KSL-integration/ShuttleSim/reference-model/sts_aero_live20261010.csv",
@@ -572,21 +572,21 @@
           "configurationPath": "/Users/kyooni18/Code/KSL-integration/Configuration/sts-live.json",
           "configurationDigest": "2b6dfa351b69f5489d311e7ae9164c611cbe9a514f7cc67e38c4392a7c359f61",
           "scenarioDigest": "1025f69999107a771a3e652c41b52f04b5c76b0c4b94329fc5ed949d4010e199",
-          "gitHead": "efae6ea86da17ac729da2ac843d969639d27c46d",
-          "gitDirty": false,
-          "gitDirtyDiffDigest": null,
-          "backendDigest": "7e5640a55747cd2a59ed15710a7f269ec6368cfaa8a14e5ba620d490e2b0d647",
+          "gitHead": "c538b78ef5fa99b51691681760626d1b97e7dfe3",
+          "gitDirty": true,
+          "gitDirtyDiffDigest": "5d106c8a3db2c0ac5c914cd27d87577d5384f9777dbb0813210f37a81438c38d",
+          "backendDigest": "2584095fc83ed9b4396c4f790cc9d6a81a484acd924a5168dc1c519a6a5670f5",
           "simulatorDigest": "985b0d56dab473a467830a42f5a36420e7790048c9a35543698b952d62a9b0ec",
           "directControl": true,
           "plantLiftScale": 1.0,
           "plantDragScale": 1.0,
           "engage": "engageReentry"
         },
-        "simulatorPid": 22029,
+        "simulatorPid": 77523,
         "simElapsedSeconds": 492.62,
         "success": false
       }
     }
   ],
-  "binarySHA256": "7e5640a55747cd2a59ed15710a7f269ec6368cfaa8a14e5ba620d490e2b0d647"
+  "binarySHA256": "2584095fc83ed9b4396c4f790cc9d6a81a484acd924a5168dc1c519a6a5670f5"
 }
