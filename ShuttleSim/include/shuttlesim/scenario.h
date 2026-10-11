@@ -19,6 +19,11 @@ typedef struct {
     double mass_kg;
     double initial_aoa_deg;
     double initial_bank_deg;
+    double initial_sideslip_deg;
+    /* Optional complete measured body pose/rate groups for live restarts. */
+    bool has_body_attitude, has_body_rates;
+    double initial_body_pitch_deg, initial_body_roll_deg, initial_body_heading_deg;
+    double initial_body_pitch_rate_deg_s, initial_body_roll_rate_deg_s, initial_body_yaw_rate_deg_s;
     double deorbit_delta_v_mps;
     double deorbit_duration_s;
     double deorbit_delay_s;

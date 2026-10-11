@@ -60,7 +60,9 @@ bool scenario_load(const char *path, Scenario *destination) {
     Scenario *s = &sample;
     enum { POSITION_X=1, POSITION_Y=2, POSITION_Z=4,
            VELOCITY_X=8, VELOCITY_Y=16, VELOCITY_Z=32,
-           CARTESIAN=63, RUNWAY=64, SURFACE=128, HEADING=256 };
+           CARTESIAN=63, RUNWAY=64, SURFACE=128, HEADING=256,
+           BODY_PITCH=512, BODY_ROLL=1024, BODY_HEADING=2048, BODY_ATTITUDE=3584,
+           BODY_Q=4096, BODY_P=8192, BODY_R=16384, BODY_RATES=28672 };
     struct Field { const char *name; double *value; unsigned flags; } fields[] = {
         {"ut0", &s->ut0, 0},
         {"latitude_deg", &s->latitude_deg, 0},
@@ -73,6 +75,13 @@ bool scenario_load(const char *path, Scenario *destination) {
         {"mass_kg", &s->mass_kg, 0},
         {"initial_aoa_deg", &s->initial_aoa_deg, 0},
         {"initial_bank_deg", &s->initial_bank_deg, 0},
+        {"initial_sideslip_deg", &s->initial_sideslip_deg, 0},
+        {"initial_body_pitch_deg", &s->initial_body_pitch_deg, BODY_PITCH},
+        {"initial_body_roll_deg", &s->initial_body_roll_deg, BODY_ROLL},
+        {"initial_body_heading_deg", &s->initial_body_heading_deg, BODY_HEADING},
+        {"initial_body_pitch_rate_deg_s", &s->initial_body_pitch_rate_deg_s, BODY_Q},
+        {"initial_body_roll_rate_deg_s", &s->initial_body_roll_rate_deg_s, BODY_P},
+        {"initial_body_yaw_rate_deg_s", &s->initial_body_yaw_rate_deg_s, BODY_R},
         {"deorbit_delta_v_mps", &s->deorbit_delta_v_mps, 0},
         {"deorbit_duration_s", &s->deorbit_duration_s, 0},
         {"deorbit_delay_s", &s->deorbit_delay_s, 0},
@@ -128,7 +137,12 @@ bool scenario_load(const char *path, Scenario *destination) {
     valid=valid&&!ferror(f);
     fclose(f);
     unsigned cartesian=seen&CARTESIAN;
+    unsigned body_attitude=seen&BODY_ATTITUDE,body_rates=seen&BODY_RATES;
     if (!valid || (cartesian && cartesian!=CARTESIAN) ||
+        (body_attitude && body_attitude!=BODY_ATTITUDE) ||
+        (body_rates && body_rates!=BODY_RATES) ||
+        fabs(s->initial_body_pitch_deg)>90 ||
+        fabs(s->initial_sideslip_deg)>90 ||
         (cartesian && (seen&SURFACE)) || s->mass_kg<=0 ||
         s->runway_length_m<=0 || s->runway_width_m<=0 ||
         fabs(s->runway_slope_deg)>=90 ||
@@ -138,6 +152,8 @@ bool scenario_load(const char *path, Scenario *destination) {
         s->orbital_engine_available_thrust_n<0 ||
         s->orbital_engine_isp_s<0 || s->orbital_attitude_slew_dps<0) return false;
     s->has_cartesian_state=cartesian==CARTESIAN;
+    s->has_body_attitude=body_attitude==BODY_ATTITUDE;
+    s->has_body_rates=body_rates==BODY_RATES;
     s->has_surface_flight_state=(seen&SURFACE)!=0;
     s->runway_override=(seen&RUNWAY)!=0;
     if (!s->has_cartesian_state && !(seen&HEADING))

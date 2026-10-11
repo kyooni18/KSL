@@ -194,6 +194,15 @@ Quat attitude_body_quat_wind(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 body_right=v3_normalized(v3_cross(forward,body_up));
     return quat_from_basis(forward,body_right,v3_scale(body_up,-1.0));
 }
+Quat attitude_body_quat_euler(LocalFrame frame,double pitch,double heading,double roll){
+    Vec3 horizontal=v3_add(v3_scale(frame.north,cos(heading)),v3_scale(frame.east,sin(heading)));
+    Vec3 forward=v3_add(v3_scale(horizontal,cos(pitch)),v3_scale(frame.up,sin(pitch)));
+    Vec3 right=v3_add(v3_scale(frame.east,cos(heading)),v3_scale(frame.north,-sin(heading)));
+    Vec3 up=v3_normalized(v3_cross(right,forward));
+    up=v3_rotate_axis(up,forward,roll);
+    right=v3_normalized(v3_cross(forward,up));
+    return quat_from_basis(forward,right,v3_scale(up,-1.0));
+}
 
 #include <stdio.h>
 #include <stdlib.h>

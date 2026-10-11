@@ -66,4 +66,5 @@ bool attitude_step_body(AttitudeModel *a, Quat *body_q_i, Vec3 position_i,
                         Vec3 air_velocity_i, double dynamic_pressure_pa, double dt);
 Quat attitude_body_quat(Vec3 position_i, Vec3 air_velocity_i, double aoa_rad, double bank_rad);
 Quat attitude_body_quat_wind(Vec3 position_i, Vec3 air_velocity_i, double aoa_rad, double bank_rad);
+Quat attitude_body_quat_euler(LocalFrame frame, double pitch_rad, double heading_rad, double roll_rad);
 #endif

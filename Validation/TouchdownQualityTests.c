@@ -13,6 +13,7 @@
 #include "shuttlesim/attitude.h"
 #include "shuttlesim/world.h"
 #include "shuttlesim/math3.h"
+#include "shuttlesim/quat.h"
 
 static void test_body_coordinate_kinematics(void) {
     Vec3 position=ss_v3(0,0,600100),velocity=ss_v3(100,0,0);
@@ -102,6 +103,26 @@ int main(void) {
     }
 
     Simulation sim;
+    Scenario measured=sc;
+    measured.has_body_attitude=measured.has_body_rates=true;
+    measured.initial_body_pitch_deg=11;
+    measured.initial_body_roll_deg=42;
+    measured.initial_body_heading_deg=118;
+    measured.initial_body_pitch_rate_deg_s=.3;
+    measured.initial_body_roll_rate_deg_s=-.4;
+    measured.initial_body_yaw_rate_deg_s=.2;
+    measured.initial_sideslip_deg=-1.5;
+    sim_init(&sim,&measured);
+    LocalFrame measured_frame=world_local_frame_i(&sim.world,sim.state.position_i_m,sim.state.ut);
+    Vec3 measured_forward=quat_rotate(sim.state.body_q_i,ss_v3(1,0,0));
+    assert(fabs(rad2deg(asin(v3_dot(measured_forward,measured_frame.up)))-11)<1e-9);
+    assert(fabs(rad2deg(atan2(v3_dot(measured_forward,measured_frame.east),
+                             v3_dot(measured_forward,measured_frame.north)))-118)<1e-9);
+    assert(sim.state.attitude.body_rates_initialized);
+    assert(fabs(rad2deg(sim.state.attitude.body_pitch_rate_rad_s)-.3)<1e-9);
+    assert(fabs(rad2deg(sim.state.attitude.body_roll_rate_rad_s)+.4)<1e-9);
+    assert(fabs(rad2deg(sim.state.attitude.body_yaw_rate_rad_s)-.2)<1e-9);
+    assert(fabs(rad2deg(sim.state.attitude.sideslip_rad)+1.5)<1e-9);
     sim_init(&sim, &sc);
 
     char atm_path[512], aero_path[512], book_path[512], att_path[512];

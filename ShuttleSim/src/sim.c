@@ -146,12 +146,27 @@ void sim_init(Simulation *sim,const Scenario *scenario){
         sim->state.attitude.requested_aoa_rad=deg2rad(scenario->initial_aoa_deg);
     sim->state.attitude.bank_rad=sim->state.attitude.cmd_bank_rad=
         sim->state.attitude.requested_bank_rad=deg2rad(scenario->initial_bank_deg);
+    sim->state.attitude.sideslip_rad=deg2rad(scenario->initial_sideslip_deg);
     derive_initial_orbit(sim);
     /* The scenario is authoritative. In particular, Cartesian checkpoints
      * must retain their recorded velocity instead of being redirected to KSC. */
     sim_apply_deorbit_initial(sim);
     Vec3 vair=v3_sub(sim->state.velocity_i_mps,world_atmosphere_velocity_i(&sim->world,sim->state.position_i_m));
     sim->state.body_q_i=attitude_body_quat(sim->state.position_i_m,vair,sim->state.attitude.aoa_rad,sim->state.attitude.bank_rad);
+    if(scenario->has_body_attitude){
+        LocalFrame frame=world_local_frame_i(&sim->world,sim->state.position_i_m,sim->state.ut);
+        sim->state.body_q_i=attitude_body_quat_euler(frame,deg2rad(scenario->initial_body_pitch_deg),
+            deg2rad(scenario->initial_body_heading_deg),deg2rad(scenario->initial_body_roll_deg));
+        /* Preserve the recorded orientation on the first direct body tick.
+           Rates remain zero only when no measured rate group was supplied. */
+        sim->state.attitude.body_rates_initialized=true;
+    }
+    if(scenario->has_body_rates){
+        sim->state.attitude.body_pitch_rate_rad_s=deg2rad(scenario->initial_body_pitch_rate_deg_s);
+        sim->state.attitude.body_roll_rate_rad_s=deg2rad(scenario->initial_body_roll_rate_deg_s);
+        sim->state.attitude.body_yaw_rate_rad_s=deg2rad(scenario->initial_body_yaw_rate_deg_s);
+        sim->state.attitude.body_rates_initialized=true;
+    }
 }
 void sim_apply_deorbit_initial(Simulation *sim){
     /* Recorded delta-v metadata is a legacy open-loop fallback. When a scenario
