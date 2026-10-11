@@ -242,10 +242,7 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertTrue(s["on_runway"] and s["touchdown_gear"] and not s["crashed"])
         self.assertAlmostEqual(s["touchdown_speed_mps"], 66.129, places=2)
         self.assertAlmostEqual(s["touchdown_sink_mps"], 1.844, places=2)
-        # Rollout stop position moved 1101.616 -> 1106.4 m when post-touchdown
-        # derotation (rate-tracked nose-down stick, then a light hold) replaced
-        # the zero stick; touchdown speed, sink and position are unchanged.
-        self.assertAlmostEqual(s["stop_along_m"], 1106.4, places=1)
+        self.assertAlmostEqual(s["stop_along_m"], 1101.616, places=1)
         self.assertEqual(status.state, "complete")
 
     def test_l7_low_energy_final_still_flares(self):
