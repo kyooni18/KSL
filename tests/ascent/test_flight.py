@@ -21,6 +21,27 @@ from ksl.ascent.vehicle import delay_booster_separation
 
 
 class SeparationEnvelopeTests(unittest.TestCase):
+    def test_opt_in_post_booster_coast_keeps_core_off_then_restarts(self):
+        engine = SimpleNamespace(thrust_limit=0.0, max_thrust=1000.0)
+        shuttle = Shuttle.__new__(Shuttle)
+        shuttle.et_attached = True
+        shuttle.top_off = lambda: None
+        shuttle.separated = True
+        shuttle.vehicle_kind = 'orbiter-shuttle'
+        shuttle.solid_boosters = [object()]
+        shuttle.booster_separation_ut = 100.0
+        shuttle.sc = SimpleNamespace(ut=102.0)
+        shuttle.groups = [[engine]]
+        shuttle.core_groups = [[engine]]
+        shuttle.vessel = SimpleNamespace(mass=1000.0)
+        shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(1.0,))
+        shuttle.allocation_for_throttles = lambda throttles: throttles
+        shuttle.update(post_booster_coast_seconds=5.0, dt=1.0, throttle_slew=1.0)
+        self.assertEqual(engine.thrust_limit, 0.0)
+        shuttle.sc.ut = 106.0
+        shuttle.update(post_booster_coast_seconds=5.0, dt=1.0, throttle_slew=1.0)
+        self.assertGreater(engine.thrust_limit, 0.0)
+
     def test_explicit_pressure_limit_holds_spent_shuttle_boosters(self):
         self.assertTrue(delay_booster_separation('orbiter-shuttle', [object()], True,
                                                   5000.0, 1000.0))

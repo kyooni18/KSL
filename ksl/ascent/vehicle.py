@@ -900,7 +900,8 @@ class Shuttle:
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
                throttle_slew=THROTTLE_SLEW_PER_SECOND,
-               dynamic_pressure=None, separation_max_q=float('inf')):
+               dynamic_pressure=None, separation_max_q=float('inf'),
+               post_booster_coast_seconds=0.0):
         if self.et_attached:
             self.top_off()
         depleted = (not self.separated and
@@ -957,33 +958,40 @@ class Shuttle:
             target_throttles = tuple(0.0 for _ in self.groups)
         elif (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
               self.separated and self.et_attached):
-            # Pad control authority is not representative after SRB separation.
-            # Do not let that stale moment envelope trap the three SSMEs at a
-            # low throttle: use the G target directly and rely on gimbal control.
-            available_core_thrust = sum(
-                engine.max_thrust for group in self.core_groups for engine in group)
-            requested_g = max_g if target_g is None else min(max_g, target_g)
-            requested_thrust = requested_g * G0 * self.vessel.mass
-            core_throttle = (min(1.0, requested_thrust / available_core_thrust)
-                             if available_core_thrust > 0 else 0.0)
-            # The CoM jump at booster separation momentarily needs more pitch
-            # authority than the gimbals have at a high SSME limiter. Ride a
-            # lower limiter (smaller off-axis moment) briefly, then ramp up.
             since_sep = self.sc.ut - self.booster_separation_ut
-            roll_done = getattr(self, 'post_sep_roll_done_ut', None)
-            # Hold a low, steady limiter (small thrust-line moment, gimbals free)
-            # until the upright roll is finished, then ramp over 15 s.
-            if roll_done is None:
-                sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (since_sep-30.0)/15.0))
+            if since_sep < post_booster_coast_seconds:
+                target_throttles = tuple(0.0 for _ in self.groups)
             else:
-                sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (self.sc.ut-roll_done)/15.0))
-            core_throttle = min(core_throttle, sep_cap)
-            target_throttles = tuple(core_throttle for _ in self.groups)
+                target_throttles = self._post_booster_core_throttles(
+                    max_g, target_g, since_sep)
         applied = slew_vector(current, target_throttles, throttle_slew, dt)
         for group, throttle in zip(self.groups, applied):
             for engine in group:
                 engine.thrust_limit = throttle
         return self.allocation_for_throttles(applied)
+
+    def _post_booster_core_throttles(self, max_g, target_g, since_sep):
+        # Pad control authority is not representative after SRB separation.
+        # Do not let that stale moment envelope trap the three SSMEs at a
+        # low throttle: use the G target directly and rely on gimbal control.
+        available_core_thrust = sum(
+            engine.max_thrust for group in self.core_groups for engine in group)
+        requested_g = max_g if target_g is None else min(max_g, target_g)
+        requested_thrust = requested_g * G0 * self.vessel.mass
+        core_throttle = (min(1.0, requested_thrust / available_core_thrust)
+                         if available_core_thrust > 0 else 0.0)
+        # The CoM jump at booster separation momentarily needs more pitch
+        # authority than the gimbals have at a high SSME limiter. Ride a
+        # lower limiter (smaller off-axis moment) briefly, then ramp up.
+        roll_done = getattr(self, 'post_sep_roll_done_ut', None)
+        # Hold a low, steady limiter (small thrust-line moment, gimbals free)
+        # until the upright roll is finished, then ramp over 15 s.
+        if roll_done is None:
+            sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (since_sep-30.0)/15.0))
+        else:
+            sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (self.sc.ut-roll_done)/15.0))
+        core_throttle = min(core_throttle, sep_cap)
+        return tuple(core_throttle for _ in self.groups)
 
     def release_et(self):
         self.vessel.control.throttle = 0

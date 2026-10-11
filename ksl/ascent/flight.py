@@ -740,7 +740,8 @@ def run(args):
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=1/args.hz, throttle_slew=args.throttle_slew,
                             dynamic_pressure=flight.dynamic_pressure,
-                            separation_max_q=args.booster_separation_max_q)
+                            separation_max_q=args.booster_separation_max_q,
+                            post_booster_coast_seconds=args.post_booster_coast_seconds)
                         if state == 'ASCENT':
                             solid_boosters_burning = (
                                 bool(shuttle.solid_boosters) and not shuttle.separated and
@@ -1055,6 +1056,8 @@ def main():
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--booster-separation-max-q', type=float, default=float('inf'),
                         help='Coast after SRB burnout until dynamic pressure is at or below this Pa value')
+    parser.add_argument('--post-booster-coast-seconds', type=float, default=0.0,
+                        help='Keep SSMEs off briefly after STS booster separation (default: immediate restart)')
     parser.add_argument('--meco-pitch', type=float, default=0,
                         help='Surface pitch used to build horizontal energy after target apoapsis')
     parser.add_argument('--max-g', type=float, default=3.0,
@@ -1117,6 +1120,8 @@ def main():
             args.roll_response_time <= 0 or not 0 < args.launch_g <= args.max_g <= 10 or
             not 0 < args.booster_min_g <= args.max_g or not 0 < args.throttle_slew <= 1 or
             math.isnan(args.booster_separation_max_q) or args.booster_separation_max_q <= 0 or
+            not math.isfinite(args.post_booster_coast_seconds) or
+            args.post_booster_coast_seconds < 0 or
             not 0 <= args.meco_periapsis < args.orbit or
             not -10 <= args.meco_pitch <= 20):
         parser.error('Invalid loop rate, ascent/MECO profile, G limit, timeout, or roll profile')

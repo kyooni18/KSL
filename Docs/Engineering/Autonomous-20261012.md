@@ -510,3 +510,16 @@ focused replay tests pass, including the clock regression.
   live KSP: it left throttle 0, paused at UT 2809.59, and wrote
   `ksl-structural-20261011T190007060948Z.sfs`. A further test will lower
   the separation threshold to q <= 100 Pa on the original four-ET derivative.
+- The q <= 100 Pa automated flight reached q 117 Pa at the 30-second coast
+  limit and correctly aborted without detaching boosters. The intact
+  37-part, zero-throttle scene is `ksl-autonomous-20261012-q100-timeout`.
+  Direct kRPC separation from that scene at UT 2827.1/q 99.6 Pa left both
+  wings attached after six simulation seconds, with SSMEs off. A separate
+  low-thrust SSME restart at q about 52 Pa also retained both wings for six
+  simulation seconds; the experimental scenes are paused and saved as
+  `ksl-autonomous-20261012-q100-direct-separation` and
+  `ksl-autonomous-20261012-q100-direct-ssme-restart`. This is evidence for
+  low-pressure clearance under those manual conditions, not yet a complete
+  controlled ascent. An opt-in `--post-booster-coast-seconds` parameter now
+  allows a short engine-off clearance interval after automated separation;
+  default behavior remains unchanged. The focused ascent tests pass.
