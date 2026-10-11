@@ -493,3 +493,13 @@ focused replay tests pass, including the clock regression.
   preserving the damaged scene for inspection during unattended flights. It
   also writes a uniquely named `ksl-structural-*` save. A focused fake-kRPC
   test verifies the safe handoff, pause and checkpoint call.
+- A third controlled run combined four-ET support, q <= 1,000 Pa separation,
+  deferred upright roll, and empty Mite motors. It still shed one four-part
+  wing assembly: a witness saw 29 parts/two wings at UT 2809.33 and 25
+  parts/one wing at UT 2809.51, q about 718 Pa and roll near 179 deg. The
+  continuous guard aborted; `ksl-autonomous-20261012-lowq-no-mite-failure`
+  preserves the paused, zero-throttle scene. Removing Mite thrust reduced
+  damage in this trial but did not solve the structural failure. A separate
+  four-ET-clamp derivative with both wings set to Root autostruts and rigid
+  attachment is prepared for the next controlled test; its STS vessel still
+  has 41 serialized parts.
