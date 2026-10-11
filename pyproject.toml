@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ksl"
+version = "1.0.0"
+description = "Unified KSP Space Shuttle flight control: launch, ascent, orbit, deorbit, entry, TAEM, landing and rollout"
+requires-python = ">=3.10"
+dependencies = ["krpc>=0.5.4,<0.7", "textual>=0.80"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+ui = ["PyQt6>=6.7,<7"]
+
+[project.scripts]
+ksl = "ksl.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ksl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "Validation"]
+python_files = ["test_*.py", "*Tests.py"]
+addopts = "-p no:cacheprovider"
