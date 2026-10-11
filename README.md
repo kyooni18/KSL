@@ -1,141 +1,160 @@
-# KSP Shuttle Lander
+# KSL: KSP Shuttle Launcher + Lander
 
-KSP Shuttle Lander is a PyQt6 operator UI backed by a native C landing stack for
-an autonomous Shuttle-style return to KSC Runway 09. C owns deorbit planning,
-entry guidance, TAEM/terminal guidance, trajectory prediction, low-level
-atmospheric flight control, physics-history persistence, safety handling, and
-flight logging.
-
-## Runtime architecture
-
-The production path is native end to end:
+KSL flies a Space Shuttle in Kerbal Space Program through one complete mission:
 
 ```text
-PyQt / headless operator
-        │ NDJSON protocol v1
-        ▼
-CLanding native backend
-        ├─ deorbit / entry / TAEM / terminal guidance
-        ├─ native atmospheric FCS (flight_control.c)
-        ├─ native SQLite flight-data store (physics_store.c)
-        └─ kRPC C-Nano 0.6.0 client
-                  │ ordinary kRPC RPC over TCP (live)
-                  ▼
-                KSP/kRPC
+Prelaunch → Launch → Ascent → Orbit → Deorbit → MM304 Entry → MM305 TAEM
+          → Final Approach → Touchdown → Rollout → Complete
 ```
 
-Live guidance, telemetry, and actuator control run in this native C backend;
-there is no Python process in the kRPC control path. C-Nano uses the ordinary
-kRPC RPC TCP endpoint for live KSP and does not support Streams or Events, so
-telemetry is scheduled as synchronous RPC polling. Fast flight-state items are
-sampled every control tick, medium-rate plant/control state is cached, and orbit
-state is polled at a lower rate. ShuttleSim uses the same backend through its
-serial/pseudo-terminal simulator transport. Actuator writes and atmospheric
-pitch/roll/yaw commands are handled by the native client and C FCS.
+It combines two former projects that now share one repository and history:
 
-The external UI-to-backend NDJSON protocol remains unchanged in purpose: UI
-stalls are isolated from guidance, and the UI never talks directly to kRPC.
-Flight-log schema v3 keeps scalar snapshots separate from trajectory deltas and
-keyframes.
+- **Lander** (this repository, formerly KSPShuttleLander). A native C17 backend
+  owns deorbit planning, entry (MM304), TAEM (MM305), final approach, flare,
+  touchdown and rollout guidance, plus the atmospheric flight-control system.
+  It speaks kRPC directly through the vendored C-Nano client.
+- **Launcher** (formerly KSPShuttleLauncher, imported with full history). Python
+  kRPC programs own the STS ascent (SSME/SRB allocation, roll program, gravity
+  turn, SRB and ET separation, PEG MECO) and the OMS orbit trim.
+
+The `ksl` mission controller sequences both through one explicit phase state
+machine. It uses one mission profile, one run record (events, telemetry,
+status, checkpoints), one CLI and one TUI.
+
+## Quick start
+
+```sh
+make setup          # .venv with krpc, textual, pytest
+make                # build the native landing backend and ShuttleSim
+make test           # offline regression gate (~25 s, no KSP needed)
+
+bin/ksl validate --connect              # profile, build, deps, and a read-only KSP probe
+bin/ksl run --dry-run                   # print the full mission plan, fly nothing
+bin/ksl simulate l5-mm305               # offline closed-loop landing (native backend + ShuttleSim)
+bin/ksl tui                             # dashboard / mission setup / replay
+```
+
+`bin/ksl` runs from a checkout. `pip install -e .` installs the same CLI as `ksl`.
+
+## Flying a mission (live KSP)
+
+Load the **STS** on the Kerbin launch pad. Start the kRPC server (RPC 50000,
+stream 50001). Make sure no other autopilot (MechJeb etc.) is active.
+
+```sh
+bin/ksl run -p sts-85km-10deg                     # pad → 85 km / 10° orbit → KSC runway 09
+bin/ksl launch -p sts-kerbin                       # pad → orbit, then hold in orbit
+bin/ksl land -p sts-kerbin                         # deorbit → rollout from the current orbit
+bin/ksl land --from mm305                          # take over an orbiter already in TAEM
+bin/ksl continue latest                            # resume the last run from its checkpoint
+bin/ksl continue latest --use-save                 # …after loading the checkpoint's KSP save
+bin/ksl status --watch                             # follow a running mission from another shell
+```
+
+Entry phases are `prelaunch`, `orbit`, `deorbit`, `mm304`, `mm305` and
+`final-approach` (`ksl phases`). A live mission can hold at `prelaunch`
+(read-only preflight), `orbit`, or `complete`. Powered ascent and the unpowered
+glide cannot be paused partway through a phase. Ctrl-C (or **a a** in the TUI)
+runs the owning program's safe-release path. The ascent programs release
+throttle and autopilot. The landing backend disengages autopilot/SAS,
+neutralizes axes, throttle and wheel steering, and restores engines it
+activated.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `run [--from P] [--to P]` | fly a mission between phases (live, or `--dry-run`) |
+| `launch` / `land` | shortcuts: prelaunch→orbit; deorbit (or `--from`)→complete |
+| `continue [RUN]` | resume from a run's checkpoint (orbit→deorbit, landing phase→same phase) |
+| `simulate [SCENARIO]` | offline closed loop against ShuttleSim; `--list` shows named scenarios |
+| `status [RUN] [--watch]`, `status --live` | run status; or a read-only probe of the game |
+| `runs`, `checkpoints` | list recorded runs and resumable checkpoints |
+| `replay SRC [--events] [--play RATE]` | summarize/play back a run, ascent CSV, or ShuttleSim recording |
+| `export SRC -f csv\|jsonl [-o FILE]` | export telemetry |
+| `validate [--connect]` | preflight checks |
+| `profiles [--show P]`, `phases` | configuration and phase reference |
+| `tui` | terminal UI |
+
+Common options: `-p/--profile`, `--set section.key=value` (repeatable),
+`--json` (machine-readable, for scripts and agents), `-v` (raw program output).
+Exit codes: `0` ok/holding, `1` mission failed, `2` usage/config error,
+`3` kRPC connection failure, `130` aborted.
+
+## Configuration
+
+A **mission profile** (`Configuration/missions/*.json`) configures a whole
+mission. Unset keys take the defaults in `ksl/config.py`.
+
+| Section | Contents |
+|---|---|
+| `connection` | kRPC address/ports, shared by the Python programs and the C backend |
+| `ascent` | target altitude/inclination, insertion offset, SRB/SSME limiters, pad settle, extra flags |
+| `orbit` | OMS trim on/off, `minBurnDeltaV` (corrections at or below it are skipped; default 0.1 m/s) |
+| `landing` | backend configuration file, `KSP_LANDER_MODEL_PROFILE`, auto-warp, strict-plan policy, timeouts |
+| `simulation` | default scenario, telemetry rate, max sim time |
+| `checkpoints` | phases at which live missions write KSP saves |
+
+The native backend keeps its own detailed configuration
+(`Configuration/sts-live.json` for the STS, `default.json` for STS-N). The
+profile references it and overrides its kRPC endpoint.
+
+## Runs, telemetry and replay
+
+Every run (live, simulated or dry-run) writes `runs/<run-id>/`:
+`config.json`, `events.jsonl`, `telemetry.jsonl`, `status.json`,
+`checkpoint.json`, per-program logs (`ascent.log`, `orbit-trim.log`,
+`backend.stderr.log`, …), plus program artifacts (`ascent.csv`,
+`deorbit-plan.json`, `simulation-result.json`). The CLI and the TUI read the
+same files, so the TUI can watch a mission started from the CLI.
+
+## Repository layout
+
+```text
+ksl/                 unified mission system (Python)
+  phases.py          phase state machine + mappings from backend/ascent phases
+  controller.py      MissionController (shared by CLI and TUI)
+  programs.py        Ascent / OrbitTrim / Landing (live) / Simulation programs
+  backend.py         NDJSON client for the native landing backend
+  config.py, runlog.py, replay.py, scenarios.py, krpc_link.py, kspguard.py
+  cli.py, tui.py     interfaces
+  ascent/            ascent + OMS programs (from the Launcher)
+    flight.py        kRPC run loop / CLI      guidance.py  ascent laws, PEG
+    vehicle.py       STS model, staging        geometry.py  frames and roll math
+    allocation.py    bounded thrust allocation attitude.py  custom attitude controller
+    orbit_trim.py    OMS trim                  events.py    @@ksl milestone lines
+CLanding/            native landing backend (C17; guidance, FCS, kRPC C-Nano, SQLite store)
+ShuttleSim/          standalone entry-to-landing simulator + closed-loop scripts
+Configuration/       mission profiles, backend configurations, checkpoints, vehicles
+Tools/               headless live harness, kRPC safety guard, analysis/probe tools
+PyQtApp/, WebTelemetry/  legacy PyQt operator UI and web telemetry viewer
+Validation/          C and Python regression tests for the native stack
+tests/               mission-layer and ascent tests
+Docs/                architecture, algorithms, campaign logs and experiments
+```
+
+See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) for how the parts fit together,
+[VALIDATION.md](VALIDATION.md) for the test surface and current verification
+status, and [Docs/Ascent/README.md](Docs/Ascent/README.md) for the ascent
+control model.
+
+## Other operator surfaces
+
+- `./run_headless.command --live …` (`Tools/headless_flight.py`) is the
+  live landing **test harness**: quickload, crash guard, campaign pinning and
+  descent checkpoints. It uses the same shared backend client and guard calls.
+- `./run_pyqt.command` is the PyQt landing UI (landing phases only).
+- `Tools/telemetry_web.py` is the browser telemetry viewer.
+
+## History
+
+The Launcher's 136 commits are merged into this repository's history
+(non-squashed subtree merge `874c59a`). Its pre-import tip is tagged
+`launcher-history`, so `git log launcher-history -- shuttle/flight.py` shows
+the ascent history at its original paths. Lander history is unchanged.
 
 ## Dependencies
 
-The native backend vendors:
-
-- `ThirdParty/krpc-cnano-0.6.0` — kRPC C-Nano 0.6.0, LGPL-3.0-or-later.
-- `ThirdParty/nanopb-0.4.9.1` — nanopb 0.4.9.1.
-- SQLite 3 — linked from the platform (`-lsqlite3`).
-
-The UI uses PyQt6 from `PyQtApp/requirements.txt`. Python is only an operator/UI
-or optional test-tool dependency; it is not in the kRPC control path.
-
-## Build and regression gate
-
-```bash
-make -C CLanding
-make -C CLanding test
-```
-
-`make test` is the maintained offline regression surface. It runs four focused checks only: MM304→MM305 ownership/architecture, TAEM interface energy/capture semantics, vessel physics, and the backend NDJSON protocol. It does not connect to live KSP or start a ShuttleSim campaign.
-
-Historical investigation probes remain in `Validation/` as reference material for targeted debugging, but they are no longer Makefile targets or qualification requirements. Native implementation structure and the flight-logic invariants that refactors must preserve are documented in `CLanding/README.md` and `CLanding/ARCHITECTURE.md`.
-
-## Native kRPC connection
-
-The live backend speaks the ordinary kRPC RPC protocol directly over TCP from
-the native C process. Set the game server's RPC endpoint in the live profile:
-
-```json
-{
-  "connection": {
-    "rpcHost": "127.0.0.1",
-    "rpcPort": 50000,
-    "timeoutMs": 2000,
-    "clientName": "Spaceplane Landing Guidance"
-  }
-}
-```
-
-`Configuration/live-mm305.json` is the live MM305 profile. The backend uses
-kRPC's RPC port (normally 50000); the separate stream port is not used. The
-serial and pseudo-terminal transport remains for ShuttleSim's local simulator
-interface. No Python serial-to-TCP bridge is required for live KSP.
-
-The headless launcher accepts an explicit profile, for example
-`./run_headless.command --live --config Configuration/live-mm305.json ...`.
-The PyQt UI uses its saved operator configuration in
-`Runtime/PyQtUI/config.json`; set the RPC host and port there before connecting.
-
-## Running the UI
-
-```bash
-./run_pyqt.command
-```
-
-The launcher builds the native backend and creates only the PyQt UI virtual
-environment when needed.
-
-For deliberate headless flight testing:
-
-```bash
-./run_headless.command --live
-```
-
-The headless tooling contains strong save/abort safeguards, but a live run is a
-separate acceptance activity and is not part of the offline build/test gate.
-The optional independent `Tools/ksp_test_guard.py` uses a separate Python kRPC
-installation. `KSP_LANDER_GUARD_PYTHON` is the preferred explicit interpreter;
-the headless runner also checks known project/legacy guard environments and the
-current Python, accepting a candidate only when it can actually import `krpc`.
-
-## Guidance stack
-
-The vehicle returns through deorbit planning, atmospheric entry/MM304-style
-energy management, TAEM, an optional HAC or another dynamically feasible
-terminal capture, final approach, preflare/flare, touchdown, and rollout.
-Guidance emits `GuidanceCommand` targets. For atmospheric profiles,
-`flight_control.c` closes the actuator loop using AoA/pitch state, physical body
-rates, adaptive control-authority estimates, rate/impulse guards, bank shaping,
-sideslip/yaw coordination, and trim/integral logic. RCS is not used in
-atmospheric flight (mission constraint in `flight_control.c`). SAS is kept
-off for direct atmospheric control. Orbital pointing may use the kRPC
-AutoPilot before the atmospheric direct-control regime.
-
-Prior-flight aerodynamic evidence is stored in
-`Runtime/Physics/observations.sqlite3`. The native store keeps model/environment
-identities, same-flight exclusion, quality metadata, airbrake-state separation,
-and bounded history selection. Current-flight observations improve future
-flights rather than rewriting the certified predictor from every sample.
-
-## Safety and recovery
-
-Pausing, aborting, disconnecting, or faulting calls the native safe-control path:
-autopilot and SAS are disengaged, direct axes/throttle/wheel steering are
-neutralized, RCS assist is released, independent engine-throttle overrides are
-cleared, and engines activated by the backend are restored to their prior state.
-The STS-N independent-throttle workaround is preserved for engines that ignore
-vessel main-throttle commands.
-
-Historical logs and repair/audit documents under `FlightLogs/`, `Runtime/`,
-`Docs/`, and `AgentWork/` may mention the retired Python bridge. Those references
-are forensic history, not the current runtime architecture.
+The native backend vendors kRPC C-Nano 0.6.0 (LGPL-3.0-or-later) and nanopb
+0.4.9.1, and links SQLite 3. Python: `krpc`, `textual`; `pytest` for tests;
+PyQt6 only for the legacy UI.
