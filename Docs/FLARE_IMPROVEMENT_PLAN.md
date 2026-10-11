@@ -309,3 +309,10 @@ temporary 36° variants. Best tracking improves only from 3.04 to 2.90 km and
 exits at 74 m/s. The broader-bound experiment is rejected; production gates
 remain unchanged. A station-only geometric shape and steeper scalar bound
 are insufficient; tie the reference to propagated Mach/q/lateral lift reserve.
+
+[Propagated-authority reference](Experiments/STS-Landing-20261011/MM305-Propagated-Reference/README.md)
+reduces a tracking error to 0.53 km but needs a 54° reference descent and still
+misses endpoint altitude by 1.31 km. A slower variant can track a short route
+while ending 17 km above Final. Neither qualifies under unchanged gates.
+Local authority following alone does not solve the endpoint/energy problem;
+next investigate lateral turn timing with the altitude/density history.
