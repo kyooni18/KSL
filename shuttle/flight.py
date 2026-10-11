@@ -1528,7 +1528,10 @@ def run(args):
         if args.orbit < body.atmosphere_depth + 5000:
             raise ValueError('Target apoapsis must clear the atmosphere by at least 5 km')
         flight = v.flight(body.reference_frame)
-        ap = v.auto_pilot
+        from .attitude import CustomAutopilot
+        # Own attitude controller (not the kRPC AutoPilot): see shuttle/attitude.py.
+        ap = CustomAutopilot(conn, v, address=args.address, rpc_port=args.rpc_port,
+                             stream_port=args.stream_port)
         control = v.control
         started = conn.space_center.ut
         state = 'ASCENT'
@@ -1568,6 +1571,7 @@ def run(args):
         upright_since = None
         ap_owns_roll = False
         upright_configured = False
+        et_cleared = False
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
@@ -1771,7 +1775,6 @@ def run(args):
                         ap.auto_tune = False
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
-                        control.roll = 0
                         mission_roll_commanded = True
                         print(f'Physical orbiter-side roll started: earthward; '
                               f'elevon roll enabled at 60% authority')
@@ -1983,6 +1986,18 @@ def run(args):
                         if shuttle.et_attached and not shuttle.release_et():
                             time.sleep(1/args.hz)
                             continue
+                        if not et_cleared:
+                            # Translate the orbiter roof-ward (control.up = vessel -z, away
+                            # from the tank) on RCS so it cannot touch the ET.
+                            control.rcs = True
+                            control.up = 1.0
+                            clear_until = time.monotonic() + args.et_clear_time
+                            while time.monotonic() < clear_until:
+                                time.sleep(0.05)
+                            control.up = 0.0
+                            control.rcs = False
+                            et_cleared = True
+                            print(f'Translated away from the ET for {args.et_clear_time:.0f} s on RCS')
                         if args.meco_periapsis < args.orbit-5000:
                             o = v.orbit
                             print(f'Target orbit reached: Ap {o.apoapsis_altitude/1000:.1f} km; '
@@ -2135,21 +2150,16 @@ def run(args):
                                 upright_configured = True
                             if upright_phase:
                                 control.rcs = True
-                            ap.set_direction_and_up(aim_direction, target_side, 0.0)
-                            roll_control = 0.0
-                        else:
-                            roll_control = manual_roll_command(
-                                roll_error_signed, body_roll_rate, roll_accel_reference,
-                                args.roll_rate, args.roll_control_limit,
-                                args.roll_response_time)
+                        # The attitude controller owns all three axes; the roll program is
+                        # an orbiter-roof target (heads-down before separation, upright after).
+                        ap.set_direction_and_up(aim_direction, target_side, 0.0)
+                        roll_control = ap.ctrl.inputs[1]
                         settle_nose_error = direction_error_deg(
                             actual_direction, aim_direction)
                         # Pause roll whenever the nose is being pulled away from
                         # the commanded ascent vector; resume once pitch/yaw recover.
                         if settle_nose_error > 5.0:
                             roll_control = 0.0
-                        if not shuttle.separated:
-                            control.roll = roll_control
                         if upright_phase:
                             if roll_error < 4.0 and abs(body_roll_rate) < 3.0:
                                 if upright_since is None:
@@ -2184,7 +2194,6 @@ def run(args):
                             else:
                                 roll_settle_since = None
                     elif target_roll is not None:
-                        control.roll = 0
                         if state in ('ASCENT', 'ORBITER_ASCENT'):
                             roll_up_reference = surface_up_for_pitch_heading(
                                 target_pitch, args.heading)
@@ -2327,6 +2336,8 @@ def main():
                         help='Fixed SSME thrust limiter held through SRB burn')
     parser.add_argument('--upper-g', type=float, default=1.4,
                         help='Acceleration cap for the SSME-only phase after booster separation')
+    parser.add_argument('--et-clear-time', type=float, default=4.0,
+                        help='Seconds of RCS up-translation after ET separation')
     parser.add_argument('--et-sep-delay', type=float, default=5.0,
                         help='Seconds to hold attitude after MECO before external-tank separation')
     parser.add_argument('--ssme-lead-time', type=float, default=3.0,

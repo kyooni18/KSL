@@ -54,6 +54,7 @@ def solve(make_node, error, lo, hi, iterations=26):
 
 
 MEASURED_AXIS = {}
+CUSTOM_AP = {}
 
 
 def thrust_axis_offset(conn, vessel, engines, frame):
@@ -101,7 +102,8 @@ def aim(conn, vessel, engines, ap, frame, direction):
 def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
     sc = conn.space_center
     ctl = vessel.control
-    ap = vessel.auto_pilot
+    from .attitude import CustomAutopilot
+    ap = CUSTOM_AP['ap']
     engines = [e for e in vessel.parts.engines if e.active]
     thrust = sum(e.available_thrust for e in engines)
     isp = sum(e.specific_impulse*e.available_thrust for e in engines)/max(thrust, 1.0)
@@ -126,7 +128,7 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         if start-sc.ut > ALIGN_LEAD+60:
             sc.warp_to(start-ALIGN_LEAD-30)
         ap.engaged = True
-        ctl.rcs = dv >= 5.0
+        ctl.rcs = False  # never RCS during OMS burns (it perturbs the orbit)
         while sc.ut < start-30:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.2)
@@ -136,7 +138,7 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             time.sleep(0.02)
         # Never burn unless the nose is on the burn vector.
         aligned_wait = time.time()
-        align_limit = 1.0 if dv < 5.0 else 3.0
+        align_limit = 2.0 if dv < 5.0 else 3.0
         while ap.error > align_limit and time.time()-aligned_wait < 120:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.1)
@@ -215,6 +217,12 @@ def main():
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     conn = krpc.connect(name='orbit-trim')
+    from .attitude import CustomAutopilot
+    # Own attitude controller (no kRPC AutoPilot). OMS burns use reaction wheels
+    # only, so the attitude loop is kept slow and gentle.
+    CUSTOM_AP['ap'] = CustomAutopilot(conn, conn.space_center.active_vessel)
+    CUSTOM_AP['ap'].time_to_peak = (6.0, 6.0, 6.0)
+    CUSTOM_AP['ap'].max_angular_velocity = (math.radians(2.0), math.radians(2.0), math.radians(2.0))
     sc = conn.space_center
     vessel = sc.active_vessel
     vessel.control.sas = False
