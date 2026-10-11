@@ -8,7 +8,7 @@ Live mission `20261011T062628Z-live-85km-10deg` / `…-landing`: 85 × 85 km at
 | UT | State |
 |---|---|
 | 6566 | TAEM entry, Mach 2.85, 26.9 km. Energy law at drag level `k = 0` (maximum range) from the first sample. |
-| 6566–6900 | `k = 0` throughout, with `loop = 1` (overhead loop) latched. Speed decays to ~100 m/s by 3 km. |
+| 6566–6900 | `k = 0` throughout. Initially `loop = 0`; at UT 6605.4 the law selects `loop = 1`, `leg = 2` (direct HAC intercept/downwind). Speed decays to ~100 m/s by 3 km. |
 | 6900–7004 | On the Final line: cross-track 3–13 m, FPA −17.5°, 96 → 85 m/s. |
 | 7005 | "MM305 crossed runway elevation before reaching the fixed-HAC exit." Contact ~75 m short, ~78 m/s, ~25 m/s sink. |
 
@@ -100,9 +100,12 @@ here has flown live.
   Final → Flare phase path.
 
 ### 2. Fix TAEM energy delivery (root cause of L7)
-- Investigate why the law sat at `k = 0` from TAEM entry and still latched
-  an overhead loop. `loop = 1` implies the mode was chosen with excess energy,
-  then frozen (`TEL_MODE_FREEZE`) while energy was short.
+- Investigate why the law sat at `k = 0` from TAEM entry and still selected
+  a HAC intercept. `loop = 1` alone does not prove an overhead circuit or
+  excess energy: `tel_plan` also sets it on direct `TEL_LEG_DOWN` candidates.
+  The original live trace first selects that mode at UT 6605.4, at `k = 0`.
+  `tel_plan_open` permits replanning on the downwind leg while the tangent
+  remains more than 5 km away; the 8 km freeze applies to straight-in selection.
   - Check `tel_solve_k` and the loop selection against the L7 entry state,
     which is now a scenario.
   - Check whether MM304 handed over short. TAEM entry was at −80 km along,
