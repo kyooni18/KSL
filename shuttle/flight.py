@@ -1500,6 +1500,7 @@ def run(args):
         roll_reset = False
         roll_reset_ut = None
         upright_since = None
+        ap_owns_roll = False
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
@@ -1970,8 +1971,9 @@ def run(args):
                                 aim_direction = tuple(c/n for c in raw)
                             except Exception:
                                 aim_direction = target_direction
-                        ap.target_direction = aim_direction
-                        ap.target_roll = float('nan')
+                        if not shuttle.separated:
+                            ap.target_direction = aim_direction
+                            ap.target_roll = float('nan')
                         surface_frame = v.surface_reference_frame
                         actual_direction = v.direction(surface_frame)
                         roll_up_reference = surface_up_for_pitch_heading(
@@ -2002,44 +2004,27 @@ def run(args):
                             # delivers (gimbal roll, elevons at low q), so bound the
                             # live estimate between 8 and 40 deg/s^2.
                             roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
-                        if shuttle.separated:
-                            # Pad-frozen pitch/yaw gains are wrong once the boosters are
-                            # gone. Periodically let kRPC retune from the live inertia,
-                            # torque and centre of mass, then freeze the tuned pitch/yaw
-                            # gains again and keep the autopilot roll loop inert so it
-                            # cannot fight the direct roll command.
-                            if upper_autotune == 'sampling':
-                                gains_pitch = ap.pitch_pid_gains
-                                gains_yaw = ap.yaw_pid_gains
-                                ap.auto_tune = False
-                                ap.pitch_pid_gains = gains_pitch
-                                ap.yaw_pid_gains = gains_yaw
-                                ap.roll_pid_gains = (0.0, 0.0, 0.0)
-                                upper_autotune = conn.space_center.ut
-                            elif (upper_autotune is False or
-                                  conn.space_center.ut-upper_autotune >= 1.0):
-                                if upper_autotune is False:
-                                    # Gentle pitch/yaw: the pad tuning (1 s to peak) is
-                                    # integral-heavy on the light post-separation stack
-                                    # and limit-cycles at ~3 Hz against the gimbals.
-                                    ap.time_to_peak = (3.0, args.roll_time_to_peak, 3.0)
-                                    ap.overshoot = (0.03, args.roll_overshoot, 0.03)
-                                    print('Pitch/yaw gains now retuned from live inertia and torque')
-                                ap.auto_tune = True
-                                upper_autotune = 'sampling'
                         upright_phase = (shuttle.separated and roll_reset and
                                          shuttle.post_sep_roll_done_ut is None)
-                        if upright_phase:
-                            # Quick upright roll at the low post-separation limiter:
-                            # RCS adds roll authority the in-line SSME gimbals lack.
-                            control.rcs = True
-                            roll_control = manual_roll_command(
-                                roll_error_signed, body_roll_rate, roll_accel_reference,
-                                args.upright_roll_rate, 1.0, 0.6)
-                        elif shuttle.separated:
-                            roll_control = manual_roll_command(
-                                roll_error_signed, body_roll_rate, roll_accel_reference,
-                                min(args.roll_rate, 3.0), min(args.roll_control_limit, 0.4), 1.0)
+                        if shuttle.separated:
+                            # After separation the autopilot owns all three axes. Its
+                            # output replaces a direct control.roll command, so the
+                            # upright roll is flown as an attitude target (nose on the
+                            # thrust aim, orbiter roof on the requested side), auto-tuned
+                            # continuously from the live inertia, CoM and torque.
+                            if not ap_owns_roll:
+                                ap.auto_tune = True
+                                ap.time_to_peak = (3.0, 2.5, 3.0)
+                                ap.overshoot = (0.03, 0.02, 0.03)
+                                ap.max_angular_velocity = (
+                                    1.0, math.radians(args.upright_roll_rate), 1.0)
+                                ap_owns_roll = True
+                                print('Autopilot owns pitch/yaw/roll after separation '
+                                      '(auto-tuned, 3 s time-to-peak)')
+                            if upright_phase:
+                                control.rcs = True
+                            ap.set_direction_and_up(aim_direction, target_side, 0.0)
+                            roll_control = 0.0
                         else:
                             roll_control = manual_roll_command(
                                 roll_error_signed, body_roll_rate, roll_accel_reference,
@@ -2051,7 +2036,8 @@ def run(args):
                         # the commanded ascent vector; resume once pitch/yaw recover.
                         if settle_nose_error > 5.0:
                             roll_control = 0.0
-                        control.roll = roll_control
+                        if not shuttle.separated:
+                            control.roll = roll_control
                         if upright_phase:
                             if roll_error < 4.0 and abs(body_roll_rate) < 1.5:
                                 if upright_since is None:
@@ -2063,6 +2049,12 @@ def run(args):
                                           f'SSME limiter ramp released')
                             else:
                                 upright_since = None
+                            if (shuttle.post_sep_roll_done_ut is None and
+                                    conn.space_center.ut-roll_reset_ut > 25.0):
+                                shuttle.post_sep_roll_done_ut = conn.space_center.ut
+                                control.rcs = False
+                                print(f'WARNING: upright roll not settled after 25 s '
+                                      f'(error {roll_error:.0f} deg); releasing climb anyway')
                         if not mission_roll_settled:
                             if roll_attitude_settled(
                                     roll_error, body_roll_rate,

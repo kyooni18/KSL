@@ -174,13 +174,18 @@ def main():
     def high_enough(orbit, ut):
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
-    def plan(d_ap, d_pe, min_lead=45.0, b_only=False):
-        """Finish everything before the first periapsis passage: a Pe of ~60 km sits in
-        the upper atmosphere and a single pass bleeds tens of km of apoapsis.
+    target_inc = math.radians(args.inclination)
+    TOL = 150.0  # m
 
-          A. soon after MECO  -- small prograde/retrograde burn that sets the apoapsis
-          B. at that apoapsis -- one burn with prograde (periapsis) and normal
-                                 (inclination) components solved together
+    def plan(min_lead=45.0):
+        """Next burns from the measured orbit, in an order that never lowers the periapsis
+        into the atmosphere:
+
+          A. soon        -- prograde, only if the apoapsis is below target
+          B. at apoapsis -- prograde (periapsis) + normal (inclination), solved together
+          C. at the new periapsis -- set the apoapsis (circularization trim)
+
+        Returns the nodes; only the first is flown before re-planning.
         """
         for stale in list(vessel.control.nodes):
             stale.remove()
@@ -189,81 +194,72 @@ def main():
         flight = vessel.flight(o0.body.reference_frame)
         nodes = []
         base = o0
-        if not b_only and abs(o0.apoapsis_altitude-(args.apoapsis+d_ap)) > 300.0:
+        if o0.apoapsis_altitude < args.apoapsis-TOL:
             ut_a = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
                              max(flight.vertical_speed, 20.0))
             xa = solve(lambda x: vessel.control.add_node(ut_a, prograde=x),
-                       lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
+                       lambda orb: orb.apoapsis_altitude-args.apoapsis, 0.0, 300.0)
             na = vessel.control.add_node(ut_a, prograde=xa)
             nodes.append(na)
             base = na.orbit
-        ut_b = base.ut_at_true_anomaly(math.pi)
-        if ut_b < now+max(30.0, min_lead):
-            ut_b += base.period
-        target = math.radians(args.inclination)
-        x = y = 0.0
-        for _ in range(4):
-            x = solve(lambda v: vessel.control.add_node(ut_b, prograde=v, normal=y),
-                      lambda orb: orb.periapsis_altitude-(args.periapsis+d_pe), -250.0, 250.0)
-            if abs(math.degrees(base.inclination)-args.inclination) > 0.02:
-                y = solve(lambda v: vessel.control.add_node(ut_b, prograde=x, normal=v),
-                          lambda orb: math.degrees(orb.inclination-target), -300.0, 300.0)
-        nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
-        nodes.append(nb)
-        return tuple(nodes), nb.orbit
+        pe_ok = abs(base.periapsis_altitude-args.periapsis) < TOL
+        inc_ok = abs(math.degrees(base.inclination)-args.inclination) < 0.02
+        if not (pe_ok and inc_ok):
+            ut_b = base.ut_at_true_anomaly(math.pi)
+            if ut_b < now+max(30.0, min_lead):
+                ut_b += base.period
+            pe_goal = min(args.periapsis, base.apoapsis_altitude)
+            x = y = 0.0
+            for _ in range(4):
+                x = solve(lambda q: vessel.control.add_node(ut_b, prograde=q, normal=y),
+                          lambda orb: orb.periapsis_altitude-pe_goal, -250.0, 400.0)
+                if not inc_ok:
+                    y = solve(lambda q: vessel.control.add_node(ut_b, prograde=x, normal=q),
+                              lambda orb: math.degrees(orb.inclination-target_inc), -300.0, 300.0)
+            nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
+            nodes.append(nb)
+            base = nb.orbit
+        if abs(base.apoapsis_altitude-args.apoapsis) > TOL:
+            ut_c = base.ut_at_true_anomaly(0.0)
+            if ut_c < (nodes[-1].ut if nodes else now)+max(60.0, min_lead):
+                ut_c += base.period
+            xc = solve(lambda q: vessel.control.add_node(ut_c, prograde=q),
+                       lambda orb: orb.apoapsis_altitude-args.apoapsis, -300.0, 300.0)
+            nodes.append(vessel.control.add_node(ut_c, prograde=xc))
+            base = nodes[-1].orbit
+        return nodes, base
 
-    d_ap = d_pe = 0.0
-    min_lead = 45.0
-    t_start = sc.ut
-    for iteration in range(8):
-        nodes, final = plan(d_ap, d_pe, min_lead)
-        elapsed = sc.ut-t_start
-        if nodes[0].ut-sc.ut < 40.0:
-            # Planning takes game time; leave room for it before the first burn.
-            min_lead = elapsed+60.0
-            print(f'planning took {elapsed:.0f} s; re-planning with lead {min_lead:.0f} s')
-            continue
-        e_ap = final.apoapsis_altitude-args.apoapsis
-        e_pe = final.periapsis_altitude-args.periapsis
-        print(f'plan {iteration}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
-              f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
-              f'(dv {[round(n.delta_v, 1) for n in nodes]})')
-        if abs(e_ap) < 100.0 and abs(e_pe) < 100.0:
-            break
-        d_ap -= e_ap
-        d_pe -= e_pe
-    if nodes[0].ut-sc.ut < 20.0:
-        for stale in list(vessel.control.nodes):
-            stale.remove()
-        raise RuntimeError('Trim plan arrived too late to burn safely; aborting without burning')
     if args.dry_run:
+        nodes, final = plan()
+        print(f'plan: final Ap {final.apoapsis_altitude/1000:.2f} Pe {final.periapsis_altitude/1000:.2f} '
+              f'inc {math.degrees(final.inclination):.3f} (dv {[round(n.delta_v, 1) for n in nodes]})')
         for stale in list(vessel.control.nodes):
             stale.remove()
         return
-    if len(nodes) == 2:
-        ap_goal = nodes[0].orbit.apoapsis_altitude
-        sign = 1.0 if nodes[0].prograde >= 0.0 else -1.0
-        execute(conn, vessel, nodes[0],
-                lambda orb: sign*(orb.apoapsis_altitude-ap_goal) >= 0.0)
-        report('after burn 1')
-        # Re-plan the apoapsis burn from the orbit that was actually achieved.
-        d_ap = d_pe = 0.0
-        for iteration in range(4):
-            nodes, final = plan(d_ap, d_pe, 30.0, b_only=True)
-            e_ap = final.apoapsis_altitude-args.apoapsis
-            e_pe = final.periapsis_altitude-args.periapsis
-            print(f're-plan {iteration}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
-                  f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
-                  f'(dv {[round(n.delta_v, 1) for n in nodes]})')
-            if abs(e_ap) < 100.0 and abs(e_pe) < 100.0:
+    for burn in range(1, 7):
+        min_lead = 45.0
+        for _ in range(4):
+            t0 = sc.ut
+            nodes, final = plan(min_lead)
+            if not nodes or nodes[0].ut-sc.ut >= 30.0:
                 break
-            d_ap -= e_ap
-            d_pe -= e_pe
-        nodes = nodes[-1:]
-    for index, node in enumerate(nodes):
-        execute(conn, vessel, node, lambda orb: False)
-        report(f'after burn {index+1}')
-
+            min_lead = (sc.ut-t0)+60.0
+        if not nodes:
+            print('Orbit on target; no burn needed')
+            break
+        print(f'plan {burn}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
+              f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
+              f'(dv {[round(n.delta_v, 1) for n in nodes]})')
+        node = nodes[0]
+        for extra in nodes[1:]:
+            extra.remove()
+        done = lambda orb: False
+        if node.prograde > 0.0 and node.normal == 0.0 and vessel.orbit.apoapsis_altitude < args.apoapsis-TOL:
+            ap_goal = node.orbit.apoapsis_altitude
+            done = lambda orb: orb.apoapsis_altitude >= ap_goal
+        execute(conn, vessel, node, done)
+        report(f'after burn {burn}')
+    report('final')
 
 if __name__ == '__main__':
     main()
