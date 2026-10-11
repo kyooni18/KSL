@@ -2096,11 +2096,13 @@ def run(args):
                                       '(auto-tuned, 3 s time-to-peak)')
                             if upright_phase and not upright_configured:
                                 # Pitch/yaw keep priority during the roll: roll is suppressed
-                                # whenever the nose is more than 4 deg off and fully engaged
-                                # only inside 2 deg; stiffer pitch/yaw while rolling.
-                                ap.roll_start_angle = 4.0
-                                ap.roll_engage_angle = 2.0
-                                ap.time_to_peak = (2.0, 2.0, 2.0)
+                                # whenever the nose is more than 8 deg off and fully engaged
+                                # inside 5 deg (a tighter gate chattered roll on/off and
+                                # limit-cycled at +-15 deg/s); stiffer pitch/yaw while rolling.
+                                ap.roll_start_angle = 8.0
+                                ap.roll_engage_angle = 5.0
+                                ap.time_to_peak = (2.0, 2.5, 2.0)
+                                ap.overshoot = (0.03, 0.01, 0.03)
                                 upright_configured = True
                             if upright_phase:
                                 control.rcs = True
@@ -2120,7 +2122,7 @@ def run(args):
                         if not shuttle.separated:
                             control.roll = roll_control
                         if upright_phase:
-                            if roll_error < 4.0 and abs(body_roll_rate) < 1.5:
+                            if roll_error < 4.0 and abs(body_roll_rate) < 3.0:
                                 if upright_since is None:
                                     upright_since = conn.space_center.ut
                                 elif conn.space_center.ut-upright_since >= 1.0:
