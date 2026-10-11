@@ -4,3 +4,4 @@
 __pycache__/
 *.pyc
 telemetry*.csv
+runs/

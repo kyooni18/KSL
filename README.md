@@ -31,6 +31,23 @@ Load **STS** onto the Kerbin launch pad. Start the kRPC server in KSP with RPC
 port 50000 and stream port 50001. Make sure the shuttle cockpit controls the
 vessel and disable competing MechJeb guidance. Run from this repository:
 
+**One command to orbit** (circular orbit of a given altitude in km and inclination
+in degrees; logs and telemetry go to `runs/`):
+
+```sh
+.venv/bin/python -m shuttle.mission --altitude 90 --inclination 34
+.venv/bin/python -m shuttle.mission --altitude 90 --inclination 90 --revert   # revert first
+```
+
+It sets the Clydesdale limiters to 0.9, launches with the SSME limiter at 0.38,
+flies to an `altitude` x `altitude-30` km insertion orbit (PEG), separates the ET
+5 s after MECO and translates clear on RCS, then circularizes with the OMS at
+apoapsis (reaction wheels only, closed-loop re-planning). Attitude is flown by
+`shuttle/attitude.py` (own controller, not the kRPC AutoPilot), which feeds
+forward the canted-engine thrust moment about the live centre of mass.
+
+Lower-level entry points:
+
 ```sh
 # Read-only inspection of the active vessel; no ignition or control writes.
 .venv/bin/python -m shuttle.flight

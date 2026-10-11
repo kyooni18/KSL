@@ -196,6 +196,7 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                     an = math.sqrt(sum(c*c for c in axis))
                     axis = tuple(c/an for c in axis)
                 MEASURED_AXIS['axis'] = axis
+                ap.ctrl.axis_override = {'Viking': axis}
                 window = [0.0, 0.0, 0.0]
             elif wn > 0.25:
                 window = [0.0, 0.0, 0.0]
@@ -227,9 +228,13 @@ def main():
     # Own attitude controller (no kRPC AutoPilot). OMS burns use reaction wheels
     # only, so the attitude loop is kept slow and gentle.
     CUSTOM_AP['ap'] = CustomAutopilot(conn, conn.space_center.active_vessel)
-    CUSTOM_AP['ap'].time_to_peak = (6.0, 6.0, 6.0)
+    # RCS is off: the reaction wheels are the only actuator, so allow their full
+    # rate authority (the wheel torque limit is the real bound), and feed the OMS
+    # thrust-line moment forward using the measured thrust axis.
+    CUSTOM_AP['ap'].time_to_peak = (2.0, 2.0, 2.0)
+    CUSTOM_AP['ap'].ctrl.max_rate = (math.radians(10.0),)*3
     CUSTOM_AP['ap'].ctrl.deadband = 0.03
-    CUSTOM_AP['ap'].max_angular_velocity = (math.radians(2.0), math.radians(2.0), math.radians(2.0))
+    CUSTOM_AP['ap'].ctrl.axis_override = {'Viking': MEASURED_AXIS['axis']}
     sc = conn.space_center
     vessel = sc.active_vessel
     vessel.control.sas = False
@@ -299,12 +304,13 @@ def main():
             x = y = 0.0
             for _ in range(4):
                 x = solve(lambda q: vessel.control.add_node(ut_b, prograde=q, normal=y),
-                          lambda orb: other_apsis(orb, ut_b, body_radius)-pe_goal, -150.0, 150.0)
+                          lambda orb: orb.periapsis_altitude-min(
+                              pe_goal, orb.radius_at(ut_b)-body_radius-50.0), -150.0, 150.0)
                 if not inc_ok:
                     y = solve(lambda q: vessel.control.add_node(ut_b, prograde=x, normal=q),
                               lambda orb: math.degrees(orb.inclination-target_inc), -300.0, 300.0)
             nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
-            nb.goal = ('other', pe_goal, ut_b) if inc_ok else None
+            nb.goal = None  # dv cutoff; the closed loop re-plans the remainder
             nodes.append(nb)
             base = nb.orbit
         if abs(base.apoapsis_altitude-args.apoapsis) > TOL:

@@ -62,17 +62,28 @@ def rotate_about(v, axis, angle):
     return tuple(v[i]*c + kxv[i]*s + k[i]*kdv*(1.0-c) for i in range(3))
 
 
-def engine_moment(vessel, frame, min_thrust=1.0, exclude=('Viking',)):
-    """Thrust-line moment vector of the running engines about the CoM (body frame)."""
+def engine_moment(vessel, frame, min_thrust=1.0, axis_override=None):
+    """Thrust-line moment vector of the running engines about the CoM (body frame).
+
+    axis_override maps an engine-title substring to a measured thrust axis (body
+    frame) for engines whose part axis is not their thrust axis (the OMS).
+    """
     moment = [0.0, 0.0, 0.0]
     for engine in vessel.parts.engines:
         try:
             if not engine.active:
                 continue
             thrust = engine.thrust
-            if thrust <= min_thrust or any(x in engine.part.title for x in exclude):
+            if thrust <= min_thrust:
                 continue
-            d = engine.part.direction(frame)
+            d = None
+            for key, axis in (axis_override or {}).items():
+                if key in engine.part.title:
+                    d = axis
+            if d is None:
+                if 'Viking' in engine.part.title:
+                    continue  # OMS part axis is wrong; skip unless a measured axis is given
+                d = engine.part.direction(frame)
             p = engine.part.position(frame)
         except Exception:
             continue
@@ -108,6 +119,7 @@ class AttitudeController:
         self.int_time = 6.0
         self.int_limit = 0.35              # fraction of available torque
         self.feedforward = True
+        self.axis_override = {}
         self.deadband = 0.0
         self.roll_gate = (8.0, 5.0)        # nose error (deg) above which roll is suppressed / fully on
         # telemetry
@@ -144,7 +156,8 @@ class AttitudeController:
             self._moi = tuple(max(1.0, x) for x in self.vessel.moment_of_inertia)
             positive, negative = self.vessel.available_torque
             self._torque = tuple(max(1.0, min(abs(p), abs(n))) for p, n in zip(positive, negative))
-            self.disturbance = (engine_moment(self.vessel, self.frame)
+            self.disturbance = (engine_moment(self.vessel, self.frame,
+                                              axis_override=self.axis_override)
                                 if self.feedforward else (0.0, 0.0, 0.0))
         except Exception:
             pass
