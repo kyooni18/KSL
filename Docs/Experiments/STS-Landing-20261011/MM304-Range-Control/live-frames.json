@@ -1,0 +1,322 @@
+{
+  "L5": {
+    "path": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+    "sha256": "83cac6ef7eae878290bf9b569f701efea086d2d6a344691b939d83642e7a7f8e",
+    "frames": {
+      "MM304 Entry": {
+        "ut": 1542.80986328081,
+        "fields": {
+          "state": {
+            "phase": "MM304 Entry",
+            "controlProfile": "entry",
+            "vesselSituation": "flying",
+            "automation": true,
+            "paused": false,
+            "constraintActive": false,
+            "gear": false,
+            "brakes": false,
+            "airbrakesAvailable": true,
+            "airbrakes": false,
+            "sasAvailable": true,
+            "sasEnabled": false,
+            "entryPlanValid": false,
+            "entryReversalScheduled": false,
+            "planId": null,
+            "planVersion": null,
+            "parentPlanId": null,
+            "parentPlanVersion": null
+          },
+          "position": {
+            "latitude": 0.679300110164778,
+            "longitude": 174.246084381928,
+            "altitude": 68995.7035619918,
+            "radarAltitude": 68995.7035619917,
+            "inertial": [
+              229012.564749916,
+              -628526.521940976,
+              7931.44298661078
+            ]
+          },
+          "motion": {
+            "velocity": [
+              2141.74171620462,
+              840.082282049696,
+              4.19947577050031
+            ],
+            "trueAirSpeed": 2105.62939453125,
+            "horizontalSpeed": 2104.88325181868,
+            "verticalSpeed": -56.0465834365483,
+            "flightPathAngle": -1.52525043494087
+          },
+          "attitude": {
+            "pitch": 13.0636596679688,
+            "roll": -0.00140380859375,
+            "heading": 89.8628158569336,
+            "angleOfAttack": 14.5889196395874,
+            "sideslip": 0.00442342832684517,
+            "pitchRate": 1.05745327191019,
+            "rollRate": -0.000246442321005765,
+            "yawRate": -0.000699862382994942,
+            "courseRate": 0.0025532797907772,
+            "coordinatePitchRate": 1.39158744927138,
+            "coordinateRollRate": -0.000422079631251392,
+            "headingRate": 0.00213453731558716,
+            "angleOfAttackRate": 1.39099238337194,
+            "bodyPitchRate": 1.05745327191019,
+            "bodyRollRate": -0.000246442321005765,
+            "bodyYawRate": -0.000699862382994942
+          },
+          "guidance": {
+            "rangeToSite": 1162647.35281751,
+            "bearingToSite": 89.7909749385988,
+            "runwayAlongTrack": -1162662.74033958,
+            "runwayCrossTrack": -6930.97096264438,
+            "specificMechanicalEnergy": -3081141.56099748,
+            "entryReversalTimeRemaining": 0,
+            "entryReversalUT": null,
+            "entryReversalRange": null,
+            "entryReversalSign": null
+          },
+          "mass": 25723.181640625
+        }
+      },
+      "TAEM": {
+        "ut": 2162.60986328024,
+        "fields": {
+          "state": {
+            "phase": "TAEM",
+            "controlProfile": "taem",
+            "vesselSituation": "flying",
+            "automation": true,
+            "paused": false,
+            "constraintActive": false,
+            "gear": false,
+            "brakes": false,
+            "airbrakesAvailable": true,
+            "airbrakes": false,
+            "sasAvailable": true,
+            "sasEnabled": false,
+            "entryPlanValid": false,
+            "entryReversalScheduled": false,
+            "planId": null,
+            "planVersion": null,
+            "parentPlanId": null,
+            "parentPlanVersion": null
+          },
+          "position": {
+            "latitude": 0.199301644587273,
+            "longitude": -80.4296212172821,
+            "altitude": 27093.1653487611,
+            "radarAltitude": 25910.5470391506,
+            "inertial": [
+              437980.804294128,
+              448791.594104361,
+              2181.32030293437
+            ]
+          },
+          "motion": {
+            "velocity": [
+              -816.937691667105,
+              641.129601844277,
+              -164.707018543025
+            ],
+            "trueAirSpeed": 872.608642578125,
+            "horizontalSpeed": 865.351019107913,
+            "verticalSpeed": -112.309835078132,
+            "flightPathAngle": -7.39481440550491
+          },
+          "attitude": {
+            "pitch": 17.5154418945312,
+            "roll": 25.0200500488281,
+            "heading": 112.312599182129,
+            "angleOfAttack": 27.3244667053223,
+            "sideslip": -0.0825515314936638,
+            "pitchRate": -0.014966024450362,
+            "rollRate": -2.31869185999875,
+            "yawRate": -0.963058777562256,
+            "courseRate": 0.21705703408815,
+            "coordinatePitchRate": 0.482608715631849,
+            "coordinateRollRate": -2.55252922968288,
+            "headingRate": -0.895194770658289,
+            "angleOfAttackRate": -0.0334845207014557,
+            "bodyPitchRate": -0.014966024450362,
+            "bodyRollRate": -2.31869185999875,
+            "bodyYawRate": -0.963058777562256
+          },
+          "guidance": {
+            "rangeToSite": 59760.0670265832,
+            "bearingToSite": 92.4840568429142,
+            "runwayAlongTrack": -59703.9443636692,
+            "runwayCrossTrack": -2593.61817836702,
+            "specificMechanicalEnergy": -5267691.57264942,
+            "entryReversalTimeRemaining": 0,
+            "entryReversalUT": null,
+            "entryReversalRange": null,
+            "entryReversalSign": null
+          },
+          "mass": 25722.5625
+        }
+      }
+    }
+  },
+  "L7": {
+    "path": "FlightLogs/2026-10-11T06-40-54Z-STS-vehicle.jsonl",
+    "sha256": "1ea62b9ece2cb68c51d0b4696719e042b1e803b65ea0374fa2dba509c1890db1",
+    "frames": {
+      "MM304 Entry": {
+        "ut": 5986.9500976799,
+        "fields": {
+          "state": {
+            "phase": "MM304 Entry",
+            "controlProfile": "entry",
+            "vesselSituation": "flying",
+            "automation": true,
+            "paused": false,
+            "constraintActive": false,
+            "gear": false,
+            "brakes": false,
+            "airbrakesAvailable": true,
+            "airbrakes": false,
+            "sasAvailable": true,
+            "sasEnabled": false,
+            "entryPlanValid": false,
+            "entryReversalScheduled": false,
+            "planId": null,
+            "planVersion": null,
+            "parentPlanId": null,
+            "parentPlanVersion": null
+          },
+          "position": {
+            "latitude": -9.67416858499572,
+            "longitude": 179.718523789297,
+            "altitude": 68994.2374081333,
+            "radarAltitude": 68499.6940676862,
+            "inertial": [
+              649983.354487676,
+              111518.706603847,
+              -112421.113015499
+            ]
+          },
+          "motion": {
+            "velocity": [
+              -434.463814762138,
+              2252.59271213192,
+              79.8917942789238
+            ],
+            "trueAirSpeed": 2103.38525390625,
+            "horizontalSpeed": 2102.52806337405,
+            "verticalSpeed": -60.0446822227851,
+            "flightPathAngle": -1.63582694156004
+          },
+          "attitude": {
+            "pitch": 12.3844299316406,
+            "roll": 0.015777587890625,
+            "heading": 88.1557693481445,
+            "angleOfAttack": 14.020245552063,
+            "sideslip": -0.0818658843636513,
+            "pitchRate": 1.24270001241037,
+            "rollRate": 0.00327008213195784,
+            "yawRate": -0.008836689681758,
+            "courseRate": -0.0365247814532348,
+            "coordinatePitchRate": 1.59038072467122,
+            "coordinateRollRate": 0.00279953892925582,
+            "headingRate": -0.0393577395554764,
+            "angleOfAttackRate": 1.59066867517804,
+            "bodyPitchRate": 1.24270001241037,
+            "bodyRollRate": 0.00327008213195784,
+            "bodyYawRate": -0.008836689681758
+          },
+          "guidance": {
+            "rangeToSite": 1102887.70277668,
+            "bearingToSite": 92.7274537265469,
+            "runwayAlongTrack": -1105266.26796474,
+            "runwayCrossTrack": 101444.116126809,
+            "specificMechanicalEnergy": -3085341.30884444,
+            "entryReversalTimeRemaining": 0,
+            "entryReversalUT": null,
+            "entryReversalRange": null,
+            "entryReversalSign": null
+          },
+          "mass": 25123.890625
+        }
+      },
+      "TAEM": {
+        "ut": 6566.59009769255,
+        "fields": {
+          "state": {
+            "phase": "TAEM",
+            "controlProfile": "taem",
+            "vesselSituation": "flying",
+            "automation": true,
+            "paused": false,
+            "constraintActive": false,
+            "gear": false,
+            "brakes": false,
+            "airbrakesAvailable": true,
+            "airbrakes": false,
+            "sasAvailable": true,
+            "sasEnabled": false,
+            "entryPlanValid": false,
+            "entryReversalScheduled": false,
+            "planId": null,
+            "planVersion": null,
+            "parentPlanId": null,
+            "parentPlanVersion": null
+          },
+          "position": {
+            "latitude": 3.05841360616146,
+            "longitude": -82.4436830475569,
+            "altitude": 26950.1486188154,
+            "radarAltitude": 26046.2062898102,
+            "inertial": [
+              -286720.070949706,
+              556542.150765604,
+              33450.3241979144
+            ]
+          },
+          "motion": {
+            "velocity": [
+              -865.590107363281,
+              -579.5358265331,
+              -140.922372481304
+            ],
+            "trueAirSpeed": 872.048889160156,
+            "horizontalSpeed": 862.881361016358,
+            "verticalSpeed": -126.11522234793,
+            "flightPathAngle": -8.31524230089908
+          },
+          "attitude": {
+            "pitch": 11.1425476074219,
+            "roll": 42.0837860107422,
+            "heading": 118.440208435059,
+            "angleOfAttack": 27.4037990570068,
+            "sideslip": -1.66061151027679,
+            "pitchRate": 0.437185731403391,
+            "rollRate": 0.249171419252292,
+            "yawRate": 0.220555645916022,
+            "courseRate": 0.373834145916909,
+            "coordinatePitchRate": 0.200023686197816,
+            "coordinateRollRate": 0.138106584084869,
+            "headingRate": 0.555150069398075,
+            "angleOfAttackRate": 0.311306113700398,
+            "bodyPitchRate": 0.437185731403391,
+            "bodyRollRate": 0.249171419252292,
+            "bodyYawRate": 0.220555645916022
+          },
+          "guidance": {
+            "rangeToSite": 87065.1988567168,
+            "bearingToSite": 111.807880823057,
+            "runwayAlongTrack": -80798.633659657,
+            "runwayCrossTrack": -32532.0782128679,
+            "specificMechanicalEnergy": -5269409.55347801,
+            "entryReversalTimeRemaining": 0,
+            "entryReversalUT": null,
+            "entryReversalRange": null,
+            "entryReversalSign": null
+          },
+          "mass": 25123.314453125
+        }
+      }
+    }
+  }
+}

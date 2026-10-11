@@ -111,6 +111,13 @@ gates were weakened.
   Final → Flare phase path.
 
 ### 2. Fix TAEM energy delivery (root cause of L7)
+- [Current MM304 replay investigation](Experiments/STS-Landing-20261011/MM304-Range-Control/README.md)
+  rejects lowering the coupled acquisition/drag-sizing range from 96.5 km to
+  60 km: L7 then misses the Mach/altitude handoff window. L5 also begins its
+  golden MM305 replay at `k=0`, so saturation alone does not establish L7's
+  cause. Compare lateral path and longitudinal model error. A candidate aligning the range predictor
+  with execution preserved L5/L7 touchdown outcomes, but was set aside after
+  the broader MM305 admission qualification failed; baseline comparison is pending.
 - Investigate why the law sat at `k = 0` from TAEM entry and still selected
   a HAC intercept. `loop = 1` alone does not prove an overhead circuit or
   excess energy: `tel_plan` also sets it on direct `TEL_LEG_DOWN` candidates.
