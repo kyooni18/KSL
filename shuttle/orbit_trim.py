@@ -112,7 +112,9 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.2)
         ap.reference_frame = node.reference_frame
-        ctl.rcs = True
+        # Fine corrections use reaction wheels only: RCS thrusters leak net
+        # translation into the orbit while they hold attitude.
+        ctl.rcs = dv >= 5.0
         while sc.ut < start:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.02)
