@@ -360,3 +360,13 @@ Final, five outside the planner band; none at 125–130 m/s passes. The 127.814
 case fails upper energy at lower AoA and measured load at higher AoA. No scalar
 speed-floor reduction is supported. Compare forecasts against an actual exit
 and flown Final tail with retained state/history; no production gates changed.
+
+[Forecast versus flown Final](Experiments/STS-Landing-20261011/Final-Forecast-Replay-Comparison/README.md)
+uses unmodified closed-loop L5/L7 states/history. L5 reproduces its golden but
+last pre-pull touchdown forecast is 10.47 m/s high; L7's is 0.13 m/s low.
+Current L7 with 150 m aim lands 376 m short at 61.929 m/s / 3.353 m/s sink,
+not the older scenario-description numbers. The forecast is conditional
+point-mass integration, not future controller/actuator replay; post-latch NaN
+is intentional. Freeze a common late state/plan and compare native response,
+drag work and sink history before tuning. No shared scalar correction or
+production change is supported; plant and live qualification remain open.
