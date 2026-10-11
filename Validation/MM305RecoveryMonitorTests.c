@@ -117,10 +117,31 @@ static void test_rejected_landing_brakes_then_terminates_failed(void) {
     guidance_result_clear(&r);
 }
 
+static void test_rollout_completion_uses_runway_bounds(void) {
+    LandingConfiguration cfg=landing_configuration_default();
+    cfg.site.runway_length=2500.0;cfg.site.runway_width=70.0;
+    /* The historical live stop at 2556 m was within the contact envelope but
+       beyond the runway. Edge tolerances must not qualify mission success. */
+    const double along[]={2400.0,2556.0,-20.0,2400.0,2400.0,2400.0};
+    const double cross[]={12.0,12.0,0.0,40.0,0.0,0.0};
+    const double speed[]={1.0,1.0,1.0,1.0,NAN,-1.0};
+    for(size_t i=0;i<sizeof(along)/sizeof(along[0]);++i){
+        GuidanceMachine g;guidance_machine_init(&g);
+        Telemetry t;telemetry_init(&t);
+        t.runway_along_track=along[i];t.runway_cross_track=cross[i];
+        t.surface_speed=speed[i];
+        Trajectory ref;trajectory_init(&ref);
+        GuidanceResult r=touchdown(&g,&t,&cfg,&ref);
+        assert(r.phase==(i==0?PHASE_COMPLETE:PHASE_ABORT));
+        guidance_result_clear(&r);trajectory_clear(&ref);
+    }
+}
+
 int main(void) {
     test_commanded_native_capture_is_not_recovery();
     test_uncommanded_energetic_reversals_still_trigger();
     test_rejected_landing_brakes_then_terminates_failed();
+    test_rollout_completion_uses_runway_bounds();
     puts("MM305 recovery monitor tests passed.");
     return 0;
 }

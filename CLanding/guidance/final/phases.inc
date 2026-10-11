@@ -63,9 +63,17 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
                            (t->pitch<=0.5);
 
     char status[160];GuidancePhase phase;
+    if(!isfinite(t->surface_speed)||t->surface_speed<0.0)
+        return terminal_abort(g,"Rollout speed is invalid; stopping cannot be confirmed.");
     if(t->surface_speed<1.5){
-        if(!terminal_runway_contact_position(t,cfg))
-            return terminal_abort(g,"Rollout stopped outside the selected runway envelope.");
+        /* Contact acquisition tolerates edge uncertainty to retain braking
+           authority. Successful completion must use the actual runway bounds,
+           not that expanded envelope (which admits an 80 m overrun). */
+        if(!isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track)||
+                !(cfg->site.runway_length>0.0)||!(cfg->site.runway_width>0.0)||
+                t->runway_along_track<0.0||t->runway_along_track>cfg->site.runway_length||
+                fabs(t->runway_cross_track)>cfg->site.runway_width*.5)
+            return terminal_abort(g,"Rollout stopped outside the selected runway bounds.");
         phase=PHASE_COMPLETE;c.wheel_steering=0;c.brakes=true;reset_limiters(g);
         snprintf(status,sizeof(status),"Landing complete.");
     }else if(!nose_gear_contact){

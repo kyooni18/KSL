@@ -65,3 +65,24 @@ This log is updated at implementation/validation checkpoints.
   Mission/lifecycle subset before the continuation test: 23 passed + 7 subtests.
 - Investigating the L5 golden with a forced native rebuild; initial make reported
   the existing backend up to date, so stale build artifacts remain a hypothesis.
+
+## Runway acceptance and fresh-baseline findings
+
+- Native rollout now requires a finite, nonnegative stopped speed and a stop
+  inside the configured runway's actual along/cross bounds. The wider contact
+  envelope remains for acquiring touchdown and braking; its +80 m margin no
+  longer qualifies a completed landing. The 2026-10-11 live stop at 2556 m on
+  a 2500 m runway must therefore fail while braking remains available.
+- Six native completion cases (inside, 56 m beyond, 20 m short, 40 m wide,
+  NaN speed, negative speed) pass in `mm305-recovery-monitor-test`.
+- Full `make test` after this change: native tests passed; Python 111 passed,
+  51 subtests passed, one L5 exact golden failure at 66.735 vs expected 66.129
+  m/s. A forced native rebuild and a fresh CMake simulator build reproduce
+  66.735/2.055/1068.915. Isolated rollback of the two later native changes
+  (`terminal_propagator` cadence and disabled adaptive-flare slew) still gives
+  the same result. No acceptance gate or assertion was relaxed.
+- Saved the current paused/landed STS scene as
+  `ksl-autonomous-20261012-pretest-landed` before loading the existing MM305
+  checkpoint. Guard confirmed the checkpoint settled at UT 6566.83, 26.9 km.
+  Live MM305 continuation with strict runway completion is in progress; its run
+  record is `runs/20261011T161341Z-live-runway-bound/`.
