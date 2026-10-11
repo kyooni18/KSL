@@ -173,3 +173,13 @@ gates were weakened.
 2. Run `make test`, plus `make -C CLanding qualification` for any TAEM change.
 3. Then a live flight from an MM305 save (`ksl-…-mm305` saves exist for L7)
    before a full mission.
+
+### Repeat live verification, 2026-10-11
+
+[The approved repeat MM305 flight](Experiments/STS-Landing-20261011/L7-Live-Rollout-Verification/README.md)
+exercised flare and automatically ended FAILED after runway overrun. Initial
+ground response followed telemetry near 47.85 m/s and 4.03 m/s downward;
+first landed flag followed a bounce. KSP paused landed at about 2810 m along
+and 1.37 m/s, brakes on. Grounded failure termination is live-verified; slow,
+long delivery, phase oscillations, flare sensitivity and the plant gap remain
+open. Universal terminal backstop and full deorbit/MM304 route were not tested.
