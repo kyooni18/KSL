@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "420bee86109e4587ede8b2337551fbd350dd76ea",
+  "sourceSHA256": "e93c99315e3f3ab913ce3c1d06de7db2d5b3e0964aaeff43ba785ecbbf0ccd39",
+  "instrumentedSourceSHA256": "9aca669d559e46c8d64b09b6157d9e55e897b162d3e9db220012e8ced4fc0bf2",
+  "policy": "Temporary instrumentation only. No command or propagation changes, no gate changes. Focused sample0. Maximum lift ignores load cap, so it is an optimistic physical bound, not a flyable command.",
+  "inputHashes": {
+    "Configuration/sts-live.json": "2b6dfa351b69f5489d311e7ae9164c611cbe9a514f7cc67e38c4392a7c359f61",
+    "ShuttleSim/reference-model/sts_aero_live20261010.csv": "a60dc45f59307e0ee7c3d622cf67cf57bd9163aebe346c96d72af202c861fd55",
+    "ShuttleSim/reference-model/stsn_attitude_identified.ini": "68530ea75d6f59dc834e8d557e23e1e0ba83f927b539fb2779a0d4dea4dbca50",
+    "ShuttleSim/reference-model/kerbin_atmosphere_identified.csv": "eab8b205a97479dbfff1ceda803d8160ef9044cc1e774319066efce6ba41c533",
+    "Validation/MM305FeasibilityPropertyTests.c": "f32f2c990a9ebb3f19b7fb66517d13b7ad150ab97f206f6b765c92f6dfad85d8"
+  },
+  "binarySHA256": "93c405d13278b17304594cd371af64a9b32a1dff28ce63cfb5e1b2cd8b918026",
+  "fixtureArguments": [
+    "--configuration",
+    "Configuration/sts-live.json",
+    "--mass-kg",
+    "25123.15",
+    "--sample-index",
+    "0"
+  ],
+  "environment": {
+    "KSP_LANDER_MODEL_PROFILE": "sts-live-20261010",
+    "KSP_LANDER_TAEM_PROFILE_DIAGNOSTICS": "1"
+  },
+  "exitCode": 1,
+  "logSHA256": "98e35992e9ad5270e7d4366f1effbb087520fad282ea12a5f09d1cca368d840e"
+}

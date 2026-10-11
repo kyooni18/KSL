@@ -272,3 +272,11 @@ rejects simply activating the existing local bow: five signed offsets produce
 tracking case still misses altitude by 3 km and exits at 70 m/s, despite a
 slope-compliant reference. Production files and acceptance gates are unchanged.
 Trace the location of authority/energy loss before designing a new profile.
+
+[Profile authority trace](Experiments/STS-Landing-20261011/MM305-Profile-Authority-Trace/README.md)
+shows the best slope-compliant trial first climbing above its reference,
+then losing 3 km of altitude in a heavily banked transonic turn. Combined
+turn/pull-up demand exceeds the incidence envelope before Mach 1; the subsonic
+ceiling discontinuity compounds it. Plan lateral and vertical curvature
+jointly against the evolving energy/authority envelope. Neither cap removal
+nor a local bow is validated as a fix; production guidance remains unchanged.
