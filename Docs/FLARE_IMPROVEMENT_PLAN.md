@@ -287,3 +287,9 @@ bands. All 2,808 focused smooth trials remain infeasible; larger routes commonly
 time out or exhaust energy. Radius expansion alone is rejected. Check the
 inlet's lower vertical-curvature bound when lateral lift prevents following a
 rapidly descending reference, while retaining full downstream qualification.
+
+[Turn-aware inlet bounds](Experiments/STS-Landing-20261011/MM305-Inlet-Curvature-Bounds/README.md)
+change the analytic reference but leave all 2,184 focused trial outcomes and
+selected-profile early commands unchanged. The ~4 m local correction is too
+small to address the later 3 km departure. The experiment is rejected as an
+admission remedy; full-path propagated authority/energy constraints are needed.
