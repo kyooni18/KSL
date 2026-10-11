@@ -342,3 +342,12 @@ Including its prefix, Mach 1 still occurs near 58–59 s, but 1.82 km higher wit
 30% lower pressure/lift availability. Delayed turn alone is rejected; couple
 lateral curvature with propagated altitude/energy and preserved endpoint/speed
 constraints. No production changes, cap removal or qualification is supported.
+
+[Zero-turn vertical diagnostic](Experiments/STS-Landing-20261011/MM305-Zero-Turn-Vertical/README.md)
+removes lateral demand while retaining native vertical shaping/servo/forces.
+Of 448 finite Hermite/bow profiles, 149 meet unchanged slope/tracking/endpoint
+checks, but their fastest arrival is 127.814 m/s, below the 140.8 m/s speed
+floor. A 68 km profile tracks within 15 m. Thus turning is not the sole failure
+in this profile family. No gate reduction or physical impossibility is proven;
+inspect live/planner arrival contracts and a coupled energy-aware profile.
+Production and goldens remain unchanged; live approval remains pending.
