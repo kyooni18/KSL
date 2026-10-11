@@ -19,7 +19,8 @@ from ksl.config import ConfigError, config_from_snapshot, load_config
 from ksl.controller import MissionController, continue_phase
 from ksl.paths import BACKEND, CLANDING, ROOT
 from ksl.phases import BACKEND_PHASES, BACKEND_FAILURE_PHASES, Phase, PhaseMachine, PhaseTransitionError
-from ksl.runlog import MissionStatus, RunLog, read_events, read_telemetry
+from ksl.replay import Recording
+from ksl.runlog import Event, MissionStatus, RunLog, read_events, read_telemetry
 from ksl.scenarios import SCENARIOS
 
 FAKES = Path(__file__).resolve().parent / "fakes"
@@ -191,6 +192,21 @@ class LandingProgramTests(ControllerTestCase):
 
 
 class CliTests(unittest.TestCase):
+    def test_replay_uses_simulation_clock_after_initial_backend_placeholder(self):
+        recording = Recording(Path("example"), "run", samples=[
+            {"ut": 0, "time": 1791730000.0, "phase": "orbit"},
+            {"ut": 5254.0, "time": 1791730001.0, "phase": "orbit"},
+            {"ut": 5260.0, "time": 1791730007.0, "phase": "deorbit"},
+        ])
+        self.assertEqual(recording.summary()["duration_s"], 6.0)
+        self.assertEqual(recording.timeline(), [(0.0, "orbit"), (6.0, "deorbit")])
+        recording.samples[1]["phase"] = "deorbit"
+        recording.samples[2]["phase"] = "mm304"
+        self.assertEqual(recording.timeline(), [(0.0, "orbit"), (0.0, "deorbit"),
+                                                (6.0, "mm304")])
+        recording.events.append(Event("phase", "Phase: Complete", phase="complete"))
+        self.assertEqual(recording.timeline()[-1], (6.0, "complete"))
+
     def run_cli(self, *argv):
         out, err = io.StringIO(), io.StringIO()
         with redirect_stdout(out), redirect_stderr(err):

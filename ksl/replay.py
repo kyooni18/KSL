@@ -45,36 +45,57 @@ class Recording:
     def timeline(self) -> list[tuple[float, str]]:
         """(elapsed seconds, phase) at each phase change."""
         out: list[tuple[float, str]] = []
-        t0 = next((_time(s) for s in self.samples if _time(s)), 0.0)
+        clocked = self.clocked_samples()
+        if not clocked:
+            return out
+        t0 = clocked[0][1]
         last = None
-        for sample in self.samples:
+        if self.samples[0] is not clocked[0][0]:
+            # The native backend emits an initial UT=0 frame with the entry
+            # phase before its first live telemetry read. Keep that phase in
+            # the timeline without treating its wall clock as simulation UT.
+            last = self.samples[0].get("phase")
+            if last:
+                out.append((0.0, last))
+        for sample, sample_time in clocked:
             phase = sample.get("phase")
             if phase and phase != last:
-                out.append((_time(sample) - t0, phase))
+                out.append((sample_time - t0, phase))
                 last = phase
+        if last != Phase.COMPLETE.value and any(
+            event.kind == "phase" and event.phase == Phase.COMPLETE.value
+            for event in self.events
+        ):
+            out.append((clocked[-1][1] - t0, Phase.COMPLETE.value))
         return out
+
+    def clocked_samples(self) -> list[tuple[dict[str, Any], float]]:
+        """Use one clock, ignoring a backend's initial UT=0 placeholder."""
+        first_ut = next((i for i, sample in enumerate(self.samples)
+                         if _is_number(sample.get("ut")) and
+                         (sample["ut"] > 0 or not _is_number(sample.get("time")))), None)
+        if first_ut is not None:
+            return [(sample, float(sample["ut"])) for sample in self.samples[first_ut:]
+                    if _is_number(sample.get("ut")) and
+                    (sample["ut"] > 0 or not _is_number(sample.get("time")))]
+        return [(sample, float(sample["time"])) for sample in self.samples
+                if _is_number(sample.get("time"))]
 
     def summary(self) -> dict[str, Any]:
         def peak(key: str) -> float | None:
             values = [float(s[key]) for s in self.samples if _is_number(s.get(key))]
             return max(values) if values else None
         last = self.samples[-1] if self.samples else {}
+        clocked = self.clocked_samples()
         return {"source": str(self.source), "kind": self.kind, "samples": len(self.samples),
                 "events": len(self.events),
-                "duration_s": (_time(last) - next((_time(s) for s in self.samples if _time(s)), 0.0)) if self.samples else 0.0,
+                "duration_s": clocked[-1][1] - clocked[0][1] if clocked else 0.0,
                 "phases": self.phases, "max_altitude_m": peak("altitude"), "max_speed_mps": peak("speed"),
                 "max_dynamic_pressure_pa": peak("dynamicPressure"), "final": last}
 
 
 def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
-
-
-def _time(sample: dict[str, Any]) -> float:
-    for key in ("ut", "time"):
-        if _is_number(sample.get(key)):
-            return float(sample[key])
-    return 0.0
 
 
 def _open_text(path: Path):

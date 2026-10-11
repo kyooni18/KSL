@@ -240,3 +240,41 @@ assertion was weakened.
 subtests in 25.56 s. This includes the orbital post-load regression and the
 parallel run-directory reservation test. The slow MM305 qualification failure
 above remains independent of this fast gate.
+
+## Live orbit-to-runway completion
+
+- The integrated CLI retry `runs/20261011T164103Z-live-orbit-retry/` completed
+  **Orbit → Deorbit → MM304 → MM305 → Final → Rollout → Complete** with exit
+  code 0. It loaded the original 85 km / 10° orbit save through the corrected
+  guard, planned at the settled 25.5 t mass, and flew a 30.06 m/s deorbit
+  burn. The selected plan was entry-stage executable but not strict full-route
+  robust (10/15 stress cases); the profile explicitly allowed guarded
+  recovery execution. All runtime handoff and cutoff checks remained active.
+- MM304 admitted MM305 at UT 6575.33, 26.705 km, 867.75 m/s, 63.19 km
+  before and 32.85 km cross from the threshold. The automatic MM305 save
+  `ksl-20261011T164103Z-live-orbit-retry-mm305` was preserved. TAEM reached
+  Final late, near UT 6838 / 3 km before the threshold; the backend warned
+  that live aerodynamic response exceeded its certified uncertainty. The
+  flare nevertheless arrested the steep sink before the threshold.
+- First landed/rollout telemetry was UT 6876.667, 579.51 m along runway 09,
+  5.58 m left of centerline, 52.37 m/s, vertical speed -0.36 m/s. The backend
+  requested drogue deployment at UT 6876.607 / 52.38 m/s; module events
+  afterward offered `Cut Parachute`, but inflation was not independently
+  confirmed. Completion at UT 6914.187 was 1.545 m/s, 1466.01 m along and
+  3.46 m left of centerline, within the configured 2500 m runway bounds.
+- Independent kRPC probe after completion found STS paused and landed at
+  UT 6914.487, throttle 0, gear and brakes on, SAS off, 22 orbiter parts
+  including the body flap, and dry mass 20160.01 kg. The scene is preserved
+  as `ksl-autonomous-20261012-orbit-runway-success`. This is one successful
+  orbit-to-rollout live flight, not a qualification of every initial state,
+  the slow MM305 fixture, or pad launch/ascent.
+
+## Replay clock correction
+
+The live `ksl replay` command initially mixed its first native UT=0
+placeholder with wall-clock time, displaying a huge negative duration and
+timeline. Replay now chooses one clock for the entire recording, skips that
+placeholder for elapsed time, retains its entry phase at T+0, and appends
+the recorded Complete event after the last telemetry frame. The same live
+run now reports 1659 s and a monotonic Orbit → Complete timeline. Four
+focused replay tests pass, including the clock regression.

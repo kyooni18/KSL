@@ -269,11 +269,10 @@ def cmd_replay(args: argparse.Namespace) -> int:
     if args.play:
         rate = max(args.play, 1e-3)
         prev = None
-        for sample in recording.samples:
-            t = sample.get("ut") or sample.get("time")
-            if prev is not None and isinstance(t, (int, float)):
+        for sample, t in recording.clocked_samples():
+            if prev is not None:
                 time.sleep(max(0.0, min(2.0, (t - prev) / rate)))
-            prev = t if isinstance(t, (int, float)) else prev
+            prev = t
             print(f"  {sample.get('phase', '?'):>14} alt {float(sample.get('altitude') or 0) / 1000:7.2f} km "
                   f"v {float(sample.get('speed') or 0):7.1f} m/s")
     return EXIT_OK

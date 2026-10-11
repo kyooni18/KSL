@@ -48,3 +48,18 @@ Live KSP tests are a separate acceptance stage. `run_headless.command --live`
 and the optional independent safety guard must only be used deliberately with a
 configured kRPC serial-protocol endpoint. Offline qualification never loads a
 quicksave or sends flight controls.
+
+On 2026-10-12, `bin/ksl land --from orbit -p sts-85km-10deg` completed one
+guarded live orbit-to-rollout flight from an existing 85 km / 10° checkpoint.
+The shuttle touched down 580 m along KSC runway 09 at 52.4 m/s and stopped
+at 1466 m along, 3.5 m off centerline, with the body flap intact. Evidence is
+`runs/20261011T164103Z-live-orbit-retry/` and the separately saved
+`ksl-autonomous-20261012-orbit-runway-success` scene. The first attempt from
+the same save safely aborted before burn when KSP's post-load placeholder mass
+was used for planning; orbital checkpoint loading now waits for the physics
+refresh. A separate MM305-only continuation overran the runway. These flights
+demonstrate the integrated handoffs and one successful recovery trajectory,
+while the slow MM305 non-vacuity gate and broader flight envelope remain open.
+The live aerodynamic residual exceeded prior-flight model uncertainty late in
+the successful approach; neither the simulator plant nor the chute inflation
+has been certified by this result.
