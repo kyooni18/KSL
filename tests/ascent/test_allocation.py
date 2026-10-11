@@ -1,5 +1,5 @@
 import unittest
-from shuttle.allocation import allocate
+from ksl.ascent.allocation import allocate
 
 
 class AllocationTests(unittest.TestCase):

@@ -4,7 +4,7 @@ import math
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
-from shuttle.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_error_exceeded,
+from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_error_exceeded,
                             body_roll_rate_deg_s, desired_orbiter_side,
                             earthward_roll_target, gravity_turn_pitch,
                             meco_ready, g_force_throttle, slew_value, slew_vector,
@@ -239,7 +239,7 @@ class FlightTests(unittest.TestCase):
         args = SimpleNamespace(address='127.0.0.1', rpc_port=50000,
                                stream_port=50001, launch=True)
         with patch.dict(sys.modules, {'krpc': krpc}), \
-                patch('shuttle.flight.Shuttle') as shuttle:
+                patch('ksl.ascent.flight.Shuttle') as shuttle:
             with self.assertRaisesRegex(ValueError, 'on the launch pad'):
                 run(args)
         shuttle.assert_not_called()

@@ -102,3 +102,7 @@ env/
 /ShuttleSim/1
 /*.plist
 **/.build-*/
+
+# Unified mission runtime output (ksl) and legacy launcher run logs
+/runs/
+telemetry*.csv

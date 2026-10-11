@@ -1,7 +1,0 @@
-.DS_Store
-.yeet/
-.venv/
-__pycache__/
-*.pyc
-telemetry*.csv
-runs/
