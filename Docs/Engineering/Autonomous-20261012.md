@@ -388,3 +388,11 @@ focused replay tests pass, including the clock regression.
   changed separation timing and absence of the active ascent guidance remain
   confounders. Both experimental scenes were paused, commanded to zero
   throttle, and saved separately.
+- A third direct separation waited for both Clydesdales to report no fuel,
+  then separated at UT 2793.55 / 25.7 km with Mites enabled. Both wings also
+  survived four subsequent simulation seconds. However, without the ascent
+  attitude controller this replay had drifted into a very different attitude
+  (at UT 2798: pitch -23°, heading 268°, roll -15°). This does not exonerate
+  the Mites under the nominal controlled geometry. The next controlled test
+  must retain the normal ascent program and inhibit Mite thrust in the pad
+  save, changing only that variable.
