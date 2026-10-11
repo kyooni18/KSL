@@ -194,6 +194,15 @@ class CliTests(unittest.TestCase):
 
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):
+    def test_poll_ignores_stopped_app(self):
+        from ksl.tui import KSLApp
+        app = KSLApp()
+        app.watcher = mock.Mock()
+        app.watcher.poll.return_value = (None, [])
+        self.assertFalse(app.is_running)
+        app.poll()
+        app.watcher.poll.assert_not_called()
+
     async def test_dry_run_from_mission_tab_shows_on_dashboard(self):
         from ksl.tui import KSLApp
         with tempfile.TemporaryDirectory() as tmp:

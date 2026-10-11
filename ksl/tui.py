@@ -206,7 +206,9 @@ class KSLApp(App[int]):
 
     # --- dashboard ------------------------------------------------------------------
     def poll(self) -> None:
-        if self.watcher is None:
+        # Textual stops the app before removing dashboard widgets. A queued
+        # timer callback during teardown must not query that disappearing tree.
+        if not self.is_running or self.watcher is None:
             return
         status, events = self.watcher.poll()
         log = self.query_one("#eventlog", RichLog)
