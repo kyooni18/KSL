@@ -1952,8 +1952,11 @@ def run(args):
                                           f'{g["along"]:.1f}, cross {g["cross"]:.1f}); vr {g["vr"]:.1f}/'
                                           f'{g["vr_target"]:.1f}, vh {g["vh"]:.1f}/{g["vh_target"]:.1f}; '
                                           f'sma {(sma_now-target_sma)/1000:+.1f} km')
-                                peg_phase_g = max(0.5, min(args.upper_g,
-                                                           min(peg_dv, max(0.0, energy_dv))/5.0/G0))
+                                # Taper to 0.15 G for the last metres per second so the
+                                # 10 Hz cutoff resolves ~0.15 m/s (~0.2 km of periapsis).
+                                peg_phase_g = max(0.15 if peg_dv < 8.0 else 0.5,
+                                                  min(args.upper_g,
+                                                      min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
                                 peg_dv = None
                         commanded_pitch = slew_value(
@@ -1963,7 +1966,7 @@ def run(args):
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
                         if (shuttle.separated and
-                                ((peg_dv is not None and (peg_dv < 1.5 or energy_done)) or
+                                ((peg_dv is not None and (peg_dv < 0.3 or energy_done)) or
                                  (peg_dv is None and
                                   meco_ready(v.orbit.apoapsis_altitude,
                                              v.orbit.periapsis_altitude,
