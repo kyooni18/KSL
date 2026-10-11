@@ -233,3 +233,10 @@ native and Python gates passed earlier, but this slow gate remains open. Its
 full output is preserved as `Docs/Engineering/qualification-20261012.log.gz`
 and the command is reproducible from the source checkout. No constraint or
 assertion was weakened.
+
+## Full offline gate after orbital load fix
+
+`nice -n 15 make test` passed: native C gates plus 119 Python tests and 51
+subtests in 25.56 s. This includes the orbital post-load regression and the
+parallel run-directory reservation test. The slow MM305 qualification failure
+above remains independent of this fast gate.
