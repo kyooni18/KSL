@@ -172,7 +172,7 @@ def main():
     def high_enough(orbit, ut):
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
-    def plan(d_ap, d_pe, min_lead=45.0):
+    def plan(d_ap, d_pe, min_lead=45.0, b_only=False):
         """Finish everything before the first periapsis passage: a Pe of ~60 km sits in
         the upper atmosphere and a single pass bleeds tens of km of apoapsis.
 
@@ -187,7 +187,7 @@ def main():
         flight = vessel.flight(o0.body.reference_frame)
         nodes = []
         base = o0
-        if abs(o0.apoapsis_altitude-(args.apoapsis+d_ap)) > 300.0:
+        if not b_only and abs(o0.apoapsis_altitude-(args.apoapsis+d_ap)) > 300.0:
             ut_a = now + max(10.0, min_lead, (MIN_BURN_ALTITUDE+1500.0-flight.mean_altitude) /
                              max(flight.vertical_speed, 20.0))
             xa = solve(lambda x: vessel.control.add_node(ut_a, prograde=x),
@@ -238,6 +238,23 @@ def main():
         for stale in list(vessel.control.nodes):
             stale.remove()
         return
+    if len(nodes) == 2:
+        execute(conn, vessel, nodes[0], lambda orb: False)
+        report('after burn 1')
+        # Re-plan the apoapsis burn from the orbit that was actually achieved.
+        d_ap = d_pe = 0.0
+        for iteration in range(4):
+            nodes, final = plan(d_ap, d_pe, 30.0, b_only=True)
+            e_ap = final.apoapsis_altitude-args.apoapsis
+            e_pe = final.periapsis_altitude-args.periapsis
+            print(f're-plan {iteration}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
+                  f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
+                  f'(dv {[round(n.delta_v, 1) for n in nodes]})')
+            if abs(e_ap) < 100.0 and abs(e_pe) < 100.0:
+                break
+            d_ap -= e_ap
+            d_pe -= e_pe
+        nodes = nodes[-1:]
     for index, node in enumerate(nodes):
         execute(conn, vessel, node, lambda orb: False)
         report(f'after burn {index+1}')
