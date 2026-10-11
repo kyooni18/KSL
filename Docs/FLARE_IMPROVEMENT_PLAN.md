@@ -400,3 +400,10 @@ frozen profile. Its plan becomes valid and response changes at the next tick;
 pull latch is not immediate ideal arc tracking. No causal speed correction or
 new forecast is established. Preserve native onset/stage/force history in the
 next forecast experiment; production, goldens and live qualification unchanged.
+
+[Native-stage forecast](Experiments/STS-Landing-20261011/Final-Native-Stage-Forecast/README.md)
+reproduces native latch/onset/arc logic and incidence slew in a passive point-mass
+forecast with unchanged-tail parity. It cuts L5's last pre-pull error from +10.5 to
+−3.0 m/s but moves L7 from −0.13 to −18.6 m/s, so it is rejected. The L7 deficit
+points to unmodelled below-12 m lift/sink behaviour; test that next. No production
+change.
