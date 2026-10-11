@@ -221,3 +221,15 @@ ongoing live flight and end-to-end orbital mission remain separate gates.
   acceptance of the later finite mass; all 14 guard tests pass. The same
   checkpoint loaded with the new guard at UT 5253.659 and 25,521.25 kg.
   Next: exercise the integrated CLI path and actual deorbit burn.
+
+## Slow native qualification gate
+
+`nice -n 15 make -C CLanding qualification` failed at the existing MM305
+feasibility non-vacuity check. Five fixture states were physically admitted,
+zero found a qualified handoff route, and five stayed under MM304 ownership;
+there were zero contract violations. Individual rejections include insufficient
+energy for the route, propagation timeout, and slow Final alignment. The fast
+native and Python gates passed earlier, but this slow gate remains open. Its
+full output is preserved as `Docs/Engineering/qualification-20261012.log.gz`
+and the command is reproducible from the source checkout. No constraint or
+assertion was weakened.
