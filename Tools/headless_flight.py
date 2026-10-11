@@ -25,6 +25,9 @@ TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 from clanding_layout import build_artifact as clanding_build_artifact
+sys.path.insert(0, str(TOOLS_DIR.parent))
+from ksl.backend import TERMINAL_PHASES, BackendClient
+from ksl.backend import validate_plan_qualification as shared_validate_plan_qualification
 from campaign_provenance import (
     load_pinned_campaign_artifacts,
     pin_campaign_artifacts,
@@ -32,8 +35,6 @@ from campaign_provenance import (
     write_run_manifest,
 )
 
-
-TERMINAL_PHASES = {"Complete", "Abort", "Fault"}
 
 
 def live_unpowered_policy_error(
@@ -1091,66 +1092,16 @@ class HUDCompanion:
                     process.wait(timeout=1.0)
 
 
-class BackendProcess:
+class BackendProcess(BackendClient):
+    """Shared ksl.backend client plus the headless operator's console reporting."""
+
     def __init__(self, executable: Path, snapshot_sink: Callable[[dict[str, Any]], None] | None = None,
                  stderr_target: Any = None) -> None:
-        env = os.environ.copy()
-        self.process = subprocess.Popen(
-            [str(executable)],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=stderr_target,
-            text=False,
-            bufsize=0,
-            env=env,
-            start_new_session=True,
-        )
-        if self.process.stdin is None or self.process.stdout is None:
-            raise RuntimeError("Could not open backend stdio pipes")
-        self.selector = selectors.DefaultSelector()
-        self.selector.register(self.process.stdout, selectors.EVENT_READ)
-        self.read_buffer = bytearray()
-        self.next_id = 1
-        self.latest_snapshot: dict[str, Any] | None = None
-        self.snapshot_sink = snapshot_sink
+        super().__init__(executable, snapshot_sink=snapshot_sink, stderr_target=stderr_target)
         self.last_printed_phase = ""
         self.last_printed_status = ""
         self.last_printed_warning = ""
         self.last_printed_at = 0.0
-    def close(self) -> None:
-        try:
-            self.selector.close()
-        except Exception:
-            pass
-        for stream in (self.process.stdin, self.process.stdout):
-            if stream is None:
-                continue
-            try:
-                stream.close()
-            except (BrokenPipeError, OSError):
-                pass
-
-    def _read_message(self, timeout: float) -> dict[str, Any]:
-        deadline = time.monotonic() + timeout
-        while b"\n" not in self.read_buffer:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("Timed out waiting for the landing backend")
-            events = self.selector.select(remaining)
-            if not events:
-                raise TimeoutError("Timed out waiting for the landing backend")
-            chunk = os.read(self.process.stdout.fileno(), 65536)
-            if not chunk:
-                code = self.process.poll()
-                raise RuntimeError(f"Landing backend exited unexpectedly with code {code}")
-            self.read_buffer.extend(chunk)
-        raw_line, _, remainder = self.read_buffer.partition(b"\n")
-        self.read_buffer = bytearray(remainder)
-        line = raw_line.decode("utf-8", errors="replace")
-        try:
-            return json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise RuntimeError(f"Landing backend emitted invalid JSON: {line[:240]!r}") from exc
 
     @staticmethod
     def _number(value: Any, default: float = 0.0) -> float:
@@ -1196,89 +1147,14 @@ class BackendProcess:
         self.last_printed_warning = warning
         self.last_printed_at = now
 
-    def read_until(
-        self,
-        predicate: Callable[[dict[str, Any]], bool],
-        timeout: float,
-    ) -> dict[str, Any]:
-        deadline = time.monotonic() + timeout
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("Timed out waiting for the requested backend state")
-            message = self._read_message(remaining)
-            if message.get("type") == "snapshot":
-                snapshot = message.get("snapshot") or {}
-                self._handle_snapshot(snapshot)
-                if predicate(snapshot):
-                    return snapshot
-
-    def engage(self, method: str, timeout: float = 180.0,
-               acknowledgement_timeout: float = 15.0) -> dict[str, Any]:
-        """Require a fresh engagement decision, including snapshots before the reply.
-
-        Native commands publish their snapshot before the method response. A
-        rejected command can then remain quiet while KSP is paused; discarding
-        that snapshot loses the actual rejection and manufactures a timeout.
-        Successful orbital engagement may likewise enter a blocking coast warp.
-        """
-        before = self.latest_snapshot
-        self.send(method, timeout=timeout)
-
-        def decided(snapshot: dict[str, Any]) -> bool:
-            return (snapshot.get("automationEngaged") is True
-                    or snapshot.get("phase") in TERMINAL_PHASES
-                    or bool(snapshot.get("lastError") or snapshot.get("warningMessage")))
-
-        armed = self.latest_snapshot
-        if armed is None or armed is before or not decided(armed):
-            try:
-                armed = self.read_until(decided, acknowledgement_timeout)
-            except TimeoutError as exc:
-                latest = self.latest_snapshot or {}
-                detail = (latest.get("lastError") or latest.get("warningMessage")
-                          or latest.get("statusMessage") or "no decision snapshot")
-                raise TimeoutError(f"{method} did not confirm engagement: {detail}") from exc
-        if armed.get("automationEngaged") is not True or armed.get("phase") in TERMINAL_PHASES:
-            detail = (armed.get("lastError") or armed.get("warningMessage")
-                      or armed.get("statusMessage") or "automation was not armed")
-            raise RuntimeError(f"{method} rejected: {detail}")
-        return armed
-
-    def send(self, method: str, timeout: float = 30.0, **fields: Any) -> dict[str, Any]:
-        request_id = str(self.next_id)
-        self.next_id += 1
-        request = {"id": request_id, "method": method, **fields}
-        self.process.stdin.write((json.dumps(request, separators=(",", ":")) + "\n").encode("utf-8"))
-        self.process.stdin.flush()
-        deadline = time.monotonic() + timeout
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError(f"Backend method {method} timed out")
-            try:
-                message = self._read_message(remaining)
-            except TimeoutError as exc:
-                raise TimeoutError(f"Backend method {method} timed out (request {request_id})") from exc
-            if message.get("type") == "snapshot":
-                self._handle_snapshot(message.get("snapshot") or {})
-                continue
-            if message.get("type") != "response" or str(message.get("id")) != request_id:
-                continue
-            if not message.get("ok"):
-                raise RuntimeError(str(message.get("error") or f"Backend method {method} failed"))
-            return message.get("result") or {}
-
 
 def validate_plan_qualification(plan: dict[str, Any], require_strict: bool) -> None:
     """Keep orbital entry admission distinct from optional full-route certification."""
-    if plan.get("executionQualified") is not True:
-        if not require_strict and os.environ.get("KSP_LANDER_CONTINUE_UNQUALIFIED") == "1":
-            print("WARNING: Deorbit plan failed entry-stage qualification; continuing with the available plan under authorized warning policy", flush=True)
-        else:
-            raise RuntimeError("Deorbit plan failed entry-stage qualification; execution is blocked")
-    if require_strict and plan.get("targetCaptureAchieved") is not True:
-        raise RuntimeError("Deorbit plan failed required strict full-route qualification; execution is blocked")
+    warning = shared_validate_plan_qualification(
+        plan, require_strict,
+        allow_unqualified=os.environ.get("KSP_LANDER_CONTINUE_UNQUALIFIED") == "1")
+    if warning:
+        print(f"WARNING: {warning}", flush=True)
 
 
 def load_configuration(path: Path, auto_warp: bool) -> dict[str, Any]:

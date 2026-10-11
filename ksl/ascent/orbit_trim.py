@@ -14,6 +14,8 @@ import time
 
 import krpc
 
+from .events import emit_event
+
 
 MIN_BURN_ALTITUDE = 74000.0
 ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
@@ -224,8 +226,12 @@ def main():
     parser.add_argument('--periapsis', type=float, default=90000.0)
     parser.add_argument('--inclination', type=float, default=34.0)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--address', default='127.0.0.1')
+    parser.add_argument('--rpc-port', type=int, default=50000)
+    parser.add_argument('--stream-port', type=int, default=50001)
     args = parser.parse_args()
-    conn = krpc.connect(name='orbit-trim')
+    conn = krpc.connect(name='orbit-trim', address=args.address,
+                        rpc_port=args.rpc_port, stream_port=args.stream_port)
     from .attitude import CustomAutopilot
     # Own attitude controller (no kRPC AutoPilot). OMS burns use reaction wheels
     # only, so the attitude loop is kept slow and gentle.
@@ -253,6 +259,8 @@ def main():
         o = vessel.orbit
         print(f'{tag}: Ap {o.apoapsis_altitude/1000:.2f} km, Pe {o.periapsis_altitude/1000:.2f} km, '
               f'inc {math.degrees(o.inclination):.3f} deg')
+        emit_event('trim-report', tag=tag, apoapsis_m=o.apoapsis_altitude,
+                   periapsis_m=o.periapsis_altitude, inclination_deg=math.degrees(o.inclination))
 
     for stale in list(vessel.control.nodes):
         stale.remove()

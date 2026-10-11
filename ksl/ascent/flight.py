@@ -5,6 +5,7 @@ import math
 import signal
 import time
 from .allocation import Allocation, allocate
+from .events import emit_event, emit_telemetry
 
 ROLL_RESET_GRACE = 60.0
 G0 = 9.80665
@@ -17,6 +18,7 @@ OUTER_SKIPPER_PAD_CAP = 0.45
 THROTTLE_SLEW_PER_SECOND = 0.25
 PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
+
 
 
 SSME_TRIM_MIN = 0.30
@@ -1335,6 +1337,7 @@ class Shuttle:
         self.booster_separation_ut = self.sc.ut
         self.groups = list(self.core_groups)
         self.control_moment_budget = self.cruise_control_moment_budget
+        emit_event('booster-separation')
         print('Boosters shut down/burned out and separated')
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
@@ -1432,6 +1435,7 @@ class Shuttle:
                             converter.start(i)
             except Exception:
                 pass
+            emit_event('et-separation')
             print('External tank separated; AJ10 orbital engines enabled')
             return True
         for group in self.core_groups[1:]:
@@ -1442,6 +1446,7 @@ class Shuttle:
         self.core_groups = [[self.skiff]]
         self.groups = [[self.skiff]]
         self.skiff.thrust_limit = 1
+        emit_event('et-separation')
         print('External tank separated')
         return True
 
@@ -1521,6 +1526,7 @@ def run(args):
             nominal_burn = shuttle.booster_nominal_burn_time()
             print(f'Booster full-throttle burn estimate at current pressure: {nominal_burn:.1f} s')
         if not args.launch:
+            emit_event('preflight', ok=True)
             print('Read-only preflight complete. Use --launch to fly.')
             return
         if body.name != 'Kerbin':
@@ -1672,10 +1678,12 @@ def run(args):
                     f'Core engines did not reach {ignition_fraction:.0%} of required thrust; '
                     'boosters remain unignited and clamps remain attached')
             if full_ssme_before_srb:
+                emit_event('ignition')
                 print(f'SSMEs verified at fixed limiter on clamps: '
                       f'{core_thrust/1000:.0f}/{expected_core_thrust/1000:.0f} kN; '
                       f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
             else:
+                emit_event('ignition', thrust_kn=core_thrust/1000)
                 print(f'Core engines ignited on clamps: {core_thrust/1000:.0f} kN; '
                       f'holding for {args.ssme_lead_time:.1f} s before booster ignition')
 
@@ -1722,6 +1730,7 @@ def run(args):
                     time.sleep(.05)
                 else:
                     raise RuntimeError('Clydesdale ignition failed after stage activation')
+                emit_event('liftoff')
                 print(f'Clydesdales ignited; clamps released; booster thrust '
                       f'{booster_thrust/1000:.0f} kN')
             else:
@@ -1974,11 +1983,13 @@ def run(args):
                                              args.orbit-3000.0, args.meco_periapsis-300.0)))):
                             control.throttle = 0
                             state = 'COAST'
+                            emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                             print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
                                   f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                         elif shuttle.separated and tanks_empty(shuttle):
                             control.throttle = 0
                             state = 'COAST'
+                            emit_event('meco', depleted=True, apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                             print(f'MECO (propellant depleted): Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
                                   f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                     elif state == 'ORBITER_ASCENT':
@@ -2038,6 +2049,7 @@ def run(args):
                         target_direction = (0, 1, 0)
                         control.throttle = min(1, max(.03, (args.orbit-v.orbit.periapsis_altitude)/10000))
                         if v.orbit.periapsis_altitude >= args.orbit-1000:
+                            emit_event('insertion', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                             print('Orbital insertion complete')
                             return
                         if flight.mean_altitude < body.atmosphere_depth:
@@ -2225,6 +2237,7 @@ def run(args):
                                       args.roll_settle_time):
                                     mission_roll_settled = True
                                     print('Limited elevon roll authority retained for ascent attitude hold')
+                                    emit_event('gravity-turn')
                                     print('Physical heads-down roll settled; gravity turn released')
                             else:
                                 roll_settle_since = None
@@ -2278,6 +2291,7 @@ def run(args):
                                 for side in v.available_torque)
                         except Exception:
                             available_torque = ()
+                        emit_telemetry(ut=conn.space_center.ut, state=state, altitude=altitude, apoapsis=v.orbit.apoapsis_altitude, periapsis=v.orbit.periapsis_altitude, mass=v.mass, verticalSpeed=flight.vertical_speed, horizontalSpeed=flight.horizontal_speed, dynamicPressure=flight.dynamic_pressure, gForce=flight.g_force, commandedG=commanded_g, pitch=actual_pitch, heading=actual_heading, roll=actual_roll)
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
                                          v.mass, flight.vertical_speed, flight.horizontal_speed,
