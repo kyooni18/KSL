@@ -4,6 +4,7 @@ import csv
 import math
 import signal
 import time
+from ..kspguard import check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
@@ -63,6 +64,9 @@ def run(args):
         if args.launch:
             validate_launch_vessel(v, conn.space_center)
         shuttle = Shuttle(conn)
+        if shuttle.vehicle_kind == 'orbiter-shuttle':
+            check_orbiter_integrity({"ready": True,
+                                     "partNames": [part.name for part in v.parts.all]})
         body = v.orbit.body
         preflight_altitude = v.flight(body.reference_frame).mean_altitude
         preflight_target_g = ascent_target_g(
