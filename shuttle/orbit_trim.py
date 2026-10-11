@@ -39,6 +39,39 @@ def solve(make_node, error, lo, hi, iterations=26):
     return 0.5*(lo+hi)
 
 
+def thrust_axis_offset(conn, vessel, engines, frame):
+    """Net thrust direction of the active engines minus the vessel's forward axis, in `frame`.
+
+    The OMS pods sit off the centre of mass and are canted, so the resultant force
+    (what actually changes the orbit, once RCS/wheels cancel the leftover torque)
+    is not along the nose. Commanding nose = burn direction - offset aims the
+    resultant force at the burn direction instead.
+    """
+    total = [0.0, 0.0, 0.0]
+    for engine in engines:
+        for thruster in engine.thrusters:
+            direction = thruster.thrust_direction(vessel.reference_frame)
+            weight = engine.thrust if engine.thrust > 1.0 else engine.available_thrust
+            for i in range(3):
+                total[i] += weight/max(len(engine.thrusters), 1)*direction[i]
+    norm = math.sqrt(sum(c*c for c in total))
+    if norm <= 0.0:
+        return (0.0, 0.0, 0.0)
+    thrust_body = tuple(c/norm for c in total)
+    forward_body = (0.0, 1.0, 0.0)
+    conn_sc = conn.space_center
+    t = conn_sc.transform_direction(thrust_body, vessel.reference_frame, frame)
+    f = conn_sc.transform_direction(forward_body, vessel.reference_frame, frame)
+    return tuple(t[i]-f[i] for i in range(3))
+
+
+def aim(conn, vessel, engines, ap, frame, direction):
+    offset = thrust_axis_offset(conn, vessel, engines, frame)
+    command = [direction[i]-offset[i] for i in range(3)]
+    norm = math.sqrt(sum(c*c for c in command)) or 1.0
+    ap.target_direction = tuple(c/norm for c in command)
+
+
 def execute(conn, vessel, node, done, tolerance=0.03):
     sc = conn.space_center
     ctl = vessel.control
@@ -55,22 +88,25 @@ def execute(conn, vessel, node, done, tolerance=0.03):
     print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s, T-{node.time_to:.0f} s')
     # Whatever happens below, the engines must never be left running.
     try:
+        burn_dir = (0.0, 1.0, 0.0)
         ap.reference_frame = node.reference_frame
-        ap.target_direction = (0.0, 1.0, 0.0)
+        aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
         ap.target_roll = float('nan')
         ap.engaged = True
         if start-sc.ut > 90:
             sc.warp_to(start-60)
         while sc.ut < start-30:
+            aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.2)
         ap.reference_frame = node.reference_frame
-        ap.target_direction = (0.0, 1.0, 0.0)
         ctl.rcs = True
         while sc.ut < start:
+            aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.02)
         # Never burn unless the nose is on the burn vector.
         aligned_wait = time.time()
         while ap.error > 3.0 and time.time()-aligned_wait < 120:
+            aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.1)
         ctl.throttle = 1.0
         mass_start = vessel.mass
@@ -89,7 +125,9 @@ def execute(conn, vessel, node, done, tolerance=0.03):
             if ap.error > 10.0:
                 ctl.throttle = 0.0
                 while ap.error > 3.0:
+                    aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
                     time.sleep(0.05)
+            aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
             ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
             time.sleep(0.02)
