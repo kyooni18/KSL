@@ -1404,6 +1404,14 @@ class Shuttle:
             for engine in self.orbiter_engines:
                 engine.active = True
                 engine.thrust_limit = 1.0
+            try:
+                # Orbiter power for the reaction wheels (no solar panels on board).
+                for converter in self.vessel.parts.resource_converters:
+                    for i in range(converter.count):
+                        if not converter.active(i):
+                            converter.start(i)
+            except Exception:
+                pass
             print('External tank separated; AJ10 orbital engines enabled')
             return True
         for group in self.core_groups[1:]:

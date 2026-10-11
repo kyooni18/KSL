@@ -16,6 +16,7 @@ import krpc
 
 
 MIN_BURN_ALTITUDE = 74000.0
+ALIGN_LEAD = 90.0  # s of attitude alignment before every burn
 
 
 def other_apsis(orbit, burn_ut, body_radius):
@@ -105,16 +106,19 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         ap.reference_frame = node.reference_frame
         aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
         ap.target_roll = float('nan')
+        # Fine corrections use reaction wheels only: RCS thrusters leak net
+        # translation into the orbit while they hold attitude.
+        ctl.rcs = False
+        # Leave at least ALIGN_LEAD s of unwarped time to settle on the burn attitude
+        # (the autopilot cannot steer on rails).
+        if start-sc.ut > ALIGN_LEAD+60:
+            sc.warp_to(start-ALIGN_LEAD-30)
         ap.engaged = True
-        if start-sc.ut > 90:
-            sc.warp_to(start-60)
+        ctl.rcs = dv >= 5.0
         while sc.ut < start-30:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.2)
         ap.reference_frame = node.reference_frame
-        # Fine corrections use reaction wheels only: RCS thrusters leak net
-        # translation into the orbit while they hold attitude.
-        ctl.rcs = dv >= 5.0
         while sc.ut < start:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.02)
@@ -174,6 +178,11 @@ def main():
     vessel.control.sas = False
     for engine in vessel.parts.engines:
         engine.active = 'Viking' in engine.part.title or 'Orbital' in engine.part.title
+    # Reaction wheels need power: the orbiter has no panels, only a fuel cell.
+    for converter in vessel.parts.resource_converters:
+        for i in range(converter.count):
+            if not converter.active(i):
+                converter.start(i)
 
     def report(tag):
         o = vessel.orbit
@@ -190,7 +199,7 @@ def main():
         return orbit.radius_at(ut)-body_radius >= MIN_BURN_ALTITUDE
 
     target_inc = math.radians(args.inclination)
-    TOL = 150.0  # m
+    TOL = 50.0  # m
 
     def plan(min_lead=45.0):
         """Next burns from the measured orbit, in an order that never lowers the periapsis
@@ -256,11 +265,11 @@ def main():
             stale.remove()
         return
     for burn in range(1, 7):
-        min_lead = 45.0
+        min_lead = ALIGN_LEAD+30.0
         for _ in range(4):
             t0 = sc.ut
             nodes, final = plan(min_lead)
-            if not nodes or nodes[0].ut-sc.ut >= 30.0:
+            if not nodes or nodes[0].ut-sc.ut >= ALIGN_LEAD+10.0:
                 break
             min_lead = (sc.ut-t0)+60.0
         if not nodes:
