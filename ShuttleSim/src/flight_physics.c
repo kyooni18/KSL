@@ -16,6 +16,12 @@ void flight_physics_airborne_step(const KerbinWorld *world,
     Vec3 attitude_vair = v3_sub(v, world_atmosphere_velocity_i(world, p));
     double attitude_speed = v3_norm(attitude_vair);
     double attitude_q = 0.5 * attitude_atm.density_kg_m3 * attitude_speed * attitude_speed;
+    if(state->attitude.direct&&state->attitude.direct_body_coordinates&&
+       !state->attitude.body_rates_initialized&&attitude_q>=state->attitude.direct_min_q_pa){
+        state->body_q_i=attitude_body_quat_wind(p,attitude_vair,
+                                               state->attitude.aoa_rad,
+                                               state->attitude.bank_rad);
+    }
 
     AeroForces applied_aero;
     applied_aero = aero_compute(world, aero, p, v, ut, input->mass_kg,
@@ -34,14 +40,19 @@ void flight_physics_airborne_step(const KerbinWorld *world,
     state->velocity_i_mps = v3_add(v, v3_scale(accel, dt));
     state->position_i_m = v3_add(p, v3_scale(state->velocity_i_mps, dt));
 
-    attitude_step(&state->attitude, attitude_q, dt);
+    Vec3 vair = v3_sub(state->velocity_i_mps,
+                       world_atmosphere_velocity_i(world, state->position_i_m));
+    bool body_step=attitude_step_body(&state->attitude,&state->body_q_i,
+                                      state->position_i_m,vair,attitude_q,dt);
+    if(!body_step){
+        state->attitude.body_rates_initialized=false;
+        attitude_step(&state->attitude, attitude_q, dt);
+        state->body_q_i = attitude_body_quat(state->position_i_m, vair,
+                                             state->attitude.aoa_rad,
+                                             state->attitude.bank_rad);
+    }
 
     state->aero = aero_compute(world, aero, state->position_i_m,
                                state->velocity_i_mps, ut + dt, input->mass_kg,
                                state->attitude.aoa_rad, state->attitude.bank_rad);
-    Vec3 vair = v3_sub(state->velocity_i_mps,
-                       world_atmosphere_velocity_i(world, state->position_i_m));
-    state->body_q_i = attitude_body_quat(state->position_i_m, vair,
-                                         state->attitude.aoa_rad,
-                                         state->attitude.bank_rad);
 }

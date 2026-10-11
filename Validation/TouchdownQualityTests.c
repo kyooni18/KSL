@@ -12,6 +12,45 @@
 #include "shuttlesim/aero.h"
 #include "shuttlesim/attitude.h"
 #include "shuttlesim/world.h"
+#include "shuttlesim/math3.h"
+
+static void test_body_coordinate_kinematics(void) {
+    Vec3 position=ss_v3(0,0,600100),velocity=ss_v3(100,0,0);
+    for(int bank=0;bank<=60;bank+=60){
+        AttitudeModel a;
+        attitude_seed(&a);
+        a.direct=true;a.direct_body_coordinates=true;
+        a.aoa_rad=deg2rad(10);a.bank_rad=deg2rad(bank);
+        a.direct_pitch_stiffness_per_kpa=0;
+        a.direct_yaw_stiffness_per_kpa=0;
+        Quat body=attitude_body_quat_wind(position,velocity,a.aoa_rad,a.bank_rad);
+        Quat initial=body;
+        assert(attitude_step_body(&a,&body,position,velocity,1000,.1));
+        assert(fabs(rad2deg(a.aoa_rad)-10)<1e-9);
+        assert(fabs(rad2deg(a.bank_rad)-bank)<1e-9);
+        assert(fabs(a.sideslip_rad)<1e-9);
+        /* No torque: changing the flight path cannot rotate the body. This
+           holds at bank as well as wings-level; incidence/slip must change. */
+        Vec3 new_velocity=ss_v3(100*cos(deg2rad(5)),0,100*sin(deg2rad(5)));
+        assert(attitude_step_body(&a,&body,position,new_velocity,1000,.1));
+        assert(fabs(body.w-initial.w)+fabs(body.x-initial.x)+
+               fabs(body.y-initial.y)+fabs(body.z-initial.z)<1e-12);
+        assert(fabs(a.body_pitch_rate_rad_s)<1e-12);
+        assert(fabs(a.aoa_rad-deg2rad(10))>deg2rad(1));
+        if(bank==0)assert(fabs(rad2deg(a.aoa_rad)-5)<1e-9);
+        else assert(fabs(a.sideslip_rad)>deg2rad(1));
+    }
+    AttitudeModel a;
+    attitude_seed(&a);
+    a.direct=true;a.direct_body_coordinates=true;
+    a.direct_pitch_stiffness_per_kpa=0;
+    a.direct_yaw_stiffness_per_kpa=0;
+    attitude_set_inputs(&a,1,0,0);
+    Quat body=attitude_body_quat_wind(position,velocity,0,0);
+    assert(attitude_step_body(&a,&body,position,velocity,1000,.1));
+    assert(fabs(rad2deg(a.body_pitch_rate_rad_s)-.4)<1e-9);
+    assert(fabs(rad2deg(a.aoa_rad)-.04)<1e-9);
+}
 
 static void load_force_book(const char *path, VesselPhysicsModel *model) {
     FILE *f = fopen(path, "r");
@@ -53,6 +92,7 @@ static AerodynamicModel envelope_at_mach(const AerodynamicEnvelope *e, double ma
 }
 
 int main(void) {
+    test_body_coordinate_kinematics();
     setenv("KSP_LANDER_FINAL_APPROACH_TEST", "1", 1);
     const char *scenario_path = "ShuttleSim/scenarios/final-mm305-ideal-3p5km-185mps-aoa3.ini";
     Scenario sc;
@@ -116,6 +156,24 @@ int main(void) {
     char decode_err[256];
     assert(shuttle_sim_decode_telemetry(json_buf, &planet, NULL,
                                         &t0, &vstate0, decode_err, sizeof(decode_err)));
+    assert(!t0.has_body_pitch_rate);
+    SimState legacy_state=sim.state;
+    sim.state.attitude.direct=true;
+    sim.state.attitude.direct_body_coordinates=true;
+    sim.state.attitude.body_rates_initialized=true;
+    sim.state.attitude.body_pitch_rate_rad_s=deg2rad(.4);
+    sim.state.attitude.body_roll_rate_rad_s=deg2rad(.2);
+    sim.state.attitude.body_yaw_rate_rad_s=deg2rad(-.3);
+    sim_build_telemetry_json(&sim,50.0,json_buf,sizeof(json_buf));
+    Telemetry body_t;
+    VehicleState body_state;
+    assert(shuttle_sim_decode_telemetry(json_buf,&planet,NULL,
+                                      &body_t,&body_state,decode_err,sizeof(decode_err)));
+    assert(body_t.has_body_pitch_rate&&body_t.has_body_roll_rate&&body_t.has_body_yaw_rate);
+    assert(fabs(body_t.body_pitch_rate-.4)<1e-6);
+    assert(fabs(body_t.body_roll_rate-.2)<1e-6);
+    assert(fabs(body_t.body_yaw_rate+.3)<1e-6);
+    sim.state=legacy_state;
     shuttle_sim_prepare_guidance_telemetry(&t0, &cfg, &planet);
 
     AerodynamicModel aero0 = envelope_at_mach(&env, t0.mach);

@@ -518,12 +518,26 @@ bool shuttle_sim_decode_telemetry(const char *packet,
         }
     }
 
-    /* ShuttleSim currently exposes controlled AoA/bank response, but not a
-       rigid-body angular-velocity vector.  Do not manufacture body p/q/r from
-       coordinate derivatives; telemetry_init deliberately leaves these false. */
+    /* Only the opt-in quaternion plant identifies body angular velocity.
+       Legacy incidence/servo derivatives cannot establish body p/q/r. */
     t->has_body_pitch_rate = false;
     t->has_body_roll_rate = false;
     t->has_body_yaw_rate = false;
+    if(bool_value(&doc,attitude,"body_rates_available",false)&&
+       required_number(&doc,attitude,"body_pitch_rate_deg_s")&&
+       required_number(&doc,attitude,"body_roll_rate_deg_s")&&
+       required_number(&doc,attitude,"body_yaw_rate_deg_s")&&
+       required_number(&doc,attitude,"body_pitch_deg")&&
+       required_number(&doc,attitude,"body_roll_deg")&&
+       required_number(&doc,attitude,"body_heading_deg")){
+        t->body_pitch_rate=number_value(&doc,attitude,"body_pitch_rate_deg_s",0.0);
+        t->body_roll_rate=number_value(&doc,attitude,"body_roll_rate_deg_s",0.0);
+        t->body_yaw_rate=number_value(&doc,attitude,"body_yaw_rate_deg_s",0.0);
+        t->has_body_pitch_rate=t->has_body_roll_rate=t->has_body_yaw_rate=true;
+        t->pitch=number_value(&doc,attitude,"body_pitch_deg",t->pitch);
+        t->roll=number_value(&doc,attitude,"body_roll_deg",t->roll);
+        t->heading=number_value(&doc,attitude,"body_heading_deg",t->heading);
+    }
 
     fill_orbit_fields(planet, state, t);
     if (error && error_size) error[0] = '\0';

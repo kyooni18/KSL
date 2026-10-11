@@ -119,6 +119,55 @@ void attitude_step(AttitudeModel *a,double dynamic_pressure_pa,double dt){
               a->roll_wn,a->roll_zeta,a->max_roll_rate_rad_s,
               a->max_roll_accel_rad_s2,roll_authority,dt,true);
 }
+bool attitude_step_body(AttitudeModel *a,Quat *body,Vec3 position,Vec3 vair,double q,double dt){
+    if(!a||!body||!a->direct||!a->direct_body_coordinates||
+       !isfinite(q)||q<a->direct_min_q_pa||!isfinite(dt)||dt<=0.0||
+       !isfinite(v3_norm(vair))||v3_norm(vair)<1e-6)return false;
+    /* A checkpoint does not identify body rates. Start at rest rather than
+       manufacturing angular velocity from incidence/flight-frame rates. */
+    if(!a->body_rates_initialized){
+        a->body_pitch_rate_rad_s=a->body_roll_rate_rad_s=a->body_yaw_rate_rad_s=0.0;
+        a->body_rates_initialized=true;
+    }
+    double kpa=q/1000.0;
+    double stiffness=a->direct_pitch_stiffness_per_kpa*kpa;
+    double damping=2.0*a->direct_pitch_damping_ratio*sqrt(fmax(stiffness,0.0));
+    double pitch_acc=fmin(a->direct_pitch_accel_max,a->direct_pitch_accel_per_kpa*kpa)*a->input_pitch-
+        stiffness*(a->aoa_rad-a->direct_trim_aoa_rad)-damping*a->body_pitch_rate_rad_s;
+    double roll_acc=fmin(a->direct_roll_accel_max,a->direct_roll_accel_per_kpa*kpa)*a->input_roll-
+        a->direct_roll_damping_s_inv*sqrt(fmax(kpa,0.0)/10.0)*a->body_roll_rate_rad_s;
+    double weathercock=a->direct_yaw_stiffness_per_kpa*kpa;
+    /* Positive body yaw turns the nose right and reduces positive sideslip. */
+    double yaw_acc=fmin(a->direct_yaw_accel_max,a->direct_yaw_accel_per_kpa*kpa)*a->input_yaw+
+        weathercock*a->sideslip_rad-
+        2.0*0.3*sqrt(fmax(weathercock,0.0))*a->body_yaw_rate_rad_s;
+    a->body_pitch_rate_rad_s+=pitch_acc*dt;
+    a->body_roll_rate_rad_s+=roll_acc*dt;
+    a->body_yaw_rate_rad_s+=yaw_acc*dt;
+    Vec3 omega=ss_v3(a->body_roll_rate_rad_s,a->body_pitch_rate_rad_s,a->body_yaw_rate_rad_s);
+    double rate=v3_norm(omega);
+    if(rate>1e-12)*body=quat_normalized(quat_mul(*body,quat_axis_angle(omega,rate*dt)));
+
+    double old_aoa=a->aoa_rad,old_bank=a->bank_rad,old_beta=a->sideslip_rad;
+    Vec3 flight=v3_normalized(vair);
+    Vec3 forward=quat_rotate(*body,ss_v3(1,0,0));
+    Vec3 right=quat_rotate(*body,ss_v3(0,1,0));
+    Vec3 down=quat_rotate(*body,ss_v3(0,0,1));
+    a->aoa_rad=atan2(v3_dot(flight,down),v3_dot(flight,forward));
+    a->sideslip_rad=asin(ss_clampd(v3_dot(flight,right),-1.0,1.0));
+    Vec3 wind_right=v3_cross(flight,v3_normalized(position));
+    if(v3_norm(wind_right)>1e-8){
+        wind_right=v3_normalized(wind_right);
+        Vec3 wind_up=v3_normalized(v3_cross(wind_right,flight));
+        Vec3 body_up=v3_scale(down,-1.0);
+        a->bank_rad=atan2(v3_dot(body_up,wind_right),v3_dot(body_up,wind_up));
+    }
+    a->aoa_rate_rad_s=wrap_pi(a->aoa_rad-old_aoa)/dt;
+    a->bank_rate_rad_s=wrap_pi(a->bank_rad-old_bank)/dt;
+    a->sideslip_rate_rad_s=wrap_pi(a->sideslip_rad-old_beta)/dt;
+    a->cmd_aoa_rad=a->aoa_rad;a->cmd_bank_rad=a->bank_rad;
+    return true;
+}
 Quat attitude_body_quat(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 flight=v3_normalized(vair), radial=v3_normalized(p);
     Vec3 right=v3_normalized(v3_cross(flight,radial)); if(v3_norm(right)<1e-8)right=ss_v3(0,1,0);
@@ -131,6 +180,19 @@ Quat attitude_body_quat(Vec3 p,Vec3 vair,double aoa,double bank){
     Vec3 body_down=v3_scale(body_up,-1.0);
     /* Aerospace right-handed body frame: +X forward, +Y right, +Z down. */
     return quat_from_basis(body_fwd,body_right,body_down);
+}
+Quat attitude_body_quat_wind(Vec3 p,Vec3 vair,double aoa,double bank){
+    Vec3 flight=v3_normalized(vair),radial=v3_normalized(p);
+    Vec3 right=v3_normalized(v3_cross(flight,radial));
+    if(v3_norm(right)<1e-8)right=ss_v3(0,1,0);
+    Vec3 up=v3_normalized(v3_cross(right,flight));
+    /* Bank rotates the lift plane about velocity before incidence is applied.
+       Rolling about the already pitched body axis changes the actual AoA. */
+    up=v3_rotate_axis(up,flight,bank);
+    Vec3 forward=v3_add(v3_scale(flight,cos(aoa)),v3_scale(up,sin(aoa)));
+    Vec3 body_up=v3_add(v3_scale(up,cos(aoa)),v3_scale(flight,-sin(aoa)));
+    Vec3 body_right=v3_normalized(v3_cross(forward,body_up));
+    return quat_from_basis(forward,body_right,v3_scale(body_up,-1.0));
 }
 
 #include <stdio.h>
@@ -151,6 +213,7 @@ bool attitude_load_ini(AttitudeModel *a,const char *path){
         char *eq=strchr(p,'='); if(!eq) continue; *eq=0;
         char *k=att_trim(p),*v=att_trim(eq+1); double x=strtod(v,NULL);
         if(!strcmp(k,"pitch_wn"))a->pitch_wn=x;
+        else if(!strcmp(k,"direct_body_coordinates"))a->direct_body_coordinates=(x==1.0);
         else if(!strcmp(k,"pitch_zeta"))a->pitch_zeta=x;
         else if(!strcmp(k,"roll_wn"))a->roll_wn=x;
         else if(!strcmp(k,"roll_zeta"))a->roll_zeta=x;
