@@ -52,7 +52,9 @@ lands short: from that energy state the runway is out of reach at the learned
 L/D (~3.8). **This fix makes the flare happen. It does not make L7 reach the
 runway.** That needs the TAEM energy work below.
 
-**Not yet verified live.** The change has only flown in ShuttleSim.
+**Live follow-up:** the approved MM305 continuation on 2026-10-11 verified
+low-energy Final delivery and flare, but landed slow/long and stopped beyond
+the configured runway. See [live verification](Experiments/STS-Landing-20261011/L7-Live-Flare-Verification/README.md).
 
 ## Evidence on flare quality
 
@@ -63,6 +65,7 @@ runway.** That needs the TAEM energy work below.
 | L5 golden | ShuttleSim | 60.7 m/s | 4.94 m/s | on runway |
 | L7 | live | no flare | ~25 m/s | −75 m |
 | L7 (fixed) | ShuttleSim | 63.3 m/s | 1.25 m/s | −962 m |
+| L7 (fixed, MM305 continuation) | live | 52.77 m/s before contact | 2.11 m/s before contact | 1531 m; stopped 2646 m, beyond runway |
 
 The touchdown gate is 75 ± 15 % (63.75–86.25 m/s), so live L5 and L6 both
 landed **slow and long**: the float bleeds ~20 m/s past the aim point. The
@@ -81,8 +84,12 @@ pitch response matches live.
 | 5. Sim/live gap | Open. Blocks trustworthy flare tuning. |
 
 ShuttleSim now: L5 passes every acceptance gate (66.1 m/s, 1.84 m/s sink).
-L7 lands with a flare (55.5 m/s, 0.91 m/s sink) but 226 m short. Nothing
-here has flown live.
+L7 lands with a flare (55.5 m/s, 0.91 m/s sink) but 226 m short. The subsequent
+live MM305 check verified Final delivery and flare but landed 1531 m along
+and stopped 146 m beyond the configured runway, with a 230 kg mass loss during
+overrun. The universal backstop and full deorbit/MM304 route remain unverified
+live. Grounded warning recovery also failed to terminate; operator abort was
+needed after stopping. No landing acceptance gates were weakened.
 
 ## Plan, in priority order
 
