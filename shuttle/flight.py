@@ -1572,6 +1572,7 @@ def run(args):
         ap_owns_roll = False
         upright_configured = False
         et_cleared = False
+        sep_handled = False
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
@@ -2041,6 +2042,12 @@ def run(args):
                             if peg_phase_g is not None:
                                 phase_max_g = peg_phase_g
                             target_g = min(target_g, phase_max_g)
+                        if shuttle.separated and not sep_handled:
+                            # New vehicle: the integrator holds the stack's trim and the
+                            # disturbance model the old CoM; start both fresh.
+                            ap.ctrl.reset_integral()
+                            ap.ctrl._last_slow = 0.0
+                            sep_handled = True
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=1/args.hz, throttle_slew=args.throttle_slew)
@@ -2077,7 +2084,8 @@ def run(args):
                                 # rolling, so hold the nose itself on target during the upright
                                 # roll and blend the thrust correction back in over 6 s after.
                                 if roll_reset and shuttle.post_sep_roll_done_ut is None:
-                                    blend = 0.0
+                                    # ramp out over 4 s: an instant switch steps the nose 15 deg
+                                    blend = max(0.0, 1.0-(conn.space_center.ut-roll_reset_ut)/4.0)
                                 elif shuttle.post_sep_roll_done_ut is not None:
                                     blend = min(1.0, (conn.space_center.ut -
                                                       shuttle.post_sep_roll_done_ut)/6.0)
@@ -2161,7 +2169,7 @@ def run(args):
                         if settle_nose_error > 5.0:
                             roll_control = 0.0
                         if upright_phase:
-                            if roll_error < 4.0 and abs(body_roll_rate) < 3.0:
+                            if roll_error < 6.0 and abs(body_roll_rate) < 3.0:
                                 if upright_since is None:
                                     upright_since = conn.space_center.ut
                                 elif conn.space_center.ut-upright_since >= 1.0:
