@@ -302,3 +302,10 @@ handoff is a different station. Investigate a steep-segment/recovery profile
 under propagated load/q/incidence/response limits. No reference ceiling or
 acceptance gate is changed by this evidence, and slow live touchdown does
 not constitute current nominal landing acceptance.
+
+[Sustained descent/recovery experiment](Experiments/STS-Landing-20261011/MM305-Descent-Recovery-Profile/README.md)
+finds no feasible focused route under either the existing 24° bound or explicit
+temporary 36° variants. Best tracking improves only from 3.04 to 2.90 km and
+exits at 74 m/s. The broader-bound experiment is rejected; production gates
+remain unchanged. A station-only geometric shape and steeper scalar bound
+are insufficient; tie the reference to propagated Mach/q/lateral lift reserve.
