@@ -66,3 +66,15 @@ def test_abort_before_run_never_starts_a_program(tmp_path):
     with mock.patch("ksl.programs.AscentProgram.run") as run:
         assert controller.run().state == "aborted"
         run.assert_not_called()
+
+
+def test_exited_parent_cannot_leave_descendant_holding_output_open(tmp_path):
+    controller = MissionController(load_config(), runs_root=tmp_path)
+    ctx = Context(controller.config, controller.log, "live", controller.stop_event,
+                  controller._advance, controller._checkpoint)
+    script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)'])"
+    try:
+        with pytest.raises(Exception, match="descendant kept its output pipe open"):
+            run_child(ctx, "test", [sys.executable, "-c", script], None, lambda _: None)
+    finally:
+        controller.log.close()

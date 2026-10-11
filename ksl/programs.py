@@ -111,8 +111,14 @@ def run_child(ctx: Context, name: str, argv: list[str], env: dict[str, str] | No
         thread.start()
         stop_sent_at: float | None = None
         output_closed = False
+        parent_exited_at: float | None = None
         try:
             while not output_closed or proc.poll() is None:
+                if proc.poll() is not None and parent_exited_at is None:
+                    parent_exited_at = time.monotonic()
+                if not output_closed and parent_exited_at is not None and \
+                        time.monotonic() - parent_exited_at > 5.0:
+                    raise BackendError(f"{name}: program exited but a descendant kept its output pipe open")
                 if ctx.stop_event.is_set() and stop_sent_at is None:
                     ctx.log.log(f"{name}: stop requested; sending SIGINT for the safe-release path", "warning")
                     _signal_child_group(proc, signal.SIGINT)

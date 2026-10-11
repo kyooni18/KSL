@@ -86,3 +86,10 @@ This log is updated at implementation/validation checkpoints.
   checkpoint. Guard confirmed the checkpoint settled at UT 6566.83, 26.9 km.
   Live MM305 continuation with strict runway completion is in progress; its run
   record is `runs/20261011T161341Z-live-runway-bound/`.
+
+## Subprocess orphan bound
+
+- Added a five-second post-exit output-pipe deadline. If a child flight program
+  exits while a descendant keeps its stdout pipe open, the mission fails and
+  kills the owned process group rather than waiting forever. A real spawned
+  descendant test passes; all five process-lifecycle tests pass (6.97 s).
