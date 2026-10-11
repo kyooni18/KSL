@@ -293,3 +293,12 @@ change the analytic reference but leave all 2,184 focused trial outcomes and
 selected-profile early commands unchanged. The ~4 m local correction is too
 small to address the later 3 km departure. The experiment is rejected as an
 admission remedy; full-path propagated authority/energy constraints are needed.
+
+[Measured TAEM envelope](Experiments/STS-Landing-20261011/Live-TAEM-Envelope/README.md)
+shows L5/L6 spent about 130 seconds with actual FPA steeper than −24° and
+reached −35° before recovering for Final. Near the aligned 8 km station they
+had 141–142 m/s, versus original L7's 101 m/s; their later 129–131 m/s Final
+handoff is a different station. Investigate a steep-segment/recovery profile
+under propagated load/q/incidence/response limits. No reference ceiling or
+acceptance gate is changed by this evidence, and slow live touchdown does
+not constitute current nominal landing acceptance.
