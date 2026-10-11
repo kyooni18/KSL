@@ -93,5 +93,9 @@ gear down, failed runway acceptance. Run directories:
 production range setting changed. The candidate has not flown live and was
 removed from the working source after `make -C CLanding qualification` failed
 the admission fixture non-vacuity assertion (0/5 qualified routes). Unit tests
-(104 plus 44 subtests) and native stack checks passed. A baseline comparison
-is pending; no test gate was weakened.
+(104 plus 44 subtests) and native stack checks passed. The same standalone
+`mm305-feasibility-test` fails on the unchanged baseline `d9881a1` with the
+same 0/5 non-vacuity assertion. The candidate did not create this observed
+failure, but remains set aside pending investigation of admission coverage.
+No test gate was weakened. Logs: `/tmp/ksl-predictor-parity-qualification.log`
+and `/tmp/ksl-baseline-feasibility.log`.
