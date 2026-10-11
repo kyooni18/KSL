@@ -1779,6 +1779,10 @@ def run(args):
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                         mission_roll_commanded = True
+                        # Roll once, straight to the launch-azimuth roof orientation: with
+                        # the pad heading kept, the roll stopped short and had to roll
+                        # again when the heading slewed (94 deg on a polar launch).
+                        args.heading = target_heading
                         print(f'Physical orbiter-side roll started: earthward; '
                               f'elevon roll enabled at 60% authority')
                     roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
