@@ -25,11 +25,13 @@ def oms_propellant_mass(vessel):
 
 
 def other_apsis(orbit, burn_ut, body_radius):
-    """Altitude of the apsis opposite the burn point (which may be Ap or Pe after the burn)."""
+    """Altitude of the apsis opposite the burn point (the burn point is an apsis).
+
+    Ap + Pe - r_burn is smooth and monotonic in the burn, unlike picking whichever
+    apsis is farther from the burn point, which flips near a circular orbit.
+    """
     r_b = orbit.radius_at(burn_ut)-body_radius
-    if abs(orbit.apoapsis_altitude-r_b) > abs(orbit.periapsis_altitude-r_b):
-        return orbit.apoapsis_altitude
-    return orbit.periapsis_altitude
+    return orbit.apoapsis_altitude+orbit.periapsis_altitude-r_b
 
 
 def solve(make_node, error, lo, hi, iterations=26):
