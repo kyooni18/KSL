@@ -1,0 +1,90 @@
+{
+  "baseline/l5": {
+    "touchdown_speed_mps": 66.129,
+    "touchdown_sink_mps": 1.844,
+    "touchdown_along_m": 297.613,
+    "stop_along_m": 1101.616,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": true,
+    "touchdown_gear": true,
+    "success": true
+  },
+  "baseline/l7": {
+    "touchdown_speed_mps": 61.929,
+    "touchdown_sink_mps": 3.353,
+    "touchdown_along_m": -376.232,
+    "stop_along_m": 0.0,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": false,
+    "touchdown_gear": true,
+    "success": false
+  },
+  "early-latch/l5": {
+    "touchdown_speed_mps": 82.451,
+    "touchdown_sink_mps": 4.238,
+    "touchdown_along_m": -531.626,
+    "stop_along_m": 0.0,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": false,
+    "touchdown_gear": true,
+    "success": false
+  },
+  "early-latch/l7": {
+    "touchdown_speed_mps": 51.998,
+    "touchdown_sink_mps": 3.337,
+    "touchdown_along_m": 209.03,
+    "stop_along_m": 0.0,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": true,
+    "touchdown_gear": true,
+    "success": false
+  },
+  "early-latch+fix/l5": {
+    "touchdown_speed_mps": 82.451,
+    "touchdown_sink_mps": 4.238,
+    "touchdown_along_m": -531.626,
+    "stop_along_m": 0.0,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": false,
+    "touchdown_gear": true,
+    "success": false
+  },
+  "early-latch+fix/l7": {
+    "touchdown_speed_mps": 56.054,
+    "touchdown_sink_mps": 1.415,
+    "touchdown_along_m": 38.638,
+    "stop_along_m": 687.629,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": true,
+    "touchdown_gear": true,
+    "success": false
+  },
+  "fix-only/l5": {
+    "touchdown_speed_mps": 70.908,
+    "touchdown_sink_mps": 1.186,
+    "touchdown_along_m": 32.39,
+    "stop_along_m": 913.403,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": true,
+    "touchdown_gear": true,
+    "success": true
+  },
+  "fix-only/l7": {
+    "touchdown_speed_mps": 61.929,
+    "touchdown_sink_mps": 3.353,
+    "touchdown_along_m": -376.232,
+    "stop_along_m": 0.0,
+    "bounce_count": 0,
+    "crashed": false,
+    "on_runway": false,
+    "touchdown_gear": true,
+    "success": false
+  }
+}
