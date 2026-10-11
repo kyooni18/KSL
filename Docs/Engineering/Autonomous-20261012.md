@@ -503,3 +503,10 @@ focused replay tests pass, including the clock regression.
   four-ET-clamp derivative with both wings set to Root autostruts and rigid
   attachment is prepared for the next controlled test; its STS vessel still
   has 41 serialized parts.
+- The four-ET Root+Rigid run also lost one four-part wing assembly about two
+  seconds after booster release: 29 parts/two wings at UT 2809.27, then 25
+  parts/one wing at UT 2809.45, q about 743 Pa, roll near 180 deg. It did
+  not make the vehicle safe. The new unattended safety path was exercised in
+  live KSP: it left throttle 0, paused at UT 2809.59, and wrote
+  `ksl-structural-20261011T190007060948Z.sfs`. A further test will lower
+  the separation threshold to q <= 100 Pa on the original four-ET derivative.
