@@ -17,6 +17,7 @@ from unittest import mock
 from ksl import cli, programs
 from ksl.config import ConfigError, config_from_snapshot, load_config
 from ksl.controller import MissionController, continue_phase
+from ksl.kspguard import GuardError, STS_REQUIRED_PARTS, check_orbiter_integrity
 from ksl.paths import BACKEND, CLANDING, ROOT
 from ksl.phases import BACKEND_PHASES, BACKEND_FAILURE_PHASES, Phase, PhaseMachine, PhaseTransitionError
 from ksl.replay import Recording
@@ -24,6 +25,18 @@ from ksl.runlog import Event, MissionStatus, RunLog, read_events, read_telemetry
 from ksl.scenarios import SCENARIOS
 
 FAKES = Path(__file__).resolve().parent / "fakes"
+
+
+class OrbiterIntegrityTests(unittest.TestCase):
+    def test_intact_sts_is_accepted(self):
+        names = [name for name, count in STS_REQUIRED_PARTS.items() for _ in range(count)]
+        self.assertEqual(check_orbiter_integrity({"ready": True, "partNames": names})["partNames"], names)
+
+    def test_detached_wing_and_dependents_block_deorbit(self):
+        names = [name for name, count in STS_REQUIRED_PARTS.items() for _ in range(count)]
+        names.remove("benjee10.shuttle.deltaWing")
+        with self.assertRaisesRegex(GuardError, "deltaWing"):
+            check_orbiter_integrity({"ready": True, "partNames": names})
 
 
 class PhaseModelTests(unittest.TestCase):
@@ -158,6 +171,8 @@ class LandingProgramTests(ControllerTestCase):
         c = self.controller(mode="live", start=Phase.MM305)
         c.config.data["checkpoints"]["kspSaveOnPhases"] = ["final-approach"]
         patches = [mock.patch.object(programs, "BACKEND", FAKES / "fake_backend.py"),
+                   mock.patch.object(programs, "probe_orbiter_integrity",
+                                     return_value={"partNames": ["fake-part"]}),
                    mock.patch.object(programs, "prepare_reentry_direct_control",
                                      return_value={"meanAltitude": 20000.0}),
                    mock.patch.dict("os.environ", {"FAKE_BACKEND_MODE": mode})]

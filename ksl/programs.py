@@ -30,7 +30,7 @@ from typing import Any, Callable
 from .backend import BackendClient, BackendError, snapshot_summary, validate_plan_qualification
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
-from .kspguard import prepare_reentry_direct_control, set_ksp_paused
+from .kspguard import prepare_reentry_direct_control, probe_orbiter_integrity, set_ksp_paused
 from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
@@ -383,6 +383,8 @@ class LandingProgram(Program):
         if snap.get("connectionStatus") != "connected":
             raise ConnectionFailure(str(snap.get("lastError") or "native kRPC connection failed"))
         ctx.log.log("Landing backend connected to KSP")
+        integrity = probe_orbiter_integrity(env)
+        ctx.log.log(f"Orbiter structural inventory verified: {len(integrity['partNames'])} parts")
 
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)

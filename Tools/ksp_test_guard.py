@@ -142,6 +142,7 @@ def probe() -> int:
                 "meanAltitude": float(flight.mean_altitude),
                 "mass": float(vessel.mass),
                 "dryMass": float(vessel.dry_mass),
+                "partNames": [str(part.name) for part in vessel.parts.all],
                 "availableThrust": float(vessel.available_thrust),
                 "railsWarpFactor": int(sc.rails_warp_factor),
                 "physicsWarpFactor": int(sc.physics_warp_factor),

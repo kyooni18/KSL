@@ -226,6 +226,9 @@ def run(args):
                   f'+{args.roll_start:.0f} m climb; manual roll cap {args.roll_rate:.1f} deg/s; '
                   f'gravity turn uses prograde-AoA guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
             clamps = list(v.parts.launch_clamps)
+            # The pad stack is the last intact reference before staging. A wing
+            # joint can fail at clamp release, before the first ascent sample.
+            prelaunch_part_count = len(v.parts.all)
             if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
                 if control.stage_lock:
                     raise RuntimeError('Staging is locked; cannot ignite Clydesdales and release clamps')
@@ -335,6 +338,15 @@ def run(args):
                     time.sleep(.05)
                 else:
                     raise RuntimeError('Clydesdale ignition failed after stage activation')
+                expected_after_clamps = prelaunch_part_count - len(clamps)
+                actual_after_clamps = len(v.parts.all)
+                if actual_after_clamps < expected_after_clamps:
+                    control.throttle = 0
+                    raise RuntimeError(
+                        'Part loss at clamp release: expected at least '
+                        f'{expected_after_clamps} parts after {len(clamps)} clamps, '
+                        f'found {actual_after_clamps}')
+                baseline_part_count = expected_after_clamps
                 emit_event('liftoff')
                 print(f'Clydesdales ignited; clamps released; booster thrust '
                       f'{booster_thrust/1000:.0f} kN')

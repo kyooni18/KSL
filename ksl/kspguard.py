@@ -14,6 +14,7 @@ import math
 import os
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,37 @@ GUARD_SCRIPT = TOOLS / "ksp_test_guard.py"
 
 class GuardError(RuntimeError):
     pass
+
+
+STS_REQUIRED_PARTS = {
+    "benjee10.shuttle.deltaWing": 2,
+    "benjee10.shuttle.elevon1": 2,
+    "benjee10.shuttle.elevon2": 2,
+    "benjee10.shuttle.mainGear": 2,
+    "benjee10.shuttle.noseGear": 1,
+    "benjee10.shuttle.bodyFlap": 1,
+}
+
+
+def check_orbiter_integrity(payload: dict[str, Any]) -> dict[str, Any]:
+    """Reject a Benjee STS that cannot safely fly or land after deorbit."""
+    if payload.get("ready") is not True:
+        raise GuardError(f"Active vessel probe failed: {payload}")
+    names = payload.get("partNames")
+    if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+        raise GuardError("Active vessel probe did not include a part inventory")
+    if not any(name.startswith("benjee10.shuttle.") for name in names):
+        return payload
+    counts = Counter(names)
+    missing = {name: required - counts[name] for name, required in STS_REQUIRED_PARTS.items()
+               if counts[name] < required}
+    if missing:
+        raise GuardError(f"STS orbiter structural integrity failed: missing {missing}")
+    return payload
+
+
+def probe_orbiter_integrity(env: dict[str, str] | None = None) -> dict[str, Any]:
+    return check_orbiter_integrity(run_guard("probe", env=env))
 
 
 def _number(value: Any) -> float:
