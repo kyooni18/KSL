@@ -537,5 +537,8 @@ focused replay tests pass, including the clock regression.
   reducing node delta-v to about 0.01 m/s: pitch/yaw controls saturated,
   throttle remained zero, and apoapsis stayed ~27 m below target. A short,
   manual RCS-assisted attitude reacquisition completed that burn; the second
-  OMS burn then completed without intervention. A bounded automatic recovery
-  is needed so future unattended trims do not hang on this condition.
+  OMS burn then completed without intervention. Orbit trim now waits up to
+  five seconds for reaction-wheel alignment, then enables RCS for bounded
+  attitude reacquisition. It turns RCS off before thrust and raises a clear
+  error if alignment still fails, including when attitude is lost mid-burn;
+  focused tests cover recovery and timeout.

@@ -108,6 +108,23 @@ def aim(conn, vessel, engines, ap, frame, direction):
     ap.target_direction = tuple(c/norm for c in command)
 
 
+def align_for_burn(conn, vessel, engines, ap, frame, direction, limit,
+                   timeout=120.0, rcs_after=5.0):
+    """Use RCS briefly if reaction wheels cannot reacquire the OMS vector."""
+    start = time.monotonic()
+    try:
+        while ap.error > limit:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                raise RuntimeError(f'OMS burn attitude did not align within {timeout:.0f} s')
+            if elapsed > rcs_after:
+                vessel.control.rcs = True
+            aim(conn, vessel, engines, ap, frame, direction)
+            time.sleep(0.1)
+    finally:
+        vessel.control.rcs = False
+
+
 def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
     sc = conn.space_center
     ctl = vessel.control
@@ -147,11 +164,9 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.02)
         # Never burn unless the nose is on the burn vector.
-        aligned_wait = time.time()
         align_limit = 2.0 if dv < 5.0 else 3.0
-        while ap.error > align_limit and time.time()-aligned_wait < 120:
-            aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
-            time.sleep(0.1)
+        align_for_burn(conn, vessel, engines, ap, node.reference_frame,
+                       burn_dir, align_limit)
         ctl.throttle = 1.0
         body = vessel.orbit.body
         nrf = body.non_rotating_reference_frame
@@ -179,9 +194,8 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 break
             if ap.error > 10.0:
                 ctl.throttle = 0.0
-                while ap.error > 3.0:
-                    aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
-                    time.sleep(0.05)
+                align_for_burn(conn, vessel, engines, ap, node.reference_frame,
+                               burn_dir, 3.0, timeout=60.0)
             # Measure the real thrust axis: velocity change minus gravity, in the body frame.
             v_now, t_now = vessel.velocity(nrf), sc.ut
             r = vessel.position(nrf)
