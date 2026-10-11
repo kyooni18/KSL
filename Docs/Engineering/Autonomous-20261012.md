@@ -433,3 +433,14 @@ focused replay tests pass, including the clock regression.
   five simulation seconds before acceptance; this covers the observed
   placeholder pad mass. Focused load-guard tests cover partial-vessel
   rejection and the pad settle interval.
+- The corrected four-ET-clamp ascent reached SRB separation at about
+  UT 2794 with both wings intact immediately beforehand; an independent
+  checkpoint is `ksl-autonomous-20261012-pre-srb-four-et` (37 parts at
+  UT 2787.13). Both wings then detached, and the one-second inventory guard
+  stopped the mission at about UT 2796 / 28 km. The failed vehicle is saved
+  as `ksl-autonomous-20261012-four-et-srb-failure` with KSP paused and
+  throttle zero. Thus all-ET clamps solve liftoff but not SRB separation.
+- A new four-ET-clamp derivative zeros only the two Mite separator motors'
+  SolidFuel. Its full automated ascent is underway from
+  `ksl-autonomous-20261012-pad-four-et-no-mite` to isolate the motor effect
+  while retaining the successful pad support and active guidance.
