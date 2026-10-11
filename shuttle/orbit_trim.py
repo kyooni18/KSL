@@ -188,17 +188,20 @@ def main():
         ut2 = n1.orbit.ut_at_true_anomaly(0.0)
         if ut2 < ut1+120.0:
             ut2 += n1.orbit.period
-        x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
-                   lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
-        n2 = vessel.control.add_node(ut2, prograde=x2)
-        nodes.append(n2)
-        final = n2.orbit
+        final = n1.orbit
+        if abs(final.apoapsis_altitude-(args.apoapsis+d_ap)) > 800.0:
+            # A burn at periapsis (inside the upper atmosphere) only when needed.
+            x2 = solve(lambda x: vessel.control.add_node(ut2, prograde=x),
+                       lambda orb: orb.apoapsis_altitude-(args.apoapsis+d_ap), -250.0, 250.0)
+            n2 = vessel.control.add_node(ut2, prograde=x2)
+            nodes.append(n2)
+            final = n2.orbit
         target = math.radians(args.inclination)
         if abs(math.degrees(final.inclination)-args.inclination) > 0.15:
             omega = final.argument_of_periapsis
             cands = sorted(final.ut_at_true_anomaly(nu) for nu in
                            ((-omega) % (2*math.pi), (math.pi-omega) % (2*math.pi)))
-            ut_p = next((c for c in cands if c > ut2+150.0), cands[0]+final.period)
+            ut_p = next((c for c in cands if c > nodes[-1].ut+150.0), cands[0]+final.period)
             xp = solve(lambda x: vessel.control.add_node(ut_p, normal=x),
                        lambda orb: math.degrees(orb.inclination-target), -400.0, 400.0)
             n3 = vessel.control.add_node(ut_p, normal=xp)
