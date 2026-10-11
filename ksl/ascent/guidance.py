@@ -15,6 +15,11 @@ PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
+def maneuver_roll_rate(error_deg, duration_s, limit_deg_s):
+    """Bound the maneuver schedule by the operator's physical roll-rate cap."""
+    return min(limit_deg_s, max(3.0, min(30.0, 1.4*abs(error_deg)/duration_s)))
+
+
 def ascent_target_g(altitude, atmosphere_depth, max_g, launch_g=LAUNCH_TARGET_G,
                     minimum_g=0.0):
     """Smooth ascent target with an optional hard lower bound."""

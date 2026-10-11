@@ -12,7 +12,7 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             pitch_heading_for_direction, surface_axis_errors,
                             surface_up_for_pitch_heading, hold_turn_for_roll,
                             limit_aero_roll, restore_aero_roll,
-                            mission_roll_allowed, manual_roll_command,
+                            mission_roll_allowed, maneuver_roll_rate, manual_roll_command,
                             roll_attitude_settled, roll_delta, roll_for_roof, slew_roll,
                             ensure_autopilot_engaged, release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel)
@@ -127,6 +127,11 @@ class FlightTests(unittest.TestCase):
     def test_roll_slew_uses_shortest_path_and_rate_limit(self):
         self.assertAlmostEqual(slew_roll(90, 180, 3), 93)
         self.assertAlmostEqual(slew_roll(179, -179, 3), -179)
+
+    def test_upright_maneuver_schedule_respects_roll_rate_cap(self):
+        self.assertEqual(maneuver_roll_rate(180, 10, 15), 15)
+        self.assertEqual(maneuver_roll_rate(180, 10, 5), 5)
+        self.assertEqual(maneuver_roll_rate(20, 10, 15), 3)
 
     def test_mission_roll_starts_after_climbing_above_the_pad(self):
         self.assertFalse(mission_roll_allowed(False, 100, 30))

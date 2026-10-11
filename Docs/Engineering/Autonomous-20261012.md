@@ -470,3 +470,9 @@ focused replay tests pass, including the clock regression.
   integrity check now runs on every ascent tick after SRB separation. Low q
   alone does not preserve the wing; the roll or sustained post-separation
   engine loading remains to be isolated.
+- Code inspection found a concrete post-SRB roll-limit mismatch: the maneuver
+  schedule could request ~25 deg/s for a 180-degree turn even when
+  `--upright-roll-rate` was 15 deg/s. The low-q trial logged physical rates
+  near 28 deg/s. The schedule now respects the configured cap for both roll
+  maneuvers, with a focused regression test. This is a justified control fix,
+  but live structural benefit still needs a retest.

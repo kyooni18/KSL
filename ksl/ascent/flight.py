@@ -8,7 +8,7 @@ from ..kspguard import check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, gravity_turn_pitch, hold_turn_for_roll, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -827,7 +827,9 @@ def run(args):
                             roll_maneuver = maneuver
                             duration = (args.upright_roll_time if maneuver == 'upright'
                                         else args.roll_time)
-                            rate = max(3.0, min(30.0, 1.4*roll_error/duration))
+                            limit = (args.upright_roll_rate if maneuver == 'upright'
+                                     else args.roll_rate)
+                            rate = maneuver_roll_rate(roll_error, duration, limit)
                             p_rate, _, y_rate = ap.ctrl.max_rate
                             ap.ctrl.max_rate = (p_rate, math.radians(rate), y_rate)
                             print(f'{maneuver} roll: {roll_error:.0f} deg in ~{duration:.0f} s '
