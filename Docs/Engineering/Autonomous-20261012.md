@@ -522,4 +522,5 @@ focused replay tests pass, including the clock regression.
   low-pressure clearance under those manual conditions, not yet a complete
   controlled ascent. An opt-in `--post-booster-coast-seconds` parameter now
   allows a short engine-off clearance interval after automated separation;
-  default behavior remains unchanged. The focused ascent tests pass.
+  default behavior remains unchanged. The focused ascent tests and full
+  offline suite pass (129 Python tests, 51 subtests, native checks).
