@@ -1575,6 +1575,7 @@ def run(args):
         upright_configured = False
         et_cleared = False
         sep_handled = False
+        roll_maneuver = None
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
         body_roll_rate = 0.0
@@ -2171,6 +2172,19 @@ def run(args):
                                 upright_configured = True
                             if upright_phase:
                                 control.rcs = True
+                        # Size each roll maneuver to finish in a set time: the rate limit is
+                        # chosen from the angle still to go when the maneuver starts.
+                        maneuver = ('upright' if upright_phase else
+                                    'headsdown' if not mission_roll_settled else None)
+                        if maneuver and maneuver != roll_maneuver:
+                            roll_maneuver = maneuver
+                            duration = (args.upright_roll_time if maneuver == 'upright'
+                                        else args.roll_time)
+                            rate = max(3.0, min(30.0, 1.4*roll_error/duration))
+                            p_rate, _, y_rate = ap.ctrl.max_rate
+                            ap.ctrl.max_rate = (p_rate, math.radians(rate), y_rate)
+                            print(f'{maneuver} roll: {roll_error:.0f} deg in ~{duration:.0f} s '
+                                  f'(rate limit {rate:.1f} deg/s)')
                         # The attitude controller owns all three axes; the roll program is
                         # an orbiter-roof target (heads-down before separation, upright after).
                         ap.set_direction_and_up(aim_direction, target_side, 0.0)
@@ -2375,6 +2389,10 @@ def main():
                         help='Start the post-separation upright roll only below this dynamic pressure (Pa)')
     parser.add_argument('--upright-roll-rate', type=float, default=15.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
+    parser.add_argument('--roll-time', type=float, default=10.0,
+                        help='Duration of the heads-down roll maneuver (s)')
+    parser.add_argument('--upright-roll-time', type=float, default=10.0,
+                        help='Duration of the post-separation upright roll (s)')
     parser.add_argument('--roll-rate', type=float, default=15.0,
                         help='Direct physical-roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
