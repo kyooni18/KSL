@@ -444,3 +444,14 @@ focused replay tests pass, including the clock regression.
   SolidFuel. Its full automated ascent is underway from
   `ksl-autonomous-20261012-pad-four-et-no-mite` to isolate the motor effect
   while retaining the successful pad support and active guidance.
+- The four-ET no-Mite flight also cleared liftoff and reached normal SRB
+  burnout. It still detached one complete wing assembly at separation;
+  the guard stopped at about UT 2797 and the paused, zero-throttle scene is
+  `ksl-autonomous-20261012-four-et-no-mite-srb-failure`. The intact
+  pre-SRB scene is `ksl-autonomous-20261012-pre-srb-four-et-no-mite`.
+  Mite thrust is therefore not the sole cause under active guidance.
+- The next experiment keeps the four-ET hardware and normal Mites but asks
+  ascent to coast after booster burnout until q <= 1,000 Pa. The new
+  `--booster-separation-max-q` option is opt-in; its default preserves
+  immediate separation. A 30-second wait limit aborts if pressure fails
+  to fall. Focused flight tests pass, and the full offline suite is running.
