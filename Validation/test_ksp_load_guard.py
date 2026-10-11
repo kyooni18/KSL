@@ -67,6 +67,14 @@ class LoadEvidenceTests(unittest.TestCase):
         state["mass"] = float("nan")
         self.assertFalse(guard.orbital_load_physics_ready(state, 5248.5))
 
+    def test_pad_load_waits_for_physics_settle(self):
+        state = sample(2683.1)
+        state.update(situation="VesselSituation.pre_launch", mass=35000.0,
+                     meanAltitude=86.5)
+        self.assertFalse(guard.orbital_load_physics_ready(state, 2682.9))
+        state.update(ut=2688.0, mass=520694.8)
+        self.assertTrue(guard.orbital_load_physics_ready(state, 2682.9))
+
     def test_cli_load_requires_the_requested_settled_flight(self):
         with patch("ksl.kspguard.run_guard", return_value={"event": "load-save-settled",
                                                        "name": "other", "gameScene": "flight"}) as invoke:
@@ -77,7 +85,7 @@ class LoadEvidenceTests(unittest.TestCase):
 
 
 class LoadLoopTests(unittest.TestCase):
-    def run_load(self, before, after, target):
+    def run_load(self, before, after, target, target_parts=None, live_parts=None):
         def connection(ut):
             client = Mock()
             client.space_center.ut = ut
@@ -87,12 +95,15 @@ class LoadLoopTests(unittest.TestCase):
             client.space_center.active_vessel.mass = 25000.0
             client.space_center.active_vessel.situation = "VesselSituation.flying"
             client.space_center.active_vessel.flight.return_value.mean_altitude = 70000.0
+            if live_parts is not None:
+                client.space_center.active_vessel.parts.all = [Mock()] * live_parts
             client.krpc.current_game_scene = types.SimpleNamespace(name="flight")
             return client
         initial, current = connection(before), connection(after)
         clients = itertools.chain([initial], itertools.repeat(current))
         with patch.object(guard, "connect", side_effect=lambda *a, **k: next(clients)), \
              patch.object(guard, "saved_game_ut", return_value=target), \
+             patch.object(guard, "saved_game_part_count", return_value=target_parts), \
              patch.object(guard.threading, "Thread"), \
              patch.object(guard.time, "monotonic", side_effect=itertools.count()), \
              patch.object(guard.time, "sleep"), patch.object(guard, "emit"):
@@ -109,6 +120,12 @@ class LoadLoopTests(unittest.TestCase):
 
     def test_forward_target_load_is_accepted(self):
         self.assertEqual(self.run_load(1290.0, 9930.2, 9930.0), 0)
+
+    def test_partial_vessel_load_is_rejected(self):
+        self.assertEqual(self.run_load(1290.0, 9930.2, 9930.0,
+                                       target_parts=41, live_parts=13), 2)
+        self.assertEqual(self.run_load(1290.0, 9930.2, 9930.0,
+                                       target_parts=41, live_parts=41), 0)
 
 
 if __name__ == "__main__":

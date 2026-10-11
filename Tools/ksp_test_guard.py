@@ -33,9 +33,7 @@ def validated_save_name(value: str) -> str:
     return name
 
 
-def saved_game_ut(name: str) -> float | None:
-    """Read the target save's UT when the local KSP save folder is visible."""
-
+def _save_candidates(name: str) -> list[Path]:
     roots: list[Path] = []
     configured = os.environ.get("KSP_SAVE_DIR")
     if configured:
@@ -44,6 +42,7 @@ def saved_game_ut(name: str) -> float | None:
         Path.home()
         / "Library/Application Support/Steam/steamapps/common/Kerbal Space Program/saves"
     )
+    ordered: list[Path] = []
     for root in roots:
         if not root.exists():
             continue
@@ -54,15 +53,43 @@ def saved_game_ut(name: str) -> float | None:
         # latter can silently bind preflight verification to an unrelated game.
         if not configured:
             candidates.sort(key=lambda path: path.stat().st_mtime if path.exists() else -1.0, reverse=True)
-        for candidate in candidates:
-            try:
-                with candidate.open("r", encoding="utf-8", errors="ignore") as handle:
-                    for line in handle:
-                        stripped = line.strip()
-                        if stripped.startswith("UT = "):
-                            return float(stripped.split("=", 1)[1].strip())
-            except (OSError, ValueError):
-                continue
+        ordered.extend(candidates)
+    return ordered
+
+
+def saved_game_ut(name: str) -> float | None:
+    """Read the target save's UT when the local KSP save folder is visible."""
+    for candidate in _save_candidates(name):
+        try:
+            with candidate.open("r", encoding="utf-8", errors="ignore") as handle:
+                for line in handle:
+                    stripped = line.strip()
+                    if stripped.startswith("UT = "):
+                        return float(stripped.split("=", 1)[1].strip())
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def saved_game_part_count(name: str, vessel_name: str) -> int | None:
+    """Expected active-vessel part count from a visible checkpoint."""
+    from ksl.ascent.craft import parse
+
+    for candidate in _save_candidates(name):
+        try:
+            root = parse(candidate.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeError, ValueError):
+            continue
+        counts: list[int] = []
+
+        def visit(node: dict) -> None:
+            if node["name"] == "VESSEL" and node["values"].get("name") == [vessel_name]:
+                counts.append(sum(child["name"] == "PART" for child in node["nodes"]))
+            for child in node["nodes"]:
+                visit(child)
+        visit(root)
+        if counts:
+            return max(counts)
     return None
 
 
@@ -205,14 +232,15 @@ def load_state_is_settled(
 
 
 def orbital_load_physics_ready(state: dict, loaded_ut: float | None) -> bool:
-    """Allow orbital planning only after post-load physics has advanced.
+    """Allow orbital planning and pad launch only after physics has advanced.
 
     The generic scene/clock proof is enough for a descending checkpoint, where
     waiting several flight seconds would waste energy. Orbit has time to wait
     for KSP's resource and mass refresh before taking a planning snapshot.
     """
     situation = str(state.get("situation", "")).lower()
-    if not situation.endswith("orbiting"):
+    if not (situation.endswith("orbiting") or situation.endswith("pre_launch") or
+            (situation.endswith("landed") and float(state.get("meanAltitude", 1e9)) < 1000.0)):
         return True
     try:
         mass = float(state["mass"])
@@ -231,6 +259,7 @@ def load_save(name: str) -> int:
     sc = conn.space_center
     vessel = sc.active_vessel
     before_ut = float(sc.ut)
+    target_parts = saved_game_part_count(name, str(vessel.name)) if vessel is not None else None
     started = time.monotonic()
     emit({"event": "load-save-requested", "name": name, "ut": before_ut,
           "targetUT": target_ut, "vessel": str(vessel.name) if vessel is not None else ""})
@@ -281,6 +310,8 @@ def load_save(name: str) -> int:
                             "physicsWarpFactor": int(check_sc.physics_warp_factor),
                             "gameScene": scene_name,
                         }
+                        if target_parts is not None:
+                            last_state["partCount"] = len(active.parts.all)
                         if load_state_is_settled(
                             last_state, before_ut=before_ut, target_ut=target_ut,
                             elapsed=time.monotonic() - started,
@@ -289,7 +320,8 @@ def load_save(name: str) -> int:
                         ):
                             if orbital_evidence_ut is None:
                                 orbital_evidence_ut = target_ut if target_ut is not None else last_state["ut"]
-                            if orbital_load_physics_ready(last_state, orbital_evidence_ut):
+                            if ((target_parts is None or last_state.get("partCount", 0) >= target_parts)
+                                    and orbital_load_physics_ready(last_state, orbital_evidence_ut)):
                                 try:
                                     conn.close()
                                 except Exception:

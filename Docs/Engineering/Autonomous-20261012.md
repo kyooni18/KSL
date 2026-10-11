@@ -425,3 +425,11 @@ focused replay tests pass, including the clock regression.
   gear. The ascent is continuing to SRB separation under the existing
   guidance. This identifies clamp attachment/order as a viable liftoff fix,
   but does not yet establish an intact orbital vehicle.
+- The malformed first four-ET save also exposed a checkpoint-load guard gap:
+  KSP briefly offered a 13-part / 13 t STS at the right scene and UT while
+  the save file specified 41 parts. Load verification now compares the live
+  active-vessel part count with the requested save's serialized count when
+  the save is locally visible. Pad loads, like orbital loads, must advance
+  five simulation seconds before acceptance; this covers the observed
+  placeholder pad mass. Focused load-guard tests cover partial-vessel
+  rejection and the pad settle interval.
