@@ -85,7 +85,7 @@ def aim(conn, vessel, engines, ap, frame, direction):
     ap.target_direction = tuple(c/norm for c in command)
 
 
-def execute(conn, vessel, node, done, tolerance=0.03):
+def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
     sc = conn.space_center
     ctl = vessel.control
     ap = vessel.auto_pilot
@@ -118,7 +118,8 @@ def execute(conn, vessel, node, done, tolerance=0.03):
             time.sleep(0.02)
         # Never burn unless the nose is on the burn vector.
         aligned_wait = time.time()
-        while ap.error > 3.0 and time.time()-aligned_wait < 120:
+        align_limit = 1.0 if dv < 5.0 else 3.0
+        while ap.error > align_limit and time.time()-aligned_wait < 120:
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             time.sleep(0.1)
         ctl.throttle = 1.0
@@ -130,7 +131,7 @@ def execute(conn, vessel, node, done, tolerance=0.03):
             except RuntimeError:
                 # KSP can drop the node mid-burn; fall back to our own accounting.
                 remaining = dv-spent
-            if remaining <= tolerance or done(vessel.orbit) or spent > 1.1*dv+0.5:
+            if done(vessel.orbit) or (remaining <= tolerance and not orbit_cutoff) or spent > 1.3*dv+0.5:
                 print(f'burn end: spent {spent:.2f} of {dv:.2f} m/s, remaining {remaining:.2f}, '
                       f'aim error {ap.error:.1f} deg')
                 break
@@ -144,7 +145,9 @@ def execute(conn, vessel, node, done, tolerance=0.03):
                     time.sleep(0.05)
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
-            ctl.throttle = max(0.02, min(1.0, remaining/max(accel, 0.1)/1.5))
+            # Fine trims fly at a low throttle so cutoff resolution is ~1 cm/s.
+            cap = 0.1 if dv < 5.0 else 1.0
+            ctl.throttle = max(0.01, min(cap, remaining/max(accel, 0.1)/1.5))
             time.sleep(0.02)
     finally:
         ctl.throttle = 0.0
@@ -210,6 +213,7 @@ def main():
             xa = solve(lambda x: vessel.control.add_node(ut_a, prograde=x),
                        lambda orb: orb.apoapsis_altitude-args.apoapsis, 0.0, 300.0)
             na = vessel.control.add_node(ut_a, prograde=xa)
+            na.goal = ('ap', args.apoapsis)
             nodes.append(na)
             base = na.orbit
         pe_ok = abs(base.periapsis_altitude-args.periapsis) < TOL
@@ -227,6 +231,7 @@ def main():
                     y = solve(lambda q: vessel.control.add_node(ut_b, prograde=x, normal=q),
                               lambda orb: math.degrees(orb.inclination-target_inc), -300.0, 300.0)
             nb = vessel.control.add_node(ut_b, prograde=x, normal=y)
+            nb.goal = ('pe', pe_goal) if inc_ok else None
             nodes.append(nb)
             base = nb.orbit
         if abs(base.apoapsis_altitude-args.apoapsis) > TOL:
@@ -235,7 +240,9 @@ def main():
                 ut_c += base.period
             xc = solve(lambda q: vessel.control.add_node(ut_c, prograde=q),
                        lambda orb: other_apsis(orb, ut_c, body_radius)-args.apoapsis, -80.0, 80.0)
-            nodes.append(vessel.control.add_node(ut_c, prograde=xc))
+            nc = vessel.control.add_node(ut_c, prograde=xc)
+            nc.goal = ('other', args.apoapsis, ut_c)
+            nodes.append(nc)
             base = nodes[-1].orbit
         return nodes, base
 
@@ -263,11 +270,20 @@ def main():
         node = nodes[0]
         for extra in nodes[1:]:
             extra.remove()
-        done = lambda orb: False
-        if node.prograde > 0.0 and node.normal == 0.0 and vessel.orbit.apoapsis_altitude < args.apoapsis-TOL:
-            ap_goal = node.orbit.apoapsis_altitude
-            done = lambda orb: orb.apoapsis_altitude >= ap_goal
-        execute(conn, vessel, node, done)
+        goal = getattr(node, 'goal', None)
+        if goal is None:
+            done = lambda orb: False
+        else:
+            # Cut off on the orbit itself: stop when the targeted apsis crosses its goal.
+            if goal[0] == 'ap':
+                measure = lambda orb: orb.apoapsis_altitude
+            elif goal[0] == 'pe':
+                measure = lambda orb: orb.periapsis_altitude
+            else:
+                measure = lambda orb, ut=goal[2]: other_apsis(orb, ut, body_radius)
+            sign = 1.0 if node.prograde >= 0.0 else -1.0
+            done = lambda orb, m=measure, g=goal[1], sg=sign: sg*(m(orb)-g) >= 0.0
+        execute(conn, vessel, node, done, orbit_cutoff=goal is not None)
         report(f'after burn {burn}')
     report('final')
 
