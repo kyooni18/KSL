@@ -16,8 +16,15 @@ from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G
 def validate_launch_vessel(vessel, space_center):
     if vessel.name not in ('STS', 'STS-N'):
         raise ValueError(f'Expected the active vessel to be named STS or STS-N; got {vessel.name!r}')
-    if vessel.situation != space_center.VesselSituation.pre_launch:
-        raise ValueError('Launch requires an STS on the launch pad')
+    if vessel.situation == space_center.VesselSituation.pre_launch:
+        return
+    # KSP can mark a pad stack LANDED after physics settles even while its
+    # launch clamps remain attached. Permit that case only while nearly still.
+    if (vessel.situation == space_center.VesselSituation.landed and
+            len(vessel.parts.launch_clamps) >= 2 and
+            vessel.flight(vessel.orbit.body.reference_frame).speed < 1.0):
+        return
+    raise ValueError('Launch requires an STS on the launch pad')
 
 
 def set_autopilot_engaged(autopilot, engaged):
@@ -645,6 +652,11 @@ def run(args):
                             control.rcs = False
                             et_cleared = True
                             print(f'Translated away from the ET for {args.et_clear_time:.0f} s on RCS')
+                            if shuttle.vehicle_kind == 'orbiter-shuttle':
+                                check_orbiter_integrity({
+                                    "ready": True,
+                                    "partNames": [part.name for part in v.parts.all],
+                                })
                         if args.meco_periapsis < args.orbit-5000:
                             o = v.orbit
                             print(f'Target orbit reached: Ap {o.apoapsis_altitude/1000:.1f} km; '

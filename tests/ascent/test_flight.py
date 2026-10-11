@@ -258,6 +258,19 @@ class FlightTests(unittest.TestCase):
             pre_launch='prelaunch'))
         validate_launch_vessel(vessel, space_center)
 
+    def test_launch_accepts_settled_pad_stack_still_on_clamps(self):
+        frame = object()
+        vessel = SimpleNamespace(
+            name='STS', situation='landed',
+            parts=SimpleNamespace(launch_clamps=[object(), object()]),
+            orbit=SimpleNamespace(body=SimpleNamespace(reference_frame=frame)),
+            flight=lambda reference_frame: SimpleNamespace(speed=0.3))
+        situations = SimpleNamespace(pre_launch='prelaunch', landed='landed')
+        validate_launch_vessel(vessel, SimpleNamespace(VesselSituation=situations))
+        vessel.parts.launch_clamps.pop()
+        with self.assertRaisesRegex(ValueError, 'on the launch pad'):
+            validate_launch_vessel(vessel, SimpleNamespace(VesselSituation=situations))
+
     def test_sts_nuclear_et_recognizes_twin_rhino_and_solid_booster_stages(self):
         nuke = Part('nfa-atomic-multimode-25-1', -4)
         nuke.title = "J-N500 'Project Eeloo' Multimode Nuclear Engine"
