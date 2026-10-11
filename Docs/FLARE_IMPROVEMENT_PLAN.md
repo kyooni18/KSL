@@ -249,3 +249,11 @@ constant profiles often lose speed before completing the route. Direct pitch
 moment coefficient changes cannot affect this command-servo predictor.
 Timeout evidence and focused selection were added without changing gates or
 production guidance. Predictor/control parity and non-vacuity remain open.
+
+[Provisional aerodynamic comparison](Experiments/STS-Landing-20261011/MM305-Aero-Comparison/README.md)
+finds that the October 11 supersonic polar also qualifies none of 2,184 focused
+sample-0 profiles. Both tables predict L/D below 1 near Mach 1.5–2.6, implying
+strong speed loss while tracking a shallow reference. This narrows the next
+check to held-out aerodynamic force fidelity and energy-aware profile design;
+steady glide estimates do not prove physical unreachability. No table was
+adopted and no acceptance gate changed.
