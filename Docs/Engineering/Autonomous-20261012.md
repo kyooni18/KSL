@@ -339,3 +339,14 @@ focused replay tests pass, including the clock regression.
   removed one entire four-part wing assembly. This failed scene is
   `ksl-autonomous-20261012-pad-aft-clamps-released`. Clamp/wing interference
   is now a much stronger explanation than launch thrust or entry control.
+- A second derived copy of the original save removed only the two aft-fuselage
+  clamps while preserving the two ET clamps. Its serialized vessel graph
+  validates at 39 parts, two wings, two ET clamps; KSP loaded it at the expected
+  520.7 t and the wings stayed attached. After 25 seconds of pad settling KSP
+  marked the clamped stack `LANDED` rather than `PRELAUNCH`, so the first ascent
+  attempt stopped in preflight. The launch validator now accepts a nearly
+  motionless landed STS still held by at least two launch clamps. This is
+  bounded to pad-like conditions and does not permit a free landed craft.
+  A second no-aft-clamp ascent is being tested from
+  `ksl-autonomous-20261012-pad-no-aft-clamps`. The full offline gate passed
+  again (122 Python tests, 51 subtests, native checks).
