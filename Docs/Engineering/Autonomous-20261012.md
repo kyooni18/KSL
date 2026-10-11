@@ -316,3 +316,26 @@ focused replay tests pass, including the clock regression.
   while the clamps attached to the aft fuselage and ET. Physical joint failure
   at release is the leading hypothesis; the exact joint stressor remains to
   be tested. The new orbit save is unsuitable as a reusable flight checkpoint.
+
+## Clamp-release integrity guard and joint experiment
+
+- Ascent now compares the pre-staging part count with the count immediately
+  after clamp release, allowing only the released clamp parts to disappear;
+  it cuts throttle and aborts before climb if anything else is lost. Benjee STS
+  wing/elevon/gear inventory is also required at ascent preflight and before
+  the landing backend can plan or engage. The failed live scene itself
+  exercised the latter guard and was rejected with the missing eight parts.
+  Offline mission tests (28) and ascent tests (32) passed after the change.
+- A derived copy of `quicksave` with both wing `rigidAttachment` flags enabled,
+  `ksl-autonomous-20261012-pad-rigidwings`, was launched to an orbit hold.
+  It still lost one complete four-part wing assembly at clamp release:
+  expected 37 parts after four clamps, found 33. The new guard stopped the
+  launch at UT ~2698 / ~88 m, and the scene was saved as
+  `ksl-autonomous-20261012-rigidwing-liftoff-failure` with throttle zero.
+  Rigid wing joints alone are therefore rejected as a fix.
+- In the original pad scene the two aft-fuselage clamps are attached near
+  x=±2.41 m, y=-12.91 m; wing roots are near x=±3.41 m, y=-10.57 m. A
+  controlled release of a single aft-fuselage clamp *without engine thrust*
+  removed one entire four-part wing assembly. This failed scene is
+  `ksl-autonomous-20261012-pad-aft-clamps-released`. Clamp/wing interference
+  is now a much stronger explanation than launch thrust or entry control.
