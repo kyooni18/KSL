@@ -274,9 +274,16 @@ slope-compliant reference. Production files and acceptance gates are unchanged.
 Trace the location of authority/energy loss before designing a new profile.
 
 [Profile authority trace](Experiments/STS-Landing-20261011/MM305-Profile-Authority-Trace/README.md)
-shows the best slope-compliant trial first climbing above its reference,
+shows the best slope-compliant trial first staying above its reference,
 then losing 3 km of altitude in a heavily banked transonic turn. Combined
 turn/pull-up demand exceeds the incidence envelope before Mach 1; the subsonic
 ceiling discontinuity compounds it. Plan lateral and vertical curvature
 jointly against the evolving energy/authority envelope. Neither cap removal
 nor a local bow is validated as a fix; production guidance remains unchanged.
+
+[Expanded radius search](Experiments/STS-Landing-20261011/MM305-Expanded-Radius-Search/README.md)
+adds 24/27/36 km upper families beyond the existing outer planner's 12/18 km
+bands. All 2,808 focused smooth trials remain infeasible; larger routes commonly
+time out or exhaust energy. Radius expansion alone is rejected. Check the
+inlet's lower vertical-curvature bound when lateral lift prevents following a
+rapidly descending reference, while retaining full downstream qualification.
