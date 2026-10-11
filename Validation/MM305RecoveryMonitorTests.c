@@ -1,7 +1,9 @@
 #include "../CLanding/guidance/guidance_internal.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 static void init_native_route_case(GuidanceMachine *g, Telemetry *t,
         double bank_target, double roll_rate) {
@@ -59,9 +61,66 @@ static void test_uncommanded_energetic_reversals_still_trigger(void) {
     assert(g.attitude_recovery);
 }
 
+static void test_rejected_landing_brakes_then_terminates_failed(void) {
+    LandingConfiguration cfg = landing_configuration_default();
+    cfg.site.latitude = cfg.site.longitude = 0.0;
+    cfg.site.runway_heading = 90.0;
+    cfg.site.runway_length = 2500.0;
+    cfg.site.allow_reciprocal_runway = false;
+    PlanetModel planet = {.radius=600000.0,
+        .gravitational_parameter=3.5316e12, .north_axis={0,0,1}};
+    VehicleState state = {.position={600070,0,0}, .velocity={0,20,0}};
+    AerodynamicModel aero = {.lift_to_drag=3.8,
+        .ballistic_coefficient=700, .confidence=1};
+    GuidanceMachine g;
+    guidance_machine_init(&g);
+    g.automation_engaged = g.terminal_glide_mode = true;
+    g.terminal_region_entered = g.final_approach_captured = true;
+    g.ground_contact_latched = true;
+    g.phase = PHASE_ROLLOUT;
+    Telemetry t;
+    telemetry_init(&t);
+    t.longitude = 2646.0 / planet.radius * RAD2DEG;
+    t.mean_altitude = 70.0;
+    t.mass = 25123.0;
+    t.gear = true;
+    t.heading = t.ground_track_heading = 90.0;
+    t.surface_speed = t.horizontal_speed = t.true_air_speed = 20.0;
+    snprintf(t.vessel_situation,sizeof(t.vessel_situation),"landed");
+    GuidanceResult r = guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase == PHASE_ROLLOUT && r.has_warning);
+    assert(r.command.brakes && r.command.target_throttle == 0.0);
+    assert(!g.aborted && g.terminal_landing_warning_latched);
+    assert(strstr(r.warning,"outside the runway"));
+    guidance_result_clear(&r);
+
+    /* Invalid speed cannot prove that a moving failed rollout has stopped. */
+    t.surface_speed = NAN;
+    t.ut += .1;
+    r = guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase == PHASE_ROLLOUT && r.command.brakes && !g.aborted);
+    guidance_result_clear(&r);
+
+    /* Even if later telemetry returns inside the runway, failure is latched. */
+    t.longitude = 2400.0 / planet.radius * RAD2DEG;
+    t.surface_speed = t.horizontal_speed = t.true_air_speed = 1.0;
+    t.ut += .1;
+    r = guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase == PHASE_ABORT && r.has_warning);
+    assert(r.command.brakes && r.command.gear && !r.command.airbrakes);
+    assert(g.aborted && !g.automation_engaged);
+    assert(strstr(r.status,"outside the runway"));
+    guidance_result_clear(&r);
+    t.ut += .1;
+    r = guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase == PHASE_ABORT);
+    guidance_result_clear(&r);
+}
+
 int main(void) {
     test_commanded_native_capture_is_not_recovery();
     test_uncommanded_energetic_reversals_still_trigger();
+    test_rejected_landing_brakes_then_terminates_failed();
     puts("MM305 recovery monitor tests passed.");
     return 0;
 }
