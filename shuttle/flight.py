@@ -19,6 +19,10 @@ PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
+SSME_TRIM_MIN = 0.30
+SSME_TRIM_MAX = 0.70
+
+
 def smoothstep01(value):
     x = min(1.0, max(0.0, value))
     return x*x*(3.0-2.0*x)
@@ -549,6 +553,26 @@ def thrust_axis_offset(conn, vessel, frame):
     thrust = sc.transform_direction(tuple(c/norm for c in total), vessel.reference_frame, frame)
     nose = sc.transform_direction((0.0, 1.0, 0.0), vessel.reference_frame, frame)
     return tuple(thrust[i]-nose[i] for i in range(3))
+
+
+def engine_pitch_moment(vessel, engines):
+    """Pitch moment (N m, vessel x axis) of the engines' current thrust about the CoM.
+
+    Uses each engine's real mounting (position and canted part axis) in the vessel
+    frame, whose origin is the centre of mass, so CoM travel from propellant burn and
+    booster separation is included. Gimbal deflection is excluded on purpose: this
+    is the disturbance the gimbals must cancel.
+    """
+    frame = vessel.reference_frame
+    moment = 0.0
+    for engine in engines:
+        thrust = engine.thrust
+        if thrust <= 1.0:
+            continue
+        d = engine.part.direction(frame)
+        p = engine.part.position(frame)
+        moment += thrust*(p[1]*d[2] - p[2]*d[1])
+    return moment
 
 
 def aoa_limit_deg(dynamic_pressure, q_alpha=50000.0, floor=1.5, ceiling=20.0):
@@ -1320,6 +1344,20 @@ class Shuttle:
             # instead of letting the allocator wind the core engines to zero.
             target_throttles = list(target_throttles)
             target_throttles[0] = current[0]
+            ssmes = self.core_groups[0]
+            try:
+                # Trim the SSME limiter so the canted SSME moment cancels the SRB
+                # thrust-line moment as the CoM moves; the gimbals then only fly
+                # the vehicle instead of sitting saturated against the offset.
+                m_ssme = engine_pitch_moment(self.vessel, ssmes)
+                m_total = m_ssme + engine_pitch_moment(self.vessel, self.solid_boosters)
+                if current[0] > 0.05 and abs(m_ssme) > 1e4:
+                    per_limit = m_ssme/current[0]
+                    trim = current[0] - m_total/per_limit
+                    target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
+                    self.pitch_moment = m_total
+            except Exception:
+                pass
             target_throttles = tuple(target_throttles)
         elif (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
               self.separated and self.et_attached):
@@ -1742,8 +1780,8 @@ def run(args):
                                 east_in = svel[2]+v_rot_now
                                 vh_in = math.hypot(east_in, svel[1])
                                 orbit_inc = math.degrees(v.orbit.inclination)
-                                aim_inclination = args.inclination + max(-3.0, min(
-                                    3.0, 1.0*(args.inclination-orbit_inc)))
+                                aim_inclination = args.inclination + max(-1.5, min(
+                                    1.5, 0.5*(args.inclination-orbit_inc)))
                                 a_inertial = math.asin(max(-1.0, min(1.0,
                                     math.cos(math.radians(aim_inclination))/
                                     max(0.05, math.cos(lat_now)))))
@@ -1845,7 +1883,7 @@ def run(args):
                                 sma_now = v.orbit.semi_major_axis
                                 energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
                                              / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
-                                energy_done = sma_now >= target_sma+3000.0
+                                energy_done = sma_now >= target_sma
                                 peg_phase_g = max(0.5, min(args.upper_g,
                                                            min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
@@ -2014,7 +2052,7 @@ def run(args):
                             # continuously from the live inertia, CoM and torque.
                             if not ap_owns_roll:
                                 ap.auto_tune = True
-                                ap.time_to_peak = (3.0, 2.5, 3.0)
+                                ap.time_to_peak = (3.0, 1.5, 3.0)
                                 ap.overshoot = (0.03, 0.02, 0.03)
                                 ap.max_angular_velocity = (
                                     1.0, math.radians(args.upright_roll_rate), 1.0)
@@ -2045,6 +2083,8 @@ def run(args):
                                 elif conn.space_center.ut-upright_since >= 1.0:
                                     shuttle.post_sep_roll_done_ut = conn.space_center.ut
                                     control.rcs = False
+                                    ap.time_to_peak = (3.0, 3.0, 3.0)
+                                    ap.max_angular_velocity = (1.0, math.radians(3.0), 1.0)
                                     print(f'Upright after {conn.space_center.ut-roll_reset_ut:.1f} s; '
                                           f'SSME limiter ramp released')
                             else:
@@ -2225,7 +2265,7 @@ def main():
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
                         help='Climb above launch point in m before starting the mission roll')
-    parser.add_argument('--upright-roll-rate', type=float, default=15.0,
+    parser.add_argument('--upright-roll-rate', type=float, default=30.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
     parser.add_argument('--roll-rate', type=float, default=8.0,
                         help='Direct physical-roll angular-rate cap in deg/s')

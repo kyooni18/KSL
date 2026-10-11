@@ -18,6 +18,14 @@ import krpc
 MIN_BURN_ALTITUDE = 74000.0
 
 
+def other_apsis(orbit, burn_ut, body_radius):
+    """Altitude of the apsis opposite the burn point (which may be Ap or Pe after the burn)."""
+    r_b = orbit.radius_at(burn_ut)-body_radius
+    if abs(orbit.apoapsis_altitude-r_b) > abs(orbit.periapsis_altitude-r_b):
+        return orbit.apoapsis_altitude
+    return orbit.periapsis_altitude
+
+
 def solve(make_node, error, lo, hi, iterations=26):
     """Bisection on a node component; error(orbit) must change sign over [lo, hi]."""
     def value(x):
@@ -53,7 +61,9 @@ def thrust_axis_offset(conn, vessel, engines, frame):
             try:
                 direction = thruster.thrust_direction(vessel.reference_frame)
             except Exception:
-                continue  # thruster transform not ready (engine just started)
+                # kRPC often cannot resolve these thruster transforms; the canted
+                # part axis is the (ungimballed) thrust axis.
+                direction = engine.part.direction(vessel.reference_frame)
             weight = engine.thrust if engine.thrust > 1.0 else engine.available_thrust
             for i in range(3):
                 total[i] += weight/max(len(engine.thrusters), 1)*direction[i]
@@ -224,7 +234,7 @@ def main():
             if ut_c < (nodes[-1].ut if nodes else now)+max(60.0, min_lead):
                 ut_c += base.period
             xc = solve(lambda q: vessel.control.add_node(ut_c, prograde=q),
-                       lambda orb: orb.apoapsis_altitude-args.apoapsis, -80.0, 80.0)
+                       lambda orb: other_apsis(orb, ut_c, body_radius)-args.apoapsis, -80.0, 80.0)
             nodes.append(vessel.control.add_node(ut_c, prograde=xc))
             base = nodes[-1].orbit
         return nodes, base
