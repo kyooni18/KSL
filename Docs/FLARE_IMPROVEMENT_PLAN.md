@@ -155,6 +155,12 @@ gates were weakened.
   fixed flare on the matrix and on replays of the L5/L6 live data.
 
 ### 5. Close the sim/live gap first
+- [Measured-state restarts and matrix](Experiments/STS-Landing-20261011/Measured-State-Replay/README.md)
+  correct course/body-heading confusion and preserve measured body pose/rates.
+  Independent L6 and a synthetic high-energy inlet now join L5/L7. The pinned
+  L4-fit CLI matrix reaches Final and flare with gear down in all four cases,
+  but every landing fails acceptance. No plant is qualified; earlier MM304
+  comparisons also need corrected inlet geometry before targeting changes.
 - [Body-coordinate plant experiment](Experiments/STS-Landing-20261011/Body-Coordinate-Plant/README.md)
   adds opt-in body moment/quaternion state with incidence derived from the
   changing flight frame, plus actual body-rate telemetry. Conservation/sign

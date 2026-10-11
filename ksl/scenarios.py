@@ -16,6 +16,8 @@ from .paths import SHUTTLESIM, repo_path
 from .phases import Phase
 
 L5 = "Docs/Experiments/STS-Landing-20261010"
+MEASURED = "Docs/Experiments/STS-Landing-20261011/Measured-State-Replay"
+BODY_L4 = "Docs/Experiments/STS-Landing-20261011/Body-Coordinate-Rate-Fix/att-body-l4.ini"
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,24 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
         model_profile="identified",
     ),
 )}
+
+# Explicit identification matrix, not production model qualification. Keep the
+# historical L5/L7 goldens separate from corrected measured-course/body states.
+for _flight in ("l5", "l6", "l7", "high"):
+    _name = f"{_flight}-measured-mm305"
+    SCENARIOS[_name] = Scenario(
+        name=_name,
+        description=("Experimental unqualified body plant from " +
+                     ("synthetic L5 measured inlet +2000 m altitude." if _flight == "high" else
+                      f"{_flight.upper()} measured course, Euler pose and body-rate inlet.")),
+        start=Phase.MM305,
+        scenario=f"{MEASURED}/{_flight}-mm305.ini",
+        configuration="Configuration/sts-live.json" if _flight == "l7" else f"{L5}/L5-72km/configuration.json",
+        model_profile="sts-live-20261010",
+        attitude=BODY_L4,
+        direct_control=True,
+        baseline="Identification experiment: Final/flare and landing gates recorded; model is not live-validated.",
+    )
 
 
 def resolve_scenario(name_or_path: str, start: Phase | None = None,
