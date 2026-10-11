@@ -108,6 +108,7 @@ class AttitudeController:
         self.int_time = 6.0
         self.int_limit = 0.35              # fraction of available torque
         self.feedforward = True
+        self.deadband = 0.0
         self.roll_gate = (8.0, 5.0)        # nose error (deg) above which roll is suppressed / fully on
         # telemetry
         self.error_deg = 0.0
@@ -212,7 +213,9 @@ class AttitudeController:
                 lim = self.int_limit*t_avail
                 self._integral[i] = max(-lim, min(lim, self._integral[i] +
                                                   self._moi[i]*err/self.int_time*self.dt))
-            inputs[i] = max(-1.0, min(1.0, u))
+            u = max(-1.0, min(1.0, u))
+            # small deadband: holding attitude must not drain the wheels' power
+            inputs[i] = 0.0 if abs(u) < self.deadband else u
         self.control.pitch = inputs[0]
         self.control.roll = inputs[1]
         self.control.yaw = inputs[2]

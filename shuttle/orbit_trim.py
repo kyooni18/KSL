@@ -116,7 +116,8 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
     mass = vessel.mass
     burn_time = isp*9.80665*mass*(1.0-math.exp(-dv/(isp*9.80665)))/thrust
     start = node.ut - 0.5*burn_time
-    print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s, T-{node.time_to:.0f} s')
+    print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s, T-{node.time_to:.0f} s, '
+          f'EC {vessel.resources.amount("ElectricCharge"):.0f}')
     # Whatever happens below, the engines must never be left running.
     try:
         burn_dir = (0.0, 1.0, 0.0)
@@ -225,6 +226,7 @@ def main():
     # only, so the attitude loop is kept slow and gentle.
     CUSTOM_AP['ap'] = CustomAutopilot(conn, conn.space_center.active_vessel)
     CUSTOM_AP['ap'].time_to_peak = (6.0, 6.0, 6.0)
+    CUSTOM_AP['ap'].ctrl.deadband = 0.03
     CUSTOM_AP['ap'].max_angular_velocity = (math.radians(2.0), math.radians(2.0), math.radians(2.0))
     sc = conn.space_center
     vessel = sc.active_vessel
@@ -284,8 +286,13 @@ def main():
         inc_ok = abs(math.degrees(base.inclination)-args.inclination) < 0.02
         if not (pe_ok and inc_ok):
             ut_b = base.ut_at_true_anomaly(math.pi)
-            if ut_b < now+max(30.0, min_lead):
-                ut_b += base.period
+            earliest = (nodes[-1].ut+60.0) if nodes else now+max(30.0, min_lead)
+            pe_unsafe = base.periapsis_altitude < MIN_BURN_ALTITUDE
+            if ut_b < earliest or (pe_unsafe and ut_b-earliest > 0.5*base.period):
+                # Never wait a whole orbit with the periapsis in the air: a burn a
+                # little past the apoapsis costs a few percent, a periapsis pass at
+                # 60-70 km costs the orbit (run a1).
+                ut_b = earliest if pe_unsafe else ut_b + base.period
             pe_goal = args.periapsis
             x = y = 0.0
             for _ in range(4):
