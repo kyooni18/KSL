@@ -16,7 +16,7 @@ import krpc
 
 
 MIN_BURN_ALTITUDE = 74000.0
-ALIGN_LEAD = 90.0  # s of attitude alignment before every burn
+ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
 
 
 def oms_propellant_mass(vessel):
