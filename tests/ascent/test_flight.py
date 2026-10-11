@@ -16,6 +16,19 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             roll_attitude_settled, roll_delta, roll_for_roof, slew_roll,
                             ensure_autopilot_engaged, release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel)
+from ksl.ascent.vehicle import delay_booster_separation
+
+
+class SeparationEnvelopeTests(unittest.TestCase):
+    def test_explicit_pressure_limit_holds_spent_shuttle_boosters(self):
+        self.assertTrue(delay_booster_separation('orbiter-shuttle', [object()], True,
+                                                  5000.0, 1000.0))
+        self.assertFalse(delay_booster_separation('orbiter-shuttle', [object()], True,
+                                                   900.0, 1000.0))
+        self.assertFalse(delay_booster_separation('orbiter-shuttle', [object()], True,
+                                                   5000.0, float('inf')))
+        self.assertFalse(delay_booster_separation('nuclear-solid', [object()], True,
+                                                   5000.0, 1000.0))
 
 
 class Part:

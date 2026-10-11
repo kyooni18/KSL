@@ -168,6 +168,13 @@ def is_separator_motor(engine):
             'Mite' in getattr(part, 'title', ''))
 
 
+def delay_booster_separation(vehicle_kind, solid_boosters, depleted,
+                             dynamic_pressure, max_pressure):
+    """Hold spent STS SRBs until the requested aerodynamic release condition."""
+    return (vehicle_kind == 'orbiter-shuttle' and bool(solid_boosters) and depleted
+            and dynamic_pressure is not None and dynamic_pressure > max_pressure)
+
+
 def body_roll_rate_deg_s(vessel):
     """Physical roll rate in the same sign convention as roll_for_roof/kRPC roll angles."""
     frame = vessel.surface_reference_frame
@@ -892,11 +899,24 @@ class Shuttle:
         print('Boosters shut down/burned out and separated')
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
-               throttle_slew=THROTTLE_SLEW_PER_SECOND):
+               throttle_slew=THROTTLE_SLEW_PER_SECOND,
+               dynamic_pressure=None, separation_max_q=float('inf')):
         if self.et_attached:
             self.top_off()
-        if (not self.separated and
-                (self._liquid_booster_depleted() or self._solid_boosters_depleted())):
+        depleted = (not self.separated and
+                    (self._liquid_booster_depleted() or self._solid_boosters_depleted()))
+        hold_separation = delay_booster_separation(
+            self.vehicle_kind, self.solid_boosters, depleted,
+            dynamic_pressure, separation_max_q)
+        if hold_separation:
+            if getattr(self, 'booster_separation_hold_ut', None) is None:
+                self.booster_separation_hold_ut = self.sc.ut
+                emit_event('booster-separation-hold', q_pa=dynamic_pressure,
+                           max_q_pa=separation_max_q)
+                print(f'Coasting spent SRBs until q <= {separation_max_q:.0f} Pa')
+            elif self.sc.ut - self.booster_separation_hold_ut > 30.0:
+                raise RuntimeError('Dynamic pressure did not fall enough for SRB separation within 30 s')
+        if depleted and not hold_separation:
             self._separate_boosters()
         target = self.allocation(max_g=max_g, target_g=target_g, altitude=altitude)
         current = tuple(
@@ -933,6 +953,8 @@ class Shuttle:
             except Exception:
                 pass
             target_throttles = tuple(target_throttles)
+        elif hold_separation:
+            target_throttles = tuple(0.0 for _ in self.groups)
         elif (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
               self.separated and self.et_attached):
             # Pad control authority is not representative after SRB separation.
