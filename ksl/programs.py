@@ -29,7 +29,7 @@ from typing import Any, Callable
 
 from .backend import BackendClient, BackendError, snapshot_summary, validate_plan_qualification
 from .config import MissionConfig
-from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, save_game, wait_for_flight_scene
+from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
 from .kspguard import prepare_reentry_direct_control, set_ksp_paused
 from .paths import BACKEND, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase

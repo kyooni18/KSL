@@ -17,7 +17,7 @@ from ksl.config import ConfigError, load_config
 from ksl.controller import MissionController, continue_phase
 from ksl.paths import BACKEND, CLANDING, ROOT
 from ksl.phases import BACKEND_PHASES, BACKEND_FAILURE_PHASES, Phase, PhaseMachine, PhaseTransitionError
-from ksl.runlog import read_events, read_status, read_telemetry
+from ksl.runlog import read_events, read_telemetry
 from ksl.scenarios import SCENARIOS
 
 FAKES = Path(__file__).resolve().parent / "fakes"

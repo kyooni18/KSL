@@ -22,7 +22,7 @@ from .controller import (EXIT_ABORTED, EXIT_CONNECTION, EXIT_FAILED, EXIT_OK, EX
                          continue_phase)
 from .paths import BACKEND
 from .phases import ENTRY_PHASES, SEQUENCE, Phase, PhaseTransitionError
-from .runlog import Event, list_runs, read_events, read_status, resolve_run
+from .runlog import Event, list_runs, read_status, resolve_run
 from .scenarios import SCENARIOS, resolve_scenario
 
 COLORS = {"error": "\033[31m", "warning": "\033[33m", "phase": "\033[1;36m", "state": "\033[1m", "reset": "\033[0m"}
