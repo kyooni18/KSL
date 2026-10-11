@@ -1287,7 +1287,7 @@ class Shuttle:
             # authority than the gimbals have at a high SSME limiter. Ride a
             # lower limiter (smaller off-axis moment) briefly, then ramp up.
             since_sep = self.sc.ut - self.booster_separation_ut
-            sep_cap = 0.25 + 0.75*min(1.0, max(0.0, (since_sep-3.0)/5.0))
+            sep_cap = 0.25 + 0.75*min(1.0, max(0.0, (since_sep-3.0)/20.0))
             core_throttle = min(core_throttle, sep_cap)
             target_throttles = tuple(core_throttle for _ in self.groups)
         applied = slew_vector(current, target_throttles, throttle_slew, dt)
@@ -1933,10 +1933,10 @@ def run(args):
                                 upper_autotune = 'sampling'
                         roll_control = manual_roll_command(
                             roll_error_signed, body_roll_rate, roll_accel_reference,
-                            (min(args.roll_rate, 5.0) if shuttle.separated else
+                            (min(args.roll_rate, 3.0) if shuttle.separated else
                              args.roll_rate),
                             args.roll_control_limit,
-                            max(args.roll_response_time, 0.6) if shuttle.separated
+                            max(args.roll_response_time, 1.0) if shuttle.separated
                             else args.roll_response_time)
                         settle_nose_error = direction_error_deg(
                             actual_direction, target_direction)
@@ -2101,7 +2101,7 @@ def main():
                         help='Gentle initial thrust-acceleration target in Earth g')
     parser.add_argument('--ssme-limit', type=float, default=0.7,
                         help='Fixed SSME thrust limiter held through SRB burn')
-    parser.add_argument('--upper-g', type=float, default=1.8,
+    parser.add_argument('--upper-g', type=float, default=1.4,
                         help='Acceleration cap for the SSME-only phase after booster separation')
     parser.add_argument('--et-sep-delay', type=float, default=10.0,
                         help='Seconds to hold attitude after MECO before external-tank separation')
