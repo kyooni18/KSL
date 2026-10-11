@@ -73,6 +73,31 @@ double entry_lateral_geometry_turn_sign(double current_course_deg,
     return 0.0;
 }
 
+/* Constant measured lift/bank turn to runway heading, after roll exchange.
+   Lateral displacement is R*(1-cos(theta)); express it in measured crossrate
+   so a velocity-frame reconstruction is unnecessary. This is a local
+   authority projection, not a forecast of density/lift over a long entry. */
+double entry_lateral_crossrange_arrest_distance(double rate,double alignment,
+        double lift,double bank) {
+    if(!isfinite(rate)||!isfinite(alignment)||alignment<=0.0||alignment>1.0||
+       !isfinite(lift)||lift<=0.0||!isfinite(bank)||fabs(bank)>=90.0)return NAN;
+    double authority=lift*fabs(sin(bank*ENTRY_LATERAL_DEG2RAD));
+    if(authority<=DBL_EPSILON)return NAN;
+    return copysign(rate*rate/(authority*(1.0+alignment)),rate);
+}
+
+static double crossrange_arrest(const EntryLateralInput *in,double magnitude,
+        double response_time) {
+    if(!in->crossrange_arrest_prediction||!in->has_crossrange_rate||
+       !in->has_crossrange_course_alignment)return 0.0;
+    double rate=in->crossrange_error_rate_mps;
+    if(in->has_crossrange_accel&&isfinite(in->crossrange_error_accel_mps2))
+        rate+=in->crossrange_error_accel_mps2*response_time;
+    double distance=entry_lateral_crossrange_arrest_distance(rate,
+        in->crossrange_course_alignment,in->lift_accel,magnitude*in->bank_effectiveness);
+    return isfinite(distance)?distance:0.0;
+}
+
 EntryLateralLimits entry_lateral_default_limits(void) {
     /*
      * Zero means "not provided". Runtime callers replace these fields from the
@@ -344,6 +369,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             if(input->has_crossrange_accel&&isfinite(input->crossrange_error_accel_mps2))
                 projected+=0.5*input->crossrange_error_accel_mps2*
                     response_time*response_time;
+            projected+=crossrange_arrest(input,magnitude,response_time);
             double uncertainty=isfinite(input->crossrange_uncertainty_m)?
                 fmax(0.0,input->crossrange_uncertainty_m):0.0;
             double numerical_resolution=sqrt(DBL_EPSILON)*fmax(1.0,
@@ -404,6 +430,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         if (input->has_crossrange_accel && isfinite(input->crossrange_error_accel_mps2))
             projected += 0.5 * input->crossrange_error_accel_mps2 * response_time * response_time;
 
+        projected+=crossrange_arrest(input,magnitude,response_time);
         double uncertainty = isfinite(input->crossrange_uncertainty_m) ?
             fmax(0.0, input->crossrange_uncertainty_m) : 0.0;
         double numerical_resolution = sqrt(DBL_EPSILON) * fmax(1.0,

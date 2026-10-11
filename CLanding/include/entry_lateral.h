@@ -50,6 +50,8 @@ typedef struct {
     double crossrange_uncertainty_m;
     /* Cosine of current ground course relative to runway heading. This maps
        predicted target-current crossrange to the corrective bank sign. */
+    /* Experimental measured-authority heading-arrest projection. */
+    bool crossrange_arrest_prediction;
     bool has_crossrange_course_alignment;
     double crossrange_course_alignment;
     /* Measured coordination state. The planner uses the configured sideslip
@@ -160,6 +162,8 @@ double entry_lateral_geometry_turn_sign(double current_course_deg,
     double target_along_m, double target_cross_m,
     double target_course_deg);
 
+double entry_lateral_crossrange_arrest_distance(double crossrange_rate,
+    double course_alignment,double lift_accel,double effective_bank_deg);
 EntryLateralLimits entry_lateral_default_limits(void);
 void entry_lateral_state_init(EntryLateralState *state, double ut,
     double bank_sign_hint, double measured_bank_deg);
