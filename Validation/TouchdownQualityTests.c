@@ -164,6 +164,12 @@ int main(void) {
     sim.state.attitude.body_pitch_rate_rad_s=deg2rad(.4);
     sim.state.attitude.body_roll_rate_rad_s=deg2rad(.2);
     sim.state.attitude.body_yaw_rate_rad_s=deg2rad(-.3);
+    sim.state.attitude.aoa_rad=deg2rad(20);
+    sim.state.attitude.bank_rad=deg2rad(60);
+    Vec3 air_velocity=v3_sub(sim.state.velocity_i_mps,
+        world_atmosphere_velocity_i(&sim.world,sim.state.position_i_m));
+    sim.state.body_q_i=attitude_body_quat_wind(sim.state.position_i_m,air_velocity,
+        sim.state.attitude.aoa_rad,sim.state.attitude.bank_rad);
     sim_build_telemetry_json(&sim,50.0,json_buf,sizeof(json_buf));
     Telemetry body_t;
     VehicleState body_state;
@@ -173,6 +179,15 @@ int main(void) {
     assert(fabs(body_t.body_pitch_rate-.4)<1e-6);
     assert(fabs(body_t.body_roll_rate-.2)<1e-6);
     assert(fabs(body_t.body_yaw_rate+.3)<1e-6);
+    sim.state.ut+=.1;
+    sim_build_telemetry_json(&sim,50.0,json_buf,sizeof(json_buf));
+    Telemetry unchanged_body;
+    assert(shuttle_sim_decode_telemetry(json_buf,&planet,&body_t,
+        &unchanged_body,&body_state,decode_err,sizeof(decode_err)));
+    assert(fabs(unchanged_body.pitch_rate)<1e-8);
+    assert(fabs(unchanged_body.roll_rate)<1e-8);
+    assert(fabs(unchanged_body.heading_rate)<1e-8);
+    assert(fabs(unchanged_body.course_rate)<1e-8);
     sim.state=legacy_state;
     shuttle_sim_prepare_guidance_telemetry(&t0, &cfg, &planet);
 

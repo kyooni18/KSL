@@ -550,7 +550,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"velocity\":{\"x_mps\":%.6f,\"y_mps\":%.6f,\"z_mps\":%.6f,\"inertial_mps\":%.3f,\"surface_mps\":%.3f,\"air_mps\":%.3f,\"horizontal_mps\":%.3f,\"vertical_mps\":%.3f,\"flight_path_angle_deg\":%.6f},"
              "\"attitude\":{\"aoa_deg\":%.4f,\"bank_deg\":%.4f,\"heading_deg\":%.4f,\"cmd_aoa_deg\":%.4f,\"cmd_bank_deg\":%.4f,\"requested_aoa_deg\":%.4f,\"requested_bank_deg\":%.4f,"
              "\"aoa_rate_deg_s\":%.6f,\"bank_rate_deg_s\":%.6f,\"sideslip_deg\":%.6f,\"direct_control\":%s,"
-             "\"body_rates_available\":%s,\"body_pitch_rate_deg_s\":%.6f,\"body_roll_rate_deg_s\":%.6f,\"body_yaw_rate_deg_s\":%.6f,"
+             "\"body_attitude_available\":%s,\"body_rates_available\":%s,\"body_pitch_rate_deg_s\":%.6f,\"body_roll_rate_deg_s\":%.6f,\"body_yaw_rate_deg_s\":%.6f,"
              "\"body_pitch_deg\":%.6f,\"body_roll_deg\":%.6f,\"body_heading_deg\":%.6f,"
              "\"input_pitch\":%.9f,\"input_roll\":%.9f,\"input_yaw\":%.9f,"
              "\"pitch_wn_s_inv\":%.9g,\"pitch_zeta\":%.9g,\"roll_wn_s_inv\":%.9g,\"roll_zeta\":%.9g,"
@@ -568,7 +568,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              rad2deg(s->attitude.aoa_rad),rad2deg(s->attitude.bank_rad),rad2deg(heading),rad2deg(s->attitude.cmd_aoa_rad),rad2deg(s->attitude.cmd_bank_rad),rad2deg(s->attitude.requested_aoa_rad),rad2deg(s->attitude.requested_bank_rad),
              rad2deg(s->attitude.aoa_rate_rad_s),rad2deg(s->attitude.bank_rate_rad_s),
              rad2deg(s->attitude.sideslip_rad),s->attitude.direct?"true":"false",
-             body_rates_available?"true":"false",rad2deg(s->attitude.body_pitch_rate_rad_s),
+             s->attitude.direct_body_coordinates?"true":"false",body_rates_available?"true":"false",rad2deg(s->attitude.body_pitch_rate_rad_s),
              rad2deg(s->attitude.body_roll_rate_rad_s),rad2deg(s->attitude.body_yaw_rate_rad_s),
              rad2deg(body_pitch),rad2deg(body_roll),rad2deg(body_heading),
              s->attitude.input_pitch,s->attitude.input_roll,s->attitude.input_yaw,

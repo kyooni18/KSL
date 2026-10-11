@@ -111,6 +111,12 @@ int main(int argc,char **argv){
     if(aero_book_path&&!aero_load_book_csv(&sim.aero,aero_book_path)){fprintf(stderr,"Failed to load aero data book: %s\n",aero_book_path);return 3;}
     if(attitude_path&&!attitude_load_ini(&sim.state.attitude,attitude_path)){fprintf(stderr,"Failed to load attitude model: %s\n",attitude_path);return 3;}
     if(has_fixed_aoa||has_fixed_bank){double a=has_fixed_aoa?fixed_aoa:rad2deg(sim.state.attitude.cmd_aoa_rad);double b=has_fixed_bank?fixed_bank:rad2deg(sim.state.attitude.cmd_bank_rad);sim_set_attitude(&sim,a,b);}
+    if(sim.state.attitude.direct_body_coordinates){
+        Vec3 air_velocity=v3_sub(sim.state.velocity_i_mps,
+            world_atmosphere_velocity_i(&sim.world,sim.state.position_i_m));
+        sim.state.body_q_i=attitude_body_quat_wind(sim.state.position_i_m,air_velocity,
+            sim.state.attitude.aoa_rad,sim.state.attitude.bank_rad);
+    }
     /* The first lockstep packet is a real state, not an uninitialized force
        sample. Refresh after loading the selected atmosphere and aero models,
        without advancing position, velocity, attitude or simulator time. */
