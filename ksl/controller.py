@@ -118,6 +118,8 @@ class MissionController:
         outcome = Outcome(True)
         try:
             for program, phase in self.plan():
+                if self.stop_event.is_set():
+                    return self._finish(MissionState.ABORTED, "stopped before starting the next program")
                 log.update(program=program.name)
                 if self.mode == "dry-run":
                     for line in program.describe(ctx, phase, self.stop):
@@ -147,6 +149,13 @@ class MissionController:
         except KeyboardInterrupt:
             self.abort()
             return self._finish(MissionState.ABORTED, "interrupted")
+        except Exception as exc:
+            # Program owners release controls in finally before arriving here.
+            # Persist unexpected failures so the TUI never shows a dead worker
+            # as an actively flying mission.
+            import traceback
+            log.log(traceback.format_exc(), "error")
+            return self._finish(MissionState.FAILED, f"{type(exc).__name__}: {exc}")
         finally:
             log.close()
 

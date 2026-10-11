@@ -101,41 +101,81 @@ def run_child(ctx: Context, name: str, argv: list[str], env: dict[str, str] | No
 
         def reader() -> None:
             assert proc.stdout is not None
-            for line in proc.stdout:
-                lines.put(line.rstrip("\n"))
-            lines.put(None)
-
-        threading.Thread(target=reader, name=f"{name}-reader", daemon=True).start()
-        stop_sent_at: float | None = None
-        while True:
-            if ctx.stop_event.is_set() and stop_sent_at is None and proc.poll() is None:
-                ctx.log.log(f"{name}: stop requested; sending SIGINT for the safe-release path", "warning")
-                proc.send_signal(signal.SIGINT)
-                stop_sent_at = time.monotonic()
-            if stop_sent_at is not None and proc.poll() is None:
-                if time.monotonic() - stop_sent_at > STOP_GRACE_SECONDS:
-                    proc.terminate()
-                if time.monotonic() - stop_sent_at > STOP_GRACE_SECONDS + 5.0:
-                    proc.kill()
             try:
-                line = lines.get(timeout=0.2)
-            except queue.Empty:
-                continue
-            if line is None:
-                break
-            raw_log.write(line + "\n")
-            raw_log.flush()
-            if line.startswith(EVENT_PREFIX):
+                for line in proc.stdout:
+                    lines.put(line.rstrip("\n"))
+            finally:
+                lines.put(None)
+
+        thread = threading.Thread(target=reader, name=f"{name}-reader", daemon=True)
+        thread.start()
+        stop_sent_at: float | None = None
+        output_closed = False
+        try:
+            while not output_closed or proc.poll() is None:
+                if ctx.stop_event.is_set() and stop_sent_at is None:
+                    ctx.log.log(f"{name}: stop requested; sending SIGINT for the safe-release path", "warning")
+                    _signal_child_group(proc, signal.SIGINT)
+                    stop_sent_at = time.monotonic()
+                if stop_sent_at is not None:
+                    elapsed = time.monotonic() - stop_sent_at
+                    if elapsed > STOP_GRACE_SECONDS + 5.0:
+                        _signal_child_group(proc, signal.SIGKILL)
+                    elif elapsed > STOP_GRACE_SECONDS:
+                        _signal_child_group(proc, signal.SIGTERM)
                 try:
-                    on_event(json.loads(line[len(EVENT_PREFIX):]))
-                except json.JSONDecodeError:
-                    pass
-                continue
-            tail = (tail + [line])[-20:]
-            if on_line is not None:
-                on_line(line)
-            ctx.log.emit(Event("program", line, level="debug", data={"program": name}))
-        return proc.wait(), tail
+                    line = lines.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+                if line is None:
+                    output_closed = True
+                    continue
+                raw_log.write(line + "\n")
+                raw_log.flush()
+                if line.startswith(EVENT_PREFIX):
+                    try:
+                        event = json.loads(line[len(EVENT_PREFIX):])
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(event, dict):
+                        raise BackendError(f"{name}: milestone must be a JSON object")
+                    on_event(event)
+                    continue
+                tail = (tail + [line])[-20:]
+                if on_line is not None:
+                    on_line(line)
+                ctx.log.emit(Event("program", line, level="debug", data={"program": name}))
+            return proc.wait(), tail
+        finally:
+            # Includes callback failures and KeyboardInterrupt: never abandon a
+            # detached flight owner. Signal its session so simulator descendants
+            # cannot retain pipes or survive an interrupted harness.
+            if proc.poll() is None or thread.is_alive():
+                _signal_child_group(proc, signal.SIGINT)
+                try:
+                    proc.wait(timeout=STOP_GRACE_SECONDS)
+                except subprocess.TimeoutExpired:
+                    _signal_child_group(proc, signal.SIGTERM)
+                    try:
+                        proc.wait(timeout=5.0)
+                    except subprocess.TimeoutExpired:
+                        _signal_child_group(proc, signal.SIGKILL)
+                        proc.wait(timeout=5.0)
+            # A crashed parent may have left descendants holding stdout open.
+            thread.join(timeout=0.5)
+            if thread.is_alive():
+                _signal_child_group(proc, signal.SIGKILL)
+                thread.join(timeout=2.0)
+            if proc.stdout is not None and not thread.is_alive():
+                proc.stdout.close()
+
+
+def _signal_child_group(proc: subprocess.Popen, sig: int) -> None:
+    """Children start their own session; signal only that owned process group."""
+    try:
+        os.killpg(proc.pid, sig)
+    except ProcessLookupError:
+        pass
 
 
 # --- ascent ------------------------------------------------------------------------
