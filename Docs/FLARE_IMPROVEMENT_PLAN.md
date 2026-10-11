@@ -155,6 +155,13 @@ gates were weakened.
   fixed flare on the matrix and on replays of the L5/L6 live data.
 
 ### 5. Close the sim/live gap first
+- [Body-coordinate plant experiment](Experiments/STS-Landing-20261011/Body-Coordinate-Plant/README.md)
+  adds opt-in body moment/quaternion state with incidence derived from the
+  changing flight frame, plus actual body-rate telemetry. Conservation/sign
+  checks and unchanged baseline goldens pass. All three coefficient candidates
+  fail full MM305 validation; isolated L5 Final still misses live contact speed
+  and position. Roll/yaw identification and predictor/control parity remain
+  open. No production model switch or flare tuning was accepted.
 - [Integral identification and kinematic check](Experiments/STS-Landing-20261011/Pitch-Integral-Crosscheck/README.md)
   includes both L7 continuations. Longer intervals and sqrt(Q) damping still
   do not produce a transferable L4–L7 fit. Subtracting measured FPA rotation
