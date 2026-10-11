@@ -456,3 +456,7 @@ focused replay tests pass, including the clock regression.
   immediate separation. A 30-second wait limit aborts if pressure fails
   to fall. Focused flight tests and the full offline suite pass (126 Python
   tests, 51 subtests, native checks).
+- `Tools/repair_sts_pad_clamps.py` now reproduces the validated four-ET pad
+  derivative from the original 41-part quicksave, refusing unexpected craft
+  topology and writing a new file only. Its output byte-matches the derivative
+  already loaded successfully in KSP; the original quicksave remains intact.
