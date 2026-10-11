@@ -380,3 +380,11 @@ focused replay tests pass, including the clock regression.
   loss from two assemblies to one in this trial but did not solve it. The
   pre-SRB checkpoint now allows targeted separation tests without replaying
   the entire climb.
+- Two direct kRPC separation experiments from that checkpoint moved separation
+  earlier to about UT 2788.5–2788.8 (versus automated UT ~2793). With Mites
+  inhibited, both wings and all four elevons remained after four simulation
+  seconds; with Mites enabled, the same inventory also survived four seconds.
+  These paired trials do **not** identify the Mite motors as the cause. The
+  changed separation timing and absence of the active ascent guidance remain
+  confounders. Both experimental scenes were paused, commanded to zero
+  throttle, and saved separately.
