@@ -502,6 +502,30 @@ def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
     return _unit(command), dv_mag, time_to_go
 
 
+def thrust_axis_offset(conn, vessel, frame):
+    """Resultant thrust direction of the running engines minus the nose axis, in `frame`.
+
+    Aiming the nose at the guidance direction leaves the force off by this canted
+    offset; subtracting it from the command points the resultant force instead.
+    """
+    total = [0.0, 0.0, 0.0]
+    for engine in vessel.parts.engines:
+        if not engine.active or engine.thrust <= 1.0:
+            continue
+        thrusters = engine.thrusters
+        for thruster in thrusters:
+            direction = thruster.thrust_direction(vessel.reference_frame)
+            for i in range(3):
+                total[i] += engine.thrust/len(thrusters)*direction[i]
+    norm = math.sqrt(sum(c*c for c in total))
+    if norm <= 0.0:
+        return (0.0, 0.0, 0.0)
+    sc = conn.space_center
+    thrust = sc.transform_direction(tuple(c/norm for c in total), vessel.reference_frame, frame)
+    nose = sc.transform_direction((0.0, 1.0, 0.0), vessel.reference_frame, frame)
+    return tuple(thrust[i]-nose[i] for i in range(3))
+
+
 def aoa_limit_deg(dynamic_pressure, q_alpha=50000.0, floor=1.5, ceiling=20.0):
     """Bound angle of attack so q*alpha (wing/tank-attach load) stays within q_alpha Pa*deg."""
     return max(floor, min(ceiling, q_alpha/max(1.0, dynamic_pressure)))
@@ -1879,7 +1903,17 @@ def run(args):
                                 roll_surface_states, flight.dynamic_pressure,
                                 low_q_limit=60.0 if mission_roll_settled else 35.0,
                                 high_q_limit=30.0)
-                        ap.target_direction = target_direction
+                        aim_direction = target_direction
+                        if state == 'ASCENT' and shuttle.separated and peg_dv is not None:
+                            # Guidance wants the resultant thrust (not the nose) on target.
+                            try:
+                                offset = thrust_axis_offset(conn, v, ap.reference_frame)
+                                raw = tuple(target_direction[i]-offset[i] for i in range(3))
+                                n = math.sqrt(sum(c*c for c in raw)) or 1.0
+                                aim_direction = tuple(c/n for c in raw)
+                            except Exception:
+                                aim_direction = target_direction
+                        ap.target_direction = aim_direction
                         ap.target_roll = float('nan')
                         surface_frame = v.surface_reference_frame
                         actual_direction = v.direction(surface_frame)
