@@ -111,6 +111,11 @@ gates were weakened.
   Final → Flare phase path.
 
 ### 2. Fix TAEM energy delivery (root cause of L7)
+- [Corrected MM304 inlet comparison](Experiments/STS-Landing-20261011/MM304-Measured-Inlet/README.md)
+  finds less than 0.1° heading/course difference at entry. The large L7
+  lateral handoff error survives corrected geometry and both provisional
+  coordinate plants, narrowing the inquiry toward lateral/range prediction
+  and model/history error. No targeting change is justified yet.
 - [Current MM304 replay investigation](Experiments/STS-Landing-20261011/MM304-Range-Control/README.md)
   rejects lowering the coupled acquisition/drag-sizing range from 96.5 km to
   60 km: L7 then misses the Mach/altitude handoff window. L5 also begins its
