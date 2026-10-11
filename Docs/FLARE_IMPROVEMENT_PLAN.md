@@ -351,3 +351,12 @@ floor. A 68 km profile tracks within 15 m. Thus turning is not the sole failure
 in this profile family. No gate reduction or physical impossibility is proven;
 inspect live/planner arrival contracts and a coupled energy-aware profile.
 Production and goldens remain unchanged; live approval remains pending.
+
+[Final arrival-contract audit](Experiments/STS-Landing-20261011/Final-Arrival-Contract-Audit/README.md)
+confirms production sample0 resolves 9 km / 165 m/s (145.2 floor), while the
+zero-turn diagnostic used raw configured 8 km / 160 m/s (140.8 floor). Neither
+is equivalent to the shared Final gate. In 216 synthetic snapshots, six pass
+Final, five outside the planner band; none at 125–130 m/s passes. The 127.814
+case fails upper energy at lower AoA and measured load at higher AoA. No scalar
+speed-floor reduction is supported. Compare forecasts against an actual exit
+and flown Final tail with retained state/history; no production gates changed.
