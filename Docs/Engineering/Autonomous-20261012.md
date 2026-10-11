@@ -524,3 +524,18 @@ focused replay tests pass, including the clock regression.
   allows a short engine-off clearance interval after automated separation;
   default behavior remains unchanged. The focused ascent tests and full
   offline suite pass (129 Python tests, 51 subtests, native checks).
+- The full four-ET automated ascent with q <= 1,000 Pa separation, five
+  seconds of post-SRB SSME coast, and upright roll delayed 10 seconds retained
+  both wings throughout separation, engine restart, the roll, and ET release.
+  PEG reached MECO at about Ap 79.0 / Pe 61.3 km, then OMS trim converged to
+  Ap 85.08 / Pe 84.95 km and inclination 10.001 deg. The mission held at Orbit
+  in `runs/20261011T191048Z-post-srb-clearance-ascent`; its saved checkpoint
+  `ksl-20261011T191048Z-post-srb-clearance-ascent-orbit` and the live vessel
+  both contain 22 orbiter parts, two wings, all four elevons and both main
+  gears. This is the first intact pad-to-orbit result in the current campaign.
+- During the first OMS trim, the reaction-wheel-only controller stalled after
+  reducing node delta-v to about 0.01 m/s: pitch/yaw controls saturated,
+  throttle remained zero, and apoapsis stayed ~27 m below target. A short,
+  manual RCS-assisted attitude reacquisition completed that burn; the second
+  OMS burn then completed without intervention. A bounded automatic recovery
+  is needed so future unattended trims do not hang on this condition.
