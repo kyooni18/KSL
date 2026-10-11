@@ -316,3 +316,10 @@ misses endpoint altitude by 1.31 km. A slower variant can track a short route
 while ending 17 km above Final. Neither qualifies under unchanged gates.
 Local authority following alone does not solve the endpoint/energy problem;
 next investigate lateral turn timing with the altitude/density history.
+
+[Gentler opening geometry](Experiments/STS-Landing-20261011/MM305-Late-Turn-Geometry/README.md)
+changes selected cubic leads and reduces best tracking error to 2.15 km, but
+still fails slope, tracking and speed requirements. Prefix curvature limits
+are rejected as an admission remedy. A reshaped cubic is not a true straight
+initial descent; any composite-path experiment must propagate that prefix and
+qualify the combined path against unchanged endpoint/energy constraints.
