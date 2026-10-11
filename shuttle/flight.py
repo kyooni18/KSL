@@ -432,7 +432,7 @@ def gravity_turn_pitch(vertical_speed, horizontal_speed, dynamic_pressure,
 
 def vertical_profile_pitch(altitude, vertical_speed, inertial_horizontal_speed,
                            radius, mu, accel, insertion_altitude, insertion_speed,
-                           min_pitch=-20.0, max_pitch=35.0):
+                           min_pitch=-20.0, max_pitch=35.0, insertion_vertical_speed=0.0):
     """Pitch that brings the climb to the insertion altitude with ~zero vertical speed
     exactly when horizontal speed reaches the insertion speed.
 
@@ -445,7 +445,9 @@ def vertical_profile_pitch(altitude, vertical_speed, inertial_horizontal_speed,
     g_eff = max(0.0, mu/(radius*radius) - inertial_horizontal_speed**2/radius)
     dh = insertion_altitude - altitude
     tgo = max(20.0, (insertion_speed - inertial_horizontal_speed)/accel)
-    a0 = (6.0*dh - 4.0*vertical_speed*tgo)/(tgo*tgo)
+    # a(t) = a0 + a1 t with v(tgo) = insertion_vertical_speed and h(tgo) = target.
+    a0 = (6.0*(dh - vertical_speed*tgo) -
+          2.0*tgo*(insertion_vertical_speed - vertical_speed))/(tgo*tgo)
     s = max(-1.0, min(1.0, (a0 + g_eff)/accel))
     return max(min_pitch, min(max_pitch, math.degrees(math.asin(s))))
 
@@ -473,6 +475,13 @@ def _norm(a):
 def _unit(a):
     n = _norm(a)
     return (a[0]/n, a[1]/n, a[2]/n) if n > 0 else (0.0, 0.0, 0.0)
+
+
+GUIDANCE_DEBUG = {}
+
+
+def _cross(a, b):
+    return (a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0])
 
 
 def _combine(*terms):
@@ -520,6 +529,10 @@ def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
     v_target = _combine((vr_target, rh), (vh_target, horizontal))
     dv = _combine((1.0, v_target), (-1.0, velocity))
     dv_mag = _norm(dv)
+    cross = _unit(_cross(rh, horizontal))
+    GUIDANCE_DEBUG.update(radial=_dot(dv, rh), along=_dot(dv, horizontal),
+                          cross=_dot(dv, cross), vr_target=vr_target, vh_target=vh_target,
+                          vr=vr, vh=_norm(vh))
     time_to_go = dv_mag/max(acceleration, 0.5)
     g_eff = mu/(r*r) - _dot(vh, vh)/r
     command = _combine((1.0/max(time_to_go, 0.5), dv), (g_eff, rh))
@@ -1817,10 +1830,11 @@ def run(args):
                                 azimuth_error = wrap_roll(desired-vel_azimuth)
                                 # Keep side loads small while the air is thick.
                                 lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
-                                              else 20.0 if flight.dynamic_pressure > 1500.0
-                                              else 30.0)
+                                              else 15.0)
+                                # Runs yy/zz overshot the plane by ~1.5 deg at 55-70 km with
+                                # a 1.5x / 30 deg lead; a softer lead converges without it.
                                 heading_goal += max(-lead_limit,
-                                                    min(lead_limit, 1.5*azimuth_error))
+                                                    min(lead_limit, 1.0*azimuth_error))
                             args.heading = slew_value(
                                 args.heading, heading_goal,
                                 3.0 if flight.dynamic_pressure < 1500.0
@@ -1864,11 +1878,17 @@ def run(args):
                             r_ins = body.equatorial_radius+insertion_altitude
                             ra = body.equatorial_radius+args.orbit
                             rp = body.equatorial_radius+args.meco_periapsis
-                            vh_ins = math.sqrt(2.0*body.gravitational_parameter*ra*rp/(ra+rp))/r_ins
+                            mu = body.gravitational_parameter
+                            vh_ins = math.sqrt(2.0*mu*ra*rp/(ra+rp))/r_ins
+                            # Radial speed of the target orbit at the insertion radius
+                            # (ascending branch): 90x60 needs ~+50 m/s at 72 km, not 0.
+                            vr_ins = math.sqrt(max(0.0, 2.0*mu*(1.0/r_ins - 1.0/(ra+rp))
+                                                   - vh_ins**2))
                             raw_pitch = vertical_profile_pitch(
                                 altitude, flight.vertical_speed, vh_inertial, r_now,
-                                body.gravitational_parameter, max(flight.g_force, 0.3)*G0,
-                                insertion_altitude, vh_ins)
+                                mu, max(flight.g_force, 0.3)*G0,
+                                insertion_altitude, vh_ins,
+                                insertion_vertical_speed=vr_ins)
                             pitch_slew_rate = max(args.pitch_slew, 2.0)
                         peg_dv = None
                         energy_done = False
@@ -1891,8 +1911,11 @@ def run(args):
                                 d_n, peg_dv, peg_tgo = terminal_guidance(
                                     pos_n, vel_n, rot_vel, body.gravitational_parameter,
                                     body.equatorial_radius, args.orbit, args.meco_periapsis,
-                                    args.inclination + max(-4.0, min(6.0, 2.0*(
-                                        args.inclination-math.degrees(v.orbit.inclination)))),
+                                    # Steer to the true target plane: an exaggerated plane
+                                    # target (target + 2x error) never converges, so the
+                                    # dv stalled ~120 m/s and the energy cutoff fired with
+                                    # the wrong shape (runs yy/zz 85x65 @34.9).
+                                    args.inclination,
                                     accel)
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
@@ -1909,6 +1932,12 @@ def run(args):
                                 energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
                                              / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
                                 energy_done = sma_now >= target_sma
+                                if int(conn.space_center.ut*2) % 4 == 0:
+                                    g = GUIDANCE_DEBUG
+                                    print(f'PEG: dv {peg_dv:.1f} (radial {g["radial"]:.1f}, along '
+                                          f'{g["along"]:.1f}, cross {g["cross"]:.1f}); vr {g["vr"]:.1f}/'
+                                          f'{g["vr_target"]:.1f}, vh {g["vh"]:.1f}/{g["vh_target"]:.1f}; '
+                                          f'sma {(sma_now-target_sma)/1000:+.1f} km')
                                 peg_phase_g = max(0.5, min(args.upper_g,
                                                            min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
