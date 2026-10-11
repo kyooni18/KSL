@@ -1803,7 +1803,9 @@ def run(args):
                         roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                         if mission_roll_settled:
                             heading_goal = target_heading
-                            if flight.horizontal_speed > 450.0:
+                            if flight.horizontal_speed > 450.0 and peg_dv is None:
+                                # (PEG owns the heading once it is active; two slewed heading
+                                # laws cancelled and left ~50 m/s of cross-track uncorrected.)
                                 # The velocity vector lags the nose heading by many
                                 # degrees at speed, so steer on the measured surface
                                 # velocity azimuth: lead the nose past the target by a
@@ -1839,7 +1841,8 @@ def run(args):
                                 # a 1.5x / 30 deg lead; a softer lead converges without it.
                                 heading_goal += max(-lead_limit,
                                                     min(lead_limit, 1.0*azimuth_error))
-                            args.heading = slew_value(
+                            if peg_dv is None:
+                                args.heading = slew_value(
                                 args.heading, heading_goal,
                                 3.0 if flight.dynamic_pressure < 1500.0
                                 else args.heading_slew if flight.dynamic_pressure < 5000.0
