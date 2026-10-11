@@ -257,3 +257,11 @@ strong speed loss while tracking a shallow reference. This narrows the next
 check to held-out aerodynamic force fidelity and energy-aware profile design;
 steady glide estimates do not prove physical unreachability. No table was
 adopted and no acceptance gate changed.
+
+[Held-out native force check](Experiments/STS-Landing-20261011/Aero-Heldout-Crosscheck/README.md)
+confirms measured L/D below 1 in Mach 1–2.5 on L5/L6/L7. The October 10 polar
+is fairly close at matched measured states, while the October 11 correction
+overpredicts Mach 1.5–2.5 drag on all three flights. No polar is newly qualified
+or adopted. Investigate an energy-aware vertical reference rather than
+artificially lowering transonic drag; atmosphere/state/attitude fidelity and
+full-route feasibility remain separate unresolved checks.
