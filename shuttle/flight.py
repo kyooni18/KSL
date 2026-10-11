@@ -1549,7 +1549,9 @@ def run(args):
             args.heading = math.degrees(math.atan2(v_orb*math.sin(azimuth)-v_rot,
                                                    v_orb*math.cos(azimuth))) % 360
             print(f'Launch heading {args.heading:.1f} deg for {args.inclination:.1f} deg inclination')
-        target_heading = args.heading
+        # Headings are kept continuous (unwrapped) so slews never go the long way
+        # round: a polar launch heads ~356 deg, i.e. -4 deg from the 90 deg pad heading.
+        target_heading = 90.0 + wrap_roll(args.heading-90.0)
         args.heading = 90.0  # pad orientation; slewed to target_heading after the roll settles
         post_booster_roll = roll_for_heading(args.heading)
         initial_pitch = 89.0
@@ -1832,7 +1834,7 @@ def run(args):
                                 desired = math.degrees(math.atan2(
                                     vh_in*math.sin(a_inertial)-v_rot_now,
                                     vh_in*math.cos(a_inertial))) % 360
-                                heading_goal = desired
+                                heading_goal = args.heading + wrap_roll(desired-args.heading)
                                 azimuth_error = wrap_roll(desired-vel_azimuth)
                                 # Keep side loads small while the air is thick.
                                 lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
@@ -1926,6 +1928,7 @@ def run(args):
                                     accel)
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
+                                peg_heading = target_heading + wrap_roll(peg_heading-target_heading)
                                 if peg_tgo > 4.0 or peg_hold is None:
                                     peg_hold = (max(-60.0, min(25.0, peg_pitch)),
                                                 max(target_heading-40.0,
