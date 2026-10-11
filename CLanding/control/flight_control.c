@@ -961,7 +961,26 @@ bool flight_control_step_attitude(FlightControlState *state,
         state->has_last_target_pitch = false;
         state->target_pitch_rate = 0.0;
         state->last_control[FLIGHT_CONTROL_AXIS_PITCH] = 0.0;
-        pitch_command = 0.0;
+        /* Derotation: drive the nose all the way down after main-wheel contact
+           instead of waiting for the vehicle's own moments.  Track a nose-down
+           pitch rate that fades as the nose nears the runway (so the nose gear is
+           set down gently rather than slammed), then hold a light nose-down
+           stick to keep it planted for wheel steering and braking. */
+        const double DEROTATION_RATE_MAX_DEG_S = 4.0;
+        const double DEROTATION_RATE_MIN_DEG_S = 0.8;
+        const double DEROTATION_PITCH_GAIN = 0.8;      /* 1/s: rate target per degree above contact pitch */
+        const double DEROTATION_RATE_GAIN = 0.10;      /* stick per deg/s of rate error */
+        const double NOSE_CONTACT_PITCH_DEG = 0.5;
+        const double NOSE_HOLD_STICK = 0.15;
+        if (state->nose_gear_contact_latched) {
+            pitch_command = -NOSE_HOLD_STICK;
+        } else {
+            double derotation_rate = isfinite(telemetry->pitch_rate) ? telemetry->pitch_rate : 0.0;
+            double above = fmax(0.0, pitch - NOSE_CONTACT_PITCH_DEG);
+            double target_rate = -fc_clamp(DEROTATION_PITCH_GAIN * above,
+                DEROTATION_RATE_MIN_DEG_S, DEROTATION_RATE_MAX_DEG_S);
+            pitch_command = fc_clamp(DEROTATION_RATE_GAIN * (target_rate - derotation_rate), -0.30, 0.15);
+        }
     } else if (rollout_profile) {
         if (rollout_pitch_hold)
             pitch_command = fc_clamp(pitch_command, -0.30, 0.30);
