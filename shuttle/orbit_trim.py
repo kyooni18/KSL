@@ -50,7 +50,10 @@ def thrust_axis_offset(conn, vessel, engines, frame):
     total = [0.0, 0.0, 0.0]
     for engine in engines:
         for thruster in engine.thrusters:
-            direction = thruster.thrust_direction(vessel.reference_frame)
+            try:
+                direction = thruster.thrust_direction(vessel.reference_frame)
+            except Exception:
+                continue  # thruster transform not ready (engine just started)
             weight = engine.thrust if engine.thrust > 1.0 else engine.available_thrust
             for i in range(3):
                 total[i] += weight/max(len(engine.thrusters), 1)*direction[i]

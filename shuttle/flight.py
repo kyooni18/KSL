@@ -514,7 +514,10 @@ def thrust_axis_offset(conn, vessel, frame):
             continue
         thrusters = engine.thrusters
         for thruster in thrusters:
-            direction = thruster.thrust_direction(vessel.reference_frame)
+            try:
+                direction = thruster.thrust_direction(vessel.reference_frame)
+            except Exception:
+                continue
             for i in range(3):
                 total[i] += engine.thrust/len(thrusters)*direction[i]
     norm = math.sqrt(sum(c*c for c in total))
