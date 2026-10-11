@@ -115,6 +115,7 @@ typedef struct {
     double radius, r_turn, x_turn, turn_cx, turn_cy;
     double k, s_req, s_go, last_geo_ut, last_pred_ut;
     bool admit_pending; double admit_since_ut;
+    bool low_energy_pending; double low_energy_since_ut;
     int trace_leg, trace_side; double trace_radius; bool trace_loop;
     double hac_left_rad, hac_last_ang;
     /* S-turn weave while drag is saturated with excess energy */
@@ -251,6 +252,7 @@ typedef struct {
     double burn_progress_watch_ut, burn_progress_watch_delta_v;
     bool has_burn_command_started, has_burn_progress_watch, deorbit_burn_completed, atmospheric_interface_crossed, has_previous_ut;
     double previous_ut; bool final_approach_captured, airbrakes_deployed;
+    bool terminal_final_low_energy; /* Final owned via low-energy TAEM delivery */
     bool hac_progress_valid, hac_captured, hac_completed, terminal_region_entered, terminal_glide_mode, terminal_final_test_mode, terminal_rehearsal_mode, terminal_test_capture_active;
     double hac_capture_lost_duration, terminal_energy_mismatch_duration;
     double terminal_reentry_after_ut;

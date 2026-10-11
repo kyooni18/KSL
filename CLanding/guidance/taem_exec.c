@@ -330,6 +330,17 @@ bool taem_exec_owns_vehicle(const TaemExecutive *exec) {
     return exec && exec->initialized && exec->ownership_latched;
 }
 
+bool taem_exec_deliver_low_energy(TaemExecutive *exec,
+                                  const TaemExecObservation *observation) {
+    if (!taem_exec_owns_vehicle(exec) || !observation_valid(observation) ||
+        !phase_valid(exec->phase) || exec->recovery_active)
+        return false;
+    if (exec->taem_complete) return true;
+    record_transition(exec, exec->phase, TAEM_PHASE_FINAL_INTERCEPT,
+                      TAEM_TRANSITION_LOW_ENERGY_DELIVERY, observation, true);
+    return true;
+}
+
 const char *taem_phase_string(TaemPhase phase) {
     switch (phase) {
         case TAEM_PHASE_PATH_ACQUISITION: return "Path Acquisition";
@@ -348,6 +359,7 @@ const char *taem_transition_reason_string(TaemTransitionReason reason) {
         case TAEM_TRANSITION_FINAL_INTERCEPT_GATE: return "Runway alignment/final intercept gate";
         case TAEM_TRANSITION_FINAL_APPROACH_DELIVERY: return "Final-approach delivery";
         case TAEM_TRANSITION_TERMINAL_PATH_REPLAN: return "Terminal path lost/stale; replan inside TAEM";
+        case TAEM_TRANSITION_LOW_ENERGY_DELIVERY: return "Low-energy final-approach delivery";
         default: return "Unknown TAEM transition";
     }
 }

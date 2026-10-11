@@ -35,6 +35,8 @@
 #define TEL_K_LOOP 0.25
 #define TEL_MODE_FREEZE 8000.0
 #define TEL_UPDATE_S 2.0
+/* on-final energy shortfall must persist this long before low-energy delivery */
+#define TEL_LOW_ENERGY_DWELL_S 3.0
 #define TEL_PI 3.14159265358979323846
 #define TEL_G0 9.81
 

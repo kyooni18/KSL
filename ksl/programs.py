@@ -31,7 +31,7 @@ from .backend import BackendClient, BackendError, snapshot_summary, validate_pla
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
 from .kspguard import prepare_reentry_direct_control, set_ksp_paused
-from .paths import BACKEND, ROOT, SHUTTLESIM
+from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
 from .scenarios import Scenario
@@ -304,7 +304,8 @@ class LandingProgram(Program):
             raise ProgramUnavailable("LandingProgram flies live KSP; use SimulationProgram offline")
         landing = ctx.config["landing"]
         start = Phase.DEORBIT if start.index < Phase.DEORBIT.index else start
-        env = {"KSP_LANDER_MODEL_PROFILE": str(landing["modelProfile"]), **krpc_env(ctx.config)}
+        env = {"KSP_LANDER_MODEL_PROFILE": str(landing["modelProfile"]),
+               "KSP_LANDER_ROOT": str(DATA_ROOT), **krpc_env(ctx.config)}
         state = _LandingState(ctx)
         with open(ctx.log.directory / "backend.stderr.log", "ab") as stderr:
             client = BackendClient(BACKEND, snapshot_sink=state.on_snapshot, stderr_target=stderr, env=env)

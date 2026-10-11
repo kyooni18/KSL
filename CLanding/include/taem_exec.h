@@ -20,7 +20,8 @@ typedef enum {
     TAEM_TRANSITION_TERMINAL_PATH_CAPTURE,
     TAEM_TRANSITION_FINAL_INTERCEPT_GATE,
     TAEM_TRANSITION_FINAL_APPROACH_DELIVERY,
-    TAEM_TRANSITION_TERMINAL_PATH_REPLAN
+    TAEM_TRANSITION_TERMINAL_PATH_REPLAN,
+    TAEM_TRANSITION_LOW_ENERGY_DELIVERY
 } TaemTransitionReason;
 
 typedef enum {
@@ -205,6 +206,12 @@ bool taem_exec_update(TaemExecutive *exec,
                       const TaemExecInputs *inputs);
 TaemExecTelemetry taem_exec_telemetry(const TaemExecutive *exec);
 bool taem_exec_owns_vehicle(const TaemExecutive *exec);
+/* Degraded delivery: the vehicle is runway-aligned on the final line but the
+   energy state cannot satisfy the nominal terminal contract.  Final (with its
+   own flare) owns the vehicle from here; staying in TAEM would fly the glide
+   into the ground without a flare.  Recorded as its own transition reason. */
+bool taem_exec_deliver_low_energy(TaemExecutive *exec,
+                                  const TaemExecObservation *observation);
 TaemTerminalEvaluation taem_exec_evaluate_terminal_contract(
     const TaemTerminalContract *contract);
 

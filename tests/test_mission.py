@@ -235,6 +235,21 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertAlmostEqual(s["stop_along_m"], 989.217, places=1)
         self.assertEqual(status.state, "failed")  # honest: the sink/speed gates fail at baseline
 
+    def test_l7_low_energy_final_still_flares(self):
+        """Live L7 regression: an energy-short TAEM must hand off to Final and flare.
+
+        Before the low-energy delivery, TAEM kept the vehicle and hit the ground
+        with no flare (13 m/s sink, gear up). The vehicle cannot reach the runway
+        from this state; the requirement is a controlled, flared, gear-down touchdown.
+        """
+        c = self.controller(mode="sim", scenario=SCENARIOS["l7-mm305"])
+        status = c.run()
+        self.assertIn("final-approach", status.phase_history)
+        s = json.loads((c.run_dir / "simulation-result.json").read_text())["simulatorSummary"]
+        self.assertTrue(s["touchdown_gear"] and not s["crashed"])
+        self.assertLess(s["touchdown_sink_mps"], 3.0)
+        self.assertLess(abs(s["touchdown_cross_m"]), 20.0)
+
 
 if __name__ == "__main__":
     unittest.main()

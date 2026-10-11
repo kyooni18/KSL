@@ -53,6 +53,17 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
         baseline="Complete on runway; touchdown 60.7 m/s, sink 4.94 m/s (fails sink gate), stop 989 m",
     ),
     Scenario(
+        name="l7-mm305",
+        description="STS from the L7 live (85 km / 10 deg) TAEM entry state through Final, flare and rollout (native FCS).",
+        start=Phase.MM305,
+        scenario="Docs/Experiments/STS-Landing-20261011/L7-85km-10deg/mm305-taem.ini",
+        configuration="Configuration/sts-live.json",
+        model_profile="sts-live-20261010",
+        attitude=f"{L5}/Codex-Flare-Offline/inputs/att-live.ini",
+        direct_control=True,
+        baseline="live L7: energy law reached the Final line but Final admission never passed; impact short in TAEM",
+    ),
+    Scenario(
         name="entry-70km-sts",
         description="STS at the 70 km entry interface (MM304) through TAEM to landing.",
         start=Phase.MM304,

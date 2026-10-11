@@ -420,6 +420,10 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         if(!g->terminal_aim_valid){
             double seed_distance=height/fmax(tan(4.0*DEG2RAD),tan(handoff_slope*DEG2RAD));
             double seed_aim=clampd(along+seed_distance,touchdown_target-6000.0,touchdown_target);
+            /* A low-energy delivery is already short of the handoff glide; a
+               geometric seed would aim kilometres short and dive.  Start on
+               the energy-sized aim instead. */
+            if(g->terminal_final_low_energy)seed_aim=aim;
             g->terminal_aim_along=seed_aim;
             g->terminal_aim_valid=true;
         }else{
@@ -474,7 +478,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        planned profile delivers and ask for the speed whose extra kinetic
        energy makes up the shortfall (or sheds the excess).  The floor keeps
        the stall margin the arc needs at its incidence limit. */
-    double station_speed=terminal_final_speed_target(g,v,s,fmax(0.0,-along));
+    /* After a low-energy delivery the station speed schedule is out of
+       reach: diving toward it trades the range the vehicle is short of for
+       speed.  Keep only the flare's own speed need (stall margin and the
+       touchdown-energy shortfall), so the glide stretches otherwise. */
+    double station_speed=g->terminal_final_low_energy?0.0:
+        terminal_final_speed_target(g,v,s,fmax(0.0,-along));
     double speed_ref=fmax(station_speed,1.6*fmax(speed_1g,v_td));
     double predicted_touchdown_speed=NAN;
     if(!g->terminal_pull_latch){
@@ -486,6 +495,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     if(!g->terminal_pull_latch&&isfinite(speed_ref))
         glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);
+    /* Low-energy stretch: no steeper than the best glide while the speed still
+       covers a flare to touchdown speed.  Steeper only converts range the
+       vehicle does not have into speed it does not need. */
+    if(g->terminal_final_low_energy&&!g->terminal_pull_latch){
+        double best_glide=-atan(1.0/terminal_learned_max_lift_to_drag(g,t,v,aoa_max));
+        double stretch=clampd((V-1.1*v_td)/(.15*v_td),0.0,1.0);
+        glide_fpa+=stretch*(fmax(glide_fpa,best_glide)-glide_fpa);
+    }
 
     /* Long landing: an unpowered vehicle cannot go around.  Past the point
        where the float would leave too little runway, stop floating and put

@@ -15,6 +15,24 @@ SHUTTLESIM = ROOT / "ShuttleSim"
 TOOLS = ROOT / "Tools"
 
 
+def _main_checkout(root: Path) -> Path:
+    """The primary checkout when ``root`` is a linked git worktree, else ``root``."""
+    marker = root / ".git"
+    if marker.is_file():
+        text = marker.read_text(encoding="utf-8").strip()
+        if text.startswith("gitdir:"):
+            gitdir = Path(text.split(":", 1)[1].strip())
+            if gitdir.parent.name == "worktrees" and gitdir.parent.parent.name == ".git":
+                return gitdir.parent.parent.parent.resolve()
+    return root
+
+
+# Durable live-flight data (FlightLogs/, Runtime/Physics observation store).
+# The native backend resolves it from KSP_LANDER_ROOT; a worktree must not
+# start a fresh, empty aerodynamic evidence store of its own.
+DATA_ROOT = Path(os.environ.get("KSL_DATA_ROOT") or _main_checkout(ROOT))
+
+
 def repo_path(value: str | os.PathLike[str]) -> Path:
     """Resolve a profile path: absolute paths stay, relative ones are repo-relative."""
     path = Path(value).expanduser()
