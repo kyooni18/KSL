@@ -199,3 +199,25 @@ ongoing live flight and end-to-end orbital mission remain separate gates.
   change is applied. Next investigation must address TAEM delivery energy,
   preflare timing and live aerodynamic residual together, then recheck all
   cases and a guarded live continuation.
+
+## Orbit checkpoint: load/physics race isolated
+
+- The first guarded orbit-to-rollout attempt from
+  `ksl-20261011T062628Z-live-85km-10deg-orbit` selected a strict deorbit
+  plan (13/15 stress cases, burn UT 5586.7, 30.02 m/s), then stopped safely
+  before burn: the planner had read 22,000 kg, while the live vessel read
+  25,521 kg before burn, beyond the unchanged ±3% mass envelope. Run record:
+  `runs/20261011T163547Z-live-orbit-chain/`. A paused postabort scene was
+  saved separately as `ksl-autonomous-20261012-orbit-mass-mismatch`.
+- Repeated load of the same orbit save reproduced KSP's transient value:
+  independent kRPC samples reported 22,000 kg from UT 5248.759 through
+  5249.599, then 25,521.25 kg at UT 5249.879. The existing load guard had
+  declared the flight scene settled around UT 5248.66, before resource/part
+  mass initialization completed. This is a checkpoint handoff race, not a
+  16% physical mass change during coast.
+- Orbital save loads now wait five simulation seconds after the loaded clock
+  before allowing a plan. Descending saves retain the previous quick handoff.
+  A focused regression checks rejection of the 22 t early sample and
+  acceptance of the later finite mass; all 14 guard tests pass. The same
+  checkpoint loaded with the new guard at UT 5253.659 and 25,521.25 kg.
+  Next: exercise the integrated CLI path and actual deorbit burn.

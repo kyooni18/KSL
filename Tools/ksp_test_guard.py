@@ -68,6 +68,10 @@ def saved_game_ut(name: str) -> float | None:
 
 DEFAULT_KRPC_CONNECT_TIMEOUT = 8.0
 ENTRY_PHYSICS_WARP_CUTOFF_ALTITUDE = 40000.0
+# KSP can report a placeholder 22 t vessel mass for over a second after an
+# orbital quickload, then replace it with the actual 25.5 t craft mass. A
+# deorbit search launched on that placeholder must not be flown.
+ORBITAL_LOAD_SETTLE_SECONDS = 5.0
 
 
 def _connect_timeout_seconds() -> float:
@@ -199,6 +203,26 @@ def load_state_is_settled(
     return bool(rewound or jumped_forward or load_acknowledged or scene_transition_observed)
 
 
+def orbital_load_physics_ready(state: dict, loaded_ut: float | None) -> bool:
+    """Allow orbital planning only after post-load physics has advanced.
+
+    The generic scene/clock proof is enough for a descending checkpoint, where
+    waiting several flight seconds would waste energy. Orbit has time to wait
+    for KSP's resource and mass refresh before taking a planning snapshot.
+    """
+    situation = str(state.get("situation", "")).lower()
+    if not situation.endswith("orbiting"):
+        return True
+    try:
+        mass = float(state["mass"])
+        ut = float(state["ut"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return (loaded_ut is not None and math.isfinite(loaded_ut)
+            and math.isfinite(mass) and mass > 0.0
+            and ut >= loaded_ut + ORBITAL_LOAD_SETTLE_SECONDS)
+
+
 def load_save(name: str) -> int:
     name = validated_save_name(name)
     target_ut = saved_game_ut(name)
@@ -229,6 +253,7 @@ def load_save(name: str) -> int:
     deadline = started + 75.0
     scene_transition_observed = False
     last_state: dict | None = None
+    orbital_evidence_ut: float | None = None
     while time.monotonic() < deadline:
         try:
             remaining = deadline - time.monotonic()
@@ -249,6 +274,8 @@ def load_save(name: str) -> int:
                         last_state = {
                             "ut": float(check_sc.ut), "vessel": str(active.name),
                             "meanAltitude": float(flight.mean_altitude),
+                            "mass": float(active.mass),
+                            "situation": str(active.situation),
                             "railsWarpFactor": int(check_sc.rails_warp_factor),
                             "physicsWarpFactor": int(check_sc.physics_warp_factor),
                             "gameScene": scene_name,
@@ -259,12 +286,15 @@ def load_save(name: str) -> int:
                             load_acknowledged=load_acknowledged.is_set(),
                             scene_transition_observed=scene_transition_observed,
                         ):
-                            try:
-                                conn.close()
-                            except Exception:
-                                pass
-                            emit({"event": "load-save-settled", "name": name, **last_state})
-                            return 0
+                            if orbital_evidence_ut is None:
+                                orbital_evidence_ut = target_ut if target_ut is not None else last_state["ut"]
+                            if orbital_load_physics_ready(last_state, orbital_evidence_ut):
+                                try:
+                                    conn.close()
+                                except Exception:
+                                    pass
+                                emit({"event": "load-save-settled", "name": name, **last_state})
+                                return 0
             finally:
                 check.close()
         except Exception:

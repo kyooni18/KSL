@@ -58,6 +58,15 @@ class LoadEvidenceTests(unittest.TestCase):
             self.assertFalse(guard.load_state_is_settled(state, before_ut=1000.0,
                                                         target_ut=2000.0, elapsed=5.0))
 
+    def test_orbit_load_waits_for_postload_mass_refresh(self):
+        state = sample(5249.4)
+        state.update(situation="VesselSituation.orbiting", mass=22000.0)
+        self.assertFalse(guard.orbital_load_physics_ready(state, 5248.5))
+        state.update(ut=5253.5, mass=25521.25)
+        self.assertTrue(guard.orbital_load_physics_ready(state, 5248.5))
+        state["mass"] = float("nan")
+        self.assertFalse(guard.orbital_load_physics_ready(state, 5248.5))
+
     def test_cli_load_requires_the_requested_settled_flight(self):
         with patch("ksl.kspguard.run_guard", return_value={"event": "load-save-settled",
                                                        "name": "other", "gameScene": "flight"}) as invoke:
@@ -75,6 +84,8 @@ class LoadLoopTests(unittest.TestCase):
             client.space_center.rails_warp_factor = 0
             client.space_center.physics_warp_factor = 0
             client.space_center.active_vessel.name = "STS"
+            client.space_center.active_vessel.mass = 25000.0
+            client.space_center.active_vessel.situation = "VesselSituation.flying"
             client.space_center.active_vessel.flight.return_value.mean_altitude = 70000.0
             client.krpc.current_game_scene = types.SimpleNamespace(name="flight")
             return client
