@@ -407,3 +407,21 @@ focused replay tests pass, including the clock regression.
   both wing joints set to `rigidAttachment=True` and `autostrutMode=Root` in a
   new derivative save, `ksl-autonomous-20261012-pad-fourclamp-rootrigid`.
   Neither original quicksave nor prior experiment is overwritten.
+- Four-clamp Root+Rigid still lost both wings at clamp release (29 versus
+  expected 37 parts); its scene is `ksl-autonomous-20261012-fourclamp-rootrigid-failure`.
+  Moving the aft clamps inboard from x=±2.41 to ±1.0 m still lost one wing
+  (33 parts), saved as `ksl-autonomous-20261012-inboard-clamp-failure`.
+- Moving both aft clamps onto the ET avoids attaching clamp hardware to the
+  orbiter, but the first serialized copy was invalid: the moved child PART
+  records still appeared before their new ET parent and KSP loaded only a
+  13-part fragment. This trial never ignited. A corrected derived save reorders
+  those two records after the ET and remaps all top-level part references.
+  KSP then loaded all 41 parts, 520.7 t, two wings, and four ET-parented
+  clamps; an independent probe at UT 2688 confirmed the complete graph.
+  The corrected save is `ksl-autonomous-20261012-pad-four-et-clamps-ordered`.
+- The corrected four-ET stack passed the 25-second pad settle and released
+  all four clamps without part loss. An independent probe just after liftoff
+  (UT 2703 / ~125 m) found the expected 37 parts, two wings and both main
+  gear. The ascent is continuing to SRB separation under the existing
+  guidance. This identifies clamp attachment/order as a viable liftoff fix,
+  but does not yet establish an intact orbital vehicle.
