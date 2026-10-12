@@ -44,15 +44,22 @@ def other_apsis(orbit, burn_ut, body_radius):
 
 def recoverable_periapsis_target(desired_periapsis, burn_altitude,
                                  margin=5000.0):
-    """Keep a same-pass rescue burn comfortably below its current altitude.
+    """Bound the requested Pe below the altitude of an impulsive prograde burn.
 
-    At a non-apsis burn the vehicle has unavoidable radial velocity. Asking
-    prograde thrust to raise Pe to within 50 m of the burn altitude gives an
-    unattainable root even with hundreds of m/s: the current position cannot
-    become the new periapsis while the vehicle is still descending. First
-    stabilize the orbit with an achievable Pe, then re-plan at the next apsis.
+    A 5 km margin is helpful for a rescue *away from an apsis*: the radial
+    speed cannot be eliminated with prograde thrust alone. But that margin
+    must not apply forever after the orbit has been stabilized, or a 100 km
+    Ap can never be circularized above 95 km (live fourth-flight OMS failure).
     """
     return min(desired_periapsis, burn_altitude-margin)
+
+
+def periapsis_burn_margin(current_periapsis, burn_altitude, apoapsis_altitude):
+    """Use a fine Pe target only at a real apsis of an already safe orbit."""
+    if (current_periapsis >= MIN_BURN_ALTITUDE and
+            abs(burn_altitude-apoapsis_altitude) <= 100.0):
+        return 100.0
+    return 5000.0
 
 
 def solve(make_node, error, lo, hi, iterations=26):
@@ -423,7 +430,10 @@ def main():
                 # 60-70 km costs the orbit (run a1).
                 ut_b = earliest if pe_unsafe else ut_b + base.period
             burn_altitude = base.radius_at(ut_b)-body_radius
-            pe_goal = recoverable_periapsis_target(args.periapsis, burn_altitude)
+            margin = periapsis_burn_margin(
+                base.periapsis_altitude, burn_altitude, base.apoapsis_altitude)
+            pe_goal = recoverable_periapsis_target(
+                args.periapsis, burn_altitude, margin=margin)
             if pe_goal <= base.periapsis_altitude+TOL:
                 raise RuntimeError(
                     f'No safe periapsis rescue at UT {ut_b:.1f}: '
