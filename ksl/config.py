@@ -65,6 +65,8 @@ DEFAULTS: dict[str, Any] = {
     "checkpoints": {
         # KSP saves written at these phase entries during live missions.
         "kspSaveOnPhases": ["orbit"],
+        # One-shot native KSP saves while descending through these altitudes.
+        "kspSaveOnDescendingAltitudesKm": [],
     },
 }
 
@@ -209,6 +211,16 @@ class MissionConfig:
                 Phase.parse(str(phase))
             except ValueError as exc:
                 problems.append(f"checkpoints.kspSaveOnPhases: {exc}")
+        altitudes = self.data["checkpoints"]["kspSaveOnDescendingAltitudesKm"]
+        for value in altitudes:
+            try:
+                altitude = float(value)
+                if not math.isfinite(altitude) or not 1.0 <= altitude <= 150.0:
+                    raise ValueError(value)
+            except ValueError:
+                problems.append(f"checkpoints.kspSaveOnDescendingAltitudesKm: invalid altitude {value!r}")
+        if len(set(altitudes)) != len(altitudes):
+            problems.append("checkpoints.kspSaveOnDescendingAltitudesKm: duplicate altitude")
         return problems
 
 

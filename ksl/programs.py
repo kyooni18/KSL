@@ -462,6 +462,11 @@ class _LandingState:
         self.last_warning: str | None = None
         self.pending_saves: list[Phase] = []
         self.save_phases = {Phase.parse(str(p)) for p in ctx.config["checkpoints"]["kspSaveOnPhases"]}
+        self.pending_altitude_saves: list[tuple[str, float, float]] = []
+        self.descent_thresholds = sorted((float(v) * 1000.0 for v in
+            ctx.config["checkpoints"]["kspSaveOnDescendingAltitudesKm"]), reverse=True)
+        self.last_descent_altitude: float | None = None
+        self.descent_checkpoints: list[dict[str, Any]] = []
 
     def on_snapshot(self, snap: dict[str, Any]) -> None:
         ctx = self.ctx
@@ -491,6 +496,19 @@ class _LandingState:
             ctx.log.update(connection=conn)
             if conn == "failed":
                 ctx.log.log(str(snap.get("lastError") or "kRPC connection lost"), "error")
+        telemetry = snap.get("telemetry") or {}
+        altitude, sink = telemetry.get("meanAltitude"), telemetry.get("verticalSpeed")
+        if self.engaged and isinstance(altitude, (int, float)) and math.isfinite(altitude):
+            # A crossing, not simply being below a target when reentry starts.
+            if self.last_descent_altitude is not None and isinstance(sink, (int, float)) and sink < -5:
+                while self.descent_thresholds and self.last_descent_altitude > self.descent_thresholds[0] >= altitude:
+                    target = self.descent_thresholds.pop(0)
+                    if target - altitude <= 2000.0:
+                        label = f"descent-{target / 1000.0:g}km"
+                        self.pending_altitude_saves.append((label, altitude, float(telemetry.get("ut") or 0)))
+                    else:
+                        ctx.log.log(f"Descending checkpoint at {target / 1000.0:g} km missed: first observed at {altitude / 1000.0:.2f} km", "warning")
+            self.last_descent_altitude = float(altitude)
         now = time.monotonic()
         if now - self.last_sample >= 0.5:
             self.last_sample = now
@@ -506,6 +524,19 @@ class _LandingState:
                 self.ctx.checkpoint(phase, name)
             except (BackendError, TimeoutError) as exc:
                 self.ctx.log.log(f"KSP checkpoint {name} failed: {exc}", "warning")
+        while self.pending_altitude_saves:
+            label, measured_altitude, ut = self.pending_altitude_saves.pop(0)
+            name = f"ksl-{self.ctx.log.status.run_id}-{label}"
+            try:
+                client.send("saveCheckpoint", timeout=30.0, name=name)
+            except (BackendError, TimeoutError) as exc:
+                self.ctx.log.log(f"KSP altitude checkpoint {name} failed: {exc}", "warning")
+                continue
+            record = {"kspSave": name, "measuredAltitude": measured_altitude, "ut": ut,
+                      "runId": self.ctx.log.status.run_id, "phase": self.ctx.log.status.phase}
+            self.descent_checkpoints.append(record)
+            self.ctx.log.write_json("descent-checkpoints.json", self.descent_checkpoints)
+            self.ctx.log.emit(Event("checkpoint", f"Saved descending checkpoint {name} at {measured_altitude / 1000.0:.2f} km", data=record))
 
 
 # --- landing (offline ShuttleSim) --------------------------------------------------
