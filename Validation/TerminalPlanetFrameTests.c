@@ -34,6 +34,14 @@ int main(void){
         .prime_meridian_at_epoch={-.933582298018746,.358363074026938,0}};
     assert(terminal_model_align_planet_frame(model,&p,reason,sizeof(reason)));
     assert(model->planet_frame_aligned);
+    assert(terminal_model_planet_matches(model,&p));
+    PlanetModel wrong_phase=p;
+    wrong_phase.prime_meridian_at_epoch.x=cos(atan2(p.prime_meridian_at_epoch.y,p.prime_meridian_at_epoch.x)+0.15);
+    wrong_phase.prime_meridian_at_epoch.y=sin(atan2(p.prime_meridian_at_epoch.y,p.prime_meridian_at_epoch.x)+0.15);
+    assert(!terminal_model_planet_matches(model,&wrong_phase));
+    wrong_phase=p;
+    wrong_phase.epoch_ut+=50.0;
+    assert(!terminal_model_planet_matches(model,&wrong_phase));
     assert(terminal_model_policy_matches(model,&cfg.site,&cfg.vehicle,&cfg.guidance));
     VehicleProfile changed=cfg.vehicle;
     changed.minimum_safe_speed+=1.0;

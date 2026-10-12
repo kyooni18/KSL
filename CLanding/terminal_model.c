@@ -114,6 +114,33 @@ bool terminal_model_align_planet_frame(TerminalModel *m,const PlanetModel *p,
     return m->planet_frame_aligned;
 }
 
+bool terminal_model_planet_matches(const TerminalModel *m,const PlanetModel *p){
+    if(!m||!p||!m->replay_validated||!m->planet_frame_aligned||
+       !isfinite(p->epoch_ut)||!isfinite(p->rotational_speed)||
+       !isfinite(p->prime_meridian_at_epoch.x)||
+       !isfinite(p->prime_meridian_at_epoch.y)||
+       !positive_finite(p->radius)||!positive_finite(p->gravitational_parameter)||
+       fabs(m->world.radius_m-p->radius)>1e-4*fmax(1.0,p->radius)||
+       fabs(m->world.mu_m3_s2-p->gravitational_parameter)>
+           1e-4*fmax(1.0,p->gravitational_parameter)||
+       fabs(m->world.rotation_rate_rad_s-p->rotational_speed)>1e-7)
+        return false;
+    double north_length=sqrt(p->north_axis.x*p->north_axis.x+
+        p->north_axis.y*p->north_axis.y+p->north_axis.z*p->north_axis.z);
+    if(!positive_finite(north_length)||
+       fabs(p->north_axis.x/north_length)>1e-5||
+       fabs(p->north_axis.y/north_length)>1e-5||
+       p->north_axis.z/north_length<.999999)return false;
+    double prime_length=hypot(p->prime_meridian_at_epoch.x,
+        p->prime_meridian_at_epoch.y);
+    if(!positive_finite(prime_length))return false;
+    double expected=atan2(p->prime_meridian_at_epoch.y,
+        p->prime_meridian_at_epoch.x)-p->rotational_speed*p->epoch_ut;
+    return isfinite(expected)&&isfinite(m->world.rotation_phase_rad_at_ut0)&&
+        fabs(remainder(m->world.rotation_phase_rad_at_ut0-expected,
+            2.0*acos(-1.0)))<1e-6;
+}
+
 bool terminal_model_policy_matches(const TerminalModel *m,
         const LandingSite *site,const VehicleProfile *v,
         const GuidanceSettings *g){

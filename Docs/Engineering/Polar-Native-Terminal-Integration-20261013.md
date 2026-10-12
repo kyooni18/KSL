@@ -18,7 +18,7 @@ This change wires the *existing* production closed-loop MM304 -> native MM305/HA
 
 `phase_at_UT0 = atan2(prime_y, prime_x) - omega * planet_epoch_UT`.
 
-The binder validates native world radius, gravitational parameter, rotation rate and +Z axis compatibility, and explicitly marks `planet_frame_aligned`; a mismatch clears the flag. `landing_controller_connect()` captures then binds the terminal plant to the live planet. A model with valid source tables but no planet-frame binding cannot certify an orbit-to-runway solution.
+The binder validates native world radius, gravitational parameter, rotation rate and +Z axis compatibility, and explicitly marks `planet_frame_aligned`; a mismatch clears the flag. `landing_controller_connect()` captures then binds the terminal plant to the live planet. A model with valid source tables but no planet-frame binding cannot certify an orbit-to-runway solution. At plan creation, `terminal_model_planet_matches()` rechecks the actual epoch/prime-meridian phase (modulo a full revolution) and dynamic constants against the captured native model, preventing silent reuse of a valid-looking snapshot from a different KSP session.
 Before each live deorbit plan, the controller checks the full immutable runway, vehicle, and guidance policy snapshot. If any policy input differs (for example, an adaptive speed envelope), the native model is recaptured and rebound; a stale model is not reused for strict route certification. The dedicated frame test checks stale runway, vehicle and guidance inputs as negative cases.
 
 ### Active guidance/policy identity
@@ -63,6 +63,24 @@ These results expose an important counterexample: **the native MM305 planner can
 
 The remaining blocker is not missing integration: it is a physically unqualified MM305 inlet and unsuccessful Final transfer with the sampled deorbit energy and geometry. Neither replay constitutes a successful unpowered landing or validates the revised retrograde burn taper in live KSP.
 
+### Reconstructed physical failure at the MM305 boundary
+
+Additional diagnostics using `KSP_LANDER_TRACE_ENTRY_WITNESS=1` and `KSP_LANDER_TRACE_DEORBIT_SEARCH=1` isolate why the geographically improved fourth-flight inlet remains inadequate:
+
+| Native MM305 admission term | Fourth polar, 71.3 km inlet |
+| --- | ---: |
+| Inlet speed / course | 863 m/s / 185.2 degrees |
+| Runway heading | 90 degrees |
+| Estimated instantaneous minimum turn radius | 72.4 km |
+| Straight-line distance to the Final reference | 72.0 km |
+| Specific energy available before drag | 566,925 J/kg |
+| Modeled straight-reference drag work | 560,919 J/kg |
+| Certified uncertainty charge | 252,413 J/kg |
+| Certified inlet margin | -246,415 J/kg |
+| Native continuation endpoint | 124 m altitude, 207 m/s, 32.7 km from KSC |
+
+The instantaneous turn radius is already comparable to the entire available approach range while the initial heading differs by about 95 degrees from RW09. The nominal energy budget has only about **6 kJ/kg** left after predicted drag on its minimal reference, even before accounting for a real curved path or uncertainty. The radius is an *instantaneous* bound, not a constant-radius impossibility proof after deceleration; nevertheless the native replay independently confirms failure to deliver the shuttle to Final. The defect is upstream MM304 inlet shaping and energy conservation, not a missing HAC-route object or a benign telemetry labeling error. Do not relax the certified energy veto merely to allow a deorbit.
+
 ## Tests
 
 - Native terminal planet frame regression verifies longitude at the recorded UT and at +300/+600/+900/+1200 s, along with rejection of wrong pole or gravity. See `Validation/TerminalPlanetFrameTests.c` and `Validation/TAEMNativeStackTests.c`.
@@ -85,4 +103,4 @@ CLanding/build/benchmark_deorbit_planning --fourth-polar-plan
 3. On an adequately qualified orbital fixture, verify that the positive native route is genuinely delivered through Final and stress-evaluate the same committed route under relevant aerodynamic variations before enabling strict autonomous deorbit.
 4. Only after offline qualification, run an explicitly authorized live KSP mission and compare the whole 70/50/30/25 km profile, propulsion timing, HAC acquisition and runway delivery.
 
-**Operational policy:** `sts-polar` retains `landing.requireStrictPlan=true` and refuses this recorded fourth-flight deorbit as a production landing. This is the intended safe outcome.
+**Operational interpretation:** The native deorbit planner leaves `targetCaptureAchieved=false` for this orbit and never calls the recorded fourth-flight overflight a certified runway landing. The separate KSL orchestrator may be configured for strict admission (`landing.requireStrictPlan=true`) or a warning-only experimental attempt. A warning-only launch is **not a qualified production landing**; check the active mission policy explicitly before any live KSP operation.

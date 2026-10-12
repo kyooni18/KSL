@@ -818,7 +818,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
        a valid model of an actual KSP polar orbital state. Never use it to
        certify an orbit-to-runway route before the frames agree. */
     bool native_terminal=terminal_model_policy_matches(
-        terminal_model,site,v,s);
+        terminal_model,site,v,s)&&
+        terminal_model_planet_matches(terminal_model,p);
     memset(out,0,sizeof(*out));
     trajectory_init(&out->trajectory);
 
@@ -1077,15 +1078,21 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         detailed.shadow_aborted;
     out->terminal_inlet_energy_margin=out->terminal_replay_evaluated?
         detailed.taem_interface_energy_margin:NAN;
+    GeoPoint terminal_end=predictor_geo_point(detailed.final_state.position,p,
+        detailed.final_state.ut);
+    GeoPoint runway_geo={site->latitude,site->longitude,site->altitude};
+    double terminal_end_range=great_circle_distance(terminal_end,runway_geo,p->radius);
     if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
         fprintf(stderr,
-            "DEORBIT_NATIVE_TERMINAL snapshot=%llu replay=%d inlet=%d committed=%d final=%d aborted=%d energy=%+.0f J/kg strict=%d\n",
+            "DEORBIT_NATIVE_TERMINAL snapshot=%llu replay=%d inlet=%d committed=%d final=%d aborted=%d energy=%+.0f J/kg strict=%d endUT=%.1f endH=%.0f endSpeed=%.1f endRange=%.1fkm\n",
             (unsigned long long)out->terminal_model_snapshot_id,
             out->terminal_replay_evaluated?1:0,out->terminal_inlet_qualified?1:0,
             out->terminal_native_path_committed?1:0,
             out->terminal_final_approach_captured?1:0,
             out->terminal_guidance_aborted?1:0,
-            out->terminal_inlet_energy_margin,nominal_capture?1:0);
+            out->terminal_inlet_energy_margin,nominal_capture?1:0,
+            detailed.final_state.ut,terminal_end.altitude,
+            vmag(detailed.final_state.velocity),terminal_end_range/1000.0);
     out->nominal_capture_achieved=nominal_capture;
     out->robustness_qualified=selected_robust.qualified&&nominal_capture;
     out->target_capture_achieved=out->robustness_qualified;

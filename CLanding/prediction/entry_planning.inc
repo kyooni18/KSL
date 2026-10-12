@@ -263,11 +263,14 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             out.taem_interface_energy_margin=inlet.energy_margin;
             if(entry_witness_trace)
                 fprintf(stderr,
-                    "ENTRY_WITNESS physical-inlet ut=%.2f h=%.0f V=%.0f M=%.2f range=%.1fkm course=%.1f along=%.1fkm cross=%.1fkm ready=%d veto=0x%x energy=%+.0f J/kg forced=%d\n",
+                    "ENTRY_WITNESS physical-inlet ut=%.2f h=%.0f V=%.0f M=%.2f range=%.1fkm course=%.1f along=%.1fkm cross=%.1fkm ready=%d veto=0x%x energy=%+.0f J/kg Eavailable=%.0f Edrag=%.0f Euncertainty=%.0f path=%.1fkm turnRadius=%.1fkm forced=%d\n",
                     state.ut,geo.altitude,at.speed,at.mach,range/1000.0,
                     synthetic.ground_track_heading,
                     synthetic.runway_along_track/1000.0,synthetic.runway_cross_track/1000.0,
                     admissible_inlet?1:0,inlet.veto,inlet.energy_margin,
+                    inlet.energy_available,inlet.energy_drag_work,
+                    inlet.energy_uncertainty,inlet.path_length_m/1000.0,
+                    inlet.minimum_turn_radius_m/1000.0,
                     forced_boundary?1:0);
             out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
             out.taem_speed=at.speed;

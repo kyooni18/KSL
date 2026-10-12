@@ -67,6 +67,10 @@ bool terminal_model_align_planet_frame(TerminalModel *model,
 bool terminal_model_policy_matches(const TerminalModel *model,
     const LandingSite *site,const VehicleProfile *vehicle,
     const GuidanceSettings *guidance);
+/* Detect a different rotating planet frame even when physical constants
+   match (e.g., an old KSP session/epoch prime meridian). */
+bool terminal_model_planet_matches(const TerminalModel *model,
+    const PlanetModel *planet);
 bool terminal_model_validate(const TerminalModel *model, char *reason,
                              size_t reason_size);
 bool terminal_state_validate(const TerminalDynamicState *state,
