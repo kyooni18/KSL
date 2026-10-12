@@ -79,6 +79,54 @@ bool terminal_model_capture(TerminalModel *m,
     return true;
 }
 
+static bool positive_finite(double value);
+/* ShuttleSim's native terminal frame has a fixed +Z pole and an inertial
+ * longitude origin at UT=0. KSP's orbital state supplies the current prime
+ * meridian and epoch instead. Without this binding the MM305 HAC solver can
+ * silently price a different piece of Kerbin than the live trajectory. */
+bool terminal_model_align_planet_frame(TerminalModel *m,const PlanetModel *p,
+                                      char *reason,size_t n){
+    if(reason&&n)reason[0]='\0';
+    if(!m||!p||!m->replay_validated)
+        return reject(reason,n,"terminal model or live planet frame unavailable");
+    m->planet_frame_aligned=false;
+    double north_length=sqrt(p->north_axis.x*p->north_axis.x+
+        p->north_axis.y*p->north_axis.y+p->north_axis.z*p->north_axis.z);
+    double prime_length=hypot(p->prime_meridian_at_epoch.x,
+        p->prime_meridian_at_epoch.y);
+    if(!positive_finite(north_length)||!positive_finite(prime_length)||
+       !isfinite(p->epoch_ut)||!isfinite(p->rotational_speed)||
+       fabs(p->north_axis.x/north_length)>1e-5||
+       fabs(p->north_axis.y/north_length)>1e-5||
+       p->north_axis.z/north_length<.999999||
+       fabs(p->prime_meridian_at_epoch.z)>1e-5)
+        return reject(reason,n,"planet rotation cannot be represented in native +Z frame");
+    if(!positive_finite(p->radius)||!positive_finite(p->gravitational_parameter)||
+       fabs(m->world.radius_m-p->radius)>1e-4*fmax(1.0,p->radius)||
+       fabs(m->world.mu_m3_s2-p->gravitational_parameter)>
+           1e-4*fmax(1.0,p->gravitational_parameter)||
+       fabs(m->world.rotation_rate_rad_s-p->rotational_speed)>1e-7)
+        return reject(reason,n,"native terminal world does not match live planet dynamics");
+    m->world.rotation_phase_rad_at_ut0=atan2(
+        p->prime_meridian_at_epoch.y,p->prime_meridian_at_epoch.x)-
+        p->rotational_speed*p->epoch_ut;
+    m->planet_frame_aligned=isfinite(m->world.rotation_phase_rad_at_ut0);
+    return m->planet_frame_aligned;
+}
+
+bool terminal_model_policy_matches(const TerminalModel *m,
+        const LandingSite *site,const VehicleProfile *v,
+        const GuidanceSettings *g){
+    if(!m||!site||!v||!g||!m->replay_validated||!m->planet_frame_aligned)
+        return false;
+    /* These are initialized/copied policy snapshots. A bytewise mismatch
+       fails closed, rather than allowing a terminal route priced with a
+       different runway or adaptive airspeed to be labeled certified. */
+    return !memcmp(&m->site,site,sizeof(*site))&&
+        !memcmp(&m->vehicle,v,sizeof(*v))&&
+        !memcmp(&m->guidance,g,sizeof(*g));
+}
+
 static bool positive_finite(double value) {
     return isfinite(value) && value > 0.0;
 }

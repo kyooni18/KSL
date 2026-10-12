@@ -564,14 +564,13 @@ bool deorbit_live_cutoff_capture_qualified(const EntryPrediction*p,
 bool deorbit_runway_capture_qualified(const EntryPrediction*p,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,
         double peri){
-    /* An MM304->MM305 executive handoff and a numerically admissible inlet
-       are not a *full-route* runway certificate. The old predicate could
-       certify a 70 km TAEM acquisition without ever asking the native MM305
-       planner whether a bounded HAC/Final route existed. Only a committed,
-       non-aborted downstream shadow may advertise strict landing capture. */
+    /* A qualified inlet and a committed HAC route are not sufficient to
+       certify a *full* runway approach: the native closed-loop witness must
+       actually deliver the vehicle to Final. A merely committed TAEM path is
+       evidence of a possible acquisition only, not completed HAC geometry. */
     if(!deorbit_recovery_qualified(p,site,v,s,peri)||!p->reached_taem||
        !p->taem_dynamic_interface_captured||
-       !(p->shadow_terminal_path_committed||p->shadow_final_approach_captured)||
+       !p->shadow_terminal_path_committed||!p->shadow_final_approach_captured||
        !isfinite(p->taem_interface_energy_margin)||
        !(p->taem_interface_energy_margin>=0.0)||
        p->shadow_aborted||p->taem_ownership_boundary_missed||

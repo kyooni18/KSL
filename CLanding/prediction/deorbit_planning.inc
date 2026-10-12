@@ -188,7 +188,14 @@ static bool hard_unsafe(const EntryPrediction*pr,double peri,const VehicleProfil
     return false;
 }
 
-static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleState initial,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,double thrust,bool trace){
+static EntryPrediction deorbit_executable_policy_witness(const Candidate*c,
+        const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,
+        const TrajectoryCalibrationModel*cal,const LandingSite*site,
+        const VehicleProfile*v,const GuidanceSettings*s,
+        const Telemetry*authority_source,const TerminalModel*terminal_model,
+        bool run_terminal,bool include_trajectory);
+
+static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleState initial,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,double thrust,const Telemetry*authority_source,const TerminalModel*terminal_model,bool full_terminal_stress,bool trace){
     double timing=s->deorbit_timing_uncertainty,thrust_unc=s->deorbit_thrust_uncertainty_fraction,dv_unc=s->deorbit_delta_v_uncertainty;
     double mass_unc=s->deorbit_mass_uncertainty_fraction,pos_unc=s->deorbit_position_uncertainty,vel_unc=s->deorbit_velocity_uncertainty;
     double pointing=s->deorbit_pointing_uncertainty,atmos=s->deorbit_atmosphere_uncertainty_fraction;
@@ -251,7 +258,20 @@ static RobustAssessment assess_candidate_robustness(const Candidate*c,VehicleSta
         scenario_cal.density_scale=clampd(cal->density_scale*(1+sc.atmosphere_fraction),.35,2.8);
         scenario_cal.stress_drag_scale=sc.aero_drag_scale>0?sc.aero_drag_scale:1;
         scenario_cal.stress_lift_scale=sc.aero_lift_scale>0?sc.aero_lift_scale:1;
-        EntryPrediction pr=predictor_simulate_entry(after,p,aero,env,&scenario_cal,v,site,s,v->maximum_bank_angle,0,0,0,4500,false);
+        /* The reduced trajectory can screen entry and approximate drag work,
+           but has no native MM305/Final commitment. Only actual full-route
+           continuation can pass strict robustness when nominal route exists. */
+        EntryPrediction pr;
+        if(full_terminal_stress&&burn_completed){
+            Candidate stressed={0};
+            stressed.after=after;stressed.peri=peri;stressed.dv=scenario_dv;
+            stressed.duration=duration;stressed.burn_ut=start+duration*.5;
+            pr=deorbit_executable_policy_witness(&stressed,p,aero,env,
+                &scenario_cal,site,v,s,authority_source,terminal_model,true,false);
+        }else{
+            pr=predictor_simulate_entry(after,p,aero,env,&scenario_cal,v,site,s,
+                v->maximum_bank_angle,0,0,0,4500,false);
+        }
         bool base_pass=burn_completed&&
             deorbit_runway_capture_qualified(&pr,site,v,s,peri);
         bool base_recovery=base_pass;
@@ -471,7 +491,8 @@ static EntryPrediction deorbit_executable_policy_witness(const Candidate*c,
         const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,
         const TrajectoryCalibrationModel*cal,const LandingSite*site,
         const VehicleProfile*v,const GuidanceSettings*s,
-        const Telemetry*authority_source,bool include_trajectory){
+        const Telemetry*authority_source,const TerminalModel*terminal_model,
+        bool run_terminal,bool include_trajectory){
     EntryPrediction empty;memset(&empty,0,sizeof(empty));trajectory_init(&empty.trajectory);
     if(!c||!p||!env||!cal||!site||!v||!s)return empty;
 
@@ -509,8 +530,18 @@ static EntryPrediction deorbit_executable_policy_witness(const Candidate*c,
     executed.live_cutoff_capture_qualified=true;executed.execution_qualified=true;
     executed.achieved_state_verified=true;executed.achieved_state_capture_qualified=true;
 
-    EntryPrediction witness=predictor_simulate_entry_guidance_shadow(c->after,&seed,&guidance,
-        &executed,p,aero,env,cal,&cfg,4500.0,include_trajectory);
+    EntryPrediction witness;
+    if(run_terminal&&terminal_model&&terminal_model->replay_validated&&
+       terminal_model->planet_frame_aligned){
+        TerminalShadowOutcome outcome;
+        witness=predictor_simulate_guidance_shadow_core(c->after,&seed,&guidance,
+            &executed,p,aero,env,cal,&cfg,4500.0,include_trajectory,
+            false,false,terminal_model,&outcome);
+        witness.uncertainty_scenarios=witness.shadow_guidance_used?1u:0u;
+    }else{
+        witness=predictor_simulate_entry_guidance_shadow(c->after,&seed,&guidance,
+            &executed,p,aero,env,cal,&cfg,4500.0,include_trajectory);
+    }
     trajectory_clear(&executed.trajectory);
     return witness;
 }
@@ -772,17 +803,22 @@ static double deorbit_search_horizon(VehicleState state,double period,const Plan
 #define PLAN_TIMING(stage) do{ if(getenv("KSP_LANDER_TRACE_PLAN_TIMING")) \
     fprintf(stderr,"PLAN_TIMING stage=%s cpu=%.3fs\n",(stage),(double)clock()/CLOCKS_PER_SEC); }while(0)
 
-bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
+bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         double period,
         const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
         const LandingSite*site,const VehicleProfile*v,
         const GuidanceSettings*s,double thrust,
-        const Telemetry*authority_source){
+        const Telemetry*authority_source,const TerminalModel*terminal_model){
     if(!out||!p||!env||!cal||!site||!v||!s||
        !isfinite(period)||!(period>0.0)||!(thrust>0.0))
         return false;
 
+    /* A loaded plant table with the default ShuttleSim planet frame is not
+       a valid model of an actual KSP polar orbital state. Never use it to
+       certify an orbit-to-runway route before the frames agree. */
+    bool native_terminal=terminal_model_policy_matches(
+        terminal_model,site,v,s);
     memset(out,0,sizeof(*out));
     trajectory_init(&out->trajectory);
 
@@ -910,7 +946,19 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
        MM304 executive before committing an irreversible deorbit. The scanned
        alternatives stay in the same ground-track pass and solve Pe separately. */
     EntryPrediction selected_inlet=deorbit_executable_policy_witness(
-        &selected,p,aero,env,cal,site,v,s,authority_source,false);
+        &selected,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+    /* Never spend a HAC/Final solve on an inlet that fails certified physical
+       energy or does not close toward the target. When plausible, let the
+       actual native route proof participate in candidate ranking. */
+    if(native_terminal&&selected_inlet.taem_dynamic_interface_captured&&
+       selected_inlet.taem_interface_energy_margin>=0.0&&
+       deorbit_witness_inlet_geometry(&selected_inlet,p,site,s)){
+        EntryPrediction full=deorbit_executable_policy_witness(
+            &selected,p,aero,env,cal,site,v,s,authority_source,
+            terminal_model,true,false);
+        entry_prediction_clear(&selected_inlet);
+        selected_inlet=full;
+    }
     unsigned inlet_candidates_evaluated=1;
     double inlet_step=s->target_deorbit_capture_radius/
         fmax(1.0,timing_best.entry_speed);
@@ -928,7 +976,16 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             continue;
         }
         EntryPrediction nearby_inlet=deorbit_executable_policy_witness(
-            &nearby,p,aero,env,cal,site,v,s,authority_source,false);
+            &nearby,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+        if(native_terminal&&nearby_inlet.taem_dynamic_interface_captured&&
+           nearby_inlet.taem_interface_energy_margin>=0.0&&
+           deorbit_witness_inlet_geometry(&nearby_inlet,p,site,s)){
+            EntryPrediction full=deorbit_executable_policy_witness(
+                &nearby,p,aero,env,cal,site,v,s,authority_source,
+                terminal_model,true,false);
+            entry_prediction_clear(&nearby_inlet);
+            nearby_inlet=full;
+        }
         inlet_candidates_evaluated++;
         bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
             &selected,&selected_inlet,p,site,v,s);
@@ -961,28 +1018,31 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             deorbit_witness_inlet_geometry(&selected_inlet,p,site,s)?1:0);
     entry_prediction_clear(&selected_inlet);
     PLAN_TIMING("inlet-retime");
+    /* This *full* witness owns the selected finite-burn state and executes
+       native MM304 -> MM305/HAC -> Final against the immutable live-aligned
+       TerminalModel, rather than certifying a handoff alone. Without such a
+       model it remains an entry-only diagnostic and cannot certify landing. */
+    PLAN_TIMING("detailed-witness");
+    EntryPrediction detailed=deorbit_executable_policy_witness(
+        &selected,p,aero,env,cal,site,v,s,authority_source,
+        terminal_model,native_terminal,true);
+    deorbit_record_execution_witness(&selected,&detailed,site,v,s);
+    bool nominal_capture=native_terminal&&selected.executable_witness_capture&&
+        deorbit_energy_margin_qualified(&selected.energy_margin,s,true);
+    /* Apply the same native downstream route proof to the burn and aero
+       stress cases *if* the nominal candidate survives. Invalid/uncertified
+       nominal approaches retain reduced entry-only stress diagnostics. */
     RobustAssessment selected_robust=assess_candidate_robustness(
-        &selected,state,p,aero,env,cal,site,v,s,thrust,false);
+        &selected,state,p,aero,env,cal,site,v,s,thrust,authority_source,
+        terminal_model,nominal_capture,false);
     PLAN_TIMING("robustness");
 
     if(getenv("KSP_LANDER_TRACE_STRESS")){
         RobustAssessment traced=assess_candidate_robustness(
-            &selected,state,p,aero,env,cal,site,v,s,thrust,true);
+            &selected,state,p,aero,env,cal,site,v,s,thrust,authority_source,
+            terminal_model,nominal_capture,true);
         (void)traced;
     }
-
-    /* Atmospheric guidance certifies the orbital solution; it does not
-       retime the burn.  If MM304 cannot accept this correctly targeted pass,
-       that is an Entry problem rather than permission to move the ground track. */
-    PLAN_TIMING("detailed-witness");
-    EntryPrediction detailed=deorbit_executable_policy_witness(
-        &selected,p,aero,env,cal,site,v,s,authority_source,true);
-    deorbit_record_execution_witness(&selected,&detailed,site,v,s);
-    bool nominal_capture=selected.executable_witness_capture&&
-        deorbit_energy_margin_qualified(&selected.energy_margin,s,true);
-    /* Stress cases are evaluated before the expensive production-guidance
-       witness. Join their unchanged results with that witness now, instead of
-       leaving the base-capture prerequisite unset on the selected candidate. */
     selected_robust.qualified=selected.executable_witness_capture&&
         selected_robust.pass_fraction+1e-9>=s->deorbit_robust_minimum_pass_fraction&&
         selected_robust.unsafe==0;
@@ -1004,6 +1064,28 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     out->predicted_entry_range=detailed.entry_range;
     out->predicted_entry_flight_path_angle=detailed.entry_flight_path_angle;
     out->predicted_post_burn_periapsis_altitude=selected.peri;
+    out->terminal_model_snapshot_id=native_terminal?terminal_model->snapshot_id:0;
+    out->terminal_replay_evaluated=native_terminal&&detailed.shadow_guidance_used;
+    out->terminal_inlet_qualified=out->terminal_replay_evaluated&&
+        detailed.reached_taem&&detailed.taem_dynamic_interface_captured&&
+        !detailed.taem_ownership_boundary_missed;
+    out->terminal_native_path_committed=out->terminal_replay_evaluated&&
+        detailed.shadow_terminal_path_committed;
+    out->terminal_final_approach_captured=out->terminal_replay_evaluated&&
+        detailed.shadow_final_approach_captured;
+    out->terminal_guidance_aborted=out->terminal_replay_evaluated&&
+        detailed.shadow_aborted;
+    out->terminal_inlet_energy_margin=out->terminal_replay_evaluated?
+        detailed.taem_interface_energy_margin:NAN;
+    if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+        fprintf(stderr,
+            "DEORBIT_NATIVE_TERMINAL snapshot=%llu replay=%d inlet=%d committed=%d final=%d aborted=%d energy=%+.0f J/kg strict=%d\n",
+            (unsigned long long)out->terminal_model_snapshot_id,
+            out->terminal_replay_evaluated?1:0,out->terminal_inlet_qualified?1:0,
+            out->terminal_native_path_committed?1:0,
+            out->terminal_final_approach_captured?1:0,
+            out->terminal_guidance_aborted?1:0,
+            out->terminal_inlet_energy_margin,nominal_capture?1:0);
     out->nominal_capture_achieved=nominal_capture;
     out->robustness_qualified=selected_robust.qualified&&nominal_capture;
     out->target_capture_achieved=out->robustness_qualified;
@@ -1100,6 +1182,15 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     PLAN_TIMING("done");
     candidate_clear(&selected);
     return true;
+}
+
+bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
+        double period,const PlanetModel*p,AerodynamicModel aero,
+        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
+        const LandingSite*site,const VehicleProfile*v,
+        const GuidanceSettings*s,double thrust,const Telemetry*authority_source){
+    return deorbit_plan_create_with_terminal_model(out,state,period,p,aero,
+        env,cal,site,v,s,thrust,authority_source,NULL);
 }
 
 bool deorbit_plan_create(DeorbitPlan*out,VehicleState state,double period,

@@ -121,6 +121,14 @@ void entry_prediction_clear(EntryPrediction *p);
 bool reentry_guidance_shadow_recovery_qualified(const EntryPrediction *prediction,const VehicleProfile *vehicle,const GuidanceSettings *settings);
 bool deorbit_plan_create(DeorbitPlan *out,VehicleState state,double orbit_period,const PlanetModel *planet,AerodynamicModel aero,const AerodynamicEnvelope *env,const TrajectoryCalibrationModel *cal,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double available_thrust);
 bool deorbit_plan_create_with_telemetry(DeorbitPlan *out,VehicleState state,double orbit_period,const PlanetModel *planet,AerodynamicModel aero,const AerodynamicEnvelope *env,const TrajectoryCalibrationModel *cal,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double available_thrust,const Telemetry *authority_source);
+/* Production deorbit planner: runs selected MM304/MM305/Final witnesses with
+   an immutable native plant/model snapshot aligned to the current planet. */
+bool deorbit_plan_create_with_terminal_model(DeorbitPlan *out,VehicleState state,
+    double orbit_period,const PlanetModel *planet,AerodynamicModel aero,
+    const AerodynamicEnvelope *env,const TrajectoryCalibrationModel *cal,
+    const LandingSite *site,const VehicleProfile *vehicle,
+    const GuidanceSettings *settings,double available_thrust,
+    const Telemetry *authority_source,const TerminalModel *terminal_model);
 bool deorbit_plan_preburn_state_compatible(const DeorbitPlan *plan,double live_mass,double live_available_thrust,const GuidanceSettings *settings);
 bool deorbit_capture_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis,bool require_entry_corridor);
 bool deorbit_recovery_qualified(const EntryPrediction *p,const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings,double postburn_periapsis);

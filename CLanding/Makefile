@@ -194,6 +194,18 @@ taem-tracker-allocation-test: $(TARGET)
 		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_tracker_allocation_tests
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_tracker_allocation_tests)"
 
+# This inexpensive test protects the UT/longitude transform consumed by the
+# native MM305 solver when a deorbit originates from a live KSP orbital state.
+.PHONY: terminal-planet-frame-test
+terminal-planet-frame-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
+		$(VALIDATION_ROOT)/TerminalPlanetFrameTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/terminal_planet_frame_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/terminal_planet_frame_tests)"
+
+test: terminal-planet-frame-test
+
 test: taem-tracker-allocation-test
 
 .PHONY: terminal-propagation-convergence-test

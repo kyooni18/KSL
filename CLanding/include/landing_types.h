@@ -149,6 +149,13 @@ typedef struct {
     double burn_normal_angle;
     double predicted_entry_range, predicted_entry_flight_path_angle, predicted_post_burn_periapsis_altitude;
     bool nominal_capture_achieved, robustness_qualified, target_capture_achieved;
+    /* Distinguish native terminal replay from an Entry-only MM304 handoff.
+       A committed HAC/Final path is still not a touchdown certification. */
+    uint64_t terminal_model_snapshot_id;
+    bool terminal_replay_evaluated, terminal_inlet_qualified;
+    bool terminal_native_path_committed, terminal_final_approach_captured;
+    bool terminal_guidance_aborted;
+    double terminal_inlet_energy_margin;
     unsigned robustness_scenarios, robustness_passed, robustness_unsafe;
     double robustness_pass_fraction, worst_case_closest_distance, worst_case_taem_range_error;
     bool execution_qualified, execution_degraded;

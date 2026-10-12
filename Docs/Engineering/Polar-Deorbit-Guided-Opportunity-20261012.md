@@ -39,11 +39,19 @@ It uses the project's native ShuttleSim atmosphere, not a copied full runtime ph
 
 Another recorded polar fixture (`--polar-plan`) changes its predicted inlet from ~168 km to ~87 km but also remains unqualified (around -252 kJ/kg). The exact outcome therefore is **a better-targeted MM305 inlet opportunity, not proven landing feasibility**. Varying the target post-burn periapsis in a separate offline sweep across 42, 46, 50, 54, 58 km did not produce positive certified MM305 energy in the sampled nearby candidate set. Do not solve this by weakening uncertainty/safety thresholds or by claiming proximity is adequate.
 
+## Follow-up: native terminal integration (2026-10-13)
+
+The next implementation phase now connects the same physical deorbit candidate to native MM305/HAC and Final continuation, with an explicit live-planet frame binding. See [Polar-Native-Terminal-Integration-20261013.md](Polar-Native-Terminal-Integration-20261013.md). The older blocker below records the state *before* that integration and is retained for provenance. The current remaining failure is certified inlet energy and failure to acquire Final, not the missing call path.
+
 ## Important next blocker
 
 The existing production deorbit witness stops deliberately at the MM304-to-MM305 boundary (`predictor_simulate_entry_guidance_shadow` with `stop_at_taem=true`); it **does not run a native MM305 HAC/Final route**. Therefore a strict full-route plan cannot yet be certified by that witness, even when the nominal inlet becomes geometrically plausible. The new strict polar flight gate will intentionally hold until downstream route evidence is implemented and validated. Required next step: plumb an immutable, replay-validated `TerminalModel` into selected post-burn candidate evaluation, execute bounded native MM305/Final continuation from the predicted handoff, and certify that route under physical uncertainty before allowing a production landing. Do not weaken the existing 1 km physical MM304 capture contract, the MM305 energy budget or bounded flight controls simply to turn the status green.
 
 Live runtime validation is still required for: (1) full attitude acquisition before the finite retro burn; (2) matching predicted vs realized 30/25-km kinematics under the new timing/taper; (3) downstream Final delivery. Do not infer any of these from an offline improvement alone.
+
+## 2026-10-13 native-route integration
+
+The next iteration integrated replay-validated native MM305/HAC/Final continuation and strict Final-stage proof. See [Polar-Native-Terminal-Integration-20261013.md](Polar-Native-Terminal-Integration-20261013.md). Both frozen polar-orbit fixtures still fail certified MM305 energy and 0/15 strict scenarios; the new model proves that a committed HAC route is not equivalent to Final approach arrival.
 
 ## Verification commands (offline only)
 

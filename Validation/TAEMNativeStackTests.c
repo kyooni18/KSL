@@ -509,6 +509,32 @@ int main(void) {
     assert(terminal_model_capture(&model, &files, &configuration, 41,
                                   reason, sizeof(reason)));
     assert(model.replay_validated && model.snapshot_id == 41);
+    assert(!model.planet_frame_aligned);
+    /* The KSP prime meridian is a *time-stamped* inertial direction, whereas
+       native world_lla() expects the angle at UT=0. This binding is required
+       before interpreting an orbital candidate in the terminal solver. */
+    PlanetModel planet={.radius=model.world.radius_m,
+        .gravitational_parameter=model.world.mu_m3_s2,
+        .rotational_speed=model.world.rotation_rate_rad_s,
+        .epoch_ut=146949660.647894,
+        .north_axis={0,0,1},
+        .prime_meridian_at_epoch={cos(.7),sin(.7),0}};
+    TerminalModel bound=model;
+    assert(terminal_model_align_planet_frame(&bound,&planet,reason,sizeof(reason)));
+    assert(bound.planet_frame_aligned);
+    Vec3 prime=world_fixed_to_inertial(&bound.world,ss_v3(1,0,0),planet.epoch_ut);
+    assert(fabs(prime.x-cos(.7))<1e-10);
+    assert(fabs(prime.y-sin(.7))<1e-10);
+    assert(fabs(prime.z)<1e-12);
+    /* An unsupported tilted spin axis or a different Kerbin dynamic model
+       cannot silently inherit the replay_validated flag. */
+    planet.north_axis=(Vector3){.1,0,.995};
+    assert(!terminal_model_align_planet_frame(&bound,&planet,reason,sizeof(reason)));
+    assert(!bound.planet_frame_aligned);
+    planet.north_axis=(Vector3){0,0,1};
+    planet.gravitational_parameter*=1.1;
+    assert(!terminal_model_align_planet_frame(&bound,&planet,reason,sizeof(reason)));
+    assert(!bound.planet_frame_aligned);
     test_mm305_acquisition_qualification_contract(&model, &configuration);
     TerminalModel invalid=model;
     double *positive_fields[]={&invalid.world.radius_m,&invalid.world.mu_m3_s2,

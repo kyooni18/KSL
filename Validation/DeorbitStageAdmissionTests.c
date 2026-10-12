@@ -70,6 +70,10 @@ int main(void) {
     assert(!deorbit_runway_capture_qualified(&overflight, &cfg.site,
         &cfg.vehicle, &cfg.guidance, 50000.0));
     overflight.shadow_terminal_path_committed = true;
+    /* An unflown HAC plan cannot qualify deorbit as runway deliverable. */
+    assert(!deorbit_runway_capture_qualified(&overflight, &cfg.site,
+        &cfg.vehicle, &cfg.guidance, 50000.0));
+    overflight.shadow_final_approach_captured = true;
     assert(deorbit_runway_capture_qualified(&overflight, &cfg.site,
         &cfg.vehicle, &cfg.guidance, 50000.0));
     overflight.taem_interface_energy_margin = -1.0;

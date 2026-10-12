@@ -21,6 +21,9 @@ typedef struct TerminalModel {
     uint64_t aero_book_source_digest;
     uint64_t attitude_source_digest;
     bool replay_validated;
+    /* The source files do not specify KSP's current inertial longitude zero.
+       This becomes true only after an explicit live/recorded PlanetModel bind. */
+    bool planet_frame_aligned;
     KerbinWorld world;
     AeroTable aero;
     AttitudeModel attitude;
@@ -56,6 +59,14 @@ bool terminal_model_capture(TerminalModel *model,
         const LandingConfiguration *configuration, uint64_t snapshot_id,
         char *reason, size_t reason_size);
 
+bool terminal_model_align_planet_frame(TerminalModel *model,
+                                      const PlanetModel *planet,
+                                      char *reason, size_t reason_size);
+/* A replay certificate must use the exact active runway, vehicle and
+   guidance policy snapshot; an adaptive speed update invalidates it. */
+bool terminal_model_policy_matches(const TerminalModel *model,
+    const LandingSite *site,const VehicleProfile *vehicle,
+    const GuidanceSettings *guidance);
 bool terminal_model_validate(const TerminalModel *model, char *reason,
                              size_t reason_size);
 bool terminal_state_validate(const TerminalDynamicState *state,
