@@ -19,6 +19,12 @@ from .events import emit_event
 
 MIN_BURN_ALTITUDE = 74000.0
 ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
+# Corrections at or below this delta-v fly as RCS forward translation instead of
+# an OMS burn: the OMS thrust vector is off the shuttle's attitude axis, so a
+# short OMS burn makes it tumble, while forward translation needs no thrust-vector
+# alignment.
+RCS_TRIM_MAX_DV = 2.0  # m/s
+RCS_TRIM_TIMEOUT = 180.0  # s of wall time
 
 
 def oms_propellant_mass(vessel):
@@ -125,7 +131,83 @@ def align_for_burn(conn, vessel, engines, ap, frame, direction, limit,
         vessel.control.rcs = False
 
 
+def use_rcs_forward(dv, engines_available=True):
+    """Slight corrections use RCS forward translation; larger ones need the OMS."""
+    return dv <= RCS_TRIM_MAX_DV or not engines_available
+
+
+def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
+    """Fly a slight correction with RCS forward translation only.
+
+    Attitude is acquired with reaction wheels while RCS is off.  Only then are the
+    RCS parts configured for forward translation alone (pitch/yaw/roll thrusters
+    disabled), so the thrusters cannot fight the attitude hold.  The vessel's
+    forward axis is aimed straight at the burn vector: no OMS thrust-axis offset.
+    """
+    sc = conn.space_center
+    ctl = vessel.control
+    ap = CUSTOM_AP['ap']
+    rcs_parts = [p.rcs for p in vessel.parts.rcs]
+    if not rcs_parts:
+        raise RuntimeError('No RCS thrusters for a forward-translation trim')
+    saved = [(r.pitch_enabled, r.yaw_enabled, r.roll_enabled, r.forward_enabled,
+              r.right_enabled, r.up_enabled) for r in rcs_parts]
+    print(f'RCS forward trim: node dv {node.delta_v:.3f} m/s, T-{node.time_to:.0f} s')
+    try:
+        ctl.rcs = False
+        ctl.throttle = 0.0
+        ap.reference_frame = node.reference_frame
+        burn_dir = (0.0, 1.0, 0.0)
+        ap.target_direction = burn_dir
+        ap.target_roll = float('nan')
+        ap.engaged = True
+        if node.time_to > ALIGN_LEAD+60:
+            sc.warp_to(node.ut-ALIGN_LEAD-30)
+        while sc.ut < node.ut-0.0:
+            ap.target_direction = burn_dir
+            time.sleep(0.1)
+        start = time.monotonic()
+        while ap.error > 2.0:  # reaction wheels only, RCS stays off
+            if time.monotonic()-start > 120.0:
+                raise RuntimeError('RCS trim attitude did not align within 120 s')
+            ap.target_direction = burn_dir
+            time.sleep(0.1)
+        for r in rcs_parts:
+            r.pitch_enabled = r.yaw_enabled = r.roll_enabled = False
+            r.right_enabled = r.up_enabled = False
+            r.forward_enabled = True
+        ctl.rcs = True
+        burn_start = time.monotonic()
+        while time.monotonic()-burn_start < RCS_TRIM_TIMEOUT:
+            try:
+                remaining = node.remaining_delta_v
+            except RuntimeError:
+                break
+            if remaining <= tolerance:
+                break
+            if ap.error > 10.0:
+                ctl.forward = 0.0
+                break
+            ctl.forward = max(0.05, min(1.0, remaining/0.3))
+            time.sleep(0.05)
+        print(f'RCS forward trim end after {time.monotonic()-burn_start:.1f} s, '
+              f'aim error {ap.error:.1f} deg')
+    finally:
+        ctl.forward = 0.0
+        ctl.rcs = False
+        for r, flags in zip(rcs_parts, saved):
+            (r.pitch_enabled, r.yaw_enabled, r.roll_enabled, r.forward_enabled,
+             r.right_enabled, r.up_enabled) = flags
+        ap.engaged = False
+        try:
+            node.remove()
+        except RuntimeError:
+            pass
+
+
 def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
+    if use_rcs_forward(node.delta_v) and not orbit_cutoff:
+        return execute_rcs_forward(conn, vessel, node, min(tolerance, 0.03))
     sc = conn.space_center
     ctl = vessel.control
     from .attitude import CustomAutopilot
