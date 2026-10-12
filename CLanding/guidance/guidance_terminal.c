@@ -221,6 +221,10 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             if (snapshot!=0) {
                 admission_route_qualified=
                     guidance_mm305_admission_qualified(g,t,true,snapshot);
+                if(g->mm305_admission_valid&&g->mm305_admission_found&&
+                   g->mm305_admission_result_ut!=t->ut)
+                    admission_route_qualified=guidance_mm305_revalidate_admission(
+                        g,t,state,cfg,terminal_model);
                 if (!admission_route_qualified && g->mm305_admission_needed &&
                     !g->mm305_async_planning) {
                     /* No worker (offline tools/tests): make one immediate attempt,
@@ -262,6 +266,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             return entry;
         }
 
+        GuidanceMachine before_handoff=*g;
         EntryExecObservation handoff_observation={
             .ut=t->ut,.relative_velocity=t->true_air_speed,
             .altitude=t->mean_altitude,.dynamic_pressure=t->dynamic_pressure};
@@ -313,13 +318,21 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->hac_radius=s->hac_radius;
         g->hac_side=0.0;
         g->phase=PHASE_TAEM;
-        if (!taem_exec_enter(g,t,s,p,aero,cfg,false))
-            return terminal_abort(g,
-                "MM304 reached the physical MM305 inlet, but the TAEM executive could not enter Path Acquisition.");
+        if (!taem_exec_enter(g,t,s,p,aero,cfg,false)){
+            *g=before_handoff;
+            entry.has_warning=true;
+            snprintf(entry.warning,sizeof(entry.warning),
+                "Qualified MM305 route could not enter the executive; MM304 ownership retained.");
+            return entry;
+        }
         if (!g->diagnostic_shadow) {
-            if (admission_route_qualified && !guidance_mm305_adopt_admission_route(g,cfg))
-                fprintf(stderr,
-                    "MM305 admission route could not be adopted; continuing in Path Acquisition and re-planning.\n");
+            if (!guidance_mm305_adopt_admission_route(g,cfg)){
+                *g=before_handoff;
+                entry.has_warning=true;
+                snprintf(entry.warning,sizeof(entry.warning),
+                    "Qualified MM305 route could not be adopted; MM304 ownership retained.");
+                return entry;
+            }
             if (!g->mm305_route_committed) {
                 g->mm305_planning_needed=true;
                 g->mm305_plan_request_ut=t->ut;

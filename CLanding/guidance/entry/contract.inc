@@ -96,7 +96,13 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     FinalAlignmentContract alignment=final_alignment_contract(alignment_distance,&cfg->site,v,s);
     double alignment_altitude=alignment.altitude_m;
     double alignment_speed=alignment.speed_mps;
-    double alignment_range=hypot(t->runway_along_track+alignment.distance_m,t->runway_cross_track);
+    /* Entry can start on the far side of the planet. Use the same spherical
+       runway aimpoint as downstream geometry instead of a tangent-plane chord. */
+    double ground_radius=p->radius+cfg->site.altitude;
+    GeoPoint alignment_point=runway_approach_aimpoint(&cfg->site,ground_radius,
+        alignment.distance_m);
+    GeoPoint current_point={t->latitude,t->longitude,t->mean_altitude};
+    double alignment_range=great_circle_distance(current_point,alignment_point,ground_radius);
     if(!alignment.valid||!isfinite(alignment_range)||!isfinite(alignment_altitude))
         return entry_program_contract_hold(g,t,cfg,dt,
             "MM304 alignment energy contract has invalid geometry.");
@@ -432,7 +438,14 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     g->entry_control_turn_radius=live_turn_radius(t,aero,v,bank);
     g->entry_control_cost=NAN;
     g->entry_control_taem_range_error=drag.predicted_range_error;
-    g->entry_control_taem_speed=taem_velocity;
+    /* Publish an inlet speed only when downstream propagation has actually
+       qualified that inlet; the sequencing velocity is not an energy target. */
+    bool qualified_inlet=g->mm305_admission_valid&&g->mm305_admission_found&&
+        g->mm305_admission_route.valid&&g->mm305_admission_route.profile_speed_tabulated&&
+        t->ut>=g->mm305_admission_result_ut&&
+        t->ut-g->mm305_admission_result_ut<=MM305_ADMISSION_MAX_AGE_S;
+    g->entry_control_taem_speed=qualified_inlet?
+        g->mm305_admission_route.profile_speed_lut[0]:NAN;
     g->entry_control_taem_energy_error=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
         cfg->site.latitude,alignment_altitude,alignment_speed,p);
@@ -458,9 +471,21 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         lateral.has_crossrange_error?lateral.crossrange_error_m/1000.0:NAN,
         aoa,handoff_ready?"admissible":"not yet admissible");
 
+    char admission_warning[384];
     const char*warning=NULL;
     if(drag.degraded||alpha.degraded||lateral_out.degraded_authority)
         warning="MM304 is using degraded aerodynamic feedback; commands remain inside measured/configured authority and no fallback trajectory is active.";
+    bool inlet_band=t->mean_altitude>=s->mm305_min_altitude&&
+        t->mean_altitude<=s->mm305_max_altitude&&
+        isfinite(t->mach)&&fabs(t->mach-s->mm305_target_mach)<=s->mm305_mach_half_width;
+    if(inlet_band&&!admission.valid)
+        warning="MM305 energy projection is invalid or unconverged; MM304 retains ownership. Verify native atmosphere, force evidence and response limits.";
+    else if(inlet_band&&(admission.veto&16u)){
+        snprintf(admission_warning,sizeof(admission_warning),
+            "MM305 alignment reserve is not certified (%+.0f J/kg, drag %.0f, uncertainty %.0f). MM304 retains ownership; preserve energy and reduce lateral displacement before the inlet.",
+            admission.energy_margin,admission.energy_drag_work,admission.energy_uncertainty);
+        warning=admission_warning;
+    }
 
     static _Thread_local double entry_trace_last_ut=-INFINITY;
     const char*entry_trace=getenv("KSP_LANDER_ENTRY_TRACE");

@@ -4,6 +4,7 @@
 #include "shuttlesim/math3.h"
 
 #include <float.h>
+#include <stdlib.h>
 #include <math.h>
 
 

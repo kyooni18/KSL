@@ -100,6 +100,11 @@ void guidance_mm305_admission_accept(GuidanceMachine *g, const Mm305PlanResult *
 bool guidance_mm305_admission_qualified(GuidanceMachine *g, const Telemetry *t,
     bool physically_admissible, uint64_t model_snapshot_id);
 
+/* Re-prove a held route geometry from the current measured state before
+   ownership transfer. The existing age guard still applies to the new proof. */
+bool guidance_mm305_revalidate_admission(GuidanceMachine *g,const Telemetry *t,
+    const VehicleState *state,const LandingConfiguration *cfg,const TerminalModel *model);
+
 /* After the phase has become PHASE_TAEM: commit the qualified route as the
    MM305 route so the handoff is bumpless.  Returns true when adopted. */
 bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,

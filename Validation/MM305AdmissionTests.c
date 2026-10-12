@@ -1,5 +1,6 @@
 #include "landing.h"
 #include "decision_envelope.h"
+#include "terminal_model.h"
 
 #include <assert.h>
 #include <math.h>
@@ -111,6 +112,32 @@ int main(void){
     assert(!decision_unpowered_path_projection(&g,&nominal,&p,&cfg,final_alt,INFINITY).valid);
     assert(!decision_unpowered_path_projection_with_tolerance(&g,&nominal,&p,&cfg,
         final_alt,ready.path_length_m,NAN).valid);
+
+    /* A signed negative lift coefficient is valid physics (camber / a
+       push-over), not permission to discard the complete energy projection. */
+    TerminalModel signed_model={0};
+    world_seed_kerbin(&signed_model.world);
+    signed_model.replay_validated=true;
+    signed_model.aero.reference_area_m2=250.0;
+    signed_model.aero.mach_count=2;signed_model.aero.alpha_count=2;
+    signed_model.aero.mach[1]=10.0;signed_model.aero.alpha_deg[1]=30.0;
+    for(unsigned i=0;i<2;i++)for(unsigned j=0;j<2;j++){
+        signed_model.aero.cl[i][j]=-.01;signed_model.aero.cd[i][j]=.05;
+    }
+    g.entry_terminal_model=&signed_model;
+    double signed_lift=0.0,signed_drag=0.0;
+    assert(decision_unpowered_aerodynamic_accelerations(&g,&nominal,&p,&cfg,
+        nominal.mean_altitude,nominal.true_air_speed,0.0,&signed_lift,&signed_drag));
+    assert(signed_lift<0.0&&signed_drag>0.0);
+    g.entry_terminal_model=NULL;
+    double distance=final_alignment_distance_for_state(NULL,nominal.mean_altitude,
+        nominal.true_air_speed,&cfg.site,&cfg.vehicle,&cfg.guidance);
+    FinalAlignmentContract alignment=final_alignment_contract(distance,&cfg.site,
+        &cfg.vehicle,&cfg.guidance);
+    assert(alignment.valid&&alignment.distance_m>=cfg.guidance.final_approach_distance);
+    assert(alignment.speed_mps>=cfg.guidance.final_alignment_speed);
+    assert(fabs(alignment.altitude_m-cfg.site.altitude-
+        alignment.distance_m*tan(alignment.slope_deg*DEG2RAD))<1e-9);
 
     Telemetry low=nominal;
     low.mean_altitude=cfg.guidance.mm305_min_altitude-1.0;

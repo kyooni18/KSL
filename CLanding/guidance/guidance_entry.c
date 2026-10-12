@@ -1,4 +1,5 @@
 #include "guidance_internal.h"
+#include "mm305_planning.h"
 
 #include <float.h>
 #include <math.h>
