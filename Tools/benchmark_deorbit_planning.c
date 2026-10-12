@@ -24,11 +24,14 @@ int main(int argc,char **argv){
     if(plan)speed=sqrt(p.gravitational_parameter/r);
     VehicleState state={.position={r,0,0},.velocity={0,0,speed},.mass=22000.0,.ut=0.0};
     AerodynamicModel aero={cfg.vehicle.estimated_lift_to_drag,cfg.vehicle.estimated_ballistic_coefficient,0.05};
+    AerodynamicEnvelope env;for(int i=0;i<4;i++)env.regimes[i]=aero;
+    TrajectoryCalibrationModel cal={.density_scale=1,.drag_scale=1,.lift_scale=1,
+        .bank_effectiveness=1,.speed_of_sound=340,.speed_of_sound_scale=1,.confidence=.05};
     clock_t start=clock();
     if(plan){
         DeorbitPlan result={0};
         bool ok=deorbit_plan_create(&result,state,2.0*M_PI*sqrt(r*r*r/p.gravitational_parameter),
-            &p,aero,NULL,NULL,&cfg.site,&cfg.vehicle,&cfg.guidance,60000.0);
+            &p,aero,&env,&cal,&cfg.site,&cfg.vehicle,&cfg.guidance,60000.0);
         printf("plan ok=%d execution=%d scenarios=%u passed=%u dv=%.17g burn=%.17g\n",
             ok,result.execution_qualified,result.robustness_scenarios,result.robustness_passed,
             result.delta_v,result.burn_ut);
