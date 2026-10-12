@@ -14,7 +14,7 @@
 typedef struct {
     double roll_accel_max, pitch_accel_max, pitch_lag_s, pitch_wn, pitch_zeta,
         pitch_trim_ki, roll_lag_s, roll_wn, roll_zeta, yaw_accel_max, yaw_wn,
-        yaw_lag_s;
+        yaw_lag_s, rcs_release_beta_deg;
 } FlightControlTuning;
 
 static FlightControlTuning fc_tuning_values;
@@ -45,6 +45,7 @@ static void fc_tuning_init(void) {
         .yaw_accel_max = fc_tuning_override(on, "KSP_LANDER_YAW_ACCEL", 30.0),
         .yaw_wn = fc_tuning_override(on, "KSP_LANDER_YAW_WN", 1.0),
         .yaw_lag_s = fc_tuning_override(on, "KSP_LANDER_YAW_LAG", 0.20),
+        .rcs_release_beta_deg = fc_tuning_override(on, "KSP_LANDER_RCS_RELEASE_BETA", 5.0),
     };
     fc_tuning_values = t;
 }
@@ -210,6 +211,7 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->quaternion_yaw_error_rate = 0.0;
     state->pitch_response_scale = 0.70;
     state->rcs_transonic_cutoff = false;
+    state->rcs_latched = false;
     state->has_last_profile = false;
     state->main_gear_contact_latched = false;
     memset(state->last_control, 0, sizeof(state->last_control));
@@ -1012,9 +1014,7 @@ bool flight_control_step_attitude(FlightControlState *state,
     double yaw_command = fc_capped_pd_command(yaw_error, yaw_coordinate_rate,
         yaw_target_rate, yaw_authority, yaw_wn, 1.0, tuning->yaw_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
-    /* Mission constraint: RCS is not used during atmospheric guidance. */
     double rcs_assist = 0.0;
-    state->rcs_transonic_cutoff = true;
 
     /* During a departure, a moving/aliased attitude reference must not defeat
        damping of the physical rotation. Switch to body-rate arrest when the
@@ -1050,8 +1050,25 @@ bool flight_control_step_attitude(FlightControlState *state,
     output->roll = rollout_profile?0.0:state->last_control[FLIGHT_CONTROL_AXIS_ROLL];
     output->yaw = rollout_heading_hold?state->last_control[FLIGHT_CONTROL_AXIS_YAW]:
         (rollout_profile?0.0:state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
+    /* Thin-air yaw authority: the rudder can saturate without turning the
+       nose (live polar entry, Mach 4, 28 deg AoA: yaw at 100 percent left while
+       the nose kept yawing right and sideslip diverged).  When any axis command
+       saturates in the high-altitude profiles, latch RCS on.  Release only after
+       no axis is saturated and sideslip is back inside the coordination scale,
+       i.e. once the air has become thick enough for the surfaces to hold it. */
+    bool rcs_profile = profile == PROFILE_ENTRY || profile == PROFILE_TAEM ||
+                       profile == PROFILE_RECOVERY;
+    bool axis_saturated = false;
+    for (int axis = 0; axis < FLIGHT_CONTROL_AXIS_COUNT; axis++)
+        if (fabs(state->last_control[axis]) >= 1.0 - DBL_EPSILON) /* decision-literal-ok: normalized actuator command domain */
+            axis_saturated = true;
+    if (!rcs_profile) state->rcs_latched = false;
+    else if (axis_saturated) state->rcs_latched = true;
+    else if (fabs(sideslip) < tuning->rcs_release_beta_deg) state->rcs_latched = false;
+    state->rcs_transonic_cutoff = !state->rcs_latched;
+    if (state->rcs_latched) rcs_assist = 1.0; /* decision-literal-ok: normalized assist domain */
     output->rcs_assist = rcs_assist;
-    output->rcs_requested = false;
+    output->rcs_requested = state->rcs_latched;
     output->valid = true;
 
     FlightControlDiagnostics *d = &output->diagnostics;
@@ -1109,7 +1126,7 @@ bool flight_control_step_attitude(FlightControlState *state,
         (quaternion_yaw_control ? attitude_error->yaw_error_deg : sideslip);
     d->attitude_error = fmax(fabs(pitch_error),
         fmax(fabs(roll_error),fabs(controlled_yaw_error)));
-    d->rcs_transonic_cutoff = true;
+    d->rcs_transonic_cutoff = !state->rcs_latched;
 
     state->last_ut = fc_finite(telemetry->ut, state->last_ut + control_dt);
     state->last_pitch = pitch;

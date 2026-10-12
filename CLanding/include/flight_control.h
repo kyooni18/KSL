@@ -191,6 +191,7 @@ typedef struct {
     double pitch_response_scale;
 
     bool rcs_transonic_cutoff;
+    bool rcs_latched;
     ControlProfile last_profile;
     bool has_last_profile;
     /* Latched on the first real main-wheel contact. Pitch is guided through
