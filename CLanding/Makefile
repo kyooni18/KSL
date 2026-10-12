@@ -24,6 +24,12 @@ CNANO_COMPAT := $(CNANO_COMPAT_ROOT)/krpc_cnano
 CNANO_INCLUDE_FLAGS := -isystem $(CNANO_ROOT)/include -isystem $(CNANO_COMPAT_ROOT) -isystem $(NANOPB_ROOT)
 CNANO_DEFINES := -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512
 PROJECT_CPPFLAGS := $(CPPFLAGS) -D_DEFAULT_SOURCE $(CNANO_INCLUDE_FLAGS) $(CNANO_DEFINES)
+# Experimental MM305 switch (path_energy.inc): `make BUILD=build-supersonic
+# MM305_SUPERSONIC_ACTIVE_UNCERTAINTY=1 ...`. Unset keeps the certified default.
+# Make does not track this flag, so use a separate BUILD directory.
+ifdef MM305_SUPERSONIC_ACTIVE_UNCERTAINTY
+PROJECT_CPPFLAGS += -DMM305_SUPERSONIC_ACTIVE_UNCERTAINTY=$(MM305_SUPERSONIC_ACTIVE_UNCERTAINTY)
+endif
 UPSTREAM_CNANO_WARNING_FLAGS := -Wno-error=unused-parameter -Wno-error=unused-function -Wno-error=missing-field-initializers
 
 VPATH := app:guidance:prediction:control:vehicle:calibration:transport:telemetry:persistence:include
