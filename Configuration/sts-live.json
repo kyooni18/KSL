@@ -51,7 +51,7 @@
     "hacLookAheadAngle": 16,
     "hacRadius": 12000,
     "maximumEntryFlightPathAngle": -3.0,
-    "minimumPlanningLeadTime": 12,
+    "minimumPlanningLeadTime": 60,
     "predictionInterval": 1.5,
     "sTurnMinimumLegDuration": 24,
     "taemGlideSlope": 24,

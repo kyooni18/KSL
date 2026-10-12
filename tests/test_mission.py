@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest import mock
 
 from ksl import cli, programs
+from ksl.backend import BackendError, validate_plan_qualification
 from ksl.config import ConfigError, config_from_snapshot, load_config
 from ksl.controller import MissionController, continue_phase
 from ksl.kspguard import GuardError, STS_REQUIRED_PARTS, check_orbiter_integrity
@@ -66,6 +67,21 @@ class PhaseModelTests(unittest.TestCase):
 
 
 class ConfigTests(unittest.TestCase):
+    def test_polar_landing_blocks_uncertified_overflight_by_default(self):
+        config = load_config("sts-polar")
+        self.assertTrue(config["landing"]["requireStrictPlan"])
+        # The fourth polar flight needed ~35s after warp exit to acquire
+        # retrograde; the former 12s coast lead systematically delayed ignition.
+        self.assertGreaterEqual(config.backend_configuration()["guidance"]
+                                ["minimumPlanningLeadTime"], 60.0)
+        degraded = {"executionQualified": True, "targetCaptureAchieved": False}
+        with self.assertRaisesRegex(BackendError, "strict full-route"):
+            validate_plan_qualification(degraded, config["landing"]["requireStrictPlan"])
+        self.assertIsNone(validate_plan_qualification(
+            {"executionQualified": True, "targetCaptureAchieved": True}, True))
+        self.assertFalse(load_config("sts-polar", ["landing.requireStrictPlan=false"])
+                         ["landing"]["requireStrictPlan"])
+
     def test_polar_insertion_periapsis_may_be_inside_atmosphere(self):
         config = load_config('sts-polar')
         # OMS raises periapsis after MECO. A sub-atmosphere-edge insertion

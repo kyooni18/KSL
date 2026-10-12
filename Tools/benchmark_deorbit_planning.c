@@ -21,7 +21,8 @@ int main(int argc,char **argv){
         fprintf(stderr,"%s\n",error);return 2;
     }
     bool polar=argc>1&&!strcmp(argv[1],"--polar-plan");
-    bool plan=polar||(argc>1&&!strcmp(argv[1],"--plan"));
+    bool fourth=argc>1&&!strcmp(argv[1],"--fourth-polar-plan");
+    bool plan=polar||fourth||(argc>1&&!strcmp(argv[1],"--plan"));
     double r=p.radius+100000.0,peri=p.radius+50000.0;
     double speed=sqrt(p.gravitational_parameter*(2.0/r-2.0/(r+peri)));
     if(plan)speed=sqrt(p.gravitational_parameter/r);
@@ -46,6 +47,24 @@ int main(int argc,char **argv){
         aero=env.regimes[2];
         thrust=59195.8151910419;
     }
+    if(fourth){
+        /* Freeze the 2026-10-12 fourth live STS orbital state at UT
+           146949660.947894, its KSP rotation frame, and first planner
+           calibrated aero envelope. Reproduces the KSC-overflight plan without
+           opening KSP or reading mutable game state. */
+        state=(VehicleState){.position={265913.976923641,266230.434410646,590362.583042728},
+            .velocity={-1338.3903380996,-1340.09579557642,1207.03270772642},
+            .mass=25703.169921875,.ut=146949660.947894};
+        p.epoch_ut=146949660.647894;
+        p.prime_meridian_at_epoch=(Vector3){-.933582298018746,.358363074026938,0};
+        p.north_axis=(Vector3){0,0,1};
+        env.regimes[0]=(AerodynamicModel){.224200587877171,191.758167836936,.882985601234646};
+        env.regimes[1]=(AerodynamicModel){.773070325204928,692.167061067764,.936993059592152};
+        env.regimes[2]=(AerodynamicModel){.734959904003455,638.320313325158,.96515002259869};
+        env.regimes[3]=(AerodynamicModel){.48723219035857,377.98466463495,.938729947916751};
+        aero=env.regimes[2];
+        thrust=59195.8164168286;
+    }
     TrajectoryCalibrationModel cal={.density_scale=1,.drag_scale=1,.lift_scale=1,
         .bank_effectiveness=1,.speed_of_sound=340,.speed_of_sound_scale=1,.confidence=.05};
     clock_t start=clock();
@@ -58,6 +77,10 @@ int main(int argc,char **argv){
             result.delta_v,result.burn_ut,result.burn_normal_angle,
             result.predicted_post_burn_periapsis_altitude,
             result.predicted_entry_range,result.predicted_entry_flight_path_angle);
+        printf("recovery=%d nominal=%d closest=%.1fkm TAEM=%.1fkm rangeError=%+.1fkm note=%s\n",
+            result.target_capture_achieved?1:0,result.nominal_capture_achieved?1:0,
+            result.predicted_closest_distance/1000.0,result.predicted_taem_distance/1000.0,
+            result.predicted_taem_range_error/1000.0,result.note);
         deorbit_plan_clear(&result);
     }else{
         EntryPrediction result=predictor_simulate_entry(state,&p,aero,NULL,NULL,

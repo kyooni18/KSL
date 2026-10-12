@@ -247,21 +247,28 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                planner to claim a runway opportunity that did not exist. */
             bool forced_boundary=shadow.entry_exec.last_transition_reason==
                 ENTRY_TRANSITION_TAEM_FORCED_HANDOFF;
-            bool admissible_inlet=true;
-            if(forced_boundary){
-                TaemInterfaceCapture admission=entry_mm305_admission_envelope(
-                    &shadow,&synthetic,synthetic.ground_track_heading,p,cfg);
-                admissible_inlet=admission.valid&&admission.ready;
-                if(!admissible_inlet)out.taem_ownership_boundary_missed=true;
-            }
+            TaemInterfaceCapture inlet=entry_mm305_admission_envelope(
+                &shadow,&synthetic,synthetic.ground_track_heading,p,cfg);
+            bool admissible_inlet=inlet.valid&&inlet.ready;
+            if(forced_boundary&&!admissible_inlet)
+                out.taem_ownership_boundary_missed=true;
             out.taem_dynamic_interface_captured=shadow.taem_interface_captured&&
                 admissible_inlet;
             out.taem_dynamic_interface_target_valid=false;
-            /* Publish a measured geometric miss, not the old literal zero. */
+            /* Publish measured runway geometry and certified inlet energy,
+               not literal zero error or a different Entry drag budget. */
             out.taem_interface_error=hypot(
                 synthetic.runway_along_track-cfg->guidance.mm304_handoff_along_track,
                 synthetic.runway_cross_track-cfg->guidance.mm304_handoff_cross_track);
-            out.taem_interface_energy_margin=shadow.entry_feedback.energy_margin;
+            out.taem_interface_energy_margin=inlet.energy_margin;
+            if(entry_witness_trace)
+                fprintf(stderr,
+                    "ENTRY_WITNESS physical-inlet ut=%.2f h=%.0f V=%.0f M=%.2f range=%.1fkm course=%.1f along=%.1fkm cross=%.1fkm ready=%d veto=0x%x energy=%+.0f J/kg forced=%d\n",
+                    state.ut,geo.altitude,at.speed,at.mach,range/1000.0,
+                    synthetic.ground_track_heading,
+                    synthetic.runway_along_track/1000.0,synthetic.runway_cross_track/1000.0,
+                    admissible_inlet?1:0,inlet.veto,inlet.energy_margin,
+                    forced_boundary?1:0);
             out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
             out.taem_speed=at.speed;
             out.taem_flight_path_angle=synthetic.flight_path_angle;
@@ -557,7 +564,16 @@ bool deorbit_live_cutoff_capture_qualified(const EntryPrediction*p,
 bool deorbit_runway_capture_qualified(const EntryPrediction*p,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,
         double peri){
+    /* An MM304->MM305 executive handoff and a numerically admissible inlet
+       are not a *full-route* runway certificate. The old predicate could
+       certify a 70 km TAEM acquisition without ever asking the native MM305
+       planner whether a bounded HAC/Final route existed. Only a committed,
+       non-aborted downstream shadow may advertise strict landing capture. */
     if(!deorbit_recovery_qualified(p,site,v,s,peri)||!p->reached_taem||
+       !p->taem_dynamic_interface_captured||
+       !(p->shadow_terminal_path_committed||p->shadow_final_approach_captured)||
+       !isfinite(p->taem_interface_energy_margin)||
+       !(p->taem_interface_energy_margin>=0.0)||
        p->shadow_aborted||p->taem_ownership_boundary_missed||
        !isfinite(p->minimum_entry_speed)||
        p->minimum_entry_speed<v->minimum_safe_speed||

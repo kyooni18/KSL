@@ -77,6 +77,10 @@ The model's `reference_reachable` flag was still **true** at the 26.7 km inlet: 
 4. Require an actual bounded MM305 route+preflare feasible inlet for a **production landing mission** before labeling the flight landing-qualified. If no candidate exists, report unqualified rather than executing a simulated success or weakening the 1 km physical handoff constraint.
 5. Validate fixes first through existing C admission tests and recorded-state offline replay. There is **no live landing-success proof** in this audit; a future KSP flight should be separately authorized.
 
+## Follow-up implementation
+
+The immediately following guided deorbit retiming, 60-second retrograde attitude acquisition lead, and strict route-certification/mission gate are documented in [Polar-Deorbit-Guided-Opportunity-20261012.md](Polar-Deorbit-Guided-Opportunity-20261012.md). The frozen fourth-flight replay selects a geometrically improved 71.3 km MM305 inlet while retaining its **negative ~246 kJ/kg energy margin and unqualified 0/15 route status**; no runway-delivery claim is made.
+
 ## Reproduction
 
 - C admission regression: `make -C CLanding deorbit-test entry-forecast-admission-test`

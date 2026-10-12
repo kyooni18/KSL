@@ -55,7 +55,8 @@ static bool perform_time_warp(LandingController*c,const Telemetry*t,char*err,siz
     if(target<=t->ut+lead){c->time_warp_issued=true;return true;}
     krpc_neutralize(c->session);
     c->time_warp_issued=true;
-    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Time-warping to 100 seconds before the planned deorbit burn.");
+    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),
+        "Time-warping to %.0f seconds before the planned deorbit burn for attitude acquisition.",lead);
     char reason[192];snprintf(reason,sizeof(reason),"event=time-warp-start; from_ut=%.9g; target_ut=%.9g",t->ut,target);log_state_event(c,reason,true);publish(c);
     if(!krpc_warp_with_progress(c->session,target,publish_warp_progress,c,err,err_size))return false;
     c->has_last_tick_ut=false;c->has_last_tick_wall=false;c->last_prediction_ut=-1e300;c->last_trajectory_ut=-1e300;

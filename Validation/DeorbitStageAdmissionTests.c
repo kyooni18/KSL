@@ -63,8 +63,19 @@ int main(void) {
         &cfg.vehicle, &cfg.guidance, 50000.0));
     overflight.taem_distance = 70000.0;
     overflight.taem_range_error = 70000.0 - 96500.0;
+    /* A valid 70 km inlet is still not a *runway* capture without a
+       certified native downstream HAC/Final commitment and positive energy. */
+    overflight.taem_dynamic_interface_captured = true;
+    overflight.taem_interface_energy_margin = 1000.0;
+    assert(!deorbit_runway_capture_qualified(&overflight, &cfg.site,
+        &cfg.vehicle, &cfg.guidance, 50000.0));
+    overflight.shadow_terminal_path_committed = true;
     assert(deorbit_runway_capture_qualified(&overflight, &cfg.site,
         &cfg.vehicle, &cfg.guidance, 50000.0));
+    overflight.taem_interface_energy_margin = -1.0;
+    assert(!deorbit_runway_capture_qualified(&overflight, &cfg.site,
+        &cfg.vehicle, &cfg.guidance, 50000.0));
+    overflight.taem_interface_energy_margin = 1000.0;
     overflight.taem_ownership_boundary_missed = true;
     assert(!deorbit_runway_capture_qualified(&overflight, &cfg.site,
         &cfg.vehicle, &cfg.guidance, 50000.0));

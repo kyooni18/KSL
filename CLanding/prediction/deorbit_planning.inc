@@ -543,6 +543,85 @@ static void deorbit_record_execution_witness(Candidate*c,
         isfinite(witness->closest_distance)?witness->closest_distance:INFINITY;
 }
 
+/* Search refinement must compare the actual MM304 guidance witness, not
+   choose a deorbit purely because its ballistic Entry-Interface miss is low.
+   These tests describe an *acquisition opportunity*, not proof that the native
+   MM305 solver can finish a runway approach. */
+static bool deorbit_witness_closing(const EntryPrediction*w,const LandingSite*site){
+    if(!w||!site||!isfinite(w->taem_along_track)||
+       !isfinite(w->taem_cross_track)||!isfinite(w->taem_course))return false;
+    double relative=(w->taem_course-site->runway_heading)*DEG2RAD;
+    return w->taem_along_track*cos(relative)+
+        w->taem_cross_track*sin(relative)<0.0;
+}
+static double deorbit_witness_range_debt(const EntryPrediction*w,
+        const PlanetModel*p,const GuidanceSettings*s){
+    if(!w||!isfinite(w->taem_distance)||!(w->taem_distance>=0.0))
+        return INFINITY;
+    double minimum=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    double maximum=entry_taem_range_target(p,s);
+    return fmax(0.0,fmax(minimum-w->taem_distance,
+        w->taem_distance-maximum));
+}
+static bool deorbit_witness_inlet_geometry(const EntryPrediction*w,
+        const PlanetModel*p,const LandingSite*site,const GuidanceSettings*s){
+    if(!w||!w->reached_taem||!isfinite(w->taem_altitude)||
+       !isfinite(w->taem_speed)||w->taem_speed<=0.0||
+       w->taem_altitude<s->mm305_min_altitude||
+       w->taem_altitude>s->mm305_max_altitude||
+       !isfinite(w->taem_course))return false;
+    double heading_offset=fabs(norm_signed_deg(w->taem_course-site->runway_heading));
+    return deorbit_witness_range_debt(w,p,s)<=0.0&&
+        fabs(heading_offset-90.0)<=s->mm304_perpendicular_heading_half_width&&
+        deorbit_witness_closing(w,site);
+}
+static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPrediction*aw,
+        const Candidate*b,const EntryPrediction*bw,const PlanetModel*p,
+        const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s){
+    bool a_safe=deorbit_entry_stage_qualified(aw,v,s,a->peri,
+        site->altitude,p->atmosphere_depth,true);
+    bool b_safe=deorbit_entry_stage_qualified(bw,v,s,b->peri,
+        site->altitude,p->atmosphere_depth,true);
+    if(a_safe!=b_safe)return a_safe;
+    bool a_capture=a_safe&&deorbit_runway_capture_qualified(aw,site,v,s,a->peri)&&
+        deorbit_energy_margin_qualified(&a->energy_margin,s,true);
+    bool b_capture=b_safe&&deorbit_runway_capture_qualified(bw,site,v,s,b->peri)&&
+        deorbit_energy_margin_qualified(&b->energy_margin,s,true);
+    if(a_capture!=b_capture)return a_capture;
+    bool a_inlet=aw->taem_dynamic_interface_captured&&
+        !aw->taem_ownership_boundary_missed;
+    bool b_inlet=bw->taem_dynamic_interface_captured&&
+        !bw->taem_ownership_boundary_missed;
+    if(a_inlet!=b_inlet)return a_inlet;
+    bool a_geometry=deorbit_witness_inlet_geometry(aw,p,site,s);
+    bool b_geometry=deorbit_witness_inlet_geometry(bw,p,site,s);
+    if(a_geometry!=b_geometry)return a_geometry;
+    if(!a_geometry){
+        double ad=deorbit_witness_range_debt(aw,p,s);
+        double bd=deorbit_witness_range_debt(bw,p,s);
+        if(ad<bd)return true;
+        if(ad>bd)return false;
+        bool ac=deorbit_witness_closing(aw,site);
+        bool bc=deorbit_witness_closing(bw,site);
+        if(ac!=bc)return ac;
+    }
+    /* A certified positive inlet reserve wins within the geometric capture
+       set. When neither candidate has one, keep useful MM305 maneuver distance
+       by preferring the configured inlet range, not closest approach to KSC. */
+    bool ae=isfinite(aw->taem_interface_energy_margin)&&
+        aw->taem_interface_energy_margin>=0.0;
+    bool be=isfinite(bw->taem_interface_energy_margin)&&
+        bw->taem_interface_energy_margin>=0.0;
+    if(ae!=be)return ae;
+    double nominal=entry_taem_range_target(p,s);
+    double ad=fabs(aw->taem_distance-nominal);
+    double bd=fabs(bw->taem_distance-nominal);
+    if(ad<bd)return true;
+    if(ad>bd)return false;
+    return a->burn_ut<b->burn_ut;
+}
+
 typedef struct {
     bool valid,closing;
     double burn_start,burn_ut,dv,duration,peri,normal_angle;
@@ -825,6 +904,63 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         return false;
     }
     PLAN_TIMING("angle-search");
+    /* The cheap orbital probe is only a seed. One 100 km geometric capture
+       radius corresponds to about 45 s of Entry-Interface travel for this
+       shuttle; evaluate two such increments on either side using the actual
+       MM304 executive before committing an irreversible deorbit. The scanned
+       alternatives stay in the same ground-track pass and solve Pe separately. */
+    EntryPrediction selected_inlet=deorbit_executable_policy_witness(
+        &selected,p,aero,env,cal,site,v,s,authority_source,false);
+    unsigned inlet_candidates_evaluated=1;
+    double inlet_step=s->target_deorbit_capture_radius/
+        fmax(1.0,timing_best.entry_speed);
+    if(!isfinite(inlet_step)||inlet_step<=0.0)inlet_step=0.0;
+    for(int offset=-2;offset<=2&&inlet_step>0.0;offset++){
+        if(offset==0)continue;
+        double start=timing_best.burn_start+offset*inlet_step;
+        if(start<state.ut+lead||start>state.ut+lead+search_horizon)continue;
+        Candidate nearby;
+        memset(&nearby,0,sizeof(nearby));
+        trajectory_init(&nearby.pred.trajectory);
+        if(!deorbit_evaluate_start(&nearby,state,start,0.0,timing_best.normal_angle,
+                p,aero,env,cal,site,v,s,thrust,NULL)){
+            candidate_clear(&nearby);
+            continue;
+        }
+        EntryPrediction nearby_inlet=deorbit_executable_policy_witness(
+            &nearby,p,aero,env,cal,site,v,s,authority_source,false);
+        inlet_candidates_evaluated++;
+        bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
+            &selected,&selected_inlet,p,site,v,s);
+        if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+            fprintf(stderr,
+                "DEORBIT_INLET_CANDIDATE dt=%+.1fs burn=%.1f tier=%d safe=%d range=%.1fkm course=%.1fdeg closing=%d geometry=%d energy=%+.0fJ/kg boundaryMiss=%d chosen=%d\n",
+                offset*inlet_step,nearby.burn_ut,nearby.tier,
+                deorbit_entry_stage_qualified(&nearby_inlet,v,s,nearby.peri,
+                    site->altitude,p->atmosphere_depth,true)?1:0,
+                nearby_inlet.taem_distance/1000.0,nearby_inlet.taem_course,
+                deorbit_witness_closing(&nearby_inlet,site)?1:0,
+                deorbit_witness_inlet_geometry(&nearby_inlet,p,site,s)?1:0,
+                nearby_inlet.taem_interface_energy_margin,
+                nearby_inlet.taem_ownership_boundary_missed?1:0,better?1:0);
+        if(better){
+            candidate_clear(&selected);
+            entry_prediction_clear(&selected_inlet);
+            selected=nearby;
+            selected_inlet=nearby_inlet;
+        }else{
+            candidate_clear(&nearby);
+            entry_prediction_clear(&nearby_inlet);
+        }
+    }
+    if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+        fprintf(stderr,"DEORBIT_INLET_SELECTED samples=%u burn=%.1f range=%.1fkm energy=%+.0fJ/kg geometry=%d\n",
+            inlet_candidates_evaluated,selected.burn_ut,
+            selected_inlet.taem_distance/1000.0,
+            selected_inlet.taem_interface_energy_margin,
+            deorbit_witness_inlet_geometry(&selected_inlet,p,site,s)?1:0);
+    entry_prediction_clear(&selected_inlet);
+    PLAN_TIMING("inlet-retime");
     RobustAssessment selected_robust=assess_candidate_robustness(
         &selected,state,p,aero,env,cal,site,v,s,thrust,false);
     PLAN_TIMING("robustness");
@@ -909,12 +1045,14 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     double selected_align_pos=deorbit_alignment_position_error(&detailed,s);
     double selected_align_course=deorbit_alignment_course_error(&detailed,site);
     snprintf(out->note,sizeof(out->note),
-        "Nominal entry %.0f km at %.2f°, wings-level impact %+.1f/%+.1f km along/cross, alignment %.1f km / %.1f° at %.1f km / %.0f m/s, Pe %.1f km. Strict %u/%u (%.0f%%), recovery %u/%u (%.0f%%)%s%s",
+        "Entry %.0fkm FPA %.2fdeg, impact %+.1f/%+.1fkm, alignment %.1fkm/%.1fdeg at %.1fkm/%.0fmps, inlet %.1fkm margin %+.0fkJ/kg, Pe %.1fkm; %u guided candidates. Strict %u/%u (%.0f%%), recovery %u/%u (%.0f%%)%s%s",
         detailed.entry_range/1000,detailed.entry_flight_path_angle,
         selected.energy_margin.impact_along_track/1000.0,
         selected.energy_margin.impact_cross_track/1000.0,
         selected_align_pos/1000,selected_align_course,
-        detailed.taem_altitude/1000,detailed.taem_speed,selected.peri/1000,
+        detailed.taem_altitude/1000,detailed.taem_speed,
+        detailed.taem_distance/1000,detailed.taem_interface_energy_margin/1000,
+        selected.peri/1000,inlet_candidates_evaluated,
         selected_robust.passed,selected_robust.scenarios,
         selected_robust.pass_fraction*100,
         selected_robust.recovery_passed,selected_robust.scenarios,
