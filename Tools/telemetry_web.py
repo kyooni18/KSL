@@ -2239,6 +2239,81 @@ def _replay_terminal_geometry(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_DEORBIT_PHASES = re.compile(r"DEORBIT|COAST TO BURN|BURN SETUP", re.I)
+
+
+def _last_json_line(path: Path, tail_bytes: int = 16384) -> dict[str, Any] | None:
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as handle:
+            handle.seek(max(0, size - tail_bytes))
+            lines = handle.read().decode("utf-8", "ignore").splitlines()
+    except OSError:
+        return None
+    for line in reversed(lines):
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
+    return None
+
+
+def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float = 15.0) -> None:
+    """Fill phase, target attitude and plan from the active KSL mission run.
+
+    The current KSL backend does not write the legacy controller snapshot, so the
+    phase and commanded attitude come from the run's own telemetry.jsonl (written
+    from the backend's published command) and its status/deorbit-plan files.
+    """
+    runs_root = root / "runs"
+    try:
+        candidates = [d for d in runs_root.iterdir() if (d / "telemetry.jsonl").is_file()]
+        run = max(candidates, key=lambda d: (d / "telemetry.jsonl").stat().st_mtime, default=None)
+        if run is None or time.time() - (run / "telemetry.jsonl").stat().st_mtime > max_age:
+            return
+    except OSError:
+        return
+    record = _last_json_line(run / "telemetry.jsonl")
+    if not record or record.get("source") != "landing":
+        return
+    backend_phase = str(record.get("backendPhase") or "").strip()
+    command = dict(snapshot.get("command") or {})
+    aoa = optional_number(record.get("targetAoA"))
+    fpa = optional_number(record.get("flightPathAngle"))
+    command.update({
+        "autopilotEngaged": bool(backend_phase) and backend_phase.lower() not in ("idle", "complete"),
+        "targetAoA": aoa,
+        "targetRoll": optional_number(record.get("targetRoll")),
+        "targetHeading": optional_number(record.get("targetHeading")),
+        "targetThrottle": optional_number(record.get("targetThrottle")),
+        "targetPitch": (fpa + aoa) if aoa is not None and fpa is not None else command.get("targetPitch"),
+    })
+    snapshot["command"] = command
+    if backend_phase:
+        snapshot["phase"] = backend_phase
+    try:
+        status = json.loads((run / "status.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        status = {}
+    message = status.get("status_message")
+    if message:
+        snapshot["statusMessage"] = f"KSL {status.get('phase', '')}: {message}".strip()
+    if status.get("warning"):
+        snapshot["warningMessage"] = status["warning"]
+    if backend_phase and _DEORBIT_PHASES.search(backend_phase) and not isinstance(snapshot.get("deorbitPlan"), dict):
+        try:
+            plan = json.loads((run / "deorbit-plan.json").read_text(encoding="utf-8"))
+            if isinstance(plan, dict):
+                snapshot["deorbitPlan"] = plan
+        except (OSError, json.JSONDecodeError):
+            pass
+    server = dict(snapshot.get("server") or {})
+    server["source"] = f"{server.get('source', 'kRPC observer')} + KSL run {run.name}"
+    snapshot["server"] = server
+
+
 def normalize_replay_snapshot(snapshot: dict[str, Any],
                               configuration: dict[str, Any]) -> dict[str, Any]:
     """Convert archived exact-controller frames to the live WebTelemetry schema."""
@@ -3574,6 +3649,7 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 if len(current_path) >= 2:
                     snapshot["executingTrajectory"] = current_path
                     snapshot["executingTrajectorySource"] = follower.guidance_path_source
+            apply_ksl_run_overlay(snapshot, root)
             store.publish(snapshot)
             retry_delay = 0.5
             stop.wait(0.12)
