@@ -208,18 +208,12 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     if (!g->terminal_region_entered && !g->final_approach_captured) {
         g->phase=PHASE_ENTRY_ENERGY;
         GuidanceResult entry=entry_program_guidance(g,t,state,course,p,aero,cfg,dt);
-        /* MM304 hands off into the measured MM305 admissible state set.  Recheck
-           the same state-set evaluator here as an invariant; never reintroduce
-           the retired fixed Entry inlet as a second ownership gate. */
-        TaemInterfaceCapture admission=entry_mm305_admission_envelope(
-            g,t,course,p,cfg);
-        bool physical_handoff=g->entry_exec.entry_complete&&
-            admission.valid&&admission.ready;
-        /* Ownership boundary: once the measured MM305 physical inlet is reached,
-           MM304 is finished.  Route qualification is opportunistic pre-acquisition
-           work, not an ownership veto.  If no replay-qualified HAC route is held,
-           MM305 owns Path Acquisition and flies its bounded acquisition/alignment
-           law while route planning continues from the measured state. */
+        /* MM304 just evaluated this exact measured state. Reuse that fresh
+           result instead of integrating the same reference twice per FCS tick. */
+        bool physical_handoff=g->entry_exec.phase==ENTRY_PHASE_TRANSITION&&
+            g->entry_control_plan_ut==t->ut&&g->entry_control_terminal_ready;
+        /* Energy screening is necessary, but ownership requires the fresh
+           bounded-control route and its independently qualified Final arrival. */
         bool admission_route_qualified=false;
         if (physical_handoff && !g->diagnostic_shadow) {
             uint64_t snapshot=terminal_model&&terminal_model->replay_validated?
@@ -230,7 +224,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
                 if (!admission_route_qualified && g->mm305_admission_needed &&
                     !g->mm305_async_planning) {
                     /* No worker (offline tools/tests): make one immediate attempt,
-                       but transfer ownership even when the search finds no route. */
+                       retain MM304 when the search finds no qualified route. */
                     Mm305PlanRequest request=guidance_mm305_admission_request(
                         g,t,state,cfg,terminal_model);
                     if (request.valid) {
@@ -244,7 +238,12 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         } else if (!physical_handoff && !g->diagnostic_shadow) {
             guidance_mm305_admission_qualified(g,t,false,0);
         }
-        if (!physical_handoff) {
+        if (!physical_handoff || !admission_route_qualified) {
+            if(physical_handoff&&!admission_route_qualified){
+                entry.has_warning=true;
+                snprintf(entry.warning,sizeof(entry.warning),
+                    "MM305 inlet energy screening passed; no bounded-control route qualifies Final arrival. Retaining MM304; preserve energy and reduce lateral displacement.");
+            }
             double low=0.0,high=0.0;
             entry_taem_handoff_altitude_bounds(s,&low,&high);
             double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
@@ -263,6 +262,15 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             return entry;
         }
 
+        EntryExecObservation handoff_observation={
+            .ut=t->ut,.relative_velocity=t->true_air_speed,
+            .altitude=t->mean_altitude,.dynamic_pressure=t->dynamic_pressure};
+        if(!entry_exec_accept_taem_handoff(&g->entry_exec,&handoff_observation)){
+            entry.has_warning=true;
+            snprintf(entry.warning,sizeof(entry.warning),
+                "MM304 executive rejected the route-qualified handoff; ownership retained.");
+            return entry;
+        }
         g->taem_interface_captured=true; /* measured MM305 admissible state-set capture */
         double loss=g->terminal_energy_loss_accel_ema;
         double speed_loss=g->terminal_speed_loss_accel_ema;
@@ -295,8 +303,8 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_last_route_ut=-INFINITY;
         g->mm305_plan_failures=0;
         g->mm305_replans=0;
-        g->mm305_lift_scale=1.0;
-        g->mm305_drag_scale=1.0;
+        g->mm305_lift_scale=g->mm305_admission_lift_scale;
+        g->mm305_drag_scale=g->mm305_admission_drag_scale;
         g->hac_side_selected=false;
         g->hac_captured=false;
         g->hac_completed=false;

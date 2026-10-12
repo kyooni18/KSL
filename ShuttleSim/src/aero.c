@@ -127,6 +127,12 @@ void aero_coefficients(const AeroTable *a,double mach,double alpha,double *cl,do
     double cd0=a->cd[i][j]*(1-ta)+a->cd[i][j+1]*ta, cd1=a->cd[i+1][j]*(1-ta)+a->cd[i+1][j+1]*ta;
     *cl=cl0*(1-tm)+cl1*tm; *cd=cd0*(1-tm)+cd1*tm;
 }
+double aero_observation_mach_weight(double mach,double observed_mach){
+    /* Compact Mach support of the existing MM305 observation correction. */
+    if(!isfinite(mach)||!isfinite(observed_mach))return 0.0;
+    return fmax(0.0,1.0-fabs(mach-observed_mach)/0.5);
+}
+
 void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
                       double *lift_per_q_out,double *drag_per_q_out){
     double cl,cd; aero_coefficients(a,mach,alpha_deg,&cl,&cd);

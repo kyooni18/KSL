@@ -670,6 +670,40 @@ bool mm305_acquisition_ready(const Telemetry*t,const PlanetModel*p,
         t->vertical_speed<0.0&&t->true_air_speed>=v->minimum_safe_speed&&
         acquisition_region&&structural;
 }
+/* Shared native Final endpoint policy. These are the existing MM305 delivery
+   contract's bounds; entry pricing must not invent a second endpoint. */
+FinalAlignmentContract final_alignment_contract(double distance,const LandingSite *site,
+        const VehicleProfile *v,const GuidanceSettings *s){
+    FinalAlignmentContract out={0};
+    if(!site||!v||!s||!isfinite(distance)||distance<500.0)return out;
+    double base_slope=clampd(s->final_glide_slope,3.0,45.0);
+    double height=fmin(distance*tan(base_slope*DEG2RAD),4000.0);
+    out.distance_m=distance;
+    out.slope_deg=clampd(atan2(height,distance)*RAD2DEG,15.0,base_slope);
+    out.altitude_m=site->altitude+distance*tan(out.slope_deg*DEG2RAD);
+    out.speed_mps=fmax(s->final_alignment_speed,
+        fmax(v->minimum_safe_speed,v->touchdown_speed))+
+        .005*clampd(distance-8000.0,0.0,1000.0);
+    out.valid=isfinite(out.altitude_m)&&isfinite(out.speed_mps)&&out.speed_mps>0.0;
+    return out;
+}
+
+double final_alignment_distance_for_state(const GuidanceMachine *g,double altitude,
+        double speed,const LandingSite *site,const VehicleProfile *v,const GuidanceSettings *s){
+    if(!site||!v||!s)return NAN;
+    if(g&&g->terminal_final_handoff_latched&&isfinite(g->terminal_final_handoff_distance)&&
+       g->terminal_final_handoff_distance>=500.0)return g->terminal_final_handoff_distance;
+    double base=fmax(500.0,s->final_approach_distance);
+    if(!isfinite(altitude)||!isfinite(speed))return base;
+    double slope=s->final_glide_slope;
+    if(!(slope>1.0&&slope<60.0))return base;
+    double nominal_height=base*tan(slope*DEG2RAD);
+    double alignment_speed=fmax(s->final_alignment_speed,v->minimum_safe_speed);
+    double altitude_load=clampd(fmax(0.0,altitude-site->altitude-nominal_height)/3000.0,0.0,1.0);
+    double speed_load=clampd(fmax(0.0,speed-alignment_speed)/250.0,0.0,1.0);
+    return base+fmax(altitude_load,speed_load)*fmax(0.0,fmax(base,9000.0)-base);
+}
+
 double rotating_specific_energy(double latitude,double altitude,
         double air_relative_speed,const PlanetModel*p){
     if(!p||!isfinite(latitude)||fabs(latitude)>90.0||!isfinite(altitude)||

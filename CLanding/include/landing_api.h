@@ -31,6 +31,11 @@ bool entry_s_turn_bank_authority_available(double dynamic_pressure,double true_a
 double entry_bank_authority_limit(double true_air_speed,double dynamic_pressure,double g_force,const VehicleProfile *vehicle,double maximum_bank);
 double entry_taem_range_target(const PlanetModel *planet,const GuidanceSettings *settings);
 bool mm305_acquisition_ready(const Telemetry *telemetry,const PlanetModel *planet,const LandingConfiguration *configuration);
+FinalAlignmentContract final_alignment_contract(double distance_m,
+    const LandingSite *site,const VehicleProfile *vehicle,const GuidanceSettings *settings);
+double final_alignment_distance_for_state(const GuidanceMachine *guidance,
+    double altitude_m,double speed_mps,const LandingSite *site,
+    const VehicleProfile *vehicle,const GuidanceSettings *settings);
 double rotating_specific_energy(double latitude,double altitude,double air_relative_speed,const PlanetModel *planet);
 double entry_remaining_specific_energy(double latitude,double altitude,double air_relative_speed,double target_latitude,double target_altitude,double target_speed,const PlanetModel *planet);
 double entry_altitude_target_for_speed(double reference_altitude,double reference_speed,double true_air_speed,double target_altitude,double target_speed);

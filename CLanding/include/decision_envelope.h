@@ -267,6 +267,14 @@ EnergyPathEnvelope decision_energy_path_envelope(
     double modeled_drag_work,
     double path_length_m);
 
+bool decision_unpowered_aerodynamic_accelerations(const GuidanceMachine *g,
+    const Telemetry *t,const PlanetModel *p,const LandingConfiguration *cfg,
+    double altitude_m,double speed_mps,double aoa_deg,double *lift_mps2,double *drag_mps2);
+/* Explicit numerical budget for deterministic refinement audits. */
+UnpoweredPathProjection decision_unpowered_path_projection_with_tolerance(
+    const GuidanceMachine *g,const Telemetry *t,const PlanetModel *p,
+    const LandingConfiguration *cfg,double target_altitude_m,double ground_path_m,
+    double relative_tolerance);
 UnpoweredPathProjection decision_unpowered_path_projection(
     const GuidanceMachine *guidance,
     const Telemetry *telemetry,

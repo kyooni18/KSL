@@ -88,6 +88,18 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     EntryPhase phase=g->entry_exec.initialized?g->entry_exec.phase:ENTRY_PHASE_PREENTRY;
     EntryDragReferenceConfig drag_cfg=entry_drag_reference_default_config();
     double measured_drag=entry_measured_drag_accel(t);
+    /* Longitudinal energy belongs to the complete unpowered arrival, not a
+       radial shell around the runway. Preserve the Final reserve while MM304
+       controls entry. An inlet/route, when qualified, remains MM305's contract. */
+    double alignment_distance=final_alignment_distance_for_state(g,t->mean_altitude,
+        t->true_air_speed,&cfg->site,v,s);
+    FinalAlignmentContract alignment=final_alignment_contract(alignment_distance,&cfg->site,v,s);
+    double alignment_altitude=alignment.altitude_m;
+    double alignment_speed=alignment.speed_mps;
+    double alignment_range=hypot(t->runway_along_track+alignment.distance_m,t->runway_cross_track);
+    if(!alignment.valid||!isfinite(alignment_range)||!isfinite(alignment_altitude))
+        return entry_program_contract_hold(g,t,cfg,dt,
+            "MM304 alignment energy contract has invalid geometry.");
     EntryDragReferenceInput drag_in={
         .phase=phase,
         .relative_velocity=t->true_air_speed,
@@ -100,11 +112,11 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .has_incidence=isfinite(t->angle_of_attack)&&isfinite(t->sideslip),
         .angle_of_attack=t->angle_of_attack,
         .sideslip=t->sideslip,
-        .range_to_site=fmax(0.0,t->range_to_site),
-        .taem_range=entry_taem_range_target(p,s),
+        .range_to_site=alignment_range,
+        .taem_range=0.0,
         .taem_latitude=cfg->site.latitude,
-        .taem_altitude=s->taem_interface_altitude,
-        .taem_velocity=taem_velocity,
+        .taem_altitude=alignment_altitude,
+        .taem_velocity=alignment_speed,
         .planet=p,
         .vehicle=v
     };
@@ -113,7 +125,12 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         return entry_program_contract_hold(g,t,cfg,dt,
             "MM304 drag-reference state is invalid; Entry ownership is retained.");
 
-    EntryExecProfile exec_profile=entry_drag_reference_exec_profile(&drag_in,&drag_cfg,&drag);
+    /* Phase/thermal sequencing still uses the configured inlet velocity band;
+       those phase gates do not define the downstream energy budget. */
+    EntryDragReferenceInput phase_in=drag_in;
+    phase_in.taem_velocity=taem_velocity;
+    phase_in.taem_altitude=s->taem_interface_altitude;
+    EntryExecProfile exec_profile=entry_drag_reference_exec_profile(&phase_in,&drag_cfg,&drag);
     bool checkpoint_restart=!g->entry_exec.initialized&&g->entry_continuation_bootstrap;
     EntryExecObservation obs={
         .ut=t->ut,
@@ -137,11 +154,6 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     TaemInterfaceCapture admission=entry_mm305_admission_envelope(g,t,course,p,cfg);
     double diagnostic_milestone=entry_diagnostic_milestone_due(g,t->range_to_site);
     bool handoff_ready=admission.valid&&admission.ready;
-    if(handoff_ready&&g->entry_exec.phase==ENTRY_PHASE_TRANSITION&&
-       !entry_exec_accept_taem_handoff(&g->entry_exec,&obs))
-        return entry_program_contract_hold(g,t,cfg,dt,
-            "MM304 executive rejected an otherwise admissible MM305 handoff state.");
-
     /* DRAGREF is the single MM304 longitudinal controller. It already
        re-solves the drag-v profile from remaining range and bounds that profile
        with measured aerodynamic authority; do not solve a second independent
@@ -423,7 +435,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     g->entry_control_taem_speed=taem_velocity;
     g->entry_control_taem_energy_error=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
-        cfg->site.latitude,s->taem_interface_altitude,taem_velocity,p);
+        cfg->site.latitude,alignment_altitude,alignment_speed,p);
     g->entry_control_segment_until_ut=t->ut;
     if(!isfinite(g->entry_supervision_ut)||
        t->ut-g->entry_supervision_ut>=fmax(DBL_EPSILON,s->prediction_interval))

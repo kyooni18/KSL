@@ -120,6 +120,10 @@ typedef struct {
     double atmosphere_density[LANDER_ATMOSPHERE_SAMPLE_MAX];
     Vector3 north_axis, prime_meridian_at_epoch; double epoch_ut;
 } PlanetModel;
+typedef struct {
+    bool valid;
+    double distance_m,altitude_m,speed_mps,slope_deg;
+} FinalAlignmentContract;
 typedef struct VesselPhysicsModel VesselPhysicsModel;
 typedef struct { double lift_to_drag, ballistic_coefficient, confidence; } AerodynamicModel;
 typedef struct { AerodynamicModel regimes[4]; } AerodynamicEnvelope;

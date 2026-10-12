@@ -273,7 +273,11 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
     /* This distance defines a prescribed descent reference, not an energy
        lower bound. Lift support is checked by the projection. Passing this
        screening reference never substitutes for MM305 route replay. */
-    double final_along=-s->final_approach_distance;
+    double alignment_distance=final_alignment_distance_for_state(g,t->mean_altitude,
+        t->true_air_speed,&cfg->site,v,s);
+    FinalAlignmentContract alignment=final_alignment_contract(alignment_distance,&cfg->site,v,s);
+    if(!alignment.valid)return out;
+    double final_along=-alignment.distance_m;
     double final_cross=0.0;
     double final_course=cfg->site.runway_heading;
     double da=final_along-t->runway_along_track;
@@ -285,9 +289,8 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
        !(minimum_turn_radius>0.0))
         return out;
 
-    double final_altitude=cfg->site.altitude+
-        s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
-    double final_speed=fmax(s->final_alignment_speed,fmax(v->final_approach_speed,v->minimum_safe_speed));
+    double final_altitude=alignment.altitude_m;
+    double final_speed=alignment.speed_mps;
     double available_energy=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
         cfg->site.latitude,final_altitude,final_speed,p);
@@ -311,22 +314,16 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
     out.required_time_s=control.control_response_time_s+
         minimum_path/t->horizontal_speed;
     out.available_time_s=projection.valid?projection.travel_time_s:NAN;
-    /* Geometry is already proved by the finite bounded-curvature solution.
-       Keep turn_margin as a signed reachability diagnostic rather than inventing
-       an arrival timestamp. */
+    /* The reference is not an alignment geometry proof. Actual turn/course
+       and endpoint margins belong to the independently qualified MM305 route. */
     out.turn_margin=isfinite(minimum_path)?0.0:-INFINITY;
-    /* MM304 admission is a measured-state ownership boundary, not a confidence
-       certification of the predictor.  Require positive nominal physical energy
-       after the lower-bound path loss, but never turn model uncertainty itself
-       into a hard handoff veto.  MM305 immediately replans/replays from the
-       measured state and closed-loop feedback remains responsible for residual
-       model error. Keep the uncertainty term explicit for telemetry and planning. */
+    /* Charge measured model uncertainty and numerical error in J/kg. A
+       nominal reference cannot certify a reserve that those losses consume. */
     out.energy_available=energy.valid?energy.available_specific_energy:NAN;
     out.energy_drag_work=energy.valid?energy.modeled_drag_work:NAN;
     out.energy_uncertainty=energy.valid?energy.uncertainty_specific_energy:NAN;
     out.energy_margin=energy.valid?
-        energy.available_specific_energy-energy.modeled_drag_work-
-        projection.integration_error_j_kg:NAN;
+        energy.energy.margin-projection.integration_error_j_kg:NAN;
     out.valid=isfinite(out.along)&&isfinite(out.cross)&&
         isfinite(out.minimum_turn_radius_m)&&energy.valid;
     if(!out.valid)return out;

@@ -229,6 +229,7 @@ typedef struct {
     int mm305_admission_runway_end;
     double mm305_admission_side;
     double mm305_admission_solve_wall_s;
+    double mm305_admission_lift_scale,mm305_admission_drag_scale,mm305_admission_scale_mach;
     unsigned mm305_admission_rejections;
     TaemInterfaceTarget taem_interface_target;
     bool taem_interface_captured, taem_safety_handoff;

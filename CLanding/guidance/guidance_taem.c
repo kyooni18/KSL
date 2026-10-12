@@ -194,17 +194,11 @@ static const TerminalModel *mm305_model_for_end(const TerminalModel *model,
 /* Apply each measured force ratio only near the Mach where it was observed.
  * Live MM305 drag has a strong Mach dependence, so extrapolating one ratio
  * across the complete table can badly misprice the low-subsonic HAC exit. */
-static double mm305_mach_scale_weight(double mach, double observed_mach) {
-    const double support_width=0.5;
-    if (!isfinite(mach) || !isfinite(observed_mach)) return 0.0;
-    return clampd(1.0-fabs(mach-observed_mach)/support_width,0.0,1.0);
-}
-
 static void mm305_scale_model(TerminalModel *m, double observed_mach,
         double lift_scale, double drag_scale) {
     if (!(fabs(lift_scale-1.0)>1e-9) && !(fabs(drag_scale-1.0)>1e-9)) return;
     for (size_t i=0;i<m->aero.mach_count;++i) {
-        double weight=mm305_mach_scale_weight(m->aero.mach[i],observed_mach);
+        double weight=aero_observation_mach_weight(m->aero.mach[i],observed_mach);
         double local_lift_scale=1.0+weight*(lift_scale-1.0);
         double local_drag_scale=1.0+weight*(drag_scale-1.0);
         for (size_t j=0;j<m->aero.alpha_count;++j) {
@@ -213,7 +207,7 @@ static void mm305_scale_model(TerminalModel *m, double observed_mach,
         }
     }
     for (size_t i=0;i<m->aero.book_count;++i) {
-        double weight=mm305_mach_scale_weight(m->aero.book[i].mach,observed_mach);
+        double weight=aero_observation_mach_weight(m->aero.book[i].mach,observed_mach);
         m->aero.book[i].lift_per_q_m2*=1.0+weight*(lift_scale-1.0);
         m->aero.book[i].drag_per_q_m2*=1.0+weight*(drag_scale-1.0);
     }
@@ -265,59 +259,23 @@ bool mm305_plan_result_fresh(const Mm305PlanResult*result,const Telemetry*t){
  * between 9.0 and 9.5 km; keep margin instead of sitting on the infeasible edge.
  * Once a route is committed this value is
  * latched, so replanning cannot walk the alignment point toward the runway. */
-static double mm305_energy_aware_final_distance(const TerminalModel *model,
-        const TerminalDynamicState *state) {
-    if (!model) return NAN;
-    double base=fmax(500.0,model->guidance.final_approach_distance);
-    if (!state) return base;
-    TaemGeometryState geometry;
-    if (!taem_geometry_state(model,state,&geometry)) return base;
-
-    double slope=model->guidance.final_glide_slope;
-    if (!(slope>1.0&&slope<60.0)) return base;
-    double nominal_height=base*tan(slope*DEG2RAD);
-    double alignment_speed=fmax(model->guidance.final_alignment_speed,
-        model->vehicle.minimum_safe_speed);
-    double altitude_load=clampd(
-        fmax(0.0,geometry.altitude_above_runway_m-nominal_height)/3000.0,0.0,1.0);
-    double speed_load=clampd(
-        fmax(0.0,geometry.airspeed_mps-alignment_speed)/250.0,0.0,1.0);
-    double load=fmax(altitude_load,speed_load);
-    double maximum=fmax(base,9000.0);
-    return base+load*fmax(0.0,maximum-base);
-}
-
 static double mm305_final_alignment_speed_for_distance(const TerminalModel *model,
-        double final_distance_m) {
-    if (!model) return NAN;
-    double base=fmax(model->guidance.final_alignment_speed,
-        fmax(model->vehicle.minimum_safe_speed,model->vehicle.touchdown_speed));
-    /* A farther alignment station is useful only if MM305 does not throw away
-       the extra energy before Final receives it.  Preserve a modest kinetic
-       reserve as the station moves from 8 to 9 km; Final then spends that
-       reserve over the extra runway-upstream distance instead of forcing TAEM
-       to arrive at the same 160 m/s regardless of geometry. */
-    double extra_distance=clampd(final_distance_m-8000.0,0.0,1000.0);
-    return base+0.005*extra_distance;
+        double distance){
+    return model?final_alignment_contract(distance,&model->site,&model->vehicle,
+        &model->guidance).speed_mps:NAN;
 }
 
-/* The Final alignment station is a shared planning contract, not a per-planner
- * tweak.  Provisional acquisition and the asynchronous qualifier must deliver
- * HAC energy to the same station; if they do not, the two planners pick
- * different HAC families for the same physical state even though the physics
- * is identical.  Resolve the station from the same measured state both see, and
- * honour an already-latched handoff so replanning cannot walk the Final
- * station toward the runway. */
 double mm305_final_alignment_distance(const GuidanceMachine *g,
-        const TerminalModel *base, const TerminalDynamicState *state) {
-    if (!base) return NAN;
-    if (g && g->terminal_final_handoff_latched &&
-            isfinite(g->terminal_final_handoff_distance) &&
-            g->terminal_final_handoff_distance>=500.0)
-        return g->terminal_final_handoff_distance;
-    double distance=mm305_energy_aware_final_distance(base,state);
-    if (distance>=500.0 && isfinite(distance)) return distance;
-    return fmax(500.0,base->guidance.final_approach_distance);
+        const TerminalModel *model,const TerminalDynamicState *state){
+    if(!model)return NAN;
+    TaemGeometryState geometry;
+    double altitude=NAN,speed=NAN;
+    if(state&&taem_geometry_state(model,state,&geometry)){
+        altitude=geometry.altitude_above_runway_m+model->site.altitude;
+        speed=geometry.airspeed_mps;
+    }
+    return final_alignment_distance_for_state(g,altitude,speed,&model->site,
+        &model->vehicle,&model->guidance);
 }
 
 bool guidance_mm305_adopt_best_effort_route(GuidanceMachine *g,
@@ -388,13 +346,12 @@ void mm305_apply_final_alignment(TerminalModel *out,
         const TerminalModel *base, double final_distance_m) {
     if (!out || !base) return;
     if (!(final_distance_m>=500.0) || !isfinite(final_distance_m)) return;
-    double base_slope=clampd(base->guidance.final_glide_slope,3.0,45.0);
-    double handoff_height=fmin(final_distance_m*tan(base_slope*DEG2RAD),4000.0);
-    out->guidance.final_approach_distance=final_distance_m;
-    out->guidance.final_glide_slope=clampd(
-        atan2(handoff_height,final_distance_m)*RAD2DEG,15.0,base_slope);
-    out->guidance.final_alignment_speed=
-        mm305_final_alignment_speed_for_distance(base,final_distance_m);
+    FinalAlignmentContract contract=final_alignment_contract(final_distance_m,
+        &base->site,&base->vehicle,&base->guidance);
+    if(!contract.valid)return;
+    out->guidance.final_approach_distance=contract.distance_m;
+    out->guidance.final_glide_slope=contract.slope_deg;
+    out->guidance.final_alignment_speed=contract.speed_mps;
 }
 
 void mm305_prepare_planning_model(TerminalModel *out,
@@ -644,6 +601,16 @@ Mm305PlanRequest guidance_mm305_admission_request(const GuidanceMachine *g,
        is committed yet, and the measured force scales belong to MM305. */
     r.restrict_side=false;
     r.lift_scale=r.drag_scale=1.0;
+    if(r.valid&&t->physics_sample_valid&&t->mass>0.0&&t->dynamic_pressure>0.0){
+        double lift_q=0.0,drag_q=0.0;
+        aero_force_per_q(&model->aero,t->dynamic_pressure,t->mach,
+            hypot(t->angle_of_attack,t->sideslip),&lift_q,&drag_q);
+        if(lift_q>DBL_MIN&&isfinite(t->lift_force)&&t->lift_force>=0.0)
+            r.lift_scale=t->lift_force/(t->dynamic_pressure*lift_q);
+        if(drag_q>DBL_MIN&&isfinite(t->drag_force)&&t->drag_force>=0.0)
+            r.drag_scale=t->drag_force/(t->dynamic_pressure*drag_q);
+        r.scale_mach=t->mach;
+    }
     return r;
 }
 
@@ -656,6 +623,9 @@ void guidance_mm305_admission_accept(GuidanceMachine *g, const Mm305PlanResult *
     g->mm305_admission_result_ut=result->request_ut;
     g->mm305_admission_snapshot_id=result->model_snapshot_id;
     g->mm305_admission_solve_wall_s=result->solve_wall_s;
+    g->mm305_admission_lift_scale=result->lift_scale;
+    g->mm305_admission_drag_scale=result->drag_scale;
+    g->mm305_admission_scale_mach=result->scale_mach;
     if (g->mm305_admission_found) {
         g->mm305_admission_route=result->candidate.route;
         g->mm305_admission_runway_end=result->candidate.runway_end;
@@ -701,6 +671,9 @@ bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
     memset(&result,0,sizeof(result));
     result.valid=result.found=true;
     result.request_ut=g->mm305_admission_result_ut;
+    result.lift_scale=g->mm305_admission_lift_scale;
+    result.drag_scale=g->mm305_admission_drag_scale;
+    result.scale_mach=g->mm305_admission_scale_mach;
     result.model_snapshot_id=g->mm305_admission_snapshot_id;
     result.solve_wall_s=g->mm305_admission_solve_wall_s;
     result.candidate.route=g->mm305_admission_route;

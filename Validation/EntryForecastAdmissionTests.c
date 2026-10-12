@@ -52,6 +52,30 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
     bool ready=admission.valid&&admission.ready;
     printf("%s: envelope=%d forecast=%d veto=0x%x q=%.0f g=%.2f\n",
         label,ready,forecast.reached_taem,admission.veto,t.dynamic_pressure,t.g_force);
+    if(ready){
+        /* A numerically admissible inlet without a terminal model/qualified
+           route cannot complete Entry or acquire MM305 ownership. */
+        GuidanceMachine blocked={0};
+        blocked.automation_engaged=true;
+        blocked.phase=PHASE_ENTRY_ENERGY;
+        blocked.terminal_glide_mode=true;
+        blocked.deorbit_burn_completed=true;
+        blocked.atmospheric_interface_crossed=true;
+        blocked.entry_exec.initialized=true;
+        blocked.entry_exec.phase=ENTRY_PHASE_TRANSITION;
+        blocked.s_turn_sign=1.0;
+        Telemetry coherent=t;
+        coherent.pitch=coherent.flight_path_angle+coherent.angle_of_attack;
+        coherent.heading=coherent.ground_track_heading=course;
+        GuidanceResult held=guidance_update_with_terminal_model(&blocked,&coherent,&state,
+            NULL,p,aero,cfg,NULL);
+        if(held.phase!=PHASE_ENTRY_ENERGY)fprintf(stderr,"blocked handoff phase=%d status=%s\n",held.phase,held.status);
+        assert(held.phase==PHASE_ENTRY_ENERGY);
+        assert(!blocked.entry_exec.entry_complete);
+        assert(!blocked.terminal_region_entered);
+        assert(!taem_exec_owns_vehicle(&blocked.taem_exec));
+        guidance_result_clear(&held);
+    }
     bool matches=ready==expected&&forecast.reached_taem==ready;
     entry_prediction_clear(&forecast);
     if(!matches) exit(EXIT_FAILURE);
