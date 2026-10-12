@@ -677,6 +677,11 @@ static double deorbit_search_horizon(VehicleState state,double period,const Plan
     return search_horizon;
 }
 
+#include <time.h>
+/* Per-stage CPU timing for planner stalls; set KSP_LANDER_TRACE_PLAN_TIMING. */
+#define PLAN_TIMING(stage) do{ if(getenv("KSP_LANDER_TRACE_PLAN_TIMING")) \
+    fprintf(stderr,"PLAN_TIMING stage=%s cpu=%.3fs\n",(stage),(double)clock()/CLOCKS_PER_SEC); }while(0)
+
 bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         double period,
         const PlanetModel*p,AerodynamicModel aero,
@@ -750,6 +755,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         return false;
     }
 
+    PLAN_TIMING("coarse-search");
     /* Refine burn time using only orbital geometry.  Delta-v is re-solved from
        the configured periapsis at every probe; downstream guidance cannot move
        the selected ground-track pass. */
@@ -779,6 +785,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
             timing_best.entry_miss/1000.0,timing_best.entry_course_error,
             timing_best.entry_fpa);
 
+    PLAN_TIMING("timing-refine");
     /* Only now pay for atmospheric prediction.  It may reject the correctly
        targeted orbital pass, but it is not allowed to retime that pass. */
     /* At the selected nearby pass, spend a lateral component only when the
@@ -806,8 +813,10 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         candidate_clear(&selected);
         return false;
     }
+    PLAN_TIMING("angle-search");
     RobustAssessment selected_robust=assess_candidate_robustness(
         &selected,state,p,aero,env,cal,site,v,s,thrust,false);
+    PLAN_TIMING("robustness");
 
     if(getenv("KSP_LANDER_TRACE_STRESS")){
         RobustAssessment traced=assess_candidate_robustness(
@@ -818,6 +827,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
     /* Atmospheric guidance certifies the orbital solution; it does not
        retime the burn.  If MM304 cannot accept this correctly targeted pass,
        that is an Entry problem rather than permission to move the ground track. */
+    PLAN_TIMING("detailed-witness");
     EntryPrediction detailed=deorbit_executable_policy_witness(
         &selected,p,aero,env,cal,site,v,s,authority_source,true);
     deorbit_record_execution_witness(&selected,&detailed,site,v,s);
@@ -938,6 +948,7 @@ bool deorbit_plan_create_with_telemetry(DeorbitPlan*out,VehicleState state,
         selected_robust.scenarios,selected_robust.recovery_passed,
         selected_robust.scenarios,out->execution_qualified?1:0);
 
+    PLAN_TIMING("done");
     candidate_clear(&selected);
     return true;
 }
