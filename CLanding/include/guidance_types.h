@@ -338,5 +338,11 @@ TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guid
 TaemInterfaceCapture entry_mm305_admission_envelope(
     const GuidanceMachine *guidance,const Telemetry *telemetry,double course,
     const PlanetModel *planet,const LandingConfiguration *configuration);
+/* Cheap necessary conditions only. A nonzero mask proves admission impossible
+   without running the expensive unpowered-path energy integration. Full
+   admission still performs its independent physics and control checks. */
+unsigned entry_mm305_admission_prefilter_veto(
+    const Telemetry *telemetry,const PlanetModel *planet,
+    const LandingConfiguration *configuration);
 
 #endif

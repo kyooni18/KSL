@@ -79,6 +79,9 @@ int main(void){
     assert(ready.energy_margin>0.0);
     assert(ready.veto==0u);
     assert(ready.ready);
+    /* Necessary prefilter must never skip the expensive energy proof for a
+       physically admissible inlet. */
+    assert(entry_mm305_admission_prefilter_veto(&nominal,&p,&cfg)==0u);
 
     /* Drag work and admission energy must close in the rotating frame, even
        when latitude changes along the physically propagated reference. */
@@ -143,6 +146,7 @@ int main(void){
     low.mean_altitude=cfg.guidance.mm305_min_altitude-1.0;
     TaemInterfaceCapture altitude=entry_mm305_admission_envelope(&g,&low,90.0,&p,&cfg);
     assert(altitude.valid&&((altitude.veto&8u)!=0u)&&!altitude.ready);
+    assert((entry_mm305_admission_prefilter_veto(&low,&p,&cfg)&8u)!=0u);
 
     Telemetry slow=nominal;
     slow.mach=cfg.guidance.mm305_target_mach-cfg.guidance.mm305_mach_half_width-.01;
@@ -151,22 +155,26 @@ int main(void){
     slow.vertical_speed=-slow.true_air_speed*sin(8.0*DEG2RAD);
     TaemInterfaceCapture speed=entry_mm305_admission_envelope(&g,&slow,90.0,&p,&cfg);
     assert(speed.valid&&((speed.veto&1u)!=0u)&&!speed.ready);
+    assert((entry_mm305_admission_prefilter_veto(&slow,&p,&cfg)&1u)!=0u);
 
     Telemetry far=nominal;
     far.runway_along_track=-(entry_taem_range_target(&p,&cfg.guidance)+1000.0);
     far.runway_cross_track=0.0;
     TaemInterfaceCapture range=entry_mm305_admission_envelope(&g,&far,90.0,&p,&cfg);
     assert(range.valid&&((range.veto&2u)!=0u)&&!range.ready);
+    assert((entry_mm305_admission_prefilter_veto(&far,&p,&cfg)&2u)!=0u);
 
     Telemetry climbing=nominal;
     climbing.vertical_speed=fabs(climbing.vertical_speed);
     TaemInterfaceCapture descent=entry_mm305_admission_envelope(&g,&climbing,90.0,&p,&cfg);
     assert(descent.valid&&((descent.veto&32u)!=0u)&&!descent.ready);
+    assert((entry_mm305_admission_prefilter_veto(&climbing,&p,&cfg)&32u)!=0u);
 
     Telemetry overloaded=nominal;
     overloaded.dynamic_pressure=cfg.vehicle.maximum_dynamic_pressure+1.0;
     TaemInterfaceCapture safety=entry_mm305_admission_envelope(&g,&overloaded,90.0,&p,&cfg);
     assert(safety.valid&&((safety.veto&64u)!=0u)&&!safety.ready);
+    assert((entry_mm305_admission_prefilter_veto(&overloaded,&p,&cfg)&64u)!=0u);
 
     Telemetry draggy=nominal;
     draggy.runway_along_track=-85000.0;
@@ -176,6 +184,9 @@ int main(void){
     assert(energy.valid);
     assert(energy.energy_margin<ready.energy_margin);
     assert((energy.veto&16u)!=0u);
+    /* An energy shortfall cannot be classified by the kinematic prefilter;
+       it must still be evaluated by the full physical projection. */
+    assert(entry_mm305_admission_prefilter_veto(&draggy,&p,&cfg)==0u);
     assert(!energy.ready);
 
     puts("MM305 admissible-state tests passed.");

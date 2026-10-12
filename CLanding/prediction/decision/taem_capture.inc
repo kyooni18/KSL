@@ -244,6 +244,40 @@ TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine*g,
 }
 
 
+unsigned entry_mm305_admission_prefilter_veto(const Telemetry*t,
+        const PlanetModel*p,const LandingConfiguration*cfg){
+    if(!t||!p||!cfg||!isfinite(t->mean_altitude)||
+       !isfinite(t->true_air_speed)||!isfinite(t->vertical_speed)||
+       !isfinite(t->runway_along_track)||!isfinite(t->runway_cross_track)||
+       !isfinite(t->dynamic_pressure)||!isfinite(t->g_force))
+        return 0xffffffffu;
+    const GuidanceSettings*s=&cfg->guidance;
+    const VehicleProfile*v=&cfg->vehicle;
+    unsigned veto=0;
+    double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
+    double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
+        (isfinite(sound)&&sound>DBL_MIN?t->true_air_speed/sound:NAN);
+    if(t->true_air_speed<v->minimum_safe_speed||!isfinite(mach)||
+       mach<s->mm305_target_mach-s->mm305_mach_half_width||
+       mach>s->mm305_target_mach+s->mm305_mach_half_width)
+        veto|=1u;
+    if(t->mean_altitude<s->mm305_min_altitude||
+       t->mean_altitude>s->mm305_max_altitude)
+        veto|=8u;
+    double range=hypot(t->runway_along_track,t->runway_cross_track);
+    double max_range=entry_taem_range_target(p,s);
+    if(!isfinite(range)||!isfinite(max_range)||range>max_range)
+        veto|=2u;
+    if(!(t->vertical_speed<0.0))veto|=32u;
+    if(isfinite(t->course_to_site_error)&&fabs(t->course_to_site_error)>90.0)
+        veto|=128u;
+    if(t->dynamic_pressure>v->maximum_dynamic_pressure||
+       t->g_force>v->maximum_g_load||
+       (t->stall_fraction_is_measured&&t->stall_fraction>=1.0))
+        veto|=64u;
+    return veto;
+}
+
 TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
         const Telemetry*t,double course,const PlanetModel*p,
         const LandingConfiguration*cfg){

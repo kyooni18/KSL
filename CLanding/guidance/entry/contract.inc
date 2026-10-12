@@ -157,7 +157,16 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
                 "MM304 phase transition invalidated the drag-reference state.");
     }
 
-    TaemInterfaceCapture admission=entry_mm305_admission_envelope(g,t,course,p,cfg);
+    /* Full inlet energy integration is irrelevant outside the immutable
+       kinematic/survivability gates. A stop-at-MM305 witness uses the physical
+       boundary independently of energy or route qualification, so it need not
+       perform the admission integration on every 0.1 s simulated FCS tick. */
+    TaemInterfaceCapture admission={0};
+    unsigned quick_veto=entry_mm305_admission_prefilter_veto(t,p,cfg);
+    if((g->diagnostic_shadow&&g->diagnostic_stop_at_taem)||quick_veto)
+        admission.veto=quick_veto;
+    else
+        admission=entry_mm305_admission_envelope(g,t,course,p,cfg);
     double diagnostic_milestone=entry_diagnostic_milestone_due(g,t->range_to_site);
     bool handoff_ready=admission.valid&&admission.ready;
     /* DRAGREF is the single MM304 longitudinal controller. It already

@@ -406,8 +406,14 @@ static bool deorbit_solve_target_periapsis(VehicleState coast,double normal_angl
         }
     }
 
-    /* Numerical bisection only; the decision target is configured periapsis. */
-    for(int i=0;i<48;i++){
+    /* Stop when the delta-v bracket is well below the actual finite-burn
+       cutoff accuracy (0.08 m/s). Forty-eight rounds unnecessarily integrate
+       thousands of identical quarter-second burns to sub-nanometer delta-v
+       precision. Retain bisection and both bracket signs, but resolve to
+       <=0.01 m/s; the last accepted midpoint differs by <=0.005 m/s. */
+    const double dv_bracket_tolerance=fmin(.01,
+        .125*GUIDANCE_BURN_TERMINAL_DV_TOLERANCE_MPS);
+    for(int i=0;i<48&&high-low>dv_bracket_tolerance;i++){
         double mid=.5*(low+high);
         double peri=deorbit_finite_burn_periapsis(
             coast,mid,normal_angle,p,s,thrust,cal);

@@ -714,9 +714,14 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
              * A retired exact interface waypoint and the old altitude/speed
              * shell must not report a release the executive would reject.
              * This is not a downstream route certificate or command owner. */
-            TaemInterfaceCapture capture=entry_mm305_admission_envelope(
-                NULL,&capture_state,capture_course,p,&interface_cfg);
-            ownership_ready=capture.valid&&capture.ready;
+            /* Skip the costly full path-energy integration when an inlet
+               cannot qualify on measured Mach, altitude, range or safety.
+               A zero prefilter veto never certifies admission on its own. */
+            if(entry_mm305_admission_prefilter_veto(&capture_state,p,&interface_cfg)==0u){
+                TaemInterfaceCapture capture=entry_mm305_admission_envelope(
+                    NULL,&capture_state,capture_course,p,&interface_cfg);
+                ownership_ready=capture.valid&&capture.ready;
+            }
             ownership_boundary_missed=!ownership_ready&&
                 geo.altitude<set->mm305_min_altitude&&vs<0.0;
         }

@@ -83,6 +83,17 @@ $(BUILD)/flight_physics/%.o: ../ShuttleSim/src/%.c $(CNANO_HEADERS) | $(BUILD)/f
 
 -include $(DEPFILES)
 
+# Offline deorbit planner benchmark. The polar fixture reconstructs an actual
+# recorded pre-plan orbital state; no live KSP RPC connection is made.
+$(BUILD)/benchmark_deorbit_planning: $(TOOLS_ROOT)/benchmark_deorbit_planning.c $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $< \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $@
+
+.PHONY: benchmark-deorbit
+benchmark-deorbit: $(BUILD)/benchmark_deorbit_planning
+	cd $(REPO_ROOT) && KSP_LANDER_TRACE_PLAN_TIMING=1 "$(abspath $<)" --polar-plan
+
 $(BUILD)/predictor_recorded_control_replay: $(TOOLS_ROOT)/predictor_recorded_control_replay.c $(BUILD)/physics_store.o $(BUILD)/vessel_physics.o $(BUILD)/json.o $(BUILD)/math.o
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $< $(BUILD)/physics_store.o $(BUILD)/vessel_physics.o $(BUILD)/json.o $(BUILD)/math.o $(LDFLAGS) $(LDLIBS) -o $@
 
