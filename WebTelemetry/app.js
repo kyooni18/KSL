@@ -1522,7 +1522,7 @@
     $("connection-dot").className = `dot ${state === "CONNECTED" ? "live" : state === "RECONNECTING" ? "bad" : ""}`;
     $("phase").textContent = orbitMode && phase === "IDLE" ? "ORBIT" : phase;
     const vesselName = t.vesselName || "—";
-    $("vessel").textContent = t.vesselName ? `${vesselName} · ${snapshot.automationEngaged ? "AUTO" : "MAN"}` : vesselName;
+    $("vessel").textContent = t.vesselName ? `${vesselName} · ${snapshot.automationEngaged ? "AUTO" : (snapshot.plannerFresh ? "DIRECT" : "MAN")}` : vesselName;
     $("launch-situation").textContent = String(t.vesselSituation || "—").toUpperCase();
     $("launch-status").textContent = snapshot.statusMessage || "Waiting for telemetry";
     $("launch-warning").textContent = [snapshot.warningMessage, snapshot.lastError].filter(Boolean).join(" · ");
