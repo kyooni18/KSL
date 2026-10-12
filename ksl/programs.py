@@ -30,7 +30,7 @@ from typing import Any, Callable
 from .backend import BackendClient, BackendError, snapshot_summary, validate_plan_qualification
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
-from .kspguard import prepare_reentry_direct_control, probe_orbiter_integrity, set_ksp_paused
+from .kspguard import prepare_reentry_direct_control, probe_orbiter_integrity
 from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
@@ -388,13 +388,8 @@ class LandingProgram(Program):
 
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)
-            set_ksp_paused(True, env=env)
-            ctx.log.log("KSP paused while the deorbit search runs")
-            try:
-                client.send("createPlan", timeout=float(landing["planTimeoutSeconds"]))
-            finally:
-                set_ksp_paused(False, env=env)
-                ctx.log.log("KSP resumed after deorbit planning")
+            ctx.log.log("Deorbit search runs with KSP unpaused (MM305 campaign)")
+            client.send("createPlan", timeout=float(landing["planTimeoutSeconds"]))
             planned = client.latest_snapshot
             if not planned or not planned.get("plan"):
                 planned = client.read_until(lambda s: bool(s.get("plan")) or s.get("phase") == "Fault", 30.0)
