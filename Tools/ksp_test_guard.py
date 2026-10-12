@@ -73,6 +73,11 @@ def saved_game_ut(name: str) -> float | None:
 
 def saved_game_part_count(name: str, vessel_name: str) -> int | None:
     """Expected active-vessel part count from a visible checkpoint."""
+    # A standalone script is launched with Tools/ as sys.path[0], not the
+    # repository root. Resolve the matching checkout before reading a save.
+    project_root = str(Path(__file__).resolve().parent.parent)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
     from ksl.ascent.craft import parse
 
     for candidate in _save_candidates(name):
