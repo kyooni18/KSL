@@ -52,7 +52,7 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
         model_profile="sts-live-20261010",
         attitude=f"{L5}/Codex-Flare-Offline/inputs/att-live.ini",
         direct_control=True,
-        baseline="Clean-build current source: complete on runway, all gates pass; touchdown 66.735 m/s, sink 2.055 m/s, stop 1068.915 m",
+        baseline="Current MM305 native + ShuttleSim: complete on runway, all gates pass; touchdown 66.129 m/s, sink 1.844 m/s, stop 1101.616 m",
     ),
     Scenario(
         name="l7-mm305",

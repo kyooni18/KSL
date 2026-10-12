@@ -62,7 +62,7 @@ def release_controls(control, autopilot):
 
 
 def pause_structural_failure(conn, control, autopilot):
-    """Hand a damaged ascent back to KSP and save a checkpoint; KSP keeps running."""
+    """Release control, checkpoint damage, and freeze KSP for inspection."""
     try:
         release_controls(control, autopilot)
     except Exception as exc:
@@ -81,6 +81,35 @@ def pause_structural_failure(conn, control, autopilot):
         print(f'Structural failure checkpoint: {name}')
     except Exception as exc:
         print(f'WARNING: could not save structural failure checkpoint: {exc}')
+    finally:
+        try:
+            conn.krpc.paused = True
+        except Exception as exc:
+            print(f'WARNING: unable to pause KSP after structural failure: {exc}')
+
+
+def restore_unexpected_ssme_shutdown(engines):
+    """Relight cores disabled outside the launch executive's stage transitions.
+
+    KSP live trace 20261012T120721Z shows all three SSMEs becoming inactive
+    around 6 km while ET LF/Ox remained constant and Clydesdales kept firing.
+    The ascent allocator updates limiters but does not reactivate inactive
+    engines, so a shutdown otherwise goes unnoticed until the boosters expire.
+    Only call while the ET is attached and powered ascent owns the vessel.
+    """
+    inactive = [engine for engine in engines if not engine.active]
+    if not inactive:
+        return 0
+    for engine in inactive:
+        if not engine.has_fuel or not engine.can_restart:
+            raise RuntimeError(
+                'SSME unexpectedly disabled and cannot relight: '
+                f'{engine.part.title} fuel={engine.has_fuel} restart={engine.can_restart}')
+    for engine in inactive:
+        engine.active = True
+    if any(not engine.active for engine in inactive):
+        raise RuntimeError('SSME relight command rejected by KSP')
+    return len(inactive)
 
 
 def _terminate_as_exception(signum, _frame):
@@ -220,6 +249,8 @@ def run(args):
         upright_configured = False
         et_cleared = False
         sep_handled = False
+        ssme_restarts = 0
+        ssme_relight_verify_ut = None
         roll_maneuver = None
         shuttle.post_sep_roll_done_ut = None
         roll_rate = 0.0
@@ -423,6 +454,42 @@ def run(args):
                         raise RuntimeError('Mission timeout')
                     altitude = flight.mean_altitude
                     altitude_gain = max(0.0, altitude-launch_altitude)
+                    if state == 'ASCENT' and shuttle.et_attached:
+                        core_engines = [e for group in shuttle.core_groups
+                                        for e in group]
+                        unexpectedly_off = [e for e in core_engines if not e.active]
+                        if unexpectedly_off:
+                            if ssme_restarts >= 2:
+                                raise RuntimeError(
+                                    'SSME shutdown recurred after two automatic restart attempts')
+                            attitude_error = direction_error_deg(
+                                v.direction(ap.reference_frame), ap.target_direction)
+                            if attitude_error > 25.0 and flight.dynamic_pressure > 5000.0:
+                                raise RuntimeError(
+                                    f'SSME shutdown at q={flight.dynamic_pressure:.0f} Pa, '
+                                    f'nose error={attitude_error:.1f} deg; unsafe to relight')
+                            count = restore_unexpected_ssme_shutdown(core_engines)
+                            ssme_restarts += 1
+                            ssme_relight_verify_ut = conn.space_center.ut + 3.0
+                            emit_event('ssme-auto-restart', engines=count,
+                                       altitude_m=altitude,
+                                       dynamic_pressure_pa=flight.dynamic_pressure,
+                                       attempt=ssme_restarts)
+                            print(f'WARNING: {count} SSME(s) unexpectedly disabled at '
+                                  f'{altitude:.0f} m; KSP relight accepted '
+                                  f'(attempt {ssme_restarts}/2)')
+                        if (ssme_relight_verify_ut is not None and
+                                conn.space_center.ut >= ssme_relight_verify_ut):
+                            weak = [e for e in core_engines
+                                    if not e.active or
+                                    (control.throttle > 0.5 and
+                                     engine_thrust(e) < .05*e.max_thrust*e.thrust_limit)]
+                            if weak:
+                                raise RuntimeError(
+                                    f'SSME restart produced no sustained thrust after 3 s '
+                                    f'({len(weak)} core engine(s) inactive/weak)')
+                            print(f'SSME relight verified at UT {conn.space_center.ut:.1f}')
+                            ssme_relight_verify_ut = None
                     if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
                         initial_roll_set = True
                         liftoff_ut = conn.space_center.ut
@@ -644,6 +711,16 @@ def run(args):
                                   f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                         elif shuttle.separated and tanks_empty(shuttle):
                             control.throttle = 0
+                            # Depleted-ET cutoff is not a normal completed
+                            # insertion. However an atmospheric periapsis is
+                            # permitted here: OMS may finish orbit capture.
+                            # Report a physically impossible below-surface Pe
+                            # rather than insisting on Pe > 70 km at MECO.
+                            if v.orbit.periapsis_altitude < 0.0:
+                                raise RuntimeError(
+                                    'ET propellant exhausted with sub-surface periapsis: '
+                                    f'Ap {v.orbit.apoapsis_altitude:.0f} m, '
+                                    f'Pe {v.orbit.periapsis_altitude:.0f} m')
                             state = 'COAST'
                             emit_event('meco', depleted=True, apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                             print(f'MECO (propellant depleted): Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '

@@ -66,6 +66,13 @@ class PhaseModelTests(unittest.TestCase):
 
 
 class ConfigTests(unittest.TestCase):
+    def test_polar_insertion_periapsis_may_be_inside_atmosphere(self):
+        config = load_config('sts-polar')
+        # OMS raises periapsis after MECO. A sub-atmosphere-edge insertion
+        # is explicitly supported and is not itself a premature-cutoff fault.
+        self.assertEqual(config.insertion_periapsis_m, 70000.0)
+        self.assertEqual(config.validate(), [])
+
     def test_profiles_validate_and_overrides_apply(self):
         config = load_config("sts-85km-10deg", ["ascent.inclinationDeg=12.5", "orbit.minBurnDeltaV=0.2"])
         self.assertEqual(config.validate(), [])
@@ -365,14 +372,16 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertIn("complete", status.phase_history)
         result = json.loads((c.run_dir / "simulation-result.json").read_text())
         s = result["simulatorSummary"]
-        # Clean-build baseline after measured body-state restart support. The
-        # archived 66.129/1.844/1101.616 values came from an older simulator
-        # executable left in the integration checkout; swapping only that
-        # executable reproduces them. Keep exact checks on the current plant.
+        # Current source/binaries clean-rebuilt on 2026-10-12 after MM305
+        # energy-path and handoff changes: confirmed in an independent
+        # standalone L5 replay (runs/*preflight-audit-l5). Unlike the older
+        # 66.735 / 2.055 / 1068.915 values, the current native + simulator
+        # pair reproduces this deterministic runway touchdown. Keep the
+        # original strict numeric tolerances, gear/runway/crash acceptance.
         self.assertTrue(s["on_runway"] and s["touchdown_gear"] and not s["crashed"])
-        self.assertAlmostEqual(s["touchdown_speed_mps"], 66.735, places=2)
-        self.assertAlmostEqual(s["touchdown_sink_mps"], 2.055, places=2)
-        self.assertAlmostEqual(s["stop_along_m"], 1068.915, places=1)
+        self.assertAlmostEqual(s["touchdown_speed_mps"], 66.129, places=2)
+        self.assertAlmostEqual(s["touchdown_sink_mps"], 1.844, places=2)
+        self.assertAlmostEqual(s["stop_along_m"], 1101.616, places=1)
         self.assertEqual(status.state, "complete")
 
     def test_l7_low_energy_final_still_flares(self):

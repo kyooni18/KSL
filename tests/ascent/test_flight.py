@@ -16,7 +16,8 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             roll_attitude_settled, roll_delta, roll_for_roof, slew_roll,
                             ensure_autopilot_engaged, pause_structural_failure,
                             release_controls, roll_for_heading,
-                            run, set_autopilot_engaged, validate_launch_vessel)
+                            run, set_autopilot_engaged, validate_launch_vessel,
+                            restore_unexpected_ssme_shutdown)
 from ksl.ascent.guidance import post_booster_master_throttle
 from ksl.ascent.vehicle import delay_booster_separation
 
@@ -268,6 +269,29 @@ class FlightTests(unittest.TestCase):
         self.assertFalse(meco_ready(100000, -100000, 100000, 45000))
         self.assertFalse(meco_ready(90000, 45000, 100000, 45000))
         self.assertTrue(meco_ready(100000, 45000, 100000, 45000))
+
+    def test_ssme_auto_restart_recovers_all_three_without_touching_limiters(self):
+        engines = [SimpleNamespace(active=False, has_fuel=True, can_restart=True,
+                                   thrust_limit=.4852,
+                                   part=SimpleNamespace(title='Vector SSME'))
+                   for _ in range(3)]
+        self.assertEqual(restore_unexpected_ssme_shutdown(engines), 3)
+        self.assertTrue(all(e.active for e in engines))
+        self.assertTrue(all(e.thrust_limit == .4852 for e in engines))
+        self.assertEqual(restore_unexpected_ssme_shutdown(engines), 0)
+
+    def test_ssme_auto_restart_refuses_engine_with_no_fuel(self):
+        engines = [SimpleNamespace(active=False, has_fuel=False, can_restart=True,
+                                   part=SimpleNamespace(title='Vector SSME'))]
+        with self.assertRaisesRegex(RuntimeError, 'cannot relight'):
+            restore_unexpected_ssme_shutdown(engines)
+        self.assertFalse(engines[0].active)
+
+    def test_ssme_auto_restart_refuses_non_restartable_engine(self):
+        engines = [SimpleNamespace(active=False, has_fuel=True, can_restart=False,
+                                   part=SimpleNamespace(title='Vector SSME'))]
+        with self.assertRaisesRegex(RuntimeError, 'cannot relight'):
+            restore_unexpected_ssme_shutdown(engines)
 
     def test_post_booster_master_does_not_latch_at_zero(self):
         # Live polar ascent twice idled its SSMEs in thin air although the
