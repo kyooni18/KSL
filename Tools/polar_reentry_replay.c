@@ -141,6 +141,23 @@ static void recorded(const char*path,const char*clock,const char*force){size_t n
         GeoPoint actual=predictor_geo_point(b->p,&planet,b->ut),pred=predictor_geo_point(s.position,&planet,s.ut),site={config.site.latitude,config.site.longitude,config.site.altitude};AeroContext ctx={.p=&planet,.e=&envelope,.c=&calibration,.v=&config.vehicle,.bank=b->bank,.aoa=b->aoa,.ut=s.ut,.mass=s.mass};AtmosState atm=atmosphere(s.position,s.velocity,&ctx);Vector3 actualair=vsub(b->v,vcross(planet_rotation_vector(&planet),b->p));fprintf(f,"%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f\n",s.ut,actual.altitude,pred.altitude,vmag(actualair),atm.speed,vmag(vsub(s.position,b->p)),vmag(vsub(s.velocity,b->v)),great_circle_distance(actual,site,planet.radius),great_circle_distance(pred,site,planet.radius),b->q,atm.q,b->aoa,b->bank,b->dt,b->ut-a->ut);if(!isfinite(pred.altitude)||pred.altitude<0||pred.altitude>200000){fprintf(stderr,"recorded open-loop diverged at row %zu, altitude %.1f; not a landing\n",i,pred.altitude);break;}}
     fclose(f);free(r);
 }
+static void close_burn(double dt){
+    load_history();load_terminal();Telemetry t;VehicleState s=load_state(sample_named("postburn"),&t),start=s;
+    int pp=object(0,"planParameters");DeorbitPlan plan={0};plan.burn_ut=number(pp,"burnUT");plan.estimated_burn_duration=number(pp,"estimatedBurnDuration");plan.delta_v=number(pp,"deltaV");plan.burn_normal_angle=number(pp,"burnNormalAngle");plan.predicted_post_burn_periapsis_altitude=number(pp,"predictedPostBurnPeriapsisAltitude");plan.execution_qualified=true;plan.live_cutoff_capture_qualified=true;
+    GuidanceMachine g;guidance_machine_init(&g);guidance_set_engaged(&g,true);g.has_burn_command_started=true;g.burn_active_elapsed=117.75;g.delivered_delta_v=42.05813674171725;g.has_previous_ut=true;g.previous_ut=s.ut-dt;
+    t.autopilot_error=0.;double impulse=0.,last_throttle=0.;FILE*f=create_output("-closure.csv");fprintf(f,"ut,periapsis,phase,throttle,delivered_delta_v\n");
+    for(int i=0;i<3000;i++){
+        t.ut=s.ut;t.mass=s.mass;t.mean_altitude=vmag(s.position)-planet.radius;t.periapsis_altitude=predictor_postburn_periapsis(s,&planet);t.current_thrust=t.available_thrust*last_throttle;
+        GuidanceResult r=guidance_update(&g,&t,&s,&plan,&planet,envelope.regimes[2],&config);
+        fprintf(f,"%.9f,%.9f,%d,%.9f,%.9f\n",s.ut,t.periapsis_altitude,r.phase,r.command.target_throttle,g.delivered_delta_v);
+        if(r.phase!=PHASE_DEORBIT_BURN){guidance_result_clear(&r);break;}
+        last_throttle=r.command.target_throttle;Vector3 force=vscale(r.command.inertial_direction,t.available_thrust*last_throttle/s.mass);impulse+=vmag(force)*dt;s=measured_force_step(s,dt,force);guidance_result_clear(&r);
+    }
+    fclose(f);printf("burn_closure step=%.6f duration=%.9f initialPe=%.9f finalPe=%.9f additionalImpulsePerMass=%.9f completed=%d fixed_mass_assumption=1\n",dt,s.ut-start.ut,predictor_postburn_periapsis(start,&planet),predictor_postburn_periapsis(s,&planet),impulse,g.deorbit_burn_completed);
+    if(!g.deorbit_burn_completed)fail("burn closure did not finish within diagnostic bound");
+    PredictorGuidance response={0};AeroContext ctx={.p=&planet,.e=&envelope,.c=&calibration,.v=&config.vehicle,.ut=s.ut,.mass=s.mass};Telemetry seed=guidance_shadow_telemetry(&t,s,&response,&ctx,&planet,&config,NULL);copy_control_authority_evidence(&seed,&t);GuidanceMachine entry;guidance_initialize_reentry_continuation(&entry,&seed,&planet,&config,1.,false,&envelope,&calibration);
+    TerminalShadowOutcome outcome;EntryPrediction prediction=predictor_simulate_guidance_shadow_core(s,&seed,&entry,&plan,&planet,envelope.regimes[2],&envelope,&calibration,&config,4500,true,false,false,terminal,&outcome);prediction_summary(&prediction,s);entry_prediction_clear(&prediction);free(terminal);
+}
 static void shadow(const char*label,bool prior){if(prior)load_history();load_terminal();Telemetry t;VehicleState s;if(!strcmp(label,"planned")){s=planned_state();PredictorGuidance response={0};AeroContext ctx={.p=&planet,.e=&envelope,.c=&calibration,.v=&config.vehicle,.ut=s.ut,.mass=s.mass};t=guidance_shadow_telemetry(NULL,s,&response,&ctx,&planet,&config,NULL);Telemetry authority;load_state(sample_named("postburn"),&authority);copy_control_authority_evidence(&t,&authority);}else s=load_state(sample_named(label),&t);
     GuidanceMachine g;guidance_initialize_reentry_continuation(&g,&t,&planet,&config,t.roll<0?-1:1,false,&envelope,&calibration);
     DeorbitPlan plan={0};plan.predicted_post_burn_periapsis_altitude=predictor_postburn_periapsis(s,&planet);plan.execution_qualified=true;
@@ -154,6 +171,7 @@ static void candidate(double offset,double normal,double peri,bool prior){if(pri
 int main(int argc,char**argv){if(argc<4)fail("usage: polar_reentry_replay FIXTURE OUTPUT_PREFIX MODE [ARGS]");output=argv[2];FILE*f=fopen(argv[1],"rb");if(!f)fail("fixture not found");if(fseek(f,0,SEEK_END))fail("fixture seek");long n=ftell(f);if(n<0||n>10000000)fail("fixture size");rewind(f);char*text=calloc((size_t)n+1,1);JsonToken*tokens=calloc(TOKEN_CAPACITY,sizeof(*tokens));if(!text||!tokens||fread(text,1,(size_t)n,f)!=(size_t)n)fail("fixture read");fclose(f);if(json_parse(text,tokens,TOKEN_CAPACITY,&doc)<0)fail("fixture JSON parse");config=landing_configuration_default();if(!landing_configuration_from_json(&config,&doc,object(0,"configuration")))fail("configuration parse");load_planet();setvbuf(stdout,NULL,_IOLBF,0);
     if(!strcmp(argv[3],"vacuum"))vacuum();
     else if(!strcmp(argv[3],"burn"))burn_study();
+    else if(!strcmp(argv[3],"close-burn"))close_burn(argc>4?strtod(argv[4],NULL):.1);
     else if(!strcmp(argv[3],"forces")&&argc==5)forces(argv[4]);
     else if(!strcmp(argv[3],"recorded")&&argc==7)recorded(argv[4],argv[5],argv[6]);
     else if(!strcmp(argv[3],"shadow")&&argc>=5)shadow(argv[4],argc>5&&!strcmp(argv[5],"prior"));

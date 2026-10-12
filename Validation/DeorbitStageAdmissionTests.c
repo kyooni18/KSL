@@ -175,6 +175,33 @@ int main(void) {
     assert(result.command.target_throttle < cfg.guidance.deorbit_maximum_throttle * 0.5);
     guidance_result_clear(&result);
 
+    /* Latest polar return stopped at +1475 m because an advisory capture bit
+       short-circuited the existing measured +300 m periapsis closure. A
+       positive downstream prediction must not silently relax that target. */
+    guidance_reset_plan(&guidance);
+    guidance_set_engaged(&guidance,true);
+    guidance.has_burn_command_started=true;
+    guidance.burn_active_elapsed=117.75;
+    t.ut=220.0;t.current_thrust=6000.0;t.autopilot_error=0.0;
+    t.periapsis_altitude=plan.predicted_post_burn_periapsis_altitude+1475.0;
+    plan.live_cutoff_capture_qualified=true;
+    result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+    assert(result.phase==PHASE_DEORBIT_BURN);
+    assert(result.command.target_throttle>0.0);
+    guidance_result_clear(&result);
+    t.ut+=.1;t.periapsis_altitude=plan.predicted_post_burn_periapsis_altitude+299.0;
+    result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+    assert(guidance.deorbit_burn_completed&&result.command.target_throttle==0.0);
+    guidance_result_clear(&result);
+
+    /* Missing periapsis retains the older best-effort forecast fallback. */
+    guidance_reset_plan(&guidance);guidance_set_engaged(&guidance,true);
+    guidance.has_burn_command_started=true;t.periapsis_altitude=NAN;t.ut+=.1;
+    result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+    assert(guidance.deorbit_burn_completed&&result.command.target_throttle==0.0);
+    guidance_result_clear(&result);
+    plan.live_cutoff_capture_qualified=false;
+
     /* A clock correction and one zero-thrust sample are not sustained loss.
        Recovering thrust resets the watch; a genuinely failed engine still aborts. */
     guidance_reset_plan(&guidance);
