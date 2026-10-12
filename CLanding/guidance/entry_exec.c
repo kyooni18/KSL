@@ -146,8 +146,8 @@ bool entry_exec_update(EntryExecutive *exec,
                                   ENTRY_TRANSITION_CONSTANT_DRAG_VELOCITY, observation, false);
             break;
         case ENTRY_PHASE_TRANSITION:
-            /* Entry completion is a qualified contract event, never a velocity gate.
-               entry_exec_accept_taem_handoff() is the sole completion API. */
+            /* Flight guidance explicitly accepts either the qualified route or
+               the physical MM305 boundary; a velocity gate does not finish Entry. */
             break;
         default:
             return false;
@@ -163,6 +163,24 @@ bool entry_exec_accept_taem_handoff(EntryExecutive *exec,
     if (exec->entry_complete) return true;
     record_transition(exec, exec->phase, exec->phase,
                       ENTRY_TRANSITION_TAEM_QUALIFIED_HANDOFF,
+                      observation, true);
+    return true;
+}
+
+bool entry_exec_force_taem_handoff(EntryExecutive *exec,
+                                   const EntryExecObservation *observation) {
+    if (!exec || !observation_valid(observation) ||
+        (exec->initialized&&!phase_valid(exec->phase)))
+        return false;
+    /* A degraded MM304 predictor may have held before Entry initialized its
+       executive. The measured physical boundary is still authoritative. */
+    if (!exec->initialized) {
+        entry_exec_reset(exec);
+        exec->initialized=true;
+    }
+    if (exec->entry_complete) return true;
+    record_transition(exec, exec->phase, ENTRY_PHASE_TRANSITION,
+                      ENTRY_TRANSITION_TAEM_FORCED_HANDOFF,
                       observation, true);
     return true;
 }
@@ -211,6 +229,7 @@ const char *entry_transition_reason_string(EntryTransitionReason reason) {
         case ENTRY_TRANSITION_EQUILIBRIUM_INTERCEPT: return "Equilibrium/constant-drag profile intersection";
         case ENTRY_TRANSITION_CONSTANT_DRAG_VELOCITY: return "Constant-drag transition velocity gate";
         case ENTRY_TRANSITION_TAEM_QUALIFIED_HANDOFF: return "Qualified TAEM handoff";
+        case ENTRY_TRANSITION_TAEM_FORCED_HANDOFF: return "MM305 physical boundary handoff";
         default: return "Unknown Entry transition";
     }
 }

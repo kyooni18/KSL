@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "landing.h"
 #include "../CLanding/guidance/guidance_internal.h"
 #include "sim_telemetry.h"
@@ -75,6 +76,84 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
         assert(!blocked.terminal_region_entered);
         assert(!taem_exec_owns_vehicle(&blocked.taem_exec));
         guidance_result_clear(&held);
+    }
+    /* The physical MM305 handoff is independent of inlet energy, runway
+       closure and route qualification. Shadow stops at transfer and therefore
+       needs no terminal planner model for this ownership regression. */
+    if(cfg->vehicle.maximum_dynamic_pressure>1000.0) {
+        GuidanceMachine forced={0};
+        forced.automation_engaged=true;
+        forced.phase=PHASE_ENTRY_ENERGY;
+        forced.terminal_glide_mode=true;
+        forced.deorbit_burn_completed=true;
+        forced.atmospheric_interface_crossed=true;
+        forced.entry_exec.initialized=true;
+        forced.entry_exec.phase=ENTRY_PHASE_EQUILIBRIUM_GLIDE;
+        forced.diagnostic_shadow=true;
+        forced.diagnostic_stop_at_taem=true;
+        forced.s_turn_sign=1.0;
+        Telemetry coherent=t;
+        coherent.pitch=coherent.flight_path_angle+coherent.angle_of_attack;
+        coherent.heading=coherent.ground_track_heading=course;
+        GuidanceResult result=guidance_update_with_terminal_model(&forced,&coherent,
+            &state,NULL,p,aero,cfg,NULL);
+        bool due=height<=cfg->guidance.mm305_max_altitude &&
+            mach<=cfg->guidance.mm305_target_mach+cfg->guidance.mm305_mach_half_width;
+        if(due) {
+            assert(result.phase==PHASE_TAEM);
+            assert(forced.entry_exec.entry_complete);
+            assert(forced.entry_exec.last_transition_reason==
+                ENTRY_TRANSITION_TAEM_FORCED_HANDOFF);
+            assert(forced.terminal_region_entered);
+            assert(taem_exec_owns_vehicle(&forced.taem_exec));
+        } else {
+            assert(!forced.entry_exec.entry_complete);
+            assert(!forced.terminal_region_entered);
+        }
+        guidance_result_clear(&result);
+    }
+    /* Exercise the non-shadow control path too: the model exists, but there
+       is no qualifying admission route and energy is below the nominal band. */
+    if(strcmp(label,"below Mach band")==0) {
+        char atmosphere[512],aero_path[512],book[512],attitude[512],reason[192];
+        TerminalModelSourceFiles files={
+            .atmosphere_csv=shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_ATMOSPHERE,
+                atmosphere,sizeof(atmosphere)),
+            .aero_csv=shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_AERO,
+                aero_path,sizeof(aero_path)),
+            .aero_book_csv=shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_FORCE_BOOK,
+                book,sizeof(book)),
+            .attitude_ini=shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_ATTITUDE,
+                attitude,sizeof(attitude))
+        };
+        TerminalModel *model=malloc(sizeof(*model));
+        assert(model);
+        assert(terminal_model_capture(model,&files,cfg,41,reason,sizeof(reason)));
+        GuidanceMachine live={0};
+        live.automation_engaged=true;
+        live.phase=PHASE_ENTRY_ENERGY;
+        live.terminal_glide_mode=true;
+        live.mm305_async_planning=true;
+        live.deorbit_burn_completed=true;
+        live.atmospheric_interface_crossed=true;
+        live.entry_exec.initialized=true;
+        live.entry_exec.phase=ENTRY_PHASE_TRANSITION;
+        live.s_turn_sign=1.0;
+        Telemetry coherent=t;
+        coherent.pitch=coherent.flight_path_angle+coherent.angle_of_attack;
+        coherent.heading=coherent.ground_track_heading=course;
+        GuidanceResult outcome=guidance_update_with_terminal_model(&live,&coherent,
+            &state,NULL,p,aero,cfg,model);
+        assert(live.entry_exec.entry_complete);
+        assert(live.entry_exec.last_transition_reason==ENTRY_TRANSITION_TAEM_FORCED_HANDOFF);
+        assert(live.terminal_region_entered);
+        assert(taem_exec_owns_vehicle(&live.taem_exec));
+        assert(live.mm305_planning_needed||live.mm305_route_committed);
+        printf("forced live handoff: phase=%d route=%d pending=%d status=%s\n",
+            outcome.phase,live.mm305_route_committed?1:0,live.mm305_planning_needed?1:0,
+            outcome.status);
+        guidance_result_clear(&outcome);
+        free(model);
     }
     bool matches=ready==expected&&forecast.reached_taem==ready;
     entry_prediction_clear(&forecast);

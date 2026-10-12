@@ -22,7 +22,8 @@ typedef enum {
     ENTRY_TRANSITION_TEMPERATURE_VELOCITY,
     ENTRY_TRANSITION_EQUILIBRIUM_INTERCEPT,
     ENTRY_TRANSITION_CONSTANT_DRAG_VELOCITY,
-    ENTRY_TRANSITION_TAEM_QUALIFIED_HANDOFF
+    ENTRY_TRANSITION_TAEM_QUALIFIED_HANDOFF,
+    ENTRY_TRANSITION_TAEM_FORCED_HANDOFF
 } EntryTransitionReason;
 
 /* Current measured state needed by the executive. The executive deliberately
@@ -41,8 +42,8 @@ typedef struct {
 
    Velocity gates are used only for the decelerating longitudinal Entry phases:
    transition when relative_velocity <= supplied gate. The final MM304 -> MM305
-   transfer is deliberately not represented by a profile threshold; a caller must
-   explicitly accept the qualified TAEM handoff once the live contract is satisfied.
+   transfer is controlled by the guidance owner: normally by qualified admission,
+   or by the physical MM305 boundary when forced ownership is due.
 
    phase_floor is only used during initialization/restart classification. It is
    never allowed to move an already-running executive backward or silently skip
@@ -99,6 +100,11 @@ bool entry_exec_update(EntryExecutive *exec,
                        const EntryExecProfile *profile);
 bool entry_exec_accept_taem_handoff(EntryExecutive *exec,
                                       const EntryExecObservation *observation);
+/* Called only after the flight guidance has observed the physical MM305 boundary.
+   Records a distinct transition even if longitudinal Entry has not reached
+   Transition; this does not assert route or arrival feasibility. */
+bool entry_exec_force_taem_handoff(EntryExecutive *exec,
+                                   const EntryExecObservation *observation);
 EntryExecTelemetry entry_exec_telemetry(const EntryExecutive *exec);
 
 const char *entry_phase_string(EntryPhase phase);

@@ -105,6 +105,32 @@ static void test_mm304_to_mm305_is_one_way(void) {
     assert(taem.last_transition_reason == TAEM_TRANSITION_TERMINAL_PATH_REPLAN);
 }
 
+static void test_forced_mm305_handoff(void) {
+    EntryExecutive entry;
+    entry_exec_reset(&entry);
+    EntryExecProfile ep=entry_profile();
+    EntryExecObservation obs=entry_obs(400.0,800.0,3000.0,false);
+    assert(entry_exec_initialize(&entry,&obs,&ep));
+    assert(entry.phase==ENTRY_PHASE_PREENTRY);
+    assert(!entry_exec_accept_taem_handoff(&entry,&obs));
+    assert(entry_exec_force_taem_handoff(&entry,&obs));
+    assert(entry.phase==ENTRY_PHASE_TRANSITION);
+    assert(entry.entry_complete);
+    assert(entry.last_transition_reason==ENTRY_TRANSITION_TAEM_FORCED_HANDOFF);
+    unsigned transitions=entry.transition_count;
+    assert(entry_exec_force_taem_handoff(&entry,&obs));
+    assert(entry.transition_count==transitions);
+    assert(!strcmp(entry_transition_reason_string(entry.last_transition_reason),
+        "MM305 physical boundary handoff"));
+
+    EntryExecutive never_initialized;
+    entry_exec_reset(&never_initialized);
+    assert(entry_exec_force_taem_handoff(&never_initialized,&obs));
+    assert(never_initialized.initialized&&never_initialized.entry_complete);
+    assert(never_initialized.phase==ENTRY_PHASE_TRANSITION);
+    assert(never_initialized.last_transition_reason==ENTRY_TRANSITION_TAEM_FORCED_HANDOFF);
+}
+
 static void test_taem_handoff_latched(void) {
     TaemExecutive taem;
     taem_exec_reset(&taem);
@@ -122,6 +148,7 @@ static void test_taem_handoff_latched(void) {
 
 int main(void) {
     test_mm304_to_mm305_is_one_way();
+    test_forced_mm305_handoff();
     test_taem_handoff_latched();
     puts("Shuttle architecture contract tests passed.");
     return 0;
