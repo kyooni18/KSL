@@ -38,6 +38,7 @@ bool aero_load_csv(AeroTable *a, const char *path);
 bool aero_load_book_csv(AeroTable *a, const char *path);
 void aero_coefficients(const AeroTable *a, double mach, double alpha_deg, double *cl, double *cd);
 /* Whole-vessel coefficients, including local force-book support, in m^2. */
+void aero_apply_mach_observation(AeroTable *a,double mach,double lift_scale,double drag_scale);
 double aero_observation_mach_weight(double mach,double observed_mach);
 void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
                       double *lift_per_q,double *drag_per_q);

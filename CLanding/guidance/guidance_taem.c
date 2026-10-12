@@ -194,23 +194,9 @@ static const TerminalModel *mm305_model_for_end(const TerminalModel *model,
 /* Apply each measured force ratio only near the Mach where it was observed.
  * Live MM305 drag has a strong Mach dependence, so extrapolating one ratio
  * across the complete table can badly misprice the low-subsonic HAC exit. */
-static void mm305_scale_model(TerminalModel *m, double observed_mach,
-        double lift_scale, double drag_scale) {
-    if (!(fabs(lift_scale-1.0)>1e-9) && !(fabs(drag_scale-1.0)>1e-9)) return;
-    for (size_t i=0;i<m->aero.mach_count;++i) {
-        double weight=aero_observation_mach_weight(m->aero.mach[i],observed_mach);
-        double local_lift_scale=1.0+weight*(lift_scale-1.0);
-        double local_drag_scale=1.0+weight*(drag_scale-1.0);
-        for (size_t j=0;j<m->aero.alpha_count;++j) {
-            m->aero.cl[i][j]*=local_lift_scale;
-            m->aero.cd[i][j]*=local_drag_scale;
-        }
-    }
-    for (size_t i=0;i<m->aero.book_count;++i) {
-        double weight=aero_observation_mach_weight(m->aero.book[i].mach,observed_mach);
-        m->aero.book[i].lift_per_q_m2*=1.0+weight*(lift_scale-1.0);
-        m->aero.book[i].drag_per_q_m2*=1.0+weight*(drag_scale-1.0);
-    }
+static void mm305_scale_model(TerminalModel *m,double observed_mach,
+        double lift_scale,double drag_scale){
+    aero_apply_mach_observation(&m->aero,observed_mach,lift_scale,drag_scale);
 }
 
 static double mm305_wall_seconds(void) {
@@ -660,6 +646,34 @@ bool guidance_mm305_admission_qualified(GuidanceMachine *g, const Telemetry *t,
         g->mm305_admission_last_attempt_ut=t->ut;
     }
     return false;
+}
+
+bool guidance_mm305_revalidate_admission(GuidanceMachine *g,const Telemetry *t,
+        const VehicleState *state,const LandingConfiguration *cfg,const TerminalModel *model){
+    if(!g||!t||!state||!cfg||!model||!g->mm305_admission_valid||
+       !g->mm305_admission_found||!g->mm305_admission_route.valid||
+       g->mm305_admission_snapshot_id!=model->snapshot_id||state->ut!=t->ut)return false;
+    if(g->mm305_admission_result_ut==t->ut)return true;
+    Mm305PlanRequest *request=malloc(sizeof(*request));
+    Mm305PlanResult *previous=calloc(1,sizeof(*previous));
+    if(!request||!previous){free(request);free(previous);return false;}
+    /* A held solution supplies topology; its initial state is not reused as
+       evidence. Request construction always captures today's bounded controls. */
+    bool needed=g->mm305_admission_needed;
+    g->mm305_admission_needed=true;
+    *request=guidance_mm305_admission_request(g,t,state,cfg,model);
+    g->mm305_admission_needed=needed;
+    request->final_approach_distance_m=-g->mm305_admission_route.alignment_along_m;
+    previous->valid=previous->found=true;
+    previous->model_snapshot_id=g->mm305_admission_snapshot_id;
+    previous->candidate.route=g->mm305_admission_route;
+    previous->candidate.runway_end=g->mm305_admission_runway_end;
+    Mm305PlanResult current=mm305_revalidate_plan(model,request,previous);
+    free(request);free(previous);
+    if(!current.valid)return false;
+    g->mm305_admission_last_attempt_ut=t->ut;
+    guidance_mm305_admission_accept(g,&current);
+    return g->mm305_admission_found;
 }
 
 bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,

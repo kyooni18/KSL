@@ -326,7 +326,7 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
         energy.energy.margin-projection.integration_error_j_kg:NAN;
     out.valid=isfinite(out.along)&&isfinite(out.cross)&&
         isfinite(out.minimum_turn_radius_m)&&energy.valid;
-    if(!out.valid)return out;
+    if(!out.valid){out.veto|=16u;return out;}
 
     double range=hypot(t->runway_along_track,t->runway_cross_track);
     double maximum_entry_range=entry_taem_range_target(p,s);

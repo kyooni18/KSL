@@ -836,6 +836,37 @@ int main(void) {
     assert(planner_g.mm305_model_snapshot_id == model.snapshot_id);
     assert(guidance_mm305_accept_plan(&planner_g, &found, &plan_cfg));
     assert(planner_g.mm305_replans == 1);
+    /* A held descriptor marked qualified by the producer is still replayed
+       from today's actual state before admission. This descriptor starts at a
+       different tangent point, so current-state qualification must reject it. */
+    GuidanceMachine admission_guard={0};
+    guidance_mm305_admission_accept(&admission_guard,&found);
+    TerminalDynamicState measured=state;
+    TerminalControl hold={state.attitude.aoa_rad,state.attitude.bank_rad,.5};
+    assert(terminal_propagator_step(&model,&measured,&hold)==TERMINAL_STEP_OK);
+    TaemGeometryState measured_geometry;
+    assert(taem_geometry_state(&model,&measured,&measured_geometry));
+    AeroForces measured_forces=aero_compute(&model.world,&model.aero,
+        measured.position_i_m,measured.velocity_i_mps,measured.ut_s,measured.mass_kg,
+        measured.attitude.aoa_rad,measured.attitude.bank_rad);
+    Telemetry current={0};current.ut=measured.ut_s;current.mass=measured.mass_kg;
+    current.mean_altitude=model.site.altitude+measured_geometry.altitude_above_runway_m;
+    current.true_air_speed=measured_geometry.airspeed_mps;
+    current.angle_of_attack=measured.attitude.aoa_rad*RAD2DEG;
+    current.roll=measured.attitude.bank_rad*RAD2DEG;
+    current.dynamic_pressure=measured_forces.dynamic_pressure_pa;
+    current.mach=measured_forces.mach;
+    current.lift_force=measured_forces.lift_n;current.drag_force=measured_forces.drag_n;
+    current.physics_sample_valid=true;
+    VehicleState measured_vehicle={measured.ut_s,
+        {measured.position_i_m.x,measured.position_i_m.y,measured.position_i_m.z},
+        {measured.velocity_i_mps.x,measured.velocity_i_mps.y,measured.velocity_i_mps.z},
+        measured.mass_kg};
+    assert(!guidance_mm305_revalidate_admission(&admission_guard,&current,
+        &measured_vehicle,&plan_cfg,&model));
+    assert(admission_guard.mm305_admission_valid&&!admission_guard.mm305_admission_found);
+    assert(admission_guard.mm305_admission_result_ut==current.ut);
+
     /* A failed later replan must leave the already committed route
      * untouched; live MM305 continues flying the last qualified route. */
     TaemRoute held_route = planner_g.mm305_route;

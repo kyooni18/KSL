@@ -133,6 +133,26 @@ double aero_observation_mach_weight(double mach,double observed_mach){
     return fmax(0.0,1.0-fabs(mach-observed_mach)/0.5);
 }
 
+/* Preserve the executable MM305 correction's interpolation contract. Both
+   upstream energy pricing and downstream replay must use the same table. */
+void aero_apply_mach_observation(AeroTable *a,double observed_mach,
+        double lift_scale,double drag_scale){
+    if(!a||(!isfinite(lift_scale))||(!isfinite(drag_scale)))return;
+    if(!(fabs(lift_scale-1.0)>1e-9)&&!(fabs(drag_scale-1.0)>1e-9))return;
+    for(size_t i=0;i<a->mach_count;i++){
+        double weight=aero_observation_mach_weight(a->mach[i],observed_mach);
+        double ls=1.0+weight*(lift_scale-1.0),ds=1.0+weight*(drag_scale-1.0);
+        for(size_t j=0;j<a->alpha_count;j++){
+            a->cl[i][j]*=ls;a->cd[i][j]*=ds;
+        }
+    }
+    for(size_t i=0;i<a->book_count;i++){
+        double weight=aero_observation_mach_weight(a->book[i].mach,observed_mach);
+        a->book[i].lift_per_q_m2*=1.0+weight*(lift_scale-1.0);
+        a->book[i].drag_per_q_m2*=1.0+weight*(drag_scale-1.0);
+    }
+}
+
 void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
                       double *lift_per_q_out,double *drag_per_q_out){
     double cl,cd; aero_coefficients(a,mach,alpha_deg,&cl,&cd);

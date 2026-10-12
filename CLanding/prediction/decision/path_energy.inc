@@ -2,30 +2,39 @@
  * bound: a shorter path can require more lift/drag than a longer trajectory.
  * It may screen an inlet only when lift and response support are demonstrated;
  * MM305 still independently replays its real bounded-curvature route. */
-bool decision_unpowered_aerodynamic_accelerations(const GuidanceMachine *g,const Telemetry *t,
+static bool path_atmosphere(const TerminalModel *model,const Telemetry *t,
+        const PlanetModel *p,double altitude,double latitude,double longitude,double ut,
+        double *density,double *sound_speed){
+    (void)t;
+    double rho,sound;
+    if(model){
+        double lat=latitude*DEG2RAD,lon=longitude*DEG2RAD;
+        double radius=model->world.radius_m+altitude;
+        Vec3 fixed={radius*cos(lat)*cos(lon),radius*cos(lat)*sin(lon),radius*sin(lat)};
+        Vec3 inertial=world_fixed_to_inertial(&model->world,fixed,ut);
+        AtmosphereSample atmosphere=world_atmosphere_sample_state(&model->world,inertial,ut);
+        rho=atmosphere.density_kg_m3;sound=atmosphere.speed_of_sound_mps;
+    }else{
+        rho=planet_atmospheric_density(p,altitude);
+        sound=planet_atmospheric_speed_of_sound(p,altitude);
+    }
+    *density=rho;*sound_speed=sound;
+    return isfinite(rho)&&rho>=0.0&&isfinite(sound)&&sound>0.0;
+}
+
+static bool path_aerodynamic_accelerations(const TerminalModel *model,const Telemetry *t,
         const PlanetModel *p,const LandingConfiguration *cfg,
-        double altitude,double speed,double aoa,double *lift,double *drag){
+        double altitude,double speed,double aoa,double latitude,double longitude,
+        double ut,double *lift,double *drag){
     if(!t||!p||!cfg||!lift||!drag||!isfinite(speed)||!(speed>0.0)||!isfinite(aoa))return false;
     const VehicleProfile *v=&cfg->vehicle;
-    double rho=planet_atmospheric_density(p,altitude);
-    double sound=planet_atmospheric_speed_of_sound(p,altitude);
-    if(!isfinite(rho)||rho<0.0||!(sound>0.0)||!isfinite(sound))return false;
+    double rho,sound;
+    if(!path_atmosphere(model,t,p,altitude,latitude,longitude,ut,&rho,&sound))return false;
     double q=.5*rho*speed*speed;
-    const TerminalModel *model=g?g->entry_terminal_model:NULL;
     if(model){
         double lq=0.0,dq=0.0;
         aero_force_per_q(&model->aero,q,speed/sound,aoa,&lq,&dq);
         *lift=q*lq/t->mass;*drag=q*dq/t->mass;
-        if(t->physics_sample_valid&&t->mass>0.0&&t->dynamic_pressure>0.0){
-            double l0=0.0,d0=0.0;
-            aero_force_per_q(&model->aero,t->dynamic_pressure,t->mach,
-                hypot(t->angle_of_attack,t->sideslip),&l0,&d0);
-            double weight=aero_observation_mach_weight(speed/sound,t->mach);
-            if(l0>DBL_MIN&&isfinite(t->lift_force)&&t->lift_force>=0.0)
-                *lift*=1.0+weight*(t->lift_force/(t->dynamic_pressure*l0)-1.0);
-            if(d0>DBL_MIN&&isfinite(t->drag_force)&&t->drag_force>=0.0)
-                *drag*=1.0+weight*(t->drag_force/(t->dynamic_pressure*d0)-1.0);
-        }
     }else{
         /* The live calibrator normalizes beta and L/D to Mach-5 entry trim.
            Only direct source-state force evidence is normalized at incidence. */
@@ -49,6 +58,38 @@ bool decision_unpowered_aerodynamic_accelerations(const GuidanceMachine *g,const
     return isfinite(*lift)&&isfinite(*drag)&&*drag>=0.0;
 }
 
+/* Capture the exact correction used by MM305 once per projection. Applying a
+   different interpolation rule upstream can falsely qualify an inlet whose
+   downstream model cannot reproduce those forces. */
+static TerminalModel *path_observed_model(const TerminalModel *base,const Telemetry *t){
+    TerminalModel *model=malloc(sizeof(*model));
+    if(!model)return NULL;
+    *model=*base;
+    double lift_q=0.0,drag_q=0.0;
+    aero_force_per_q(&base->aero,t->dynamic_pressure,t->mach,
+        hypot(t->angle_of_attack,t->sideslip),&lift_q,&drag_q);
+    double ls=lift_q>DBL_MIN&&isfinite(t->lift_force)&&t->lift_force>=0.0?
+        t->lift_force/(t->dynamic_pressure*lift_q):1.0;
+    double ds=drag_q>DBL_MIN&&isfinite(t->drag_force)&&t->drag_force>0.0?
+        t->drag_force/(t->dynamic_pressure*drag_q):1.0;
+    aero_apply_mach_observation(&model->aero,t->mach,ls,ds);
+    return model;
+}
+
+bool decision_unpowered_aerodynamic_accelerations(const GuidanceMachine *g,const Telemetry *t,
+        const PlanetModel *p,const LandingConfiguration *cfg,double altitude,double speed,
+        double aoa,double *lift,double *drag){
+    if(!t)return false;
+    const TerminalModel *base=g?g->entry_terminal_model:NULL;
+    TerminalModel *observed=base&&t->physics_sample_valid&&t->dynamic_pressure>0.0?
+        path_observed_model(base,t):NULL;
+    if(base&&t->physics_sample_valid&&t->dynamic_pressure>0.0&&!observed)return false;
+    bool valid=path_aerodynamic_accelerations(observed?observed:base,t,p,cfg,altitude,
+        speed,aoa,t->latitude,t->longitude,t->ut,lift,drag);
+    free(observed);
+    return valid;
+}
+
 static void path_axis_step(double target,double dt,GuidanceAttitudeLimits limits,
         double *angle,double *rate){
     double error=target-*angle;
@@ -60,14 +101,17 @@ static void path_axis_step(double target,double dt,GuidanceAttitudeLimits limits
     else{*angle+=delta;*rate=next;}
 }
 
-static bool path_acceleration(const GuidanceMachine *g,const Telemetry *t,
+static bool path_acceleration(const TerminalModel *model,const Telemetry *t,
         const PlanetModel *p,const LandingConfiguration *cfg,Vec3 position,
-        Vec3 velocity,double aoa,double bank,Vec3 *accel,double *drag_power){
+        Vec3 velocity,double aoa,double bank,double ut,Vec3 *accel,double *drag_power){
     double r=v3_norm(position),speed=v3_norm(velocity);
     if(!(r>0.0)||!(speed>0.0))return false;
     Vec3 up=v3_scale(position,1.0/r),flow=v3_scale(velocity,1.0/speed);
     double lift=0.0,drag=0.0;
-    if(!decision_unpowered_aerodynamic_accelerations(g,t,p,cfg,r-p->radius,speed,aoa,&lift,&drag))return false;
+    double latitude=asin(position.z/r)*RAD2DEG;
+    double longitude=atan2(position.y,position.x)*RAD2DEG;
+    if(!path_aerodynamic_accelerations(model,t,p,cfg,r-p->radius,speed,aoa,
+        latitude,longitude,ut,&lift,&drag))return false;
     Vec3 right=v3_normalized(v3_cross(flow,up));
     Vec3 lift_axis=v3_normalized(v3_cross(right,flow));
     lift_axis=v3_rotate_axis(lift_axis,flow,bank*DEG2RAD);
@@ -80,13 +124,14 @@ static bool path_acceleration(const GuidanceMachine *g,const Telemetry *t,
     return isfinite(accel->x)&&isfinite(accel->y)&&isfinite(accel->z);
 }
 
-static UnpoweredPathProjection path_reference_integrate(const GuidanceMachine *g,
+static UnpoweredPathProjection path_reference_integrate(const TerminalModel *model,
         const Telemetry *t,const PlanetModel *p,const LandingConfiguration *cfg,
         double target_altitude,double path,unsigned resolution){
     UnpoweredPathProjection out={0};
     double lat=t->latitude*DEG2RAD,r=p->radius+t->mean_altitude;
-    Vec3 position={r*cos(lat),0.0,r*sin(lat)},up=v3_normalized(position);
-    Vec3 north={-sin(lat),0.0,cos(lat)},east={0.0,1.0,0.0};
+    double lon=t->longitude*DEG2RAD;
+    Vec3 position={r*cos(lat)*cos(lon),r*cos(lat)*sin(lon),r*sin(lat)},up=v3_normalized(position);
+    Vec3 north={-sin(lat)*cos(lon),-sin(lat)*sin(lon),cos(lat)},east={-sin(lon),cos(lon),0.0};
     double course=isfinite(t->ground_track_heading)?t->ground_track_heading*DEG2RAD:0.0;
     Vec3 horizontal=v3_add(v3_scale(north,cos(course)),v3_scale(east,sin(course)));
     double gamma=t->flight_path_angle*DEG2RAD;
@@ -106,8 +151,10 @@ static UnpoweredPathProjection path_reference_integrate(const GuidanceMachine *g
     for(unsigned n=0;n<resolution*256u;n++){
         double altitude=v3_norm(position)-p->radius,speed=v3_norm(velocity);
         if(altitude<target_altitude||!(speed>0.0))return out;
-        double sound=planet_atmospheric_speed_of_sound(p,altitude);
-        if(!(sound>0.0))return out;
+        double latitude=asin(position.z/v3_norm(position))*RAD2DEG;
+        double longitude=atan2(position.y,position.x)*RAD2DEG;
+        double density,sound;
+        if(!path_atmosphere(model,t,p,altitude,latitude,longitude,t->ut+time,&density,&sound))return out;
         double upper=cfg->vehicle.maximum_angle_of_attack;
         if(speed/sound<1.0&&cfg->vehicle.terminal_maximum_lift_angle_of_attack>0.0)
             upper=fmin(upper,cfg->vehicle.terminal_maximum_lift_angle_of_attack);
@@ -130,17 +177,17 @@ static UnpoweredPathProjection path_reference_integrate(const GuidanceMachine *g
         double previous_lift=0.0;
         for(unsigned j=0;j<=(unsigned)ceil(upper);j++){
             double candidate=fmin(j,upper),lift=0.0,drag=0.0;
-            if(!decision_unpowered_aerodynamic_accelerations(g,t,p,cfg,altitude,speed,candidate,&lift,&drag))return out;
+            if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,candidate,latitude,longitude,t->ut+time,&lift,&drag))return out;
             if(lift>max_lift){max_lift=lift;max_lift_aoa=candidate;}
             if(j&&previous_lift<required&&lift>=required){
                 double lo=candidate-1.0,hi=candidate;
                 for(unsigned k=0;k<16;k++){
                     double mid=.5*(lo+hi),ml=0.0,md=0.0;
-                    if(!decision_unpowered_aerodynamic_accelerations(g,t,p,cfg,altitude,speed,mid,&ml,&md))return out;
+                    if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,mid,latitude,longitude,t->ut+time,&ml,&md))return out;
                     if(ml<required)lo=mid;else hi=mid;
                 }
                 candidate=hi;
-                if(!decision_unpowered_aerodynamic_accelerations(g,t,p,cfg,altitude,speed,candidate,&lift,&drag))return out;
+                if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,candidate,latitude,longitude,t->ut+time,&lift,&drag))return out;
             }
             if(lift>=required&&drag<best_drag){best_drag=drag;target_aoa=candidate;}
             previous_lift=lift;
@@ -149,10 +196,10 @@ static UnpoweredPathProjection path_reference_integrate(const GuidanceMachine *g
         path_axis_step(target_aoa,step,pitch,&aoa,&aoa_rate);
         path_axis_step(0.0,step,roll,&bank,&bank_rate);
         Vec3 accel,mid_accel;double power,mid_power;
-        if(!path_acceleration(g,t,p,cfg,position,velocity,aoa,bank,&accel,&power))return out;
+        if(!path_acceleration(model,t,p,cfg,position,velocity,aoa,bank,t->ut+time,&accel,&power))return out;
         Vec3 mid_position=v3_add(position,v3_scale(velocity,.5*step));
         Vec3 mid_velocity=v3_add(velocity,v3_scale(accel,.5*step));
-        if(!path_acceleration(g,t,p,cfg,mid_position,mid_velocity,aoa,bank,&mid_accel,&mid_power))return out;
+        if(!path_acceleration(model,t,p,cfg,mid_position,mid_velocity,aoa,bank,t->ut+time+.5*step,&mid_accel,&mid_power))return out;
         Vec3 next_position=v3_add(position,v3_scale(mid_velocity,step));
         Vec3 next_velocity=v3_add(velocity,v3_scale(mid_accel,step));
         double next_altitude=v3_norm(next_position)-p->radius;
@@ -187,30 +234,31 @@ static UnpoweredPathProjection path_reference_integrate(const GuidanceMachine *g
     return out; /* no arrival in the finite 2048 s reference horizon */
 }
 
-UnpoweredPathProjection decision_unpowered_path_projection_with_tolerance(const GuidanceMachine *g,
+static UnpoweredPathProjection path_reference_project(const TerminalModel *model,
         const Telemetry *t,const PlanetModel *p,const LandingConfiguration *cfg,
         double target_altitude,double path,double relative_tolerance){
     UnpoweredPathProjection out={0};
     if(!t||!p||!cfg||!isfinite(relative_tolerance)||!(relative_tolerance>0.0)||
-       !isfinite(target_altitude)||!isfinite(path)||!(path>0.0)||
+       !isfinite(target_altitude)||!isfinite(path)||path<0.0||
        !isfinite(t->mean_altitude)||!isfinite(t->latitude)||fabs(t->latitude)>90.0||
+       !isfinite(t->longitude)||!isfinite(t->ut)||
+       !isfinite(t->dynamic_pressure)||t->dynamic_pressure<0.0||
        !isfinite(t->true_air_speed)||!(t->true_air_speed>0.0)||
        !isfinite(t->angle_of_attack)||!isfinite(t->sideslip)||!isfinite(t->roll)||
        !isfinite(t->flight_path_angle)||!(p->radius+t->mean_altitude>0.0)||
        !(p->radius+target_altitude>0.0)||!(p->gravitational_parameter>0.0)||
        !isfinite(p->rotational_speed)||!(cfg->vehicle.estimated_ballistic_coefficient>0.0)||
-       (g&&g->entry_terminal_model&&(!(t->mass>0.0)||
-        !g->entry_terminal_model->replay_validated)))return out;
+       (model&&(!(t->mass>0.0)||!model->replay_validated)))return out;
     /* Refine independently of atmosphere spacing. Relative energy tolerance
        is a quadrature budget, charged against admission, never credited. */
     double tolerance=relative_tolerance*fmax(1.0,fabs(entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,cfg->site.latitude,
         target_altitude,0.0,p)));
     unsigned n=32;
-    out=path_reference_integrate(g,t,p,cfg,target_altitude,path,n);
+    out=path_reference_integrate(model,t,p,cfg,target_altitude,path,n);
     while(out.valid&&n<4096){
         n*=2;
-        UnpoweredPathProjection finer=path_reference_integrate(g,t,p,cfg,target_altitude,path,n);
+        UnpoweredPathProjection finer=path_reference_integrate(model,t,p,cfg,target_altitude,path,n);
         if(!finer.valid)return finer;
         finer.integration_error_j_kg=fmax(finer.integration_error_j_kg,
             fabs(finer.modeled_drag_work-out.modeled_drag_work));
@@ -219,6 +267,20 @@ UnpoweredPathProjection decision_unpowered_path_projection_with_tolerance(const 
     }
     out.valid=false; /* unconverged results cannot admit an inlet */
     return out;
+}
+
+UnpoweredPathProjection decision_unpowered_path_projection_with_tolerance(const GuidanceMachine *g,
+        const Telemetry *t,const PlanetModel *p,const LandingConfiguration *cfg,
+        double altitude,double path,double tolerance){
+    UnpoweredPathProjection invalid={0};
+    const TerminalModel *base=g?g->entry_terminal_model:NULL;
+    TerminalModel *observed=base&&t&&t->physics_sample_valid&&t->dynamic_pressure>0.0?
+        path_observed_model(base,t):NULL;
+    if(base&&t&&t->physics_sample_valid&&t->dynamic_pressure>0.0&&!observed)return invalid;
+    UnpoweredPathProjection result=path_reference_project(observed?observed:base,
+        t,p,cfg,altitude,path,tolerance);
+    free(observed);
+    return result;
 }
 
 UnpoweredPathProjection decision_unpowered_path_projection(const GuidanceMachine *g,
