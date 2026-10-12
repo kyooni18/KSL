@@ -152,6 +152,26 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
 
     EntryAlphaSchedule alpha_schedule;
     entry_alpha_schedule_default(&alpha_schedule,v,transition_velocity);
+    /* Rudder authority collapses as incidence rises and density falls.  Live
+       polar entry at Mach 4.2 with drag modulation lifting AoA from 22 to 28
+       degrees ran yaw to 100 percent while sideslip kept growing (departure at
+       Mach 3.6).  Below Mach 5.5 keep incidence at the lift-bearing schedule
+       instead of letting drag trim add more, and back AoA off whenever the yaw
+       channel is already heavily used. */
+    double alpha_ceiling=v->maximum_angle_of_attack;
+    double yaw_use=t->has_controls&&isfinite(t->control_yaw)?
+        clampd(fabs(t->control_yaw),0.0,1.0):0.0;
+    if(isfinite(t->mach)&&t->mach<MM304_LOW_ALT_AOA_MACH){
+        double nominal=entry_alpha_schedule_interpolate(&alpha_schedule,t->true_air_speed);
+        if(isfinite(nominal))
+            alpha_ceiling=fmin(alpha_ceiling,nominal+MM304_LOW_ALT_AOA_MARGIN_DEG);
+    }
+    if(yaw_use>MM304_YAW_USE_SOFT&&isfinite(t->angle_of_attack)){
+        double load=clampd((yaw_use-MM304_YAW_USE_SOFT)/(1.0-MM304_YAW_USE_SOFT),0.0,1.0);
+        alpha_ceiling=fmin(alpha_ceiling,
+            t->angle_of_attack-MM304_YAW_UNLOAD_AOA_DEG*load);
+    }
+    alpha_ceiling=fmax(alpha_ceiling,alpha_schedule.minimum_protective_aoa);
     EntryAlphaInput alpha_in={
         .relative_velocity=t->true_air_speed,
         .phase=entry_alpha_phase_for_exec(g->entry_exec.phase),
@@ -164,7 +184,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .has_previous_modulation=g->entry_alpha_has_modulation,
         .previous_modulation=g->entry_alpha_modulation,
         .dt=fmax(DBL_EPSILON,dt),
-        .maximum_aoa=v->maximum_angle_of_attack,
+        .maximum_aoa=alpha_ceiling,
         .stall_margin_aoa_limit=NAN,
         .stall_fraction=t->stall_fraction,
         .stall_fraction_is_measured=t->stall_fraction_is_measured,
@@ -189,6 +209,25 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     limits.maximum_bank_deg=fmin(dynamic_bank_limit(t,v),MM304_PLANNED_MAX_BANK_DEG);
     limits.maximum_roll_rate_deg_s=s->entry_roll_rate;
     limits.maximum_roll_accel_deg_s2=s->entry_roll_acceleration;
+    /* Slow every bank exchange at low Mach and as yaw authority is consumed.
+       The reversal look-ahead is built from these limits, so a slower roll
+       automatically starts the reversal earlier (higher, faster) and spreads
+       it over more time instead of rolling hard at high incidence. */
+    {
+        double roll_scale=1.0;
+        if(isfinite(t->mach)&&t->mach<MM304_LOW_ALT_AOA_MACH)
+            roll_scale*=MM304_LOW_ALT_ROLL_SCALE;
+        if(yaw_use>MM304_YAW_USE_SOFT){
+            double load=clampd((yaw_use-MM304_YAW_USE_SOFT)/(1.0-MM304_YAW_USE_SOFT),0.0,1.0);
+            roll_scale*=1.0-0.75*load;
+        }
+        limits.maximum_roll_rate_deg_s*=roll_scale;
+        limits.maximum_roll_accel_deg_s2*=roll_scale;
+        if(yaw_use>MM304_YAW_USE_SOFT){
+            double load=clampd((yaw_use-MM304_YAW_USE_SOFT)/(1.0-MM304_YAW_USE_SOFT),0.0,1.0);
+            limits.maximum_bank_deg*=1.0-0.4*load;
+        }
+    }
 
     EntryLateralInput lateral={0};
     lateral.ut=t->ut;
