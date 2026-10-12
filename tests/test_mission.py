@@ -297,12 +297,29 @@ class TuiTests(unittest.IsolatedAsyncioTestCase):
         app.poll()
         app.watcher.poll.assert_not_called()
 
+    async def test_inclination_and_altitude_fields_set_the_mission(self):
+        from textual.widgets import Input
+        from ksl.tui import KSLApp
+        app = KSLApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.press("m")
+            app.query_one("#inclination", Input).value = "51.6"
+            app.query_one("#altitude", Input).value = "120"
+            app.query_one("#overrides", Input).value = "ascent.targetAltitudeKm=400 orbit.trim=false"
+            sel = app._selection()
+        config = load_config(sel["profile"], sel["overrides"])
+        self.assertEqual(config.data["ascent"]["inclinationDeg"], 51.6)
+        self.assertEqual(config.data["ascent"]["targetAltitudeKm"], 120)
+        self.assertFalse(config.data["orbit"]["trim"])
+
     async def test_dry_run_from_mission_tab_shows_on_dashboard(self):
         from ksl.tui import KSLApp
         with tempfile.TemporaryDirectory() as tmp:
             app = KSLApp(runs_root=Path(tmp))
             async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.press("m")
+                app.query_one("#validate").scroll_visible()
+                await pilot.pause()
                 await pilot.click("#validate")
                 self.assertIn("orbit-trim", str(app.query_one("#plan").render()))
                 await pilot.press("s")

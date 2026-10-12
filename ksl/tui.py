@@ -2,7 +2,7 @@
 
 Tabs
   Dashboard  phase strip, vehicle state, guidance/status, connection, event log
-  Mission    profile / mode / phases / scenario selection; start and abort
+  Mission    inclination / altitude / mode / phases / scenario; start and abort
   Replay     recorded runs: summary, phase timeline, events, sample stepping
 
 The dashboard always watches a run *directory* (status.json + events.jsonl),
@@ -28,7 +28,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import (Button, DataTable, Footer, Header, Input, Label, RichLog, Select, Static,
                              TabbedContent, TabPane)
 
-from .config import ConfigError, DEFAULT_PROFILE, available_profiles, load_config
+from .config import DEFAULT_PROFILE, DEFAULTS, ConfigError, load_config
 from .controller import MissionController
 from .phases import ENTRY_PHASES, SEQUENCE, MissionState, Phase, PhaseTransitionError
 from .runlog import Event, MissionStatus, list_runs, read_status
@@ -164,10 +164,11 @@ class KSLApp(App[int]):
                 yield RichLog(id="eventlog", wrap=True, markup=False, max_lines=5000)
             with TabPane("Mission", id="mission"):
                 with VerticalScroll(id="setup"):
-                    profiles = available_profiles() or [DEFAULT_PROFILE]
-                    yield Label("Profile")
-                    yield Select([(p, p) for p in profiles], value=self.profile if self.profile in profiles
-                                 else profiles[0], allow_blank=False, id="profile")
+                    ascent = self._base_ascent()
+                    yield Label("Inclination (deg)")
+                    yield Input(f"{ascent['inclinationDeg']:g}", id="inclination")
+                    yield Label("Target altitude (km, circular orbit)")
+                    yield Input(f"{ascent['targetAltitudeKm']:g}", id="altitude")
                     yield Label("Mode")
                     yield Select([("Live KSP", "live"), ("Simulation (ShuttleSim)", "sim"),
                                   ("Dry run (plan only)", "dry-run")], value="dry-run", allow_blank=False, id="mode")
@@ -180,7 +181,7 @@ class KSLApp(App[int]):
                     yield Label("Simulation scenario")
                     yield Select([(f"{s.name} — from {s.start.title}", s.name) for s in SCENARIOS.values()],
                                  value="l5-mm305", allow_blank=False, id="scenario")
-                    yield Label("Overrides (space separated KEY=VALUE, e.g. ascent.inclinationDeg=10)")
+                    yield Label("Other overrides (space separated KEY=VALUE, e.g. orbit.trim=false)")
                     yield Input(" ".join(self.overrides), id="overrides")
                     with Horizontal(id="buttons"):
                         yield Button("Validate plan", id="validate")
@@ -282,11 +283,32 @@ class KSLApp(App[int]):
         self.query_one("#eventlog", RichLog).focus()  # keep focus out of the hidden Mission pane
 
     # --- mission setup ----------------------------------------------------------------
+    def _base_ascent(self) -> dict[str, Any]:
+        """Ascent values of the base profile (plus CLI overrides), shown in the Mission fields."""
+        try:
+            return load_config(self.profile, self.overrides).data["ascent"]
+        except ConfigError:
+            return DEFAULTS["ascent"]  # the start action reports the broken profile
+
+    def _number(self, wid: str, label: str) -> float:
+        text = self.query_one(f"#{wid}", Input).value.strip()
+        try:
+            return float(text)
+        except ValueError:
+            raise ConfigError(f"{label} must be a number, not {text!r}") from None
+
     def _selection(self) -> dict[str, Any]:
         value = lambda wid: self.query_one(f"#{wid}", Select).value  # noqa: E731
-        return {"profile": value("profile"), "mode": value("mode"), "start": Phase(value("start")),
+        # The inclination and altitude fields are the single source for those two keys, so they
+        # are appended last and any typed copy of them in the overrides box is dropped.
+        owned = ("ascent.inclinationDeg", "ascent.targetAltitudeKm")
+        extra = [text for text in self.query_one("#overrides", Input).value.split()
+                 if text.split("=", 1)[0] not in owned]
+        fields = [f"ascent.inclinationDeg={json.dumps(self._number('inclination', 'Inclination'))}",
+                  f"ascent.targetAltitudeKm={json.dumps(self._number('altitude', 'Altitude'))}"]
+        return {"profile": self.profile, "mode": value("mode"), "start": Phase(value("start")),
                 "stop": Phase(value("stop")), "scenario": SCENARIOS[str(value("scenario"))],
-                "overrides": self.query_one("#overrides", Input).value.split()}
+                "overrides": extra + fields}
 
     def _build_controller(self, mode_override: str | None = None) -> MissionController:
         sel = self._selection()
@@ -301,8 +323,8 @@ class KSLApp(App[int]):
 
     @on(Button.Pressed, "#validate")
     def validate_plan(self) -> None:
-        sel = self._selection()
         try:
+            sel = self._selection()
             config = load_config(str(sel["profile"]), sel["overrides"])
             mode = str(sel["mode"])
             probe = MissionController.__new__(MissionController)  # plan without creating a run
