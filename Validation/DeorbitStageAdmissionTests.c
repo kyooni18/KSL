@@ -100,6 +100,36 @@ int main(void) {
     assert(result.command.autopilot_engaged);
     guidance_result_clear(&result);
 
+    /* A clock correction and one zero-thrust sample are not sustained loss.
+       Recovering thrust resets the watch; a genuinely failed engine still aborts. */
+    guidance_reset_plan(&guidance);
+    guidance_set_engaged(&guidance,true);
+    t.ut=200.0;t.periapsis_altitude=100000.0;
+    t.mass=26000.0;t.available_thrust=60000.0;t.autopilot_error=0.0;
+    cfg.guidance.deorbit_throttle_ramp_duration=1.0;
+    for(unsigned i=0;i<10;i++){
+        t.ut+=0.1;t.current_thrust=6000.0;
+        result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+        assert(result.phase==PHASE_DEORBIT_BURN);
+        guidance_result_clear(&result);
+    }
+    t.ut+=20.0;t.current_thrust=0.0;
+    result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+    assert(result.phase==PHASE_DEORBIT_BURN);
+    guidance_result_clear(&result);
+    t.ut+=0.1;t.current_thrust=6000.0;
+    result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+    assert(result.phase==PHASE_DEORBIT_BURN&&guidance.burn_thrust_loss_elapsed==0.0);
+    guidance_result_clear(&result);
+    for(unsigned i=0;i<70&&!guidance.aborted;i++){
+        t.ut+=0.1;t.current_thrust=0.0;
+        result=guidance_update(&guidance,&t,&state,&plan,&planet,(AerodynamicModel){0},&cfg);
+        guidance_result_clear(&result);
+    }
+    assert(guidance.aborted);
+    guidance_reset_plan(&guidance);
+    assert(guidance.burn_thrust_loss_elapsed==0.0);
+
     puts("Deorbit stage admission tests passed.");
     return 0;
 }

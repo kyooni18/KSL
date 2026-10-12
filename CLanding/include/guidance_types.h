@@ -252,6 +252,7 @@ typedef struct {
     double terminal_final_handoff_speed_mps;
     double hac_side; bool hac_side_selected; double delivered_delta_v, burn_command_started_ut, burn_active_elapsed;
     double burn_progress_watch_ut, burn_progress_watch_delta_v;
+    double burn_thrust_loss_elapsed;
     bool has_burn_command_started, has_burn_progress_watch, deorbit_burn_completed, atmospheric_interface_crossed, has_previous_ut;
     double previous_ut; bool final_approach_captured, airbrakes_deployed;
     bool terminal_final_low_energy; /* Final owned via low-energy TAEM delivery */
