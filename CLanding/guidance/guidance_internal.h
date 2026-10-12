@@ -17,11 +17,6 @@
 #define MM304_PLANNED_MAX_BANK_DEG 40.0
 #define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
 #define MM304_COORDINATION_BETA_SCALE_DEG 5.0
-#define MM304_LOW_ALT_AOA_MACH 5.5
-#define MM304_LOW_ALT_AOA_MARGIN_DEG 1.0
-#define MM304_LOW_ALT_ROLL_SCALE 0.5
-#define MM304_YAW_USE_SOFT 0.6
-#define MM304_YAW_UNLOAD_AOA_DEG 8.0
 
 
 /* Shared live MM304→MM305 capture contract.  The terminal owner must use the
