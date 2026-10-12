@@ -374,12 +374,32 @@ static double tel_entry_arc(TaemEnergyLawState *L,const TelContext *c,const TelP
     return turn;
 }
 
+/* An along-track crossing is not a Final intercept. A polar pass can be
+   directly abeam the station while still tens of kilometres off centreline;
+   retaining the capture leg is necessary to keep the full lateral correction
+   rather than the near-runway 2 km cross-track trim. */
+static bool tel_final_line_ready(const TelContext *c,const TelPoint *s){
+    if(!c||!s||!(c->d_station>0.0)||
+       !isfinite(s->x)||!isfinite(s->y)||!isfinite(s->psi))return false;
+    return -c->d_station-s->x<6000.0&&
+        fabs(s->y)<=fmin(2000.0,0.25*c->d_station)&&
+        fabs(tel_wrap(s->psi))<=15.0*DEG2RAD;
+}
+
 /* One guidance tick.  Returns false when the inputs are unusable. */
 /* Pattern choice is open while the first leg is still far from its end. */
 static bool tel_plan_open(const TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
     double D=c->d_station,tx,ty,arc;
-    if (L->leg==TEL_LEG_OUT)
-        return L->loop?s->x<L->x_turn-6000.0:s->x<-D-TEL_MODE_FREEZE;
+    if (L->leg==TEL_LEG_OUT) {
+        if (L->loop) return s->x<L->x_turn-6000.0;
+        /* A near-polar inlet begins well off the runway centreline, often
+           already abreast of the Final station (x ~ 0, |y| tens of km).
+           The old x-only gate never evaluated an available tangent HAC. */
+        double remaining=hypot(-D-s->x,s->y);
+        return s->x<-D-TEL_MODE_FREEZE ||
+            (fabs(s->y)>fmax(6000.0,0.75*D)&&
+             remaining>D+TEL_MODE_FREEZE);
+    }
     if (L->leg==TEL_LEG_DOWN)
         return tel_hac_tangent(L,c,s->x,s->y,&tx,&ty,&arc)&&hypot(tx-s->x,ty-s->y)>5000.0;
     return false;
@@ -519,7 +539,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
            point ~45 s ahead so the capture does not overshoot the centreline. */
         if (mach>1.1) look=fmax(look,45.0*gnd);
         course_cmd=atan2(-s.y,look);
-        if (!L->loop&&-D-s.x<6000.0) L->leg=TEL_LEG_FINAL;
+        if(!L->loop&&tel_final_line_ready(&c,&s))L->leg=TEL_LEG_FINAL;
     } else if (L->leg==TEL_LEG_TURN||L->leg==TEL_LEG_DOWN) {
         double tx,ty,arc;
         if (!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) {

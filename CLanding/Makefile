@@ -289,8 +289,16 @@ deorbit-test: $(TARGET)
 		"$(abspath $(BUILD)/thrust_alignment_tests)"
 	@echo "Deorbit planning, admission, engine-role and thrust-alignment tests passed."
 
+# Fast offline regression of polar MM305 inlet and Final capture geometry.
+.PHONY: taem-energy-geometry-test
+taem-energy-geometry-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/TaemEnergyGeometryTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/taem_energy_geometry_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_energy_geometry_tests)"
+
 # Fast offline regression gate (~10 s); must pass on every commit.
-test: entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-recovery-monitor-test touchdown-quality-test deorbit-test
+test: taem-energy-geometry-test entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-recovery-monitor-test touchdown-quality-test deorbit-test
 
 # Slow physical gates (~4 min). mm305-feasibility-test is a documented open
 # gate: it currently fails its non-vacuity check (see VALIDATION.md).

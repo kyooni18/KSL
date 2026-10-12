@@ -129,6 +129,10 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     EntryWitnessTracePoint entry_witness_history[8];
     unsigned entry_witness_history_count=0,entry_witness_history_next=0;
     double next_entry_witness_history_ut=state.ut;
+    /* Optional 12 s terminal course/energy witness. This is disabled in
+       ordinary flight and costs no extra physics/route evaluations. */
+    bool trace_terminal_witness=getenv("KSP_LANDER_TRACE_TERMINAL_WITNESS")!=NULL;
+    double next_terminal_trace_ut=state.ut;
     double entry_alt=p->atmosphere_depth-cfg->guidance.entry_interface_altitude_margin;
     out.entered_atmosphere=telemetry->mean_altitude<=entry_alt&&telemetry->vertical_speed<0.0;
     bool initial_terminal_owned=taem_exec_owns_vehicle(&shadow.taem_exec);
@@ -191,6 +195,22 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
         }
         unsigned previous_reversals=shadow.entry_control_reversals;
         GuidanceResult r=guidance_update_with_terminal_model(&shadow,&synthetic,&state,plan,p,aero,cfg,terminal_model);
+        if(trace_terminal_witness&&taem_exec_owns_vehicle(&shadow.taem_exec)&&
+           state.ut>=next_terminal_trace_ut){
+            fprintf(stderr,
+                "TERMINAL_WITNESS ut=%.1f phase=%d alt=%.0f V=%.1f M=%.2f range=%.0f along=%+.0f cross=%+.0f hdg=%.1f siteErr=%+.1f fpa=%.1f bank=%.1f/%.1f aoa=%.1f/%.1f leg=%d go=%.0f req=%.0f k=%.3f route=%d final=%d status=%.130s\n",
+                state.ut,(int)r.phase,geo.altitude,at.speed,at.mach,range,
+                synthetic.runway_along_track,synthetic.runway_cross_track,
+                synthetic.ground_track_heading,synthetic.course_to_site_error,
+                synthetic.flight_path_angle,response.actual_bank,
+                r.command.target_roll,response.actual_aoa,
+                r.command.has_target_aoa?r.command.target_aoa:response.actual_aoa,
+                (int)shadow.taem_energy_law.leg,
+                shadow.taem_energy_law.s_go,shadow.taem_energy_law.s_req,
+                shadow.taem_energy_law.k,shadow.terminal_path_committed?1:0,
+                shadow.final_approach_captured?1:0,r.status);
+            next_terminal_trace_ut=state.ut+12.0;
+        }
         if(entry_witness_trace&&state.ut+1e-6>=next_entry_witness_history_ut){
             TaemInterfaceCapture admission=entry_mm305_admission_envelope(
                 &shadow,&synthetic,synthetic.ground_track_heading,p,cfg);
