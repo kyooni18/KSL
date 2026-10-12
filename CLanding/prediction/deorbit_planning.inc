@@ -24,6 +24,11 @@ static DeorbitEnergyMargin deorbit_energy_margin_probe(VehicleState after,const 
     EntryPrediction passive=predictor_simulate_entry(after,p,aero,env,cal,v,site,s,0.0,0,0,0,4500,false);
     VehicleState final=passive.final_state;
     GeoPoint geo=predictor_geo_point(final.position,p,final.ut);
+    if(getenv("KSP_LANDER_TRACE_PLAN_TIMING"))
+        fprintf(stderr,"PLAN_TIMING probe passive_s=%.0f entered=%d alt_km=%.2f vs=%.1f\n",
+            final.ut-after.ut,passive.entered_atmosphere?1:0,
+            predictor_geo_point(final.position,p,final.ut).altitude/1000.0,
+            vdot(final.velocity,vnorm(final.position,v3(0,1,0))));
     Vector3 up=vnorm(final.position,v3(0,1,0));
     Vector3 surface_velocity=vsub(final.velocity,vcross(planet_rotation_vector(p),final.position));
     double vertical=vdot(surface_velocity,up);
