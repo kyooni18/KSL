@@ -1,0 +1,81 @@
+--- a/CLanding/guidance/guidance_taem.c
++++ b/CLanding/guidance/guidance_taem.c
+@@ -194,23 +194,12 @@
+ /* Apply each measured force ratio only near the Mach where it was observed.
+  * Live MM305 drag has a strong Mach dependence, so extrapolating one ratio
+  * across the complete table can badly misprice the low-subsonic HAC exit. */
+-static void mm305_scale_model(TerminalModel *m, double observed_mach,
+-        double lift_scale, double drag_scale) {
+-    if (!(fabs(lift_scale-1.0)>1e-9) && !(fabs(drag_scale-1.0)>1e-9)) return;
+-    for (size_t i=0;i<m->aero.mach_count;++i) {
+-        double weight=aero_observation_mach_weight(m->aero.mach[i],observed_mach);
+-        double local_lift_scale=1.0+weight*(lift_scale-1.0);
+-        double local_drag_scale=1.0+weight*(drag_scale-1.0);
+-        for (size_t j=0;j<m->aero.alpha_count;++j) {
+-            m->aero.cl[i][j]*=local_lift_scale;
+-            m->aero.cd[i][j]*=local_drag_scale;
+-        }
+-    }
+-    for (size_t i=0;i<m->aero.book_count;++i) {
+-        double weight=aero_observation_mach_weight(m->aero.book[i].mach,observed_mach);
+-        m->aero.book[i].lift_per_q_m2*=1.0+weight*(lift_scale-1.0);
+-        m->aero.book[i].drag_per_q_m2*=1.0+weight*(drag_scale-1.0);
+-    }
++static void mm305_scale_model(TerminalModel *m,double observed_mach,
++        double lift_scale,double drag_scale){
++    /* Apply the local correction after interpolation. Scaling grid knots
++       weakened observations between widely spaced Mach rows and spread their
++       influence beyond the certified support width. */
++    aero_set_observation(&m->aero,observed_mach,lift_scale,drag_scale);
+ }
+ 
+ static double mm305_wall_seconds(void) {
+--- a/ShuttleSim/src/aero.c
++++ b/ShuttleSim/src/aero.c
+@@ -133,6 +133,15 @@
+     return fmax(0.0,1.0-fabs(mach-observed_mach)/0.5);
+ }
+ 
++void aero_set_observation(AeroTable *a,double mach,double lift_scale,double drag_scale){
++    if(!a)return;
++    a->observation_valid=isfinite(mach)&&isfinite(lift_scale)&&lift_scale>0.0&&
++        isfinite(drag_scale)&&drag_scale>0.0;
++    a->observation_mach=mach;
++    a->observation_lift_scale=lift_scale;
++    a->observation_drag_scale=drag_scale;
++}
++
+ void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
+                       double *lift_per_q_out,double *drag_per_q_out){
+     double cl,cd; aero_coefficients(a,mach,alpha_deg,&cl,&cd);
+@@ -149,6 +158,11 @@
+     }
+     if(a->lift_scale>0.0)lift_per_q*=a->lift_scale;
+     if(a->drag_scale>0.0)drag_per_q*=a->drag_scale;
++    if(a->observation_valid){
++        double weight=aero_observation_mach_weight(mach,a->observation_mach);
++        lift_per_q*=1.0+weight*(a->observation_lift_scale-1.0);
++        drag_per_q*=1.0+weight*(a->observation_drag_scale-1.0);
++    }
+     *lift_per_q_out=lift_per_q;
+     *drag_per_q_out=drag_per_q;
+ }
+--- a/ShuttleSim/include/shuttlesim/aero.h
++++ b/ShuttleSim/include/shuttlesim/aero.h
+@@ -31,6 +31,8 @@
+        lift / drag.  Zero (the memset default) means 1. */
+     double lift_scale;
+     double drag_scale;
++    bool observation_valid;
++    double observation_mach,observation_lift_scale,observation_drag_scale;
+ } AeroTable;
+ 
+ void aero_seed_stsn(AeroTable *a);
+@@ -38,6 +40,7 @@
+ bool aero_load_book_csv(AeroTable *a, const char *path);
+ void aero_coefficients(const AeroTable *a, double mach, double alpha_deg, double *cl, double *cd);
+ /* Whole-vessel coefficients, including local force-book support, in m^2. */
++void aero_set_observation(AeroTable *a,double mach,double lift_scale,double drag_scale);
+ double aero_observation_mach_weight(double mach,double observed_mach);
+ void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
+                       double *lift_per_q,double *drag_per_q);

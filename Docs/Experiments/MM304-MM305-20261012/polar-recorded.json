@@ -1,0 +1,1673 @@
+{
+  "source": "FlightLogs/2026-10-12T01-26-17Z-STS-vehicle.jsonl",
+  "sha256": "bfc365d3452fb80dc7d10f60566bd6359a142a2130d9cd55e70d8b2fb87669e3",
+  "planet": {
+    "name": "Kerbin",
+    "radius": 600000,
+    "gravitationalParameter": 3531600000000,
+    "rotationalSpeed": 0.000291570900559802,
+    "atmosphereDepth": 70000,
+    "surfaceDensity": 1.1399229405107,
+    "atmosphereAdiabaticIndex": 1.4,
+    "northAxis": [
+      3.71433421706059e-17,
+      -6.25603604277234e-17,
+      1
+    ],
+    "primeMeridianAtEpoch": [
+      0.58329107340539,
+      -0.812263210840912,
+      0
+    ],
+    "epochUT": 12910.6409570397,
+    "atmosphereSamples": [
+      {
+        "altitude": 0,
+        "pressure": 101324.996948242,
+        "density": 1.1399229405107
+      },
+      {
+        "altitude": 1000,
+        "pressure": 87185.0509643555,
+        "density": 1.00864003159222
+      },
+      {
+        "altitude": 2000,
+        "pressure": 74691.7190551758,
+        "density": 0.891452827778128
+      },
+      {
+        "altitude": 3000,
+        "pressure": 63693.3059692383,
+        "density": 0.78653193715464
+      },
+      {
+        "altitude": 4000,
+        "pressure": 54048.2063293457,
+        "density": 0.692339804098489
+      },
+      {
+        "altitude": 5000,
+        "pressure": 45624.51171875,
+        "density": 0.607579596923186
+      },
+      {
+        "altitude": 6000,
+        "pressure": 38299.5872497559,
+        "density": 0.531155868639915
+      },
+      {
+        "altitude": 7000,
+        "pressure": 31959.7358703613,
+        "density": 0.462145381897334
+      },
+      {
+        "altitude": 8000,
+        "pressure": 26499.7596740723,
+        "density": 0.399773990233476
+      },
+      {
+        "altitude": 9000,
+        "pressure": 21825.2296447754,
+        "density": 0.341151954072648
+      },
+      {
+        "altitude": 10000,
+        "pressure": 17932.9452514648,
+        "density": 0.281930680944864
+      },
+      {
+        "altitude": 11000,
+        "pressure": 14737.4391555786,
+        "density": 0.233004207361559
+      },
+      {
+        "altitude": 12000,
+        "pressure": 12111.6752624512,
+        "density": 0.192499305825751
+      },
+      {
+        "altitude": 13000,
+        "pressure": 9954.39910888672,
+        "density": 0.158940993595115
+      },
+      {
+        "altitude": 14000,
+        "pressure": 8180.89389801025,
+        "density": 0.131101925500896
+      },
+      {
+        "altitude": 15000,
+        "pressure": 6722.16272354126,
+        "density": 0.107987701069143
+      },
+      {
+        "altitude": 16000,
+        "pressure": 5527.55355834961,
+        "density": 0.0888798400748577
+      },
+      {
+        "altitude": 17000,
+        "pressure": 4547.65939712524,
+        "density": 0.0727279780039136
+      },
+      {
+        "altitude": 18000,
+        "pressure": 3741.57238006592,
+        "density": 0.0594976243629406
+      },
+      {
+        "altitude": 19000,
+        "pressure": 3082.768201828,
+        "density": 0.0487453413442613
+      },
+      {
+        "altitude": 20000,
+        "pressure": 2546.12803459167,
+        "density": 0.0400344615642437
+      },
+      {
+        "altitude": 21000,
+        "pressure": 2106.53281211853,
+        "density": 0.032938063037393
+      },
+      {
+        "altitude": 22000,
+        "pressure": 1741.32609367371,
+        "density": 0.0270769916614227
+      },
+      {
+        "altitude": 23000,
+        "pressure": 1439.04900550842,
+        "density": 0.0222536149197966
+      },
+      {
+        "altitude": 24000,
+        "pressure": 1191.13659858704,
+        "density": 0.0183191508880961
+      },
+      {
+        "altitude": 25000,
+        "pressure": 989.01355266571,
+        "density": 0.0151279004356567
+      },
+      {
+        "altitude": 26000,
+        "pressure": 824.103951454163,
+        "density": 0.0125040467519622
+      },
+      {
+        "altitude": 27000,
+        "pressure": 687.832713127136,
+        "density": 0.0102757930443739
+      },
+      {
+        "altitude": 28000,
+        "pressure": 573.702454566956,
+        "density": 0.00843597204323524
+      },
+      {
+        "altitude": 29000,
+        "pressure": 479.074120521545,
+        "density": 0.0069323324271929
+      },
+      {
+        "altitude": 30000,
+        "pressure": 401.300191879272,
+        "density": 0.00571404484478038
+      },
+      {
+        "altitude": 31000,
+        "pressure": 337.733268737793,
+        "density": 0.00473225903259817
+      },
+      {
+        "altitude": 32000,
+        "pressure": 285.725742578506,
+        "density": 0.00394037312452544
+      },
+      {
+        "altitude": 33000,
+        "pressure": 242.630243301392,
+        "density": 0.00329417104681421
+      },
+      {
+        "altitude": 34000,
+        "pressure": 205.905348062515,
+        "density": 0.00275325301562197
+      },
+      {
+        "altitude": 35000,
+        "pressure": 174.532741308212,
+        "density": 0.00229952472493509
+      },
+      {
+        "altitude": 36000,
+        "pressure": 148.030057549477,
+        "density": 0.00192281818625161
+      },
+      {
+        "altitude": 37000,
+        "pressure": 125.810623168945,
+        "density": 0.00161218247647444
+      },
+      {
+        "altitude": 38000,
+        "pressure": 107.287801802158,
+        "density": 0.00135933532468499
+      },
+      {
+        "altitude": 39000,
+        "pressure": 91.874897480011,
+        "density": 0.00116405398841789
+      },
+      {
+        "altitude": 40000,
+        "pressure": 78.985258936882,
+        "density": 0.00100074240313249
+      },
+      {
+        "altitude": 41000,
+        "pressure": 68.0322200059891,
+        "density": 0.000861967514642668
+      },
+      {
+        "altitude": 42000,
+        "pressure": 58.4291219711304,
+        "density": 0.000748458950418006
+      },
+      {
+        "altitude": 43000,
+        "pressure": 49.8734563589096,
+        "density": 0.000647053911849432
+      },
+      {
+        "altitude": 44000,
+        "pressure": 42.4561053514481,
+        "density": 0.000557972393797996
+      },
+      {
+        "altitude": 45000,
+        "pressure": 36.0655188560486,
+        "density": 0.00048021671210299
+      },
+      {
+        "altitude": 46000,
+        "pressure": 30.5883958935738,
+        "density": 0.000412712053977348
+      },
+      {
+        "altitude": 47000,
+        "pressure": 25.9114317595959,
+        "density": 0.000354325138069116
+      },
+      {
+        "altitude": 48000,
+        "pressure": 21.9213217496872,
+        "density": 0.00030386043629506
+      },
+      {
+        "altitude": 49000,
+        "pressure": 18.5047723352909,
+        "density": 0.000260055984431453
+      },
+      {
+        "altitude": 50000,
+        "pressure": 15.5587214976549,
+        "density": 0.000221724499710353
+      },
+      {
+        "altitude": 51000,
+        "pressure": 13.0337588489056,
+        "density": 0.000188386347804271
+      },
+      {
+        "altitude": 52000,
+        "pressure": 10.8872726559639,
+        "density": 0.000159633637799136
+      },
+      {
+        "altitude": 53000,
+        "pressure": 9.07570403069258,
+        "density": 0.00013502035759038
+      },
+      {
+        "altitude": 54000,
+        "pressure": 7.55549129098654,
+        "density": 0.000114073797298655
+      },
+      {
+        "altitude": 55000,
+        "pressure": 6.28307368606329,
+        "density": 9.62926081241022e-05
+      },
+      {
+        "altitude": 56000,
+        "pressure": 5.21489139646292,
+        "density": 8.1144619755604e-05
+      },
+      {
+        "altitude": 57000,
+        "pressure": 4.30859345942736,
+        "density": 6.80836313505295e-05
+      },
+      {
+        "altitude": 58000,
+        "pressure": 3.54432151652873,
+        "density": 5.66768438790058e-05
+      },
+      {
+        "altitude": 59000,
+        "pressure": 2.90779955685139,
+        "density": 4.66721619262046e-05
+      },
+      {
+        "altitude": 60000,
+        "pressure": 2.38176807761192,
+        "density": 3.81794636196778e-05
+      },
+      {
+        "altitude": 61000,
+        "pressure": 1.94896920584142,
+        "density": 3.11096344414531e-05
+      },
+      {
+        "altitude": 62000,
+        "pressure": 1.59214367158711,
+        "density": 2.52850814031139e-05
+      },
+      {
+        "altitude": 63000,
+        "pressure": 1.2844423763454,
+        "density": 2.03197004336416e-05
+      },
+      {
+        "altitude": 64000,
+        "pressure": 0.992979621514678,
+        "density": 1.5698996747046e-05
+      },
+      {
+        "altitude": 65000,
+        "pressure": 0.723810575436801,
+        "density": 1.14784341464285e-05
+      },
+      {
+        "altitude": 66000,
+        "pressure": 0.48515317030251,
+        "density": 7.73844930846983e-06
+      },
+      {
+        "altitude": 67000,
+        "pressure": 0.285225687548518,
+        "density": 4.58611353671365e-06
+      },
+      {
+        "altitude": 68000,
+        "pressure": 0.132245477288961,
+        "density": 2.14711062224366e-06
+      },
+      {
+        "altitude": 69000,
+        "pressure": 0.0344311119988561,
+        "density": 5.63820698368113e-07
+      },
+      {
+        "altitude": 70000,
+        "pressure": 0,
+        "density": 0
+      }
+    ]
+  },
+  "configuration": {
+    "connection": {
+      "serialPort": "/dev/tty.krpc",
+      "rpcHost": "127.0.0.1",
+      "rpcPort": 50000,
+      "baudRate": 921600,
+      "timeoutMs": 10000,
+      "clientName": "Spaceplane Landing Guidance"
+    },
+    "site": {
+      "name": "KSC Runway 09",
+      "latitude": -0.0486111111,
+      "longitude": -74.7283333333,
+      "altitude": 68.4421590169271,
+      "runwayHeading": 90,
+      "runwayLength": 2500,
+      "runwayWidth": 70,
+      "allowReciprocalRunway": false
+    },
+    "vehicle": {
+      "modelId": "STS",
+      "estimatedLiftToDrag": 0.4,
+      "estimatedBallisticCoefficient": 700,
+      "entryAngleOfAttack": 18,
+      "maximumAngleOfAttack": 28,
+      "terminalMaximumLiftAngleOfAttack": 15,
+      "maximumBankAngle": 70,
+      "maximumDynamicPressure": 45000,
+      "maximumGLoad": 3.5,
+      "minimumSafeSpeed": 85,
+      "finalApproachSpeed": 115,
+      "touchdownSpeed": 75,
+      "allowPoweredApproach": false,
+      "maximumApproachThrottle": 0,
+      "airbrakeActionGroup": 1
+    },
+    "guidance": {
+      "targetDeorbitCaptureRadius": 100000,
+      "entryInterfaceAltitudeMargin": 500,
+      "targetEntryRange": 1030000,
+      "entryRangeReferenceSpeed": 0,
+      "targetEntryFlightPathAngle": -2,
+      "maximumEntryFlightPathAngle": -3,
+      "targetPostBurnPeriapsisAltitude": 50000,
+      "deorbitMaximumThrottle": 0.18,
+      "deorbitThrottleRampDuration": 12,
+      "deorbitTimingUncertainty": 0.5,
+      "deorbitThrustUncertaintyFraction": 0.08,
+      "deorbitDeltaVUncertainty": 0.5,
+      "deorbitMassUncertaintyFraction": 0.03,
+      "deorbitPositionUncertainty": 50,
+      "deorbitVelocityUncertainty": 0.5,
+      "deorbitPointingUncertainty": 2,
+      "deorbitAtmosphereUncertaintyFraction": 0.12,
+      "deorbitRobustMinimumPassFraction": 0.75,
+      "taemInterfaceAltitude": 25000,
+      "taemInterfaceRange": 96500,
+      "taemForceHandoffSpeed": 1300,
+      "mm304HandoffRadius": 1000,
+      "mm304PerpendicularHeadingHalfWidth": 30,
+      "mm304HandoffAlongTrack": -8000,
+      "mm304HandoffCrossTrack": 0,
+      "mm305MinimumAltitude": 22000,
+      "mm305MaximumAltitude": 30000,
+      "mm305TargetMach": 2.5,
+      "mm305MachHalfWidth": 0.35,
+      "hacAcquisitionAltitude": 10700,
+      "hacAcquisitionMach": 0.95,
+      "hacRadius": 12000,
+      "hacLookAheadAngle": 16,
+      "finalApproachDistance": 8000,
+      "finalAlignmentSpeed": 160,
+      "finalGlideSlope": 20,
+      "taemGlideSlope": 24,
+      "gearDeploymentAltitude": 1500,
+      "flareAltitude": 55,
+      "touchdownAimAlong": 150,
+      "touchdownSinkRate": -1.5,
+      "guidanceRate": 10,
+      "predictionInterval": 1.5,
+      "sTurnMinimumLegDuration": 24,
+      "entryRollRate": 4.5,
+      "entryRollAcceleration": 1.8,
+      "taemRollRate": 6,
+      "approachRollRate": 3.5,
+      "useTimeWarp": true,
+      "taemEnergyLaw": true,
+      "adaptiveFlare": false,
+      "rolloutParachutes": true,
+      "minimumPlanningLeadTime": 12
+    },
+    "calibration": {
+      "enablePassiveCalibration": true,
+      "enableTrajectoryCalibration": true,
+      "autoApplyInFlight": true,
+      "minimumDynamicPressure": 500,
+      "maximumSampleDynamicPressure": 55000,
+      "maximumSideslip": 8,
+      "minimumCalibrationRadarAltitude": 3000,
+      "maximumCalibrationDynamicPressure": 35000,
+      "maximumCalibrationGLoad": 2.5,
+      "maximumCalibrationSinkRate": 80,
+      "abortStallFraction": 0.32,
+      "minimumAngleOfAttack": 3,
+      "maximumAngleOfAttack": 18,
+      "angleOfAttackStep": 3,
+      "settlingDuration": 4,
+      "samplingDuration": 8,
+      "trajectoryLearningRate": 0.18
+    }
+  },
+  "samples": [
+    {
+      "ut": 13471.600957052,
+      "fields": {
+        "position": {
+          "latitude": 9.30825890884824,
+          "longitude": -71.7747229661202,
+          "altitude": 28371.2764424909,
+          "radarAltitude": 27472.2859816686,
+          "inertial": [
+            -278825.357923783,
+            -553874.431210474,
+            101636.58439712
+          ]
+        },
+        "motion": {
+          "velocity": [
+            152.310994783046,
+            -166.906304600117,
+            -953.734115414904
+          ],
+          "trueAirSpeed": 957.612670898438,
+          "horizontalSpeed": 954.692416821328,
+          "verticalSpeed": -74.728608363363,
+          "flightPathAngle": -4.47570473649139
+        },
+        "attitude": {
+          "pitch": 22.982666015625,
+          "roll": 1.20358276367188,
+          "heading": 183.792419433594,
+          "angleOfAttack": 27.4636173248291,
+          "sideslip": -5.0371994972229,
+          "pitchRate": -0.162097512262794,
+          "rollRate": 1.52501445357461,
+          "yawRate": 0.469957026441835,
+          "courseRate": 0.00579766829415817,
+          "coordinatePitchRate": -0.100629586537954,
+          "coordinateRollRate": 1.56998786969003,
+          "headingRate": 0.746877342380447,
+          "angleOfAttackRate": 0.0336162731045174,
+          "bodyPitchRate": -0.162097512262794,
+          "bodyRollRate": 1.52501445357461,
+          "bodyYawRate": 0.469957026441835
+        },
+        "aero": {
+          "dynamicPressure": 3597.45703125,
+          "staticPressure": 536.289428710938,
+          "density": 0.00784595554633253,
+          "mach": 3.09563095412734,
+          "stallFraction": 0.923373903547015,
+          "stallFractionMeasured": false,
+          "liftForce": 178215.551258814,
+          "dragForce": 338349.034043236,
+          "gForce": 0.73877506505581,
+          "energyExcessRange": 6705.51960143804,
+          "liftVector": [
+            -83633.7030276522,
+            -156668.839879418,
+            14868.1215761265
+          ],
+          "dragVector": [
+            3244.47279883367,
+            30247.8289707179,
+            336978.650773022
+          ],
+          "aeroAcceleration": [
+            -3.26802354011498,
+            -5.13933070933496,
+            14.3034524808559
+          ]
+        },
+        "vehicle": {
+          "mass": 24598.73046875,
+          "dryMass": 20348.005859375,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -278825.357923783,
+            -553874.431210474,
+            101636.58439712
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            427516.877234423,
+            415331.7916796,
+            64677.6658818928
+          ],
+          "momentOfInertia": [
+            888538.8125,
+            84555.65625,
+            920244.125
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 102709.917468861,
+          "bearingToSite": 197.606761082268,
+          "runwayAlongTrack": 30934.4463991273,
+          "runwayCrossTrack": -97984.2373860758,
+          "specificMechanicalEnergy": -5178077.88408116,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.0930676542480403,
+          "modelResidual": 0.0382139122872175,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            -1.04026061413488,
+            -0.0755189659429416,
+            -0.173660215694778
+          ],
+          "forceResidualSigmaPerQ": [
+            6.61242501389965,
+            1.8426626408677,
+            0.268855267402466
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1009
+        }
+      }
+    },
+    {
+      "ut": 13477.9409570521,
+      "fields": {
+        "position": {
+          "latitude": 8.77959210511876,
+          "longitude": -71.7585961164078,
+          "altitude": 27912.7914822823,
+          "radarAltitude": 27587.6275508471,
+          "inertial": [
+            -277850.149663223,
+            -554876.852240218,
+            95840.7370964141
+          ]
+        },
+        "motion": {
+          "velocity": [
+            154.536134686818,
+            -148.853193917777,
+            -875.853944718044
+          ],
+          "trueAirSpeed": 878.507263183594,
+          "horizontalSpeed": 875.671650124935,
+          "verticalSpeed": -70.527603061163,
+          "flightPathAngle": -4.60472845576079
+        },
+        "attitude": {
+          "pitch": 21.7501525878906,
+          "roll": 9.53424072265625,
+          "heading": 187.914978027344,
+          "angleOfAttack": 27.3879413604736,
+          "sideslip": -5.11656904220581,
+          "pitchRate": -0.114108508577059,
+          "rollRate": 1.18649487736155,
+          "yawRate": 0.628339829121836,
+          "courseRate": 0.0685853278930755,
+          "coordinatePitchRate": -0.197971593727502,
+          "coordinateRollRate": 1.30493134473211,
+          "headingRate": 0.799587563011304,
+          "angleOfAttackRate": 0.0531597977081221,
+          "bodyPitchRate": -0.114108508577059,
+          "bodyRollRate": 1.18649487736155,
+          "bodyYawRate": 0.628339829121836
+        },
+        "aero": {
+          "dynamicPressure": 3312.90405273438,
+          "staticPressure": 582.692016601562,
+          "density": 0.00858515500894502,
+          "mach": 2.84994097051892,
+          "stallFraction": 0.912563051496233,
+          "stallFractionMeasured": false,
+          "liftForce": 172876.176309188,
+          "dragForce": 315186.064949711,
+          "gForce": 0.716794192851672,
+          "energyExcessRange": 8457.47906064353,
+          "liftVector": [
+            -100953.971508914,
+            -139851.088419053,
+            11667.9492572195
+          ],
+          "dragVector": [
+            2601.04708719218,
+            24339.3302362544,
+            314234.127834938
+          ],
+          "aeroAcceleration": [
+            -3.99914621871822,
+            -4.6968446914041,
+            13.2515638649141
+          ]
+        },
+        "vehicle": {
+          "mass": 24593.48046875,
+          "dryMass": 20348.001953125,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -277850.149663223,
+            -554876.852240218,
+            95840.7370964141
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            415578.564976289,
+            403378.081217671,
+            63562.2426489794
+          ],
+          "momentOfInertia": [
+            888208.125,
+            84546.609375,
+            919913.375
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 97500.6390348248,
+          "bearingToSite": 198.676638194556,
+          "runwayAlongTrack": 31103.1003105048,
+          "runwayCrossTrack": -92448.0441648098,
+          "specificMechanicalEnergy": -5254829.31027339,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.305297943470732,
+          "modelResidual": 0.0799900644302162,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            2.65272217642498,
+            -0.0488070089248091,
+            -0.129809205906688
+          ],
+          "forceResidualSigmaPerQ": [
+            11.5717057861828,
+            1.65075181686076,
+            0.280636009849615
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1022
+        }
+      }
+    },
+    {
+      "ut": 13482.0009570522,
+      "fields": {
+        "position": {
+          "latitude": 8.46416007307099,
+          "longitude": -71.7508362475282,
+          "altitude": 27628.2893343767,
+          "radarAltitude": 27280.1536086296,
+          "inertial": [
+            -277223.664662205,
+            -555454.811972525,
+            92381.0650545887
+          ]
+        },
+        "motion": {
+          "velocity": [
+            153.894914119342,
+            -135.726260566336,
+            -829.018337001124
+          ],
+          "trueAirSpeed": 830.872985839844,
+          "horizontalSpeed": 827.929107882078,
+          "verticalSpeed": -69.8807003917771,
+          "flightPathAngle": -4.82456970146285
+        },
+        "attitude": {
+          "pitch": 20.8300476074219,
+          "roll": 13.7917785644531,
+          "heading": 190.01545715332,
+          "angleOfAttack": 27.3907661437988,
+          "sideslip": -4.97181987762451,
+          "pitchRate": -0.214384352521388,
+          "rollRate": 0.741689010348749,
+          "yawRate": 0.700219865188425,
+          "courseRate": 0.104178762330683,
+          "coordinatePitchRate": -0.280803333284214,
+          "coordinateRollRate": 0.981079469393093,
+          "headingRate": 0.570342732795192,
+          "angleOfAttackRate": -0.0237154085499773,
+          "bodyPitchRate": -0.214384352521388,
+          "bodyRollRate": 0.741689010348749,
+          "bodyYawRate": 0.700219865188425
+        },
+        "aero": {
+          "dynamicPressure": 3134.0234375,
+          "staticPressure": 613.240478515625,
+          "density": 0.00907952142259349,
+          "mach": 2.70126514560277,
+          "stallFraction": 0.912879398890904,
+          "stallFractionMeasured": false,
+          "liftForce": 168991.236700423,
+          "dragForce": 300663.971739606,
+          "gForce": 0.700749171904829,
+          "energyExcessRange": 6944.99577863314,
+          "liftVector": [
+            -108097.514446857,
+            -129537.58912792,
+            9642.53363364576
+          ],
+          "dragVector": [
+            2910.27412385537,
+            19902.1337999733,
+            299990.431975699
+          ],
+          "aeroAcceleration": [
+            -4.27742246262127,
+            -4.45830842105398,
+            12.5911754904728
+          ]
+        },
+        "vehicle": {
+          "mass": 24591.267578125,
+          "dryMass": 20348.005859375,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -277229.820547394,
+            -555449.381554841,
+            92414.2302969973
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            401595.772421028,
+            394580.565014854,
+            58766.7782399803
+          ],
+          "momentOfInertia": [
+            888068.5,
+            84542.609375,
+            919773.6875
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 94403.8753853192,
+          "bearingToSite": 199.360045184764,
+          "runwayAlongTrack": 31184.2231730039,
+          "runwayCrossTrack": -89144.8440757871,
+          "specificMechanicalEnergy": -5298103.8540991,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.290468268091127,
+          "modelResidual": 0.104787630489158,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            5.07739523119622,
+            0.209140699904629,
+            -0.138276967706056
+          ],
+          "forceResidualSigmaPerQ": [
+            12.9485403721322,
+            1.71787552087988,
+            0.259564263082186
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1029
+        }
+      }
+    },
+    {
+      "ut": 13485.2409570523,
+      "fields": {
+        "position": {
+          "latitude": 8.22473587263249,
+          "longitude": -71.746570876402,
+          "altitude": 27401.0887518701,
+          "radarAltitude": 27079.2908333717,
+          "inertial": [
+            -276726.848669626,
+            -555876.481431114,
+            89753.6338215606
+          ]
+        },
+        "motion": {
+          "velocity": [
+            152.722898909351,
+            -124.533851548807,
+            -793.318512197975
+          ],
+          "trueAirSpeed": 794.58447265625,
+          "horizontalSpeed": 791.449480195691,
+          "verticalSpeed": -70.513595461799,
+          "flightPathAngle": -5.09128156208669
+        },
+        "attitude": {
+          "pitch": 19.9592590332031,
+          "roll": 16.5510864257812,
+          "heading": 191.647659301758,
+          "angleOfAttack": 27.3486404418945,
+          "sideslip": -5.02553987503052,
+          "pitchRate": -0.183551408317641,
+          "rollRate": 0.689113882594751,
+          "yawRate": 0.379721780610197,
+          "courseRate": 0.130126949818721,
+          "coordinatePitchRate": -0.25036815779508,
+          "coordinateRollRate": 0.729072707526571,
+          "headingRate": 0.577936998188368,
+          "angleOfAttackRate": 0.024508425261517,
+          "bodyPitchRate": -0.183551408317641,
+          "bodyRollRate": 0.689113882594751,
+          "bodyYawRate": 0.379721780610197
+        },
+        "aero": {
+          "dynamicPressure": 2997.37646484375,
+          "staticPressure": 639.380676269531,
+          "density": 0.00949491629611137,
+          "mach": 2.58786649096794,
+          "stallFraction": 0.906948634556362,
+          "stallFractionMeasured": false,
+          "liftForce": 165539.553002523,
+          "dragForce": 292854.018958406,
+          "gForce": 0.686467127555033,
+          "energyExcessRange": 4728.74315715323,
+          "liftVector": [
+            -111776.295690729,
+            -121838.270566897,
+            8052.27639870991
+          ],
+          "dragVector": [
+            3447.72048454021,
+            16160.8586997204,
+            292387.442086077
+          ],
+          "aeroAcceleration": [
+            -4.40536273525066,
+            -4.29754874289898,
+            12.2178837622749
+          ]
+        },
+        "vehicle": {
+          "mass": 24590.16015625,
+          "dryMass": 20348.001953125,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -276726.848669626,
+            -555876.481431114,
+            89753.6338215606
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            399352.126932195,
+            387163.715361641,
+            61890.7228092613
+          ],
+          "momentOfInertia": [
+            887998.5625,
+            84540.78125,
+            919703.6875
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 92057.1647658878,
+          "bearingToSite": 199.899505309533,
+          "runwayAlongTrack": 31228.7826213648,
+          "runwayCrossTrack": -86637.5977441782,
+          "specificMechanicalEnergy": -5329642.45904955,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.176693670556726,
+          "modelResidual": 0.119135755204424,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            6.57365758311974,
+            0.476553898847508,
+            -0.1461171202504
+          ],
+          "forceResidualSigmaPerQ": [
+            13.5158187558249,
+            1.93697280873334,
+            0.246916359598326
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1035
+        }
+      }
+    },
+    {
+      "ut": 13487.9609570523,
+      "fields": {
+        "position": {
+          "latitude": 8.03177313655012,
+          "longitude": -71.7444559328835,
+          "altitude": 27207.486379966,
+          "radarAltitude": 26932.7752900386,
+          "inertial": [
+            -276313.011503256,
+            -556201.840706715,
+            87634.827777197
+          ]
+        },
+        "motion": {
+          "velocity": [
+            151.626639098529,
+            -114.688556222594,
+            -765.888007327532
+          ],
+          "trueAirSpeed": 766.720336914062,
+          "horizontalSpeed": 763.322294780359,
+          "verticalSpeed": -72.105151477419,
+          "flightPathAngle": -5.39627647712821
+        },
+        "attitude": {
+          "pitch": 17.0565490722656,
+          "roll": 17.8325500488281,
+          "heading": 191.412338256836,
+          "angleOfAttack": 24.8489055633545,
+          "sideslip": -4.55693864822388,
+          "pitchRate": -1.50069814864821,
+          "rollRate": 0.639702261068205,
+          "yawRate": 0.02934358983158,
+          "courseRate": 0.14219900439053,
+          "coordinatePitchRate": -1.34190720015825,
+          "coordinateRollRate": 0.457943069873434,
+          "headingRate": -0.373465651736576,
+          "angleOfAttackRate": -1.24744968091682,
+          "bodyPitchRate": -1.50069814864821,
+          "bodyRollRate": 0.639702261068205,
+          "bodyYawRate": 0.02934358983158
+        },
+        "aero": {
+          "dynamicPressure": 2899.2734375,
+          "staticPressure": 661.898864746094,
+          "density": 0.00986382154737926,
+          "mach": 2.50078530610116,
+          "stallFraction": 0.549843651907785,
+          "stallFractionMeasured": false,
+          "liftForce": 157476.350221574,
+          "dragForce": 243083.017378599,
+          "gForce": 0.653062785802199,
+          "energyExcessRange": 3292.17217149334,
+          "liftVector": [
+            -109256.188502664,
+            -113220.054864475,
+            6565.46490838542
+          ],
+          "dragVector": [
+            3337.24045012829,
+            10860.2200012182,
+            242817.363023296
+          ],
+          "aeroAcceleration": [
+            -4.30758573711407,
+            -4.16284123678815,
+            10.1420749774333
+          ]
+        },
+        "vehicle": {
+          "mass": 24588.935546875,
+          "dryMass": 20348,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -276319.076683166,
+            -556197.251659496,
+            87665.4668370311
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            395844.485224436,
+            393696.248826571,
+            60607.5061094016
+          ],
+          "momentOfInertia": [
+            887921.375,
+            84538.7578125,
+            919626.625
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 90167.3431945939,
+          "bearingToSite": 200.346458568779,
+          "runwayAlongTrack": 31250.8418924972,
+          "runwayCrossTrack": -84616.8957212957,
+          "specificMechanicalEnergy": -5353137.8186499,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.13522725826905,
+          "modelResidual": 0.124725411371382,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            7.26949079553023,
+            0.665922035163725,
+            -0.14476765594212
+          ],
+          "forceResidualSigmaPerQ": [
+            13.4989453471083,
+            2.15911056313389,
+            0.234424867942981
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1041
+        }
+      }
+    },
+    {
+      "ut": 13500.4209570526,
+      "fields": {
+        "position": {
+          "latitude": 7.20814261064659,
+          "longitude": -71.7510242276171,
+          "altitude": 26135.2120959661,
+          "radarAltitude": 25936.3435796871,
+          "inertial": [
+            -274412.600361488,
+            -557288.75184082,
+            78563.8317612397
+          ]
+        },
+        "motion": {
+          "velocity": [
+            156.089941876956,
+            -59.1684808812883,
+            -698.512023106116
+          ],
+          "trueAirSpeed": 698.852172851562,
+          "horizontalSpeed": 691.161809203155,
+          "verticalSpeed": -103.391244890837,
+          "flightPathAngle": -8.50781824965402
+        },
+        "attitude": {
+          "pitch": 8.80209350585938,
+          "roll": 10.2778625488281,
+          "heading": 184.537353515625,
+          "angleOfAttack": 17.6181030273438,
+          "sideslip": -0.16854727268219,
+          "pitchRate": 0.06408640563417,
+          "rollRate": -2.63857324152624,
+          "yawRate": -0.728264927858834,
+          "courseRate": 0.0825625278631375,
+          "coordinatePitchRate": 0.301151870828696,
+          "coordinateRollRate": -2.74258220272407,
+          "headingRate": -0.680798810649591,
+          "angleOfAttackRate": 0.382728532235239,
+          "bodyPitchRate": 0.06408640563417,
+          "bodyRollRate": -2.63857324152624,
+          "bodyYawRate": -0.728264927858834
+        },
+        "aero": {
+          "dynamicPressure": 2972.3740234375,
+          "staticPressure": 803.893310546875,
+          "density": 0.0121720243717985,
+          "mach": 2.29828296093268,
+          "stallFraction": 0,
+          "stallFractionMeasured": false,
+          "liftForce": 127949.722014495,
+          "dragForce": 150602.751256529,
+          "gForce": 0.530614543752274,
+          "energyExcessRange": 0,
+          "liftVector": [
+            -76442.3971607028,
+            -102577.384335458,
+            -2360.40310281094
+          ],
+          "dragVector": [
+            1379.03745248606,
+            -4491.50752546603,
+            150529.443305585
+          ],
+          "aeroAcceleration": [
+            -3.05273058035825,
+            -4.35435453008551,
+            6.02584485756538
+          ]
+        },
+        "vehicle": {
+          "mass": 24588.923828125,
+          "dryMass": 20348.001953125,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -274412.600361488,
+            -557288.75184082,
+            78563.8317612397
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            413550.044413489,
+            430615.852117538,
+            71834.8810561001
+          ],
+          "momentOfInertia": [
+            887921.75,
+            84538.8828125,
+            919627
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 82108.7910766561,
+          "bearingToSite": 202.379263260697,
+          "runwayAlongTrack": 31181.6636399865,
+          "runwayCrossTrack": -75991.8600664557,
+          "specificMechanicalEnergy": -5412520.31936737,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.31303897613581,
+          "modelResidual": 0.34307356110077,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            7.5999446242367,
+            1.42232098355979,
+            -2.54849250828347
+          ],
+          "forceResidualSigmaPerQ": [
+            10.4070022036934,
+            2.13243659810411,
+            4.16485374000531
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1064
+        }
+      }
+    },
+    {
+      "ut": 13509.3209570528,
+      "fields": {
+        "position": {
+          "latitude": 6.66452903074658,
+          "longitude": -71.7634005958486,
+          "altitude": 25141.9926802011,
+          "radarAltitude": 24813.9971480978,
+          "inertial": [
+            -272967.758948226,
+            -557698.313957115,
+            72551.3900373161
+          ]
+        },
+        "motion": {
+          "velocity": [
+            171.432898506473,
+            -35.4244294833577,
+            -652.280444266327
+          ],
+          "trueAirSpeed": 653.833435058594,
+          "horizontalSpeed": 642.921501572445,
+          "verticalSpeed": -118.954354876094,
+          "flightPathAngle": -10.4824139102062
+        },
+        "attitude": {
+          "pitch": 6.89224243164062,
+          "roll": -15.3576049804688,
+          "heading": 176.324020385742,
+          "angleOfAttack": 17.9936580657959,
+          "sideslip": -0.0738027095794678,
+          "pitchRate": -0.311269778650703,
+          "rollRate": -2.75105804451332,
+          "yawRate": -1.12277551659901,
+          "courseRate": -0.129865772684613,
+          "coordinatePitchRate": -0.518951529132508,
+          "coordinateRollRate": -2.90552260618223,
+          "headingRate": -1.00857341730454,
+          "angleOfAttackRate": -0.0717597549383306,
+          "bodyPitchRate": -0.311269778650703,
+          "bodyRollRate": -2.75105804451332,
+          "bodyYawRate": -1.12277551659901
+        },
+        "aero": {
+          "dynamicPressure": 3146.41162109375,
+          "staticPressure": 963.109008789062,
+          "density": 0.0147201176968896,
+          "mach": 2.16033462134425,
+          "stallFraction": 0,
+          "stallFractionMeasured": false,
+          "liftForce": 141915.283822653,
+          "dragForce": 165433.11885033,
+          "gForce": 0.588530731432434,
+          "energyExcessRange": 0,
+          "liftVector": [
+            -26373.9867553661,
+            -139099.995029695,
+            -9775.06970976947
+          ],
+          "dragVector": [
+            -2232.72647901836,
+            -11174.6467445091,
+            165040.173943051
+          ],
+          "aeroAcceleration": [
+            -1.16339880491151,
+            -6.1114794005232,
+            6.31443518972125
+          ]
+        },
+        "vehicle": {
+          "mass": 24588.9140625,
+          "dryMass": 20348,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -272967.758948226,
+            -557698.313957115,
+            72551.3900373161
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            451016.085773517,
+            469805.797860026,
+            75884.0030804276
+          ],
+          "momentOfInertia": [
+            887921.0625,
+            84538.828125,
+            919626.3125
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 76822.9674403269,
+          "bearingToSite": 203.896424139829,
+          "runwayAlongTrack": 31051.7911050973,
+          "runwayCrossTrack": -70299.1576754604,
+          "specificMechanicalEnergy": -5451915.4891661,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.166946309657642,
+          "modelResidual": 0.430883447992125,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            8.74355242540948,
+            1.7740895222469,
+            -3.63076031996597
+          ],
+          "forceResidualSigmaPerQ": [
+            9.15653644960692,
+            1.97918373594456,
+            4.35695005366195
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1081
+        }
+      }
+    },
+    {
+      "ut": 13509.8809570528,
+      "fields": {
+        "position": {
+          "latitude": 6.6316155152206,
+          "longitude": -71.7639686476772,
+          "altitude": 25075.108125973,
+          "radarAltitude": 24790.5035821642,
+          "inertial": [
+            -272871.297570612,
+            -557717.83849997,
+            72186.9682127521
+          ]
+        },
+        "motion": {
+          "velocity": [
+            173.028903239832,
+            -34.3490909461635,
+            -649.33128899469
+          ],
+          "trueAirSpeed": 650.986755371094,
+          "horizontalSpeed": 639.854480809223,
+          "verticalSpeed": -119.874838609705,
+          "flightPathAngle": -10.6111883425222
+        },
+        "attitude": {
+          "pitch": 6.58486938476562,
+          "roll": -16.9219360351562,
+          "heading": 175.762817382812,
+          "angleOfAttack": 17.9523105621338,
+          "sideslip": -0.059536088258028,
+          "pitchRate": -0.30601821329411,
+          "rollRate": -2.52798904281251,
+          "yawRate": -1.11151940257841,
+          "courseRate": -0.145611299740826,
+          "coordinatePitchRate": -0.54468309571637,
+          "coordinateRollRate": -2.78514701031628,
+          "headingRate": -1.00147791196153,
+          "angleOfAttackRate": -0.0736269473755437,
+          "bodyPitchRate": -0.30601821329411,
+          "bodyRollRate": -2.52798904281251,
+          "bodyYawRate": -1.11151940257841
+        },
+        "aero": {
+          "dynamicPressure": 3158.76782226562,
+          "staticPressure": 975.011840820312,
+          "density": 0.0149074511706197,
+          "mach": 2.15131935577207,
+          "stallFraction": 0,
+          "stallFractionMeasured": false,
+          "liftForce": 142440.969515934,
+          "dragForce": 165731.031804454,
+          "gForce": 0.590710779819305,
+          "energyExcessRange": 0,
+          "liftVector": [
+            -22484.9443384114,
+            -140289.924888464,
+            -10128.872075749
+          ],
+          "dragVector": [
+            -2651.39686209693,
+            -11510.3282168531,
+            165309.580309155
+          ],
+          "aeroAcceleration": [
+            -1.02226316854079,
+            -6.17352408160327,
+            6.31100291127001
+          ]
+        },
+        "vehicle": {
+          "mass": 24588.9140625,
+          "dryMass": 20348.001953125,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -272871.297570612,
+            -557717.83849997,
+            72186.9682127521
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            453447.083747167,
+            472507.314838469,
+            76266.9547945261
+          ],
+          "momentOfInertia": [
+            887920.8125,
+            84538.84375,
+            919626.1875
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 76505.566765136,
+          "bearingToSite": 203.996326861264,
+          "runwayAlongTrack": 31045.8265579083,
+          "runwayCrossTrack": -69954.4884082495,
+          "specificMechanicalEnergy": -5454375.86566754,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.160217447383607,
+          "modelResidual": 0.434039422803093,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            8.78740119775685,
+            1.78750039204175,
+            -3.67202083962415
+          ],
+          "forceResidualSigmaPerQ": [
+            9.08743311115884,
+            1.96920016285856,
+            4.35566325553514
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1082
+        }
+      }
+    },
+    {
+      "ut": 13516.5209570529,
+      "fields": {
+        "position": {
+          "latitude": 6.25305837204011,
+          "longitude": -71.7662277730383,
+          "altitude": 24243.5298175716,
+          "radarAltitude": 24030.428431457,
+          "inertial": [
+            -271654.019617023,
+            -557907.778399591,
+            67992.5653748116
+          ]
+        },
+        "motion": {
+          "velocity": [
+            193.356587474839,
+            -23.4087743103436,
+            -613.995317988431
+          ],
+          "trueAirSpeed": 617.288696289062,
+          "horizontalSpeed": 603.423268074346,
+          "verticalSpeed": -130.098703238974,
+          "flightPathAngle": -12.1667933680804
+        },
+        "attitude": {
+          "pitch": 4.55520629882812,
+          "roll": -18.2703247070312,
+          "heading": 174.029602050781,
+          "angleOfAttack": 17.6463451385498,
+          "sideslip": 0.0932700484991074,
+          "pitchRate": -0.184242597780869,
+          "rollRate": 1.48093106769341,
+          "yawRate": 0.119367210899638,
+          "courseRate": -0.194377666591795,
+          "coordinatePitchRate": -0.128516069065083,
+          "coordinateRollRate": 1.18198165266573,
+          "headingRate": 0.0554807036006349,
+          "angleOfAttackRate": 0.00662218139623139,
+          "bodyPitchRate": -0.184242597780869,
+          "bodyRollRate": 1.48093106769341,
+          "bodyYawRate": 0.119367210899638
+        },
+        "aero": {
+          "dynamicPressure": 3326.25366210938,
+          "staticPressure": 1135.26086425781,
+          "density": 0.0174353529070753,
+          "mach": 2.04588343482505,
+          "stallFraction": 0,
+          "stallFractionMeasured": false,
+          "liftForce": 150697.802889838,
+          "dragForce": 172985.033985031,
+          "gForce": 0.624952485069629,
+          "energyExcessRange": 0,
+          "liftVector": [
+            -18366.8849389539,
+            -148879.140992682,
+            -14404.3990067162
+          ],
+          "dragVector": [
+            -8529.66384682863,
+            -15595.8128809586,
+            172069.280924995
+          ],
+          "aeroAcceleration": [
+            -1.09384884288454,
+            -6.68898970686049,
+            6.41203263747354
+          ]
+        },
+        "vehicle": {
+          "mass": 24588.908203125,
+          "dryMass": 20348.001953125,
+          "availableThrust": 59999.99609375,
+          "currentThrust": 0,
+          "centerOfMass": [
+            -271669.481274476,
+            -557905.902282687,
+            68041.6980289841
+          ],
+          "centerOfMassRoot": [
+            0,
+            0,
+            0
+          ],
+          "availableTorque": [
+            486207.976223479,
+            508384.160161018,
+            81042.4248017371
+          ],
+          "momentOfInertia": [
+            887921.1875,
+            84538.8046875,
+            919626.4375
+          ]
+        },
+        "guidance": {
+          "rangeToSite": 72891.6495005066,
+          "bearingToSite": 205.239892638558,
+          "runwayAlongTrack": 31021.9906597707,
+          "runwayCrossTrack": -65990.2483165493,
+          "specificMechanicalEnergy": -5483252.32758185,
+          "entryReversalTimeRemaining": 0,
+          "entryReversalUT": null,
+          "entryReversalRange": null,
+          "entryReversalSign": null
+        },
+        "physics": {
+          "confidence": 0.0733548119745455,
+          "modelResidual": 0.460363230541942,
+          "modelResidualConfidence": 1,
+          "certifiedUncertainty": 0.584954888657014,
+          "forceResidualPerQ": [
+            7.29453244575292,
+            2.13846773030516,
+            -3.06978666318929
+          ],
+          "forceResidualSigmaPerQ": [
+            13.3409696238967,
+            2.54880047114333,
+            6.90325626669019
+          ],
+          "forceResidualConfidence": 0.95,
+          "airbrakeModelAvailable": false,
+          "airbrakeModelConfidence": 0,
+          "airbrakeDragAccel": 0,
+          "samples": 191,
+          "liveSamples": 1094
+        }
+      }
+    }
+  ]
+}

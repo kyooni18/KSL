@@ -228,6 +228,13 @@ UnpoweredPathProjection decision_unpowered_path_projection(const GuidanceMachine
         target_altitude,path,1e-4); /* numerical relative quadrature tolerance */
 }
 
+/* Experimental: apply active-regime uncertainty at Mach >= 1 too. Off by
+   default; the global certified uncertainty stays in force for supersonic
+   states until this is validated against the recorded fixtures. */
+#ifndef MM305_SUPERSONIC_ACTIVE_UNCERTAINTY
+#define MM305_SUPERSONIC_ACTIVE_UNCERTAINTY 0
+#endif
+
 EnergyPathEnvelope decision_energy_path_envelope(
         const Telemetry *t,
         const PlanetModel *p,
@@ -278,7 +285,8 @@ EnergyPathEnvelope decision_energy_path_envelope(
        global uncertainty at its measured magnitude (bounded only to a sane
        relative domain); the legacy 8% fallback is retained only when no
        active-regime evidence exists at all. */
-    if (isfinite(t->mach) && t->mach < 1.0 && relative_uncertainty > 0.08) {
+    if (isfinite(t->mach) && (t->mach < 1.0 || MM305_SUPERSONIC_ACTIVE_UNCERTAINTY) &&
+        relative_uncertainty > 0.08) {
         double active_unc = 0.0;
         bool active_evidence = false;
         if (isfinite(t->aerodynamic_confidence) && t->aerodynamic_confidence > 0.0) {
