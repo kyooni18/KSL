@@ -312,6 +312,24 @@ class TuiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config.data["ascent"]["targetAltitudeKm"], 120)
         self.assertFalse(config.data["orbit"]["trim"])
 
+    async def test_mode_limits_selectable_phases(self):
+        from textual.widgets import Select
+        from ksl.phases import Phase
+        from ksl.tui import KSLApp
+        app = KSLApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.press("m")
+            app.query_one("#stop", Select).value = Phase.MM305.value  # holdable in dry run
+            app.query_one("#mode", Select).value = "live"
+            await pilot.pause()
+            self.assertEqual(app.query_one("#stop", Select).value, Phase.COMPLETE.value)
+            self.assertFalse(app.query_one("#start", Select).disabled)
+            self.assertTrue(app.query_one("#scenario", Select).disabled)
+            app.query_one("#mode", Select).value = "sim"
+            await pilot.pause()
+            self.assertTrue(app.query_one("#start", Select).disabled)
+            self.assertFalse(app.query_one("#scenario", Select).disabled)
+
     async def test_dry_run_from_mission_tab_shows_on_dashboard(self):
         from ksl.tui import KSLApp
         with tempfile.TemporaryDirectory() as tmp:

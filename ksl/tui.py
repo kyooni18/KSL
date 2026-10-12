@@ -29,12 +29,13 @@ from textual.widgets import (Button, DataTable, Footer, Header, Input, Label, Ri
                              TabbedContent, TabPane)
 
 from .config import DEFAULT_PROFILE, DEFAULTS, ConfigError, load_config
-from .controller import MissionController
-from .phases import ENTRY_PHASES, SEQUENCE, MissionState, Phase, PhaseTransitionError
+from .controller import MissionController, holdable
+from .phases import ENTRY_PHASES, SEQUENCE, MissionState, Phase, PhaseTransitionError, validate_range
 from .runlog import Event, MissionStatus, list_runs, read_status
 from .scenarios import SCENARIOS
 
 STALE_SECONDS = 15.0
+DEFAULT_MODE = "dry-run"
 LEVEL_STYLE = {"error": "bold red", "warning": "yellow", "info": "", "debug": "dim"}
 KIND_STYLE = {"phase": "bold cyan", "state": "bold", "milestone": "green", "checkpoint": "magenta"}
 
@@ -171,16 +172,18 @@ class KSLApp(App[int]):
                     yield Input(f"{ascent['targetAltitudeKm']:g}", id="altitude")
                     yield Label("Mode")
                     yield Select([("Live KSP", "live"), ("Simulation (ShuttleSim)", "sim"),
-                                  ("Dry run (plan only)", "dry-run")], value="dry-run", allow_blank=False, id="mode")
+                                  ("Dry run (plan only)", "dry-run")], value=DEFAULT_MODE, allow_blank=False, id="mode")
                     yield Label("Start phase (live / dry run)")
                     yield Select([(f"{p.title} — {d}", p.value) for p, d in ENTRY_PHASES.items()],
-                                 value=Phase.PRELAUNCH.value, allow_blank=False, id="start")
-                    yield Label("Stop / hold phase")
-                    yield Select([(p.title, p.value) for p in SEQUENCE], value=Phase.COMPLETE.value,
+                                 value=Phase.PRELAUNCH.value, allow_blank=False, id="start",
+                                 disabled=DEFAULT_MODE == "sim")
+                    yield Label("Stop / hold phase (only phases this mode can hold at)")
+                    yield Select(self._stop_options(DEFAULT_MODE), value=Phase.COMPLETE.value,
                                  allow_blank=False, id="stop")
-                    yield Label("Simulation scenario")
+                    yield Label("Simulation scenario (simulation mode only; sets the start phase)")
                     yield Select([(f"{s.name} — from {s.start.title}", s.name) for s in SCENARIOS.values()],
-                                 value="l5-mm305", allow_blank=False, id="scenario")
+                                 value="l5-mm305", allow_blank=False, id="scenario",
+                                 disabled=DEFAULT_MODE != "sim")
                     yield Label("Other overrides (space separated KEY=VALUE, e.g. orbit.trim=false)")
                     yield Input(" ".join(self.overrides), id="overrides")
                     with Horizontal(id="buttons"):
@@ -297,6 +300,21 @@ class KSLApp(App[int]):
         except ValueError:
             raise ConfigError(f"{label} must be a number, not {text!r}") from None
 
+    @staticmethod
+    def _stop_options(mode: str) -> list[tuple[str, str]]:
+        return [(p.title, p.value) for p in SEQUENCE if holdable(p, mode)]
+
+    @on(Select.Changed, "#mode")
+    def mode_changed(self, event: Select.Changed) -> None:
+        mode = str(event.value)
+        stop = self.query_one("#stop", Select)
+        previous = stop.value
+        options = self._stop_options(mode)
+        stop.set_options(options)
+        stop.value = previous if previous in {value for _, value in options} else Phase.COMPLETE.value
+        self.query_one("#start", Select).disabled = mode == "sim"
+        self.query_one("#scenario", Select).disabled = mode != "sim"
+
     def _selection(self) -> dict[str, Any]:
         value = lambda wid: self.query_one(f"#{wid}", Select).value  # noqa: E731
         # The inclination and altitude fields are the single source for those two keys, so they
@@ -331,8 +349,6 @@ class KSLApp(App[int]):
             probe.config, probe.mode = config, mode
             probe.start = sel["scenario"].start if mode == "sim" else sel["start"]
             probe.stop = sel["stop"]
-            from .controller import holdable
-            from .phases import validate_range
             validate_range(probe.start, probe.stop)
             if not holdable(probe.stop, mode):
                 raise PhaseTransitionError(f"cannot hold at {probe.stop.value} in {mode} mode")
