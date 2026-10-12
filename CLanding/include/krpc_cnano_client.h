@@ -103,6 +103,8 @@ bool krpc_cnano_client_warp_decision(double remaining_ut,
                                      double response_horizon_seconds,
                                      int maximum_factor,
                                      KrpcCNanoWarpDecision *decision);
+bool krpc_cnano_client_warp_with_progress(KrpcCNanoClient *client,double ut,
+    KRPCWarpProgress progress,void *context,char *error,size_t error_size);
 bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
                             char *error, size_t error_size);
 bool krpc_cnano_client_save(KrpcCNanoClient *client, const char *name,

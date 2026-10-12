@@ -183,8 +183,12 @@ static double ut_resolution(double ut) {
     return isfinite(resolution) && resolution > 0.0 ? resolution : DBL_EPSILON;
 }
 
-bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
-                            char *error, size_t error_size) {
+bool krpc_cnano_client_warp(KrpcCNanoClient *client,double ut,char *error,size_t error_size){
+    return krpc_cnano_client_warp_with_progress(client,ut,NULL,NULL,error,error_size);
+}
+
+bool krpc_cnano_client_warp_with_progress(KrpcCNanoClient *client,double ut,
+        KRPCWarpProgress progress,void *context,char *error,size_t error_size) {
     if (!client || !client->connected || !isfinite(ut)) return false;
 
     /* SpaceCenter.WarpTo is intentionally avoided: it withholds its RPC
@@ -235,6 +239,8 @@ bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
 
     double last_progress_ut = state.ut;
     double last_progress_wall = monotonic_seconds();
+    double last_publish_wall = last_progress_wall;
+    if(progress)progress(context,state.ut,ut,state.factor,state.rate);
 
     for (;;) {
         double remaining = ut - state.ut;
@@ -320,6 +326,10 @@ bool krpc_cnano_client_warp(KrpcCNanoClient *client, double ut,
             return false;
         }
 
+        if(progress&&wall-last_publish_wall>=1.0){
+            progress(context,next.ut,ut,next.factor,next.rate);
+            last_publish_wall=wall;
+        }
         state = next;
     }
 }

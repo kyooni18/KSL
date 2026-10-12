@@ -38,6 +38,16 @@ static bool should_time_warp(const LandingController*c,const GuidanceResult*r,co
     return target>t->ut+lead;
 }
 
+static void publish_warp_progress(void *context,double ut,double target,int factor,double rate){
+    LandingController *c=context;
+    /* The caller already holds the controller mutex. Keep the last measured
+       flight sample intact and explicitly identify this as warp progress. */
+    snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),
+        "Coast warp: UT %.3f, %.1f s to target, factor %d (%.1fx). Flight telemetry resumes after warp.",
+        ut,fmax(0.0,target-ut),factor,rate);
+    publish(c);
+}
+
 static bool perform_time_warp(LandingController*c,const Telemetry*t,char*err,size_t err_size){
     double burn_start=c->plan.burn_ut-c->plan.estimated_burn_duration*.5;
     double lead=fmax(0.0,c->configuration.guidance.minimum_planning_lead_time);
@@ -47,7 +57,7 @@ static bool perform_time_warp(LandingController*c,const Telemetry*t,char*err,siz
     c->time_warp_issued=true;
     snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Time-warping to 100 seconds before the planned deorbit burn.");
     char reason[192];snprintf(reason,sizeof(reason),"event=time-warp-start; from_ut=%.9g; target_ut=%.9g",t->ut,target);log_state_event(c,reason,true);publish(c);
-    if(!krpc_warp(c->session,target,err,err_size))return false;
+    if(!krpc_warp_with_progress(c->session,target,publish_warp_progress,c,err,err_size))return false;
     c->has_last_tick_ut=false;c->has_last_tick_wall=false;c->last_prediction_ut=-1e300;c->last_trajectory_ut=-1e300;
     snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Time warp complete. Reacquiring live state before burn setup.");
     snprintf(reason,sizeof(reason),"event=time-warp-complete; target_ut=%.9g",target);log_state_event(c,reason,true);publish(c);
