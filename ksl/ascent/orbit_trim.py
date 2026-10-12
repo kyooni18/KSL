@@ -42,6 +42,19 @@ def other_apsis(orbit, burn_ut, body_radius):
     return orbit.apoapsis_altitude+orbit.periapsis_altitude-r_b
 
 
+def recoverable_periapsis_target(desired_periapsis, burn_altitude,
+                                 margin=5000.0):
+    """Keep a same-pass rescue burn comfortably below its current altitude.
+
+    At a non-apsis burn the vehicle has unavoidable radial velocity. Asking
+    prograde thrust to raise Pe to within 50 m of the burn altitude gives an
+    unattainable root even with hundreds of m/s: the current position cannot
+    become the new periapsis while the vehicle is still descending. First
+    stabilize the orbit with an achievable Pe, then re-plan at the next apsis.
+    """
+    return min(desired_periapsis, burn_altitude-margin)
+
+
 def solve(make_node, error, lo, hi, iterations=26):
     """Bisection on a node component; error(orbit) must change sign over [lo, hi]."""
     def value(x):
@@ -409,12 +422,20 @@ def main():
                 # little past the apoapsis costs a few percent, a periapsis pass at
                 # 60-70 km costs the orbit (run a1).
                 ut_b = earliest if pe_unsafe else ut_b + base.period
-            pe_goal = args.periapsis
+            burn_altitude = base.radius_at(ut_b)-body_radius
+            pe_goal = recoverable_periapsis_target(args.periapsis, burn_altitude)
+            if pe_goal <= base.periapsis_altitude+TOL:
+                raise RuntimeError(
+                    f'No safe periapsis rescue at UT {ut_b:.1f}: '
+                    f'current Pe {base.periapsis_altitude:.0f} m, '
+                    f'burn altitude {burn_altitude:.0f} m')
+            if pe_goal < args.periapsis-TOL:
+                print(f'Periapsis rescue stage: burn altitude {burn_altitude/1000:.1f} km, '
+                      f'target Pe {pe_goal/1000:.1f} km before final orbit trim')
             x = y = 0.0
             for _ in range(4):
                 x = solve(lambda q: vessel.control.add_node(ut_b, prograde=q, normal=y),
-                          lambda orb: orb.periapsis_altitude-min(
-                              pe_goal, orb.radius_at(ut_b)-body_radius-50.0), -150.0, 150.0)
+                          lambda orb: orb.periapsis_altitude-pe_goal, -150.0, 150.0)
                 if not inc_ok:
                     y = solve(lambda q: vessel.control.add_node(ut_b, prograde=x, normal=q),
                               lambda orb: math.degrees(orb.inclination-target_inc), -300.0, 300.0)

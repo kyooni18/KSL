@@ -15,3 +15,11 @@ class RcsTrimSelectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_rescue_periapsis_target_respects_burn_altitude():
+    # A descending 93 km pass cannot be circularized to 100 km with prograde
+    # thrust; stage to an achievable, atmosphere-safe 88 km first.
+    assert orbit_trim.recoverable_periapsis_target(100000, 93000) == 88000
+    assert orbit_trim.recoverable_periapsis_target(100000, 108000) == 100000
+    assert orbit_trim.recoverable_periapsis_target(100000, 102000) == 97000
