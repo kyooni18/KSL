@@ -50,3 +50,9 @@ sts-taem-frame-test: $(TARGET)
 	cd $(REPO_ROOT) && "$(abspath $(BUILD)/taem_vertical_frame_tests)"
 
 sts-repair-test: sts-taem-frame-test
+
+# Read-only, offline recorded-state energy / route audit.
+$(BUILD)/mm304_energy_replay: $(TARGET) $(TOOLS_ROOT)/mm304_energy_replay.c
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(TOOLS_ROOT)/mm304_energy_replay.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $@
