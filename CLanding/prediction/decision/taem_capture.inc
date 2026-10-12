@@ -124,7 +124,7 @@ TaemInterfaceCapture entry_taem_interface_capture(const TaemInterfaceTarget*q,
         &cfg->site,s,&maneuver_path,&maneuver_slope,&final_altitude)&&
         t->true_air_speed>=v->minimum_safe_speed;
 
-    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    double final_speed=fmax(s->final_alignment_speed,fmax(v->final_approach_speed,v->minimum_safe_speed));
     double available_energy=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
         cfg->site.latitude,final_altitude,final_speed,p);
@@ -207,7 +207,7 @@ TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine*g,
         (out.available_time_s-out.required_time_s)*t->horizontal_speed:NAN;
     double final_altitude=cfg->site.altitude+
         s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
-    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    double final_speed=fmax(s->final_alignment_speed,fmax(v->final_approach_speed,v->minimum_safe_speed));
     out.energy_margin=entry_remaining_specific_energy(t->latitude,t->mean_altitude,
         t->true_air_speed,cfg->site.latitude,final_altitude,final_speed,p);
     out.energy_available=out.energy_margin;
@@ -270,22 +270,9 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
        !(t->horizontal_speed>DBL_MIN))
         return out;
 
-    /*
-     * MM304 transfers ownership into a state set, not a waypoint.  Admission is
-     * deliberately a lower-bound test: the exact lead/HAC/final path belongs to
-     * MM305 and is replay-qualified there from the measured handoff state.
-     *
-     * Freezing the instantaneous high-Mach turn radius through the entire TAEM
-     * descent is physically wrong: density rises, speed falls, and available
-     * curvature changes continuously.  It can inflate a 30-50 km terminal
-     * problem into a fictitious several-hundred-kilometre Dubins path and keep
-     * MM304 in control until the vehicle is already below the TAEM envelope.
-     *
-     * The straight runway-frame distance to Final's alignment interface is the
-     * true geometric lower bound.  If the vehicle lacks energy even for this
-     * path, handoff is impossible.  If it passes, native MM305 still has to
-     * construct and replay-qualify a real bounded-control route before commit.
-     */
+    /* This distance defines a prescribed descent reference, not an energy
+       lower bound. Lift support is checked by the projection. Passing this
+       screening reference never substitutes for MM305 route replay. */
     double final_along=-s->final_approach_distance;
     double final_cross=0.0;
     double final_course=cfg->site.runway_heading;
@@ -300,12 +287,15 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
 
     double final_altitude=cfg->site.altitude+
         s->final_approach_distance*tan(s->final_glide_slope*DEG2RAD);
-    double final_speed=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    double final_speed=fmax(s->final_alignment_speed,fmax(v->final_approach_speed,v->minimum_safe_speed));
     double available_energy=entry_remaining_specific_energy(
         t->latitude,t->mean_altitude,t->true_air_speed,
         cfg->site.latitude,final_altitude,final_speed,p);
     UnpoweredPathProjection projection=decision_unpowered_path_projection(
         g,t,p,cfg,final_altitude,minimum_path);
+    if(projection.valid)
+        available_energy=entry_remaining_specific_energy(t->latitude,t->mean_altitude,
+            t->true_air_speed,projection.terminal_latitude_deg,final_altitude,final_speed,p);
     EnergyPathEnvelope energy={0};
     if(projection.valid&&isfinite(available_energy))
         energy=decision_energy_path_envelope(t,p,available_energy,
@@ -335,7 +325,8 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
     out.energy_drag_work=energy.valid?energy.modeled_drag_work:NAN;
     out.energy_uncertainty=energy.valid?energy.uncertainty_specific_energy:NAN;
     out.energy_margin=energy.valid?
-        energy.available_specific_energy-energy.modeled_drag_work:NAN;
+        energy.available_specific_energy-energy.modeled_drag_work-
+        projection.integration_error_j_kg:NAN;
     out.valid=isfinite(out.along)&&isfinite(out.cross)&&
         isfinite(out.minimum_turn_radius_m)&&energy.valid;
     if(!out.valid)return out;
@@ -357,7 +348,7 @@ TaemInterfaceCapture entry_mm305_admission_envelope(const GuidanceMachine*g,
     if(t->mean_altitude<s->mm305_min_altitude||
        t->mean_altitude>s->mm305_max_altitude)
         out.veto|=8u;
-    if(!(out.energy_margin>0.0))
+    if(!(out.energy_margin>0.0)||!projection.reference_reachable)
         out.veto|=16u;
     if(!(t->vertical_speed<0.0))
         out.veto|=32u;

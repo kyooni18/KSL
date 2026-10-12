@@ -672,7 +672,8 @@ bool mm305_acquisition_ready(const Telemetry*t,const PlanetModel*p,
 }
 double rotating_specific_energy(double latitude,double altitude,
         double air_relative_speed,const PlanetModel*p){
-    if(!p||!isfinite(latitude)||!isfinite(altitude)||!isfinite(air_relative_speed)||
+    if(!p||!isfinite(latitude)||fabs(latitude)>90.0||!isfinite(altitude)||
+       !isfinite(air_relative_speed)||air_relative_speed<0.0||
        !isfinite(p->radius)||!(p->radius>0.0)||
        !isfinite(p->gravitational_parameter)||!(p->gravitational_parameter>0.0)||
        !isfinite(p->rotational_speed))return NAN;

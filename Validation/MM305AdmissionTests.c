@@ -1,4 +1,5 @@
 #include "landing.h"
+#include "decision_envelope.h"
 
 #include <assert.h>
 #include <math.h>
@@ -77,6 +78,30 @@ int main(void){
     assert(ready.energy_margin>0.0);
     assert(ready.veto==0u);
     assert(ready.ready);
+
+    /* Drag work and admission energy must close in the rotating frame, even
+       when latitude changes along the physically propagated reference. */
+    double final_alt=cfg.site.altitude+cfg.guidance.final_approach_distance*
+        tan(cfg.guidance.final_glide_slope*DEG2RAD);
+    UnpoweredPathProjection projection=decision_unpowered_path_projection(
+        &g,&nominal,&p,&cfg,final_alt,ready.path_length_m);
+    assert(projection.valid&&projection.reference_reachable);
+    double loss=entry_remaining_specific_energy(nominal.latitude,nominal.mean_altitude,
+        nominal.true_air_speed,projection.terminal_latitude_deg,final_alt,
+        projection.terminal_speed_mps,&p);
+    assert(fabs(loss-projection.modeled_drag_work)<=projection.integration_error_j_kg+1e-6);
+    assert(projection.integration_error_j_kg<1e-4*fabs(ready.energy_available));
+    EnergyPathEnvelope positive=decision_energy_path_envelope(&nominal,&p,100.0,90.0,1.0);
+    EnergyPathEnvelope negative=decision_energy_path_envelope(&nominal,&p,90.0,100.0,1.0);
+    assert(positive.valid&&positive.energy.margin==10.0);
+    assert(negative.valid&&negative.energy.margin==-10.0&&!negative.feasible);
+    Telemetry invalid=nominal;invalid.true_air_speed=NAN;
+    assert(!decision_unpowered_path_projection(&g,&invalid,&p,&cfg,final_alt,ready.path_length_m).valid);
+    invalid=nominal;invalid.latitude=91.0;
+    assert(!decision_unpowered_path_projection(&g,&invalid,&p,&cfg,final_alt,ready.path_length_m).valid);
+    assert(isnan(rotating_specific_energy(91.0,1000.0,100.0,&p)));
+    assert(isnan(rotating_specific_energy(0.0,1000.0,-100.0,&p)));
+    assert(!decision_unpowered_path_projection(&g,&nominal,&p,&cfg,final_alt,INFINITY).valid);
 
     Telemetry low=nominal;
     low.mean_altitude=cfg.guidance.mm305_min_altitude-1.0;

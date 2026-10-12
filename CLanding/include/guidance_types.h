@@ -150,6 +150,7 @@ typedef enum {
 
 typedef struct {
     GuidancePhase phase; bool automation_engaged, paused, aborted;
+    const struct TerminalModel *entry_terminal_model; /* Borrowed only during guidance_update; never serialized. */
     bool diagnostic_shadow; /* Prediction rollouts must not masquerade as live decisions. */
     bool diagnostic_stop_at_taem; /* Boundary-only entry supervision stops before MM305 route search. */
     /* Shadow-only trace state; never read by guidance or transition decisions. */

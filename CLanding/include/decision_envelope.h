@@ -121,6 +121,10 @@ typedef struct {
 
 typedef struct {
     bool valid;
+    bool reference_reachable; /* Physically propagated screening reference; never a route proof. */
+    double projected_ground_path_m;
+    double terminal_latitude_deg;
+    double integration_error_j_kg;
     double ground_path_m;
     double air_path_m;
     double modeled_drag_work;

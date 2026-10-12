@@ -127,18 +127,13 @@ void aero_coefficients(const AeroTable *a,double mach,double alpha,double *cl,do
     double cd0=a->cd[i][j]*(1-ta)+a->cd[i][j+1]*ta, cd1=a->cd[i+1][j]*(1-ta)+a->cd[i+1][j+1]*ta;
     *cl=cl0*(1-tm)+cl1*tm; *cd=cd0*(1-tm)+cd1*tm;
 }
-AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,double ut,double mass,double aoa,double bank){
-    (void)mass; AeroForces out; memset(&out,0,sizeof(out));
-    AtmosphereSample atm=world_atmosphere_sample_state(w,p,ut);
-    Vec3 vair=v3_sub(v,world_atmosphere_velocity_i(w,p)); double speed=v3_norm(vair);
-    out.airspeed_mps=speed; if(speed<1e-6||atm.density_kg_m3<=0)return out;
-    out.mach=(atm.speed_of_sound_mps>1)?speed/atm.speed_of_sound_mps:0;
-    out.dynamic_pressure_pa=0.5*atm.density_kg_m3*speed*speed;
-    double cl,cd; aero_coefficients(a,out.mach,rad2deg(aoa),&cl,&cd);
+void aero_force_per_q(const AeroTable *a,double q,double mach,double alpha_deg,
+                      double *lift_per_q_out,double *drag_per_q_out){
+    double cl,cd; aero_coefficients(a,mach,alpha_deg,&cl,&cd);
     double fallback_lift_per_q=a->reference_area_m2*cl;
     double fallback_drag_per_q=a->reference_area_m2*cd;
     double lift_per_q=0,drag_per_q=0,book_coverage=0;
-    if(aero_book_lookup(a,out.dynamic_pressure_pa,out.mach,rad2deg(aoa),
+    if(aero_book_lookup(a,q,mach,alpha_deg,
             &lift_per_q,&drag_per_q,&book_coverage)){
         lift_per_q=fallback_lift_per_q+book_coverage*(lift_per_q-fallback_lift_per_q);
         drag_per_q=fallback_drag_per_q+book_coverage*(drag_per_q-fallback_drag_per_q);
@@ -148,6 +143,19 @@ AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,do
     }
     if(a->lift_scale>0.0)lift_per_q*=a->lift_scale;
     if(a->drag_scale>0.0)drag_per_q*=a->drag_scale;
+    *lift_per_q_out=lift_per_q;
+    *drag_per_q_out=drag_per_q;
+}
+
+AeroForces aero_compute(const KerbinWorld *w,const AeroTable *a,Vec3 p,Vec3 v,double ut,double mass,double aoa,double bank){
+    (void)mass; AeroForces out; memset(&out,0,sizeof(out));
+    AtmosphereSample atm=world_atmosphere_sample_state(w,p,ut);
+    Vec3 vair=v3_sub(v,world_atmosphere_velocity_i(w,p)); double speed=v3_norm(vair);
+    out.airspeed_mps=speed; if(speed<1e-6||atm.density_kg_m3<=0)return out;
+    out.mach=(atm.speed_of_sound_mps>1)?speed/atm.speed_of_sound_mps:0;
+    out.dynamic_pressure_pa=0.5*atm.density_kg_m3*speed*speed;
+    double lift_per_q,drag_per_q;
+    aero_force_per_q(a,out.dynamic_pressure_pa,out.mach,rad2deg(aoa),&lift_per_q,&drag_per_q);
     out.lift_n=out.dynamic_pressure_pa*lift_per_q;
     out.drag_n=out.dynamic_pressure_pa*drag_per_q;
     Vec3 fwd=v3_normalized(vair), up=v3_normalized(p);

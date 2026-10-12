@@ -83,7 +83,9 @@ GuidanceResult guidance_update_with_terminal_model(GuidanceMachine*g,
        appear as a new primary runway on the next preview and aliases the stored
        runway_end_index, causing the MM304/MM305 inlet to flip ends every cycle. */
     double dt=g->has_previous_ut?clampd(t->ut-g->previous_ut,0,1):.1;
+    g->entry_terminal_model=terminal_model;
     GuidanceResult r=guidance_update_impl(g,t,state,plan,p,aero,cfg,terminal_model);
+    g->entry_terminal_model=NULL;
     if ((r.phase==PHASE_ABORT ||
             (r.phase==PHASE_COMPLETE&&g->terminal_landing_warning_latched)) &&
             g->automation_engaged && !g->aborted) {

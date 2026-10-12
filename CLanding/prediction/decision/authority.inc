@@ -24,10 +24,6 @@ static double lift_factor(double mach, double aoa, const VehicleProfile *v) {
     return fabs(lift);
 }
 
-static double best_glide_aoa(double mach,const VehicleProfile*v){
-    return aerodynamic_best_glide_aoa(mach,v);
-}
-
 static double maximum_lift_aoa(const Telemetry *t, const VehicleProfile *v) {
     if (!t || !v || !(v->maximum_angle_of_attack > 0.0)) return 0.0;
     double lo = 0.0;

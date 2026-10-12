@@ -1,5 +1,7 @@
 #include "decision_envelope.h"
 #include "taem_route.h"
+#include "terminal_model.h"
+#include "shuttlesim/math3.h"
 
 #include <float.h>
 #include <math.h>
