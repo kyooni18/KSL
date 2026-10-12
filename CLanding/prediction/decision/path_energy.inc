@@ -22,40 +22,56 @@ static bool path_atmosphere(const TerminalModel *model,const Telemetry *t,
     return isfinite(rho)&&rho>=0.0&&isfinite(sound)&&sound>0.0;
 }
 
+/* Source normalization is constant throughout a projection; q and Mach are
+   constant throughout each incidence search. Keep their exact arithmetic but
+   avoid rebuilding them for every cell and lift-crossing refinement. */
+typedef struct {
+    double base,lbase;
+} PathForceScale;
+
+static PathForceScale path_force_scale(const Telemetry *t,const VehicleProfile *v){
+    double l0=0.0,d0=0.0;
+    aerodynamic_force_factors_mach(t->mach,hypot(t->angle_of_attack,t->sideslip),v,&l0,&d0);
+    double beta=isfinite(t->estimated_ballistic_coefficient)&&t->estimated_ballistic_coefficient>0.0?
+        t->estimated_ballistic_coefficient:v->estimated_ballistic_coefficient;
+    double ld=isfinite(t->estimated_lift_to_drag)&&t->estimated_lift_to_drag>0.0?
+        t->estimated_lift_to_drag:v->estimated_lift_to_drag;
+    PathForceScale scale={.base=1.0/beta,.lbase=(1.0/beta)*ld};
+    if(t->mass>0.0&&t->dynamic_pressure>0.0&&
+       isfinite(t->lift_force)&&t->lift_force>0.0&&isfinite(t->drag_force)&&t->drag_force>0.0){
+        if(t->drag_force>=0.0&&isfinite(t->drag_force)&&d0>DBL_MIN)
+            scale.base=t->drag_force/(t->mass*t->dynamic_pressure*d0);
+        if(t->lift_force>=0.0&&isfinite(t->lift_force)&&fabs(l0)>DBL_MIN)
+            scale.lbase=t->lift_force/(t->mass*t->dynamic_pressure*fabs(l0));
+    }
+    return scale;
+}
+
+static bool path_incidence_accelerations(const TerminalModel *model,const Telemetry *t,
+        const VehicleProfile *v,PathForceScale scale,double q,double mach,double aoa,
+        double *lift,double *drag){
+    if(model){
+        double lq=0.0,dq=0.0;
+        aero_force_per_q(&model->aero,q,mach,aoa,&lq,&dq);
+        *lift=q*lq/t->mass;*drag=q*dq/t->mass;
+    }else{
+        double lf=0.0,df=0.0;
+        aerodynamic_force_factors_mach(mach,aoa,v,&lf,&df);
+        *lift=q*scale.lbase*lf;*drag=q*scale.base*df;
+    }
+    return isfinite(*lift)&&isfinite(*drag)&&*drag>=0.0;
+}
+
 static bool path_aerodynamic_accelerations(const TerminalModel *model,const Telemetry *t,
         const PlanetModel *p,const LandingConfiguration *cfg,
         double altitude,double speed,double aoa,double latitude,double longitude,
         double ut,double *lift,double *drag){
     if(!t||!p||!cfg||!lift||!drag||!isfinite(speed)||!(speed>0.0)||!isfinite(aoa))return false;
-    const VehicleProfile *v=&cfg->vehicle;
     double rho,sound;
     if(!path_atmosphere(model,t,p,altitude,latitude,longitude,ut,&rho,&sound))return false;
-    double q=.5*rho*speed*speed;
-    if(model){
-        double lq=0.0,dq=0.0;
-        aero_force_per_q(&model->aero,q,speed/sound,aoa,&lq,&dq);
-        *lift=q*lq/t->mass;*drag=q*dq/t->mass;
-    }else{
-        /* The live calibrator normalizes beta and L/D to Mach-5 entry trim.
-           Only direct source-state force evidence is normalized at incidence. */
-        double lf=0.0,df=0.0,l0=0.0,d0=0.0;
-        aerodynamic_force_factors_mach(speed/sound,aoa,v,&lf,&df);
-        aerodynamic_force_factors_mach(t->mach,hypot(t->angle_of_attack,t->sideslip),v,&l0,&d0);
-        double beta=isfinite(t->estimated_ballistic_coefficient)&&t->estimated_ballistic_coefficient>0.0?
-            t->estimated_ballistic_coefficient:v->estimated_ballistic_coefficient;
-        double ld=isfinite(t->estimated_lift_to_drag)&&t->estimated_lift_to_drag>0.0?
-            t->estimated_lift_to_drag:v->estimated_lift_to_drag;
-        double base=1.0/beta,lbase=base*ld;
-        if(t->mass>0.0&&t->dynamic_pressure>0.0&&
-           isfinite(t->lift_force)&&t->lift_force>0.0&&isfinite(t->drag_force)&&t->drag_force>0.0){
-            if(t->drag_force>=0.0&&isfinite(t->drag_force)&&d0>DBL_MIN)
-                base=t->drag_force/(t->mass*t->dynamic_pressure*d0);
-            if(t->lift_force>=0.0&&isfinite(t->lift_force)&&fabs(l0)>DBL_MIN)
-                lbase=t->lift_force/(t->mass*t->dynamic_pressure*fabs(l0));
-        }
-        *lift=q*lbase*lf;*drag=q*base*df;
-    }
-    return isfinite(*lift)&&isfinite(*drag)&&*drag>=0.0;
+    PathForceScale scale=model?(PathForceScale){0}:path_force_scale(t,&cfg->vehicle);
+    return path_incidence_accelerations(model,t,&cfg->vehicle,scale,
+        .5*rho*speed*speed,speed/sound,aoa,lift,drag);
 }
 
 /* Capture the exact correction used by MM305 once per projection. Applying a
@@ -148,6 +164,7 @@ static UnpoweredPathProjection path_reference_integrate(const TerminalModel *mod
        range or impossibility. Initial bank and pitch cannot disappear at once.
        Curvature, normal lift, centrifugal gravity and Coriolis are integrated
        in the rotating frame. MM305 must still qualify the alignment route. */
+    PathForceScale force_scale=model?(PathForceScale){0}:path_force_scale(t,&cfg->vehicle);
     for(unsigned n=0;n<resolution*256u;n++){
         double altitude=v3_norm(position)-p->radius,speed=v3_norm(velocity);
         if(altitude<target_altitude||!(speed>0.0))return out;
@@ -175,19 +192,20 @@ static UnpoweredPathProjection path_reference_integrate(const TerminalModel *mod
            insufficient lift steepens the actual trajectory rather than keeping
            the aircraft on a fictitious geometric line. */
         double previous_lift=0.0;
+        double search_q=.5*density*speed*speed,search_mach=speed/sound;
         for(unsigned j=0;j<=(unsigned)ceil(upper);j++){
             double candidate=fmin(j,upper),lift=0.0,drag=0.0;
-            if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,candidate,latitude,longitude,t->ut+time,&lift,&drag))return out;
+            if(!path_incidence_accelerations(model,t,&cfg->vehicle,force_scale,search_q,search_mach,candidate,&lift,&drag))return out;
             if(lift>max_lift){max_lift=lift;max_lift_aoa=candidate;}
             if(j&&previous_lift<required&&lift>=required){
                 double lo=candidate-1.0,hi=candidate;
                 for(unsigned k=0;k<16;k++){
                     double mid=.5*(lo+hi),ml=0.0,md=0.0;
-                    if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,mid,latitude,longitude,t->ut+time,&ml,&md))return out;
+                    if(!path_incidence_accelerations(model,t,&cfg->vehicle,force_scale,search_q,search_mach,mid,&ml,&md))return out;
                     if(ml<required)lo=mid;else hi=mid;
                 }
                 candidate=hi;
-                if(!path_aerodynamic_accelerations(model,t,p,cfg,altitude,speed,candidate,latitude,longitude,t->ut+time,&lift,&drag))return out;
+                if(!path_incidence_accelerations(model,t,&cfg->vehicle,force_scale,search_q,search_mach,candidate,&lift,&drag))return out;
             }
             if(lift>=required&&drag<best_drag){best_drag=drag;target_aoa=candidate;}
             previous_lift=lift;
