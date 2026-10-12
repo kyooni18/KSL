@@ -9,7 +9,7 @@ from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -626,12 +626,17 @@ def run(args):
                         pitch = commanded_pitch
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
+                        # A small PEG residual or target semi-major axis is
+                        # insufficient: a 100 km Ap / underground Pe trajectory
+                        # can satisfy energy_done while being nowhere near orbit.
+                        # Do not release the ET until the measured *two* apsides
+                        # reach the executable handoff orbit. Depletion below is
+                        # separately reported as a failed/partial insertion.
                         if (shuttle.separated and
-                                ((peg_dv is not None and (peg_dv < 0.3 or energy_done)) or
-                                 (peg_dv is None and
-                                  meco_ready(v.orbit.apoapsis_altitude,
-                                             v.orbit.periapsis_altitude,
-                                             args.orbit-3000.0, args.meco_periapsis-300.0)))):
+                                meco_ready(v.orbit.apoapsis_altitude,
+                                           v.orbit.periapsis_altitude,
+                                           args.orbit-3000.0,
+                                           args.meco_periapsis-300.0)):
                             control.throttle = 0
                             state = 'COAST'
                             emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
@@ -742,10 +747,23 @@ def run(args):
                                 any(engine.active and engine.has_fuel
                                     for engine in shuttle.solid_boosters))
                             if not solid_boosters_burning:
-                                control.throttle = g_force_throttle(
-                                    control.throttle, flight.g_force, min(args.max_g, phase_max_g))
-                                control.throttle = dynamic_pressure_throttle(
-                                    control.throttle, flight.dynamic_pressure, args.max_q)
+                                # Engine thrust_limit already follows target_g
+                                # and PEG's phase_max_g each FCS tick. Reapplying
+                                # that *same* low-G target to the master throttle
+                                # made it decay to zero irrecoverably as the
+                                # vehicle approached the desired orbit. Master
+                                # throttle is a hard G/Q guard, not a second
+                                # copy of the phase-trim allocator; recompute it
+                                # from full each tick to prevent a zero latch.
+                                if shuttle.separated:
+                                    control.throttle = post_booster_master_throttle(
+                                        flight.g_force, args.max_g,
+                                        flight.dynamic_pressure, args.max_q)
+                                else:
+                                    control.throttle = dynamic_pressure_throttle(
+                                        g_force_throttle(control.throttle, flight.g_force,
+                                                         min(args.max_g, phase_max_g)),
+                                        flight.dynamic_pressure, args.max_q)
                     else:
                         shuttle.skiff.thrust_limit = 1
                     actual_roll = ''

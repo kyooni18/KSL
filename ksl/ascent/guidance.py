@@ -219,6 +219,17 @@ def g_force_throttle(current_throttle, actual_g, max_g, recovery_step=.02):
     return current
 
 
+def post_booster_master_throttle(actual_g, max_g, dynamic_pressure, max_q):
+    """Hard launch envelope only: core engine limiters already set target G.
+
+    Always start from a full master command so a previous reduced/zero master
+    throttle cannot permanently disable an otherwise healthy powered ascent.
+    """
+    return dynamic_pressure_throttle(
+        g_force_throttle(1.0, actual_g, max_g),
+        dynamic_pressure, max_q)
+
+
 def dynamic_pressure_throttle(current_throttle, dynamic_pressure, max_dynamic_pressure):
     """Reduce liquid throttle when measured aerodynamic pressure exceeds its cap."""
     if max_dynamic_pressure <= 0 or dynamic_pressure <= max_dynamic_pressure:

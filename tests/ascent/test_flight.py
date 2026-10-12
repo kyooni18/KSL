@@ -17,6 +17,7 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             ensure_autopilot_engaged, pause_structural_failure,
                             release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel)
+from ksl.ascent.guidance import post_booster_master_throttle
 from ksl.ascent.vehicle import delay_booster_separation
 
 
@@ -267,6 +268,16 @@ class FlightTests(unittest.TestCase):
         self.assertFalse(meco_ready(100000, -100000, 100000, 45000))
         self.assertFalse(meco_ready(90000, 45000, 100000, 45000))
         self.assertTrue(meco_ready(100000, 45000, 100000, 45000))
+
+    def test_post_booster_master_does_not_latch_at_zero(self):
+        # Live polar ascent twice idled its SSMEs in thin air although the
+        # core thrust-limit allocator still requested positive acceleration.
+        self.assertEqual(post_booster_master_throttle(0.0, 3.0, 0.0, 30000.0), 1.0)
+        self.assertEqual(post_booster_master_throttle(0.5, 3.0, 0.0, 30000.0), 1.0)
+        self.assertAlmostEqual(post_booster_master_throttle(3.5, 3.0, 0.0,
+                                                            30000.0), 3.0/3.5)
+        self.assertLess(post_booster_master_throttle(1.0, 3.0, 45000.0,
+                                                    30000.0), 1.0)
 
     def test_g_force_governor_preserves_ratios_with_global_throttle(self):
         self.assertAlmostEqual(g_force_throttle(1.0, 3.3, 3.0), 3.0/3.3)

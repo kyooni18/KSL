@@ -443,6 +443,13 @@ def main():
             nb.goal = None  # dv cutoff; the closed loop re-plans the remainder
             nodes.append(nb)
             base = nb.orbit
+            # Only execute the first burn, then replan from the measured state.
+            # A second burn constructed on the predicted post-rescue orbit
+            # cannot safely solve 'other apsis' before that rescue exists:
+            # the future ut_c may no longer be an apsis of this post-node orbit,
+            # and a physical solution can be absent inside the +/-80 m/s
+            # bracket. That rejected the *valid first rescue* prematurely.
+            return nodes, base
         if abs(base.apoapsis_altitude-args.apoapsis) > TOL:
             ut_c = base.ut_at_true_anomaly(0.0)
             if ut_c < (nodes[-1].ut if nodes else now)+max(60.0, min_lead):
