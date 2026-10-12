@@ -303,3 +303,12 @@ test: taem-energy-geometry-test entry-forecast-admission-test architecture-test 
 # Slow physical gates (~4 min). mm305-feasibility-test is a documented open
 # gate: it currently fails its non-vacuity check (see VALIDATION.md).
 qualification: test taem-native-stack-test mm305-feasibility-test
+
+.PHONY: throttle-feedback-test
+throttle-feedback-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/ThrottleFeedbackTests.c \
+		$(BUILD)/flight_log_codec.o $(BUILD)/json.o $(LDFLAGS) $(LDLIBS) \
+		-o $(BUILD)/throttle_feedback_tests
+	$(BUILD)/throttle_feedback_tests
+
+test: throttle-feedback-test

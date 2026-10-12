@@ -27,9 +27,12 @@ static bool set_engine_throttle(KrpcCNanoClient *client, double throttle,
                 rpc_failed(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, (float)throttle),
                            "Engine.Throttle", error, error_size)) return false;
             engine->independent_owned = true;
-        } else if (engine->independent_owned) {
-            RPC_OPTIONAL(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 0.0f));
-            RPC_OPTIONAL(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, false));
+        } else {
+            /* A zero command also clears independently throttled engines whose
+               ownership may have changed outside KSL. Do not cache success if
+               a cutoff write failed; the next control tick must retry. */
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 0.0f), error, error_size);
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, false), error, error_size);
             engine->independent_owned = false;
         }
     }

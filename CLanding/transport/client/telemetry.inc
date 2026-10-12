@@ -282,6 +282,9 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     t->dry_mass = client->cached_dry_mass;
     t->available_thrust = client->commandable_thrust;
     t->current_thrust = client->cached_current_thrust*client->burn_resultant_fraction;
+    if (throttle_feedback_requires_reassertion(client->has_command_throttle,
+            client->cached_command_throttle, t->throttle, t->current_thrust))
+        client->has_command_throttle = false;
     t->has_torque = client->cached_torque[0] > 0 || client->cached_torque[1] > 0 || client->cached_torque[2] > 0;
     t->available_pitch_torque = client->cached_torque[0];
     t->available_roll_torque = client->cached_torque[1];

@@ -11,6 +11,7 @@
 
 #include "engine_role.h"
 #include "thrust_alignment.h"
+#include "throttle_feedback.h"
 #include <float.h>
 #include <math.h>
 #include <stdarg.h>
