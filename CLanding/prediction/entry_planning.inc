@@ -240,9 +240,27 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
         if(!out.reached_taem&&terminal_owned_now&&!noninterface_terminal_ownership){
             out.reached_taem=true;
             out.taem_distance=range;
-            out.taem_dynamic_interface_captured=shadow.taem_interface_captured;
+            /* A forced MM304->MM305 ownership transfer is not proof of a
+               physically admissible TAEM inlet. The 2026-10-12 polar shadow
+               transferred just 0.5 km from KSC while flying away at Mach
+               ~2.9; recording that as zero-error capture caused the deorbit
+               planner to claim a runway opportunity that did not exist. */
+            bool forced_boundary=shadow.entry_exec.last_transition_reason==
+                ENTRY_TRANSITION_TAEM_FORCED_HANDOFF;
+            bool admissible_inlet=true;
+            if(forced_boundary){
+                TaemInterfaceCapture admission=entry_mm305_admission_envelope(
+                    &shadow,&synthetic,synthetic.ground_track_heading,p,cfg);
+                admissible_inlet=admission.valid&&admission.ready;
+                if(!admissible_inlet)out.taem_ownership_boundary_missed=true;
+            }
+            out.taem_dynamic_interface_captured=shadow.taem_interface_captured&&
+                admissible_inlet;
             out.taem_dynamic_interface_target_valid=false;
-            out.taem_interface_error=0.0;
+            /* Publish a measured geometric miss, not the old literal zero. */
+            out.taem_interface_error=hypot(
+                synthetic.runway_along_track-cfg->guidance.mm304_handoff_along_track,
+                synthetic.runway_cross_track-cfg->guidance.mm304_handoff_cross_track);
             out.taem_interface_energy_margin=shadow.entry_feedback.energy_margin;
             out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
             out.taem_speed=at.speed;
@@ -550,10 +568,21 @@ bool deorbit_runway_capture_qualified(const EntryPrediction*p,
        !(s->mm304_perpendicular_heading_half_width>0.0))
         return false;
 
+    /* The orbital capture radius (often 100 km) is NOT a TAEM runway
+       maneuver corridor. A witness nearly above KSC cannot be qualified for
+       HAC + final, even if its absolute error from the 96.5 km inlet is
+       within that broad orbital tolerance. Reserve one nominal HAC and the
+       final alignment leg, using the same geometry as entry_taem_range_target. */
+    double minimum_taem_range=fmax(s->final_approach_distance*1.5,
+        s->final_approach_distance+fmax(0.0,s->hac_radius));
+    double maximum_taem_range=fmax(s->taem_interface_range,minimum_taem_range);
     double position=deorbit_alignment_position_error(p,s);
     double course=deorbit_alignment_course_error(p,site);
     return isfinite(p->closest_distance)&&
         p->closest_distance<=s->target_deorbit_capture_radius&&
+        isfinite(p->taem_distance)&&
+        p->taem_distance>=minimum_taem_range&&
+        p->taem_distance<=maximum_taem_range&&
         isfinite(p->taem_range_error)&&
         fabs(p->taem_range_error)<=s->target_deorbit_capture_radius&&
         isfinite(position)&&position<=s->target_deorbit_capture_radius&&
