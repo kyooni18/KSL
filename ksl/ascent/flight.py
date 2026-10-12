@@ -62,13 +62,12 @@ def release_controls(control, autopilot):
 
 
 def pause_structural_failure(conn, control, autopilot):
-    """Freeze a damaged ascent after handing controls back to KSP."""
+    """Hand a damaged ascent back to KSP and save a checkpoint; KSP keeps running."""
     try:
         release_controls(control, autopilot)
     except Exception as exc:
         print(f'WARNING: control release during structural failure: {exc}')
-    # A write made while paused may not take effect until a physics frame.
-    # Leave the game running briefly so the throttle-zero handoff can settle.
+    # Let the throttle-zero handoff settle on a physics frame before saving.
     for _ in range(10):
         try:
             if control.throttle <= 0.01:
@@ -76,11 +75,6 @@ def pause_structural_failure(conn, control, autopilot):
         except Exception:
             break
         time.sleep(0.1)
-    try:
-        conn.krpc.paused = True
-        print('Structural failure: KSP paused for inspection')
-    except Exception as exc:
-        print(f'WARNING: could not pause KSP after structural failure: {exc}')
     try:
         name = 'ksl-structural-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
         conn.space_center.save(name)
