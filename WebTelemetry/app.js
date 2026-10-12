@@ -424,7 +424,7 @@
     mapView.offsetX = x - width / 2 - worldX * newZoom;
     mapView.offsetY = y - height / 2 - worldY * newZoom;
     clampMapView(width, height);
-    drawMap();
+    refreshMap();
   }
 
   function resetMapView() {
@@ -432,7 +432,7 @@
     mapView.offsetX = 0;
     mapView.offsetY = 0;
     mapView.autoFocus = true;
-    drawMap();
+    refreshMap();
   }
 
   function mapEventPoint(event) {
@@ -1525,16 +1525,9 @@
     $("vessel").textContent = t.vesselName ? `${vesselName} · ${snapshot.automationEngaged ? "AUTO" : (snapshot.plannerFresh ? "DIRECT" : "MAN")}` : vesselName;
     $("launch-situation").textContent = String(t.vesselSituation || "—").toUpperCase();
     $("launch-status").textContent = snapshot.statusMessage || "Waiting for telemetry";
-    $("launch-warning").textContent = [snapshot.warningMessage, snapshot.lastError].filter(Boolean).join(" · ");
-    const launchValues = {
-      altitude: distance(t.meanAltitude), radar: distance(t.radarAltitude),
-      speed: speed(t.surfaceSpeed), vertical: speed(t.verticalSpeed),
-      mach: fmt(t.mach, 2, ""), pressure: pressure(t.dynamicPressure),
-      g: fmt(t.gForce, 2, " g"), "orbit-speed": speed(t.orbitalSpeed),
-      ap: distance(t.apoapsisAltitude), pe: distance(t.periapsisAltitude),
-      mass: fmt(t.mass, 0, " kg"), thrust: fmt(t.availableThrust, 0, " N"),
-    };
-    for (const [key, value] of Object.entries(launchValues)) $("launch-" + key).textContent = value;
+    setAlert("launch-warning", snapshot.warningMessage);
+    setAlert("launch-error", snapshot.lastError);
+    updateLaunchConsole(t, cmd);
     setTitle("connection", `${source}${tick !== null ? ` · tick ${tick}` : ""}`);
     setTitle("vessel", `${vesselName}${finite(t.ut) ? ` · UT ${n(t.ut).toFixed(1)} s` : ""}${tick !== null ? ` · controller tick ${tick}` : ""}`);
 
@@ -1886,48 +1879,188 @@
 
   scene3dToggle.addEventListener("click", () => setScene3DVisible(scene3dPanel.hidden));
 
+  // Standard gravity; the KSP-side thrust-to-weight uses the same constant.
+  const G0 = 9.80665;
+  // Stock Kerbin atmosphere top, used to label periapsis.
+  const KERBIN_ATMOSPHERE_M = 70000;
+
+  function setAlert(id, message) {
+    const element = $(id);
+    element.textContent = message || "";
+    element.hidden = !message;
+  }
+
+  function put(id, value) {
+    const element = $(id);
+    if (element) element.textContent = value;
+  }
+
+  function clockText(seconds) {
+    const total = Math.max(0, Math.round(n(seconds)));
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function percent(value) {
+    return finite(value) ? `${(n(value) * 100).toFixed(0)}%` : "—";
+  }
+
+  function kilonewtons(value) {
+    return finite(value) ? `${(n(value) / 1000).toFixed(0)} kN` : "—";
+  }
+
+  // Elapsed time across the recorded ascent samples; the first sample is not necessarily liftoff.
+  function launchElapsedSeconds() {
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut));
+    return points.length < 2 ? null : n(points[points.length - 1].ut) - n(points[0].ut);
+  }
+
+  // Wrapped difference so 359° against 1° reads as a 2° error.
+  function angleError(value, target) {
+    if (!finite(value) || !finite(target)) return null;
+    let diff = n(value) - n(target);
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    return diff;
+  }
+
+  function updateLaunchConsole(t, cmd) {
+    const elapsed = launchElapsedSeconds();
+    const thrustWeight = finite(t.availableThrust) && finite(t.mass) && n(t.mass) > 0
+      ? n(t.availableThrust) / (n(t.mass) * G0)
+      : null;
+    put("launch-clock", elapsed === null ? "ASCENT —" : `ASCENT ${clockText(elapsed)}`);
+
+    put("launch-altitude", distance(t.meanAltitude));
+    put("launch-radar", `RADAR ${distance(t.radarAltitude)}`);
+    put("launch-speed", speed(t.horizontalSpeed));
+    put("launch-vertical", `VERTICAL ${fmtSigned(t.verticalSpeed, 0, " m/s")}`);
+    put("launch-mach", fmt(t.mach, 2, ""));
+    put("launch-q", `Q ${pressure(t.dynamicPressure)}`);
+    put("launch-twr", fmt(thrustWeight, 2, ""));
+    put("launch-twr-sub", `G ${fmt(t.gForce, 2, " g")} · ${kilonewtons(t.availableThrust)}`);
+
+    put("launch-pitch", fmt(t.pitch, 1, "°"));
+    put("launch-pitch-target", fmt(cmd.targetPitch, 1, "°"));
+    setTone("launch-pitch", errorTone(angleError(t.pitch, cmd.targetPitch), 1, 4));
+    put("launch-heading", fmt(t.heading, 0, "°"));
+    put("launch-heading-target", fmt(cmd.targetHeading, 0, "°"));
+    setTone("launch-heading", errorTone(angleError(t.heading, cmd.targetHeading), 2, 8));
+    put("launch-roll", fmt(t.roll, 1, "°"));
+    put("launch-roll-target", fmt(cmd.targetRoll, 1, "°"));
+    setTone("launch-roll", errorTone(angleError(t.roll, cmd.targetRoll), 2, 8));
+    put("launch-aoa", fmt(t.angleOfAttack, 1, "°"));
+    put("launch-aoa-target", fmt(cmd.targetAoA, 1, "°"));
+    setTone("launch-aoa", errorTone(angleError(t.angleOfAttack, cmd.targetAoA), 1, 3));
+
+    put("launch-ap", distance(t.apoapsisAltitude));
+    put("launch-ap-note", finite(t.timeToApoapsis) ? `T− ${clockText(t.timeToApoapsis)}` : "—");
+    put("launch-pe", distance(t.periapsisAltitude));
+    const pe = finite(t.periapsisAltitude) ? n(t.periapsisAltitude) : null;
+    put("launch-pe-note", pe === null ? "—" : pe < 0 ? "SUBORBITAL" : pe < KERBIN_ATMOSPHERE_M ? "IN ATMOSPHERE" : "CLEAR");
+    setTone("launch-pe", pe === null ? "" : pe >= KERBIN_ATMOSPHERE_M ? "good" : "warn");
+    put("launch-orbit-speed", speed(t.orbitalSpeed));
+    put("launch-ecc", fmt(t.eccentricity, 3, ""));
+
+    put("launch-throttle", percent(t.throttle));
+    put("launch-throttle-target", percent(cmd.targetThrottle));
+    put("launch-thrust", kilonewtons(t.availableThrust));
+    put("launch-thrust-actual", finite(t.currentThrust) ? `ACT ${kilonewtons(t.currentThrust)}` : "—");
+    put("launch-isp", fmt(t.specificImpulse, 0, " s"));
+    put("launch-mass", finite(t.mass) ? `${(n(t.mass) / 1000).toFixed(1)} t` : "—");
+  }
+
   function drawLaunchAltitude() {
     if (!document.body.classList.contains("launch-page")) return;
     const canvas = $("launch-altitude-chart"), ctx = canvas.getContext("2d");
     const { width, height } = resizeCanvas(canvas, ctx);
     ctx.clearRect(0, 0, width, height);
-    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut) && finite(p.altitude ?? p.meanAltitude));
-    ctx.font = "11px sans-serif";
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.fillStyle = "#899fb5";
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut) && finite(p.altitude ?? p.meanAltitude));
     if (points.length < 2) {
-      ctx.fillText("Waiting for altitude history…", 24, height / 2);
+      ctx.fillText("Waiting for altitude history…", 16, height / 2);
       return;
     }
+    const altitudeOf = (p) => Math.max(0, n(p.altitude ?? p.meanAltitude));
+    const apoapsis = finite(snapshot?.telemetry?.apoapsisAltitude) ? n(snapshot.telemetry.apoapsisAltitude) : null;
     const start = n(points[0].ut), span = Math.max(1, n(points[points.length - 1].ut) - start);
-    const maxAlt = Math.max(1000, ...points.map(p => n(p.altitude ?? p.meanAltitude)));
-    const left = 65, right = width - 24, top = 24, bottom = height - 35;
-    ctx.strokeStyle = "#28415c";
+    // Round the vertical scale up to a whole tick step so the top gridline clears the highest sample and the apoapsis.
+    const highest = Math.max(1000, ...points.map(altitudeOf), apoapsis !== null && apoapsis > 0 ? apoapsis : 0);
+    const topAltitude = niceMapDistance(highest / 4) * 4;
+    const left = 58, right = width - 14, top = 12, bottom = height - 24;
+    const xOf = (ut) => left + (ut - start) / span * (right - left);
+    const yOf = (altitude) => bottom - altitude / topAltitude * (bottom - top);
+
+    ctx.strokeStyle = "#28415c"; ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
-      const y = bottom - (bottom - top) * i / 4;
+      const altitude = topAltitude * i / 4, y = yOf(altitude);
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
-      ctx.fillText((maxAlt * i / 4000).toFixed(1) + " km", 8, y + 4);
-      ctx.fillText(Math.round(span * i / 4) + " s", left + (right - left) * i / 4 - 10, height - 10);
+      ctx.fillText(`${(altitude / 1000).toFixed(altitude >= 10000 ? 0 : 1)} km`, 6, y + 4);
+      ctx.fillText(clockText(span * i / 4), xOf(start + span * i / 4) - 12, height - 8);
     }
-    ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.beginPath();
-    points.forEach((p, i) => {
-      const x = left + (n(p.ut) - start) / span * (right - left);
-      const y = bottom - Math.max(0, n(p.altitude ?? p.meanAltitude)) / maxAlt * (bottom - top);
-      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
-    });
-    ctx.stroke();
+
+    const tracePath = () => {
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = xOf(n(p.ut)), y = yOf(altitudeOf(p));
+        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      });
+    };
+    const last = points[points.length - 1];
+    tracePath();
+    ctx.lineTo(xOf(n(last.ut)), bottom); ctx.lineTo(left, bottom); ctx.closePath();
+    const fill = ctx.createLinearGradient(0, top, 0, bottom);
+    fill.addColorStop(0, "rgba(102,216,239,.26)"); fill.addColorStop(1, "rgba(102,216,239,0)");
+    ctx.fillStyle = fill; ctx.fill();
+
+    if (apoapsis !== null && apoapsis > 0) {
+      const y = yOf(apoapsis);
+      ctx.save();
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = "#ff9b52"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#ff9b52";
+      ctx.fillText(`AP ${(apoapsis / 1000).toFixed(1)} km`, right - 92, y - 6);
+    }
+
+    tracePath();
+    ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#eef2f4";
+    ctx.beginPath(); ctx.arc(xOf(n(last.ut)), yOf(altitudeOf(last)), 3.5, 0, Math.PI * 2); ctx.fill();
   }
 
   function drawLaunchMap() {
     const { width, height } = resizeCanvas(map, mapCtx);
+    if (!focusMapOnFlight(width, height)) clampMapView(width, height);
     mapCtx.fillStyle = "#0b1726"; mapCtx.fillRect(0, 0, width, height);
     if (!snapshot) return;
-    drawWrappedKerbin(width, height);
-    const path = displayableGuidanceTrajectory(snapshot);
+    // Same zoom/offset transform as the landing map, so pan, zoom and focus apply to the ascent view.
+    mapCtx.save();
+    mapCtx.translate(width / 2 + mapView.offsetX, height / 2 + mapView.offsetY);
+    mapCtx.scale(mapView.zoom, mapView.zoom);
+    mapCtx.translate(-width / 2, -height / 2);
+    if (kerbin.complete && kerbin.naturalWidth > 0) {
+      mapCtx.globalAlpha = .72;
+      drawWrappedKerbin(width, height);
+      mapCtx.globalAlpha = 1;
+    }
+    drawAdaptiveGrid(width, height);
+    mapCtx.restore();
+
     const planLabel = $("map-plan-label");
     if (planLabel) planLabel.textContent = mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
-    drawPath(path, width, height, "#ff9b52", 2.8);
-    drawPath(snapshot.actualTrajectory || [], width, height, "#66d8ef", 2);
-    drawShuttleMapIndicator(snapshot.telemetry || {}, width, height, { cyan: "#66d8ef", green: "#72f19a", orange: "#ff9b52", text: "#eef2f4" });
+    const c = C();
+    drawPath(displayableGuidanceTrajectory(snapshot), width, height, c.orange, 2.8, [], 1.4, 1);
+    drawPath(snapshot.actualTrajectory || [], width, height, c.cyan, 2, [], 1.8, .9);
+    const site = snapshot.site || {};
+    if (finite(site.latitude) && finite(site.longitude)) drawEndpointMarker(site, width, height, c.orange, "KSC", snapshot.telemetry?.ut);
+    drawShuttleMapIndicator(snapshot.telemetry || {}, width, height, { cyan: c.cyan, green: c.green, orange: c.orange, text: c.text });
+  }
+
+  // Pan, zoom and resize paths call this so the open page keeps its own map.
+  function refreshMap() {
+    if (document.body.classList.contains("launch-page")) drawLaunchMap();
+    else drawMap();
   }
 
   function render() {
@@ -2428,7 +2561,7 @@
         clampMapView();
       }
       if (pinchDistance > 0) zoomMapAt(center.x, center.y, mapView.zoom * distance / pinchDistance);
-      else drawMap();
+      else refreshMap();
       pinchDistance = distance;
       pinchCenter = center;
       return;
@@ -2438,7 +2571,7 @@
       mapView.offsetY += point.y - mapDragPoint.y;
       clampMapView();
       mapDragPoint = point;
-      drawMap();
+      refreshMap();
     }
   });
 
@@ -2504,9 +2637,9 @@
     else if (archiveReplay.active) showReplayFrame(archiveReplay.index);
   });
   const resizeObserver = new ResizeObserver(render);
-  resizeObserver.observe(nav); resizeObserver.observe(map);
-  window.addEventListener("resize", () => { clampMapView(); drawMap(); });
-  kerbin.addEventListener("load", drawMap);
+  resizeObserver.observe(nav); resizeObserver.observe(map); resizeObserver.observe($("launch-altitude-chart"));
+  window.addEventListener("resize", () => { clampMapView(); render(); });
+  kerbin.addEventListener("load", refreshMap);
   window.addEventListener("visibilitychange", () => {
     if (!document.hidden && !eventSource) connect();
     if (scene3dViewer) scene3dViewer.setVisible(!document.hidden && !scene3dPanel.hidden);

@@ -480,20 +480,69 @@ body.replay-mode .playback-shell{border-color:rgba(102,216,239,.24)}
 .launch-panel[hidden] { display: none; }
 body.launch-page .telemetry-panel, body.launch-page .guidance-panel { display: none; }
 
-/* Dedicated ascent console: trajectory first, instruments second. */
+/* Launch console: status and instruments first, then the ground track and navball. */
 body.launch-page { background: #070f1c; }
-body.launch-page .grid { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); grid-template-areas: "map map" "launch nav"; gap: 16px; padding-top: 16px; }
-body.launch-page .panel { background: #101e30; border-color: #28415c; border-radius: 4px; }
-body.launch-page .map-wrap { height: auto; aspect-ratio: 2 / 1; min-height: 0; }
-body.launch-page .nav-wrap { height: 360px; }
-body.launch-page .map-strip .legend, body.launch-page .map-footer, body.launch-page .scene3d-panel { display: none; }
-body.launch-page .map-strip::before { content: "ASCENT GROUND TRACK"; color: #66d8ef; font-weight: 700; }
+body.launch-page .grid { grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); grid-template-areas: "launch launch" "map nav"; gap: 12px; padding-top: 12px; }
+body.launch-page .panel { background: #101e30; border-color: #28415c; border-radius: 6px; }
 body.launch-page .launch-panel { grid-area: launch; }
-body.launch-page .launch-panel .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-body.launch-page .launch-panel .metric-grid b { font-size: 24px; color: #66d8ef; }
-.launch-chart-head { display: flex; justify-content: space-between; gap: 12px; padding: 20px 20px 0; font-size: 11px; letter-spacing: .08em; }
-#launch-altitude-chart { display: block; width: 100%; height: 240px; }
+body.launch-page .map-wrap { height: auto; aspect-ratio: 16 / 10; min-height: 0; }
+body.launch-page .nav-wrap { height: 340px; }
+body.launch-page .map-strip { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; }
+body.launch-page .map-strip::before { content: "ASCENT GROUND TRACK"; color: var(--cyan); font-weight: 700; }
+body.launch-page .map-strip .legend { display: flex; justify-content: flex-start; }
+body.launch-page .map-strip .legend .orbit-only { display: none !important; }
+body.launch-page .map-footer, body.launch-page .scene3d-panel { display: none; }
+
+.launch-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid #28415c; }
+.launch-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.launch-kicker { color: var(--cyan); font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.launch-clock { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; letter-spacing: .04em; }
+.launch-status { font-size: 12px; line-height: 1.4; min-width: 0; }
+.launch-alerts { padding: 0 12px; }
+.launch-alert { margin-top: 10px; padding: 8px 12px; border: 1px solid; border-radius: 6px; font-size: 12px; line-height: 1.4; }
+.launch-alert.warn { color: var(--orange); border-color: rgba(255,155,82,.38); background: rgba(255,155,82,.08); }
+.launch-alert.bad { color: var(--red); border-color: rgba(255,107,104,.4); background: rgba(255,107,104,.08); }
+.launch-hero { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 12px; border-top: 1px solid #28415c; border-bottom: 1px solid #28415c; }
+.hero-card { min-width: 0; padding: 14px 16px 13px; border-right: 1px solid #28415c; }
+.hero-card:last-child { border-right: 0; }
+.hero-card b { display: block; overflow: hidden; color: var(--cyan); font-size: 34px; font-weight: 650; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+.hero-sub { display: block; margin-top: 6px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+
+.launch-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); gap: 12px; padding: 12px; }
+.launch-chart { min-width: 0; background: #0b1726; border: 1px solid #28415c; border-radius: 6px; overflow: hidden; }
+.launch-chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 12px 0; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.launch-legend { display: flex; align-items: center; gap: 8px; }
+.launch-legend .swatch.apo { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--orange); }
+#launch-altitude-chart { display: block; width: 100%; height: 260px; }
+
+.launch-side { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.launch-card { min-width: 0; padding: 10px 12px 6px; background: #0b1726; border: 1px solid #28415c; border-radius: 6px; }
+.launch-card h3 { margin: 0 0 2px; color: var(--cyan); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+.launch-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); align-items: baseline; gap: 6px; min-height: 28px; padding: 4px 0; border-top: 1px solid rgba(40,65,92,.5); }
+.launch-row-head { min-height: 18px; padding: 0; border-top: 0; color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: .08em; }
+.launch-row-head span:not(:first-child) { text-align: right; }
+.launch-row b { overflow: hidden; font-size: 15px; font-weight: 650; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.launch-k { color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .06em; }
+.launch-target { overflow: hidden; color: var(--muted); font-size: 11px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (max-width: 900px) {
-  body.launch-page .grid { grid-template-columns: 1fr; grid-template-areas: "map" "launch" "nav"; }
-  body.launch-page .launch-panel .metric-grid { grid-template-columns: repeat(3, 1fr); }
+  body.launch-page .grid { grid-template-columns: 1fr; grid-template-areas: "launch" "map" "nav"; }
+  body.launch-page .nav-wrap { height: 300px; }
+  body.launch-page .map-wrap { aspect-ratio: 16 / 11; }
+  .launch-body { grid-template-columns: 1fr; }
+  .launch-side { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  body.launch-page .map-strip { grid-template-columns: minmax(0, 1fr); }
+  body.launch-page .map-strip .legend { flex-wrap: wrap; gap: 6px 10px; }
+  .launch-head { padding: 10px 12px; }
+  .launch-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-card:nth-child(2n) { border-right: 0; }
+  .hero-card:nth-child(-n+2) { border-bottom: 1px solid #28415c; }
+  .hero-card { padding: 12px; }
+  .hero-card b { font-size: 26px; }
+  .launch-body { padding: 10px; }
+  .launch-side { grid-template-columns: 1fr; }
+  #launch-altitude-chart { height: 210px; }
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="/styles.css?v=launch-views-map-plan-1">
+  <link rel="stylesheet" href="/styles.css?v=launch-console-1">
 </head>
 <body>
   <nav class="telemetry-pages" aria-label="Telemetry views">
@@ -131,27 +131,75 @@
     </section>
 
     <section id="launch-panel" class="panel launch-panel" aria-label="Launching telemetry" hidden>
-      <div class="guidance-head">
-        <div class="mode-line"><span>LAUNCHING / LIVE STATUS</span><span id="launch-situation" class="chip">—</span></div>
-        <div id="launch-status" class="muted">Waiting for telemetry</div>
+      <header class="launch-head">
+        <div class="launch-title">
+          <span class="launch-kicker">LAUNCH · LIVE STATUS</span>
+          <span id="launch-situation" class="chip">—</span>
+          <span id="launch-clock" class="launch-clock" title="Elapsed since the first recorded ascent sample">ASCENT —</span>
+        </div>
+        <div id="launch-status" class="launch-status muted">Waiting for telemetry</div>
+      </header>
+      <div class="launch-alerts" role="status" aria-live="polite">
+        <div id="launch-warning" class="launch-alert warn" hidden></div>
+        <div id="launch-error" class="launch-alert bad" hidden></div>
       </div>
-      <div class="metric-grid">
-        <div><small>ALT MSL</small><b id="launch-altitude">—</b></div>
-        <div><small>RADAR</small><b id="launch-radar">—</b></div>
-        <div><small>SURFACE V</small><b id="launch-speed">—</b></div>
-        <div><small>VERT</small><b id="launch-vertical">—</b></div>
-        <div><small>MACH</small><b id="launch-mach">—</b></div>
-        <div><small>Q</small><b id="launch-pressure">—</b></div>
-        <div><small>G</small><b id="launch-g">—</b></div>
-        <div><small>ORBIT V</small><b id="launch-orbit-speed">—</b></div>
-        <div><small>APOAPSIS</small><b id="launch-ap">—</b></div>
-        <div><small>PERIAPSIS</small><b id="launch-pe">—</b></div>
-        <div><small>MASS</small><b id="launch-mass">—</b></div>
-        <div><small>AVAILABLE THRUST</small><b id="launch-thrust">—</b></div>
+      <div class="launch-hero">
+        <article class="hero-card">
+          <small>ALTITUDE MSL</small>
+          <b id="launch-altitude">—</b>
+          <span id="launch-radar" class="hero-sub">RADAR —</span>
+        </article>
+        <article class="hero-card">
+          <small>SURFACE VELOCITY</small>
+          <b id="launch-speed">—</b>
+          <span id="launch-vertical" class="hero-sub">VERTICAL —</span>
+        </article>
+        <article class="hero-card">
+          <small>MACH</small>
+          <b id="launch-mach">—</b>
+          <span id="launch-q" class="hero-sub">Q —</span>
+        </article>
+        <article class="hero-card">
+          <small>THRUST / WEIGHT</small>
+          <b id="launch-twr">—</b>
+          <span id="launch-twr-sub" class="hero-sub">G — · — kN</span>
+        </article>
       </div>
-      <div class="launch-chart-head"><span>ALTITUDE HISTORY</span><span class="muted">Actual trajectory · km / elapsed seconds</span></div>
-      <canvas id="launch-altitude-chart" aria-label="Altitude versus elapsed time" role="img"></canvas>
-      <div id="launch-warning" class="launch-note"></div>
+      <div class="launch-body">
+        <div class="launch-chart">
+          <div class="launch-chart-head">
+            <span>ALTITUDE HISTORY</span>
+            <span class="launch-legend"><i class="swatch actual"></i>ALTITUDE<i class="swatch apo"></i>APOAPSIS</span>
+          </div>
+          <canvas id="launch-altitude-chart" aria-label="Altitude versus elapsed time" role="img"></canvas>
+        </div>
+        <div class="launch-side">
+          <section class="launch-card" aria-label="Attitude">
+            <h3>ATTITUDE</h3>
+            <div class="launch-row launch-row-head"><span></span><span>ACTUAL</span><span>TARGET</span></div>
+            <div class="launch-row"><span class="launch-k">PITCH</span><b id="launch-pitch">—</b><span id="launch-pitch-target" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">HEADING</span><b id="launch-heading">—</b><span id="launch-heading-target" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">ROLL</span><b id="launch-roll">—</b><span id="launch-roll-target" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">AOA</span><b id="launch-aoa">—</b><span id="launch-aoa-target" class="launch-target">—</span></div>
+          </section>
+          <section class="launch-card" aria-label="Orbit">
+            <h3>ORBIT</h3>
+            <div class="launch-row launch-row-head"><span></span><span>VALUE</span><span>NOTE</span></div>
+            <div class="launch-row"><span class="launch-k">APOAPSIS</span><b id="launch-ap">—</b><span id="launch-ap-note" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">PERIAPSIS</span><b id="launch-pe">—</b><span id="launch-pe-note" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">ORBIT V</span><b id="launch-orbit-speed">—</b><span class="launch-target"></span></div>
+            <div class="launch-row"><span class="launch-k">ECCENTRICITY</span><b id="launch-ecc">—</b><span class="launch-target"></span></div>
+          </section>
+          <section class="launch-card" aria-label="Vehicle">
+            <h3>VEHICLE</h3>
+            <div class="launch-row launch-row-head"><span></span><span>VALUE</span><span>TARGET</span></div>
+            <div class="launch-row"><span class="launch-k">THROTTLE</span><b id="launch-throttle">—</b><span id="launch-throttle-target" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">THRUST</span><b id="launch-thrust">—</b><span id="launch-thrust-actual" class="launch-target">—</span></div>
+            <div class="launch-row"><span class="launch-k">ISP</span><b id="launch-isp">—</b><span class="launch-target"></span></div>
+            <div class="launch-row"><span class="launch-k">MASS</span><b id="launch-mass">—</b><span class="launch-target"></span></div>
+          </section>
+        </div>
+      </div>
       <div class="launch-note">Display only — launch controls remain in KSP.</div>
     </section>
   </main>
@@ -204,6 +252,6 @@
   </aside>
 
   <script src="/runway-geometry.js?v=20260924-ksc-runway-1"></script>
-  <script src="/app.js?v=launch-views-authoritative-route-5"></script>
+  <script src="/app.js?v=launch-console-1"></script>
 </body>
 </html>
