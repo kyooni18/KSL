@@ -499,6 +499,15 @@ class _LandingState:
         telemetry = snap.get("telemetry") or {}
         altitude, sink = telemetry.get("meanAltitude"), telemetry.get("verticalSpeed")
         if self.engaged and isinstance(altitude, (int, float)) and math.isfinite(altitude):
+            # A resumed descent can begin below an earlier checkpoint. That
+            # checkpoint was never crossed by this controller; retire it without
+            # inventing a save, so lower thresholds remain reachable.
+            if (self.last_descent_altitude is None and isinstance(sink, (int, float))
+                    and math.isfinite(sink) and sink < -5):
+                while self.descent_thresholds and altitude <= self.descent_thresholds[0]:
+                    target = self.descent_thresholds.pop(0)
+                    ctx.log.log(f"Descending checkpoint at {target / 1000.0:g} km already passed at "
+                                f"guidance start {altitude / 1000.0:.2f} km; not backfilled", "warning")
             # A crossing, not simply being below a target when reentry starts.
             if self.last_descent_altitude is not None and isinstance(sink, (int, float)) and sink < -5:
                 while self.descent_thresholds and self.last_descent_altitude > self.descent_thresholds[0] >= altitude:

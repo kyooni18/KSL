@@ -82,6 +82,38 @@ class DescentCheckpointTests(TestCase):
         self.assertEqual(backend.calls, [])
         self.assertTrue(any("missed" in msg for _level, msg in log.messages))
 
+    def test_resume_below_first_threshold_keeps_lower_checkpoint_armed(self):
+        log = FakeLog()
+        state = _LandingState(SimpleNamespace(config=load_config("sts-polar"), log=log,
+                                               advance=lambda phase: None))
+        state.engaged = True
+        backend = FakeBackend()
+        for altitude in (70600, 46000, 44920, 44800):
+            state.on_snapshot({"phase": "MM304 Entry",
+                               "telemetry": {"meanAltitude": altitude, "verticalSpeed": -80,
+                                             "ut": altitude / 1000}})
+            state.flush(backend)
+        self.assertEqual(len(backend.calls), 1)
+        self.assertTrue(backend.calls[0][1]["name"].endswith("-descent-45km"))
+        self.assertEqual(round(log.saved_files["descent-checkpoints.json"][0]["measuredAltitude"]), 44920)
+        self.assertTrue(any("72 km already passed" in msg and "not backfilled" in msg
+                            for _level, msg in log.messages))
+        self.assertFalse(any("72km" in e.message for e in log.events if e.kind == "checkpoint"))
+
+    def test_resume_below_all_thresholds_does_not_fabricate_saves(self):
+        log = FakeLog()
+        state = _LandingState(SimpleNamespace(config=load_config("sts-polar"), log=log,
+                                               advance=lambda phase: None))
+        state.engaged = True
+        backend = FakeBackend()
+        for altitude in (44000, 42500):
+            state.on_snapshot({"phase": "MM304 Entry",
+                               "telemetry": {"meanAltitude": altitude, "verticalSpeed": -50,
+                                             "ut": altitude / 1000}})
+            state.flush(backend)
+        self.assertEqual(backend.calls, [])
+        self.assertEqual(sum("not backfilled" in msg for _level, msg in log.messages), 2)
+
     def test_invalid_altitude_configuration_rejected(self):
         config = load_config("sts-polar")
         config.data["checkpoints"]["kspSaveOnDescendingAltitudesKm"] = ["NaN"]
