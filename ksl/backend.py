@@ -207,19 +207,26 @@ class BackendClient:
 
 
 def validate_plan_qualification(plan: dict[str, Any], require_strict: bool,
-                                allow_unqualified: bool = False) -> str | None:
-    """Keep orbital entry admission distinct from optional full-route certification.
+                                allow_unqualified: bool = True) -> str | None:
+    """Report prediction quality without conflating it with execution ability.
 
-    Raises when execution must be blocked; returns a warning string when an
-    unqualified plan is explicitly allowed to continue.
+    A real candidate plan may fly with zero robustness passes or no native
+    Final proof. These are diagnostic warnings, not a reason to terminate a
+    flight attempt. An explicit strict policy remains an opt-in block; absent
+    plans and an explicitly disabled warning policy still fail closed.
     """
+    if not plan:
+        raise BackendError("Deorbit planner produced no executable candidate")
     if plan.get("executionQualified") is not True:
-        if not require_strict and allow_unqualified:
-            return ("Deorbit plan failed entry-stage qualification; continuing with the "
-                    "available plan under authorized warning policy")
-        raise BackendError("Deorbit plan failed entry-stage qualification; execution is blocked")
-    if require_strict and plan.get("targetCaptureAchieved") is not True:
-        raise BackendError("Deorbit plan failed required strict full-route qualification; execution is blocked")
+        if require_strict or not allow_unqualified:
+            raise BackendError("Deorbit plan failed entry-stage qualification; execution is blocked by explicit policy")
+        return ("Deorbit entry-stage qualification failed; proceeding with the best "
+                "available physical candidate in degraded guidance mode (not certified)")
+    if plan.get("targetCaptureAchieved") is not True:
+        if require_strict:
+            raise BackendError("Deorbit plan failed required strict full-route qualification; execution is blocked")
+        return ("Deorbit has no certified MM305/Final runway route; proceeding with "
+                "entry-stage-qualified guidance and in-flight recovery attempts")
     return None
 
 

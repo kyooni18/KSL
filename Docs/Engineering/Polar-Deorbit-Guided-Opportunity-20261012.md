@@ -49,6 +49,18 @@ The existing production deorbit witness stops deliberately at the MM304-to-MM305
 
 Live runtime validation is still required for: (1) full attitude acquisition before the finite retro burn; (2) matching predicted vs realized 30/25-km kinematics under the new timing/taper; (3) downstream Final delivery. Do not infer any of these from an offline improvement alone.
 
+## 2026-10-13 operational best-effort policy update
+
+The initial strict mission default described above was reversed by user
+instruction: **validation failures are diagnostics, not automatic mission
+termination**. `Configuration/missions/sts-polar.json` now sets
+`landing.requireStrictPlan=false`, and the KSL mission controller attempts
+an existing candidate despite failed entry/terminal confidence checks.
+Structural-inventory probing also becomes warning-only at mission startup.
+Native bounded guidance/replanning and physical outcome detection remain
+unchanged; failure is not falsely reported as certification success.
+See [KSL-Best-Effort-Landing-20261013.md](KSL-Best-Effort-Landing-20261013.md).
+
 ## 2026-10-13 native-route integration
 
 The next iteration integrated replay-validated native MM305/HAC/Final continuation and strict Final-stage proof. See [Polar-Native-Terminal-Integration-20261013.md](Polar-Native-Terminal-Integration-20261013.md). Both frozen polar-orbit fixtures still fail certified MM305 energy and 0/15 strict scenarios; the new model proves that a committed HAC route is not equivalent to Final approach arrival.

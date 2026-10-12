@@ -1113,7 +1113,7 @@ def validate_plan_qualification(plan: dict[str, Any], require_strict: bool) -> N
     """Keep orbital entry admission distinct from optional full-route certification."""
     warning = shared_validate_plan_qualification(
         plan, require_strict,
-        allow_unqualified=os.environ.get("KSP_LANDER_CONTINUE_UNQUALIFIED") == "1")
+        allow_unqualified=os.environ.get("KSP_LANDER_CONTINUE_UNQUALIFIED", "1") != "0")
     if warning:
         print(f"WARNING: {warning}", flush=True)
 
@@ -1638,9 +1638,10 @@ def main() -> int:
             validate_plan_qualification(plan, args.require_strict)
             if not args.live:
                 print(
-                    "plan produced: entry-stage qualification passed; "
+                    "plan produced: entry-stage qualification="
+                    f"{bool(plan.get('executionQualified'))}; "
                     f"strict full-route qualification={bool(plan.get('targetCaptureAchieved'))}; "
-                    "no live flight has been validated",
+                    "unqualified plans are diagnostic, not successful landings",
                     flush=True,
                 )
                 return 0

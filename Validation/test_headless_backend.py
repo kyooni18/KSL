@@ -78,9 +78,17 @@ class PlanAdmissionTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 flight.validate_plan_qualification(plan, True)
 
-    def test_unqualified_plan_cannot_be_called_validated(self):
-        with self.assertRaisesRegex(RuntimeError, "entry-stage"):
+    def test_unqualified_plan_continues_with_visible_warning_by_default(self):
+        with patch.dict(flight.os.environ, {}, clear=False), \
+             patch("builtins.print") as printer:
+            flight.os.environ.pop("KSP_LANDER_CONTINUE_UNQUALIFIED", None)
             flight.validate_plan_qualification({"executionQualified": False}, False)
+        self.assertIn("not certified", printer.call_args.args[0])
+
+    def test_disabling_best_effort_is_an_explicit_gate(self):
+        with patch.dict(flight.os.environ, {"KSP_LANDER_CONTINUE_UNQUALIFIED": "0"}):
+            with self.assertRaisesRegex(RuntimeError, "entry-stage"):
+                flight.validate_plan_qualification({"executionQualified": False}, False)
 
     def test_stage_qualified_plan_is_distinct_from_strict_capture(self):
         plan = {"executionQualified": True, "targetCaptureAchieved": False}

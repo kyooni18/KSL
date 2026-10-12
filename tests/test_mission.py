@@ -67,20 +67,32 @@ class PhaseModelTests(unittest.TestCase):
 
 
 class ConfigTests(unittest.TestCase):
-    def test_polar_landing_blocks_uncertified_overflight_by_default(self):
+    def test_polar_landing_attempts_unqualified_guidance_with_warnings(self):
         config = load_config("sts-polar")
-        self.assertTrue(config["landing"]["requireStrictPlan"])
-        # The fourth polar flight needed ~35s after warp exit to acquire
-        # retrograde; the former 12s coast lead systematically delayed ignition.
+        self.assertFalse(config["landing"]["requireStrictPlan"])
+        # Flight 4 needed ~35s after nominal burn start for retrograde acquisition.
         self.assertGreaterEqual(config.backend_configuration()["guidance"]
                                 ["minimumPlanningLeadTime"], 60.0)
-        degraded = {"executionQualified": True, "targetCaptureAchieved": False}
-        with self.assertRaisesRegex(BackendError, "strict full-route"):
-            validate_plan_qualification(degraded, config["landing"]["requireStrictPlan"])
+        for degraded in (
+                {"executionQualified": True, "targetCaptureAchieved": False},
+                {"executionQualified": False, "targetCaptureAchieved": False},
+                {"executionQualified": None, "targetCaptureAchieved": None},
+        ):
+            with self.subTest(plan=degraded):
+                warning = validate_plan_qualification(degraded, False)
+                self.assertIn("not certified" if not degraded.get("executionQualified")
+                              else "no certified", warning)
+                self.assertFalse(degraded.get("targetCaptureAchieved"))
         self.assertIsNone(validate_plan_qualification(
-            {"executionQualified": True, "targetCaptureAchieved": True}, True))
-        self.assertFalse(load_config("sts-polar", ["landing.requireStrictPlan=false"])
-                         ["landing"]["requireStrictPlan"])
+            {"executionQualified": True, "targetCaptureAchieved": True}, False))
+        # Strict certification is an *explicit* opt-in for other campaigns.
+        strict = load_config("sts-polar", ["landing.requireStrictPlan=true"])
+        self.assertTrue(strict["landing"]["requireStrictPlan"])
+        with self.assertRaisesRegex(BackendError, "strict full-route"):
+            validate_plan_qualification(
+                {"executionQualified": True, "targetCaptureAchieved": False}, True)
+        with self.assertRaisesRegex(BackendError, "no executable candidate"):
+            validate_plan_qualification({}, False)
 
     def test_polar_insertion_periapsis_may_be_inside_atmosphere(self):
         config = load_config('sts-polar')
@@ -216,6 +228,24 @@ class LandingProgramTests(ControllerTestCase):
         self.assertEqual(checkpoint["phase"], "final-approach")
         self.assertTrue(checkpoint["kspSave"].endswith("final-approach"))
         self.assertTrue(any(s.get("backendPhase") for s in read_telemetry(c.run_dir)))
+
+    def test_deorbit_proceeds_after_strict_qualification_failure(self):
+        for mode in ("unqualified-route", "unqualified-entry"):
+            with self.subTest(mode=mode):
+                c = self.controller(profile="sts-polar", mode="live", start=Phase.DEORBIT)
+                with mock.patch.object(programs, "BACKEND", FAKES / "fake_backend.py"), \
+                     mock.patch.object(programs, "probe_orbiter_integrity",
+                                       side_effect=programs.GuardError("partial wing inventory")), \
+                     mock.patch.dict("os.environ", {"FAKE_BACKEND_MODE": mode}):
+                    status = c.run()
+                self.assertEqual(status.state, "complete", status.status_message)
+                self.assertIn("deorbit", status.phase_history)
+                events = list(read_events(c.run_dir))
+                self.assertTrue(any("guidance-degraded" == e.kind for e in events))
+                self.assertTrue(any("partial wing inventory" in e.message for e in events))
+                plan = json.loads((c.run_dir / "deorbit-plan.json").read_text())
+                self.assertFalse(plan["targetCaptureAchieved"])
+                self.assertEqual(plan["robustnessPassed"], 0)
 
     def test_backend_fault_fails_mission(self):
         c, status = self.fly("fault")

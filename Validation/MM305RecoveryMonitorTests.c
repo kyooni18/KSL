@@ -61,6 +61,60 @@ static void test_uncommanded_energetic_reversals_still_trigger(void) {
     assert(g.attitude_recovery);
 }
 
+/* A failed terminal route/state condition is a recoverable warning while
+   the orbiter is airborne. It must not disengage the C pilot or force the
+   Python mission to stop; the next tick will try guidance again. */
+static void test_missing_terminal_route_attempts_bounded_recovery(void) {
+    LandingConfiguration cfg=landing_configuration_default();
+    cfg.site.latitude=cfg.site.longitude=0;
+    cfg.site.runway_heading=90;
+    cfg.site.allow_reciprocal_runway=false;
+    PlanetModel planet={.radius=600000.0,
+        .gravitational_parameter=3.5316e12,
+        .rotational_speed=0.000291571753452,
+        .north_axis={0,0,1},
+        .prime_meridian_at_epoch={1,0,0}};
+    GuidanceMachine g;
+    guidance_machine_init(&g);
+    g.automation_engaged=true;
+    g.terminal_glide_mode=true;
+    g.terminal_region_entered=true;
+    g.phase=PHASE_TAEM;
+    g.mm305_route_committed=true; /* invalid/stale, must release */
+    g.terminal_path_committed=true;
+    Telemetry t;
+    telemetry_init(&t);
+    t.ut=100;
+    t.latitude=0;
+    t.longitude=-0.05;
+    t.mean_altitude=20000;
+    t.radar_altitude=19930;
+    t.true_air_speed=t.horizontal_speed=t.surface_speed=220;
+    t.vertical_speed=-20;
+    t.heading=t.ground_track_heading=90;
+    t.flight_path_angle=-5;
+    t.mass=24000;
+    t.runway_along_track=-40000;
+    t.runway_cross_track=10000;
+    t.range_to_site=41000;
+    VehicleState state={.ut=100,.mass=24000,
+        .position={620000,0,0},.velocity={0,220,-20}};
+    AerodynamicModel aero={.lift_to_drag=3.0,
+        .ballistic_coefficient=650,.confidence=.6};
+    for(int tick=0;tick<2;tick++){
+        GuidanceResult result=guidance_update(&g,&t,&state,NULL,
+            &planet,aero,&cfg);
+        assert(result.phase==PHASE_TAEM);
+        assert(result.has_warning);
+        assert(result.command.target_throttle==0);
+        assert(isfinite(result.command.target_roll));
+        assert(g.automation_engaged&&!g.aborted);
+        assert(!g.mm305_route_committed&&!g.terminal_path_committed);
+        guidance_result_clear(&result);
+        t.ut+=0.1;state.ut+=0.1;
+    }
+}
+
 static void test_rejected_landing_brakes_then_terminates_failed(void) {
     LandingConfiguration cfg = landing_configuration_default();
     cfg.site.latitude = cfg.site.longitude = 0.0;
@@ -140,6 +194,7 @@ static void test_rollout_completion_uses_runway_bounds(void) {
 int main(void) {
     test_commanded_native_capture_is_not_recovery();
     test_uncommanded_energetic_reversals_still_trigger();
+    test_missing_terminal_route_attempts_bounded_recovery();
     test_rejected_landing_brakes_then_terminates_failed();
     test_rollout_completion_uses_runway_bounds();
     puts("MM305 recovery monitor tests passed.");

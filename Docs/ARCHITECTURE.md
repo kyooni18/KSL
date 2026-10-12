@@ -91,9 +91,13 @@ This mirrors the safety steps of the headless live harness:
 1. Start the backend with `KSP_LANDER_MODEL_PROFILE`. Wait for `ready`, send
    `updateConfiguration` (the profile's kRPC endpoint applied), then `connect`
    and wait for `connected`.
-2. From Deorbit: pause KSP through the independent guard, run `createPlan`,
-   resume. Require entry-stage qualification (and strict full-route capture if
-   `landing.requireStrictPlan`). Then `engage`.
+2. From Deorbit: keep the active KSP session available, run `createPlan`
+   using the native backend, and record separate entry-stage and full-route
+   qualification. By default an existing finite-burn candidate **engages under
+   warning even when both qualifications fail** (`sts-polar` uses
+   `landing.requireStrictPlan=false`). Explicit strict certification is an
+   opt-in policy for operators who want an admission block. Do not alter the
+   qualification bits to make a degraded attempt look certified.
    From MM304/MM305/Final: run the guard's `prepare-reentry` handoff (SAS off,
    zero throttle/thrust, 1× warp, all verified), then `engageReentry` /
    `engageFinalTest`.

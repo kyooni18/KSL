@@ -30,7 +30,7 @@ from typing import Any, Callable
 from .backend import BackendClient, BackendError, snapshot_summary, validate_plan_qualification
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
-from .kspguard import prepare_reentry_direct_control, probe_orbiter_integrity
+from .kspguard import GuardError, prepare_reentry_direct_control, probe_orbiter_integrity
 from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
@@ -337,8 +337,9 @@ class LandingProgram(Program):
                  f"configuration {landing['backendConfiguration']})",
                  f"landing: connect to kRPC {ctx.config['connection']['address']}:{ctx.config['connection']['rpcPort']}"]
         if start == Phase.DEORBIT:
-            steps += ["landing: pause KSP, createPlan (deorbit search), resume; require entry-stage qualification"
-                      + (" and strict full-route capture" if landing["requireStrictPlan"] else ""),
+            steps += ["landing: createPlan, record entry/terminal confidence; "
+                      + ("explicit strict mode" if landing["requireStrictPlan"]
+                         else "attempt best available plan under diagnostic warnings"),
                       "landing: engage -> coast, deorbit burn, MM304 entry, MM305 TAEM, final, flare, rollout"]
         else:
             steps += ["landing: verified direct-control handoff (SAS off, zero throttle, 1x warp)",
@@ -383,8 +384,15 @@ class LandingProgram(Program):
         if snap.get("connectionStatus") != "connected":
             raise ConnectionFailure(str(snap.get("lastError") or "native kRPC connection failed"))
         ctx.log.log("Landing backend connected to KSP")
-        integrity = probe_orbiter_integrity(env)
-        ctx.log.log(f"Orbiter structural inventory verified: {len(integrity['partNames'])} parts")
+        # Inventory is evidence, not the guidance authority. Missing wings or
+        # a temporarily unavailable second probe should not cancel a commanded
+        # KSP flight that the native backend can still steer. Keep the warning.
+        try:
+            integrity = probe_orbiter_integrity(env)
+        except (GuardError, TimeoutError, OSError) as exc:
+            ctx.log.log(f"Orbiter preflight warning: {exc}; proceeding with best-effort guidance", "warning")
+        else:
+            ctx.log.log(f"Orbiter structural inventory verified: {len(integrity['partNames'])} parts")
 
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)
@@ -400,9 +408,16 @@ class LandingProgram(Program):
             ctx.log.emit(Event("milestone", "deorbit plan: burn UT {:.1f}, dv {:.2f} m/s, executable={}, strict={}".format(
                 float(plan.get("burnUT") or 0), float(plan.get("deltaV") or 0),
                 bool(plan.get("executionQualified")), bool(plan.get("targetCaptureAchieved"))), data=plan))
-            warning = validate_plan_qualification(plan, bool(landing["requireStrictPlan"]))
+            warning = validate_plan_qualification(
+                plan, bool(landing["requireStrictPlan"]), allow_unqualified=True)
             if warning:
                 ctx.log.log(warning, "warning")
+                ctx.log.emit(Event("guidance-degraded", warning,
+                                   data={"executionQualified": plan.get("executionQualified"),
+                                         "targetCaptureAchieved": plan.get("targetCaptureAchieved"),
+                                         "terminalInletEnergyMargin": plan.get("terminalInletEnergyMargin")}))
+            # The native controller already accepts an unqualified *existing*
+            # plan with visible warnings and retains control/physical limits.
             client.engage("engage", timeout=120.0)
         else:
             payload = prepare_reentry_direct_control(env=env)

@@ -37,11 +37,24 @@ for line in sys.stdin:
         state["connectionStatus"] = "connected"
         snap()
         respond(rid)
-    elif method == "engageReentry":
-        state.update(phase="TAEM", automationEngaged=True)
+    elif method == "createPlan":
+        # A valid physical candidate may fail every forecast/capture gate.
+        # Script the actual backend plan response for end-to-end controller tests.
+        state.update(phase="Idle", automationEngaged=False)
+        plan = {"burnUT": 5000.0, "deltaV": 42.0,
+                "executionQualified": MODE != "unqualified-entry",
+                "targetCaptureAchieved": MODE not in ("unqualified-entry", "unqualified-route"),
+                "terminalInletEnergyMargin": -246415.0,
+                "robustnessScenarios": 15, "robustnessPassed": 0}
+        snap(plan=plan)
+        respond(rid)
+    elif method in ("engageReentry", "engage"):
+        state.update(phase="TAEM" if method == "engageReentry" else "Coast",
+                     automationEngaged=True)
         snap()
         respond(rid)
-        script = ["TAEM", "Final Approach", "Flare", "Touchdown", "Rollout",
+        script = (["Coast", "Deorbit Burn", "Entry"] if method == "engage" else []) + [
+                  "TAEM", "Final Approach", "Flare", "Touchdown", "Rollout",
                   "Fault" if MODE == "fault" else "Complete"]
         if MODE == "hold":
             script = ["TAEM"] * 400

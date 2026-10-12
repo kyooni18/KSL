@@ -104,3 +104,16 @@ CLanding/build/benchmark_deorbit_planning --fourth-polar-plan
 4. Only after offline qualification, run an explicitly authorized live KSP mission and compare the whole 70/50/30/25 km profile, propulsion timing, HAC acquisition and runway delivery.
 
 **Operational interpretation:** The native deorbit planner leaves `targetCaptureAchieved=false` for this orbit and never calls the recorded fourth-flight overflight a certified runway landing. The separate KSL orchestrator may be configured for strict admission (`landing.requireStrictPlan=true`) or a warning-only experimental attempt. A warning-only launch is **not a qualified production landing**; check the active mission policy explicitly before any live KSP operation.
+
+## Follow-up: nonfatal mission admission (2026-10-13)
+
+At the user's request, the flight attempt is no longer blocked by predicted
+route or energy certification failures. `sts-polar` now defaults to
+`landing.requireStrictPlan=false`. The C planner still reports failed
+qualification truthfully (`targetCaptureAchieved=false`, 0/15 stress passes);
+the Python mission controller logs a degraded-guidance warning and engages
+its best available native plan. Structural inventory probe failures do not
+prevent an attempt. Strict-plan blocking remains opt-in; disconnection,
+missing executable plans, explicit operator abort, and actual impact remain
+separate conditions. Details and a simulated end-to-end regression are in
+[KSL-Best-Effort-Landing-20261013.md](KSL-Best-Effort-Landing-20261013.md).
