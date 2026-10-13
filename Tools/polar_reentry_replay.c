@@ -4,7 +4,7 @@
  *
  * Usage: polar_reentry_replay FIXTURE OUTPUT_PREFIX MODE [ARG...]
  * MODE: vacuum | forces CSV | recorded CSV CLOCK FORCE | shadow LABEL [prior]
- *       candidate OFFSET_S NORMAL_DEG PERIAPSIS_M [prior]
+ *       candidate OFFSET_S NORMAL_DEG PERIAPSIS_M [prior] | plan [prior]
  * CLOCK: raw | kinematic; FORCE: prior | envelope | measured
  * "measured" is a dynamics reconstruction, never a predictive certificate.
  */
@@ -163,10 +163,21 @@ static void shadow(const char*label,bool prior){if(prior)load_history();load_ter
     DeorbitPlan plan={0};plan.predicted_post_burn_periapsis_altitude=predictor_postburn_periapsis(s,&planet);plan.execution_qualified=true;
     TerminalShadowOutcome outcome;EntryPrediction result=predictor_simulate_guidance_shadow_core(s,&t,&g,&plan,&planet,envelope.regimes[2],&envelope,&calibration,&config,4500,true,false,false,terminal,&outcome);prediction_summary(&result,s);entry_prediction_clear(&result);free(terminal);
 }
-static void candidate(double offset,double normal,double peri,bool prior){if(prior)load_history();load_terminal();Telemetry t;VehicleState initial=load_state(object(0,"orbitalSample"),&t);int p=object(0,"planParameters");double start=number(p,"burnUT")-.5*number(p,"estimatedBurnDuration")+offset;config.guidance.target_post_burn_periapsis_altitude=peri;/* Rebind policy after a scenario changes the orbital target. */char reason[512];if(!terminal_model_align_planet_frame(terminal,&planet,reason,sizeof(reason)))fail(reason);
+static void candidate(double offset,double normal,double peri,bool prior){if(prior)load_history();config.guidance.target_post_burn_periapsis_altitude=peri;load_terminal();Telemetry t;VehicleState initial=load_state(object(0,"orbitalSample"),&t);int p=object(0,"planParameters");double start=number(p,"burnUT")-.5*number(p,"estimatedBurnDuration")+offset;config.guidance.target_post_burn_periapsis_altitude=peri;/* Rebind policy after a scenario changes the orbital target. */char reason[512];if(!terminal_model_align_planet_frame(terminal,&planet,reason,sizeof(reason)))fail(reason);
     VehicleState coast=predictor_propagate_vacuum(initial,start,&planet,2.);double dv;DeorbitRejectReason reject;if(!deorbit_solve_target_periapsis(coast,normal,&planet,&config.guidance,t.available_thrust,&calibration,&dv,&reject)){printf("candidate offset=%.1f normal=%.4f peri=%.1f solved=0 reject=%d\n",offset,normal,peri,reject);free(terminal);return;}
     Candidate c={0};double delivered;c.after=retro_burn_scenario(coast,dv,t.available_thrust,config.guidance.deorbit_maximum_throttle,config.guidance.deorbit_throttle_ramp_duration,&planet,0,normal,&c.duration,&delivered,calibration.physics);c.dv=dv;c.burn_ut=start+.5*c.duration;c.peri=predictor_postburn_periapsis(c.after,&planet);c.burn_normal_angle=normal;
     printf("candidate offset=%.1f normal=%.4f peri=%.1f solved=1 dv=%.9f duration=%.9f state_elapsed=%.9f delivered=%.9f\n",offset,normal,peri,dv,c.duration,c.after.ut-coast.ut,delivered);EntryPrediction result=deorbit_executable_policy_witness(&c,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,&t,terminal,true,true);prediction_summary(&result,c.after);entry_prediction_clear(&result);free(terminal);
+}
+/* Full native deorbit planner from the recorded pre-plan orbit, then the
+   closed-loop executable witness for the selected burn (offline, read-only). */
+static void plan_mode(bool prior){if(prior)load_history();load_terminal();Telemetry t;VehicleState initial=load_state(object(0,"orbitalSample"),&t);
+    double r=vmag(initial.position),a=1/(2/r-vdot(initial.velocity,initial.velocity)/planet.gravitational_parameter),period=2*M_PI*sqrt(a*a*a/planet.gravitational_parameter);
+    DeorbitPlan out;memset(&out,0,sizeof(out));bool ok=deorbit_plan_create_with_terminal_model(&out,initial,period,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,t.available_thrust,&t,terminal);
+    printf("plan ok=%d burnUT=%.3f dv=%.4f normal=%.4f duration=%.3f taemDist=%.1f taemErr=%.1f closest=%.1f peri=%.1f nominal=%d robust=%d/%d inlet=%d route=%d final=%d exec=%d degraded=%d note=%s\n",ok,out.burn_ut,out.delta_v,out.burn_normal_angle,out.estimated_burn_duration,out.predicted_taem_distance,out.predicted_taem_range_error,out.predicted_closest_distance,out.predicted_post_burn_periapsis_altitude,out.nominal_capture_achieved,out.robustness_passed,out.robustness_scenarios,out.terminal_inlet_qualified,out.terminal_native_path_committed,out.terminal_final_approach_captured,out.execution_qualified,out.execution_degraded,out.note);
+    if(!ok){free(terminal);return;}
+    double start=out.burn_ut-.5*out.estimated_burn_duration;VehicleState coast=predictor_propagate_vacuum(initial,start,&planet,2.);
+    Candidate c={0};double delivered;c.after=retro_burn_scenario(coast,out.delta_v,t.available_thrust,config.guidance.deorbit_maximum_throttle,config.guidance.deorbit_throttle_ramp_duration,&planet,0,out.burn_normal_angle,&c.duration,&delivered,calibration.physics);c.dv=out.delta_v;c.burn_ut=start+.5*c.duration;c.peri=predictor_postburn_periapsis(c.after,&planet);c.burn_normal_angle=out.burn_normal_angle;
+    EntryPrediction result=deorbit_executable_policy_witness(&c,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,&t,terminal,true,true);prediction_summary(&result,c.after);entry_prediction_clear(&result);trajectory_clear(&out.trajectory);free(terminal);
 }
 int main(int argc,char**argv){if(argc<4)fail("usage: polar_reentry_replay FIXTURE OUTPUT_PREFIX MODE [ARGS]");output=argv[2];FILE*f=fopen(argv[1],"rb");if(!f)fail("fixture not found");if(fseek(f,0,SEEK_END))fail("fixture seek");long n=ftell(f);if(n<0||n>10000000)fail("fixture size");rewind(f);char*text=calloc((size_t)n+1,1);JsonToken*tokens=calloc(TOKEN_CAPACITY,sizeof(*tokens));if(!text||!tokens||fread(text,1,(size_t)n,f)!=(size_t)n)fail("fixture read");fclose(f);if(json_parse(text,tokens,TOKEN_CAPACITY,&doc)<0)fail("fixture JSON parse");config=landing_configuration_default();if(!landing_configuration_from_json(&config,&doc,object(0,"configuration")))fail("configuration parse");load_planet();setvbuf(stdout,NULL,_IOLBF,0);
     if(!strcmp(argv[3],"vacuum"))vacuum();
@@ -175,6 +186,7 @@ int main(int argc,char**argv){if(argc<4)fail("usage: polar_reentry_replay FIXTUR
     else if(!strcmp(argv[3],"forces")&&argc==5)forces(argv[4]);
     else if(!strcmp(argv[3],"recorded")&&argc==7)recorded(argv[4],argv[5],argv[6]);
     else if(!strcmp(argv[3],"shadow")&&argc>=5)shadow(argv[4],argc>5&&!strcmp(argv[5],"prior"));
+    else if(!strcmp(argv[3],"plan"))plan_mode(argc>4&&!strcmp(argv[4],"prior"));
     else if(!strcmp(argv[3],"candidate")&&argc>=7)candidate(strtod(argv[4],NULL),strtod(argv[5],NULL),strtod(argv[6],NULL),argc>7&&!strcmp(argv[7],"prior"));
     else fail("invalid mode/arguments");free(tokens);free(text);return 0;
 }
