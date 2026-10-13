@@ -124,6 +124,39 @@ it biases towards arriving at MM305 with excess energy.
 No AoA/bank/q/g/stall limit, admission gate or Final contract was relaxed. The improved RCS
 pre-entry control (`2495309`) and the payload-bay preflight (`b882aeb`) are unchanged.
 
-## Live verification
+## Live verification (2026-10-13, run `runs/20261013T1240Z-polar100-cells`)
 
-See the live-run section appended below.
+From a fresh copy of the 100 km polar orbit checkpoint, plain `bin/ksl land -p sts-polar --from
+deorbit`: payload bay closed automatically, burn 146969679.6 (42.2 m/s), MM304 → MM305 at
+25 km / 816 m/s / 53 km from the site, overhead loop and HAC, Final capture, flare, touchdown on
+runway 09 (≈740 m past the threshold, 9.7 m off centreline) and rollout to a stop.
+
+| Altitude | Live range | History-cell model | Fitted plant |
+|---|---|---|---|
+| 50 km | 529 km | 527 km | 522 km |
+| 40 km | 268 km | 242 km | 317 km |
+| 30 km | 118 km | 121 km | 193 km |
+| 25 km | 53 km | 80 km | 152 km |
+
+The history-cell model was right; the fitted plant would have rejected a landable burn.
+
+## Flare balloon over the runway (fixed)
+
+The landing floated: the sink was arrested at 8 m wheel height and the shuttle climbed at up to
++2.7 m/s to 14 m before settling, touching down at 51 m/s (target 75). Cause: the touchdown
+attitude floor (8° pitch, smoothstep 26 → 5 m) was capped at the *table* 1-g incidence, while the
+measured lift at that incidence was 1.1–1.3 g. Lift telemetry was fresh (0.26 s), not stale.
+**Fix:** once the sink is at or below the float sink, the floor is capped by the *measured* lift
+(Newton step on the table slope) at 0.97 g, so it shapes the attitude but can never hold the
+vehicle level or make it climb. Fully releasing the floor instead failed the touchdown-quality
+test (3.5 m/s sink); with the cap it lands at 1.63 m/s (baseline 1.47).
+
+## Runway altitude check
+
+KSC 09 is not level. Surface height from live altitude − radar (radar is centre-of-mass height;
+at main-gear contact the wheel-height geometry gives 0.01 m): 69.0 m near the threshold, 68.4 m
+at 375 m, 68.0 m in the touchdown zone, 67.7 m beyond 1 km; approach terrain 64.8 m. The
+configured 68.44 m is a fair average, but over the pavement guidance took `min(plane, radar)`,
+which under-read the wheel height by up to 0.8 m at contact. Over the runway it now uses the
+radar directly. The ground-contact latch tested `radar < 0.6 m`, which can never be true (radar
+reads 3.07 m with the wheels down); it now tests wheel height.
