@@ -166,6 +166,8 @@ Follow-up scan (read-only, same session): counted parts and PRELAUNCH entries in
 all predating the separatron change. None is confirmed to match the separatron craft at 521 003 kg. Loading one would
 fly a different craft under the same profile, so none was loaded.
 
+Third revert attempt (same session): `revert_to_launch()` with a 5 s wait, reading the active vessel before and after. Result: still `orbiting`, mass 26 015 kg, UT 642. kRPC reports success but the revert has no effect in this game state.
+
 Current KSP state at the time of this entry: scene `flight`, situation `orbiting`, paused, vessel `STS`
 (vesselId 9201), altitude 85.0 km, mass 26 014.6 kg. The 3-attempt campaign summary above stands.
 
