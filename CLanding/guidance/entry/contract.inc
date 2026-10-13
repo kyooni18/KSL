@@ -387,10 +387,20 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     {
         double headroom=fmax(0.0,v->maximum_angle_of_attack-alpha.target_aoa);
         bool need_drag=bank_at_limit&&structural_clear&&drag.drag_error_accel>0.0;
+        /* Mirror the deorbit predictor (entry_bank): incidence rises with the
+           measured drag deficit, alpha = trim + span*(1 - D/D_ref), not only
+           after bank saturates.  Trim incidence alone left the bay-closed
+           polar run (L/D 0.56 at Mach 6) with a +307 km surplus at 51 km that
+           bank could not shed in time; it passed 18 km from KSC at 35 km. */
+        double deficit=isfinite(measured_drag_accel)&&drag.reference_drag_accel>1e-6?
+            clampd(1.0-measured_drag_accel/drag.reference_drag_accel,0.0,1.0):0.0;
+        double proportional=structural_clear?
+            fmax(0.0,fmin(alpha_ceiling,v->maximum_angle_of_attack)-alpha.target_aoa)*deficit:0.0;
+        double goal=need_drag?headroom:fmin(headroom,proportional);
         double rate=1.0*fmax(0.0,dt);
-        g->entry_alpha_drag_boost=need_drag?
-            fmin(headroom,g->entry_alpha_drag_boost+rate):
-            fmax(0.0,g->entry_alpha_drag_boost-rate);
+        g->entry_alpha_drag_boost=g->entry_alpha_drag_boost<goal?
+            fmin(goal,g->entry_alpha_drag_boost+rate):
+            fmax(goal,g->entry_alpha_drag_boost-rate);
         g->entry_alpha_drag_boost=fmin(g->entry_alpha_drag_boost,headroom);
     }
     double aoa=clampd(alpha.target_aoa+g->entry_alpha_drag_boost,0.0,v->maximum_angle_of_attack);
