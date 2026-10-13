@@ -1,6 +1,7 @@
 """Important operation boundaries and explicit plan engagement (no KSP)."""
 import json
 import time
+import asyncio
 from pathlib import Path
 from unittest import mock
 
@@ -44,6 +45,25 @@ def test_directed_launch_and_explicit_orbit_are_independent(tmp_path):
     assert resume(orbit.run_dir)[1].value == "deorbit"
 
 
+def test_directed_launch_records_an_orbit_checkpoint_without_running_trim(tmp_path):
+    import sys
+    from ksl import programs
+    request = OperationRequest("launch", load_config(), "live")
+    with mock.patch("ksl.ownership.DATA_ROOT", tmp_path), \
+         mock.patch("ksl.krpc_link.probe", return_value={**vessel(), "situation": "pre_launch"}), \
+         mock.patch.object(programs.AscentProgram, "_pad_prep"), \
+         mock.patch.object(programs.AscentProgram, "_argv", return_value=[sys.executable, str(FAKE.with_name("fake_ascent.py"))]), \
+         mock.patch("ksl.krpc_link.save_game") as save:
+        controller = request.build(tmp_path)
+        assert controller.run().state == "holding"
+        assert controller.status.phase == "orbit"
+        save.assert_called_once()
+    config, start, checkpoint = resume(controller.run_dir)
+    assert start.value == "deorbit"
+    assert checkpoint["kspSave"]
+    assert not (controller.run_dir / "orbit-trim.log").exists()
+
+
 def test_context_and_live_ownership_are_checked(tmp_path):
     assert blocked_reason(BY_KEY["launch"], vessel(), "live")
     assert blocked_reason(BY_KEY["deorbit"], vessel(), "live") is None
@@ -65,6 +85,7 @@ def test_context_and_live_ownership_are_checked(tmp_path):
 def test_review_validity_rejects_changed_state_and_expired_windows():
     plan, ref = {"burnUT": 5000}, vessel()
     assert invalid_reason(plan, ref, ref, 60) is None
+    assert invalid_reason(plan, ref, {**ref, "argumentOfPeriapsis": 2}, 60) is None  # circular orbit
     for delta in ({"vesselId": 999}, {"periapsis": 84000}, {"ut": 4950},
                   {"ut": 0}, {"mass": 40000}, {"scene": "space_center"}):
         assert invalid_reason(plan, ref, {**ref, **delta}, 60)
@@ -118,3 +139,28 @@ def test_changed_orbit_rejects_execution_and_external_abort_releases_review(revi
     wait_for(lambda: commands.read(abort["id"])["state"] == "completed")
     assert controller.status.state == "aborted"
     assert "shutdown\n" in requests.read_text()
+
+
+def test_tui_executes_an_external_reviewed_plan(review_run, tmp_path):
+    from ksl.tui import KSLApp
+    controller, commands, info, requests = review_run
+
+    async def exercise():
+        app = KSLApp(runs_root=tmp_path)
+        async with app.run_test(size=(120, 45)) as pilot:
+            app.vessel_info = info
+            app.watch_run(controller.run_dir)
+            await pilot.pause()
+            assert app.controller is None  # a run started outside this UI
+            assert app.displayed_plan_revision == controller.status.plan_revision
+            assert "42.0 m/s" in str(app.query_one("#deorbit-plan").render())
+            app.query_one("#execute-plan").scroll_visible()
+            await pilot.pause()
+            assert await pilot.click("#execute-plan")
+            for _ in range(50):
+                await pilot.pause(0.1)
+                if controller.status.finished_at and not app.pending_commands:
+                    break
+            assert controller.status.state == "complete"
+            assert "completed" in str(app.query_one("#command-result").render())
+    asyncio.run(exercise())

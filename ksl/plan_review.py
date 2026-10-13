@@ -21,6 +21,13 @@ def invalid_reason(plan: dict[str, Any], reference: dict[str, Any], current: dic
         if not isinstance(a, (int, float)) or not isinstance(b, (int, float)) or not math.isfinite(a + b):
             return f"Cannot verify {key}; refresh and replan"
         delta = abs(b - a)
+        # The periapsis direction is undefined for a circular orbit, and the
+        # ascending node is undefined in an equatorial plane. Harmless angle
+        # noise there must not invalidate a physically unchanged orbit.
+        if key == "argumentOfPeriapsis" and reference.get("eccentricity", 1) < 0.0001:
+            continue
+        if key == "longitudeOfAscendingNode" and abs(math.sin(math.radians(reference.get("inclination", 90)))) < 0.001:
+            continue
         if key in ("longitudeOfAscendingNode", "argumentOfPeriapsis"):
             delta = abs((b - a + math.pi) % (2 * math.pi) - math.pi)
         if delta > tolerance:

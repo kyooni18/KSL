@@ -1,8 +1,9 @@
 """Python kRPC connections for the ascent side and mission bookkeeping.
 
-The landing path does not use this: the native backend owns its own C-Nano
-kRPC connection. Both are pointed at the same server through the mission
-profile's ``connection`` block (and ``KSL_KRPC_*`` for child processes).
+The native backend owns its C-Nano landing control connection. Python probes
+only read vessel identity and planning state when a deorbit plan is held for
+operator review. Both use the mission profile's ``connection`` block (and
+``KSL_KRPC_*`` for child processes).
 """
 
 from __future__ import annotations
@@ -84,7 +85,8 @@ def probe(config: MissionConfig) -> dict[str, Any]:
     """Read-only snapshot of the game state (no control writes)."""
     with connect(config, "ksl-probe") as conn:
         info: dict[str, Any] = {"scene": str(conn.krpc.current_game_scene).split(".")[-1],
-                                "paused": bool(conn.krpc.paused), "observedAt": time.time()}
+                                "paused": bool(conn.krpc.paused), "observedAt": time.time(),
+                                "connection": dict(config["connection"])}
         if info["scene"] == "flight":
             sc = conn.space_center
             vessel = sc.active_vessel
@@ -102,6 +104,7 @@ def probe(config: MissionConfig) -> dict[str, Any]:
                 "argumentOfPeriapsis": orbit.argument_of_periapsis,
                 "verticalSpeed": flight.vertical_speed, "dynamicPressure": flight.dynamic_pressure,
             })
+        info["observedAt"] = time.time()
         return info
 
 

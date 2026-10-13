@@ -129,6 +129,7 @@ class MissionController:
 
         def watch_commands():
             while not monitor_done.wait(0.2):
+                self.log.write_status()  # controller heartbeat, including long planning / save loads
                 for request in commands.pending():
                     if request.get("action") == "abort":
                         commands.update(request, "accepted", "Safe release requested")
@@ -138,18 +139,27 @@ class MissionController:
 
         try:
             with claim(self.config, self.run_dir) if self.mode == "live" else nullcontext():
+                self.log.update(state=MissionState.RUNNING.value, operation_stage="preparing", started_at=time.time())
+                monitor = threading.Thread(target=watch_commands, name="ksl-commands", daemon=True)
+                monitor.start()
                 if self.load_save and self.mode == "live":
                     from .kspguard import load_save_verified
                     from .krpc_link import krpc_env
                     self.log.update(operation_stage="loading")
                     load_save_verified(self.load_save, krpc_env(self.config))
+                if self.stop_event.is_set():
+                    return self._finish(MissionState.ABORTED, "stopped during preparation; guidance was not started")
                 if self.mode == "live" and self.precondition is not None:
                     self.precondition()
-                monitor = threading.Thread(target=watch_commands, name="ksl-commands", daemon=True)
-                monitor.start()
                 return self._run_programs()
         except (OwnershipError, GuardError, ConnectionFailure, ConfigError, OSError) as exc:
+            if isinstance(exc, ConnectionFailure):
+                self.log.update(connection="failed")
             return self._finish(MissionState.FAILED, str(exc))
+        except Exception as exc:
+            import traceback
+            self.log.log(traceback.format_exc(), "error")
+            return self._finish(MissionState.FAILED, f"{type(exc).__name__}: {exc}")
         finally:
             monitor_done.set()
             if monitor is not None:
@@ -166,11 +176,11 @@ class MissionController:
 
     def _run_programs(self) -> MissionStatus:
         log = self.log
-        log.update(state=MissionState.RUNNING.value, operation_stage="running", started_at=time.time())
+        log.update(state=MissionState.RUNNING.value, operation_stage="running")
         log.emit(Event("state", f"Mission {self.status.run_id}: {self.mode} {self.start.value} -> {self.stop.value}"
                        + (f" (scenario {self.scenario.name})" if self.scenario else "")))
         ctx = Context(self.config, log, self.mode, self.stop_event, self._advance, self._checkpoint, self.scenario,
-                      review_plan=self.operation in ("deorbit", "continue") and not self.automatic)
+                      review_plan=self.operation == "deorbit" or (self.operation == "continue" and not self.automatic))
         outcome = Outcome(True)
         try:
             for program, phase in self.plan():

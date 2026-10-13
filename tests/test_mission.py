@@ -327,6 +327,18 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2, err)
         load.assert_not_called()
 
+    def test_explicit_cli_operations_use_the_same_directed_boundaries(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch("ksl.runlog.RUNS_DIR", Path(tmp)):
+            code, out, err = self.run_cli("operate", "launch", "--dry-run", "--json")
+            self.assertEqual(code, 0, err)
+            result = json.loads(out.strip().splitlines()[-1])
+            self.assertEqual(result["result"]["stop_phase"], "orbit")
+            self.assertEqual(result["result"]["operation"], "launch")
+            self.assertNotIn('"message":"orbit:', out)
+            code, out, err = self.run_cli("operate", "deorbit", "--dry-run")
+            self.assertEqual(code, 0, err)
+            self.assertIn("wait for explicit plan execution", out)
+
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):
     async def test_quit_waits_for_control_release(self):
@@ -372,41 +384,96 @@ class TuiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(config.data["profile"]["geoLongitudeDeg"], -30)
         self.assertEqual(config.validate(), [])
 
-    async def test_mode_limits_selectable_phases(self):
+    async def test_mode_and_vessel_context_limit_operations(self):
         from textual.widgets import Select
-        from ksl.phases import Phase
         from ksl.tui import KSLApp
         app = KSLApp()
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.press("m")
-            app.query_one("#stop", Select).value = Phase.MM305.value  # holdable in dry run
             app.query_one("#mode", Select).value = "live"
             await pilot.pause()
-            self.assertEqual(app.query_one("#stop", Select).value, Phase.COMPLETE.value)
-            self.assertFalse(app.query_one("#start", Select).disabled)
-            self.assertTrue(app.query_one("#scenario", Select).disabled)
+            self.assertTrue(app.query_one("#validate").disabled)
+            self.assertIn("Connect to KSP", str(app.query_one("#availability").render()))
+            app.vessel_info = {"scene": "flight", "situation": "pre_launch", "observedAt": time.time()}
+            app.refresh_operations()
+            self.assertFalse(app.query_one("#validate").disabled)
             app.query_one("#mode", Select).value = "sim"
             await pilot.pause()
-            self.assertTrue(app.query_one("#start", Select).disabled)
-            self.assertFalse(app.query_one("#scenario", Select).disabled)
+            self.assertEqual(app.selected_operation, "simulate")
+            self.assertTrue(app.query_one("#scenario-fields").display)
+            self.assertFalse(app.query_one("#launch-fields").display)
 
-    async def test_dry_run_from_mission_tab_shows_on_dashboard(self):
+    async def test_vessel_monitor_runs_without_a_mission_or_valid_form_fields(self):
         from ksl.tui import KSLApp
+        from textual.widgets import Input
+        from tests.test_operations import vessel
+        with tempfile.TemporaryDirectory() as tmp, mock.patch("ksl.krpc_link.probe", side_effect=lambda _: vessel()) as probe:
+            app = KSLApp(runs_root=Path(tmp))
+            async with app.run_test(size=(120, 40)) as pilot:
+                app.query_one("#altitude", Input).value = "editing"
+                await pilot.click("#connect-vessel")
+                for _ in range(20):
+                    await pilot.pause(0.05)
+                    if app.vessel_info:
+                        break
+                self.assertEqual(app.vessel_info["vessel"], "STS")
+                self.assertIn("STS", str(app.query_one("#vehicle-panel").render()))
+                self.assertIsNone(app.controller)
+                self.assertEqual(list(Path(tmp).iterdir()), [])
+                probe.assert_called()
+
+    async def test_checkpoint_continuation_restores_the_recorded_profile(self):
+        from ksl.tui import KSLApp
+        from textual.widgets import Input
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = MissionController(load_config(overrides=["ascent.inclinationDeg=51.6"]),
+                                         "dry-run", Phase.ORBIT, Phase.ORBIT, runs_root=root)
+            original.run()
+            app = KSLApp(runs_root=root)
+            async with app.run_test(size=(120, 40)) as pilot:
+                app.watch_run(original.run_dir)
+                app.choose_operation("continue")
+                app.query_one("#altitude", Input).value = "unfinished unrelated edit"
+                await pilot.pause()
+                app.validate_plan()
+                app.action_start()
+                for _ in range(30):
+                    await pilot.pause(0.1)
+                    if app.controller and app.controller.status.finished_at:
+                        break
+                self.assertEqual(app.controller.config["ascent"]["inclinationDeg"], 51.6)
+                self.assertEqual(app.controller.start, Phase.DEORBIT)
+                self.assertEqual(app.controller.status.state, "holding")
+                self.assertEqual(app._connection_config()["ascent"]["inclinationDeg"], 51.6)
+
+    async def test_reviewed_operation_runs_and_edits_invalidate_review(self):
+        from ksl.tui import KSLApp
+        from textual.widgets import Input
         with tempfile.TemporaryDirectory() as tmp:
             app = KSLApp(runs_root=Path(tmp))
             async with app.run_test(size=(120, 40)) as pilot:
-                await pilot.press("m")
+                await pilot.press("s")
+                self.assertIsNone(app.controller)  # no unmodified single-key start
                 app.query_one("#validate").scroll_visible()
                 await pilot.pause()
                 await pilot.click("#validate")
-                self.assertIn("orbit-trim", str(app.query_one("#plan").render()))
-                await pilot.press("s")
+                self.assertIn("Launch to orbit", str(app.query_one("#plan").render()))
+                self.assertFalse(app.query_one("#start-btn").disabled)
+                app.query_one("#altitude", Input).value = "120"
+                await pilot.pause()
+                self.assertTrue(app.query_one("#start-btn").disabled)
+                app.query_one("#validate").scroll_visible()
+                await pilot.pause()
+                await pilot.click("#validate")
+                await pilot.press("ctrl+enter")
                 for _ in range(30):
                     await pilot.pause(0.1)
-                    if app.controller.status.state != "running":
+                    if app.controller and app.controller.status.finished_at:
                         break
                 await pilot.pause(0.6)
                 self.assertEqual(app.controller.status.state, "holding")
+                self.assertEqual(app.controller.status.operation, "launch")
+                self.assertEqual([p.name for p, _ in app.controller.plan()], ["ascent"])
                 self.assertEqual(app.query_one("#tabs").active, "dashboard")
                 await pilot.resize_terminal(80, 24)
                 await pilot.press("r")

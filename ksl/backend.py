@@ -2,8 +2,8 @@
 
 The backend (``CLanding/build/landing_backend``) owns deorbit, entry (MM304),
 TAEM (MM305), final approach, flare, touchdown, rollout guidance and the
-atmospheric flight-control system. Python only sends operator methods and
-reads snapshots; it never talks to kRPC on the landing path.
+atmospheric flight-control system. This client sends operator methods and reads
+snapshots; separate Python probes only read state for held-plan validation.
 
 Messages from the backend are one JSON object per line:
     {"type": "ready", "protocolVersion": 1, "configuration": ..., "snapshot": ...}

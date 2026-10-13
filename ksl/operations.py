@@ -48,14 +48,16 @@ BY_KEY = {op.key: op for op in OPERATIONS}
 
 
 def blocked_reason(operation: Operation, info: dict[str, Any] | None, mode: str,
-                   busy: bool = False, source: Path | None = None) -> str | None:
+                   busy: bool = False, source: Path | None = None, load_save: bool = False) -> str | None:
     if busy:
         return "A KSL operation owns this endpoint; watch it or release its controls first"
     if operation.key == "continue":
         if source is None:
             return "Select a recorded run in Runs first"
         try:
-            resume(source)
+            _, _, checkpoint = resume(source)
+            if load_save and not checkpoint.get("kspSave"):
+                return "The selected checkpoint has no KSP save"
         except (OSError, ValueError, ConfigError, PhaseTransitionError) as exc:
             return str(exc)
     if mode == "sim":
@@ -64,6 +66,8 @@ def blocked_reason(operation: Operation, info: dict[str, Any] | None, mode: str,
         return None if mode == "dry-run" else "Choose simulation mode"
     if mode == "dry-run":
         return None
+    if operation.key == "continue" and load_save:
+        return None  # controller verifies the save before checking the vessel
     if not info:
         return "Connect to KSP to inspect the active vessel"
     if info.get("scene") != "flight":
@@ -116,6 +120,8 @@ class OperationRequest:
     scenario: Scenario | None = None
     source: Path | None = None
     use_save: bool = False
+    resume_profile: str | None = None
+    resume_overrides: list[str] | None = None
 
     def resolve(self):
         op = BY_KEY[self.key]
@@ -124,7 +130,7 @@ class OperationRequest:
         if self.key == "continue":
             if self.source is None:
                 raise ConfigError("Select a checkpoint run first")
-            config, start, checkpoint = resume(self.source)
+            config, start, checkpoint = resume(self.source, self.resume_profile, self.resume_overrides)
             save = checkpoint.get("kspSave") if self.use_save else None
             if self.use_save and not save:
                 raise ConfigError("The selected checkpoint has no KSP save")
@@ -149,6 +155,11 @@ class OperationRequest:
         op = BY_KEY[self.key]
         lines = [f"{op.title} · {self.mode} · {config.name}", op.description,
                  f"{start.title} → {stop.title}"]
+        if self.key in ("preflight", "launch", "orbit"):
+            lines.append(f"Target: {config['ascent']['targetAltitudeKm']:g} km / "
+                         f"{config['ascent']['inclinationDeg']:g}° · {config['profile']['kind']}")
+        if self.key == "simulate" and self.scenario:
+            lines.append(f"Scenario: {self.scenario.name} — {self.scenario.description}")
         if self.key == "launch" and not self.automatic:
             lines.append("Orbit trim and deorbit wait for separate operator actions.")
         if self.automatic and self.key in ("launch", "orbit"):
@@ -170,5 +181,6 @@ class OperationRequest:
         return MissionController(config, self.mode, start, stop, scenario=self.scenario,
                                  runs_root=runs_root, label=self.key,
                                  resumed_from=self.source.name if self.source else None,
-                                 operation=self.key, automatic=self.automatic, load_save=save,
+                                 operation=self.key, automatic=self.automatic if self.key in ("launch", "orbit") else False,
+                                 load_save=save,
                                  precondition=check_vessel)

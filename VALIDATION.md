@@ -49,6 +49,16 @@ and the optional independent safety guard must only be used deliberately with a
 configured kRPC serial-protocol endpoint. Offline qualification never loads a
 quicksave or sends flight controls.
 
+The flight-operations console is checked offline with the scripted NDJSON backend
+and Textual's test driver. Coverage includes insertion-only launch checkpoints,
+explicit orbit operations, controller ownership conflicts, deorbit review without
+engagement, revision-bound execution, replanning, changed orbit/mass/identity and
+expired burn rejection, external abort/release, and executing an externally
+started run's reviewed plan from the TUI. Console tests verify that settings
+edits invalidate review and that simulation/live context limits available actions.
+The layout is inspected at 120×40 and 80×24 terminal sizes. These checks do not
+constitute a new live flight qualification.
+
 On 2026-10-12, `bin/ksl land --from orbit -p sts-85km-10deg` completed one
 guarded live orbit-to-rollout flight from an existing 85 km / 10° checkpoint.
 The shuttle touched down 580 m along KSC runway 09 at 52.4 m/s and stopped

@@ -5,6 +5,7 @@
 ```text
             bin/ksl (CLI)          ksl tui (Textual)
                     \                 /
+                     OperationRequest             ksl/operations.py
                      MissionController            ksl/controller.py
                      ├─ PhaseMachine              ksl/phases.py
                      ├─ RunLog (runs/<id>/)       ksl/runlog.py
@@ -51,7 +52,41 @@ There are two boundaries, both process boundaries:
    The controller maps the milestones onto mission phases.
 
 Neither boundary needed C or Python rewrites. The backend still never shares a
-process with Python, and Python never talks to kRPC on the landing path.
+process with Python. Native guidance owns landing controls. Python makes
+read-only vessel probes to bind and recheck plans held for operator review.
+
+## Explicit operations and operator sessions
+
+`OperationRequest` resolves one operation, its configuration, entry and endpoint.
+CLI `operate` and the TUI share it. Operator-directed launch runs only
+`AscentProgram`, then records an orbit checkpoint; explicit orbit operations run
+only `OrbitTrimProgram`. The automatic launch/orbit option retains full mission
+sequencing. Supported atmospheric entry points run continuously through rollout.
+TUI continuation and `operate continue` restore the source run's configuration;
+legacy `continue` uses the same snapshot resolver and retains automatic execution.
+
+The TUI's read-only live monitor is independent of its run watcher. Contextual
+availability is advisory; execution rechecks the vessel after acquiring ownership
+and after any verified save load. `ownership.py` uses an OS-held process lock in
+the shared data root, keyed by kRPC address/port, to exclude competing KSL mission
+controllers. Read-only monitoring does not claim control. Direct native clients
+and unrelated autopilots do not participate in this lock.
+
+`commands.py` writes independent atomic request files under a run's `commands/`.
+The controller acknowledges abort requests and rejects commands outside the
+appropriate stage. `LandingProgram` handles execute/replan during review; each
+request records its lifecycle and diagnostic result. TUI and CLI can issue and
+inspect requests on runs started by either interface.
+
+Deorbit review holds the same native backend session with guidance disengaged.
+It captures a reference vessel state before planning, stores an immutable plan
+revision and the applied backend configuration, then continues reading snapshots
+and accepting operator requests. Engagement requires the displayed revision,
+fresh read-only state, matching vessel/body, materially unchanged orbital
+elements/mass, and the original configuration's minimum planning lead time.
+Strict qualification policy is checked again before engagement. Review does not
+pause game time; stale plans require an explicit replan. The native engagement
+checks and safe shutdown path remain authoritative.
 
 ## Phase state machine
 

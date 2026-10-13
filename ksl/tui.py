@@ -1,19 +1,9 @@
-"""``ksl tui``: keyboard-first terminal interface for the unified mission system.
+"""Persistent flight operations console, shared with the CLI operation API.
 
-Tabs
-  Dashboard  phase strip, vehicle state, guidance/status, connection, event log
-  Mission    orbit profile (circular, plane, GTO, GEO, rendezvous), inclination /
-             altitude, operations (auto-warp, orbit trim), mode / phases; start/abort
-  Controls   live operator controls of the watched run (any run, any process):
-             f warp now · x stop warp · g auto-warp on/off · o orbit trim on/off ·
-             h hold in orbit on/off · t trigger orbit trim
-  Replay     recorded runs: summary, phase timeline, events, sample stepping
-
-The dashboard always watches a run *directory* (status.json + events.jsonl),
-so it shows missions started here (in a background thread through the same
-MissionController the CLI uses) exactly like missions started from the CLI
-or another terminal. A run whose status stops updating is flagged as stale
-instead of silently freezing the display.
+The live vessel monitor is read-only and independent of recorded runs. Flight
+operations require a reviewed request; deorbit engagement additionally requires
+an explicit command for the currently displayed plan revision. Watching and
+operator commands work across processes through the same run directory.
 """
 
 from __future__ import annotations
@@ -21,6 +11,7 @@ from __future__ import annotations
 import json
 import asyncio
 import time
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -28,16 +19,20 @@ from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import (Button, DataTable, Footer, Header, Input, Label, RichLog, Select, Static,
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import (Button, Collapsible, DataTable, Footer, Header, Input, Label, RichLog, Select, Static,
                              Switch, TabbedContent, TabPane)
 
-from .config import DEFAULT_PROFILE, DEFAULTS, PROFILE_KINDS, ConfigError, load_config
+from .config import DEFAULT_PROFILE, DEFAULTS, PROFILE_KINDS, ConfigError, available_profiles, config_from_snapshot, load_config
 from .controls import FILE_NAME as CONTROLS_FILE, Controls
-from .controller import MissionController, holdable
-from .phases import ENTRY_PHASES, SEQUENCE, MissionState, Phase, PhaseTransitionError, validate_range
+from .controller import MissionController
+from .phases import SEQUENCE, MissionState, Phase, PhaseTransitionError
 from .runlog import Event, MissionStatus, list_runs, read_status
 from .scenarios import SCENARIOS
+from .operations import BY_KEY, OPERATIONS, OperationRequest, blocked_reason
+from .commands import Commands
+from .ownership import owner
+from .plan_review import invalid_reason
 
 STALE_SECONDS = 15.0
 KIND_LABELS = {
@@ -96,14 +91,15 @@ class PhaseStrip(Static):
         done = set(status.phase_history) if status else set()
         failed = status is not None and status.state in (MissionState.FAILED.value, MissionState.ABORTED.value)
         for i, phase in enumerate(SEQUENCE):
+            title = {Phase.MM304: "Entry", Phase.MM305: "TAEM", Phase.FINAL_APPROACH: "Final"}.get(phase, phase.title)
             if i:
                 text.append(" › ", style="dim")
             if phase == current:
-                text.append(f" {phase.title} ", style="bold white on red" if failed else "bold black on cyan")
+                text.append(f" {title} ", style="bold white on red" if failed else "bold black on cyan")
             elif phase.value in done:
-                text.append(phase.title, style="green")
+                text.append(title, style="green")
             else:
-                text.append(phase.title, style="dim")
+                text.append(title, style="dim")
         self.update(text)
 
 
@@ -118,14 +114,37 @@ class KeyValue(Static):
 
 
 class KSLApp(App[int]):
-    TITLE = "KSL — Shuttle Flight Control"
+    TITLE = "KSL — Flight Operations"
     CSS = """
     Screen { layout: vertical; }
     #phases { height: auto; padding: 0 1; margin-bottom: 1; }
-    #panels { height: auto; }
-    .panel { border: round $primary-darken-2; padding: 0 1; width: 1fr; height: auto; min-height: 9; }
-    #banner { height: auto; padding: 0 1; }
-    #eventlog { height: 1fr; border: round $primary-darken-2; }
+    #panels { height: auto; max-height: 9; }
+    #compact-status { display: none; height: auto; }
+    .panel { border: round $primary-darken-2; padding: 0 1; width: 1fr; height: auto; min-height: 6; }
+    #banner { height: auto; max-height: 3; padding: 0 1; }
+    #eventlog { height: 8; border: round $primary-darken-2; }
+    #session-actions, #session-settings, .actionrow { height: auto; }
+    #session-actions Button { margin-right: 1; }
+    #session-settings Select { width: 1fr; }
+    #workspace { height: auto; min-height: 21; }
+    #operation-list { width: 2fr; height: auto; padding: 0 1; }
+    #operation-settings { width: 3fr; height: auto; max-height: 21; padding: 0 1; border: round $primary-darken-2; }
+    #operations { height: 11; }
+    #availability, #operation-title, #connection, #command-result { height: auto; }
+    #availability { min-height: 2; }
+    .actionrow Button { margin-right: 1; }
+    .actionrow Input { width: 1fr; }
+    .context-fields, #deorbit-review { height: auto; }
+    #deorbit-plan { height: auto; border: round $warning; padding: 0 1; }
+    #operation-settings Label { margin-top: 1; }
+    #settings-hint { height: auto; color: $text-muted; margin-top: 1; }
+    .compact #workspace, .compact #panels, .compact #session-settings { layout: vertical; }
+    .compact #operation-list, .compact #operation-settings { width: 1fr; }
+    .compact #workspace { height: 40; }
+    .compact #session-actions Button { min-width: 12; width: 1fr; }
+    .compact .panel { width: 1fr; }
+    .compact #panels, .compact #phases, .compact #banner { display: none; }
+    .compact #compact-status { display: block; }
     #setup { padding: 1 2; }
     #setup Label { margin-top: 1; }
     #setup Select, #setup Input { width: 60; }
@@ -140,11 +159,11 @@ class KSLApp(App[int]):
     #sample { height: auto; border: round $primary-darken-2; padding: 0 1; }
     """
     BINDINGS = [
-        Binding("d", "tab('dashboard')", "Dashboard"),
-        Binding("m", "tab('mission')", "Mission"),
-        Binding("r", "tab('replay')", "Replay"),
-        Binding("s", "start", "Start"),
-        Binding("a", "abort", "Abort"),
+        Binding("d", "tab('dashboard')", "Console"),
+        Binding("m", "tab('mission')", "Settings"),
+        Binding("r", "tab('replay')", "Runs"),
+        Binding("ctrl+enter", "start", "Execute reviewed operation"),
+        Binding("ctrl+a", "abort", "Abort"),
         Binding("w", "watch_latest", "Watch latest"),
         Binding("ctrl+l", "clear_log", "Clear log"),
         Binding("v", "toggle_verbose", "Raw output"),
@@ -171,90 +190,131 @@ class KSLApp(App[int]):
         self.replay_samples: list[dict[str, Any]] = []
         self.replay_index = 0
         self.vehicle_document = None
+        self.selected_operation = "launch"
+        self.selected_run: Path | None = None
+        self.vessel_info: dict[str, Any] | None = None
+        self.connection_error = ""
+        self.monitor_vessel = False
+        self.probing = False
+        self.reviewed_signature: str | None = None
+        self.displayed_plan_revision: str | None = None
+        self.pending_commands: dict[str, Path] = {}
 
     # --- layout -------------------------------------------------------------------
     def compose(self) -> ComposeResult:
+        base = self._base()
+        ascent, pr = base["ascent"], base["profile"]
         yield Header(show_clock=True)
         with TabbedContent(initial="dashboard", id="tabs"):
-            with TabPane("Dashboard", id="dashboard"):
+            with TabPane("Console", id="dashboard"):
+                with Horizontal(id="session-actions"):
+                    yield Button("Connect / refresh", id="connect-vessel")
+                    yield Button("Watch latest run", id="watch-latest")
+                    yield Button("Abort / release", id="abort-btn", variant="error")
+                yield Static("Disconnected · Connect to inspect the active vessel. No flight controls are sent.", id="connection", markup=False)
                 yield PhaseStrip(id="phases")
-                yield Static(id="banner")
+                yield Static(id="banner", markup=False)
                 with Horizontal(id="panels"):
-                    yield KeyValue(id="mission-panel", classes="panel")
                     yield KeyValue(id="vehicle-panel", classes="panel")
-                    yield KeyValue(id="guidance-panel", classes="panel")
-                    yield KeyValue(id="controls-panel", classes="panel")
-                yield RichLog(id="eventlog", wrap=True, markup=False, max_lines=5000)
-            with TabPane("Mission", id="mission"):
+                    yield KeyValue(id="mission-panel", classes="panel")
+                yield Static(id="compact-status", markup=False)
+                with VerticalScroll(id="console"):
+                    with Horizontal(id="session-settings"):
+                        yield Select([("Dry run · no flight", "dry-run"), ("Live KSP", "live"),
+                                      ("Simulation", "sim")], value=DEFAULT_MODE, allow_blank=False, id="mode")
+                        names = list(dict.fromkeys([self.profile, *available_profiles()]))
+                        yield Select([(f"Profile: {name}", name) for name in names], value=self.profile,
+                                     allow_blank=False, id="mission-profile")
+                        yield Select([("Operator-directed", "directed"), ("Automatic mission", "automatic")],
+                                     value="directed", allow_blank=False, id="execution-style")
+                    with Horizontal(id="workspace"):
+                        with Vertical(id="operation-list"):
+                            yield DataTable(id="operations", cursor_type="row", zebra_stripes=True)
+                            yield Static(id="availability", markup=False)
+                            with Horizontal(classes="actionrow"):
+                                yield Button("Review", id="validate", variant="primary")
+                                yield Button("Execute", id="start-btn", variant="success", disabled=True)
+                        with VerticalScroll(id="operation-settings"):
+                            yield Static(id="operation-title", markup=False)
+                            with Vertical(id="orbit-target-fields", classes="context-fields"):
+                                yield Label("Target altitude (km) / inclination (deg)")
+                                with Horizontal(classes="actionrow"):
+                                    yield Input(f"{ascent['targetAltitudeKm']:g}", id="altitude")
+                                    yield Input(f"{ascent['inclinationDeg']:g}", id="inclination")
+                                yield Label("Orbit profile")
+                                yield Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
+                                             allow_blank=False, id="kind")
+                            with Vertical(id="launch-fields", classes="context-fields"):
+                                yield Label("Ascent guidance")
+                                yield Select([("Legacy STS", "legacy"), ("Intelligent · experimental", "intelligent")],
+                                             value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
+                            with Vertical(id="landing-fields", classes="context-fields"):
+                                yield Label("Landing configuration / model profile")
+                                yield Input(base["landing"]["backendConfiguration"], id="landing-config")
+                                yield Input(base["landing"]["modelProfile"], id="landing-model")
+                                with Horizontal(classes="switchrow"):
+                                    yield Label("Require strict plan qualification")
+                                    yield Switch(bool(base["landing"]["requireStrictPlan"]), id="strict-plan")
+                            with Vertical(id="scenario-fields", classes="context-fields"):
+                                yield Label("Simulation scenario")
+                                yield Select([(f"{s.name} — {s.start.title}", s.name) for s in SCENARIOS.values()],
+                                             value=base["simulation"]["scenario"] if base["simulation"]["scenario"] in SCENARIOS else "l5-mm305",
+                                             allow_blank=False, id="scenario")
+                            with Vertical(id="continue-fields", classes="context-fields"):
+                                yield Static("Select a run in Runs; its saved configuration is restored.", id="resume-source", markup=False)
+                                with Horizontal(classes="switchrow"):
+                                    yield Label("Load checkpoint's KSP save first")
+                                    yield Switch(False, id="use-save")
+                            yield Static("More profile settings are available in Settings [m].", id="settings-hint", markup=False)
+                            yield Static("Select an operation, then Review.", id="plan", markup=False)
+                    with Vertical(id="deorbit-review"):
+                        yield Static(id="deorbit-plan", markup=False)
+                        with Horizontal(classes="actionrow"):
+                            yield Button("Execute reviewed plan", id="execute-plan", variant="success")
+                            yield Button("Replan", id="replan")
+                    yield Static(id="command-result", markup=False)
+                    with Collapsible(title="Guidance and live orbit controls", collapsed=True):
+                        with Horizontal():
+                            yield KeyValue(id="guidance-panel", classes="panel")
+                            yield KeyValue(id="controls-panel", classes="panel")
+                        with Horizontal(classes="actionrow"):
+                            yield Button("Warp now", id="warp-now")
+                            yield Button("Stop warp", id="warp-stop")
+                            yield Button("Trim now", id="trim-now")
+                    yield RichLog(id="eventlog", wrap=True, markup=False, max_lines=5000)
+            with TabPane("Settings", id="mission"):
                 with VerticalScroll(id="setup"):
-                    ascent = self._base_ascent()
-                    base = self._base()
-                    pr = base["profile"]
-                    yield Label("Ascent guidance (next mission only)")
-                    yield Select([("Legacy STS (default)", "legacy"), ("Intelligent (experimental)", "intelligent")],
-                                 value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
-                    yield Label("Vehicle configuration (optional; inspect in Vehicle tab)")
+                    yield Label("Profile settings for the next operation; running guidance keeps its configuration.")
+                    yield Label("Vehicle configuration (inspect in Vehicle)")
                     yield Input(base["intelligentAscent"]["vehicleConfig"], id="vehicle-config")
                     yield Label("Intelligent periapsis (km; 0 = target altitude)")
                     yield Input(str(base["intelligentAscent"]["targetPeriapsisKm"]), id="intelligent-periapsis")
-                    yield Label("Orbit profile")
-                    yield Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
-                                 allow_blank=False, id="kind")
-                    yield Label("Plane / rendezvous target (moon or vessel name)")
+                    yield Label("Plane / rendezvous target")
                     yield Input(pr["planeTarget"], placeholder="e.g. Minmus or Station", id="plane-target")
-                    yield Label("GEO longitude (deg east; geo profile)")
+                    yield Label("GEO longitude (deg east)")
                     yield Input(f"{pr['geoLongitudeDeg']:g}", id="geo-longitude")
-                    yield Label("GTO perigee (km; gto/geo profiles)")
+                    yield Label("GTO perigee (km)")
                     yield Input(f"{pr['gtoPerigeeKm']:g}", id="gto-perigee")
                     yield Label("GEO circularization")
-                    yield Select([("Auto — only if OMS delta-v is enough", "auto"), ("Always", "always"),
-                                  ("Never — stay in GTO", "never")], value=pr["geoCircularize"],
-                                 allow_blank=False, id="geo-circularize")
-                    with Horizontal(classes="switchrow"):
-                        yield Label("Wait for launch window (plane / rendezvous)")
-                        yield Switch(bool(pr["launchWindow"]), id="launch-window")
-                    with Horizontal(classes="switchrow"):
-                        yield Label("Phase GTO apogee onto the GEO longitude")
-                        yield Switch(bool(pr["targetLongitude"]), id="target-longitude")
-                    with Horizontal(classes="switchrow"):
-                        yield Label("Auto time-warp (live: g)")
-                        yield Switch(bool(base["operations"]["autoWarp"]), id="auto-warp")
-                    with Horizontal(classes="switchrow"):
-                        yield Label("Orbit trim / orbit operations (live: o)")
-                        yield Switch(bool(base["orbit"]["trim"]), id="orbit-trim")
-                    with Horizontal(classes="switchrow"):
-                        yield Label("Hold in orbit until triggered (live: h, t)")
-                        yield Switch(bool(base["orbit"]["holdForTrigger"]), id="hold-trim")
+                    yield Select([("Auto", "auto"), ("Always", "always"), ("Never", "never")],
+                                 value=pr["geoCircularize"], allow_blank=False, id="geo-circularize")
+                    for wid, label, val in (
+                        ("launch-window", "Wait for plane / rendezvous launch window", pr["launchWindow"]),
+                        ("target-longitude", "Phase GTO apogee onto GEO longitude", pr["targetLongitude"]),
+                        ("auto-warp", "Allow automatic orbit time warp", base["operations"]["autoWarp"]),
+                        ("orbit-trim", "Include orbit operations in automatic missions", base["orbit"]["trim"]),
+                        ("hold-trim", "Automatic missions wait for Trim now", base["orbit"]["holdForTrigger"]),
+                    ):
+                        with Horizontal(classes="switchrow"):
+                            yield Label(label)
+                            yield Switch(bool(val), id=wid)
                     yield Label("Maximum trim burns")
                     yield Input(str(base["orbit"]["maxBurns"]), id="max-burns")
-                    yield Label("Inclination (deg)")
-                    yield Input(f"{ascent['inclinationDeg']:g}", id="inclination")
-                    yield Label("Target altitude (km, circular orbit)")
-                    yield Input(f"{ascent['targetAltitudeKm']:g}", id="altitude")
-                    yield Label("Mode")
-                    yield Select([("Live KSP", "live"), ("Simulation (ShuttleSim)", "sim"),
-                                  ("Dry run (plan only)", "dry-run")], value=DEFAULT_MODE, allow_blank=False, id="mode")
-                    yield Label("Start phase (live / dry run)")
-                    yield Select([(f"{p.title} — {d}", p.value) for p, d in ENTRY_PHASES.items()],
-                                 value=Phase.PRELAUNCH.value, allow_blank=False, id="start",
-                                 disabled=DEFAULT_MODE == "sim")
-                    yield Label("Stop / hold phase (only phases this mode can hold at)")
-                    yield Select(self._stop_options(DEFAULT_MODE), value=Phase.COMPLETE.value,
-                                 allow_blank=False, id="stop")
-                    yield Label("Simulation scenario (simulation mode only; sets the start phase)")
-                    yield Select([(f"{s.name} — from {s.start.title}", s.name) for s in SCENARIOS.values()],
-                                 value="l5-mm305", allow_blank=False, id="scenario",
-                                 disabled=DEFAULT_MODE != "sim")
-                    yield Label("Other overrides (space separated KEY=VALUE, e.g. orbit.trim=false)")
-                    yield Input(" ".join(self.overrides), id="overrides")
-                    with Horizontal(id="buttons"):
-                        yield Button("Validate plan", id="validate")
-                        yield Button("Start  [s]", id="start-btn", variant="success")
-                        yield Button("Abort  [a]", id="abort-btn", variant="error")
-                    yield Label("Save setup as reusable mission profile")
+                    yield Label("Other overrides (shell-style KEY=VALUE; quote JSON and values with spaces)")
+                    yield Input(shlex.join(self.overrides), id="overrides")
+                    yield Label("Save settings as a reusable mission profile")
                     yield Input("Configuration/missions/user-ascent.json", id="save-profile-path")
                     yield Button("Save mission setup", id="save-profile")
-                    yield Static(id="plan")
             with TabPane("Vehicle", id="vehicle-editor"):
                 with VerticalScroll():
                     yield Button("Inspect active vessel (read-only)", id="inspect-vehicle")
@@ -269,31 +329,82 @@ class KSLApp(App[int]):
                     yield Button("Apply component correction", id="apply-component")
                     yield Input("Configuration/vehicles/user-ascent.json", id="vehicle-save-path")
                     yield Button("Save vehicle and use for next mission", id="save-vehicle")
-            with TabPane("Replay", id="replay"):
+            with TabPane("Runs", id="replay"):
                 with Horizontal(id="replay-top"):
                     yield DataTable(id="runs", cursor_type="row", zebra_stripes=True)
                     with VerticalScroll(id="replay-detail"):
-                        yield Static(id="replay-summary")
-                yield Static("←/→ step samples · enter: open run in dashboard", id="sample")
+                        yield Static(id="replay-summary", markup=False)
+                        yield Button("Watch selected run", id="watch-selected")
+                        yield Button("Continue checkpoint", id="continue-selected")
+                yield Static("←/→ step samples · enter: watch run · Continue restores its saved configuration", id="sample", markup=False)
         yield Footer()
 
     def on_mount(self) -> None:
         self.query_one("#eventlog", RichLog).write(Text(
-            "Keys: d/m/r tabs · s start · a abort (press twice) · w watch latest run · v raw program output · "
+            "Select an operation → Review → Execute. Keys: d/m/r tabs · Ctrl+Enter execute reviewed operation · "
+            "Ctrl+A abort (press twice) · w watch latest run · v raw program output · "
             "f warp now · x stop warp · g auto-warp · o orbit trim · h hold · t trim now · q quit", style="dim"))
+        operations = self.query_one("#operations", DataTable)
+        operations.add_column("Operation", key="title")
+        operations.add_column("Status", key="status")
+        for op in OPERATIONS:
+            operations.add_row(op.title, "", key=op.key)
+        operations.move_cursor(row=1)
         table = self.query_one("#runs", DataTable)
         table.add_columns("Run", "Mode", "State", "Phase", "Profile")
         self.refresh_runs()
         self.render_dashboard(None)
+        self.refresh_operations()
         self.set_interval(0.5, self.poll)
+        self.set_interval(3, self.schedule_probe)
+
+    def on_resize(self, event) -> None:
+        self.screen.set_class(event.size.width < 100, "compact")
+
+    @on(Button.Pressed, "#connect-vessel")
+    def connect_vessel(self) -> None:
+        self.monitor_vessel = True
+        self.schedule_probe()
+
+    def schedule_probe(self) -> None:
+        if self.monitor_vessel and not self.probing and self.is_running:
+            self.probing = True
+            self.run_worker(self.refresh_vessel(), group="vessel-probe")
+
+    async def refresh_vessel(self) -> None:
+        from .krpc_link import probe
+        try:
+            config = self._connection_config()
+            if config.validate():
+                raise ConfigError("; ".join(config.validate()))
+            info = await asyncio.to_thread(probe, config)
+            # A reply from the old endpoint must not become the new profile's
+            # live state when the operator edits settings during the request.
+            current = self._connection_config()
+            if current["connection"] == config["connection"]:
+                self.vessel_info = info
+                self.connection_error = ""
+        except Exception as exc:
+            self.connection_error = str(exc)
+            self.vessel_info = None
+        finally:
+            self.probing = False
+        self.poll()
+
+    def _connection_config(self):
+        # Monitoring is independent of partly edited operation form fields.
+        if self.selected_operation == "continue" and self.selected_run:
+            saved = json.loads((self.selected_run / "config.json").read_text())
+            return config_from_snapshot(saved["profile"], saved["configuration"])
+        return load_config(self.profile, shlex.split(self.query_one("#overrides", Input).value))
 
     # --- dashboard ------------------------------------------------------------------
     def poll(self) -> None:
         # Textual stops the app before removing dashboard widgets. A queued
         # timer callback during teardown must not query that disappearing tree.
-        if not self.is_running or self.watcher is None:
+        if not self.is_running:
             return
-        status, events = self.watcher.poll()
+        status, events = self.watcher.poll() if self.watcher else (None, [])
         log = self.query_one("#eventlog", RichLog)
         for event in events:
             if event.kind == "program" and not self.verbose:
@@ -302,6 +413,120 @@ class KSLApp(App[int]):
             style = KIND_STYLE.get(event.kind, "") if event.level == "info" else LEVEL_STYLE.get(event.level, "")
             log.write(Text(f"{stamp}  {event.message}", style=style))
         self.render_dashboard(status)
+        self.render_vessel()
+        self.refresh_operations()
+        self.render_plan_review(status)
+        for request_id, run_dir in list(self.pending_commands.items()):
+            try:
+                command = Commands(run_dir).read(request_id)
+                self.query_one("#command-result", Static).update(
+                    Text(f"{command['action']}: {command['state']} — {command['message']}",
+                         style="red" if command["state"] == "rejected" else "cyan"))
+                if command["state"] in ("completed", "rejected"):
+                    del self.pending_commands[request_id]
+            except (OSError, ValueError):
+                continue
+
+    def render_vessel(self) -> None:
+        from .krpc_link import suggest_phase
+        info = self.vessel_info
+        status = self.watcher.status if self.watcher else None
+        self.query_one("#compact-status", Static).update(
+            f"Vessel: {(info or {}).get('vessel', '—')} · alt {_fmt((info or {}).get('altitude'), 1e-3, 'km')} · "
+            f"Ap/Pe {_fmt((info or {}).get('apoapsis'), 1e-3)}/{_fmt((info or {}).get('periapsis'), 1e-3)} km\n"
+            + (f"Run: {status.operation} · {status.state} · {status.phase}" if status else "Run: none · guidance disengaged"))
+        if info:
+            age = time.time() - info["observedAt"]
+            message = f"KSP · {info.get('scene')} · {'paused' if info.get('paused') else 'running'} · updated {age:.0f}s ago"
+            if age > STALE_SECONDS:
+                message += " · STALE"
+            suggested = suggest_phase(info)
+            if suggested:
+                message += f" · suggested entry: {Phase.parse(suggested).title}"
+            self.query_one("#connection", Static).update(Text(message, style="yellow" if age > STALE_SECONDS else "green"))
+            self.query_one("#vehicle-panel", KeyValue).show("Active vessel · read-only", [
+                ("vessel", str(info.get("vessel", "—"))),
+                ("body / situation", f"{info.get('body', '—')} / {info.get('situation', '—')}"),
+                ("altitude / speed", f"{_fmt(info.get('altitude'), 1e-3, 'km')} / {_fmt(info.get('speed'), unit='m/s')}"),
+                ("Ap / Pe", f"{_fmt(info.get('apoapsis'), 1e-3, 'km')} / {_fmt(info.get('periapsis'), 1e-3, 'km')}"),
+                ("inclination", _fmt(info.get("inclination"), unit="deg", digits=3)),
+                ("sink / dynamic q", f"{_fmt(info.get('verticalSpeed'), unit='m/s')} / "
+                                     f"{_fmt(info.get('dynamicPressure'), 1e-3, 'kPa')}"),
+            ])
+        else:
+            message = self.connection_error or ("Connecting…" if self.probing else
+                       "Disconnected · Connect to inspect the active vessel. No flight controls are sent.")
+            self.query_one("#connection", Static).update(Text(message, style="yellow" if self.connection_error else "dim"))
+
+    def _availability(self, request: OperationRequest) -> str | None:
+        busy = self.controller is not None and self.controller.status.finished_at is None
+        if request.mode == "live":
+            config = request.resolve()[0]
+            busy = busy or owner(config) is not None
+            if (not request.use_save and self.vessel_info and self.vessel_info.get("connection")
+                    and self.vessel_info["connection"] != config["connection"]):
+                return "Connect / refresh using this operation's kRPC endpoint"
+        return blocked_reason(BY_KEY[request.key], self.vessel_info, request.mode, busy, request.source, request.use_save)
+
+    def refresh_operations(self) -> None:
+        mode = str(self.query_one("#mode", Select).value)
+        busy = self.controller is not None and self.controller.status.finished_at is None
+        guidance_owner = None
+        if mode == "live":
+            try:
+                config = self._connection_config()
+                guidance_owner = owner(config)
+                busy = busy or guidance_owner is not None
+            except (ConfigError, ValueError, OSError, KeyError):
+                pass
+        table = self.query_one("#operations", DataTable)
+        for op in OPERATIONS:
+            reason = blocked_reason(op, self.vessel_info, mode, busy, self.selected_run,
+                                    self.query_one("#use-save", Switch).value if op.key == "continue" else False)
+            table.update_cell(op.key, "status", Text("Blocked" if reason else "Ready", style="dim" if reason else "green"))
+        op = BY_KEY[self.selected_operation]
+        try:
+            reason = self._availability(self._request())
+        except (ConfigError, ValueError, KeyError, OSError, PhaseTransitionError) as exc:
+            reason = str(exc)
+        if guidance_owner:
+            reason = f"Guidance owner: {guidance_owner['run']} · select it in Runs to watch or abort"
+        self.query_one("#availability", Static).update(Text(reason or "Ready to review. Execution begins only when you choose Execute.",
+                                                          style="yellow" if reason else "green"))
+        self.query_one("#operation-title", Static).update(Text(op.title + "\n" + op.description, style="bold"))
+        for wid, show in {
+            "orbit-target-fields": op.key in ("preflight", "launch", "orbit"),
+            "launch-fields": op.key in ("preflight", "launch"),
+            "landing-fields": op.key in ("deorbit", "entry", "taem", "final", "simulate"),
+            "scenario-fields": op.key == "simulate", "continue-fields": op.key == "continue",
+        }.items():
+            self.query_one(f"#{wid}").display = show
+        self.query_one("#execution-style", Select).disabled = op.key not in ("launch", "orbit")
+        self.query_one("#validate", Button).disabled = reason is not None
+        self.query_one("#start-btn", Button).disabled = reason is not None or self.reviewed_signature is None
+
+    @on(DataTable.RowHighlighted, "#operations")
+    def select_operation(self, event: DataTable.RowHighlighted) -> None:
+        if event.row_key and event.row_key.value:
+            self.selected_operation = str(event.row_key.value)
+            self.invalidate_review()
+            self.refresh_operations()
+
+    def invalidate_review(self) -> None:
+        self.reviewed_signature = None
+        self.query_one("#start-btn", Button).disabled = True
+        self._show_plan("Select an operation, then Review.")
+
+    @on(Input.Changed)
+    @on(Switch.Changed)
+    def settings_changed(self, event) -> None:
+        if self.is_mounted:
+            self.invalidate_review()
+
+    @on(Select.Changed)
+    def selection_changed(self, event: Select.Changed) -> None:
+        if self.is_mounted and event.select.id not in ("component", "component-role", "mission-profile", "mode"):
+            self.invalidate_review()
 
     def render_dashboard(self, status: MissionStatus | None) -> None:
         self.query_one("#phases", PhaseStrip).show(status)
@@ -310,9 +535,8 @@ class KSLApp(App[int]):
         vehicle = self.query_one("#vehicle-panel", KeyValue)
         guidance = self.query_one("#guidance-panel", KeyValue)
         if status is None:
-            banner.update(Text("No mission selected — start one on the Mission tab (m) or press w to watch "
-                               "the latest run.", style="dim"))
-            mission.show("Mission", [("state", "—")])
+            banner.update(Text("Select a flight operation below, or watch a recorded run.", style="dim"))
+            mission.show("Watched run", [("state", "No run selected"), ("guidance", "Not commanding")])
             self.query_one("#controls-panel", KeyValue).show("Controls", [("run", "—")])
             vehicle.show("Vehicle", [("altitude", "—")])
             guidance.show("Guidance", [("program", "—")])
@@ -331,11 +555,11 @@ class KSLApp(App[int]):
         else:
             banner.update(Text(status.status_message or "", style="green" if not running else ""))
         conn_style = {"connected": "green", "simulator": "green", "failed": "bold red"}.get(status.connection, "yellow")
-        mission.show("Mission", [
+        mission.show("Watched run", [
             ("run", status.run_id), ("profile", f"{status.profile} ({status.mode})"),
             ("state", status.state.upper() + ("  (this TUI)" if local else "  (watching)")),
             ("phase", Phase(status.phase).title), ("range", f"{status.start_phase} → {status.stop_phase}"),
-            ("program", status.program or "—"),
+            ("operation", f"{status.operation} · {status.operation_stage}"),
         ])
         mission.styles.border = ("round", "red" if status.state in ("failed", "aborted") else
                                  "green" if status.state == "complete" else "cyan" if running else "grey")
@@ -377,8 +601,12 @@ class KSLApp(App[int]):
 
     def action_control(self, name: str) -> None:
         controls = self._controls()
-        if controls is None:
-            self.notify("Watch a run first (start one, or press w).", severity="warning")
+        status = self.watcher.status if self.watcher else None
+        if (controls is None or status is None or status.state != "running" or status.mode != "live"
+                or status.phase != "orbit" or status.program != "orbit-trim"
+                or time.time() - status.updated_at > STALE_SECONDS
+                or not (self.watcher.run_dir / CONTROLS_FILE).is_file()):
+            self.notify("These controls apply to a running live orbit operation.", severity="warning")
             return
         if name in ("autoWarp", "trim", "holdTrim"):
             value = controls.toggle(name)
@@ -390,11 +618,92 @@ class KSLApp(App[int]):
         self._render_controls()
 
     def watch_run(self, run_dir: Path) -> None:
+        self.selected_run = run_dir
+        self.abort_armed_at = 0
         self.watcher = RunWatcher(run_dir)
         self.query_one("#eventlog", RichLog).write(Text(f"— watching {run_dir.name} —", style="bold"))
         self.poll()
         self.query_one("#tabs", TabbedContent).active = "dashboard"
         self.query_one("#eventlog", RichLog).focus()  # keep focus out of the hidden Mission pane
+
+    @on(Button.Pressed, "#watch-latest")
+    def watch_latest_button(self) -> None:
+        self.action_watch_latest()
+
+    @on(Button.Pressed, "#warp-now")
+    def warp_now_button(self) -> None:
+        self.action_control("warpNow")
+
+    @on(Button.Pressed, "#warp-stop")
+    def warp_stop_button(self) -> None:
+        self.action_control("warpStop")
+
+    @on(Button.Pressed, "#trim-now")
+    def trim_now_button(self) -> None:
+        self.action_control("trimNow")
+
+    def render_plan_review(self, status: MissionStatus | None) -> None:
+        reviewing = status is not None and status.state == "running" and status.operation_stage == "review"
+        self.query_one("#deorbit-review").display = reviewing
+        previous_revision = self.displayed_plan_revision
+        self.displayed_plan_revision = None
+        if not reviewing or self.watcher is None:
+            return
+        try:
+            review = json.loads((self.watcher.run_dir / "plan-review.json").read_text())
+            saved = json.loads((self.watcher.run_dir / "config.json").read_text())
+            config = config_from_snapshot(saved["profile"], saved["configuration"])
+            plan = review["plan"]
+            if review["revision"] != status.plan_revision:
+                raise ValueError("Waiting for the current plan revision")
+            self.displayed_plan_revision = review["revision"]
+            if previous_revision != self.displayed_plan_revision:
+                self.call_after_refresh(self.query_one("#deorbit-plan").scroll_visible, animate=False)
+            reason = None
+            if time.time() - status.updated_at > STALE_SECONDS:
+                reason = "Controller status is stale; command delivery cannot be confirmed"
+            elif self.vessel_info and time.time() - self.vessel_info["observedAt"] <= STALE_SECONDS:
+                reason = invalid_reason(plan, review["reference"], self.vessel_info,
+                                        float(review["minimumLead"]))
+            from .backend import validate_plan_qualification
+            try:
+                warning = validate_plan_qualification(plan, config["landing"]["requireStrictPlan"])
+            except Exception as exc:
+                reason, warning = str(exc), None
+            text = Text("Deorbit plan · awaiting execution · guidance is disengaged\n", style="bold yellow")
+            text.append(f"Burn UT {_fmt(plan.get('burnUT'), digits=1)} · Δv {_fmt(plan.get('deltaV'), unit='m/s')}\n")
+            text.append(f"Entry qualified: {plan.get('executionQualified')} · Full-route capture: {plan.get('targetCaptureAchieved')}\n")
+            text.append(f"Predicted miss: {_fmt(plan.get('predictedClosestDistance'), unit='m')} · "
+                        f"Entry FPA: {_fmt(plan.get('predictedEntryFlightPathAngle'), unit='deg')}\n")
+            if warning:
+                text.append(warning + "\n", style="yellow")
+            text.append(reason or "Execution rechecks the active vessel, orbit, mass and burn window.",
+                        style="red" if reason else "dim")
+            self.query_one("#deorbit-plan", Static).update(text)
+            self.query_one("#execute-plan", Button).disabled = reason is not None
+            self.query_one("#replan", Button).disabled = time.time() - status.updated_at > STALE_SECONDS
+        except (OSError, ValueError, KeyError, ConfigError) as exc:
+            self.query_one("#deorbit-plan", Static).update(Text(str(exc), style="yellow"))
+            self.query_one("#execute-plan", Button).disabled = True
+
+    def submit_command(self, action: str) -> None:
+        if self.watcher is None:
+            return
+        try:
+            request = Commands(self.watcher.run_dir).submit(action, self.displayed_plan_revision)
+            self.pending_commands[request["id"]] = self.watcher.run_dir
+            self.query_one("#command-result", Static).update(Text(
+                f"{action}: requested — waiting for controller acknowledgement", style="cyan"))
+        except (OSError, ValueError) as exc:
+            self.notify(str(exc), severity="error")
+
+    @on(Button.Pressed, "#execute-plan")
+    def execute_plan(self) -> None:
+        self.submit_command("execute-plan")
+
+    @on(Button.Pressed, "#replan")
+    def replan(self) -> None:
+        self.submit_command("replan")
 
     # --- mission setup ----------------------------------------------------------------
     def _base(self) -> dict[str, Any]:
@@ -403,13 +712,6 @@ class KSLApp(App[int]):
         except ConfigError:
             return DEFAULTS
 
-    def _base_ascent(self) -> dict[str, Any]:
-        """Ascent values of the base profile (plus CLI overrides), shown in the Mission fields."""
-        try:
-            return load_config(self.profile, self.overrides).data["ascent"]
-        except ConfigError:
-            return DEFAULTS["ascent"]  # the start action reports the broken profile
-
     def _number(self, wid: str, label: str) -> float:
         text = self.query_one(f"#{wid}", Input).value.strip()
         try:
@@ -417,20 +719,53 @@ class KSLApp(App[int]):
         except ValueError:
             raise ConfigError(f"{label} must be a number, not {text!r}") from None
 
-    @staticmethod
-    def _stop_options(mode: str) -> list[tuple[str, str]]:
-        return [(p.title, p.value) for p in SEQUENCE if holdable(p, mode)]
-
     @on(Select.Changed, "#mode")
     def mode_changed(self, event: Select.Changed) -> None:
         mode = str(event.value)
-        stop = self.query_one("#stop", Select)
-        previous = stop.value
-        options = self._stop_options(mode)
-        stop.set_options(options)
-        stop.value = previous if previous in {value for _, value in options} else Phase.COMPLETE.value
-        self.query_one("#start", Select).disabled = mode == "sim"
-        self.query_one("#scenario", Select).disabled = mode != "sim"
+        self.invalidate_review()
+        if mode == "sim":
+            self.choose_operation("simulate")
+        self.refresh_operations()
+
+    def choose_operation(self, key: str) -> None:
+        self.selected_operation = key
+        self.query_one("#operations", DataTable).move_cursor(row=next(i for i, op in enumerate(OPERATIONS) if op.key == key))
+        self.invalidate_review()
+        self.refresh_operations()
+
+    @on(Select.Changed, "#mission-profile")
+    def profile_changed(self, event: Select.Changed) -> None:
+        if event.value is Select.BLANK:
+            return
+        try:
+            config = load_config(str(event.value), self.overrides)
+            self.profile = str(event.value)
+            self.apply_profile(config.data)
+            self.vessel_info = None
+            self.connection_error = ""
+            self.invalidate_review()
+            self.schedule_probe()
+        except ConfigError as exc:
+            self.notify(str(exc), severity="error")
+
+    def apply_profile(self, data: dict[str, Any]) -> None:
+        # All fields come from one resolved document when switching profiles.
+        fields = {
+            "altitude": ("ascent", "targetAltitudeKm"), "inclination": ("ascent", "inclinationDeg"),
+            "ascent-mode": ("ascent", "guidanceMode"), "kind": ("profile", "kind"),
+            "vehicle-config": ("intelligentAscent", "vehicleConfig"),
+            "intelligent-periapsis": ("intelligentAscent", "targetPeriapsisKm"),
+            "plane-target": ("profile", "planeTarget"), "geo-longitude": ("profile", "geoLongitudeDeg"),
+            "gto-perigee": ("profile", "gtoPerigeeKm"), "geo-circularize": ("profile", "geoCircularize"),
+            "launch-window": ("profile", "launchWindow"), "target-longitude": ("profile", "targetLongitude"),
+            "auto-warp": ("operations", "autoWarp"), "orbit-trim": ("orbit", "trim"),
+            "hold-trim": ("orbit", "holdForTrigger"), "max-burns": ("orbit", "maxBurns"),
+            "landing-config": ("landing", "backendConfiguration"), "landing-model": ("landing", "modelProfile"),
+            "strict-plan": ("landing", "requireStrictPlan"),
+        }
+        for wid, (section, key) in fields.items():
+            widget = self.query_one(f"#{wid}")
+            widget.value = data[section][key] if isinstance(widget, (Select, Switch)) else str(data[section][key])
 
     def _selection(self) -> dict[str, Any]:
         value = lambda wid: self.query_one(f"#{wid}", Select).value  # noqa: E731
@@ -454,22 +789,38 @@ class KSLApp(App[int]):
             "orbit.trim": switch("orbit-trim"),
             "orbit.holdForTrigger": switch("hold-trim"),
             "orbit.maxBurns": int(self._number("max-burns", "Maximum trim burns")),
+            "landing.backendConfiguration": self.query_one("#landing-config", Input).value.strip(),
+            "landing.modelProfile": self.query_one("#landing-model", Input).value.strip(),
+            "landing.requireStrictPlan": switch("strict-plan"),
         }
         owned = tuple(owned_values)
-        extra = [text for text in self.query_one("#overrides", Input).value.split()
+        extra = [text for text in shlex.split(self.query_one("#overrides", Input).value)
                  if text.split("=", 1)[0] not in owned]
         fields = [f"{key}={json.dumps(val)}" for key, val in owned_values.items()]
-        return {"profile": self.profile, "mode": value("mode"), "start": Phase(value("start")),
-                "stop": Phase(value("stop")), "scenario": SCENARIOS[str(value("scenario"))],
+        return {"profile": self.profile, "mode": value("mode"), "scenario": SCENARIOS[str(value("scenario"))],
                 "overrides": extra + fields}
 
-    def _build_controller(self, mode_override: str | None = None) -> MissionController:
+    def _request(self) -> OperationRequest:
+        if self.selected_operation == "continue" and self.selected_run:
+            from .operations import resume
+            config = resume(self.selected_run)[0]
+            return OperationRequest("continue", config, str(self.query_one("#mode", Select).value),
+                                    source=self.selected_run, use_save=self.query_one("#use-save", Switch).value)
         sel = self._selection()
         config = load_config(str(sel["profile"]), sel["overrides"])
-        mode = mode_override or str(sel["mode"])
-        return MissionController(config, mode, sel["start"], sel["stop"],
-                                 scenario=sel["scenario"] if mode == "sim" else None,
-                                 runs_root=self.runs_root, label="tui")
+        return OperationRequest(self.selected_operation, config, str(sel["mode"]),
+                                self.selected_operation in ("launch", "orbit") and
+                                self.query_one("#execution-style", Select).value == "automatic",
+                                sel["scenario"] if self.selected_operation == "simulate" else None,
+                                self.selected_run, self.query_one("#use-save", Switch).value)
+
+    @staticmethod
+    def _signature(request: OperationRequest) -> str:
+        config, start, stop, save = request.resolve()
+        return json.dumps({"config": config.data, "key": request.key, "mode": request.mode,
+                           "start": start.value, "stop": stop.value, "save": save,
+                           "source": str(request.source), "scenario": request.scenario.name if request.scenario else None,
+                           "automatic": request.automatic}, sort_keys=True)
 
     def _show_plan(self, message: str, style: str = "") -> None:
         self.query_one("#plan", Static).update(Text(message, style=style))
@@ -477,57 +828,52 @@ class KSLApp(App[int]):
     @on(Button.Pressed, "#validate")
     def validate_plan(self) -> None:
         try:
-            sel = self._selection()
-            config = load_config(str(sel["profile"]), sel["overrides"])
-            mode = str(sel["mode"])
-            probe = MissionController.__new__(MissionController)  # plan without creating a run
-            probe.config, probe.mode = config, mode
-            probe.start = sel["scenario"].start if mode == "sim" else sel["start"]
-            probe.stop = sel["stop"]
-            validate_range(probe.start, probe.stop)
-            if not holdable(probe.stop, mode):
-                raise PhaseTransitionError(f"cannot hold at {probe.stop.value} in {mode} mode")
-            problems = config.validate()
-            if problems:
-                raise ConfigError("; ".join(problems))
-            lines = [f"{config.name}: {mode} {probe.start.title} → {probe.stop.title}"]
-            lines += [f"  • {program.name} from {phase.title}" for program, phase in probe.plan()]
-            if mode == "sim":
-                lines.append(f"  scenario {sel['scenario'].name}: {sel['scenario'].description}")
-                if sel["scenario"].baseline:
-                    lines.append(f"  baseline: {sel['scenario'].baseline}")
-            self._show_plan("\n".join(lines), "green")
-        except (ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
+            request = self._request()
+            reason = self._availability(request)
+            if reason:
+                raise ConfigError(reason)
+            self._show_plan(request.preview(), "green")
+            self.query_one("#operation-settings", VerticalScroll).scroll_to_widget(self.query_one("#plan"), animate=False)
+            self.reviewed_signature = self._signature(request)
+            self.refresh_operations()
+        except (OSError, ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
+            self.reviewed_signature = None
             self._show_plan(f"✖ {exc}", "bold red")
+            self.query_one("#start-btn", Button).disabled = True
 
     @on(Button.Pressed, "#start-btn")
     def action_start(self) -> None:
-        if self.controller is not None and self.controller.status.state == MissionState.RUNNING.value:
-            self.notify("A mission is already running from this TUI.", severity="warning")
-            return
         try:
-            controller = self._build_controller()
-        except (ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
+            request = self._request()
+            if self.reviewed_signature != self._signature(request):
+                raise ConfigError("Review the selected operation and its settings before executing")
+            reason = self._availability(request)
+            if reason:
+                raise ConfigError(reason)
+            controller = request.build(self.runs_root)
+        except (OSError, ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
             self._show_plan(f"✖ {exc}", "bold red")
             self.notify(str(exc), title="Cannot start", severity="error")
             return
         if controller.mode == "live":
             self.notify("Live mission started — flight software is now commanding KSP.", severity="warning")
         self.controller = controller
+        self.invalidate_review()
         controller.start_background()
         self.watch_run(controller.run_dir)
 
     @on(Button.Pressed, "#abort-btn")
     def action_abort(self) -> None:
-        if self.controller is None or self.controller.status.state != MissionState.RUNNING.value:
-            self.notify("No mission running from this TUI (external runs: Ctrl-C their CLI).")
+        status = self.watcher.status if self.watcher else None
+        if status is None or status.state != "running":
+            self.notify("Watch a running operation first.")
             return
         if time.monotonic() - self.abort_armed_at > 3.0:
             self.abort_armed_at = time.monotonic()
             self.notify("Press abort again within 3 s to confirm.", severity="warning")
             return
-        self.controller.abort()
-        self.notify("Abort requested: safe-control path running.", severity="error")
+        self.abort_armed_at = 0
+        self.submit_command("abort")
 
     @on(Button.Pressed, "#save-profile")
     def save_profile(self) -> None:
@@ -542,6 +888,9 @@ class KSLApp(App[int]):
             path = repo_path(self.query_one("#save-profile-path", Input).value.strip())
             save_document(path, config.data)
             self.profile = str(path)
+            selector = self.query_one("#mission-profile", Select)
+            selector.set_options([(f"Profile: {name}", name) for name in dict.fromkeys([self.profile, *available_profiles()])])
+            selector.value = self.profile
             self.notify(f"Saved mission. Reuse with ksl tui -p {path}")
         except (OSError, ValueError, ConfigError) as exc:
             self.notify(str(exc), severity="error")
@@ -627,6 +976,9 @@ class KSLApp(App[int]):
     def show_run(self, event: DataTable.RowHighlighted) -> None:
         if event.row_key is None or event.row_key.value is None:
             return
+        self.selected_run = Path(event.row_key.value)
+        self.query_one("#resume-source", Static).update(f"Checkpoint source: {self.selected_run.name}\nUses its saved configuration.")
+        self.invalidate_review()
         from .replay import load
         try:
             recording = load(Path(event.row_key.value))
@@ -659,6 +1011,18 @@ class KSLApp(App[int]):
     def open_run(self, event: DataTable.RowSelected) -> None:
         if event.row_key.value:
             self.watch_run(Path(event.row_key.value))
+
+    @on(Button.Pressed, "#watch-selected")
+    def watch_selected(self) -> None:
+        if self.selected_run:
+            self.watch_run(self.selected_run)
+
+    @on(Button.Pressed, "#continue-selected")
+    def continue_selected(self) -> None:
+        if self.selected_run:
+            self.query_one("#tabs", TabbedContent).active = "dashboard"
+            self.choose_operation("continue")
+            self.query_one("#operations", DataTable).focus()
 
     def _show_sample(self) -> None:
         widget = self.query_one("#sample", Static)

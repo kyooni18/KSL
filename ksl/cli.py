@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import ConfigError, available_profiles, config_from_snapshot, load_config
+from .config import ConfigError, available_profiles, load_config
 from .controller import (EXIT_ABORTED, EXIT_CONNECTION, EXIT_FAILED, EXIT_OK, EXIT_USAGE, MissionController,
                          continue_phase, holdable)
 from .paths import BACKEND
@@ -380,6 +380,16 @@ def cmd_operate(args: argparse.Namespace) -> int:
     mode = "dry-run" if args.dry_run else args.mode
     config = _profile(args)
     source = resolve_run(args.run) if args.run else None
+    request = None
+    if args.operation is not None:
+        overrides = [*args.set]
+        if args.ascent_mode:
+            overrides.append(f"ascent.guidanceMode={args.ascent_mode}")
+        request = OperationRequest(args.operation, config, mode, args.automatic,
+                                   resolve_scenario(args.scenario or config["simulation"]["scenario"])
+                                   if args.operation == "simulate" else None, source, args.use_save,
+                                   resume_profile=args.profile, resume_overrides=overrides)
+        config = request.resolve()[0]
     info = None
     busy = False
     if mode == "live":
@@ -395,12 +405,7 @@ def cmd_operate(args: argparse.Namespace) -> int:
             for row in rows:
                 print(f"{row['operation']:<12} {row['title']}: {row['blocked'] or 'available'}")
         return EXIT_OK
-    request = OperationRequest(args.operation, config, mode, args.automatic,
-                               resolve_scenario(args.scenario or config["simulation"]["scenario"])
-                               if args.operation == "simulate" else None, source, args.use_save)
-    # Continuing after a verified quickload intentionally uses the checkpoint
-    # vessel rather than requiring the currently loaded vessel to match.
-    reason = blocked_reason(BY_KEY[args.operation], info, mode, busy, source)
+    reason = blocked_reason(BY_KEY[args.operation], info, mode, busy, source, args.use_save)
     if reason:
         raise ConfigError(reason)
     return _fly(args, request.build())
@@ -512,7 +517,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = common(sub.add_parser("phases", help="list mission phases and valid entry phases"))
     p.set_defaults(func=cmd_phases)
 
-    p = common(sub.add_parser("tui", help="interactive terminal UI (dashboard, setup, replay)"))
+    p = common(sub.add_parser("tui", help="persistent flight operations console, vehicle inspection and runs"))
     p.set_defaults(func=cmd_tui)
 
     from .operations import BY_KEY

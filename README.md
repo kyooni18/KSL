@@ -31,7 +31,7 @@ make test           # offline regression gate (~25 s, no KSP needed)
 bin/ksl validate --connect              # profile, build, deps, and a read-only KSP probe
 bin/ksl run --dry-run                   # print the full mission plan, fly nothing
 bin/ksl simulate l5-mm305               # offline closed-loop landing (native backend + ShuttleSim)
-bin/ksl tui                             # dashboard / mission setup / replay
+bin/ksl tui                             # persistent flight operations console
 ```
 
 `bin/ksl` runs from a checkout. `pip install -e .` installs the same CLI as `ksl`.
@@ -56,7 +56,8 @@ bin/ksl status --watch                             # follow a running mission fr
 Entry phases are `prelaunch`, `orbit`, `deorbit`, `mm304`, `mm305` and
 `final-approach` (`ksl phases`). A live mission can hold at `prelaunch`
 (read-only preflight), `orbit`, or `complete`. Powered ascent and the unpowered
-glide cannot be paused partway through a phase. Ctrl-C (or **a a** in the TUI)
+glide cannot be paused partway through a phase. Ctrl-C (or press **Abort / release**
+twice within three seconds in the TUI)
 runs the owning program's safe-release path. The ascent programs release
 throttle and autopilot. The landing backend disengages autopilot/SAS,
 neutralizes axes, throttle and wheel steering, and restores engines it
@@ -101,11 +102,74 @@ timing together; other craft still need their own structural flight test.
 | `validate [--connect]` | preflight checks |
 | `profiles [--show P]`, `phases` | configuration and phase reference |
 | `tui` | terminal UI |
+| `operate [OPERATION]` | list or explicitly execute preflight, launch, orbit, deorbit, entry, TAEM, final, continuation or simulation |
+| `control [ACTION] [RUN]` | request abort, execute a reviewed plan, replan, or read a command acknowledgement |
 
 Common options: `-p/--profile`, `--set section.key=value` (repeatable),
 `--json` (machine-readable, for scripts and agents), `-v` (raw program output).
 Exit codes: `0` ok/holding, `1` mission failed, `2` usage/config error,
 `3` kRPC connection failure, `130` aborted.
+
+## Flight operations console
+
+`bin/ksl tui` opens on **Console**. Choose **Connect / refresh** for a read-only
+vessel monitor that keeps updating independently of any run. The active vessel
+and watched run stay visible while you scroll through operations and settings.
+Phase suggestions never execute an action. Unavailable operations explain their
+prerequisites; the program checks the vessel again when execution begins.
+
+Choose an operation, edit its relevant settings, then **Review → Execute**.
+The initial mode is **Dry run**. Select **Live KSP** to command a vessel, or
+**Simulation** for a ShuttleSim scenario. Editing settings invalidates the
+review. **Settings** holds additional profile options and profile saving;
+changes apply to the next operation, not guidance already running.
+
+- **Operator-directed launch** flies continuously to insertion, writes an orbit
+  checkpoint and waits. **Orbit operations / trim** is a separate explicit
+  action; it enables the profile's orbit operations immediately, even if the
+  profile normally disables trim or waits for a trigger.
+- **Automatic mission** on launch or orbit operations continues through landing
+  using the profile's policies. Existing `run`, `launch`, `land` and `continue`
+  commands retain their sequencing behavior.
+- **Plan deorbit** prepares the payload bay and creates a plan without engaging
+  guidance. Review burn timing, delta-v, predicted miss and qualification
+  warnings, then choose **Execute reviewed plan** or **Replan**. Execution checks
+  the exact reviewed revision, vessel/body, orbital elements, mass and remaining
+  burn lead time. Changed state or an expired window requires replanning.
+  Review leaves KSP time running; it does not freeze the orbit.
+- **Entry / TAEM / final** explicitly engage the selected supported takeover
+  phase and continue through rollout. They do not pause between descent phases.
+- **Runs** lets you watch an external run, inspect its record, or select
+  **Continue checkpoint**. Continuation restores that run's saved configuration;
+  optionally load and verify its KSP save first. An atmospheric checkpoint
+  resumes its phase; an orbit checkpoint opens deorbit planning for review.
+
+Operator requests show requested, accepted/running, completed or rejected results.
+Abort works on a watched run started by either interface. Live orbit controls
+are available in the expandable guidance panel. `Ctrl+Enter` executes a reviewed
+operation; there is no single-key Start shortcut. At small terminal sizes, the
+console uses a compact status strip and scrolling operation panels.
+
+The same operations are available from the CLI:
+
+```sh
+bin/ksl operate --dry-run                     # operation reference, no connection
+bin/ksl operate launch -p sts-85km-10deg       # insertion only, then wait
+bin/ksl operate orbit -p sts-85km-10deg        # explicit orbit operations, then wait
+bin/ksl operate deorbit -p sts-85km-10deg      # plan and wait for review
+bin/ksl status latest                         # includes review path and revision
+bin/ksl control execute-plan latest --revision <reviewed-revision>
+bin/ksl control replan latest
+bin/ksl control abort latest
+bin/ksl control --result <command-id>          # inspect acknowledgement on latest run
+bin/ksl operate continue --run <run-id> --use-save
+bin/ksl operate simulate --mode sim --scenario l5-mm305
+```
+
+Live mission controllers acquire a process lock per kRPC endpoint before save
+loading or flight preparation. Another KSL controller cannot start a competing
+operation on that endpoint; watching remains available. This coordinates KSL
+controllers, not unrelated autopilots or direct native-backend clients.
 
 ## Configuration
 
@@ -137,7 +201,9 @@ Every run (live, simulated or dry-run) writes `runs/<run-id>/`:
 `config.json`, `events.jsonl`, `telemetry.jsonl`, `status.json`,
 `checkpoint.json`, per-program logs (`ascent.log`, `orbit-trim.log`,
 `backend.stderr.log`, …), plus program artifacts (`ascent.csv`,
-`deorbit-plan.json`, `simulation-result.json`). The CLI and the TUI read the
+`deorbit-plan.json`, `simulation-result.json`). Reviewed deorbit operations also
+write `backend-configuration.json`, `plan-review.json` and command acknowledgement
+files under `commands/`. The CLI and the TUI read the
 same files, so the TUI can watch a mission started from the CLI.
 
 ## Repository layout
@@ -150,6 +216,10 @@ ksl/                 unified mission system (Python)
   backend.py         NDJSON client for the native landing backend
   config.py, runlog.py, replay.py, scenarios.py, krpc_link.py, kspguard.py
   cli.py, tui.py     interfaces
+  operations.py     explicit operation requests, prerequisites and previews
+  commands.py       run-scoped operator requests and acknowledgements
+  ownership.py      live-controller endpoint locks
+  plan_review.py    held-plan state and burn-window validation
   ascent/            ascent + OMS programs (from the Launcher)
     flight.py        kRPC run loop / CLI      guidance.py  ascent laws, PEG
     vehicle.py       STS model, staging        geometry.py  frames and roll math

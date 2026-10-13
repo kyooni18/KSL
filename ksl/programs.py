@@ -361,7 +361,8 @@ class OrbitTrimProgram(Program):
     def stages(self, ctx: Context) -> list[tuple[str, str, list[str]]]:
         """(stage name, description, argv) in flight order."""
         c, pr, o = ctx.config, ctx.config["profile"], ctx.config["orbit"]
-        if c["ascent"]["guidanceMode"] == "intelligent" and ctx.log.status.operation != "orbit":
+        operation = getattr(getattr(ctx.log, "status", None), "operation", "mission")
+        if c["ascent"]["guidanceMode"] == "intelligent" and operation != "orbit":
             # Intelligent ascent owns and verifies its full circular insertion.
             return []
         inc = str(c["ascent"]["inclinationDeg"])
@@ -497,7 +498,9 @@ class LandingProgram(Program):
         landing = ctx.config["landing"]
         if client._read_message(10.0).get("type") != "ready":
             raise BackendError("landing backend did not announce ready")
-        client.send("updateConfiguration", configuration=ctx.config.backend_configuration())
+        backend_configuration = ctx.config.backend_configuration()
+        ctx.log.write_json("backend-configuration.json", backend_configuration)
+        client.send("updateConfiguration", configuration=backend_configuration)
         ctx.log.update(connection="connecting")
         client.send("connect", timeout=180.0)
         snap = client.latest_snapshot
@@ -534,7 +537,7 @@ class LandingProgram(Program):
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)
             if ctx.review_plan:
-                if not self._review(ctx, client):
+                if not self._review(ctx, client, float(backend_configuration["guidance"]["minimumPlanningLeadTime"])):
                     return Outcome(False, "deorbit review stopped; guidance was not engaged", aborted=True)
             else:
                 self._create_plan(ctx, client)
@@ -596,7 +599,7 @@ class LandingProgram(Program):
                                      "terminalInletEnergyMargin": plan.get("terminalInletEnergyMargin")}))
         return plan
 
-    def _review(self, ctx: Context, client: BackendClient) -> bool:
+    def _review(self, ctx: Context, client: BackendClient, minimum_lead: float) -> bool:
         from .krpc_link import probe
         commands = Commands(ctx.log.directory)
         replanning_request = None
@@ -608,7 +611,8 @@ class LandingProgram(Program):
                 return False
             revision = uuid.uuid4().hex
             ctx.log.write_json("plan-review.json", {"revision": revision, "plan": plan,
-                                                    "reference": reference, "createdAt": time.time()})
+                                                    "reference": reference, "minimumLead": minimum_lead,
+                                                    "createdAt": time.time()})
             ctx.log.update(operation_stage="review", plan_revision=revision,
                            status_message="Plan ready: review then Execute plan, or Replan. Guidance is not engaged.")
             ctx.log.emit(Event("plan-review", "Awaiting explicit deorbit execution", data={"revision": revision}))
@@ -639,8 +643,7 @@ class LandingProgram(Program):
                         break
                     try:
                         current = probe(ctx.config)
-                        reason = invalid_reason(plan, reference, current,
-                                                float(ctx.config.backend_configuration()["guidance"]["minimumPlanningLeadTime"]))
+                        reason = invalid_reason(plan, reference, current, minimum_lead)
                         if reason:
                             raise BackendError(reason)
                         validate_plan_qualification(plan, bool(ctx.config["landing"]["requireStrictPlan"]))
