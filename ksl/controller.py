@@ -111,7 +111,8 @@ class MissionController:
             steps.append((OrbitTrimProgram(), Phase.ORBIT))
         if self.stop.index >= Phase.DEORBIT.index:
             landing_start = self.start if self.start.index >= Phase.DEORBIT.index else Phase.DEORBIT
-            program = SimulationProgram() if self.mode == "sim" else LandingProgram()
+            simulation = self.mode == "sim" or (self.mode == "dry-run" and self.scenario is not None)
+            program = SimulationProgram() if simulation else LandingProgram()
             steps.append((program, landing_start))
         return steps
 

@@ -338,6 +338,10 @@ class CliTests(unittest.TestCase):
             code, out, err = self.run_cli("operate", "deorbit", "--dry-run")
             self.assertEqual(code, 0, err)
             self.assertIn("wait for explicit plan execution", out)
+            code, out, err = self.run_cli("operate", "simulate", "--dry-run", "--scenario", "l5-mm305")
+            self.assertEqual(code, 0, err)
+            self.assertIn("simulation: ShuttleSim scenario l5-mm305", out)
+            self.assertNotIn("landing: connect to kRPC", out)
 
 
 class TuiTests(unittest.IsolatedAsyncioTestCase):
