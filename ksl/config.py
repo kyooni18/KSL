@@ -47,6 +47,7 @@ DEFAULTS: dict[str, Any] = {
         "extraArgs": [],
     },
     "intelligentAscent": {
+        "targetPeriapsisKm": 0.0,  # zero uses the ascent target altitude (circular)
         "vehicleConfig": "",
         "maxDynamicPressurePa": 25000.0,
         "maxG": 3.0,
@@ -228,7 +229,12 @@ class MissionConfig:
             problems.append("orbit.rcsMaxDeltaV must be nonnegative")
         if not isinstance(self.data["orbit"]["maxBurns"], int) or not 1 <= self.data["orbit"]["maxBurns"] <= 6:
             problems.append("orbit.maxBurns must be an integer 1-6")
-        if a["targetAltitudeKm"] < 80.0:
+        periapsis = self.data["intelligentAscent"]["targetPeriapsisKm"]
+        if periapsis < 0 or periapsis > a["targetAltitudeKm"]:
+            problems.append("intelligentAscent.targetPeriapsisKm must be between zero and target altitude")
+        if a["guidanceMode"] == "intelligent" and a["targetAltitudeKm"] <= 0:
+            problems.append("ascent.targetAltitudeKm must be positive")
+        if a["guidanceMode"] == "legacy" and a["targetAltitudeKm"] < 80.0:
             problems.append("ascent.targetAltitudeKm must be at least 80 (Kerbin atmosphere ends at 70 km)")
         if not -180.0 <= a["inclinationDeg"] <= 180.0:
             problems.append("ascent.inclinationDeg must be within [-180, 180]")
@@ -249,7 +255,7 @@ class MissionConfig:
                              ("ascent", "minimumInsertionPeriapsisKm"), ("orbit", "minBurnDeltaV")):
             if self.data[section][key] < 0:
                 problems.append(f"{section}.{key} must be nonnegative")
-        if self.insertion_periapsis_m > self.target_altitude_m:
+        if a["guidanceMode"] == "legacy" and self.insertion_periapsis_m > self.target_altitude_m:
             problems.append("ascent insertion periapsis must not exceed target altitude")
         for section, key in (("connection", "address"), ("landing", "backendConfiguration"),
                              ("landing", "modelProfile"), ("simulation", "scenario")):

@@ -9,8 +9,9 @@ from dataclasses import replace
 from .planner import State, Target, Planner, apsides, coast_apoapsis
 
 
-def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., dt=.25):
-    target = Target(600000., 3.5316e12, 70000., altitude, altitude)
+def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., dt=.25, periapsis=None):
+    periapsis = altitude if periapsis is None else periapsis
+    target = Target(600000., 3.5316e12, 70000., altitude, periapsis)
     planner = Planner(target)
     # No planetary rotation: the harder zero-horizontal-speed launch case.
     y = [0., 0., 0., mass]
@@ -30,7 +31,7 @@ def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., 
         state = State(h, vr, vt, m, thrust if m > dry else 0., isp, q, drag)
         ap, pe = apsides(state, target)
         # Check achieved orbital elements of the independent plant.
-        if abs(pe-altitude) < 1000 and abs(ap-altitude) < 1000:
+        if abs(pe-periapsis) < 1000 and abs(ap-altitude) < 1000:
             return dict(success=True, time=tick*dt, apoapsis=ap, periapsis=pe, mass=m, peakQ=peak_q)
         if (tick > 10 and h < 0) or m <= dry:
             return dict(success=False, time=tick*dt, altitude=h, apoapsis=ap, periapsis=pe,
@@ -47,7 +48,7 @@ def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., 
             cmd = planner.command(state, dt)
             pitch, throttle = math.radians(cmd.pitch), cmd.throttle
         elif h > target.atmosphere+1000 and maneuver is None:
-            solution = om.solve_one_burn(position, velocity, target.mu, altitude, altitude, 0.,
+            solution = om.solve_one_burn(position, velocity, target.mu, altitude, periapsis, 0.,
                                          target.radius, min_lead=5., deadline=2000. if pe > target.atmosphere else 500.)
             if solution is None:
                 return dict(success=False, reason='no correction', apoapsis=ap, periapsis=pe)

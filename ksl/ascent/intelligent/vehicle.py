@@ -19,6 +19,11 @@ def optional(obj, name, default=None):
         return default
 
 
+def has_command(part):
+    return bool(optional(part, 'command')) or any(
+        optional(module, 'name') == 'ModuleCommand' for module in optional(part, 'modules', []))
+
+
 @dataclass
 class Component:
     key: str
@@ -34,6 +39,7 @@ class Component:
     isp: float = 0.0
     throttleable: bool = False
     confidence: str = 'measured'
+    separator: bool = False
 
 
 class Vehicle:
@@ -55,7 +61,7 @@ class Vehicle:
             role = 'structure'
             if resources and optional(resources, 'names', []):
                 role = 'tank'
-            if optional(part, 'command'):
+            if has_command(part):
                 role = 'payload'
             direction = (0., 1., 0.)
             confidence = 'measured'
@@ -66,7 +72,7 @@ class Vehicle:
             throttleable = False
             if engine:
                 self.engines[key] = engine
-                role = 'engine'
+                role = 'booster' if engine.throttle_locked else 'engine'
                 thrust = float(engine.max_thrust)
                 isp = float(engine.vacuum_specific_impulse)
                 throttleable = bool(engine.throttle_locked is False)
@@ -81,7 +87,7 @@ class Vehicle:
                     self.warnings.append(f'{key}: thrust transforms unavailable; check axis')
             self.components.append(Component(key, parent, part.name, role, int(part.stage),
                 int(part.decouple_stage), float(part.mass), tuple(part.position(frame)),
-                direction, thrust, isp, throttleable, confidence))
+                direction, thrust, isp, throttleable, confidence, bool(separator)))
             for i, child in enumerate(part.children):
                 walk(child, f'{key}/{i}', key)
         walk(vessel.parts.root, '0', None)
@@ -112,8 +118,7 @@ class Vehicle:
 
     def usable_engines(self):
         return {c.key: self.engines[c.key] for c in self.components
-                if c.key in self.engines and c.role in ('engine', 'booster')
-                and c.direction[1] > .5}
+                if c.key in self.engines and c.role in ('engine', 'booster')}
 
     def exhausted_branch(self, key):
         """Only positively identified, exhausted propulsion branches may auto-separate.
@@ -123,7 +128,7 @@ class Vehicle:
         """
         branch = self.descendants(key)
         motors = [e for k, e in self.engines.items() if k in branch]
-        if key == '0' or any(optional(self.parts[k], 'command') for k in branch):
+        if key == '0' or any(c.role == 'payload' for c in self.components if c.key in branch):
             return False
         if any(c.role in ('payload', 'ignore') for c in self.components if c.key in branch):
             return False

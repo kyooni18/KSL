@@ -2,8 +2,7 @@
 
 The prediction includes gravity, spherical curvature, propellant mass flow and
 measured drag. Each update starts from telemetry; no precomputed time script is
-executed. The short horizon optimizes a bounded pitch command around a terminal
-altitude/velocity boundary-value solution.
+executed. The short horizon optimizes a bounded pitch command around a velocity-based gravity turn, with an apoapsis boundary constraint.
 """
 from dataclasses import dataclass, replace
 import math
@@ -23,6 +22,8 @@ class State:
     isp: float
     q: float = 0.
     drag: float = 0.  # measured specific drag, m/s²
+    fixed_thrust: float = 0.  # solid/unthrottleable contribution
+    surface_horizontal: float = -1.  # -1 means nonrotating offline plant
 
 
 @dataclass(frozen=True)
@@ -65,7 +66,7 @@ def apsides(s, target):
 def step(s, target, pitch, throttle, dt):
     """Midpoint integration of planar equations, with a measured local drag model."""
     p = math.radians(pitch)
-    force = s.thrust*throttle
+    force = s.fixed_thrust+(s.thrust-s.fixed_thrust)*throttle
     flow = force/(max(s.isp, 1.)*9.80665)
     def derivative(h, vr, vt, mass):
         r = target.radius+h
@@ -80,15 +81,6 @@ def step(s, target, pitch, throttle, dt):
                    horizontal=s.horizontal+mid[2]*dt, mass=max(1., s.mass-flow*dt))
 
 
-def terminal_pitch(s, target):
-    accel = max(.1, s.thrust/s.mass)
-    remaining = max(0., target.insertion_speed-s.horizontal)
-    tgo = max(12., remaining/accel * 1.15)
-    dh = target.periapsis-s.altitude
-    geff = target.mu/(target.radius+s.altitude)**2-s.horizontal**2/(target.radius+s.altitude)
-    ar = (6*dh-4*s.radial*tgo)/tgo**2
-    return math.degrees(math.asin(clamp((ar+geff)/accel, -1., 1.)))
-
 
 class Planner:
     def __init__(self, target, max_q=25000., max_g=3., slew=2.):
@@ -100,21 +92,19 @@ class Planner:
             raise ValueError('Invalid flight state')
         t = self.target
         accel = s.thrust/s.mass
-        throttle = min(1., self.max_g*9.80665/max(accel, .01))
+        throttle = clamp((self.max_g*9.80665*s.mass-s.fixed_thrust)/max(s.thrust-s.fixed_thrust, .01), 0., 1.)
         if s.q > self.max_q:
             throttle *= math.sqrt(self.max_q/s.q)
-        effective = replace(s, thrust=s.thrust*throttle)
-        speed = math.hypot(s.radial, s.horizontal)
+        aero_horizontal = s.horizontal if s.surface_horizontal < 0 else s.surface_horizontal
+        speed = math.hypot(s.radial, aero_horizontal)
         # Establish a gravity turn based on velocity and aerodynamic load.
         launch = clamp(90.-max(0., speed-35.)*.08, 0., 90.)
-        terminal = terminal_pitch(effective, t)
-        blend = clamp(s.horizontal/(.60*t.insertion_speed), 0., 1.)
-        ap_now, pe_now = apsides(s, t)
+        ap_now, _ = apsides(s, t)
         desired = launch
         if ap_now > t.apoapsis*.8:
             # Predictive apoapsis feedback while building transverse energy.
             desired = clamp(launch-(ap_now-t.apoapsis*.8)/1500., -60., launch)
-        prograde = math.degrees(math.atan2(s.radial, max(.1, s.horizontal)))
+        prograde = math.degrees(math.atan2(s.radial, max(.1, aero_horizontal)))
         alpha = clamp(50000./max(s.q, 1.), 1.5, 35.)
         lower, upper = -75., 90.
         if s.q > 100.:
@@ -152,8 +142,8 @@ def achieved(apoapsis, periapsis, inclination, target):
 
 def coast_apoapsis(state, target):
     """Predict drag loss until atmospheric exit or apex, with no engine impulse."""
-    initial = state
-    s = state
+    initial = replace(state, fixed_thrust=0.)
+    s = initial
     for _ in range(240):
         if s.radial <= 0 or s.altitude >= target.atmosphere:
             break

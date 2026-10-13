@@ -135,6 +135,8 @@ def cmd_land(args: argparse.Namespace) -> int:
 
 
 def cmd_continue(args: argparse.Namespace) -> int:
+    if args.ascent_mode:
+        args.set = [*args.set, f"ascent.guidanceMode={args.ascent_mode}"]
     run_dir = resolve_run(args.run)
     status = read_status(run_dir)
     checkpoint_path = run_dir / "checkpoint.json"

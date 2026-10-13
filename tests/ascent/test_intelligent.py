@@ -96,3 +96,33 @@ def test_independent_plant_reaches_measured_orbit(mass, thrust, dry, target):
     assert abs(result['apoapsis']-target) < 1000
     assert abs(result['periapsis']-target) < 1000
     assert result['mass'] > dry
+
+
+def test_rotation_and_fixed_thrust_are_not_throttleable_airspeed():
+    from ksl.ascent.intelligent.planner import step
+    target = Target(600000., 3.5316e12, 70000., 90000., 90000.)
+    pad = State(800., 0., 175., 30000., 600000., 300., surface_horizontal=0.)
+    assert Planner(target).command(pad).pitch == 90.
+    solid = State(10000., 200., 100., 30000., 600000., 300., fixed_thrust=400000.)
+    # Zero liquid throttle must still predict SRB acceleration and depletion.
+    next_state = step(solid, target, 90., 0., 1.)
+    assert next_state.mass < solid.mass
+    assert next_state.radial > solid.radial
+
+
+def test_autopilot_property_compatibility():
+    from ksl.ascent.intelligent.flight import engage
+    autopilot = NS(engaged=False)
+    engage(autopilot, True)
+    assert autopilot.engaged
+    engage(autopilot, False)
+    assert not autopilot.engaged
+
+
+@pytest.mark.parametrize('thrust', [(0.,1.,0.), (1.,0.,0.), (0.,-1.,0.), (.3,.7,.2)])
+def test_thrust_alignment_handles_large_cants(thrust):
+    from ksl.ascent.intelligent.flight import rotate_thrust_to_target
+    from ksl.ascent.orbit_math import unit
+    target = unit((.7,.2,.3))
+    result = rotate_thrust_to_target(unit(thrust), thrust, target)
+    assert result == pytest.approx(target)

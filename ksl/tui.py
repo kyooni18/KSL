@@ -195,6 +195,8 @@ class KSLApp(App[int]):
                                  value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
                     yield Label("Vehicle configuration (optional; inspect in Vehicle tab)")
                     yield Input(base["intelligentAscent"]["vehicleConfig"], id="vehicle-config")
+                    yield Label("Intelligent periapsis (km; 0 = target altitude)")
+                    yield Input(str(base["intelligentAscent"]["targetPeriapsisKm"]), id="intelligent-periapsis")
                     yield Label("Orbit profile")
                     yield Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
                                  allow_blank=False, id="kind")
@@ -436,6 +438,7 @@ class KSLApp(App[int]):
         # are appended last and any typed copy of them in the overrides box is dropped.
         switch = lambda wid: self.query_one(f"#{wid}", Switch).value  # noqa: E731
         owned_values = {
+            "intelligentAscent.targetPeriapsisKm": self._number("intelligent-periapsis", "Periapsis"),
             "ascent.guidanceMode": str(value("ascent-mode")),
             "intelligentAscent.vehicleConfig": self.query_one("#vehicle-config", Input).value.strip(),
             "ascent.inclinationDeg": self._number("inclination", "Inclination"),
@@ -585,6 +588,10 @@ class KSLApp(App[int]):
         approved = set(document['approvedSeparators'])
         approved.discard(str(key))
         if self.query_one("#approve-separator", Switch).value:
+            component = next(c for c in document['components'] if c['key'] == key)
+            if not component.get('separator'):
+                self.notify("Only a measured decoupler can be approved for tank release", severity="error")
+                return
             approved.add(str(key))
         document['approvedSeparators'] = sorted(approved)
         self.query_one("#vehicle-tree", Static).update(diagram(document))
