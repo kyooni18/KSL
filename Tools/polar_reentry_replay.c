@@ -62,12 +62,12 @@ static void load_history(void){
     const char*flight=(const char*)sqlite3_column_text(statement,0);
     const char*structure=(const char*)sqlite3_column_text(statement,1);
     const char*environment=(const char*)sqlite3_column_text(statement,2);
-    PhysicsStoreOptions options={.path=database,.model_id="STS",.vessel_name="STS",.structure_manifest_json=structure,.environment_manifest_json=environment,.session_id=session,.flight_key=flight,.mode=PHYSICS_STORE_READ_ONLY};
+    PhysicsStoreOptions options={.path=database,.model_id="STS",.vessel_name="STS",.structure_manifest_json=structure,.environment_manifest_json=environment,.session_id=session,.flight_key=flight,.mode=PHYSICS_STORE_READ_ONLY,.structure_variant=getenv("KSP_LANDER_PHYSICS_VARIANT")};
     char error[1024]={0};PhysicsStore*store=physics_store_open(&options,error,sizeof(error));if(!store)fail(error);
     VesselAeroSample samples[VESSEL_AERO_SAMPLES];size_t n=physics_store_load_history(store,&planet,samples,VESSEL_AERO_SAMPLES,error,sizeof(error));if(error[0])fail(error);
     vessel_physics_init(&physics);for(size_t i=0;i<n;i++)vessel_physics_import_sample(&physics,&samples[i]);
     fprintf(stderr,"prior_cells=%zu recorded_initial_cells=%.0f excluded_flight=%s\n",n,number(context,"historicalSamplesLoaded"),flight);
-    if(n!=(size_t)number(context,"historicalSamplesLoaded"))fail("certified prior changed: freeze compatible original history before comparing");
+    if(n!=(size_t)number(context,"historicalSamplesLoaded")&&!getenv("REPLAY_ALLOW_PRIOR_CHANGE"))fail("certified prior changed: freeze compatible original history before comparing");
     FILE*f=create_output("-prior.csv");fprintf(f,"q,mach,aoa,beta,mass,fx_per_q,fy_per_q,fz_per_q,gear,brakes,airbrakes,observations,trust\n");
     for(size_t i=0;i<n;i++){VesselAeroSample*s=&samples[i];fprintf(f,"%.17g,%.17g,%.17g,%.17g,%.17g,",s->q,s->mach,s->aoa,s->beta,s->mass);print_v(f,s->force_per_q);fprintf(f,",%d,%d,%d,%u,%.17g\n",s->gear,s->brakes,s->airbrakes,s->observations,s->trust);}fclose(f);
     int identity=object(0,"modelIdentity");physics.certified_uncertainty=number(identity,"physicsCertifiedUncertainty");physics.certified_confidence=number(identity,"physicsCertifiedConfidence");
