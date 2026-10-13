@@ -6,14 +6,12 @@ import math
 import signal
 import time
 from pathlib import Path
-from types import SimpleNamespace
 
 from ...config import config_from_snapshot
 from ...krpc_link import connect
 from ...paths import repo_path
 from ..events import emit_event, emit_telemetry
 from ..orbit_math import norm, unit, dot, cross
-from ..vehicle import thrust_axis_offset
 from .vehicle import Vehicle, diagram
 from .planner import Planner, State, Target, achieved, coast_apoapsis
 
@@ -59,6 +57,7 @@ class Propulsion:
     def update(self):
         attached = set(self.model.vessel.parts.all)
         groups = {}
+        waiting_for_separation = False
         for c in self.model.components:
             if c.key in self.model.separators and c.key not in self.separated and self.model.parts[c.key] in attached:
                 groups.setdefault(c.separation_stage, []).append(c.key)
@@ -70,6 +69,7 @@ class Propulsion:
                 continue
             since = self.depleted_since.setdefault(token, time.monotonic())
             if time.monotonic()-since < 2.:
+                waiting_for_separation = True
                 continue
             for key in group:
                 self.model.separators[key].decouple()
@@ -77,7 +77,7 @@ class Propulsion:
                 emit_event('stage-separation', component=key)
         engines = list(self.present().values())
         active = [e for e in engines if e.active and e.has_fuel]
-        if not active and self.ignite():
+        if not active and not waiting_for_separation and self.ignite():
             active = [e for e in self.present().values() if e.active and e.has_fuel]
         return active
 
@@ -100,27 +100,43 @@ def rotate_thrust_to_target(vector, thrust, target):
 
 def aim(conn, vessel, frame, direction):
     sc = conn.space_center
-    offset = thrust_axis_offset(conn, vessel, frame)
+    total = [0., 0., 0.]
+    for engine in vessel.parts.engines:
+        if not engine.active:
+            continue
+        force = engine.thrust if engine.thrust > 1. else engine.available_thrust
+        thrusters = engine.thrusters
+        try:
+            directions = [t.thrust_direction(vessel.reference_frame) for t in thrusters]
+        except Exception:
+            directions = []
+        if not directions:
+            directions = [engine.part.direction(vessel.reference_frame)]
+        for axis in directions:
+            for i in range(3):
+                total[i] += force*axis[i]/len(directions)
     nose = sc.transform_direction((0., 1., 0.), vessel.reference_frame, frame)
     roof = sc.transform_direction((0., 0., -1.), vessel.reference_frame, frame)
-    thrust = tuple(nose[i]+offset[i] for i in range(3))
+    thrust = sc.transform_direction(unit(total), vessel.reference_frame, frame) if norm(total) > 1. else nose
     nose_target = rotate_thrust_to_target(nose, thrust, direction)
     roof_target = rotate_thrust_to_target(roof, thrust, direction)
     ap = vessel.auto_pilot
+    vessel.control.sas = False
+    if not getattr(ap, 'engaged', True):
+        engage(ap, True)
     ap.reference_frame = frame
     if hasattr(ap, 'set_direction_and_up'):
         ap.set_direction_and_up(nose_target, roof_target)
     else:
         ap.target_direction = nose_target
+    return math.degrees(math.acos(max(-1., min(1., dot(unit(thrust), unit(direction))))))
 
 
 def correct_orbit(conn, vessel, propulsion, target, timeout):
     """Replan finite burns from achieved elements, using generic active propulsion."""
-    from ..orbit_trim import plan_exact
+    from .insertion import plan_node, recovery_direction
     sc, ap = conn.space_center, vessel.auto_pilot
     frame = vessel.orbit.body.non_rotating_reference_frame
-    args = SimpleNamespace(apoapsis=target.apoapsis, periapsis=target.periapsis,
-                           inclination=abs(target.inclination))
     deadline = time.monotonic()+timeout
     from ...controls import Controls, warp_until
     controls = Controls.from_env()
@@ -132,21 +148,38 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
         thrust = sum(e.available_thrust for e in engines)
         if thrust <= 0:
             raise RuntimeError('No fueled propulsion remains for insertion')
-        result = plan_exact(sc, vessel, args, 5., target.altitude_tolerance*.4,
-                            target.inclination_tolerance*.4)
-        if result is None or not result[0]:
-            raise RuntimeError('No usable orbital correction found from measured state')
-        node = result[0][0]
+        try:
+            result = plan_node(sc, vessel, target)
+        except (ArithmeticError, ValueError) as exc:
+            emit_event('prediction-warning', error=str(exc))
+            result = None
+        if result is None:
+            # A search failure is not proof of an infeasible orbit. Build energy
+            # for a bounded interval and retry from fresh telemetry.
+            emit_event('insertion-recovery', attempt=attempt+1)
+            until = min(deadline, time.monotonic()+15.)
+            try:
+                while time.monotonic() < until:
+                    direction = recovery_direction(vessel.position(frame), vessel.velocity(frame), target.mu)
+                    error = aim(conn, vessel, frame, direction)
+                    vessel.control.throttle = min(1., 9.80665*vessel.mass/max(thrust, 1.)) if error < 10 else 0.
+                    time.sleep(.1)
+            finally:
+                vessel.control.throttle = 0.
+            continue
+        node, prediction = result
+        emit_event('insertion-plan', attempt=attempt+1, deltaV=prediction['dv'],
+                   burnIn=prediction['t'], exact=prediction['exact'])
         try:
             duration = node.delta_v/(thrust/vessel.mass)
             start = node.ut-duration/2
             aim(conn, vessel, frame, node.burn_vector(frame))
-            if vessel.orbit.periapsis_altitude > target.atmosphere+1000 and start-sc.ut > 40:
+            if vessel.flight().mean_altitude > target.atmosphere+1000 and start-sc.ut > 40:
                 warp_until(sc, start, controls, lead=20.)
             while sc.ut < start:
                 if time.monotonic() > deadline:
                     raise RuntimeError('Insertion coast timed out')
-                if vessel.flight().mean_altitude < target.atmosphere and vessel.flight().vertical_speed < 0:
+                if vessel.flight().mean_altitude < target.atmosphere and vessel.flight(vessel.orbit.body.reference_frame).vertical_speed < 0:
                     raise RuntimeError('Insertion coast is descending into atmosphere')
                 time.sleep(.1)
             initial = norm(node.remaining_burn_vector(frame))
@@ -157,14 +190,15 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
                 if remaining < .15 or (remaining > previous+.2 and previous < 1.):
                     break
                 previous = remaining
-                aim(conn, vessel, frame, dv)
+                error = aim(conn, vessel, frame, dv)
                 engines = propulsion.update()
                 accel = sum(e.available_thrust for e in engines)/vessel.mass
                 if accel <= .001:
                     raise RuntimeError('Propulsion lost during insertion')
-                vessel.control.throttle = min(1., remaining/max(accel*2., .1)) if ap.error < 8 else 0.
+                vessel.control.throttle = min(1., remaining/max(accel*2., .1)) if error < 8 else 0.
                 emit_telemetry(phase='insertion', apoapsis=vessel.orbit.apoapsis_altitude,
-                               periapsis=vessel.orbit.periapsis_altitude, remainingDeltaV=remaining)
+                               periapsis=vessel.orbit.periapsis_altitude, remainingDeltaV=remaining,
+                               thrustAlignmentError=error, attitudeError=ap.error, throttle=vessel.control.throttle)
                 time.sleep(.05)
             else:
                 raise RuntimeError('Insertion burn timed out')
@@ -213,6 +247,8 @@ def fly(conn, config, output, launch):
     heading = heading_for(target.inclination, vessel.flight().latitude)
     last = start
     turn_announced = False
+    coasting = False
+    no_thrust_since = None
     with output.open('w') as stream:
         writer = csv.DictWriter(stream, fieldnames=['ut', 'altitude', 'verticalSpeed', 'horizontalSpeed',
             'apoapsis', 'periapsis', 'inclination', 'mass', 'dynamicPressure', 'pitchCommand',
@@ -220,7 +256,8 @@ def fly(conn, config, output, launch):
         writer.writeheader()
         try:
             ap.reference_frame = vessel.surface_reference_frame
-            ap.target_pitch_and_heading(90., heading)
+            ap.target_direction = vessel.direction(vessel.surface_reference_frame)
+            ctl.sas = False
             engage(ap, True)
             if not propulsion.ignite():
                 raise RuntimeError('No fueled launch engines')
@@ -255,21 +292,46 @@ def fly(conn, config, output, launch):
                 state = State(f.mean_altitude, f.vertical_speed, inertial.horizontal_speed,
                               vessel.mass, thrust, isp, f.dynamic_pressure, drag,
                               sum(e.thrust for e in engines if e.throttle_locked), f.horizontal_speed)
-                if thrust <= 0:
-                    raise RuntimeError('No fueled propulsion remains during ascent')
+                if thrust <= 0 and not coasting:
+                    no_thrust_since = no_thrust_since or time.monotonic()
+                    if time.monotonic()-no_thrust_since > 15.:
+                        raise RuntimeError('No fueled propulsion remains during ascent after staging grace')
+                    ctl.throttle = 0.
+                    time.sleep(.1)
+                    continue
+                no_thrust_since = None
+                # Bound command slew by live rotational authority and inertia.
+                positive, negative = vessel.available_torque
+                inertia = vessel.moment_of_inertia
+                authority = min(max(positive[i], negative[i])/max(inertia[i], 1.) for i in (0, 2))
+                planner.slew = min(2., max(.1, math.degrees(math.sqrt(max(0., authority)))*.2))
                 command = planner.command(state, dt)
                 if not turn_announced and command.pitch < 85:
                     emit_event('gravity-turn', guidance='intelligent')
                     turn_announced = True
                 # A safe ballistic arc is handed to the generic finite-burn insertion solver.
-                if state.fixed_thrust < 1. and coast_apoapsis(state, target) >= target.apoapsis-100:
+                if coasting:
                     ctl.throttle = 0.
-                    break
+                    if state.altitude > target.atmosphere+1000:
+                        break
+                    if state.radial > 0:
+                        emit_telemetry(phase='coast', altitude=state.altitude, verticalSpeed=state.radial,
+                                       apoapsis=vessel.orbit.apoapsis_altitude, periapsis=vessel.orbit.periapsis_altitude)
+                        time.sleep(.1)
+                        continue
+                    emit_event('coast-recovery', reason='atmospheric climb ended before clearance')
+                    coasting = False
+                    planner.pitch = max(30., planner.pitch)
+                if state.fixed_thrust < 1. and coast_apoapsis(state, target) >= target.apoapsis-100 and state.radial > 0:
+                    ctl.throttle = 0.
+                    coasting = True
+                    emit_event('ascent-cutoff', guidance='intelligent')
+                    continue
                 pitch, yaw = math.radians(command.pitch), math.radians(heading)
                 direction = (math.sin(pitch), math.cos(pitch)*math.cos(yaw), math.cos(pitch)*math.sin(yaw))
-                aim(conn, vessel, vessel.surface_reference_frame, direction)
+                error = aim(conn, vessel, vessel.surface_reference_frame, direction)
                 ctl.throttle = command.throttle
-                if ap.error > 30 and f.mean_altitude > 1000:
+                if error > 30 and f.mean_altitude > 1000:
                     ctl.throttle = min(ctl.throttle, .25)
                 sample = dict(ut=now, altitude=f.mean_altitude, verticalSpeed=f.vertical_speed,
                     horizontalSpeed=inertial.horizontal_speed, apoapsis=vessel.orbit.apoapsis_altitude,
@@ -284,11 +346,6 @@ def fly(conn, config, output, launch):
                 time.sleep(.1)
             else:
                 raise RuntimeError('Ascent timed out')
-            emit_event('ascent-cutoff', guidance='intelligent')
-            while vessel.flight().mean_altitude < target.atmosphere+1000:
-                if time.monotonic() > wall_deadline or vessel.flight().vertical_speed <= 0:
-                    raise RuntimeError('Ballistic ascent did not clear the atmosphere')
-                time.sleep(.1)
             correct_orbit(conn, vessel, propulsion, target, max(1., wall_deadline-time.monotonic()))
             o = vessel.orbit
             report = dict(apoapsis=o.apoapsis_altitude, periapsis=o.periapsis_altitude,

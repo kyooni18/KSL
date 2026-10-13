@@ -40,6 +40,7 @@ class Component:
     throttleable: bool = False
     confidence: str = 'measured'
     separator: bool = False
+    command: bool = False
 
 
 class Vehicle:
@@ -87,7 +88,7 @@ class Vehicle:
                     self.warnings.append(f'{key}: thrust transforms unavailable; check axis')
             self.components.append(Component(key, parent, part.name, role, int(part.stage),
                 int(part.decouple_stage), float(part.mass), tuple(part.position(frame)),
-                direction, thrust, isp, throttleable, confidence, bool(separator)))
+                direction, thrust, isp, throttleable, confidence, bool(separator), has_command(part)))
             for i, child in enumerate(part.children):
                 walk(child, f'{key}/{i}', key)
         walk(vessel.parts.root, '0', None)
@@ -98,6 +99,8 @@ class Vehicle:
         return {k for k in self.parts if k == key or k.startswith(key + '/')}
 
     def apply(self, document):
+        if document.get('version') != 1:
+            raise ValueError('Unsupported vehicle configuration version')
         if document.get('fingerprint') != self.fingerprint:
             raise ValueError('Vehicle configuration does not match this craft; inspect and save a new configuration')
         corrections = document.get('roles', {})
@@ -128,7 +131,9 @@ class Vehicle:
         """
         branch = self.descendants(key)
         motors = [e for k, e in self.engines.items() if k in branch]
-        if key == '0' or any(c.role == 'payload' for c in self.components if c.key in branch):
+        if key == '0':
+            return False
+        if key not in self.approved and any(c.command for c in self.components if c.key in branch):
             return False
         if any(c.role in ('payload', 'ignore') for c in self.components if c.key in branch):
             return False
@@ -155,11 +160,33 @@ def save_document(path, document):
 
 
 def diagram(document):
-    lines = [f"{document['name']}  [{document['fingerprint']}]", 'Body axes: +Y nose; position in metres; arrows show thrust']
-    for c in document['components']:
-        indent = '  ' * c['key'].count('/')
+    components = document['components']
+    ids = {c['key']: f"{i:02d}" for i,c in enumerate(components)}
+    lines = [f"{document['name']}  [{document['fingerprint']}]",
+             'Body projection: X across, +Y nose ↑; coordinates in metres from CoM']
+    if components:
+        xs = [c['position'][0] for c in components]
+        ys = [c['position'][1] for c in components]
+        width, height = 51, 13
+        grid = [[' ']*width for _ in range(height)]
+        for c in sorted(components, key=lambda c: bool(c['thrust'])):
+            x,y,_ = c['position']
+            col = round((x-min(xs))/max(max(xs)-min(xs),1.)*(width-1))
+            row = height-1-round((y-min(ys))/max(max(ys)-min(ys),1.)*(height-1))
+            if c['thrust']:
+                glyph = '↑' if c['direction'][1] > .5 else '↓' if c['direction'][1] < -.5 else '↔'
+            else:
+                glyph = {'payload':'P','tank':'T','external-tank':'T','decoupler':'D'}.get(c['role'], '·')
+            grid[row][col] = glyph
+        lines += ['┌'+'─'*width+'┐'] + ['│'+''.join(row)+'│' for row in grid] + ['└'+'─'*width+'┘']
+    lines += ['↑↓↔ engine thrust · structure T tank D decoupler P payload',
+              'ID ← parent | component / role | (X,Y,Z) | ignition / separation']
+    for c in components:
+        if c['role'] == 'structure':
+            continue
         pos = ','.join(f'{x:.1f}' for x in c['position'])
         axis = ','.join(f'{x:+.2f}' for x in c['direction'])
-        engine = f"  ↑({axis}) {c['thrust']/1000:.1f} kN" if c['thrust'] else ''
-        lines.append(f"{indent}{c['key']} {c['name']} [{c['role']}] ({pos}) S{c['stage']}/D{c['separation_stage']}{engine}")
+        engine = f"  thrust({axis}) {c['thrust']/1000:.1f} kN" if c['thrust'] else ''
+        lines.append(f"{ids[c['key']]} ← {ids.get(c['parent'], '--')} | {c['name']} / {c['role']} "
+                     f"| ({pos}) | S{c['stage']}/D{c['separation_stage']}{engine}")
     return '\n'.join(lines + document.get('warnings', []))

@@ -126,3 +126,37 @@ def test_thrust_alignment_handles_large_cants(thrust):
     target = unit((.7,.2,.3))
     result = rotate_thrust_to_target(unit(thrust), thrust, target)
     assert result == pytest.approx(target)
+
+
+def test_staged_mass_drop_and_elliptical_insertion():
+    result = simulate(mass=30000., altitude=200000., periapsis=90000.,
+                      stages=[(600000.,300.,12000.,3000.), (200000.,350.,3000.,0.)])
+    assert result['success'], result
+    assert abs(result['apoapsis']-200000.) < 1000
+    assert abs(result['periapsis']-90000.) < 1000
+
+
+def test_burn_alignment_uses_force_not_roll_and_disables_competing_sas():
+    from ksl.ascent.intelligent.flight import aim
+    engine = NS(active=True, thrust=0., available_thrust=1000.,
+                thrusters=[NS(thrust_direction=lambda frame: (0.,1.,0.))])
+    ap = NS(engaged=False, error=180.)
+    control = NS(sas=True)
+    vessel = NS(parts=NS(engines=[engine]), reference_frame='body', auto_pilot=ap, control=control)
+    conn = NS(space_center=NS(transform_direction=lambda vector, src, dst: vector))
+    error = aim(conn, vessel, 'inertial', (0.,1.,0.))
+    assert error == pytest.approx(0.)
+    assert ap.error == 180.  # roll must not prohibit an aligned burn
+    assert ap.engaged and not control.sas
+    assert ap.target_direction == (0.,1.,0.)
+
+
+def test_role_correction_cannot_silently_authorize_controlled_branch_release():
+    vehicle = model()
+    motor = next(c for c in vehicle.components if c.key == '0/0/0')
+    motor.command = True
+    assert not vehicle.exhausted_branch('0/0')
+    doc = vehicle.document()
+    doc['approvedSeparators'] = ['0/0']
+    vehicle.apply(doc)
+    assert vehicle.exhausted_branch('0/0')

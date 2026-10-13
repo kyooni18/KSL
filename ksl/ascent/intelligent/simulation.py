@@ -9,7 +9,7 @@ from dataclasses import replace
 from .planner import State, Target, Planner, apsides, coast_apoapsis
 
 
-def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., dt=.25, periapsis=None):
+def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., dt=.25, periapsis=None, stages=None):
     periapsis = altitude if periapsis is None else periapsis
     target = Target(600000., 3.5316e12, 70000., altitude, periapsis)
     planner = Planner(target)
@@ -17,12 +17,19 @@ def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., 
     y = [0., 0., 0., mass]
     peak_q = 0.
     phase = 'ascent'
+    stages = list(stages or [(thrust, isp, dry, 0.)])
+    stage_index = 0
+    thrust, isp, dry, discard = stages[0]
     angle = 0.
     maneuver = None
     attempts = 0
     from .. import orbit_math as om
     for tick in range(int(2400/dt)):
         h, vr, vt, m = y
+        if m <= dry and stage_index+1 < len(stages):
+            y[3] = m = m-discard
+            stage_index += 1
+            thrust, isp, dry, discard = stages[stage_index]
         speed = math.hypot(vr, vt)
         density = 1.225*math.exp(-max(0., h)/5600.) if h < 70000 else 0.
         q = .5*density*speed*speed

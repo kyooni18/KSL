@@ -264,7 +264,7 @@ class KSLApp(App[int]):
                     yield Label("Role")
                     from .ascent.intelligent.vehicle import ROLES
                     yield Select([(role, role) for role in ROLES], value="structure", allow_blank=False, id="component-role")
-                    yield Label("Permit depleted engine-less tank separation at this decoupler")
+                    yield Label("Approve depleted tank / controlled booster release at this decoupler")
                     yield Switch(False, id="approve-separator")
                     yield Button("Apply component correction", id="apply-component")
                     yield Input("Configuration/vehicles/user-ascent.json", id="vehicle-save-path")
@@ -561,7 +561,7 @@ class KSLApp(App[int]):
             self.vehicle_document = document
             self.query_one("#vehicle-tree", Static).update(diagram(document))
             self.query_one("#component", Select).set_options(
-                [(f"{c['key']} {c['name']} ({c['role']})", c['key']) for c in document['components']])
+                [(f"{i:02d} {c['name']} ({c['role']})", c['key']) for i,c in enumerate(document['components'])])
         except Exception as exc:
             self.notify(str(exc), severity="error")
 

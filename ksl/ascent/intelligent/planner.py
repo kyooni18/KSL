@@ -114,6 +114,13 @@ class Planner:
         if lower > upper:  # slew wins when a sudden gust moves prograde
             lower = upper = clamp(prograde, self.pitch-self.slew*dt, self.pitch+self.slew*dt)
         nominal = clamp(desired, lower, upper)
+        if s.q > self.max_q*.6 and speed > 1.:
+            near = step(s, t, nominal, throttle, 2.)
+            surface_next = aero_horizontal+(near.horizontal-s.horizontal)
+            future_q = s.q*(near.radial**2+surface_next**2)/(speed*speed)*math.exp(
+                clamp((s.altitude-near.altitude)/5600., -10., 10.))
+            if future_q > self.max_q:
+                throttle *= math.sqrt(self.max_q/future_q)
         horizon = clamp((t.insertion_speed-s.horizontal)/max(accel, .1)*.12, 3., 15.)
         candidates = sorted(set(clamp(nominal+d, lower, upper) for d in (-6., -3., 0., 3., 6.)))
         best = None
