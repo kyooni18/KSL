@@ -14,6 +14,8 @@ import time
 
 import krpc
 
+from ..controls import Controls, warp_until
+from . import orbit_math as om
 from .events import emit_event
 
 
@@ -25,6 +27,21 @@ ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
 # alignment.
 RCS_TRIM_MAX_DV = 2.0  # m/s
 RCS_TRIM_TIMEOUT = 180.0  # s of wall time
+RUNTIME = {}  # 'controls': operator runtime controls (auto-warp, trim hold/disable)
+
+
+def controls():
+    if 'controls' not in RUNTIME:
+        RUNTIME['controls'] = Controls.from_env()
+    return RUNTIME['controls']
+
+
+def warp_to_burn(sc, ut, lead):
+    """Warp toward a burn, honouring the operator's auto-warp setting."""
+    def announce(index, remaining):
+        print(f'time warp index {index}, {remaining:.0f} s to go'
+              + ('' if controls().auto_warp else ' (auto-warp off)'))
+    warp_until(sc, ut, controls(), lead=lead, announce=announce)
 
 
 def oms_propellant_mass(vessel):
@@ -182,7 +199,7 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
         ap.target_roll = float('nan')
         ap.engaged = True
         if node.time_to > ALIGN_LEAD+60:
-            sc.warp_to(node.ut-ALIGN_LEAD-30)
+            warp_to_burn(sc, node.ut, ALIGN_LEAD+30)
         while sc.ut < node.ut-0.0:
             ap.target_direction = burn_dir
             time.sleep(0.1)
@@ -225,6 +242,98 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
             pass
 
 
+def oms_delta_v(vessel):
+    """Delta-v (m/s) the active OMS engines can still deliver."""
+    engines = [e for e in vessel.parts.engines if e.active and e.available_thrust > 0]
+    thrust = sum(e.available_thrust for e in engines)
+    if thrust <= 0.0:
+        return 0.0
+    isp = sum(e.specific_impulse*e.available_thrust for e in engines)/thrust
+    mass = vessel.mass
+    dry = mass - oms_propellant_mass(vessel)
+    return isp*9.80665*math.log(mass/max(1.0, dry)) if mass > dry > 0 else 0.0
+
+
+def choose_frame_map(r0, v0, mu, krpc_inclination_deg):
+    """Pick the kRPC -> right-handed mapping whose inclination matches kRPC's own."""
+    best = None
+    for name, fn in (('swap', lambda v: (v[0], v[2], v[1])),
+                     ('rotate', lambda v: (v[0], v[2], -v[1]))):
+        inc = om.elements(fn(r0), fn(v0), mu)['inc']
+        error = abs(inc-krpc_inclination_deg)
+        if best is None or error < best[0]:
+            best = (error, name, fn)
+    return best[2], best[1]
+
+
+def solve3(columns, rhs):
+    """Solve  sum_i x_i * columns[i] = rhs  for three 3-vectors (Cramer's rule)."""
+    def det(a, b, c):
+        return om.dot(a, om.cross(b, c))
+    d = det(*columns)
+    if abs(d) < 1e-9:
+        raise RuntimeError('Degenerate node basis')
+    return (det(rhs, columns[1], columns[2])/d,
+            det(columns[0], rhs, columns[2])/d,
+            det(columns[0], columns[1], rhs)/d)
+
+
+def plan_exact(sc, vessel, args, min_lead, tolerance_alt=100.0, tolerance_inc=0.02):
+    """One burn to the exact target apsides and inclination, or None to fall back.
+
+    The burn time is searched analytically (orbit_math.solve_one_burn); the dv
+    vector is then converted to node components with the node frame calibrated by
+    probing unit nodes through kRPC's own burn_vector, so no frame or sign
+    convention is assumed. Returns (nodes, predicted orbit); nodes is empty when
+    the orbit is already on target.
+    """
+    orbit = vessel.orbit
+    body = orbit.body
+    nrf = body.non_rotating_reference_frame
+    mu, radius = body.gravitational_parameter, body.equatorial_radius
+    if (abs(orbit.apoapsis_altitude-args.apoapsis) < tolerance_alt and
+            abs(orbit.periapsis_altitude-args.periapsis) < tolerance_alt and
+            abs(math.degrees(orbit.inclination)-args.inclination) < tolerance_inc):
+        return [], orbit
+    r_k, v_k = vessel.position(nrf), vessel.velocity(nrf)
+    to_rh, _ = choose_frame_map(r_k, v_k, mu, math.degrees(orbit.inclination))
+    r0, v0 = to_rh(r_k), to_rh(v_k)
+    deadline = None
+    if orbit.periapsis_altitude < MIN_BURN_ALTITUDE:
+        # never wait through a periapsis pass inside the atmosphere
+        deadline = orbit.time_to_periapsis - 20.0
+    solution = om.solve_one_burn(
+        r0, v0, mu, max(args.apoapsis, args.periapsis), min(args.apoapsis, args.periapsis),
+        args.inclination, radius, min_lead=min_lead, deadline=deadline)
+    if solution is None:
+        return None
+    ut = sc.ut + solution['t']
+    # kRPC <-> right-handed map is its own inverse for 'swap'; invert 'rotate' by hand.
+    if to_rh((1.0, 2.0, 3.0)) == (1.0, 3.0, 2.0):
+        from_rh = to_rh
+    else:
+        from_rh = lambda v: (v[0], -v[2], v[1])
+    dv_k = from_rh(solution['dv_vec'])
+    basis = []
+    for kwargs in ({'prograde': 1.0}, {'normal': 1.0}, {'radial': 1.0}):
+        probe = vessel.control.add_node(ut, **kwargs)
+        try:
+            basis.append(probe.burn_vector(nrf))
+        finally:
+            probe.remove()
+    prograde, normal, radial = solve3(basis, dv_k)
+    node = vessel.control.add_node(ut, prograde=prograde, normal=normal, radial=radial)
+    node.goal = None
+    predicted = node.orbit
+    print(f'exact plan: burn in {solution["t"]:.0f} s, dv {solution["dv"]:.3f} m/s '
+          f'(prograde {prograde:.3f}, normal {normal:.3f}, radial {radial:.3f}); '
+          f'predicted Ap {predicted.apoapsis_altitude/1000:.3f} km, '
+          f'Pe {predicted.periapsis_altitude/1000:.3f} km, '
+          f'inc {math.degrees(predicted.inclination):.4f} deg; '
+          f'{"exact" if solution["exact"] else "closest"} solution')
+    return [node], predicted
+
+
 def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
     if use_rcs_forward(node.delta_v) and not orbit_cutoff:
         return execute_rcs_forward(conn, vessel, node, min(tolerance, 0.03))
@@ -255,7 +364,7 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         # Leave at least ALIGN_LEAD s of unwarped time to settle on the burn attitude
         # (the autopilot cannot steer on rails).
         if start-sc.ut > ALIGN_LEAD+60:
-            sc.warp_to(start-ALIGN_LEAD-30)
+            warp_to_burn(sc, start, ALIGN_LEAD+30)
         ap.engaged = True
         ctl.rcs = False  # never RCS during OMS burns (it perturbs the orbit)
         while sc.ut < start-30:
@@ -344,6 +453,13 @@ def main():
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--min-burn-dv', type=float, default=0.0,
                         help='Skip planned burns at or below this delta-v (m/s)')
+    parser.add_argument('--max-burns', type=int, default=2,
+                        help='Maximum number of burns (1 ideally; a 2nd finishes the residual)')
+    parser.add_argument('--legacy-plan', action='store_true',
+                        help='Use the staged apsis-by-apsis planner instead of the exact one-burn solution')
+    parser.add_argument('--skip-if-short-dv', type=float, default=None, metavar='MARGIN',
+                        help='Skip (no burn) unless the OMS has the planned dv plus this margin (m/s)')
+    parser.add_argument('--label', default='trim', help='Name used in trim events')
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
     parser.add_argument('--stream-port', type=int, default=50001)
@@ -404,6 +520,16 @@ def main():
         """
         for stale in list(vessel.control.nodes):
             stale.remove()
+        if not args.legacy_plan:
+            try:
+                exact = plan_exact(sc, vessel, args, min_lead)
+            except Exception as exc:  # fall back to the staged planner
+                print(f'exact planner unavailable ({type(exc).__name__}: {exc}); staged plan')
+                for stale in list(vessel.control.nodes):
+                    stale.remove()
+                exact = None
+            if exact is not None:
+                return exact
         o0 = vessel.orbit
         now = sc.ut
         flight = vessel.flight(o0.body.reference_frame)
@@ -479,7 +605,39 @@ def main():
         for stale in list(vessel.control.nodes):
             stale.remove()
         return
-    for burn in range(1, 7):
+    ctl = controls()
+    if not ctl.trim_enabled:
+        print('Orbit operations disabled by the operator; nothing flown')
+        emit_event('trim-skipped', label=args.label, reason='disabled')
+        return
+    if ctl.hold_trim:
+        print('Holding in orbit: waiting for the operator to trigger orbit trim')
+        emit_event('trim-held', label=args.label)
+        while not ctl.take('trimNow'):
+            if not ctl.hold_trim or not ctl.trim_enabled:
+                break
+            time.sleep(0.5)
+        if not ctl.trim_enabled:
+            emit_event('trim-skipped', label=args.label, reason='disabled')
+            return
+    if args.skip_if_short_dv is not None:
+        nodes, _ = plan(ALIGN_LEAD+30.0)
+        need = sum(n.delta_v for n in nodes)
+        have = oms_delta_v(vessel)
+        for stale in list(vessel.control.nodes):
+            stale.remove()
+        emit_event('trim-budget', label=args.label, needed_mps=need, available_mps=have)
+        print(f'OMS delta-v budget: need {need:.1f} m/s, have {have:.1f} m/s '
+              f'(margin {args.skip_if_short_dv:.1f})')
+        if have < need + args.skip_if_short_dv:
+            emit_event('trim-skipped', label=args.label, reason='insufficient-dv')
+            print('Insufficient OMS delta-v; leaving the orbit as it is')
+            return
+    for burn in range(1, args.max_burns+1):
+        if not ctl.trim_enabled:
+            print('Orbit trim disabled by the operator; stopping')
+            emit_event('trim-skipped', label=args.label, reason='disabled')
+            break
         min_lead = ALIGN_LEAD+30.0
         for _ in range(4):
             t0 = sc.ut
@@ -500,6 +658,8 @@ def main():
             if not nodes:
                 print('Remaining corrections are below the minimum burn; orbit accepted')
                 break
+        emit_event('trim-plan', label=args.label, burn=burn,
+                   dv_mps=[n.delta_v for n in nodes])
         print(f'plan {burn}: final Ap {final.apoapsis_altitude/1000:.2f} Pe '
               f'{final.periapsis_altitude/1000:.2f} inc {math.degrees(final.inclination):.3f} '
               f'(dv {[round(n.delta_v, 1) for n in nodes]})')

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
+from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
@@ -264,7 +265,12 @@ def run(args):
         turn_start_altitude = args.turn_start
         # Burnout altitude for the post-separation climb profile: low in the target
         # band, where the insertion point of a low-perigee ellipse lies.
-        insertion_altitude = args.meco_periapsis + 0.4*(args.orbit-args.meco_periapsis)
+        insertion_altitude = (args.insertion_altitude if args.insertion_altitude is not None else
+                              args.meco_periapsis + 0.4*(args.orbit-args.meco_periapsis))
+        # Reference apoapsis of the climb corridor and gravity-turn schedule: the target
+        # apoapsis for a circular ascent, the parking-orbit altitude for a transfer
+        # (GTO/GEO) ascent whose real apoapsis is reached only by the terminal burn.
+        reference_apoapsis = args.reference_altitude if args.reference_altitude is not None else args.orbit
         turn_end_altitude = args.turn_end
         old_sigterm_handler = signal.getsignal(signal.SIGTERM)
         signal.signal(signal.SIGTERM, _terminate_as_exception)
@@ -585,14 +591,22 @@ def run(args):
                             raw_pitch = initial_pitch
                         else:
                             raw_pitch = scheduled_turn_pitch(
-                                altitude, args.orbit, flight.vertical_speed,
+                                altitude, reference_apoapsis, flight.vertical_speed,
                                 flight.horizontal_speed, flight.dynamic_pressure,
                                 initial_pitch)
+                            if not args.no_corridor and not shuttle.separated:
+                                raw_pitch = corridor_pitch(
+                                    raw_pitch,
+                                    math.degrees(math.atan2(max(0.0, flight.vertical_speed),
+                                                            max(0.5, flight.horizontal_speed))),
+                                    altitude, v.orbit.apoapsis_altitude, reference_apoapsis,
+                                    flight.dynamic_pressure)
                         # Apply the MECO energy-build pitch through the same
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
                         pitch_slew_rate = args.pitch_slew
-                        if (v.orbit.apoapsis_altitude >= 0.8*args.orbit and
+                        if (not args.transfer and
+                                v.orbit.apoapsis_altitude >= 0.8*args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
                             # Apoapsis is approaching target: spend the remaining
                             # energy on horizontal speed. Damp the climb with
@@ -1134,8 +1148,21 @@ def main():
                         help='Launch-azimuth turn rate in deg/s after the roll settles')
     parser.add_argument('--heading', type=float, default=None,
                         help='Explicit final launch heading; default derives from --inclination')
-    parser.add_argument('--turn-start', type=float, default=1500,
-                        help='Altitude in m where the post-roll gravity turn begins')
+    parser.add_argument('--turn-start', type=float, default=500,
+                        help='Altitude in m where the post-roll gravity turn begins; low enough that '
+                             'the pitch-over happens at low dynamic pressure, where the q*alpha '
+                             'bound still allows a useful angle of attack')
+    parser.add_argument('--no-corridor', action='store_true',
+                        help='Disable apoapsis-corridor feedback on the gravity turn')
+    parser.add_argument('--transfer', action='store_true',
+                        help='Target is a transfer orbit (GTO/GEO): disable the circular-ascent '
+                             'apoapsis hold and plan the climb for the insertion perigee')
+    parser.add_argument('--reference-altitude', type=float, default=None,
+                        help='Altitude in m that scales the gravity-turn schedule and corridor '
+                             '(default: --orbit; set the parking-orbit altitude for transfers)')
+    parser.add_argument('--insertion-altitude', type=float, default=None,
+                        help='Altitude in m of the planned insertion point '
+                             '(default: derived from --orbit and --meco-periapsis)')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
     parser.add_argument('--pitch-slew', type=float,
