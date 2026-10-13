@@ -165,6 +165,10 @@ tests/               mission-layer and ascent tests
 Docs/                architecture, algorithms, campaign logs and experiments
 ```
 
+An optional experimental ascent mode is available with `ksl launch --ascent-mode intelligent`.
+Legacy remains the default. See [intelligent ascent](Docs/Ascent/Intelligent.md) for
+vehicle configuration, orbital targets, and the current verification limits.
+
 See [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md) for how the parts fit together,
 [VALIDATION.md](VALIDATION.md) for the test surface and current verification
 status, and [Docs/Ascent/README.md](Docs/Ascent/README.md) for the ascent

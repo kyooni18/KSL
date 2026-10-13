@@ -262,9 +262,10 @@ class AscentProgram(Program):
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         a = ctx.config["ascent"]
         if a["guidanceMode"] == "intelligent":
+            periapsis = ctx.config["intelligentAscent"]["targetPeriapsisKm"] or a["targetAltitudeKm"]
             return ["ascent: intelligent vehicle discovery" +
                     (" (read-only)" if stop == Phase.PRELAUNCH else
-                     f" and predictive ascent to {a['targetAltitudeKm']:g} km / {a['inclinationDeg']:g} deg"),
+                     f" and predictive ascent to {a['targetAltitudeKm']:g} x {periapsis:g} km / {a['inclinationDeg']:g} deg"),
                     "  $ " + " ".join(self._argv(ctx, stop == Phase.PRELAUNCH))]
         if stop == Phase.PRELAUNCH:
             return ["ascent: read-only preflight of the STS on the pad (no control writes)",
@@ -309,9 +310,13 @@ class AscentProgram(Program):
                 "Use `ksl replay` on a recorded ascent, or start the simulation at deorbit or later.")
         preflight_only = stop == Phase.PRELAUNCH
         seen: set[str] = set()
+        failure_message = ""
 
         def on_event(event: dict[str, Any]) -> None:
+            nonlocal failure_message
             name = str(event.pop("event", ""))
+            if name == "guidance-failure":
+                failure_message = str(event.get("error", "guidance failed")).splitlines()[0]
             if name == "telemetry":
                 vs, hs = event.get("verticalSpeed"), event.get("horizontalSpeed")
                 if isinstance(vs, (int, float)) and isinstance(hs, (int, float)):
@@ -334,7 +339,7 @@ class AscentProgram(Program):
         if ctx.stop_event.is_set():
             return Outcome(False, "ascent stopped by operator; controls released", aborted=True)
         if code != 0:
-            return Outcome(False, f"ascent program exited with code {code}: " + (tail[-1] if tail else ""))
+            return Outcome(False, f"ascent program exited with code {code}: " + (failure_message or (tail[-1] if tail else "")))
         if preflight_only:
             return Outcome(True, "preflight complete", holding=True)
         if not seen & {"insertion", "et-separation"}:

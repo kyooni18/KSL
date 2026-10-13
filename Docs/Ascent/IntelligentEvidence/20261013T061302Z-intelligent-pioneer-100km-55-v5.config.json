@@ -1,0 +1,81 @@
+{
+  "profile": "sts-kerbin",
+  "mode": "live",
+  "start": "prelaunch",
+  "stop": "orbit",
+  "scenario": null,
+  "resumedFrom": null,
+  "configuration": {
+    "description": "STS to a 90 km circular orbit at 34 deg (KSC latitude band), then unpowered return to KSC runway 09.",
+    "connection": {
+      "address": "127.0.0.1",
+      "rpcPort": 50000,
+      "streamPort": 50001,
+      "timeoutSeconds": 10.0
+    },
+    "ascent": {
+      "guidanceMode": "intelligent",
+      "targetAltitudeKm": 100,
+      "inclinationDeg": 55,
+      "insertionOffsetKm": 30.0,
+      "minimumInsertionPeriapsisKm": 55.0,
+      "srbThrustLimit": 0.9,
+      "ssmeThrustLimit": 0.38,
+      "padSettleSeconds": 1,
+      "revertToLaunch": false,
+      "extraArgs": []
+    },
+    "intelligentAscent": {
+      "targetPeriapsisKm": 0.0,
+      "vehicleConfig": "",
+      "maxDynamicPressurePa": 25000.0,
+      "maxG": 3.0,
+      "altitudeToleranceM": 1000.0,
+      "inclinationToleranceDeg": 0.2,
+      "timeoutSeconds": 2400.0
+    },
+    "orbit": {
+      "trim": true,
+      "minBurnDeltaV": 0.1,
+      "maxBurns": 2,
+      "rcsMaxDeltaV": 2.0,
+      "holdForTrigger": false,
+      "extraArgs": []
+    },
+    "profile": {
+      "kind": "circular",
+      "planeTarget": "",
+      "launchWindow": true,
+      "windowLeadSeconds": 0.0,
+      "gtoPerigeeKm": 85.0,
+      "semiGtoApoapsisKm": 0.0,
+      "geoLongitudeDeg": 0.0,
+      "targetLongitude": true,
+      "geoCircularize": "auto",
+      "reserveDeltaV": 0.0,
+      "insertionLongitudeDeg": -60.0,
+      "standoffM": 1000.0,
+      "stopDistanceM": 50.0
+    },
+    "operations": {
+      "autoWarp": true
+    },
+    "landing": {
+      "backendConfiguration": "Configuration/sts-live.json",
+      "modelProfile": "sts-live-20261010",
+      "autoWarp": true,
+      "requireStrictPlan": false,
+      "planTimeoutSeconds": 600.0,
+      "flightTimeoutSeconds": 7200.0
+    },
+    "simulation": {
+      "scenario": "l5-mm305",
+      "telemetryHz": 10.0,
+      "maxSimTimeSeconds": 2400.0
+    },
+    "checkpoints": {
+      "kspSaveOnPhases": [],
+      "kspSaveOnDescendingAltitudesKm": []
+    }
+  }
+}

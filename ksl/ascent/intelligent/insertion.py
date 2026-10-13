@@ -15,6 +15,8 @@ def plan_node(sc, vessel, target, min_lead=5.):
     rk, vk = vessel.position(frame), vessel.velocity(frame)
     transform, _ = choose_frame_map(rk, vk, target.mu, math.degrees(orbit.inclination))
     r, v = transform(rk), transform(vk)
+    if not all(math.isfinite(x) for x in (*r, *v)) or om.norm(r) <= target.radius:
+        raise RuntimeError('Invalid orbital telemetry for insertion')
     deadline = None
     if orbit.periapsis_altitude < target.atmosphere+1000:
         # Search forward for atmospheric return; never coast through that boundary.

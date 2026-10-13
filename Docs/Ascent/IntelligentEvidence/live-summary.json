@@ -1,0 +1,70 @@
+{
+  "trials": [
+    {
+      "run": "20261013T044046Z-intelligent-pioneer-100km-v4",
+      "vehicle": "Pioneer 100 km / 10 deg",
+      "accepted": false,
+      "reason": "Failed coast guard: omitted Flight reference frame returned zero vertical velocity. Fixed in later code; recovery did not complete insertion.",
+      "samples": 1468,
+      "maxima": {
+        "altitude": 61126.88467738847,
+        "apoapsis": 99721.65341612569,
+        "periapsis": -71946.53140173468,
+        "dynamicPressure": 35864.70703125
+      },
+      "lastSample": {
+        "ut": "147105201.6374754",
+        "altitude": "61126.88467738847",
+        "verticalSpeed": "259.99583661386976",
+        "horizontalSpeed": "2205.2514989020215",
+        "apoapsis": "99721.65341612569",
+        "periapsis": "-71946.53140173468",
+        "inclination": "9.240284385929199",
+        "mass": "14737.470703125",
+        "dynamicPressure": "62.56768798828125",
+        "pitchCommand": "-15.320325179636246",
+        "throttle": "1.0",
+        "predictedApoapsis": "120670.38709292223"
+      }
+    },
+    {
+      "run": "20261013T061302Z-intelligent-pioneer-100km-55-v5",
+      "vehicle": "Pioneer 100 km / 55 deg",
+      "accepted": false,
+      "reason": "KSP left flight for SpaceCenter/editor externally; RPC error stopped guidance.",
+      "samples": 460,
+      "maxima": {
+        "altitude": 14398.194081083522,
+        "apoapsis": 22722.236550547997,
+        "periapsis": -594370.8561576395,
+        "dynamicPressure": 36614.70703125
+      },
+      "lastSample": {
+        "ut": "147191198.9939498",
+        "altitude": "14398.194081083522",
+        "verticalSpeed": "388.4570079578081",
+        "horizontalSpeed": "323.08581800718525",
+        "apoapsis": "22722.236550547997",
+        "periapsis": "-594370.8561576395",
+        "inclination": "52.13263986962398",
+        "mass": "28856.73828125",
+        "dynamicPressure": "12065.662109375",
+        "pitchCommand": "57.2346895092898",
+        "throttle": "1.0",
+        "predictedApoapsis": "30383.027929096133"
+      }
+    }
+  ],
+  "recovery": {
+    "accepted": false,
+    "reason": "No completed insertion. Burn held with high attitude error; KSP subsequently left the flight scene.",
+    "lastRecordedState": {
+      "event": "telemetry",
+      "phase": "insertion",
+      "apoapsis": 100034.96518571186,
+      "periapsis": -70097.92466256721,
+      "remainingDeltaV": 163.80479960329043
+    }
+  },
+  "qualification": "Development trials, not qualification of the final committed source. No achieved live target orbit."
+}

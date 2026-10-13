@@ -1,5 +1,7 @@
 # Optional intelligent ascent
 
+**Status: experimental. No live flight has yet passed complete orbital acceptance.**
+
 The legacy STS launch process remains the default. Intelligent ascent runs in a
 separate process and does not use STS engine names, pad limiter settings, launch
 roll schedules, or the OMS trim program. Landing guidance is unchanged.
@@ -48,13 +50,16 @@ that branch is active, positively out of fuel, and producing no thrust, with no
 protected payload. Decouplers in the same separation stage wait for the entire
 group and a depletion confirmation interval. The stock staging stack is never
 activated. Engine-less tanks require explicit separator approval and measured
-resource depletion. Clamps are released directly after measured ignition thrust
+resource depletion. Reusable stages with command hardware require both a corrected
+non-payload role and explicit separator approval. Separation motors are an explicit
+role, excluded from main propulsion; approved branches activate them immediately
+before release after main-engine depletion. Clamps are released directly after measured ignition thrust
 settles. Ambiguous branches remain attached.
 
 ## Guidance and evidence
 
 The ascent planner integrates a spherical point-mass model including gravity,
-curvature, mass flow, measured aerodynamic drag, and unthrottleable thrust. It
+curvature, mass flow, measured aerodynamic drag and lift, and unthrottleable thrust. It
 scores bounded candidate pitches, predicts atmospheric coast losses before
 cutoff, and recomputes from live state. Surface velocity drives aerodynamic
 steering; inertial velocity drives orbital prediction. Live rotational authority
@@ -75,6 +80,8 @@ qualification envelope allowing finite-burn and control-cycle error across engin
 sizes, not a claim of exact insertion. Configure tighter tolerances through
 `intelligentAscent.altitudeToleranceM` and `inclinationToleranceDeg`. An exhausted
 correction or time budget reports failure; predicted success alone is insufficient.
+
+Detailed development outcomes are in the [verification report](IntelligentEvidence/README.md).
 
 The independent RK4 test plant uses a separate integrator and atmosphere from the
 planner. Recorded cases are in [IntelligentEvidence](IntelligentEvidence/): nine

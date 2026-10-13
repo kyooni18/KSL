@@ -24,6 +24,8 @@ class State:
     drag: float = 0.  # measured specific drag, m/s²
     fixed_thrust: float = 0.  # solid/unthrottleable contribution
     surface_horizontal: float = -1.  # -1 means nonrotating offline plant
+    lift_radial: float = 0.
+    lift_horizontal: float = 0.
 
 
 @dataclass(frozen=True)
@@ -71,9 +73,10 @@ def step(s, target, pitch, throttle, dt):
     def derivative(h, vr, vt, mass):
         r = target.radius+h
         speed = max(1., math.hypot(vr, vt))
-        drag = s.drag*math.exp(clamp((s.altitude-h)/6000., -20., 20.))
-        return vr, force/max(mass, 1.)*math.sin(p)-target.mu/r**2+vt*vt/r-drag*vr/speed, \
-            force/max(mass, 1.)*math.cos(p)-vr*vt/r-drag*vt/speed
+        density_ratio = math.exp(clamp((s.altitude-h)/6000., -20., 20.))
+        drag = s.drag*density_ratio
+        return vr, force/max(mass, 1.)*math.sin(p)-target.mu/r**2+vt*vt/r-drag*vr/speed+s.lift_radial*density_ratio, \
+            force/max(mass, 1.)*math.cos(p)-vr*vt/r-drag*vt/speed+s.lift_horizontal*density_ratio
     d = derivative(s.altitude, s.radial, s.horizontal, s.mass)
     mid = derivative(s.altitude+d[0]*dt/2, s.radial+d[1]*dt/2,
                      s.horizontal+d[2]*dt/2, s.mass-flow*dt/2)
@@ -157,5 +160,7 @@ def coast_apoapsis(state, target):
         # Rebase the measured atmosphere as the integration advances.
         speed_ratio = (s.radial*s.radial+s.horizontal*s.horizontal)/max(1., initial.radial**2+initial.horizontal**2)
         local_drag = initial.drag*math.exp(clamp((initial.altitude-s.altitude)/5600., -30., 20.))*speed_ratio
-        s = step(replace(s, drag=local_drag), target, 0., 0., 1.)
+        density_ratio = math.exp(clamp((initial.altitude-s.altitude)/5600., -30., 20.))
+        s = step(replace(s, drag=local_drag, lift_radial=initial.lift_radial*density_ratio,
+                         lift_horizontal=initial.lift_horizontal*density_ratio), target, 0., 0., 1.)
     return apsides(s, target)[0]

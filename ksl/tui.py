@@ -191,7 +191,7 @@ class KSLApp(App[int]):
                     base = self._base()
                     pr = base["profile"]
                     yield Label("Ascent guidance (next mission only)")
-                    yield Select([("Legacy STS (default)", "legacy"), ("Intelligent", "intelligent")],
+                    yield Select([("Legacy STS (default)", "legacy"), ("Intelligent (experimental)", "intelligent")],
                                  value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
                     yield Label("Vehicle configuration (optional; inspect in Vehicle tab)")
                     yield Input(base["intelligentAscent"]["vehicleConfig"], id="vehicle-config")

@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from ..orbit_math import norm, unit
 
-ROLES = ('engine', 'booster', 'tank', 'external-tank', 'decoupler', 'structure', 'payload', 'ignore')
+ROLES = ('engine', 'booster', 'separation-motor', 'tank', 'external-tank', 'decoupler', 'structure', 'payload', 'ignore')
 
 
 def optional(obj, name, default=None):
@@ -130,7 +130,10 @@ class Vehicle:
         fuel state raises rather than being interpreted as depletion.
         """
         branch = self.descendants(key)
-        motors = [e for k, e in self.engines.items() if k in branch]
+        auxiliary = {c.key for c in self.components if c.key in branch and c.role == 'separation-motor'}
+        if auxiliary and key not in self.approved:
+            return False
+        motors = [e for k, e in self.engines.items() if k in branch and k not in auxiliary]
         if key == '0':
             return False
         if key not in self.approved and any(c.command for c in self.components if c.key in branch):
@@ -143,7 +146,7 @@ class Vehicle:
             return False
         # Explicitly approved engine-less tanks require measured resource depletion.
         amounts = []
-        for k in branch:
+        for k in branch-auxiliary:
             res = self.parts[k].resources
             for name in res.names:
                 if res.max(name) > 0 and name not in ('ElectricCharge', 'IntakeAir'):

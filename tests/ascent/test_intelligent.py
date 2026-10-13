@@ -160,3 +160,31 @@ def test_role_correction_cannot_silently_authorize_controlled_branch_release():
     doc['approvedSeparators'] = ['0/0']
     vehicle.apply(doc)
     assert vehicle.exhausted_branch('0/0')
+
+
+def test_auxiliary_separation_motor_requires_explicit_branch_approval():
+    vehicle = model()
+    auxiliary = Part('unfamiliar-auxiliary', engine=True)
+    vehicle.parts['0/0'].children.append(auxiliary)
+    vehicle = Vehicle(vehicle.vessel)
+    doc = vehicle.document()
+    doc['roles']['0/0/1'] = 'separation-motor'
+    vehicle.engines['0/0/1'].has_fuel = True
+    vehicle.engines['0/0/1'].active = False
+    vehicle.apply(doc)
+    assert not vehicle.exhausted_branch('0/0')
+    doc['approvedSeparators'] = ['0/0']
+    vehicle.apply(doc)
+    assert vehicle.exhausted_branch('0/0')
+    assert '0/0/1' not in vehicle.usable_engines()
+
+
+@pytest.mark.parametrize('scene,active', [('editor_vab','owned'), ('flight','other')])
+def test_coast_releases_warp_when_scene_or_vessel_changes(scene, active):
+    from ksl.ascent.intelligent.flight import coast_until
+    sc = NS(ut=0., active_vessel=active, rails_warp_factor=4)
+    conn = NS(space_center=sc, krpc=NS(current_game_scene=scene))
+    controls = NS(auto_warp=True, take=lambda name: False)
+    with pytest.raises(RuntimeError, match='changed'):
+        coast_until(conn, 'owned', 100., controls, float('inf'))
+    assert sc.rails_warp_factor == 0
