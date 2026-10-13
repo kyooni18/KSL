@@ -172,3 +172,12 @@ Current KSP state at the time of this entry: scene `flight`, situation `orbiting
 (vesselId 9201), altitude 85.0 km, mass 26 014.6 kg. The 3-attempt campaign summary above stands.
 
 
+
+### Blocker update — computer-use access to KSP denied (2026-10-14 ~02:10 KST)
+
+- Requested computer-use access to KSP to perform an in-game Revert to Launch. The first request used the name
+  "Kerbal Space Program" and was reported as not installed (index lookup); the retry as "KSP" was **denied by the user**.
+- No GUI action was taken. Vessel state re-checked read-only with `bin/ksl status --live`: unchanged (`orbiting`,
+  paused, UT 641.6 s, mass 26 014.6 kg, vesselId 9201, launchClamps 0).
+- Attempt 4 remains blocked. The remaining routes need the operator: an in-game Revert to Launch, or a save name that
+  holds the separatron craft at the pad. Nothing was loaded, reverted, or changed.
