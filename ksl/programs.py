@@ -184,6 +184,61 @@ def _signal_child_group(proc: subprocess.Popen, sig: int) -> None:
         pass
 
 
+# --- profile targets and runtime controls -------------------------------------------
+
+def controls_env(ctx: Context) -> dict[str, str]:
+    """Child programs poll the run's controls.json (TUI warp/trim toggles)."""
+    from .controls import ENV_VAR, Controls
+    path = Controls.for_run(ctx.log.directory, {
+        "autoWarp": bool(ctx.config["operations"]["autoWarp"]),
+        "trim": bool(ctx.config["orbit"]["trim"]),
+        "holdTrim": bool(ctx.config["orbit"]["holdForTrigger"]),
+    }).path
+    return {ENV_VAR: str(path)}
+
+
+def semi_gto_apoapsis_m(config: MissionConfig) -> float:
+    """ET target apoapsis of a GTO/GEO ascent (designed for the GEO longitude if asked)."""
+    from .ascent import geo
+    pr = config["profile"]
+    if pr["semiGtoApoapsisKm"] > 0:
+        return float(pr["semiGtoApoapsisKm"]) * 1000.0
+    body = geo.KERBIN
+    perigee = float(pr["gtoPerigeeKm"]) * 1000.0
+    if pr["kind"] == "geo" and pr["targetLongitude"]:
+        design = geo.design_semi_gto_apoapsis(
+            body["mu"], body["radius"], perigee, geo.synchronous_altitude(body),
+            float(pr["insertionLongitudeDeg"]), float(pr["geoLongitudeDeg"]), geo.rotation_rate_deg(body))
+        if design is not None and design["apoapsis_alt"] <= 1500000.0:
+            return design["apoapsis_alt"]
+    return 800000.0
+
+
+def ascent_target_args(config: MissionConfig) -> tuple[str, list[str]]:
+    """(description, flight.py target flags) for the profile kind."""
+    pr, a = config["profile"], config["ascent"]
+    kind = pr["kind"]
+    if kind in ("gto", "geo"):
+        perigee = float(pr["gtoPerigeeKm"]) * 1000.0
+        apo = semi_gto_apoapsis_m(config)
+        return (f"semi-GTO {apo / 1000:.0f} x {perigee / 1000:.0f} km at {a['inclinationDeg']} deg",
+                ["--orbit", f"{apo:.0f}", "--meco-periapsis", f"{perigee:.0f}", "--transfer",
+                 "--reference-altitude", f"{max(80000.0, perigee):.0f}",
+                 "--insertion-altitude", f"{perigee:.0f}", "--inclination", str(a["inclinationDeg"])])
+    flags = ["--orbit", f"{config.target_altitude_m:.0f}",
+             "--meco-periapsis", f"{config.insertion_periapsis_m:.0f}",
+             "--inclination", str(a["inclinationDeg"])]
+    text = (f"{a['targetAltitudeKm']:.0f} x {config.insertion_periapsis_m / 1000:.0f} km "
+            f"at {a['inclinationDeg']} deg")
+    if kind in ("plane", "rendezvous"):
+        flags += ["--plane-target", str(pr["planeTarget"])]
+        if pr["launchWindow"]:
+            flags += ["--launch-window", "--window-lead", str(pr["windowLeadSeconds"])]
+        text = (f"{a['targetAltitudeKm']:.0f} x {config.insertion_periapsis_m / 1000:.0f} km in the plane of "
+                f"{pr['planeTarget']}" + (" (launch window)" if pr["launchWindow"] else ""))
+    return text, flags
+
+
 # --- ascent ------------------------------------------------------------------------
 
 class AscentProgram(Program):
@@ -193,9 +248,7 @@ class AscentProgram(Program):
     def _argv(self, ctx: Context, preflight_only: bool) -> list[str]:
         a = ctx.config["ascent"]
         argv = [ctx.python, "-u", "-m", "ksl.ascent.flight", *endpoint_args(ctx.config),
-                "--orbit", f"{ctx.config.target_altitude_m:.0f}",
-                "--meco-periapsis", f"{ctx.config.insertion_periapsis_m:.0f}",
-                "--inclination", str(a["inclinationDeg"]), "--ssme-limit", str(a["ssmeThrustLimit"]),
+                *ascent_target_args(ctx.config)[1], "--ssme-limit", str(a["ssmeThrustLimit"]),
                 "--telemetry", str(ctx.log.directory / "ascent.csv"), *map(str, a["extraArgs"])]
         if not preflight_only:
             argv.insert(4, "--launch")
@@ -211,9 +264,8 @@ class AscentProgram(Program):
             steps.append("ascent: revert the current flight to launch")
         steps += [f"ascent: wait for the flight scene, settle {a['padSettleSeconds']:.0f} s, "
                   f"set Clydesdale limiters to {a['srbThrustLimit']}",
-                  f"ascent: fly to {a['targetAltitudeKm']:.0f} x "
-                  f"{ctx.config.insertion_periapsis_m / 1000:.0f} km at {a['inclinationDeg']} deg "
-                  "(SSME lead, SRB/ET separation, PEG MECO)",
+                  f"ascent: fly to {ascent_target_args(ctx.config)[0]} "
+                  "(SSME lead, SRB/ET separation, corridor-tracked gravity turn, PEG MECO)",
                   "  $ " + " ".join(self._argv(ctx, False))]
         return steps
 
@@ -265,7 +317,8 @@ class AscentProgram(Program):
                 self._pad_prep(ctx)
         except InterruptedError as exc:
             return Outcome(False, str(exc), aborted=True)
-        code, tail = run_child(ctx, self.name, self._argv(ctx, preflight_only), krpc_env(ctx.config), on_event)
+        env = {**krpc_env(ctx.config), **controls_env(ctx)}
+        code, tail = run_child(ctx, self.name, self._argv(ctx, preflight_only), env, on_event)
         if ctx.stop_event.is_set():
             return Outcome(False, "ascent stopped by operator; controls released", aborted=True)
         if code != 0:
@@ -280,46 +333,84 @@ class AscentProgram(Program):
 # --- orbit ---------------------------------------------------------------------------
 
 class OrbitTrimProgram(Program):
+    """Orbit operations for the profile kind, run as one or more child stages."""
     name = "orbit-trim"
     phases = (Phase.ORBIT,)
 
-    def _argv(self, ctx: Context) -> list[str]:
-        alt = f"{ctx.config.target_altitude_m:.0f}"
-        return [ctx.python, "-u", "-m", "ksl.ascent.orbit_trim", "--apoapsis", alt, "--periapsis", alt,
-                "--inclination", str(ctx.config["ascent"]["inclinationDeg"]), *endpoint_args(ctx.config),
-                "--min-burn-dv", str(ctx.config["orbit"]["minBurnDeltaV"]),
-                *map(str, ctx.config["orbit"]["extraArgs"])]
+    def stages(self, ctx: Context) -> list[tuple[str, str, list[str]]]:
+        """(stage name, description, argv) in flight order."""
+        c, pr, o = ctx.config, ctx.config["profile"], ctx.config["orbit"]
+        inc = str(c["ascent"]["inclinationDeg"])
+        common = [*endpoint_args(c), "--min-burn-dv", str(o["minBurnDeltaV"])]
+        if pr["kind"] in ("gto", "geo"):
+            argv = [ctx.python, "-u", "-m", "ksl.ascent.geo_transfer", "--perigee",
+                    f"{float(pr['gtoPerigeeKm']) * 1000.0:.0f}", "--inclination", inc, *common,
+                    "--circularize", "never" if pr["kind"] == "gto" else str(pr["geoCircularize"]),
+                    "--reserve-dv", str(pr["reserveDeltaV"])]
+            if pr["kind"] == "geo" and pr["targetLongitude"]:
+                argv += ["--longitude", str(pr["geoLongitudeDeg"])]
+            text = ("GTO: perigee phasing" if pr["kind"] == "geo" and pr["targetLongitude"] else "GTO") + \
+                ", apogee raise to synchronous altitude" + \
+                ("" if pr["kind"] == "gto" else
+                 f", circularize at apogee ({pr['geoCircularize']})"
+                 + (f" over {pr['geoLongitudeDeg']} deg" if pr["targetLongitude"] else ""))
+            return [("geo-transfer", text, argv)]
+        alt = f"{c.target_altitude_m:.0f}"
+        trim = [ctx.python, "-u", "-m", "ksl.ascent.orbit_trim", "--apoapsis", alt, "--periapsis", alt,
+                "--inclination", inc, *common, "--max-burns", str(o["maxBurns"]), *map(str, o["extraArgs"])]
+        if pr["kind"] in ("plane", "rendezvous"):
+            trim.append("--keep-inclination")  # the launch window already set the plane
+            inc = f"the plane of {pr['planeTarget']}"
+        steps = [("orbit-trim", f"OMS trim to {c['ascent']['targetAltitudeKm']:.0f} km circular at {inc} deg "
+                  f"(exact one-burn plan, at most {o['maxBurns']} burns)", trim)]
+        if pr["kind"] == "rendezvous":
+            steps.append(("rendezvous", f"rendezvous with {pr['planeTarget']}: Lambert transfer to "
+                          f"{pr['standoffM']:.0f} m behind, midcourse, velocity match, RCS approach to "
+                          f"{pr['stopDistanceM']:.0f} m",
+                          [ctx.python, "-u", "-m", "ksl.ascent.rendezvous", "--target", str(pr["planeTarget"]),
+                           "--standoff", str(pr["standoffM"]), "--stop-distance", str(pr["stopDistanceM"]),
+                           *common]))
+        return steps
 
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         if not ctx.config["orbit"]["trim"]:
-            return ["orbit: OMS trim disabled (orbit.trim=false)"]
-        return [f"orbit: OMS trim to {ctx.config['ascent']['targetAltitudeKm']:.0f} km circular "
-                f"at {ctx.config['ascent']['inclinationDeg']} deg (reaction wheels, closed-loop re-plan)",
-                "  $ " + " ".join(self._argv(ctx))]
+            return ["orbit: orbit operations disabled (orbit.trim=false; toggle live from the TUI)"]
+        lines = []
+        if ctx.config["orbit"]["holdForTrigger"]:
+            lines.append("orbit: hold until the operator triggers orbit operations")
+        for name, text, argv in self.stages(ctx):
+            lines += [f"orbit: {text}", "  $ " + " ".join(argv)]
+        return lines
 
     def run(self, ctx: Context, start: Phase, stop: Phase) -> Outcome:
         ctx.advance(Phase.ORBIT)
         if ctx.mode == "sim":
             raise ProgramUnavailable("no offline orbital plant exists for the OMS trim program")
-        if ctx.config["orbit"]["trim"]:
-            def on_event(event: dict[str, Any]) -> None:
-                name = str(event.pop("event", ""))
-                if name == "trim-report":
-                    ctx.log.telemetry({"altitude": None, "apoapsis": event.get("apoapsis_m"),
-                                       "periapsis": event.get("periapsis_m"),
-                                       "inclination": event.get("inclination_deg")}, "orbit-trim")
-                    ctx.log.emit(Event("milestone", f"orbit trim {event.get('tag')}: "
-                                       f"Ap {event.get('apoapsis_m', 0) / 1000:.2f} km, "
-                                       f"Pe {event.get('periapsis_m', 0) / 1000:.2f} km, "
-                                       f"inc {event.get('inclination_deg', 0):.3f} deg", data=event))
 
-            code, tail = run_child(ctx, self.name, self._argv(ctx), krpc_env(ctx.config), on_event)
-            if ctx.stop_event.is_set():
-                return Outcome(False, "orbit trim stopped by operator", aborted=True)
-            if code != 0:
-                return Outcome(False, f"orbit trim exited with code {code}: " + (tail[-1] if tail else ""))
+        def on_event(event: dict[str, Any]) -> None:
+            name = str(event.pop("event", ""))
+            if name == "trim-report":
+                ctx.log.telemetry({"altitude": None, "apoapsis": event.get("apoapsis_m"),
+                                   "periapsis": event.get("periapsis_m"),
+                                   "inclination": event.get("inclination_deg")}, "orbit-trim")
+                ctx.log.emit(Event("milestone", f"orbit trim {event.get('tag')}: "
+                                   f"Ap {event.get('apoapsis_m', 0) / 1000:.2f} km, "
+                                   f"Pe {event.get('periapsis_m', 0) / 1000:.2f} km, "
+                                   f"inc {event.get('inclination_deg', 0):.3f} deg", data=event))
+                return
+            detail = ", ".join(f"{k}={v:.2f}" if isinstance(v, float) else f"{k}={v}" for k, v in event.items())
+            ctx.log.emit(Event("milestone", f"orbit: {name}" + (f" ({detail})" if detail else ""), data=event))
+
+        env = {**krpc_env(ctx.config), **controls_env(ctx)}
+        if ctx.config["orbit"]["trim"]:
+            for name, _, argv in self.stages(ctx):
+                code, tail = run_child(ctx, name, argv, env, on_event)
+                if ctx.stop_event.is_set():
+                    return Outcome(False, f"{name} stopped by operator", aborted=True)
+                if code != 0:
+                    return Outcome(False, f"{name} exited with code {code}: " + (tail[-1] if tail else ""))
         ctx.checkpoint(Phase.ORBIT, None)
-        return Outcome(True, "in target orbit", holding=stop == Phase.ORBIT)
+        return Outcome(True, "orbit operations complete", holding=stop == Phase.ORBIT)
 
 
 # --- landing (live) -------------------------------------------------------------------

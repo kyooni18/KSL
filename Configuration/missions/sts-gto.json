@@ -1,0 +1,6 @@
+{
+  "description": "STS to a geosynchronous transfer orbit: ET semi-GTO, OMS raises apogee to synchronous altitude, shuttle stays in GTO.",
+  "ascent": {"targetAltitudeKm": 85, "inclinationDeg": 0.1},
+  "profile": {"kind": "gto", "gtoPerigeeKm": 85},
+  "checkpoints": {"kspSaveOnPhases": ["orbit"]}
+}

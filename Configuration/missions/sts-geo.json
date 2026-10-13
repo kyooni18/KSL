@@ -1,0 +1,6 @@
+{
+  "description": "STS to GEO over a chosen longitude: ET semi-GTO designed for the slot, OMS phasing + GTO injection, circularize at apogee if OMS dv allows (otherwise stays in GTO).",
+  "ascent": {"targetAltitudeKm": 85, "inclinationDeg": 0.1},
+  "profile": {"kind": "geo", "gtoPerigeeKm": 85, "geoLongitudeDeg": -74.6, "targetLongitude": true, "geoCircularize": "auto"},
+  "checkpoints": {"kspSaveOnPhases": ["orbit"]}
+}

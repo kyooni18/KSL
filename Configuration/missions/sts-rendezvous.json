@@ -1,0 +1,6 @@
+{
+  "description": "STS launch into the plane of a target vessel (launch window), 85 km parking orbit, Lambert rendezvous and RCS approach to 50 m. Set profile.planeTarget to the target vessel name.",
+  "ascent": {"targetAltitudeKm": 85, "inclinationDeg": 0},
+  "profile": {"kind": "rendezvous", "planeTarget": "Station", "standoffM": 1000, "stopDistanceM": 50},
+  "checkpoints": {"kspSaveOnPhases": ["orbit"]}
+}

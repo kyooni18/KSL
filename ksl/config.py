@@ -21,6 +21,7 @@ from typing import Any
 from .paths import PROFILES_DIR, repo_path
 
 DEFAULT_PROFILE = "sts-kerbin"
+PROFILE_KINDS = ("circular", "plane", "gto", "geo", "rendezvous")
 
 DEFAULTS: dict[str, Any] = {
     "description": "",
@@ -47,7 +48,32 @@ DEFAULTS: dict[str, Any] = {
     "orbit": {
         "trim": True,             # run OMS trim to the circular target after insertion
         "minBurnDeltaV": 0.1,     # m/s; planned corrections at or below this are not flown
+        "maxBurns": 2,            # exact one-burn plan; a 2nd burn only finishes the residual
+        "holdForTrigger": False,  # wait in orbit until the operator triggers orbit operations
         "extraArgs": [],
+    },
+    "profile": {
+        # circular   ascent + OMS trim to targetAltitudeKm / inclinationDeg
+        # plane      as circular, but into the orbital plane of planeTarget (launch window)
+        # gto        ET semi-GTO, OMS raises apogee to synchronous altitude, stays in GTO
+        # geo        as gto, then circularizes at apogee (if OMS dv allows) over geoLongitudeDeg
+        # rendezvous plane launch to the target's plane, parking orbit, then rendezvous
+        "kind": "circular",
+        "planeTarget": "",            # moon or vessel name (plane / rendezvous)
+        "launchWindow": True,         # hold on the pad for the plane launch window
+        "windowLeadSeconds": 0.0,
+        "gtoPerigeeKm": 85.0,
+        "semiGtoApoapsisKm": 0.0,     # ET target apoapsis; 0 = design it from the longitude
+        "geoLongitudeDeg": 0.0,
+        "targetLongitude": True,      # phase the GTO so the apogee sits over geoLongitudeDeg
+        "geoCircularize": "auto",     # auto (if OMS dv allows) | always | never
+        "reserveDeltaV": 0.0,         # m/s of OMS dv kept when deciding to circularize
+        "insertionLongitudeDeg": -60.0,  # estimated MECO/perigee longitude for semi-GTO design
+        "standoffM": 1000.0,
+        "stopDistanceM": 50.0,
+    },
+    "operations": {
+        "autoWarp": True,         # initial runtime control; toggled live from the TUI
     },
     "landing": {
         "backendConfiguration": "Configuration/sts-live.json",
@@ -170,6 +196,19 @@ class MissionConfig:
         if problems:
             return problems
         a, c = self.data["ascent"], self.data["connection"]
+        pr = self.data["profile"]
+        if pr["kind"] not in PROFILE_KINDS:
+            problems.append(f"profile.kind must be one of {', '.join(PROFILE_KINDS)}")
+        if pr["kind"] in ("plane", "rendezvous") and not pr["planeTarget"].strip():
+            problems.append(f"profile.planeTarget is required for a {pr['kind']} profile")
+        if pr["kind"] in ("gto", "geo") and pr["gtoPerigeeKm"] < 75.0:
+            problems.append("profile.gtoPerigeeKm must be at least 75 (above the atmosphere)")
+        if not -180.0 <= pr["geoLongitudeDeg"] <= 180.0:
+            problems.append("profile.geoLongitudeDeg must be within [-180, 180]")
+        if pr["geoCircularize"] not in ("auto", "always", "never"):
+            problems.append("profile.geoCircularize must be auto, always or never")
+        if not isinstance(self.data["orbit"]["maxBurns"], int) or not 1 <= self.data["orbit"]["maxBurns"] <= 6:
+            problems.append("orbit.maxBurns must be an integer 1-6")
         if a["targetAltitudeKm"] < 80.0:
             problems.append("ascent.targetAltitudeKm must be at least 80 (Kerbin atmosphere ends at 70 km)")
         if not -180.0 <= a["inclinationDeg"] <= 180.0:

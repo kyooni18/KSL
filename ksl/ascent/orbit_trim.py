@@ -479,6 +479,8 @@ def main():
     parser.add_argument('--skip-if-short-dv', type=float, default=None, metavar='MARGIN',
                         help='Skip (no burn) unless the OMS has the planned dv plus this margin (m/s)')
     parser.add_argument('--label', default='trim', help='Name used in trim events')
+    parser.add_argument('--keep-inclination', action='store_true',
+                        help='Trim apsides only; keep the as-flown plane (plane-targeted ascents)')
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
     parser.add_argument('--stream-port', type=int, default=50001)
@@ -517,6 +519,8 @@ def prepare(conn):
 
 
 def _trim(conn, sc, vessel, args):
+    if getattr(args, 'keep_inclination', False):
+        args.inclination = math.degrees(vessel.orbit.inclination)
 
     def report(tag):
         o = vessel.orbit
