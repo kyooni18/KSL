@@ -68,7 +68,10 @@ class Printer:
 
 
 def _profile(args: argparse.Namespace):
-    return load_config(args.profile, args.set)
+    overrides = list(args.set)
+    if getattr(args, "ascent_mode", None):
+        overrides.append(f"ascent.guidanceMode={args.ascent_mode}")
+    return load_config(args.profile, overrides)
 
 
 def _install_abort(controller: MissionController) -> None:
@@ -378,7 +381,10 @@ def cmd_tui(args: argparse.Namespace) -> int:
     except ImportError as exc:
         print(f"the TUI needs the 'textual' package ({exc}); run `make setup`", file=sys.stderr)
         return EXIT_USAGE
-    return run_tui(profile=args.profile, overrides=args.set)
+    overrides = list(args.set)
+    if args.ascent_mode:
+        overrides.append(f"ascent.guidanceMode={args.ascent_mode}")
+    return run_tui(profile=args.profile, overrides=overrides)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -394,6 +400,8 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("-p", "--profile", help="mission profile name or JSON path (default sts-kerbin)")
         p.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
                        help="override a profile value, e.g. --set ascent.inclinationDeg=10 (repeatable)")
+        p.add_argument("--ascent-mode", choices=("legacy", "intelligent"),
+                       help="ascent guidance for this mission (default: profile or legacy)")
         p.add_argument("--json", action="store_true", help="machine-readable output")
         if flying:
             p.add_argument("--dry-run", action="store_true", help="validate and print the plan without flying")

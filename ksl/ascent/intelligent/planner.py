@@ -1,0 +1,164 @@
+"""Receding-horizon point-mass guidance, independent of kRPC and craft identity.
+
+The prediction includes gravity, spherical curvature, propellant mass flow and
+measured drag. Each update starts from telemetry; no precomputed time script is
+executed. The short horizon optimizes a bounded pitch command around a terminal
+altitude/velocity boundary-value solution.
+"""
+from dataclasses import dataclass, replace
+import math
+
+
+def clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+@dataclass(frozen=True)
+class State:
+    altitude: float
+    radial: float
+    horizontal: float
+    mass: float
+    thrust: float
+    isp: float
+    q: float = 0.
+    drag: float = 0.  # measured specific drag, m/s²
+
+
+@dataclass(frozen=True)
+class Target:
+    radius: float
+    mu: float
+    atmosphere: float
+    apoapsis: float
+    periapsis: float
+    inclination: float = 0.
+    altitude_tolerance: float = 1000.
+    inclination_tolerance: float = .2
+
+    @property
+    def insertion_speed(self):
+        rp, ra = self.radius + self.periapsis, self.radius + self.apoapsis
+        return math.sqrt(2*self.mu*ra/(rp*(ra+rp)))
+
+
+@dataclass(frozen=True)
+class Command:
+    pitch: float
+    throttle: float
+    predicted_apoapsis: float
+    horizon: float
+    status: str = 'powered'
+
+
+def apsides(s, target):
+    r = target.radius + s.altitude
+    h = r*s.horizontal
+    energy = .5*(s.radial*s.radial+s.horizontal*s.horizontal)-target.mu/r
+    if energy >= 0:
+        return math.inf, -target.radius
+    a = -target.mu/(2*energy)
+    e = math.sqrt(max(0., 1-h*h/(target.mu*a)))
+    return a*(1+e)-target.radius, a*(1-e)-target.radius
+
+
+def step(s, target, pitch, throttle, dt):
+    """Midpoint integration of planar equations, with a measured local drag model."""
+    p = math.radians(pitch)
+    force = s.thrust*throttle
+    flow = force/(max(s.isp, 1.)*9.80665)
+    def derivative(h, vr, vt, mass):
+        r = target.radius+h
+        speed = max(1., math.hypot(vr, vt))
+        drag = s.drag*math.exp(clamp((s.altitude-h)/6000., -20., 20.))
+        return vr, force/max(mass, 1.)*math.sin(p)-target.mu/r**2+vt*vt/r-drag*vr/speed, \
+            force/max(mass, 1.)*math.cos(p)-vr*vt/r-drag*vt/speed
+    d = derivative(s.altitude, s.radial, s.horizontal, s.mass)
+    mid = derivative(s.altitude+d[0]*dt/2, s.radial+d[1]*dt/2,
+                     s.horizontal+d[2]*dt/2, s.mass-flow*dt/2)
+    return replace(s, altitude=s.altitude+mid[0]*dt, radial=s.radial+mid[1]*dt,
+                   horizontal=s.horizontal+mid[2]*dt, mass=max(1., s.mass-flow*dt))
+
+
+def terminal_pitch(s, target):
+    accel = max(.1, s.thrust/s.mass)
+    remaining = max(0., target.insertion_speed-s.horizontal)
+    tgo = max(12., remaining/accel * 1.15)
+    dh = target.periapsis-s.altitude
+    geff = target.mu/(target.radius+s.altitude)**2-s.horizontal**2/(target.radius+s.altitude)
+    ar = (6*dh-4*s.radial*tgo)/tgo**2
+    return math.degrees(math.asin(clamp((ar+geff)/accel, -1., 1.)))
+
+
+class Planner:
+    def __init__(self, target, max_q=25000., max_g=3., slew=2.):
+        self.target, self.max_q, self.max_g, self.slew = target, max_q, max_g, slew
+        self.pitch = 90.
+
+    def command(self, s, dt=1.):
+        if not all(math.isfinite(x) for x in vars(s).values()) or s.mass <= 0 or s.thrust < 0:
+            raise ValueError('Invalid flight state')
+        t = self.target
+        accel = s.thrust/s.mass
+        throttle = min(1., self.max_g*9.80665/max(accel, .01))
+        if s.q > self.max_q:
+            throttle *= math.sqrt(self.max_q/s.q)
+        effective = replace(s, thrust=s.thrust*throttle)
+        speed = math.hypot(s.radial, s.horizontal)
+        # Establish a gravity turn based on velocity and aerodynamic load.
+        launch = clamp(90.-max(0., speed-35.)*.08, 0., 90.)
+        terminal = terminal_pitch(effective, t)
+        blend = clamp(s.horizontal/(.60*t.insertion_speed), 0., 1.)
+        ap_now, pe_now = apsides(s, t)
+        desired = launch
+        if ap_now > t.apoapsis*.8:
+            # Predictive apoapsis feedback while building transverse energy.
+            desired = clamp(launch-(ap_now-t.apoapsis*.8)/1500., -60., launch)
+        prograde = math.degrees(math.atan2(s.radial, max(.1, s.horizontal)))
+        alpha = clamp(50000./max(s.q, 1.), 1.5, 35.)
+        lower, upper = -75., 90.
+        if s.q > 100.:
+            lower, upper = max(lower, prograde-alpha), min(upper, prograde+alpha)
+        lower = max(lower, self.pitch-self.slew*dt)
+        upper = min(upper, self.pitch+self.slew*dt)
+        if lower > upper:  # slew wins when a sudden gust moves prograde
+            lower = upper = clamp(prograde, self.pitch-self.slew*dt, self.pitch+self.slew*dt)
+        nominal = clamp(desired, lower, upper)
+        horizon = clamp((t.insertion_speed-s.horizontal)/max(accel, .1)*.12, 3., 15.)
+        candidates = sorted(set(clamp(nominal+d, lower, upper) for d in (-6., -3., 0., 3., 6.)))
+        best = None
+        for pitch in candidates:
+            pred = s
+            for _ in range(10):
+                pred = step(pred, t, pitch, throttle, horizon/10)
+            ap, _ = apsides(pred, t)
+            # Only penalize excess apoapsis: insufficient energy is expected early.
+            excess = max(0., ap-t.apoapsis) if math.isfinite(ap) else 1e7
+            score = ((pitch-nominal)/6.)**2 + (excess/10000.)**2
+            if pred.altitude < 0:
+                score += 1e6
+            if best is None or score < best[0]:
+                best = score, pitch, ap
+        self.pitch = best[1]
+        return Command(self.pitch, throttle, best[2], horizon)
+
+
+def achieved(apoapsis, periapsis, inclination, target):
+    return (all(math.isfinite(x) for x in (apoapsis, periapsis, inclination))
+            and abs(apoapsis-target.apoapsis) <= target.altitude_tolerance
+            and abs(periapsis-target.periapsis) <= target.altitude_tolerance
+            and abs(inclination-abs(target.inclination)) <= target.inclination_tolerance)
+
+
+def coast_apoapsis(state, target):
+    """Predict drag loss until atmospheric exit or apex, with no engine impulse."""
+    initial = state
+    s = state
+    for _ in range(240):
+        if s.radial <= 0 or s.altitude >= target.atmosphere:
+            break
+        # Rebase the measured atmosphere as the integration advances.
+        speed_ratio = (s.radial*s.radial+s.horizontal*s.horizontal)/max(1., initial.radial**2+initial.horizontal**2)
+        local_drag = initial.drag*math.exp(clamp((initial.altitude-s.altitude)/5600., -30., 20.))*speed_ratio
+        s = step(replace(s, drag=local_drag), target, 0., 0., 1.)
+    return apsides(s, target)[0]

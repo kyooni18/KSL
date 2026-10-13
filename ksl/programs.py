@@ -247,6 +247,11 @@ class AscentProgram(Program):
 
     def _argv(self, ctx: Context, preflight_only: bool) -> list[str]:
         a = ctx.config["ascent"]
+        if a["guidanceMode"] == "intelligent":
+            argv = [ctx.python, "-u", "-m", "ksl.ascent.intelligent.flight",
+                    "--config", str(ctx.log.directory / "config.json"),
+                    "--telemetry", str(ctx.log.directory / "ascent.csv")]
+            return argv if preflight_only else argv + ["--launch"]
         argv = [ctx.python, "-u", "-m", "ksl.ascent.flight", *endpoint_args(ctx.config),
                 *ascent_target_args(ctx.config)[1], "--ssme-limit", str(a["ssmeThrustLimit"]),
                 "--telemetry", str(ctx.log.directory / "ascent.csv"), *map(str, a["extraArgs"])]
@@ -256,6 +261,11 @@ class AscentProgram(Program):
 
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         a = ctx.config["ascent"]
+        if a["guidanceMode"] == "intelligent":
+            return ["ascent: intelligent vehicle discovery" +
+                    (" (read-only)" if stop == Phase.PRELAUNCH else
+                     f" and predictive ascent to {a['targetAltitudeKm']:g} km / {a['inclinationDeg']:g} deg"),
+                    "  $ " + " ".join(self._argv(ctx, stop == Phase.PRELAUNCH))]
         if stop == Phase.PRELAUNCH:
             return ["ascent: read-only preflight of the STS on the pad (no control writes)",
                     "  $ " + " ".join(self._argv(ctx, True))]
@@ -282,6 +292,8 @@ class AscentProgram(Program):
         ctx.log.log(f"Pad: settling {settle:.0f} s before launch")
         if ctx.stop_event.wait(settle):
             raise InterruptedError("stopped on the pad before ignition")
+        if a["guidanceMode"] == "intelligent":
+            return
         with connect(ctx.config, "ksl-pad") as conn:
             count = 0
             for engine in conn.space_center.active_vessel.parts.engines:
@@ -340,6 +352,9 @@ class OrbitTrimProgram(Program):
     def stages(self, ctx: Context) -> list[tuple[str, str, list[str]]]:
         """(stage name, description, argv) in flight order."""
         c, pr, o = ctx.config, ctx.config["profile"], ctx.config["orbit"]
+        if c["ascent"]["guidanceMode"] == "intelligent":
+            # Intelligent ascent owns and verifies its full circular insertion.
+            return []
         inc = str(c["ascent"]["inclinationDeg"])
         common = [*endpoint_args(c), "--min-burn-dv", str(o["minBurnDeltaV"]),
                   "--rcs-max-dv", str(o["rcsMaxDeltaV"])]

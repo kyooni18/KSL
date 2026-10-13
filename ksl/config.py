@@ -32,6 +32,7 @@ DEFAULTS: dict[str, Any] = {
         "timeoutSeconds": 10.0,
     },
     "ascent": {
+        "guidanceMode": "legacy",
         # Circular target orbit; ascent inserts into altitude x (altitude - insertionOffsetKm).
         "targetAltitudeKm": 90.0,
         "inclinationDeg": 34.0,
@@ -44,6 +45,14 @@ DEFAULTS: dict[str, Any] = {
         "revertToLaunch": False,
         # Extra raw flags for ksl.ascent.flight (e.g. ["--max-q", "22000"]).
         "extraArgs": [],
+    },
+    "intelligentAscent": {
+        "vehicleConfig": "",
+        "maxDynamicPressurePa": 25000.0,
+        "maxG": 3.0,
+        "altitudeToleranceM": 1000.0,
+        "inclinationToleranceDeg": 0.2,
+        "timeoutSeconds": 2400.0,
     },
     "orbit": {
         "trim": True,             # run OMS trim to the circular target after insertion
@@ -198,6 +207,13 @@ class MissionConfig:
             return problems
         a, c = self.data["ascent"], self.data["connection"]
         pr = self.data["profile"]
+        if a["guidanceMode"] not in ("legacy", "intelligent"):
+            problems.append("ascent.guidanceMode must be legacy or intelligent")
+        for key in ("maxDynamicPressurePa", "maxG", "altitudeToleranceM", "inclinationToleranceDeg", "timeoutSeconds"):
+            if self.data["intelligentAscent"][key] <= 0:
+                problems.append(f"intelligentAscent.{key} must be positive")
+        if a["guidanceMode"] == "intelligent" and pr["kind"] != "circular":
+            problems.append("intelligent ascent currently supports circular orbit profiles")
         if pr["kind"] not in PROFILE_KINDS:
             problems.append(f"profile.kind must be one of {', '.join(PROFILE_KINDS)}")
         if pr["kind"] in ("plane", "rendezvous") and not pr["planeTarget"].strip():

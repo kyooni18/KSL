@@ -170,6 +170,7 @@ class KSLApp(App[int]):
         self.quit_armed_at = 0.0
         self.replay_samples: list[dict[str, Any]] = []
         self.replay_index = 0
+        self.vehicle_document = None
 
     # --- layout -------------------------------------------------------------------
     def compose(self) -> ComposeResult:
@@ -189,6 +190,11 @@ class KSLApp(App[int]):
                     ascent = self._base_ascent()
                     base = self._base()
                     pr = base["profile"]
+                    yield Label("Ascent guidance (next mission only)")
+                    yield Select([("Legacy STS (default)", "legacy"), ("Intelligent", "intelligent")],
+                                 value=ascent["guidanceMode"], allow_blank=False, id="ascent-mode")
+                    yield Label("Vehicle configuration (optional; inspect in Vehicle tab)")
+                    yield Input(base["intelligentAscent"]["vehicleConfig"], id="vehicle-config")
                     yield Label("Orbit profile")
                     yield Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
                                  allow_blank=False, id="kind")
@@ -243,7 +249,24 @@ class KSLApp(App[int]):
                         yield Button("Validate plan", id="validate")
                         yield Button("Start  [s]", id="start-btn", variant="success")
                         yield Button("Abort  [a]", id="abort-btn", variant="error")
+                    yield Label("Save setup as reusable mission profile")
+                    yield Input("Configuration/missions/user-ascent.json", id="save-profile-path")
+                    yield Button("Save mission setup", id="save-profile")
                     yield Static(id="plan")
+            with TabPane("Vehicle", id="vehicle-editor"):
+                with VerticalScroll():
+                    yield Button("Inspect active vessel (read-only)", id="inspect-vehicle")
+                    yield Static("Load a vessel, then inspect its attachment tree.", id="vehicle-tree", markup=False)
+                    yield Label("Component")
+                    yield Select([], id="component")
+                    yield Label("Role")
+                    from .ascent.intelligent.vehicle import ROLES
+                    yield Select([(role, role) for role in ROLES], value="structure", allow_blank=False, id="component-role")
+                    yield Label("Permit depleted engine-less tank separation at this decoupler")
+                    yield Switch(False, id="approve-separator")
+                    yield Button("Apply component correction", id="apply-component")
+                    yield Input("Configuration/vehicles/user-ascent.json", id="vehicle-save-path")
+                    yield Button("Save vehicle and use for next mission", id="save-vehicle")
             with TabPane("Replay", id="replay"):
                 with Horizontal(id="replay-top"):
                     yield DataTable(id="runs", cursor_type="row", zebra_stripes=True)
@@ -413,6 +436,8 @@ class KSLApp(App[int]):
         # are appended last and any typed copy of them in the overrides box is dropped.
         switch = lambda wid: self.query_one(f"#{wid}", Switch).value  # noqa: E731
         owned_values = {
+            "ascent.guidanceMode": str(value("ascent-mode")),
+            "intelligentAscent.vehicleConfig": self.query_one("#vehicle-config", Input).value.strip(),
             "ascent.inclinationDeg": self._number("inclination", "Inclination"),
             "ascent.targetAltitudeKm": self._number("altitude", "Altitude"),
             "profile.kind": str(value("kind")),
@@ -500,6 +525,84 @@ class KSLApp(App[int]):
             return
         self.controller.abort()
         self.notify("Abort requested: safe-control path running.", severity="error")
+
+    @on(Button.Pressed, "#save-profile")
+    def save_profile(self) -> None:
+        from .paths import repo_path
+        from .ascent.intelligent.vehicle import save_document
+        try:
+            selection = self._selection()
+            config = load_config(str(selection["profile"]), selection["overrides"])
+            problems = config.validate()
+            if problems:
+                raise ConfigError("; ".join(problems))
+            path = repo_path(self.query_one("#save-profile-path", Input).value.strip())
+            save_document(path, config.data)
+            self.profile = str(path)
+            self.notify(f"Saved mission. Reuse with ksl tui -p {path}")
+        except (OSError, ValueError, ConfigError) as exc:
+            self.notify(str(exc), severity="error")
+
+    @on(Button.Pressed, "#inspect-vehicle")
+    async def inspect_vehicle(self) -> None:
+        from .krpc_link import connect
+        from .ascent.intelligent.vehicle import Vehicle, diagram
+        try:
+            config = load_config(self.profile, self.overrides)
+            def inspect():
+                with connect(config, "KSL vehicle inspector") as conn:
+                    if str(conn.krpc.current_game_scene).split('.')[-1] != 'flight':
+                        raise ValueError("Load a vessel in the flight scene first")
+                    return Vehicle(conn.space_center.active_vessel).document()
+            document = await asyncio.to_thread(inspect)
+            self.vehicle_document = document
+            self.query_one("#vehicle-tree", Static).update(diagram(document))
+            self.query_one("#component", Select).set_options(
+                [(f"{c['key']} {c['name']} ({c['role']})", c['key']) for c in document['components']])
+        except Exception as exc:
+            self.notify(str(exc), severity="error")
+
+    @on(Select.Changed, "#component")
+    def select_component(self, event: Select.Changed) -> None:
+        if self.vehicle_document is None or event.value is Select.BLANK:
+            return
+        key = str(event.value)
+        self.query_one("#component-role", Select).value = self.vehicle_document['roles'][key]
+        self.query_one("#approve-separator", Switch).value = key in self.vehicle_document['approvedSeparators']
+
+    @on(Button.Pressed, "#apply-component")
+    def apply_component(self) -> None:
+        from .ascent.intelligent.vehicle import diagram
+        document = self.vehicle_document
+        key = self.query_one("#component", Select).value
+        if document is None or key is Select.BLANK:
+            return
+        role = str(self.query_one("#component-role", Select).value)
+        document['roles'][str(key)] = role
+        for c in document['components']:
+            if c['key'] == key:
+                c['role'] = role
+        approved = set(document['approvedSeparators'])
+        approved.discard(str(key))
+        if self.query_one("#approve-separator", Switch).value:
+            approved.add(str(key))
+        document['approvedSeparators'] = sorted(approved)
+        self.query_one("#vehicle-tree", Static).update(diagram(document))
+
+    @on(Button.Pressed, "#save-vehicle")
+    def save_vehicle(self) -> None:
+        from .paths import repo_path
+        from .ascent.intelligent.vehicle import save_document
+        if self.vehicle_document is None:
+            self.notify("Inspect a vehicle first", severity="warning")
+            return
+        try:
+            path = repo_path(self.query_one("#vehicle-save-path", Input).value.strip())
+            save_document(path, self.vehicle_document)
+            self.query_one("#vehicle-config", Input).value = str(path)
+            self.notify("Vehicle saved for the next mission. Save mission setup to reuse it.")
+        except OSError as exc:
+            self.notify(str(exc), severity="error")
 
     # --- replay -----------------------------------------------------------------------
     def refresh_runs(self) -> None:
