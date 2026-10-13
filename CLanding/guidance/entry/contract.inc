@@ -267,7 +267,11 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.crossrange_error_m=lateral.has_crossrange_error?-t->runway_cross_track:0.0;
 
     const char *arrest_test=getenv("KSP_LANDER_ENTRY_LATERAL_ARREST_TEST");
-    lateral.crossrange_arrest_prediction=arrest_test&&strcmp(arrest_test,"1")==0;
+    /* Roll reversal alone does not arrest cross-track velocity.  On the
+       34-degree return it still carried the vehicle north of KSC by MM305.
+       Include the measured lift/bank stopping distance by default; retain
+       explicit zero only for controlled offline comparison. */
+    lateral.crossrange_arrest_prediction=!arrest_test||strcmp(arrest_test,"0")!=0;
     double map_radius=p->radius+fmax(0.0,t->mean_altitude);
     double map_scale=map_radius>DBL_EPSILON?p->radius/map_radius:1.0;
     double map_speed=fmax(0.0,t->horizontal_speed)*map_scale;

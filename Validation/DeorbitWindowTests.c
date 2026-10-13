@@ -67,6 +67,32 @@ int main(void){
  unsafe.taem_ownership_boundary_missed=false;
  assert(!deorbit_guided_candidate_better(&improved,&unsafe,&previous,&usable,
      &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+ /* The 34-degree return's course fails the perpendicular inlet heuristic,
+    but a safe closing inlet still deserves a native MM305 continuation. */
+ EntryPrediction oblique=usable;oblique.taem_course=60;
+ oblique.taem_along_track=-40000;oblique.taem_cross_track=-40000;
+ assert(!deorbit_witness_inlet_geometry(&oblique,&p,&cfg.site,&cfg.guidance));
+ assert(deorbit_witness_terminal_trial(&improved,&oblique,&p,&cfg.site,
+     &cfg.vehicle,&cfg.guidance));
+ assert(!deorbit_witness_terminal_trial(&improved,&unsafe,&p,&cfg.site,
+     &cfg.vehicle,&cfg.guidance));
+ /* Among two completed uncertified attempts, prefer the nearer ground
+    endpoint even if the other candidate better matches the nominal range. */
+ EntryPrediction near=usable,nominal=usable;
+ near.shadow_guidance_used=nominal.shadow_guidance_used=true;
+ near.taem_distance=70000;nominal.taem_distance=96500;
+ near.final_state.ut=nominal.final_state.ut=1000;
+ near.final_state.position=predictor_inertial_position((GeoPoint){
+     cfg.site.latitude,cfg.site.longitude+.1,50},&p,1000);
+ nominal.final_state.position=predictor_inertial_position((GeoPoint){
+     cfg.site.latitude,cfg.site.longitude+1,50},&p,1000);
+ previous.executable_witness_evaluated=improved.executable_witness_evaluated=true;
+ assert(deorbit_guided_candidate_better(&improved,&near,&previous,&nominal,
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+ /* A closer point high above KSC is not a completed approach. */
+ near.final_state.position=predictor_inertial_position((GeoPoint){
+     cfg.site.latitude,cfg.site.longitude,15000},&p,1000);
+ assert(!isfinite(deorbit_guided_terminal_miss(&improved,&near,&p,&cfg.site)));
  printf("selected nearby OMS burn %.1fs, miss %.1fm\n",best.burn_start,best.entry_miss);
  printf("equatorial horizon %.1fs (orbit %.1fs); steered peri %.1fm; lateral response %.1fm\n",horizon,period,steered.peri,steered.entry_crossrange-straight.entry_crossrange);
 }

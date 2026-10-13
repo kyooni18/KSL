@@ -607,6 +607,34 @@ static bool deorbit_witness_inlet_geometry(const EntryPrediction*w,
         fabs(heading_offset-90.0)<=s->mm304_perpendicular_heading_half_width&&
         deorbit_witness_closing(w,site);
 }
+/* A negative analytic inlet reserve or a non-perpendicular course is not
+   proof that the production MM305 law cannot acquire a runway route.  Spend
+   the bounded native continuation on safe, closing, nearby physical inlets;
+   only that continuation can prove Final. */
+static bool deorbit_witness_terminal_trial(const Candidate *candidate,
+        const EntryPrediction *w,const PlanetModel *p,const LandingSite *site,
+        const VehicleProfile *v,const GuidanceSettings *s) {
+    return candidate&&w&&deorbit_entry_stage_qualified(w,v,s,candidate->peri,
+        site->altitude,p->atmosphere_depth,true)&&w->reached_taem&&
+        isfinite(w->taem_altitude)&&w->taem_altitude>=s->mm305_min_altitude&&
+        w->taem_altitude<=s->mm305_max_altitude&&
+        deorbit_witness_range_debt(w,p,s)<=0.0&&deorbit_witness_closing(w,site);
+}
+
+/* Ground endpoint of a completed native attempt, not its closest high-altitude
+   overflight.  This ranks uncertified recovery attempts only; it never grants
+   a capture certificate or weakens Final's contract. */
+static double deorbit_guided_terminal_miss(const Candidate *candidate,
+        const EntryPrediction *w,const PlanetModel *p,const LandingSite *site) {
+    if(!candidate->executable_witness_evaluated||!w->shadow_guidance_used||
+       w->shadow_aborted||!isfinite(w->final_state.ut))return INFINITY;
+    GeoPoint end=predictor_geo_point(w->final_state.position,p,w->final_state.ut);
+    if(!isfinite(end.altitude)||end.altitude>site->altitude+750.0)return INFINITY;
+    GeoPoint target={site->latitude,site->longitude,site->altitude};
+    double miss=great_circle_distance(end,target,p->radius);
+    return isfinite(miss)?miss:INFINITY;
+}
+
 static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPrediction*aw,
         const Candidate*b,const EntryPrediction*bw,const PlanetModel*p,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s){
@@ -620,6 +648,13 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
     bool b_capture=b_safe&&deorbit_runway_capture_qualified(bw,site,v,s,b->peri)&&
         deorbit_energy_margin_qualified(&b->energy_margin,s,true);
     if(a_capture!=b_capture)return a_capture;
+    if(a_safe&&b_safe&&a->executable_witness_evaluated&&
+       b->executable_witness_evaluated){
+        double am=deorbit_guided_terminal_miss(a,aw,p,site);
+        double bm=deorbit_guided_terminal_miss(b,bw,p,site);
+        if(isfinite(am)&&isfinite(bm)&&fabs(am-bm)>1.0)
+            return am<bm;
+    }
     bool a_inlet=aw->taem_dynamic_interface_captured&&
         !aw->taem_ownership_boundary_missed;
     bool b_inlet=bw->taem_dynamic_interface_captured&&
@@ -948,15 +983,15 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
        alternatives stay in the same ground-track pass and solve Pe separately. */
     EntryPrediction selected_inlet=deorbit_executable_policy_witness(
         &selected,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
-    /* Never spend a HAC/Final solve on an inlet that fails certified physical
-       energy or does not close toward the target. When plausible, let the
-       actual native route proof participate in candidate ranking. */
-    if(native_terminal&&selected_inlet.taem_dynamic_interface_captured&&
-       selected_inlet.taem_interface_energy_margin>=0.0&&
-       deorbit_witness_inlet_geometry(&selected_inlet,p,site,s)){
+    /* Evaluate nearby safe, closing inlets with the production terminal law.
+       Analytic inlet energy/course heuristics do not certify or veto the
+       downstream route; the complete native attempt participates in ranking. */
+    if(native_terminal&&deorbit_witness_terminal_trial(&selected,&selected_inlet,
+            p,site,v,s)){
         EntryPrediction full=deorbit_executable_policy_witness(
             &selected,p,aero,env,cal,site,v,s,authority_source,
             terminal_model,true,false);
+        deorbit_record_execution_witness(&selected,&full,site,v,s);
         entry_prediction_clear(&selected_inlet);
         selected_inlet=full;
     }
@@ -983,12 +1018,12 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         }
         EntryPrediction nearby_inlet=deorbit_executable_policy_witness(
             &nearby,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
-        if(native_terminal&&nearby_inlet.taem_dynamic_interface_captured&&
-           nearby_inlet.taem_interface_energy_margin>=0.0&&
-           deorbit_witness_inlet_geometry(&nearby_inlet,p,site,s)){
+        if(native_terminal&&deorbit_witness_terminal_trial(&nearby,&nearby_inlet,
+            p,site,v,s)){
             EntryPrediction full=deorbit_executable_policy_witness(
                 &nearby,p,aero,env,cal,site,v,s,authority_source,
                 terminal_model,true,false);
+            deorbit_record_execution_witness(&nearby,&full,site,v,s);
             entry_prediction_clear(&nearby_inlet);
             nearby_inlet=full;
         }
@@ -1045,12 +1080,12 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
                     p,aero,env,cal,site,v,s,thrust,NULL)){candidate_clear(&refined);break;}
             EntryPrediction refined_inlet=deorbit_executable_policy_witness(
                 &refined,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
-            if(native_terminal&&refined_inlet.taem_dynamic_interface_captured&&
-               refined_inlet.taem_interface_energy_margin>=0.0&&
-               deorbit_witness_inlet_geometry(&refined_inlet,p,site,s)){
+            if(native_terminal&&deorbit_witness_terminal_trial(&refined,&refined_inlet,
+                    p,site,v,s)){
                 EntryPrediction full=deorbit_executable_policy_witness(
                     &refined,p,aero,env,cal,site,v,s,authority_source,
                     terminal_model,true,false);
+                deorbit_record_execution_witness(&refined,&full,site,v,s);
                 entry_prediction_clear(&refined_inlet);
                 refined_inlet=full;
             }

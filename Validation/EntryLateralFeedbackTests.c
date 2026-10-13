@@ -360,6 +360,30 @@ static void bank_reference_waits_for_measured_response(void){
     assert(state.command_bank_deg>held+reserve);
 }
 
+/* At high speed, a vehicle can still be south of the runway while its
+   northward velocity already requires a right bank to stop the overshoot. */
+static void arrests_velocity_before_crossing_runway_line(void){
+    EntryLateralLimits l=limits();
+    EntryLateralState seed={0};
+    entry_lateral_state_init(&seed,90.0,-1.0,-20.0);
+    seed.leg_captured=true;
+    EntryLateralInput in=azimuth_input(10.0,5.0);
+    in.measured_bank_deg=-20.0;
+    in.has_bank_magnitude=true;in.bank_magnitude_deg=20.0;
+    in.has_crossrange_error=true;in.crossrange_error_m=-60000.0;
+    in.has_crossrange_rate=true;in.crossrange_error_rate_mps=1000.0;
+    in.has_crossrange_course_alignment=true;in.crossrange_course_alignment=.8;
+    in.lift_accel=10.0;
+    EntryLateralState old=seed,anticipatory=seed;
+    EntryLateralOutput before=entry_lateral_update(&old,&in,&l);
+    in.crossrange_arrest_prediction=true;
+    EntryLateralOutput after=entry_lateral_update(&anticipatory,&in,&l);
+    assert(before.valid&&after.valid);
+    assert(before.bank_sign<0.0);
+    assert(after.projected_crossrange_error_m>after.crossrange_corridor_m);
+    assert(after.reversal_requested&&after.bank_sign>0.0);
+}
+
 int main(void){
     assert(fabs(entry_lateral_crossrange_arrest_distance(100,.5,10,30)-1333.333333333333)<1e-8);
     assert(fabs(entry_lateral_crossrange_arrest_distance(-100,.5,10,-30)+1333.333333333333)<1e-8);
@@ -372,6 +396,7 @@ int main(void){
     initial_side_follows_crossrange_sign();
     predicts_crossing_over_physical_roll_response();
     uncertainty_corridor_prevents_chatter();
+    arrests_velocity_before_crossing_runway_line();
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
     behind_site_preserves_turn_until_azimuth_ahead();
