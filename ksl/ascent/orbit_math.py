@@ -333,3 +333,125 @@ def closest_approach(r_c, v_c, r_t, v_t, mu, t_start, t_end, samples=720):
             lo = m1
     t = 0.5*(lo+hi)
     return t, separation(t)
+
+
+# --- Lambert targeting and rendezvous planning ------------------------------------------
+
+def lambert(r1, r2, tof, mu, prograde=True):
+    """Velocities (v1, v2) of the single-revolution conic from r1 to r2 in ``tof`` s.
+
+    Universal-variable solution (Curtis, alg. 5.2) with a bracketed bisection, so it
+    never diverges. ``prograde`` selects the sense of motion about +z. Returns None
+    when no solution exists in the bracket (e.g. a degenerate 180-degree transfer).
+    """
+    r1n, r2n = norm(r1), norm(r2)
+    c = cross(r1, r2)
+    cos_dtheta = max(-1.0, min(1.0, dot(r1, r2)/(r1n*r2n)))
+    dtheta = math.acos(cos_dtheta)
+    if (c[2] < 0.0) == prograde:
+        dtheta = TAU - dtheta
+    sin_dtheta = math.sin(dtheta)
+    if abs(sin_dtheta) < 1e-9 or abs(1.0 - cos_dtheta) < 1e-12:
+        return None
+    A = sin_dtheta*math.sqrt(r1n*r2n/(1.0-math.cos(dtheta)))
+    sqmu = math.sqrt(mu)
+
+    def y_of(z):
+        cz, sz = _stumpff(z)
+        return r1n + r2n + A*(z*sz - 1.0)/math.sqrt(cz)
+
+    def f_of(z):
+        cz, sz = _stumpff(z)
+        y = y_of(z)
+        if y < 0.0:
+            return None
+        return (y/cz)**1.5*sz + A*math.sqrt(y) - sqmu*tof
+
+    lo, hi = -4.0*math.pi**2, 4.0*math.pi**2 - 1e-6
+    while y_of(lo) < 0.0 and lo < hi:   # lift the lower bound until y > 0
+        lo += 0.5
+    f_lo, f_hi = f_of(lo), f_of(hi)
+    if f_lo is None or f_hi is None or f_lo*f_hi > 0.0:
+        return None
+    for _ in range(200):
+        mid = 0.5*(lo+hi)
+        f_mid = f_of(mid)
+        if f_mid is None:
+            lo = mid
+            continue
+        if f_lo*f_mid <= 0.0:
+            hi = mid
+        else:
+            lo, f_lo = mid, f_mid
+        if hi-lo < 1e-12:
+            break
+    z = 0.5*(lo+hi)
+    y = y_of(z)
+    f = 1.0 - y/r1n
+    g = A*math.sqrt(y/mu)
+    gdot = 1.0 - y/r2n
+    if abs(g) < 1e-12:
+        return None
+    v1 = scale(add(r2, r1, -f), 1.0/g)
+    v2 = scale(add(scale(r2, gdot), r1, -1.0), 1.0/g)
+    return v1, v2
+
+
+def station_offset(r_t, v_t, distance):
+    """Point ``distance`` m behind the target along its velocity (V-bar station)."""
+    return add(r_t, unit(v_t), -distance)
+
+
+def plan_rendezvous(chaser, target, mu, delay_range, tof_range, standoff=0.0,
+                    delay_samples=36, tof_samples=36, min_departure_alt_radius=0.0):
+    """Cheapest two-impulse rendezvous found by Lambert search (Hohmann or better).
+
+    ``chaser`` and ``target`` are (r, v) states at t=0 (now). Searches the departure
+    delay and the time of flight; the arrival point is ``standoff`` m behind the
+    target. Returns the best plan dict (departure, arrival, dv1, dv2 vectors and
+    magnitudes) or None. The total includes the braking burn that matches the
+    target's velocity at arrival.
+    """
+    def evaluate(delay, tof):
+        r_c, v_c = propagate(chaser[0], chaser[1], mu, delay)
+        r_t0, v_t0 = propagate(target[0], target[1], mu, delay+tof)
+        aim = station_offset(r_t0, v_t0, standoff) if standoff else r_t0
+        solution = lambert(r_c, aim, tof, mu)
+        if solution is None:
+            return None
+        v1, v2 = solution
+        if min_departure_alt_radius:
+            if elements(r_c, v1, mu)['rp'] < min_departure_alt_radius:
+                return None
+        dv1 = add(v1, v_c, -1.0)
+        dv2 = add(v_t0, v2, -1.0)
+        return {'delay': delay, 'tof': tof, 'dv1_vec': dv1, 'dv2_vec': dv2,
+                'dv1': norm(dv1), 'dv2': norm(dv2), 'dv': norm(dv1)+norm(dv2),
+                'r_depart': r_c, 'v_depart': v_c, 'r_arrive': aim}
+
+    def search(d_lo, d_hi, t_lo, t_hi, nd, nt):
+        best = None
+        for i in range(nd+1):
+            delay = d_lo + (d_hi-d_lo)*i/nd
+            for j in range(nt+1):
+                tof = t_lo + (t_hi-t_lo)*j/nt
+                result = evaluate(delay, tof)
+                if result is not None and (best is None or result['dv'] < best['dv']):
+                    best = result
+        return best
+
+    d_lo, d_hi = delay_range
+    t_lo, t_hi = tof_range
+    best = search(d_lo, d_hi, t_lo, t_hi, delay_samples, tof_samples)
+    if best is None:
+        return None
+    for _ in range(3):  # zoom in around the best cell
+        dd = (d_hi-d_lo)/delay_samples
+        dt = (t_hi-t_lo)/tof_samples
+        d_lo, d_hi = max(delay_range[0], best['delay']-dd), min(delay_range[1], best['delay']+dd)
+        t_lo, t_hi = max(tof_range[0], best['tof']-dt), min(tof_range[1], best['tof']+dt)
+        refined = search(d_lo, d_hi, t_lo, t_hi, 12, 12)
+        if refined is not None and refined['dv'] <= best['dv']:
+            best = refined
+        delay_samples = tof_samples = 12
+    return best

@@ -132,7 +132,7 @@ GUIDANCE_DEBUG = {}
 
 def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
                       apoapsis_altitude, periapsis_altitude, inclination_deg,
-                      acceleration):
+                      acceleration, plane_normal=None):
     """Velocity-to-be-gained guidance to an exact apoapsis/periapsis/inclination.
 
     All vectors are in a non-rotating body frame whose +y axis points to the north
@@ -159,6 +159,12 @@ def terminal_guidance(position, velocity, rotation_velocity, mu, body_radius,
     cos_i = math.cos(math.radians(inclination_deg))
     azimuth = math.asin(max(-1.0, min(1.0, cos_i/max(cos_lat, 1e-6))))
     horizontal = _combine((math.cos(azimuth), north), (math.sin(azimuth), east))
+    if plane_normal is not None:
+        # Steer into an exact plane (inclination *and* node), e.g. a rendezvous
+        # target's. h x r is the prograde horizontal in any consistent algebra.
+        in_plane = _unit(_cross(plane_normal, rh))
+        if _norm(in_plane) > 0.0:
+            horizontal = in_plane
     v_target = _combine((vr_target, rh), (vh_target, horizontal))
     dv = _combine((1.0, v_target), (-1.0, velocity))
     dv_mag = _norm(dv)

@@ -113,6 +113,60 @@ def restore_unexpected_ssme_shutdown(engines):
     return len(inactive)
 
 
+def plane_target_state(sc, body, name):
+    """(position, velocity) in the body's inertial frame of a moon or vessel named ``name``."""
+    frame = body.non_rotating_reference_frame
+    candidate = sc.bodies.get(name)
+    if candidate is not None:
+        if candidate.orbit is None or candidate.orbit.body != body:
+            raise ValueError(f'{name} does not orbit {body.name}')
+        return candidate.position(frame), candidate.velocity(frame)
+    for vessel in sc.vessels:
+        if vessel.name == name and vessel != sc.active_vessel:
+            if vessel.orbit.body != body:
+                raise ValueError(f'{name} does not orbit {body.name}')
+            return vessel.position(frame), vessel.velocity(frame)
+    raise ValueError(f'Plane target {name!r} is neither a moon of {body.name} nor a vessel')
+
+
+def wait_for_plane_window(conn, vessel, args):
+    """Hold on the pad until it lies in the target's orbital plane, then set the inclination.
+
+    Returns the target plane normal in kRPC inertial coordinates for PEG.
+    """
+    from ..controls import Controls, warp_until
+    from . import launch_window
+    from . import orbit_math as om
+    sc = conn.space_center
+    body = vessel.orbit.body
+    frame = body.non_rotating_reference_frame
+    r_t, v_t = plane_target_state(sc, body, args.plane_target)
+    normal_k = _unit(_cross(r_t, v_t))
+    r_site = om.from_krpc(vessel.position(frame))
+    v_site = om.from_krpc(vessel.velocity(frame))
+    omega = math.copysign(body.rotational_speed, om.cross(r_site, v_site)[2])
+    normal_rh = om.unit(om.cross(om.from_krpc(r_t), om.from_krpc(v_t)))
+    args.inclination = math.degrees(math.acos(max(-1.0, min(1.0, normal_rh[2]))))
+    if not args.launch_window:
+        print(f'Plane target {args.plane_target}: inclination {args.inclination:.3f} deg '
+              '(no window wait; node not matched)')
+        return normal_k
+    windows = [w for w in launch_window.windows(r_site, omega, normal_rh, horizon=3*om.TAU/abs(omega))
+               if w['t'] - args.window_lead >= 30.0]
+    if not windows:
+        raise ValueError(f'The pad never passes under the plane of {args.plane_target} '
+                         f'(inclination {args.inclination:.2f} deg is below the pad latitude)')
+    window = windows[0]
+    launch_ut = sc.ut + window['t'] - args.window_lead
+    emit_event('launch-window', target=args.plane_target, wait_s=launch_ut - sc.ut,
+               launch_ut=launch_ut, azimuth_deg=window['azimuth'], inclination_deg=args.inclination)
+    print(f'Launch window for the plane of {args.plane_target}: T-{launch_ut - sc.ut:.0f} s, '
+          f'inertial azimuth {window["azimuth"]:.2f} deg, inclination {args.inclination:.3f} deg')
+    warp_until(sc, launch_ut, Controls.from_env(), lead=0.0,
+               announce=lambda index, remaining: print(f'pad hold: warp index {index}, T-{remaining:.0f} s'))
+    return normal_k
+
+
 def _terminate_as_exception(signum, _frame):
     raise SystemExit(128 + signum)
 
@@ -203,6 +257,9 @@ def run(args):
         if args.orbit < body.atmosphere_depth + 5000:
             raise ValueError('Target apoapsis must clear the atmosphere by at least 5 km')
         flight = v.flight(body.reference_frame)
+        plane_normal = None
+        if args.plane_target:
+            plane_normal = wait_for_plane_window(conn, v, args)
         from .attitude import CustomAutopilot
         # Own attitude controller (not the kRPC AutoPilot): see shuttle/attitude.py.
         ap = CustomAutopilot(conn, v, address=args.address, rpc_port=args.rpc_port,
@@ -671,7 +728,7 @@ def run(args):
                                     # dv stalled ~120 m/s and the energy cutoff fired with
                                     # the wrong shape (runs yy/zz 85x65 @34.9).
                                     args.inclination,
-                                    accel)
+                                    accel, plane_normal=plane_normal)
                                 d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
                                 peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
                                 peg_heading = target_heading + wrap_roll(peg_heading-target_heading)
@@ -1152,6 +1209,12 @@ def main():
                         help='Altitude in m where the post-roll gravity turn begins; low enough that '
                              'the pitch-over happens at low dynamic pressure, where the q*alpha '
                              'bound still allows a useful angle of attack')
+    parser.add_argument('--plane-target', default='',
+                        help='Moon or vessel whose orbital plane the ascent targets (e.g. Minmus)')
+    parser.add_argument('--launch-window', action='store_true',
+                        help='Wait on the pad for the plane-target launch window')
+    parser.add_argument('--window-lead', type=float, default=0.0,
+                        help='Launch this many seconds before the pad crosses the plane')
     parser.add_argument('--no-corridor', action='store_true',
                         help='Disable apoapsis-corridor feedback on the gravity turn')
     parser.add_argument('--transfer', action='store_true',

@@ -278,6 +278,39 @@ def solve3(columns, rhs):
             det(columns[0], columns[1], rhs)/d)
 
 
+def from_rh_map(to_rh):
+    """Inverse of a kRPC -> right-handed map chosen by choose_frame_map."""
+    if to_rh((1.0, 2.0, 3.0)) == (1.0, 3.0, 2.0):
+        return to_rh  # the swap is its own inverse
+    return lambda v: (v[0], -v[2], v[1])
+
+
+def node_for_dv(vessel, ut, dv_krpc, frame):
+    """Maneuver node at ``ut`` whose burn vector equals ``dv_krpc`` (in ``frame``).
+
+    The node frame is calibrated by probing unit nodes through kRPC's own
+    burn_vector, so no prograde/normal/radial sign convention is assumed.
+    """
+    basis = []
+    for kwargs in ({'prograde': 1.0}, {'normal': 1.0}, {'radial': 1.0}):
+        probe = vessel.control.add_node(ut, **kwargs)
+        try:
+            basis.append(probe.burn_vector(frame))
+        finally:
+            probe.remove()
+    prograde, normal, radial = solve3(basis, dv_krpc)
+    node = vessel.control.add_node(ut, prograde=prograde, normal=normal, radial=radial)
+    node.goal = None
+    return node
+
+
+def rh_state(vessel, frame, mu):
+    """(r, v, to_rh) of the vessel in the right-handed orbit_math frame."""
+    r_k, v_k = vessel.position(frame), vessel.velocity(frame)
+    to_rh, _ = choose_frame_map(r_k, v_k, mu, math.degrees(vessel.orbit.inclination))
+    return to_rh(r_k), to_rh(v_k), to_rh
+
+
 def plan_exact(sc, vessel, args, min_lead, tolerance_alt=100.0, tolerance_inc=0.02):
     """One burn to the exact target apsides and inclination, or None to fall back.
 
@@ -308,22 +341,8 @@ def plan_exact(sc, vessel, args, min_lead, tolerance_alt=100.0, tolerance_inc=0.
     if solution is None:
         return None
     ut = sc.ut + solution['t']
-    # kRPC <-> right-handed map is its own inverse for 'swap'; invert 'rotate' by hand.
-    if to_rh((1.0, 2.0, 3.0)) == (1.0, 3.0, 2.0):
-        from_rh = to_rh
-    else:
-        from_rh = lambda v: (v[0], -v[2], v[1])
-    dv_k = from_rh(solution['dv_vec'])
-    basis = []
-    for kwargs in ({'prograde': 1.0}, {'normal': 1.0}, {'radial': 1.0}):
-        probe = vessel.control.add_node(ut, **kwargs)
-        try:
-            basis.append(probe.burn_vector(nrf))
-        finally:
-            probe.remove()
-    prograde, normal, radial = solve3(basis, dv_k)
-    node = vessel.control.add_node(ut, prograde=prograde, normal=normal, radial=radial)
-    node.goal = None
+    node = node_for_dv(vessel, ut, from_rh_map(to_rh)(solution['dv_vec']), nrf)
+    prograde, normal, radial = node.prograde, node.normal, node.radial
     predicted = node.orbit
     print(f'exact plan: burn in {solution["t"]:.0f} s, dv {solution["dv"]:.3f} m/s '
           f'(prograde {prograde:.3f}, normal {normal:.3f}, radial {radial:.3f}); '
@@ -466,6 +485,12 @@ def main():
     args = parser.parse_args()
     conn = krpc.connect(name='orbit-trim', address=args.address,
                         rpc_port=args.rpc_port, stream_port=args.stream_port)
+    sc, vessel = prepare(conn)
+    _trim(conn, sc, vessel, args)
+
+
+def prepare(conn):
+    """Shared OMS setup: custom autopilot, OMS engines only, fuel cells on."""
     from .attitude import CustomAutopilot
     # Own attitude controller (no kRPC AutoPilot). OMS burns use reaction wheels
     # only, so the attitude loop is kept slow and gentle.
@@ -488,6 +513,10 @@ def main():
         for i in range(converter.count):
             if not converter.active(i):
                 converter.start(i)
+    return sc, vessel
+
+
+def _trim(conn, sc, vessel, args):
 
     def report(tag):
         o = vessel.orbit
@@ -610,7 +639,7 @@ def main():
         print('Orbit operations disabled by the operator; nothing flown')
         emit_event('trim-skipped', label=args.label, reason='disabled')
         return
-    if ctl.hold_trim:
+    if ctl.hold_trim and not getattr(args, 'no_hold', False):
         print('Holding in orbit: waiting for the operator to trigger orbit trim')
         emit_event('trim-held', label=args.label)
         while not ctl.take('trimNow'):
