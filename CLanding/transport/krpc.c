@@ -70,6 +70,8 @@ static void project_root(char *out,size_t out_size){
 static char *build_structure_manifest(const LandingConfiguration *cfg,const char *vessel){
     JsonWriter w;jw_init(&w);jw_raw(&w,"{\"schema\":3,\"modelId\":");jw_string(&w,cfg->vehicle.model_id);
     jw_raw(&w,",\"vesselName\":");jw_string(&w,vessel?vessel:"");
+    const char *variant=getenv("KSP_LANDER_PHYSICS_VARIANT");
+    if(variant&&*variant){jw_raw(&w,",\"configuration\":");jw_string(&w,variant);}
     /* Model ID is the authoritative manual identity. A later native parts
        inventory can add a geometry witness without changing that durable key. */
     jw_raw(&w,",\"parts\":[],\"geometryComplete\":false,\"geometry\":[]}");
@@ -100,7 +102,12 @@ static void open_physics_store(KRPCSession *session,const LandingConfiguration *
         .path=session->physics_storage,.model_id=cfg->vehicle.model_id,
         .vessel_name=krpc_cnano_client_vessel(session->client),
         .structure_manifest_json=structure,.environment_manifest_json=environment,
-        .flight_key=krpc_cnano_client_flight_key(session->client),.mode=PHYSICS_STORE_READ_WRITE};
+        .flight_key=krpc_cnano_client_flight_key(session->client),
+        /* The open Benjee payload bay roughly halves hypersonic L/D; the
+           landing program closes it before deorbit/reentry, so live flights
+           declare that configuration and never learn from bay-open history. */
+        .structure_variant=getenv("KSP_LANDER_PHYSICS_VARIANT"),
+        .mode=PHYSICS_STORE_READ_WRITE};
     /* A save reload is a new physical experiment, not a continuation of the
      * original launch. Keep the normal same-flight holdout, but in explicitly
      * forced unpowered checkpoint development exclude this native session only.

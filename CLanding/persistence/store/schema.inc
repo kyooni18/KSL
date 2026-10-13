@@ -232,7 +232,9 @@ PhysicsStore *physics_store_open(const PhysicsStoreOptions *options,char *error,
     if(!store){structure_identity_clear(&structure);free(structure_text);free(environment_text);set_error(error,error_size,"Out of memory opening physics store");return NULL;}
     store->mode=options->mode;
     if(!copy_string(store->path,sizeof(store->path),options->path)||
-       snprintf(store->structure_id,sizeof(store->structure_id),"model:%s",options->model_id)>=(int)sizeof(store->structure_id)){
+       snprintf(store->structure_id,sizeof(store->structure_id),"model:%s%s%s",options->model_id,
+           options->structure_variant&&*options->structure_variant?"#":"",
+           options->structure_variant?options->structure_variant:"")>=(int)sizeof(store->structure_id)){
         set_error(error,error_size,"Physics store path or model ID is too long");goto fail;
     }
     digest_text(structure_text,store->structure_witness_id);digest_text(environment_text,store->environment_id);

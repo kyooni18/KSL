@@ -354,6 +354,9 @@ class LandingProgram(Program):
         start = Phase.DEORBIT if start.index < Phase.DEORBIT.index else start
         env = {"KSP_LANDER_MODEL_PROFILE": str(landing["modelProfile"]),
                "KSP_LANDER_ROOT": str(DATA_ROOT), **krpc_env(ctx.config)}
+        # The payload-bay preflight below closes the bay before any planning or
+        # atmospheric flight, so aero history is keyed to that configuration.
+        env["KSP_LANDER_PHYSICS_VARIANT"] = "payload-bay-closed"
         state = _LandingState(ctx)
         with open(ctx.log.directory / "backend.stderr.log", "ab") as stderr:
             client = BackendClient(BACKEND, snapshot_sink=state.on_snapshot, stderr_target=stderr, env=env)

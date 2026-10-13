@@ -23,6 +23,9 @@ typedef struct {
     const char *environment_manifest_json;
     const char *session_id; /* Optional deterministic/test override. */
     const char *flight_key; /* Stable KSP-launch identity, e.g. UT-MET launch key. */
+    /* Optional aerodynamic configuration (e.g. "payload-bay-closed"); a
+       different configuration is a different structure with its own history. */
+    const char *structure_variant;
     PhysicsStoreMode mode;
 } PhysicsStoreOptions;
 
