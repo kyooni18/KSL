@@ -187,6 +187,31 @@ def csv_write(path: Path, rows: Iterable[dict]):
 def sha(path: Path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def classify_observed_outcome(observed: list[dict], run_status: dict) -> dict:
+    """Classify only witnessed milestones and durable mission state, never a forecast."""
+    witnessed = {r["phase"] for r in observed}
+    last_phase = observed[-1]["phase"] if observed else None
+    state = run_status.get("state")
+    milestones = {"mm305Observed": "TAEM" in witnessed,
+                  "finalObserved": "Final Approach" in witnessed,
+                  "touchdownPhaseObserved": "Touchdown" in witnessed,
+                  "rolloutPhaseObserved": "Rollout" in witnessed,
+                  "completePhaseObserved": "Complete" in witnessed}
+    if state == "aborted":
+        description = f"mission aborted at {last_phase}; no verified touchdown/rollout"
+    elif state == "failed":
+        description = f"mission failed at {last_phase}; no verified touchdown/rollout"
+    elif state == "completed" and all(milestones[k] for k in
+                                    ("touchdownPhaseObserved", "rolloutPhaseObserved", "completePhaseObserved")):
+        description = "mission completed; touchdown, rollout and Complete phases observed"
+    else:
+        description = (f"incomplete/unverified recording ending at {last_phase}; mission status "
+                       f"{state or 'unavailable'}; no verified terminal landing")
+    return dict(description=description, statusState=state, lastObservedPhase=last_phase,
+                lastObservedUT=observed[-1]["ut"] if observed else None,
+                **milestones)
+
+
 def audit(vehicle: Path, planner: Path, plan_path: Path, output: Path, physics_session: str | None = None):
     header, samples = load_vehicle(vehicle)
     planet, cfg = header["planet"], header["configuration"]
@@ -301,10 +326,13 @@ def audit(vehicle: Path, planner: Path, plan_path: Path, output: Path, physics_s
     planner_initial = next(r for r in map(json.loads, planner.open()) if r.get("recordType") == "plannerSample")
     selected = {cutoff_raw["sequence"]: dict(label="postburn", **cutoff_raw)}
     for h in (70000, 69000, 65000, 60000, 50000, 45000, 40000, 35000, 31000, 30000, 29000, 28000, 27500, 26000, 25000, 22000, 18000, 15000):
+        if crossing(observed[cutoff_i:], h) is None:
+            continue  # Never label the last sample as a gate the flight did not cross.
         i = min(range(cutoff_i, len(observed)), key=lambda j: abs(observed[j]["altitude"]-h))
         selected[samples[i]["sequence"]] = dict(label=f"h{h}", **samples[i])
-    i = next(i for i, r in enumerate(observed) if r["phase"] == "TAEM")
-    selected[samples[i]["sequence"]] = dict(label="mm305-first", **samples[i])
+    i = next((i for i, r in enumerate(observed) if r["phase"] == "TAEM"), None)
+    if i is not None:
+        selected[samples[i]["sequence"]] = dict(label="mm305-first", **samples[i])
     frozen = []
     for raw in sorted(selected.values(), key=lambda r: r["ut"]):
         frozen.append({"label": raw["label"], "ut": raw["ut"], "sequence": raw["sequence"],
@@ -326,8 +354,12 @@ def audit(vehicle: Path, planner: Path, plan_path: Path, output: Path, physics_s
         w.writerow(columns+[a+str(i) for a in ("p", "v", "lift", "drag") for i in range(3)])
         for r in observed[cutoff_i:]:
             w.writerow([r[c] if r[c] is not None else math.nan for c in columns]+r["p"]+r["v"]+r["lift_vector"]+r["drag_vector"])
+    status_path = plan_path.parent/"status.json"
+    run_status = json.loads(status_path.read_text()) if status_path.is_file() else {}
+    outcome = classify_observed_outcome(observed, run_status)
     summary = {"sources": manifest, "planet_frame_closure_max_m": max(r["frame_closure_m"] for r in observed),
-               "sample_count": len(observed), "phases": phases, "outcome": "operator-aborted at MM305; no observed Final or touchdown",
+               "sample_count": len(observed), "phases": phases, "outcome": outcome["description"],
+               "observed_outcome": outcome,
                "burn": {"planned_ignition_ut": ignition, "planned_midpoint_ut": plan["burnUT"],
                         "planned_duration_s": plan["estimatedBurnDuration"], "thrust_onset_ut_by_threshold_n": onset,
                         "first_zero_thrust_after_entry_interface_ut": cutoff["ut"],
@@ -338,7 +370,7 @@ def audit(vehicle: Path, planner: Path, plan_path: Path, output: Path, physics_s
                "same_altitude": matches,
                "clock": {"positive_steps_over_half_second": sum(r["clock_error_step"]>.5 for r in observed),
                          "negative_steps_over_half_second": sum(r["clock_error_step"]<-.5 for r in observed),
-                         "cumulative_excess_at_abort_s": observed[-1]["clock_excess"],
+                         "cumulative_excess_at_last_sample_s": observed[-1]["clock_excess"],
                          "definition": "sum(raw UT delta - displacement projected on mean inertial velocity / mean velocity squared); diagnostic, raw UT unchanged"},
                "limitations": ["Original plan omitted force/control samples; reconstructed derivatives are not original telemetry.",
                                "Interpolated UT crossings can span non-coincident state batches; bracket discrepancy is retained.",

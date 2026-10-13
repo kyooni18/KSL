@@ -81,3 +81,29 @@ def test_periapsis_circular_orbit():
     p=dict(radius=600000.,gravitationalParameter=3.5316e12)
     r=700000.
     assert audit.periapsis([r,0,0],[0,math.sqrt(p["gravitationalParameter"]/r),0],p)==pytest.approx(100000.,abs=.02)
+
+
+def test_incomplete_pre_taem_recording_does_not_claim_landing():
+    rows = [dict(ut=1., phase="Deorbit Burn"), dict(ut=2., phase="MM304 Entry")]
+    result = audit.classify_observed_outcome(rows, dict(state="running"))
+    assert result["statusState"] == "running"
+    assert result["lastObservedPhase"] == "MM304 Entry"
+    assert result["mm305Observed"] is False
+    assert result["finalObserved"] is False
+    assert result["touchdownPhaseObserved"] is False
+    assert "incomplete" in result["description"]
+
+
+def test_abort_and_full_completion_have_distinct_certificates():
+    aborted = audit.classify_observed_outcome([dict(ut=4., phase="TAEM")], dict(state="aborted"))
+    assert "aborted" in aborted["description"]
+    assert aborted["mm305Observed"] and not aborted["finalObserved"]
+    complete = audit.classify_observed_outcome(
+        [dict(ut=float(i), phase=name) for i, name in enumerate(
+            ("TAEM", "Final Approach", "Touchdown", "Rollout", "Complete"))],
+        dict(state="completed"))
+    assert complete["completePhaseObserved"]
+    assert complete["touchdownPhaseObserved"] and complete["rolloutPhaseObserved"]
+    assert "completed" in complete["description"]
+    unverified = audit.classify_observed_outcome([dict(ut=1., phase="TAEM")], dict(state="completed"))
+    assert "unverified" in unverified["description"]
