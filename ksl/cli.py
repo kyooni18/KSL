@@ -112,12 +112,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     problems = config.validate()
     if problems:
         raise ConfigError("invalid mission profile:\n  " + "\n  ".join(problems))
-    if args.load_save and not args.dry_run:
-        from .krpc_link import krpc_env
-        from .kspguard import load_save_verified
-        print(f"Loading KSP save {args.load_save!r}")
-        load_save_verified(args.load_save, krpc_env(config))
-    controller = MissionController(config, _mode(args), start, stop, label=args.label)
+    controller = MissionController(config, _mode(args), start, stop, label=args.label, load_save=args.load_save)
     return _fly(args, controller)
 
 
@@ -135,33 +130,20 @@ def cmd_land(args: argparse.Namespace) -> int:
 
 
 def cmd_continue(args: argparse.Namespace) -> int:
+    from .operations import resume
     if args.ascent_mode:
         args.set = [*args.set, f"ascent.guidanceMode={args.ascent_mode}"]
     run_dir = resolve_run(args.run)
     status = read_status(run_dir)
-    checkpoint_path = run_dir / "checkpoint.json"
-    checkpoint = json.loads(checkpoint_path.read_text()) if checkpoint_path.is_file() else {}
-    phase = Phase.parse(checkpoint.get("phase") or status.phase)
-    start = continue_phase(phase)
-    saved = json.loads((run_dir / "config.json").read_text())
-    if args.profile or not isinstance(saved.get("configuration"), dict):
-        config = load_config(args.profile or saved.get("profile"), args.set)
-    else:
-        config = config_from_snapshot(saved.get("profile") or status.profile, saved["configuration"], args.set)
+    config, start, checkpoint = resume(run_dir, args.profile, args.set)
     if args.use_save:
         if not checkpoint.get("kspSave"):
             raise ConfigError(f"run {run_dir.name} has no KSP save to load")
         args.load_save = checkpoint["kspSave"]
     print(f"Continuing {run_dir.name} ({status.state} at {Phase(status.phase).title}) from {start.title}")
-    if args.load_save and not args.dry_run:
-        from .krpc_link import krpc_env
-        from .kspguard import load_save_verified
-        problems = config.validate()
-        if problems:
-            raise ConfigError("invalid mission profile:\n  " + "\n  ".join(problems))
-        load_save_verified(args.load_save, krpc_env(config))
     controller = MissionController(config, _mode(args), start, Phase.COMPLETE,
-                                   label=f"continue-{status.profile}", resumed_from=run_dir.name)
+                                   label=f"continue-{status.profile}", resumed_from=run_dir.name,
+                                   load_save=args.load_save)
     return _fly(args, controller)
 
 
@@ -198,6 +180,9 @@ def _status_text(run_dir: Path, status: Any) -> str:
         lines.append(f"Warning    {status.warning}")
     if status.error:
         lines.append(f"Error      {status.error}")
+    lines.append(f"Operation  {status.operation} ({status.operation_stage})")
+    if status.plan_revision:
+        lines.append(f"Review     {run_dir / 'plan-review.json'}\nRevision   {status.plan_revision}")
     if t:
         shown = ", ".join(f"{k}={v:.1f}" if isinstance(v, float) else f"{k}={v}"
                           for k, v in t.items() if k in ("altitude", "speed", "apoapsis", "periapsis",
@@ -389,6 +374,56 @@ def cmd_tui(args: argparse.Namespace) -> int:
     return run_tui(profile=args.profile, overrides=overrides)
 
 
+def cmd_operate(args: argparse.Namespace) -> int:
+    from .operations import BY_KEY, OPERATIONS, OperationRequest, blocked_reason
+    from .ownership import owner
+    mode = "dry-run" if args.dry_run else args.mode
+    config = _profile(args)
+    source = resolve_run(args.run) if args.run else None
+    info = None
+    busy = False
+    if mode == "live":
+        from .krpc_link import probe
+        info = probe(config)
+        busy = owner(config) is not None
+    if args.operation is None:
+        rows = [{"operation": op.key, "title": op.title,
+                 "blocked": blocked_reason(op, info, mode, busy, source)} for op in OPERATIONS]
+        if args.json:
+            print(json.dumps(rows, indent=2))
+        else:
+            for row in rows:
+                print(f"{row['operation']:<12} {row['title']}: {row['blocked'] or 'available'}")
+        return EXIT_OK
+    request = OperationRequest(args.operation, config, mode, args.automatic,
+                               resolve_scenario(args.scenario or config["simulation"]["scenario"])
+                               if args.operation == "simulate" else None, source, args.use_save)
+    # Continuing after a verified quickload intentionally uses the checkpoint
+    # vessel rather than requiring the currently loaded vessel to match.
+    reason = blocked_reason(BY_KEY[args.operation], info, mode, busy, source)
+    if reason:
+        raise ConfigError(reason)
+    return _fly(args, request.build())
+
+
+def cmd_control(args: argparse.Namespace) -> int:
+    from .commands import Commands
+    run_dir = resolve_run(args.run)
+    commands = Commands(run_dir)
+    if args.result:
+        result = commands.read(args.result)
+    else:
+        if not args.action:
+            raise ConfigError("Choose abort, execute-plan or replan, or inspect a command with --result ID")
+        revision = args.revision
+        if args.action == "replan" and not revision:
+            revision = read_status(run_dir).plan_revision
+        result = commands.submit(args.action, revision)
+    print(json.dumps(result, indent=2) if args.json else
+          f"{result['id']}: {result['state']} — {result['message']}")
+    return EXIT_FAILED if result["state"] == "rejected" else EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ksl", description="KSL — unified KSP Space Shuttle flight control: launch, orbit, deorbit, "
@@ -479,6 +514,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = common(sub.add_parser("tui", help="interactive terminal UI (dashboard, setup, replay)"))
     p.set_defaults(func=cmd_tui)
+
+    from .operations import BY_KEY
+    p = common(sub.add_parser("operate", help="list or explicitly execute a flight operation"), True)
+    p.add_argument("operation", nargs="?", choices=tuple(BY_KEY))
+    p.add_argument("--mode", choices=("live", "sim", "dry-run"), default="live")
+    p.add_argument("--automatic", action="store_true", help="continue launch/orbit operations through landing")
+    p.add_argument("--scenario", help="ShuttleSim scenario for the simulate operation")
+    p.add_argument("--run", help="source run for checkpoint continuation")
+    p.add_argument("--use-save", action="store_true", help="load and verify the source checkpoint's save")
+    p.set_defaults(func=cmd_operate)
+
+    p = common(sub.add_parser("control", help="request a command on a running operation or read its result"))
+    p.add_argument("action", nargs="?", choices=("abort", "execute-plan", "replan"))
+    p.add_argument("run", nargs="?", default="latest")
+    p.add_argument("--revision", help="reviewed plan revision required for execute-plan")
+    p.add_argument("--result", help="read acknowledgement for this command id")
+    p.set_defaults(func=cmd_control)
     return parser
 
 

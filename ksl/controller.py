@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 import time
+from contextlib import nullcontext
 from dataclasses import asdict
 from pathlib import Path
 from typing import Callable
@@ -22,6 +23,8 @@ from .programs import (AscentProgram, Context, LandingProgram, OrbitTrimProgram,
                        ProgramUnavailable, SimulationProgram)
 from .runlog import Event, MissionStatus, RunLog, new_run_id
 from .scenarios import Scenario
+from .ownership import OwnershipError, claim
+from .commands import Commands
 
 MODES = ("live", "sim", "dry-run")
 
@@ -45,7 +48,9 @@ class MissionController:
     def __init__(self, config: MissionConfig, mode: str = "live", start: Phase = Phase.PRELAUNCH,
                  stop: Phase = Phase.COMPLETE, scenario: Scenario | None = None,
                  runs_root: Path | None = None, label: str | None = None,
-                 resumed_from: str | None = None) -> None:
+                 resumed_from: str | None = None, operation: str = "mission",
+                 automatic: bool = True, load_save: str | None = None,
+                 precondition: Callable[[], None] | None = None) -> None:
         if mode not in MODES:
             raise ConfigError(f"unknown mode {mode!r}; expected one of {MODES}")
         if mode == "sim":
@@ -65,16 +70,21 @@ class MissionController:
         self.start = start
         self.stop = stop
         self.scenario = scenario
+        self.operation = operation
+        self.automatic = automatic
+        self.load_save = load_save
+        self.precondition = precondition
         self.machine = PhaseMachine(start)
         self.stop_event = threading.Event()
         run_id = new_run_id(label or (scenario.name if scenario else config.name))
         status = MissionStatus(run_id=run_id, profile=config.name, mode=mode, phase=start.value,
                                start_phase=start.value, stop_phase=stop.value,
-                               phase_history=[start.value])
+                               phase_history=[start.value], operation=operation)
         self.log = RunLog.create(status, runs_root)
         self.log.write_json("config.json", {"profile": config.name, "mode": mode, "start": start.value,
                                             "stop": stop.value, "scenario": scenario.name if scenario else None,
-                                            "resumedFrom": resumed_from, "configuration": config.data})
+                                            "resumedFrom": resumed_from, "configuration": config.data,
+                                            "operation": operation, "automatic": automatic})
 
     # --- public API -----------------------------------------------------------
     @property
@@ -95,6 +105,8 @@ class MissionController:
             steps.append((AscentProgram(), Phase.PRELAUNCH))
             if self.stop == Phase.PRELAUNCH:
                 return steps
+            if self.operation == "launch" and not self.automatic:
+                return steps
         if self.start.index <= Phase.ORBIT.index <= self.stop.index and self.mode != "sim":
             steps.append((OrbitTrimProgram(), Phase.ORBIT))
         if self.stop.index >= Phase.DEORBIT.index:
@@ -105,16 +117,60 @@ class MissionController:
 
     def abort(self) -> None:
         """Request the safe stop path (thread-safe; returns immediately)."""
-        if not self.stop_event.is_set():
+        if not self.stop_event.is_set() and self.status.finished_at is None:
             self.stop_event.set()
             self.log.log("Abort requested by operator", "warning")
 
     def run(self) -> MissionStatus:
+        """Claim live flight ownership before loading saves or starting programs."""
+        monitor_done = threading.Event()
+        monitor = None
+        commands = Commands(self.run_dir)
+
+        def watch_commands():
+            while not monitor_done.wait(0.2):
+                for request in commands.pending():
+                    if request.get("action") == "abort":
+                        commands.update(request, "accepted", "Safe release requested")
+                        self.abort()
+                    elif self.status.operation_stage != "review":
+                        commands.update(request, "rejected", "This run is not awaiting plan review")
+
+        try:
+            with claim(self.config, self.run_dir) if self.mode == "live" else nullcontext():
+                if self.load_save and self.mode == "live":
+                    from .kspguard import load_save_verified
+                    from .krpc_link import krpc_env
+                    self.log.update(operation_stage="loading")
+                    load_save_verified(self.load_save, krpc_env(self.config))
+                if self.mode == "live" and self.precondition is not None:
+                    self.precondition()
+                monitor = threading.Thread(target=watch_commands, name="ksl-commands", daemon=True)
+                monitor.start()
+                return self._run_programs()
+        except (OwnershipError, GuardError, ConnectionFailure, ConfigError, OSError) as exc:
+            return self._finish(MissionState.FAILED, str(exc))
+        finally:
+            monitor_done.set()
+            if monitor is not None:
+                monitor.join(timeout=2)
+            for request in commands.pending():
+                commands.update(request, "rejected", "Run finished before command was accepted")
+            for path in commands.directory.glob("*.json"):
+                request = commands.read(path.stem)
+                if request["action"] == "abort" and request["state"] == "accepted":
+                    commands.update(request, "completed", self.status.status_message)
+                elif request["state"] in ("accepted", "running"):
+                    commands.update(request, "rejected", self.status.status_message)
+            self.log.close()
+
+    def _run_programs(self) -> MissionStatus:
         log = self.log
-        log.update(state=MissionState.RUNNING.value, started_at=time.time())
+        log.update(state=MissionState.RUNNING.value, operation_stage="running", started_at=time.time())
         log.emit(Event("state", f"Mission {self.status.run_id}: {self.mode} {self.start.value} -> {self.stop.value}"
                        + (f" (scenario {self.scenario.name})" if self.scenario else "")))
-        ctx = Context(self.config, log, self.mode, self.stop_event, self._advance, self._checkpoint, self.scenario)
+        ctx = Context(self.config, log, self.mode, self.stop_event, self._advance, self._checkpoint, self.scenario,
+                      review_plan=self.operation in ("deorbit", "continue") and not self.automatic)
         outcome = Outcome(True)
         try:
             for program, phase in self.plan():
@@ -127,6 +183,8 @@ class MissionController:
                     continue
                 log.emit(Event("state", f"Starting {program.name} at {phase.title}"))
                 outcome = program.run(ctx, phase, self.stop)
+                if outcome.ok and self.operation == "launch" and not self.automatic:
+                    self._checkpoint(Phase.ORBIT, None)
                 log.emit(Event("state", f"{program.name}: {outcome.message}",
                                level="info" if outcome.ok else "error"))
                 if not outcome.ok or outcome.holding:
@@ -156,8 +214,6 @@ class MissionController:
             import traceback
             log.log(traceback.format_exc(), "error")
             return self._finish(MissionState.FAILED, f"{type(exc).__name__}: {exc}")
-        finally:
-            log.close()
 
     def start_background(self) -> threading.Thread:
         thread = threading.Thread(target=self.run, name="ksl-mission", daemon=True)
@@ -203,7 +259,7 @@ class MissionController:
 
     def _finish(self, state: MissionState, message: str) -> MissionStatus:
         level = "info" if state in (MissionState.COMPLETE, MissionState.HOLDING) else "error"
-        fields = {"state": state.value, "status_message": message, "finished_at": time.time()}
+        fields = {"state": state.value, "operation_stage": "finished", "status_message": message, "finished_at": time.time()}
         if level == "error":
             fields["error"] = message
         self.log.update(**fields)

@@ -84,7 +84,7 @@ def probe(config: MissionConfig) -> dict[str, Any]:
     """Read-only snapshot of the game state (no control writes)."""
     with connect(config, "ksl-probe") as conn:
         info: dict[str, Any] = {"scene": str(conn.krpc.current_game_scene).split(".")[-1],
-                                "paused": bool(conn.krpc.paused)}
+                                "paused": bool(conn.krpc.paused), "observedAt": time.time()}
         if info["scene"] == "flight":
             sc = conn.space_center
             vessel = sc.active_vessel
@@ -95,6 +95,12 @@ def probe(config: MissionConfig) -> dict[str, Any]:
                 "body": orbit.body.name, "altitude": flight.mean_altitude, "speed": flight.speed,
                 "apoapsis": orbit.apoapsis_altitude, "periapsis": orbit.periapsis_altitude,
                 "inclination": orbit.inclination * 57.29577951308232, "mass": vessel.mass,
+                "vesselId": hash(vessel), "atmosphereDepth": orbit.body.atmosphere_depth,
+                "launchClamps": len(vessel.parts.launch_clamps),
+                "eccentricity": orbit.eccentricity, "semiMajorAxis": orbit.semi_major_axis,
+                "longitudeOfAscendingNode": orbit.longitude_of_ascending_node,
+                "argumentOfPeriapsis": orbit.argument_of_periapsis,
+                "verticalSpeed": flight.vertical_speed, "dynamicPressure": flight.dynamic_pressure,
             })
         return info
 
@@ -106,7 +112,9 @@ def suggest_phase(info: dict[str, Any]) -> str | None:
     situation = info.get("situation", "")
     if situation in ("pre_launch", "prelaunch"):
         return "prelaunch"
-    if situation == "orbiting" and info.get("periapsis", 0) > 70000:
+    if situation == "landed" and info.get("launchClamps", 0) >= 2 and info.get("speed", 99) < 1:
+        return "prelaunch"
+    if situation == "orbiting" and info.get("periapsis", 0) > info.get("atmosphereDepth", 70000):
         return "orbit"
     if situation in ("sub_orbital", "flying") and info.get("altitude", 0) > 30000:
         return "mm304"

@@ -24,6 +24,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -35,6 +36,8 @@ from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
 from .scenarios import Scenario
+from .commands import Commands
+from .plan_review import invalid_reason
 
 EVENT_PREFIX = "@@ksl "
 STOP_GRACE_SECONDS = 20.0
@@ -61,6 +64,7 @@ class Context:
     advance: Callable[[Phase], None]
     checkpoint: Callable[[Phase, str | None], None]
     scenario: Scenario | None = None
+    review_plan: bool = False
 
     @property
     def python(self) -> str:
@@ -357,7 +361,7 @@ class OrbitTrimProgram(Program):
     def stages(self, ctx: Context) -> list[tuple[str, str, list[str]]]:
         """(stage name, description, argv) in flight order."""
         c, pr, o = ctx.config, ctx.config["profile"], ctx.config["orbit"]
-        if c["ascent"]["guidanceMode"] == "intelligent":
+        if c["ascent"]["guidanceMode"] == "intelligent" and ctx.log.status.operation != "orbit":
             # Intelligent ascent owns and verifies its full circular insertion.
             return []
         inc = str(c["ascent"]["inclinationDeg"])
@@ -454,6 +458,8 @@ class LandingProgram(Program):
                       + ("explicit strict mode" if landing["requireStrictPlan"]
                          else "attempt best available plan under diagnostic warnings"),
                       "landing: engage -> coast, deorbit burn, MM304 entry, MM305 TAEM, final, flare, rollout"]
+            if ctx.review_plan:
+                steps.insert(-1, "landing: wait for explicit plan execution; recheck vessel, orbit and burn window")
         else:
             steps += ["landing: verified direct-control handoff (SAS off, zero throttle, 1x warp)",
                       f"landing: {BACKEND_ENGAGE[start]} from {start.title}"]
@@ -527,35 +533,19 @@ class LandingProgram(Program):
 
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)
-            ctx.log.log("Deorbit search runs with KSP unpaused (MM305 campaign)")
-            client.send("createPlan", timeout=float(landing["planTimeoutSeconds"]))
-            planned = client.latest_snapshot
-            if not planned or not planned.get("plan"):
-                planned = client.read_until(lambda s: bool(s.get("plan")) or s.get("phase") == "Fault", 30.0)
-            plan = planned.get("plan") or {}
-            if not plan:
-                raise BackendError(str(planned.get("lastError") or "no deorbit plan was produced"))
-            ctx.log.write_json("deorbit-plan.json", plan)
-            ctx.log.emit(Event("milestone", "deorbit plan: burn UT {:.1f}, dv {:.2f} m/s, executable={}, strict={}".format(
-                float(plan.get("burnUT") or 0), float(plan.get("deltaV") or 0),
-                bool(plan.get("executionQualified")), bool(plan.get("targetCaptureAchieved"))), data=plan))
-            warning = validate_plan_qualification(
-                plan, bool(landing["requireStrictPlan"]), allow_unqualified=True)
-            if warning:
-                ctx.log.log(warning, "warning")
-                ctx.log.emit(Event("guidance-degraded", warning,
-                                   data={"executionQualified": plan.get("executionQualified"),
-                                         "targetCaptureAchieved": plan.get("targetCaptureAchieved"),
-                                         "terminalInletEnergyMargin": plan.get("terminalInletEnergyMargin")}))
-            # The native controller already accepts an unqualified *existing*
-            # plan with visible warnings and retains control/physical limits.
-            client.engage("engage", timeout=120.0)
+            if ctx.review_plan:
+                if not self._review(ctx, client):
+                    return Outcome(False, "deorbit review stopped; guidance was not engaged", aborted=True)
+            else:
+                self._create_plan(ctx, client)
+                client.engage("engage", timeout=120.0)
         else:
             payload = prepare_reentry_direct_control(env=env)
             ctx.log.log(f"Direct-control handoff verified at {float(payload.get('meanAltitude') or 0) / 1000:.1f} km")
             ctx.advance(start)
             client.engage(BACKEND_ENGAGE[start], timeout=180.0)
         state.engaged = True
+        ctx.log.update(operation_stage="flying")
         ctx.log.log(f"Guidance engaged ({'engage' if start == Phase.DEORBIT else BACKEND_ENGAGE[start]})")
 
         deadline = time.monotonic() + float(landing["flightTimeoutSeconds"])
@@ -578,6 +568,94 @@ class LandingProgram(Program):
                 state.terminal = True
                 detail = (client.latest_snapshot or {}).get("lastError") or (client.latest_snapshot or {}).get("statusMessage")
                 return Outcome(False, f"backend entered {phase}: {detail}")
+
+    def _create_plan(self, ctx: Context, client: BackendClient) -> dict[str, Any]:
+        landing = ctx.config["landing"]
+        ctx.log.log("Deorbit search runs with KSP unpaused (MM305 campaign)")
+        previous = client.latest_snapshot
+        client.send("createPlan", timeout=float(landing["planTimeoutSeconds"]))
+        planned = client.latest_snapshot
+        if planned is previous or not planned or not planned.get("plan"):
+            planned = client.read_until(lambda s: bool(s.get("plan")) or s.get("phase") == "Fault", 30.0)
+        if planned.get("phase") == "Fault" or planned.get("lastError"):
+            raise BackendError(str(planned.get("lastError") or "planning failed"))
+        plan = planned.get("plan") or {}
+        if not plan:
+            raise BackendError(str(planned.get("lastError") or "no deorbit plan was produced"))
+        ctx.log.write_json("deorbit-plan.json", plan)
+        ctx.log.emit(Event("milestone", "deorbit plan: burn UT {:.1f}, dv {:.2f} m/s, executable={}, strict={}".format(
+            float(plan.get("burnUT") or 0), float(plan.get("deltaV") or 0),
+            bool(plan.get("executionQualified")), bool(plan.get("targetCaptureAchieved"))), data=plan))
+        warning = validate_plan_qualification(
+            plan, bool(landing["requireStrictPlan"]) and not ctx.review_plan, allow_unqualified=True)
+        if warning:
+            ctx.log.log(warning, "warning")
+            ctx.log.emit(Event("guidance-degraded", warning,
+                               data={"executionQualified": plan.get("executionQualified"),
+                                     "targetCaptureAchieved": plan.get("targetCaptureAchieved"),
+                                     "terminalInletEnergyMargin": plan.get("terminalInletEnergyMargin")}))
+        return plan
+
+    def _review(self, ctx: Context, client: BackendClient) -> bool:
+        from .krpc_link import probe
+        commands = Commands(ctx.log.directory)
+        replanning_request = None
+        while not ctx.stop_event.is_set():
+            ctx.log.update(operation_stage="planning", plan_revision=None)
+            reference = probe(ctx.config)
+            plan = self._create_plan(ctx, client)
+            if ctx.stop_event.is_set():
+                return False
+            revision = uuid.uuid4().hex
+            ctx.log.write_json("plan-review.json", {"revision": revision, "plan": plan,
+                                                    "reference": reference, "createdAt": time.time()})
+            ctx.log.update(operation_stage="review", plan_revision=revision,
+                           status_message="Plan ready: review then Execute plan, or Replan. Guidance is not engaged.")
+            ctx.log.emit(Event("plan-review", "Awaiting explicit deorbit execution", data={"revision": revision}))
+            if replanning_request is not None:
+                commands.update(replanning_request, "completed", "New plan ready for review")
+                replanning_request = None
+            replan = False
+            while not ctx.stop_event.is_set() and not replan:
+                client.pump(0.2)
+                if (client.latest_snapshot or {}).get("connectionStatus") != "connected":
+                    raise ConnectionFailure("Landing connection lost during plan review")
+                ctx.log.write_status()
+                for request in commands.pending():
+                    action = request.get("action")
+                    if action == "abort":
+                        continue  # controller command monitor owns aborts
+                    if action not in ("execute-plan", "replan"):
+                        commands.update(request, "rejected", "Unknown plan command")
+                        continue
+                    if request.get("revision") != revision:
+                        commands.update(request, "rejected", "The reviewed plan changed; review the current revision")
+                        continue
+                    commands.update(request, "accepted", "Checking planning state" if action == "execute-plan" else "Replanning")
+                    if action == "replan":
+                        replan = True
+                        replanning_request = request
+                        commands.update(request, "running", "Creating a new plan")
+                        break
+                    try:
+                        current = probe(ctx.config)
+                        reason = invalid_reason(plan, reference, current,
+                                                float(ctx.config.backend_configuration()["guidance"]["minimumPlanningLeadTime"]))
+                        if reason:
+                            raise BackendError(reason)
+                        validate_plan_qualification(plan, bool(ctx.config["landing"]["requireStrictPlan"]))
+                        if ctx.stop_event.is_set():
+                            raise BackendError("Abort requested; guidance will not engage")
+                        client.engage("engage", timeout=120.0)
+                    except (BackendError, ConnectionFailure, TimeoutError) as exc:
+                        if (client.latest_snapshot or {}).get("automationEngaged"):
+                            raise  # owning program's finally must release any partial engagement
+                        commands.update(request, "rejected", str(exc))
+                        ctx.log.log(str(exc), "warning")
+                    else:
+                        commands.update(request, "completed", "Reviewed plan engaged; continuous guidance through rollout")
+                        return True
+        return False
 
 
 class _LandingState:

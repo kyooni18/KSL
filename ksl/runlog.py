@@ -68,6 +68,9 @@ class MissionStatus:
     started_at: float | None = None
     updated_at: float = field(default_factory=time.time)
     finished_at: float | None = None
+    operation: str = "mission"
+    operation_stage: str = "ready"
+    plan_revision: str | None = None
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "MissionStatus":

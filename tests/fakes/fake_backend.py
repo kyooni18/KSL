@@ -33,6 +33,9 @@ print(json.dumps({"type": "ready", "protocolVersion": 1, "configuration": {}, "s
 for line in sys.stdin:
     req = json.loads(line)
     method, rid = req["method"], req.get("id")
+    if os.environ.get("FAKE_BACKEND_REQUESTS"):
+        with open(os.environ["FAKE_BACKEND_REQUESTS"], "a") as handle:
+            handle.write(method + "\n")
     if method == "connect":
         state["connectionStatus"] = "connected"
         snap()
