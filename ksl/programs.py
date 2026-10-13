@@ -341,7 +341,8 @@ class OrbitTrimProgram(Program):
         """(stage name, description, argv) in flight order."""
         c, pr, o = ctx.config, ctx.config["profile"], ctx.config["orbit"]
         inc = str(c["ascent"]["inclinationDeg"])
-        common = [*endpoint_args(c), "--min-burn-dv", str(o["minBurnDeltaV"])]
+        common = [*endpoint_args(c), "--min-burn-dv", str(o["minBurnDeltaV"]),
+                  "--rcs-max-dv", str(o["rcsMaxDeltaV"])]
         if pr["kind"] in ("gto", "geo"):
             argv = [ctx.python, "-u", "-m", "ksl.ascent.geo_transfer", "--perigee",
                     f"{float(pr['gtoPerigeeKm']) * 1000.0:.0f}", "--inclination", inc, *common,

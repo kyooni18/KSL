@@ -168,9 +168,30 @@ def align_for_burn(conn, vessel, engines, ap, frame, direction, limit,
         vessel.control.rcs = False
 
 
-def use_rcs_forward(dv, engines_available=True):
-    """Slight corrections use RCS forward translation; larger ones need the OMS."""
-    return dv <= RCS_TRIM_MAX_DV or not engines_available
+def rcs_delta_v(vessel):
+    """Delta-v (m/s) the RCS monopropellant can deliver as forward translation."""
+    try:
+        mono = vessel.resources.amount('MonoPropellant')*4.0  # 4 kg per unit
+        thrusters = [p.rcs for p in vessel.parts.rcs]
+        isp = max((t.vacuum_specific_impulse for t in thrusters), default=0.0)
+    except Exception:
+        return math.inf  # unknown: do not block the RCS path on telemetry gaps
+    mass = vessel.mass
+    if isp <= 0.0 or mass <= mono:
+        return 0.0
+    return isp*9.80665*math.log(mass/(mass-mono))
+
+
+def use_rcs_forward(dv, engines_available=True, rcs_available=math.inf, limit=None):
+    """Slight corrections use RCS forward translation; larger ones need the OMS.
+
+    The RCS path is only chosen while the monopropellant covers the burn with a 50%
+    margin (alignment and attitude leakage also spend it).
+    """
+    limit = RCS_TRIM_MAX_DV if limit is None else limit
+    if not engines_available:
+        return True
+    return dv <= limit and 1.5*dv <= rcs_available
 
 
 def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
@@ -215,7 +236,8 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
             r.forward_enabled = True
         ctl.rcs = True
         burn_start = time.monotonic()
-        while time.monotonic()-burn_start < RCS_TRIM_TIMEOUT:
+        timeout = max(RCS_TRIM_TIMEOUT, 120.0*node.delta_v)  # ~0.01-0.05 m/s^2 of RCS accel
+        while time.monotonic()-burn_start < timeout:
             try:
                 remaining = node.remaining_delta_v
             except RuntimeError:
@@ -354,7 +376,8 @@ def plan_exact(sc, vessel, args, min_lead, tolerance_alt=100.0, tolerance_inc=0.
 
 
 def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
-    if use_rcs_forward(node.delta_v) and not orbit_cutoff:
+    if not orbit_cutoff and use_rcs_forward(node.delta_v, rcs_available=rcs_delta_v(vessel),
+                                            limit=RUNTIME.get('rcs_max_dv')):
         return execute_rcs_forward(conn, vessel, node, min(tolerance, 0.03))
     sc = conn.space_center
     ctl = vessel.control
@@ -479,6 +502,9 @@ def main():
     parser.add_argument('--skip-if-short-dv', type=float, default=None, metavar='MARGIN',
                         help='Skip (no burn) unless the OMS has the planned dv plus this margin (m/s)')
     parser.add_argument('--label', default='trim', help='Name used in trim events')
+    parser.add_argument('--rcs-max-dv', type=float, default=RCS_TRIM_MAX_DV,
+                        help='Burns up to this dv (m/s) fly as RCS forward translation '
+                             '(RCS off while aligning on reaction wheels)')
     parser.add_argument('--keep-inclination', action='store_true',
                         help='Trim apsides only; keep the as-flown plane (plane-targeted ascents)')
     parser.add_argument('--address', default='127.0.0.1')
@@ -488,6 +514,7 @@ def main():
     conn = krpc.connect(name='orbit-trim', address=args.address,
                         rpc_port=args.rpc_port, stream_port=args.stream_port)
     sc, vessel = prepare(conn)
+    RUNTIME['rcs_max_dv'] = args.rcs_max_dv
     _trim(conn, sc, vessel, args)
 
 

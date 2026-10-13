@@ -14,7 +14,7 @@ import krpc
 
 from . import geo
 from .events import emit_event
-from .orbit_trim import (ALIGN_LEAD, _trim, controls, execute, oms_delta_v, prepare, solve)
+from .orbit_trim import (RUNTIME, ALIGN_LEAD, _trim, controls, execute, oms_delta_v, prepare, solve)
 
 
 def perigee_longitude(sc, vessel, t_perigee):
@@ -40,6 +40,8 @@ def main():
     parser.add_argument('--reserve-dv', type=float, default=0.0,
                         help='OMS dv (m/s) to keep in reserve when deciding to circularize')
     parser.add_argument('--max-revs', type=int, default=6)
+    parser.add_argument('--rcs-max-dv', type=float, default=2.0,
+                        help='Burns up to this dv (m/s) fly as RCS forward translation')
     parser.add_argument('--min-burn-dv', type=float, default=0.1)
     parser.add_argument('--address', default='127.0.0.1')
     parser.add_argument('--rpc-port', type=int, default=50000)
@@ -48,6 +50,7 @@ def main():
     conn = krpc.connect(name='geo-transfer', address=args.address,
                         rpc_port=args.rpc_port, stream_port=args.stream_port)
     sc, vessel = prepare(conn)
+    RUNTIME['rcs_max_dv'] = args.rcs_max_dv
     ctl = controls()
     if not ctl.trim_enabled:
         emit_event('trim-skipped', label='gto', reason='disabled')

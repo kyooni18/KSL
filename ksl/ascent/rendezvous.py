@@ -16,7 +16,7 @@ import krpc
 
 from . import orbit_math as om
 from .events import emit_event
-from .orbit_trim import (ALIGN_LEAD, controls, execute, from_rh_map, node_for_dv, prepare, rh_state)
+from .orbit_trim import (RUNTIME, ALIGN_LEAD, controls, execute, from_rh_map, node_for_dv, prepare, rh_state)
 
 
 def find_target(sc, name):
@@ -102,6 +102,8 @@ def main():
     parser.add_argument('--stop-distance', type=float, default=50.0,
                         help='Final approach stops at this range (m)')
     parser.add_argument('--min-burn-dv', type=float, default=0.1)
+    parser.add_argument('--rcs-max-dv', type=float, default=2.0,
+                        help='Burns up to this dv (m/s) fly as RCS forward translation')
     parser.add_argument('--max-wait-orbits', type=float, default=6.0,
                         help='Longest departure delay searched, in chaser orbits')
     parser.add_argument('--address', default='127.0.0.1')
@@ -111,6 +113,7 @@ def main():
     conn = krpc.connect(name='rendezvous', address=args.address,
                         rpc_port=args.rpc_port, stream_port=args.stream_port)
     sc, vessel = prepare(conn)
+    RUNTIME['rcs_max_dv'] = args.rcs_max_dv
     if not controls().trim_enabled:
         print('Orbit operations disabled by the operator')
         return

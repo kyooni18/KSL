@@ -3,6 +3,13 @@ import unittest
 from ksl.ascent import orbit_trim
 
 
+class RcsBudgetTests(unittest.TestCase):
+    def test_rcs_needs_monopropellant_margin_and_respects_configured_limit(self):
+        self.assertFalse(orbit_trim.use_rcs_forward(1.0, rcs_available=1.2))
+        self.assertTrue(orbit_trim.use_rcs_forward(4.0, rcs_available=10.0, limit=5.0))
+        self.assertFalse(orbit_trim.use_rcs_forward(4.0, rcs_available=10.0, limit=2.0))
+
+
 class RcsTrimSelectionTests(unittest.TestCase):
     def test_slight_corrections_use_rcs_forward_translation(self):
         self.assertTrue(orbit_trim.use_rcs_forward(0.2))

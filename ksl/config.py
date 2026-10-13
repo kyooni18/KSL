@@ -48,7 +48,8 @@ DEFAULTS: dict[str, Any] = {
     "orbit": {
         "trim": True,             # run OMS trim to the circular target after insertion
         "minBurnDeltaV": 0.1,     # m/s; planned corrections at or below this are not flown
-        "maxBurns": 2,            # exact one-burn plan; a 2nd burn only finishes the residual
+        "maxBurns": 2,
+        "rcsMaxDeltaV": 2.0,      # m/s; burns this small fly as RCS forward translation            # exact one-burn plan; a 2nd burn only finishes the residual
         "holdForTrigger": False,  # wait in orbit until the operator triggers orbit operations
         "extraArgs": [],
     },
@@ -207,6 +208,8 @@ class MissionConfig:
             problems.append("profile.geoLongitudeDeg must be within [-180, 180]")
         if pr["geoCircularize"] not in ("auto", "always", "never"):
             problems.append("profile.geoCircularize must be auto, always or never")
+        if self.data["orbit"]["rcsMaxDeltaV"] < 0:
+            problems.append("orbit.rcsMaxDeltaV must be nonnegative")
         if not isinstance(self.data["orbit"]["maxBurns"], int) or not 1 <= self.data["orbit"]["maxBurns"] <= 6:
             problems.append("orbit.maxBurns must be an integer 1-6")
         if a["targetAltitudeKm"] < 80.0:
