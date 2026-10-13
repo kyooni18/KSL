@@ -56,8 +56,6 @@ void entry_alpha_schedule_default(EntryAlphaSchedule *schedule,
     if(!vehicle || !isfinite(transition_velocity) || transition_velocity<=0)return;
 
     const double trim=clampd(vehicle->entry_angle_of_attack,0.0,vehicle->maximum_angle_of_attack);
-    const double maximum=fmax(trim,vehicle->maximum_angle_of_attack);
-    const double span=fmax(0.0,maximum-trim);
     const double v=fmax(transition_velocity,vehicle->minimum_safe_speed*3.0);
 
     schedule->point_count=5;
@@ -67,11 +65,15 @@ void entry_alpha_schedule_default(EntryAlphaSchedule *schedule,
     schedule->relative_velocity[3]=v*1.55;
     schedule->relative_velocity[4]=v*1.85;
 
-    schedule->alpha[0]=trim;
-    schedule->alpha[1]=trim;
-    schedule->alpha[2]=clampd(trim+span*0.30,0.0,maximum);
-    schedule->alpha[3]=clampd(trim+span*0.65,0.0,maximum);
-    schedule->alpha[4]=clampd(trim+span*0.90,0.0,maximum);
+    /* Lift-bearing nominal: hold trim incidence at every velocity.  Measured
+       STS L/D (2026-10-13 polar flights, 22-part Benjee orbiter) is ~0.70 at
+       15-21 deg and only ~0.33-0.39 at 24-28 deg for Mach 4-7, so the former
+       Shuttle-style 27-degree hypersonic ramp halved the glide and put MM305
+       ~240 km short of the deorbit planner's forecast, which already flies
+       trim incidence.  Drag modulation, the bank-saturated drag boost and
+       the q/g protections still raise incidence when energy must be shed,
+       and lower incidence also preserves rudder authority. */
+    for(size_t i=0;i<5;i++)schedule->alpha[i]=trim;
 
     schedule->phase_modulation_scale[ENTRY_ALPHA_PRE_ENTRY]=0.0;
     schedule->phase_modulation_scale[ENTRY_ALPHA_TEMPERATURE_CONTROL]=0.35;

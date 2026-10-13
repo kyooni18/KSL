@@ -1488,7 +1488,11 @@ static double taem_energy_law_line_bank(const GuidanceMachine *g,const Telemetry
     double reversal_time=decision_axis_capture_time(2.0*later_bank,0.0,
         roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
     const double RATE_CLOSURE_TAU=2.0;
-    double omega_limit=.25/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
+    /* 0.25 closed a 120-250 m HAC-exit offset with a ~28 s time constant, so
+       the polar witness reached Final's pavement-projection gate only below
+       200 m and never flared.  0.5 still respects the roll-reversal lag and
+       lands in the closed-loop witness (0.4-0.8 all captured Final). */
+    double omega_limit=.5/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
     double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
     double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);

@@ -29,6 +29,7 @@
 
 typedef struct {
     krpc_SpaceCenter_Engine_t object;
+    krpc_SpaceCenter_Part_t part;
     bool initially_active;
     bool activated_by_client;
     bool independent_owned;

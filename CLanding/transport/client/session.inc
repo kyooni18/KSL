@@ -335,22 +335,46 @@ static void refresh_burn_geometry(KrpcCNanoClient *client) {
     for(size_t i=0;i<client->engine_count;i++)
         if(client->engines[i].selected)selected_thrust+=client->engines[i].available_thrust;
     bool geometry_ok=selected_thrust>0;
+    bool part_fallback=false;
     for(size_t i=0;i<client->engine_count;i++){
         CommandableEngine *entry=&client->engines[i];
         if(!entry->selected)continue;
+        Vector3 engine_force=v3(0,0,0),engine_moment=v3(0,0,0);
+        bool engine_ok=true;
         krpc_list_object_t thrusters=KRPC_NULL_LIST;
-        if(krpc_SpaceCenter_Engine_Thrusters(client->connection,&thrusters,entry->object)!=KRPC_OK||!thrusters.size){geometry_ok=false;continue;}
-        for(size_t j=0;j<thrusters.size;j++){
+        if(krpc_SpaceCenter_Engine_Thrusters(client->connection,&thrusters,entry->object)!=KRPC_OK||!thrusters.size)engine_ok=false;
+        for(size_t j=0;engine_ok&&j<thrusters.size;j++){
             krpc_tuple_double_double_double_t d={0},r={0};
             krpc_SpaceCenter_Thruster_t thruster=thrusters.items[j];
             if(krpc_SpaceCenter_Thruster_InitialThrustDirection(client->connection,&d,thruster,client->vessel_frame)!=KRPC_OK||
-               krpc_SpaceCenter_Thruster_InitialThrustPosition(client->connection,&r,thruster,client->vessel_frame)!=KRPC_OK){geometry_ok=false;continue;}
+               krpc_SpaceCenter_Thruster_InitialThrustPosition(client->connection,&r,thruster,client->vessel_frame)!=KRPC_OK){engine_ok=false;break;}
             Vector3 direction=v3(d.e0,d.e1,d.e2);
-            if(!isfinite(vmag(direction))||vmag(direction)<=1e-8){geometry_ok=false;continue;}
+            if(!isfinite(vmag(direction))||vmag(direction)<=1e-8){engine_ok=false;break;}
             Vector3 f=vscale(vnorm(direction,v3(0,1,0)),entry->available_thrust/thrusters.size);
-            force=vadd(force,f);moment=vadd(moment,vcross(v3(r.e0,r.e1,r.e2),f));
+            engine_force=vadd(engine_force,f);engine_moment=vadd(engine_moment,vcross(v3(r.e0,r.e1,r.e2),f));
         }
         KRPC_FREE_LIST(thrusters);
+        /* Benjee10 OMS thrusters have no thrust transform visible to kRPC
+           (Thruster.* throws).  The 2026-10-13 polar burn then pointed the
+           nose, not the 20-degree canted OMS line, retrograde: 16.8 m/s of the
+           48 m/s burn went radially down and the line of apsides rotated 10.8
+           degrees (~125 km early descent).  Part.Direction equals the thruster
+           force direction for every engine where both are readable (SSME:
+           0.9659/0.2589 both ways), so it is the measured fallback axis. */
+        if(!engine_ok&&entry->part!=KRPC_NULL){
+            krpc_tuple_double_double_double_t d={0},r={0};
+            if(krpc_SpaceCenter_Part_Direction(client->connection,&d,entry->part,client->vessel_frame)==KRPC_OK&&
+               krpc_SpaceCenter_Part_Position(client->connection,&r,entry->part,client->vessel_frame)==KRPC_OK){
+                Vector3 direction=v3(d.e0,d.e1,d.e2);
+                if(isfinite(vmag(direction))&&vmag(direction)>1e-8){
+                    engine_force=vscale(vnorm(direction,v3(0,1,0)),entry->available_thrust);
+                    engine_moment=vcross(v3(r.e0,r.e1,r.e2),engine_force);
+                    engine_ok=true;part_fallback=true;
+                }
+            }
+        }
+        if(!engine_ok){geometry_ok=false;continue;}
+        force=vadd(force,engine_force);moment=vadd(moment,engine_moment);
     }
     client->burn_geometry_valid=geometry_ok&&vmag(force)>0;
     client->burn_thrust_axis_body=vnorm(force,v3(0,1,0));
@@ -359,7 +383,7 @@ static void refresh_burn_geometry(KrpcCNanoClient *client) {
     client->commandable_thrust=client->burn_geometry_valid?vmag(force):selected_thrust;
     fprintf(stderr,"Selected burn thrust %.0f N; body axis %.4f/%.4f/%.4f; moment %.0f/%.0f/%.0f Nm; geometry=%s\n",
         client->commandable_thrust,client->burn_thrust_axis_body.x,client->burn_thrust_axis_body.y,client->burn_thrust_axis_body.z,
-        moment.x,moment.y,moment.z,client->burn_geometry_valid?"measured":"unavailable");
+        moment.x,moment.y,moment.z,client->burn_geometry_valid?(part_fallback?"part-orientation":"measured"):"unavailable");
 }
 
 static void inventory_engines(KrpcCNanoClient *client) {
@@ -398,6 +422,7 @@ static void inventory_engines(KrpcCNanoClient *client) {
             name?name:"",title?title:"",entry->role,(double)available);
         if(name)krpc_free(name);if(title)krpc_free(title);if(tag)krpc_free(tag);
         entry->object = engine;
+        entry->part = part;
         entry->initially_active = active;
         entry->available_thrust = available;
         client->commandable_thrust += available;
