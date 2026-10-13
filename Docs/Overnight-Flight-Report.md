@@ -140,4 +140,28 @@ log paths, observations, and hypotheses separately._
 - H3 and H4 from attempt 2 still apply. Replays from the same orbit state cannot distinguish the cause.
 - A repeat full run from the pad would test whether the refusal is stable across different ascent states, not just the same save.
 
+### Blocker — return to launchpad for attempt 4 (2026-10-14 ~02:01 KST)
+
+Goal: attempt 4 as a full pad-to-landing run with the separatron craft. Status: **blocked, not flown.**
+
+What I tried (all read-only or revert-only; no craft, config, or code changed):
+
+1. `mcp__kRPC__run` with `space_center.revert_to_launch()` — returned `reverted to launch` with exit 0, but the
+   vessel stayed `situation=orbiting`, UT 641.56 s, mass 26 014.6 kg, unchanged across two checks.
+2. Same call with `space_center.paused = False` first — again no change; the game reported `paused=True` afterward.
+3. Searched KSP `saves/Main` for a launch-state save that matches the separatron craft (pad mass 521 003 kg, 8 launch
+   clamps). No save was written between 01:40 and now, so none is confirmed. Pad saves present are older campaign saves
+   (`ksl-autonomous-20261012-pad-*`, `quicksave`) and were not loaded, because loading an unverified pad save could fly
+   a different craft.
+
+What is needed to continue:
+
+- An in-game **Revert to Launch** by the operator (KSP GUI), or the name of a save that contains the current
+  separatron craft at the pad. Then attempt 4 can start with `bin/ksl run -p sts-85km-10deg`.
+- The deorbit refusal from attempts 2–3 is a planner gate, not a pad problem. Repeating full flights would test
+  ascent repeatability only, unless the gate or its inputs change, and those changes are out of scope for this goal.
+
+Current KSP state at the time of this entry: scene `flight`, situation `orbiting`, paused, vessel `STS`
+(vesselId 9201), altitude 85.0 km, mass 26 014.6 kg. The 3-attempt campaign summary above stands.
+
 
