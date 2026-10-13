@@ -161,6 +161,11 @@ What is needed to continue:
 - The deorbit refusal from attempts 2–3 is a planner gate, not a pad problem. Repeating full flights would test
   ascent repeatability only, unless the gate or its inputs change, and those changes are out of scope for this goal.
 
+Follow-up scan (read-only, same session): counted parts and PRELAUNCH entries in the pad-tagged saves in
+`saves/Main`. The 155-part candidates (`ksl-autonomous-20261012-pad-*`) are older campaign saves from 2026-10-12,
+all predating the separatron change. None is confirmed to match the separatron craft at 521 003 kg. Loading one would
+fly a different craft under the same profile, so none was loaded.
+
 Current KSP state at the time of this entry: scene `flight`, situation `orbiting`, paused, vessel `STS`
 (vesselId 9201), altitude 85.0 km, mass 26 014.6 kg. The 3-attempt campaign summary above stands.
 
