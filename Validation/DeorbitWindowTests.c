@@ -87,6 +87,17 @@ int main(void){
  nominal.final_state.position=predictor_inertial_position((GeoPoint){
      cfg.site.latitude,cfg.site.longitude+1,50},&p,1000);
  previous.executable_witness_evaluated=improved.executable_witness_evaluated=true;
+ /* The nearer ground endpoint cannot compensate for a missed MM305
+    ownership boundary or a larger terminal energy deficit. */
+ nominal.taem_dynamic_interface_captured=true;
+ nominal.taem_ownership_boundary_missed=false;
+ assert(deorbit_guided_candidate_better(&previous,&nominal,&improved,&near,
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+ nominal.taem_dynamic_interface_captured=false;
+ nominal.taem_interface_energy_margin=-200000;
+ assert(deorbit_guided_candidate_better(&previous,&nominal,&improved,&near,
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+ nominal.taem_interface_energy_margin=near.taem_interface_energy_margin;
  assert(deorbit_guided_candidate_better(&improved,&near,&previous,&nominal,
      &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
  /* A closer point high above KSC is not a completed approach. */

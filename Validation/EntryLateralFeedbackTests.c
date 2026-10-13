@@ -384,6 +384,22 @@ static void arrests_velocity_before_crossing_runway_line(void){
     assert(after.reversal_requested&&after.bank_sign>0.0);
 }
 
+static void crossrange_reversal_survives_azimuth_deadband(void){
+    EntryLateralLimits l=limits();
+    EntryLateralState state={0};
+    entry_lateral_state_init(&state,90.0,-1.0,-20.0);
+    state.leg_captured=true;
+    EntryLateralInput in=azimuth_input(0.5,5.0);
+    in.measured_bank_deg=-20.0;
+    in.bank_magnitude_deg=20.0;
+    in.has_crossrange_error=true;in.crossrange_error_m=10000.0;
+    in.has_crossrange_rate=true;in.crossrange_error_rate_mps=100.0;
+    in.has_crossrange_course_alignment=true;in.crossrange_course_alignment=1.0;
+    EntryLateralOutput out=entry_lateral_update(&state,&in,&l);
+    assert(out.valid&&out.projected_crossrange_error_m>out.crossrange_corridor_m);
+    assert(out.reversal_requested&&out.bank_sign>0.0);
+}
+
 int main(void){
     assert(fabs(entry_lateral_crossrange_arrest_distance(100,.5,10,30)-1333.333333333333)<1e-8);
     assert(fabs(entry_lateral_crossrange_arrest_distance(-100,.5,10,-30)+1333.333333333333)<1e-8);
@@ -397,6 +413,7 @@ int main(void){
     predicts_crossing_over_physical_roll_response();
     uncertainty_corridor_prevents_chatter();
     arrests_velocity_before_crossing_runway_line();
+    crossrange_reversal_survives_azimuth_deadband();
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
     behind_site_preserves_turn_until_azimuth_ahead();

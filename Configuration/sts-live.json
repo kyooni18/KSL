@@ -88,7 +88,7 @@
     "runwayHeading": 90,
     "runwayLength": 2500,
     "runwayWidth": 70,
-    "allowReciprocalRunway": false
+    "allowReciprocalRunway": true
   },
   "vehicle": {
     "modelId": "STS",

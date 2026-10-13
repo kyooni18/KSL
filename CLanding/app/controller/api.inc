@@ -150,17 +150,21 @@ void landing_controller_engage_reentry(LandingController*c){
         initial_s_turn_sign=course_error<0.0?-1.0:1.0;
     }
 
-    /* Reentry engagement is phase-adaptive.  A vehicle already inside the
-       terminal region should resume MM305 directly instead of replaying MM304
-       merely to rediscover an ownership transition that happened before the
-       controller attached.  This is phase classification only: MM305 still has
-       to qualify a route and earn the unchanged Final handoff. */
+    /* Restart at the same upper altitude/Mach boundary as live MM304. Range
+       alone can put a fast, laterally displaced orbiter into MM305 too early. */
     double live_course=surface_course(state.position,state.velocity,
         planet_rotation_vector(p),p->north_axis,t.heading);
     double terminal_restart_range=entry_taem_range_target(p,&cfg.guidance);
+    double restart_sound=planet_atmospheric_speed_of_sound(p,t.mean_altitude);
+    double restart_mach=isfinite(t.mach)&&t.mach>0.0?t.mach:
+        (isfinite(restart_sound)&&restart_sound>0.0?
+            t.true_air_speed/restart_sound:NAN);
     bool late_terminal_restart=in_atmosphere&&descending&&
         isfinite(live_course)&&isfinite(t.range_to_site)&&
-        t.mean_altitude<=cfg.guidance.mm305_max_altitude+1000.0&&
+        isfinite(restart_mach)&&
+        t.mean_altitude<=cfg.guidance.mm305_max_altitude&&
+        restart_mach<=cfg.guidance.mm305_target_mach+
+            cfg.guidance.mm305_mach_half_width&&
         t.range_to_site<=terminal_restart_range&&
         t.true_air_speed>cfg.vehicle.minimum_safe_speed;
     if(late_terminal_restart){

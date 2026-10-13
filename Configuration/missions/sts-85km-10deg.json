@@ -1,7 +1,7 @@
 {
-  "description": "Live acceptance mission: STS to an 85 km circular orbit at 10 deg, OMS trim ignoring corrections <= 0.1 m/s, then unpowered deorbit-to-rollout at KSC runway 09.",
+  "description": "Live acceptance mission: STS to an 85 km circular orbit at 10 deg, OMS trim ignoring corrections <= 0.1 m/s, then unpowered deorbit-to-rollout at KSC runway 09 or 27.",
   "ascent": {"targetAltitudeKm": 85, "inclinationDeg": 10},
   "orbit": {"trim": true, "minBurnDeltaV": 0.1},
-  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261010"},
+  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261010", "requireStrictPlan": true},
   "checkpoints": {"kspSaveOnPhases": ["orbit", "mm305"]}
 }

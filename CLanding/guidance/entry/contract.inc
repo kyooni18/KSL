@@ -106,6 +106,20 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     if(!alignment.valid||!isfinite(alignment_range)||!isfinite(alignment_altitude))
         return entry_program_contract_hold(g,t,cfg,dt,
             "MM304 alignment energy contract has invalid geometry.");
+    /* Near the terminal region the great-circle chord can be much shorter
+       than the path a bank-limited orbiter must actually fly. Charge the
+       bounded turn and course alignment to the drag budget while there is
+       still speed to preserve. The runway-frame solver is local geometry, so
+       retain the spherical distance on the far side of Kerbin. */
+    double energy_range=alignment_range;
+    if(t->true_air_speed<=s->taem_force_handoff_speed&&
+       alignment_range<=entry_taem_range_target(p,s)&&
+       isfinite(t->runway_along_track)&&isfinite(t->runway_cross_track)&&
+       isfinite(course)){
+        double turn_path=decision_target_path_length(g,t,course,
+            -alignment.distance_m,0.0,cfg->site.runway_heading,NAN,p,cfg,NULL);
+        if(isfinite(turn_path))energy_range=fmax(energy_range,turn_path);
+    }
     EntryDragReferenceInput drag_in={
         .phase=phase,
         .relative_velocity=t->true_air_speed,
@@ -118,7 +132,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .has_incidence=isfinite(t->angle_of_attack)&&isfinite(t->sideslip),
         .angle_of_attack=t->angle_of_attack,
         .sideslip=t->sideslip,
-        .range_to_site=alignment_range,
+        .range_to_site=energy_range,
         .taem_range=0.0,
         .taem_latitude=cfg->site.latitude,
         .taem_altitude=alignment_altitude,
@@ -513,6 +527,9 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     const char*warning=NULL;
     if(drag.degraded||alpha.degraded||lateral_out.degraded_authority)
         warning="MM304 is using degraded aerodynamic feedback; commands remain inside measured/configured authority and no fallback trajectory is active.";
+    if(drag.predicted_range_error<0.0&&
+       drag.drag_range_scale<=drag_cfg.minimum_drag_scale+1e-6)
+        warning="MM304 maximum-range drag profile cannot reach the required Final alignment path; preserve energy and correct lateral displacement before MM305.";
     bool inlet_band=t->mean_altitude>=s->mm305_min_altitude&&
         t->mean_altitude<=s->mm305_max_altitude&&
         isfinite(t->mach)&&fabs(t->mach-s->mm305_target_mach)<=s->mm305_mach_half_width;

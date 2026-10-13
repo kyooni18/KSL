@@ -397,7 +397,11 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             demanded_sign=crossrange_demand;
 
         bool captured_or_small = state->leg_captured || magnitude < 5.0;
-        if (authority_valid && fabs(error) > deadband &&
+        /* Cross-track arrest can require a reversal while the point bearing
+           is inside its azimuth deadband. Do not discard that measured
+           prediction merely because the runway bearing looks centered. */
+        if (authority_valid &&
+            (fabs(error) > deadband || crossrange_demand != 0.0) &&
             demanded_sign * state->bank_sign < 0.0) {
             state->reversal_armed = true;
             if (captured_or_small && reversal_ready) {

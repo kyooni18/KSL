@@ -70,6 +70,13 @@ class BackendEngagementTests(unittest.TestCase):
 
 
 class PlanAdmissionTests(unittest.TestCase):
+    def test_acceptance_sts_landing_requires_full_route_qualification(self):
+        from ksl.config import DEFAULTS, load_config
+        self.assertFalse(DEFAULTS["landing"]["requireStrictPlan"])
+        mission = load_config("sts-85km-10deg")
+        self.assertTrue(mission["landing"]["requireStrictPlan"])
+        self.assertTrue(mission.backend_configuration()["site"]["allowReciprocalRunway"])
+
     def test_warning_policy_preserves_rejection_and_strict_requirement(self):
         plan = {"executionQualified": False, "targetCaptureAchieved": False}
         with patch.dict(flight.os.environ, {"KSP_LANDER_CONTINUE_UNQUALIFIED": "1"}):

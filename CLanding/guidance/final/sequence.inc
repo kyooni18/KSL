@@ -781,7 +781,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         const PlanetModel*p,AerodynamicModel aero,const LandingConfiguration*cfg,const Trajectory*ref,double dt){
     (void)aero;
     if(!strcasecmp(t->vessel_situation,"landed")&&!terminal_runway_contact_position(t,cfg))
-        return terminal_abort(g,"Touchdown occurred outside the runway 09 contact envelope.");
+        return terminal_abort(g,"Touchdown occurred outside the runway contact envelope for the selected end.");
     if(!strcasecmp(t->vessel_situation,"landed")&&!t->gear)
         return terminal_abort(g,"Touchdown occurred without confirmed landing-gear deployment.");
     if(!g->terminal_vertical_stage_valid)terminal_set_stage(g,TERMINAL_OUTER_FINAL,t->ut);

@@ -210,10 +210,9 @@ def validate_plan_qualification(plan: dict[str, Any], require_strict: bool,
                                 allow_unqualified: bool = True) -> str | None:
     """Report prediction quality without conflating it with execution ability.
 
-    A real candidate plan may fly with zero robustness passes or no native
-    Final proof. These are diagnostic warnings, not a reason to terminate a
-    flight attempt. An explicit strict policy remains an opt-in block; absent
-    plans and an explicitly disabled warning policy still fail closed.
+    Strict missions require entry-stage and full-route qualification. An
+    best-effort mission may accept a candidate without
+    robustness or native Final proof and receives a diagnostic warning.
     """
     if not plan:
         raise BackendError("Deorbit planner produced no executable candidate")

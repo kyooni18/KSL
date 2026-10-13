@@ -169,7 +169,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     if (g->final_approach_captured &&
         (g->phase==PHASE_ROLLOUT || g->phase==PHASE_COMPLETE || g->ground_contact_latched)) {
         if (reported_landed && !terminal_runway_contact_position(t,cfg))
-            return terminal_abort(g,"Touchdown occurred outside the runway 09 contact envelope.");
+            return terminal_abort(g,"Touchdown occurred outside the runway contact envelope for the selected end.");
         if (reported_landed && !t->gear)
             return terminal_abort(g,"Touchdown occurred without confirmed landing-gear deployment.");
         Trajectory reference; trajectory_init(&reference);
@@ -463,12 +463,17 @@ static GuidanceResult terminal_guidance_selected(GuidanceMachine*g,
      * chooses the end by testing the live pose against both configured outlets.
      */
     bool handoff_end_selected=false;
-    /* Keep the MM304 runway frame authoritative until its handoff target is
-       acquired.  Reframing here changes the live along/cross coordinates and
-       makes the declared -8 km station appear farther away. */
+    /* Choose a runway direction while MM304 still has enough range to price
+       its turn and arrest cross-track motion. Keep that frame through MM305
+       handoff so 09 and 27 do not alternate between guidance ticks. */
+    bool near_terminal_preview=isfinite(t->true_air_speed)&&
+        t->true_air_speed<=cfg->guidance.taem_force_handoff_speed&&
+        isfinite(t->range_to_site)&&
+        t->range_to_site<=entry_taem_range_target(p,&cfg->guidance);
     if(cfg->site.allow_reciprocal_runway&&!g->runway_end_committed&&
-       !g->terminal_region_entered&&
-       (g->taem_interface_captured||g->entry_exec.entry_complete)){
+       !g->runway_end_preview_valid&&!g->terminal_region_entered&&
+       (near_terminal_preview||g->taem_interface_captured||
+        g->entry_exec.entry_complete)){
         LandingSite primary=cfg->site;
         LandingSite reciprocal=runway_reciprocal_site(&primary,p->radius);
         double primary_path=decision_runway_end_path_score(g,t,p,cfg,&primary);

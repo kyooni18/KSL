@@ -648,13 +648,8 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
     bool b_capture=b_safe&&deorbit_runway_capture_qualified(bw,site,v,s,b->peri)&&
         deorbit_energy_margin_qualified(&b->energy_margin,s,true);
     if(a_capture!=b_capture)return a_capture;
-    if(a_safe&&b_safe&&a->executable_witness_evaluated&&
-       b->executable_witness_evaluated){
-        double am=deorbit_guided_terminal_miss(a,aw,p,site);
-        double bm=deorbit_guided_terminal_miss(b,bw,p,site);
-        if(isfinite(am)&&isfinite(bm)&&fabs(am-bm)>1.0)
-            return am<bm;
-    }
+    /* A small ground miss after an unqualified overflight is not a usable
+       MM305 inlet. Rank the ownership boundary before endpoint proximity. */
     bool a_inlet=aw->taem_dynamic_interface_captured&&
         !aw->taem_ownership_boundary_missed;
     bool b_inlet=bw->taem_dynamic_interface_captured&&
@@ -673,13 +668,25 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
         if(ac!=bc)return ac;
     }
     /* A certified positive inlet reserve wins within the geometric capture
-       set. When neither candidate has one, keep useful MM305 maneuver distance
-       by preferring the configured inlet range, not closest approach to KSC. */
+       set. When neither candidate has one, prefer the smaller energy deficit. */
     bool ae=isfinite(aw->taem_interface_energy_margin)&&
         aw->taem_interface_energy_margin>=0.0;
     bool be=isfinite(bw->taem_interface_energy_margin)&&
         bw->taem_interface_energy_margin>=0.0;
     if(ae!=be)return ae;
+    if(!ae&&isfinite(aw->taem_interface_energy_margin)&&
+       isfinite(bw->taem_interface_energy_margin)&&
+       fabs(aw->taem_interface_energy_margin-
+            bw->taem_interface_energy_margin)>1.0)
+        return aw->taem_interface_energy_margin>
+            bw->taem_interface_energy_margin;
+    if(a_safe&&b_safe&&a->executable_witness_evaluated&&
+       b->executable_witness_evaluated){
+        double am=deorbit_guided_terminal_miss(a,aw,p,site);
+        double bm=deorbit_guided_terminal_miss(b,bw,p,site);
+        if(isfinite(am)&&isfinite(bm)&&fabs(am-bm)>1.0)
+            return am<bm;
+    }
     double nominal=entry_taem_range_target(p,s);
     double ad=fabs(aw->taem_distance-nominal);
     double bd=fabs(bw->taem_distance-nominal);
