@@ -109,6 +109,14 @@ def prepare_reentry_direct_control(python: Path | str | None = None, script: Pat
     return check_reentry_handoff(run_guard("prepare-reentry", python, script, env))
 
 
+def ensure_payload_bay_closed(env: dict[str, str] | None = None) -> dict[str, Any]:
+    """Ask the independent kRPC guard to verify/close Benjee STS bay doors."""
+    payload = run_guard("close-bay", env=env, timeout=25.0)
+    if payload.get("event") != "payload-bay-status":
+        raise GuardError(f"Payload bay closure acknowledgement invalid: {payload}")
+    return payload
+
+
 def set_ksp_paused(paused: bool, python: Path | str | None = None, script: Path = GUARD_SCRIPT,
                    env: dict[str, str] | None = None) -> None:
     payload = run_guard("pause" if paused else "resume", python, script, env)

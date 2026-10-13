@@ -351,6 +351,87 @@ def load_save(name: str) -> int:
     return 2
 
 
+def ensure_sts_payload_bay_closed(vessel, *, paused: bool = False,
+                                  timeout: float = 6.0, poll_interval: float = 0.15) -> dict:
+    """Close Benjee STS bay doors by their *current* event, never a blind toggle.
+
+    In OV_midFuselage.cfg the animation closedPosition is 1. In a live KSP
+    module the canonical event is ``Toggle``: its GUI label is ``Close`` when
+    doors are open, ``Open`` once they are closed. ``Status: Locked`` does NOT
+    distinguish those states. We only trigger an active ``Close`` event and
+    verify that its label becomes ``Open``. Missing/unknown bays are reported,
+    not mistaken for closed or used to abort best-effort flight guidance.
+    """
+    parts = [part for part in vessel.parts.all
+             if part.name == "benjee10.shuttle.midFuselage"]
+    if not parts:
+        return {"status": "not-applicable", "bayCount": 0, "triggered": 0}
+
+    triggered = 0
+    pending = 0
+    for part in parts:
+        modules = [module for module in part.modules
+                   if module.name == "ModuleAnimateGeneric"]
+        if len(modules) != 1:
+            return {"status": "unknown", "reason": "bay-animation-module-ambiguous",
+                    "bayCount": len(parts), "triggered": triggered}
+        module = modules[0]
+
+        def door_event():
+            events = [event for event in module.event_list
+                      if event.name == "Toggle"]
+            return events[0] if len(events) == 1 else None
+
+        event = door_event()
+        if event is None:
+            return {"status": "unknown", "reason": "bay-toggle-event-missing",
+                    "bayCount": len(parts), "triggered": triggered}
+        label = str(event.gui_name).strip().casefold()
+        if label == "open":
+            continue  # Closed; triggering Toggle here would OPEN the doors.
+        if label != "close" or not event.active:
+            return {"status": "unknown", "reason": "bay-close-event-unavailable",
+                    "eventLabel": label, "bayCount": len(parts), "triggered": triggered}
+
+        event.trigger()
+        triggered += 1
+        # Animation frames do not advance while KSP is paused. A successful
+        # event request there is pending verification after flight resumes.
+        if paused:
+            pending += 1
+            continue
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            follow_up = door_event()
+            if follow_up is not None and str(follow_up.gui_name).strip().casefold() == "open":
+                break
+            time.sleep(poll_interval)
+        else:
+            pending += 1
+    return {"status": "closing-pending" if pending else
+            ("closed" if triggered else "already-closed"),
+            "bayCount": len(parts), "triggered": triggered, "pending": pending}
+
+
+def close_payload_bay() -> int:
+    conn = connect("KSP Lander Benjee Bay Door Preflight")
+    try:
+        vessel = conn.space_center.active_vessel
+        if vessel is None:
+            emit({"event": "payload-bay-status", "status": "unknown",
+                  "reason": "no-active-vessel"})
+            return 0
+        paused = bool(conn.krpc.paused)
+        altitude = float(vessel.flight().mean_altitude)
+        timeout = 0.0 if math.isfinite(altitude) and altitude < 70000.0 else 6.0
+        status = ensure_sts_payload_bay_closed(vessel, paused=paused, timeout=timeout)
+        emit({"event": "payload-bay-status", "vessel": vessel.name,
+              "ut": float(conn.space_center.ut), **status})
+        return 0
+    finally:
+        conn.close()
+
+
 def prepare_reentry() -> int:
     conn = connect("KSP Lander Reentry Direct-Control Handoff")
     try:
@@ -1205,7 +1286,7 @@ def monitor(interval: float, recovery_save: str = "quicksave", parent_pid: int |
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("probe", "quickload", "load-save", "prepare-reentry", "pause", "resume", "monitor", "preentry-warp", "startup-hold", "parent-watch", "backend-watch"))
+    parser.add_argument("mode", choices=("probe", "quickload", "load-save", "prepare-reentry", "close-bay", "pause", "resume", "monitor", "preentry-warp", "startup-hold", "parent-watch", "backend-watch"))
     parser.add_argument("--name", default="")
     parser.add_argument("--interval", type=float, default=0.2)
     parser.add_argument("--multiplier", type=int, choices=(1, 2, 3, 4), default=4)
@@ -1222,6 +1303,8 @@ def main() -> int:
         return load_save(args.name)
     if args.mode == "prepare-reentry":
         return prepare_reentry()
+    if args.mode == "close-bay":
+        return close_payload_bay()
     if args.mode == "pause":
         return set_pause(True)
     if args.mode == "resume":

@@ -30,7 +30,7 @@ from typing import Any, Callable
 from .backend import BackendClient, BackendError, snapshot_summary, validate_plan_qualification
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
-from .kspguard import GuardError, prepare_reentry_direct_control, probe_orbiter_integrity
+from .kspguard import GuardError, ensure_payload_bay_closed, prepare_reentry_direct_control, probe_orbiter_integrity
 from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
@@ -335,7 +335,8 @@ class LandingProgram(Program):
         start = max(start, Phase.DEORBIT, key=lambda p: p.index)
         steps = [f"landing: start {BACKEND} (KSP_LANDER_MODEL_PROFILE={landing['modelProfile']}, "
                  f"configuration {landing['backendConfiguration']})",
-                 f"landing: connect to kRPC {ctx.config['connection']['address']}:{ctx.config['connection']['rpcPort']}"]
+                 f"landing: connect to kRPC {ctx.config['connection']['address']}:{ctx.config['connection']['rpcPort']}",
+                 "landing: inspect and close Benjee STS payload bay before deorbit/reentry"]
         if start == Phase.DEORBIT:
             steps += ["landing: createPlan, record entry/terminal confidence; "
                       + ("explicit strict mode" if landing["requireStrictPlan"]
@@ -393,6 +394,21 @@ class LandingProgram(Program):
             ctx.log.log(f"Orbiter preflight warning: {exc}; proceeding with best-effort guidance", "warning")
         else:
             ctx.log.log(f"Orbiter structural inventory verified: {len(integrity['partNames'])} parts")
+
+        # The Benjee OV-100 payload bay may remain open after orbital ops.
+        # Close it *before* planning/burning or resuming atmospheric guidance;
+        # a blind Toggle command would reopen an already-closed bay. Flight
+        # continues with a visible warning if the guard cannot verify closure.
+        try:
+            bay = ensure_payload_bay_closed(env=env)
+        except (GuardError, TimeoutError, OSError) as exc:
+            ctx.log.log(f"Payload-bay closure not verified: {exc}; proceeding with best-effort guidance", "warning")
+        else:
+            status = str(bay.get("status") or "unknown")
+            if status in ("closed", "already-closed", "not-applicable"):
+                ctx.log.log(f"Payload bay preflight: {status} ({bay.get('bayCount', 0)} bay part(s))")
+            else:
+                ctx.log.log(f"Payload bay preflight: {status} ({bay.get('reason') or 'animation still in progress'}); proceeding with best-effort guidance", "warning")
 
         if start == Phase.DEORBIT:
             ctx.advance(Phase.DEORBIT)
