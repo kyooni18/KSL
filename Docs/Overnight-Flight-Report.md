@@ -181,3 +181,18 @@ Current KSP state at the time of this entry: scene `flight`, situation `orbiting
   paused, UT 641.6 s, mass 26 014.6 kg, vesselId 9201, launchClamps 0).
 - Attempt 4 remains blocked. The remaining routes need the operator: an in-game Revert to Launch, or a save name that
   holds the separatron craft at the pad. Nothing was loaded, reverted, or changed.
+
+### Blocker check — ksl CLI options for a pad reset (2026-10-14 ~02:20 KST)
+
+Read-only review of `bin/ksl` for a path back to the pad. No flight, revert, load, or save was run.
+
+- `ksl operate` lists `preflight` and `launch`, but both require a stationary stack on the launch clamps. The vessel is
+  in orbit with 0 clamps, so neither applies.
+- `ksl run --load-save NAME` and `ksl continue --use-save` load a named save. The `ksl checkpoints` list holds only
+  orbit or mm305 saves from this vessel's orbit states. No checkpoint is at the pad.
+- Pad-tagged saves in `saves/Main` (`ksl-autonomous-20261012-pad-*`) predate the separatron change. Attempt 1 failed on
+  that craft at booster separation, so flying one of those now would test the old craft, not the separatron craft.
+  Not loaded.
+
+Conclusion: attempt 4 still needs an operator-side Revert to Launch, or a save that holds the current separatron craft
+at the pad. Nothing else in the CLI or the checkpoint list can reset the pad.
