@@ -819,6 +819,8 @@ bool terminal_runway_contact_position(const Telemetry*t,const LandingConfigurati
         fabs(t->runway_cross_track)<fmax(site->runway_width*.75,45.0);
 }
 
+static double terminal_wheel_height(const Telemetry*t,const LandingConfiguration*cfg);
+
 static bool terminal_update_ground_latch(GuidanceMachine*g,const Telemetry*t,const LandingConfiguration*cfg,double dt){
     const VehicleProfile*v=&cfg->vehicle;
     if(g->ground_contact_latched)return true;
@@ -826,7 +828,7 @@ static bool terminal_update_ground_latch(GuidanceMachine*g,const Telemetry*t,con
     bool landed_on_runway=!strcasecmp(t->vessel_situation,"landed")&&over_runway&&t->gear;
     bool flare_stage=g->terminal_vertical_stage_valid&&g->terminal_vertical_stage>=TERMINAL_TOUCHDOWN_FLARE;
     bool near_contact=flare_stage&&t->gear&&over_runway&&
-        t->radar_altitude<.6&&t->vertical_speed>-3.0&&fabs(t->vertical_speed)<3.0&&
+        terminal_wheel_height(t,cfg)<.6&&t->vertical_speed>-3.0&&fabs(t->vertical_speed)<3.0&&
         t->surface_speed<fmax(190.0,v->final_approach_speed*1.65);
     bool contact_evidence=landed_on_runway||near_contact;
     if(contact_evidence)g->ground_contact_duration+=fmax(0,dt);

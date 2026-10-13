@@ -134,9 +134,14 @@ static double terminal_wheel_height(const Telemetry*t,const LandingConfiguration
     if(!isfinite(t->mean_altitude)||!isfinite(t->flight_path_angle)||
        !isfinite(t->angle_of_attack))return NAN;
     double height=t->mean_altitude-cfg->site.altitude;
+    /* Over the pavement the radar (centre-of-mass height above the surface
+       actually below) replaces the configured plane: KSC 09 is not level
+       (live 2026-10-13: 69.0 m near the threshold, 68.0 m in the touchdown
+       zone, 67.7 m at 1.2 km), and the plane put the wheels up to 0.8 m
+       higher than computed at contact. */
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&
             terminal_runway_contact_position(t,cfg))
-        height=fmin(height,t->radar_altitude);
+        height=t->radar_altitude;
     double pitch=(t->flight_path_angle+t->angle_of_attack)*DEG2RAD;
     return fmax(0.0,height-3.1535*cos(pitch)-.9058*sin(pitch));
 }
@@ -272,6 +277,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double TOUCHDOWN_PITCH=8.0;
     const double TOUCHDOWN_ATTITUDE_START=26.0;
     const double TOUCHDOWN_ATTITUDE_FULL=5.0;
+    const double FLOOR_SETTLE_G=.97; /* floor lift cap once the sink is arrested */
 
     double height=terminal_wheel_height(t,cfg);
     double V=fmax(1.0,t->true_air_speed),Vh=fmax(1.0,t->horizontal_speed);
@@ -672,6 +678,24 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         double floor_lift_cap=terminal_aoa_for_lift(g,t,v,
             1.0*t->mass*g0/fmax(.3,lift_div)/fmax(.3,g->terminal_lift_ratio),aoa_max);
         touchdown_aoa_floor=fmin(touchdown_aoa_floor,fmax(aoa,floor_lift_cap));
+        /* The floor shapes the attitude; it must never stop the descent.  Its
+           1-g cap comes from the table, and the table level can be tens of
+           percent low: on the live polar flight (2026-10-13) the floor held
+           1.25 g, arrested the sink at 8 m wheel height and climbed to 14 m
+           (+2.7 m/s), touching down 750 m long at 51 m/s.  Once the sink is
+           down to the float sink, cap it by the measured lift at a slightly
+           sub-1-g level instead, so the vehicle keeps settling. */
+        if(sink<float_sink&&isfinite(t->lift_force)&&t->dynamic_pressure>100.0){
+            double La=0.0,Da=0.0,Lb=0.0,Db=0.0,a0=clampd(t->angle_of_attack,0.0,aoa_max);
+            terminal_aero_q(g,t,v,fmax(0.0,a0-1.0),&La,&Da);
+            terminal_aero_q(g,t,v,fmin(aoa_max+1.0,a0+1.0),&Lb,&Db);
+            double slope=(Lb-La)/(fmin(aoa_max+1.0,a0+1.0)-fmax(0.0,a0-1.0));
+            if(slope>1e-3){
+                double settle=t->mass*FLOOR_SETTLE_G*g0*cos(gamma)/fmax(.3,lift_div);
+                double measured_cap=a0+(settle-t->lift_force)/(t->dynamic_pressure*slope);
+                touchdown_aoa_floor=fmin(touchdown_aoa_floor,fmax(aoa,measured_cap));
+            }
+        }
         aoa=fmax(aoa,touchdown_aoa_floor);
     }
 
