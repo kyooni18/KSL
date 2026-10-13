@@ -1520,7 +1520,7 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
     double aoa=NAN,bank=NAN;
     TaemEnergyLawState *L=&g->taem_energy_law;
     if (!taem_energy_law_step(L,control_model,geometry,current->mass_kg,
-            t->angle_of_attack,t->ut,&aoa,&bank))
+            t->angle_of_attack,t->ut,t->roll,&aoa,&bank))
         return terminal_abort(g,"MM305 energy law could not produce a bounded command.");
     static _Thread_local double trace_last_ut=-INFINITY;
     if (!g->diagnostic_shadow&&(!isfinite(trace_last_ut)||t->ut<trace_last_ut||

@@ -45,7 +45,7 @@
 enum { TEL_LEG_OUT=0, TEL_LEG_TURN, TEL_LEG_DOWN, TEL_LEG_HAC, TEL_LEG_FINAL };
 
 typedef struct {
-    double x,y,h,v,g,psi,m,aoa,aoa_rate;
+    double x,y,h,v,g,psi,m,aoa,aoa_rate,bank,ground_speed;
 } TelPoint;
 
 typedef struct {
@@ -296,19 +296,26 @@ static double tel_sum(const TelSegment *s,int n) {
     return a;
 }
 
+static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *c,
+        const TelPoint *s,double k,double *bank_over_deg);
+
 static double tel_solve_k(const TaemEnergyLawState *L,const TelContext *c,
         const TelPoint *s,double *s_req) {
     TelSegment segs[5];
     int n=tel_segments(L,c,s,segs);
     double s_go=tel_sum(segs,n);
-    double r_lo=tel_predict_range(c,s,0.0,s_go,segs,n);
-    double r_hi=tel_predict_range(c,s,1.0,s_go,segs,n);
+    double r_lo=L->capture_forecast?tel_predict_pattern(L,c,s,0.0,NULL):
+        tel_predict_range(c,s,0.0,s_go,segs,n);
+    double r_hi=L->capture_forecast?tel_predict_pattern(L,c,s,1.0,NULL):
+        tel_predict_range(c,s,1.0,s_go,segs,n);
     if (r_hi>=s_go) { *s_req=r_hi; return 1.0; }
     if (r_lo<=s_go) { *s_req=r_lo; return 0.0; }
     double lo=0.0,hi=1.0;
     for (int i=0;i<7;++i) {
         double mid=0.5*(lo+hi);
-        if (tel_predict_range(c,s,mid,s_go,segs,n)>s_go) lo=mid; else hi=mid;
+        double reach=L->capture_forecast?tel_predict_pattern(L,c,s,mid,NULL):
+            tel_predict_range(c,s,mid,s_go,segs,n);
+        if (reach>s_go) lo=mid; else hi=mid;
     }
     *s_req=s_go;
     return 0.5*(lo+hi);
@@ -318,7 +325,8 @@ static double tel_solve_k(const TaemEnergyLawState *L,const TelContext *c,
 static double tel_pattern_excess(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
     TelSegment segs[5];
     int n=tel_segments(L,c,s,segs);
-    return tel_predict_range(c,s,TEL_K_PLAN,1e9,segs,n)-tel_sum(segs,n);
+    return (L->capture_forecast?tel_predict_pattern(L,c,s,TEL_K_PLAN,NULL):
+        tel_predict_range(c,s,TEL_K_PLAN,1e9,segs,n))-tel_sum(segs,n);
 }
 
 static void tel_size_hac(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s,
@@ -386,6 +394,167 @@ static bool tel_final_line_ready(const TelContext *c,const TelPoint *s){
         fabs(tel_wrap(s->psi))<=15.0*DEG2RAD;
 }
 
+/* Shared by live control and the range forecast.  A capture turn must use
+   the same heading error, bank saturation and leg transitions in both. */
+static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
+    double bank_cmd;
+    double D=c->d_station;
+    double q,mach;
+    tel_air(c,s->h,s->v,&q,&mach);
+    double gnd=s->ground_speed>0.0?s->ground_speed:s->v*cos(s->g);
+    if (L->loop&&L->leg==TEL_LEG_OUT&&s->x>=L->x_turn) {
+        L->leg=TEL_LEG_TURN;
+        L->side=s->y<=0.0?1:-1;
+        L->r_turn=fmax(TEL_R_TURN,gnd*gnd/(TEL_G0*tan(45.0*DEG2RAD)));
+    }
+    double r=L->radius,bank_ff=0.0,course_cmd;
+    int side=L->side;
+    if (L->leg==TEL_LEG_OUT||L->leg==TEL_LEG_FINAL) {
+        double look=clampd(0.4*fmax(0.0,-D-s->x),3000.0,12000.0);
+        /* Supersonic turn rates are a fraction of a degree per second: aim at a
+           point ~45 s ahead so the capture does not overshoot the centreline. */
+        if (mach>1.1) look=fmax(look,45.0*gnd);
+        /* Far off axis, capture the actual station.  A positive lookahead
+           assumes the station is ahead in x; after an abeam pass it instead
+           aims farther east and can never close the along-track separation. */
+        course_cmd=L->capture_forecast&&!L->loop&&fabs(s->y)>6000.0?atan2(-s->y,-D-s->x):atan2(-s->y,look);
+        if(!L->loop&&tel_final_line_ready(c,s))L->leg=TEL_LEG_FINAL;
+    } else if (L->leg==TEL_LEG_TURN||L->leg==TEL_LEG_DOWN) {
+        double tx,ty,arc;
+        if (!tel_hac_tangent(L,c,s->x,s->y,&tx,&ty,&arc)) {
+            L->leg=TEL_LEG_HAC;
+            {
+                double cx=-D,cy=side*r,ang=atan2(s->y-cy,s->x-cx),end=-side*TEL_PI/2.0;
+                double rem=fmod(side*(end-ang),2.0*TEL_PI);
+                if (rem<0.0) rem+=2.0*TEL_PI;
+                if (rem>1.9*TEL_PI) {
+                    /* just past the exit: fly the full circle only if the energy needs it */
+                    TelSegment full[1]={{rem*r,r}};
+                    if (tel_predict_range(c,s,TEL_K_PLAN,1e9,full,1)<0.5*rem*r) rem=0.0;
+                }
+                L->hac_left_rad=tel_entry_arc(L,c,s,rem);
+            }
+            L->hac_last_ang=NAN;
+            course_cmd=s->psi;
+        } else {
+            double brg=atan2(ty-s->y,tx-s->x);
+            course_cmd=brg;
+            if (L->leg==TEL_LEG_TURN) {
+                /* turnaround: keep turning toward `side` at the turn radius until
+                   the tangent point is ahead */
+                double rem=tel_wrap(brg-s->psi);
+                if (L->side*rem<0.0||fabs(rem)>0.35) {
+                    bank_ff=side*atan(gnd*gnd/(TEL_G0*L->r_turn))*RAD2DEG;
+                    course_cmd=s->psi;
+                } else L->leg=TEL_LEG_DOWN;
+            }
+            if (L->leg==TEL_LEG_DOWN&&hypot(tx-s->x,ty-s->y)<fmax(300.0,2.0*gnd)) {
+                L->leg=TEL_LEG_HAC;
+                L->hac_left_rad=tel_entry_arc(L,c,s,arc/fmax(1.0,L->radius));
+                L->hac_last_ang=NAN;
+            }
+        }
+    }
+    if (L->leg==TEL_LEG_HAC) {
+        r=L->radius;   /* an exit entry may have resized the circle */
+        double cx=-D,cy=side*r;
+        double ang=atan2(s->y-cy,s->x-cx);
+        if (isfinite(L->hac_last_ang))
+            L->hac_left_rad-=side*tel_wrap(ang-L->hac_last_ang);
+        L->hac_last_ang=ang;
+        double r_err=hypot(s->x-cx,s->y-cy)-r;
+        course_cmd=ang+side*(TEL_PI/2.0+clampd(r_err/1500.0,-0.6,0.6));
+        bank_ff=side*atan(gnd*gnd/(TEL_G0*r))*RAD2DEG;
+        if (L->hac_left_rad<0.3&&fabs(tel_wrap(s->psi))<0.35) {
+            L->leg=TEL_LEG_FINAL;
+            bank_ff=0.0;
+            course_cmd=atan2(-s->y,3000.0);
+        }
+    }
+    /* S-turns: with drag saturated (k=1) and range still in excess of the
+       path, weave off the direct course so the flown path absorbs the excess,
+       psi_w = acos(d/(d+E)).  Only on legs steered by course (the downwind to
+       the HAC tangent and a straight-in centreline), subsonic, and ending
+       3 km before the leg's end so the vehicle is realigned. */
+    {
+        double E=L->s_req-L->s_go,tx=-D,ty=0.0,arc=0.0;
+        bool leg_ok=L->leg==TEL_LEG_DOWN||(L->leg==TEL_LEG_OUT&&!L->loop);
+        if (L->leg==TEL_LEG_DOWN&&!tel_hac_tangent(L,c,s->x,s->y,&tx,&ty,&arc)) leg_ok=false;
+        double d=hypot(tx-s->x,ty-s->y);
+        if (L->leg==TEL_LEG_OUT) d=fmax(0.0,-D-6000.0-s->x);
+        if (leg_ok&&L->k>0.999&&E>300.0&&mach<0.95&&d>3000.0) {
+            double brg=atan2(ty-s->y,tx-s->x);
+            if (!L->weave_on) { L->weave_on=true; L->weave_sign=1; L->weave_brg=brg; }
+            double ux=cos(L->weave_brg),uy=sin(L->weave_brg);
+            double off=-(s->x-tx)*uy+(s->y-ty)*ux;
+            double ymax=clampd(0.25*d,800.0,2500.0);
+            if (L->weave_sign>0&&off>ymax) L->weave_sign=-1;
+            else if (L->weave_sign<0&&off<-ymax) L->weave_sign=1;
+            double psi_w=fmin(acos(d/(d+E)),50.0*DEG2RAD);
+            course_cmd=brg+L->weave_sign*psi_w;
+            bank_ff=0.0;
+        } else L->weave_on=false;
+    }
+    double cerr=tel_wrap(course_cmd-s->psi);
+    double omega=clampd(cerr/6.0,-0.12,0.12);
+    double bank_left=bank_ff+atan(gnd*omega/TEL_G0)*RAD2DEG;
+    double lim=mach>1.1?TEL_BANK_SUP:TEL_BANK_MAX;
+    if (L->leg==TEL_LEG_HAC||(L->leg==TEL_LEG_TURN&&bank_ff!=0.0)) lim=TEL_BANK_ARC;
+    lim=fmin(lim,c->model->vehicle.maximum_bank_angle);
+    bank_cmd=-clampd(bank_left,-lim,lim);
+    return bank_cmd;
+}
+
+/* Price actual progress toward the selected route, rather than distance
+   travelled along a fictitious tangent.  The former segment predictor reduced
+   bank as speed fell on a fixed initial capture radius, although live control
+   kept maximum bank until the heading was captured.  It also counted travel
+   away from the station as useful range.  Integrate the shared lateral law and
+   its lift-dependent turn rate; only reduction of remaining route counts. */
+static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *c,
+        const TelPoint *s,double k,double *bank_over_deg) {
+    TaemEnergyLawState route=*L;
+    route.k=k;
+    route.s_req=route.s_go=0.0; /* no unpriced surplus weave in a range probe */
+    TelPoint p=*s;
+    TelSegment segs[5];
+    double initial=tel_sum(segs,tel_segments(L,c,s,segs));
+    const double dt=1.0;
+    double rr=c->model->world.radius_m+c->model->site.altitude;
+    for (unsigned i=0;i<1500;++i) {
+        if (p.h+p.v*p.v/(2.0*TEL_G0)<=c->e_station||p.h<0.0||p.v<1.0) break;
+        double along=tel_sum(segs,tel_segments_path(&route,c,&p,segs));
+        p.ground_speed=p.v*cos(p.g);
+        double command=tel_lateral(&route,c,&p);
+        p.bank+=clampd(command-p.bank,-6.0*dt,6.0*dt);
+        if (bank_over_deg&&route.leg==TEL_LEG_HAC) {
+            double gnd=p.v*cos(p.g);
+            double need=atan(gnd*gnd/(TEL_G0*route.radius))*RAD2DEG;
+            *bank_over_deg=fmax(*bank_over_deg,need-TEL_BANK_TURN);
+        }
+        double vertical_along=route.leg==TEL_LEG_FINAL?-c->d_station-p.x:along;
+        double target=tel_vertical(c,&p,p.bank,k,vertical_along,true);
+        tel_servo(&p.aoa,&p.aoa_rate,target,dt);
+        double q,mach,lift,drag;
+        tel_forces(c,&p,p.aoa,&q,&mach,&lift,&drag);
+        double v=fmax(p.v,1.0),grav=tel_gravity(c,p.h),phi=p.bank*DEG2RAD;
+        double gnd=v*cos(p.g);
+        double dv=-drag/p.m-grav*sin(p.g);
+        double dg=lift*cos(phi)/(p.m*v)-(grav/v-v/(rr+p.h))*cos(p.g);
+        double dpsi=-lift*sin(phi)/(p.m*fmax(1.0,gnd));
+        p.x+=gnd*cos(p.psi)*dt;
+        p.y+=gnd*sin(p.psi)*dt;
+        p.h+=v*sin(p.g)*dt;
+        p.v+=dv*dt;
+        p.g+=dg*dt;
+        p.psi=tel_wrap(p.psi+dpsi*dt);
+    }
+    double remaining=tel_sum(segs,tel_segments(&route,c,&p,segs));
+    if (route.leg==TEL_LEG_FINAL)
+        remaining=-c->d_station-p.x+fabs(p.y);
+    return initial-remaining;
+}
+
 /* One guidance tick.  Returns false when the inputs are unusable. */
 /* Pattern choice is open while the first leg is still far from its end. */
 static bool tel_plan_open(const TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
@@ -413,10 +582,13 @@ static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint
     TelSegment segs[5];
     int n=tel_segments(P,c,s,segs);
     double path=tel_sum(segs,n);
-    double r_max=tel_predict_range(c,s,0.0,1e9,segs,n);
-    double r_min=tel_predict_range(c,s,1.0,1e9,segs,n);
+    double r_max=P->capture_forecast?tel_predict_pattern(P,c,s,0.0,NULL):
+        tel_predict_range(c,s,0.0,1e9,segs,n);
+    double r_min=P->capture_forecast?tel_predict_pattern(P,c,s,1.0,NULL):
+        tel_predict_range(c,s,1.0,1e9,segs,n);
     double over=0.0;
-    double r_mid=tel_predict_range_ex(c,s,TEL_K_PLAN,1e9,segs,n,&over);
+    double r_mid=P->capture_forecast?tel_predict_pattern(P,c,s,TEL_K_PLAN,&over):
+        tel_predict_range_ex(c,s,TEL_K_PLAN,1e9,segs,n,&over);
     bool stretch=P->loop&&P->leg==TEL_LEG_OUT;
     /* a directly intercepted HAC can still spiral between its flyable minimum
        and TEL_R_MAX, scaling its arc */
@@ -441,7 +613,7 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
     double cur_score=tel_score(&cur,c,s),best_score=cur_score;
     TaemEnergyLawState p=*L;
     p.loop=false;p.leg=TEL_LEG_OUT;
-    if (s->x<-D-TEL_MODE_FREEZE) {
+    if (s->x<-D-TEL_MODE_FREEZE || (L->capture_forecast&&fabs(s->y)>6000.0)) {
         double sc=tel_score(&p,c,s);
         if (sc<best_score) { best_score=sc; best=p; }
     }
@@ -465,7 +637,7 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
 
 static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *model,
         const TaemGeometryState *geo,double mass_kg,double aoa_deg,double ut,
-        double *aoa_cmd,double *bank_cmd) {
+        double bank_deg,double *aoa_cmd,double *bank_cmd) {
     if (!L||!model||!geo||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)) return false;
     TelContext c={.model=model,
         .d_station=fmax(500.0,model->guidance.final_approach_distance),
@@ -478,10 +650,12 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     TelPoint s={.x=geo->runway_along_m,.y=-geo->runway_cross_m,
         .h=geo->altitude_above_runway_m,.v=geo->airspeed_mps,
         .g=geo->flight_path_angle_deg*DEG2RAD,.psi=-geo->heading_error_deg*DEG2RAD,
-        .m=mass_kg,.aoa=isfinite(aoa_deg)?aoa_deg:10.0,.aoa_rate=0.0};
+        .m=mass_kg,.aoa=isfinite(aoa_deg)?aoa_deg:10.0,.aoa_rate=0.0,
+        .bank=isfinite(bank_deg)?bank_deg:0.0,.ground_speed=geo->ground_speed_mps};
     double D=c.d_station;
     if (!L->initialized) {
         *L=(TaemEnergyLawState){.initialized=true,.leg=TEL_LEG_OUT,.side=1,
+            .capture_forecast=fabs(s.y)>6000.0,
             .x_turn=-D,.radius=5000.0,.k=0.5,.last_geo_ut=-INFINITY,.last_pred_ut=-INFINITY};
     }
     double q,mach;
@@ -530,99 +704,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         L->k=tel_solve_k(L,&c,&s,&L->s_req);
     }
 
-    /* lateral path following */
-    double r=L->radius,bank_ff=0.0,course_cmd;
-    int side=L->side;
-    if (L->leg==TEL_LEG_OUT||L->leg==TEL_LEG_FINAL) {
-        double look=clampd(0.4*fmax(0.0,-D-s.x),3000.0,12000.0);
-        /* Supersonic turn rates are a fraction of a degree per second: aim at a
-           point ~45 s ahead so the capture does not overshoot the centreline. */
-        if (mach>1.1) look=fmax(look,45.0*gnd);
-        course_cmd=atan2(-s.y,look);
-        if(!L->loop&&tel_final_line_ready(&c,&s))L->leg=TEL_LEG_FINAL;
-    } else if (L->leg==TEL_LEG_TURN||L->leg==TEL_LEG_DOWN) {
-        double tx,ty,arc;
-        if (!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) {
-            L->leg=TEL_LEG_HAC;
-            {
-                double cx=-D,cy=side*r,ang=atan2(s.y-cy,s.x-cx),end=-side*TEL_PI/2.0;
-                double rem=fmod(side*(end-ang),2.0*TEL_PI);
-                if (rem<0.0) rem+=2.0*TEL_PI;
-                if (rem>1.9*TEL_PI) {
-                    /* just past the exit: fly the full circle only if the energy needs it */
-                    TelSegment full[1]={{rem*r,r}};
-                    if (tel_predict_range(&c,&s,TEL_K_PLAN,1e9,full,1)<0.5*rem*r) rem=0.0;
-                }
-                L->hac_left_rad=tel_entry_arc(L,&c,&s,rem);
-            }
-            L->hac_last_ang=NAN;
-            course_cmd=s.psi;
-        } else {
-            double brg=atan2(ty-s.y,tx-s.x);
-            course_cmd=brg;
-            if (L->leg==TEL_LEG_TURN) {
-                /* turnaround: keep turning toward `side` at the turn radius until
-                   the tangent point is ahead */
-                double rem=tel_wrap(brg-s.psi);
-                if (L->side*rem<0.0||fabs(rem)>0.35) {
-                    bank_ff=side*atan(gnd*gnd/(TEL_G0*L->r_turn))*RAD2DEG;
-                    course_cmd=s.psi;
-                } else L->leg=TEL_LEG_DOWN;
-            }
-            if (L->leg==TEL_LEG_DOWN&&hypot(tx-s.x,ty-s.y)<fmax(300.0,2.0*gnd)) {
-                L->leg=TEL_LEG_HAC;
-                L->hac_left_rad=tel_entry_arc(L,&c,&s,arc/fmax(1.0,L->radius));
-                L->hac_last_ang=NAN;
-            }
-        }
-    }
-    if (L->leg==TEL_LEG_HAC) {
-        r=L->radius;   /* an exit entry may have resized the circle */
-        double cx=-D,cy=side*r;
-        double ang=atan2(s.y-cy,s.x-cx);
-        if (isfinite(L->hac_last_ang))
-            L->hac_left_rad-=side*tel_wrap(ang-L->hac_last_ang);
-        L->hac_last_ang=ang;
-        double r_err=hypot(s.x-cx,s.y-cy)-r;
-        course_cmd=ang+side*(TEL_PI/2.0+clampd(r_err/1500.0,-0.6,0.6));
-        bank_ff=side*atan(gnd*gnd/(TEL_G0*r))*RAD2DEG;
-        if (L->hac_left_rad<0.3&&fabs(tel_wrap(s.psi))<0.35) {
-            L->leg=TEL_LEG_FINAL;
-            bank_ff=0.0;
-            course_cmd=atan2(-s.y,3000.0);
-        }
-    }
-    /* S-turns: with drag saturated (k=1) and range still in excess of the
-       path, weave off the direct course so the flown path absorbs the excess,
-       psi_w = acos(d/(d+E)).  Only on legs steered by course (the downwind to
-       the HAC tangent and a straight-in centreline), subsonic, and ending
-       3 km before the leg's end so the vehicle is realigned. */
-    {
-        double E=L->s_req-L->s_go,tx=-D,ty=0.0,arc=0.0;
-        bool leg_ok=L->leg==TEL_LEG_DOWN||(L->leg==TEL_LEG_OUT&&!L->loop);
-        if (L->leg==TEL_LEG_DOWN&&!tel_hac_tangent(L,&c,s.x,s.y,&tx,&ty,&arc)) leg_ok=false;
-        double d=hypot(tx-s.x,ty-s.y);
-        if (L->leg==TEL_LEG_OUT) d=fmax(0.0,-D-6000.0-s.x);
-        if (leg_ok&&L->k>0.999&&E>300.0&&mach<0.95&&d>3000.0) {
-            double brg=atan2(ty-s.y,tx-s.x);
-            if (!L->weave_on) { L->weave_on=true; L->weave_sign=1; L->weave_brg=brg; }
-            double ux=cos(L->weave_brg),uy=sin(L->weave_brg);
-            double off=-(s.x-tx)*uy+(s.y-ty)*ux;
-            double ymax=clampd(0.25*d,800.0,2500.0);
-            if (L->weave_sign>0&&off>ymax) L->weave_sign=-1;
-            else if (L->weave_sign<0&&off<-ymax) L->weave_sign=1;
-            double psi_w=fmin(acos(d/(d+E)),50.0*DEG2RAD);
-            course_cmd=brg+L->weave_sign*psi_w;
-            bank_ff=0.0;
-        } else L->weave_on=false;
-    }
-    double cerr=tel_wrap(course_cmd-s.psi);
-    double omega=clampd(cerr/6.0,-0.12,0.12);
-    double bank_left=bank_ff+atan(gnd*omega/TEL_G0)*RAD2DEG;
-    double lim=mach>1.1?TEL_BANK_SUP:TEL_BANK_MAX;
-    if (L->leg==TEL_LEG_HAC||(L->leg==TEL_LEG_TURN&&bank_ff!=0.0)) lim=TEL_BANK_ARC;
-    lim=fmin(lim,model->vehicle.maximum_bank_angle);
-    *bank_cmd=-clampd(bank_left,-lim,lim);
+    *bank_cmd=tel_lateral(L,&c,&s);
     /* on the runway line the vertical reference is the signed distance to the station */
     double along_v=L->leg==TEL_LEG_FINAL?-D-s.x:L->s_go;
     *aoa_cmd=tel_vertical(&c,&s,*bank_cmd,L->k,along_v,true);

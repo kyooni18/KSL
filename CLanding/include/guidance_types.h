@@ -111,6 +111,9 @@ typedef struct { double e,n; } HACPoint2;
 /* MM305 predictive energy law state (guidance/taem/energy_law.inc). */
 typedef struct {
     bool initialized, loop;
+    /* Wide inlets require a spatial capture forecast; keep the qualified
+       near-centreline schedule on its existing segment predictor. */
+    bool capture_forecast;
     int leg, side;
     double radius, r_turn, x_turn, turn_cx, turn_cy;
     double k, s_req, s_go, last_geo_ut, last_pred_ut;

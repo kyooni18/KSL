@@ -7,7 +7,50 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../CLanding/include/sim_telemetry.h"
 #include "../CLanding/guidance/taem/energy_law.inc"
+
+/* The 14:24 KST run reached this inlet before the operator's engine
+   firings.  Maximum drag modulation must not be selected while the actual
+   high-speed capture turn already leaves the station beyond glide range. */
+static void recorded_capture_range(void) {
+    LandingConfiguration cfg=landing_configuration_default();
+    cfg.vehicle.maximum_bank_angle=70.0;
+    cfg.guidance.final_approach_distance=9000.0;
+    cfg.guidance.final_glide_slope=20.0;
+    cfg.guidance.final_alignment_speed=160.0;
+    char attitude[512],reason[192];
+    TerminalModelSourceFiles files={
+        .atmosphere_csv="ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+        .aero_csv="ShuttleSim/reference-model/sts_aero_live20261010.csv",
+        .attitude_ini=shuttle_sim_model_path(NULL,SHUTTLE_SIM_MODEL_ATTITUDE,
+            attitude,sizeof(attitude))
+    };
+    TerminalModel *model=calloc(1,sizeof(*model));
+    assert(model&&terminal_model_capture(model,&files,&cfg,1,reason,sizeof(reason)));
+    TelContext c={.model=model,.d_station=9000.0,.v_station=160.0,.aoa_max=15.0};
+    c.h_station=c.d_station*tan(20.0*DEG2RAD);
+    c.e_station=c.h_station+160.0*160.0/(2.0*TEL_G0);
+    TelPoint inlet={.x=-38498.0,.y=41727.0,.h=25789.0,.v=864.0,
+        .g=-6.788758*DEG2RAD,.psi=28.984301*DEG2RAD,.m=24073.0,
+        .aoa=17.83,.bank=37.3};
+    TaemEnergyLawState route={.initialized=true,.loop=true,.capture_forecast=true,.leg=TEL_LEG_DOWN,
+        .side=-1,.radius=4207.0};
+    TelSegment segs[5];
+    double path=tel_sum(segs,tel_segments(&route,&c,&inlet,segs));
+    double predicted;
+    assert(tel_solve_k(&route,&c,&inlet,&predicted)==0.0);
+    assert(predicted<path-20000.0);
+    /* Once abeam, a wide capture must point back toward the actual station,
+       rather than the always-forward centreline lookahead. */
+    route.loop=false;route.leg=TEL_LEG_OUT;
+    TelPoint abeam=inlet;
+    abeam.x=10000.0;abeam.y=40000.0;abeam.v=160.0;
+    abeam.psi=-100.0*DEG2RAD;
+    assert(tel_lateral(&route,&c,&abeam)>0.0);
+    assert(route.leg==TEL_LEG_OUT);
+    free(model);
+}
 
 int main(void){
     /* Whole-include white-box test: the full static law is linked for ABI
@@ -33,6 +76,7 @@ int main(void){
     assert(tel_final_line_ready(&c,&polar));
     polar.y=NAN;
     assert(!tel_final_line_ready(&c,&polar));
+    recorded_capture_range();
     puts("MM305 off-axis and Final-mode geometry tests passed.");
     return 0;
 }

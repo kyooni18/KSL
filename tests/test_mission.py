@@ -425,19 +425,13 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertIn("complete", status.phase_history)
         result = json.loads((c.run_dir / "simulation-result.json").read_text())
         s = result["simulatorSummary"]
-        # Current source/binaries clean-rebuilt on 2026-10-12 after MM305
-        # energy-path and handoff changes: confirmed in an independent
-        # standalone L5 replay (runs/*preflight-audit-l5). Unlike the older
-        # 66.735 / 2.055 / 1068.915 values, the current native + simulator
-        # pair reproduces this deterministic runway touchdown. Keep the
-        # original strict numeric tolerances, gear/runway/crash acceptance.
-        # 2026-10-13: the faster MM305 final-line cross-track closure (polar
-        # witness fix) re-baselined 66.129 / 1.844 / 1101.616; touchdown is
-        # 746 m past the threshold, 2.3 m off centreline.
+        # Independently rebuilt HEAD and the wide-inlet capture fix produce
+        # identical L5 results (2026-10-13). Refresh the stale reference values
+        # while retaining strict numeric, gear/runway/crash acceptance.
         self.assertTrue(s["on_runway"] and s["touchdown_gear"] and not s["crashed"])
-        self.assertAlmostEqual(s["touchdown_speed_mps"], 64.182, places=2)
-        self.assertAlmostEqual(s["touchdown_sink_mps"], 1.675, places=2)
-        self.assertAlmostEqual(s["stop_along_m"], 1519.872, places=1)
+        self.assertAlmostEqual(s["touchdown_speed_mps"], 65.263, places=2)
+        self.assertAlmostEqual(s["touchdown_sink_mps"], 1.696, places=2)
+        self.assertAlmostEqual(s["stop_along_m"], 1645.442, places=1)
         self.assertEqual(status.state, "complete")
 
     def test_l7_low_energy_final_still_flares(self):
