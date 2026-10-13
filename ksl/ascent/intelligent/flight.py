@@ -359,8 +359,14 @@ def fly(conn, config, output, launch):
                 if sc.active_vessel != vessel:
                     raise RuntimeError('Active vessel changed; releasing guidance')
                 engines = propulsion.update()
-                thrust = sum(e.available_thrust for e in engines)
-                isp = sum(e.specific_impulse*e.available_thrust for e in engines)/max(1., thrust)
+                fixed_thrust = sum(e.thrust for e in engines if e.throttle_locked)
+                thrust = fixed_thrust+sum(e.available_thrust for e in engines if not e.throttle_locked)
+                fixed_flow = sum(e.thrust/(max(e.specific_impulse, 1.)*9.80665)
+                                 for e in engines if e.throttle_locked)
+                mass_flow = fixed_flow+sum(
+                    e.available_thrust/(max(e.specific_impulse, 1.)*9.80665)
+                    for e in engines if not e.throttle_locked)
+                isp = thrust/max(1e-9, mass_flow*9.80665)
                 f = vessel.flight(body.reference_frame)
                 inertial = vessel.flight(body.non_rotating_reference_frame)
                 drag = norm(f.drag)/vessel.mass
@@ -369,8 +375,8 @@ def fly(conn, config, output, launch):
                                    lift[2]*math.sin(math.radians(heading)))/vessel.mass
                 state = State(f.mean_altitude, f.vertical_speed, inertial.horizontal_speed,
                               vessel.mass, thrust, isp, f.dynamic_pressure, drag,
-                              sum(e.thrust for e in engines if e.throttle_locked), f.horizontal_speed,
-                              lift[0]/vessel.mass, horizontal_lift)
+                              fixed_thrust, f.horizontal_speed,
+                              lift[0]/vessel.mass, horizontal_lift, mass_flow, fixed_flow)
                 if thrust <= 0 and not coasting:
                     no_thrust_since = no_thrust_since or time.monotonic()
                     if time.monotonic()-no_thrust_since > 15.:

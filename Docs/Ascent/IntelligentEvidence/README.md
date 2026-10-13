@@ -17,6 +17,11 @@ experiments, not a reliability qualification of the final source.
   pre-change commit `24ca7d0`, using the same native artifacts, reproduced the
   identical failure. Landing files were not changed by this ascent work.
 
+The subsequent mixed-propulsion fuel-flow correction passed all 19 focused
+intelligent-ascent tests. The predictor now accounts separately for fixed solid
+fuel flow and throttle-dependent liquid flow; legacy guidance is unaffected.
+This correction has not yet flown live.
+
 ## Independent point-mass experiments
 
 `point-mass-matrix.jsonl`: nine combinations of 10, 30 and 80 tonne initial mass

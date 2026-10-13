@@ -26,6 +26,8 @@ class State:
     surface_horizontal: float = -1.  # -1 means nonrotating offline plant
     lift_radial: float = 0.
     lift_horizontal: float = 0.
+    mass_flow: float = -1.  # full-throttle kg/s; -1 uses the scalar Isp fallback
+    fixed_mass_flow: float = 0.  # unthrottleable kg/s
 
 
 @dataclass(frozen=True)
@@ -69,7 +71,8 @@ def step(s, target, pitch, throttle, dt):
     """Midpoint integration of planar equations, with a measured local drag model."""
     p = math.radians(pitch)
     force = s.fixed_thrust+(s.thrust-s.fixed_thrust)*throttle
-    flow = force/(max(s.isp, 1.)*9.80665)
+    flow = (s.fixed_mass_flow+(s.mass_flow-s.fixed_mass_flow)*throttle
+            if s.mass_flow >= 0 else force/(max(s.isp, 1.)*9.80665))
     def derivative(h, vr, vt, mass):
         r = target.radius+h
         speed = max(1., math.hypot(vr, vt))

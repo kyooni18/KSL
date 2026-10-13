@@ -188,3 +188,21 @@ def test_coast_releases_warp_when_scene_or_vessel_changes(scene, active):
     with pytest.raises(RuntimeError, match='changed'):
         coast_until(conn, 'owned', 100., controls, float('inf'))
     assert sc.rails_warp_factor == 0
+
+
+def test_mixed_propellant_flow_preserves_solid_consumption_at_liquid_cutoff():
+    from dataclasses import replace
+    from ksl.ascent.intelligent.planner import State, Target, step
+    target = Target(600000., 3.5316e12, 70000., 100000., 100000.)
+    solid, liquid = 100000., 200000.
+    solid_flow, liquid_flow = solid/(200.*9.80665), liquid/(400.*9.80665)
+    state = State(1000., 100., 0., 10000., solid+liquid, 300.,
+                  fixed_thrust=solid, mass_flow=solid_flow+liquid_flow,
+                  fixed_mass_flow=solid_flow)
+    for throttle in (0., .5, 1.):
+        result = step(state, target, 90., throttle, 2.)
+        assert result.mass == pytest.approx(state.mass-2*(solid_flow+liquid_flow*throttle))
+    # Existing callers retain their scalar-Isp model when no flow is supplied.
+    fallback = replace(state, mass_flow=-1.)
+    assert step(fallback, target, 90., 0., 2.).mass == pytest.approx(
+        state.mass-2*solid/(300.*9.80665))
