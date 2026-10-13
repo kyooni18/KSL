@@ -22,6 +22,8 @@ import time
 
 import krpc
 
+from .engine_roles import is_oms_engine
+
 
 def _dot(a, b):
     return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
@@ -78,10 +80,10 @@ def engine_moment(vessel, frame, min_thrust=1.0, axis_override=None):
                 continue
             d = None
             for key, axis in (axis_override or {}).items():
-                if key in engine.part.title:
+                if key.casefold() in engine.part.title.casefold():
                     d = axis
             if d is None:
-                if 'Viking' in engine.part.title:
+                if is_oms_engine(engine):
                     continue  # OMS part axis is wrong; skip unless a measured axis is given
                 d = engine.part.direction(frame)
             p = engine.part.position(frame)

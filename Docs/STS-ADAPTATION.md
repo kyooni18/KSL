@@ -12,7 +12,12 @@ The initial fallback values in `vehicle` were copied from the STS-N default prof
 
 ## Propulsion constraint
 
-The saved craft contains three aft SSMEs and two AJ10 OMS engines. The OMS pair is mirrored about the same lateral line as the SSMEs in the saved part positions, so equal pair thrust should cancel most lateral thrust moment. This is a static geometry observation; loaded-vessel CoM and actual engine state must be checked in KSP.
+The conventional STS OMS configuration uses two Terrier engines (0.5 t, 60 kN,
+345 s each), replacing the former Viking engines (0.8 t, 30 kN, 316 s each).
+The OMS pair is mirrored about the same lateral line as the SSMEs in the saved
+part positions, so equal pair thrust should cancel most lateral thrust moment.
+This is a static geometry observation; loaded-vessel CoM and actual engine state
+must be checked in KSP.
 
 The deorbit controller commands vessel throttle and plans from aggregate live vessel thrust. It does not select OMS engines or balance thrust moments engine by engine. For an OMS deorbit, configure the craft so the paired OMS engines are active and the SSMEs are shut down before planning. Confirm live `availableThrust`, `currentThrust`, mass, and attitude rates before and during a cautious burn. The inherited 18% deorbit throttle limit is not yet validated for this craft and should be reviewed against the live OMS-only thrust and planned burn duration.
 

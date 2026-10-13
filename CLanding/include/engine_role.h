@@ -18,7 +18,9 @@ static inline EngineRole engine_role_identify(const char *name,const char *title
     if(tag&&(!strcmp(tag,"OMS")||!strcmp(tag,"oms")))return ENGINE_ROLE_OMS;
     if(tag&&(!strcmp(tag,"SSME")||!strcmp(tag,"ssme")))return ENGINE_ROLE_MAIN;
     if(engine_role_contains(name,"SSME")||engine_role_contains(title,"space shuttle main engine"))return ENGINE_ROLE_MAIN;
-    if(engine_role_contains(title,"orbital manoeuvr")||engine_role_contains(title,"orbital maneuver")||engine_role_contains(name,"OMS"))return ENGINE_ROLE_OMS;
+    if(engine_role_contains(title,"orbital manoeuvr")||engine_role_contains(title,"orbital maneuver")||
+       engine_role_contains(title,"terrier")||engine_role_contains(name,"terrier")||
+       engine_role_contains(name,"OMS"))return ENGINE_ROLE_OMS;
     return ENGINE_ROLE_OTHER;
 }
 static inline bool engine_role_selected(EngineRole role,bool has_oms){

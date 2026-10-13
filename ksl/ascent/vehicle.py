@@ -4,6 +4,7 @@ import time
 
 from .allocation import Allocation, allocate
 from .events import emit_event
+from .engine_roles import is_oms_engine
 from .geometry import slew_vector, smoothstep01
 from .guidance import THROTTLE_SLEW_PER_SECOND
 
@@ -480,12 +481,11 @@ class Shuttle:
         self.vehicle_kind = 'orbiter-shuttle'
         engines = [part_engine(p) for p in parts if part_engine(p) is not None]
         ssmes = [e for e in engines if e.part.name == 'SSME']
-        self.orbiter_engines = [e for e in engines
-                                if e.part.name == 'benjee10.AJ10.v2']
+        self.orbiter_engines = [e for e in engines if is_oms_engine(e)]
         if len(ssmes) != 3:
             raise ValueError(f'Expected three SSMEs, found {len(ssmes)}')
         if len(self.orbiter_engines) != 2:
-            raise ValueError(f'Expected two AJ10 orbital engines, found {len(self.orbiter_engines)}')
+            raise ValueError(f'Expected two OMS engines, found {len(self.orbiter_engines)}')
         self.skiff = self.orbiter_engines[0]
         self.wolfhound = None
         self.et_skippers = []
@@ -1017,7 +1017,7 @@ class Shuttle:
             except Exception:
                 pass
             emit_event('et-separation')
-            print('External tank separated; AJ10 orbital engines enabled')
+            print('External tank separated; OMS engines enabled')
             return True
         for group in self.core_groups[1:]:
             for engine in group:

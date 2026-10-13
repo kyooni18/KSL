@@ -20,7 +20,7 @@ Savegame `Main` (`/Applications/.Misc/LMPKSP/saves/Main`), flight scene.
 | Mass / dry mass | 26146.85 kg / 20348.0 kg | live |
 | LF / Ox / MonoProp / EC | 377.9 / 461.9 / 400 / 210 (of 378 / 462 / 400 / 210) | live |
 | SSMEs (×3) | inactive, 1000 kN available each | live |
-| OMS AJ10.v2 (×2) | active, 30 kN available each, throttle 0 | live |
+| OMS AJ10.v2 (×2) | active, 30 kN available each, throttle 0 | live, historical Viking configuration |
 | Attitude | pitch −89.8°, heading 229.9°, roll −139.9°, angular rate 0 | live |
 | Control | throttle 0, SAS off, RCS off, autopilot off, brakes off, gear off, AG1 on | live |
 

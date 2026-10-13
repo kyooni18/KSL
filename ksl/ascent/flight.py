@@ -229,7 +229,7 @@ def run(args):
         elif shuttle.vehicle_kind == 'orbiter-shuttle':
             ssme_thrust = sum(e.max_thrust for e in shuttle.core_groups[0])
             oms_thrust = sum(e.max_thrust for e in shuttle.orbiter_engines)
-            print(f"Orbiter SSMEs / paired AJ10 OMS: {ssme_thrust/1000:.0f}/"
+            print(f"Orbiter SSMEs / paired OMS: {ssme_thrust/1000:.0f}/"
                   f"{oms_thrust/1000:.0f} kN; external-tank propellant "
                   f"LF/Ox={shuttle.et_resource_amount('LiquidFuel'):.0f}/"
                   f"{shuttle.et_resource_amount('Oxidizer'):.0f}")

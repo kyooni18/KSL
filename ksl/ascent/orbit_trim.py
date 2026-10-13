@@ -16,6 +16,7 @@ import krpc
 
 from ..controls import Controls, warp_until
 from . import orbit_math as om
+from .engine_roles import is_oms_engine
 from .events import emit_event
 
 
@@ -467,7 +468,9 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                     an = math.sqrt(sum(c*c for c in axis))
                     axis = tuple(c/an for c in axis)
                 MEASURED_AXIS['axis'] = axis
-                ap.ctrl.axis_override = {'Viking': axis}
+                ap.ctrl.axis_override = {
+                    'Terrier': axis, 'Viking': axis, 'AJ10': axis, 'Orbital': axis,
+                }
                 window = [0.0, 0.0, 0.0]
             elif wn > 2.0:
                 window = [0.0, 0.0, 0.0]
@@ -531,12 +534,15 @@ def prepare(conn):
     CUSTOM_AP['ap'].ctrl.rate_tau = 0.4
     CUSTOM_AP['ap'].ctrl.max_rate = (math.radians(10.0),)*3
     CUSTOM_AP['ap'].ctrl.deadband = 0.03
-    CUSTOM_AP['ap'].ctrl.axis_override = {'Viking': MEASURED_AXIS['axis']}
+    oms_axis = MEASURED_AXIS['axis']
+    CUSTOM_AP['ap'].ctrl.axis_override = {
+        'Terrier': oms_axis, 'Viking': oms_axis, 'AJ10': oms_axis, 'Orbital': oms_axis,
+    }
     sc = conn.space_center
     vessel = sc.active_vessel
     vessel.control.sas = False
     for engine in vessel.parts.engines:
-        engine.active = 'Viking' in engine.part.title or 'Orbital' in engine.part.title
+        engine.active = is_oms_engine(engine)
     # Reaction wheels need power: the orbiter has no panels, only a fuel cell.
     for converter in vessel.parts.resource_converters:
         for i in range(converter.count):

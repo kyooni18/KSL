@@ -6,11 +6,11 @@ topology, controls engine thrust and pitch moment, and handles booster and ET
 separation followed by orbital insertion.
 
 The active STS observed over kRPC has three SSMEs fed from its external tank,
-two Clydesdale solid boosters, two AJ10 orbital engines, and one Mite motor
+two Clydesdale solid boosters, two Terrier OMS engines, and one Mite motor
 attached to each booster. The controller throttles the SSMEs, accounts for the
 fixed booster thrust, separates both Clydesdales after burnout, then disables
-the SSMEs and enables both AJ10s when the ET is released. The Mites remain under
-stock staging. The documented
+the SSMEs and enables both Terrier OMS engines when the ET is released. The
+Mites remain under stock staging. The documented
 four-Skipper and J-N500 layouts remain separate supported variants; their
 variant-specific allocation notes below do not describe this Orbiter craft.
 The ascent also applies a 25 kPa default dynamic-pressure cap and a measured-G
@@ -82,7 +82,7 @@ periapsis is positive and below the 70 km atmosphere boundary. Reaching target
 apoapsis alone cannot discard the ET with insufficient horizontal energy.
 If apoapsis arrives first, `--meco-pitch 0` commands a near-horizontal energy-build
 segment through the configured pitch slew until the periapsis gate is met. If ET propellant runs low first, the
-program separates the tank and hands off to the AJ10s rather than allowing an
+program separates the tank and hands off to the Terrier OMS engines rather than allowing an
 SSME fuel-out.
 The shuttle preserves its measured pad roll through the first 30 m of climb, then
 performs a dedicated rate-damped body roll to twice the launch heading, wrapped to
