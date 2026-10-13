@@ -5,6 +5,17 @@
 int main(void){
  PlanetModel p={0};p.radius=600000;p.gravitational_parameter=3.5316e12;p.rotational_speed=.0002915709;p.atmosphere_depth=70000;p.north_axis=v3(0,0,1);p.prime_meridian_at_epoch=v3(1,0,0);
  LandingConfiguration cfg=landing_configuration_default();
+ GeoPoint west=destination_point((GeoPoint){cfg.site.latitude,
+     cfg.site.longitude,cfg.site.altitude},270.0,5000.0,p.radius);
+ DeorbitEnergyMargin runway_margin={0};
+ deorbit_passive_runway_margin(west,&cfg.site,p.radius,&runway_margin);
+ assert(runway_margin.impact_runway_end==1&&
+     runway_margin.impact_along_track>7000.0);
+ cfg.site.allow_reciprocal_runway=false;
+ deorbit_passive_runway_margin(west,&cfg.site,p.radius,&runway_margin);
+ assert(runway_margin.impact_runway_end==0&&
+     runway_margin.impact_along_track<-4000.0);
+ cfg.site.allow_reciprocal_runway=true;
  cfg.guidance.target_post_burn_periapsis_altitude=50000;
  cfg.guidance.target_deorbit_capture_radius=15000;
  VehicleState state={0};state.position=v3(686000,0,0);state.velocity=v3(0,sqrt(p.gravitational_parameter/686000),0);state.mass=26000;

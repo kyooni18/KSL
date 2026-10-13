@@ -654,6 +654,7 @@ bool reentry_guidance_shadow_recovery_qualified(const EntryPrediction*p,
 typedef struct {
     bool valid;
     double impact_along_track,impact_cross_track,impact_range,impact_altitude,impact_speed;
+    int impact_runway_end;
 } DeorbitEnergyMargin;
 typedef struct {
     double burn_ut,dv,duration,peri,requested_periapsis_altitude,score;

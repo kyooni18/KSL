@@ -12,6 +12,31 @@ static double deorbit_effective_entry_range(const GuidanceSettings*s,const Plane
     return s->target_entry_range*clampd(scale,0.7,2.0);
 }
 
+static void deorbit_passive_runway_margin(GeoPoint geo,const LandingSite*site,
+        double radius,DeorbitEnergyMargin*m){
+    GeoPoint site_geo={site->latitude,site->longitude,site->altitude};
+    double along=0.0,cross=0.0;
+    runway_coordinates(geo,site_geo,site->runway_heading,radius,&along,&cross);
+    m->impact_runway_end=0;
+    if(site->allow_reciprocal_runway){
+        LandingSite reciprocal=runway_reciprocal_site(site,radius);
+        GeoPoint reciprocal_geo={reciprocal.latitude,reciprocal.longitude,
+            reciprocal.altitude};
+        double reciprocal_along=0.0,reciprocal_cross=0.0;
+        runway_coordinates(geo,reciprocal_geo,reciprocal.runway_heading,radius,
+            &reciprocal_along,&reciprocal_cross);
+        /* Passive overflight reserve belongs to either usable runway end.
+           A western approach need not pass the RW09 threshold to reach RW27. */
+        if(isfinite(reciprocal_along)&&reciprocal_along>along){
+            along=reciprocal_along;
+            cross=reciprocal_cross;
+            m->impact_runway_end=1;
+        }
+    }
+    m->impact_along_track=along;
+    m->impact_cross_track=cross;
+}
+
 static DeorbitEnergyMargin deorbit_energy_margin_probe(VehicleState after,const PlanetModel*p,
         AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s){
@@ -33,11 +58,10 @@ static DeorbitEnergyMargin deorbit_energy_margin_probe(VehicleState after,const 
     Vector3 surface_velocity=vsub(final.velocity,vcross(planet_rotation_vector(p),final.position));
     double vertical=vdot(surface_velocity,up);
     GeoPoint site_geo={site->latitude,site->longitude,site->altitude};
-    double along=0.0,cross=0.0;
-    runway_coordinates(geo,site_geo,site->runway_heading,p->radius,&along,&cross);
-    m.valid=passive.entered_atmosphere&&isfinite(geo.altitude)&&isfinite(along)&&isfinite(cross)&&
+    deorbit_passive_runway_margin(geo,site,p->radius,&m);
+    m.valid=passive.entered_atmosphere&&isfinite(geo.altitude)&&
+        isfinite(m.impact_along_track)&&isfinite(m.impact_cross_track)&&
         isfinite(vertical)&&geo.altitude<=site->altitude+750.0&&vertical<0.0;
-    m.impact_along_track=along;m.impact_cross_track=cross;
     m.impact_range=great_circle_distance(geo,site_geo,p->radius);
     m.impact_altitude=geo.altitude;m.impact_speed=vmag(surface_velocity);
     entry_prediction_clear(&passive);

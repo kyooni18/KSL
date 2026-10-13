@@ -15,6 +15,6 @@ The 2026-10-13 flight record is split between `runs/20261013T133312Z-sts-85km-10
 2. Deorbit candidate ranking now values a captured MM305 ownership boundary and a smaller energy deficit before a close ground endpoint. A completed, equally qualified approach still uses endpoint miss to break a tie.
 3. MM304 includes a bounded turn to the Final alignment point in its near-terminal drag budget, warns when its maximum-range profile still falls short, and can reverse bank to arrest measured cross-track motion inside the azimuth deadband.
 4. Reentry continuation enters MM305 directly only after crossing the same upper altitude and Mach boundary used by live MM304 handoff.
-5. STS live guidance enables both runway directions and previews the shorter reachable path before MM304 hands off, retaining the chosen runway frame through MM305.
+5. STS live guidance enables both runway directions and previews the shorter reachable path before MM304 hands off, retaining the chosen runway frame through MM305. The deorbit passive overflight reserve can be satisfied by either threshold.
 
 Offline unit and configuration tests cover these changes. No live KSP test or successful landing has been observed after this patch. A route that still cannot satisfy the native energy and robustness proof will be rejected by the acceptance mission before its deorbit burn.
