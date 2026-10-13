@@ -162,6 +162,8 @@ typedef struct {
     EntryExecutive entry_exec; EntryLateralState entry_lateral; EntryEnergyState entry_energy; TaemExecutive taem_exec;
     bool entry_alpha_has_target, entry_alpha_has_modulation, entry_drag_ratio_valid;
     double entry_alpha_target, entry_alpha_modulation, entry_alpha_drag_boost, entry_drag_velocity_ratio;
+    /* Low-passed drag deficit and yaw-reserve AoA ceiling for the proportional boost. */
+    double entry_alpha_deficit_filter, entry_alpha_ceiling_filter; bool entry_alpha_filter_valid;
     bool entry_bank_authority_acquired;
     bool entry_supervision_valid, entry_supervision_boundary_missed; EntrySupervisionMode entry_supervision_mode;
 

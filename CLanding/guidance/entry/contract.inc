@@ -394,10 +394,25 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
            bank could not shed in time; it passed 18 km from KSC at 35 km. */
         double deficit=isfinite(measured_drag_accel)&&drag.reference_drag_accel>1e-6?
             clampd(1.0-measured_drag_accel/drag.reference_drag_accel,0.0,1.0):0.0;
+        double ceiling=fmin(alpha_ceiling,v->maximum_angle_of_attack);
+        /* Measured drag answers the incidence within one cycle and the yaw-
+           reserve ceiling follows rudder use, so feeding either straight back
+           produced a 2-degree target-AoA limit cycle at 62 km (10:07 polar
+           retake).  Low-pass both before they set the boost goal. */
+        if(!g->entry_alpha_filter_valid){
+            g->entry_alpha_deficit_filter=deficit;g->entry_alpha_ceiling_filter=ceiling;
+            g->entry_alpha_filter_valid=true;
+        }else{
+            double a=clampd(dt/8.0,0.0,1.0);
+            g->entry_alpha_deficit_filter+=(deficit-g->entry_alpha_deficit_filter)*a;
+            /* A tighter ceiling (more yaw demand) is honoured faster. */
+            double b=clampd(dt/(ceiling<g->entry_alpha_ceiling_filter?2.0:8.0),0.0,1.0);
+            g->entry_alpha_ceiling_filter+=(ceiling-g->entry_alpha_ceiling_filter)*b;
+        }
         double proportional=structural_clear?
-            fmax(0.0,fmin(alpha_ceiling,v->maximum_angle_of_attack)-alpha.target_aoa)*deficit:0.0;
+            fmax(0.0,g->entry_alpha_ceiling_filter-alpha.target_aoa)*g->entry_alpha_deficit_filter:0.0;
         double goal=need_drag?headroom:fmin(headroom,proportional);
-        double rate=1.0*fmax(0.0,dt);
+        double rate=(need_drag?1.0:0.5)*fmax(0.0,dt);
         g->entry_alpha_drag_boost=g->entry_alpha_drag_boost<goal?
             fmin(goal,g->entry_alpha_drag_boost+rate):
             fmax(goal,g->entry_alpha_drag_boost-rate);

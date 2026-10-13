@@ -961,6 +961,11 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         selected_inlet=full;
     }
     unsigned inlet_candidates_evaluated=1;
+    /* (burn-start offset, witness inlet range) of every scanned candidate. */
+    double scan_dt[8],scan_range[8];int scan_count=0;
+    if(isfinite(selected_inlet.taem_distance)&&selected_inlet.reached_taem){
+        scan_dt[scan_count]=0.0;scan_range[scan_count++]=selected_inlet.taem_distance;}
+    double scan_origin=timing_best.burn_start;
     double inlet_step=s->target_deorbit_capture_radius/
         fmax(1.0,timing_best.entry_speed);
     if(!isfinite(inlet_step)||inlet_step<=0.0)inlet_step=0.0;
@@ -988,6 +993,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             nearby_inlet=full;
         }
         inlet_candidates_evaluated++;
+        if(scan_count<8&&isfinite(nearby_inlet.taem_distance)&&nearby_inlet.reached_taem){
+            scan_dt[scan_count]=offset*inlet_step;scan_range[scan_count++]=nearby_inlet.taem_distance;}
         bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
             &selected,&selected_inlet,p,site,v,s);
         if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
@@ -1009,6 +1016,59 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         }else{
             candidate_clear(&nearby);
             entry_prediction_clear(&nearby_inlet);
+        }
+    }
+    /* The scan step (~43 s) moves the polar MM305 inlet ~75 km, so nothing
+       near the configured inlet range may be sampled (2026-10-13: 132/57/26 km;
+       the 57 km pick overshot live once the bay-closed vehicle glided further
+       than the learned envelope).  Secant-refine inside the adjacent pair that
+       brackets the nominal range; candidates are ranked by the same rule. */
+    {
+        double nominal=entry_taem_range_target(p,s);
+        for(int i=0;i<scan_count;i++)for(int j=i+1;j<scan_count;j++)
+            if(scan_dt[j]<scan_dt[i]){double t=scan_dt[i];scan_dt[i]=scan_dt[j];scan_dt[j]=t;
+                t=scan_range[i];scan_range[i]=scan_range[j];scan_range[j]=t;}
+        int bracket=-1;
+        for(int i=0;i+1<scan_count;i++)
+            if((scan_range[i]-nominal)*(scan_range[i+1]-nominal)<0.0&&
+               scan_dt[i+1]-scan_dt[i]<=1.5*inlet_step){bracket=i;break;}
+        double lo_dt=bracket>=0?scan_dt[bracket]:0.0,lo_r=bracket>=0?scan_range[bracket]:0.0;
+        double hi_dt=bracket>=0?scan_dt[bracket+1]:0.0,hi_r=bracket>=0?scan_range[bracket+1]:0.0;
+        for(int it=0;bracket>=0&&it<3;it++){
+            double dt=lo_dt+(nominal-lo_r)*(hi_dt-lo_dt)/(hi_r-lo_r);
+            dt=clampd(dt,lo_dt+.1*(hi_dt-lo_dt),hi_dt-.1*(hi_dt-lo_dt));
+            double start=scan_origin+dt;
+            if(start<state.ut+lead||start>state.ut+lead+search_horizon)break;
+            Candidate refined;memset(&refined,0,sizeof(refined));
+            trajectory_init(&refined.pred.trajectory);
+            if(!deorbit_evaluate_start(&refined,state,start,0.0,timing_best.normal_angle,
+                    p,aero,env,cal,site,v,s,thrust,NULL)){candidate_clear(&refined);break;}
+            EntryPrediction refined_inlet=deorbit_executable_policy_witness(
+                &refined,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+            if(native_terminal&&refined_inlet.taem_dynamic_interface_captured&&
+               refined_inlet.taem_interface_energy_margin>=0.0&&
+               deorbit_witness_inlet_geometry(&refined_inlet,p,site,s)){
+                EntryPrediction full=deorbit_executable_policy_witness(
+                    &refined,p,aero,env,cal,site,v,s,authority_source,
+                    terminal_model,true,false);
+                entry_prediction_clear(&refined_inlet);
+                refined_inlet=full;
+            }
+            inlet_candidates_evaluated++;
+            double r=refined_inlet.reached_taem?refined_inlet.taem_distance:NAN;
+            bool better=deorbit_guided_candidate_better(&refined,&refined_inlet,
+                &selected,&selected_inlet,p,site,v,s);
+            if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+                fprintf(stderr,"DEORBIT_INLET_REFINE dt=%+.1fs burn=%.1f range=%.1fkm geometry=%d chosen=%d\n",
+                    dt,refined.burn_ut,r/1000.0,
+                    deorbit_witness_inlet_geometry(&refined_inlet,p,site,s)?1:0,better?1:0);
+            if(better){
+                candidate_clear(&selected);entry_prediction_clear(&selected_inlet);
+                selected=refined;selected_inlet=refined_inlet;
+            }else{candidate_clear(&refined);entry_prediction_clear(&refined_inlet);}
+            if(!isfinite(r))break;
+            if((r-nominal)*(lo_r-nominal)>0.0){lo_dt=dt;lo_r=r;}else{hi_dt=dt;hi_r=r;}
+            if(fabs(r-nominal)<5000.0)break;
         }
     }
     if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
