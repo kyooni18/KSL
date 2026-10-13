@@ -358,12 +358,19 @@ class TuiTests(unittest.IsolatedAsyncioTestCase):
             await pilot.press("m")
             app.query_one("#inclination", Input).value = "51.6"
             app.query_one("#altitude", Input).value = "120"
-            app.query_one("#overrides", Input).value = "ascent.targetAltitudeKm=400 orbit.trim=false"
+            app.query_one("#overrides", Input).value = "ascent.targetAltitudeKm=400 orbit.trim=true"
+            from textual.widgets import Select, Switch
+            app.query_one("#orbit-trim", Switch).value = False
+            app.query_one("#kind", Select).value = "geo"
+            app.query_one("#geo-longitude", Input).value = "-30"
             sel = app._selection()
         config = load_config(sel["profile"], sel["overrides"])
         self.assertEqual(config.data["ascent"]["inclinationDeg"], 51.6)
         self.assertEqual(config.data["ascent"]["targetAltitudeKm"], 120)
-        self.assertFalse(config.data["orbit"]["trim"])
+        self.assertFalse(config.data["orbit"]["trim"])  # the switch owns it, not the free-text box
+        self.assertEqual(config.data["profile"]["kind"], "geo")
+        self.assertEqual(config.data["profile"]["geoLongitudeDeg"], -30)
+        self.assertEqual(config.validate(), [])
 
     async def test_mode_limits_selectable_phases(self):
         from textual.widgets import Select

@@ -2,7 +2,11 @@
 
 Tabs
   Dashboard  phase strip, vehicle state, guidance/status, connection, event log
-  Mission    inclination / altitude / mode / phases / scenario; start and abort
+  Mission    orbit profile (circular, plane, GTO, GEO, rendezvous), inclination /
+             altitude, operations (auto-warp, orbit trim), mode / phases; start/abort
+  Controls   live operator controls of the watched run (any run, any process):
+             f warp now · x stop warp · g auto-warp on/off · o orbit trim on/off ·
+             h hold in orbit on/off · t trigger orbit trim
   Replay     recorded runs: summary, phase timeline, events, sample stepping
 
 The dashboard always watches a run *directory* (status.json + events.jsonl),
@@ -26,15 +30,23 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import (Button, DataTable, Footer, Header, Input, Label, RichLog, Select, Static,
-                             TabbedContent, TabPane)
+                             Switch, TabbedContent, TabPane)
 
-from .config import DEFAULT_PROFILE, DEFAULTS, ConfigError, load_config
+from .config import DEFAULT_PROFILE, DEFAULTS, PROFILE_KINDS, ConfigError, load_config
+from .controls import FILE_NAME as CONTROLS_FILE, Controls
 from .controller import MissionController, holdable
 from .phases import ENTRY_PHASES, SEQUENCE, MissionState, Phase, PhaseTransitionError, validate_range
 from .runlog import Event, MissionStatus, list_runs, read_status
 from .scenarios import SCENARIOS
 
 STALE_SECONDS = 15.0
+KIND_LABELS = {
+    "circular": "Circular orbit (altitude / inclination)",
+    "plane": "Plane of a moon/vessel (launch window), e.g. Minmus",
+    "gto": "GTO — ET semi-GTO, OMS apogee raise, stay in GTO",
+    "geo": "GEO — GTO over a chosen longitude, circularize if OMS dv allows",
+    "rendezvous": "Rendezvous — plane launch, parking orbit, Lambert transfer, RCS approach",
+}
 DEFAULT_MODE = "dry-run"
 LEVEL_STYLE = {"error": "bold red", "warning": "yellow", "info": "", "debug": "dim"}
 KIND_STYLE = {"phase": "bold cyan", "state": "bold", "milestone": "green", "checkpoint": "magenta"}
@@ -117,6 +129,8 @@ class KSLApp(App[int]):
     #setup { padding: 1 2; }
     #setup Label { margin-top: 1; }
     #setup Select, #setup Input { width: 60; }
+    .switchrow { height: auto; margin-top: 1; }
+    .switchrow Label { margin: 1 1 0 0; width: 44; }
     #buttons { height: auto; margin-top: 1; }
     #buttons Button { margin-right: 2; }
     #plan { border: round $primary-darken-2; height: auto; max-height: 14; padding: 0 1; margin-top: 1; }
@@ -134,6 +148,12 @@ class KSLApp(App[int]):
         Binding("w", "watch_latest", "Watch latest"),
         Binding("ctrl+l", "clear_log", "Clear log"),
         Binding("v", "toggle_verbose", "Raw output"),
+        Binding("f", "control('warpNow')", "Warp now"),
+        Binding("x", "control('warpStop')", "Stop warp"),
+        Binding("g", "control('autoWarp')", "Auto-warp"),
+        Binding("o", "control('trim')", "Orbit trim"),
+        Binding("h", "control('holdTrim')", "Hold"),
+        Binding("t", "control('trimNow')", "Trim now"),
         Binding("q", "quit_safe", "Quit"),
     ]
 
@@ -162,10 +182,43 @@ class KSLApp(App[int]):
                     yield KeyValue(id="mission-panel", classes="panel")
                     yield KeyValue(id="vehicle-panel", classes="panel")
                     yield KeyValue(id="guidance-panel", classes="panel")
+                    yield KeyValue(id="controls-panel", classes="panel")
                 yield RichLog(id="eventlog", wrap=True, markup=False, max_lines=5000)
             with TabPane("Mission", id="mission"):
                 with VerticalScroll(id="setup"):
                     ascent = self._base_ascent()
+                    base = self._base()
+                    pr = base["profile"]
+                    yield Label("Orbit profile")
+                    yield Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
+                                 allow_blank=False, id="kind")
+                    yield Label("Plane / rendezvous target (moon or vessel name)")
+                    yield Input(pr["planeTarget"], placeholder="e.g. Minmus or Station", id="plane-target")
+                    yield Label("GEO longitude (deg east; geo profile)")
+                    yield Input(f"{pr['geoLongitudeDeg']:g}", id="geo-longitude")
+                    yield Label("GTO perigee (km; gto/geo profiles)")
+                    yield Input(f"{pr['gtoPerigeeKm']:g}", id="gto-perigee")
+                    yield Label("GEO circularization")
+                    yield Select([("Auto — only if OMS delta-v is enough", "auto"), ("Always", "always"),
+                                  ("Never — stay in GTO", "never")], value=pr["geoCircularize"],
+                                 allow_blank=False, id="geo-circularize")
+                    with Horizontal(classes="switchrow"):
+                        yield Label("Wait for launch window (plane / rendezvous)")
+                        yield Switch(bool(pr["launchWindow"]), id="launch-window")
+                    with Horizontal(classes="switchrow"):
+                        yield Label("Phase GTO apogee onto the GEO longitude")
+                        yield Switch(bool(pr["targetLongitude"]), id="target-longitude")
+                    with Horizontal(classes="switchrow"):
+                        yield Label("Auto time-warp (live: g)")
+                        yield Switch(bool(base["operations"]["autoWarp"]), id="auto-warp")
+                    with Horizontal(classes="switchrow"):
+                        yield Label("Orbit trim / orbit operations (live: o)")
+                        yield Switch(bool(base["orbit"]["trim"]), id="orbit-trim")
+                    with Horizontal(classes="switchrow"):
+                        yield Label("Hold in orbit until triggered (live: h, t)")
+                        yield Switch(bool(base["orbit"]["holdForTrigger"]), id="hold-trim")
+                    yield Label("Maximum trim burns")
+                    yield Input(str(base["orbit"]["maxBurns"]), id="max-burns")
                     yield Label("Inclination (deg)")
                     yield Input(f"{ascent['inclinationDeg']:g}", id="inclination")
                     yield Label("Target altitude (km, circular orbit)")
@@ -202,7 +255,7 @@ class KSLApp(App[int]):
     def on_mount(self) -> None:
         self.query_one("#eventlog", RichLog).write(Text(
             "Keys: d/m/r tabs · s start · a abort (press twice) · w watch latest run · v raw program output · "
-            "q quit", style="dim"))
+            "f warp now · x stop warp · g auto-warp · o orbit trim · h hold · t trim now · q quit", style="dim"))
         table = self.query_one("#runs", DataTable)
         table.add_columns("Run", "Mode", "State", "Phase", "Profile")
         self.refresh_runs()
@@ -235,6 +288,7 @@ class KSLApp(App[int]):
             banner.update(Text("No mission selected — start one on the Mission tab (m) or press w to watch "
                                "the latest run.", style="dim"))
             mission.show("Mission", [("state", "—")])
+            self.query_one("#controls-panel", KeyValue).show("Controls", [("run", "—")])
             vehicle.show("Vehicle", [("altitude", "—")])
             guidance.show("Guidance", [("program", "—")])
             return
@@ -277,6 +331,38 @@ class KSLApp(App[int]):
             ("status", (status.status_message or "—")[:60]),
         ], style="")
         guidance.styles.border = ("round", conn_style)
+        self._render_controls()
+
+    def _controls(self) -> Controls | None:
+        if self.watcher is None:
+            return None
+        return Controls(self.watcher.run_dir / CONTROLS_FILE)
+
+    def _render_controls(self) -> None:
+        panel = self.query_one("#controls-panel", KeyValue)
+        controls = self._controls()
+        if controls is None or not (self.watcher.run_dir / CONTROLS_FILE).is_file():
+            panel.show("Controls", [("run", "— (no live controls)")])
+            return
+        c = controls.read()
+        on = lambda flag: "ON" if flag else "off"  # noqa: E731
+        panel.show("Controls", [("auto-warp [g]", on(c["autoWarp"])), ("orbit trim [o]", on(c["trim"])),
+                                ("hold [h]", on(c["holdTrim"])), ("warp now [f]", str(c["warpNow"])),
+                                ("trim now [t]", str(c["trimNow"]))])
+
+    def action_control(self, name: str) -> None:
+        controls = self._controls()
+        if controls is None:
+            self.notify("Watch a run first (start one, or press w).", severity="warning")
+            return
+        if name in ("autoWarp", "trim", "holdTrim"):
+            value = controls.toggle(name)
+            self.notify(f"{name} {'ON' if value else 'off'} for {self.watcher.run_dir.name}")
+        else:
+            controls.trigger(name)
+            self.notify({"warpNow": "Warp to the next event requested", "warpStop": "Warp stop requested",
+                         "trimNow": "Orbit operations triggered"}[name])
+        self._render_controls()
 
     def watch_run(self, run_dir: Path) -> None:
         self.watcher = RunWatcher(run_dir)
@@ -286,6 +372,12 @@ class KSLApp(App[int]):
         self.query_one("#eventlog", RichLog).focus()  # keep focus out of the hidden Mission pane
 
     # --- mission setup ----------------------------------------------------------------
+    def _base(self) -> dict[str, Any]:
+        try:
+            return load_config(self.profile, self.overrides).data
+        except ConfigError:
+            return DEFAULTS
+
     def _base_ascent(self) -> dict[str, Any]:
         """Ascent values of the base profile (plus CLI overrides), shown in the Mission fields."""
         try:
@@ -319,11 +411,26 @@ class KSLApp(App[int]):
         value = lambda wid: self.query_one(f"#{wid}", Select).value  # noqa: E731
         # The inclination and altitude fields are the single source for those two keys, so they
         # are appended last and any typed copy of them in the overrides box is dropped.
-        owned = ("ascent.inclinationDeg", "ascent.targetAltitudeKm")
+        switch = lambda wid: self.query_one(f"#{wid}", Switch).value  # noqa: E731
+        owned_values = {
+            "ascent.inclinationDeg": self._number("inclination", "Inclination"),
+            "ascent.targetAltitudeKm": self._number("altitude", "Altitude"),
+            "profile.kind": str(value("kind")),
+            "profile.planeTarget": self.query_one("#plane-target", Input).value.strip(),
+            "profile.geoLongitudeDeg": self._number("geo-longitude", "GEO longitude"),
+            "profile.gtoPerigeeKm": self._number("gto-perigee", "GTO perigee"),
+            "profile.geoCircularize": str(value("geo-circularize")),
+            "profile.launchWindow": switch("launch-window"),
+            "profile.targetLongitude": switch("target-longitude"),
+            "operations.autoWarp": switch("auto-warp"),
+            "orbit.trim": switch("orbit-trim"),
+            "orbit.holdForTrigger": switch("hold-trim"),
+            "orbit.maxBurns": int(self._number("max-burns", "Maximum trim burns")),
+        }
+        owned = tuple(owned_values)
         extra = [text for text in self.query_one("#overrides", Input).value.split()
                  if text.split("=", 1)[0] not in owned]
-        fields = [f"ascent.inclinationDeg={json.dumps(self._number('inclination', 'Inclination'))}",
-                  f"ascent.targetAltitudeKm={json.dumps(self._number('altitude', 'Altitude'))}"]
+        fields = [f"{key}={json.dumps(val)}" for key, val in owned_values.items()]
         return {"profile": self.profile, "mode": value("mode"), "start": Phase(value("start")),
                 "stop": Phase(value("stop")), "scenario": SCENARIOS[str(value("scenario"))],
                 "overrides": extra + fields}

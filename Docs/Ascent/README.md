@@ -213,3 +213,69 @@ API semantics were checked against the official kRPC documentation:
 [engines and parts](https://krpc.github.io/krpc/0.5.4/python/api/space-center/parts.html),
 [vessel frames](https://krpc.github.io/krpc/0.5.4/python/api/space-center/vessel.html),
 [resource transfers](https://krpc.github.io/krpc/python/api/space-center/resources.html).
+
+## Orbit profiles, trajectory corridor, trim and live controls (2026-10-13)
+
+**Status: offline-verified only (unit tests, fake kRPC node frames, dry runs). None
+of this has flown in KSP yet.** First live flight checklist is at the end.
+
+### Profile kinds (`profile.kind`, selectable in the TUI Mission tab)
+
+| kind | ascent (ET) | orbit operations (OMS) |
+|---|---|---|
+| `circular` | `targetAltitudeKm` × insertion Pe, `inclinationDeg` | exact one-burn trim, ≤ `orbit.maxBurns` (2) |
+| `plane` | waits for the pad to pass under `planeTarget`'s orbital plane (e.g. Minmus), PEG steers to that plane normal | trim apsides, keep the as-flown plane |
+| `gto` | semi-GTO: Pe `gtoPerigeeKm`, Ap `semiGtoApoapsisKm` (default 800 km) | `geo_transfer`: apogee raise to synchronous altitude, stay in GTO |
+| `geo` | semi-GTO whose Ap is *designed* so a 2-rev coast lines the apogee up with `geoLongitudeDeg` | perigee phasing burn → GTO injection → circularize at apogee (`geoCircularize`: auto = only if OMS dv ≥ need + `reserveDeltaV`) |
+| `rendezvous` | plane launch to `planeTarget` (a vessel) | trim to parking orbit, then `rendezvous`: Lambert transfer to `standoffM` behind, midcourse, velocity match, RCS approach to `stopDistanceM` |
+
+Examples: `Configuration/missions/sts-{gto,geo,minmus-plane,rendezvous}.json`.
+
+GEO longitude math (`ksl/ascent/geo.py`): apogee longitude =
+L_perigee + 180° − ω·(n·P_semi + P_GTO/2). The launch time cannot move it (the
+ground track repeats every day), so it is placed by the number of semi-GTO revs `n`
+and a small perigee phasing burn that retunes P_semi. `insertionLongitudeDeg` (default
+−60°) is only the pre-flight estimate used to design the ET apoapsis; after MECO the
+plan is recomputed from the measured perigee.
+
+### Ascent trajectory following (`ksl/ascent/trajectory.py`)
+
+Recorded flights (e.g. run 20261012T123634Z) lofted to Ap 105 km for an 85 km target
+with ~700 m/s vertical speed at 67 km: the pitch-over began at 1.5 km where q was
+already ~6 kPa, so the q·α bound pinned the nose to prograde. Changes:
+
+* `--turn-start` 1500 → 500 m: pitch over while q is low enough for a useful α.
+* Apoapsis corridor: above 6 km the pitch is corrected by −0.35°/km of predicted-Ap
+  error against a reference Ap(altitude) (scaled to the target), ±10°, still inside the
+  q·α bound. Altitude/apoapsis are mass independent, so a heavy payload follows the same
+  shape, only slower. Disable with `--no-corridor` in `ascent.extraArgs`.
+* `--transfer` disables the circular-ascent Ap hold for GTO insertions.
+
+Note: in the recorded SRB phase the CSV's vertical speed, UT and altitude are mutually
+inconsistent (∫vz dt ≈ 2× altitude), so that data cannot calibrate a simulator; the
+corridor gains are first-principles and need a live check.
+
+### Orbit trim
+
+`orbit_trim.plan_exact` solves one impulsive burn reaching the exact Ap, Pe and
+inclination (scan over burn time including exact target-radius crossings), converts
+the dv vector to node components by probing kRPC's own `burn_vector` (no frame sign
+assumptions), and flies it. A second burn only removes the residual (RCS forward
+translation when ≤ 2 m/s). `--legacy-plan` restores the staged apsis-by-apsis planner,
+which is also the automatic fallback.
+
+### Live operator controls
+
+Every child program polls `runs/<id>/controls.json` (`ksl/controls.py`). TUI keys
+on the watched run: `f` warp now, `x` stop warp, `g` auto-warp on/off, `o` orbit
+operations on/off, `h` hold in orbit, `t` trigger orbit operations. Warping is
+re-evaluated every 0.25 s, so turning auto-warp off drops to 1× immediately (unlike
+`SpaceCenter.warp_to`). Initial values: `operations.autoWarp`, `orbit.trim`,
+`orbit.holdForTrigger`.
+
+### First live flight checklist
+
+1. Circular 85 km / 10°: watch the pitch-over at ~500 m (q, α, wing loads) and the
+   corridor correction in the telemetry; compare max Ap against the 105 km baseline.
+2. Trim: confirm `exact plan` predicted elements vs the result after burn 1.
+3. Only then GTO/GEO (check `geo-plan` / `gto-apogee` events) and rendezvous.
