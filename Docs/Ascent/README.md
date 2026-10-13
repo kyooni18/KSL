@@ -117,11 +117,16 @@ Its fixed time schedule is deliberately not used for flight control.
 At each control tick, the program solves a bounded moment equality while obeying
 the configured total-thrust target. In ordinary ascent, KSP's measured
 `Flight.g_force` is fed back into global liquid throttle and measured dynamic
-pressure reduces throttle above `--max-q`. On the live STS, the SSME limiter is
-held at or above its ignition setting throughout the Clydesdale burn, and these
-global throttle reductions are suspended until SRB separation. This preserves
-SSME thrust as requested; combined SRB and SSME thrust can exceed the G or q
-targets while the fixed-thrust boosters burn. The feedback guard does not
+pressure reduces throttle above `--max-q`. During the STS Clydesdale burn,
+master throttle stays at 100% and the common SSME limiter tracks the pitch moment
+needed to balance the boosters about the live center of mass. The controller uses
+pressure-corrected full SSME thrust and canted mounting geometry, with a 30–100%
+limiter range and the normal throttle slew. It retains this balance through the
+last fueled booster tick; the post-booster clearance/roll schedule starts at
+burnout and separation, without an early low-fuel throttle drop. If the required
+balance exceeds full SSME thrust, the remaining moment needs attitude control.
+Combined SRB and SSME thrust can exceed the G or q targets during this phase.
+The feedback guard does not
 predict lift, drag, angle of attack, or aerodynamic pitching torque. Core
 commands remain Skiff, two
 near Bobcats, two far Bobcats,

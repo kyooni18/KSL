@@ -894,7 +894,11 @@ def run(args):
                                 bool(shuttle.solid_boosters) and not shuttle.separated and
                                 any(engine.active and engine.has_fuel
                                     for engine in shuttle.solid_boosters))
-                            if not solid_boosters_burning:
+                            if solid_boosters_burning and shuttle.vehicle_kind == 'orbiter-shuttle':
+                                # The SSME limiter balances fixed SRB pitch torque;
+                                # a stale master reduction would undo that balance.
+                                control.throttle = 1.0
+                            elif not solid_boosters_burning:
                                 # Engine thrust_limit already follows target_g
                                 # and PEG's phase_max_g each FCS tick. Reapplying
                                 # that *same* low-G target to the master throttle

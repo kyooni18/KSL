@@ -23,6 +23,48 @@ from ksl.ascent.vehicle import delay_booster_separation
 
 
 class SeparationEnvelopeTests(unittest.TestCase):
+    def test_ssme_balances_boosters_through_last_fueled_tick(self):
+        # A canted core contributes -1 MN m at full thrust. The SRBs
+        # contribute +0.9 MN m, beyond the former 70% trim ceiling.
+        frame = object()
+        core = [SimpleNamespace(
+            thrust_limit=.38, max_thrust=1e6/3, thrust=0., has_fuel=True,
+            part=SimpleNamespace(position=lambda _: (0., 0., 1.),
+                                 direction=lambda _: (0., 1., 0.))) for _ in range(3)]
+        booster = SimpleNamespace(
+            active=True, has_fuel=True, thrust=9e5,
+            part=SimpleNamespace(position=lambda _: (0., 0., -1.),
+                                 direction=lambda _: (0., 1., 0.),
+                                 resources=SimpleNamespace(
+                                     has_resource=lambda _: True,
+                                     amount=lambda _: 1., max=lambda _: 100.)))
+        shuttle = Shuttle.__new__(Shuttle)
+        shuttle.et_attached = True
+        shuttle.top_off = lambda: None
+        shuttle.separated = False
+        shuttle.vehicle_kind = 'orbiter-shuttle'
+        shuttle.solid_boosters = [booster]
+        shuttle.groups = shuttle.core_groups = [core]
+        shuttle.vessel = SimpleNamespace(reference_frame=frame)
+        shuttle._liquid_booster_depleted = lambda: False
+        shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(0.,))
+        shuttle.allocation_for_throttles = lambda throttles: throttles
+
+        # Even with zero measured core thrust during spool-up, derive the
+        # correct trim from rated thrust; preserve the normal actuator slew.
+        result = shuttle.update(dt=.1, throttle_slew=.2)
+        self.assertAlmostEqual(result[0], .40)
+        result = shuttle.update(dt=3., throttle_slew=1.)
+        self.assertAlmostEqual(result[0], .9)
+        self.assertTrue(all(abs(e.thrust_limit-.9) < 1e-9 for e in core))
+
+        # Follow the changing CoM/thrust moment, without a low-fuel taper.
+        booster.thrust = 6e5
+        self.assertAlmostEqual(shuttle.update(dt=1., throttle_slew=1.)[0], .6)
+        booster.thrust = 1.2e6
+        self.assertEqual(shuttle.update(dt=1., throttle_slew=1.)[0], 1.)
+        self.assertFalse(shuttle.separated)
+
     def test_opt_in_post_booster_coast_keeps_core_off_then_restarts(self):
         engine = SimpleNamespace(thrust_limit=0.0, max_thrust=1000.0)
         shuttle = Shuttle.__new__(Shuttle)

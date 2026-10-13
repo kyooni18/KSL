@@ -18,7 +18,7 @@ OUTER_SKIPPER_PAD_CAP = 0.45
 
 
 SSME_TRIM_MIN = 0.30
-SSME_TRIM_MAX = 0.70
+SSME_TRIM_MAX = 1.00
 
 
 def descendants(part):
@@ -239,18 +239,20 @@ def thrust_axis_offset(conn, vessel, frame):
     return tuple(thrust[i]-nose[i] for i in range(3))
 
 
-def engine_pitch_moment(vessel, engines):
+def engine_pitch_moment(vessel, engines, full_thrust=False):
     """Pitch moment (N m, vessel x axis) of the engines' current thrust about the CoM.
 
     Uses each engine's real mounting (position and canted part axis) in the vessel
     frame, whose origin is the centre of mass, so CoM travel from propellant burn and
-    booster separation is included. Gimbal deflection is excluded on purpose: this
+    booster separation is included. full_thrust uses pressure-corrected maximum
+    thrust for fueled engines, independent of limiter and ignition transients.
+    Gimbal deflection is excluded on purpose: this
     is the disturbance the gimbals must cancel.
     """
     frame = vessel.reference_frame
     moment = 0.0
     for engine in engines:
-        thrust = engine.thrust
+        thrust = (engine.max_thrust if engine.has_fuel else 0.0) if full_thrust else engine.thrust
         if thrust <= 1.0:
             continue
         d = engine.part.direction(frame)
@@ -927,9 +929,8 @@ class Shuttle:
         if (self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters and
                 not self.separated and any(engine.active and engine.has_fuel
                                            for engine in self.solid_boosters)):
-            # The fixed-thrust Clydesdales can meet the G target by themselves
-            # late in the burn. Preserve the SSME limiter reached at ignition
-            # instead of letting the allocator wind the core engines to zero.
+            # Prioritize pitch balance while the unthrottleable SRBs burn,
+            # even when their thrust alone exceeds the requested G target.
             target_throttles = list(target_throttles)
             target_throttles[0] = current[0]
             ssmes = self.core_groups[0]
@@ -937,20 +938,14 @@ class Shuttle:
                 # Trim the SSME limiter so the canted SSME moment cancels the SRB
                 # thrust-line moment as the CoM moves; the gimbals then only fly
                 # the vehicle instead of sitting saturated against the offset.
-                m_ssme = engine_pitch_moment(self.vessel, ssmes)
-                m_total = m_ssme + engine_pitch_moment(self.vessel, self.solid_boosters)
-                if current[0] > 0.05 and abs(m_ssme) > 1e4:
-                    per_limit = m_ssme/current[0]
-                    trim = current[0] - m_total/per_limit
+                per_limit = engine_pitch_moment(self.vessel, ssmes, full_thrust=True)
+                m_booster = engine_pitch_moment(self.vessel, self.solid_boosters)
+                if abs(per_limit) > 1e4:
+                    trim = -m_booster/per_limit
                     target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
-                    self.pitch_moment = m_total
-                solid = sum(resource_total([e.part], 'SolidFuel') for e in self.solid_boosters)
-                solid_max = sum(resource_total([e.part], 'SolidFuel', maximum=True)
-                                for e in self.solid_boosters)
-                if solid_max > 0 and solid/solid_max < 0.05:
-                    # Arrive at separation on the post-separation limiter so the
-                    # CoM jump does not meet a high canted-SSME moment.
-                    target_throttles[0] = SSME_TRIM_MIN
+                    self.pitch_moment = m_booster + per_limit*current[0]
+                # Keep balancing through the last fueled tick. The low-limiter
+                # clearance/roll schedule begins only after booster burnout.
             except Exception:
                 pass
             target_throttles = tuple(target_throttles)
