@@ -14,7 +14,7 @@
 typedef struct {
     double roll_accel_max, pitch_accel_max, pitch_lag_s, pitch_wn, pitch_zeta,
         pitch_trim_ki, roll_lag_s, roll_wn, roll_zeta, yaw_accel_max, yaw_wn,
-        yaw_lag_s, rcs_release_beta_deg;
+        yaw_lag_s, rcs_release_beta_deg, rcs_q_on_pa, rcs_q_off_pa;
 } FlightControlTuning;
 
 static FlightControlTuning fc_tuning_values;
@@ -46,7 +46,14 @@ static void fc_tuning_init(void) {
         .yaw_wn = fc_tuning_override(on, "KSP_LANDER_YAW_WN", 1.0),
         .yaw_lag_s = fc_tuning_override(on, "KSP_LANDER_YAW_LAG", 0.20),
         .rcs_release_beta_deg = fc_tuning_override(on, "KSP_LANDER_RCS_RELEASE_BETA", 5.0),
+        /* In the recorded polar entry, q was 527 Pa at 50 km and ~983 Pa
+           at 45 km; roll divergence precedes axis saturation. Enable RCS
+           before that interval, with a 200 Pa hysteresis band. */
+        .rcs_q_on_pa = fc_tuning_override(on, "KSP_LANDER_RCS_Q_ON_PA", 700.0),
+        .rcs_q_off_pa = fc_tuning_override(on, "KSP_LANDER_RCS_Q_OFF_PA", 500.0),
     };
+    if (t.rcs_q_off_pa >= t.rcs_q_on_pa)
+        t.rcs_q_off_pa = 0.75 * t.rcs_q_on_pa;
     fc_tuning_values = t;
 }
 
@@ -212,6 +219,8 @@ void flight_control_reset_transients(FlightControlState *state) {
     state->pitch_response_scale = 0.70;
     state->rcs_transonic_cutoff = false;
     state->rcs_latched = false;
+    state->rcs_q_latched = false;
+    state->rcs_saturation_latched = false;
     state->has_last_profile = false;
     state->main_gear_contact_latched = false;
     memset(state->last_control, 0, sizeof(state->last_control));
@@ -1050,21 +1059,28 @@ bool flight_control_step_attitude(FlightControlState *state,
     output->roll = rollout_profile?0.0:state->last_control[FLIGHT_CONTROL_AXIS_ROLL];
     output->yaw = rollout_heading_hold?state->last_control[FLIGHT_CONTROL_AXIS_YAW]:
         (rollout_profile?0.0:state->last_control[FLIGHT_CONTROL_AXIS_YAW]);
-    /* Thin-air yaw authority: the rudder can saturate without turning the
-       nose (live polar entry, Mach 4, 28 deg AoA: yaw at 100 percent left while
-       the nose kept yawing right and sideslip diverged).  When any axis command
-       saturates in the high-altitude profiles, latch RCS on.  Release only after
-       no axis is saturated and sideslip is back inside the coordination scale,
-       i.e. once the air has become thick enough for the surfaces to hold it. */
+    /* Measured kRPC Flight.DynamicPressure is in pascals (q = .5*rho*V^2).
+       Command RCS proactively as dynamic loading builds, before a significant
+       bank error has exhausted the surface-control law. Separate hysteresis
+       from the existing saturated-axis/beta latch: neither can cancel the
+       other, and neither leaks into approach, flare, or rollout profiles. */
     bool rcs_profile = profile == PROFILE_ENTRY || profile == PROFILE_TAEM ||
                        profile == PROFILE_RECOVERY;
     bool axis_saturated = false;
     for (int axis = 0; axis < FLIGHT_CONTROL_AXIS_COUNT; axis++)
         if (fabs(state->last_control[axis]) >= 1.0 - DBL_EPSILON) /* decision-literal-ok: normalized actuator command domain */
             axis_saturated = true;
-    if (!rcs_profile) state->rcs_latched = false;
-    else if (axis_saturated) state->rcs_latched = true;
-    else if (fabs(sideslip) < tuning->rcs_release_beta_deg) state->rcs_latched = false;
+    if (!rcs_profile) {
+        state->rcs_q_latched = false;
+        state->rcs_saturation_latched = false;
+    } else {
+        if (q >= tuning->rcs_q_on_pa) state->rcs_q_latched = true;
+        else if (q <= tuning->rcs_q_off_pa) state->rcs_q_latched = false;
+        if (axis_saturated) state->rcs_saturation_latched = true;
+        else if (fabs(sideslip) < tuning->rcs_release_beta_deg)
+            state->rcs_saturation_latched = false;
+    }
+    state->rcs_latched = state->rcs_q_latched || state->rcs_saturation_latched;
     state->rcs_transonic_cutoff = !state->rcs_latched;
     if (state->rcs_latched) rcs_assist = 1.0; /* decision-literal-ok: normalized assist domain */
     output->rcs_assist = rcs_assist;

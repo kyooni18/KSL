@@ -127,7 +127,59 @@ static void sustained_weak_beta_response_reduces_yaw_authority(void){
     assert(s.authority[FLIGHT_CONTROL_AXIS_YAW].controlled_confidence==0);
 }
 
+static void rcs_pressure_hysteresis_precedes_axis_saturation(void){
+    FlightControlState s;flight_control_init(&s,.1);
+    GuidanceCommand c=entry_command();FlightControlOutput out={0};
+    Telemetry t=sample(500.0,0.0,0.0);
+    t.dynamic_pressure=699.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested && !s.rcs_q_latched);
+    t.ut+=.1;t.dynamic_pressure=700.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(out.rcs_requested && out.rcs_assist==1.0 && s.rcs_q_latched);
+    assert(fabs(out.pitch)<.99 && fabs(out.roll)<.99 && fabs(out.yaw)<.99);
+    t.ut+=.1;t.dynamic_pressure=600.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(out.rcs_requested && s.rcs_q_latched); /* retain across band */
+    t.ut+=.1;t.dynamic_pressure=500.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested && !s.rcs_q_latched);
+    t.ut+=.1;t.dynamic_pressure=600.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested); /* low-to-high chatter cannot retrigger */
+    t.ut+=.1;t.dynamic_pressure=850.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(out.rcs_requested);
+    c.control_profile=PROFILE_APPROACH;t.ut+=.1;t.dynamic_pressure=3000.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested && !s.rcs_q_latched);
+    c.control_profile=PROFILE_ENTRY;t.ut+=.1;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(out.rcs_requested);
+    flight_control_reset_transients(&s);
+    assert(!s.rcs_q_latched && !s.rcs_saturation_latched);
+    t.ut+=.1;t.dynamic_pressure=NAN;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested); /* invalid pressure cannot enable RCS */
+}
+
+static void saturated_axis_still_requests_rcs_below_pressure_gate(void){
+    FlightControlState s;flight_control_init(&s,.1);
+    GuidanceCommand c=entry_command();c.heading_control_enabled=true;
+    FlightControlOutput out={0};
+    Telemetry t=sample(600.0,0.0,0.0);
+    t.dynamic_pressure=130.0;t.heading_rate=90.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(fabs(out.yaw)>.999 && out.rcs_requested);
+    assert(s.rcs_saturation_latched && !s.rcs_q_latched);
+    t.ut+=.1;t.heading_rate=0.0;
+    assert(flight_control_step(&s,&t,&c,.1,&out));
+    assert(!out.rcs_requested && !s.rcs_saturation_latched);
+}
+
 int main(void){
+    rcs_pressure_hysteresis_precedes_axis_saturation();
+    saturated_axis_still_requests_rcs_below_pressure_gate();
     sustained_weak_beta_response_reduces_yaw_authority();
     /* The same yaw acceleration with simultaneous aileron excitation supplies
        less independent evidence of rudder authority. */

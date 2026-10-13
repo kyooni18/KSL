@@ -192,6 +192,8 @@ typedef struct {
 
     bool rcs_transonic_cutoff;
     bool rcs_latched;
+    bool rcs_q_latched; /* dynamic-pressure hysteresis, independent of saturation */
+    bool rcs_saturation_latched;
     ControlProfile last_profile;
     bool has_last_profile;
     /* Latched on the first real main-wheel contact. Pitch is guided through
