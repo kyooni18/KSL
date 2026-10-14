@@ -76,6 +76,11 @@ typedef struct {
        longitudinal vertical-lift demand. */
     bool has_time_to_go;
     double time_to_go_s;
+    /* Zero-effort lateral miss of the capture point along the present ground
+       track (target-current sign). When set it is the lateral-lift demand's
+       miss; runway-line crossrange remains for terminal capture/reversal. */
+    bool has_point_miss;
+    double point_miss_m;
 } EntryLateralInput;
 
 typedef struct {

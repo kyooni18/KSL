@@ -407,6 +407,12 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         lateral.has_time_to_go=isfinite(mean_speed)&&mean_speed>DBL_EPSILON&&
             isfinite(alignment_range);
         lateral.time_to_go_s=lateral.has_time_to_go?alignment_range/mean_speed:NAN;
+        /* Far from the site the approach is not along the runway line, so
+           runway-frame crossrange is geometry, not miss. The miss is where
+           the present ground track passes the capture point. */
+        lateral.has_point_miss=isfinite(t->course_to_site_error)&&isfinite(alignment_range);
+        lateral.point_miss_m=lateral.has_point_miss?
+            alignment_range*sin(t->course_to_site_error*DEG2RAD):NAN;
     }
 
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;

@@ -164,6 +164,18 @@ static double choose_bank_sign(const EntryLateralState *state,
  * crossrange error only through the course projection onto the runway normal.
  */
 static bool lateral_demand(const EntryLateralInput *input,double *accel,double *zem){
+    if(input->has_time_to_go&&isfinite(input->time_to_go_s)&&
+       input->time_to_go_s>DBL_EPSILON&&input->has_point_miss&&
+       isfinite(input->point_miss_m)){
+        double t=input->time_to_go_s,miss=input->point_miss_m;
+        double uncertainty=isfinite(input->crossrange_uncertainty_m)?
+            fmax(0.0,input->crossrange_uncertainty_m):0.0;
+        if(fabs(miss)<=uncertainty)miss=0.0;
+        else miss-=copysign(uncertainty,miss);
+        *zem=miss;
+        *accel=2.0*fabs(miss)/(t*t);
+        return true;
+    }
     if(!input->has_time_to_go||!isfinite(input->time_to_go_s)||
        !(input->time_to_go_s>DBL_EPSILON)||
        !input->has_crossrange_error||!isfinite(input->crossrange_error_m)||
