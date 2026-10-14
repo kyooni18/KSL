@@ -6,6 +6,7 @@ executed. The short horizon optimizes a bounded pitch command around a velocity-
 """
 from dataclasses import dataclass, replace
 import math
+from ..peg import PoweredExplicitGuidance, orbit_state_at
 
 
 def clamp(x, lo, hi):
@@ -89,14 +90,59 @@ def step(s, target, pitch, throttle, dt):
 
 
 class Planner:
-    def __init__(self, target, max_q=25000., max_g=3., slew=2.):
+    peg_altitude, peg_q = .3, .05
+    def __init__(self, target, max_q=25000., max_g=3., slew=2., peg=True):
         self.target, self.max_q, self.max_g, self.slew = target, max_q, max_g, slew
         self.pitch = 90.
+        self.clock = 0.
+        # Closed-loop insertion guidance takes over once the air is thin, so the
+        # climb is planned to end at the target state instead of overshooting.
+        self.peg = PoweredExplicitGuidance(target.mu) if peg else None
+        self.peg_active = False
+        self.peg_plan = None
+
+    def peg_ready(self, s):
+        t = self.target
+        return (self.peg is not None and s.altitude > self.peg_altitude*t.atmosphere and
+                s.q < self.peg_q*self.max_q and s.radial > 0. and s.fixed_thrust < 1.)
+
+    def plan_insertion(self, s, accel, ve, solve, constant):
+        """Pick the burnout point (radius, ellipse periapsis) of least total delta-v.
+
+        Each candidate is a full PEG solution; it is feasible only if its steering
+        stays within bounds. Cost is the PEG burn plus circularization at apoapsis,
+        so a high-thrust stage cuts off low and circularizes rather than lofting.
+        """
+        t = self.target
+        ra = t.radius+t.apoapsis
+        # Vacuum PEG: keep burnout out of air where drag still matters.
+        low = min(t.apoapsis, max(s.altitude, .75*t.atmosphere)+2000.)
+        best = None
+        for i in range(8):
+            r_t = t.radius+low+(t.apoapsis-low)*i/7
+            for k in range(9):
+                rp = t.radius+t.periapsis-(t.periapsis+.3*t.radius)*k/8
+                if rp > r_t:
+                    continue
+                trial = PoweredExplicitGuidance(t.mu)
+                solve((r_t, rp), trial)
+                if not trial.converged or trial.tgo <= 1.:
+                    continue
+                T = trial.tgo
+                burn = accel*T if constant else -ve*math.log(1-T*accel/ve)
+                v_ap = math.sqrt(2*t.mu*rp/(ra*(ra+rp)))
+                rp_goal = t.radius+t.periapsis
+                v_goal = math.sqrt(2*t.mu*rp_goal/(ra*(ra+rp_goal)))
+                cost = burn+abs(v_goal-v_ap)
+                if best is None or cost < best[0]:
+                    best = cost, (r_t, rp), trial
+        return (best[1], best[2]) if best else (None, self.peg)
 
     def command(self, s, dt=1.):
         if not all(math.isfinite(x) for x in vars(s).values()) or s.mass <= 0 or s.thrust < 0:
             raise ValueError('Invalid flight state')
         t = self.target
+        self.clock += dt
         accel = s.thrust/s.mass
         throttle = clamp((self.max_g*9.80665*s.mass-s.fixed_thrust)/max(s.thrust-s.fixed_thrust, .01), 0., 1.)
         if s.q > self.max_q:
@@ -119,6 +165,39 @@ class Planner:
         upper = min(upper, self.pitch+self.slew*dt)
         if lower > upper:  # slew wins when a sudden gust moves prograde
             lower = upper = clamp(prograde, self.pitch-self.slew*dt, self.pitch+self.slew*dt)
+        if self.peg_active or self.peg_ready(s):
+            force = s.fixed_thrust+(s.thrust-s.fixed_thrust)*throttle
+            flow = (s.fixed_mass_flow+(s.mass_flow-s.fixed_mass_flow)*throttle
+                    if s.mass_flow >= 0 else force/(max(s.isp, 1.)*9.80665))
+            r = t.radius+s.altitude
+            ra = t.radius+t.apoapsis
+            ve = force/max(flow, 1e-6)
+            def solve(plan, guide):
+                r_t, rp = plan
+                vr_t, vh_t = orbit_state_at(t.mu, ra, rp, r_t)
+                return guide.update(self.clock, r, s.radial, s.horizontal, force/s.mass,
+                                    ve, r_t, vr_t, vh_t, constant_accel=throttle < .999)
+            # Re-plan only when the locked plan has become clearly unflyable.
+            # Re-plan only when the locked plan has become clearly unflyable,
+            # never in the final seconds where the steering is frozen by design.
+            ending = self.peg_plan is not None and (self.peg.tgo or 0.) < 2*self.peg.freeze_tgo
+            if not ending and (self.peg_plan is None or not (
+                    math.isfinite(self.peg.tgo or math.nan) and self.peg.peak < 1.2)):
+                self.peg_plan, self.peg = self.plan_insertion(s, force/s.mass, ve, solve,
+                                                              throttle < .999)
+            peg_pitch, tgo = (solve(self.peg_plan, self.peg) if self.peg_plan is not None
+                              else (None, None))
+            ap_now = apsides(s, t)[0]
+            if peg_pitch is not None and tgo <= max(.2, 1.5*dt) and ap_now < t.apoapsis-t.altitude_tolerance:
+                # Burnout without the apoapsis: drop the plan and let the energy
+                # guidance below finish the climb.
+                self.peg_plan, peg_pitch = None, None
+                self.peg = PoweredExplicitGuidance(t.mu)
+            self.peg_active = peg_pitch is not None
+            if self.peg_active:
+                self.pitch = clamp(peg_pitch, lower, upper)
+                status = 'cutoff' if tgo <= max(.2, 1.5*dt) else 'peg'
+                return Command(self.pitch, throttle, apsides(s, t)[0], tgo, status)
         nominal = clamp(desired, lower, upper)
         if s.q > self.max_q*.6 and speed > 1.:
             near = step(s, t, nominal, throttle, 2.)

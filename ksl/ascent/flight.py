@@ -10,6 +10,7 @@ from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
+from .peg import PoweredExplicitGuidance
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
@@ -298,6 +299,7 @@ def run(args):
         meco_ut = None
         peg_dv = None
         peg_hold = None
+        peg_law = PoweredExplicitGuidance(body.gravitational_parameter)
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -696,11 +698,22 @@ def run(args):
                             # (ascending branch): 90x60 needs ~+50 m/s at 72 km, not 0.
                             vr_ins = math.sqrt(max(0.0, 2.0*mu*(1.0/r_ins - 1.0/(ra+rp))
                                                    - vh_ins**2))
-                            raw_pitch = vertical_profile_pitch(
-                                altitude, flight.vertical_speed, vh_inertial, r_now,
-                                mu, max(flight.g_force, 0.3)*G0,
-                                insertion_altitude, vh_ins,
-                                insertion_vertical_speed=vr_ins)
+                            # Closed-loop PEG to the burnout state (radius, radial and
+                            # horizontal speed), re-solved every cycle, so the climb ends
+                            # at insertion instead of overshooting and pitching down.
+                            peg_accel = max(v.thrust, 1.0)/v.mass
+                            peg_ve = max(v.specific_impulse, 1.0)*G0
+                            peg_pitch_cmd, peg_law_tgo = peg_law.update(
+                                conn.space_center.ut, r_now, flight.vertical_speed,
+                                vh_inertial, peg_accel, peg_ve, r_ins, vr_ins, vh_ins,
+                                constant_accel=control.throttle < 0.99)
+                            if peg_pitch_cmd is None or not math.isfinite(peg_pitch_cmd):
+                                peg_pitch_cmd = vertical_profile_pitch(
+                                    altitude, flight.vertical_speed, vh_inertial, r_now,
+                                    mu, max(flight.g_force, 0.3)*G0,
+                                    insertion_altitude, vh_ins,
+                                    insertion_vertical_speed=vr_ins)
+                            raw_pitch = max(-30.0, min(45.0, peg_pitch_cmd))
                             pitch_slew_rate = max(args.pitch_slew, 2.0)
                         peg_dv = None
                         energy_done = False
@@ -736,7 +749,8 @@ def run(args):
                                     peg_hold = (max(-60.0, min(25.0, peg_pitch)),
                                                 max(target_heading-40.0,
                                                     min(target_heading+40.0, peg_heading)))
-                                raw_pitch = peg_hold[0]
+                                # Pitch stays with the closed-loop PEG above; this
+                                # velocity-to-be-gained solution only steers heading.
                                 args.heading = slew_value(args.heading, peg_hold[1],
                                                           3.0, 1/args.hz)
                                 pitch_slew_rate = max(pitch_slew_rate, 4.0)

@@ -43,7 +43,7 @@ def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., 
         if (tick > 10 and h < 0) or m <= dry:
             return dict(success=False, time=tick*dt, altitude=h, apoapsis=ap, periapsis=pe,
                         mass=m, peakQ=peak_q, reason='impact' if h < 0 else 'fuel')
-        if phase == 'ascent' and coast_apoapsis(state, target) >= altitude-100:
+        if phase == 'ascent' and not planner.peg_active and coast_apoapsis(state, target) >= altitude-100:
             phase = 'coast'
         now = tick*dt
         pitch, throttle = 0., 0.
@@ -54,6 +54,8 @@ def simulate(mass=30000., thrust=600000., isp=330., dry=5000., altitude=90000., 
         if phase == 'ascent':
             cmd = planner.command(state, dt)
             pitch, throttle = math.radians(cmd.pitch), cmd.throttle
+            if cmd.status == 'cutoff':
+                phase, pitch, throttle = 'coast', 0., 0.
         elif h > target.atmosphere+1000 and maneuver is None:
             solution = om.solve_one_burn(position, velocity, target.mu, altitude, periapsis, 0.,
                                          target.radius, min_lead=5., deadline=2000. if pe > target.atmosphere else 500.)
