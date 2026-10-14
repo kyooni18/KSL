@@ -56,7 +56,16 @@ At near-vacuum altitudes, telemetry reported Mach values equal to speed in m/s (
 
 ## Supplemental Final-only replay
 
-An isolated Final/flare/rollout replay on the matching STS-N model (`final-aligned-185mps-fpa10-aoa3`) did reach gear-down touchdown and stop, but the result failed the touchdown sink gate: 69.53 m/s at touchdown with 3.128 m/s sink (gate false). It recorded wheel runway departure near the runway end (along 2490.2 m, cross 0.007 m), then stopped at 2494.2 m; rollout stability and runway rollout flags were true, with no crash. This is a supplemental STS-N ideal-attitude simulation, not live evidence for the custom STS craft. Run: `final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184/`.
+Three isolated Final/flare/rollout replays on the matching STS-N model (all ideal-attitude, supplemental simulation only) produced no passing touchdown:
+
+| Initial Final condition | Touchdown result | Failed gate |
+| --- | --- | --- |
+| 185 m/s, −10° FPA | 69.53 m/s, 3.128 m/s sink, on runway at 1,529.8 m; stopped at 2,494.2 m | Sink |
+| 170 m/s, −16° FPA | 58.88 m/s, 2.465 m/s sink, 2,991.1 m along-track; did not stop | Speed and runway contact |
+| 180 m/s, −18° FPA | 59.52 m/s, 2.448 m/s sink, 3,057.7 m along-track; did not stop | Speed and runway contact |
+| 200 m/s, −20° FPA | 58.31 m/s, 4.239 m/s sink, 3,352.3 m along-track, peak gear load 4.374 g; did not stop | Speed, sink, and runway contact |
+
+The 185 m/s case recorded wheel runway departure near the runway end (along 2490.2 m, cross 0.007 m), then stopped at 2494.2 m; rollout stability and runway rollout flags were true, with no crash. The other three fixtures provide a consistent overshoot pattern. These are ideal-attitude STS-N simulation results, not live evidence for the custom STS craft. Runs: `final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184/`, `final-polar90-terminal-fpa16-v170-20261014T180613Z-jypfld0s/`, `final-polar90-terminal-fpa18-v180-20261014T180629Z-7t4mc1w4/`, and `final-polar90-terminal-fpa20-v200-20261014T180623Z-m47v98cm/`.
 
 ## Evidence locations
 
@@ -76,4 +85,7 @@ An isolated Final/flare/rollout replay on the matching STS-N model (`final-align
 20261014T175404Z-sts-polar90-mm304-from-30km
 mm304-sts-polar90-recorded-mm304-matched-20261014T180104Z-v_o3d7ew
 final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184
+final-polar90-terminal-fpa16-v170-20261014T180613Z-jypfld0s
+final-polar90-terminal-fpa18-v180-20261014T180629Z-7t4mc1w4
+final-polar90-terminal-fpa20-v200-20261014T180623Z-m47v98cm
 ```
