@@ -1733,7 +1733,12 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        radius (2026-10-14: RW09 kept while the vehicle passed abeam RW09 at
        42 km crossrange; it overflew, turned back and landed short). */
     if (cfg->guidance.taem_energy_law && !g->mm305_route_committed &&
-            !g->taem_energy_law.initialized && cfg->site.allow_reciprocal_runway) {
+            !g->taem_energy_law.initialized && cfg->site.allow_reciprocal_runway &&
+            !g->taem_runway_end_scored) {
+        /* Once per TAEM: re-initialising the law (e.g. after attitude
+           recovery) must not re-pick the end (live 20261014T052206Z flipped
+           RW27/RW09/RW27/RW27). */
+        g->taem_runway_end_scored=true;
         double score[2]={INFINITY,INFINITY};
         for (int e=0;e<2;++e) {
             TerminalModel trial;

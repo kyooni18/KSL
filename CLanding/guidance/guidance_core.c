@@ -190,6 +190,7 @@ static void reset_controllers(GuidanceMachine*g){
     g->entry_alpha_drag_boost=0.0;
     g->entry_policy_valid=false;g->entry_policy_bank_deg=NAN;g->entry_policy_aoa_deg=NAN;g->entry_policy_ut=NAN;
     g->entry_handoff_target_range=NAN;
+    g->taem_runway_end_scored=false;
     g->entry_alpha_deficit_filter=0.0;g->entry_alpha_ceiling_filter=0.0;g->entry_alpha_filter_valid=false;
     g->entry_drag_ratio_valid=false;
     g->entry_drag_velocity_ratio=0.0;
