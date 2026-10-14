@@ -126,6 +126,8 @@ typedef struct {
     bool weave_on;
     int weave_sign;
     double weave_brg;
+    /* Outer-glide slope the station was priced with (equilibrium glide). */
+    double station_slope_deg;
 } TaemEnergyLawState;
 
 /* Adaptive flare (guidance/final/adaptive_flare.inc): online incidence-response

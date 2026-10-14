@@ -372,8 +372,7 @@ void mm305_prepare_planning_model(TerminalModel *out,
     if (!out || !base) return;
     *out=*base;
     mm305_apply_final_alignment(out,base,final_distance_m);
-    mm305_scale_model(out,scale_mach,clampd(lift_scale,0.5,2.0),
-        clampd(drag_scale,0.5,2.0));
+    mm305_scale_model(out,scale_mach,lift_scale,drag_scale);
     if (trim_aoa_ceiling_rad>0.0 && isfinite(trim_aoa_ceiling_rad))
         out->vehicle.maximum_angle_of_attack=fmin(
             out->vehicle.maximum_angle_of_attack,trim_aoa_ceiling_rad*RAD2DEG);
@@ -832,8 +831,9 @@ static void mm305_observe_force_scale(GuidanceMachine *g, const Telemetry *t,
     if (!(modeled.lift_n>1.0) || !(modeled.drag_n>1.0)) return;
     double lift_raw=fabs(t->lift_force)/modeled.lift_n;
     double drag_raw=fabs(t->drag_force)/modeled.drag_n;
-    double lift_ratio=clampd(lift_raw,0.5,2.0);
-    double drag_ratio=clampd(drag_raw,0.5,2.0);
+    /* Live forces are trusted over the recorded polar; no ratio bounds. */
+    double lift_ratio=lift_raw;
+    double drag_ratio=drag_raw;
     double a=clampd(dt/(8.0+dt),0.0,1.0);
     bool first_lift=!(g->mm305_lift_scale>0.0)||!isfinite(g->mm305_lift_scale);
     bool first_drag=!(g->mm305_drag_scale>0.0)||!isfinite(g->mm305_drag_scale);
@@ -1558,16 +1558,25 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
     if (!taem_energy_law_step(L,control_model,geometry,current->mass_kg,
             t->angle_of_attack,t->ut,t->roll,&aoa,&bank))
         return terminal_abort(g,"MM305 energy law could not produce a bounded command.");
+    /* Final flies the outer glide the station was priced on. */
+    if (isfinite(L->station_slope_deg)) {
+        if (!g->terminal_final_handoff_latched) {
+            g->terminal_final_handoff_distance=control_model->guidance.final_approach_distance;
+            g->terminal_final_handoff_speed_mps=control_model->guidance.final_alignment_speed;
+        }
+        g->terminal_final_handoff_latched=true;
+        g->terminal_final_handoff_slope_deg=L->station_slope_deg;
+    }
     static _Thread_local double trace_last_ut=-INFINITY;
     if (!g->diagnostic_shadow&&(!isfinite(trace_last_ut)||t->ut<trace_last_ut||
             t->ut-trace_last_ut>=2.0)) {
         trace_last_ut=t->ut;
         fprintf(stderr,
-            "TAEM_ENERGY ut=%.1f along=%+.0f cross=%+.0f h=%.0f V=%.1f M=%.2f fpa=%.1f hdgErr=%+.1f k=%.2f loop=%d leg=%d side=%+d R=%.0f xTurn=%.0f sGo=%.0f sReq=%.0f aoa=%.1f/%.1f bank=%+.1f/%+.1f\n",
+            "TAEM_ENERGY ut=%.1f along=%+.0f cross=%+.0f h=%.0f V=%.1f M=%.2f fpa=%.1f hdgErr=%+.1f k=%.2f loop=%d leg=%d side=%+d R=%.0f xTurn=%.0f sGo=%.0f sReq=%.0f slope=%.1f aoa=%.1f/%.1f bank=%+.1f/%+.1f\n",
             t->ut,geometry->runway_along_m,geometry->runway_cross_m,
             geometry->altitude_above_runway_m,geometry->airspeed_mps,t->mach,
             geometry->flight_path_angle_deg,geometry->heading_error_deg,L->k,(int)L->loop,
-            L->leg,L->side,L->radius,L->x_turn,L->s_go,L->s_req,t->angle_of_attack,aoa,t->roll,bank);
+            L->leg,L->side,L->radius,L->x_turn,L->s_go,L->s_req,L->station_slope_deg,t->angle_of_attack,aoa,t->roll,bank);
     }
     double heading=course;
     if (L->leg==TEL_LEG_FINAL) {
@@ -1746,9 +1755,9 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             mm305_prepare_planning_model(&trial,trial_end,
                 mm305_final_alignment_distance(g,trial_end,&current),t->mach,
                 isfinite(g->mm305_lift_scale)&&g->mm305_lift_scale>0.0?
-                    clampd(g->mm305_lift_scale,0.5,2.0):1.0,
+                    g->mm305_lift_scale:1.0,
                 isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?
-                    clampd(g->mm305_drag_scale,0.5,2.0):1.0,
+                    g->mm305_drag_scale:1.0,
                 current.trim_aoa_ceiling_rad);
             TaemGeometryState trial_geometry;
             if (taem_geometry_state(&trial,&current,&trial_geometry))
@@ -1774,9 +1783,9 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        model snapshot remains immutable. */
     TerminalModel live_model;
     double live_lift_scale=isfinite(g->mm305_lift_scale)&&g->mm305_lift_scale>0.0?
-        clampd(g->mm305_lift_scale,0.5,2.0):1.0;
+        g->mm305_lift_scale:1.0;
     double live_drag_scale=isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?
-        clampd(g->mm305_drag_scale,0.5,2.0):1.0;
+        g->mm305_drag_scale:1.0;
     double live_final_distance=mm305_final_alignment_distance(g,end_model,&current);
     mm305_prepare_planning_model(&live_model,end_model,live_final_distance,t->mach,
         live_lift_scale,live_drag_scale,current.trim_aoa_ceiling_rad);

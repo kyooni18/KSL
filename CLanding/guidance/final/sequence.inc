@@ -125,7 +125,7 @@ void terminal_observe_landing_aero(GuidanceMachine*g,const Telemetry*t,
     double modeled=L*fmax(t->dynamic_pressure,1.0);
     if(modeled>.2*t->mass*gravity&&isfinite(t->lift_force)&&t->lift_force>0.0)
         g->terminal_lift_ratio+=clampd(dt/2.0,0.0,1.0)*
-            (clampd(t->lift_force/modeled,.6,1.6)-g->terminal_lift_ratio);
+            (t->lift_force/modeled-g->terminal_lift_ratio);
     g->terminal_aero_sample_ut=t->ut;
     g->terminal_aero_sample_valid=true;
 }
@@ -262,6 +262,31 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
 
 #include "adaptive_flare.inc"
 
+/* Steady-glide slope on the live-learned polar at the present state:
+   gamma = atan(D/L) where the lift carries m g cos(gamma).  The recorded
+   polar only seeds terminal_aero_q until the vehicle has shown its own. */
+static double terminal_live_equilibrium_slope(const GuidanceMachine*g,const Telemetry*t,
+        const VehicleProfile*v,double g0,double aoa_max){
+    double q=t->dynamic_pressure;
+    if(!(q>0.0)||!(t->mass>0.0)||!(aoa_max>0.0))return NAN;
+    double ratio=g->terminal_lift_ratio>0.0&&isfinite(g->terminal_lift_ratio)?g->terminal_lift_ratio:1.0;
+    double slope=isfinite(t->flight_path_angle)?fabs(t->flight_path_angle)*DEG2RAD:0.0;
+    for(int it=0;it<8;++it){
+        double need=t->mass*g0*cos(slope),lo=0.0,hi=aoa_max,L=0.0,D=0.0;
+        for(int i=0;i<30;++i){
+            double mid=.5*(lo+hi);
+            terminal_aero_q(g,t,v,mid,&L,&D);
+            if(L*q*ratio<need)lo=mid;else hi=mid;
+        }
+        terminal_aero_q(g,t,v,.5*(lo+hi),&L,&D);
+        if(!(L>0.0)||!(D>0.0))return NAN;
+        double next=atan2(D,L*ratio);
+        if(fabs(next-slope)<1e-5){slope=next;break;}
+        slope=next;
+    }
+    return slope*RAD2DEG;
+}
+
 static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetry*t,double course,
         const PlanetModel*p,const LandingConfiguration*cfg,const Trajectory*ref,double dt){
     const GuidanceSettings*s=&cfg->guidance;
@@ -289,6 +314,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
 
     TerminalVerticalStage stage=g->terminal_vertical_stage;
     if(stage<TERMINAL_OUTER_FINAL)stage=TERMINAL_OUTER_FINAL;
+    /* The outer glide follows what the vehicle is measured to sustain. */
+    if(stage==TERMINAL_OUTER_FINAL&&!g->terminal_pull_latch&&!g->terminal_glide_mode){
+        double live_slope=terminal_live_equilibrium_slope(g,t,v,g0,aoa_max);
+        if(isfinite(live_slope)&&live_slope>=3.0&&live_slope<=45.0){
+            g->terminal_final_handoff_latched=true;
+            g->terminal_final_handoff_slope_deg=live_slope;
+        }
+    }
 
     if(g->terminal_vs_prev_ut>0.0&&t->ut>g->terminal_vs_prev_ut+1e-3&&
        t->ut<g->terminal_vs_prev_ut+2.0){
