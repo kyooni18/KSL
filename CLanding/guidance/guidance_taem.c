@@ -421,6 +421,8 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
     memset(&search,0,sizeof(search));
     TaemFixedHacCandidate best_candidate={0};
     bool have_best=false;
+    char reasons[sizeof(out.diagnostic)]="";
+    int reasons_used=0;
 
     /* Preserve configured-runway-end preference: exhaust its full radius domain
        before considering the reciprocal end. Within one end, however, no radius
@@ -444,6 +446,15 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
                 radius,200.0,0.5,420.0);
             for (int i=0;i<search.candidate_count;++i)
                 search.candidates[i].runway_end=runway_end;
+            for (int i=0;i<search.candidate_count&&reasons_used>=0&&
+                    (size_t)reasons_used<sizeof(reasons);++i) {
+                const TaemFixedHacCandidate *c=&search.candidates[i];
+                reasons_used+=snprintf(reasons+reasons_used,
+                    sizeof(reasons)-(size_t)reasons_used,
+                    " [%s %c r%.0f] %s t%.1f;",runway_end==1?"RECIP":"CONF",
+                    c->side>0.0?'R':'L',radius,c->reason?c->reason:"unknown",
+                    c->replay.elapsed_s);
+            }
             const char *plan_diag=getenv("KSP_LANDER_TAEM_DIAGNOSTICS");
             if (plan_diag && strcmp(plan_diag,"2")==0) {
                 fprintf(stderr,
@@ -476,15 +487,9 @@ Mm305PlanResult mm305_plan(const TerminalModel *model, const Mm305PlanRequest *r
         out.found=true;
         out.candidate=best_candidate;
     }
-    int used=snprintf(out.diagnostic,sizeof(out.diagnostic),
-        "MM305 route %s scale=%.3f/%.3f:",
-        out.found?"found":"rejected",request->lift_scale,request->drag_scale);
-    for (int i=0;i<search.candidate_count && used>0 && (size_t)used<sizeof(out.diagnostic);++i) {
-        const TaemFixedHacCandidate *c=&search.candidates[i];
-        used+=snprintf(out.diagnostic+used,sizeof(out.diagnostic)-(size_t)used,
-            " [%s %c] %s t%.1f;",c->runway_end==1?"RECIP":"CONF",c->side>0.0?'R':'L',
-            c->reason?c->reason:"unknown",c->replay.elapsed_s);
-    }
+    snprintf(out.diagnostic,sizeof(out.diagnostic),
+        "MM305 route %s scale=%.3f/%.3f:%s",
+        out.found?"found":"rejected",request->lift_scale,request->drag_scale,reasons);
     free(scaled);free(reciprocal);
     out.solve_wall_s=mm305_wall_seconds()-started;
     return out;
@@ -543,7 +548,12 @@ static Mm305PlanRequest mm305_request_from_state(const GuidanceMachine *g,
     if (!(r.final_approach_distance_m>=500.0) ||
             !isfinite(r.final_approach_distance_m))
         r.final_approach_distance_m=cfg->guidance.final_approach_distance;
-    r.search_both_ends=cfg->site.allow_reciprocal_runway && !g->runway_end_committed;
+    /* The runway end is a consequence of which end has an energy-feasible
+       route, so keep both ends open until MM305 adopts one. A preview or a
+       direct-line/best-effort frame is not evidence that the other end is
+       infeasible (2026-10-14: RW09 was locked from a 1300 m/s preview and
+       RW27 was never searched while RW09 had no feasible HAC). */
+    r.search_both_ends=cfg->site.allow_reciprocal_runway && !g->mm305_route_committed;
     r.upstream_end=g->runway_end_preview_valid&&g->runway_end_index==1?1:0;
     r.restrict_side=g->mm305_route_committed||g->mm305_replans>0;
     r.side=g->hac_side;
