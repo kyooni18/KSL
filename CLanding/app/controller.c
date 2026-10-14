@@ -38,6 +38,8 @@ struct LandingController {
     GuidanceMachine guidance;
     TerminalModel terminal_model;
     bool terminal_model_valid;
+    /* Craft identity resolved from the live KSP vessel at connect; empty until then. */
+    char vehicle_identity[128];
     uint64_t terminal_model_capture_sequence;
     VesselPhysicsModel physics;
     AdaptiveFlightCalibrator adaptive;

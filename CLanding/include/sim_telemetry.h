@@ -55,6 +55,11 @@ const char *shuttle_sim_model_profile(void);
 /* Aerodynamic profile identity, not a claim of independent certification. */
 const char *shuttle_sim_model_vehicle_id(void);
 bool shuttle_sim_model_matches_vehicle(const char *model_id, char *reason, size_t size);
+/* Runtime craft identity: the live KSP vessel name wins.  The configured modelId
+   is only the fallback when KSP reports no usable name.  Returns a pointer into
+   one of the inputs. */
+const char *shuttle_sim_resolve_vehicle_identity(const char *live_name,
+                                                 const char *configured_model_id);
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
                                    char *buffer, size_t buffer_size);
 

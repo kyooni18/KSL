@@ -637,6 +637,13 @@ bool shuttle_sim_model_matches_vehicle(const char *model_id, char *reason, size_
     return false;
 }
 
+const char *shuttle_sim_resolve_vehicle_identity(const char *live_name,
+                                                 const char *configured_model_id) {
+    /* "Active Vessel" is the session fallback when the live name lookup fails. */
+    if (live_name && live_name[0] && strcmp(live_name, "Active Vessel") != 0) return live_name;
+    return configured_model_id ? configured_model_id : "";
+}
+
 const char *shuttle_sim_model_path(const char *root, ShuttleSimModelFile kind,
                                    char *buffer, size_t buffer_size) {
     if (!buffer || buffer_size == 0 || (int)kind < 0 || (int)kind > SHUTTLE_SIM_MODEL_CERTIFIED_PRIOR)

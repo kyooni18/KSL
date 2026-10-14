@@ -90,7 +90,14 @@ static char *build_environment_manifest(const PlanetModel *planet){
     char *result=!w.failed&&w.data?strdup(w.data):NULL;jw_free(&w);return result;
 }
 
-static void open_physics_store(KRPCSession *session,const LandingConfiguration *cfg){
+static void open_physics_store(KRPCSession *session,const LandingConfiguration *configured){
+    /* The store is partitioned by runtime craft identity, so an uncertified
+       craft learns only from its own flights and never from another vehicle's
+       history.  The configured modelId is only the fallback name. */
+    LandingConfiguration identified=*configured;
+    snprintf(identified.vehicle.model_id,sizeof(identified.vehicle.model_id),"%s",
+        shuttle_sim_resolve_vehicle_identity(krpc_cnano_client_vessel(session->client),configured->vehicle.model_id));
+    const LandingConfiguration *cfg=&identified;
     const PlanetModel *planet=krpc_cnano_client_planet(session->client);
     char root[1024];project_root(root,sizeof(root));char runtime[1200];snprintf(runtime,sizeof(runtime),"%s/Runtime",root);mkdir(runtime,0700);
     char physics_dir[1300];snprintf(physics_dir,sizeof(physics_dir),"%s/Physics",runtime);mkdir(physics_dir,0700);

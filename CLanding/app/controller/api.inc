@@ -5,21 +5,15 @@ static const char *terminal_model_path(const char *environment_name,
     return shuttle_sim_model_path(NULL, kind, buffer, buffer_size);
 }
 
-/* A named aerodynamic profile is vehicle-specific even when it is provisional.
-   Matching identity is necessary, not sufficient, for any flight qualification. */
-static bool controller_model_identity_ready(LandingController *c) {
-    char reason[384];
-    if (shuttle_sim_model_matches_vehicle(c->configuration.vehicle.model_id,
-                                         reason, sizeof(reason))) return true;
-    set_warning(c, reason);
-    publish(c);
-    return false;
-}
-
+/* A craft that matches no certified aerodynamic profile flies uncertified: it
+   keeps the configured seeds, learns only from its own flight history (the
+   physics store is keyed by this identity), and never receives the certified
+   terminal model.  Certification is reported at connect; it is not an admission
+   gate, so the engagement paths below no longer refuse on identity. */
 static bool controller_capture_terminal_model(LandingController *c,
         const LandingConfiguration *cfg) {
     char reason[256];
-    if (!shuttle_sim_model_matches_vehicle(cfg->vehicle.model_id, reason, sizeof(reason))) {
+    if (!shuttle_sim_model_matches_vehicle(c->vehicle_identity, reason, sizeof(reason))) {
         c->terminal_model_valid = false;
         fprintf(stderr, "MM305 native model unavailable: %s\n", reason);
         return false;
@@ -57,7 +51,14 @@ LandingController *landing_controller_create(const LandingConfiguration*cfg,Snap
 void landing_controller_destroy(LandingController*c){if(!c)return;landing_controller_shutdown(c);pthread_mutex_lock(&c->mutex);clear_snapshot_dynamic(&c->snapshot);trajectory_clear(&c->dynamic_trajectory);trajectory_clear(&c->stabilized_trajectory);trajectory_calibrator_clear(&c->trajectory_calibrator);if(c->has_plan)deorbit_plan_clear(&c->plan);pthread_mutex_unlock(&c->mutex);pthread_mutex_destroy(&c->mutex);free(c);}
 LandingConfiguration landing_controller_configuration(LandingController*c){pthread_mutex_lock(&c->mutex);LandingConfiguration r=c->configuration;pthread_mutex_unlock(&c->mutex);return r;}
 void landing_controller_update_configuration(LandingController*c,const LandingConfiguration*cfg){pthread_mutex_lock(&c->mutex);c->prediction_generation++;LandingConfiguration before=c->configuration,next=*cfg;VehicleProfile before_vehicle=before.vehicle;landing_configuration_normalize(&next);bool changed=!configuration_equal(&before,&next),planning_changed=!planning_configuration_equal(&before,&next);if(!changed){pthread_mutex_unlock(&c->mutex);return;}c->configuration=next;if(c->session&&!c->guidance.terminal_region_entered)(void)controller_capture_terminal_model(c,&c->configuration);if(!vehicle_profile_equal(&before_vehicle,&c->configuration.vehicle)&&!c->glide.active){reset_models(c,&c->configuration.vehicle);if(c->session){krpc_session_seed_physics(c->session,&c->physics);apply_certified_aero_prior(c);}}if(c->has_plan&&planning_changed){c->plan_stale=true;set_warning(c,"Planning-relevant configuration changed after planning. Create a new deorbit plan before engagement.");}append_configuration_log(c);log_state_event(c,planning_changed?"event=configuration-changed; replan_required=true":"event=configuration-changed; replan_required=false",true);publish(c);pthread_mutex_unlock(&c->mutex);}
-void landing_controller_connect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,false);reset_snapshot(c,getenv("KSP_LANDER_SIMULATOR")?"Opening ShuttleSim lockstep backend…":"Opening native kRPC C-Nano link…");c->snapshot.connection_status=CONN_CONNECTING;publish(c);LandingConfiguration cfg=c->configuration;pthread_mutex_unlock(&c->mutex);char err[768];KRPCSession*s=krpc_session_open(&cfg,err,sizeof(err));pthread_mutex_lock(&c->mutex);if(!s){c->snapshot.connection_status=CONN_FAILED;c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Native kRPC C-Nano connection failed.");set_error(c,err);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->session=s;start_log(c);reset_models(c,&c->configuration.vehicle);krpc_session_seed_physics(s,&c->physics);apply_certified_aero_prior(c);(void)controller_capture_terminal_model(c,&c->configuration);guidance_machine_init(&c->guidance);glide_calibration_init(&c->glide);c->has_prediction_cache=false;c->time_warp_issued=false;c->snapshot.connection_status=CONN_CONNECTED;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s connected to %s around %s with %u certified aerodynamic cells.",krpc_session_is_simulator(s)?"ShuttleSim lockstep":"Native kRPC C-Nano",krpc_session_vessel(s),krpc_session_planet(s)->name,c->physics.count);set_error(c,NULL);c->snapshot.adaptive_vehicle_profile=c->adaptive_profile;publish(c);pthread_mutex_unlock(&c->mutex);start_thread(c);}
+void landing_controller_connect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,false);reset_snapshot(c,getenv("KSP_LANDER_SIMULATOR")?"Opening ShuttleSim lockstep backend…":"Opening native kRPC C-Nano link…");c->snapshot.connection_status=CONN_CONNECTING;publish(c);LandingConfiguration cfg=c->configuration;pthread_mutex_unlock(&c->mutex);char err[768];KRPCSession*s=krpc_session_open(&cfg,err,sizeof(err));pthread_mutex_lock(&c->mutex);if(!s){c->snapshot.connection_status=CONN_FAILED;c->snapshot.phase=PHASE_FAULT;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"Native kRPC C-Nano connection failed.");set_error(c,err);publish(c);pthread_mutex_unlock(&c->mutex);return;}c->session=s;snprintf(c->vehicle_identity,sizeof(c->vehicle_identity),"%s",shuttle_sim_resolve_vehicle_identity(krpc_session_vessel(s),c->configuration.vehicle.model_id));start_log(c);reset_models(c,&c->configuration.vehicle);krpc_session_seed_physics(s,&c->physics);apply_certified_aero_prior(c);(void)controller_capture_terminal_model(c,&c->configuration);guidance_machine_init(&c->guidance);glide_calibration_init(&c->glide);c->has_prediction_cache=false;c->time_warp_issued=false;c->snapshot.connection_status=CONN_CONNECTED;snprintf(c->snapshot.status_message,sizeof(c->snapshot.status_message),"%s connected to %s around %s with %u %s aerodynamic cells.",krpc_session_is_simulator(s)?"ShuttleSim lockstep":"Native kRPC C-Nano",krpc_session_vessel(s),krpc_session_planet(s)->name,c->physics.count,shuttle_sim_model_matches_vehicle(c->vehicle_identity,NULL,0)?"certified":"self-learned");set_error(c,NULL);
+    if(!shuttle_sim_model_matches_vehicle(c->vehicle_identity,NULL,0)){
+        char warning[320];
+        snprintf(warning,sizeof(warning),"UNCERTIFIED craft '%s': no certified aerodynamic profile matches it (profile %s describes %s). Flying from configured seeds; aerodynamics learn only from this craft's flight data, and no certified terminal model is used.",
+            c->vehicle_identity,shuttle_sim_model_profile()?shuttle_sim_model_profile():"unknown",shuttle_sim_model_vehicle_id()?shuttle_sim_model_vehicle_id():"unknown");
+        set_warning(c,warning);
+    }
+    c->snapshot.adaptive_vehicle_profile=c->adaptive_profile;publish(c);pthread_mutex_unlock(&c->mutex);start_thread(c);}
 void landing_controller_disconnect(LandingController*c){stop_thread(c);pthread_mutex_lock(&c->mutex);disconnect_locked(c,true);pthread_mutex_unlock(&c->mutex);}
 
 void landing_controller_create_plan(LandingController*c){pthread_mutex_lock(&c->mutex);if(!c->session){pthread_mutex_unlock(&c->mutex);return;}if(c->glide.active){set_warning(c,"Stop the glide calibration before creating a deorbit plan.");log_state_event(c,"event=planning-blocked; reason=calibration-active",false);publish(c);pthread_mutex_unlock(&c->mutex);return;}LandingConfiguration cfg=effective_config(c);char err[768];Telemetry t;VehicleState s;
@@ -71,7 +72,6 @@ if(!read_live_sample(c,&cfg,&t,&s,err,sizeof(err))){c->snapshot.phase=PHASE_FAUL
 void landing_controller_engage(LandingController*c){
     pthread_mutex_lock(&c->mutex);
     c->prediction_generation++;
-    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
     if(c->glide.active)set_warning(c,"Stop calibration before engaging landing guidance.");
     else if(!c->has_plan)set_warning(c,"Create and review a deorbit plan before engaging guidance.");
     else if(c->plan_stale)set_warning(c,"Engagement blocked because planning-relevant configuration changed. Create a new deorbit plan.");
@@ -93,7 +93,6 @@ void landing_controller_engage(LandingController*c){
 void landing_controller_engage_reentry(LandingController*c){
     pthread_mutex_lock(&c->mutex);
     c->prediction_generation++;
-    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
 
     if(!c->session){
         set_warning(c,"Connect to KSP before starting reentry-only guidance.");
@@ -394,7 +393,6 @@ void landing_controller_engage_reentry(LandingController*c){
 
 void landing_controller_engage_hac_test(LandingController*c){
     pthread_mutex_lock(&c->mutex);c->prediction_generation++;
-    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
     if(!c->session){set_warning(c,"Connect to KSP before starting the HAC-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     if(c->glide.active){set_warning(c,"Stop calibration before starting the HAC-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     LandingConfiguration cfg=effective_config(c);char err[768]={0};Telemetry t;VehicleState state;
@@ -429,7 +427,6 @@ void landing_controller_engage_hac_test(LandingController*c){
 
 void landing_controller_engage_final_test(LandingController*c){
     pthread_mutex_lock(&c->mutex);c->prediction_generation++;
-    if(!controller_model_identity_ready(c)){pthread_mutex_unlock(&c->mutex);return;}
     if(!c->session){set_warning(c,"Connect to ShuttleSim before starting the final-only landing test.");publish(c);pthread_mutex_unlock(&c->mutex);return;}
     if((!krpc_session_is_simulator(c->session)&&!getenv("KSP_LANDER_FINAL_TEST_LIVE"))||!getenv("KSP_LANDER_FINAL_APPROACH_TEST")||strcmp(getenv("KSP_LANDER_FINAL_APPROACH_TEST"),"1")){
         set_warning(c,"Final-only landing test is simulator-only and requires KSP_LANDER_FINAL_APPROACH_TEST=1.");publish(c);pthread_mutex_unlock(&c->mutex);return;

@@ -20,7 +20,8 @@ static void append_log_metadata(LandingController*c,const char*started){
     jw_raw(&w,",\"vessel\":");jw_string(&w,krpc_session_vessel(c->session));
     jw_raw(&w,",\"planet\":");planet_model_replay_json(&w,p);
     jw_raw(&w,",\"runtime\":{\"transport\":");jw_string(&w,krpc_session_transport(c->session));jw_raw(&w,",\"clientLibrary\":");jw_string(&w,krpc_session_library_version(c->session));jw_raw(&w,",\"nativeBuild\":");jw_string(&w,c->log_native_build);jw_char(&w,'}');
-    jw_raw(&w,",\"modelIdentity\":{\"vehicleModelId\":");jw_string(&w,c->configuration.vehicle.model_id);jw_char(&w,'}');
+    jw_raw(&w,",\"modelIdentity\":{\"vehicleModelId\":");jw_string(&w,c->vehicle_identity);
+    jw_raw(&w,",\"certified\":");jw_raw(&w,shuttle_sim_model_matches_vehicle(c->vehicle_identity,NULL,0)?"true":"false");jw_char(&w,'}');
     jw_raw(&w,",\"physicsContext\":{\"structureId\":");jw_string(&w,krpc_session_physics_structure_id(c->session));jw_raw(&w,",\"environmentId\":");jw_string(&w,krpc_session_physics_environment_id(c->session));jw_raw(&w,",\"storage\":");jw_string(&w,krpc_session_physics_storage(c->session));jw_raw(&w,",\"historicalSamplesLoaded\":");jw_integer(&w,krpc_session_physics_history_count(c->session));jw_char(&w,'}');
     jw_raw(&w,",\"encoding\":{\"policy\":\"adaptive delta with semantic-event forcing\",\"periodicKeyframeSeconds\":5,\"nominalHz\":10,\"thinAtmosphereHz\":5,\"rapidTransientHz\":20}");
     jw_raw(&w,",\"configuration\":");landing_configuration_json(&w,&c->configuration);jw_char(&w,'}');
