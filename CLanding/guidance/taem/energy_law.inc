@@ -87,14 +87,33 @@ static double tel_lift_aoa(const TelContext *c,const TelPoint *p,double lift_nee
     return 0.5*(lo+hi);
 }
 
+/* Incidence of maximum L/D at this Mach within the vehicle incidence limit.
+   The scan step is a discretization of the tabulated polar, not a policy. */
+static double tel_best_ld_aoa(const TelContext *c,double mach) {
+    const double step=0.25; /* decision-literal-ok: polar scan resolution */
+    double best_aoa=c->aoa_max,best_ld=-INFINITY;
+    for (double a=TEL_AOA_MIN;a<=c->aoa_max+1e-9;a+=step) {
+        double cl,cd;
+        aero_coefficients(&c->model->aero,mach,a,&cl,&cd);
+        if (!(cd>0.0)) continue;
+        double ld=cl/cd;
+        if (ld>best_ld) { best_ld=ld; best_aoa=a; }
+    }
+    return best_aoa;
+}
+
 /* Incidence command for drag-modulation level k; `along` is the remaining path. */
 static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg,
         double k,double along,bool live) {
     double q,mach,lift,drag;
     tel_air(c,p->h,p->v,&q,&mach);
     if (mach>1.05) {
+        /* Maximum range is the measured polar's best L/D at this Mach, not
+           the incidence ceiling: the live polar peaks at 8-10 deg near Mach
+           1.2-1.5 and above 15 deg from Mach 1.6. */
+        double best=tel_best_ld_aoa(c,mach);
         if (p->g<-32.0*DEG2RAD) return c->aoa_max;
-        return c->aoa_max-(c->aoa_max-TEL_AOA_SUP_MIN)*k;
+        return best+(fmin(best,TEL_AOA_SUP_MIN)-best)*k;
     }
     double q_ref=TEL_Q_LO+(TEL_Q_HI-TEL_Q_LO)*k;
     /* At maximum range (k=0) the station speed is already out of reach;
@@ -695,7 +714,7 @@ static void tel_setup(const TerminalModel *model,const TaemGeometryState *geo,
     TelContext c={.model=model,
         .d_station=fmax(500.0,model->guidance.final_approach_distance),
         .v_station=fmax(model->guidance.final_alignment_speed,model->vehicle.minimum_safe_speed),
-        .aoa_max=fmin(15.0,fmax(5.0,model->vehicle.maximum_angle_of_attack))};
+        .aoa_max=fmax(TEL_AOA_SUP_MIN,model->vehicle.maximum_angle_of_attack)};
     c.h_station=c.d_station*tan(model->guidance.final_glide_slope*DEG2RAD);
     c.e_station=c.h_station+c.v_station*c.v_station/(2.0*TEL_G0);
     if (model->vehicle.terminal_maximum_lift_angle_of_attack>0.0)
