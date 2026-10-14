@@ -249,3 +249,5 @@ Hypotheses (not verified):
 - The cause is the gate's robustness scenarios, not the burn itself: `executionQualified` is true, yet the gate still blocks.
 
 Status: the run did not fly. Attempt 4 (pad) is still blocked on an operator revert or named save.
+
+- 2026-10-14 10:44 KST — scheduled check: no change in pad state. `ksl status --live` shows orbiting, mass 26014.6 kg, 0 clamps, UT 685.8 s (advanced since attempt 4b). Attempt 4 still blocked.
