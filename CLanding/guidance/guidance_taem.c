@@ -1583,7 +1583,12 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
             L->leg,L->side,L->radius,L->x_turn,L->s_go,L->s_req,L->station_slope_deg,t->angle_of_attack,aoa,t->roll,bank);
     }
     double heading=course;
-    if (L->leg==TEL_LEG_FINAL) {
+    /* The line controller is sized for HAC-exit offsets inside the Final
+       capture window; a wider exit (e.g. after a mid-arc HAC resize) keeps the
+       law's own station capture, which is not capped at a 20 deg cut. */
+    TelContext line_c;TelPoint line_s;
+    tel_setup(control_model,geometry,current->mass_kg,t->angle_of_attack,t->roll,&line_c,&line_s);
+    if (L->leg==TEL_LEG_FINAL&&tel_final_line_ready(&line_c,&line_s)) {
         bank=taem_energy_law_line_bank(g,t,cfg,course);
         heading=norm_deg(cfg->site.runway_heading+clampd(atan2(-t->runway_cross_track,
             fmax(400.0,t->true_air_speed*6.0))*RAD2DEG,-20.0,20.0));
