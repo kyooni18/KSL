@@ -36,6 +36,8 @@ typedef struct {
     float available_thrust;
     EngineRole role;
     bool selected;
+    /* Air-breathing engine: driven only by jet assist, never rocket-selected. */
+    bool airbreathing, jet_assist_on;
 } CommandableEngine;
 
 /* Field handles of one rudder-half ModuleControlSurface. */
@@ -82,6 +84,8 @@ struct KrpcCNanoClient {
 
     Vector3 burn_thrust_axis_body, burn_thrust_moment_body;
     bool burn_geometry_valid, require_oms;
+    /* Body has oxygen for air-breathing engines; cached once per connect. */
+    bool body_has_oxygen;
     double burn_resultant_fraction;
     CommandableEngine engines[CNANO_ENGINE_LIMIT];
     size_t engine_count;

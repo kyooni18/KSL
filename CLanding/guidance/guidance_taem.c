@@ -1638,6 +1638,7 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
         bool energy_short=!admissible&&L->k<=TEL_K_SHORT&&
             geometry->runway_along_m<0.0&&
             terminal_preflare_alignment_valid(g,t,course,cfg);
+        g->jet_assist_requested=energy_short;
         if (!energy_short) L->low_energy_pending=false;
         else if (!L->low_energy_pending) {
             L->low_energy_pending=true; L->low_energy_since_ut=t->ut;

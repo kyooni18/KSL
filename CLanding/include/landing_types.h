@@ -287,6 +287,9 @@ typedef struct {
     double speedbrake_fraction;
     bool gear, brakes, airbrakes, use_inertial_direction, thrust_alignment; Vector3 inertial_direction;
     bool autopilot_engaged, heading_control_enabled, hac_control_tuning, terminal_pitch_tuning; NavballSpeedMode navball_speed_mode; ControlProfile control_profile;
+    /* Request air-breathing engines at full throttle for energy recovery; the
+       transport honours it only when the body has atmospheric oxygen. */
+    bool jet_assist;
 } GuidanceCommand;
 
 typedef struct {

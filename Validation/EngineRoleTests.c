@@ -10,4 +10,7 @@ int main(void){
  assert(engine_role_selected(ENGINE_ROLE_OMS,true));
  assert(!engine_role_selected(ENGINE_ROLE_MAIN,false));
  assert(engine_role_selected(ENGINE_ROLE_OTHER,false));
+ assert(engine_propellant_is_intake_air("IntakeAir"));
+ assert(!engine_propellant_is_intake_air("LiquidFuel"));
+ assert(!engine_propellant_is_intake_air(NULL));
 }

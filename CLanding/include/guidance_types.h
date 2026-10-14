@@ -348,6 +348,8 @@ typedef struct {
     GuidancePhase last_stabilized_phase; bool has_last_stabilized_phase;
     TaemEnergyLawState taem_energy_law;
     AdaptiveFlareState adaptive_flare;
+    /* Set by the MM305 energy-short path each tick; copied into the command. */
+    bool jet_assist_requested;
 } GuidanceMachine;
 TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
     const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,

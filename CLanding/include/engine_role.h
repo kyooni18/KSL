@@ -26,4 +26,9 @@ static inline EngineRole engine_role_identify(const char *name,const char *title
 static inline bool engine_role_selected(EngineRole role,bool has_oms){
     return has_oms?role==ENGINE_ROLE_OMS:role!=ENGINE_ROLE_MAIN;
 }
+/* Air-breathing engines (jets) consume IntakeAir; rocket engines do not.  Jets
+   produce no thrust without atmospheric oxygen, so they are never rocket-selected. */
+static inline bool engine_propellant_is_intake_air(const char *name){
+    return name&&!strcmp(name,"IntakeAir");
+}
 #endif

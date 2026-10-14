@@ -389,6 +389,9 @@ static void refresh_burn_geometry(KrpcCNanoClient *client) {
 static void inventory_engines(KrpcCNanoClient *client) {
     client->engine_count = 0;
     client->commandable_thrust = 0.0;
+    client->body_has_oxygen = false;
+    if (krpc_SpaceCenter_CelestialBody_HasAtmosphericOxygen(client->connection, &client->body_has_oxygen, client->body) != KRPC_OK)
+        client->body_has_oxygen = false;
     krpc_SpaceCenter_Parts_t parts = KRPC_NULL;
     krpc_list_object_t engines = KRPC_NULL_LIST;
     krpc_error_t e = krpc_SpaceCenter_Vessel_Parts(client->connection, &parts, client->vessel);
@@ -418,8 +421,18 @@ static void inventory_engines(KrpcCNanoClient *client) {
             krpc_SpaceCenter_Part_Tag(client->connection,&tag,part);
         }
         entry->role=engine_role_identify(name,title,tag);
-        fprintf(stderr,"Engine inventory: name=%s title=%s role=%d thrust=%.0f N\n",
-            name?name:"",title?title:"",entry->role,(double)available);
+        /* Jets are identified by consuming IntakeAir; an unreadable propellant
+           list leaves the engine classed as rocket. */
+        krpc_list_string_t propellants=KRPC_NULL_LIST;
+        if(krpc_SpaceCenter_Engine_PropellantNames(client->connection,&propellants,engine)==KRPC_OK){
+            for(size_t p=0;p<propellants.size;p++){
+                entry->airbreathing|=engine_propellant_is_intake_air(propellants.items[p]);
+                krpc_free(propellants.items[p]);
+            }
+            KRPC_FREE_LIST(propellants);
+        }
+        fprintf(stderr,"Engine inventory: name=%s title=%s role=%d airbreathing=%d thrust=%.0f N\n",
+            name?name:"",title?title:"",entry->role,entry->airbreathing?1:0,(double)available);
         if(name)krpc_free(name);if(title)krpc_free(title);if(tag)krpc_free(tag);
         entry->object = engine;
         entry->part = part;
@@ -433,7 +446,7 @@ static void inventory_engines(KrpcCNanoClient *client) {
     client->commandable_thrust=0;
     for(size_t i=0;i<client->engine_count;i++){
         CommandableEngine *entry=&client->engines[i];
-        entry->selected=engine_role_selected(entry->role,has_oms||client->require_oms);
+        entry->selected=!entry->airbreathing&&engine_role_selected(entry->role,has_oms||client->require_oms);
         if(entry->selected)client->commandable_thrust+=entry->available_thrust;
     }
     refresh_burn_geometry(client);

@@ -1,8 +1,39 @@
+/* Jet assist: air-breathing engines run at full throttle only while guidance
+   requests energy recovery and the body has oxygen.  Edge-triggered, so a
+   steady request or steady cutoff costs no RPCs. */
+static bool set_jet_assist(KrpcCNanoClient *client, bool want, char *error, size_t error_size) {
+    for (size_t i = 0; i < client->engine_count; ++i) {
+        CommandableEngine *engine = &client->engines[i];
+        if (!engine->airbreathing) continue;
+        bool on = want && client->body_has_oxygen;
+        if (engine->jet_assist_on == on) continue;
+        if (on) {
+            bool active = false;
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_Active(client->connection, &active, engine->object), error, error_size);
+            if (!active) {
+                RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Active(client->connection, engine->object, true), error, error_size);
+                engine->activated_by_client = true;
+            }
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, true), error, error_size);
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 1.0f), error, error_size);
+            engine->independent_owned = true;
+        } else {
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 0.0f), error, error_size);
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, false), error, error_size);
+            engine->independent_owned = false;
+        }
+        engine->jet_assist_on = on;
+    }
+    return true;
+}
+
 static bool set_engine_throttle(KrpcCNanoClient *client, double throttle,
                                 char *error, size_t error_size) {
     bool powered = throttle > 1e-4;
     for (size_t i = 0; i < client->engine_count; ++i) {
         CommandableEngine *engine = &client->engines[i];
+        /* Jets are governed by set_jet_assist, never by the rocket throttle. */
+        if (engine->airbreathing) continue;
         if(powered && !engine->selected){
             /* Global throttle stays zero; also suppress any inherited
                independent throttle on excluded launch/main engines. */
@@ -84,6 +115,9 @@ bool krpc_cnano_client_set_direct_controls(KrpcCNanoClient *client,
         if(!set_engine_throttle(client,throttle,error,error_size))return false;
         client->cached_command_throttle=throttle;client->has_command_throttle=true;
     }
+    /* Direct control does not own the jets; any assist requested by a previous
+       autopilot command is cut here. */
+    if(!set_jet_assist(client,false,error,error_size))return false;
     if(change_wheel){client->cached_command_wheel=wheel_steering;client->has_command_wheel=true;}
     if(change_rcs){client->cached_rcs=rcs;client->has_rcs=true;}
 
@@ -180,6 +214,7 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
         if (!set_engine_throttle(client, throttle, error, error_size)) return false;
         client->cached_command_throttle = throttle; client->has_command_throttle = true;
     }
+    if (!set_jet_assist(client, command->jet_assist, error, error_size)) return false;
     client->cached_sas = false; client->has_sas = true;
     client->last_apply_calls=client->total_rpc_calls-before;
     client->last_apply_wire_requests=client->total_wire_requests-wire_before;
