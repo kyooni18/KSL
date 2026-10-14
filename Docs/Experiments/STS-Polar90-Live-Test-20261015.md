@@ -1,6 +1,6 @@
 # STS Polar 90 Live Test — 2026-10-15
 
-**Status: overnight test in progress.** Evidence collected through 03:12 KST; KSP has been restored to the named prelaunch checkpoint and independently verified after an additional ascent-mode test. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
+**Status: overnight test completed at 06:00 KST.** KSP was restored to the named prelaunch checkpoint and independently verified after the ascent-mode test; read-only checks through 06:00 showed the same safe pad state and no active control program. No additional failure occurred during the idle watch. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
 
 ## Test setup
 
@@ -100,3 +100,7 @@ final-polar90-terminal-fpa16-v180-20261014T180706Z-yohyn9se
 final-polar90-terminal-fpa18-v180-20261014T180629Z-7t4mc1w4
 final-polar90-terminal-fpa20-v200-20261014T180623Z-m47v98cm
 ```
+
+## Final overnight watch
+
+Read-only kRPC observation at 06:00 KST confirmed the STS remained in `pre_launch` on `sts-polar90-prelaunch-20261015`: 521,003.44 kg, 8 clamps attached, and throttle 0. The only completed kRPC program was the earlier save/verification script; no active guidance controller remained. No source files were changed by the test session. The watch added no new failure beyond the distinct issues documented above.
