@@ -1,3 +1,29 @@
+/* Site distance at the first forecast point inside the live MM305 physical
+   handoff (Mach <= target+half-width, altitude <= MM305 ceiling), interpolated
+   between recorded samples. NAN when the forecast never gets there. */
+static double entry_policy_handoff_distance(const EntryPrediction *f,const PlanetModel *p,
+        const LandingConfiguration *cfg){
+    if(!f||!p||!cfg)return NAN;
+    GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
+    double mach_handoff=cfg->guidance.mm305_target_mach+cfg->guidance.mm305_mach_half_width;
+    double prev_excess=NAN,prev_range=NAN;
+    for(size_t i=0;i<f->trajectory.count;++i){
+        const TrajectoryPoint *pt=&f->trajectory.points[i];
+        double sound=planet_atmospheric_speed_of_sound(p,pt->altitude);
+        if(!(sound>0.0))continue;
+        GeoPoint geo={pt->latitude,pt->longitude,pt->altitude};
+        double range=great_circle_distance(geo,site,p->radius);
+        double excess=pt->speed-mach_handoff*sound;
+        if(excess<=0.0&&pt->altitude<=cfg->guidance.mm305_max_altitude){
+            if(isfinite(prev_excess)&&prev_excess>0.0)
+                return prev_range+(range-prev_range)*prev_excess/(prev_excess-excess);
+            return range;
+        }
+        prev_excess=excess;prev_range=range;
+    }
+    return NAN;
+}
+
 static double entry_supervision_horizon(const GuidanceSettings *settings){
     if(!settings||!isfinite(settings->prediction_interval)||
        settings->prediction_interval<=0.0)return 0.0;
@@ -303,6 +329,49 @@ static void *terminal_prediction_worker(void *arg){
             guidance.entry_supervision_boundary_missed=pr.taem_ownership_boundary_missed;
             guidance.entry_supervision_mode=guidance.entry_supervision_valid?
                 ENTRY_SUPERVISION_PASS_THROUGH:ENTRY_SUPERVISION_INFEASIBLE;
+            /* Re-plan from live telemetry: solve the constant bank magnitude
+               whose physics forecast from this measured state reaches the live
+               MM305 handoff (Mach mm305TargetMach+halfWidth below the MM305
+               ceiling) at the target site distance. More bank sheds more
+               energy and hands off further out, so the miss is monotone. */
+            double target=guidance.entry_handoff_target_range;
+            if(cfg.guidance.taem_energy_law&&isfinite(target)&&isfinite(telemetry.range_to_site)){
+                double aoa=guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
+                    guidance.entry_alpha_target:telemetry.angle_of_attack;
+                double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
+                double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);
+                double lo=0.0,f_lo=NAN,f_hi=NAN;
+                double sound_floor=planet_atmospheric_speed_of_sound(&planet,cfg.guidance.mm305_max_altitude);
+                double mach_handoff=cfg.guidance.mm305_target_mach+cfg.guidance.mm305_mach_half_width;
+                double bound=2.0*telemetry.range_to_site/fmax(1.0,mach_handoff*sound_floor);
+                for(int iteration=0;;++iteration){
+                    double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);
+                    EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound);
+                    double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
+                    entry_prediction_clear(&f);
+                    double miss=handoff-target; /* + : hands off too far out (short) */
+                    if(iteration==0){f_lo=miss;if(!(miss<0.0))break;continue;}
+                    if(iteration==1){f_hi=miss;if(!(miss>0.0))break;continue;}
+                    if(!isfinite(miss))break;
+                    if(miss>0.0){hi=bank;f_hi=miss;}else{lo=bank;f_lo=miss;}
+                    /* stop when the bracket is below the roll command resolution
+                       the allocator can express in one guidance tick */
+                    if(hi-lo<=cfg.guidance.entry_roll_rate/fmax(1.0,cfg.guidance.guidance_rate))break;
+                }
+                double solved=isfinite(f_lo)&&!(f_lo<0.0)?0.0:
+                    isfinite(f_hi)&&!(f_hi>0.0)?hi:0.5*(lo+hi);
+                double policy_aoa=NAN,best_miss=f_lo;
+                if(isfinite(f_lo)||isfinite(f_hi)){
+                    guidance.entry_policy_valid=true;
+                    guidance.entry_policy_bank_deg=solved;
+                    guidance.entry_policy_aoa_deg=policy_aoa;
+                    guidance.entry_policy_ut=request_ut;
+                    fprintf(stderr,"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %.1f deg "
+                        "(miss at 0 deg %+.1f km, at max %+.1f km, best %+.1f km)\n",request_ut,target/1000.0,
+                        solved,policy_aoa,f_lo/1000.0,f_hi/1000.0,best_miss/1000.0);
+                }
+            }
         }else pr=predictor_simulate_terminal_shadow_ensemble(state,&telemetry,&guidance,
             has_plan?&plan:NULL,&planet,aero,&envelope,&calibration,&cfg,
             terminal_model_valid?&terminal_model:NULL,600,true);

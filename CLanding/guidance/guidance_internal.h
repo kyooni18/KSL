@@ -14,7 +14,6 @@
    planner must stay inside that target while downstream control keeps the full
    physical authority needed to track and brake the maneuver. */
 #define GUIDANCE_HARD_AOA_LIMIT_DEG 40.0
-#define MM304_PLANNED_MAX_BANK_DEG 40.0
 #define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
 #define MM304_COORDINATION_BETA_SCALE_DEG 5.0
 
@@ -109,6 +108,8 @@ void entry_program_commit_planned_reversal(GuidanceMachine*g,EntryControlPlan*pl
 
 bool entry_taem_tangent_target_geometry(const TaemInterfaceTarget*q,
         const LandingConfiguration*cfg);
+double mm305_energy_law_handoff_reach(const struct TerminalModel *model,
+        double altitude_above_site_m,double speed_mps,double mass_kg);
 GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         const VehicleState*state,double course,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg,double dt);

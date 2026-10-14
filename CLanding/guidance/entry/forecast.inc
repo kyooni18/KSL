@@ -32,6 +32,12 @@ bool guidance_accept_entry_plan(GuidanceMachine*g,const GuidanceMachine*request,
         g->entry_s_turn_plan.predicted_reversals=result->entry_s_turn_plan.predicted_reversals;
         g->entry_s_turn_plan.cost=result->entry_s_turn_plan.cost;
     }
+    if(result->entry_policy_valid&&isfinite(result->entry_policy_bank_deg)){
+        g->entry_policy_valid=true;
+        g->entry_policy_bank_deg=result->entry_policy_bank_deg;
+        g->entry_policy_aoa_deg=result->entry_policy_aoa_deg;
+        g->entry_policy_ut=result->entry_policy_ut;
+    }
     g->entry_planning_needed=false;
     return true;
 }

@@ -1,5 +1,6 @@
 #ifndef KSP_LANDER_GUIDANCE_TYPES_H
 #define KSP_LANDER_GUIDANCE_TYPES_H
+#define MM304_PLANNED_MAX_BANK_DEG 40.0
 
 #include "landing_types.h"
 #include "taem_route.h"
@@ -169,6 +170,11 @@ typedef struct {
     double entry_alpha_deficit_filter, entry_alpha_ceiling_filter; bool entry_alpha_filter_valid;
     bool entry_bank_authority_acquired;
     bool entry_supervision_valid, entry_supervision_boundary_missed; EntrySupervisionMode entry_supervision_mode;
+    /* Live numerical predictor-corrector: the bank magnitude whose physics
+       forecast from measured state reaches the MM305 handoff at the target
+       distance. Re-solved every forecast cycle from live telemetry. */
+    bool entry_policy_valid; double entry_policy_bank_deg, entry_policy_aoa_deg, entry_policy_ut;
+    double entry_handoff_target_range; /* site distance MM304 aims to hand off at */
 
     double entry_supervision_ut;
 

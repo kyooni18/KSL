@@ -815,6 +815,17 @@ EntryPrediction predictor_simulate_entry_with_rate(VehicleState state,const Plan
     return predictor_simulate_entry_with_attitude(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,initial_bank_rate,NAN,NAN,initial_sign,initial_leg,maxdur,include);
 }
 
+/* Constant entry-energy policy (bank magnitude, AoA) held to the horizon; the
+   S-turn side still follows the ground track. The trajectory is recorded so a
+   caller can locate its own handoff boundary on it. */
+EntryPrediction predictor_simulate_entry_policy(VehicleState state,const PlanetModel*p,AerodynamicModel aero,
+        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,
+        const LandingSite*site,const GuidanceSettings*set,double bank_deg,double aoa_deg,
+        double sign,double maxdur){
+    return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,v->maximum_bank_angle,
+        sign*bank_deg,0,aoa_deg,0,sign,0,false,maxdur,true,true,bank_deg,aoa_deg,maxdur,maxdur,
+        false,false,NULL,NULL);
+}
 EntryPrediction predictor_simulate_entry(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_sign,double initial_leg,double maxdur,bool include){
     return predictor_simulate_entry_with_rate(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,0,initial_sign,initial_leg,maxdur,include);
 }

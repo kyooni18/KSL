@@ -140,6 +140,27 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .planet=p,
         .vehicle=v
     };
+    /* With the TAEM energy law, everything below the MM305 physical handoff
+       (Mach mm305TargetMach+halfWidth) is flown by that law under its own
+       polar.  Budget MM304 to deliver that handoff speed at the TAEM
+       interface altitude where the law's mid-drag glide still reaches the
+       Final station, instead of extrapolating MM304's drag profile down to
+       Final speed (2026-10-14: handoff 100 km out needing 94 km of path with
+       79 km of TAEM reach). */
+    if(cfg->guidance.taem_energy_law&&g->entry_terminal_model){
+        double interface_altitude=s->taem_interface_altitude;
+        double sound=planet_atmospheric_speed_of_sound(p,interface_altitude);
+        double handoff_speed=(s->mm305_target_mach+s->mm305_mach_half_width)*sound;
+        double reach=mm305_energy_law_handoff_reach(g->entry_terminal_model,
+            interface_altitude-cfg->site.altitude,handoff_speed,t->mass);
+        if(isfinite(handoff_speed)&&handoff_speed>0.0&&isfinite(reach)&&
+           t->true_air_speed>handoff_speed){
+            drag_in.taem_velocity=handoff_speed;
+            drag_in.taem_altitude=interface_altitude;
+            g->entry_handoff_target_range=reach+alignment.distance_m;
+            drag_in.taem_range=reach;
+        }
+    }
     EntryDragReferenceOutput drag=entry_drag_reference_compute(&drag_in,&drag_cfg);
     if(!drag.valid)
         return entry_program_contract_hold(g,t,cfg,dt,
@@ -320,6 +341,15 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .required_vertical_lift_accel=drag.required_vertical_lift_accel
     };
 
+    /* A live physics replan supersedes the analytic drag-v range model for
+       the energy share of the bank: fly the vertical lift of its solved bank. */
+    if(g->entry_policy_valid&&isfinite(g->entry_policy_bank_deg)&&
+       isfinite(lateral.lift_accel)&&lateral.lift_accel>0.0){
+        double eff=clampd(g->entry_policy_bank_deg*lateral.bank_effectiveness,0.0,
+            nextafter(90.0,0.0));
+        lateral.longitudinal.required_vertical_lift_accel=lateral.lift_accel*cos(eff*DEG2RAD);
+        lateral.longitudinal.valid=true;
+    }
     /* Convert DRAGREF's vertical-lift demand to bank against measured
        lift inside the lateral allocator.  Supplying a separate precomputed bank
        magnitude here bypasses that contract. */

@@ -21,6 +21,32 @@
 #include "taem/state.inc"
 #include "taem/energy.inc"
 #include "taem/energy_law.inc"
+
+/* Straight-line distance the TAEM energy law glides from an MM305 handoff
+   state to the Final station energy at its mid drag level. MM304 sizes its
+   energy budget against this so the handoff leaves TAEM modulation margin
+   both ways under the same polar TAEM flies. */
+double mm305_energy_law_handoff_reach(const TerminalModel *model,
+        double altitude_above_site_m,double speed_mps,double mass_kg) {
+    if (!model||!isfinite(altitude_above_site_m)||!(altitude_above_site_m>0.0)||
+        !isfinite(speed_mps)||!(speed_mps>0.0)||!isfinite(mass_kg)||!(mass_kg>0.0))
+        return NAN;
+    TaemGeometryState geo={0};
+    geo.runway_along_m=-INFINITY;
+    geo.altitude_above_runway_m=altitude_above_site_m;
+    geo.airspeed_mps=speed_mps;
+    geo.ground_speed_mps=speed_mps;
+    TelContext c;TelPoint p;
+    tel_setup(model,&geo,mass_kg,NAN,0.0,&c,&p);
+    double q,mach,cl,cd;
+    tel_air(&c,p.h,p.v,&q,&mach);
+    p.aoa=tel_best_ld_aoa(&c,mach);
+    aero_coefficients(&model->aero,mach,p.aoa,&cl,&cd);
+    p.g=cl>0.0&&cd>0.0?-atan(cd/cl):0.0;   /* equilibrium glide at best L/D */
+    TelSegment straight[1]={{INFINITY,0.0}};
+    double reach=tel_predict_range(&c,&p,TEL_K_PLAN,INFINITY,straight,1);
+    return isfinite(reach)&&reach>0.0?reach:NAN;
+}
 #include "taem/executive_bridge.inc"
 
 double terminal_energy_commit_tolerance = NAN;
