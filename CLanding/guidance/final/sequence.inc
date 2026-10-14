@@ -359,7 +359,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double lift_accel=isfinite(t->lift_force)&&t->lift_force>0.0&&t->mass>1.0?
         t->lift_force/t->mass:g0;
     lift_accel=fmax(.3*g0,lift_accel);
-    double later_bank=fmin(bank_limit,10.0);
+    double later_bank=fmin(bank_limit,TERMINAL_LINE_CAPTURE_BANK_DEG);
     double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
     double y=clampd(t->runway_cross_track,-2000.0,2000.0);
     /* The bank command passes through the Final roll limiter (rate and

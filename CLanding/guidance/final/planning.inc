@@ -373,7 +373,7 @@ static TerminalPreflarePlan terminal_preflare_plan_floor(const GuidanceMachine*g
        pointed away from the runway; Final then had too little energy and time to
        recover that lateral error. Keep the aircraft in TAEM until its current
        runway-frame intercept is actually inside the runway. */
-    bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
+    bool runway_aligned=terminal_runway_line_capturable(g,t,course,cfg);
     if(!runway_aligned){
         if(getenv("KSP_LANDER_GATE_TRACE"))fprintf(stderr,"GATE_TRACE ut=%.2f not-aligned hac=%d\n",t->ut,g->hac_completed?1:0);
         return false;
@@ -440,7 +440,7 @@ static TerminalPreflarePlan terminal_preflare_plan_floor(const GuidanceMachine*g
     /* plan->response_time is the pull-up actuator response after the preflare
        trigger and is already charged by terminal_preflare_plan().  TAEM delivery
        only needs reserve for unfinished runway-vector capture before that trigger. */
-    bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
+    bool runway_aligned=terminal_runway_line_capturable(g,t,course,cfg);
     double response_required=runway_aligned?0.0:
         fmax(envelope.lateral_capture_time_s,envelope.heading_capture_time_s);
 
@@ -773,8 +773,8 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
 }
 
 
-bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
-        const LandingConfiguration*cfg){
+static bool terminal_runway_line_check(const GuidanceMachine*g,const Telemetry*t,double course,
+        const LandingConfiguration*cfg,bool allow_capture){
     (void)g;
     const LandingSite*site=&cfg->site;
     const VehicleProfile*v=&cfg->vehicle;
@@ -806,10 +806,39 @@ bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t
     double minimum=g&&g->terminal_preflare_plan_valid?
         g->preflare_minimum_speed:v->minimum_safe_speed;
 
+    bool straight_in=fabs(projected_cross)<=half_width&&
+        fabs(projected_runway_end_cross)<=half_width;
+    /* Far out the straight projection overstates the miss: Final keeps
+       steering.  The line is capturable when the bank Final's line capture
+       plans with, on the measured lift, can null both cross-track offset and
+       rate by the threshold; the minimum-effort profile for that peaks at
+       |6 y/T^2 + 4 ydot/T|. */
+    bool capturable=false;
+    if(allow_capture&&!straight_in&&time_to_threshold>0.0&&t->mass>0.0&&
+       isfinite(t->lift_force)&&t->lift_force>0.0){
+        double T=time_to_threshold,y=t->runway_cross_track;
+        double needed=fabs(6.0*y/(T*T)+4.0*cross_rate/T);
+        double available=t->lift_force/t->mass*
+            sin(fmin(terminal_lateral_bank_limit(t,v),TERMINAL_LINE_CAPTURE_BANK_DEG)*DEG2RAD);
+        capturable=isfinite(needed)&&needed<=available;
+    }
     return t->runway_along_track<site->runway_length&&
-        fabs(projected_cross)<=half_width&&
-        fabs(projected_runway_end_cross)<=half_width&&
+        (straight_in||capturable)&&
         t->true_air_speed>=minimum;
+}
+
+
+/* Straight-in: the measured ground track already lies on the runway. */
+bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
+        const LandingConfiguration*cfg){
+    return terminal_runway_line_check(g,t,course,cfg,false);
+}
+
+/* Final's admission: straight-in, or a residual Final's line capture can
+   still null before the threshold. */
+bool terminal_runway_line_capturable(const GuidanceMachine*g,const Telemetry*t,double course,
+        const LandingConfiguration*cfg){
+    return terminal_runway_line_check(g,t,course,cfg,true);
 }
 
 

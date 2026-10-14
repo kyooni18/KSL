@@ -217,13 +217,11 @@ class KSLApp(App[int]):
         base = self._base()
         ascent, pr = base["ascent"], base["profile"]
         yield Header(show_clock=True)
-        modes = [("Dry run · no flight", "dry-run"), ("Live KSP", "live")]
         with TabbedContent(initial="launch", id="tabs"):
             with TabPane("Launch", id="launch"):
                 with VerticalScroll(classes="quick"):
                     yield Static(id="q-launch-status", classes="quick-status", markup=False)
                     for label, widget in (
-                        ("Mode", Select(modes, value=DEFAULT_MODE, allow_blank=False, id="q-launch-mode")),
                         ("Mission type", Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
                                                 allow_blank=False, id="q-kind")),
                         ("Target altitude km", Input(f"{ascent['targetAltitudeKm']:g}", id="q-altitude")),
@@ -255,7 +253,7 @@ class KSLApp(App[int]):
                 with VerticalScroll(classes="quick"):
                     yield Static(id="q-land-status", classes="quick-status", markup=False)
                     for label, widget in (
-                        ("Mode", Select([*modes, ("Simulation", "sim")], value=DEFAULT_MODE, allow_blank=False,
+                        ("Mode", Select([("Live KSP", "live"), ("Simulation", "sim")], value="live", allow_blank=False,
                                         id="q-land-mode")),
                         ("Start from", Select([("Auto (from vessel state)", "auto"), ("Deorbit plan", "deorbit"),
                                                ("Entry · MM304", "entry"), ("TAEM · MM305", "taem"),
@@ -838,7 +836,8 @@ class KSLApp(App[int]):
             # The simple tabs drive the console's fields, so both views share one request path.
             for source, target in self.QUICK_FIELDS.items():
                 self.query_one(f"#{target}").value = self.query_one(f"#{source}").value
-            mode = str(self.query_one(f"#q-{tab}-mode", Select).value)
+            # The simple view always flies; dry runs stay in the full console.
+            mode = "live" if tab == "launch" else str(self.query_one("#q-land-mode", Select).value)
             self.query_one("#mode", Select).value = mode
             self.query_one("#execution-style", Select).value = (
                 "automatic" if self.query_one("#q-automatic", Switch).value else "directed")

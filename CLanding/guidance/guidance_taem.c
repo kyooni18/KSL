@@ -1516,7 +1516,7 @@ static double taem_energy_law_line_bank(const GuidanceMachine *g,const Telemetry
     double lift_accel=isfinite(t->lift_force)&&t->lift_force>0.0&&t->mass>1.0?
         t->lift_force/t->mass:g0;
     lift_accel=fmax(.3*g0,lift_accel);
-    double later_bank=fmin(bank_limit,10.0);
+    double later_bank=fmin(bank_limit,TERMINAL_LINE_CAPTURE_BANK_DEG);
     double stop_accel=.6*g0*tan(later_bank*DEG2RAD);
     double y=clampd(t->runway_cross_track,-2000.0,2000.0);
     GuidanceAttitudeLimits roll_limits=decision_guidance_attitude_limits(t,&cfg->guidance,
