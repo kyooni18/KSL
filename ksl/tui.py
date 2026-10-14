@@ -157,8 +157,19 @@ class KSLApp(App[int]):
     #runs { width: 2fr; }
     #replay-detail { width: 3fr; border: round $primary-darken-2; padding: 0 1; }
     #sample { height: auto; border: round $primary-darken-2; padding: 0 1; }
+    .quick { padding: 1 2; }
+    .quick-status { height: auto; border: round $primary-darken-2; padding: 0 1; margin-bottom: 1; }
+    .quick-row { height: auto; margin-bottom: 1; }
+    .quick-row Label { width: 18; margin-top: 1; }
+    .quick-row Select, .quick-row Input { width: 1fr; max-width: 60; }
+    .quick-buttons { height: auto; margin-top: 1; }
+    .quick-buttons Button { margin-right: 2; min-width: 16; }
+    .quick-msg { height: auto; margin-top: 1; }
+    .quick-more { height: auto; border: round $primary-darken-2; padding: 0 1; }
     """
     BINDINGS = [
+        Binding("1", "tab('launch')", "Launch"),
+        Binding("2", "tab('landing')", "Landing"),
         Binding("d", "tab('dashboard')", "Console"),
         Binding("m", "tab('mission')", "Settings"),
         Binding("r", "tab('replay')", "Runs"),
@@ -199,13 +210,82 @@ class KSLApp(App[int]):
         self.reviewed_signature: str | None = None
         self.displayed_plan_revision: str | None = None
         self.pending_commands: dict[str, Path] = {}
+        self.quick_armed: tuple[str, str, float] | None = None
 
     # --- layout -------------------------------------------------------------------
     def compose(self) -> ComposeResult:
         base = self._base()
         ascent, pr = base["ascent"], base["profile"]
         yield Header(show_clock=True)
-        with TabbedContent(initial="dashboard", id="tabs"):
+        modes = [("Dry run · no flight", "dry-run"), ("Live KSP", "live")]
+        with TabbedContent(initial="launch", id="tabs"):
+            with TabPane("Launch", id="launch"):
+                with VerticalScroll(classes="quick"):
+                    yield Static(id="q-launch-status", classes="quick-status", markup=False)
+                    for label, widget in (
+                        ("Mode", Select(modes, value=DEFAULT_MODE, allow_blank=False, id="q-launch-mode")),
+                        ("Mission type", Select([(KIND_LABELS[k], k) for k in PROFILE_KINDS], value=pr["kind"],
+                                                allow_blank=False, id="q-kind")),
+                        ("Target altitude km", Input(f"{ascent['targetAltitudeKm']:g}", id="q-altitude")),
+                        ("Inclination deg", Input(f"{ascent['inclinationDeg']:g}", id="q-inclination")),
+                    ):
+                        with Horizontal(classes="quick-row"):
+                            yield Label(label)
+                            yield widget
+                    with Horizontal(classes="quick-row"):
+                        yield Label("Settings")
+                        yield Switch(False, id="q-launch-settings")
+                    with Vertical(id="q-launch-more", classes="quick-more"):
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Ascent guidance")
+                            yield Select([("Legacy STS", "legacy"), ("Intelligent · experimental", "intelligent")],
+                                         value=ascent["guidanceMode"], allow_blank=False, id="q-ascent-mode")
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Plane target")
+                            yield Input(pr["planeTarget"], placeholder="e.g. Minmus or Station", id="q-plane-target")
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Continue to orbit ops")
+                            yield Switch(False, id="q-automatic")
+                        yield Static("Full configuration: Console [d] and Settings [m].", markup=False)
+                    with Horizontal(classes="quick-buttons"):
+                        yield Button("LAUNCH", id="q-launch", variant="success")
+                        yield Button("ABORT", id="q-launch-abort", variant="error")
+                    yield Static(id="q-launch-msg", classes="quick-msg", markup=False)
+            with TabPane("Landing", id="landing"):
+                with VerticalScroll(classes="quick"):
+                    yield Static(id="q-land-status", classes="quick-status", markup=False)
+                    for label, widget in (
+                        ("Mode", Select([*modes, ("Simulation", "sim")], value=DEFAULT_MODE, allow_blank=False,
+                                        id="q-land-mode")),
+                        ("Start from", Select([("Auto (from vessel state)", "auto"), ("Deorbit plan", "deorbit"),
+                                               ("Entry · MM304", "entry"), ("TAEM · MM305", "taem"),
+                                               ("Final approach", "final")], value="auto", allow_blank=False,
+                                              id="q-land-from")),
+                    ):
+                        with Horizontal(classes="quick-row"):
+                            yield Label(label)
+                            yield widget
+                    with Horizontal(classes="quick-row"):
+                        yield Label("Settings")
+                        yield Switch(False, id="q-land-settings")
+                    with Vertical(id="q-land-more", classes="quick-more"):
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Landing config")
+                            yield Input(base["landing"]["backendConfiguration"], id="q-landing-config")
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Strict plan")
+                            yield Switch(bool(base["landing"]["requireStrictPlan"]), id="q-strict-plan")
+                        with Horizontal(classes="quick-row"):
+                            yield Label("Sim scenario")
+                            yield Select([(f"{s.name} — {s.start.title}", s.name) for s in SCENARIOS.values()],
+                                         value=base["simulation"]["scenario"] if base["simulation"]["scenario"] in SCENARIOS else "l5-mm305",
+                                         allow_blank=False, id="q-scenario")
+                        yield Static("Full configuration: Console [d] and Settings [m].", markup=False)
+                    with Horizontal(classes="quick-buttons"):
+                        yield Button("LAND", id="q-land", variant="success")
+                        yield Button("EXECUTE DEORBIT BURN", id="q-execute-plan", variant="warning")
+                        yield Button("ABORT", id="q-land-abort", variant="error")
+                    yield Static(id="q-land-msg", classes="quick-msg", markup=False)
             with TabPane("Console", id="dashboard"):
                 with Horizontal(id="session-actions"):
                     yield Button("Connect / refresh", id="connect-vessel")
@@ -355,6 +435,9 @@ class KSLApp(App[int]):
         self.refresh_runs()
         self.render_dashboard(None)
         self.refresh_operations()
+        self.query_one("#q-launch-more").display = False
+        self.query_one("#q-land-more").display = False
+        self.monitor_vessel = True  # the quick tabs need the vessel state; probing is read-only
         self.set_interval(0.5, self.poll)
         self.set_interval(3, self.schedule_probe)
 
@@ -416,6 +499,7 @@ class KSLApp(App[int]):
         self.render_vessel()
         self.refresh_operations()
         self.render_plan_review(status)
+        self.render_quick(status)
         for request_id, run_dir in list(self.pending_commands.items()):
             try:
                 command = Commands(run_dir).read(request_id)
@@ -623,8 +707,10 @@ class KSLApp(App[int]):
         self.watcher = RunWatcher(run_dir)
         self.query_one("#eventlog", RichLog).write(Text(f"— watching {run_dir.name} —", style="bold"))
         self.poll()
-        self.query_one("#tabs", TabbedContent).active = "dashboard"
-        self.query_one("#eventlog", RichLog).focus()  # keep focus out of the hidden Mission pane
+        tabs = self.query_one("#tabs", TabbedContent)
+        if tabs.active not in ("launch", "landing"):
+            tabs.active = "dashboard"
+            self.query_one("#eventlog", RichLog).focus()  # keep focus out of the hidden Mission pane
 
     @on(Button.Pressed, "#watch-latest")
     def watch_latest_button(self) -> None:
@@ -705,6 +791,106 @@ class KSLApp(App[int]):
     def replan(self) -> None:
         self.submit_command("replan")
 
+    # --- simple launch / landing ----------------------------------------------------
+    QUICK_FIELDS = {"q-altitude": "altitude", "q-inclination": "inclination", "q-kind": "kind",
+                    "q-ascent-mode": "ascent-mode", "q-plane-target": "plane-target",
+                    "q-landing-config": "landing-config", "q-strict-plan": "strict-plan", "q-scenario": "scenario"}
+
+    @on(Switch.Changed, "#q-launch-settings")
+    @on(Switch.Changed, "#q-land-settings")
+    def toggle_quick_settings(self, event: Switch.Changed) -> None:
+        self.query_one("#" + event.switch.id.replace("settings", "more")).display = event.value
+
+    def render_quick(self, status: MissionStatus | None) -> None:
+        info = self.vessel_info or {}
+        vessel = (f"Vessel: {info.get('vessel', '—')} · {info.get('situation', '—')} · "
+                  f"alt {_fmt(info.get('altitude'), 1e-3, 'km')} · "
+                  f"Ap/Pe {_fmt(info.get('apoapsis'), 1e-3)}/{_fmt(info.get('periapsis'), 1e-3)} km"
+                  if info else (self.connection_error or "Vessel: not connected"))
+        run = (f"Run: {status.operation} · {status.state.upper()} · {Phase(status.phase).title}"
+               + (f" · {status.status_message}" if status.status_message else "") if status else "Run: none")
+        text = Text(vessel + "\n" + run, style="red" if status and status.error else "")
+        self.query_one("#q-launch-status", Static).update(text)
+        self.query_one("#q-land-status", Static).update(text)
+        ready = self.displayed_plan_revision is not None and not self.query_one("#execute-plan", Button).disabled
+        self.query_one("#q-execute-plan", Button).display = self.displayed_plan_revision is not None
+        self.query_one("#q-execute-plan", Button).disabled = not ready
+        running = status is not None and status.state == "running"
+        self.query_one("#q-launch-abort", Button).disabled = not running
+        self.query_one("#q-land-abort", Button).disabled = not running
+
+    def _landing_operation(self, mode: str) -> str:
+        if mode == "sim":
+            return "simulate"
+        chosen = str(self.query_one("#q-land-from", Select).value)
+        if chosen != "auto":
+            return chosen
+        from .krpc_link import suggest_phase
+        suggested = suggest_phase(self.vessel_info) if self.vessel_info else None
+        operation = {"orbit": "deorbit", "mm304": "entry", "mm305": "taem"}.get(suggested or "")
+        if operation is None:
+            raise ConfigError("Cannot pick a landing phase from the vessel state; choose Start from")
+        return operation
+
+    def quick_start(self, tab: str) -> None:
+        message = self.query_one(f"#q-{tab}-msg", Static)
+        try:
+            # The simple tabs drive the console's fields, so both views share one request path.
+            for source, target in self.QUICK_FIELDS.items():
+                self.query_one(f"#{target}").value = self.query_one(f"#{source}").value
+            mode = str(self.query_one(f"#q-{tab}-mode", Select).value)
+            self.query_one("#mode", Select).value = mode
+            self.query_one("#execution-style", Select).value = (
+                "automatic" if self.query_one("#q-automatic", Switch).value else "directed")
+            key = "launch" if tab == "launch" else self._landing_operation(mode)
+            self.selected_operation = key
+            request = self._request()
+            reason = self._availability(request)
+            if reason:
+                raise ConfigError(reason)
+            signature = self._signature(request)
+        except (OSError, ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
+            self.quick_armed = None
+            message.update(Text(f"✖ {exc}", style="bold red"))
+            return
+        armed = self.quick_armed
+        if armed is None or armed[:2] != (key, signature) or time.monotonic() - armed[2] > 5.0:
+            self.quick_armed = (key, signature, time.monotonic())
+            message.update(Text(request.preview() + f"\n\nPress {tab.upper()} again within 5 s to confirm.",
+                                style="yellow"))
+            return
+        self.quick_armed = None
+        try:
+            controller = request.build(self.runs_root)
+        except (OSError, ConfigError, PhaseTransitionError, ValueError, KeyError) as exc:
+            message.update(Text(f"✖ {exc}", style="bold red"))
+            return
+        if controller.mode == "live":
+            self.notify("Live mission started — flight software is now commanding KSP.", severity="warning")
+        self.controller = controller
+        self.invalidate_review()
+        controller.start_background()
+        message.update(Text(f"Started {BY_KEY[key].title} ({controller.mode}) · {controller.run_dir.name}",
+                            style="green"))
+        self.watch_run(controller.run_dir)
+
+    @on(Button.Pressed, "#q-launch")
+    def quick_launch(self) -> None:
+        self.quick_start("launch")
+
+    @on(Button.Pressed, "#q-land")
+    def quick_land(self) -> None:
+        self.quick_start("land")
+
+    @on(Button.Pressed, "#q-launch-abort")
+    @on(Button.Pressed, "#q-land-abort")
+    def quick_abort(self) -> None:
+        self.action_abort()
+
+    @on(Button.Pressed, "#q-execute-plan")
+    def quick_execute_plan(self) -> None:
+        self.submit_command("execute-plan")
+
     # --- mission setup ----------------------------------------------------------------
     def _base(self) -> dict[str, Any]:
         try:
@@ -766,6 +952,8 @@ class KSLApp(App[int]):
         for wid, (section, key) in fields.items():
             widget = self.query_one(f"#{wid}")
             widget.value = data[section][key] if isinstance(widget, (Select, Switch)) else str(data[section][key])
+        for source, target in self.QUICK_FIELDS.items():
+            self.query_one(f"#{source}").value = self.query_one(f"#{target}").value
 
     def _selection(self) -> dict[str, Any]:
         value = lambda wid: self.query_one(f"#{wid}", Select).value  # noqa: E731

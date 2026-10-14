@@ -450,12 +450,24 @@ class TuiTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(app.controller.status.state, "holding")
                 self.assertEqual(app._connection_config()["ascent"]["inclinationDeg"], 51.6)
 
+    async def test_quick_launch_needs_confirming_second_press(self):
+        from ksl.tui import KSLApp
+        with tempfile.TemporaryDirectory() as tmp:
+            app = KSLApp(runs_root=Path(tmp))
+            async with app.run_test(size=(120, 40)) as pilot:
+                app.quick_start("launch")
+                self.assertIsNone(app.controller)
+                app.quick_start("launch")
+                await pilot.pause(0.5)
+                self.assertEqual(app.controller.start, Phase.PRELAUNCH)
+
     async def test_reviewed_operation_runs_and_edits_invalidate_review(self):
         from ksl.tui import KSLApp
         from textual.widgets import Input
         with tempfile.TemporaryDirectory() as tmp:
             app = KSLApp(runs_root=Path(tmp))
             async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.press("d")
                 await pilot.press("s")
                 self.assertIsNone(app.controller)  # no unmodified single-key start
                 app.query_one("#validate").scroll_visible()
