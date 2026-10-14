@@ -303,6 +303,21 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
            wings-level candidate is scored as wings-level all the way to TAEM
            instead of assuming it will suddenly bank hard after 60-70 seconds. */
         mag=clampd(fabs(g->forced_bank),0,env);
+        /* Live MM304 also flies the crossrange zero-effort-miss demand on top
+           of the energy bank (entry_lateral). Price it here, or the policy is
+           scored wings-level while the vehicle actually banks to null the
+           capture-point miss and loses that range. t_go uses the present speed,
+           which overstates the demand slightly: the error is toward margin. */
+        double lift=a->lift_accel;
+        if(lift>0.0&&a->speed>1.0&&range>0.0){
+            double vertical=lift*cos(mag*DEG2RAD);
+            double t_go=range/a->speed;
+            double lateral=2.0*fabs(range*sin(he*DEG2RAD))/(t_go*t_go);
+            if(hypot(vertical,lateral)>lift){
+                mag=clampd(atan2(lateral,vertical)*RAD2DEG,0,env);
+                if((he>=0?1:-1)!=g->sign)predictor_change_sign(g,he>=0?1:-1);
+            }
+        }
     }else if(drag_deficit>.01&&isfinite(minimum_radius)){
         /* Bank is an energy-path actuator: reducing the vertical component of
            lift lets a hot trajectory descend into denser air. Express the
