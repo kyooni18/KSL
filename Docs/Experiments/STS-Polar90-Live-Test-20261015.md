@@ -25,10 +25,10 @@
 
 ### Deorbit, entry, TAEM
 
-- Deorbit plan: 34.10 m/s at UT 24907.3; strict qualification false, nominal target capture false, predicted TAEM range error −43.6 km, and entry robustness 0/15 passing. The profile allowed the best available unqualified candidate to execute, while retaining downstream gates.
+- Deorbit plan: 34.10 m/s at UT 24907.3; strict qualification false, nominal target capture false, predicted TAEM range error −43.6 km, and entry robustness 0/15 passing (4 unsafe cases). The profile allowed the best available unqualified candidate to execute, while retaining downstream gates. The plan predicted 1,180.6 km to entry; the measured range at about 89 km was 1,673.0 km, roughly 492 km farther.
 - The 72 km checkpoint was saved while descending at about 2,293 m/s. At 72 km the measured range to site was about 1,249 km. At the 30 km checkpoint it was about 143.8 km, with speed 1,344.9 m/s, sink rate −85.2 m/s, and q 5.18 kPa.
 - MM304 warned that its maximum-range drag profile could not reach the required Final alignment path. The flight nevertheless transitioned to MM305 near 26.0 km.
-- MM305 followed an overhead-loop/HAC profile but descended through runway elevation before the fixed-HAC exit. It then entered Attitude Recovery with insufficient height, did not stabilize within 15 s, and was operator-aborted through the safe-control path after the vessel had splashed. At the first logged splashed sample: UT 26464.254, altitude 0.50 m, speed 14.52 m/s, about 10.08 km from the runway with roughly 2.02 km cross-track error.
+- At the MM305 handoff near 26.04 km, the shuttle was still 88.97 km from the site and about 85.42 km cross-track from the runway. MM305 followed an overhead-loop/HAC profile but descended through runway elevation before the fixed-HAC exit. It then entered Attitude Recovery with insufficient height, did not stabilize within 15 s, and was operator-aborted through the safe-control path after the vessel had splashed. At the first logged splashed sample: UT 26464.254, altitude 0.50 m, speed 14.52 m/s, about 10.08 km from the runway with roughly 2.02 km cross-track error.
 - The MM305 descent had already become unrecoverable well above the surface: at 14.98 km, speed was 292.6 m/s with a −157.2 m/s sink rate and −32.5° FPA; at 1.70 km, speed was 86.5 m/s with −25.6 m/s sink and the runway still 14.7 km away; at 501 m, speed was 37.6 m/s with −13.7 m/s sink and 11.2 km remaining. These samples place the miss before the attitude-recovery abort.
 
 ## Checkpoint replays
