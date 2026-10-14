@@ -398,8 +398,10 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
 
     double bank=lateral_out.target_bank_deg;
     double bank_resolution=sqrt(DBL_EPSILON)*fmax(1.0,limits.maximum_bank_deg);
+    /* Only the energy share of the bank speaks for drag; bank raised for a
+       crossrange miss is not evidence that bank can no longer shed energy. */
     bool bank_at_limit=limits.maximum_bank_deg>DBL_EPSILON&&
-        lateral_out.bank_magnitude_deg>=limits.maximum_bank_deg-bank_resolution;
+        lateral_out.energy_bank_magnitude_deg>=limits.maximum_bank_deg-bank_resolution;
     bool structural_clear=isfinite(t->dynamic_pressure)&&isfinite(t->g_force)&&
         t->dynamic_pressure<v->maximum_dynamic_pressure&&t->g_force<v->maximum_g_load;
     /* If the bounded bank solution still cannot achieve DRAGREF's measured-
@@ -459,7 +461,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         .crossrange_rate=lateral.has_crossrange_rate?lateral.crossrange_error_rate_mps:NAN,
         .projected_crossrange_error=lateral_out.projected_crossrange_error_m,
         .crossrange_corridor=lateral_out.crossrange_corridor_m,
-        .energy_bank_magnitude_deg=lateral_out.bank_magnitude_deg,
+        .energy_bank_magnitude_deg=lateral_out.energy_bank_magnitude_deg,
         .commanded_bank_deg=bank,
         .bank_sign=side
     };

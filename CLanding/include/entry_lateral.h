@@ -99,6 +99,9 @@ typedef struct {
     bool degraded_authority;
     double bank_sign;
     double bank_magnitude_deg;
+    /* Bank the vertical-lift demand alone would fly. Drag/incidence
+       saturation logic must read this, not a magnitude raised for crossrange. */
+    double energy_bank_magnitude_deg;
     double raw_target_bank_deg;
     double target_bank_deg;
     double target_bank_rate_deg_s;

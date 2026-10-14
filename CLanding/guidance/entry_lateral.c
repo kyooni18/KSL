@@ -184,9 +184,9 @@ static bool lateral_demand(const EntryLateralInput *input,double *accel,double *
 }
 
 static bool bank_magnitude(const EntryLateralInput *input,
-        const EntryLateralLimits *limits, double *out,
+        const EntryLateralLimits *limits, double *out, double *energy_out,
         double *lateral_accel, double *zem, bool *binding) {
-    *lateral_accel=NAN;*zem=NAN;*binding=false;
+    *lateral_accel=NAN;*zem=NAN;*binding=false;*energy_out=0.0;
     if (!out || !input->longitudinal.valid ||
         !isfinite(input->longitudinal.required_vertical_lift_accel) ||
         input->longitudinal.required_vertical_lift_accel < 0.0)
@@ -213,6 +213,9 @@ static bool bank_magnitude(const EntryLateralInput *input,
         effective_bank_limit = nextafter(90.0, 0.0);
 
     double vertical = input->longitudinal.required_vertical_lift_accel;
+    double energy_bank = acos(clamp_value(vertical / available_lift,
+        cos(effective_bank_limit * ENTRY_LATERAL_DEG2RAD), 1.0)) * ENTRY_LATERAL_RAD2DEG;
+    *energy_out = clamp_value(energy_bank / effectiveness, 0.0, bank_limit);
     double effective_bank;
     double lateral=0.0;
     if(lateral_demand(input,&lateral,zem))*lateral_accel=lateral;
@@ -359,13 +362,15 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
             isfinite(input->lift_accel) && input->lift_accel > 0.0;
         magnitude = authority_valid ? clamp_value(input->bank_magnitude_deg, 0.0,
             fabs(limits->maximum_bank_deg)) : 0.0;
+        output.energy_bank_magnitude_deg = magnitude;
     } else {
         authority_valid = bank_magnitude(input, limits, &magnitude,
-            &output.required_lateral_lift_accel,&output.zero_effort_crossrange_m,
+            &output.energy_bank_magnitude_deg,&output.required_lateral_lift_accel,&output.zero_effort_crossrange_m,
             &output.lateral_demand_binding);
     }
     if (!authority_valid) {
         magnitude = 0.0;
+        output.energy_bank_magnitude_deg = 0.0;
         output.degraded_authority = true;
     }
 
