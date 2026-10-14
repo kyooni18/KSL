@@ -25,10 +25,11 @@ class PoweredExplicitGuidance:
         self.tgo = None
         self.converged = False
         self.peak = 0.
+        self.hold = None
         self._last_t = None
 
     def reset(self):
-        self.A = self.B = self.tgo = self._last_t = None
+        self.A = self.B = self.tgo = self._last_t = self.hold = None
         self.converged = False
 
     def _integrals(self, T, accel, ve, constant):
@@ -103,7 +104,16 @@ class PoweredExplicitGuidance:
         self.converged = math.isfinite(T) and T < T_cap and self.peak < .95
         self.tgo = T
         fr = _clamp(self.A+C, -1., 1.)
-        return math.degrees(math.asin(fr)), T
+        pitch = math.degrees(math.asin(fr))
+        # Final seconds: hold the attitude reached at freeze. Extrapolating A+B*t
+        # while a throttle taper stretches the burn walks the nose away and trades
+        # apoapsis for periapsis at cutoff.
+        if T <= self.freeze_tgo:
+            if self.hold is None:
+                self.hold = pitch
+            return self.hold, T
+        self.hold = None
+        return pitch, T
 
 
 def orbit_state_at(mu, apoapsis_r, periapsis_r, insertion_r):
@@ -130,3 +140,151 @@ def choose_insertion(mu, t, r, vr, vh, accel, ve, apoapsis_r, periapsis_r, radii
         if guide.converged and guide.tgo > 1. and (best is None or guide.tgo < best[1].tgo):
             best = r_t, guide
     return best or (None, None)
+
+
+def apsides(mu, r, vr, vh):
+    """(apoapsis radius, periapsis radius) of a planar state; apoapsis inf if unbound."""
+    energy = .5*(vr*vr+vh*vh)-mu/r
+    h = r*vh
+    if energy >= 0.:
+        return math.inf, h*h/mu/2.
+    a = -mu/(2*energy)
+    e = math.sqrt(max(0., 1-h*h/(mu*a)))
+    return a*(1+e), a*(1-e)
+
+
+class InsertionGuidance:
+    """Attitude-aware closed-loop insertion to one target ellipse.
+
+    PEG alone assumes the thrust can point anywhere instantly. The shuttle's
+    commanded pitch moves at a few deg/s, is held during the post-separation
+    upright roll, and the SSME limiter ramps up afterwards. Plans that ignore this
+    leave the stack climbing at the old pitch for tens of seconds: apoapsis runs
+    past target and is then cancelled at a saturated nose-down limit. The burnout
+    point is therefore chosen by flying each candidate through the same closed
+    loop (PEG + slew + hold + throttle schedule) and scoring the cutoff orbit.
+    """
+
+    def __init__(self, mu, apoapsis_r, periapsis_r, min_insertion_r, slew=2.0,
+                 hold_slew=0.5, lag=2.0, pitch_bounds=(-30.0, 45.0), replan_period=10.0,
+                 apoapsis_tolerance=3000.0, periapsis_tolerance=300.0):
+        self.mu, self.ra, self.rp = mu, apoapsis_r, periapsis_r
+        self.min_insertion_r = min_insertion_r
+        self.slew, self.hold_slew = slew, hold_slew
+        self.lag = lag  # attitude response time constant behind the command, s
+        self.lo, self.hi = pitch_bounds
+        self.replan_period = replan_period
+        self.ap_tol, self.pe_tol = apoapsis_tolerance, periapsis_tolerance
+        self.guide = PoweredExplicitGuidance(mu)
+        self.r_t = None
+        self.planned_at = None
+        self.prediction = None
+
+    def done(self, r, vr, vh):
+        ra, rp = apsides(self.mu, r, vr, vh)
+        return ra >= self.ra-self.ap_tol and rp >= self.rp-self.pe_tol
+
+    @staticmethod
+    def _throttle_cap(t, hold_left, ramp, cap_now):
+        """Limiter schedule: held at ``cap_now`` through the hold, then ramped to 1."""
+        if t < hold_left:
+            return cap_now
+        if ramp <= 0.:
+            return 1.
+        return min(1., cap_now+(1.-cap_now)*(t-hold_left)/ramp)
+
+    def steer(self, guide, t, r, vr, vh, accel, ve, r_t, constant_accel, pitch):
+        """PEG to the planned burnout; velocity-to-be-gained in the final seconds.
+
+        Near burnout the position constraint is ill-conditioned and any attitude
+        frozen there is wrong as soon as the burn runs long or short. The last
+        seconds instead steer along the velocity still missing from the target
+        orbit at the current radius, which closes apoapsis and periapsis together
+        wherever the burn actually ends.
+        """
+        vr_t, vh_t = orbit_state_at(self.mu, self.ra, self.rp, r_t)
+        cmd, tgo = guide.update(t, r, vr, vh, accel, ve, r_t, vr_t, vh_t, constant_accel)
+        # Already at or past the planned burnout altitude: insert here rather than
+        # diving back down to it.
+        if cmd is None or tgo < guide.freeze_tgo or r >= r_t-500.:
+            vr_here, vh_here = orbit_state_at(self.mu, self.ra, self.rp, r)
+            dvr, dvh = vr_here-vr, vh_here-vh
+            go = max(1., math.hypot(dvr, dvh)/max(accel, .1))
+            g_eff = self.mu/(r*r)-vh*vh/r
+            cmd = math.degrees(math.atan2(dvr/go+g_eff, max(dvh/go, 1e-3)))
+        return cmd
+
+    def fly(self, r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0.,
+            ramp=15., cap_now=1., dt=1., t_max=500., flown=None):
+        """Closed-loop point-mass prediction to cutoff; returns a summary dict."""
+        mu = self.mu
+        guide = PoweredExplicitGuidance(mu)
+        m0, t, peak_ra, saturated = mass, 0., 0., 0.
+        flown = pitch if flown is None else flown
+        while t < t_max:
+            cap = self._throttle_cap(t, hold_left, ramp, cap_now)
+            a_avail = thrust*cap/mass
+            a = min(a_avail, g_limit)
+            cmd = self.steer(guide, t, r, vr, vh, a, ve, r_t, a < .99*a_avail, pitch)
+            if cmd < self.lo or cmd > self.hi:
+                saturated += dt
+            cmd = _clamp(cmd, self.lo, self.hi)
+            rate = self.hold_slew if t < hold_left else self.slew
+            pitch += _clamp(cmd-pitch, -rate*dt, rate*dt)
+            flown += (pitch-flown)*min(1., dt/max(self.lag, 1e-3))
+            p = math.radians(flown)
+            # Midpoint step of the planar inertial equations.
+            def deriv(r_, vr_, vh_):
+                return (vr_, a*math.sin(p)-mu/(r_*r_)+vh_*vh_/r_, a*math.cos(p)-vr_*vh_/r_)
+            k = deriv(r, vr, vh)
+            k = deriv(r+k[0]*dt/2, vr+k[1]*dt/2, vh+k[2]*dt/2)
+            r, vr, vh = r+k[0]*dt, vr+k[1]*dt, vh+k[2]*dt
+            mass -= a*mass/ve*dt
+            t += dt
+            ra, rp = apsides(mu, r, vr, vh)
+            peak_ra = max(peak_ra, min(ra, 10*self.ra))
+            if self.done(r, vr, vh) or mass < .2*m0:
+                break
+        ra, rp = apsides(mu, r, vr, vh)
+        dv = ve*math.log(m0/max(mass, 1.))
+        # Cutoff orbit error, any apoapsis overshoot on the way, and propellant
+        # (50 m/s weighs like 1 km).
+        score = (abs(min(ra, 10*self.ra)-self.ra)+abs(rp-self.rp) +
+                 2*max(0., peak_ra-self.ra-self.ap_tol) + 20*dv + 500*saturated)
+        return dict(r_t=r_t, score=score, apoapsis_r=ra, periapsis_r=rp,
+                    peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated)
+
+    def plan(self, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0., ramp=15.,
+             cap_now=1., candidates=8):
+        low = max(self.min_insertion_r, r+2000.)
+        high = self.ra-self.ap_tol
+        radii = ([low+(high-low)*i/(candidates-1) for i in range(candidates)] if low < high
+                 else [max(r, self.rp)])
+        best = None
+        for r_t in radii:
+            result = self.fly(r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
+                              hold_left, ramp, cap_now, dt=2.)
+            if best is None or result['score'] < best['score']:
+                best = result
+        return best
+
+    def command(self, t, r, vr, vh, mass, thrust, ve, g_limit, accel, constant_accel,
+                pitch, hold_left=0., ramp=15., cap_now=1.):
+        """Thrust pitch (deg) for this cycle. ``pitch`` is the current commanded pitch."""
+        end = self.guide.tgo is not None and self.guide.tgo < 2*self.guide.freeze_tgo
+        if self.r_t is None or (not end and t-self.planned_at >= self.replan_period):
+            best = self.plan(r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left, ramp, cap_now)
+            keep = None
+            if self.r_t is not None:
+                keep = self.fly(self.r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
+                                hold_left, ramp, cap_now, dt=2.)
+            # Switching burnout points steps the command; only do it for a clear gain.
+            if keep is None or best['score'] < .7*keep['score']-1000.:
+                if best['r_t'] != self.r_t:
+                    self.guide = PoweredExplicitGuidance(self.mu)
+                self.r_t, self.prediction = best['r_t'], best
+            else:
+                self.prediction = keep
+            self.planned_at = t
+        cmd = self.steer(self.guide, t, r, vr, vh, accel, ve, self.r_t, constant_accel, pitch)
+        return _clamp(cmd, self.lo, self.hi)

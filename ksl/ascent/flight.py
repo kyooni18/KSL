@@ -10,7 +10,7 @@ from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
-from .peg import PoweredExplicitGuidance, choose_insertion
+from .peg import InsertionGuidance
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
@@ -299,8 +299,7 @@ def run(args):
         meco_ut = None
         peg_dv = None
         peg_hold = None
-        peg_law = PoweredExplicitGuidance(body.gravitational_parameter)
-        peg_r_ins = None
+        insertion_guide = None
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -682,56 +681,60 @@ def run(args):
                                 - min(15.0, 1.5*ap_excess/1000.0)
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
-                        if shuttle.separated and shuttle.post_sep_roll_done_ut is None:
-                            # Hold attitude while rolling upright.
-                            raw_pitch = commanded_pitch
-                        elif shuttle.separated:
+                        if shuttle.separated:
+                            # Attitude-planned insertion: the burnout point is chosen by
+                            # flying the closed loop (PEG, slew, roll hold, limiter ramp,
+                            # attitude lag) ahead, so the climb is never left running at a
+                            # stale pitch and then cancelled nose-down.
+                            now_ut = conn.space_center.ut
                             r_now = body.equatorial_radius+altitude
                             lat_now = math.radians(flight.latitude)
-                            v_rot = body.rotational_speed*r_now*math.cos(lat_now)
-                            vh_inertial = flight.horizontal_speed+v_rot
-                            ra = body.equatorial_radius+args.orbit
-                            rp = body.equatorial_radius+args.meco_periapsis
-                            mu = body.gravitational_parameter
-                            peg_accel = max(v.thrust, 1.0)/v.mass
-                            peg_ve = max(v.specific_impulse, 1.0)*G0
-                            # Plan the burnout radius on the target ellipse once, and again
-                            # only if the plan turns unflyable (never in the frozen end).
-                            if peg_r_ins is None or (
-                                    (peg_law.tgo or 0.0) > 2*peg_law.freeze_tgo and
-                                    not peg_law.peak < 1.2):
-                                low = max(body.equatorial_radius+insertion_altitude, r_now+2000.0)
-                                # Never plan a burnout above the target apoapsis band.
-                                radii = [low+(ra-3000.0-low)*i/7 for i in range(8)] if low < ra-3000.0 else []
-                                planned_r, planned = choose_insertion(
-                                    mu, conn.space_center.ut, r_now, flight.vertical_speed,
-                                    vh_inertial, peg_accel, peg_ve, ra, rp, radii,
-                                    control.throttle < 0.99)
-                                if planned_r is not None:
-                                    peg_r_ins, peg_law = planned_r, planned
-                                    print(f'PEG plan: insertion {(planned_r-body.equatorial_radius)/1000:.1f} km, '
-                                          f'tgo {planned.tgo:.0f} s')
-                            r_ins = peg_r_ins or body.equatorial_radius+insertion_altitude
-                            vh_ins = math.sqrt(2.0*mu*ra*rp/(ra+rp))/r_ins
-                            # Radial speed of the target orbit at the insertion radius
-                            # (ascending branch): 90x60 needs ~+50 m/s at 72 km, not 0.
-                            vr_ins = math.sqrt(max(0.0, 2.0*mu*(1.0/r_ins - 1.0/(ra+rp))
-                                                   - vh_ins**2))
-                            # Closed-loop PEG to the burnout state (radius, radial and
-                            # horizontal speed), re-solved every cycle, so the climb ends
-                            # at insertion instead of overshooting and pitching down.
-                            peg_pitch_cmd, peg_law_tgo = peg_law.update(
-                                conn.space_center.ut, r_now, flight.vertical_speed,
-                                vh_inertial, peg_accel, peg_ve, r_ins, vr_ins, vh_ins,
-                                constant_accel=control.throttle < 0.99)
-                            if peg_pitch_cmd is None or not math.isfinite(peg_pitch_cmd):
-                                peg_pitch_cmd = vertical_profile_pitch(
-                                    altitude, flight.vertical_speed, vh_inertial, r_now,
-                                    mu, max(flight.g_force, 0.3)*G0,
-                                    insertion_altitude, vh_ins,
-                                    insertion_vertical_speed=vr_ins)
-                            raw_pitch = max(-30.0, min(45.0, peg_pitch_cmd))
-                            pitch_slew_rate = max(args.pitch_slew, 2.0)
+                            vh_inertial = flight.horizontal_speed + \
+                                body.rotational_speed*r_now*math.cos(lat_now)
+                            ssmes = shuttle.core_groups[0]
+                            full_thrust = sum(e.max_thrust for e in ssmes)
+                            isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
+                                   / max(1, len(ssmes)))
+                            roll_done = shuttle.post_sep_roll_done_ut
+                            if roll_done is None:
+                                rolling_for = 0.0 if roll_reset_ut is None else now_ut-roll_reset_ut
+                                hold_left = max(0.0, 25.0-rolling_for)
+                                ramp_left, cap_now = 15.0, 0.3
+                            else:
+                                into_ramp = now_ut-roll_done
+                                hold_left = 0.0
+                                ramp_left = max(0.0, 15.0-into_ramp)
+                                cap_now = 0.3+0.7*min(1.0, max(0.0, into_ramp/15.0))
+                            g_limit = min(args.max_g, args.upper_g)*G0
+                            accel_now = max(v.thrust, 1.0)/v.mass
+                            if insertion_guide is None:
+                                insertion_guide = InsertionGuidance(
+                                    body.gravitational_parameter,
+                                    body.equatorial_radius+args.orbit,
+                                    body.equatorial_radius+args.meco_periapsis,
+                                    body.equatorial_radius+insertion_altitude,
+                                    slew=max(args.pitch_slew, 2.0),
+                                    hold_slew=args.post_sep_hold_slew)
+                            planned_r = insertion_guide.r_t
+                            raw_pitch = insertion_guide.command(
+                                now_ut, r_now, flight.vertical_speed, vh_inertial, v.mass,
+                                full_thrust, max(isp, 1.0)*G0, g_limit, accel_now,
+                                full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
+                                hold_left, ramp_left, cap_now)
+                            if insertion_guide.r_t != planned_r:
+                                pred = insertion_guide.prediction
+                                R0 = body.equatorial_radius
+                                print(f'Insertion plan: burnout {(insertion_guide.r_t-R0)/1000:.1f} km; '
+                                      f'predicted cutoff {(pred["apoapsis_r"]-R0)/1000:.1f} x '
+                                      f'{(pred["periapsis_r"]-R0)/1000:.1f} km, peak Ap '
+                                      f'{(pred["peak_apoapsis_r"]-R0)/1000:.1f} km, '
+                                      f'{pred["time"]:.0f} s')
+                            if roll_done is None:
+                                # Upright roll: drift toward the plan slowly, never hold
+                                # a stale pitch for the whole roll.
+                                pitch_slew_rate = args.post_sep_hold_slew
+                            else:
+                                pitch_slew_rate = max(args.pitch_slew, 2.0)
                         peg_dv = None
                         energy_done = False
                         peg_phase_g = None
@@ -1263,6 +1266,9 @@ def main():
                              '(default: derived from --orbit and --meco-periapsis)')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
+    parser.add_argument('--post-sep-hold-slew', type=float, default=0.5,
+                        help='Pitch-command slew (deg/s) toward the insertion plan during '
+                             'the post-separation upright roll; 0 holds pitch')
     parser.add_argument('--pitch-slew', type=float,
                         default=PITCH_SLEW_DEG_PER_SECOND,
                         help='Maximum pitch-command change in deg/s')
