@@ -367,14 +367,16 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     lateral.has_azimuth_error=isfinite(t->course_to_site_error);
     lateral.azimuth_error_deg=lateral.has_azimuth_error?t->course_to_site_error:0.0;
     {
-        /* Keep target-azimuth reversals subordinate to measured crossrange:
-           the old 4-10 deg corridor let entry drift >10 km off track before
-           bank reversal.  Narrow with energy, but retain a small noise margin. */
-        double span=fmax(1.0,transition_velocity*1.6-taem_velocity);
-        double x=clampd((t->true_air_speed-taem_velocity)/span,0.0,1.0);
-        lateral.azimuth_deadband_deg=1.5+2.5*x;
-        double off_nose=fabs(lateral.azimuth_error_deg);
-        lateral.minimum_turn_bank_deg=20.0+25.0*clampd((off_nose-45.0)/45.0,0.0,1.0);
+        /* Azimuth reversals respect only what navigation can resolve: the
+           angle the crossrange uncertainty subtends at the capture point. */
+        lateral.azimuth_deadband_deg=atan2(lateral.crossrange_uncertainty_m,
+            fmax(alignment_range,DBL_EPSILON))*RAD2DEG;
+        /* Speed falls from the present value toward the alignment contract;
+           the mean of the two converts remaining range into time-to-go. */
+        double mean_speed=0.5*(map_speed+fmax(0.0,alignment_speed));
+        lateral.has_time_to_go=isfinite(mean_speed)&&mean_speed>DBL_EPSILON&&
+            isfinite(alignment_range);
+        lateral.time_to_go_s=lateral.has_time_to_go?alignment_range/mean_speed:NAN;
     }
 
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;

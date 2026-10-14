@@ -157,8 +157,36 @@ static double choose_bank_sign(const EntryLateralState *state,
     return 1.0;
 }
 
+/*
+ * Lateral lift needed to null the zero-effort crossrange miss by the capture
+ * point: e + e_dot*t_go is where the vehicle arrives without turning, and a
+ * constant acceleration 2*ZEM/t_go^2 removes it.  Lateral lift changes the
+ * crossrange error only through the course projection onto the runway normal.
+ */
+static bool lateral_demand(const EntryLateralInput *input,double *accel,double *zem){
+    if(!input->has_time_to_go||!isfinite(input->time_to_go_s)||
+       !(input->time_to_go_s>DBL_EPSILON)||
+       !input->has_crossrange_error||!isfinite(input->crossrange_error_m)||
+       !input->has_crossrange_rate||!isfinite(input->crossrange_error_rate_mps)||
+       !input->has_crossrange_course_alignment||
+       !isfinite(input->crossrange_course_alignment)||
+       !(input->crossrange_course_alignment>DBL_EPSILON))
+        return false;
+    double t=input->time_to_go_s;
+    double miss=input->crossrange_error_m+input->crossrange_error_rate_mps*t;
+    double uncertainty=isfinite(input->crossrange_uncertainty_m)?
+        fmax(0.0,input->crossrange_uncertainty_m):0.0;
+    if(fabs(miss)<=uncertainty)miss=0.0;
+    else miss-=copysign(uncertainty,miss);
+    *zem=miss;
+    *accel=2.0*fabs(miss)/(t*t*input->crossrange_course_alignment);
+    return true;
+}
+
 static bool bank_magnitude(const EntryLateralInput *input,
-        const EntryLateralLimits *limits, double *out) {
+        const EntryLateralLimits *limits, double *out,
+        double *lateral_accel, double *zem, bool *binding) {
+    *lateral_accel=NAN;*zem=NAN;*binding=false;
     if (!out || !input->longitudinal.valid ||
         !isfinite(input->longitudinal.required_vertical_lift_accel) ||
         input->longitudinal.required_vertical_lift_accel < 0.0)
@@ -184,12 +212,23 @@ static bool bank_magnitude(const EntryLateralInput *input,
     if (!(effective_bank_limit < 90.0)) /* decision-literal-ok: positive vertical-lift bank domain */
         effective_bank_limit = nextafter(90.0, 0.0);
 
-    double required_fraction =
-        input->longitudinal.required_vertical_lift_accel / available_lift;
-    double minimum_fraction = cos(effective_bank_limit * ENTRY_LATERAL_DEG2RAD);
-    required_fraction = clamp_value(required_fraction, minimum_fraction, 1.0);
-
-    double effective_bank = acos(required_fraction) * ENTRY_LATERAL_RAD2DEG;
+    double vertical = input->longitudinal.required_vertical_lift_accel;
+    double effective_bank;
+    double lateral=0.0;
+    if(lateral_demand(input,&lateral,zem))*lateral_accel=lateral;
+    if(hypot(vertical,lateral)<=available_lift){
+        /* Both demands fit: vertical is met exactly and the surplus is
+           lateral, which is at least the crossrange demand. */
+        effective_bank = acos(vertical / available_lift) * ENTRY_LATERAL_RAD2DEG;
+    }else{
+        /* Measured lift cannot meet both. Point the lift vector along the
+           combined demand so each shortfall is proportional; crossrange left
+           unflown is also unflown range, so neither has a free priority.
+           As t_go falls the lateral demand grows and takes the larger share. */
+        effective_bank = atan2(lateral, vertical) * ENTRY_LATERAL_RAD2DEG;
+        *binding = lateral > DBL_EPSILON;
+    }
+    effective_bank = fmin(effective_bank, effective_bank_limit);
     *out = clamp_value(effective_bank / effectiveness, 0.0, bank_limit);
     return true;
 }
@@ -251,6 +290,8 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
     output.crossrange_corridor_m = NAN;
     output.projected_crossrange_error_m = NAN;
     output.reversal_response_time_s = NAN;
+    output.required_lateral_lift_accel = NAN;
+    output.zero_effort_crossrange_m = NAN;
 
     if (!state || !input || !limits_valid(limits) ||
         !isfinite(input->ut) || !isfinite(input->relative_speed) ||
@@ -319,7 +360,9 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         magnitude = authority_valid ? clamp_value(input->bank_magnitude_deg, 0.0,
             fabs(limits->maximum_bank_deg)) : 0.0;
     } else {
-        authority_valid = bank_magnitude(input, limits, &magnitude);
+        authority_valid = bank_magnitude(input, limits, &magnitude,
+            &output.required_lateral_lift_accel,&output.zero_effort_crossrange_m,
+            &output.lateral_demand_binding);
     }
     if (!authority_valid) {
         magnitude = 0.0;
@@ -341,9 +384,6 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
            a lift-up energy demand. */
         double error = input->azimuth_error_deg;
         double deadband = fmax(0.0, finite_or(input->azimuth_deadband_deg, 0.0));
-        double floor_bank = fmax(0.0, finite_or(input->minimum_turn_bank_deg, 0.0));
-        if (authority_valid && fabs(error) > 3.0 * deadband && magnitude < floor_bank)
-            magnitude = fmin(floor_bank, fabs(limits->maximum_bank_deg));
         output.corridor_metric = deadband > 0.0 ? error / deadband : NAN;
         output.course_corridor_deg = deadband;
         double demanded_sign = unit_sign(error);
@@ -393,6 +433,13 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
            target is ahead of the aircraft. */
         if(point_target_behind)
             demanded_sign=state->bank_sign;
+        else if(output.lateral_demand_binding&&
+                fabs(output.zero_effort_crossrange_m)>DBL_EPSILON){
+            /* The bank exists for the crossrange miss; its side is that of
+               the zero-effort miss (target-current convention). */
+            demanded_sign=unit_sign(output.zero_effort_crossrange_m);
+            crossrange_demand=demanded_sign;
+        }
         else if(crossrange_demand&&crossrange_demand*demanded_sign<0.0)
             demanded_sign=crossrange_demand;
 

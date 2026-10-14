@@ -71,7 +71,11 @@ typedef struct {
     bool has_azimuth_error;
     double azimuth_error_deg;
     double azimuth_deadband_deg;
-    double minimum_turn_bank_deg; /* bank floor when the target is far off the nose */
+    /* Time remaining to the lateral capture point. With crossrange state it
+       defines the lateral-lift demand that shares measured lift with the
+       longitudinal vertical-lift demand. */
+    bool has_time_to_go;
+    double time_to_go_s;
 } EntryLateralInput;
 
 typedef struct {
@@ -103,6 +107,9 @@ typedef struct {
     double crossrange_corridor_m; /* physical roll-response + navigation uncertainty */
     double projected_crossrange_error_m;
     double reversal_response_time_s;
+    double required_lateral_lift_accel; /* NAN when no crossrange demand */
+    double zero_effort_crossrange_m;    /* NAN when no crossrange demand */
+    bool lateral_demand_binding;        /* combined demand exceeded measured lift */
     double expected_course_rate_deg_s;
     double sideslip_rate_deg_s;
     double coordination_roll_rate_limit_deg_s;

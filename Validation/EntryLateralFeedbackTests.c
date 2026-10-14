@@ -89,7 +89,6 @@ static EntryLateralInput azimuth_input(double error,double deadband){
     in.has_azimuth_error=true;
     in.azimuth_error_deg=error;
     in.azimuth_deadband_deg=deadband;
-    in.minimum_turn_bank_deg=30.0;
     return in;
 }
 
@@ -184,15 +183,33 @@ static void behind_site_preserves_turn_until_azimuth_ahead(void){
 
 /* A large azimuth error keeps a turning bank even when the energy law asks
    for lift-up. */
-static void azimuth_turn_bank_floor(void){
+/* 2026-10-14 live run: energy-short MM304 wanted all lift up, so the bank
+   magnitude was zero and a 40 km crossrange miss was never flown out. The
+   crossrange miss must claim a share of measured lift, on its own side. */
+static void energy_short_still_banks_for_crossrange(void){
     EntryLateralLimits l=limits();
-    EntryLateralState state={0};
-    EntryLateralInput in=azimuth_input(40.0,5.0);
-    in.measured_bank_deg=0.0;
-    in.bank_magnitude_deg=0.0;
-    EntryLateralOutput out=entry_lateral_update(&state,&in,&l);
-    assert(out.valid&&out.bank_sign>0.0);
-    assert(out.bank_magnitude_deg>=30.0-1e-9);
+    for(int side=-1;side<=1;side+=2){
+        EntryLateralState state={0};
+        EntryLateralInput in=input();
+        in.measured_bank_deg=0.0;
+        in.longitudinal.required_vertical_lift_accel=2.0*in.lift_accel;
+        in.has_crossrange_rate=true;
+        in.has_crossrange_course_alignment=true;
+        in.crossrange_course_alignment=1.0;
+        in.crossrange_error_m=side*20000.0;
+        in.crossrange_error_rate_mps=side*100.0; /* drifting further off */
+        in.has_time_to_go=true;
+        in.time_to_go_s=300.0;
+        EntryLateralOutput out=entry_lateral_update(&state,&in,&l);
+        assert(out.valid&&out.lateral_demand_binding);
+        assert(out.bank_magnitude_deg>1.0);
+        assert(out.bank_sign*side>0.0);
+        /* No miss, no lateral share: vertical demand keeps wings level. */
+        EntryLateralState level={0};
+        in.crossrange_error_m=0.0;in.crossrange_error_rate_mps=0.0;
+        out=entry_lateral_update(&level,&in,&l);
+        assert(out.valid&&out.bank_magnitude_deg<1e-9);
+    }
 }
 
 static void sideslip_coordination_slows_bank_reference(void){
@@ -417,7 +434,7 @@ int main(void){
     azimuth_initial_side_points_at_target();
     azimuth_deadband_reversal();
     behind_site_preserves_turn_until_azimuth_ahead();
-    azimuth_turn_bank_floor();
+    energy_short_still_banks_for_crossrange();
     sideslip_coordination_slows_bank_reference();
     mirror_symmetry();
     puts("Entry lateral feedback tests passed.");
