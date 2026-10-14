@@ -701,7 +701,8 @@ def run(args):
                                     (peg_law.tgo or 0.0) > 2*peg_law.freeze_tgo and
                                     not peg_law.peak < 1.2):
                                 low = max(body.equatorial_radius+insertion_altitude, r_now+2000.0)
-                                radii = [low+(ra-3000.0-low)*i/7 for i in range(8)] if low < ra-3000.0 else [low]
+                                # Never plan a burnout above the target apoapsis band.
+                                radii = [low+(ra-3000.0-low)*i/7 for i in range(8)] if low < ra-3000.0 else []
                                 planned_r, planned = choose_insertion(
                                     mu, conn.space_center.ut, r_now, flight.vertical_speed,
                                     vh_inertial, peg_accel, peg_ve, ra, rp, radii,
