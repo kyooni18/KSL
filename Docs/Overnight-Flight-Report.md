@@ -266,3 +266,5 @@ Observations:
 Hypothesis: the refusal is deterministic for this orbit state, as attempts 2, 3, and 4b suggested. A retry does not change it.
 
 Status: no flight. Attempt 4 (pad) is still blocked on an operator revert or named save.
+
+- 2026-10-14 11:15 KST — scheduled check: no change in pad state. `ksl status --live` shows orbiting, mass 26014.6 kg, 0 clamps, UT 686.0 s. Attempt 4 still blocked.
