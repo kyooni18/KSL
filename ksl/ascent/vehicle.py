@@ -896,8 +896,6 @@ class Shuttle:
         self.separated = True
         self.booster_separation_ut = self.sc.ut
         self.groups = list(self.core_groups)
-        if getattr(self, 'vehicle_kind', None) == 'orbiter-shuttle':
-            self.groups = self._split_by_pitch_arm(self.core_groups[0]) or self.groups
         self.control_moment_budget = self.cruise_control_moment_budget
         emit_event('booster-separation')
         print('Boosters shut down/burned out and separated')
@@ -988,45 +986,7 @@ class Shuttle:
         else:
             sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (self.sc.ut-roll_done)/15.0))
         core_throttle = min(core_throttle, sep_cap)
-        if len(self.groups) == 2:
-            return self._balanced_pair_throttles(core_throttle)
         return tuple(core_throttle for _ in self.groups)
-
-    def _split_by_pitch_arm(self, engines, gap=0.5):
-        """Cluster SSMEs by radial mounting (top engine vs bottom pair).
-
-        After SRB separation the thrust line misses the CoM by more than the
-        gimbals can cover; engines at different arms can be throttled apart to
-        carry part of that moment.
-        """
-        frame = self.vessel.reference_frame
-        ranked = sorted(engines, key=lambda e: self.project(e.part.position(frame)))
-        arms = [self.project(e.part.position(frame)) for e in ranked]
-        cuts = [i for i in range(1, len(ranked)) if arms[i]-arms[i-1] > gap]
-        if len(cuts) != 1:
-            return None
-        return [ranked[:cuts[0]], ranked[cuts[0]:]]
-
-    def _balanced_pair_throttles(self, core_throttle, low=0.05):
-        """Same total thrust as ``core_throttle``, split to null the pitch moment."""
-        a, b = self.groups
-        f_a = sum(e.max_thrust for e in a)
-        f_b = sum(e.max_thrust for e in b)
-        if f_a <= 0 or f_b <= 0:
-            return (core_throttle, core_throttle)
-        m_a = engine_pitch_moment(self.vessel, a, full_thrust=True)
-        m_b = engine_pitch_moment(self.vessel, b, full_thrust=True)
-        total = core_throttle*(f_a+f_b)
-        lo_b = max(low, (total-f_a)/f_b)
-        hi_b = min(1.0, (total-f_a*low)/f_b)
-        if lo_b > hi_b:
-            return (core_throttle, core_throttle)
-        slope = m_b - m_a*f_b/f_a
-        u_b = core_throttle if abs(slope) < 1.0 else -m_a*total/f_a/slope
-        u_b = max(lo_b, min(hi_b, u_b))
-        u_a = (total-f_b*u_b)/f_a
-        self.pitch_moment = m_a*u_a + m_b*u_b
-        return (u_a, u_b)
 
     def release_et(self):
         self.vessel.control.throttle = 0
