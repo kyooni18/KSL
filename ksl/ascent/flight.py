@@ -12,7 +12,7 @@ from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
-from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
+from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
 
@@ -696,15 +696,20 @@ def run(args):
                             isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
                                    / max(1, len(ssmes)))
                             roll_done = shuttle.post_sep_roll_done_ut
+                            # Mirror the vehicle's limiter schedule exactly; a planner that
+                            # assumes a lower cap than the engines fly lofts the climb.
+                            since_sep = now_ut-shuttle.booster_separation_ut
                             if roll_done is None:
                                 rolling_for = 0.0 if roll_reset_ut is None else now_ut-roll_reset_ut
-                                hold_left = max(0.0, 25.0-rolling_for)
-                                ramp_left, cap_now = 15.0, 0.3
+                                hold_left = max(0.0, min(25.0-rolling_for,
+                                                         POST_SEP_CAP_TIMEOUT-since_sep))
+                                into_ramp = since_sep-POST_SEP_CAP_TIMEOUT
                             else:
-                                into_ramp = now_ut-roll_done
                                 hold_left = 0.0
-                                ramp_left = max(0.0, 15.0-into_ramp)
-                                cap_now = 0.3+0.7*min(1.0, max(0.0, into_ramp/15.0))
+                                into_ramp = now_ut-roll_done
+                            ramp_left = max(0.0, POST_SEP_CAP_RAMP-max(0.0, into_ramp))
+                            cap_now = post_sep_throttle_cap(
+                                since_sep, None if roll_done is None else now_ut-roll_done)
                             g_limit = min(args.max_g, args.upper_g)*G0
                             accel_now = max(v.thrust, 1.0)/v.mass
                             if insertion_guide is None:

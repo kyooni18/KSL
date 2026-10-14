@@ -278,8 +278,12 @@ class InsertionGuidance:
             if self.r_t is not None:
                 keep = self.fly(self.r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
                                 hold_left, ramp, cap_now, dt=2.)
-            # Switching burnout points steps the command; only do it for a clear gain.
-            if keep is None or best['score'] < .7*keep['score']-1000.:
+            # Switching burnout points steps the command; only do it for a clear gain,
+            # or when the current plan no longer reaches the target apoapsis at all.
+            keep_missing = (keep is not None and
+                            abs(keep['apoapsis_r']-self.ra) > 3*self.ap_tol and
+                            abs(best['apoapsis_r']-self.ra) < abs(keep['apoapsis_r']-self.ra))
+            if keep is None or keep_missing or best['score'] < .7*keep['score']-1000.:
                 if best['r_t'] != self.r_t:
                     self.guide = PoweredExplicitGuidance(self.mu)
                 self.r_t, self.prediction = best['r_t'], best

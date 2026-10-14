@@ -210,6 +210,28 @@ def tanks_empty(shuttle):
         return False
 
 
+POST_SEP_CAP_FLOOR = 0.3
+POST_SEP_CAP_RAMP = 15.0
+POST_SEP_CAP_TIMEOUT = 60.0
+
+
+def post_sep_throttle_cap(since_sep, since_roll_done):
+    """SSME limiter cap after booster separation; the insertion planner models the same.
+
+    Hold a low, steady limiter (small thrust-line moment, gimbals free) until the
+    upright roll is finished, then ramp over 15 s. Ramping on time since separation
+    instead let the SSMEs reach full G mid-roll, at a pitch frozen for the roll, while
+    the planner still assumed the low cap: the climb ran on and lofted Ap to ~130 km
+    for an 85 km target. The timeout only guards a roll that never starts.
+    """
+    if since_roll_done is None:
+        into_ramp = since_sep-POST_SEP_CAP_TIMEOUT
+    else:
+        into_ramp = since_roll_done
+    return POST_SEP_CAP_FLOOR + (1.0-POST_SEP_CAP_FLOOR)*min(
+        1.0, max(0.0, into_ramp/POST_SEP_CAP_RAMP))
+
+
 def thrust_axis_offset(conn, vessel, frame):
     """Resultant thrust direction of the running engines minus the nose axis, in `frame`.
 
@@ -979,12 +1001,8 @@ class Shuttle:
         # authority than the gimbals have at a high SSME limiter. Ride a
         # lower limiter (smaller off-axis moment) briefly, then ramp up.
         roll_done = getattr(self, 'post_sep_roll_done_ut', None)
-        # Hold a low, steady limiter (small thrust-line moment, gimbals free)
-        # until the upright roll is finished, then ramp over 15 s.
-        if roll_done is None:
-            sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (since_sep-30.0)/15.0))
-        else:
-            sep_cap = 0.3 + 0.7*min(1.0, max(0.0, (self.sc.ut-roll_done)/15.0))
+        sep_cap = post_sep_throttle_cap(
+            since_sep, None if roll_done is None else self.sc.ut-roll_done)
         core_throttle = min(core_throttle, sep_cap)
         return tuple(core_throttle for _ in self.groups)
 
