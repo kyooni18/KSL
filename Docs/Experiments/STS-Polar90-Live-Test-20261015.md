@@ -1,6 +1,6 @@
 # STS Polar 90 Live Test — 2026-10-15
 
-**Status: overnight test in progress.** Evidence collected through 03:06 KST; KSP has been restored to the named prelaunch checkpoint and independently verified. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
+**Status: overnight test in progress.** Evidence collected through 03:12 KST; KSP has been restored to the named prelaunch checkpoint and independently verified after an additional ascent-mode test. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
 
 ## Test setup
 
@@ -36,6 +36,12 @@
 - `--from mm305` from the 30 km save failed before control engagement. Shadow admission reported `entered=true, MM305=true, closest=87.8 km, range error=-8.7 km, q=5.4 kPa, g=1.25`.
 - `--from mm304` from the 72 km save also failed before control engagement: `entered=true, MM305=true, closest=45.6 km, range error=-50.9 km, q=7.4 kPa, g=1.73`.
 - A distinct `--from mm304` replay from the 30 km save returned the same 30 km shadow rejection as the direct MM305 start. Both starts therefore reject this checkpoint without sending flight controls; the MM305 phase flag in the shadow result is already true while the backend remains Idle.
+
+## Alternate ascent mode
+
+The saved pad state was also tested with `--ascent-mode intelligent`, targeting the same 90 km / 90° orbit and holding at orbit. Preflight and liftoff completed, but ascent failed before clearing the launch area. In 104 telemetry samples over about 14.6 s of game time, the predicted apoapsis fell from the hundreds of metres to 2.28 m while the shuttle was at 70 m, descending at 56.7 m/s, moving horizontally at 219.3 m/s, under full throttle and q 12.10 kPa. Pitch command had decreased to 65.9°. The next sample at UT 15323.122 showed mass dropping from 476,862 kg to 12,293 kg; the intelligent ascent process then exited with `division by zero`. KSP subsequently reported the active vessel landed at 66 m altitude with zero mass, consistent with a destroyed/lost vehicle. This is a distinct ascent failure; the exception's exact arithmetic site is unconfirmed because the controller logs the exception without a traceback. The run log supports a severe early vertical-energy/trajectory failure before the exception.
+
+The named pad checkpoint was immediately reloaded and independently verified: STS pre-launch, 61 parts, 8 clamps, 4 crew, 521,003.44 kg, throttle 0. Run: `runs/20261014T180910Z-sts-polar90-intelligent-ascent/`.
 
 ## Offline validation
 
@@ -84,6 +90,7 @@ The 185 m/s case recorded wheel runway departure near the runway end (along 2490
 20261014T175022Z-sts-polar90-orbit-checkpoint-replay
 20261014T175115Z-sts-polar90-orbit-replay-explicit
 20261014T175404Z-sts-polar90-mm304-from-30km
+20261014T180910Z-sts-polar90-intelligent-ascent
 mm304-sts-polar90-recorded-mm304-matched-20261014T180104Z-v_o3d7ew
 final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184
 final-polar90-terminal-fpa16-v170-20261014T180613Z-jypfld0s
