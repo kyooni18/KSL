@@ -854,9 +854,15 @@ def run(args):
                             # Translate the orbiter roof-ward (control.up = vessel -z, away
                             # from the tank) on RCS so it cannot touch the ET.
                             control.rcs = True
-                            control.up = 1.0
-                            clear_until = time.monotonic() + args.et_clear_time
-                            while time.monotonic() < clear_until:
+                            control.up = 0.0
+                            # Ramp the push up and back down so the pair separates
+                            # with a soft, low relative velocity.
+                            clear_start = time.monotonic()
+                            while True:
+                                frac = (time.monotonic()-clear_start)/args.et_clear_time
+                                if frac >= 1:
+                                    break
+                                control.up = args.et_clear_thrust*math.sin(math.pi*frac)
                                 time.sleep(0.05)
                             control.up = 0.0
                             control.rcs = False
@@ -1290,9 +1296,11 @@ def main():
                         help='Fixed SSME thrust limiter held through SRB burn')
     parser.add_argument('--upper-g', type=float, default=1.4,
                         help='Acceleration cap for the SSME-only phase after booster separation')
-    parser.add_argument('--et-clear-time', type=float, default=4.0,
+    parser.add_argument('--et-clear-time', type=float, default=8.0,
                         help='Seconds of RCS up-translation after ET separation')
-    parser.add_argument('--et-sep-delay', type=float, default=5.0,
+    parser.add_argument('--et-clear-thrust', type=float, default=0.35,
+                        help='Peak RCS up-translation fraction (half-sine ramp) after ET separation')
+    parser.add_argument('--et-sep-delay', type=float, default=8.0,
                         help='Seconds to hold attitude after MECO before external-tank separation')
     parser.add_argument('--ssme-lead-time', type=float, default=3.0,
                         help='Seconds to hold verified SSME thrust before booster ignition')
