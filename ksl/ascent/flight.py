@@ -10,7 +10,7 @@ from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
-from .peg import PoweredExplicitGuidance
+from .peg import PoweredExplicitGuidance, choose_insertion
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
@@ -300,6 +300,7 @@ def run(args):
         peg_dv = None
         peg_hold = None
         peg_law = PoweredExplicitGuidance(body.gravitational_parameter)
+        peg_r_ins = None
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -689,10 +690,27 @@ def run(args):
                             lat_now = math.radians(flight.latitude)
                             v_rot = body.rotational_speed*r_now*math.cos(lat_now)
                             vh_inertial = flight.horizontal_speed+v_rot
-                            r_ins = body.equatorial_radius+insertion_altitude
                             ra = body.equatorial_radius+args.orbit
                             rp = body.equatorial_radius+args.meco_periapsis
                             mu = body.gravitational_parameter
+                            peg_accel = max(v.thrust, 1.0)/v.mass
+                            peg_ve = max(v.specific_impulse, 1.0)*G0
+                            # Plan the burnout radius on the target ellipse once, and again
+                            # only if the plan turns unflyable (never in the frozen end).
+                            if peg_r_ins is None or (
+                                    (peg_law.tgo or 0.0) > 2*peg_law.freeze_tgo and
+                                    not peg_law.peak < 1.2):
+                                low = max(body.equatorial_radius+insertion_altitude, r_now+2000.0)
+                                radii = [low+(ra-3000.0-low)*i/7 for i in range(8)] if low < ra-3000.0 else [low]
+                                planned_r, planned = choose_insertion(
+                                    mu, conn.space_center.ut, r_now, flight.vertical_speed,
+                                    vh_inertial, peg_accel, peg_ve, ra, rp, radii,
+                                    control.throttle < 0.99)
+                                if planned_r is not None:
+                                    peg_r_ins, peg_law = planned_r, planned
+                                    print(f'PEG plan: insertion {(planned_r-body.equatorial_radius)/1000:.1f} km, '
+                                          f'tgo {planned.tgo:.0f} s')
+                            r_ins = peg_r_ins or body.equatorial_radius+insertion_altitude
                             vh_ins = math.sqrt(2.0*mu*ra*rp/(ra+rp))/r_ins
                             # Radial speed of the target orbit at the insertion radius
                             # (ascending branch): 90x60 needs ~+50 m/s at 72 km, not 0.
@@ -701,8 +719,6 @@ def run(args):
                             # Closed-loop PEG to the burnout state (radius, radial and
                             # horizontal speed), re-solved every cycle, so the climb ends
                             # at insertion instead of overshooting and pitching down.
-                            peg_accel = max(v.thrust, 1.0)/v.mass
-                            peg_ve = max(v.specific_impulse, 1.0)*G0
                             peg_pitch_cmd, peg_law_tgo = peg_law.update(
                                 conn.space_center.ut, r_now, flight.vertical_speed,
                                 vh_inertial, peg_accel, peg_ve, r_ins, vr_ins, vh_ins,

@@ -24,6 +24,7 @@ class PoweredExplicitGuidance:
         self.A = self.B = None
         self.tgo = None
         self.converged = False
+        self.peak = 0.
         self._last_t = None
 
     def reset(self):
@@ -111,3 +112,21 @@ def orbit_state_at(mu, apoapsis_r, periapsis_r, insertion_r):
     vh = math.sqrt(2*mu*apoapsis_r*periapsis_r/(apoapsis_r+periapsis_r))/insertion_r
     vr = math.sqrt(max(0., 2*mu*(1/insertion_r-1/(apoapsis_r+periapsis_r))-vh*vh))
     return vr, vh
+
+
+def choose_insertion(mu, t, r, vr, vh, accel, ve, apoapsis_r, periapsis_r, radii,
+                     constant_accel=False):
+    """Burnout radius on one target ellipse that PEG reaches in the least burn time.
+
+    Returns (radius, solved guide) or (None, None). Only solutions whose steering
+    stays feasible count, so a lofted vehicle inserts higher on the ascending
+    branch instead of diving to a fixed altitude.
+    """
+    best = None
+    for r_t in radii:
+        guide = PoweredExplicitGuidance(mu)
+        vr_t, vh_t = orbit_state_at(mu, apoapsis_r, periapsis_r, r_t)
+        guide.update(t, r, vr, vh, accel, ve, r_t, vr_t, vh_t, constant_accel)
+        if guide.converged and guide.tgo > 1. and (best is None or guide.tgo < best[1].tgo):
+            best = r_t, guide
+    return best or (None, None)
