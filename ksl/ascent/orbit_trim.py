@@ -173,7 +173,7 @@ def rcs_delta_v(vessel):
     """Delta-v (m/s) the RCS monopropellant can deliver as forward translation."""
     try:
         mono = vessel.resources.amount('MonoPropellant')*4.0  # 4 kg per unit
-        thrusters = [p.rcs for p in vessel.parts.rcs]
+        thrusters = list(vessel.parts.rcs)
         isp = max((t.vacuum_specific_impulse for t in thrusters), default=0.0)
     except Exception:
         return math.inf  # unknown: do not block the RCS path on telemetry gaps
@@ -206,7 +206,7 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
     sc = conn.space_center
     ctl = vessel.control
     ap = CUSTOM_AP['ap']
-    rcs_parts = [p.rcs for p in vessel.parts.rcs]
+    rcs_parts = list(vessel.parts.rcs)
     if not rcs_parts:
         raise RuntimeError('No RCS thrusters for a forward-translation trim')
     saved = [(r.pitch_enabled, r.yaw_enabled, r.roll_enabled, r.forward_enabled,
