@@ -42,6 +42,7 @@
 - `make test` stopped during native C compilation before running its test targets. The compiler error is `no member named 'jet_assist' in 'GuidanceCommand'` in `CLanding/transport/client/controls.inc:217`. The currently modified `CLanding/include/guidance_types.h` declares `jet_assist_throttle`; those local source changes predated this test. No source edits were made to address it.
 - The separate `entry-70km-sts` MM304-to-landing ShuttleSim scenario could not start because its runtime backend build hit the same compile error. Run: `runs/20261014T175611Z-sts-polar90-sim-entry70/`. This is blocked validation, not a trajectory result.
 - The Python closed-loop suite ran against the existing `CLanding/build/landing_backend` artifact timestamped 2026-10-14 22:33 KST; the failed native build did not refresh it. Treat the two ShuttleSim landing failures as results from that existing artifact, not a clean build of the currently modified C sources.
+- A distinct archived MM304 scenario (`ksp-20261014-mm304-start.ini`) was first refused when paired with the STS profile because the scenario's aerodynamic profile identifies STS-N. After selecting its matching STS-N configuration, it reached TAEM at 26.95 km, 64.70 km from the site and 24.05 km cross-track, then remained in “tracking the displayed provisional TAEM route while qualification runs.” After 2:17 wall time, all 33 guidance snapshots were frozen at the same UT/state while the backend used about 196% CPU. The run was interrupted before its 600 s planner timeout; it is recorded as a TAEM qualification stall, not as a completed landing failure. Evidence: `ShuttleSim/runs/mm304-sts-polar90-recorded-mm304-matched-20261014T180104Z-v_o3d7ew/` (manifest records 583.42 simulated seconds and `runner interrupted: KeyboardInterrupt`). This simulator used the ideal attitude plant and is diagnostic only.
 - A separate clean-controller run of `.venv/bin/python -m pytest -q tests Validation` completed with **212 passed, 4 failed, 7 warnings, 56 subtests passed**. Failures:
   - `test_l5_mm305_golden_replay`: phase history stopped at MM305 instead of completing.
   - `test_l7_low_energy_final_still_flares`: no Final Approach handoff.
@@ -69,4 +70,5 @@ At near-vacuum altitudes, telemetry reported Mach values equal to speed in m/s (
 20261014T175022Z-sts-polar90-orbit-checkpoint-replay
 20261014T175115Z-sts-polar90-orbit-replay-explicit
 20261014T175404Z-sts-polar90-mm304-from-30km
+mm304-sts-polar90-recorded-mm304-matched-20261014T180104Z-v_o3d7ew
 ```
