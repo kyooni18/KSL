@@ -254,7 +254,7 @@ Status: the run did not fly. Attempt 4 (pad) is still blocked on an operator rev
 
 ## Attempt 4c — deorbit from current orbit, retry (user-directed, 2026-10-14 11:13 KST)
 
-- Run: `` (label `orbit-deorbit-retry`, `bin/ksl land -p sts-85km-10deg --from deorbit`). Nothing else changed: same profile, same command, no code, craft, or config edits.
+- Run: `runs/20261014T021357Z-orbit-deorbit-retry` (label `orbit-deorbit-retry`, `bin/ksl land -p sts-85km-10deg --from deorbit`). Nothing else changed: same profile, same command, no code, craft, or config edits.
 - Console log: `scratchpad/attempt4c-deorbit-console.log` (session scratchpad)
 - Outcome: FAILED at Deorbit, exit 1. Same error as attempt 4b: "Deorbit plan failed required strict full-route qualification; execution is blocked".
 - Failure phase: deorbit planning, before any burn.
