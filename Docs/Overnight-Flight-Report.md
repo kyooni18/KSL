@@ -251,3 +251,18 @@ Hypotheses (not verified):
 Status: the run did not fly. Attempt 4 (pad) is still blocked on an operator revert or named save.
 
 - 2026-10-14 10:44 KST — scheduled check: no change in pad state. `ksl status --live` shows orbiting, mass 26014.6 kg, 0 clamps, UT 685.8 s (advanced since attempt 4b). Attempt 4 still blocked.
+
+## Attempt 4c — deorbit from current orbit, retry (user-directed, 2026-10-14 11:13 KST)
+
+- Run: `` (label `orbit-deorbit-retry`, `bin/ksl land -p sts-85km-10deg --from deorbit`). Nothing else changed: same profile, same command, no code, craft, or config edits.
+- Console log: `scratchpad/attempt4c-deorbit-console.log` (session scratchpad)
+- Outcome: FAILED at Deorbit, exit 1. Same error as attempt 4b: "Deorbit plan failed required strict full-route qualification; execution is blocked".
+- Failure phase: deorbit planning, before any burn.
+
+Observations:
+- Plan: burn UT 1328.9, dv 30.01 m/s, `executable=True`, `strict=False`. Same values as attempt 4b.
+- Vessel still orbiting at 85 km, 2073.9 m/s, range 681.3 km at the failure. No burn applied.
+
+Hypothesis: the refusal is deterministic for this orbit state, as attempts 2, 3, and 4b suggested. A retry does not change it.
+
+Status: no flight. Attempt 4 (pad) is still blocked on an operator revert or named save.
