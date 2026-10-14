@@ -23,9 +23,9 @@
 #include "taem/energy_law.inc"
 
 /* Straight-line distance the TAEM energy law glides from an MM305 handoff
-   state to the Final station energy at its mid drag level. MM304 sizes its
-   energy budget against this so the handoff leaves TAEM modulation margin
-   both ways under the same polar TAEM flies. */
+   state to the Final station energy at full drag. MM304 sizes its energy
+   budget against this so the handoff arrives with surplus, never shortage,
+   under the same polar TAEM flies. */
 double mm305_energy_law_handoff_reach(const TerminalModel *model,
         double altitude_above_site_m,double speed_mps,double mass_kg) {
     if (!model||!isfinite(altitude_above_site_m)||!(altitude_above_site_m>0.0)||
@@ -44,7 +44,11 @@ double mm305_energy_law_handoff_reach(const TerminalModel *model,
     aero_coefficients(&model->aero,mach,p.aoa,&cl,&cd);
     p.g=cl>0.0&&cd>0.0?-atan(cd/cl):0.0;   /* equilibrium glide at best L/D */
     TelSegment straight[1]={{INFINITY,0.0}};
-    double reach=tel_predict_range(&c,&p,TEL_K_PLAN,INFINITY,straight,1);
+    /* Shortage is unrecoverable, surplus is not: size the handoff on the
+       straight-in reach at full drag modulation (k=1), so the whole range
+       between it and maximum range is margin, and anything beyond full drag is
+       still bled by the weave/loop. */
+    double reach=tel_predict_range(&c,&p,1.0,INFINITY,straight,1);
     return isfinite(reach)&&reach>0.0?reach:NAN;
 }
 #include "taem/executive_bridge.inc"
