@@ -690,6 +690,24 @@ static KrpcCNanoClient *finish_client_open(KrpcCNanoClient *client,
     if(!rpc_failed(client,krpc_SpaceCenter_Vessel_Name(client->connection,&vessel_name,client->vessel),"Vessel.Name",error,error_size)&&vessel_name){
         snprintf(client->vessel_name,sizeof(client->vessel_name),"%s",vessel_name);krpc_free(vessel_name);
     }else if(!client->vessel_name[0])snprintf(client->vessel_name,sizeof(client->vessel_name),"Active Vessel");
+    {
+        /* Attitude, incidence and the vessel frame all follow the controlling
+           part; a docked or carried payload can become the root or the control
+           point.  Name both so a wrong control point is visible at engage. */
+        krpc_SpaceCenter_Parts_t parts=KRPC_NULL;
+        krpc_SpaceCenter_Part_t controlling=KRPC_NULL,root=KRPC_NULL;
+        char *controlling_title=NULL,*root_title=NULL;
+        if(krpc_SpaceCenter_Vessel_Parts(client->connection,&parts,client->vessel)==KRPC_OK){
+            if(krpc_SpaceCenter_Parts_Controlling(client->connection,&controlling,parts)==KRPC_OK&&controlling!=KRPC_NULL)
+                (void)krpc_SpaceCenter_Part_Title(client->connection,&controlling_title,controlling);
+            if(krpc_SpaceCenter_Parts_Root(client->connection,&root,parts)==KRPC_OK&&root!=KRPC_NULL)
+                (void)krpc_SpaceCenter_Part_Title(client->connection,&root_title,root);
+        }
+        fprintf(stderr,"Vessel '%s': controlling part '%s', root part '%s'.\n",client->vessel_name,
+            controlling_title?controlling_title:"?",root_title?root_title:"?");
+        if(controlling_title)krpc_free(controlling_title);
+        if(root_title)krpc_free(root_title);
+    }
     if(!load_planet(client,error,error_size)){discard_setup_client(client);return NULL;}
 
     /* AutoPilot configuration and oscillation-detector state persist across
