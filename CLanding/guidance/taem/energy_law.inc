@@ -193,11 +193,15 @@ static bool tel_hac_tangent(const TaemEnergyLawState *L,const TelContext *c,
    centreline leg (charged as an arc at the leg's bank limit). */
 static int tel_segments(const TaemEnergyLawState *L,const TelContext *c,const TelPoint *s,
         TelSegment *out) {
-    TelSegment path[4];
+    TelSegment path[4]={{0}};
     int n=tel_segments_path(L,c,s,path);
     double turn,tx,ty,hac_arc;
     if (L->leg==TEL_LEG_DOWN&&tel_hac_tangent(L,c,s->x,s->y,&tx,&ty,&hac_arc))
         turn=fabs(tel_wrap(atan2(ty-s->y,tx-s->x)-s->psi));
+    else if (L->leg==TEL_LEG_OUT&&!L->loop) {
+        for (int i=0;i<n;++i) out[i]=path[i];
+        return n;
+    }
     else if (L->leg==TEL_LEG_OUT||L->leg==TEL_LEG_FINAL)
         turn=fabs(s->psi)+fabs(atan2(s->y,fmax(3000.0,0.4*fmax(0.0,-c->d_station-s->x))));
     else {
@@ -244,13 +248,64 @@ static double tel_hac_remaining(const TaemEnergyLawState *L,const TelContext *c,
     return r*rem;
 }
 
+/* Bank-limited turn radius at the energy-mean speed of the remaining TAEM:
+   the vehicle slows from its present speed toward the station speed while it
+   turns, so neither end-point speed prices the turn. */
+static double tel_mean_turn_radius(const TelContext *c,const TelPoint *s) {
+    double gnd=s->v*cos(s->g),q,mach;
+    tel_air(c,s->h,s->v,&q,&mach);
+    double lim=(mach>1.1?TEL_BANK_SUP:TEL_BANK_MAX)*DEG2RAD;
+    double v2=0.5*(gnd*gnd+c->v_station*c->v_station);
+    return v2/(TEL_G0*tan(lim));
+}
+
+/* Shortest turn-straight-turn (Dubins CSC) path from the vehicle pose to the
+   Final station on runway heading.  Frame: x down the runway, y left, psi
+   counter-clockwise.  The old straight-in chord clamped the along-track
+   leg at the station, so a vehicle past the station abeam the runway was
+   priced at |y| with no turn-back (2026-10-14 live: sGo = crossrange). */
+static int tel_dubins_to_station(const TelContext *c,const TelPoint *s,double r,
+        TelSegment *out) {
+    double ex=-c->d_station,ey=0.0,epsi=0.0;
+    double best=INFINITY,a1=0.0,st=0.0,a2=0.0;
+    for (int d1=-1;d1<=1;d1+=2)
+        for (int d2=-1;d2<=1;d2+=2) {
+            double c1x=s->x-d1*r*sin(s->psi),c1y=s->y+d1*r*cos(s->psi);
+            double c2x=ex-d2*r*sin(epsi),c2y=ey+d2*r*cos(epsi);
+            double dx=c2x-c1x,dy=c2y-c1y,d=hypot(dx,dy),phi=atan2(dy,dx);
+            double theta,straight;
+            if (d1==d2) { theta=phi; straight=d; }
+            else {
+                if (d<2.0*r) continue;
+                theta=phi+d1*asin(2.0*r/d);
+                straight=sqrt(d*d-4.0*r*r);
+            }
+            double arc1=fmod(d1*(theta-s->psi),2.0*TEL_PI);
+            if (arc1<0.0) arc1+=2.0*TEL_PI;
+            double arc2=fmod(d2*(epsi-theta),2.0*TEL_PI);
+            if (arc2<0.0) arc2+=2.0*TEL_PI;
+            double total=r*(arc1+arc2)+straight;
+            if (total<best) { best=total; a1=r*arc1; st=straight; a2=r*arc2; }
+        }
+    if (!isfinite(best)) {
+        out[0]=(TelSegment){hypot(ex-s->x,ey-s->y),0.0};
+        return 1;
+    }
+    out[0]=(TelSegment){a1,r};
+    out[1]=(TelSegment){st,0.0};
+    out[2]=(TelSegment){a2,r};
+    return 3;
+}
+
 static int tel_segments_path(const TaemEnergyLawState *L,const TelContext *c,
         const TelPoint *s,TelSegment *out) {
     double r=L->radius,D=c->d_station,tx,ty,arc;
-    if (!L->loop||L->leg==TEL_LEG_FINAL) {
+    if (L->leg==TEL_LEG_FINAL) {
         out[0]=(TelSegment){hypot(fmax(0.0,-D-s->x),s->y),0.0};
         return 1;
     }
+    if (!L->loop)
+        return tel_dubins_to_station(c,s,tel_mean_turn_radius(c,s),out);
     if (L->leg==TEL_LEG_OUT) {
         /* turnaround toward the centreline, then intercept the HAC on that side */
         TaemEnergyLawState q=*L;
@@ -635,10 +690,8 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
     if (L->loop&&L->leg==TEL_LEG_OUT) tel_size_hac(L,c,s,true);
 }
 
-static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *model,
-        const TaemGeometryState *geo,double mass_kg,double aoa_deg,double ut,
-        double bank_deg,double *aoa_cmd,double *bank_cmd) {
-    if (!L||!model||!geo||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)) return false;
+static void tel_setup(const TerminalModel *model,const TaemGeometryState *geo,
+        double mass_kg,double aoa_deg,double bank_deg,TelContext *out_c,TelPoint *out_s) {
     TelContext c={.model=model,
         .d_station=fmax(500.0,model->guidance.final_approach_distance),
         .v_station=fmax(model->guidance.final_alignment_speed,model->vehicle.minimum_safe_speed),
@@ -652,12 +705,39 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         .g=geo->flight_path_angle_deg*DEG2RAD,.psi=-geo->heading_error_deg*DEG2RAD,
         .m=mass_kg,.aoa=isfinite(aoa_deg)?aoa_deg:10.0,.aoa_rate=0.0,
         .bank=isfinite(bank_deg)?bank_deg:0.0,.ground_speed=geo->ground_speed_mps};
+    *out_c=c;*out_s=s;
+}
+
+static void tel_initialize(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
+    double D=c->d_station;
+    *L=(TaemEnergyLawState){.initialized=true,.leg=TEL_LEG_OUT,.side=1,
+        .capture_forecast=fabs(s->y)>6000.0,
+        .x_turn=-D,.radius=5000.0,.k=0.5,.last_geo_ut=-INFINITY,.last_pred_ut=-INFINITY};
+}
+
+/* Physical cost of starting the law in this runway frame: the best pattern's
+   distance outside the range its drag levels can reach (tel_score). Lower is
+   better; the same predictor then flies the chosen frame. */
+static double taem_energy_law_frame_score(const TerminalModel *model,
+        const TaemGeometryState *geo,double mass_kg,double aoa_deg,double bank_deg) {
+    if (!model||!geo||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)) return INFINITY;
+    TelContext c;TelPoint s;
+    tel_setup(model,geo,mass_kg,aoa_deg,bank_deg,&c,&s);
+    TaemEnergyLawState L;
+    tel_initialize(&L,&c,&s);
+    tel_plan(&L,&c,&s);
+    double score=tel_score(&L,&c,&s);
+    return isfinite(score)?score:INFINITY;
+}
+
+static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *model,
+        const TaemGeometryState *geo,double mass_kg,double aoa_deg,double ut,
+        double bank_deg,double *aoa_cmd,double *bank_cmd) {
+    if (!L||!model||!geo||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)) return false;
+    TelContext c;TelPoint s;
+    tel_setup(model,geo,mass_kg,aoa_deg,bank_deg,&c,&s);
     double D=c.d_station;
-    if (!L->initialized) {
-        *L=(TaemEnergyLawState){.initialized=true,.leg=TEL_LEG_OUT,.side=1,
-            .capture_forecast=fabs(s.y)>6000.0,
-            .x_turn=-D,.radius=5000.0,.k=0.5,.last_geo_ut=-INFINITY,.last_pred_ut=-INFINITY};
-    }
+    if (!L->initialized) tel_initialize(L,&c,&s);
     double q,mach;
     tel_air(&c,s.h,s.v,&q,&mach);
     double gnd=geo->ground_speed_mps;

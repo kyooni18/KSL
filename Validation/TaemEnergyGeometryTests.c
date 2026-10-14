@@ -49,6 +49,16 @@ static void recorded_capture_range(void) {
     abeam.psi=-100.0*DEG2RAD;
     assert(tel_lateral(&route,&c,&abeam)>0.0);
     assert(route.leg==TEL_LEG_OUT);
+    /* 2026-10-14 live MM305 handoff: past the RW09 station abeam at 42 km
+       crossrange, Mach 2.85, flying away from the runway line. The straight-in
+       path must charge the turn back, not price the chord as |y| (37.7 km). */
+    TaemEnergyLawState straight={.initialized=true,.leg=TEL_LEG_OUT,.loop=false,
+        .x_turn=-9000.0,.radius=5000.0};
+    TelPoint passed={.x=9014.0,.y=37660.0,.h=21043.0,.v=592.0,
+        .g=-13.8*DEG2RAD,.psi=-19.5*DEG2RAD,.m=25670.0,.aoa=14.8,.bank=44.0};
+    double passed_path=tel_sum(segs,tel_segments(&straight,&c,&passed,segs));
+    assert(passed_path>hypot(passed.x+c.d_station,passed.y)+20000.0);
+    (void)taem_energy_law_frame_score;
     free(model);
 }
 

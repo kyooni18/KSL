@@ -1701,6 +1701,39 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
 
     int end=g->mm305_route_committed&&g->runway_end_index==1?1:
         (g->runway_end_preview_valid&&g->runway_end_index==1?1:0);
+    /* The energy law flies whichever frame it starts in. Choose that frame
+       when the law starts, by the law's own reachability score in each runway
+       end, instead of inheriting an MM304 preview priced at hypersonic turn
+       radius (2026-10-14: RW09 kept while the vehicle passed abeam RW09 at
+       42 km crossrange; it overflew, turned back and landed short). */
+    if (cfg->guidance.taem_energy_law && !g->mm305_route_committed &&
+            !g->taem_energy_law.initialized && cfg->site.allow_reciprocal_runway) {
+        double score[2]={INFINITY,INFINITY};
+        for (int e=0;e<2;++e) {
+            TerminalModel trial;
+            const TerminalModel *trial_end=mm305_model_for_end(model,e);
+            mm305_prepare_planning_model(&trial,trial_end,
+                mm305_final_alignment_distance(g,trial_end,&current),t->mach,
+                isfinite(g->mm305_lift_scale)&&g->mm305_lift_scale>0.0?
+                    clampd(g->mm305_lift_scale,0.5,2.0):1.0,
+                isfinite(g->mm305_drag_scale)&&g->mm305_drag_scale>0.0?
+                    clampd(g->mm305_drag_scale,0.5,2.0):1.0,
+                current.trim_aoa_ceiling_rad);
+            TaemGeometryState trial_geometry;
+            if (taem_geometry_state(&trial,&current,&trial_geometry))
+                score[e]=taem_energy_law_frame_score(&trial,&trial_geometry,
+                    current.mass_kg,t->angle_of_attack,t->roll);
+        }
+        if (isfinite(score[0])||isfinite(score[1])) {
+            int other=1-end;
+            if (score[other]<score[end]) end=other;
+            g->runway_end_index=end;
+            g->runway_end_preview_valid=true;
+            g->runway_end_committed=true;
+            fprintf(stderr,"MM305 energy-law runway end: RW%s score09=%.0f score27=%.0f\n",
+                end==1?"27":"09",score[0],score[1]);
+        }
+    }
     const TerminalModel *end_model=mm305_model_for_end(model,end);
     /* Planner and live tracker must fly the same measured aerodynamics.
        The asynchronous planner has always applied these Mach-local force scales
