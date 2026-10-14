@@ -262,14 +262,18 @@ static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Tel
 
 #include "adaptive_flare.inc"
 
-/* Steady-glide slope on the live-learned polar at the present state:
-   gamma = atan(D/L) where the lift carries m g cos(gamma).  The recorded
-   polar only seeds terminal_aero_q until the vehicle has shown its own. */
+/* Outer-glide slope on the live-learned polar at the present state, from the
+   energy balance to the threshold: tan(gamma) = Drag/L - (V^2 - V_a^2)/(2 g d),
+   where the lift carries m g cos(gamma) and V_a is the approach speed.  The
+   recorded polar only seeds terminal_aero_q until the vehicle shows its own. */
 static double terminal_live_equilibrium_slope(const GuidanceMachine*g,const Telemetry*t,
-        const VehicleProfile*v,double g0,double aoa_max){
+        const VehicleProfile*v,double g0,double aoa_max,double distance){
     double q=t->dynamic_pressure;
-    if(!(q>0.0)||!(t->mass>0.0)||!(aoa_max>0.0))return NAN;
+    if(!(q>0.0)||!(t->mass>0.0)||!(aoa_max>0.0)||!(distance>0.0))return NAN;
     double ratio=g->terminal_lift_ratio>0.0&&isfinite(g->terminal_lift_ratio)?g->terminal_lift_ratio:1.0;
+    double V=t->true_air_speed,v_a=fmax(v->final_approach_speed,v->minimum_safe_speed);
+    if(!(V>0.0)||!(v_a>0.0))return NAN;
+    double kinetic=(V*V-v_a*v_a)/(2.0*g0*distance);
     double slope=isfinite(t->flight_path_angle)?fabs(t->flight_path_angle)*DEG2RAD:0.0;
     for(int it=0;it<8;++it){
         double need=t->mass*g0*cos(slope),lo=0.0,hi=aoa_max,L=0.0,D=0.0;
@@ -280,7 +284,7 @@ static double terminal_live_equilibrium_slope(const GuidanceMachine*g,const Tele
         }
         terminal_aero_q(g,t,v,.5*(lo+hi),&L,&D);
         if(!(L>0.0)||!(D>0.0))return NAN;
-        double next=atan2(D,L*ratio);
+        double next=atan(fmax(0.0,D/(L*ratio)-kinetic));
         if(fabs(next-slope)<1e-5){slope=next;break;}
         slope=next;
     }
@@ -316,7 +320,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     if(stage<TERMINAL_OUTER_FINAL)stage=TERMINAL_OUTER_FINAL;
     /* The outer glide follows what the vehicle is measured to sustain. */
     if(stage==TERMINAL_OUTER_FINAL&&!g->terminal_pull_latch&&!g->terminal_glide_mode){
-        double live_slope=terminal_live_equilibrium_slope(g,t,v,g0,aoa_max);
+        double live_slope=terminal_live_equilibrium_slope(g,t,v,g0,aoa_max,fmax(0.0,-along));
         if(isfinite(live_slope)&&live_slope>=3.0&&live_slope<=45.0){
             g->terminal_final_handoff_latched=true;
             g->terminal_final_handoff_slope_deg=live_slope;

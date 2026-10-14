@@ -709,21 +709,30 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
     if (L->loop&&L->leg==TEL_LEG_OUT) tel_size_hac(L,c,s,true);
 }
 
-/* Outer-glide slope: the steady glide that holds the station speed on the
-   (measured-scaled) polar, gamma = atan(D/L) with L = m g cos(gamma) at the
-   station altitude D tan(gamma).  The altitude/slope coupling is a fixed
-   point; the configured slope is only the seed. */
-static double tel_equilibrium_slope(const TelContext *c,double mass_kg,double seed_deg) {
+/* Outer-glide slope from the energy balance over the final distance D.
+   With lift carrying the weight, specific energy falls by D*(Drag/L) along
+   the glide, so arriving at the approach speed from the station speed needs
+     tan(gamma) = Drag/L - (V_station^2 - V_approach^2)/(2 g D),
+   with Drag/L from the (measured-scaled) polar at the mean-energy speed and
+   mid-glide altitude.  Holding the station speed instead (no kinetic credit)
+   is a ~30 deg dive at the low incidence that speed needs.  The
+   altitude/slope coupling is a fixed point; the configured slope is a seed. */
+static double tel_equilibrium_slope(const TelContext *c,double mass_kg,double seed_deg,
+        double approach_speed) {
     double slope=isfinite(seed_deg)&&seed_deg>0.0?seed_deg*DEG2RAD:atan(0.5);
-    if (!(mass_kg>0.0)||!(c->v_station>0.0)) return slope*RAD2DEG;
+    if (!(mass_kg>0.0)||!(c->v_station>0.0)||!(c->d_station>0.0)) return slope*RAD2DEG;
+    double v_a=isfinite(approach_speed)&&approach_speed>0.0?
+        fmin(approach_speed,c->v_station):c->v_station;
+    double kinetic=(c->v_station*c->v_station-v_a*v_a)/(2.0*TEL_G0*c->d_station);
     for (int i=0;i<8;++i) {
-        TelPoint p={.h=c->d_station*tan(slope),.v=c->v_station,.m=mass_kg};
+        TelPoint p={.h=0.5*c->d_station*tan(slope),
+            .v=sqrt(0.5*(c->v_station*c->v_station+v_a*v_a)),.m=mass_kg};
         double weight=mass_kg*tel_gravity(c,p.h);
         double aoa=tel_lift_aoa(c,&p,weight*cos(slope));
         double q,mach,lift,drag;
         tel_forces(c,&p,aoa,&q,&mach,&lift,&drag);
         if (!(lift>0.0)||!(drag>0.0)) break;
-        double next=atan2(drag,lift);
+        double next=atan(fmax(0.0,drag/lift-kinetic));
         if (fabs(next-slope)<1e-5) { slope=next; break; }
         slope=next;
     }
@@ -738,7 +747,8 @@ static void tel_setup(const TerminalModel *model,const TaemGeometryState *geo,
         .aoa_max=fmax(TEL_AOA_SUP_MIN,model->vehicle.maximum_angle_of_attack)};
     if (model->vehicle.terminal_maximum_lift_angle_of_attack>0.0)
         c.aoa_max=fmin(c.aoa_max,model->vehicle.terminal_maximum_lift_angle_of_attack);
-    c.slope_deg=tel_equilibrium_slope(&c,mass_kg,model->guidance.final_glide_slope);
+    c.slope_deg=tel_equilibrium_slope(&c,mass_kg,model->guidance.final_glide_slope,
+        fmax(model->vehicle.final_approach_speed,model->vehicle.minimum_safe_speed));
     c.h_station=c.d_station*tan(c.slope_deg*DEG2RAD);
     c.e_station=c.h_station+c.v_station*c.v_station/(2.0*TEL_G0);
     TelPoint s={.x=geo->runway_along_m,.y=-geo->runway_cross_m,
