@@ -68,6 +68,7 @@ struct KrpcCNanoClient {
     krpc_SpaceCenter_CelestialBody_t body;
     krpc_SpaceCenter_ReferenceFrame_t body_nonrotating;
     krpc_SpaceCenter_ReferenceFrame_t vessel_frame;
+    bool root_frame_aoa_reported;
     krpc_SpaceCenter_ReferenceFrame_t surface_frame;
     krpc_SpaceCenter_Flight_t flight_surface;
     krpc_SpaceCenter_Flight_t flight_body;

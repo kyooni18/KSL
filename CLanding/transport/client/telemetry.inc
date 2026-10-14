@@ -221,6 +221,33 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
     double body_x=r00*angular.e0+r10*angular.e1+r20*angular.e2;
     double body_y=r01*angular.e0+r11*angular.e1+r21*angular.e2;
     double body_z=r02*angular.e0+r12*angular.e1+r22*angular.e2;
+    /* Incidence in the control part's axes.  Stock kRPC Flight.AngleOfAttack
+       and SideslipAngle use vessel.transform, which is the ROOT part's
+       transform: with a payload as root (e.g. a berthing mechanism mounted
+       belly-up) they come out sign-flipped or mixed while the controlling part
+       and navball are correct.  Rotate the surface velocity into the vessel
+       (controlling part) frame, x right / y nose / z belly, and apply the same
+       asin definitions there.  Raw kRPC coordinates are canonical (x,z,y). */
+    {
+        double sv_raw[3]={surface_velocity.x,surface_velocity.z,surface_velocity.y};
+        double bx=r00*sv_raw[0]+r10*sv_raw[1]+r20*sv_raw[2];
+        double by=r01*sv_raw[0]+r11*sv_raw[1]+r21*sv_raw[2];
+        double bz=r02*sv_raw[0]+r12*sv_raw[1]+r22*sv_raw[2];
+        double speed=sqrt(bx*bx+by*by+bz*bz);
+        if(speed>1.0&&isfinite(speed)){
+            double own_aoa=asin(clampd(bz/speed,-1.0,1.0))*RAD2DEG;
+            double own_beta=asin(clampd(bx/speed,-1.0,1.0))*RAD2DEG;
+            if(!client->root_frame_aoa_reported&&speed>50.0&&
+               fabs(own_aoa-t->angle_of_attack)>1.0){
+                client->root_frame_aoa_reported=true;
+                fprintf(stderr,"kRPC root-part incidence differs from the controlling part: "
+                    "kRPC AoA %.1f / sideslip %.1f, controlling-part AoA %.1f / sideslip %.1f; "
+                    "using the controlling part.\n",t->angle_of_attack,t->sideslip,own_aoa,own_beta);
+            }
+            t->angle_of_attack=own_aoa;
+            t->sideslip=own_beta;
+        }
+    }
     /* Keep the established bridge/control sign convention. */
     t->has_body_pitch_rate = t->has_body_roll_rate = t->has_body_yaw_rate = true;
     t->body_pitch_rate = -body_x * RAD2DEG;
