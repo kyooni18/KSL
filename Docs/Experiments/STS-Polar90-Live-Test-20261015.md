@@ -43,6 +43,8 @@ The saved pad state was also tested with `--ascent-mode intelligent`, targeting 
 
 The named pad checkpoint was immediately reloaded and independently verified: STS pre-launch, 61 parts, 8 clamps, 4 crew, 521,003.44 kg, throttle 0. Run: `runs/20261014T180910Z-sts-polar90-intelligent-ascent/`.
 
+The existing `tests/ascent/test_intelligent.py` cases passed in the Python suite, including three lightweight independent-plant orbit simulations and a staged-mass-drop simulation. They do not replay this KSP STS vehicle or assert positive vertical speed through its pad gravity turn, so they did not catch this live low-altitude loss.
+
 ## Offline validation
 
 - `make test` stopped during native C compilation before running its test targets. The compiler error is `no member named 'jet_assist' in 'GuidanceCommand'` in `CLanding/transport/client/controls.inc:217`. The currently modified `CLanding/include/guidance_types.h` declares `jet_assist_throttle`; those local source changes predated this test. No source edits were made to address it.
