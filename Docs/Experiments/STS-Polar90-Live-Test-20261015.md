@@ -1,6 +1,6 @@
 # STS Polar 90 Live Test — 2026-10-15
 
-**Status: overnight test in progress.** Evidence collected through 03:04 KST; KSP has been restored to the named prelaunch checkpoint and independently verified. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
+**Status: overnight test in progress.** Evidence collected through 03:06 KST; KSP has been restored to the named prelaunch checkpoint and independently verified. No source files were edited by this test session. The checkout already contained six modified C source/header files at test start.
 
 ## Test setup
 
@@ -54,6 +54,10 @@
 
 At near-vacuum altitudes, telemetry reported Mach values equal to speed in m/s (for example about 2,293 at 72 km while dynamic pressure was zero). This is invalid Mach telemetry in that regime and should not be used as a physical Mach measurement. The relevant telemetry path divides true airspeed by a speed-of-sound value floored at 1 m/s.
 
+## Supplemental Final-only replay
+
+An isolated Final/flare/rollout replay on the matching STS-N model (`final-aligned-185mps-fpa10-aoa3`) did reach gear-down touchdown and stop, but the result failed the touchdown sink gate: 69.53 m/s at touchdown with 3.128 m/s sink (gate false). It recorded wheel runway departure near the runway end (along 2490.2 m, cross 0.007 m), then stopped at 2494.2 m; rollout stability and runway rollout flags were true, with no crash. This is a supplemental STS-N ideal-attitude simulation, not live evidence for the custom STS craft. Run: `final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184/`.
+
 ## Evidence locations
 
 - Full flight: `runs/20261014T165854Z-sts-polar90-full-20261015/` (`status.json`, `events.jsonl`, `telemetry.jsonl`, `ascent.log`, `orbit-trim.log`, `deorbit-plan.json`, `checkpoint.json`, `descent-checkpoints.json`).
@@ -71,4 +75,5 @@ At near-vacuum altitudes, telemetry reported Mach values equal to speed in m/s (
 20261014T175115Z-sts-polar90-orbit-replay-explicit
 20261014T175404Z-sts-polar90-mm304-from-30km
 mm304-sts-polar90-recorded-mm304-matched-20261014T180104Z-v_o3d7ew
+final-polar90-terminal-final-isolation-20261014T180531Z-_xtlt184
 ```
