@@ -226,3 +226,26 @@ at the pad. Nothing else in the CLI or the checkpoint list can reset the pad.
 - 2026-10-14 09:11 KST — scheduled check: no change. `ksl status --live` shows orbiting, mass 26014.6 kg, 0 clamps, UT 641.6 s. Attempt 4 still blocked.
 
 - 2026-10-14 10:13 KST — scheduled check: no change. `ksl status --live` shows orbiting, mass 26014.6 kg, 0 clamps, UT 641.6 s. Attempt 4 still blocked.
+
+## Attempt 4b — deorbit from current orbit (user-directed, 2026-10-14 10:27 KST)
+
+Context: attempt 4 (launch from pad) remains blocked; the vessel is still in orbit with 0 launch clamps. On the operator's instruction ("you can just deorbit it"), I ran the deorbit-to-rollout from the current orbit state. This is not a launch-through-landing attempt. No code, craft, or configuration was changed.
+
+- Run: `runs/20261014T012718Z-orbit-deorbit-attempt4` (label `orbit-deorbit-attempt4`, `bin/ksl land -p sts-85km-10deg --from deorbit`)
+- Dry run before it: `runs/20261014T012711Z-sts-85km-10deg` (validated the plan, nothing flown; kept as-is)
+- Console log: `scratchpad/attempt4-deorbit-console.log` (session scratchpad)
+- Outcome: FAILED at Deorbit. Mission state `failed`, error "Deorbit plan failed required strict full-route qualification; execution is blocked".
+- Failure phase: deorbit planning, before any burn.
+
+Observations:
+- Orbiter inventory verified at 26 parts. Payload bay already closed.
+- Deorbit plan: burn UT 1328.9, dv 30.01 m/s, `executable=True`, `strict=False`.
+- `deorbit-plan.json`: `robustnessQualified=false`, `robustnessPassed=0/15`, `robustnessPassFraction=0`, `robustnessUnsafe=0`, `recoveryPassFraction=0`, `terminalInletQualified=false`, `liveCutoffCaptureQualified=false`, `achievedStateCaptureQualified=false`. `executionQualified=true`, `executionDegraded=true`.
+- Telemetry at the failure: UT 665.9 s, altitude 85004.5 m, speed 2073.9 m/s, situation orbiting, no burn applied.
+- The kRPC connection was dropped after the failure.
+
+Hypotheses (not verified):
+- The strict full-route gate is deterministic for this orbit state. Attempts 2 and 3 (orbit checkpoint) gave the same 0/15 result, so the orbit state itself is likely the cause, not run-to-run noise.
+- The cause is the gate's robustness scenarios, not the burn itself: `executionQualified` is true, yet the gate still blocks.
+
+Status: the run did not fly. Attempt 4 (pad) is still blocked on an operator revert or named save.
