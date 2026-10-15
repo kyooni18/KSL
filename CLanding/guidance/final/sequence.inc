@@ -695,6 +695,19 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             arrest_accel,SGS_HEIGHT,SGS_SINK,FINAL_FLARE_ACCEL);
         double reference_sink=height>NO_PUSH_HEIGHT?profile_sink:
             fmin(profile_sink,fmax(float_sink,sink));
+        /* STS must carry the mains over the threshold before settling. Only
+           stretch when the learned polar has enough height/kinetic reserve
+           to reach it above the current maximum-lift 1-g speed. This closes
+           runway position during the shallow flare without a fixed aim bias. */
+        if(s->taem_energy_law&&s->terminal_speedbrake&&along<0.0&&
+           isfinite(speed_1g)&&V>speed_1g){
+            double reserve=ld_float*(fmax(0.0,height)+
+                fmax(0.0,V*V-speed_1g*speed_1g)/(2.0*g0));
+            if(reserve>-along){
+                reference_sink=fmin(reference_sink,
+                    fmax(0.0,lead_height)*Vh/(-along));
+            }
+        }
         double flare_top=terminal_final_flare_height(float_height,float_sink,FINAL_FLARE_ACCEL,SGS_SINK);
         double ff=lead_height>float_height&&lead_height<=flare_top&&sink>float_sink?FINAL_FLARE_ACCEL:0.0;
         arc_accel=ff+(sink-reference_sink)/FLARE_TAU;
