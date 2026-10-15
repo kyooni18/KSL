@@ -3,6 +3,8 @@ import argparse
 import csv
 import json
 import math
+import sys
+import traceback
 import signal
 import time
 from pathlib import Path
@@ -473,7 +475,8 @@ def main():
     except KeyboardInterrupt:
         return 130
     except Exception as exc:
-        print(f'Intelligent ascent failed: {exc}', flush=True)
+        print(f'Intelligent ascent failed: {type(exc).__name__}: {exc}', flush=True)
+        traceback.print_exc(file=sys.stdout)  # 2026-10-15 loss logged no site
         emit_event('guidance-failure', error=str(exc))
         return 1
 

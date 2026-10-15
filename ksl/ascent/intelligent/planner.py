@@ -157,7 +157,10 @@ class Planner:
             # Predictive apoapsis feedback while building transverse energy.
             desired = clamp(launch-(ap_now-t.apoapsis*.8)/1500., -60., launch)
         prograde = math.degrees(math.atan2(s.radial, max(.1, aero_horizontal)))
-        alpha = clamp(50000./max(s.q, 1.), 1.5, 35.)
+        # q*alpha <= 50 kPa*deg.  No extra 35 deg cap: on the pad (q ~ 240 Pa at
+        # ~20 m/s) prograde is noise and that cap slewed a TWR-1.2 STS from 90
+        # to 66 deg pitch by 190 m; it sank into the ground (2026-10-15).
+        alpha = clamp(50000./max(s.q, 1.), 1.5, 90.)
         lower, upper = -75., 90.
         if s.q > 100.:
             lower, upper = max(lower, prograde-alpha), min(upper, prograde+alpha)

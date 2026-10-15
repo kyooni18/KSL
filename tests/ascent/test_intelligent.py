@@ -206,3 +206,14 @@ def test_mixed_propellant_flow_preserves_solid_consumption_at_liquid_cutoff():
     fallback = replace(state, mass_flow=-1.)
     assert step(fallback, target, 90., 0., 2.).mass == pytest.approx(
         state.mass-2*solid/(300.*9.80665))
+
+
+def test_low_speed_pad_drift_does_not_pitch_a_low_twr_stack_over():
+    # 2026-10-15 live STS: 108 m, vr 9.9 m/s, small surface drift, q 238 Pa,
+    # TWR ~1.2.  The aero bound must not slew pitch toward a noisy prograde.
+    target = Target(600000., 3.5316e12, 70000., 90000., 90000., 90.)
+    planner = Planner(target)
+    s = State(108., 9.9, 175.7, 509061., 6.1e6, 300., q=238., surface_horizontal=12.)
+    for _ in range(25):
+        command = planner.command(s, .4)
+    assert command.pitch > 85.
