@@ -405,7 +405,13 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double omega_limit=.35/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
     double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
+    /* STS: the pavement intercept reaches the centreline only at touchdown,
+       which left v7-v10 still converging through the flare.  Use it as a
+       minimum closure: keep the centreline capture rate when that is faster. */
+    double capture_rate=desired_rate;
     bool pavement_intercept=terminal_pavement_intercept_rate(t,cfg,&desired_rate);
+    if(pavement_intercept&&capture_rate*desired_rate>0.0&&
+       fabs(capture_rate)>fabs(desired_rate))desired_rate=capture_rate;
     double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);
     double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
     double lateral_accel=0.0;
@@ -671,7 +677,17 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         double onset_room=fmax(0.0,height-SGS_HEIGHT-fmax(0.0,sink)*(response+1.0));
         double onset_sink=sqrt(SGS_SINK*SGS_SINK+2.0*arrest_accel*onset_room);
         bool on_arc=sink<.92*glide_sink||onset_sink<sink;
-        if(sink>SGS_SINK&&!on_arc){
+        bool sts_gentle=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
+        if(sink>SGS_SINK&&!on_arc&&sts_gentle){
+            /* Experimental STS: live v10 held the outer glide from a 303 m
+               latch to ~37 m, then stepped to a ~9 m/s^2 catch-up pull that
+               overshot to zero sink at ~6 m and oscillated.  Spread the sink
+               reduction over all remaining arc height at the constant
+               deceleration that just reaches the shallow-glide sink there. */
+            arc_accel=(sink*sink-SGS_SINK*SGS_SINK)/(2.0*fmax(room,1.0));
+            double arc_goal=fmax(SGS_SINK,sink-arc_accel*PREFLARE_TAU);
+            reference_fpa=fmax(glide_fpa,-asin(clampd(arc_goal/V,0.0,.95)));
+        }else if(sink>SGS_SINK&&!on_arc){
             arc_accel=NAN;
             reference_fpa=glide_fpa;
         }else{
