@@ -2,7 +2,7 @@
 from __future__ import annotations
 import argparse, hashlib, io, json, math, os, pathlib, re, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
-from run_geometry import fixed_hac_geometry_evidence
+from run_geometry import fixed_hac_geometry_evidence, energy_law_runway_end
 from run_artifacts import allocate_run, compress_recording, write_json
 from model_paths import model_file, active_profile, file_digest, validate_vehicle_profile
 
@@ -606,9 +606,8 @@ def main():
     runway_end=fixed_hac_geometry.get("runwayEnd")
     if runway_end is None:
         # The TAEM energy law commits a runway end without a fixed HAC record.
-        ends=re.findall(r"MM305 energy-law runway end: \S+ end=([01])",
-                        backend_err.read_text(encoding="utf-8",errors="replace"))
-        runway_end=int(ends[-1]) if ends else 0
+        end=energy_law_runway_end(backend_err.read_text(encoding="utf-8",errors="replace"))
+        runway_end=end if end is not None else 0
     selected_heading=(config["site"]["runwayHeading"]+180.0*runway_end)%360.0
     first_touchdown=None
     final_sim=None

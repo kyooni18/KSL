@@ -3,6 +3,16 @@ from __future__ import annotations
 
 import json
 import math
+import re
+
+
+def energy_law_runway_end(text: str) -> int | None:
+    """Read both archived and timestamped native runway commitments."""
+    ends = re.findall(
+        r"^MM305 energy-law runway end: (?:UT \S+ )?RW\S+ end=([01])\b",
+        text, re.MULTILINE,
+    )
+    return int(ends[-1]) if ends else None
 
 def fixed_hac_geometry_evidence(text: str, final_distance: float | None = None) -> dict:
     """Validate the native committed circle; flight completion is checked separately."""

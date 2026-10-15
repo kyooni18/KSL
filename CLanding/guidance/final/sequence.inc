@@ -868,6 +868,18 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     GuidanceResult r=result_make(phase,c,status,warn);
     trajectory_copy(&r.reference,ref);
     r=stabilized(g,r,t,v,s,dt);
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")){
+        /* This program has already shaped its incidence reference above and
+           prices the physical response to that reference. A second jerk
+           limiter overshot a relaxing pull, then delayed the next arrest by
+           >10 degrees in the recorded STS flare. Keep the shared bank/safety
+           handling, but deliver the rate-bounded STS incidence exactly once. */
+        double shaped=clampd(c.target_aoa,0.0,
+            fmin(v->maximum_angle_of_attack,GUIDANCE_HARD_AOA_LIMIT_DEG));
+        r.command.target_aoa=shaped;
+        r.command.target_pitch=t->flight_path_angle+shaped;
+        g->pitch_limiter.has_value=false;
+    }
     if(getenv("KSP_LANDER_FINAL_TRACE"))
         fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
             "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d vtd=%.1f sb=%.2f sbOn=%d finCdA=%.2f\n",
