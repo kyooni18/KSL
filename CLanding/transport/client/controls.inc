@@ -40,8 +40,16 @@ static bool set_engine_throttle(KrpcCNanoClient *client, double throttle,
         /* Jets are governed by set_jet_assist, never by the rocket throttle. */
         if (engine->airbreathing) continue;
         if(powered && !engine->selected){
-            /* Global throttle stays zero; also suppress any inherited
-               independent throttle on excluded launch/main engines. */
+            /* Excluded launch/main engines (SSMEs) must not burn.  A zero
+               independent throttle alone left them ignited in the live 60 deg
+               deorbit burn, so shut down any that are still active from
+               ascent, then also hold their independent throttle at zero. */
+            bool active=false;
+            if(krpc_SpaceCenter_Engine_Active(client->connection,&active,engine->object)==KRPC_OK&&active){
+                client->total_rpc_calls++;client->total_wire_requests++;
+                if(rpc_failed(client,krpc_SpaceCenter_Engine_set_Active(client->connection,engine->object,false),"Excluded Engine.Active",error,error_size))return false;
+                fprintf(stderr,"Burn engine exclusion: shut down non-selected engine %zu\n",i);
+            }
             if(rpc_failed(client,krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection,engine->object,true),"Excluded Engine.IndependentThrottle",error,error_size)||
                rpc_failed(client,krpc_SpaceCenter_Engine_set_Throttle(client->connection,engine->object,0.0f),"Excluded Engine.Throttle",error,error_size))return false;
             engine->independent_owned=true;
