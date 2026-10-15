@@ -366,6 +366,8 @@ Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at
 
 ## 2026-10-16 overnight STS live runs
 
+Summary (written 05:40 KST, early: stopped on the repeat-failure rule, no run active). Three runs from the 60 deg orbit save. Run 1 (sts-night-1) delivered to touchdown at 72 m altitude and 41.4 m/s, 48 m short of the along=0 end of the runway, then rolled out past it to along -78 m and aborted ("outside the selected runway bounds"). Its MM304→MM305 handoff was abeam (Mach 2.50, 23.5 km, cross +29 km, heading error -103 deg), the same geometry as the earlier 60 deg failures. Runs 2 and 3 never produced a landing: run 2 hit a fast-telemetry batch decode timeout at 72.7 km during entry; run 3 hit a kRPC decode failure in `SpaceCenter.UT(warp)` / `Thruster.StashGimbalRotation` during the coast warp before the burn. Recurring failure: kRPC response-decoding faults (2 of 3 runs). Suggested next fixes: diagnose the kRPC decode path (`StashGimbalRotation`, telemetry batch timeout, warp) and confirm KSP is responsive before any new test; then address the abeam supersonic MM304 handoff geometry, and the long-float / fast-rollout energy problem seen in run 1. The deorbit inlet refine now lands at the 40.2 km target (39.1-39.2 km selected), so that fix is confirmed, though the rangeError figure (-57 km) is still unexplained.
+
 ### sts-night-1 (`runs/20261015T175522Z-sts-night-1`, save `ksl-20261015T113418Z-sts-incl60-full-orbit`, `/tmp/ksl-sts-night-1.log`)
 
 - Deorbit: `DEORBIT_STS_HANDOFF_TARGET 40.2km`. Refine moved to the target: `DEORBIT_INLET_REFINE` 38.9 km, `DEORBIT_INLET_SELECTED` 38.9 km (not ~28 km). Selected burn 24924.1 s, tier 3, TAEMrange 38.9 km, rangeError -57.6 km (the rangeError figure is still unexplained; it is not against the 40.2 km target).
@@ -383,3 +385,11 @@ Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at
 - MM304 live replan miss: none recorded (run ended before the handoff).
 - MM304→MM305 handoff and first TAEM_ENERGY: not reached.
 - Result: FAILED at MM304 Entry. "backend entered Fault: fast telemetry C-Nano batch failed: decoding failed (transport=timeout)". Last telemetry UT 25357.0 at 72.7 km, Mach 7.5, 2192 m/s, i.e. about 430 s after the burn, during entry. The guidance was not the cause. This is a telemetry transport fault, first seen tonight. Cause not diagnosed; KSP state was not checked before the next run.
+
+### sts-night-3 (`runs/20261016T193307Z-sts-night-3`, `/tmp/ksl-sts-night-3.log`)
+
+- Deorbit: `DEORBIT_STS_HANDOFF_TARGET 40.2km`; `DEORBIT_INLET_REFINE` and `DEORBIT_INLET_SELECTED` both 39.2 km (target 40.2 km). Burn 24924.2 s, tier 3, rangeError -57.3 km.
+- Burn exclusion: not reached (no "shut down" line).
+- MM304 replan, handoff and first TAEM_ENERGY: not reached.
+- Result: FAILED at Deorbit. "backend entered Fault: SpaceCenter.UT(warp) failed: decoding failed" in `Transform.get_localRotation` via `Thruster.StashGimbalRotation` / `Thruster.InitialThrustDirection`. Last telemetry UT 16598.5 at 90.0 km, Mach 7.41, 2166 m/s (coast warp, factor 3, before the burn).
+- Pattern: kRPC decode failure, second in a row (run 2 telemetry batch timeout at entry, run 3 warp/thruster decode before the burn). Both are kRPC response-decoding faults in different calls. Per the repeat rule, rerunning stopped here.
