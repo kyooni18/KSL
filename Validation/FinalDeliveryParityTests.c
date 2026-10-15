@@ -152,6 +152,7 @@ static void test_touchdown_forecast_handoff_parity(void) {
         GuidanceResult range=terminal_approach_sequence(&range_g,&range_t,270.0,
             &planet,gate_aero,&range_cfg,&reference,.1);
         assert(strstr(range.status,"Range-stretch glide"));
+        assert(range.command.terminal_roll_trim_enabled);
         assert(!range_g.terminal_final_low_energy);
         guidance_result_clear(&range);trajectory_clear(&reference);
     }

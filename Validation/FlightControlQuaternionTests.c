@@ -266,7 +266,30 @@ static void live_weak_roll_response_displaces_report_gradually(void){
     assert(out.diagnostics.roll_raw_authority>=.5-1e-6);
 }
 
+static void sts_final_removes_sustained_bank_error(void){
+    FlightControlState enabled,legacy;
+    flight_control_init(&enabled,.1);flight_control_init(&legacy,.1);
+    Telemetry t=atmospheric_sample();
+    t.roll=0.0;t.angle_of_attack=4.0;t.radar_altitude=1500.0;
+    GuidanceCommand c={0};c.autopilot_engaged=true;c.control_profile=PROFILE_APPROACH;
+    c.has_target_aoa=true;c.target_aoa=4.0;c.target_roll=-.7;
+    FlightControlOutput on={0},off={0};double initial=0.0;
+    for(int i=0;i<100;++i){
+        t.ut+=.1;c.terminal_roll_trim_enabled=false;
+        assert(flight_control_step(&legacy,&t,&c,.1,&off));
+        c.terminal_roll_trim_enabled=true;
+        assert(flight_control_step(&enabled,&t,&c,.1,&on));
+        if(i==0)initial=on.roll;
+    }
+    assert(on.roll<initial&&on.roll<off.roll);
+    assert(enabled.roll_trim<0.0&&legacy.roll_trim==0.0);
+    t.ut+=.1;t.has_main_gear_grounded=true;t.main_gear_grounded=true;
+    assert(flight_control_step(&enabled,&t,&c,.1,&on));
+    assert(enabled.roll_trim==0.0);
+}
+
 int main(void){
+    sts_final_removes_sustained_bank_error();
     live_weak_roll_response_displaces_report_gradually();
     recovery_arrests_body_rotation_before_chasing_attitude();
     learned_trim_transfer_preserves_elevator_demand();

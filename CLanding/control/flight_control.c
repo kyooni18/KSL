@@ -812,7 +812,6 @@ bool flight_control_step_attitude(FlightControlState *state,
     double effective_roll_rate=quaternion_control?
         -state->quaternion_roll_error_rate:observed_roll_rate;
 
-    state->roll_trim = 0.0;
     state->terminal_pitch_authority = pitch_authority;
     state->terminal_roll_authority = roll_authority;
     state->has_terminal_pitch_authority = true;
@@ -988,6 +987,21 @@ bool flight_control_step_attitude(FlightControlState *state,
         roll_error, effective_roll_rate, commanded_roll_rate,
         roll_authority, roll_wn_used, roll_zeta, roll_lag_s,
         state->last_control[FLIGHT_CONTROL_AXIS_ROLL]);
+    bool terminal_roll_trim=command->terminal_roll_trim_enabled&&
+        (profile==PROFILE_APPROACH||profile==PROFILE_FLARE)&&
+        !state->main_gear_contact_latched;
+    if(terminal_roll_trim&&roll_wn_used>DBL_EPSILON){
+        /* Remove sustained bank error without a new physical gain: integrate
+           the existing proportional demand over its damped response time.
+           Saturation permits only unwinding; confirmed contact clears trim. */
+        double response_time=2.0*roll_zeta/roll_wn_used+roll_lag_s;
+        double increment=control_dt*roll_wn_used*roll_wn_used*roll_error/
+            (roll_authority*response_time);
+        double candidate=fc_clamp(state->roll_trim+increment,-1.0,1.0);
+        if(fabs(roll_command+candidate)<=1.0||
+           (roll_command+candidate)*increment<0.0)state->roll_trim=candidate;
+        roll_command=fc_clamp(roll_command+state->roll_trim,-1.0,1.0);
+    }else state->roll_trim=0.0;
     (void)roll_guard_known;
 
     double heading_error = 0.0;
@@ -1113,7 +1127,7 @@ bool flight_control_step_attitude(FlightControlState *state,
     d->pitch_trim = state->pitch_trim;
     d->steady_pitch_trim = state->pitch_trim;
     d->terminal_pitch_integral = state->terminal_pitch_integral;
-    d->roll_trim = 0.0;
+    d->roll_trim = state->roll_trim;
     d->pitch_authority = pitch_authority;
     d->pitch_raw_authority = raw_pitch_authority;
     d->pitch_guard_authority = pitch_guard_authority;

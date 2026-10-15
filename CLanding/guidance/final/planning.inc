@@ -774,8 +774,8 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
 
 
 /* A pavement-valid straight intercept need not already be on centreline.
-   Prefer the configured touchdown point, then the midpoint, only when both
-   projected ends fit inside its width;
+   Prefer the closest feasible track to the configured touchdown point while
+   both projected ends fit inside its width;
    otherwise retain the authority-aware centreline acquisition law. */
 bool terminal_pavement_intercept_rate(const Telemetry*t,const LandingConfiguration*cfg,
         double *rate){

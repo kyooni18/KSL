@@ -857,6 +857,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     GuidanceCommand c=atmospheric(t,target_course,bank,v,0.0,
         g->airbrakes_deployed,flaring?PROFILE_FLARE:PROFILE_APPROACH);
     c.speedbrake_fraction=g->terminal_speedbrake_fraction;
+    c.terminal_roll_trim_enabled=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
     c.has_target_aoa=true;
     c.target_aoa=aoa;
     c.target_pitch=t->flight_path_angle+aoa;
