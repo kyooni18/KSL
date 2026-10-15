@@ -77,6 +77,24 @@ static void test_touchdown_forecast_handoff_parity(void) {
     assert(fabs(oblique.runway_cross_track+cross_rate*threshold_time)<1e-6);
     assert(!terminal_preflare_alignment_valid(&g,&oblique,oblique_course,&reciprocal));
 
+    /* Recorded v4 HAC-exit offset: centreline-rate closure projected beyond
+       the far pavement edge and delayed handoff. A midpoint intercept fits
+       both ends without widening the admission gate. */
+    LandingConfiguration delivery=reciprocal;
+    delivery.guidance.sts_trajectory_delivery=true;
+    snprintf(delivery.vehicle.model_id,sizeof(delivery.vehicle.model_id),"STS");
+    Telemetry exit=t;exit.runway_along_track=-8000.0;exit.runway_cross_track=114.0;
+    exit.horizontal_speed=130.0;exit.true_air_speed=139.0;
+    double intercept_rate=NAN;
+    assert(terminal_pavement_intercept_rate(&exit,&delivery,&intercept_rate));
+    double intercept_course=delivery.site.runway_heading+
+        asin(intercept_rate/exit.horizontal_speed)*RAD2DEG;
+    assert(terminal_preflare_alignment_valid(&g,&exit,intercept_course,&delivery));
+    exit.runway_cross_track=1000.0;
+    assert(!terminal_pavement_intercept_rate(&exit,&delivery,&intercept_rate));
+    delivery.guidance.sts_trajectory_delivery=false;exit.runway_cross_track=114.0;
+    assert(!terminal_pavement_intercept_rate(&exit,&delivery,&intercept_rate));
+
     /* Direct runway guidance must reserve enough modelled lift for its lateral
        turn even when the radial vertical solution wants a steeper dive. */
     Telemetry turn={0};

@@ -1535,6 +1535,7 @@ static double taem_energy_law_line_bank(const GuidanceMachine *g,const Telemetry
     double omega_limit=.5/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
     double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
+    (void)terminal_pavement_intercept_rate(t,cfg,&desired_rate);
     double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);
     double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
     double lateral_accel=0.0;

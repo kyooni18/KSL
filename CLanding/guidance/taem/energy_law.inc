@@ -558,6 +558,12 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
            aims farther east and can never close the along-track separation. */
         course_cmd=L->capture_forecast&&!L->loop&&fabs(s->y)>6000.0?atan2(-s->y,-D-s->x):atan2(-s->y,look);
         if(!L->loop&&tel_final_line_ready(c,s))L->leg=TEL_LEG_FINAL;
+        if(tel_delivery_policy(c)&&L->leg==TEL_LEG_FINAL&&s->x<0.0&&
+           c->model->site.runway_length>0.0&&c->model->site.runway_width>0.0){
+            double half=.5*c->model->site.runway_length,distance=-s->x+half;
+            if(fabs(s->y*half/distance)<=.5*c->model->site.runway_width)
+                course_cmd=atan2(-s->y,distance);
+        }
     } else if (L->leg==TEL_LEG_TURN||L->leg==TEL_LEG_DOWN) {
         double tx,ty,arc;
         if (!tel_hac_tangent(L,c,s->x,s->y,&tx,&ty,&arc)) {

@@ -187,6 +187,7 @@ bool terminal_native_delivery_admissible(const TerminalModel*model,
         TaemTerminalEvaluation*evaluation);
 void terminal_store_preflare_plan(GuidanceMachine*g,const TerminalPreflarePlan*p);
 void terminal_set_stage(GuidanceMachine*g,TerminalVerticalStage stage,double ut);
+bool terminal_pavement_intercept_rate(const Telemetry*t,const LandingConfiguration*cfg,double *rate);
 bool terminal_preflare_alignment_valid(const GuidanceMachine*g,const Telemetry*t,double course,
         const LandingConfiguration*cfg);
 bool terminal_outer_gate(GuidanceMachine*g,const Telemetry*t,double course,
