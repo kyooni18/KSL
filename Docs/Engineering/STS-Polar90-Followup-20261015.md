@@ -349,3 +349,11 @@ FAILED: touchdown outside the selected-end contact envelope (vehicle intact, 25.
 Correction: MM304's 40 deg bank in the earlier rerun was deliberate. Its replan miss is "+ = short", so -16 km meant excess energy at that point.
 
 Root cause for this case: the deorbit plan itself was 33 km short at TAEM (tier 3, unqualified, robust 0/15, "TAEMrange 63.4km rangeError -33.1km"). From the 72 km save, no entry or TAEM change can recover it. The next step is the deorbit candidate selection, verified from `ksl-20261015T113418Z-sts-incl60-full-orbit`.
+
+### Deorbit ranking fix and live rerun from the 60 deg orbit save (`1900420`)
+
+The deorbit trace from `ksl-20261015T113418Z-sts-incl60-full-orbit` explains the earlier choice. With periapsis fixed at 50 km, burn timing set the predicted handoff distance: -90.8 s gave 28 km, +10 s gave 93 km, +45 s gave 161 km. All candidates missed the ownership boundary and read -210..-280 kJ/kg on the analytic inlet margin. The old ranking accepted any distance inside 20-96.5 km and then preferred the perpendicular-course test, so it chose 28 km (rangeError -68 km). `1900420` ranks experimental STS candidates that reach TAEM by distance from the TAEM interface range; it chose the +10 s burn (92.6 km, rangeError -3.9 km, executable=True).
+
+Live (`runs/*-sts-incl60-deorbit-fix`): the burn was flown as planned, but the handoff did not move. It came at Mach 2.50, 23.0 km altitude, 22 km before RW27, heading error -93 deg. TAEM began ~4 km short (sGo 40.4 vs sReq 36.1 km). Final started at 1.0 km altitude 8.7 km out, and the orbiter hit the ground 1,383 m short of the RW27 threshold at 20 m/s sink: destroyed (3 parts). Mission stopped with SIGINT; KSP paused.
+
+Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at the handoff-speed radius, exceeds the TAEM reach at a perpendicular arrival. That clamped MM304's handoff target to the 8 km alignment distance. MM304 therefore flew 0 deg bank to carry energy in close ("target 8.0 km", "+17.5 km short at 0 deg"), overriding the deorbit plan's 92.6 km handoff. The reserve should come out, or be reformulated, before the next attempt.
