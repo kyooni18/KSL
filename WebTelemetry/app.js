@@ -1872,7 +1872,7 @@
     $("terminal-state").textContent = terminalState;
     $("terminal-blend").textContent = terminalActive && finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(0)}%` : "—";
     $("hac-radius-label").textContent = energyLaw ? "PATH GO" : "HAC R";
-    $("hac-remaining-label").textContent = energyLaw ? "PATH REQ" : "HAC REM";
+    $("hac-remaining-label").textContent = energyLaw ? "RANGE SCORE" : "HAC REM";
     $("terminal-blend-label").textContent = energyLaw ? "DRAG LEVEL" : "BLEND";
     if (energyLaw) {
       $("hac-radius").textContent = distance(energyLaw.pathToGo);
@@ -1880,11 +1880,11 @@
       $("terminal-blend").textContent = fmt(energyLaw.dragLevel,2);
       setTitle("plan-valid", "Predictive energy guidance is active; no fixed-HAC route certificate is implied");
       setTitle("hac-radius", "Remaining path priced by the active energy law");
-      setTitle("hac-remaining", "Path to the Final station required by the active energy law at the current energy state");
+      setTitle("hac-remaining", "Predicted route-progress score at the selected drag level, including height and speed delivery penalties; a negative score is not a negative required path");
       setTitle("terminal-blend", "Active drag modulation level from the energy law");
     }
     if (!energyLaw) setTitle("hac-radius", `Active HAC ${distance(g.hacRadius)} · candidate ${distance(g.terminalCandidateRadius)}${finite(g.minimumTurnRadius) ? ` · minimum turn ${distance(g.minimumTurnRadius)}` : ""}`);
-    setTitle("hac-remaining", terminalActive ? `Terminal path remaining ${distance(g.terminalPathRemaining)}` : "No committed/captured terminal path yet");
+    if (!energyLaw) setTitle("hac-remaining", terminalActive ? `Terminal path remaining ${distance(g.terminalPathRemaining)}` : "No committed/captured terminal path yet");
     setTitle("terminal-state", energyLaw ? (snapshot.statusMessage || "Active energy-law path") : `${terminalState}${finite(g.terminalCandidateAltitude) ? ` · candidate altitude ${distance(g.terminalCandidateAltitude)}` : ""}${finite(g.terminalCandidateSpeed) ? ` · speed ${speed(g.terminalCandidateSpeed)}` : ""}`);
     if (!energyLaw) setTitle("terminal-blend", `Terminal blend ${finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(1)}%` : "unavailable"}${g.hacTransitionActive ? " · HAC transition active" : ""}`);
   }
