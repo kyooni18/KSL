@@ -1788,8 +1788,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             g->runway_end_index=end;
             g->runway_end_preview_valid=true;
             g->runway_end_committed=true;
-            fprintf(stderr,"MM305 energy-law runway end: RW%s score09=%.0f score27=%.0f\n",
-                end==1?"27":"09",score[0],score[1]);
+            fprintf(stderr,"MM305 energy-law runway end: RW%s end=%d score09=%.0f score27=%.0f\n",
+                end==1?"27":"09",end,score[0],score[1]);
         }
     }
     const TerminalModel *end_model=mm305_model_for_end(model,end);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, io, json, math, os, pathlib, shutil, socket, subprocess, time
+import argparse, hashlib, io, json, math, os, pathlib, re, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
 from run_geometry import fixed_hac_geometry_evidence
 from run_artifacts import allocate_run, compress_recording, write_json
@@ -603,7 +603,12 @@ def main():
         config["guidance"]["finalApproachDistance"])
     runway_length=config["site"]["runwayLength"]
     runway_half_width=config["site"]["runwayWidth"]/2.0
-    runway_end=fixed_hac_geometry.get("runwayEnd",0)
+    runway_end=fixed_hac_geometry.get("runwayEnd")
+    if runway_end is None:
+        # The TAEM energy law commits a runway end without a fixed HAC record.
+        ends=re.findall(r"MM305 energy-law runway end: \S+ end=([01])",
+                        backend_err.read_text(encoding="utf-8",errors="replace"))
+        runway_end=int(ends[-1]) if ends else 0
     selected_heading=(config["site"]["runwayHeading"]+180.0*runway_end)%360.0
     first_touchdown=None
     final_sim=None
