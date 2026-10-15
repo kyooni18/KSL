@@ -240,7 +240,9 @@ def snapshot_summary(snapshot: Snapshot) -> dict[str, Any]:
             "rangeToSite": "rangeToSite",
             "runwayAlongTrack": "runwayAlongTrack", "runwayCrossTrack": "runwayCrossTrack",
             "latitude": "latitude", "longitude": "longitude", "gForce": "gForce",
-            "situation": "vesselSituation"}
+            "situation": "vesselSituation",
+            "hasMainGearGrounded": "hasMainGearGrounded", "mainGearGrounded": "mainGearGrounded",
+            "hasNoseGearGrounded": "hasNoseGearGrounded", "noseGearGrounded": "noseGearGrounded"}
     out = {name: t.get(src) for name, src in keys.items() if t.get(src) is not None}
     out.update({k: cmd.get(k) for k in ("targetAoA", "targetRoll", "targetHeading", "targetThrottle")
                 if cmd.get(k) is not None})

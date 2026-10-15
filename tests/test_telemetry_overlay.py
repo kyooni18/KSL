@@ -13,10 +13,13 @@ def test_controller_state_round_trip(tmp_path):
     reference = [{"ut": 100., "latitude": 0., "longitude": 1., "altitude": 2000.},
                  {"ut": 110., "latitude": 0., "longitude": 1.1, "altitude": 1500.}]
     record = snapshot_summary({"phase": "Deorbit Burn", "telemetry": {
-        "ut": 100., "flightPathAngle": 2., "autopilotError": 4.},
+        "ut": 100., "flightPathAngle": 2., "autopilotError": 4.,
+        "hasMainGearGrounded": True, "mainGearGrounded": True,
+        "hasNoseGearGrounded": True, "noseGearGrounded": False},
         "command": command, "guidanceState": guidance, "referenceTrajectory": reference,
         "statusMessage": "Tracking the burn target", "warningMessage": None,
         "decisionReason": "burn_started=true", "decisionTrace": {"burnStarted": True}})
+    assert record["mainGearGrounded"] is True and record["noseGearGrounded"] is False
     record["source"] = "landing"
     run = tmp_path / "runs" / "test"
     run.mkdir(parents=True)
