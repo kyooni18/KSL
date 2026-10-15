@@ -375,3 +375,11 @@ Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at
 - First TAEM_ENERGY (UT 25992.3): sGo = sReq = 57052 m, cross +29306, hdgErr -102.6, bank +22.8/+45.0. TAEM turned back through the centreline and converged slowly. sGo fell 40.7 → 15.3 km in one step at UT ~26051.
 - Final: "Long landing: floating would leave too little runway; landing firmly now" at 129 m (preflare). Touchdown at UT 26285.2, 72 m altitude, 41.4 m/s, runwayAlongTrack +48 m, cross -0.1 m. Rollout stopped at along -78 m at 1.2 m/s, cross -0.3 m. `CLanding/guidance/final/phases.inc:79` requires along in [0, runway_length] for a completed stop, so the vehicle overran the along=0 end by 78 m.
 - Result: FAILED, "Rollout stopped outside the selected runway bounds." Vehicle intact. Touched down with about 48 m of runway left at 41 m/s and overran. Diagnosis: the approach floated long after the threshold, then arrived too fast with too little runway. The earlier 60° run died on an abeam supersonic handoff, and tonight's run has the same handoff geometry (abeam, Mach 2.5, heading error -100 deg).
+
+### sts-night-2 (`runs/20261015T185305Z-sts-night-2`, `/tmp/ksl-sts-night-2.log`)
+
+- Deorbit: `DEORBIT_STS_HANDOFF_TARGET 40.2km`. `DEORBIT_INLET_REFINE` and `DEORBIT_INLET_SELECTED` both 39.1 km (target 40.2 km, not ~28 km). Selected burn 24924.1 s, tier 3, TAEMrange 39.1 km, rangeError -57.4 km.
+- Burn exclusion: "shut down non-selected engine" for 0, 1, 2. Whether the SSMEs stayed off through the burn is not checked.
+- MM304 live replan miss: none recorded (run ended before the handoff).
+- MM304→MM305 handoff and first TAEM_ENERGY: not reached.
+- Result: FAILED at MM304 Entry. "backend entered Fault: fast telemetry C-Nano batch failed: decoding failed (transport=timeout)". Last telemetry UT 25357.0 at 72.7 km, Mach 7.5, 2192 m/s, i.e. about 430 s after the burn, during entry. The guidance was not the cause. This is a telemetry transport fault, first seen tonight. Cause not diagnosed; KSP state was not checked before the next run.
