@@ -1,0 +1,4057 @@
+{
+ "status": "provisional; not certified",
+ "base": "sts_aero_live20261010.csv",
+ "logs": [
+  {
+   "path": "FlightLogs/2026-10-07T18-50-21Z-STS-vehicle.jsonl",
+   "sha256": "52c08b88420bf75c2fe7626d709a3e5d8c2bdcf3e5cf3932252bf8e4facc498d"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T18-58-28Z-STS-vehicle.jsonl",
+   "sha256": "c805d4e69d825701a9003ba23824c2431c1900fcb70146acef4856af15f45e15"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T19-07-42Z-STS-vehicle.jsonl",
+   "sha256": "008b42621155519d016c391436442196b149281e5636c99db6c3140fd3a9d6fc"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T19-14-13Z-STS-vehicle.jsonl",
+   "sha256": "b6a028147b434dcc1d179e16ea452fcf6184feb14a4fd95a54989bd50c6edb99"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T19-39-04Z-STS-vehicle.jsonl",
+   "sha256": "3e55e84d00569763f34dfe303e9385c9c8fdd88fe36e7411f3191c7628069569"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T21-28-19Z-STS-vehicle.jsonl",
+   "sha256": "ceef4040971b25f1ce226e19ecdd9549e0f2649de991bd6ca23d97434a799925"
+  },
+  {
+   "path": "FlightLogs/2026-10-07T21-34-08Z-STS-vehicle.jsonl",
+   "sha256": "d324fdb16a8397c6b03b65426010a99ea872b4f663bf5bef7e89da4925b25330"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T13-57-30Z-STS-vehicle.jsonl",
+   "sha256": "0d88b424527c22c7c8dc5a7b0b56866a67eab9d8c19fdd6989271de966250189"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T13-57-59Z-STS-vehicle.jsonl",
+   "sha256": "25804cb8b6689883b6692b0a21b09e12aba125cc611364dbe7879c345afec162"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T13-59-46Z-STS-vehicle.jsonl",
+   "sha256": "b7b7fe83e66e8c647ae1f9df13a6c5f515bc72327c46ed7a0ed92398a209acf8"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-05-33Z-STS-vehicle.jsonl",
+   "sha256": "40a96d8d464ae8d3b48360ba0b41854f6d889e7c6a4a5ac88965b7a9fb61ae98"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-09-48Z-STS-vehicle.jsonl",
+   "sha256": "b543e6ab2978dd31604d2288ad504f20e635f437e8961b8e741588d064fd1f7d"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-11-39Z-STS-vehicle.jsonl",
+   "sha256": "811a885da4a53db1442e780c9d4bac5706b00bc169497901ee067179ae0bc33d"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-18-11Z-STS-vehicle.jsonl",
+   "sha256": "aa343ce69ecbf10ca54cb4fde7c446ba0f0952dcc5d8206e500872693cc82507"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-24-38Z-STS-vehicle.jsonl",
+   "sha256": "f4e2c6436ed2d401cf5b19b6d37ab50092c814b2ce6502b99e6d58d4b58908b4"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-27-03Z-STS-vehicle.jsonl",
+   "sha256": "e5d1c57e745729a36a0c3f15a80c59f87464b81f7df73cf7f732d3eba016c276"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-29-18Z-STS-vehicle.jsonl",
+   "sha256": "82aa140d599f7ab203b60daa296ed49f4385cd3436a7d43670b6d75bac598e48"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T14-29-41Z-STS-vehicle.jsonl",
+   "sha256": "3258109932fc53febd14eff4ba50cc3514cd93fc2fa0a9fa4736247ab0a49c12"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T17-31-29Z-STS-vehicle.jsonl",
+   "sha256": "7f498c4ec379aab6a0e14c83bb435f38780a46854c3a448d2a89b7d1f405b5c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T17-47-42Z-STS-vehicle.jsonl",
+   "sha256": "9939c6a974e750f7d80f4f620f9b7d169073ee75f56eaf8aa86ccd3aa892bee7"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T17-49-55Z-STS-vehicle.jsonl",
+   "sha256": "5ecf3cef667e85289e586505773b0391a0baed7d54fcc4c1d08ee8153371add3"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T18-03-47Z-STS-vehicle.jsonl",
+   "sha256": "62a7f22a08170adcfa57636f924c7fb5d64f1b911ae4720c089c3e0710cabab7"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T18-12-27Z-STS-vehicle.jsonl",
+   "sha256": "b4d43f721fac8936d2400c36490cfa4de01dc1843f1059d6e82dd1623d3f8626"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T18-37-41Z-STS-vehicle.jsonl",
+   "sha256": "534dd9b7fc5774808809e66f5c0d68290adf7e0e7042da5f547b06552fd86055"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T18-56-21Z-STS-vehicle.jsonl",
+   "sha256": "c091d0d0954b9603c832bfd3a40c96328c5a6dd7fd317794b8602b540127979f"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T18-58-24Z-STS-vehicle.jsonl",
+   "sha256": "9418d2d7d85074e8485e2d6130fbc44f6ca64ec7bdb70825152b822e721d6d04"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-03-54Z-STS-vehicle.jsonl",
+   "sha256": "3c016b4183323fd950db8fc7896b8746bb504b143577b1447bf81859ae8e1ade"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-07-01Z-STS-vehicle.jsonl",
+   "sha256": "280488d81146177dbbeebe4f3964877d301e031737c3a075f512e61885a2b609"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-08-48Z-STS-vehicle.jsonl",
+   "sha256": "5a73b995d735c8f876d64b7d07d160cf99931ab473f41a9bcf7dbf5962b38cb6"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-23-03Z-STS-vehicle.jsonl",
+   "sha256": "75fcd7277344bfc952669080b45794aead05b476c386de5535149e299c6186b5"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-34-50Z-STS-vehicle.jsonl",
+   "sha256": "cfbcf5747ad7009b08f81ed27f50f7d9692d6967b4a8d032a5374db8a672e738"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T19-53-56Z-STS-vehicle.jsonl",
+   "sha256": "04edb818864b769c22edda9f52fcca371d39d6aa66fd4e4874ea26093aa92e16"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T20-14-27Z-STS-vehicle.jsonl",
+   "sha256": "b45b29865b318da66ea45cf239a9754a46ff12352edb8ecba21f6cef926777f1"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T20-46-23Z-STS-vehicle.jsonl",
+   "sha256": "249c272e6fc8c53974c590a2db8842a842e95e9bcbb4cd3608d1db483661d816"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T20-48-01Z-STS-vehicle.jsonl",
+   "sha256": "b907373ce1d6c7aaaf92816813df07d448fddcce9576f7c21af96db3856680b0"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-07-37Z-STS-vehicle.jsonl",
+   "sha256": "0f2e8b386402b87364f70202a1680b4671e23a91c071ca686183cbbbde992c3f"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-14-18Z-STS-vehicle.jsonl",
+   "sha256": "1ebb28f39d9297402ba40e197e422e148848d78d311b9e3f293b2db232ae10da"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-19-17Z-STS-vehicle.jsonl",
+   "sha256": "10404c79f1f69628fb8476673939af259dbb00492f1cf9ceb5d0e928fcde8ab5"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-28-07Z-STS-vehicle.jsonl",
+   "sha256": "ee63328a5640d7653eebb0baef023d979922dfbe997be618da038f8b3a9cc281"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-49-32Z-STS-vehicle.jsonl",
+   "sha256": "4f4ae1c809d414a9396484ff9e5c872f7a5d33a410d1987fbc9a43f43a3866b1"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T21-56-12Z-STS-vehicle.jsonl",
+   "sha256": "42b90ca80ea341006a7c6a440ce04334edc7363b26daf1d22f45c8f19fc3783a"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-02-07Z-STS-vehicle.jsonl",
+   "sha256": "435f0a604f43c44151a0f33a5a2359230a5891d2d5276d7196aefc15010363e6"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-13-16Z-STS-vehicle.jsonl",
+   "sha256": "b0dea8b305631ce704ed33b2bd54aef5ceaa3a06346db305df7891839b897b57"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-14-33Z-STS-vehicle.jsonl",
+   "sha256": "986451d895c911cb431e95d2b63f855b77f9dc2110f13b525bd2bfdf0408f413"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-27-30Z-STS-vehicle.jsonl",
+   "sha256": "d114c707ff3d1b70cdf8e683ca62724902d1feeb5dbd970aeb0b017c7a206104"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-46-46Z-STS-vehicle.jsonl",
+   "sha256": "9de3ed01e8cb45a4829cbc941a304bd9742020463a2c1b6647dd03ffa8becb67"
+  },
+  {
+   "path": "FlightLogs/2026-10-08T22-59-23Z-STS-vehicle.jsonl",
+   "sha256": "1af11cf1bb73659891df8107287a95826cfaf9024d2fded0c581f5994a62393d"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T06-18-41Z-STS-vehicle.jsonl",
+   "sha256": "ed9b576490d8cedb4e1b00b0aaba601244bf73006f494c0456c47f510fa59279"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T06-37-36Z-STS-vehicle.jsonl",
+   "sha256": "5848d5fd5018c60f3bb75307aeb06f28c4ca8308d18d338836518ffeb3401015"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T07-22-46Z-STS-vehicle.jsonl",
+   "sha256": "813f660f3041b5c25f53e3ba01d26f5498fc1281cb3feabe1c2e1b6d21404749"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T07-53-36Z-STS-vehicle.jsonl",
+   "sha256": "3ddd36bdfad7381684aefbd6b39643cbf9aae612de0729505fefe3fea61cf610"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-19-26Z-STS-vehicle.jsonl",
+   "sha256": "c95b2932b56b812779f7fe98ad98260aa2ac323d148b33112206a402d8aa8bb4"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-22-05Z-STS-vehicle.jsonl",
+   "sha256": "76e8e7f531aeedfa5febd22d0ed139ea9fa3d4a365f5e11bdc6a33d407530fe7"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-22-56Z-STS-vehicle.jsonl",
+   "sha256": "990272709c9781187df1c8f42c5df0f31f5c2a26bd3db621a5cf6ac0fd5c5f28"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-32-10Z-STS-vehicle.jsonl",
+   "sha256": "046049e0b0ddd4c731a726e0b79df8bf05785278d9351b5ec01d69436984f885"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-33-23Z-STS-vehicle.jsonl",
+   "sha256": "a697fe175385c113024f076b351af8e51d329f989d2fb2056db475960c7f8883"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-34-55Z-STS-vehicle.jsonl",
+   "sha256": "2fcf125b3143fa0c0f991da4266edaeb6a8414911f673a6b7beed8211cc203cd"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-35-00Z-STS-vehicle.jsonl",
+   "sha256": "cfff139862a59a7dcbe8e6fc32cdacd460da535f565e330a063906b8c0814dce"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-36-58Z-STS-vehicle.jsonl",
+   "sha256": "ab078d33eeeb598aaa1780d3f8fbff5268bd0220871f8f9cd14102e7af0e30f9"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-39-48Z-STS-vehicle.jsonl",
+   "sha256": "8fcc6f1e607fd22720241926c4fcd37216f072644f99a4d2dce69d5fad3209d7"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-39-51Z-STS-vehicle.jsonl",
+   "sha256": "3bf92174516499502cdd80450b899abca2e5bc16198248d608e98b6a9ec57a61"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-39-52Z-STS-vehicle.jsonl",
+   "sha256": "58eb6a49d5c049424394ca480d645f0383818b10b48c50b3ab04840546deebe8"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-40-01Z-STS-vehicle.jsonl",
+   "sha256": "e7cb29020e59c29ffbfdd1487d5e6405867fb3c8bc0382577380c51dbd21264b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-42-51Z-STS-vehicle.jsonl",
+   "sha256": "2e3bab5f91647ff00b1b9a3a6d260a503c60c0f4239519526117d5ea8e5d7655"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-42-52Z-STS-vehicle.jsonl",
+   "sha256": "7330943334fe477ad464b6922b93eb2643420a8c179928199f9cecfb403dd3e8"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-43-00Z-STS-vehicle.jsonl",
+   "sha256": "a1608a407987078d35d5db27c9582d466cf19db1d8be5e5b04f43d261c76f1c3"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-46-10Z-STS-vehicle.jsonl",
+   "sha256": "edc763925477cf2d2dc99cc1dfc9b9af0b87d2979627335f9061a1bd1b3691df"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-46-17Z-STS-vehicle.jsonl",
+   "sha256": "5393fb4ed5000a1024d174e5545b8ac04c923fa16f06d71ad45d57377c2612c8"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T08-49-24Z-STS-vehicle.jsonl",
+   "sha256": "da21ed4c25388c98e4043a69f82aaad4e4b43b2fa4617efc137e1da6461df881"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-01-14Z-STS-vehicle.jsonl",
+   "sha256": "968446e42bce7f1e9622a5290cfd78a854076ab4164461286dc55aa65573e76d"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-01-47Z-STS-vehicle.jsonl",
+   "sha256": "9e114e1501e01488106db1f202c4d4193947650c8ba7443505d73b5e00319b69"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-05-38Z-STS-vehicle.jsonl",
+   "sha256": "d9337797eec95ae872553a6c8c322dfb2d3b93b8686cf6d07528c5d97694bb86"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-05-57Z-STS-vehicle.jsonl",
+   "sha256": "7c9ab9754dea0b38f96c4fa4493fdac3b5cdcdd9b4968d45f8e626bf79e98124"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-07-55Z-STS-vehicle.jsonl",
+   "sha256": "ca96962211e6990f816a4a07b8637692288de010b8168bb5cd634458e5651e06"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-09-24Z-STS-vehicle.jsonl",
+   "sha256": "ca48c2d680d2d65608aff5414858b011433c48c13a300be6b076f5c6226b4759"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-11-52Z-STS-vehicle.jsonl",
+   "sha256": "ed06e9ed74669b6a81d3565828e7978e63a967b67850539dc1e4085e6aab1a5a"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-22-02Z-STS-vehicle.jsonl",
+   "sha256": "6359250692c3c244f10066ec8b0f550a31f5de32910068b4c42efe0c3597ee89"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-24-20Z-STS-vehicle.jsonl",
+   "sha256": "8bc3ef4125c9226ade2b96089b6119d9cb029a9e82196c845292f87238a6bbf6"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-26-54Z-STS-vehicle.jsonl",
+   "sha256": "b025b98df6fbe641e808a4589fdd2fa3796c8ee7ee1fa1a362acb4a69f84f30f"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-29-09Z-STS-vehicle.jsonl",
+   "sha256": "ea2de35f822d526f8ea85e34b0b93f30f75f2451f7c0b7c1f72c22a53b3bbdb8"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-31-25Z-STS-vehicle.jsonl",
+   "sha256": "711b7857d21ed0c368df61f847dd0d587f510584306f8b43645f33bc0d1344dd"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-33-49Z-STS-vehicle.jsonl",
+   "sha256": "007fb02e6e65bc6050bc7d7e81c6761f10399b414a5417153fd61c69fa3f5d87"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-34-08Z-STS-vehicle.jsonl",
+   "sha256": "1456e5af7c9dc278262dc12f7bee795d2963d6d97da46b12fafc6bf1d1ad8c9b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-35-23Z-STS-vehicle.jsonl",
+   "sha256": "46df88a9ec71bfeddf6be6bd4da04f2caaed47f020596d980d30b2f62e0bc759"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-38-49Z-STS-vehicle.jsonl",
+   "sha256": "991857536d7223270034fdc1f67320502ea9796610caba8305d9edbc4f16765f"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-38-52Z-STS-vehicle.jsonl",
+   "sha256": "edff95969f05b790370b1471183d29fe767156e11d04b69a1bf85b95ecf67b3d"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-42-34Z-STS-vehicle.jsonl",
+   "sha256": "951ebe6a3c2069eb750e54035ad2cfd9c3614ab89e56b9a201b894d416c666d5"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-42-48Z-STS-vehicle.jsonl",
+   "sha256": "509036307a5f08498578b95a2e5c1a2a9b2ccff6759a2fb5724659af6932097f"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-46-16Z-STS-vehicle.jsonl",
+   "sha256": "be523d4e730a350bee3ff5f298dda548de4b1c70e384aa502df5bf3bf6b66c84"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-46-49Z-STS-vehicle.jsonl",
+   "sha256": "0be4ced0aaa3dcaf87643a85a85e75e747bc87e7ffbbcbf6ad64b9efed5b0b52"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-46-50Z-STS-vehicle.jsonl",
+   "sha256": "dbb4bd5618238097faececd4fd758f048c2b64d466a3bd7b79d894c60230acc0"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-52-03Z-STS-vehicle.jsonl",
+   "sha256": "c8bde663f4c239b7f57880673b5029b88be575d2062231622f8a847a97ba77e4"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-57-22Z-STS-vehicle.jsonl",
+   "sha256": "62b819bd5ad1dfb99b0d659ea2a435d54c4dbed38b63393cfb0b92c62265e889"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-57-59Z-STS-vehicle.jsonl",
+   "sha256": "62dd7194c30a471a572e48fc380edf6bf6467cc7921666dc6e5063108e37f92a"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T09-58-01Z-STS-vehicle.jsonl",
+   "sha256": "026d3daad0463878f4268fb454707bd9b4f3813aa00255dab62105c7d4e3bcb5"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-03-45Z-STS-vehicle.jsonl",
+   "sha256": "e41a5f82e928d4ea458f856411ad5799ac8c9545783953f4e06c6c614f688682"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-06-13Z-STS-vehicle.jsonl",
+   "sha256": "20c27b7b0e4be083cdbec5f069163edc8d79b7cc88a90236db86af59fc254f4a"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-08-46Z-STS-vehicle.jsonl",
+   "sha256": "f8d5277f78b936148b261e2b25015fde7e23d99a646769e20576b8d44231f270"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-09-40Z-STS-vehicle.jsonl",
+   "sha256": "1a482a6ed15da9a0aa16500c04a4aefe3dd7cc2278b383fda91a76a08d02b9d4"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-09-44Z-STS-vehicle.jsonl",
+   "sha256": "645e2769a7288ffbf8ccdfacc8ade291ca53cd62dd1a53a477c8b1b5cff3c70b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-17-15Z-STS-vehicle.jsonl",
+   "sha256": "c60edc1cb8cbc0026fed7523add3f51e18d8075c03f259b27edbcc46ff281c48"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-19-45Z-STS-vehicle.jsonl",
+   "sha256": "ee09490d37d7f47e1936f555c99b71be42d04afd08717c6d7182a8dfaad0753e"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-20-44Z-STS-vehicle.jsonl",
+   "sha256": "0bfa68966a259eaead42e2a57692e514ceae547ebf21ed78623675b561acc8e7"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-20-47Z-STS-vehicle.jsonl",
+   "sha256": "d43ba382105c60304a0014848bfcf612f4a92d0fe917248c61147a718636553b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T10-46-41Z-STS-vehicle.jsonl",
+   "sha256": "3ccf6febb3d2b9039588db126a071ef63c9de972bbc0381f5b64b29090035bcc"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T11-05-42Z-STS-vehicle.jsonl",
+   "sha256": "cabb64df5add201748ad23e6119c70ef89bde23e7006bb054b98be7294d2086f"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T11-27-40Z-STS-vehicle.jsonl",
+   "sha256": "2d2beda1e5c2d6fbb7e2c5f22c5487b6103d55e1cd4cb057d258554df5e82236"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T11-31-06Z-STS-vehicle.jsonl",
+   "sha256": "243439975c2423a395637fc9150371a9b21b7c0d786146218313654ff6acafe5"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T11-46-32Z-STS-vehicle.jsonl",
+   "sha256": "9eb3e5ed4e6b96e0f4259a36af38c116cb9a934856918604d0c206357b2f89cf"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T12-00-34Z-STS-vehicle.jsonl",
+   "sha256": "2060e6966251e80cb7e06e1ab9eebf7d91c7cf505e007eb6c5ac4597b673c6fa"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T12-03-47Z-STS-vehicle.jsonl",
+   "sha256": "68221a354103337454b77b8f92c3ae8c43471f89d46a445f80cabcddd873f2b4"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T12-33-31Z-STS-vehicle.jsonl",
+   "sha256": "2dbf6cf57c5745ec5b31ee76b1f547b2be8250522635bd6f226c7be3196af2c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T13-02-48Z-STS-vehicle.jsonl",
+   "sha256": "aabddb50c2076750a396e4dcf0b45207576d8fe9973488dc0c0eae0087d2955b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T13-27-33Z-STS-vehicle.jsonl",
+   "sha256": "1c4f999be52449f98644d99bb785628bf75070f128911d978bfa485e9f234bf9"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T13-52-53Z-STS-vehicle.jsonl",
+   "sha256": "e98d07935381b21e7ba23e9ec13d53a937e52d95630ba910aa05575d7c3687f2"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T14-21-19Z-STS-vehicle.jsonl",
+   "sha256": "701a3262cb266b0259b609e02630209c6017515a51b7042ff4291588b429552e"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T15-11-10Z-STS-vehicle.jsonl",
+   "sha256": "14c3c8fe9e71a2f37284d0c7d0792e9a45848aab1ee1c5326b8b4d2d4c407b4b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T15-12-04Z-STS-vehicle.jsonl",
+   "sha256": "a170a4b93666dc721b20620562d490c553b401edd3da08b9cea3628e077654b5"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T15-31-04Z-STS-vehicle.jsonl",
+   "sha256": "0ba74e6d2a9a916b0bab4037eee7c27f0574fd2bc99178ef89b31b5a7179cf3c"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-25-19Z-STS-vehicle.jsonl",
+   "sha256": "b9c81e4305de9589bed603ca6f5882fe2defeea3da681cffd83f541b8fdd7e3c"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-29-47Z-STS-vehicle.jsonl",
+   "sha256": "d2415d7b0b187690f185c7443caeb9cc44a8397ed5ccee46c65040894604b233"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-30-26Z-STS-vehicle.jsonl",
+   "sha256": "a631ec253b0020767002b12e1f6c3db3244879d64c96b50a9b546550e5e83860"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-30-28Z-STS-vehicle.jsonl",
+   "sha256": "ba776c615e4eda9c49e30e54be0cbde0955776ff53e0826cbcdd65b1b41250ec"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-30-29Z-STS-vehicle.jsonl",
+   "sha256": "728bacae8494bc5352fafdfd4fc87621db83a483d179d3d6bacad9b30b5fac4d"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-30-31Z-STS-vehicle.jsonl",
+   "sha256": "5fe4fe4d064b9e2b78b7859986c18d459b6f25e799042786c7ffc1ffdb25590e"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-47-22Z-STS-vehicle.jsonl",
+   "sha256": "cb712fbcbde360662fdba919abea7bf4118e91b73979e2a4b40dadcc64b5dc7a"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-47-23Z-STS-vehicle.jsonl",
+   "sha256": "67eccf8c3147ae3e81200ac250aa1603105ee1835dab320f84b2626d0de134ca"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T20-58-27Z-STS-vehicle.jsonl",
+   "sha256": "b5ba4d6b61bc30b7f5bd6b4875b055276d11da828e9ca53b809281e377bc2faf"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T21-00-12Z-STS-vehicle.jsonl",
+   "sha256": "0cefc195d9882abd213b4215f15fa637f1d1b262ee4401a89cbf5eba5d62bbca"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T21-01-09Z-STS-vehicle.jsonl",
+   "sha256": "793203efe817c353920fe1eb6efa110dc442e6feacdeacbb8a9c136a708bbf12"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T21-01-42Z-STS-vehicle.jsonl",
+   "sha256": "a2fe463208e63585195e8fbe3e7156636f9ec6be9f2665b384e0a33a468c6f60"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T21-17-32Z-STS-vehicle.jsonl",
+   "sha256": "41d60631fc66dba9b1e6594dad70190a47e280ba30f97a03edee754a30c57679"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-04-40Z-STS-vehicle.jsonl",
+   "sha256": "fe2227ee6af2ae6b749594515f178da0447a178f6b8e1d3572d0ef256917c596"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-35-27Z-STS-vehicle.jsonl",
+   "sha256": "21f5237486a56eb21ff87f23f4e63be87cddc9b8e3662d3f6a9f059cb220703c"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-36-06Z-STS-vehicle.jsonl",
+   "sha256": "96a734b8cd653233d6bece2e60845760a34fb369bd33e9f6ff4b7a497ee442c3"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-36-20Z-STS-vehicle.jsonl",
+   "sha256": "142554410b33638c317d9da75aa80e1c8ca7a9cd9603be3e0f5ba3ddf65f7cda"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-36-30Z-STS-vehicle.jsonl",
+   "sha256": "8a48a80ad60060dcfb88757af45f3aa7f8764b5e0cdb2a05fb200534eb85ac19"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-36-54Z-STS-vehicle.jsonl",
+   "sha256": "54059d4c49e00112117cc2cd3e4d4b450b538d0fa77bfc6b58d6148740ea4103"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-37-03Z-STS-vehicle.jsonl",
+   "sha256": "354995c267731bfb4fd13ef42e8c60cf875a87fd8b0dccf7e3449a92fabb3786"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-37-47Z-STS-vehicle.jsonl",
+   "sha256": "feb04e24115173088a6dd59b3116d9dadbaa859c4133f4e2ed763ed90ab60246"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T22-37-57Z-STS-vehicle.jsonl",
+   "sha256": "fff05b7f0ec5abc262b7eed0a75b5f09c7b86e8606f9f42d3177a14e0e2ae958"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-09-56Z-STS-vehicle.jsonl",
+   "sha256": "dc1fcba3adaabc65ea2e137e7586dec4451441b4eb4499efb74f888aec893025"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-11-17Z-STS-vehicle.jsonl",
+   "sha256": "4c11cb66d4527b14b4246a4adb628584f6564dca1ca04355153fde086b895bd4"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-13-01Z-STS-vehicle.jsonl",
+   "sha256": "bfdefb4cabd27feaea4471abbde479428189c1613a754d4b56686d3c3f42b249"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-14-05Z-STS-vehicle.jsonl",
+   "sha256": "5386232590ffaae4081fc614ce1ef750d20251222a36df2495ad2075ad35e33c"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-14-26Z-STS-vehicle.jsonl",
+   "sha256": "2c27be90b5ebe99fab95e7503012f0acd468111291e5a3e91e1290dcd92abacc"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-15-17Z-STS-vehicle.jsonl",
+   "sha256": "df66e8d44b9814c557741bcb794b16293da11cdc37d778723260a25cbbbce832"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-15-37Z-STS-vehicle.jsonl",
+   "sha256": "8d625c366c29822d90e4e159ade7605edfa1169d721d02707f91f05edf1fc257"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-16-00Z-STS-vehicle.jsonl",
+   "sha256": "cfe6431346cdc6cb84ec57301625e86f2efdda57182a854d21cafe044b5011a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-16-43Z-STS-vehicle.jsonl",
+   "sha256": "67edb7071f01f4cda0859a6730b096be2b0ef0bd3ecc6f33c469a1ab35fa8653"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-17-21Z-STS-vehicle.jsonl",
+   "sha256": "5aaa5cd991a24f330b1c28d6e4b64cbcb2cce6119247df1647ad3717415f1af7"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-17-55Z-STS-vehicle.jsonl",
+   "sha256": "3e4a24ac6ea7623a1da8ea2acd89cbf4f682dcabefb1430f9bb3444b5635c356"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-18-36Z-STS-vehicle.jsonl",
+   "sha256": "06c98a49165bc3d736c96b2bc60816edd33d22f6183c0f564fe2b0aabd772014"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-19-40Z-STS-vehicle.jsonl",
+   "sha256": "e8a9ce6b3be9fdf27bbd85d8ac210c01498cb221d9eff1273c861addc2ef7f68"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-19-55Z-STS-vehicle.jsonl",
+   "sha256": "8fea7b157c5fa00c70ae462b2cf536240d8b3efb20249afb11908505958f26d1"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-20-44Z-STS-vehicle.jsonl",
+   "sha256": "9774635be9b71ab7e29a5220bac49811f59891afd1b36dff99078a381d79c2dd"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-21-58Z-STS-vehicle.jsonl",
+   "sha256": "cadd159140719671ad834fb80966f98803a3b99d658e6cf00ade4786d1724c35"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-22-01Z-STS-vehicle.jsonl",
+   "sha256": "1e78307df5350f7dc7b478d598372b84734f317cd18e4d3f7eba5d7ad45f16f2"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-22-35Z-STS-vehicle.jsonl",
+   "sha256": "c42d68e9cc33b795b34214a3bf5895c8748553c532fad71d687ba96268dc784b"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-22-40Z-STS-vehicle.jsonl",
+   "sha256": "8f893e68e8e15e29761276101311535b4c731fad972002bf44c8520f18c39740"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-22-42Z-STS-vehicle.jsonl",
+   "sha256": "43a3de9fd1b421a1a7928d3977890b21263627dd80e8b8e8cf603ad613ee8de0"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-22-43Z-STS-vehicle.jsonl",
+   "sha256": "fbdb490c744395798dd2aab8c0d0a2b287029615ad4738fca5a94694b9a0560c"
+  },
+  {
+   "path": "FlightLogs/2026-10-09T23-23-40Z-STS-vehicle.jsonl",
+   "sha256": "074b156d267caba1cf49fa044c037602e68d0964785e511dd471bed38f45d42c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-25-53Z-STS-vehicle.jsonl",
+   "sha256": "671071edec3afbb35773ffb837ea5f7887bce24b33c32a4e9f4be09d03c6ad39"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-26-38Z-STS-vehicle.jsonl",
+   "sha256": "cfaf1964c1014fd8ba2de19aabae0772efbcca574f74b9bf9fb04b9ccc0a0971"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-26-44Z-STS-vehicle.jsonl",
+   "sha256": "f1516473a9c61700859955bace2730ba8c395291b2f314e62301b4f35193af62"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-27-06Z-STS-vehicle.jsonl",
+   "sha256": "b39d0b7b67aa45662f5e2fdf7454fc16ba86c21d671d9115177dd66c363415d2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-27-12Z-STS-vehicle.jsonl",
+   "sha256": "515e4caf68cc2e0acc11ee8b5a36a9b58e5bea780a79d740753f0d9165b7d560"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-28-26Z-STS-vehicle.jsonl",
+   "sha256": "b4a5d08a034a6c078ef4a8d59f5120d7aa70e4d2a7deda3c9a864ff24b4bc9c0"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-28-32Z-STS-vehicle.jsonl",
+   "sha256": "cbca29d5a6a563b9b3c0d8d9a750d1040941edf14a805a1a77815935464aec3f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-29-06Z-STS-vehicle.jsonl",
+   "sha256": "e7b14419db21c4db017e5d64518707bf1d9df7d5ecc1f86414c203ffd3c2a08f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-29-11Z-STS-vehicle.jsonl",
+   "sha256": "5c23694fc4d868edbcc0b80d2785324807bca6d4d581ace630736e2db76a2767"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-29-59Z-STS-vehicle.jsonl",
+   "sha256": "457cd29692fd7751dea3a36ba602940e91f49519341f26cd40e10d111b227442"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-30-41Z-STS-vehicle.jsonl",
+   "sha256": "42fb1300f47d8a8f198e54b0ab7a8241d9b81fc2960dab4a57fb12dd7824e0fe"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-30-47Z-STS-vehicle.jsonl",
+   "sha256": "ece9c347e06ab7a7dee77fd089ada99ec20499d3b91af85b6cbcd96225d4d0f9"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-31-14Z-STS-vehicle.jsonl",
+   "sha256": "b037c62dc51e1d3eb73086e8b71d2fc58c8fed778a634b099687c952569c2473"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-31-20Z-STS-vehicle.jsonl",
+   "sha256": "b81cbb7e4b5419700a0273b3e4a5822c4a3d0db88a6a1ec05ac6d4b61892f3ae"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-31-52Z-STS-vehicle.jsonl",
+   "sha256": "96aca186efd7387c67e5dd4c2d9749655e4764084c9583125726917c43315f07"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-31-58Z-STS-vehicle.jsonl",
+   "sha256": "e0a49855483611162795728b6a5d598914531f948639f983dafb15e1f68e7ddd"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-32-44Z-STS-vehicle.jsonl",
+   "sha256": "b5f2fd9663d553f551d6c168347d19ecaeaa7086febead0cf48d0832200ff909"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-32-56Z-STS-vehicle.jsonl",
+   "sha256": "aa929f3b60040f5a9037e78c1c3ef09f403de844114414835525f2273117898f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-33-18Z-STS-vehicle.jsonl",
+   "sha256": "04221f9cc7c0b1d7436397ba05da642ef0cd3413a7fe74c80b0e343f167a8093"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-40-29Z-STS-vehicle.jsonl",
+   "sha256": "a684c14f2e810ead5c08bed9283f9346ca20f6eb9a3466c92fbcd7a3d4d4ed5b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-40-42Z-STS-vehicle.jsonl",
+   "sha256": "4d26dbc1cbec10dd7447a6c326baabb13180be72d87ce4c918236ed3f29fff66"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-40-44Z-STS-vehicle.jsonl",
+   "sha256": "927aa7a0951742cb251817a9b82800594ef785b797be93838788fb91ca1bd9f9"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-40-53Z-STS-vehicle.jsonl",
+   "sha256": "62af8f704d88c566122879ede85fa20579854cd94c36bcd8b44baed90c037be4"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-40-58Z-STS-vehicle.jsonl",
+   "sha256": "64692fda87654a87d6b81371b7bd7e3efdbbf99083dc79c5ba2c096c7a19696f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-41-44Z-STS-vehicle.jsonl",
+   "sha256": "5e772edc5e05d141113cbf6919a18a7e95709a19466a5fdbe32a12e707cd5b51"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-42-43Z-STS-vehicle.jsonl",
+   "sha256": "d620f43097d0f176a795273a13e16f9baad18a7a9290345ab18aa33269d22a0a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-42-44Z-STS-vehicle.jsonl",
+   "sha256": "6ffb3bc4376806d30e94aeabb4e75af81f92477eb77ee2f52fb02a6d020fcd5c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-42-50Z-STS-vehicle.jsonl",
+   "sha256": "0e79311e251cd8d73103a5e0e604d6b5d9bfface086e3dc30fa984fb378ab01a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-43-02Z-STS-vehicle.jsonl",
+   "sha256": "538a60d460a04e0b9f60fa39e2804da53be0df2194aa5426cbb3ce3b44b69cab"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-43-31Z-STS-vehicle.jsonl",
+   "sha256": "23e06f82a3d3daa0f54f9966fe3eb18cdf16cd754b183a139526200a6aa739c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-43-37Z-STS-vehicle.jsonl",
+   "sha256": "7dd60b8fd12cae3d0d181fe4ca853fd01a4d0ccf960b663e5687ca082fde713c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-43-44Z-STS-vehicle.jsonl",
+   "sha256": "584443642781a313179e9d6c67c88d21952bb4f95457f0a31aacaca5ff8b96dc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-03Z-STS-vehicle.jsonl",
+   "sha256": "17126cfcfc9b0eec912fea23a7b0b0c64695bdfa650a1ff45c8f017e1f6c6926"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-09Z-STS-vehicle.jsonl",
+   "sha256": "32f49a2a7a7d3766b651aff2f1a95c290a457b748086cc418f046f1e36304684"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-15Z-STS-vehicle.jsonl",
+   "sha256": "22cbc80f1aa70d1d7d722537da97a1d0c7d05e4f3eb7e54ade3b5ce8f1f39d03"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-38Z-STS-vehicle.jsonl",
+   "sha256": "6ca1e1e3a79b67e19663130147a355cad884140f4f4684215a364ccb59c2c90a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-44Z-STS-vehicle.jsonl",
+   "sha256": "8dbb94fb4f0e0026f17b254a0cc71a24e00ba62f5d870d5e8a543fb689af3476"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-50Z-STS-vehicle.jsonl",
+   "sha256": "dfb20c8134d0c94ad6593ded22592d5e212cb04048ae7a1ceef2b05e1915c964"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-44-59Z-STS-vehicle.jsonl",
+   "sha256": "934004eb1a3e06a4b4c15ecccd483032bfe5728d8572b51532c877796f4a07ea"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-45-04Z-STS-vehicle.jsonl",
+   "sha256": "d41413666d52c8c3d7d46277db06fd5cbc47595da8fd77313fb2f0ae3b50ffab"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-45-10Z-STS-vehicle.jsonl",
+   "sha256": "b95746a7021569aac1b8286a86c4a086ec5db25c957bdce6ffe473771aed8c16"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-45-55Z-STS-vehicle.jsonl",
+   "sha256": "03666596af58c556bc76bfdfaa0da6cd34e09de0bee33dc602affbf2b89679cc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-46-01Z-STS-vehicle.jsonl",
+   "sha256": "364d07ca6a7b1848a1034fe4bcd10dd41c79e4306d9fe49281b102f2a0d00ac1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-46-33Z-STS-vehicle.jsonl",
+   "sha256": "413363864ecc85d7868ca97d9f646625c9f19079e0db28fa911438db367e44fb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-47-45Z-STS-vehicle.jsonl",
+   "sha256": "9d6119eccd1510fd073f16784e768ac5268bf9b82dcd775a9eec98c7d05c470d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-47-51Z-STS-vehicle.jsonl",
+   "sha256": "ec82b8f7169f8b3b1f65bd95ccf1b5902edddccc29689c6234e8988a3c2156da"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-58-41Z-STS-vehicle.jsonl",
+   "sha256": "1223e1feba2e0a87b2a64dce5077c2a45978f67d1b0e9da8a181409ba2cc1aef"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-58-47Z-STS-vehicle.jsonl",
+   "sha256": "31362b80eeb2fe63ad2362f6ba9c0e00a5456ea815c32c4f92306beb8ec979c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T03-59-24Z-STS-vehicle.jsonl",
+   "sha256": "1dc1ee83104d2e8857d818cb867d3b77aca599f948d9aceeeafb2fca1fc10210"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-05-08Z-STS-vehicle.jsonl",
+   "sha256": "d60f56363c3b6693e3b5faf797710b1488b9d1169a17b895132310b695c69f7a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-05-09Z-STS-vehicle.jsonl",
+   "sha256": "08a9c030a2fcd092dec671f6a46fa58242bf1877c656b9805807ab985091fa67"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-05-14Z-STS-vehicle.jsonl",
+   "sha256": "9c99b6768bbbdbc872b267789147d1b1d408b746537d9e08354a0560b3c37d40"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-05-37Z-STS-vehicle.jsonl",
+   "sha256": "e694640148f4fcd072de53933d38b04c60615f820d313aeb20a9a1b7155bca9d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-05-46Z-STS-vehicle.jsonl",
+   "sha256": "88c472bab7cbcfd6b6351213bcff17d8b3f5a41bba1761b31c063626a161ab5a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-06-52Z-STS-vehicle.jsonl",
+   "sha256": "54e708a90e1a98a22a6f16faf6e6f620c39cfb334025c74f63dec8e246317242"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-07-01Z-STS-vehicle.jsonl",
+   "sha256": "1e2ba4d20e01579901ecdb57beb608801411d94ead44a4875eab42961c3be781"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-07-10Z-STS-vehicle.jsonl",
+   "sha256": "4710a666d7a0c6d544eeaba02d36e194ced2830d62ca4e99ac38b2f75612365f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-07-16Z-STS-vehicle.jsonl",
+   "sha256": "d1587af479f789e6445dbfb5048422a712a765db3f0a35e34215d626d4c51dd7"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-07-29Z-STS-vehicle.jsonl",
+   "sha256": "0bb9628584fc85eebe860d42f2b480b1279726dc23528d5e1cb9de04501c583a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-07-45Z-STS-vehicle.jsonl",
+   "sha256": "ae0c9d9543aa8d8c7d47b844bf556b32c18c5a67df73fa3ba04c292b2da2a429"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-08-31Z-STS-vehicle.jsonl",
+   "sha256": "b020c26ee4f2151005880f609b1c28098b6a869f5201ccc102fc502835deeede"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-08-40Z-STS-vehicle.jsonl",
+   "sha256": "2d4da502a05dc711979735b40b5ce72c7bfa0e9c359999c3126c14e27c3d9fbc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-08-49Z-STS-vehicle.jsonl",
+   "sha256": "d1fb1d5c6b7bf9f79662776940375dbf6233646c132291ab3ff842df348a8c41"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-08-58Z-STS-vehicle.jsonl",
+   "sha256": "d069d558771b75489a860314c38092068b88c8c1a5258406d55bc1c573099417"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-04Z-STS-vehicle.jsonl",
+   "sha256": "135748d3d0f63004a6a3af1d3c53201e325fd61f182285ed689d0080e05b7093"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-16Z-STS-vehicle.jsonl",
+   "sha256": "7f8c5fda0e3af40861fbf5627686b815a094c55ef00d85a1bf439012673f8435"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-34Z-STS-vehicle.jsonl",
+   "sha256": "716795edca10b141a19f85d6fee3cf0a802d6377fdebd676f96b266d4a39b58d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-42Z-STS-vehicle.jsonl",
+   "sha256": "3b77174ddcf58d86c8a282084df8a5ba4a0d03b86ff07a4ece562dabf94233f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-51Z-STS-vehicle.jsonl",
+   "sha256": "597d40c6839108410bcc5177dd5fb0a95d5b0d5a7f8e5683456c52701cf982ca"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-09-58Z-STS-vehicle.jsonl",
+   "sha256": "5e1232d34c4ba6d8f36275bce9b7493a0997fd69b726e6edd31e0cb6a2b54dde"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-10-12Z-STS-vehicle.jsonl",
+   "sha256": "767ad7fc503aac4fcf327d98fe62994d222ccc26284e6d118dd25250eaefddbf"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-10-36Z-STS-vehicle.jsonl",
+   "sha256": "da7f8f5fc5d2ae2dc6d50f656f94e29e8aea739e19fe15b07e5e729f0f1e812f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-06Z-STS-vehicle.jsonl",
+   "sha256": "40e217731a18fd12a9fe2c713b17d2875fc1c2013477bc45e05acc52c1f64039"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-19Z-STS-vehicle.jsonl",
+   "sha256": "62ab291ea801bef57cae629b8b3c29c85c47f169f7fd3ec3f56205c4dfa0f10b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-27Z-STS-vehicle.jsonl",
+   "sha256": "e3642f4b6c8dd71eb70566f9c713f0a79ade18f758e959133bfac65ae0f08d64"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-36Z-STS-vehicle.jsonl",
+   "sha256": "cbd8612d1ac89538473dd247ed66ddd6fc501023eb92e34aef74cddb4b0109c1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-42Z-STS-vehicle.jsonl",
+   "sha256": "ab37caedd3173b857585e4ac395f4f4459e317de436dfed9c731431e4363d573"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-11-47Z-STS-vehicle.jsonl",
+   "sha256": "91bff354e4b1c912244ae27d23c54fa359095fe884f48be2e96389fb79db661f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-12-01Z-STS-vehicle.jsonl",
+   "sha256": "abc42736c50e191169af3274aa5d9515570aa522d9f5508d54780d05caf1faa1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-01Z-STS-vehicle.jsonl",
+   "sha256": "b06a7201089a1127ed318b8c32f8003719c273c8f90465165349095722afd02c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-10Z-STS-vehicle.jsonl",
+   "sha256": "abd90733a57675d95e78953a2bb3c7bfbbb7a806f68d4102f4d0108950c8ca84"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-18Z-STS-vehicle.jsonl",
+   "sha256": "f689d31be6884dda90c03d7fe5abbe46f61d2fb21972203d3f310bd33e44c74a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-27Z-STS-vehicle.jsonl",
+   "sha256": "ce7fd8fafc2f6e7aaa21509440efea27376ee207eb62bda9fb2d1df47d970270"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-33Z-STS-vehicle.jsonl",
+   "sha256": "5dd54f2f5766a3d5e9b47e955d884ed7722597269d21a7375ced92214aba4366"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-13-39Z-STS-vehicle.jsonl",
+   "sha256": "387eb83c317679f2ed14d5f897ad2f7240190b8c093d7abfc29f396df07d9c13"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-07Z-STS-vehicle.jsonl",
+   "sha256": "d2f3ed09b4e91444674794f4a4fce143a8778d33f60e91202e44ccf05ec4f050"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-15Z-STS-vehicle.jsonl",
+   "sha256": "f83242ae36dcd81f276ec6391b74e87ab3898d405875db5124f5f890a164645c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-23Z-STS-vehicle.jsonl",
+   "sha256": "3317fe285ed39249d020b86e120d857106734839a2b115e2949b545bde55e785"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-29Z-STS-vehicle.jsonl",
+   "sha256": "38ecc71e785a9710ecafad307686f3998cf878e449555506de6ba840f0112cc0"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-47Z-STS-vehicle.jsonl",
+   "sha256": "0aec026717da83b9a4af194c84654fe5943a4f034130e5ccb501a81998cb63e3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-14-54Z-STS-vehicle.jsonl",
+   "sha256": "93b6f3ab05e79f637e498020ad13a46958dcc1442defc9a216c619c64088f9d0"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-02Z-STS-vehicle.jsonl",
+   "sha256": "a0982e765380b686c40527d8466248c7a11c2cda7a0e313d6793a08618a87b3f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-09Z-STS-vehicle.jsonl",
+   "sha256": "8bdfde3eecf625088598cef06565f28bd282e7ed7814aa16df98b497568baaa2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-32Z-STS-vehicle.jsonl",
+   "sha256": "7db51416b5142be1e0350495ff3a8016cabc2eccaedd8b2cf527755e252c964c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-40Z-STS-vehicle.jsonl",
+   "sha256": "e833071f4b1d91a22e3e65eb3f73aea372b08a14f8be6a2a0cf680fcf118a689"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-49Z-STS-vehicle.jsonl",
+   "sha256": "b36acf888f78cab2d6a22c89fb2a36f64d72aaadcb400ed5f861015b003e1bf6"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-15-55Z-STS-vehicle.jsonl",
+   "sha256": "b499d44a6998894ba7057db30a9cf85fc764b7f39569011401476278d844eb99"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-16-12Z-STS-vehicle.jsonl",
+   "sha256": "3b57d5992ca3e6f22f3dce130eece529c2a3fe8a4914095ae95b5449cc5dffd2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-16-19Z-STS-vehicle.jsonl",
+   "sha256": "13489a75de43523b4c1649eb7e689823429df60413780bb47aa45a66e7458239"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-16-28Z-STS-vehicle.jsonl",
+   "sha256": "5d8a7258a105cce4d49c77a412caf44728449ad36ea9f81da5af97d0d1048e51"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-16-34Z-STS-vehicle.jsonl",
+   "sha256": "daa42ea1c869ce560b43f37420d27a7060f7f0f00dcff2eb181308f4c5a5f7e2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-16-54Z-STS-vehicle.jsonl",
+   "sha256": "4fab6659aabd950709261069d6ea252a52636b6e8b80a4c966a8a44525025906"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-17-13Z-STS-vehicle.jsonl",
+   "sha256": "decd45cb7ff9aece8ec19453a2bb20cee26cc92fe5ae0198260b6a5f70a927fb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-17-21Z-STS-vehicle.jsonl",
+   "sha256": "78f25335235ceb46ca8439cf67560b885461a1e5b3e2b1c7404cc8de94fde863"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-17-30Z-STS-vehicle.jsonl",
+   "sha256": "a8c65d96a80afc289e7966b1987b5ff6583afd74a0761aaa36cdf17af4cc6861"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-17-36Z-STS-vehicle.jsonl",
+   "sha256": "f136719eedecc7f379b07da157704b988aff13e907936decb1c1361c2168a354"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-18-16Z-STS-vehicle.jsonl",
+   "sha256": "b677c769a947747c7898162f45c1b54b34b1eccfdaf44501315c532e68319ca8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-18-23Z-STS-vehicle.jsonl",
+   "sha256": "419a1553e1262bf6a65245df3939f21be25d912e3e80fac90808514675ed5235"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-18-32Z-STS-vehicle.jsonl",
+   "sha256": "335fb1ec28d07b8e5ce1381e7e983baf968ad1ac5b67e08bc1531282a4644f3b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-18-38Z-STS-vehicle.jsonl",
+   "sha256": "3bbbaede85e79288aabe1785bb76e27952bf45bffa7b8ea3dedc4bdeda1b3f20"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-18-44Z-STS-vehicle.jsonl",
+   "sha256": "2d8b9ba3785355a094fad213d6e17e3046b10925a5f822e3c20cec2c3a87d65d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-19-12Z-STS-vehicle.jsonl",
+   "sha256": "527be44fb1c863a9c51c8404a5ad52ad1f5024f6625115c4cbdd59f012eaf847"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-20-04Z-STS-vehicle.jsonl",
+   "sha256": "663765153fdeebc595ecbd09db77cc263e4c5e8bdf9530096ee8da7dc09c74dc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-26-29Z-STS-vehicle.jsonl",
+   "sha256": "0782757bf1f72469d5f3d42f452a7225fb63ba0f646ed85a5697cefb50d120d6"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-29-07Z-STS-vehicle.jsonl",
+   "sha256": "a066e8a79f2451e3d7b729f9601d2447ad66c43277a7cffcd6ca042f388ef99d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-30-24Z-STS-vehicle.jsonl",
+   "sha256": "544153e27c6d99dd1847bcbfae8b3dd1b8e30ab6491344ff7aa4894d5cb276b4"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-32-22Z-STS-vehicle.jsonl",
+   "sha256": "28fd11da53302374a0446611ba32f64250bc2687472689845bfeaeeda1921f50"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-33-36Z-STS-vehicle.jsonl",
+   "sha256": "9794577acba8185f16aaa938286f96eb094fb3f21fe0c49d4a71a786ecd5f114"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T04-39-07Z-STS-vehicle.jsonl",
+   "sha256": "94accc6822e4a2c63af5398bf91319f9b3a66f12ecf367747816a29367e7462c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-09-19Z-STS-vehicle.jsonl",
+   "sha256": "843db2ad1b741b335a5f03edff8a631a05126793259764b2a941e1900560bd22"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-09-21Z-STS-vehicle.jsonl",
+   "sha256": "8770d724fccf04fa1166d035c661ab47d57ab3d699e1aeb89c606f80286344c3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-09-41Z-STS-vehicle.jsonl",
+   "sha256": "25a946b0f4e3ff1f4af591a72ae96e2267ccefb77d7cabdc974eb39270f96d9a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-12-03Z-STS-vehicle.jsonl",
+   "sha256": "673d611f2cd313000b577c5ffd4e3e26a0363cbda6294b93ffa596fb30d9f4ff"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-12-26Z-STS-vehicle.jsonl",
+   "sha256": "ba6a745d15fb5925f773e2a0848dcea1f8a05660086c1baa28acfc537b5a062d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-15-56Z-STS-vehicle.jsonl",
+   "sha256": "8440a3952ac12fb40cf627d0f10758db7c4d31fae080aade4930b6448207ffd0"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-16-18Z-STS-vehicle.jsonl",
+   "sha256": "c8e9f44f4ea3785024181395f0f395c21e67ea0c29da1e6b403a86d29d056bff"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-16-53Z-STS-vehicle.jsonl",
+   "sha256": "2572e8d6ff556f72820b72f65d24dc98a0eeb401e8db2b6588ada5ab87fff179"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-17-29Z-STS-vehicle.jsonl",
+   "sha256": "ede80e3b105dfc9aa42a894b14fb730622bd2557d6d4517c5fedd66750551095"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-17-39Z-STS-vehicle.jsonl",
+   "sha256": "66dfc2e711d872c0826424c9fef7259afd5717a48bd8c2fb2c2988e0ea055856"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-17-48Z-STS-vehicle.jsonl",
+   "sha256": "a8d6c069c90be6ff233ebc8c34e1a9a3a68cf23ebe65115df8743a4ec8f94458"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-17-49Z-STS-vehicle.jsonl",
+   "sha256": "71feb1277ee7a8da602397126a96aaf61ff8c0ce6b540500a4fe66499d28edcc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-19-41Z-STS-vehicle.jsonl",
+   "sha256": "98d97649018beefe3949777f9625e33f03033100b878bdb6f10229f6e9f010ef"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-19-50Z-STS-vehicle.jsonl",
+   "sha256": "bcb6f64e8417e57c64eabc0deb6cc3851a4b1fb7edaf73b9cc25a61ba42a4ac1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-21-31Z-STS-vehicle.jsonl",
+   "sha256": "3144940ec9af4016bfc1168a06b70c2caf86221752a7c9ff976746ef7f128444"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-23-46Z-STS-vehicle.jsonl",
+   "sha256": "37b387743b19c041b03f19aedafa9dd94cf500dd2c76bc1b75613facabcf4f46"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-42-23Z-STS-vehicle.jsonl",
+   "sha256": "edd6a0a2e8388c8e74090781e293b231dab25851be94c2df4f1a563aa1b731fb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-42-34Z-STS-vehicle.jsonl",
+   "sha256": "dd342031d147da745b25d075e409e3551ae43ab75a6c2ab20e6bcc1d8835b81e"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-42-47Z-STS-vehicle.jsonl",
+   "sha256": "98aa7a1e9d8992889b252b1bb543fcae856c294d4e61d239733c429a35fdbde1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-42-48Z-STS-vehicle.jsonl",
+   "sha256": "310c92d8d2ab8fbff81b492f55270099b73822ee111293e9e36cba04e22af28c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-43-19Z-STS-vehicle.jsonl",
+   "sha256": "1af928729725a13f2705a995cb1ed225c102bcef20701ead815a655ecc8d29c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-43-38Z-STS-vehicle.jsonl",
+   "sha256": "9a4cf08fbc3157347c6d6a1885846b9d661029062476cd889be0d2d1fd254629"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-44-28Z-STS-vehicle.jsonl",
+   "sha256": "19c59dee402333c2deca04f0fa10881242a2b0eb6bf084ee42304eb5fd5a1958"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-53-29Z-STS-vehicle.jsonl",
+   "sha256": "a1d838852f54e3fdbe26a2b5b329cba39308fc8012003f7e785f70a98b2cf134"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-54-08Z-STS-vehicle.jsonl",
+   "sha256": "d43ed3c120009e57b3a3fe42da6b6df8452a774cca5b1bc79dbb2fe1d153e280"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-54-37Z-STS-vehicle.jsonl",
+   "sha256": "6e8e97d2c8a6109739c23a7e6bb604bec2e35768fbf77513aad584e402c50508"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-55-09Z-STS-vehicle.jsonl",
+   "sha256": "c4336b3af397d164492ef2549346c429032d3a98d76f312a76f8abb8f4d8f980"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-56-13Z-STS-vehicle.jsonl",
+   "sha256": "fbda692c5180b862a28e3618a468129ccae8a788b2b3cfac4f5069eab17f3b11"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-57-13Z-STS-vehicle.jsonl",
+   "sha256": "6e89c9f3abda6e05f14a6b5c2e1adc91357203bcd8d4d0d4c75991b67b2dc3cd"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-58-18Z-STS-vehicle.jsonl",
+   "sha256": "bc33b632bbe0d198a3e5e3c408f170cec233e18a2e8a5af379ab92cb036ccc93"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-58-37Z-STS-vehicle.jsonl",
+   "sha256": "449b89f02eebaab60b4cabe7fe04e326b3eb806d5b4bc6451152c5386e86b603"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-59-09Z-STS-vehicle.jsonl",
+   "sha256": "53d0ee6d8fc69217dcfcda62d21397f3ddd731fc667548a1e13a0cba7786023b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T05-59-39Z-STS-vehicle.jsonl",
+   "sha256": "2b5fabbb48d077854d79df5898a11c5ca0b93520623e6581f3e1925772bc8f6b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-00-01Z-STS-vehicle.jsonl",
+   "sha256": "fd4ea6492056eea48811b3f4884f706447700fdbe573871cd75c48877af56d1a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-00-15Z-STS-vehicle.jsonl",
+   "sha256": "a100dbf0cc887f705a6245ce7e6179a8e26338af1c7983d8c2b2fbc35b919926"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-00-24Z-STS-vehicle.jsonl",
+   "sha256": "19142c8aab934efb71332cb230bfc453b5330fa76e43cc21c41dd8ac134eba3a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-10Z-STS-vehicle.jsonl",
+   "sha256": "b0aa25c6f2cce06b5738e4aad23e376de4fc67e8dc993a4023c105fc3bfa2a8f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-12Z-STS-vehicle.jsonl",
+   "sha256": "91e570953f81197d04a4bd46ee9856dfab978ed00c87b8065793fd155ab351dd"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-13Z-STS-vehicle.jsonl",
+   "sha256": "e7f293d146e981636718f82e29573ee58be9b6799e65263627e9bcb4e848a889"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-48Z-STS-vehicle.jsonl",
+   "sha256": "d9efa8e6e367636af45c83be5763b1a90eaecb43e995e3c383a5e7ff4ec6da21"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-50Z-STS-vehicle.jsonl",
+   "sha256": "5689183e20c7654d088c0b42bb2ee743f333c0b2231dccbd719e5be721290253"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-01-52Z-STS-vehicle.jsonl",
+   "sha256": "9d9af2acd4e05bd905f05686d1d3b8c42d75fb7a342f6a3b33598165c6d7c3ac"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-02-46Z-STS-vehicle.jsonl",
+   "sha256": "3ddda4b2528002d174af9d2ba541a4b95cb21358cef759783e9eb734d9b73e21"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-02-47Z-STS-vehicle.jsonl",
+   "sha256": "d4baffab9d362837a1296c5a4d29ed55945bf8d5ec7ad61d19403ded3e354f89"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-02-49Z-STS-vehicle.jsonl",
+   "sha256": "f39e1237b7d2535b50e300011692b81a85a3c42b9a6ba883dfb346c036d7814d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-07Z-STS-vehicle.jsonl",
+   "sha256": "438da3010932a902a962611253144ef7fa2139f7f325cedceb93101555e8f2fb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-09Z-STS-vehicle.jsonl",
+   "sha256": "8bf39bc263823c7122a189402713bba77e33211c972ae01645a48a3df951a3f8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-11Z-STS-vehicle.jsonl",
+   "sha256": "c185f7d2b7761e6b49a7ea34f9fb556b6e62e2a87afdae54e2aa482d6420d04c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-39Z-STS-vehicle.jsonl",
+   "sha256": "4f442586edba2a16a4d258e3222d4259f9bcc8a3ad5a06e1f222510548a7d1f3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-40Z-STS-vehicle.jsonl",
+   "sha256": "cd813a5ace5f31917d6bb0a28ab85f9884e2b20765314fde1786cd26eecacc9d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-42Z-STS-vehicle.jsonl",
+   "sha256": "73bc5f3c6beb8306ff5d19d07dc7cef5f966c5e6a73b1e6fedaf070fcb4c7f3d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-03-55Z-STS-vehicle.jsonl",
+   "sha256": "42df56fbd2594cda507dfeec73d1a97d96966eae034d8670eca312c23aca7c33"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-04-26Z-STS-vehicle.jsonl",
+   "sha256": "b6aeb4f6a5ceb7f02e6b5e1e77a57d13185b704d1b4cd810d753e830ce44a968"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-05-04Z-STS-vehicle.jsonl",
+   "sha256": "2063d38464df48157dc166af136060aa682c2268e40c1a2bdd9ed86c2957d266"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-05-15Z-STS-vehicle.jsonl",
+   "sha256": "21f43425089c5e984973f2149310681e3388dca2af88fa7d4a1ab15fb95f85f1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-05-17Z-STS-vehicle.jsonl",
+   "sha256": "0d12364e3e418e64cdaf387e7f98a61f38c2e9bbf2c757119e376ee06dc97d6d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-05-19Z-STS-vehicle.jsonl",
+   "sha256": "ca8426fad93a31ffaaff35f07ec6543cee62de901e844696441464eb0bed8e4f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-05-50Z-STS-vehicle.jsonl",
+   "sha256": "c83acbc501251b27f6dd9f05d25024445c01361f2c9f00b10b6da3a7e5563101"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-06-00Z-STS-vehicle.jsonl",
+   "sha256": "7af8da7b18d181aafcc9c817dc913a448a3081b73f7ba5e4c1c651b85f2944c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-06-02Z-STS-vehicle.jsonl",
+   "sha256": "2868d3f58252b40de17ea02c7fc553700c7fc34c0dfee845f4068d13457427db"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-06-03Z-STS-vehicle.jsonl",
+   "sha256": "2feaa004d91ae13e6c99f1cfa1bf238980ce1fd49f4bfc4aa199ae12e05e48c2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-06-29Z-STS-vehicle.jsonl",
+   "sha256": "90fbfaf390a8aa0e08ae75372de80d0a282b7f666d05c8cd20ece6e5c35b6451"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-06-55Z-STS-vehicle.jsonl",
+   "sha256": "ef9b8abad926993735d311cf8684641487d6561f76190334718c823de24ebaf9"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-07-06Z-STS-vehicle.jsonl",
+   "sha256": "dd45b1be2c02ce578ce4a33362abf04fb9515bc3040d488d368d5525b3497690"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-07-08Z-STS-vehicle.jsonl",
+   "sha256": "cc8e768145367ff64f252b03966007d1c2c709996c849cf3abaf305546c7a3f4"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-07-10Z-STS-vehicle.jsonl",
+   "sha256": "f5fe4a63b0dc8d56fb5e453197d699cc27ae1cf6f45426cfeb9e5c5cfc7a766f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-13-07Z-STS-vehicle.jsonl",
+   "sha256": "4137ea5deb6143b6805bb8c2c4693606138ef57c4de29964f3eb22cbdd72a35c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-14Z-STS-vehicle.jsonl",
+   "sha256": "067c153fda3459d70640f734d96b3fab603a4e4c9b4eb1c8b211a26ba106462f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-15Z-STS-vehicle.jsonl",
+   "sha256": "ce6b4b814b4132bc73d0ca40cde177be9bc29f706cfe5f481841b434f0430443"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-17Z-STS-vehicle.jsonl",
+   "sha256": "46e664c06a0fc45a78e44136f0c9996d41e7871a0c50b5a9c54dd7d47e9a7ad2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-26Z-STS-vehicle.jsonl",
+   "sha256": "6e5c7fab2125db727d3bde331d3e4e39bb7b361ec890df48923b7e9daa2a2737"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-28Z-STS-vehicle.jsonl",
+   "sha256": "d5eff375f12ba90095ded066a928977763960df5cece478c91915ebf7d969b75"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-30Z-STS-vehicle.jsonl",
+   "sha256": "a9ae2eebd19c0b11def1d61497139cb230964dbfd4497b7358a9ad406194a49a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-40Z-STS-vehicle.jsonl",
+   "sha256": "b73280cbe92843ce3e2134ada99c83b17ac3158586a76a6f948cd423496834e3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-42Z-STS-vehicle.jsonl",
+   "sha256": "5e03fd8abd83b0108ccbcf4c467e3ace8e57d9e27c8ccb97266ac015d9fdaca8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-14-44Z-STS-vehicle.jsonl",
+   "sha256": "0f2568853fe00da524deda623689c6db8a961847bd2362d40f7e57af2cbe3d09"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-15-10Z-STS-vehicle.jsonl",
+   "sha256": "da346ea41470644c4ac52d5c06542d8b353b5e1f5e248cc716d3056d20a08304"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-15-13Z-STS-vehicle.jsonl",
+   "sha256": "889077b016362b6c2f6f9f58f52083d7dc0b655bb233a3cc326d150e5e352ea5"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-15-15Z-STS-vehicle.jsonl",
+   "sha256": "edad8a33216d8e4c65df41bf5123c58326dd7a544457c947270b83a6fc05ece7"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-15-32Z-STS-vehicle.jsonl",
+   "sha256": "9dfd6f677b8cdd49f819c2f0ff42fb30f5088317304aa049aec64f1a6aedfa1a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-11Z-STS-vehicle.jsonl",
+   "sha256": "4758c187b2cfd32a1dbe9462ea291259bf01e4943f02639296c3a5176345e943"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-13Z-STS-vehicle.jsonl",
+   "sha256": "5cafa4e39b9bd32e90e99d84c9e58cb847715c59a76214ba4e128262662fd7b5"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-15Z-STS-vehicle.jsonl",
+   "sha256": "851f387fb0f0517aa8b2ccb2b5ea92d525d14131ebc462037dbf0c7b8d15e3ed"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-17Z-STS-vehicle.jsonl",
+   "sha256": "2525e84a57daee6eb42248b1963a82ef0aac39185ab8fbbac832d26bdb14a4f4"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-56Z-STS-vehicle.jsonl",
+   "sha256": "346aaaf99f79c59b5a9c67a1c98d5f4f8b308b93c4db4715f9877cc732c4c34a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-16-58Z-STS-vehicle.jsonl",
+   "sha256": "3504252f818c685097ba5088c06982895d1d09633ba24a3ffd7db73856db3f39"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-17-00Z-STS-vehicle.jsonl",
+   "sha256": "2f83eaa904444b7a8a0d4adbcb802e0f7da26287207f01d0a83c8592063a0741"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-17-02Z-STS-vehicle.jsonl",
+   "sha256": "7c42b7fa930f99efa443ba9bcae7160ca8b2aea3fff0f5cf613fb1af8e01cf2b"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-15Z-STS-vehicle.jsonl",
+   "sha256": "bcf06268350c4761733a0c0b232ef9a7e63e48bb711876b873557cd052b23c85"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-17Z-STS-vehicle.jsonl",
+   "sha256": "cd777704ffe65ec6ee14f55b11fe98b48a0444695c96f55f983717aa7ff969d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-19Z-STS-vehicle.jsonl",
+   "sha256": "14e853ddfe4a9d573d06c80d077ce9467af022b2b0039a074dd1769b194dfaee"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-20Z-STS-vehicle.jsonl",
+   "sha256": "bb8db4067e08b2e256a643dc7c87e85fecd2b197f2b9f151b6eaff68db5637df"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-51Z-STS-vehicle.jsonl",
+   "sha256": "5e08240e25894ecfc04e4f480994580194a5a90cc3524a53eb141edf8c4ff472"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-52Z-STS-vehicle.jsonl",
+   "sha256": "e03ee6a6b6bacbfe4d2cfd7f78d01541b5dff08ceff43d6b08dcfe0f8e1c0e28"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-54Z-STS-vehicle.jsonl",
+   "sha256": "0e5b7bc6b825393b14c4a1ff7240dd400e279223acbbcef21ae5c4f20b37aff1"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-18-57Z-STS-vehicle.jsonl",
+   "sha256": "07af247e2840759721a37e8dfb783bf3392ce2884ccd218b9aed403ac53cf354"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-19-27Z-STS-vehicle.jsonl",
+   "sha256": "14cce7d5d83b38b23029d07739a2f101acd7ce068805c651e19099ebc5886365"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-19-28Z-STS-vehicle.jsonl",
+   "sha256": "34e80421cf1466f1c002db3239488b6d883adca9b4f6d3246cf8ba20488009ad"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-19-30Z-STS-vehicle.jsonl",
+   "sha256": "03660da6359df9ef23496b2f4b887c0c71e16762675e016df2709f3debfafdbd"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-19-33Z-STS-vehicle.jsonl",
+   "sha256": "15d3d512e91318139870d4ad061923fd8155b324c140415fde6addb378377829"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-20-22Z-STS-vehicle.jsonl",
+   "sha256": "2bd0187e365de992cd0a1d7392fadc011cd7cffdd26c9bc0113d43e5548cff28"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-20-23Z-STS-vehicle.jsonl",
+   "sha256": "01be9d498a2cc083f0dd565cfed129526f9d2d02bf6052f29427d72bdb03fa01"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-20-25Z-STS-vehicle.jsonl",
+   "sha256": "dcd4b7e4682d4baf225f88d679a9e7b0c4b82c59fa646bc0f007d8e668557c46"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-20-28Z-STS-vehicle.jsonl",
+   "sha256": "f82b77f4655c4b402b8d5b31432fd4895f60efccd4a40ffc3347b193746b9704"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-05Z-STS-vehicle.jsonl",
+   "sha256": "33028250deab244e5a6b6f3c68d2bf7b741c276e2cdf499a98fe5c9707182bbb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-06Z-STS-vehicle.jsonl",
+   "sha256": "4afa67eeb6e341077914581ed5212177ce464d0eef406d88015b95b56901c663"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-08Z-STS-vehicle.jsonl",
+   "sha256": "d1b6e8b609971f1c0acb92c7d596a40e382bc07afe3830ba6bd1e26581225ab6"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-11Z-STS-vehicle.jsonl",
+   "sha256": "501dfa8ce00da6e6350f37b214da2b1974b663885fcd2e56ee75f64d7b97b56c"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-54Z-STS-vehicle.jsonl",
+   "sha256": "259303363280ae4b0175445c68f7b12ac97852d53c3703a5005486c7745da762"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-55Z-STS-vehicle.jsonl",
+   "sha256": "4036b9d9bba7505c74ac4196a78432b1f27bd5fa784c43386c7cb4a3ee7b2af8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-21-58Z-STS-vehicle.jsonl",
+   "sha256": "cc4a3e4af0b4e1f027cbc1705130cc60dfea7993edd552503144698d9927a2ee"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-22-01Z-STS-vehicle.jsonl",
+   "sha256": "75c61bb7dc2020b633080b15e87aaf59eddd611f6990d946c2905f4fd016efd5"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-22-40Z-STS-vehicle.jsonl",
+   "sha256": "70f9468536e157655d977f881de248068ab7378ba247bca12c2708854e214f0a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-22-41Z-STS-vehicle.jsonl",
+   "sha256": "c8b1dbfb30adeeadfbe33a919dca5e2fdffc36ef8103066aada905d59cc0b028"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-22-43Z-STS-vehicle.jsonl",
+   "sha256": "1c127935a8d753a7071206760428984fc59672db5884293b121fe22e0422ce0f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-22-47Z-STS-vehicle.jsonl",
+   "sha256": "4e223de4c32436b10fff9986d511c8189ab78d95dd88e1d73f6a585d12797b95"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-00Z-STS-vehicle.jsonl",
+   "sha256": "d40152118941714b23e66808dd8e037c4e9ad04bcb0a064fd814c36690047a01"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-02Z-STS-vehicle.jsonl",
+   "sha256": "c74b28c3f1c4dde535ac6cb29f56eb6bec26f663138d4a99b49a711b5936e8ce"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-04Z-STS-vehicle.jsonl",
+   "sha256": "5f628becb282d8e29744dd835d3c6b053275b31a13e94a20b95e01e3cd646851"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-13Z-STS-vehicle.jsonl",
+   "sha256": "9cf3856dba704bbcbe0763fb7b56e4121a110d9a57683b12bc0c4228091ef11e"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-14Z-STS-vehicle.jsonl",
+   "sha256": "f5013fc5c76c2e8767e2ff0b2bf067ef994154a93c982b9c4c8c324b099662c5"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-41Z-STS-vehicle.jsonl",
+   "sha256": "589f388643fdd04ff0b55a9ba86701a9d0f849ca844fa0d00f2fb1f0371237d7"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-42Z-STS-vehicle.jsonl",
+   "sha256": "3d1013f5b8c56f9fa0720439f7cc47ab989b782dd4ffe6c8b10794b69e512534"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-44Z-STS-vehicle.jsonl",
+   "sha256": "dfe7bb9bb86001de9f80b0c18ae54b8bcb118ebf309a486131215d2a8c3a2184"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-45Z-STS-vehicle.jsonl",
+   "sha256": "07ac1484cad0d08d719ed003f668d798e17e1fc69f5940648929cfd04382de78"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-24-49Z-STS-vehicle.jsonl",
+   "sha256": "4ad617c0364b9971bc3efaa91eb5d66d74effb92025a0528a9c7a66c25488e05"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-25-30Z-STS-vehicle.jsonl",
+   "sha256": "0cd90e1d1bb6d80d1c14b936e43f47d730590665f75c35d8a1af0b7eb63ee657"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-25-31Z-STS-vehicle.jsonl",
+   "sha256": "8c07cd213dd02850b6ced80d08411f12458f02ff8ac34dd4e7f985ac15e9c522"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-25-34Z-STS-vehicle.jsonl",
+   "sha256": "ca4d7ec743c44784292d281231c564decb40e760b2773d5d8fde529cac073cf3"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-25-37Z-STS-vehicle.jsonl",
+   "sha256": "8f1b694ed1867b0a1c56660d6d3b651056fd38734624226459a734d400c683ff"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-11Z-STS-vehicle.jsonl",
+   "sha256": "552d21e7114b929c3c28671aeb6bff9358d4fe082c945fcb9657ae7b56f112c2"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-13Z-STS-vehicle.jsonl",
+   "sha256": "870ee42abb8c761c715c8c212e914ce262dd6721a85031b87b26ce3660b8e1de"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-15Z-STS-vehicle.jsonl",
+   "sha256": "e42824bfda2e82b9868f0cb6625ea85ae3783cd3bbbf36421cb580554262e352"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-18Z-STS-vehicle.jsonl",
+   "sha256": "894cabd64a67daffbd2801434c875ed99a33757808433197edbb5a63faab5a53"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-46Z-STS-vehicle.jsonl",
+   "sha256": "cb157d1c624340ec44faf13870c567d021a5a5fc684154a1bc8440a7f1e1aed6"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-47Z-STS-vehicle.jsonl",
+   "sha256": "11e331e19d45a06c6bf85a6feeed3a03dfc19d74a5551287775d4d688fc1c1ed"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-49Z-STS-vehicle.jsonl",
+   "sha256": "462bfe5f0b44e83c92a2b9d5d1e80e0723e988e50c0250f1a7525af16a4c5fdc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-26-52Z-STS-vehicle.jsonl",
+   "sha256": "b506d80274bdeb8cf4b31bd6f51afdd41133563ad0aaf41e05a5b11feb50a1fc"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T06-29-47Z-STS-vehicle.jsonl",
+   "sha256": "b715b99d7afc7ef9f2998ee539dfbf1d9a496c43051df79bd48f9358054aa972"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-06-18Z-STS-vehicle.jsonl",
+   "sha256": "f1d9be2fade83854af0ef565485921218f4a25fa32ccbcc5786f15e70d384d77"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-06-19Z-STS-vehicle.jsonl",
+   "sha256": "6fc3a061b05643b6cd60a08de8c1474ad9f78e7e3f7b4156b164a630bfb77da8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-10-28Z-STS-vehicle.jsonl",
+   "sha256": "4dcd31d4317477a6fc9c2b0342f515be9f406c52637b6b40aa68147881687ef0"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-10-35Z-STS-vehicle.jsonl",
+   "sha256": "71a86d388b18e1f37b26c3f7bc84c11ec50759ba24c7d8e241e106619a5b210f"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-12-26Z-STS-vehicle.jsonl",
+   "sha256": "b16a6857e7118bbd65b4525d9dc379a2e7f1c833bee95370d0c59dd56d48b9b8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-12-32Z-STS-vehicle.jsonl",
+   "sha256": "b1df0ed7b1fadd23a7433c7ff957ca29e18792367dc935d9119cfe4195853f27"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-12-33Z-STS-vehicle.jsonl",
+   "sha256": "92bcbb1e0e7202e1181de60c26814dd128db458db191008269ac34cbaf97a015"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-13-33Z-STS-vehicle.jsonl",
+   "sha256": "0aec7a0e6f292755b80dd5bdb0ab4e1e1a2f79ebfd374d47d8bb70cfbc9b3aea"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-13-38Z-STS-vehicle.jsonl",
+   "sha256": "a40a4f91561fa1eb082da46a0df0d9491b45d4becb86007d39bfff01bc8c4975"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-16-18Z-STS-vehicle.jsonl",
+   "sha256": "6004da8eaa7efadc8920ace7edd14d945369ab3acc25b7faa221fce8f0e78958"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-16-19Z-STS-vehicle.jsonl",
+   "sha256": "be733e5591cec0331177a94d817a9a438c80c4a28a481df8472353e72fb7c4b5"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-16-20Z-STS-vehicle.jsonl",
+   "sha256": "6dfa2ce97d89f6b5e483b9b493255f5fce035a97a236aa15353c259aafe8becb"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-16-24Z-STS-vehicle.jsonl",
+   "sha256": "20eda6da315c1759614b5276fb3d24d8bb9fab254309024aee9ff4400f245402"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-18-19Z-STS-vehicle.jsonl",
+   "sha256": "75bc4dadfadb036b49e1d7daf5c418f73ba4fd29397dc3e661dc7149452ac244"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-18-24Z-STS-vehicle.jsonl",
+   "sha256": "ec6c32006324e9795db2aae5637825dbe015cf7cb09f1a93e27127c9c484e70d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-50-49Z-STS-vehicle.jsonl",
+   "sha256": "e732b8049dd6907c8f73b6c45896ef7e3b5ecee5f6034ca23fbe3b1d35e460af"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-50-54Z-STS-vehicle.jsonl",
+   "sha256": "bb1bd09a5fe305fbb2bb78fdac8a4f0395a627b4fac0f0a0521126732159d3e8"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-51-14Z-STS-vehicle.jsonl",
+   "sha256": "355825642269546c94f9927fb0c79d8ff5ed64aa9c10566aa9ca01c1e76cae8a"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-51-19Z-STS-vehicle.jsonl",
+   "sha256": "61ba70777c20d85d38f6c21dda292dbc0a9e0e4516d10a38f31aeb49f925f698"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T07-54-07Z-STS-vehicle.jsonl",
+   "sha256": "83cac6ef7eae878290bf9b569f701efea086d2d6a344691b939d83642e7a7f8e"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T08-15-19Z-STS-vehicle.jsonl",
+   "sha256": "b8486ec0a176f925e2396265200431057c90e9de3883bc4f81c2343b4c28bf5d"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T08-25-48Z-STS-vehicle.jsonl",
+   "sha256": "a0413e74b22662182334f25f36ff0159a937420aff5a21c458c9a22128b7a097"
+  },
+  {
+   "path": "FlightLogs/2026-10-10T08-28-20Z-STS-vehicle.jsonl",
+   "sha256": "e55dc83df09fca8a1b335cad2e579915e15619ed99360c6dbb34f56e8a1ebbbe"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T15-48-51Z-STS-vehicle.jsonl",
+   "sha256": "75e8ab4ef6c2a494f7f94af8b981b7db5f428c9b52541e24ba64d98f1b0d479c"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T15-48-56Z-STS-vehicle.jsonl",
+   "sha256": "a372705ade69f9881c4bff1aca1ac503edd4cc59657b06b0fd15593b5e21a5b8"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T15-52-35Z-STS-vehicle.jsonl",
+   "sha256": "3e0129e538b762e11dbafd607ce1cc3017a6bcaca549d8187b0bec75b59a3196"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T15-52-40Z-STS-vehicle.jsonl",
+   "sha256": "04f76ef97cb2d23db90f0692fea4057e766f3bd733503dfde2f6a8d04135ec43"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-06-50Z-STS-vehicle.jsonl",
+   "sha256": "fd9dd7e8b417607a976d236e7404ddc4cc73e2b5bb00a55b5e440932f546d5a5"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-06-56Z-STS-vehicle.jsonl",
+   "sha256": "7931c5e8b703f7be2aa649ac6f820554ebf2c6ebb209f2d74264becfb4684ce1"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-07-15Z-STS-vehicle.jsonl",
+   "sha256": "919a05bd3a08ceace9832cdaebe0d2322cdc19470bd5065ef8f520b196b0d6f0"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-07-31Z-STS-vehicle.jsonl",
+   "sha256": "180e883b94bc86f739edd4eba6c1bd238c9cd6403b6f761b3acd17c6aab8575d"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-07-37Z-STS-vehicle.jsonl",
+   "sha256": "c6a5eed050a31c4dd2470b01623704f8b0e98980b3a27fe2f7ac7adea17f1e06"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-09-59Z-STS-vehicle.jsonl",
+   "sha256": "4029d87275719d13dcf39174e15c8e96d121dd449a15b43fe2a0cd67f835ea28"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-10-35Z-STS-vehicle.jsonl",
+   "sha256": "6733d7c94a4f9c8ae6fd76368962311261087a20cbfdaf0f95d2d536bc913baf"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-11-04Z-STS-vehicle.jsonl",
+   "sha256": "ef0d2da5b7ef78997a77be2419b5db4be82307d349abd5192fba6088f3643188"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-12-44Z-STS-vehicle.jsonl",
+   "sha256": "92e42fb061fd4aa81494ac1406b53955cb43dc78c60306280eea955ace81acba"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-12-58Z-STS-vehicle.jsonl",
+   "sha256": "d6ae6f2bb6a99a15e988d6a8274cfe0e5fffa8c48e9cfb6a53a66b4604062869"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-13-04Z-STS-vehicle.jsonl",
+   "sha256": "be94da049e4b7aebad5962bda17df21f6863c377eb75804193a3f68da05508a1"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-13-41Z-STS-vehicle.jsonl",
+   "sha256": "dffa083ae3e8f2badc64c076755579b974407698fcaf5c0a5cde0c5d0133583f"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-20-03Z-STS-vehicle.jsonl",
+   "sha256": "0f564e8346102e6bad67c62b75d08268730ad9194b4056382a9ab906712c78bf"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-20-14Z-STS-vehicle.jsonl",
+   "sha256": "0584aa27aac05bef834712c68822f7be0b9b3eec4164d79062b3ff139333fc38"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-20-24Z-STS-vehicle.jsonl",
+   "sha256": "427fdf8a3c53cdc461cdaf1a1595fec6916efb7e1af5c9accab7dc085a1ebfa8"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-21-04Z-STS-vehicle.jsonl",
+   "sha256": "2a88c788fd96e5849d0f7f59be354059ece2a987c44cfaeeae4f28d1105b106a"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-21-09Z-STS-vehicle.jsonl",
+   "sha256": "7bee94b3168098b50c7d78bfeaa6c929b38ec52079b1f44e4b6f66510fc00cbe"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-22-31Z-STS-vehicle.jsonl",
+   "sha256": "1450a68a80e5486052450e2185b7c099d740dfe147e16c451f3280ce702f1987"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-22-36Z-STS-vehicle.jsonl",
+   "sha256": "6db19b67f9f1aa989f7c6918bec6503818e4f864062b5006c5d1f2b504400324"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-21Z-STS-vehicle.jsonl",
+   "sha256": "56ca7530b7688f3a28d1fe2581914db6048a0297fd6f2eaf432e4f6c64eba1b6"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-25Z-STS-vehicle.jsonl",
+   "sha256": "6b6b7d0a9a6c8c854e4ab36b17fefe31a8f9cbc3f95cecd27d012dce37047d03"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-29Z-STS-vehicle.jsonl",
+   "sha256": "2ae3d20d8503417efb25266a2f0a81b00fa477c8b543229ac8d2b81e3b8fe4cf"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-37Z-STS-vehicle.jsonl",
+   "sha256": "0cba804a2c689dce2ad35cbba3dea949d6b1083330f222f50dfbee44203182f8"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-41Z-STS-vehicle.jsonl",
+   "sha256": "f78408559900cca46baf0359ad92a06dc996ce86fa14f4c284d620d9633d7e72"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-45Z-STS-vehicle.jsonl",
+   "sha256": "deef4d6a0e68105dd880988e62cb414dba330ee214355cb6419e691c20b5808b"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-49Z-STS-vehicle.jsonl",
+   "sha256": "92ff80cbcbdcc0e71d8c78242f32f8158c8b5552cdc7700b0f2b3dab5d529feb"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-29-56Z-STS-vehicle.jsonl",
+   "sha256": "d5bdc2aa6760c6728c384c653ffbdac51248d61d80723a70094fd0ec15a18850"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-00Z-STS-vehicle.jsonl",
+   "sha256": "3fda230c5e09789f436466b6904a8c28ba250123d16c1b29d12ea4a11eb97813"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-04Z-STS-vehicle.jsonl",
+   "sha256": "f29aae1001efe32fd05e492152fce2753a75507eb91e7358351a291b54eeee05"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-08Z-STS-vehicle.jsonl",
+   "sha256": "481d3e750b6cf44df5aad641f263c72c14f8919e31cdf901990e1c2bf84e5032"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-15Z-STS-vehicle.jsonl",
+   "sha256": "47ccdb6d8ff7299b50707b8e924500189a3764978151689f52520a6aff24b1d2"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-19Z-STS-vehicle.jsonl",
+   "sha256": "2629a25150401295db76d197c622fba812506645bab4277715ab07df08da08d1"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-23Z-STS-vehicle.jsonl",
+   "sha256": "b2c52000ab4e74fca957ae5839c465e335d89609cef319377417f4a711504335"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-27Z-STS-vehicle.jsonl",
+   "sha256": "9edbb07c6c1b3d24687e04af0c4b551ccab0526519fbea41562b1180587f69a5"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-30-34Z-STS-vehicle.jsonl",
+   "sha256": "2896e0a914ed56c429097cebc78f0c40202eea513357d349cdeaf2f0d544620a"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-35-49Z-STS-vehicle.jsonl",
+   "sha256": "7d2b902d814fd9a757b36c8f2b670d5c81839d338a52066f20ba018eaccdf80e"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-41-05Z-STS-vehicle.jsonl",
+   "sha256": "11b655be408944deb5184fe13e2662b891730c7df4555d85767065ce1ba99cad"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-45-05Z-STS-vehicle.jsonl",
+   "sha256": "173bf47b9b351d876d557151c82263a2de25c72ed97a67ca3b0adb63f2196b62"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T16-45-10Z-STS-vehicle.jsonl",
+   "sha256": "20a6d02d4ab90e7b367896321dcee6034953b00b9ca7088cdeae46bdf5b12c02"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-14-41Z-STS-vehicle.jsonl",
+   "sha256": "fb3997f8efec64818ba98a45db3f886ad6a20b89230a9f3f3292fd6ac7f8f9da"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-15-08Z-STS-vehicle.jsonl",
+   "sha256": "36f354d3ee353bc4c591ef5bba895ea05dae10d2724cd8b3a4c05c4d9167b263"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-15-37Z-STS-vehicle.jsonl",
+   "sha256": "7da2b48ecb23002fc3e3f6c3c5fe89239c6aecea2b1b2337535e3caf051cb994"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-29-51Z-STS-vehicle.jsonl",
+   "sha256": "4b558c0f114c034dd4b18d9f40aaac891711aee5dfea8016f37d25bb247e6bb9"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-53-39Z-STS-vehicle.jsonl",
+   "sha256": "2cd26197711f20c264004875fe672151cc87ff950c590f42d37bbfbe6d1722dc"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-53-44Z-STS-vehicle.jsonl",
+   "sha256": "65ea0bb19c1d51317cd61006f1efbc7a3efc30468e3948945998f931e96b50d7"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-54-14Z-STS-vehicle.jsonl",
+   "sha256": "51470b4309d451b186cb638ede04d39745fa763c29b1017bdb86b15b8eee4937"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-54-19Z-STS-vehicle.jsonl",
+   "sha256": "55221e20994f9d6961f047423752627430dc3782d2080ad795ddee0e75f523ec"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-58-55Z-STS-vehicle.jsonl",
+   "sha256": "de3dfcb2e5eda3ceeb1ced2596c7f573b4742a30a324af62a72f558e4b1e9803"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T17-59-01Z-STS-vehicle.jsonl",
+   "sha256": "ef7f178671ee03df5c2d190753c1d2bc6fc1dd89e091af1d67059dc660245cca"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-25-12Z-STS-vehicle.jsonl",
+   "sha256": "d25315b3589906f3bf3cabded3fdf09ef843895af37503bc93b46983e7bf02c6"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-25-18Z-STS-vehicle.jsonl",
+   "sha256": "6db51047e4404d41003144e1cf93c2714e040751290fb1768ebfad0904dfdcee"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-34-52Z-STS-vehicle.jsonl",
+   "sha256": "563b627df9bb5ac0221aa6bd3667dcd732deeae015d4c068b33bd19586d59706"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-34-57Z-STS-vehicle.jsonl",
+   "sha256": "50c8e5ef52071004030d50e8f104836fe26b3d299157d66b4afeab4518f86b48"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-46-13Z-STS-vehicle.jsonl",
+   "sha256": "3506cef9afd5eaeb20629b3e2aafbe44c470bf5656c93c05b770f4f7a141428c"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T18-46-18Z-STS-vehicle.jsonl",
+   "sha256": "ed539055aadf371f8738817bb93383c62a0470bf67cc08cd9261e2a8ff49fc53"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T19-09-57Z-STS-vehicle.jsonl",
+   "sha256": "907e8d23f8b6f927559ab52129821abea78ad66b2983c3190c7233c741eb68a6"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T19-10-02Z-STS-vehicle.jsonl",
+   "sha256": "7bce9518d7b242ee439dbff1a03960b496dac6ffd1e69e833aa015af51770d7d"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T19-27-26Z-STS-vehicle.jsonl",
+   "sha256": "fdba0f3c6e15ff2fb41a3109191edddbe67c3ae7cf2acb17080e431b29c1e595"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-39-04Z-STS-vehicle.jsonl",
+   "sha256": "85060b8c65874164fcdb73abc427e0e064630026f918201f7fd6e7431efad8bd"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-39-10Z-STS-vehicle.jsonl",
+   "sha256": "d56eda1c397d391457039c80707d5aae01fb39b6bc78be4c8feedabf0c95fea4"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-39-58Z-STS-vehicle.jsonl",
+   "sha256": "2b1a5ad4a154fb65c2c5fd1e59eb82c4035024949776d294cf731fdc6507e345"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-40-03Z-STS-vehicle.jsonl",
+   "sha256": "a609341c8b2bdd9b1028134d8a49df83255a19ae30c5f91979847fc51ac82860"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-40-35Z-STS-vehicle.jsonl",
+   "sha256": "948a3ff369c7172818e27d6372c541fa55c5089f6135846fc22ba11053b364d8"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-40-40Z-STS-vehicle.jsonl",
+   "sha256": "6ec7020609da1085a18ef31ba8339facd6429d0dba63b3325465f9dd1ff5c274"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-41-40Z-STS-vehicle.jsonl",
+   "sha256": "b23e23d9684adfa88c2af15d3ce59ab0e8697b047f4168d25c81dafd4499dca9"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-41-45Z-STS-vehicle.jsonl",
+   "sha256": "e7172131e1037b096e7465b83f9e9245e6b848b91ecfc8ad5a2b20442fd2116e"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-42-33Z-STS-vehicle.jsonl",
+   "sha256": "bb7ceb4dfa0f01cdfc9e8640cb43982f3c60f3000670011aec5125560f7a68ab"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-43-25Z-STS-vehicle.jsonl",
+   "sha256": "73f0840c4efe13806182aadd1541e46888b67b20a28a9c97c5caaeac45272228"
+  },
+  {
+   "path": "FlightLogs/2026-10-11T23-43-31Z-STS-vehicle.jsonl",
+   "sha256": "5325a8c6ef93e1aca137dbb6e0e015eebc9186f4e83d7927365f3485cf39f076"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T00-09-00Z-STS-vehicle.jsonl",
+   "sha256": "37b90ba1b90958501f544478c17790047919c8ced2035235359f1b2c5001b743"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T00-42-46Z-STS-vehicle.jsonl",
+   "sha256": "fedfbb980bff9b57511d2db3d22d7fb934a902a0f7b4a8f4d2a8cc6e3e2267c5"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T00-44-16Z-STS-vehicle.jsonl",
+   "sha256": "8ed0e7f75cfe8ec378b528870af5c90ac7c7d96168bb6306b9279c0766f392f4"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T01-04-38Z-STS-vehicle.jsonl",
+   "sha256": "fdc3904f4831a944c351b51c9f55a5394b4615efea434aae4773cc09c09212b0"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T01-26-17Z-STS-vehicle.jsonl",
+   "sha256": "bfc365d3452fb80dc7d10f60566bd6359a142a2130d9cd55e70d8b2fb87669e3"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T02-37-50Z-STS-vehicle.jsonl",
+   "sha256": "c8e7177991879b367d73e9806af25c89b697f64f82a3bcf5118fa23b391a347f"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T02-37-58Z-STS-vehicle.jsonl",
+   "sha256": "1b5fa65690915fb0d586b6b078209c14258afac80f6eb4bf76bf4d647c212985"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T02-38-41Z-STS-vehicle.jsonl",
+   "sha256": "9f538356d50fe606578e536337f458eec26c59337aba689e7119843b775cdcdc"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T03-18-11Z-STS-vehicle.jsonl",
+   "sha256": "110e3b92f7e58f49de20803618ea24b4670d64458804116db7d7558c7de0aa4b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T03-18-16Z-STS-vehicle.jsonl",
+   "sha256": "f4f6b671d8aa622377bf293c62f0f4ab3aaf25f748662028ae26dd7fa6bcdbbf"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T03-25-45Z-STS-vehicle.jsonl",
+   "sha256": "cf7132059b3a5e703b5b89d6cdbe860745681cae355dd879af9d818ce49751b3"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T03-25-51Z-STS-vehicle.jsonl",
+   "sha256": "d60b4c1f2002ef9aa9ba3849864fdcb5a4bfa130c210616c97ddc7d4ef0161c4"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-13-39Z-STS-vehicle.jsonl",
+   "sha256": "8bd5fbae8d8023500210747a7c9a10f301a4bce8995932aa43d5bac6529a1c92"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-13-52Z-STS-vehicle.jsonl",
+   "sha256": "a3940b285fbf03ba3c82b294fd15a0b5b112e3ffc887d242556a6afb28f8f5f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-20-24Z-STS-vehicle.jsonl",
+   "sha256": "e621bcae0750a208f02b643ba0200c5e0f2cbef9f289fddbdbe1fd5fbee3fb58"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-20-34Z-STS-vehicle.jsonl",
+   "sha256": "a53914e347fd68fdbe0f1e1815c68281c90d6db11ba26b95216912791d0776cb"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-33-40Z-STS-vehicle.jsonl",
+   "sha256": "8bcbbfb6922b1df35f36e8b0276f62ac43c014bad6dcc0ae6f2eafbda56a37e7"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T04-38-46Z-STS-vehicle.jsonl",
+   "sha256": "820512f60467f3defc2b2d32c2da5704d4af64309821a543a2e5976c99c326f8"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T08-11-06Z-STS-vehicle.jsonl",
+   "sha256": "71f780ce59899f9ef2927380e3964a9327186abfa0cd9b11498422778009105a"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T08-50-32Z-STS-vehicle.jsonl",
+   "sha256": "4ac074736534f698e5197176c8a600d43f2ad0551aa685ea661aa045cd1d6bfc"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-08-16Z-STS-vehicle.jsonl",
+   "sha256": "46c537c05669ed073385a9b87aeb45bd21a2381e92aead2026a551e2a8039f42"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-13-38Z-STS-vehicle.jsonl",
+   "sha256": "7c5c889d583c93e454b366faf006e9cec410e57e0f3a23fcf1dedcef1bb174bd"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-14-36Z-STS-vehicle.jsonl",
+   "sha256": "9c791f290d8dfc6e036f4deab9e648317797c122acd205c89189557f404309d9"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-34-54Z-STS-vehicle.jsonl",
+   "sha256": "d9a84cac68d0a6bea180895d4a14247e1154dda85ab3203c29e11dcf793f6e2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-45-19Z-STS-vehicle.jsonl",
+   "sha256": "89fd627f276e10d63d2bb6e00eae8cd6122363dfd8af7b7cbb91094482b3cbce"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T09-50-05Z-STS-vehicle.jsonl",
+   "sha256": "0d25c8a60232fbd095b69287dddd9d0c28846032e4e49e004f801f8315156c35"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T10-06-05Z-STS-vehicle.jsonl",
+   "sha256": "54d30946163d9782ba078c6439e7cbfea61859aa7b637ece7dad05008c7c9442"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T10-13-00Z-STS-vehicle.jsonl",
+   "sha256": "0300ca83487db95e567151afd7ef1505006f65e33af4d78fcb671f7d1810eb86"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T10-24-47Z-STS-vehicle.jsonl",
+   "sha256": "c623560e9a8d03158f18c62f94ab192503ea635bd480bb4c40ee831334335fe0"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T10-25-20Z-STS-vehicle.jsonl",
+   "sha256": "92bc894213b87fc3e8b28d2810cf177e115f8508549c0ca141e43f585e8c0aaa"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T10-59-09Z-STS-vehicle.jsonl",
+   "sha256": "f7c3fbf5467cf19d17470bdad4c7e263b2bb7f82fb91fc3ff5ab64564a02fcb9"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-20-45Z-STS-vehicle.jsonl",
+   "sha256": "8d8a8cf56042881ce3e78faba07f986fc5a77e7a18f55b1bba7ea67ee455071e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-20-53Z-STS-vehicle.jsonl",
+   "sha256": "a889c43222d9f425de334c0b6802f200fa0b04ecd0496e1f2c733f0d15f2357c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-24-49Z-STS-vehicle.jsonl",
+   "sha256": "4944f1fb6dd3552a738fef4b62b7f16515e8a79ab10c49aa0d77d7ab47afd390"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-24-55Z-STS-vehicle.jsonl",
+   "sha256": "b544f5a2ceafcf7f6466752fa1be674d07cae5fbb95d59d386b2950a2b0c0d0d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-27-55Z-STS-vehicle.jsonl",
+   "sha256": "df40170e473a9801e3ede6c2609c60c1dea402bb0d5d6bcc633acdedfcb4cf65"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-28-19Z-STS-vehicle.jsonl",
+   "sha256": "6a4682baa4b7f6b47e78da8ee4fda380ffcdfeb7c7654aefff2fbd6dd1e67016"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-28-42Z-STS-vehicle.jsonl",
+   "sha256": "6e98aac37b571aea8a6644c582d61cdd89b6dda1c8ce4048b71a0fec9739069e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-28-48Z-STS-vehicle.jsonl",
+   "sha256": "47bbfd6228a9ec10176443be94758980f34151e8ae643ed1d2db00025e8c6107"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-29-43Z-STS-vehicle.jsonl",
+   "sha256": "8f90097b3c438842f2cfba4eabb2defb4ca148c0928285b9f0cdb4e04a26bf4a"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-29-49Z-STS-vehicle.jsonl",
+   "sha256": "fb0f34fe47b8b548f05baf579fd1335a3b340714b2f1f61c25a88e3c67bb83df"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T12-51-12Z-STS-vehicle.jsonl",
+   "sha256": "329bc6e92cef4ae223f0f2c6e3e3c8dcdb41484a6f1fbf953c3f771bc344a81b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-11-32Z-STS-vehicle.jsonl",
+   "sha256": "c2946b231cd07448e3e14017f13d9f0d7a6dafccfdada31fea8409cb3f31ba82"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-11-38Z-STS-vehicle.jsonl",
+   "sha256": "387244423b3cdcb7bb9e5b0f98743a13b85ffdfe6251f11520fe8914351d0bb1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-31-53Z-STS-vehicle.jsonl",
+   "sha256": "6e4eedcc42f31ab4ff12dde86a1f64d749fe96cea20c552e48814f409671f19b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-31-59Z-STS-vehicle.jsonl",
+   "sha256": "1ed724fe88276f213f4544cb7b68af8d0b71170327b6f6a758111dc818d17a47"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-38-18Z-STS-vehicle.jsonl",
+   "sha256": "dd6c44a559fc58d4cbf5febb21325e72580197c002f8b660dc5658b285f43786"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T14-38-24Z-STS-vehicle.jsonl",
+   "sha256": "1d14ffe167a2db9bd4f258d7c9b062ca9e6ee556b790894718b7fa78735f2764"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-05-43Z-STS-vehicle.jsonl",
+   "sha256": "e5ec76214e6b3508a73669ae9b12f7352f9b0d6b2c50a133302f771d03a6282c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-05-48Z-STS-vehicle.jsonl",
+   "sha256": "b535dc805dcfb708fcf3b54eeda7488b063242d8297e714ab88c8bc04ade3e72"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-10-10Z-STS-vehicle.jsonl",
+   "sha256": "13e46533dfd38e415e143b13ea92b4a333e06cc730e2c0aa10cdc148f7dce5a2"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-10-16Z-STS-vehicle.jsonl",
+   "sha256": "0b63630fae6d9febb2a759fa073a2822212dcb92e7daa211dec4347774ded509"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-14-32Z-STS-vehicle.jsonl",
+   "sha256": "ba4dc15392c57a86854676767078d31696c393df55f566f239b12b66a4d2726d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-14-38Z-STS-vehicle.jsonl",
+   "sha256": "c85c536744ac45145a0ab32e60040f92017d6f19e4e18d8bc172e001e787f0ee"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-14-39Z-STS-vehicle.jsonl",
+   "sha256": "aeeb1b62fa53d5c09dc2dca3c7b7ebf8d334283df3cea338a88599f700f8e945"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-14-46Z-STS-vehicle.jsonl",
+   "sha256": "5493ab903c19f9d5b8a4014f97408c04a7018b6088621244920047fb97277cba"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-15-37Z-STS-vehicle.jsonl",
+   "sha256": "e02cbe5b712d994b55d9c6e3e20854e35d3453b816995853a7531fe31e4b9848"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-15-43Z-STS-vehicle.jsonl",
+   "sha256": "f961c1da00a53c3ac62f92ece44571b879745e72499e7320f592cee95151031d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-16-15Z-STS-vehicle.jsonl",
+   "sha256": "e0283a7b2726a0ac22a0d113d8b476f638cc9216ac733f13e00a0baa89289bee"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-16-21Z-STS-vehicle.jsonl",
+   "sha256": "0d60b84e4a282b7569a872fb60457c85727a978e1819b3237b1a89b5f15e4dcf"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-20-10Z-STS-vehicle.jsonl",
+   "sha256": "45c38cbd7d787ac3e1c8fd645f9864f5a19ea9f935c9c006934e6e9a108c4908"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-20-16Z-STS-vehicle.jsonl",
+   "sha256": "88945e6b20d4dc6cb0c7ef726ab5bd7433bef5d84946dae7bbf0b42bbe15a5b4"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-58-14Z-STS-vehicle.jsonl",
+   "sha256": "8d88dfbc9997702dcf369ce413b2cf8c0275e93d28a6e8217d988e7992f4f84b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-58-20Z-STS-vehicle.jsonl",
+   "sha256": "f48c68988e93fad6e91e82fde33d1827725d094d21ae2fc70db91a3af061c3b2"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T15-59-49Z-STS-vehicle.jsonl",
+   "sha256": "cd34c0fa885e2d8ed2de266dfee4ca38de6aaae90c6a4b08f256ded1d9078e32"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T17-07-27Z-STS-vehicle.jsonl",
+   "sha256": "60081cf6b7994b15c5fa74ff5017e65b990cd8c1b8c8aebe5f929f2dee002f52"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T17-07-33Z-STS-vehicle.jsonl",
+   "sha256": "0effaff4985051d92a18037447338d3eb0ec6d1763a51d4c62bac14e0c326e50"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T21-03-40Z-STS-vehicle.jsonl",
+   "sha256": "9919fbed2eadccd5f8f5240a20faf6d3a10577740df98b7847139c979b399de8"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T21-04-01Z-STS-vehicle.jsonl",
+   "sha256": "a4d426d19712702b262d2d2ecd83d883990a138dd3c7a869c6e40703c5de96c8"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T21-07-38Z-STS-vehicle.jsonl",
+   "sha256": "2da61102c2c53e4990c74aca4520cc0f48a418e043b6dca3e0f3dacd3f1437c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T21-07-58Z-STS-vehicle.jsonl",
+   "sha256": "cfece8cacdbcef4af39b3fa5c00ca5d883dfb9f81ae15f3db4807d6417b79206"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T21-39-50Z-STS-vehicle.jsonl",
+   "sha256": "6f0ad5c5d5a7411b73fef652fbdb990ad2c5ac014f474c71364b698103288c9e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-12-04Z-STS-vehicle.jsonl",
+   "sha256": "1bdb931e079ae121687d8bc0da7e8294052f96a2e490df85a3a127c2ffd056b0"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-15-31Z-STS-vehicle.jsonl",
+   "sha256": "1ca07fb9c344e18c4f8d06da3999155b366e8eb36cf09137e33b34890e0df604"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-19-53Z-STS-vehicle.jsonl",
+   "sha256": "50f1523bfb4c1dafddefeddc3aacb856add5fab0816a5efffc4ebfce5bda0366"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-19-59Z-STS-vehicle.jsonl",
+   "sha256": "f51b7297a94d48ce25eadb1b9ec8be6fbc8e14bc1d0d202e52b1aa03581dc2b1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-47-44Z-STS-vehicle.jsonl",
+   "sha256": "563177cbc05df25a402ad39be5e65880ca1b36b0f860dad89f2eb42474c3ba76"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-48-07Z-STS-vehicle.jsonl",
+   "sha256": "8bc0aef682c77ed59ec412d1b474ac46256a4db6782cd643039711a05169ea4e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-48-13Z-STS-vehicle.jsonl",
+   "sha256": "66409479e4fe92b5f1c11ffb75fe9522f7a5e9efda646e0eed7df59e0542c833"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-48-35Z-STS-vehicle.jsonl",
+   "sha256": "94a539dbc174a0b0f00274065360854884bd9df0514d0778a0bde689872ef391"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-48-53Z-STS-vehicle.jsonl",
+   "sha256": "d2d6d441fe5a78df3f6779445b0969adb06b663441ef38a18f0d8e137fddbbcf"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-49-13Z-STS-vehicle.jsonl",
+   "sha256": "28aa7d0600117417d9f745a3e3a9068e735a878e45c5993f9780bd91401735af"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-49-33Z-STS-vehicle.jsonl",
+   "sha256": "004943d455bfa5ed35d2c68acce36a49d1d1da3ef319fd8a9525aef2d607cd55"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-49-40Z-STS-vehicle.jsonl",
+   "sha256": "91e41b25216d92786dc6a9a617e64ad2c0739ded378cab0407e87587d67ffad6"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-50-04Z-STS-vehicle.jsonl",
+   "sha256": "b2e49c6ab19230ebb159e2b1af8d1925b8f0f2d9da7f633c2d782ce8e199eaec"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-50-12Z-STS-vehicle.jsonl",
+   "sha256": "33ded8b98dbd7138e4fcf546552c324c2aeecfdba06a2e8f27d7d42c12fd857a"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-50-34Z-STS-vehicle.jsonl",
+   "sha256": "8e46c678c39f4ef3603c66047cfaf5f02d01d89ef3f24bb3a370854e62eee30e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-50-41Z-STS-vehicle.jsonl",
+   "sha256": "cfc6c8ca7970cb435ededbc3fda7baa6b1c5114cc655a5de6d0711a7e6395c29"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-51-03Z-STS-vehicle.jsonl",
+   "sha256": "6629d6f5c387de5ef4b2041e7ebd72a241ac4ae378affce163750b27ae792434"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-51-21Z-STS-vehicle.jsonl",
+   "sha256": "93b6f9ddb92fc1fc3e3398febb9c05c9ee2252f773028fa3c9325302bb817243"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-51-29Z-STS-vehicle.jsonl",
+   "sha256": "e5b3992db2d25063e74cb31301f2474a975fad4f9c45e18643ab6bb49ab8496b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-51-50Z-STS-vehicle.jsonl",
+   "sha256": "8f25a40330a263f6eefbde856d88f7c0d7349270f7bc5664c1f1b7631135a62e"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-51-58Z-STS-vehicle.jsonl",
+   "sha256": "4ab5258bf34605205de653275733b2c92786c58d45f4aab60648e913500a279d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-52-19Z-STS-vehicle.jsonl",
+   "sha256": "0d59bd32fad31725d30d2c98b14c05213df38f3c776921965337d87be8f16fb1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-52-37Z-STS-vehicle.jsonl",
+   "sha256": "43f70f1c452cc716f82bd09e06ac605bf1c0aab8202fef0e99b5483c46439ae5"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-52-44Z-STS-vehicle.jsonl",
+   "sha256": "f596c9738f7f27f1ac55990f70c36e966b1b9f5f98909729107776ea86bb2de5"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-53-05Z-STS-vehicle.jsonl",
+   "sha256": "bd12a32197184ea1c629637b27aa59465c56ceb1f51f633eddffdb21ea0af0ff"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-53-12Z-STS-vehicle.jsonl",
+   "sha256": "aa0a727070d7661f4cbca4e2a8af1821f17c6fbc96f575386613a843eaeb4414"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-53-33Z-STS-vehicle.jsonl",
+   "sha256": "0b6e8d8a7be563782684daed6f24433a1e9a7193ddc8ec73d501af0020b31af2"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-53-40Z-STS-vehicle.jsonl",
+   "sha256": "cef066f9950ff9af67e46a374bf6b84376e7841f0782df1440ffc7d1df8cba0f"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-54-01Z-STS-vehicle.jsonl",
+   "sha256": "ca49eb86e8a30905ca9c91b9497202a0648b6425268e25ea5136347603bde07d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-54-08Z-STS-vehicle.jsonl",
+   "sha256": "233e82c62d90da06efe41401b99b1b9c8b62e2a4872b492673dc6cf92ce1ac12"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-54-31Z-STS-vehicle.jsonl",
+   "sha256": "64649469de397a1dd142c44c4c99872afdf71d5924f7e6d164f4632402285383"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-54-48Z-STS-vehicle.jsonl",
+   "sha256": "8bbe5d0a74a52be48a7c3f140b5aad281ee0d6c4fa023b303b932585844fe535"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-55-07Z-STS-vehicle.jsonl",
+   "sha256": "869e59e209e2c1968c4f841d1872281e857fb7d7445c77b17c7307ae94a6e605"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-55-14Z-STS-vehicle.jsonl",
+   "sha256": "43b817e6d54fbea9bb8f23c7d428f0aaced1360b1e794a22ec2bfb4c4fc88a0f"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-55-36Z-STS-vehicle.jsonl",
+   "sha256": "83013dd91aafdc3993646f93fa9cc6de2c53ab74ff614e2ac960789068a3950c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-55-43Z-STS-vehicle.jsonl",
+   "sha256": "af1b2201068680924b35e03d958b813afad441349ebd97183a93a3fa16a3525c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-56-05Z-STS-vehicle.jsonl",
+   "sha256": "142c7c8dbff19e3ff4bcbdb4c26e6fa2768cdf36440e841bf7b849b57c50bc2d"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-56-11Z-STS-vehicle.jsonl",
+   "sha256": "244f1d9f7880ca069c25e971e73bbe940a9c91a6f5b129f48a54ebe0899421c1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-56-34Z-STS-vehicle.jsonl",
+   "sha256": "c313a0ceb1c28e7092e47120a62768742550349ffc780a579fe6ad905afec840"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-56-54Z-STS-vehicle.jsonl",
+   "sha256": "8b4fc561a2428835b930262b381a0da6131526003a01c9314c6873a3bcec1d13"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-57-01Z-STS-vehicle.jsonl",
+   "sha256": "f8b05d61743204893232894b789a927e676304500c7f15c8fed82bae846fc8c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-57-24Z-STS-vehicle.jsonl",
+   "sha256": "0f82ef1f2e5b56dcd413b6ce1758771c7bd722715878ef9c2338dbb1c676b0e2"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-57-31Z-STS-vehicle.jsonl",
+   "sha256": "c5ba7c754b77ab02ca30eedbe2ec34e1ef4d8e25d57a503f5fcdd629b37eb745"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-57-53Z-STS-vehicle.jsonl",
+   "sha256": "3afd703728836f0390013e49263c42737e0891751e94b287f80eea11536057b6"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-58-01Z-STS-vehicle.jsonl",
+   "sha256": "07b642904df9d9b5920b69ce8a8d5f5beaa5c09a24d71524697332560f1505c2"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-58-23Z-STS-vehicle.jsonl",
+   "sha256": "4f8ea721dd729c5da776a9e5696deb0f82de23fdabb62f99130d74d0f173cfb4"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-58-30Z-STS-vehicle.jsonl",
+   "sha256": "ae4939decd5350dba52215ccf585ad6c6bd594badf680082881ed781400a5938"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-58-53Z-STS-vehicle.jsonl",
+   "sha256": "36436f2770a7e420e9de4add14c4acc438e5b35f27a5562c9e4802f5de1c760a"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-59-00Z-STS-vehicle.jsonl",
+   "sha256": "fe068eb7b6db60bd6123574515af2debd95d3a75ac0fb132a194effc0ae6cb38"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-59-23Z-STS-vehicle.jsonl",
+   "sha256": "cd52ba8437cf7c67a615a4c8cbcb1f15fbdf0925687ecc86e5e2766082cd8e66"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-59-42Z-STS-vehicle.jsonl",
+   "sha256": "45e97123eb15fa89bcc50952d312450fafc97743cb0ba7b3f2ab8c75e475ab51"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T22-59-50Z-STS-vehicle.jsonl",
+   "sha256": "d88791a3aa3cf345c5a1abb55235bd1d8376e8f972b925b977d6c7e2ec57bf2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-00-11Z-STS-vehicle.jsonl",
+   "sha256": "a724f0319e86c7c08c534071fa56647bc294629704292323a97e1c19460191c1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-00-19Z-STS-vehicle.jsonl",
+   "sha256": "dc162270f4fcdcc9602bbc0bec2046042f28c1f0798fb010fb85b8a8925a6b81"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-00-41Z-STS-vehicle.jsonl",
+   "sha256": "379dd123aa6222d34554eaec08f9f39053c3e7208a39625aec2c308c70e88d82"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-00-48Z-STS-vehicle.jsonl",
+   "sha256": "318c62fc1935f078d8e00827ec480203ac0b0ef002db124e547dcb39d32014ac"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-01-09Z-STS-vehicle.jsonl",
+   "sha256": "fdd407c62613ec791b53e51150e49fff80e665b8b8b68e5bd4dc3c8da34f60ae"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-01-16Z-STS-vehicle.jsonl",
+   "sha256": "4365552c76889bd0349bff62aea3ad4dc7641b022cacf019a7ae93051217ff42"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-01-39Z-STS-vehicle.jsonl",
+   "sha256": "5c535f3e46d5986af6cc8dbc8743cbb7706a8ad5de55c6c6ff0c79b51a3298a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-01-58Z-STS-vehicle.jsonl",
+   "sha256": "c5e1a96c87b8e0fa85c1d6552500f38e1ffe43b8dbaefac4722855df1a4d5c89"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-02-05Z-STS-vehicle.jsonl",
+   "sha256": "7c52a0a59e1b8e0b30880929530b5c448785150694b718fd2846e2d9404a8121"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-02-26Z-STS-vehicle.jsonl",
+   "sha256": "b75d8409485ea4d7da6530da10bfd56f15bd3e9fb425234e87da4097129a7cc4"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-02-33Z-STS-vehicle.jsonl",
+   "sha256": "1473d11c974b9aff0346cd89e308a5dafb1093fbbb8a8357d14eb91c30656837"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-02-55Z-STS-vehicle.jsonl",
+   "sha256": "bb5e2ffac7ab3235c669991c6b0cb2f8631a7cf523190f8c911b18fb22b85ed7"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-03-02Z-STS-vehicle.jsonl",
+   "sha256": "d936900df7a8f17dfde1f3abd5768168bb119a9fe16f122eb67d9b04deb40d99"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-03-26Z-STS-vehicle.jsonl",
+   "sha256": "5e6d8ea239bc9fa861866473e8f475bef6b6e732fbaf6001b898511881b29485"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-03-46Z-STS-vehicle.jsonl",
+   "sha256": "9c815ceb3965ad0f5a904ad8a73ec7aad2fdf11793e1b983ce412f82f49be48b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-03-54Z-STS-vehicle.jsonl",
+   "sha256": "b2f7a1889996640ebbdda171b8408d1d8a5f2720686f6a73e3e2f70f79292f5b"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-04-15Z-STS-vehicle.jsonl",
+   "sha256": "01716f1e14798080940a1a2b91340fdb908a0dd8d167ca6ecace63a98fb56ef1"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-04-34Z-STS-vehicle.jsonl",
+   "sha256": "3348e07656faefb8d6a0ac936262ababeb1f205c6bfba46ee03d9faf6deaf615"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-04-42Z-STS-vehicle.jsonl",
+   "sha256": "e31f020d0364158636a9f488d3150e371a88c8d566739934e2caec1b683d06fa"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-05-03Z-STS-vehicle.jsonl",
+   "sha256": "8a9bb0a6d9501ae3f032e20ed69eff3a81a9075c13414f2987ab4df36d76a331"
+  },
+  {
+   "path": "FlightLogs/2026-10-12T23-07-40Z-STS-vehicle.jsonl",
+   "sha256": "449e70138e5aa852cb7be4ef8340bf640541cb1af90722456fc1477c331ed5e4"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T00-29-24Z-STS-vehicle.jsonl",
+   "sha256": "51b282b6ecc15f7d85076a6700dc3aeb25d2d755680c003e69beed9d1f7f9748"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T00-29-30Z-STS-vehicle.jsonl",
+   "sha256": "7b8e8bafb0a6d0e8afbe3db608b153245a9d2be6464400765163549a25069349"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T00-37-01Z-STS-vehicle.jsonl",
+   "sha256": "fd3f624082b5420c98e2e22ed31b5193c952e00e35d6a8f39bfa367506d8081e"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T00-53-08Z-STS-vehicle.jsonl",
+   "sha256": "a25c73f94890fc52f201c31d53097d62e840ea2856388537353be2491d27474a"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T00-53-15Z-STS-vehicle.jsonl",
+   "sha256": "87e56fc5181d1adc0756b72fe9c2f94045c3877a040421a68863fcd6968599bf"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-20-07Z-STS-vehicle.jsonl",
+   "sha256": "78eaa1d3f9f1a954ae245331983529660cef33b508168a4c3621616e443bbff5"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-20-15Z-STS-vehicle.jsonl",
+   "sha256": "7095e6b759c722769ad7c5bc2d84794d2b84d999ab7b53a41e143a8ad4886e2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-20-54Z-STS-vehicle.jsonl",
+   "sha256": "e8d069f84748e871dfb3477acb822841e7d5cfb0f56fce4810854b8a876e2769"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-21-02Z-STS-vehicle.jsonl",
+   "sha256": "0e462f22054cb8c934cc2609ceee644a0b53eac12fe888e8cb1c3e8ed47fbaf1"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-21-59Z-STS-vehicle.jsonl",
+   "sha256": "a5b814f143feb2189a8ea4410571da22418b46e0ce785ea44c9f8804c9487978"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-22-07Z-STS-vehicle.jsonl",
+   "sha256": "73d5c0e6ca65d6d7870cb18b880bd55b110fb858d8b636952e7e465d5c9635d0"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T01-24-17Z-STS-vehicle.jsonl",
+   "sha256": "6517d132184393f84a6a933f6a61bfb1b21a9915f05a183dd79500a6698aada1"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-06-56Z-STS-vehicle.jsonl",
+   "sha256": "36d964a2ed4d3d3de27a1d2d55e35196b8a86201609a94e126e1a44480313de3"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-07-02Z-STS-vehicle.jsonl",
+   "sha256": "20a50ffaba48e2dd88a81d502db836555b8c7e1c1099669863c2dc78527535f3"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-07-59Z-STS-vehicle.jsonl",
+   "sha256": "6467ca7ea0e987054c6a66871929a6b0d515add5238e192f3ed09e965695c61d"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-16-40Z-STS-vehicle.jsonl",
+   "sha256": "a13d49be633e4f93b014715c4e4d1421a8d720f8b64032e848ed9ce8134773d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-16-46Z-STS-vehicle.jsonl",
+   "sha256": "3391447592b20995bed7a5b5bd5e51b5a19eea92ca924ec122e0e859170f60c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-17-31Z-STS-vehicle.jsonl",
+   "sha256": "436967a673380db55a5953b84ddb8b651a8709d7c2f4a09b5b21b1e5a45c948e"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-21-12Z-STS-vehicle.jsonl",
+   "sha256": "a6d0dd3432ab25d29da3265597b16d958bfbf0597b3bc9be36ea15d198507a13"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-21-20Z-STS-vehicle.jsonl",
+   "sha256": "8df0efe321bacc8c78796d94e2a6f046f5dcf16efa300aa767ac8439874be86b"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-22-07Z-STS-vehicle.jsonl",
+   "sha256": "94cae11876d921d1fc9ff226e27adf5afaa9f32ca06a8bef8bd2127532a3a9e5"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T02-32-49Z-STS-vehicle.jsonl",
+   "sha256": "b1192794b1ce1077908bc78e325fb430b35cfb62a0c673332274685f8cfed526"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-15-32Z-STS-vehicle.jsonl",
+   "sha256": "eca5b763c6eeacfd7179ab46da7b58322f11e739a94259da9a4cede7af6c0b3b"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-17-08Z-STS-vehicle.jsonl",
+   "sha256": "847a07bddf82c9eea0801aefd98d87603ed12342f1c70bf7681f27065a2f28f8"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-17-29Z-STS-vehicle.jsonl",
+   "sha256": "14a89817b47796f7550d9c4a48264ab03c46a2149cde37fd1e768c724682e1bb"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-21-52Z-STS-vehicle.jsonl",
+   "sha256": "d4d25df17311c9968de16d70053d05dcb8006797f93a0deca8ac4a2e65a5bbea"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-21-59Z-STS-vehicle.jsonl",
+   "sha256": "d1e2d9badaca6bbcf1038bcd6eb9c229ee7b448f3ed1c302644e65a54d905204"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-42-40Z-STS-vehicle.jsonl",
+   "sha256": "e70e4b15a44f3545d84748cb94a1c82cd2075706db0002a0cdb834559860ceae"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-42-47Z-STS-vehicle.jsonl",
+   "sha256": "30886fb399871302ca803dcad2f3453c97be848ce1d4227c7d40ca3f1fc96db1"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-54-51Z-STS-vehicle.jsonl",
+   "sha256": "71af741e0e89832815436f9f01ab8d17692f70cadf9c4ba47504caa9c7bc84bb"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T03-54-58Z-STS-vehicle.jsonl",
+   "sha256": "4aaf30b9a2578438d60dc482c55bfa66752ca1b51784c5414b74d705d3ab74ad"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-00-06Z-STS-vehicle.jsonl",
+   "sha256": "8521eaaf147dcc84697f61542618cb1c38c76a38a5ba48f75d6292fb93e7dc15"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-00-13Z-STS-vehicle.jsonl",
+   "sha256": "f00e74d8d49e1ccb21bc56dce9563cc6e5f36317963480089c4765f2c0c55810"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-01-50Z-STS-vehicle.jsonl",
+   "sha256": "4b1492fe2e5a95fce630d9bd4b6506fb7d7f674c3b9b9444bd6a073e2c9da144"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-01-57Z-STS-vehicle.jsonl",
+   "sha256": "73b49dfbff5ad86fd2ec90385220a5f9d2e010c1c987deaa918e098e887cfc6a"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-02-47Z-STS-vehicle.jsonl",
+   "sha256": "c91feea8cde64f35619ea1a3bc0f722def2328f63ae351ce1d52da797197ea30"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-02-54Z-STS-vehicle.jsonl",
+   "sha256": "8306f10028fbef301c722c951be35da48690208f5ec12d8f22eae8c5be43d265"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-04-00Z-STS-vehicle.jsonl",
+   "sha256": "069333576fac21671886894d1f263098081a4b231fbbc0493ebffe93e9cbbb54"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-04-07Z-STS-vehicle.jsonl",
+   "sha256": "1d884943c28b9c50965eaddfbd12fcc94de13ec205c48dcae188866ad7068c24"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-04-33Z-STS-vehicle.jsonl",
+   "sha256": "e50e181a2c351433418d94923c0916615e0d81ca0ab5b35b6f82be2099210c34"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-04-40Z-STS-vehicle.jsonl",
+   "sha256": "86cf78de71efe641a652bf88959348adf51eca9f454eeaf8227e3eda31e27d83"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-05-34Z-STS-vehicle.jsonl",
+   "sha256": "5a8802fc071d658535427103694b958430e417d051b0737b1d6d04e2322ec4db"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-05-41Z-STS-vehicle.jsonl",
+   "sha256": "ec7c20756ae9f9281411e3693d831de489ccdea8bc5d2c07ca6920ad6f95bd63"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-10-37Z-STS-vehicle.jsonl",
+   "sha256": "a41b2141a756bc110a9167c531348655e6f82691003a0e72f922a2569f157607"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-10-44Z-STS-vehicle.jsonl",
+   "sha256": "951819eb6255ca03eaa22b2cd83b06b57ca1867020e70e2d704b78e042c817a2"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-30-25Z-STS-vehicle.jsonl",
+   "sha256": "f25c85a857a89cb447b6bd60f3abd7cad11ec8047e39a4ec6441061f15885a21"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-30-33Z-STS-vehicle.jsonl",
+   "sha256": "1a82f325b7abc5fba67172b13e98a1ea6859ec07db1ba629f309b9b1db3fa8e8"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-35-28Z-STS-vehicle.jsonl",
+   "sha256": "981b9c080b79651315187a7be097582b79899c53b65d9558a7043cd62c5d345d"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-37-08Z-STS-vehicle.jsonl",
+   "sha256": "26583caeb27861f5491f391bbac32b00cdca42116b539dca6d1c3e009738791a"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-42-11Z-STS-vehicle.jsonl",
+   "sha256": "1eee13d2537f50f78a0d6cc48e170109c901fe4d7a4fd48ff5f4dd606d7a2143"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T04-45-25Z-STS-vehicle.jsonl",
+   "sha256": "b7351db6bd2129f9153cec99e127c5999dfac0f7ffb73ede0977d74bbf089699"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T05-24-07Z-STS-vehicle.jsonl",
+   "sha256": "0a2128b1ac3c04827e9f17db16cc9f7486d66ef6e950ac9047e9f198bbcda3d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-12-57Z-STS-vehicle.jsonl",
+   "sha256": "682d94413abf6cb3d7b6b40e1de0f2cc8a37906c1dbf28f9241b443ea1a57a23"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-13-02Z-STS-vehicle.jsonl",
+   "sha256": "fd6b664e2dd419adf41ffe145f46f3326043a8768a19e5d614e54fd3a95b753c"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-13-38Z-STS-vehicle.jsonl",
+   "sha256": "6dee9b02c94a0719ca72fe25232f0e27b41e931c877a074b632e1460ae4ee25f"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-14-48Z-STS-vehicle.jsonl",
+   "sha256": "0f8d7c194bcebc2b1849203a8f57418047dea623523bc70dac8d5d8759625d4d"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-16-22Z-STS-vehicle.jsonl",
+   "sha256": "46071e7684c7f1334966d8fcd942ee863fbd8f066e8b09f0ade01557fa12e4bd"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-17-01Z-STS-vehicle.jsonl",
+   "sha256": "b2d5ce35d8bbe742e6ffd407f6071d95a6bd99d459d48d052f0148ee8c2357d5"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-18-14Z-STS-vehicle.jsonl",
+   "sha256": "1bf9a495b8e42e8dbcdb1ff39bb1fe5dc7a6308b4d092fc1421fd2de59f3aabe"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-18-38Z-STS-vehicle.jsonl",
+   "sha256": "45b3becebc35ce45234e3487bf42f15a03de587fd0b4fe08c9c20ce27a239e20"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-20-36Z-STS-vehicle.jsonl",
+   "sha256": "2164259d15b804c72fa26a00505fd773cd4f3e5ec7af08d26a8615f5c4e983b6"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-20-40Z-STS-vehicle.jsonl",
+   "sha256": "1f110ac2af74b7420c24eebab05ca2f582962d8e820ef43ddf02298f4080fed2"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-26-57Z-STS-vehicle.jsonl",
+   "sha256": "cc510151506c277b7685f8986d0708615450da9bd9025c3c7046275f95bd7331"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-28-14Z-STS-vehicle.jsonl",
+   "sha256": "a0cc028c554e873ca17649f9813036ae2f3ac1b6b1ae5bf71d78454333d45195"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-28-19Z-STS-vehicle.jsonl",
+   "sha256": "5b25e445939b18bcc64742fcb98bcbdae948cca49ae83443ba590348280f9c19"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-29-40Z-STS-vehicle.jsonl",
+   "sha256": "3c9768df0edd5af794013b5331f0f6f825546a92f01de16980b5b721022acc5f"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-32-59Z-STS-vehicle.jsonl",
+   "sha256": "a0788ee68ab044bdb5c6a7de2a6ee6a33f76fe1bc58ce2f48099b563911fc2f4"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T06-41-49Z-STS-vehicle.jsonl",
+   "sha256": "4eadc6bd8afdf9ade276ef4d4fff1819b027883e604e6f3438100f9dcbb960af"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-12-20Z-STS-vehicle.jsonl",
+   "sha256": "45805c5123fdcf6a8315e50fc7c02e74cde9383b1b0c5bfbed475ea542fae15f"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-12-25Z-STS-vehicle.jsonl",
+   "sha256": "500427ec908cb65aa127c85aa99288108b99a87bf6afef4e16ccb8372b232448"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-17-03Z-STS-vehicle.jsonl",
+   "sha256": "32dcc773f931e8b029389c6a4b0f4c767b7cafabca369eb9d7dd145a3447eace"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-17-07Z-STS-vehicle.jsonl",
+   "sha256": "bf04f0580ca7d4e56a4dc4efed3cb3d419252bf8b0d35492638b291dfc579400"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-21-39Z-STS-vehicle.jsonl",
+   "sha256": "e19b1f7df7e55e5421eadf941c7b2c6892746990ef9a664928a3a582cad10888"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-21-46Z-STS-vehicle.jsonl",
+   "sha256": "c729cdb24d59676de5f8566f34a413529c0cb2ee8f320de5f09df0d5df9da562"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-23-23Z-STS-vehicle.jsonl",
+   "sha256": "292374471a35189a27c51a206ed7c1f700e1d79a956f45d9cdf39439b73a93c4"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T08-23-27Z-STS-vehicle.jsonl",
+   "sha256": "6bea54f98bc34262b973286a8f32abde226b53174f7821a208a5156c8f81dcf5"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T12-45-45Z-STS-vehicle.jsonl",
+   "sha256": "8087757bf24b2b9d25e77fc729924f5b892e6394bffcd87eb8d2beb2f02f2c09"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T13-33-12Z-STS-vehicle.jsonl",
+   "sha256": "c43968cdcfe98e07ed1cd23201a6ac8976fd3fba6ecfb85f789b71ce92aa541b"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T14-04-49Z-STS-vehicle.jsonl",
+   "sha256": "2bac6d878ba9d555d50b6d4d00647461cf2b52dd2af25cfc861bb762652c4394"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T16-57-12Z-STS-vehicle.jsonl",
+   "sha256": "41c404a8d513f069d3fe70234cd13137d503ce8edf97515fb0a4c7743a0ff6e0"
+  },
+  {
+   "path": "FlightLogs/2026-10-13T16-58-40Z-STS-vehicle.jsonl",
+   "sha256": "a62dab848637076e61ac0378c5d9a1d1be358e5fcffdf132f70ce8806248c6f0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T01-27-18Z-STS-vehicle.jsonl",
+   "sha256": "fd58eb633137e50a2c28f1fe93c0ab5dde76e33360aac61dcd0ecd2c63e3d4ee"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T02-13-57Z-STS-vehicle.jsonl",
+   "sha256": "579b8cb0d1b2d7fa6db4ddfd1c64656da81ea61f7bf5f7a408e54b45719bc469"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T02-18-11Z-STS-vehicle.jsonl",
+   "sha256": "4364ea3ed3ef057ae6a5f63322fb0442f52beb34838f1257c3baa798eb5f9024"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T02-41-22Z-STS-vehicle.jsonl",
+   "sha256": "a1410e4ed9b947e97def47bbfdd55986866a120d91d725dde49a99e2aaf3701e"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T02-59-45Z-STS-vehicle.jsonl",
+   "sha256": "05406e3411ab25900dc2e9c3c625ea374ebb07f53357dc3f176a733ea9c96f49"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T03-00-36Z-STS-vehicle.jsonl",
+   "sha256": "af2fca997f48ccb1f6d335ad90c680900b981470056214d302aa0acd2f3c91d0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T03-16-02Z-STS-vehicle.jsonl",
+   "sha256": "3e1511d08cb4a165840deeaa3743234fa301ab3b5101fe12bdece37b427a5b1d"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T03-18-05Z-STS-vehicle.jsonl",
+   "sha256": "3ff47ca6272fa5f9b0cde645d11dac7c87c9a0f5340fd2221b6e2cde60541786"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T03-20-44Z-STS-vehicle.jsonl",
+   "sha256": "a44a7726f9f8c0e6fbf7ca7f9467311f58941de9e097d86694f03e4ce1d70730"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-04-04Z-STS-vehicle.jsonl",
+   "sha256": "50c990536da5d87a73be74164e7b271bec157c729911e6255c61b3004de44f46"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-05-02Z-STS-vehicle.jsonl",
+   "sha256": "a54f20fadaa41ac4a4f57414a2bb58713153c45f95e805f3fc854e04ca415cb6"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-05-08Z-STS-vehicle.jsonl",
+   "sha256": "ac07fe138c630940dffe78eaedacc8df34a6ff45552d680bacf8b7265bb34ce7"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-05-56Z-STS-vehicle.jsonl",
+   "sha256": "bec2857a17f999728d8d2f92247c7db05f3fbfc1d157ff74a03e9b8c944a8bba"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-06-03Z-STS-vehicle.jsonl",
+   "sha256": "93172941828e053467de9d077d345eacef3010ef8ee53058210bd06b81d279a6"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-06-27Z-STS-vehicle.jsonl",
+   "sha256": "95f6fb08f235775c2998ceae05dd4c964a38788a2cbc235d090cd372456009c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-06-44Z-STS-vehicle.jsonl",
+   "sha256": "8fc4550e55951f3d9c209fd46607e1198592d5b2dc60f5e631eae6f605d786f8"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-06-50Z-STS-vehicle.jsonl",
+   "sha256": "a84adc56eed34aacda87ba80bee05831f5b63bb1a15c33dedeaa9c156729f94c"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-14-34Z-STS-vehicle.jsonl",
+   "sha256": "0c7dc89e29201d81db6655c16744de8b65c3ca7487fd79722b05f29ce24c0f28"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-16-50Z-STS-vehicle.jsonl",
+   "sha256": "a6f3180a2f16c8132cb111a28a2d05edd92315d3cec7c13bb14c08d175d52cdb"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-18-43Z-STS-vehicle.jsonl",
+   "sha256": "15906601d335ec81825d8453d373b5521311595629ff7dee08d98c2bf58e0110"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-21-43Z-STS-vehicle.jsonl",
+   "sha256": "89ee7dc4ea19f2c36cfbb7e45ed2e39e371faf0a83e30df4a4ed5177a25c08f7"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-26-49Z-STS-vehicle.jsonl",
+   "sha256": "e8c83878aa1e0c6853db8409266379bd7e6da9fead891b1843577e5d5e08ed9d"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-31-36Z-STS-vehicle.jsonl",
+   "sha256": "f12282886a0667dd1a1ae266c469dea0b275f4b3f2ed3215ec4a5800ff2db6dd"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-35-37Z-STS-vehicle.jsonl",
+   "sha256": "86e354d95c08843913968d8ab2ea75d14514f053b6fdf48d7e8fef3262586444"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T04-39-16Z-STS-vehicle.jsonl",
+   "sha256": "09188cd8872db532066df49508586aa94e7eca97f42f340e6823fe99334216a1"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T05-21-48Z-STS-vehicle.jsonl",
+   "sha256": "1bae06551e8353993cb3af2e49e379c4161c71865803ef696cd944d64a874998"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T05-22-20Z-STS-vehicle.jsonl",
+   "sha256": "58fea47818918b1bc662dcf7ac14466cbd644be73bc1cefce6e0f8a35a5fa6c7"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-24-52Z-STS-vehicle.jsonl",
+   "sha256": "3556c60df3c028917c05eb79871f64b3a735f0d4b3dfecd2000401ff9e1ff0b1"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-24-57Z-STS-vehicle.jsonl",
+   "sha256": "d43cceccf33a111cebcbb17d6cba2fea55f1defba3ddeccc9405e416e85d4a4e"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-28-57Z-STS-vehicle.jsonl",
+   "sha256": "de7cbb67bcac5b01ca002821b62b29e4d8e5790df64a46bbc5c1b5f72ef942ff"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-29-02Z-STS-vehicle.jsonl",
+   "sha256": "62638f2d1149ce9350f97be74da1c0d4c861484b8709679f56c5a4d4a4abf930"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-29-41Z-STS-vehicle.jsonl",
+   "sha256": "40bcb67099740766edbf291f6385d7db467f6650ad3f9fbd62e175380fbb72ea"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-30-04Z-STS-vehicle.jsonl",
+   "sha256": "b1348264bed1dfc96eb60622a5c24d8886f54da5e4285a92d7bf5ad1dc2b4dec"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-32-36Z-STS-vehicle.jsonl",
+   "sha256": "97c38d1b96ba14d2c09fc9ba885e8ab8013e8bb5da97cb9da1c2dac5481f0708"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-35-18Z-STS-vehicle.jsonl",
+   "sha256": "413b53c5934ae761fe0d703e7d028084a0653c4c83c3e03ca8a3f51dfc2d8250"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-38-32Z-STS-vehicle.jsonl",
+   "sha256": "28ae0f573dc508049d6f490d031132f738df28fafa7ad103e5044534a4f292c6"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-38-36Z-STS-vehicle.jsonl",
+   "sha256": "446f9d2fc74dd960ea027c2d0c4aeb7566c9cdc9f0d150ab65cc9643faa24938"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-41-58Z-STS-vehicle.jsonl",
+   "sha256": "c1e948d0a75ecaa69cbce362e6abd0e1e0e3a502a9dab729fd65dacb80714d2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-45-09Z-STS-vehicle.jsonl",
+   "sha256": "edf07a07aed46115c39300b20efebc7487b7d5f7254f2a0e08b36a12777519d5"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-45-16Z-STS-vehicle.jsonl",
+   "sha256": "e05cd7ebedf1fd5d4bd5c5e8f2c9f95656d7fb8a7af92bb2cd22137560047b00"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-46-04Z-STS-vehicle.jsonl",
+   "sha256": "76d6f97c27f17ad35e8c8bb0fc45d1c6a82645f53b75bc881ece827e1999d3d7"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-46-22Z-STS-vehicle.jsonl",
+   "sha256": "4f7fdad3b42c6ba4bc3a0f977167db52c80da3f4ef3e09ff4984755b174bbbb8"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T06-46-44Z-STS-vehicle.jsonl",
+   "sha256": "1ca47f2d2c17377b6e0c921710d1fd956c9d27751853d516994d09028fe0f8a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-21-24Z-STS-vehicle.jsonl",
+   "sha256": "a931d24718681acd27dc99a188236b79351b029ffc532bff6cba800253c7e916"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-21-28Z-STS-vehicle.jsonl",
+   "sha256": "c64dd4519c3f39d662e7391761b05069ddaa8cc817887d3abe4dbbc92a5d2dcb"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-22-13Z-STS-vehicle.jsonl",
+   "sha256": "1c6665021efe3eee723793b7cd0a8c9504e63635181c6878b05c126e86c19022"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-22-33Z-STS-vehicle.jsonl",
+   "sha256": "4aabc21df4f32f6070ef7be5551abf33f87a847ef3de309bd72a50a1ec7b60ec"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-23-05Z-STS-vehicle.jsonl",
+   "sha256": "c70e178849cfa013f32dfed79a0dac26d03e413e1d3db193a1174f508a1efeb0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-49-41Z-STS-vehicle.jsonl",
+   "sha256": "179199eabdf171ffd29e8ff61e2bc39550be051b4e79b9a9999826919c3f672f"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-49-45Z-STS-vehicle.jsonl",
+   "sha256": "ca6fc8e2ecfefb15d96fae7f6c8f8290ea6d7189325e834755bb1a278146f192"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-50-07Z-STS-vehicle.jsonl",
+   "sha256": "e3f471e85ff7d542bf3e394d517a4abb9d56549056c3a5077e22c2bba3fa6174"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-50-21Z-STS-vehicle.jsonl",
+   "sha256": "5a113552d20e243c201cd151d836fb44128733405f64b9738f9a4765e8d73865"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T07-53-00Z-STS-vehicle.jsonl",
+   "sha256": "0c0f4265b4caab6f9cd713be32d9993f83418c7bee4dcbe0db2a9e0b9dec34b2"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-04-03Z-STS-vehicle.jsonl",
+   "sha256": "4be9029be827cee9aafc125f3e6e7cd892bd71195a9fc3c78ee01e076a631495"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-04-13Z-STS-vehicle.jsonl",
+   "sha256": "0f1a71793543afdcb9d028e1a079fb601cce2b58215dab877b664ce8031ad967"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-04-50Z-STS-vehicle.jsonl",
+   "sha256": "e26519432409e75016ad3f78ec62466964c80070e97a0b128b9b8d5d87511ac0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-04-57Z-STS-vehicle.jsonl",
+   "sha256": "3ebcac59deb3d99623074e80bfd5b61f1b3a1180dab272916c0947257956399b"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-19-31Z-STS-vehicle.jsonl",
+   "sha256": "812dc416fde937a16c60d36e22abbb6285656330d52e79754a3407b751f16a0c"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-19-51Z-STS-vehicle.jsonl",
+   "sha256": "a1b717245be8eb239b996b05d40fe7bb8ef09de5b040385c04299221d57c265d"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-20-26Z-STS-vehicle.jsonl",
+   "sha256": "75d5089d9f2e3da5620ae06b89fbe2de4641b5a774f5f32b4253a1bc4edb353a"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-20-55Z-STS-vehicle.jsonl",
+   "sha256": "f650e458700c8b719351e07a1dead7dad6e2dea5354e8a93049cd2bf9948b685"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-21-35Z-STS-vehicle.jsonl",
+   "sha256": "c483d8c9c943af7bc1e916f9f26fa4a7fc9f20cc51d83530505ac83fd0a56951"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-21-37Z-STS-vehicle.jsonl",
+   "sha256": "c7730cdef5ea75cfeb9d5f961380b669997858d4f6e9aebf71aff08c02b68119"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-24-12Z-STS-vehicle.jsonl",
+   "sha256": "fa9916b8adefb2ec7ad2ca0d9b8d592c1ceefbcbe7cf5dc6486794fef7df4965"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-24-16Z-STS-vehicle.jsonl",
+   "sha256": "f0126b21a7bbc6a7948a41a0ff529c9e4867ffb76e6ea1eb410d7562b9874913"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-24-49Z-STS-vehicle.jsonl",
+   "sha256": "cc83702b556e01a5c6f2fafc957f4a17a52a1077c90c0c7f5edc16cd36375835"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-25-17Z-STS-vehicle.jsonl",
+   "sha256": "71498bcc3aca0efae07c615f2980e697ad8c3b015971ef6eb8773a3a77559696"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-25-59Z-STS-vehicle.jsonl",
+   "sha256": "b9addfb5211b556a2363a92853b321951691f6f2f6f46e0d8c16176cbf8ea28b"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-26-16Z-STS-vehicle.jsonl",
+   "sha256": "9153991fd0f194fa0816961711d7590a8fc8d4765a998ac792e6f7c14f94c33e"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-26-20Z-STS-vehicle.jsonl",
+   "sha256": "b7aa2509cd6f8c6bc1fa8c5b850d79ad294f02210deae632d53249ee2fe80255"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-27-12Z-STS-vehicle.jsonl",
+   "sha256": "ca7d5adaa9eb873f9ac58e98ae86a9b97e8a5c786c6560a28386c0a454e2d9c8"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-27-22Z-STS-vehicle.jsonl",
+   "sha256": "57076051d0e6509c0e1de19a71c759c62e512749a89b5cc514cbb8c3a2d1028e"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-27-26Z-STS-vehicle.jsonl",
+   "sha256": "c808d71db843917b9cf5ca5b4f68f2243f87394dc8d454af70fc735db4caa09b"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-28-00Z-STS-vehicle.jsonl",
+   "sha256": "3dd8fb1f95eda45fea7ead06236f9edc13d9efecfec3e2cf1681f3b341dc86a5"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-28-17Z-STS-vehicle.jsonl",
+   "sha256": "218bfa97f5f36cbf882b4d55c38d1c7453702017c54e8f39b7344acc35756566"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-28-51Z-STS-vehicle.jsonl",
+   "sha256": "d7c8c23874df48ad96c7a449fb3d0ca77c80d6935a98afbe3ffe1da5a24bf84c"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-29-14Z-STS-vehicle.jsonl",
+   "sha256": "d127bdbc1836d0c20f40ee5650fec83378fa2191d94b6b3304ae168fad686ee6"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-30-46Z-STS-vehicle.jsonl",
+   "sha256": "aba5fb4b1b01ca2e5c9011913a12ecde4b91dfac688d998ea462a29e0aff30e5"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-30-51Z-STS-vehicle.jsonl",
+   "sha256": "2a9fe9cbf0e3f57e6a4359ca80b55560b6718adfa30d8505b0ce8da9f17be5d4"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-31-23Z-STS-vehicle.jsonl",
+   "sha256": "fab9ac88410367427b9e69411638d676eaafc59e818105e599b6cddb258a01a3"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-31-28Z-STS-vehicle.jsonl",
+   "sha256": "c7161e41064d92416fa8c0675235535296d68962cb6483c1342e8e4d021a6d63"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-31-41Z-STS-vehicle.jsonl",
+   "sha256": "a25143c4e10e8dc85c9673e5882e0d85c26c48329f6570f1615e3cff7b49960e"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-33-06Z-STS-vehicle.jsonl",
+   "sha256": "110941dc52fad976a3304704f76818566e434b84750cd89054aff489eb19e653"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-33-16Z-STS-vehicle.jsonl",
+   "sha256": "d2ba8695a8e0634af43ae3a496bc2015a016b35e41e4d38a960b9a65b7c1a182"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T08-33-21Z-STS-vehicle.jsonl",
+   "sha256": "7fb81921988d22043b3929a974a1adcc1b1bae6c8a3e2bb4d3493a1b299b4339"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T09-38-39Z-STS-vehicle.jsonl",
+   "sha256": "cf369453501ab9f463ff7d2071c8a0f44e163d04a2344d0baa973ee80ab6030a"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T09-38-50Z-STS-vehicle.jsonl",
+   "sha256": "297a5e86b706ee4bf87ca4fbf1f95489e7d204354ed4faf0bb5792ae35956128"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T09-38-55Z-STS-vehicle.jsonl",
+   "sha256": "655102c74994003855b3dd96b55acfc6a42604d793e97c3b39c5fc8f77d3a04b"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T09-54-03Z-STS-vehicle.jsonl",
+   "sha256": "42c74825b4230e4710ba27c10abb1a0d6fac03063effb31332cb66dc511c65e0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T17-13-23Z-STS-vehicle.jsonl",
+   "sha256": "0b400cae3b8ff5b7afbce69b2ff77d8a7ee537dad107725c2f97fce1b2471cd0"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T17-47-32Z-STS-vehicle.jsonl",
+   "sha256": "02bcb64bdf362096d91dae587b015c30add198908a931fbad051c4e79f7f08e8"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T17-48-07Z-STS-vehicle.jsonl",
+   "sha256": "62ccfb6fb4fdda85c269d8d1d9697a93132d312c7ec941049a83808c48f76b55"
+  },
+  {
+   "path": "FlightLogs/2026-10-14T17-54-12Z-STS-vehicle.jsonl",
+   "sha256": "ad651cc3b2fe6e3f4551b721575f8d3f0470a6a9a130fa3668a96cba25e1308b"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-35-33Z-STS-vehicle.jsonl",
+   "sha256": "326c58f349200bbb1f4d7fa1c5f6339abb66129914cbbd67d2faa175e2d3a8d1"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-35-44Z-STS-vehicle.jsonl",
+   "sha256": "49227dd45411fb2a427396eaa65daf3dedd076e41db55310c03861e1be49fa85"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-35-48Z-STS-vehicle.jsonl",
+   "sha256": "4a636641666de384f378d06423bc10ab3e602933b98e394da51d83ac96f62aae"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-36-57Z-STS-vehicle.jsonl",
+   "sha256": "d4e15cbce5380193fe3efad9341719c6beafbff87a5d0d3ca9334f61b979a932"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-37-41Z-STS-vehicle.jsonl",
+   "sha256": "75854a24556eb1b4bb1c02a6a012aa188627555eec90c7b7592144cd9014dda2"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-37-55Z-STS-vehicle.jsonl",
+   "sha256": "e5aae99c6e7eff1d88612bfd4bac22d6d8efe0d03b7d1703e0c4d1284d000663"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-42-10Z-STS-vehicle.jsonl",
+   "sha256": "dbe2516bd5b75612512b53589e88755c6509dc655b216c43fdeeefa687757051"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-43-18Z-STS-vehicle.jsonl",
+   "sha256": "60ef0b08f977eba30be486b89df078bb35c747634f3d5e13a9128c5487c0928e"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-45-37Z-STS-vehicle.jsonl",
+   "sha256": "69e3f11315e2d3cec4a95ca5751e7765bf08268bbf34c976971e5417fdada1f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-45-43Z-STS-vehicle.jsonl",
+   "sha256": "e5e65718eacb62b694ec65fcf505577503d79a7d4329e7e5cd79fee9775b804e"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-46-06Z-STS-vehicle.jsonl",
+   "sha256": "90efe86eb92a55f0ab0be6746918ca7ac6dece1bc276f98289e8d611acc15f8b"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-48-34Z-STS-vehicle.jsonl",
+   "sha256": "95040b7c26f8d078a89059e26ac65161cd5f0008268c8cd7c25b320e92c77145"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-50-42Z-STS-vehicle.jsonl",
+   "sha256": "e18992297a29ae12b0654026965c6ef8a36236b34d8cfcbff4206fcfb2eecfe3"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-51-23Z-STS-vehicle.jsonl",
+   "sha256": "25b2b96969485d085c6be4a75a8082d83704d780265e8644e70d5108762ecb9a"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-51-35Z-STS-vehicle.jsonl",
+   "sha256": "a50cb1c5898c855dce761fe441d420463f3394c224d867471205bc2060670e01"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-51-40Z-STS-vehicle.jsonl",
+   "sha256": "bdde92d597f62f042c6e50e7c31ddc3b87821cd0fde4a347fa7845e8f1250804"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-54-10Z-STS-vehicle.jsonl",
+   "sha256": "64ee236010e89fa14f869ee8490cc6ad65e6d83e01852a5ce952fd04b532cbdd"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-54-15Z-STS-vehicle.jsonl",
+   "sha256": "fd39c8a221581ef7986e6ed32ea8b6de1efa8e6145c77b53f5c0047b9f0d9e86"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-54-38Z-STS-vehicle.jsonl",
+   "sha256": "cd103e119d283277d0c479552a92a38750d43e68753a5682f86b230c88a7570a"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-54-44Z-STS-vehicle.jsonl",
+   "sha256": "8f4bbd374589e7fae9803c7c45ffa96f8b30a6aa96d942422e00c1c01d83f953"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-55-22Z-STS-vehicle.jsonl",
+   "sha256": "6abd43555cb875b4fc4d43f8f85abb8cefebef597c89d77078a435261ce11646"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-55-34Z-STS-vehicle.jsonl",
+   "sha256": "1dbe0b1958227b968a2c131af8d0ddcf0c9199ed23bf25ad788de7f57cffa9a8"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-55-39Z-STS-vehicle.jsonl",
+   "sha256": "fa8e88b218db1ad58b36945ba731ba8617e070386bfed118eb8c3c5013d8200c"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T00-57-19Z-STS-vehicle.jsonl",
+   "sha256": "e5251cf82424ec75f5df213df33d8b365427ba1d3204a6bc65cfdff40b2835a6"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-12-03Z-STS-vehicle.jsonl",
+   "sha256": "6bf3ba47515a608ab0e28a5885ba936411a5a625139754be8a22188231dd0a7e"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-15-08Z-STS-vehicle.jsonl",
+   "sha256": "f28cae0bd77123cb65e0f4de96ad7ade74b1869eead0a29ee747ca0e251c6d6f"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-15-20Z-STS-vehicle.jsonl",
+   "sha256": "377eb1bf1b627028147381d6a6eb6db7e9758cdea114c4640a1face0a9dd9a6d"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-15-25Z-STS-vehicle.jsonl",
+   "sha256": "d82e480ffc4878f2e4a2fb4f7d5dfa1593bd8a25538919ff802055a3534deb91"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-17-04Z-STS-vehicle.jsonl",
+   "sha256": "b6ef71044ce52a6f1382ba068ebeb96fb62170849b33ac3e482e889b78e489a0"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-21-05Z-STS-vehicle.jsonl",
+   "sha256": "845d7ff6c912624dc538cd2aa5cfa31af027bde45b2f7fa1a4ff2913e0989b50"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-32-05Z-STS-vehicle.jsonl",
+   "sha256": "14361b977bb80ba2575d7e54c25d0c1dff728e7a7e3f54332366b573f84f4ea8"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-33-45Z-STS-vehicle.jsonl",
+   "sha256": "cf4b20dce52cfe0ef1ec3b8ea4d2f8c3ba5f3171344233ae60971b63019a79ba"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-36-23Z-STS-vehicle.jsonl",
+   "sha256": "65f08585324570f2c9c346b973a2579a9427846d1a71ca9aa6362703e394afb7"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-37-24Z-STS-vehicle.jsonl",
+   "sha256": "7922cae9141ec58407e0d14b92e49c7514dd0c90c5c39642c3ae5503eb71c385"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-39-37Z-STS-vehicle.jsonl",
+   "sha256": "61aadb099937c6092a18a41a8eb2575f34687c21300694117be58de9a22d4f98"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-43-20Z-STS-vehicle.jsonl",
+   "sha256": "a14a165a3b3aaea0dcab508e185a464b26e79605603e8974428b0391385f59a4"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-46-05Z-STS-vehicle.jsonl",
+   "sha256": "cfa7c0cfbf086a1f1d28d11691a21bdc45ceb6706c70fdc286c1f24e19c2ec98"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-46-17Z-STS-vehicle.jsonl",
+   "sha256": "af75e7cc8ca3221736c144656dc280ef6cea30721e20395fe70190bd06fde81a"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-46-23Z-STS-vehicle.jsonl",
+   "sha256": "56e385fb209884064527a3bdf4ab22d1cdad45ca660e7a10e2e486253948e201"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T01-58-00Z-STS-vehicle.jsonl",
+   "sha256": "89f41b97e5a714069b9f202afafedb5d1a776859b9249fafb7bc33cd049fe475"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-00-44Z-STS-vehicle.jsonl",
+   "sha256": "72bd3906c4b4cd0086b0f9cef0dda322b2d010101806e21f0c6ea2bb7832b59b"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-00-56Z-STS-vehicle.jsonl",
+   "sha256": "10462c4e918dadd26563f6870028960198884208638b63c8d79ef1ef1dc5018c"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-01-02Z-STS-vehicle.jsonl",
+   "sha256": "e2434321415a25d14bf39c63015ab69fb20d5d85361a290e3b822343837ca7f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-13-01Z-STS-vehicle.jsonl",
+   "sha256": "00209e94ab50eadeb341ef7b7e004522f6b233cc07262cfe5e0dc7b967c4f456"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-15-05Z-STS-vehicle.jsonl",
+   "sha256": "e4daa945bab76e03192ad2e871ade81045abaac3da1674963f04ef5a68a16652"
+  },
+  {
+   "path": "FlightLogs/2026-10-15T02-21-11Z-STS-vehicle.jsonl",
+   "sha256": "ef4f2a7ceef7149216e65b99ec6c98b4301726a138cd4ab259b92ae05d9b3907"
+  }
+ ],
+ "settings": {
+  "area": 250.0,
+  "q_min": 300.0,
+  "max_sideslip": 2.0,
+  "max_pitch_rate": 3.0,
+  "window": 0.25,
+  "min_samples": 200,
+  "min_flights": 2
+ },
+ "cells": {
+  "M6.636 a25": {
+   "n": 22527,
+   "flights": 77,
+   "cl": 0.15365755331876543,
+   "cd": 0.31278948809605234,
+   "cl_ratio": 1.00130853363417,
+   "cd_ratio": 0.9830466465843068
+  },
+  "M4.832 a28": {
+   "n": 9389,
+   "flights": 69,
+   "cl": 0.16169315524512265,
+   "cd": 0.3348156097956404,
+   "cl_ratio": 1.005753284465397,
+   "cd_ratio": 0.9660602049494093
+  },
+  "M3.511 a25": {
+   "n": 256,
+   "flights": 16,
+   "cl": 0.1643513881363052,
+   "cd": 0.25526245722329144,
+   "cl_ratio": 0.8773240116045217,
+   "cd_ratio": 0.9884065558351067
+  },
+  "M2.581 a20": {
+   "n": 303,
+   "flights": 28,
+   "cl": 0.17664075946803262,
+   "cd": 0.22520940868500883,
+   "cl_ratio": 0.9667577712346611,
+   "cd_ratio": 0.9962783951147982
+  },
+  "M2.581 a18": {
+   "n": 1164,
+   "flights": 52,
+   "cl": 0.16479812439297054,
+   "cd": 0.20332938807194229,
+   "cl_ratio": 0.9863426757026411,
+   "cd_ratio": 0.950867896128148
+  },
+  "M1.627 a18": {
+   "n": 426,
+   "flights": 39,
+   "cl": 0.18501295619840039,
+   "cd": 0.20148795835833927,
+   "cl_ratio": 0.988663792608895,
+   "cd_ratio": 1.0126515040222974
+  },
+  "M0.300 a16": {
+   "n": 257,
+   "flights": 24,
+   "cl": 0.7739327991298843,
+   "cd": 0.29474013976584484,
+   "cl_ratio": 0.9873980094571655,
+   "cd_ratio": 0.9812052045392582
+  },
+  "M5.673 a28": {
+   "n": 2311,
+   "flights": 59,
+   "cl": 0.15940106893803557,
+   "cd": 0.32962327031220773,
+   "cl_ratio": 0.9879065856797491,
+   "cd_ratio": 1.0032959424359649
+  },
+  "M5.673 a25": {
+   "n": 7541,
+   "flights": 35,
+   "cl": 0.1508130464425491,
+   "cd": 0.274387434132983,
+   "cl_ratio": 1.0115417557058233,
+   "cd_ratio": 0.8786845046497732
+  },
+  "M4.832 a22": {
+   "n": 2135,
+   "flights": 21,
+   "cl": 0.13387743066739233,
+   "cd": 0.3096468044403309,
+   "cl_ratio": 0.9938255190116748,
+   "cd_ratio": 0.9813779494897824
+  },
+  "M4.832 a20": {
+   "n": 469,
+   "flights": 17,
+   "cl": 0.13105010599082834,
+   "cd": 0.2152952253642867,
+   "cl_ratio": 1.0513417451635378,
+   "cd_ratio": 0.7025105941445821
+  },
+  "M3.511 a18": {
+   "n": 3081,
+   "flights": 46,
+   "cl": 0.14142721240781225,
+   "cd": 0.2181784356821233,
+   "cl_ratio": 0.9839088967683159,
+   "cd_ratio": 1.0026309747552975
+  },
+  "M1.200 a10": {
+   "n": 294,
+   "flights": 66,
+   "cl": 0.12560875866261415,
+   "cd": 0.16768157419478869,
+   "cl_ratio": 0.9930985936033268,
+   "cd_ratio": 0.9943235155765631
+  },
+  "M1.000 a8": {
+   "n": 303,
+   "flights": 99,
+   "cl": 0.1063539804987442,
+   "cd": 0.13092087128753802,
+   "cl_ratio": 0.9922664934805279,
+   "cd_ratio": 0.9881549844776318
+  },
+  "M0.600 a8": {
+   "n": 1634,
+   "flights": 226,
+   "cl": 0.21356617309532078,
+   "cd": 0.0953010129264001,
+   "cl_ratio": 1.010869434268481,
+   "cd_ratio": 1.0060837642545943
+  },
+  "M0.600 a6": {
+   "n": 338,
+   "flights": 8,
+   "cl": 0.15743230064578356,
+   "cd": 0.07772842314245945,
+   "cl_ratio": 0.9827380746716683,
+   "cd_ratio": 0.9887181465510164
+  },
+  "M0.500 a6": {
+   "n": 1089,
+   "flights": 57,
+   "cl": 0.2120910114900217,
+   "cd": 0.084064642402113,
+   "cl_ratio": 1.0012476305045248,
+   "cd_ratio": 1.0308496216455307
+  },
+  "M0.400 a8": {
+   "n": 227,
+   "flights": 59,
+   "cl": 0.32928465402066176,
+   "cd": 0.10347382900846584,
+   "cl_ratio": 0.9452359210427467,
+   "cd_ratio": 0.9676481475415319
+  },
+  "M0.300 a18": {
+   "n": 557,
+   "flights": 40,
+   "cl": 0.8592712245915674,
+   "cd": 0.35452836150270106,
+   "cl_ratio": 0.9805814235661193,
+   "cd_ratio": 0.9783320822153238
+  },
+  "M0.300 a12": {
+   "n": 537,
+   "flights": 33,
+   "cl": 0.6078899408586617,
+   "cd": 0.20374592943027467,
+   "cl_ratio": 1.015085093489501,
+   "cd_ratio": 1.0336269506212448
+  },
+  "M0.300 a14": {
+   "n": 748,
+   "flights": 24,
+   "cl": 0.6936773237890572,
+   "cd": 0.24184948716035642,
+   "cl_ratio": 1.0033906422917613,
+   "cd_ratio": 0.985940733198843
+  },
+  "M6.636 a28": {
+   "n": 505,
+   "flights": 21,
+   "cl": 0.16193563081206083,
+   "cd": 0.2808779042512661,
+   "cl_ratio": 0.9750708400314462,
+   "cd_ratio": 0.8386173395020677
+  },
+  "M3.511 a28": {
+   "n": 4553,
+   "flights": 69,
+   "cl": 0.19560501386821513,
+   "cd": 0.2818929249327544,
+   "cl_ratio": 0.9648201547747663,
+   "cd_ratio": 1.0114592523924872
+  },
+  "M2.581 a25": {
+   "n": 223,
+   "flights": 26,
+   "cl": 0.2074064331879012,
+   "cd": 0.30425900512777937,
+   "cl_ratio": 0.9524945590913667,
+   "cd_ratio": 1.1653554879314088
+  },
+  "M2.581 a14": {
+   "n": 1165,
+   "flights": 45,
+   "cl": 0.1314220185531009,
+   "cd": 0.15950534590067822,
+   "cl_ratio": 0.9848114799371602,
+   "cd_ratio": 0.8272216712817254
+  },
+  "M0.900 a14": {
+   "n": 1984,
+   "flights": 28,
+   "cl": 0.18974771435557197,
+   "cd": 0.14787423068126132,
+   "cl_ratio": 0.9015569844119844,
+   "cd_ratio": 1.0208878762850833
+  },
+  "M0.800 a14": {
+   "n": 809,
+   "flights": 26,
+   "cl": 0.22748976310089325,
+   "cd": 0.14659134655687386,
+   "cl_ratio": 0.9607847176952041,
+   "cd_ratio": 1.0279880774174985
+  },
+  "M4.832 a25": {
+   "n": 441,
+   "flights": 9,
+   "cl": 0.14886163533406863,
+   "cd": 0.32905259091413896,
+   "cl_ratio": 1.002081118632746,
+   "cd_ratio": 0.9960195579534403
+  },
+  "M2.581 a16": {
+   "n": 1130,
+   "flights": 47,
+   "cl": 0.1444279999893025,
+   "cd": 0.1811055600131342,
+   "cl_ratio": 0.958817478730544,
+   "cd_ratio": 0.8932859415370645
+  },
+  "M1.627 a12": {
+   "n": 283,
+   "flights": 10,
+   "cl": 0.13117166085509224,
+   "cd": 0.15824662725593153,
+   "cl_ratio": 1.0129591086558623,
+   "cd_ratio": 0.955066482227367
+  },
+  "M1.100 a14": {
+   "n": 320,
+   "flights": 15,
+   "cl": 0.18268868844562416,
+   "cd": 0.271353178628147,
+   "cl_ratio": 0.9820392258687844,
+   "cd_ratio": 1.1663603631253872
+  },
+  "M1.000 a14": {
+   "n": 378,
+   "flights": 33,
+   "cl": 0.18861858383834845,
+   "cd": 0.20977782275775514,
+   "cl_ratio": 0.963460325963563,
+   "cd_ratio": 1.13449486282737
+  },
+  "M0.700 a12": {
+   "n": 270,
+   "flights": 13,
+   "cl": 0.2565523929807588,
+   "cd": 0.13436037878252188,
+   "cl_ratio": 0.9981636100012098,
+   "cd_ratio": 1.0373299435879848
+  },
+  "M0.200 a12": {
+   "n": 844,
+   "flights": 3,
+   "cl": 0.8078738586728615,
+   "cd": 0.2632546014151359,
+   "cl_ratio": 0.9666506562164129,
+   "cd_ratio": 1.021226402285707
+  },
+  "M2.581 a12": {
+   "n": 1266,
+   "flights": 213,
+   "cl": 0.1166949303960883,
+   "cd": 0.1841852263287373,
+   "cl_ratio": 1.0093294845915597,
+   "cd_ratio": 1.0003379063200046
+  },
+  "M1.000 a12": {
+   "n": 336,
+   "flights": 50,
+   "cl": 0.1645571543515424,
+   "cd": 0.17560801802205028,
+   "cl_ratio": 0.9898632565412643,
+   "cd_ratio": 1.0705876308029498
+  },
+  "M0.700 a10": {
+   "n": 313,
+   "flights": 165,
+   "cl": 0.21691194301000952,
+   "cd": 0.10860062046375257,
+   "cl_ratio": 1.0088166980992248,
+   "cd_ratio": 1.0155254862128014
+  },
+  "M0.500 a4": {
+   "n": 964,
+   "flights": 14,
+   "cl": 0.13501129561037323,
+   "cd": 0.0653368292064887,
+   "cl_ratio": 0.9547909353252794,
+   "cd_ratio": 0.9762962359591015
+  },
+  "M0.400 a4": {
+   "n": 862,
+   "flights": 62,
+   "cl": 0.17252576065436392,
+   "cd": 0.06543029241476404,
+   "cl_ratio": 0.9856879520489217,
+   "cd_ratio": 1.0061267264193896
+  },
+  "M0.300 a4": {
+   "n": 1630,
+   "flights": 174,
+   "cl": 0.22872325066943183,
+   "cd": 0.07331327830914683,
+   "cl_ratio": 0.9990196916572158,
+   "cd_ratio": 0.9979521634508413
+  },
+  "M0.300 a6": {
+   "n": 2337,
+   "flights": 19,
+   "cl": 0.29189149526797226,
+   "cd": 0.09327235538045994,
+   "cl_ratio": 0.9081175011598273,
+   "cd_ratio": 0.9920818970788083
+  },
+  "M0.400 a2": {
+   "n": 457,
+   "flights": 85,
+   "cl": 0.10612625857808683,
+   "cd": 0.05709449038760892,
+   "cl_ratio": 1.2009985238286238,
+   "cd_ratio": 1.0478270061098967
+  },
+  "M1.200 a14": {
+   "n": 289,
+   "flights": 11,
+   "cl": 0.17746596921435745,
+   "cd": 0.26169525189979087,
+   "cl_ratio": 1.019370250808903,
+   "cd_ratio": 1.094805894336851
+  },
+  "M0.900 a12": {
+   "n": 275,
+   "flights": 31,
+   "cl": 0.17799876303007817,
+   "cd": 0.1316297986228068,
+   "cl_ratio": 0.9888698757091825,
+   "cd_ratio": 1.075886077873958
+  },
+  "M2.581 a2": {
+   "n": 226,
+   "flights": 4,
+   "cl": 0.0191797570688092,
+   "cd": 0.033916411258134854,
+   "cl_ratio": 0.9672813235082195,
+   "cd_ratio": 0.21165951226001364
+  },
+  "M2.581 a0": {
+   "n": 1787,
+   "flights": 5,
+   "cl": 0.0035280275644884113,
+   "cd": 0.021906939713648176,
+   "cl_ratio": null,
+   "cd_ratio": 0.1373062634044186
+  },
+  "M1.000 a4": {
+   "n": 363,
+   "flights": 44,
+   "cl": 0.05164093705552239,
+   "cd": 0.11161560329377569,
+   "cl_ratio": 1.0730929942787226,
+   "cd_ratio": 0.9741640274565505
+  },
+  "M0.500 a2": {
+   "n": 514,
+   "flights": 12,
+   "cl": 0.07227405429031841,
+   "cd": 0.05864230347732896,
+   "cl_ratio": 1.0182120299548925,
+   "cd_ratio": 1.008826775339437
+  },
+  "M2.581 a10": {
+   "n": 429,
+   "flights": 189,
+   "cl": 0.09994720680381577,
+   "cd": 0.1787244237141298,
+   "cl_ratio": 1.028047575646058,
+   "cd_ratio": 1.0115107075828418
+  },
+  "M6.636 a22": {
+   "n": 4916,
+   "flights": 36,
+   "cl": 0.14205916124691356,
+   "cd": 0.3048461522956737,
+   "cl_ratio": 1.020859410077705,
+   "cd_ratio": 1.0065960105462404
+  },
+  "M0.300 a2": {
+   "n": 270,
+   "flights": 149,
+   "cl": 0.13289314052684958,
+   "cd": 0.0616406115767542,
+   "cl_ratio": 1.0892503597568148,
+   "cd_ratio": 1.0162983953189109
+  },
+  "M0.400 a6": {
+   "n": 5560,
+   "flights": 200,
+   "cl": 0.25769951215906084,
+   "cd": 0.08225216976092822,
+   "cl_ratio": 0.9847262146768384,
+   "cd_ratio": 0.9968332414201975
+  },
+  "M0.700 a14": {
+   "n": 331,
+   "flights": 19,
+   "cl": 0.28639867505068817,
+   "cd": 0.15823177225172713,
+   "cl_ratio": 0.9577507409081919,
+   "cd_ratio": 1.0134625248309443
+  },
+  "M1.000 a2": {
+   "n": 372,
+   "flights": 18,
+   "cl": 0.022368806075931995,
+   "cd": 0.07328498805223155,
+   "cl_ratio": 1.0042004519786092,
+   "cd_ratio": 0.6601010661620847
+  },
+  "M1.627 a16": {
+   "n": 1117,
+   "flights": 16,
+   "cl": 0.1742182092986277,
+   "cd": 0.21913014662334468,
+   "cl_ratio": 1.0326401653535036,
+   "cd_ratio": 1.1746817343858627
+  },
+  "M1.500 a16": {
+   "n": 257,
+   "flights": 12,
+   "cl": 0.18547201562781035,
+   "cd": 0.24501595375912455,
+   "cl_ratio": 1.0041016058781904,
+   "cd_ratio": 1.0218128822910864
+  },
+  "M2.581 a8": {
+   "n": 758,
+   "flights": 247,
+   "cl": 0.07852389934247007,
+   "cd": 0.17208771022344907,
+   "cl_ratio": 1.0022083908253996,
+   "cd_ratio": 1.008959983017358
+  },
+  "M1.400 a10": {
+   "n": 209,
+   "flights": 63,
+   "cl": 0.12142225815422598,
+   "cd": 0.1431180237483619,
+   "cl_ratio": 1.0117407754881815,
+   "cd_ratio": 1.0129747331675873
+  },
+  "M7.099 a22": {
+   "n": 255,
+   "flights": 13,
+   "cl": 0.14171944926017566,
+   "cd": 0.33667340530862905,
+   "cl_ratio": 1.0231940721237347,
+   "cd_ratio": 1.0103383310528025
+  },
+  "M5.673 a22": {
+   "n": 1873,
+   "flights": 30,
+   "cl": 0.13845292027540496,
+   "cd": 0.2983120799346465,
+   "cl_ratio": 1.024070211016921,
+   "cd_ratio": 1.0031624396711054
+  },
+  "M5.673 a20": {
+   "n": 456,
+   "flights": 9,
+   "cl": 0.12882289739171113,
+   "cd": 0.2092504106565697,
+   "cl_ratio": 1.0297325376789632,
+   "cd_ratio": 0.7258539248173937
+  },
+  "M4.832 a18": {
+   "n": 2382,
+   "flights": 34,
+   "cl": 0.11629859630339207,
+   "cd": 0.28925057494312795,
+   "cl_ratio": 1.0203045360970386,
+   "cd_ratio": 0.9702092677462929
+  },
+  "M1.300 a10": {
+   "n": 217,
+   "flights": 31,
+   "cl": 0.12170480619401176,
+   "cd": 0.15296368808481506,
+   "cl_ratio": 0.9942550031355111,
+   "cd_ratio": 0.9987176038982415
+  },
+  "M5.673 a18": {
+   "n": 206,
+   "flights": 6,
+   "cl": 0.11478159766521384,
+   "cd": 0.2809390373582744,
+   "cl_ratio": 1.0033500276159015,
+   "cd_ratio": 1.0036471641128584
+  }
+ }
+}

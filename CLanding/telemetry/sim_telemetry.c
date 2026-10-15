@@ -601,6 +601,13 @@ static const struct {
                          "none",
                          "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                          "none"}},
+    /* sts-live-20261010 with cells replaced by live measurements from all STS logs;
+       provisional, no certified cells. */
+    {"sts-live-20261015", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_cells20261015.csv",
+                         "none",
+                         "ShuttleSim/reference-model/stsn_attitude_identified.ini",
+                         "none"}},
     {"fitted-legacy", "STS-N", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",
