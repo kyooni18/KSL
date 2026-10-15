@@ -104,3 +104,11 @@ final-polar90-terminal-fpa20-v200-20261014T180623Z-m47v98cm
 ## Final overnight watch
 
 Read-only kRPC observation at 06:00 KST confirmed the STS remained in `pre_launch` on `sts-polar90-prelaunch-20261015`: 521,003.44 kg, 8 clamps attached, and throttle 0. The only completed kRPC program was the earlier save/verification script; no active guidance controller remained. No source files were changed by the test session. The watch added no new failure beyond the distinct issues documented above.
+
+## Live feedback-cutoff test (14:51 KST, in progress)
+
+Run `20261015T055107Z-sts-polar90-live-feedback-cutoff` executes HEAD `240a88b` from the saved 90 km polar orbit, using `sts-polar` with `ascent.targetAltitudeKm=90` and `KSP_LANDER_CONTINUE_UNQUALIFIED=1`. KSP was not restarted. This is diagnostic: the selected plan is unqualified and the current provisional aero table has unresolved simulator-source contamination.
+
+The planner selected burn UT 24950.8, 34.10 m/s, target periapsis 49.965 km. Live ignition telemetry and browser display agreed: 18% commanded throttle, 0.8 degrees burn alignment, remaining delta-v 28.6 m/s. Screenshot: `work/live-feedback-cutoff-20261015/burn.png`.
+
+Burn completed at 34.4176 m/s delivered over 61.3 active seconds, throttle zero, measured periapsis **50.264 km**. This meets the existing +300 m cutoff allowance and improves on the previous orbit-start run's approximately 48.0 km periapsis. It verifies the burn cutoff and three burn-display corrections in live KSP; it does not yet establish landing reliability. MM304 entry is in progress. Console log: `/tmp/ksl-live-feedback-cutoff.log`; vehicle log: `FlightLogs/2026-10-15T05-51-26Z-STS-vehicle.jsonl`.
