@@ -59,6 +59,13 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    "sts-live-20261015-live-only": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_cells20261015_live_only.csv",
+        "aero_book": None,
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",
@@ -91,6 +98,7 @@ PROFILE_VEHICLES = {
     "sts-live-20261010": "STS",
     "sts-live-20261011": "STS",
     "sts-live-20261015": "STS",
+    "sts-live-20261015-live-only": "STS",
     "fitted-legacy": "STS-N",
     "reference-b": "STS-N",
 }

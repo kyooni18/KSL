@@ -18,6 +18,14 @@ def open_log(path):
     return gzip.open(path, "rt") if str(path).endswith(".gz") else open(path)
 
 
+def file_digest(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def live_session(path):
     """Fail closed: STS simulator logs share the live vehicle schema/name."""
     session, control = None, False
@@ -123,10 +131,19 @@ def main():
     base = read_table(a.base)
     machs = sorted(base)
     cells = collections.defaultdict(lambda: collections.defaultdict(list))
-    sources = []
+    sources, seen = [], set()
     for path in dict.fromkeys(a.logs):
         session, classification = live_session(path)
-        sources.append(dict(path=os.path.relpath(path), session=session, classification=classification))
+        try:
+            digest = file_digest(path)
+        except OSError:
+            digest = None
+        if session and digest in seen:
+            session, classification = None, "duplicate content"
+        if session:
+            seen.add(digest)
+        sources.append(dict(path=os.path.relpath(path), session=session,
+                            classification=classification, sha256=digest))
         if session is None:
             continue
         for m, al, cl, cd in samples(path, a):
@@ -177,8 +194,8 @@ def main():
         f.write("mach,alpha_deg,cl,cd\n")
         for mr, ar, cl, cd in out:
             f.write(f"{mr:.8f},{ar:g},{cl:.8f},{cd:.8f}\n")
-    logs = [dict(s, sha256=hashlib.sha256(open(s["path"], "rb").read()).hexdigest()) for s in sources]
-    json.dump(dict(status="provisional; not certified", base=os.path.basename(a.base), logs=logs,
+    json.dump(dict(status="provisional; not certified", base=os.path.basename(a.base),
+                   base_sha256=file_digest(a.base), witness_unit="live session", logs=sources,
                    settings={k: v for k, v in vars(a).items() if k not in ("logs", "base", "output", "report")},
                    cells=report), open(a.report, "w"), indent=1)
     for k, v in sorted(report.items(), key=lambda kv: (float(kv[0].split()[0][1:]), float(kv[0].split()[1][1:]))):

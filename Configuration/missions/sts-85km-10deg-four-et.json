@@ -10,6 +10,6 @@
     ]
   },
   "orbit": {"trim": true, "minBurnDeltaV": 0.1},
-  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261015"},
+  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261015-live-only"},
   "checkpoints": {"kspSaveOnPhases": ["orbit", "mm305"]}
 }
