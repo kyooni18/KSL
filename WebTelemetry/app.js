@@ -1865,12 +1865,12 @@
       $("segment-remaining").textContent = "FEEDBACK";
       $("reversal").textContent = entryFeedback.reversalRequested ? "REQUESTED" : "NONE";
     }
-    const hacRadius = terminalPlanProven ? (finite(g.hacRadius) && n(g.hacRadius) > 0 ? g.hacRadius : g.terminalCandidateRadius) : null;
-    const terminalActive = terminalPlanProven;
+    const hacRadius = !finalControl && terminalPlanProven ? (finite(g.hacRadius) && n(g.hacRadius) > 0 ? g.hacRadius : g.terminalCandidateRadius) : null;
+    const terminalActive = terminalPlanProven && !finalControl;
     $("hac-radius").textContent = distance(hacRadius);
     $("hac-remaining").textContent = terminalActive && finite(g.terminalPathRemaining) ? distance(g.terminalPathRemaining) : "—";
     $("terminal-state").textContent = terminalState;
-    $("terminal-blend").textContent = terminalPlanProven && finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(0)}%` : "—";
+    $("terminal-blend").textContent = terminalActive && finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(0)}%` : "—";
     $("hac-radius-label").textContent = energyLaw ? "PATH GO" : "HAC R";
     $("hac-remaining-label").textContent = energyLaw ? "PATH REQ" : "HAC REM";
     $("terminal-blend-label").textContent = energyLaw ? "DRAG LEVEL" : "BLEND";
