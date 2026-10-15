@@ -489,7 +489,10 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
             krpc_cnano_client_surface_layout(s->client,layout,sizeof(layout))[0]?layout:"unclassified; stock mixing kept");
     }
     if(!krpc_cnano_client_set_surface_allocation(s->client,
-        s->taem_surface_roles_latched?KRPC_SURFACE_ALLOCATION_SEPARATED:KRPC_SURFACE_ALLOCATION_MIXED,
+        !s->taem_surface_roles_latched?KRPC_SURFACE_ALLOCATION_MIXED:
+        (command->terminal_roll_trim_enabled&&
+         (command->control_profile==PROFILE_APPROACH||command->control_profile==PROFILE_FLARE))?
+            KRPC_SURFACE_ALLOCATION_SEPARATED_FLAP_PITCH:KRPC_SURFACE_ALLOCATION_SEPARATED,
         error,error_size))return false;
     bool atmospheric=command->control_profile!=PROFILE_ORBITAL;
     bool inertial_entry=atmospheric&&command->control_profile==PROFILE_ENTRY&&command->use_inertial_direction;

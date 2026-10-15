@@ -63,7 +63,11 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
    request can no longer consume elevator deflection. */
 typedef enum {
     KRPC_SURFACE_ALLOCATION_MIXED,
-    KRPC_SURFACE_ALLOCATION_SEPARATED
+    KRPC_SURFACE_ALLOCATION_SEPARATED,
+    /* SEPARATED plus the body flap on pitch: experimental STS Final/flare,
+       where the flap's pitch authority carries trim the elevators alone
+       saturated on (live v9). */
+    KRPC_SURFACE_ALLOCATION_SEPARATED_FLAP_PITCH
 } KrpcSurfaceAllocation;
 typedef enum {
     KRPC_SURFACE_ROLE_UNKNOWN,

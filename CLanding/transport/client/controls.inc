@@ -237,8 +237,10 @@ bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
     for (size_t i = 0; i < client->surface_count; ++i) {
         const CommandableSurface *surface = &client->surfaces[i];
         bool pitch = true, roll = true, yaw = true;
-        if (allocation == KRPC_SURFACE_ALLOCATION_SEPARATED) {
-            pitch = surface->role == KRPC_SURFACE_ROLE_ELEVATOR;
+        if (allocation != KRPC_SURFACE_ALLOCATION_MIXED) {
+            pitch = surface->role == KRPC_SURFACE_ROLE_ELEVATOR ||
+                    (allocation == KRPC_SURFACE_ALLOCATION_SEPARATED_FLAP_PITCH &&
+                     surface->role == KRPC_SURFACE_ROLE_BODY_FLAP);
             roll = surface->role == KRPC_SURFACE_ROLE_AILERON;
             yaw = surface->role == KRPC_SURFACE_ROLE_AILERON ||
                   surface->role == KRPC_SURFACE_ROLE_RUDDER;
@@ -249,12 +251,16 @@ bool krpc_cnano_client_set_surface_allocation(KrpcCNanoClient *client,
     }
     /* kRPC's ControlSurface wraps only the first module of a part; the second
        rudder half is addressed as a module so both halves obey the roles. */
-    bool separated = allocation == KRPC_SURFACE_ALLOCATION_SEPARATED;
+    bool separated = allocation != KRPC_SURFACE_ALLOCATION_MIXED;
     for (size_t i = 0; i < client->fin_module_count; ++i) {
         RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_pitch, separated), error, error_size);
         RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_roll, separated), error, error_size);
         RPC_REQUIRED(client, krpc_SpaceCenter_PartField_set_BoolValue(client->connection, client->fin_modules[i].ignore_yaw, false), error, error_size);
     }
+    fprintf(stderr, "Surface allocation applied: %s\n",
+            allocation == KRPC_SURFACE_ALLOCATION_MIXED ? "mixed" :
+            allocation == KRPC_SURFACE_ALLOCATION_SEPARATED ? "separated (body flap off)" :
+            "separated + body flap pitch");
     client->applied_surface_allocation = allocation;
     client->has_applied_surface_allocation = true;
     return true;
