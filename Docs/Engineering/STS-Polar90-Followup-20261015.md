@@ -18,7 +18,13 @@ Follow-up to `Docs/Experiments/STS-Polar90-Live-Test-20261015.md`. Offline only;
 
 Offline gate: 217 passed, 0 failed, 56 subtests.
 
-## Polar return: diagnosis (not yet fixed)
+## Polar return
+
+**Fixed in f0c6bd6.** MM304 now measures the lateral miss as the capture point's angular distance from the inertial trajectory plane, with the capture point rotated by planet rotation over time-to-go. This replaces the straight-ground-track `range·sin(course error)`. Over short ranges it reduces to the old value. The calibrated replay (plant `sts_aero_polar90_live20261015.csv`, fitted from the live flight) went from 10 km short / 92 km cross-track at MM305 handoff to touchdown 201 m along / 9 m cross at 65 m/s. It still fails acceptance on the contact envelope only. The fix is in shared MM304 code; `make test` (218 passed) shows no general-guidance regression.
+
+Deorbit ranking (item 1 below) was left unchanged: the replay that now lands flies the live burn, so selection was not the blocking fault.
+
+### Original diagnosis
 
 The 72 km replay (`ksl simulate ShuttleSim/scenarios/sts-polar90-72km.ini --from mm304 -p sts-polar`) reproduces the live miss: MM305 handoff ~147–153 km out at 25.7 km, landing ~50 km off the runway.
 
