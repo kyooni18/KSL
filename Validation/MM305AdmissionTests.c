@@ -139,6 +139,10 @@ int main(void){
         &cfg.vehicle,&cfg.guidance);
     assert(alignment.valid&&alignment.distance_m>=cfg.guidance.final_approach_distance);
     assert(alignment.speed_mps>=cfg.guidance.final_alignment_speed);
+    GuidanceSettings delivery=cfg.guidance;delivery.sts_trajectory_delivery=true;
+    VehicleProfile sts=cfg.vehicle;snprintf(sts.model_id,sizeof(sts.model_id),"STS");
+    assert(final_alignment_distance_for_state(NULL,nominal.mean_altitude,
+        nominal.true_air_speed,&cfg.site,&sts,&delivery)==delivery.final_approach_distance);
     assert(fabs(alignment.altitude_m-cfg.site.altitude-
         alignment.distance_m*tan(alignment.slope_deg*DEG2RAD))<1e-9);
 

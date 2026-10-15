@@ -694,6 +694,9 @@ double final_alignment_distance_for_state(const GuidanceMachine *g,double altitu
     if(g&&g->terminal_final_handoff_latched&&isfinite(g->terminal_final_handoff_distance)&&
        g->terminal_final_handoff_distance>=500.0)return g->terminal_final_handoff_distance;
     double base=fmax(500.0,s->final_approach_distance);
+    /* The opt-in STS law prices and flies its configured station. The legacy
+       high-inlet extension was fitted to a different delivery policy/polar. */
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS"))return base;
     if(!isfinite(altitude)||!isfinite(speed))return base;
     double slope=s->final_glide_slope;
     if(!(slope>1.0&&slope<60.0))return base;
