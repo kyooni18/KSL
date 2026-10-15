@@ -103,6 +103,44 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         alignment.distance_m);
     GeoPoint current_point={t->latitude,t->longitude,t->mean_altitude};
     double alignment_range=great_circle_distance(current_point,alignment_point,ground_radius);
+    bool sts_delivery=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
+    if(sts_delivery&&cfg->site.allow_reciprocal_runway){
+        /* Experimental STS: deliver to the approach side of the runway end
+           TAEM will fly.  The 60 deg full test steered for the RW09 aimpoint
+           while TAEM chose RW27, and handed over abeam at Mach 2.85 needing a
+           reversal.  The end is the one reached with the smaller heading
+           change onto its runway; it is re-chosen until the TAEM interface
+           range and then held, and passed to TAEM as its preview. */
+        /* cfg->site is already the preview end (guidance_terminal.c swaps
+           it for end 1); index the configured end as 0. */
+        LandingSite base=g->runway_end_preview_valid&&g->runway_end_index==1?
+            runway_reciprocal_site(&cfg->site,ground_radius):cfg->site;
+        LandingSite ends[2]={base,runway_reciprocal_site(&base,ground_radius)};
+        GeoPoint aims[2];double turn[2],range[2];
+        for(int e=0;e<2;++e){
+            aims[e]=runway_approach_aimpoint(&ends[e],ground_radius,alignment.distance_m);
+            range[e]=great_circle_distance(current_point,aims[e],ground_radius);
+            turn[e]=fabs(norm_signed_deg(ends[e].runway_heading-
+                initial_bearing(current_point,aims[e])));
+        }
+        int end=g->runway_end_preview_valid?g->runway_end_index:0;
+        if(range[end]>entry_taem_range_target(p,s)||!g->runway_end_preview_valid){
+            /* Keep the held end until reaching it would need more than a
+               perpendicular turn (arrival from its departure side); near a
+               perpendicular approach both ends cost alike and switching only
+               moves the aimpoint across the runway every cycle. */
+            int best=!g->runway_end_preview_valid?(turn[1]<turn[0]?1:0):
+                (turn[end]>90.0&&turn[1-end]<turn[end]?1-end:end);
+            if(best!=end||!g->runway_end_preview_valid)
+                fprintf(stderr,"MM304 delivery runway end: UT %.1f RW%s turn09=%.1f turn27=%.1f range=%.0f\n",
+                    t->ut,best==1?"27":"09",turn[0],turn[1],range[best]);
+            end=best;
+            g->runway_end_index=end;
+            g->runway_end_preview_valid=true;
+        }
+        alignment_point=aims[end];
+        alignment_range=range[end];
+    }
     if(!alignment.valid||!isfinite(alignment_range)||!isfinite(alignment_altitude))
         return entry_program_contract_hold(g,t,cfg,dt,
             "MM304 alignment energy contract has invalid geometry.");
@@ -150,7 +188,10 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     if(cfg->guidance.taem_energy_law&&g->entry_terminal_model){
         double interface_altitude=s->taem_interface_altitude;
         double sound=planet_atmospheric_speed_of_sound(p,interface_altitude);
-        double handoff_speed=(s->mm305_target_mach+s->mm305_mach_half_width)*sound;
+        /* Experimental STS budgets the handoff band centre, not its upper
+           edge: the 60 deg full test arrived at Mach 2.85 too fast to turn. */
+        double handoff_speed=(s->mm305_target_mach+
+            (sts_delivery?0.0:s->mm305_mach_half_width))*sound;
         double reach=mm305_energy_law_handoff_reach(g->entry_terminal_model,
             interface_altitude-cfg->site.altitude,handoff_speed,t->mass);
         if(isfinite(handoff_speed)&&handoff_speed>0.0&&isfinite(reach)&&
@@ -396,6 +437,12 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     }
     lateral.has_azimuth_error=isfinite(t->course_to_site_error);
     lateral.azimuth_error_deg=lateral.has_azimuth_error?t->course_to_site_error:0.0;
+    /* Experimental STS steers for the same aimpoint its energy targets. */
+    if(sts_delivery&&isfinite(t->ground_track_heading)){
+        lateral.has_azimuth_error=true;
+        lateral.azimuth_error_deg=norm_signed_deg(
+            initial_bearing(current_point,alignment_point)-t->ground_track_heading);
+    }
     {
         /* Azimuth reversals respect only what navigation can resolve: the
            angle the crossrange uncertainty subtends at the capture point. */

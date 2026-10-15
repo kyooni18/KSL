@@ -35,9 +35,14 @@ static bool mm305_physical_handoff_due(const Telemetry *t,const PlanetModel *p,
     double sound=planet_atmospheric_speed_of_sound(p,t->mean_altitude);
     double mach=isfinite(t->mach)&&t->mach>0.0?t->mach:
         (isfinite(sound)&&sound>0.0?t->true_air_speed/sound:NAN);
+    /* Experimental STS hands over at the band centre MM304 now budgets for
+       (the 60 deg full test arrived at the Mach 2.85 edge too fast to turn). */
+    bool sts_delivery=cfg->guidance.sts_trajectory_delivery&&
+        !strcmp(cfg->vehicle.model_id,"STS");
     return isfinite(mach)&&
         t->mean_altitude<=cfg->guidance.mm305_max_altitude &&
-        mach<=cfg->guidance.mm305_target_mach+cfg->guidance.mm305_mach_half_width;
+        mach<=cfg->guidance.mm305_target_mach+
+            (sts_delivery?0.0:cfg->guidance.mm305_mach_half_width);
 }
 
 /* Translation-unit private helpers. */
