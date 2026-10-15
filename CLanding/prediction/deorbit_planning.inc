@@ -680,6 +680,18 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
     bool b_inlet=bw->taem_dynamic_interface_captured&&
         !bw->taem_ownership_boundary_missed;
     if(a_inlet!=b_inlet)return a_inlet;
+    /* Experimental STS: hand over near the configured TAEM interface range.
+       The 60 deg flight's chosen burn passed the 20-96.5 km window test and
+       the perpendicular-course test but handed over 28 km out at Mach 2.5;
+       TAEM had no room to turn and the orbiter arrived short.  The analytic
+       inlet margin ranked next is uniformly -200..-280 kJ/kg across these
+       candidates and cannot separate them. */
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&aw->reached_taem&&bw->reached_taem&&
+       isfinite(aw->taem_distance)&&isfinite(bw->taem_distance)){
+        double nominal=entry_taem_range_target(p,s);
+        double ae=fabs(aw->taem_distance-nominal),be=fabs(bw->taem_distance-nominal);
+        if(fabs(ae-be)>1.0)return ae<be;
+    }
     bool a_geometry=deorbit_witness_inlet_geometry(aw,p,site,s);
     bool b_geometry=deorbit_witness_inlet_geometry(bw,p,site,s);
     if(a_geometry!=b_geometry)return a_geometry;
