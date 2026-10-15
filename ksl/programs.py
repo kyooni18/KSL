@@ -353,6 +353,35 @@ class AscentProgram(Program):
 
 # --- orbit ---------------------------------------------------------------------------
 
+ORBIT_RETARGET_TOLERANCE_M = 5000.0
+
+
+def established_orbit_retarget(config: MissionConfig) -> str | None:
+    """Refuse to silently move an orbit this run did not insert.
+
+    A run started at Orbit from a saved checkpoint does not inherit the
+    original run's --set overrides; on 2026-10-15 a 90 km polar orbit was about
+    to be trimmed to the profile's 100 km default.  Circular profiles only.
+    """
+    if config["profile"]["kind"] != "circular":
+        return None
+    from .krpc_link import probe
+    try:
+        info = probe(config)
+    except Exception:  # noqa: BLE001 - the trim child reports connection faults itself
+        return None
+    ap, pe = info.get("apoapsis"), info.get("periapsis")
+    depth = info.get("atmosphereDepth") or 0.0
+    if info.get("situation") != "orbiting" or ap is None or pe is None or pe <= depth:
+        return None
+    target = config.target_altitude_m
+    if max(abs(ap - target), abs(pe - target)) <= ORBIT_RETARGET_TOLERANCE_M:
+        return None
+    return (f"orbit trim refused: the current orbit ({ap / 1000:.1f} x {pe / 1000:.1f} km) is far from the "
+            f"configured {target / 1000:.0f} km target. A saved checkpoint does not restore the original run's "
+            f"overrides; re-apply them (--set ascent.targetAltitudeKm=...) or use `ksl continue`.")
+
+
 class OrbitTrimProgram(Program):
     """Orbit operations for the profile kind, run as one or more child stages."""
     name = "orbit-trim"
@@ -428,6 +457,11 @@ class OrbitTrimProgram(Program):
             ctx.log.emit(Event("milestone", f"orbit: {name}" + (f" ({detail})" if detail else ""), data=event))
 
         env = {**krpc_env(ctx.config), **controls_env(ctx)}
+        operation = getattr(getattr(ctx.log, "status", None), "operation", "mission")
+        if ctx.config["orbit"]["trim"] and start == Phase.ORBIT and operation != "orbit":
+            refusal = established_orbit_retarget(ctx.config)
+            if refusal:
+                return Outcome(False, refusal)
         if ctx.config["orbit"]["trim"]:
             for name, _, argv in self.stages(ctx):
                 code, tail = run_child(ctx, name, argv, env, on_event)

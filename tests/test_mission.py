@@ -541,3 +541,14 @@ class ClosedLoopSimulationTests(ControllerTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OrbitRetargetGuardTests(unittest.TestCase):
+    def test_established_orbit_far_from_target_is_not_retargeted(self):
+        config = load_config("sts-polar")  # 100 km default target
+        orbit = {"scene": "flight", "situation": "orbiting", "apoapsis": 89995.0,
+                 "periapsis": 89986.0, "atmosphereDepth": 70000.0}
+        with mock.patch("ksl.krpc_link.probe", return_value=orbit):
+            self.assertIn("ksl continue", programs.established_orbit_retarget(config))
+            orbit.update(apoapsis=99800.0, periapsis=99500.0)
+            self.assertIsNone(programs.established_orbit_retarget(config))

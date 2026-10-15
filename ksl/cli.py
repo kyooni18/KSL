@@ -161,7 +161,12 @@ def cmd_simulate(args: argparse.Namespace) -> int:
         return EXIT_OK
     config = _profile(args)
     name = args.scenario or config["simulation"]["scenario"]
-    scenario = resolve_scenario(name, Phase.parse(args.start) if args.start else None)
+    # A raw .ini flies the profile's backend configuration and aero profile,
+    # not the general default.json (2026-10-15: an STS polar replay silently
+    # ran general guidance).
+    scenario = resolve_scenario(name, Phase.parse(args.start) if args.start else None,
+                                config["landing"]["backendConfiguration"],
+                                config["landing"]["modelProfile"])
     stop = Phase.parse(args.stop) if args.stop else Phase.COMPLETE
     controller = MissionController(config, "dry-run" if args.dry_run else "sim", scenario.start, stop,
                                    scenario=scenario, label=args.label)
@@ -386,7 +391,9 @@ def cmd_operate(args: argparse.Namespace) -> int:
         if args.ascent_mode:
             overrides.append(f"ascent.guidanceMode={args.ascent_mode}")
         request = OperationRequest(args.operation, config, mode, args.automatic,
-                                   resolve_scenario(args.scenario or config["simulation"]["scenario"])
+                                   resolve_scenario(args.scenario or config["simulation"]["scenario"], None,
+                                                    config["landing"]["backendConfiguration"],
+                                                    config["landing"]["modelProfile"])
                                    if args.operation == "simulate" else None, source, args.use_save,
                                    resume_profile=args.profile, resume_overrides=overrides)
         config = request.resolve()[0]
