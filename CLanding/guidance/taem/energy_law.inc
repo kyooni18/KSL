@@ -465,6 +465,31 @@ static double tel_entry_arc(TaemEnergyLawState *L,const TelContext *c,const TelP
    directly abeam the station while still tens of kilometres off centreline;
    retaining the capture leg is necessary to keep the full lateral correction
    rather than the near-runway 2 km cross-track trim. */
+/* Centreline lookahead of the straight-in pursuit (tel_lateral). */
+static double tel_line_lookahead(const TelContext *c,const TelPoint *s,double mach,double gnd){
+    double look=clampd(0.4*fmax(0.0,-c->d_station-s->x),3000.0,12000.0);
+    /* Supersonic turn rates are a fraction of a degree per second: aim at a
+       point ~45 s ahead so the capture does not overshoot the centreline. */
+    if (mach>1.1) look=fmax(look,45.0*gnd);
+    return look;
+}
+
+/* The straight-in pursuit meets the centreline about one lookahead ahead.
+   When that is inside the Final station, Final takes over there, so the
+   law's station (path end and energy target) is the capture point on the
+   same outer glide; elsewhere the configured station stands. */
+static TelContext tel_effective_station(const TaemEnergyLawState *L,const TelContext *c,
+        const TelPoint *s,double mach,double gnd){
+    TelContext e=*c;
+    if (L->loop||(L->leg!=TEL_LEG_OUT&&L->leg!=TEL_LEG_FINAL)) return e;
+    double x_cap=L->leg==TEL_LEG_FINAL?s->x:s->x+tel_line_lookahead(c,s,mach,gnd);
+    if (!(x_cap>-c->d_station)) return e;
+    e.d_station=fmax(500.0,-x_cap);
+    e.h_station=e.d_station*tan(e.slope_deg*DEG2RAD);
+    e.e_station=e.h_station+e.v_station*e.v_station/(2.0*TEL_G0);
+    return e;
+}
+
 static bool tel_final_line_ready(const TelContext *c,const TelPoint *s){
     if(!c||!s||!(c->d_station>0.0)||
        !isfinite(s->x)||!isfinite(s->y)||!isfinite(s->psi))return false;
@@ -489,10 +514,7 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
     double r=L->radius,bank_ff=0.0,course_cmd;
     int side=L->side;
     if (L->leg==TEL_LEG_OUT||L->leg==TEL_LEG_FINAL) {
-        double look=clampd(0.4*fmax(0.0,-D-s->x),3000.0,12000.0);
-        /* Supersonic turn rates are a fraction of a degree per second: aim at a
-           point ~45 s ahead so the capture does not overshoot the centreline. */
-        if (mach>1.1) look=fmax(look,45.0*gnd);
+        double look=tel_line_lookahead(c,s,mach,gnd);
         /* Far off axis, capture the actual station.  A positive lookahead
            assumes the station is ahead in x; after an abeam pass it instead
            aims farther east and can never close the along-track separation. */
@@ -831,8 +853,11 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         double r_new=clampd(need/L->hac_left_rad,fmax(r_floor,r_fly),TEL_R_MAX);
         L->radius=clampd(r_new,L->radius-250.0,L->radius+250.0);
     }
+    /* Energy pricing (path and drag level) ends where Final will take over;
+       lateral and the vertical glide reference keep the configured station. */
+    TelContext ce=tel_effective_station(L,&c,&s,mach,gnd);
     TelSegment segs[5];
-    int nseg=tel_segments(L,&c,&s,segs);
+    int nseg=tel_segments(L,&ce,&s,segs);
     L->s_go=tel_sum(segs,nseg);
     if (getenv("KSP_LANDER_TEL_TRACE")&&(L->leg!=L->trace_leg||L->side!=L->trace_side||
             fabs(L->radius-L->trace_radius)>1.0||L->loop!=L->trace_loop)) {
@@ -844,7 +869,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     }
     if (ut>=L->last_pred_ut+TEL_UPDATE_S) {
         L->last_pred_ut=ut;
-        L->k=tel_solve_k(L,&c,&s,&L->s_req);
+        L->k=tel_solve_k(L,&ce,&s,&L->s_req);
     }
 
     *bank_cmd=tel_lateral(L,&c,&s);

@@ -559,10 +559,12 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
        kinetic energy before the aim point is sized with the learned split-fin
        drag area; until that is measured the fin opens to its nominal to
        measure it. */
-    /* In the preflare and float the fin sheds the total energy above
-       touchdown (speed and height) over the distance left to the touchdown
-       target, net of the clean drag already acting; past the target it
-       opens fully so the mains go down on the runway that remains. */
+    /* In the preflare and float the fin only keeps the touchdown inside the
+       long-landing limit (the point past which Final stops floating): it
+       sheds the total energy above touchdown (speed and height) over the
+       distance left to that limit, net of the clean drag already acting, and
+       opens fully past it.  Aiming it at the nominal touchdown point instead
+       spends the speed the flare needs to arrest the sink. */
     double speedbrake_target=0.0;
     if(s->terminal_speedbrake&&t->dynamic_pressure>0.0){
         double extra_drag=0.0;
@@ -570,7 +572,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             if(isfinite(speed_ref)&&V>speed_ref)
                 extra_drag=t->mass*(V*V-speed_ref*speed_ref)/(2.0*aim_distance);
         }else{
-            double to_target=touchdown_target-along;
+            double to_target=touchdown_target+.35*runway_length-along;
             double fin_drag=g->terminal_split_fin_cda*g->terminal_speedbrake_fraction*t->dynamic_pressure;
             double clean_drag=fmax(0.0,t->drag_force-fin_drag);
             double excess_energy=V*V-v_td*v_td+2.0*g0*fmax(0.0,height);
@@ -607,7 +609,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     /* Long landing: an unpowered vehicle cannot go around.  Past the point
        where the float would leave too little runway, stop floating and put
        the mains down firmly. */
-    bool long_landing=along>touchdown_target+.35*runway_length;
+    bool long_landing=along>touchdown_target+.35*runway_length; /* fin limit above */
     double float_height=long_landing?0.0:H_FLOAT;
     double float_sink=long_landing?1.8:S_FLOAT;
     bool flaring=g->terminal_pull_latch;

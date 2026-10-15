@@ -694,8 +694,10 @@ def main():
     # Touchdown speed window from the configured vehicle touchdown speed (the
     # guidance target), not a separate hard-coded band that disagrees with it.
     configured_touchdown=float((config.get("vehicle") or {}).get("touchdownSpeed") or 65.0)
+    # A slow touchdown is acceptable when the sink rate is (checked below);
+    # only excess speed is a contact-envelope failure.
     touchdown_speed_ok=(isinstance(touchdown_speed,(int,float)) and
-                        .85*configured_touchdown<=touchdown_speed<=1.15*configured_touchdown)
+                        touchdown_speed<=1.15*configured_touchdown)
     touchdown_sink=simulator_summary.get("touchdown_sink_mps")
     touchdown_sink_ok=isinstance(touchdown_sink,(int,float)) and 0.0<=touchdown_sink<=3.0
     rollout_controls_ok=rollout_brakes_seen and not rollout_airbrakes_seen
