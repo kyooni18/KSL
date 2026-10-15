@@ -21,9 +21,11 @@ def test_controller_state_round_trip(tmp_path):
         "hasMainGearGrounded": True, "mainGearGrounded": True,
         "hasNoseGearGrounded": True, "noseGearGrounded": False},
         "command": command, "guidanceState": guidance, "referenceTrajectory": reference,
+        "commandLifecycle": {"appliedCommand": {"controlDiagnostics": {"rollAuthority": 42.}}},
         "statusMessage": "Tracking the burn target", "warningMessage": None,
         "decisionReason": "burn_started=true", "decisionTrace": {"burnStarted": True}})
     assert record["mainGearGrounded"] is True and record["noseGearGrounded"] is False
+    assert record["commandLifecycle"]["appliedCommand"]["controlDiagnostics"]["rollAuthority"] == 42.
     record["source"] = "landing"
     run = tmp_path / "runs" / "test"
     run.mkdir(parents=True)
