@@ -402,6 +402,17 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
     const double RATE_CLOSURE_TAU=2.0;
     /* Position loop an order slower than the rate loop plus one bank reversal. */
+    /* Experimental STS: the full +/-later_bank reversal (~9 s live) held the
+       position bandwidth near 0.03/s, so a 90 m offset was still closing at
+       the threshold.  Size the reversal from the bank this capture needs:
+       stopping the commanded closure rate omega*|y| within |y|. */
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")){
+        double need_accel=.5*omega*omega*fabs(y);
+        double need_bank=fmin(later_bank,atan(need_accel/g0)*RAD2DEG);
+        double need_reversal=decision_axis_capture_time(2.0*need_bank,0.0,
+            roll_limits.accel_deg_s2,roll_limits.rate_deg_s);
+        if(isfinite(need_reversal))reversal_time=need_reversal;
+    }
     double omega_limit=.35/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
     double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
@@ -924,10 +935,11 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             aoa,r.command.target_aoa,ld_float,long_landing,g->terminal_final_low_energy,range_short,predicted_ground_range,predicted_touchdown_speed,g->terminal_speedbrake_fraction,s->terminal_speedbrake?1:0,g->terminal_split_fin_cda);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
-        fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f\n",
+        fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f omegaLim=%.3f rateGain=%.3f reversal=%.2f laterBank=%.2f desired=%.2f pave=%d\n",
             t->ut,along,t->runway_cross_track,course,t->ground_track_heading,
             site->runway_heading,track_error*RAD2DEG,cross_rate,omega,lateral_accel,
-            bank_limit,bank,target_course,r.command.target_roll,t->roll,t->roll_rate);
+            bank_limit,bank,target_course,r.command.target_roll,t->roll,t->roll_rate,
+            omega_limit,rate_gain,reversal_time,later_bank,desired_rate,pavement_intercept?1:0);
     return r;
 }
 
