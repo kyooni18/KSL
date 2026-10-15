@@ -363,3 +363,15 @@ Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at
 - Root cause: the deorbit inlet scan sampled 28.4 / 23.7 / 126 / 157 / 252 km (STS target 40.2 km), but the secant refine bracketed the *configured* 96.5 km inlet range (found 92.8 km). The STS ranking rejected that, so the plan kept the coarse 28.4 km sample.
 - Fix: the refine aims at `sts_handoff_target` when it is finite. Not verified live yet (live tests on hold).
 - Also, ea05f0a: excluded SSMEs are shut down (`Engine.Active=false`) before burns; they had ignited during the deorbit burn.
+
+## 2026-10-16 overnight STS live runs
+
+### sts-night-1 (`runs/20261015T175522Z-sts-night-1`, save `ksl-20261015T113418Z-sts-incl60-full-orbit`, `/tmp/ksl-sts-night-1.log`)
+
+- Deorbit: `DEORBIT_STS_HANDOFF_TARGET 40.2km`. Refine moved to the target: `DEORBIT_INLET_REFINE` 38.9 km, `DEORBIT_INLET_SELECTED` 38.9 km (not ~28 km). Selected burn 24924.1 s, tier 3, TAEMrange 38.9 km, rangeError -57.6 km (the rangeError figure is still unexplained; it is not against the 40.2 km target).
+- Burn exclusion: "shut down non-selected engine" for 0, 1, 2 (the three SSMEs). Whether they stayed off through the burn is not checked in the log.
+- MM304 live replan late: miss -1.3 km at 0 deg (bank 40 deg, target 39.8 km). The sign is "+ = short", so the run was about 1.3 km long at handoff.
+- MM304→MM305 handoff: UT 25992.32, 23.5 km, Mach 2.50, routeQualified=0. Planned TAEM range was 38.9 km, but the handoff was abeam: cross +29.3 km, heading error -102.6 deg.
+- First TAEM_ENERGY (UT 25992.3): sGo = sReq = 57052 m, cross +29306, hdgErr -102.6, bank +22.8/+45.0. TAEM turned back through the centreline and converged slowly. sGo fell 40.7 → 15.3 km in one step at UT ~26051.
+- Final: "Long landing: floating would leave too little runway; landing firmly now" at 129 m (preflare). Touchdown at UT 26285.2, 72 m altitude, 41.4 m/s, runwayAlongTrack +48 m, cross -0.1 m. Rollout stopped at along -78 m at 1.2 m/s, cross -0.3 m. `CLanding/guidance/final/phases.inc:79` requires along in [0, runway_length] for a completed stop, so the vehicle overran the along=0 end by 78 m.
+- Result: FAILED, "Rollout stopped outside the selected runway bounds." Vehicle intact. Touched down with about 48 m of runway left at 41 m/s and overran. Diagnosis: the approach floated long after the threshold, then arrived too fast with too little runway. The earlier 60° run died on an abeam supersonic handoff, and tonight's run has the same handoff geometry (abeam, Mach 2.5, heading error -100 deg).
