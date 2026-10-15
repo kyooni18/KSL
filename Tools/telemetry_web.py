@@ -2279,6 +2279,30 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
     if not record or record.get("source") != "landing":
         return
     backend_phase = str(record.get("backendPhase") or "").strip()
+    try:
+        status = json.loads((run / "status.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        status = {}
+    plan = None
+    if status.get("phase") == "deorbit" or (backend_phase and _DEORBIT_PHASES.search(backend_phase)):
+        try:
+            loaded = json.loads((run / "deorbit-plan.json").read_text(encoding="utf-8"))
+            plan = loaded if isinstance(loaded, dict) else None
+        except (OSError, json.JSONDecodeError):
+            plan = None
+    # During a coast time warp the backend publishes nothing, so the run's last
+    # record keeps its pre-engage phase and UT.  When that record is older than
+    # the live game clock, the KSL run (flying, deorbit) and its plan own the
+    # phase, named as the backend names it.
+    live_ut = optional_number((snapshot.get("telemetry") or {}).get("ut"))
+    record_ut = optional_number(record.get("ut"))
+    record_stale = live_ut is not None and record_ut is not None and live_ut - record_ut > max_age
+    flying = status.get("state") == "running" and status.get("operation_stage") == "flying"
+    if record_stale and flying and status.get("phase") == "deorbit" and plan is not None:
+        burn_ut = optional_number(plan.get("burnUT"))
+        duration = optional_number(plan.get("estimatedBurnDuration")) or 0.0
+        burn_start = burn_ut - 0.5 * duration if burn_ut is not None else None
+        backend_phase = "Coast to Burn" if burn_start is not None and live_ut < burn_start else "Deorbit Burn"
     command = dict(snapshot.get("command") or {})
     aoa = optional_number(record.get("targetAoA"))
     fpa = optional_number(record.get("flightPathAngle"))
@@ -2293,22 +2317,16 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
     snapshot["command"] = command
     if backend_phase:
         snapshot["phase"] = backend_phase
-    try:
-        status = json.loads((run / "status.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        status = {}
+    if flying and backend_phase.lower() not in ("", "idle", "complete"):
+        snapshot["automationEngaged"] = True
     message = status.get("status_message")
     if message:
         snapshot["statusMessage"] = f"KSL {status.get('phase', '')}: {message}".strip()
     if status.get("warning"):
         snapshot["warningMessage"] = status["warning"]
-    if backend_phase and _DEORBIT_PHASES.search(backend_phase) and not isinstance(snapshot.get("deorbitPlan"), dict):
-        try:
-            plan = json.loads((run / "deorbit-plan.json").read_text(encoding="utf-8"))
-            if isinstance(plan, dict):
-                snapshot["deorbitPlan"] = plan
-        except (OSError, json.JSONDecodeError):
-            pass
+    if plan is not None and backend_phase and _DEORBIT_PHASES.search(backend_phase) \
+            and not isinstance(snapshot.get("deorbitPlan"), dict):
+        snapshot["deorbitPlan"] = plan
     server = dict(snapshot.get("server") or {})
     server["source"] = f"{server.get('source', 'kRPC observer')} + KSL run {run.name}"
     snapshot["server"] = server
