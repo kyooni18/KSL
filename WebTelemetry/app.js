@@ -325,13 +325,13 @@
     const append = (point) => {
       if (point && finite(point.latitude) && finite(point.longitude)) points.push(point);
     };
-    const appendTrajectory = (trajectory) => {
+    const appendTrajectory = (trajectory, includeStart = true) => {
       if (!Array.isArray(trajectory)) return;
       let kept = 0;
       for (const point of trajectory) {
         if (!point || !finite(point.latitude) || !finite(point.longitude)) continue;
         const range = greatCircleMeters(craft, point);
-        if (!finite(range) || range <= horizon || kept < 2) {
+        if (!finite(range) || range <= horizon || (includeStart && kept < 2)) {
           append(point);
           kept += 1;
         }
@@ -342,7 +342,8 @@
     const hasDeorbitPlan = trajectoryCount(snapshot?.deorbitPlan?.trajectory) >= 2;
     const orbital = hasDeorbitPlan ? [] : snapshot?.orbitalTrajectory;
     if (Array.isArray(orbital)) for (const point of orbital) append(point);
-    appendTrajectory(snapshot?.actualTrajectory);
+    // Old entry samples must not keep a terminal approach zoomed out.
+    appendTrajectory(snapshot?.actualTrajectory, !terminalApproach);
     appendTrajectory(displayableGuidanceTrajectory(snapshot));
 
     const site = snapshot?.site;
