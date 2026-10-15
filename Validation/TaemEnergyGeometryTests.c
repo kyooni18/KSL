@@ -72,6 +72,17 @@ static void recorded_capture_range(void) {
     low.x=-5000.0;
     TelContext priced=tel_effective_station(&final_line,&c,&low,0.3,low.v);
     assert(priced.d_station==5000.0); /* loop exits price their actual capture too */
+    /* Live runway switch: near the centreline but pointing across it. The
+       frame scorer priced a HAC, while the old first-tick replan gate left
+       live guidance on an unplanned direct pursuit with the opposite bank. */
+    TaemGeometryState switched={.runway_along_m=33767.0,.runway_cross_m=-5006.0,
+        .altitude_above_runway_m=23459.0,.airspeed_mps=768.7,
+        .ground_speed_mps=754.6,.flight_path_angle_deg=-11.0,
+        .heading_error_deg=105.8};
+    TaemEnergyLawState fresh={0};double aoa,bank;
+    assert(taem_energy_law_step(&fresh,model,&switched,25660.0,13.4,26015.1,
+        44.8,&aoa,&bank));
+    assert(fresh.capture_forecast&&fresh.loop);
     (void)taem_energy_law_frame_score;
     free(model);
 }

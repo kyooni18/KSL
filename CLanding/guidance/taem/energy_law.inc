@@ -64,7 +64,7 @@ typedef struct {
 typedef struct { double length,radius; } TelSegment;
 
 static bool tel_delivery_policy(const TelContext *c) {
-    return c->model->guidance.sts_trajectory_delivery&&
+    return c&&c->model&&c->model->guidance.sts_trajectory_delivery&&
         !strcmp(c->model->vehicle.model_id,"STS");
 }
 
@@ -874,7 +874,7 @@ static void tel_setup(const TerminalModel *model,const TaemGeometryState *geo,
 static void tel_initialize(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
     double D=c->d_station;
     *L=(TaemEnergyLawState){.initialized=true,.leg=TEL_LEG_OUT,.side=1,
-        .capture_forecast=fabs(s->y)>6000.0,
+        .capture_forecast=tel_delivery_policy(c)||fabs(s->y)>6000.0,
         .x_turn=-D,.radius=5000.0,.k=0.5,.last_geo_ut=-INFINITY,.last_pred_ut=-INFINITY};
 }
 
@@ -903,12 +903,14 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     tel_setup(model,geo,mass_kg,aoa_deg,bank_deg,&c,&s);
     L->station_slope_deg=c.slope_deg;
     double D=c.d_station;
-    if (!L->initialized) tel_initialize(L,&c,&s);
+    bool initial_plan=!L->initialized;
+    if (initial_plan) tel_initialize(L,&c,&s);
     double q,mach;
     tel_air(&c,s.h,s.v,&q,&mach);
     double gnd=geo->ground_speed_mps;
 
-    if (ut>=L->last_geo_ut+TEL_UPDATE_S&&tel_plan_open(L,&c,&s)) {
+    if ((tel_delivery_policy(&c)&&initial_plan)||
+            (ut>=L->last_geo_ut+TEL_UPDATE_S&&tel_plan_open(L,&c,&s))) {
         L->last_geo_ut=ut;
         tel_plan(L,&c,&s);
     } else if (L->loop&&L->leg==TEL_LEG_OUT&&ut>=L->last_geo_ut+TEL_UPDATE_S) {
