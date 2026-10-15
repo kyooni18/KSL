@@ -353,6 +353,12 @@ bool shuttle_sim_decode_telemetry(const char *packet,
         t->pitch=number_value(&doc,attitude,"body_pitch_deg",t->pitch);
         t->roll=number_value(&doc,attitude,"body_roll_deg",t->roll);
         t->heading=number_value(&doc,attitude,"body_heading_deg",t->heading);
+    }else if(isfinite(t->sideslip)){
+        /* KSP reports the nose heading; with kRPC's beta ~ course - heading
+           the wind-axis sim's nose is track - beta.  Reporting the track
+           hid rudder from the runway heading hold: L5 learned ~zero yaw
+           authority at flare entry, held full rudder and grew beta to 18 deg. */
+        t->heading=fmod(t->heading-t->sideslip+360.0,360.0);
     }
 
     double published_aoa_rate =

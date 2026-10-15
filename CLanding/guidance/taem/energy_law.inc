@@ -754,6 +754,12 @@ static void tel_setup(const TerminalModel *model,const TaemGeometryState *geo,
         c.aoa_max=fmin(c.aoa_max,model->vehicle.terminal_maximum_lift_angle_of_attack);
     c.slope_deg=tel_equilibrium_slope(&c,mass_kg,model->guidance.final_glide_slope,
         fmax(model->vehicle.final_approach_speed,model->vehicle.minimum_safe_speed));
+    /* The configured outer glide is a ceiling.  The polar's subsonic D/L is
+       pessimistic (L5: 25.7 deg priced while the vehicle sustained ~30 deg FPA
+       and still decelerated), and a steeper priced station hands Final a high,
+       fast vehicle that floats off the runway end. */
+    if (model->guidance.final_glide_slope>0.0)
+        c.slope_deg=fmin(c.slope_deg,model->guidance.final_glide_slope);
     c.h_station=c.d_station*tan(c.slope_deg*DEG2RAD);
     c.e_station=c.h_station+c.v_station*c.v_station/(2.0*TEL_G0);
     TelPoint s={.x=geo->runway_along_m,.y=-geo->runway_cross_m,
