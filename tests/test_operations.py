@@ -154,9 +154,11 @@ def test_tui_executes_an_external_reviewed_plan(review_run, tmp_path):
             assert app.controller is None  # a run started outside this UI
             assert app.displayed_plan_revision == controller.status.plan_revision
             assert "42.0 m/s" in str(app.query_one("#deorbit-plan").render())
-            app.query_one("#execute-plan").scroll_visible()
+            app.query_one("#tabs").active = "dashboard"  # full console holds the review panel
             await pilot.pause()
-            assert await pilot.click("#execute-plan")
+            button = app.query_one("#execute-plan")
+            assert button.display and not button.disabled
+            button.press()  # scroll-then-click raced the layout (OutOfBounds)
             for _ in range(50):
                 await pilot.pause(0.1)
                 if controller.status.finished_at and not app.pending_commands:
