@@ -175,11 +175,22 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
        banked safe-speed boundary with the measured-model acceleration
        balance as well: at that speed gravity along the glide must at least
        cover drag, otherwise live bank protection removes the turn entirely. */
-    if (tel_delivery_policy(c)&&safe_speed>0.0&&p->v<safe_speed/sqrt(bank_cos)) {
+    /* Live 60 deg rerun: balance alone held the orbiter at ~82 m/s, just
+       under the 85 m/s safe speed, where bank authority is zero; it flew
+       wings level away from the runway for minutes.  Below the speed that
+       carries the TAEM bank limit, recover toward it (over the same 4 s
+       flight-path time constant used below) instead of only holding. */
+    double turn_cos=fmax(0.3,cos(fmin(TEL_BANK_MAX,
+        c->model->vehicle.maximum_bank_angle)*DEG2RAD));
+    /* Below the safe speed live bank authority is zero, so the commanded
+       bank (and bank_cos) reads wings level; target the speed that restores
+       turning.  Above it, the commanded bank sets the boundary. */
+    double turn_speed=safe_speed/sqrt(p->v<safe_speed?turn_cos:bank_cos);
+    if (tel_delivery_policy(c)&&safe_speed>0.0&&p->v<turn_speed) {
         double actual_q,actual_mach,actual_lift,actual_drag;
         tel_forces(c,p,p->aoa,&actual_q,&actual_mach,&actual_lift,&actual_drag);
-        double balance=-asin(clampd(actual_drag/(p->m*gravity),0.0,1.0));
-        g_cmd=fmin(g_cmd,balance);
+        double recover=actual_drag/p->m+(turn_speed-p->v)/4.0;
+        g_cmd=fmin(g_cmd,-asin(clampd(recover/gravity,0.0,1.0)));
     }
     g_cmd=clampd(g_cmd,-35.0*DEG2RAD,6.0*DEG2RAD);
     double gdot=clampd((g_cmd-p->g)/4.0,-0.08,0.08);
