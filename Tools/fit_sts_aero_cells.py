@@ -11,7 +11,39 @@ nodes in a measured Mach row take the measured/table ratio of the nearest
 measured node; rows with no measured cell keep the base table.  Grids come
 from the base table.  Output is provisional, not certified.
 """
-import argparse, bisect, collections, csv, hashlib, json, os, statistics
+import argparse, bisect, collections, csv, gzip, hashlib, json, os, statistics
+
+
+def open_log(path):
+    return gzip.open(path, "rt") if str(path).endswith(".gz") else open(path)
+
+
+def live_session(path):
+    """Fail closed: STS simulator logs share the live vehicle schema/name."""
+    session, control = None, False
+    try:
+        with open_log(path) as handle:
+            for index, line in enumerate(handle):
+                if index >= 256:
+                    break
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if record.get("recordType") == "sessionStart":
+                    session = record
+                    if str(record.get("campaignIdentity") or "").lower().startswith(("sim:", "shuttlesim:")):
+                        return None, "simulator"
+                applied = (record.get("fields") or {}).get("appliedControl") or {}
+                control |= applied.get("reportedAvailable") is True
+    except (OSError, UnicodeError, EOFError):
+        return None, "unreadable"
+    if not session or session.get("vessel") != "STS":
+        return None, "missing STS session"
+    transport = (session.get("runtime") or {}).get("transport", "")
+    if not str(transport).startswith("tcp:") or not control or not session.get("sessionId"):
+        return None, "unverified live source"
+    return session["sessionId"], "live"
 
 
 def merge(a, b):
@@ -45,7 +77,7 @@ def nearest(grid, x, window):
 
 def samples(path, a):
     st = {}
-    for line in open(path):
+    for line in open_log(path):
         try:
             d = json.loads(line)
         except ValueError:
@@ -91,14 +123,20 @@ def main():
     base = read_table(a.base)
     machs = sorted(base)
     cells = collections.defaultdict(lambda: collections.defaultdict(list))
-    for path in a.logs:
+    sources = []
+    for path in dict.fromkeys(a.logs):
+        session, classification = live_session(path)
+        sources.append(dict(path=os.path.relpath(path), session=session, classification=classification))
+        if session is None:
+            continue
         for m, al, cl, cd in samples(path, a):
             mr = nearest(machs, m, a.window)
             if mr is None:
                 continue
             ar = nearest(sorted(base[mr]), al, a.window)
             if ar is not None:
-                cells[(mr, ar)][path].append((cl, cd))
+                # Rotated files from one session are one statistical witness.
+                cells[(mr, ar)][session].append((cl, cd))
 
     measured, report = {}, {}
     for (mr, ar), by_flight in cells.items():
@@ -131,14 +169,15 @@ def main():
             out.append((mr, ar, cl, cd))
 
     with open(a.output, "w") as f:
-        f.write(f"# PROVISIONAL STS live aero: {len(measured)} cells measured from {len(a.logs)} logs "
+        f.write(f"# PROVISIONAL STS live aero: {len(measured)} cells measured from "
+                f"{len({s['session'] for s in sources if s['session']})} verified live sessions "
                 f"(q>={a.q_min:g} Pa, |beta|<={a.max_sideslip:g} deg, unpowered, gear up, airbrakes stowed); "
                 f"other cells from {os.path.basename(a.base)} scaled by the nearest measured cell in their Mach row. "
                 f"Not certified. Area {a.area:g} m2 is normalization only. Logs and per-cell evidence: {os.path.basename(a.report)}\n")
         f.write("mach,alpha_deg,cl,cd\n")
         for mr, ar, cl, cd in out:
             f.write(f"{mr:.8f},{ar:g},{cl:.8f},{cd:.8f}\n")
-    logs = [dict(path=os.path.relpath(p), sha256=hashlib.sha256(open(p, "rb").read()).hexdigest()) for p in a.logs]
+    logs = [dict(s, sha256=hashlib.sha256(open(s["path"], "rb").read()).hexdigest()) for s in sources]
     json.dump(dict(status="provisional; not certified", base=os.path.basename(a.base), logs=logs,
                    settings={k: v for k, v in vars(a).items() if k not in ("logs", "base", "output", "report")},
                    cells=report), open(a.report, "w"), indent=1)
