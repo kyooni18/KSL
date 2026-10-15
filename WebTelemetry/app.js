@@ -1615,7 +1615,8 @@
       $("sim-status-line")?.setAttribute("hidden", "");
     }
 
-    const retroErr = retrogradeError(t);
+    const retroErr = cmd.useInertialDirection && finite(t.autopilotError)
+      ? Math.abs(n(t.autopilotError)) : retrogradeError(t);
     $("pitch-label").textContent = orbitMode ? "ATT PITCH" : "PITCH";
     $("roll-label").textContent = orbitMode ? "ATT ROLL" : "ROLL";
     $("heading-label").textContent = orbitMode ? "ATT HDG" : "HDG";
@@ -1663,7 +1664,8 @@
     const toBurn = finite(burnStartUT) && finite(t.ut) ? n(burnStartUT) - n(t.ut) : null;
     const currentThrust = finite(t.currentThrust) ? n(t.currentThrust) : finite(t.thrust) ? n(t.thrust) : 0;
     const availableThrust = finite(t.availableThrust) ? Math.max(0,n(t.availableThrust)) : 0;
-    const throttle = finite(t.throttle) ? Math.max(0,Math.min(1,n(t.throttle))) : 0;
+    const throttleValue = cmd.autopilotEngaged && finite(cmd.targetThrottle) ? cmd.targetThrottle : t.throttle;
+    const throttle = finite(throttleValue) ? Math.max(0,Math.min(1,n(throttleValue))) : 0;
     const engineOn = currentThrust > Math.max(500, availableThrust * .005) || throttle > .02;
     const deliveredDV = finite(g.deliveredDeltaV) ? Math.max(0,n(g.deliveredDeltaV)) : 0;
     const plannedDV = plan && finite(plan.deltaV) ? Math.max(0,n(plan.deltaV)) : null;
@@ -1678,7 +1680,7 @@
     $("orbit-t-burn").textContent = plan ? countdown(toBurn) : "—";
     $("orbit-burn-dv").textContent = finite(plannedDV) ? `${n(plannedDV).toFixed(1)} m/s` : "—";
     $("orbit-dv-rem").textContent = finite(remainingDV) ? `${n(remainingDV).toFixed(1)} m/s` : "—";
-    $("orbit-throttle").textContent = finite(t.throttle) ? `${Math.round(throttle*100)}%` : "—";
+    $("orbit-throttle").textContent = finite(throttleValue) ? `${Math.round(throttle*100)}%` : "—";
     $("orbit-thrust").textContent = thrust(currentThrust);
     $("orbit-retro-error").textContent = fmt(retroErr,1,"°");
     $("orbit-postburn-pe").textContent = plan ? distance(plan.predictedPostBurnPeriapsisAltitude) : "—";

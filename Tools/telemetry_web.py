@@ -2314,6 +2314,17 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
         "targetThrottle": optional_number(record.get("targetThrottle")),
         "targetPitch": (fpa + aoa) if aoa is not None and fpa is not None else command.get("targetPitch"),
     })
+    # Full backend commands own pitch and control mode; older records retain
+    # the flattened-field fallback above. Never project stale coast commands
+    # or burn progress onto a newer observer UT during time warp.
+    if not record_stale:
+        if isinstance(record.get("command"), dict):
+            command.update(record["command"])
+        if isinstance(record.get("guidanceState"), dict):
+            snapshot["guidanceState"] = dict(record["guidanceState"])
+        alignment = optional_number(record.get("autopilotError"))
+        if alignment is not None:
+            snapshot.setdefault("telemetry", {})["autopilotError"] = alignment
     snapshot["command"] = command
     if backend_phase:
         snapshot["phase"] = backend_phase
@@ -2324,6 +2335,10 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
         snapshot["statusMessage"] = f"KSL {status.get('phase', '')}: {message}".strip()
     if status.get("warning"):
         snapshot["warningMessage"] = status["warning"]
+    if not record_stale:
+        for key in ("statusMessage", "warningMessage"):
+            if key in record:
+                snapshot[key] = record[key]
     if plan is not None and backend_phase and _DEORBIT_PHASES.search(backend_phase) \
             and not isinstance(snapshot.get("deorbitPlan"), dict):
         snapshot["deorbitPlan"] = plan

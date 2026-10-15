@@ -236,12 +236,19 @@ def snapshot_summary(snapshot: Snapshot) -> dict[str, Any]:
     keys = {"ut": "ut", "altitude": "meanAltitude", "speed": "trueAirSpeed",
             "verticalSpeed": "verticalSpeed", "mach": "mach", "dynamicPressure": "dynamicPressure",
             "angleOfAttack": "angleOfAttack", "roll": "roll", "heading": "heading",
-            "flightPathAngle": "flightPathAngle", "rangeToSite": "rangeToSite",
+            "flightPathAngle": "flightPathAngle", "autopilotError": "autopilotError",
+            "rangeToSite": "rangeToSite",
             "runwayAlongTrack": "runwayAlongTrack", "runwayCrossTrack": "runwayCrossTrack",
             "latitude": "latitude", "longitude": "longitude", "gForce": "gForce",
             "situation": "vesselSituation"}
     out = {name: t.get(src) for name, src in keys.items() if t.get(src) is not None}
     out.update({k: cmd.get(k) for k in ("targetAoA", "targetRoll", "targetHeading", "targetThrottle")
                 if cmd.get(k) is not None})
+    for key in ("command", "guidanceState"):
+        if isinstance(snapshot.get(key), dict):
+            out[key] = dict(snapshot[key])
+    for key in ("statusMessage", "warningMessage"):
+        if key in snapshot:
+            out[key] = snapshot[key]
     out["backendPhase"] = snapshot.get("phase")
     return out
