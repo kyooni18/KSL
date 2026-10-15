@@ -23,7 +23,7 @@ def merge(a, b):
             a[k] = v
 
 
-def samples(files):
+def samples(files, mach_min, mach_max, alpha_max):
     for fn in files:
         st = {}
         for line in open(fn):
@@ -49,7 +49,7 @@ def samples(files):
             if abs(at.get("sideslip") or 0) > 2 or abs(at.get("bodyPitchRate") or 0) > 3:
                 continue
             m, a = ae["mach"], at["angleOfAttack"]
-            if not (0.05 < m < 1.55 and -1 <= a <= 19):
+            if not (mach_min < m < mach_max and -1 <= a <= alpha_max):
                 continue
             yield m, a, ae["liftForce"] / (q * 250.0), ae["dragForce"] / (q * 250.0)
 
@@ -70,17 +70,30 @@ def main():
     ap.add_argument("--logs", nargs="+", required=True)
     ap.add_argument("--output", required=True)
     ap.add_argument("--report", required=True)
+    # Defaults are the original subsonic/transonic fit; entry fits widen these.
+    ap.add_argument("--mach-min", type=float, default=0.05)
+    ap.add_argument("--mach-max", type=float, default=1.55)
+    ap.add_argument("--alpha-max", type=float, default=19.0)
+    ap.add_argument("--mach-bin", type=float, default=0.1)
+    ap.add_argument("--min-alpha-span", type=float, default=6.0)
     args = ap.parse_args()
     base = Aero(args.base)
     files = sorted(set(f for g in args.logs for f in glob.glob(g)))
     bins = collections.defaultdict(list)
-    for m, a, cl, cd in samples(files):
-        bins[round(m * 10) / 10].append((a, cl, cd))
+    for m, a, cl, cd in samples(files, args.mach_min, args.mach_max, args.alpha_max):
+        bins[round(m / args.mach_bin) * args.mach_bin].append((a, cl, cd))
     fits = {}
     for mb in sorted(bins):
         pts = bins[mb]
         alphas = [p[0] for p in pts]
-        if len(pts) < 60 or max(alphas) - min(alphas) < 6:
+        if len(pts) < 60:
+            continue
+        if max(alphas) - min(alphas) < args.min_alpha_span:
+            # Too narrow for a slope (entry holds one incidence): keep the base
+            # polar's shape and scale it by the measured/table median ratio.
+            rl = statistics.median(cl / base.coef(mb, a)[0] for a, cl, cd in pts if abs(base.coef(mb, a)[0]) > 1e-3)
+            rd = statistics.median(cd / base.coef(mb, a)[1] for a, cl, cd in pts if base.coef(mb, a)[1] > 1e-4)
+            fits[mb] = dict(ratio_lift=rl, ratio_drag=rd, n=len(pts), amin=min(alphas), amax=max(alphas))
             continue
         # weight AoA cells equally: median per 1-degree cell
         cells = collections.defaultdict(list)
@@ -100,6 +113,10 @@ def main():
     fit_machs = sorted(fits)
     for mb in fit_machs:
         f = fits[mb]
+        if "ratio_drag" in f:
+            for a, cl, cd in base.tab[min(base.mach, key=lambda m: abs(m - mb))]:
+                rows.append((mb, a, cl * f["ratio_lift"], cd * f["ratio_drag"]))
+            continue
         for a in ALPHAS:
             ae = max(f["amin"], min(f["amax"], abs(a)))
             clf = f["cl0"] + f["cla"] * ae
@@ -121,9 +138,10 @@ def main():
                 rows.append((m, a, cl, cd))
     rows.sort()
     with open(args.output, "w") as out:
-        out.write("# PROVISIONAL STS live terminal polar (2026-10-10): Mach 0.1-1.5 rows fitted to live 2026-10-09 flights "
-                  "(CL linear in alpha, CD parabolic in CL) inside observed alpha span; base table scaled outside; "
-                  "other Mach rows from sts_aero_live20261009.csv. Not certified. Area 250 m2 is normalization only.\n")
+        out.write(f"# PROVISIONAL STS live polar: Mach {args.mach_min}-{args.mach_max} rows fitted to "
+                  f"{', '.join(os.path.basename(f) for f in files)} (CL linear in alpha, CD parabolic in CL) "
+                  f"inside observed alpha span; base table scaled outside; other Mach rows from "
+                  f"{os.path.basename(args.base)}. Not certified. Area 250 m2 is normalization only.\n")
         out.write("mach,alpha_deg,cl,cd\n")
         for r in rows:
             out.write("%.8f,%g,%.8f,%.8f\n" % r)
@@ -133,6 +151,9 @@ def main():
                fits=fits)
     json.dump(rep, open(args.report, "w"), indent=1)
     for mb, f in fits.items():
+        if "ratio_drag" in f:
+            print(f"M{mb:.1f} n={f['n']:5d} a[{f['amin']:.0f},{f['amax']:.0f}] ratio CL x{f['ratio_lift']:.3f} CD x{f['ratio_drag']:.3f}")
+            continue
         print(f"M{mb:.1f} n={f['n']:5d} a[{f['amin']},{f['amax']}] CL={f['cl0']:.3f}+{f['cla']:.4f}a  CD={f['cd0']:.4f}+{f['k']:.3f}CL^2  LDmax~{0.5/math.sqrt(f['cd0']*f['k']) if f['k']>0 else 0:.2f}")
 
 

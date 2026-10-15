@@ -413,6 +413,32 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         lateral.has_point_miss=isfinite(t->course_to_site_error)&&isfinite(alignment_range);
         lateral.point_miss_m=lateral.has_point_miss?
             alignment_range*sin(t->course_to_site_error*DEG2RAD):NAN;
+        /* A straight ground track is wrong over long ranges: the vehicle
+           follows a great circle of the inertial trajectory plane while the
+           capture point rotates with the planet. Measure the miss as the
+           capture point's angular distance from that plane at arrival. */
+        double track=t->ground_track_heading*DEG2RAD;
+        double lat=t->latitude*DEG2RAD,lon=t->longitude*DEG2RAD;
+        if(lateral.has_time_to_go&&isfinite(track)&&isfinite(t->horizontal_speed)&&
+           isfinite(p->rotational_speed)){
+            Vector3 up=v3(cos(lat)*cos(lon),cos(lat)*sin(lon),sin(lat));
+            Vector3 east=v3(-sin(lon),cos(lon),0.0);
+            Vector3 north=vcross(up,east);
+            double r=p->radius+t->mean_altitude;
+            Vector3 v_surface=vscale(vadd(vscale(north,cos(track)),vscale(east,sin(track))),
+                t->horizontal_speed);
+            Vector3 v_inertial=vadd(v_surface,vscale(east,p->rotational_speed*r*cos(lat)));
+            Vector3 n=vnorm(vcross(up,v_inertial),v3(0,0,0));
+            double slat=alignment_point.latitude*DEG2RAD;
+            double slon=alignment_point.longitude*DEG2RAD+p->rotational_speed*lateral.time_to_go_s;
+            Vector3 site=v3(cos(slat)*cos(slon),cos(slat)*sin(slon),sin(slat));
+            double side=vdot(n,site);
+            if(isfinite(side)&&vmag(n)>0.0){
+                lateral.has_point_miss=true;
+                /* Plane normal points left of track; course error is positive right. */
+                lateral.point_miss_m=-ground_radius*asin(clampd(side,-1.0,1.0));
+            }
+        }
     }
 
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;
