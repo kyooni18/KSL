@@ -83,6 +83,12 @@ static void recorded_capture_range(void) {
     assert(taem_energy_law_step(&fresh,model,&switched,25660.0,13.4,26015.1,
         44.8,&aoa,&bank));
     assert(fresh.capture_forecast&&fresh.loop);
+    TelPoint slow_line={.x=-7500.0,.y=0.0,.h=2800.0,.v=108.0,
+        .g=-5.0*DEG2RAD,.m=25660.0,.aoa=5.5};
+    c.final_line=false;
+    double range_aoa=tel_vertical(&c,&slow_line,0.0,0.0,-1500.0,true);
+    c.final_line=true;
+    assert(tel_vertical(&c,&slow_line,0.0,0.0,-1500.0,true)<range_aoa);
     (void)taem_energy_law_frame_score;
     free(model);
 }

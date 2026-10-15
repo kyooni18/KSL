@@ -59,6 +59,7 @@ typedef struct {
 typedef struct {
     const TerminalModel *model;
     double d_station,h_station,v_station,e_station,aoa_max,slope_deg;
+    bool final_line;
 } TelContext;
 
 typedef struct { double length,radius; } TelSegment;
@@ -137,6 +138,8 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
     double bank_cos=fmax(0.3,cos(fabs(bank_deg)*DEG2RAD));
     double q_range=best_lift>0.0?best_q*vertical_load/(bank_cos*best_lift):TEL_Q_LO;
     double safe_speed=c->model->vehicle.minimum_safe_speed;
+    if (c->final_line)
+        safe_speed=fmax(safe_speed,c->model->vehicle.final_approach_speed);
     if (p->v>0.0&&safe_speed>0.0)
         q_range=fmax(q_range,q*safe_speed*safe_speed/(p->v*p->v*bank_cos));
     double q_ref=tel_delivery_policy(c)?
@@ -681,7 +684,9 @@ static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *
             *bank_over_deg=fmax(*bank_over_deg,need-TEL_BANK_TURN);
         }
         double vertical_along=route.leg==TEL_LEG_FINAL?-c->d_station-p.x:along;
-        double target=tel_vertical(c,&p,p.bank,k,vertical_along,true);
+        TelContext vertical=*c;
+        vertical.final_line=route.leg==TEL_LEG_FINAL;
+        double target=tel_vertical(&vertical,&p,p.bank,k,vertical_along,true);
         tel_servo(&p.aoa,&p.aoa_rate,target,dt);
         double q,mach,lift,drag;
         tel_forces(c,&p,p.aoa,&q,&mach,&lift,&drag);
@@ -958,6 +963,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     *bank_cmd=tel_lateral(L,&c,&s);
     /* on the runway line the vertical reference is the signed distance to the station */
     double along_v=L->leg==TEL_LEG_FINAL?-D-s.x:L->s_go;
+    c.final_line=L->leg==TEL_LEG_FINAL;
     *aoa_cmd=tel_vertical(&c,&s,*bank_cmd,L->k,along_v,true);
     return isfinite(*aoa_cmd)&&isfinite(*bank_cmd);
 }
