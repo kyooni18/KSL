@@ -155,6 +155,16 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     c->snapshot.guidance_taem_energy_drag_level=c->guidance.taem_energy_law.k;
     c->snapshot.guidance_taem_energy_path_to_go=c->guidance.taem_energy_law.s_go;
     c->snapshot.guidance_taem_energy_required_path=c->guidance.taem_energy_law.s_req;
+    c->snapshot.has_active_runway=c->guidance.runway_end_preview_valid||c->guidance.runway_end_committed;
+    c->snapshot.active_runway=cfg.site;
+    if(c->snapshot.has_active_runway&&cfg.site.allow_reciprocal_runway&&c->guidance.runway_end_index==1)
+        c->snapshot.active_runway=runway_reciprocal_site(&cfg.site,krpc_session_planet(c->session)->radius);
+    c->snapshot.active_final_distance=c->guidance.terminal_final_handoff_latched&&
+        isfinite(c->guidance.terminal_final_handoff_distance)&&c->guidance.terminal_final_handoff_distance>0.0?
+        c->guidance.terminal_final_handoff_distance:cfg.guidance.final_approach_distance;
+    c->snapshot.active_final_slope=c->guidance.terminal_final_handoff_latched&&
+        isfinite(c->guidance.terminal_final_handoff_slope_deg)&&c->guidance.terminal_final_handoff_slope_deg>0.0?
+        c->guidance.terminal_final_handoff_slope_deg:cfg.guidance.final_glide_slope;
     c->snapshot.tick_sequence=c->tick_sequence;
     c->snapshot.log_sequence=++c->log_sequence;
     c->snapshot.wall_monotonic_seconds=wall_start;

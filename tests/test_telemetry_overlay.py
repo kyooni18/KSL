@@ -9,7 +9,11 @@ def test_controller_state_round_trip(tmp_path):
     command = {"targetPitch": -12.0, "targetAoA": None, "targetThrottle": .18,
                "autopilotEngaged": True, "useInertialDirection": True,
                "controlProfile": "orbital"}
-    guidance = {"deliveredDeltaV": 23.5, "burnStarted": True, "burnCompleted": False}
+    active_runway = {"latitude": 0., "longitude": 1.2, "altitude": 70.,
+                     "runwayHeading": 270., "runwayLength": 2500., "runwayWidth": 70.,
+                     "finalApproachDistance": 4500., "finalGlideSlope": 17.5}
+    guidance = {"deliveredDeltaV": 23.5, "burnStarted": True, "burnCompleted": False,
+                "activeRunway": active_runway}
     reference = [{"ut": 100., "latitude": 0., "longitude": 1., "altitude": 2000.},
                  {"ut": 110., "latitude": 0., "longitude": 1.1, "altitude": 1500.}]
     record = snapshot_summary({"phase": "Deorbit Burn", "telemetry": {
@@ -35,6 +39,7 @@ def test_controller_state_round_trip(tmp_path):
     assert snapshot["decisionTrace"] == {"burnStarted": True}
     assert snapshot["guidanceState"] == guidance
     assert snapshot["referenceTrajectory"] == reference
+    assert snapshot["site"] == active_runway
     assert snapshot["telemetry"]["autopilotError"] == 4.
     # Warp advances the observer without a new backend record. Do not reuse
     # an old command/alignment measurement as if sampled at the new UT.

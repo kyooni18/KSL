@@ -330,6 +330,8 @@ typedef struct {
     KRPCApplyResult applied_command;
     bool guidance_has_burn_started, guidance_burn_completed, guidance_atmosphere_crossed;
     bool guidance_final_captured, guidance_airbrakes_deployed, guidance_hac_side_selected;
+    bool has_active_runway; LandingSite active_runway;
+    double active_final_distance, active_final_slope;
     double guidance_delivered_delta_v, guidance_burn_active_elapsed, guidance_s_turn_sign;
     double guidance_hac_side, guidance_entry_leg_elapsed;
     bool guidance_entry_plan_valid, guidance_entry_plan_terminal_ready, guidance_entry_reversal_scheduled;

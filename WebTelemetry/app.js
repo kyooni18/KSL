@@ -1041,62 +1041,15 @@
   function drawRunwayCorridor(site, width, height, color) {
     if (!site || !finite(site.latitude) || !finite(site.longitude) || !finite(site.runwayHeading)) return;
     const heading = n(site.runwayHeading);
-    const offsetPoint = (base, lateralMeters) => destinationPoint(base, heading + (lateralMeters >= 0 ? 90 : -90), Math.abs(lateralMeters));
-
-    // Match the real guidance geometry instead of drawing a generic 36 km
-    // airport funnel. STS-N owns an 8 km final line; the MM305 -> FINAL gate
-    // requires roughly 200 m cross-track at that station. Narrow the envelope
-    // toward the actual runway width as the orbiter descends the 20 deg final.
-    const finalDistance = 8000;
-    const finalGlideSlope = 20;
-    const runwayHalfWidth = Math.max(35, n(site.runwayWidth, 70) / 2);
-    const gateHalfWidth = 200;
-    const nearHalfWidth = Math.max(runwayHalfWidth + 45, 90);
+    const finalDistance = n(site.finalApproachDistance);
+    const finalGlideSlope = n(site.finalGlideSlope);
+    if (!(finalDistance > 0) || !(finalGlideSlope > 0)) return;
+    // Published controller reference only; no invented capture-width funnel.
     const finalGate = destinationPoint(site, heading + 180, finalDistance);
-    const nearCenter = destinationPoint(site, heading + 180, 350);
-    const corridorPoints = [
-      offsetPoint(finalGate, -gateHalfWidth),
-      offsetPoint(finalGate, gateHalfWidth),
-      offsetPoint(nearCenter, nearHalfWidth),
-      offsetPoint(nearCenter, -nearHalfWidth),
-    ];
-    const polygonCopies = trajectorySegments([...corridorPoints, corridorPoints[0]], width, height);
-
-    mapCtx.save();
-    mapCtx.fillStyle = color;
-    mapCtx.strokeStyle = color;
-    for (const polygon of polygonCopies) {
-      if (polygon.length < 4) continue;
-      mapCtx.globalAlpha = .045;
-      mapCtx.beginPath();
-      mapCtx.moveTo(polygon[0].x, polygon[0].y);
-      for (let i = 1; i < polygon.length; i++) mapCtx.lineTo(polygon[i].x, polygon[i].y);
-      mapCtx.closePath();
-      mapCtx.fill();
-      mapCtx.globalAlpha = .42;
-      mapCtx.lineWidth = 1.1;
-      mapCtx.setLineDash([5, 5]);
-      mapCtx.stroke();
-    }
-    mapCtx.setLineDash([]);
-
-    // Draw the actual final centerline and controller-relevant stations.
     drawPath([finalGate, site], width, height, color, 1.35, [9, 5], 1.0, .74);
-    for (const distanceMeters of [8000, 4000, 2000]) {
-      const center = destinationPoint(site, heading + 180, distanceMeters);
-      const frac = distanceMeters / finalDistance;
-      const halfWidth = nearHalfWidth + (gateHalfWidth - nearHalfWidth) * frac;
-      const leftPoint = offsetPoint(center, -halfWidth);
-      const rightPoint = offsetPoint(center, halfWidth);
-      drawPath([leftPoint, rightPoint], width, height, color, distanceMeters === 8000 ? 1.15 : .85, [], 0, distanceMeters === 8000 ? .62 : .34);
-      const right = mapPoint(rightPoint, width, height);
-      mapCtx.globalAlpha = distanceMeters === 8000 ? .78 : .54;
-      mapCtx.font = "700 8px ui-monospace, SFMono-Regular, Menlo, monospace";
-      mapCtx.fillStyle = color;
-      const label = distanceMeters === 8000 ? `FINAL 8K / ${finalGlideSlope}°` : `${distanceMeters / 1000}K`;
-      for (const x of wrappedMapXs(right.x, width, 90)) mapCtx.fillText(label, x + 5, right.y - 4);
-    }
-    mapCtx.restore();
+    drawTrajectoryTag(finalGate, width, height, color,
+      `FINAL REF ${distance(finalDistance)} / ${fmt(finalGlideSlope,1)}°`,
+      snapshot?.telemetry?.ut, 8, -8);
   }
 
   function drawTrajectoryLadder(points, width, height, color, currentUt) {

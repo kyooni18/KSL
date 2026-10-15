@@ -2322,6 +2322,9 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
             command.update(record["command"])
         if isinstance(record.get("guidanceState"), dict):
             snapshot["guidanceState"] = dict(record["guidanceState"])
+            active_runway = record["guidanceState"].get("activeRunway")
+            if isinstance(active_runway, dict):
+                snapshot["site"] = dict(active_runway)
         if isinstance(record.get("referenceTrajectory"), list):
             snapshot["referenceTrajectory"] = record["referenceTrajectory"]
         alignment = optional_number(record.get("autopilotError"))
@@ -2363,6 +2366,10 @@ def normalize_replay_snapshot(snapshot: dict[str, Any],
     configured_site = configuration.get("site") if isinstance(configuration.get("site"), dict) else {}
     if not isinstance(out.get("site"), dict) or not out.get("site"):
         out["site"] = copy.deepcopy(configured_site)
+
+    active_runway = (out.get("guidanceState") or {}).get("activeRunway")
+    if isinstance(active_runway, dict):
+        out["site"] = copy.deepcopy(active_runway)
 
     telemetry = out.get("telemetry")
     if isinstance(telemetry, dict) and not telemetry.get("vesselName"):
