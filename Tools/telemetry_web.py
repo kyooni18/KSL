@@ -2336,7 +2336,8 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
     if status.get("warning"):
         snapshot["warningMessage"] = status["warning"]
     if not record_stale:
-        for key in ("statusMessage", "warningMessage"):
+        for key in ("statusMessage", "warningMessage", "decisionReason", "decisionTrace",
+                    "automationEngaged", "paused"):
             if key in record:
                 snapshot[key] = record[key]
     if plan is not None and backend_phase and _DEORBIT_PHASES.search(backend_phase) \

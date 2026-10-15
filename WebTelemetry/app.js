@@ -1722,7 +1722,10 @@
       : `Geometry source ${source} · actual ${actualCount} pts · orbit ${orbitalCount} pts · predicted ${predictedCount} pts · proven plan ${plannedCount} pts · committed reference ${referenceCount} pts · TAEM projection ${projectedCount} pts${snapshot.plannerLog ? ` · ${snapshot.plannerLog}` : ""}`);
 
     $("guidance-phase").textContent = orbitMode ? (/DEORBIT BURN/.test(phase) ? "DEORBIT BURN" : plan ? "ORBIT / DEORBIT" : "ORBIT") : phase;
-    const terminalState = g.terminalPathComplete ? "COMPLETE" : g.terminalPathCaptured ? "CAPTURED" : g.terminalPathCommitted ? "COMMITTED" : g.terminalCandidateValid ? "CANDIDATE" : g.terminalPredictionValid ? "PREDICT" : "WAIT";
+    const entryFeedback = /ENTRY|MM304/.test(phase) && g.entryFeedback?.valid === true
+      ? g.entryFeedback : null;
+    const energyLaw = terminalPhase && g.energyLaw?.active === true ? g.energyLaw : null;
+    const terminalState = energyLaw ? "ENERGY LAW" : g.terminalPathComplete ? "COMPLETE" : g.terminalPathCaptured ? "CAPTURED" : g.terminalPathCommitted ? "COMMITTED" : g.terminalCandidateValid ? "CANDIDATE" : g.terminalPredictionValid ? "PREDICT" : "WAIT";
     let smartStatus;
     if (orbitMode) {
       const orbitalStatus = [];
@@ -1735,11 +1738,18 @@
       smartStatus = orbitalStatus.join(" · ");
     } else {
       const statusParts = [];
-      if (terminalPhase) {
+      if (energyLaw) {
+        statusParts.push(snapshot.statusMessage || `ENERGY GUIDANCE · path ${distance(energyLaw.pathToGo)} · drag ${fmt(energyLaw.dragLevel,2)}`);
+      } else if (terminalPhase) {
         statusParts.push(terminalState);
         if (finite(t.runwayCrossTrack)) statusParts.push(`XTK ${signedDistance(t.runwayCrossTrack)}`);
         if (finite(g.terminalReferenceFPA) && finite(t.flightPathAngle)) statusParts.push(`FPA ${fmtSigned(t.flightPathAngle,1,"°")}/${fmtSigned(g.terminalReferenceFPA,1,"°")}`);
         statusParts.push(trajectoryLabel("REF", referenceCount));
+      } else if (entryFeedback) {
+        statusParts.push(`DRAG ${fmt(entryFeedback.measuredDrag,2)}/${fmt(entryFeedback.referenceDrag,2)} m/s²`);
+        if (finite(entryFeedback.energyMargin)) statusParts.push(`RANGE ΔR ${signedDistance(entryFeedback.energyMargin)}`);
+        if (finite(entryFeedback.projectedCrossrangeError)) statusParts.push(`PROJECTED XTK ${signedDistance(entryFeedback.projectedCrossrangeError)}`);
+        if (entryFeedback.reversalRequested) statusParts.push("REVERSAL REQUESTED");
       } else if (/ENTRY|MM304/.test(phase)) {
         statusParts.push(trajectoryLabel("PRED", predictedCount));
         if (typeof t.predictedTerminalPolicyFeasible === "boolean") statusParts.push(t.predictedTerminalPolicyFeasible ? "TERM OK" : "TERM UNPROVEN");
@@ -1775,7 +1785,8 @@
         ? `Burn ${countdown(toBurn)} · ΔV ${finite(plannedDV) ? n(plannedDV).toFixed(1) : "—"} m/s · post-burn PE ${distance(plan.predictedPostBurnPeriapsisAltitude)} · ${burnAlignment ? "burn alignment" : "retrograde error"} ${fmt(retroErr,1,"°")}`
         : `No current deorbit plan · AP ${distance(t.apoapsisAltitude)} · PE ${distance(t.periapsisAltitude)}`);
     } else if (terminalPhase) {
-      if (terminalPlanProven && referenceCount >= 2) { planChip = "REF COMMITTED"; planTone = "good"; }
+      if (energyLaw) { planChip = "ENERGY GUIDANCE"; planTone = "warn"; }
+      else if (terminalPlanProven && referenceCount >= 2) { planChip = "REF COMMITTED"; planTone = "good"; }
       else if (terminalPlanProven && plannedCount >= 2) { planChip = "PLAN COMMITTED"; planTone = "good"; }
       else if (plannedCount >= 2 && snapshot.planProvisionalKind === "acquisition") { planChip = "ACQ GUIDANCE"; planTone = "warn"; }
       else if (plannedCount >= 2) { planChip = "PLAN PROVISIONAL"; planTone = "warn"; }
@@ -1787,6 +1798,9 @@
       else if (plannedCount >= 2) { planChip = "PLAN PROVEN"; planTone = "good"; }
       else if (predictedCount >= 2) { planChip = "PROVEN · PRED ONLY"; planTone = "warn"; }
       else { planChip = "PLAN PROVEN · WAIT"; planTone = "warn"; }
+    } else if (entryFeedback) {
+      planChip = "ENTRY FEEDBACK";
+      planTone = "warn";
     } else if (g.entryPlanValid) {
       planChip = predictedCount >= 2 ? "PRED · TERMINAL UNPROVEN" : "GUIDANCE · TERMINAL UNPROVEN";
       planTone = "warn";
@@ -1832,21 +1846,42 @@
 
     const planRangeError = entryPlanProven && finite(g.entryPlanTAEMRangeError) ? g.entryPlanTAEMRangeError : t.predictedTAEMRangeError;
     const planEnergyError = entryPlanProven && finite(g.entryPlanTAEMEnergyError) ? g.entryPlanTAEMEnergyError : t.predictedTAEMEnergyError;
-    $("taem-range").textContent = signedDistance(planRangeError);
-    $("taem-energy").textContent = specificEnergy(planEnergyError);
+    $("taem-range-label").textContent = entryFeedback ? "RANGE ΔR" : "TAEM ΔR";
+    $("taem-energy-label").textContent = entryFeedback ? "DRAG ERR" : "TAEM ΔE";
+    $("taem-range").textContent = signedDistance(entryFeedback ? entryFeedback.energyMargin : planRangeError);
+    $("taem-energy").textContent = entryFeedback ? fmtSigned(entryFeedback.dragError,2," m/s²") : specificEnergy(planEnergyError);
     setTitle("taem-range", entryPlanProven ? `Proven plan TAEM ΔR ${signedDistance(g.entryPlanTAEMRangeError)}${finite(t.predictedTAEMRangeError) ? ` · current forecast ${signedDistance(t.predictedTAEMRangeError)}` : ""}` : `Forecast TAEM ΔR ${signedDistance(t.predictedTAEMRangeError)} · no proven entry plan`);
     setTitle("taem-energy", entryPlanProven ? `Proven plan TAEM ΔE ${specificEnergy(g.entryPlanTAEMEnergyError)}${finite(t.predictedTAEMEnergyError) ? ` · current forecast ${specificEnergy(t.predictedTAEMEnergyError)}` : ""}` : `Forecast TAEM ΔE ${specificEnergy(t.predictedTAEMEnergyError)} · no proven entry plan`);
 
+    if (entryFeedback) {
+      setTitle("taem-range", `Closed-loop range margin ${signedDistance(entryFeedback.energyMargin)} · achievable ${distance(entryFeedback.predictedAchievableRange)} · required ${distance(entryFeedback.requiredRangeToGo)}; this is a distance, not specific energy`);
+      setTitle("taem-energy", `Measured drag ${fmt(entryFeedback.measuredDrag,2," m/s²")} · reference ${fmt(entryFeedback.referenceDrag,2," m/s²")} · error ${fmtSigned(entryFeedback.dragError,2," m/s²")}`);
+      setTitle("plan-valid", "Closed-loop entry feedback is active; this does not certify a terminal runway route");
+      $("segment-remaining").textContent = "FEEDBACK";
+      $("reversal").textContent = entryFeedback.reversalRequested ? "REQUESTED" : "NONE";
+    }
     const hacRadius = terminalPlanProven ? (finite(g.hacRadius) && n(g.hacRadius) > 0 ? g.hacRadius : g.terminalCandidateRadius) : null;
     const terminalActive = terminalPlanProven;
     $("hac-radius").textContent = distance(hacRadius);
     $("hac-remaining").textContent = terminalActive && finite(g.terminalPathRemaining) ? distance(g.terminalPathRemaining) : "—";
     $("terminal-state").textContent = terminalState;
     $("terminal-blend").textContent = terminalPlanProven && finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(0)}%` : "—";
-    setTitle("hac-radius", `Active HAC ${distance(g.hacRadius)} · candidate ${distance(g.terminalCandidateRadius)}${finite(g.minimumTurnRadius) ? ` · minimum turn ${distance(g.minimumTurnRadius)}` : ""}`);
+    $("hac-radius-label").textContent = energyLaw ? "PATH GO" : "HAC R";
+    $("hac-remaining-label").textContent = energyLaw ? "PATH REQ" : "HAC REM";
+    $("terminal-blend-label").textContent = energyLaw ? "DRAG LEVEL" : "BLEND";
+    if (energyLaw) {
+      $("hac-radius").textContent = distance(energyLaw.pathToGo);
+      $("hac-remaining").textContent = distance(energyLaw.requiredPath);
+      $("terminal-blend").textContent = fmt(energyLaw.dragLevel,2);
+      setTitle("plan-valid", "Predictive energy guidance is active; no fixed-HAC route certificate is implied");
+      setTitle("hac-radius", "Remaining path priced by the active energy law");
+      setTitle("hac-remaining", "Path to the Final station required by the active energy law at the current energy state");
+      setTitle("terminal-blend", "Active drag modulation level from the energy law");
+    }
+    if (!energyLaw) setTitle("hac-radius", `Active HAC ${distance(g.hacRadius)} · candidate ${distance(g.terminalCandidateRadius)}${finite(g.minimumTurnRadius) ? ` · minimum turn ${distance(g.minimumTurnRadius)}` : ""}`);
     setTitle("hac-remaining", terminalActive ? `Terminal path remaining ${distance(g.terminalPathRemaining)}` : "No committed/captured terminal path yet");
-    setTitle("terminal-state", `${terminalState}${finite(g.terminalCandidateAltitude) ? ` · candidate altitude ${distance(g.terminalCandidateAltitude)}` : ""}${finite(g.terminalCandidateSpeed) ? ` · speed ${speed(g.terminalCandidateSpeed)}` : ""}`);
-    setTitle("terminal-blend", `Terminal blend ${finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(1)}%` : "unavailable"}${g.hacTransitionActive ? " · HAC transition active" : ""}`);
+    setTitle("terminal-state", energyLaw ? (snapshot.statusMessage || "Active energy-law path") : `${terminalState}${finite(g.terminalCandidateAltitude) ? ` · candidate altitude ${distance(g.terminalCandidateAltitude)}` : ""}${finite(g.terminalCandidateSpeed) ? ` · speed ${speed(g.terminalCandidateSpeed)}` : ""}`);
+    if (!energyLaw) setTitle("terminal-blend", `Terminal blend ${finite(g.terminalBlend) ? `${(n(g.terminalBlend)*100).toFixed(1)}%` : "unavailable"}${g.hacTransitionActive ? " · HAC transition active" : ""}`);
   }
 
   async function setScene3DVisible(visible) {

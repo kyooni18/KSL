@@ -342,6 +342,9 @@ typedef struct {
     EntryGuidanceFeedback guidance_entry_feedback;
     EntryExecTelemetry guidance_entry_exec;
     TaemExecTelemetry guidance_taem_exec;
+    bool guidance_taem_energy_law_active;
+    double guidance_taem_energy_drag_level, guidance_taem_energy_path_to_go;
+    double guidance_taem_energy_required_path;
     bool guidance_hac_captured, guidance_hac_completed, guidance_hac_progress_valid;
     bool guidance_hac_transition_active;
     bool guidance_terminal_prediction_valid, guidance_terminal_candidate_valid, guidance_terminal_committed;

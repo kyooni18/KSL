@@ -244,10 +244,10 @@ def snapshot_summary(snapshot: Snapshot) -> dict[str, Any]:
     out = {name: t.get(src) for name, src in keys.items() if t.get(src) is not None}
     out.update({k: cmd.get(k) for k in ("targetAoA", "targetRoll", "targetHeading", "targetThrottle")
                 if cmd.get(k) is not None})
-    for key in ("command", "guidanceState"):
+    for key in ("command", "guidanceState", "decisionTrace"):
         if isinstance(snapshot.get(key), dict):
             out[key] = dict(snapshot[key])
-    for key in ("statusMessage", "warningMessage"):
+    for key in ("statusMessage", "warningMessage", "decisionReason", "automationEngaged", "paused"):
         if key in snapshot:
             out[key] = snapshot[key]
     out["backendPhase"] = snapshot.get("phase")

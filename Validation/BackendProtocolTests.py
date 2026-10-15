@@ -30,6 +30,8 @@ def main() -> int:
     ready = next(m for m in messages if m.get("type") == "ready")
     assert ready["protocolVersion"] == 1
     assert ready["snapshot"]["connectionStatus"] == "disconnected"
+    energy = ready["snapshot"]["guidanceState"]["energyLaw"]
+    assert energy == {"active": False, "dragLevel": None, "pathToGo": None, "requiredPath": None}
     connection = ready["configuration"]["connection"]
     for key in ("serialPort", "baudRate", "timeoutMs", "rpcHost", "rpcPort"):
         assert connection[key] == expected["connection"][key], (key, connection)

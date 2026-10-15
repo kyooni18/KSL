@@ -13,7 +13,8 @@ def test_controller_state_round_trip(tmp_path):
     record = snapshot_summary({"phase": "Deorbit Burn", "telemetry": {
         "ut": 100., "flightPathAngle": 2., "autopilotError": 4.},
         "command": command, "guidanceState": guidance,
-        "statusMessage": "Tracking the burn target", "warningMessage": None})
+        "statusMessage": "Tracking the burn target", "warningMessage": None,
+        "decisionReason": "burn_started=true", "decisionTrace": {"burnStarted": True}})
     record["source"] = "landing"
     run = tmp_path / "runs" / "test"
     run.mkdir(parents=True)
@@ -25,6 +26,8 @@ def test_controller_state_round_trip(tmp_path):
     assert snapshot["command"]["useInertialDirection"] is True
     assert snapshot["statusMessage"] == "Tracking the burn target"
     assert snapshot["warningMessage"] is None
+    assert snapshot["decisionReason"] == "burn_started=true"
+    assert snapshot["decisionTrace"] == {"burnStarted": True}
     assert snapshot["guidanceState"] == guidance
     assert snapshot["telemetry"]["autopilotError"] == 4.
     # Warp advances the observer without a new backend record. Do not reuse

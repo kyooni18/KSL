@@ -150,6 +150,11 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     c->snapshot.guidance_terminal_reference_fpa=native_mm305_route?
         c->guidance.mm305_route.profile_final_slope_deg:0.0;
     c->snapshot.guidance_terminal_mix=native_mm305_route?1.0:0.0;
+    c->snapshot.guidance_taem_energy_law_active=cfg.guidance.taem_energy_law&&
+        r.phase==PHASE_TAEM&&c->guidance.taem_energy_law.initialized;
+    c->snapshot.guidance_taem_energy_drag_level=c->guidance.taem_energy_law.k;
+    c->snapshot.guidance_taem_energy_path_to_go=c->guidance.taem_energy_law.s_go;
+    c->snapshot.guidance_taem_energy_required_path=c->guidance.taem_energy_law.s_req;
     c->snapshot.tick_sequence=c->tick_sequence;
     c->snapshot.log_sequence=++c->log_sequence;
     c->snapshot.wall_monotonic_seconds=wall_start;
