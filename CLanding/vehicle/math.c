@@ -677,15 +677,17 @@ bool runway_landing_intercept_ratio(double along,double cross,const LandingSite*
     if(!site||!settings||!ratio||!(along<0.0)||!isfinite(cross)||
        !(site->runway_length>0.0)||!(site->runway_width>0.0))return false;
     double target=clampd(settings->touchdown_aim_along,0.0,site->runway_length);
-    double targets[2]={target,.5*site->runway_length};
-    for(unsigned i=0;i<2;++i){
-        double r=-cross/(-along+targets[i]);
-        double near=cross+r*(-along),far=cross+r*(-along+site->runway_length);
-        if(fabs(near)<=.5*site->runway_width&&fabs(far)<=.5*site->runway_width){
-            *ratio=r;return true;
-        }
-    }
-    return false;
+    /* Intersect the track-slope bounds at both pavement ends. Choose the
+       feasible track closest to the configured touchdown aim, rather than
+       jumping to the midpoint and carrying its offset into touchdown. */
+    double distance=-along,half_width=.5*site->runway_width;
+    double lower=fmax((-half_width-cross)/distance,
+        (-half_width-cross)/(distance+site->runway_length));
+    double upper=fmin((half_width-cross)/distance,
+        (half_width-cross)/(distance+site->runway_length));
+    if(lower>upper)return false;
+    *ratio=clampd(-cross/(distance+target),lower,upper);
+    return true;
 }
 
 FinalAlignmentContract final_alignment_contract(double distance,const LandingSite *site,

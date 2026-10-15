@@ -94,6 +94,16 @@ static void test_touchdown_forecast_handoff_parity(void) {
     double ratio=tan((intercept_course-delivery.site.runway_heading)*DEG2RAD);
     assert(fabs(exit.runway_cross_track+ratio*(-exit.runway_along_track+
         delivery.guidance.touchdown_aim_along))<1e-8);
+    /* Near threshold, a midpoint track leaves 25 m of cross error at the
+       threshold. The closest feasible touchdown track leaves under 20 m,
+       while respecting both runway edges. Check mirrored approaches too. */
+    for(int sign=-1;sign<=1;sign+=2){
+        double r=NAN;
+        assert(runway_landing_intercept_ratio(-500.0,sign*30.0,
+            &delivery.site,&delivery.guidance,&r));
+        assert(fabs(sign*30.0+r*500.0)<20.0);
+        assert(fabs(sign*30.0+r*3000.0)<=35.0+1e-10);
+    }
     exit.runway_cross_track=1000.0;
     assert(!terminal_pavement_intercept_rate(&exit,&delivery,&intercept_rate));
     delivery.guidance.sts_trajectory_delivery=false;exit.runway_cross_track=114.0;
