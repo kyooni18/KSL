@@ -28,6 +28,7 @@ typedef struct {
 } PredictorGuidance;
 typedef struct {
     const PlanetModel*p; const AerodynamicEnvelope*e; const TrajectoryCalibrationModel*c; const VehicleProfile*v;
+    const TerminalModel *entry_table;
     double bank,aoa,ut,mass;
     bool gear,brakes; int airbrakes;
 } AeroContext;

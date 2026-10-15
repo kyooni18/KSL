@@ -234,6 +234,12 @@ static void plan_mode(bool prior){if(prior)load_history();load_terminal();Teleme
     DeorbitPlan out;memset(&out,0,sizeof(out));bool ok=deorbit_plan_create_with_terminal_model(&out,initial,period,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,t.available_thrust,&t,terminal);
     printf("plan ok=%d burnUT=%.3f dv=%.4f normal=%.4f duration=%.3f taemDist=%.1f taemErr=%.1f closest=%.1f peri=%.1f nominal=%d robust=%d/%d inlet=%d route=%d final=%d exec=%d degraded=%d note=%s\n",ok,out.burn_ut,out.delta_v,out.burn_normal_angle,out.estimated_burn_duration,out.predicted_taem_distance,out.predicted_taem_range_error,out.predicted_closest_distance,out.predicted_post_burn_periapsis_altitude,out.nominal_capture_achieved,out.robustness_passed,out.robustness_scenarios,out.terminal_inlet_qualified,out.terminal_native_path_committed,out.terminal_final_approach_captured,out.execution_qualified,out.execution_degraded,out.note);
     if(!ok){free(terminal);return;}
+    LandingSnapshot snapshot;landing_snapshot_init(&snapshot,&config.vehicle);
+    snapshot.plan=&out;
+    JsonWriter writer;jw_init(&writer);snapshot_json(&writer,&snapshot);
+    if(writer.failed)fail("could not encode selected plan");
+    FILE *plan_file=create_output("-plan-snapshot.json");
+    fputs(writer.data,plan_file);fputc('\n',plan_file);fclose(plan_file);jw_free(&writer);
     /* REPLAY_TRUTH_ENVELOPE="ld0,bc0,ld1,bc1,ld2,bc2,ld3,bc3": fly the selected
        burn's witness on a different (e.g. flight-calibrated) plant. */
     const char*truth=getenv("REPLAY_TRUTH_ENVELOPE");if(truth){double x[8];if(sscanf(truth,"%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf",&x[0],&x[1],&x[2],&x[3],&x[4],&x[5],&x[6],&x[7])!=8)fail("bad REPLAY_TRUTH_ENVELOPE");for(int i=0;i<4;i++){envelope.regimes[i].lift_to_drag=x[2*i];envelope.regimes[i].ballistic_coefficient=x[2*i+1];}}

@@ -118,6 +118,11 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     int initial_airbrakes=telemetry->has_airbrakes&&telemetry->airbrakes?1:0;
     AeroContext ctx={.p=p,.e=env0,.c=cal0,.v=&cfg->vehicle,.bank=response.actual_bank,.aoa=response.actual_aoa,
         .ut=state.ut,.mass=state.mass,.gear=initial_gear,.brakes=initial_brakes,.airbrakes=initial_airbrakes};
+    bool sts_entry_table=cfg->guidance.taem_energy_law&&
+        !strcmp(cfg->vehicle.model_id,"STS")&&
+        terminal_model_policy_matches(terminal_model,&cfg->site,&cfg->vehicle,&cfg->guidance)&&
+        terminal_model_planet_matches(terminal_model,p);
+
     GeoPoint target={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     double elapsed=0,lastsample=-DBL_MAX;
     out.taem_interface_error=INFINITY;
@@ -157,6 +162,8 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
     }
     out.shadow_guidance_used=true;
     while(elapsed<maxdur){
+        ctx.entry_table=sts_entry_table&&!taem_exec_owns_vehicle(&shadow.taem_exec)&&
+            !ctx.gear&&!ctx.airbrakes?terminal_model:NULL;
         AtmosState at;Telemetry synthetic=guidance_shadow_telemetry(telemetry,state,&response,&ctx,p,cfg,&at);
         GeoPoint geo={synthetic.latitude,synthetic.longitude,synthetic.mean_altitude};
         double range=synthetic.range_to_site;

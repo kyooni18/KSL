@@ -252,10 +252,13 @@ void landing_controller_engage_reentry(LandingController*c){
             fmax(cfg.vehicle.minimum_safe_speed,DBL_EPSILON);
         double qualification_horizon=fmax(horizontal_time,vertical_time)+terminal_time;
 
-        prediction=predictor_simulate_entry_guidance_shadow(
+        const TerminalModel *entry_model=cfg.guidance.taem_energy_law&&
+            !strcmp(cfg.vehicle.model_id,"STS")&&c->terminal_model_valid?
+            &c->terminal_model:NULL;
+        prediction=predictor_simulate_entry_guidance_shadow_with_terminal_model(
             state,&t,&qualification_guidance,&qualification_plan,
             p,c->planning_aerodynamics,&c->envelope,&c->trajectory_calibration,
-            &cfg,qualification_horizon,true);
+            &cfg,entry_model,qualification_horizon,true);
         trajectory_clear(&qualification_plan.trajectory);
     }
 

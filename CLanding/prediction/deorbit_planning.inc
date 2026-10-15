@@ -555,12 +555,13 @@ static EntryPrediction deorbit_executable_policy_witness(const Candidate*c,
     executed.achieved_state_verified=true;executed.achieved_state_capture_qualified=true;
 
     EntryPrediction witness;
-    if(run_terminal&&terminal_model&&terminal_model->replay_validated&&
+    bool sts_table_witness=s->taem_energy_law&&!strcmp(v->model_id,"STS");
+    if((run_terminal||sts_table_witness)&&terminal_model&&terminal_model->replay_validated&&
        terminal_model->planet_frame_aligned){
         TerminalShadowOutcome outcome;
         witness=predictor_simulate_guidance_shadow_core(c->after,&seed,&guidance,
             &executed,p,aero,env,cal,&cfg,4500.0,include_trajectory,
-            false,false,terminal_model,&outcome);
+            false,!run_terminal,terminal_model,&outcome);
         witness.uncertainty_scenarios=witness.shadow_guidance_used?1u:0u;
     }else{
         witness=predictor_simulate_entry_guidance_shadow(c->after,&seed,&guidance,
@@ -886,6 +887,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
     bool native_terminal=terminal_model_policy_matches(
         terminal_model,site,v,s)&&
         terminal_model_planet_matches(terminal_model,p);
+    const TerminalModel *entry_model=native_terminal&&s->taem_energy_law&&
+        !strcmp(v->model_id,"STS")?terminal_model:NULL;
     memset(out,0,sizeof(*out));
     trajectory_init(&out->trajectory);
 
@@ -1013,7 +1016,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
        MM304 executive before committing an irreversible deorbit. The scanned
        alternatives stay in the same ground-track pass and solve Pe separately. */
     EntryPrediction selected_inlet=deorbit_executable_policy_witness(
-        &selected,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+        &selected,p,aero,env,cal,site,v,s,authority_source,entry_model,false,false);
     /* Evaluate nearby safe, closing inlets with the production terminal law.
        Analytic inlet energy/course heuristics do not certify or veto the
        downstream route; the complete native attempt participates in ranking. */
@@ -1048,7 +1051,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             continue;
         }
         EntryPrediction nearby_inlet=deorbit_executable_policy_witness(
-            &nearby,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+            &nearby,p,aero,env,cal,site,v,s,authority_source,entry_model,false,false);
         if(native_terminal&&deorbit_witness_terminal_trial(&nearby,&nearby_inlet,
             p,site,v,s)){
             EntryPrediction full=deorbit_executable_policy_witness(
@@ -1110,7 +1113,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             if(!deorbit_evaluate_start(&refined,state,start,0.0,timing_best.normal_angle,
                     p,aero,env,cal,site,v,s,thrust,NULL)){candidate_clear(&refined);break;}
             EntryPrediction refined_inlet=deorbit_executable_policy_witness(
-                &refined,p,aero,env,cal,site,v,s,authority_source,NULL,false,false);
+                &refined,p,aero,env,cal,site,v,s,authority_source,entry_model,false,false);
             if(native_terminal&&deorbit_witness_terminal_trial(&refined,&refined_inlet,
                     p,site,v,s)){
                 EntryPrediction full=deorbit_executable_policy_witness(

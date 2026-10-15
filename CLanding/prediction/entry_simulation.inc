@@ -10,6 +10,18 @@ static AtmosState atmosphere(Vector3 pos,Vector3 vel,const AeroContext*ctx){
     double mach=sp/fmax(sos,1),q=.5*fmax(0,d)*sp*sp;
     AtmosState s={.density=d,.air_velocity=air,.speed=sp,.speed_of_sound=sos,.mach=mach,.q=q};
     s.specific_force=vessel_physics_force_best_estimate_config(ctx->c->physics,q,mach,context_aoa(ctx,alt),0,ctx->mass,ctx->gear,ctx->brakes,ctx->airbrakes,aero_at(ctx->e,mach),ctx->c,ctx->v,&s.physics_confidence,&s.direct_aero,&s.physics_uncertainty);
+    if(ctx->entry_table){
+        /* The STS table describes clean-configuration whole-vessel forces.
+           Keep the recorded atmosphere/frame and the explicit stress dispersions;
+           scalar L/D residual multipliers are not a calibration of this table. */
+        double lift_per_q,drag_per_q;
+        aero_force_per_q(&ctx->entry_table->aero,q,mach,context_aoa(ctx,alt),
+            &lift_per_q,&drag_per_q);
+        double lift_stress=ctx->c->stress_lift_scale>0?ctx->c->stress_lift_scale:1.0;
+        double drag_stress=ctx->c->stress_drag_scale>0?ctx->c->stress_drag_scale:1.0;
+        s.specific_force=v3(q*drag_per_q*drag_stress/fmax(ctx->mass,1.0),
+            q*lift_per_q*lift_stress/fmax(ctx->mass,1.0),0.0);
+    }
     s.drag_accel=s.specific_force.x;s.lift_accel=s.specific_force.y;
     s.non_gravity=vmag(s.specific_force);
     return s;
