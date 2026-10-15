@@ -1638,10 +1638,18 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
         bool energy_short=!admissible&&L->k<=TEL_K_SHORT&&
             geometry->runway_along_m<0.0&&
             terminal_preflare_alignment_valid(g,t,course,cfg);
-        g->jet_assist_requested=energy_short;
         if (!energy_short) L->low_energy_pending=false;
         else if (!L->low_energy_pending) {
             L->low_energy_pending=true; L->low_energy_since_ut=t->ut;
+        }
+        /* Jets follow only a shortfall that has persisted for the dwell, so a
+           noisy margin cannot flap them; the deficit sets the throttle. */
+        g->jet_assist_throttle=0.0;
+        if (energy_short&&t->ut-L->low_energy_since_ut>=TEL_LOW_ENERGY_DWELL_S) {
+            double deficit=isfinite(final_contract.specific_energy_margin)?
+                fmax(0.0,-final_contract.specific_energy_margin):0.0;
+            g->jet_assist_throttle=clampd(deficit/JET_ASSIST_FULL_DEFICIT_J_KG,
+                JET_ASSIST_MIN_THROTTLE,1.0);
         }
         if (energy_short&&t->ut-L->low_energy_since_ut>=TEL_LOW_ENERGY_DWELL_S) {
             TaemExecObservation observation={.ut=t->ut,

@@ -43,7 +43,7 @@ void krpc_cnano_client_neutralize(KrpcCNanoClient *client){
             SAFE_ADD(batch_add_object_float(&batch,PROC_ENGINE_SET_THROTTLE,engine->object,0.0f,false));
             SAFE_ADD(batch_add_object_bool(&batch,PROC_ENGINE_SET_INDEPENDENT_THROTTLE,engine->object,false,false));
             engine->independent_owned=false;
-            engine->jet_assist_on=false;
+            engine->jet_assist_on=false;engine->jet_throttle=0.0f;
         }
         if(engine->activated_by_client&&!engine->initially_active){
             SAFE_ADD(batch_add_object_bool(&batch,PROC_ENGINE_SET_ACTIVE,engine->object,false,false));

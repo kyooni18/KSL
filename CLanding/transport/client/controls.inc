@@ -1,28 +1,33 @@
-/* Jet assist: air-breathing engines run at full throttle only while guidance
-   requests energy recovery and the body has oxygen.  Edge-triggered, so a
-   steady request or steady cutoff costs no RPCs. */
-static bool set_jet_assist(KrpcCNanoClient *client, bool want, char *error, size_t error_size) {
+/* Jet assist: air-breathing engines run at the guidance-requested throttle
+   only while the body has oxygen.  Edge-triggered on on/off and on throttle
+   changes, so a steady request or steady cutoff costs no RPCs. */
+static bool set_jet_assist(KrpcCNanoClient *client, double throttle, char *error, size_t error_size) {
+    float want = isfinite(throttle) ? (float)clampd(throttle, 0.0, 1.0) : 0.0f;
     for (size_t i = 0; i < client->engine_count; ++i) {
         CommandableEngine *engine = &client->engines[i];
         if (!engine->airbreathing) continue;
-        bool on = want && client->body_has_oxygen;
-        if (engine->jet_assist_on == on) continue;
+        bool on = want > 1e-3f && client->body_has_oxygen;
+        float level = on ? want : 0.0f;
+        if (engine->jet_assist_on == on && fabsf(engine->jet_throttle - level) <= 0.02f) continue;
         if (on) {
-            bool active = false;
-            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_Active(client->connection, &active, engine->object), error, error_size);
-            if (!active) {
-                RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Active(client->connection, engine->object, true), error, error_size);
-                engine->activated_by_client = true;
+            if (!engine->jet_assist_on) {
+                bool active = false;
+                RPC_REQUIRED(client, krpc_SpaceCenter_Engine_Active(client->connection, &active, engine->object), error, error_size);
+                if (!active) {
+                    RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Active(client->connection, engine->object, true), error, error_size);
+                    engine->activated_by_client = true;
+                }
+                RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, true), error, error_size);
+                engine->independent_owned = true;
             }
-            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, true), error, error_size);
-            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 1.0f), error, error_size);
-            engine->independent_owned = true;
+            RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, level), error, error_size);
         } else {
             RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 0.0f), error, error_size);
             RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_IndependentThrottle(client->connection, engine->object, false), error, error_size);
             engine->independent_owned = false;
         }
         engine->jet_assist_on = on;
+        engine->jet_throttle = level;
     }
     return true;
 }
@@ -117,7 +122,7 @@ bool krpc_cnano_client_set_direct_controls(KrpcCNanoClient *client,
     }
     /* Direct control does not own the jets; any assist requested by a previous
        autopilot command is cut here. */
-    if(!set_jet_assist(client,false,error,error_size))return false;
+    if(!set_jet_assist(client,0.0,error,error_size))return false;
     if(change_wheel){client->cached_command_wheel=wheel_steering;client->has_command_wheel=true;}
     if(change_rcs){client->cached_rcs=rcs;client->has_rcs=true;}
 
@@ -214,7 +219,7 @@ bool krpc_cnano_client_set_autopilot(KrpcCNanoClient *client,
         if (!set_engine_throttle(client, throttle, error, error_size)) return false;
         client->cached_command_throttle = throttle; client->has_command_throttle = true;
     }
-    if (!set_jet_assist(client, command->jet_assist, error, error_size)) return false;
+    if (!set_jet_assist(client, command->jet_assist_throttle, error, error_size)) return false;
     client->cached_sas = false; client->has_sas = true;
     client->last_apply_calls=client->total_rpc_calls-before;
     client->last_apply_wire_requests=client->total_wire_requests-wire_before;

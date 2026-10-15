@@ -39,6 +39,11 @@
 #define TEL_LOW_ENERGY_DWELL_S 3.0
 /* drag level at or below which the law is energy-short (flying maximum range) */
 #define TEL_K_SHORT 0.05
+/* Jet assist for a persistent MM305 energy shortfall.  The throttle scales with
+   the measured deficit (J/kg) and never drops below the floor while requested.
+   The full-scale deficit is an untuned placeholder pending flight data. */
+#define JET_ASSIST_FULL_DEFICIT_J_KG 2000.0
+#define JET_ASSIST_MIN_THROTTLE 0.25
 #define TEL_PI 3.14159265358979323846
 #define TEL_G0 9.81
 

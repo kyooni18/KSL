@@ -349,7 +349,7 @@ typedef struct {
     TaemEnergyLawState taem_energy_law;
     AdaptiveFlareState adaptive_flare;
     /* Set by the MM305 energy-short path each tick; copied into the command. */
-    bool jet_assist_requested;
+    double jet_assist_throttle;
 } GuidanceMachine;
 TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
     const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,

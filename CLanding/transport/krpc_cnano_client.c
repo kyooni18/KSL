@@ -10,6 +10,7 @@
 #include <krpc_cnano/services/space_center.h>
 
 #include "engine_role.h"
+#include "sim_telemetry.h"
 #include "thrust_alignment.h"
 #include "throttle_feedback.h"
 #include <float.h>
@@ -38,6 +39,7 @@ typedef struct {
     bool selected;
     /* Air-breathing engine: driven only by jet assist, never rocket-selected. */
     bool airbreathing, jet_assist_on;
+    float jet_throttle;
 } CommandableEngine;
 
 /* Field handles of one rudder-half ModuleControlSurface. */
