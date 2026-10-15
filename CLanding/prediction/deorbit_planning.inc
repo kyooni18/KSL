@@ -660,9 +660,26 @@ static double deorbit_guided_terminal_miss(const Candidate *candidate,
     return isfinite(miss)?miss:INFINITY;
 }
 
+double mm305_energy_law_handoff_reach(const struct TerminalModel *model,
+        double altitude_above_site_m,double speed_mps,double mass_kg);
+
+/* Site distance at which live experimental-STS MM304 aims to hand over:
+   the TAEM energy-law reach from the band-centre Mach at the interface
+   altitude, plus the Final alignment distance (guidance/entry/contract.inc).
+   NAN when the native terminal model is unavailable. */
+static double deorbit_sts_handoff_target(const TerminalModel*model,const PlanetModel*p,
+        const LandingSite*site,const GuidanceSettings*s,double mass){
+    if(!model||!p||!site||!s)return NAN;
+    double sound=planet_atmospheric_speed_of_sound(p,s->taem_interface_altitude);
+    double reach=mm305_energy_law_handoff_reach(model,
+        s->taem_interface_altitude-site->altitude,s->mm305_target_mach*sound,mass);
+    return isfinite(reach)?reach+s->final_approach_distance:NAN;
+}
+
 static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPrediction*aw,
         const Candidate*b,const EntryPrediction*bw,const PlanetModel*p,
-        const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s){
+        const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,
+        double sts_handoff_target){
     bool a_safe=deorbit_entry_stage_qualified(aw,v,s,a->peri,
         site->altitude,p->atmosphere_depth,true);
     bool b_safe=deorbit_entry_stage_qualified(bw,v,s,b->peri,
@@ -680,16 +697,17 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
     bool b_inlet=bw->taem_dynamic_interface_captured&&
         !bw->taem_ownership_boundary_missed;
     if(a_inlet!=b_inlet)return a_inlet;
-    /* Experimental STS: hand over near the configured TAEM interface range.
-       The 60 deg flight's chosen burn passed the 20-96.5 km window test and
-       the perpendicular-course test but handed over 28 km out at Mach 2.5;
-       TAEM had no room to turn and the orbiter arrived short.  The analytic
-       inlet margin ranked next is uniformly -200..-280 kJ/kg across these
-       candidates and cannot separate them. */
-    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&aw->reached_taem&&bw->reached_taem&&
+    /* Experimental STS: rank by the handoff distance live MM304 will steer
+       for, so the burn and MM304 agree.  The 60 deg flight's ranking ignored
+       it (chose a 28 km handoff by heading test); ranking toward the 96.5 km
+       configured interface range instead chose a burn MM304 could not reach
+       its 39 km target from.  The analytic inlet margin ranked next is
+       uniformly -200..-280 kJ/kg across these candidates. */
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&isfinite(sts_handoff_target)&&
+       aw->reached_taem&&bw->reached_taem&&
        isfinite(aw->taem_distance)&&isfinite(bw->taem_distance)){
-        double nominal=entry_taem_range_target(p,s);
-        double ae=fabs(aw->taem_distance-nominal),be=fabs(bw->taem_distance-nominal);
+        double ae=fabs(aw->taem_distance-sts_handoff_target);
+        double be=fabs(bw->taem_distance-sts_handoff_target);
         if(fabs(ae-be)>1.0)return ae<be;
     }
     bool a_geometry=deorbit_witness_inlet_geometry(aw,p,site,s);
@@ -903,6 +921,10 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         !strcmp(v->model_id,"STS")?terminal_model:NULL;
     memset(out,0,sizeof(*out));
     trajectory_init(&out->trajectory);
+    double sts_handoff_target=entry_model&&s->sts_trajectory_delivery?
+        deorbit_sts_handoff_target(entry_model,p,site,s,state.mass):NAN;
+    if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
+        fprintf(stderr,"DEORBIT_STS_HANDOFF_TARGET %.1fkm\n",sts_handoff_target/1000.0);
 
     double lead=fmax(0.0,s->minimum_planning_lead_time);
     double search_horizon=deorbit_search_horizon(state,period,p,s);
@@ -1077,7 +1099,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         if(scan_count<8&&isfinite(nearby_inlet.taem_distance)&&nearby_inlet.reached_taem){
             scan_dt[scan_count]=offset*inlet_step;scan_range[scan_count++]=nearby_inlet.taem_distance;}
         bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
-            &selected,&selected_inlet,p,site,v,s);
+            &selected,&selected_inlet,p,site,v,s,sts_handoff_target);
         if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
             fprintf(stderr,
                 "DEORBIT_INLET_CANDIDATE dt=%+.1fs burn=%.1f tier=%d safe=%d range=%.1fkm course=%.1fdeg closing=%d geometry=%d energy=%+.0fJ/kg boundaryMiss=%d chosen=%d\n",
@@ -1138,7 +1160,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             inlet_candidates_evaluated++;
             double r=refined_inlet.reached_taem?refined_inlet.taem_distance:NAN;
             bool better=deorbit_guided_candidate_better(&refined,&refined_inlet,
-                &selected,&selected_inlet,p,site,v,s);
+                &selected,&selected_inlet,p,site,v,s,sts_handoff_target);
             if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
                 fprintf(stderr,"DEORBIT_INLET_REFINE dt=%+.1fs burn=%.1f range=%.1fkm geometry=%d chosen=%d\n",
                     dt,refined.burn_ut,r/1000.0,
