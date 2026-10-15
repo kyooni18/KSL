@@ -61,23 +61,23 @@ int main(void){
  assert(deorbit_witness_inlet_geometry(&usable,&p,&cfg.site,&cfg.guidance));
  assert(!deorbit_witness_inlet_geometry(&poor,&p,&cfg.site,&cfg.guidance));
  assert(deorbit_guided_candidate_better(&improved,&usable,&previous,&poor,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  EntryPrediction overshot=usable;
  overshot.taem_distance=90000;overshot.taem_along_track=4000;
  overshot.taem_cross_track=89900;overshot.taem_course=195;
  assert(!deorbit_witness_closing(&overshot,&cfg.site));
  assert(!deorbit_guided_candidate_better(&improved,&overshot,&previous,&usable,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  EntryPrediction too_close=usable;too_close.taem_distance=8000;
  too_close.taem_along_track=1000;too_close.taem_cross_track=-8000;
  assert(!deorbit_witness_inlet_geometry(&too_close,&p,&cfg.site,&cfg.guidance));
  assert(!deorbit_guided_candidate_better(&improved,&too_close,&previous,&usable,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  EntryPrediction unsafe=usable;unsafe.entry_flight_path_angle=-15;
  unsafe.taem_dynamic_interface_captured=true;
  unsafe.taem_ownership_boundary_missed=false;
  assert(!deorbit_guided_candidate_better(&improved,&unsafe,&previous,&usable,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  /* The 34-degree return's course fails the perpendicular inlet heuristic,
     but a safe closing inlet still deserves a native MM305 continuation. */
  EntryPrediction oblique=usable;oblique.taem_course=60;
@@ -103,14 +103,14 @@ int main(void){
  nominal.taem_dynamic_interface_captured=true;
  nominal.taem_ownership_boundary_missed=false;
  assert(deorbit_guided_candidate_better(&previous,&nominal,&improved,&near,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  nominal.taem_dynamic_interface_captured=false;
  nominal.taem_interface_energy_margin=-200000;
  assert(deorbit_guided_candidate_better(&previous,&nominal,&improved,&near,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  nominal.taem_interface_energy_margin=near.taem_interface_energy_margin;
  assert(deorbit_guided_candidate_better(&improved,&near,&previous,&nominal,
-     &p,&cfg.site,&cfg.vehicle,&cfg.guidance));
+     &p,&cfg.site,&cfg.vehicle,&cfg.guidance,NAN));
  /* A closer point high above KSC is not a completed approach. */
  near.final_state.position=predictor_inertial_position((GeoPoint){
      cfg.site.latitude,cfg.site.longitude,15000},&p,1000);
