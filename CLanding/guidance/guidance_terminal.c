@@ -166,6 +166,17 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     }
 
     bool reported_landed=!strcasecmp(t->vessel_situation,"landed");
+    /* Confirmed STS wheel contact owns rollout before the airborne departure
+       monitor can interpret strut/terrain contact rates as a flight upset. */
+    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&
+       g->final_approach_captured&&t->gear&&
+       (reported_landed||(t->has_main_gear_grounded&&t->main_gear_grounded))){
+        if(!terminal_runway_contact_position(t,cfg))
+            return terminal_abort(g,"Touchdown occurred outside the runway contact envelope for the selected end.");
+        g->ground_contact_latched=true;g->gear_command_latched=true;
+        g->attitude_recovery=false;
+        terminal_set_stage(g,TERMINAL_GROUND,t->ut);
+    }
     if (g->final_approach_captured &&
         (g->phase==PHASE_ROLLOUT || g->phase==PHASE_COMPLETE || g->ground_contact_latched)) {
         if (reported_landed && !terminal_runway_contact_position(t,cfg))

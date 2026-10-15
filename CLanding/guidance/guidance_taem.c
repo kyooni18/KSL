@@ -1593,6 +1593,10 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
         bank=taem_energy_law_line_bank(g,t,cfg,course);
         heading=norm_deg(cfg->site.runway_heading+clampd(atan2(-t->runway_cross_track,
             fmax(400.0,t->true_air_speed*6.0))*RAD2DEG,-20.0,20.0));
+        double intercept_rate;
+        if(terminal_pavement_intercept_rate(t,cfg,&intercept_rate))
+            heading=norm_deg(cfg->site.runway_heading+
+                asin(clampd(intercept_rate/fmax(1.0,t->horizontal_speed),-1.0,1.0))*RAD2DEG);
     }
     GuidanceCommand command=atmospheric(t,heading,bank,&cfg->vehicle,0.0,false,PROFILE_TAEM);
     command.heading_control_enabled=false;

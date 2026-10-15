@@ -560,9 +560,9 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
         if(!L->loop&&tel_final_line_ready(c,s))L->leg=TEL_LEG_FINAL;
         if(tel_delivery_policy(c)&&L->leg==TEL_LEG_FINAL&&s->x<0.0&&
            c->model->site.runway_length>0.0&&c->model->site.runway_width>0.0){
-            double half=.5*c->model->site.runway_length,distance=-s->x+half;
-            if(fabs(s->y*half/distance)<=.5*c->model->site.runway_width)
-                course_cmd=atan2(-s->y,distance);
+            double ratio;
+            if(runway_landing_intercept_ratio(s->x,-s->y,&c->model->site,
+                    &c->model->guidance,&ratio))course_cmd=-atan(ratio);
         }
     } else if (L->leg==TEL_LEG_TURN||L->leg==TEL_LEG_DOWN) {
         double tx,ty,arc;

@@ -672,6 +672,22 @@ bool mm305_acquisition_ready(const Telemetry*t,const PlanetModel*p,
 }
 /* Shared native Final endpoint policy. These are the existing MM305 delivery
    contract's bounds; entry pricing must not invent a second endpoint. */
+bool runway_landing_intercept_ratio(double along,double cross,const LandingSite*site,
+        const GuidanceSettings*settings,double*ratio){
+    if(!site||!settings||!ratio||!(along<0.0)||!isfinite(cross)||
+       !(site->runway_length>0.0)||!(site->runway_width>0.0))return false;
+    double target=clampd(settings->touchdown_aim_along,0.0,site->runway_length);
+    double targets[2]={target,.5*site->runway_length};
+    for(unsigned i=0;i<2;++i){
+        double r=-cross/(-along+targets[i]);
+        double near=cross+r*(-along),far=cross+r*(-along+site->runway_length);
+        if(fabs(near)<=.5*site->runway_width&&fabs(far)<=.5*site->runway_width){
+            *ratio=r;return true;
+        }
+    }
+    return false;
+}
+
 FinalAlignmentContract final_alignment_contract(double distance,const LandingSite *site,
         const VehicleProfile *v,const GuidanceSettings *s){
     FinalAlignmentContract out={0};

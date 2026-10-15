@@ -774,7 +774,8 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
 
 
 /* A pavement-valid straight intercept need not already be on centreline.
-   Use the runway midpoint only when both projected ends fit inside its width;
+   Prefer the configured touchdown point, then the midpoint, only when both
+   projected ends fit inside its width;
    otherwise retain the authority-aware centreline acquisition law. */
 bool terminal_pavement_intercept_rate(const Telemetry*t,const LandingConfiguration*cfg,
         double *rate){
@@ -782,11 +783,9 @@ bool terminal_pavement_intercept_rate(const Telemetry*t,const LandingConfigurati
        strcmp(cfg->vehicle.model_id,"STS")||!(t->runway_along_track<0.0)||
        !(t->horizontal_speed>0.0)||!(cfg->site.runway_length>0.0)||
        !(cfg->site.runway_width>0.0)||!isfinite(t->runway_cross_track))return false;
-    double half_length=.5*cfg->site.runway_length;
-    double distance=-t->runway_along_track+half_length;
-    double ratio=-t->runway_cross_track/distance;
-    if(fabs(t->runway_cross_track*half_length/distance)>.5*cfg->site.runway_width)
-        return false;
+    double ratio;
+    if(!runway_landing_intercept_ratio(t->runway_along_track,t->runway_cross_track,
+        &cfg->site,&cfg->guidance,&ratio))return false;
     *rate=t->horizontal_speed*ratio/sqrt(1.0+ratio*ratio);
     return isfinite(*rate);
 }

@@ -82,6 +82,7 @@ static void test_touchdown_forecast_handoff_parity(void) {
        both ends without widening the admission gate. */
     LandingConfiguration delivery=reciprocal;
     delivery.guidance.sts_trajectory_delivery=true;
+    delivery.guidance.touchdown_aim_along=150.0;
     snprintf(delivery.vehicle.model_id,sizeof(delivery.vehicle.model_id),"STS");
     Telemetry exit=t;exit.runway_along_track=-8000.0;exit.runway_cross_track=114.0;
     exit.horizontal_speed=130.0;exit.true_air_speed=139.0;
@@ -90,6 +91,9 @@ static void test_touchdown_forecast_handoff_parity(void) {
     double intercept_course=delivery.site.runway_heading+
         asin(intercept_rate/exit.horizontal_speed)*RAD2DEG;
     assert(terminal_preflare_alignment_valid(&g,&exit,intercept_course,&delivery));
+    double ratio=tan((intercept_course-delivery.site.runway_heading)*DEG2RAD);
+    assert(fabs(exit.runway_cross_track+ratio*(-exit.runway_along_track+
+        delivery.guidance.touchdown_aim_along))<1e-8);
     exit.runway_cross_track=1000.0;
     assert(!terminal_pavement_intercept_rate(&exit,&delivery,&intercept_rate));
     delivery.guidance.sts_trajectory_delivery=false;exit.runway_cross_track=114.0;

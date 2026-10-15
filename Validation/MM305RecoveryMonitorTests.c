@@ -191,12 +191,45 @@ static void test_rollout_completion_uses_runway_bounds(void) {
     }
 }
 
+static void test_sts_confirmed_main_contact_precedes_airborne_recovery(void) {
+    LandingConfiguration cfg=landing_configuration_default();
+    cfg.site.latitude=cfg.site.longitude=0.0;cfg.site.runway_heading=90.0;
+    cfg.site.runway_length=2500.0;cfg.site.allow_reciprocal_runway=false;
+    cfg.guidance.sts_trajectory_delivery=true;
+    snprintf(cfg.vehicle.model_id,sizeof(cfg.vehicle.model_id),"STS");
+    PlanetModel planet={.radius=600000.0,.gravitational_parameter=3.5316e12,
+        .north_axis={0,0,1}};
+    VehicleState state={.position={600070,42,0},.velocity={0,58,0}};
+    AerodynamicModel aero={.lift_to_drag=3.0,.ballistic_coefficient=700,.confidence=1};
+    GuidanceMachine g;guidance_machine_init(&g);
+    g.automation_engaged=g.terminal_glide_mode=g.terminal_region_entered=true;
+    g.final_approach_captured=true;g.phase=PHASE_FLARE;
+    Telemetry t;telemetry_init(&t);
+    t.ut=26357.6;t.longitude=42.0/planet.radius*RAD2DEG;
+    t.mean_altitude=70.0;t.radar_altitude=3.3;t.mass=25222.0;t.gear=true;
+    t.true_air_speed=t.surface_speed=t.horizontal_speed=58.0;
+    t.heading=t.ground_track_heading=90.0;t.pitch=5.0;t.roll=19.4;t.roll_rate=30.0;
+    t.has_main_gear_grounded=t.main_gear_grounded=true;
+    snprintf(t.vessel_situation,sizeof(t.vessel_situation),"flying");
+    GuidanceResult r=guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase==PHASE_TOUCHDOWN&&!r.has_warning);
+    assert(g.ground_contact_latched&&!g.attitude_recovery);
+    guidance_result_clear(&r);
+    t.ut+=.1;t.pitch=0.0;t.surface_speed=t.true_air_speed=t.horizontal_speed=.6;
+    t.has_nose_gear_grounded=t.nose_gear_grounded=true;
+    snprintf(t.vessel_situation,sizeof(t.vessel_situation),"landed");
+    r=guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase==PHASE_COMPLETE&&r.command.brakes&&!g.terminal_landing_warning_latched);
+    guidance_result_clear(&r);
+}
+
 int main(void) {
     test_commanded_native_capture_is_not_recovery();
     test_uncommanded_energetic_reversals_still_trigger();
     test_missing_terminal_route_attempts_bounded_recovery();
     test_rejected_landing_brakes_then_terminates_failed();
     test_rollout_completion_uses_runway_bounds();
+    test_sts_confirmed_main_contact_precedes_airborne_recovery();
     puts("MM305 recovery monitor tests passed.");
     return 0;
 }

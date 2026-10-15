@@ -401,7 +401,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double omega_limit=.35/(RATE_CLOSURE_TAU+(isfinite(reversal_time)?reversal_time:30.0));
     double rate_gain=fmin(fmin(omega,omega_limit),sqrt(2.0*stop_accel/fmax(fabs(y),1.0)));
     double desired_rate=-y*rate_gain;
-    (void)terminal_pavement_intercept_rate(t,cfg,&desired_rate);
+    bool pavement_intercept=terminal_pavement_intercept_rate(t,cfg,&desired_rate);
     double present_accel=lift_accel*sin(clampd(roll_now,-60.0,60.0)*DEG2RAD);
     double lateral_limit=lift_accel*sin(bank_limit*DEG2RAD);
     double lateral_accel=0.0;
@@ -839,6 +839,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
 
     double intercept=clampd(atan2(-t->runway_cross_track,fmax(400.0,V*6.0))*RAD2DEG,
         -20.0,20.0);
+    if(pavement_intercept)intercept=asin(clampd(desired_rate/Vh,-1.0,1.0))*RAD2DEG;
     double target_course=norm_deg(site->runway_heading+intercept);
     if(height<90.0)g->gear_command_latched=true;
     terminal_speedbrake_closed(g); /* Unpowered landing contract: no airbrakes. */
