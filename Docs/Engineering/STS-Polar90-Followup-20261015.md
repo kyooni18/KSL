@@ -340,3 +340,12 @@ FAILED: touchdown outside the selected-end contact envelope (vehicle intact, 25.
 ### 60 deg MM304 delivery rerun from 72 km (`5570d6c`) — energy short, operator stop
 
 `runs/*-sts-incl60-mm304-delivery`, `/tmp/ksl-sts-incl60-mm304-delivery.log`. MM304 chose RW09 at 994 km (turn 8 deg vs 170 deg) and handed over at Mach 2.50, 23.1 km. Position was still wrong: TAEM rescored and chose RW27 (score09 12140, score27 2746), with the vehicle 18 km east of the RW27 threshold, 7 km cross, heading error -93 deg. Energy was lost in two places. (1) MM304 live replan predicted 16-17 km short even at 0 deg bank, yet held 40 deg bank for lateral demand to handoff. (2) TAEM turned through the centreline to 21.5 km cross. Its HAC radius then grew 4000 to 8000 m, and from Mach 0.44 it flew wings level away from the runway (heading error +132 to +160 deg, bank target 0) while its own sGo exceeded sReq by 10-20 km. Altitude fell 8.7 to 2.7 km with sGo shrinking only 23.8 to 11.8 km. The operator stopped the run; the backend exited (broken pipe) and the orbiter was left flying unpowered, uncontrolled. KSP was then paused through kRPC at 2,420 m, 97 m/s, 26 parts intact. The TAEM wrong-way wings-level leg is the dominant loss and is not yet diagnosed.
+
+### 60 deg reruns from the 72 km save (45a5855, 0ce1035)
+
+- `45a5855` (TAEM recovers turn authority below the safe speed): TAEM no longer flew away from the runway. The initial supersonic turn after a -95 deg Mach 2.5 handoff still swung 24 km past the centreline. Final began 8.7 km out at ~500 m; the orbiter splashed 5.8 km short and broke up (15/26 parts). Mission stopped with SIGINT and KSP paused.
+- `0ce1035` (MM304 reserves the TAEM turn R*(theta - sin theta) at handoff-speed radius; replan uses the band-centre handoff): MM304 flew 0 deg bank (maximum range) and its replan still predicted 8.6 km short. TAEM started 12 km short (sGo 58.9 vs sReq 47.0 km). Stopped by SIGINT before impact; KSP paused at 18.4 km, 26 parts intact.
+
+Correction: MM304's 40 deg bank in the earlier rerun was deliberate. Its replan miss is "+ = short", so -16 km meant excess energy at that point.
+
+Root cause for this case: the deorbit plan itself was 33 km short at TAEM (tier 3, unqualified, robust 0/15, "TAEMrange 63.4km rangeError -33.1km"). From the 72 km save, no entry or TAEM change can recover it. The next step is the deorbit candidate selection, verified from `ksl-20261015T113418Z-sts-incl60-full-orbit`.
