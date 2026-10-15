@@ -16,6 +16,8 @@
  * circle of radius R back onto the centreline at the station.  Pattern size
  * comes from the same predictor. */
 
+#include <string.h>
+
 #define TEL_AOA_SUP_MIN 8.0
 #define TEL_AOA_MIN 1.0
 #define TEL_Q_LO 3500.0
@@ -35,6 +37,7 @@
 #define TEL_K_LOOP 0.25
 #define TEL_MODE_FREEZE 8000.0
 #define TEL_UPDATE_S 2.0
+#define TEL_REPLAN_MARGIN 2000.0
 /* on-final energy shortfall must persist this long before low-energy delivery */
 #define TEL_LOW_ENERGY_DWELL_S 3.0
 /* drag level at or below which the law is energy-short (flying maximum range) */
@@ -59,6 +62,11 @@ typedef struct {
 } TelContext;
 
 typedef struct { double length,radius; } TelSegment;
+
+static bool tel_delivery_policy(const TelContext *c) {
+    return c->model->guidance.sts_trajectory_delivery&&
+        !strcmp(c->model->vehicle.model_id,"STS");
+}
 
 static double tel_wrap(double a) { return remainder(a,2.0*TEL_PI); }
 
@@ -120,7 +128,20 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
         if (p->g<-32.0*DEG2RAD) return c->aoa_max;
         return best+(fmin(best,TEL_AOA_SUP_MIN)-best)*k;
     }
-    double q_ref=TEL_Q_LO+(TEL_Q_HI-TEL_Q_LO)*k;
+    /* k=0 must mean maximum range on this polar, not a fixed dynamic
+       pressure that can trim far below its best-L/D incidence. Derive the
+       pressure needed to carry the current banked load at that incidence. */
+    double best=tel_best_ld_aoa(c,mach),best_q,best_mach,best_lift,best_drag;
+    tel_forces(c,p,best,&best_q,&best_mach,&best_lift,&best_drag);
+    double vertical_load=p->m*tel_gravity(c,p->h)*fmax(0.0,cos(p->g));
+    double bank_cos=fmax(0.3,cos(fabs(bank_deg)*DEG2RAD));
+    double q_range=best_lift>0.0?best_q*vertical_load/(bank_cos*best_lift):TEL_Q_LO;
+    double safe_speed=c->model->vehicle.minimum_safe_speed;
+    if (p->v>0.0&&safe_speed>0.0)
+        q_range=fmax(q_range,q*safe_speed*safe_speed/(p->v*p->v*bank_cos));
+    double q_ref=tel_delivery_policy(c)?
+        q_range+(fmax(q_range,TEL_Q_HI)-q_range)*k:
+        TEL_Q_LO+(TEL_Q_HI-TEL_Q_LO)*k;
     /* At maximum range (k=0) the station speed is already out of reach;
        blending toward it dives away range Final now needs more (live L7). */
     if (along<TEL_BLEND&&(!live||k>TEL_K_SHORT)) {
@@ -141,11 +162,21 @@ static double tel_vertical(const TelContext *c,const TelPoint *p,double bank_deg
         double g_aim=fmin(-atan2(p->h-c->h_station,fmax(500.0,along)),-atan(1.0/ld));
         double w=fmin(1.0,(TEL_AIM-along)/3000.0);
         g_cmd=(1.0-w)*g_cmd+w*g_aim;
-    } else if (live&&along<=0.0) {
+    } else if (live&&along<=0.0&&(k>TEL_K_SHORT||!tel_delivery_policy(c))) {
         /* past the station (Final not yet admitted): hold the outer glide slope */
         double ogs=atan(c->h_station/c->d_station),dist=fmax(1000.0,-p->x);
         g_cmd=-ogs-0.5*(p->h-dist*tan(ogs))/dist;
         g_cmd=clampd(g_cmd,-35.0*DEG2RAD,-10.0*DEG2RAD);
+    }
+    /* A proportional pressure schedule has steady-state error. Protect the
+       banked safe-speed boundary with the measured-model acceleration
+       balance as well: at that speed gravity along the glide must at least
+       cover drag, otherwise live bank protection removes the turn entirely. */
+    if (tel_delivery_policy(c)&&safe_speed>0.0&&p->v<safe_speed/sqrt(bank_cos)) {
+        double actual_q,actual_mach,actual_lift,actual_drag;
+        tel_forces(c,p,p->aoa,&actual_q,&actual_mach,&actual_lift,&actual_drag);
+        double balance=-asin(clampd(actual_drag/(p->m*gravity),0.0,1.0));
+        g_cmd=fmin(g_cmd,balance);
     }
     g_cmd=clampd(g_cmd,-35.0*DEG2RAD,6.0*DEG2RAD);
     double gdot=clampd((g_cmd-p->g)/4.0,-0.08,0.08);
@@ -481,7 +512,8 @@ static double tel_line_lookahead(const TelContext *c,const TelPoint *s,double ma
 static TelContext tel_effective_station(const TaemEnergyLawState *L,const TelContext *c,
         const TelPoint *s,double mach,double gnd){
     TelContext e=*c;
-    if (L->loop||(L->leg!=TEL_LEG_OUT&&L->leg!=TEL_LEG_FINAL)) return e;
+    if ((L->loop&&(!tel_delivery_policy(c)||L->leg!=TEL_LEG_FINAL))||
+            (L->leg!=TEL_LEG_OUT&&L->leg!=TEL_LEG_FINAL)) return e;
     double x_cap=L->leg==TEL_LEG_FINAL?s->x:s->x+tel_line_lookahead(c,s,mach,gnd);
     if (!(x_cap>-c->d_station)) return e;
     e.d_station=fmax(500.0,-x_cap);
@@ -490,12 +522,15 @@ static TelContext tel_effective_station(const TaemEnergyLawState *L,const TelCon
     return e;
 }
 
-static bool tel_final_line_ready(const TelContext *c,const TelPoint *s){
+static bool tel_line_aligned(const TelContext *c,const TelPoint *s){
     if(!c||!s||!(c->d_station>0.0)||
        !isfinite(s->x)||!isfinite(s->y)||!isfinite(s->psi))return false;
-    return -c->d_station-s->x<6000.0&&
-        fabs(s->y)<=fmin(2000.0,0.25*c->d_station)&&
+    return fabs(s->y)<=fmin(2000.0,0.25*c->d_station)&&
         fabs(tel_wrap(s->psi))<=15.0*DEG2RAD;
+}
+
+static bool tel_final_line_ready(const TelContext *c,const TelPoint *s){
+    return tel_line_aligned(c,s)&&-c->d_station-s->x<6000.0;
 }
 
 /* Shared by live control and the range forecast.  A capture turn must use
@@ -602,6 +637,14 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
     double lim=mach>1.1?TEL_BANK_SUP:TEL_BANK_MAX;
     if (L->leg==TEL_LEG_HAC||(L->leg==TEL_LEG_TURN&&bank_ff!=0.0)) lim=TEL_BANK_ARC;
     lim=fmin(lim,c->model->vehicle.maximum_bank_angle);
+    /* Forecasts must lose bank authority at the same measured speed/q/load
+       boundaries as the live command stabilizer. Otherwise a predicted slow
+       HAC can keep turning after live protection has levelled the wings. */
+    double lift,drag;
+    tel_forces(c,s,s->aoa,&q,&mach,&lift,&drag);
+    if (tel_delivery_policy(c))
+        lim=entry_bank_authority_limit(s->v,q,lift/(s->m*TEL_G0),
+            &c->model->vehicle,lim);
     bank_cmd=-clampd(bank_left,-lim,lim);
     return bank_cmd;
 }
@@ -622,8 +665,12 @@ static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *
     double initial=tel_sum(segs,tel_segments(L,c,s,segs));
     const double dt=1.0;
     double rr=c->model->world.radius_m+c->model->site.altitude;
+    bool delivered=false;
     for (unsigned i=0;i<1500;++i) {
-        if (p.h+p.v*p.v/(2.0*TEL_G0)<=c->e_station||p.h<0.0||p.v<1.0) break;
+        if (p.h<0.0||p.v<1.0||(!tel_delivery_policy(c)&&
+                p.h+p.v*p.v/(2.0*TEL_G0)<=c->e_station)) break;
+        if (tel_delivery_policy(c)&&route.leg==TEL_LEG_FINAL&&p.x>=-c->d_station&&
+                tel_final_line_ready(c,&p)) { delivered=true; break; }
         double along=tel_sum(segs,tel_segments_path(&route,c,&p,segs));
         p.ground_speed=p.v*cos(p.g);
         double command=tel_lateral(&route,c,&p);
@@ -650,10 +697,25 @@ static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *
         p.g+=dg*dt;
         p.psi=tel_wrap(p.psi+dpsi*dt);
     }
+    if (!tel_delivery_policy(c)) {
+        double remaining=tel_sum(segs,tel_segments(&route,c,&p,segs));
+        if (route.leg==TEL_LEG_FINAL) remaining=-c->d_station-p.x+fabs(p.y);
+        return initial-remaining;
+    }
+    /* Delivery is a pose with height AND speed, not just an equal sum of
+       potential and kinetic energy somewhere on the pattern. In the live
+       polar return the old forecast stopped before alignment, then credited
+       a slow, low station pass as successful range delivery. */
+    double slope=tan(c->slope_deg*DEG2RAD);
+    if (!(slope>0.0)) slope=c->h_station/c->d_station;
+    if (!(slope>0.0)) slope=1.0;
+    double energy_margin=p.h+p.v*p.v/(2.0*TEL_G0)-c->e_station;
+    double height_margin=p.h-c->h_station;
+    double speed_margin=(p.v*p.v-c->v_station*c->v_station)/(2.0*TEL_G0);
+    double reserve=fmin(energy_margin,fmin(height_margin,speed_margin))/slope;
     double remaining=tel_sum(segs,tel_segments(&route,c,&p,segs));
-    if (route.leg==TEL_LEG_FINAL)
-        remaining=-c->d_station-p.x+fabs(p.y);
-    return initial-remaining;
+    if (delivered) remaining=fabs(p.y);
+    return initial-remaining+fmin(0.0,reserve)+(delivered?fmax(0.0,reserve):0.0);
 }
 
 /* One guidance tick.  Returns false when the inputs are unusable. */
@@ -679,7 +741,8 @@ static bool tel_plan_open(const TaemEnergyLawState *L,const TelContext *c,const 
    can reach (shortfall at maximum range, excess at maximum drag), plus a mild
    preference for a pattern flown near mid-range drag.  The loop can lengthen
    its downwind, so excess does not count against it. */
-static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint *s) {
+static double tel_score_with_delivery(TaemEnergyLawState *P,const TelContext *c,
+        const TelPoint *s,bool *delivery_feasible) {
     TelSegment segs[5];
     int n=tel_segments(P,c,s,segs);
     double path=tel_sum(segs,n);
@@ -690,6 +753,7 @@ static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint
     double over=0.0;
     double r_mid=P->capture_forecast?tel_predict_pattern(P,c,s,TEL_K_PLAN,&over):
         tel_predict_range_ex(c,s,TEL_K_PLAN,1e9,segs,n,&over);
+    if (delivery_feasible) *delivery_feasible=r_max>=path&&r_min<=path;
     bool stretch=P->loop&&P->leg==TEL_LEG_OUT;
     /* a directly intercepted HAC can still spiral between its flyable minimum
        and TEL_R_MAX, scaling its arc */
@@ -704,6 +768,10 @@ static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint
         1000.0*fmax(0.0,over);   /* an arc the vehicle cannot hold is not a plan */
 }
 
+static double tel_score(TaemEnergyLawState *P,const TelContext *c,const TelPoint *s) {
+    return tel_score_with_delivery(P,c,s,NULL);
+}
+
 static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s) {
     static const double radii[]={TEL_R_MIN,3000.0,3500.0,4000.0,5000.0,6000.0,7000.0,8000.0,9000.0,TEL_R_MAX};
     double D=c->d_station,tx,ty,arc;
@@ -711,17 +779,28 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
     double v_hac=clampd(s->v*cos(s->g),130.0,170.0);
     double r_fly=v_hac*v_hac/(TEL_G0*tan(35.0*DEG2RAD));
     TaemEnergyLawState cur=*L,best=*L;
-    double cur_score=tel_score(&cur,c,s),best_score=cur_score;
+    /* A wide "direct" option used Dubins pricing but pursuit steering.
+       Until actually aligned, compare trackable tangent/HAC patterns only. */
+    bool direct_ready=tel_line_aligned(c,s);
+    double cur_score=tel_delivery_policy(c)&&!cur.loop&&!direct_ready?
+        INFINITY:tel_score(&cur,c,s);
+    double best_score=cur_score;
     TaemEnergyLawState p=*L;
     p.loop=false;p.leg=TEL_LEG_OUT;
-    if (s->x<-D-TEL_MODE_FREEZE || (L->capture_forecast&&fabs(s->y)>6000.0)) {
+    if (tel_delivery_policy(c)?direct_ready:
+            (s->x<-D-TEL_MODE_FREEZE || (L->capture_forecast&&fabs(s->y)>6000.0))) {
         double sc=tel_score(&p,c,s);
         if (sc<best_score) { best_score=sc; best=p; }
     }
     for (int side=-1;side<=1;side+=2)
         for (size_t i=0;i<sizeof(radii)/sizeof(radii[0]);++i) {
-            if (i>0&&radii[i]<=r_fly) continue;      /* one candidate at r_fly */
-            p=*L;p.loop=true;p.leg=TEL_LEG_DOWN;p.side=side;p.radius=fmax(radii[i],r_fly);
+            bool forecast_radius=tel_delivery_policy(c)&&L->capture_forecast;
+            if (!forecast_radius&&i>0&&radii[i]<=r_fly) continue;
+            p=*L;p.loop=true;p.leg=TEL_LEG_DOWN;p.side=side;
+            /* Spatial forecasts price the bank needed at the predicted HAC
+               speed. A guessed 130-170 m/s floor excluded compact flyable
+               circles when the actual inlet decelerated to ~108 m/s. */
+            p.radius=forecast_radius?radii[i]:fmax(radii[i],r_fly);
             if (!tel_hac_tangent(&p,c,s->x,s->y,&tx,&ty,&arc)) continue;
             if (hypot(tx-s->x,ty-s->y)<6000.0) continue;
             double sc=tel_score(&p,c,s);
@@ -732,7 +811,7 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
         double sc=tel_score(&p,c,s);
         if (sc<best_score) { best_score=sc; best=p; }
     }
-    if (best_score<cur_score-2000.0) *L=best;
+    if (best_score<cur_score-TEL_REPLAN_MARGIN) *L=best;
     if (L->loop&&L->leg==TEL_LEG_OUT) tel_size_hac(L,c,s,true);
 }
 
@@ -803,14 +882,16 @@ static void tel_initialize(TaemEnergyLawState *L,const TelContext *c,const TelPo
    distance outside the range its drag levels can reach (tel_score). Lower is
    better; the same predictor then flies the chosen frame. */
 static double taem_energy_law_frame_score(const TerminalModel *model,
-        const TaemGeometryState *geo,double mass_kg,double aoa_deg,double bank_deg) {
+        const TaemGeometryState *geo,double mass_kg,double aoa_deg,double bank_deg,
+        double *first_bank,bool *delivery_feasible) {
     if (!model||!geo||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)) return INFINITY;
     TelContext c;TelPoint s;
     tel_setup(model,geo,mass_kg,aoa_deg,bank_deg,&c,&s);
     TaemEnergyLawState L;
     tel_initialize(&L,&c,&s);
     tel_plan(&L,&c,&s);
-    double score=tel_score(&L,&c,&s);
+    double score=tel_score_with_delivery(&L,&c,&s,delivery_feasible);
+    if (first_bank) *first_bank=tel_lateral(&L,&c,&s);
     return isfinite(score)?score:INFINITY;
 }
 
@@ -840,7 +921,7 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
         L->side=s.y<=0.0?1:-1;
         L->r_turn=fmax(TEL_R_TURN,gnd*gnd/(TEL_G0*tan(45.0*DEG2RAD)));
     }
-    if (L->leg==TEL_LEG_HAC&&L->hac_left_rad>0.5&&ut>=L->last_geo_ut+TEL_UPDATE_S) {
+    if ((!tel_delivery_policy(&c)||!L->capture_forecast)&&L->leg==TEL_LEG_HAC&&L->hac_left_rad>0.5&&ut>=L->last_geo_ut+TEL_UPDATE_S) {
         /* HAC spiral: resize the circle (still tangent to the runway line at
            the station) so the remaining arc matches the range at mid drag. */
         L->last_geo_ut=ut;

@@ -119,6 +119,17 @@ int main(void) {
         LandingConfiguration restored=landing_configuration_default();assert(landing_configuration_from_json(&restored,&doc,0));
         assert(restored.guidance.touchdown_aim_along==150&&restored.guidance.rollout_parachutes);
         jw_free(&w);
+        double legacy_cap=cfg.vehicle.terminal_maximum_lift_angle_of_attack;
+        assert(legacy_cap<cfg.vehicle.maximum_angle_of_attack);
+        assert(json_parse("{\"vehicle\":{\"modelId\":\"STS\"}}",tokens,2048,&doc)>0);
+        assert(landing_configuration_from_json(&cfg,&doc,0));
+        assert(cfg.vehicle.terminal_maximum_lift_angle_of_attack==legacy_cap);
+        assert(json_parse("{\"guidance\":{\"stsTrajectoryDelivery\":true}}",tokens,2048,&doc)>0);
+        assert(landing_configuration_from_json(&cfg,&doc,0));
+        assert(cfg.vehicle.terminal_maximum_lift_angle_of_attack==cfg.vehicle.maximum_angle_of_attack);
+        assert(json_parse("{\"vehicle\":{\"modelId\":\"STS\",\"terminalMaximumLiftAngleOfAttack\":12}}",tokens,2048,&doc)>0);
+        assert(landing_configuration_from_json(&cfg,&doc,0));
+        assert(cfg.vehicle.terminal_maximum_lift_angle_of_attack==12);
     }
     setenv("KSP_LANDER_FINAL_APPROACH_TEST", "1", 1);
     const char *scenario_path = "ShuttleSim/scenarios/final-mm305-ideal-3p5km-185mps-aoa3.ini";

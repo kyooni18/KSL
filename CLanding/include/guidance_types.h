@@ -180,7 +180,8 @@ typedef struct {
        distance. Re-solved every forecast cycle from live telemetry. */
     bool entry_policy_valid; double entry_policy_bank_deg, entry_policy_aoa_deg, entry_policy_ut;
     double entry_handoff_target_range; /* site distance MM304 aims to hand off at */
-    bool taem_runway_end_scored; /* energy law chose the runway end once this TAEM */
+    bool taem_runway_end_scored;
+    double taem_runway_end_score_ut; /* re-evaluate only before the capture arc */
 
     double entry_supervision_ut;
 

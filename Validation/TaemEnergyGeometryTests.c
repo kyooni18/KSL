@@ -58,6 +58,20 @@ static void recorded_capture_range(void) {
         .g=-13.8*DEG2RAD,.psi=-19.5*DEG2RAD,.m=25670.0,.aoa=14.8,.bank=44.0};
     double passed_path=tel_sum(segs,tel_segments(&straight,&c,&passed,segs));
     assert(passed_path>hypot(passed.x+c.d_station,passed.y)+20000.0);
+    model->guidance.sts_trajectory_delivery=true;
+    snprintf(model->vehicle.model_id,sizeof(model->vehicle.model_id),"STS");
+    tel_plan(&straight,&c,&passed);
+    assert(straight.loop); /* price and fly a capture route, not a pursuit/Dubins mix */
+    TaemEnergyLawState final_line={.initialized=true,.loop=true,
+        .capture_forecast=true,.leg=TEL_LEG_FINAL,.radius=2200.0};
+    TelPoint low={.x=-9500.0,.y=0.0,.h=1680.0,.v=91.5,
+        .g=-19.3*DEG2RAD,.m=25660.0,.aoa=4.8};
+    double final_path=tel_sum(segs,tel_segments(&final_line,&c,&low,segs));
+    assert(tel_predict_pattern(&final_line,&c,&low,0.0,NULL)<final_path);
+    c.slope_deg=20.0;
+    low.x=-5000.0;
+    TelContext priced=tel_effective_station(&final_line,&c,&low,0.3,low.v);
+    assert(priced.d_station==5000.0); /* loop exits price their actual capture too */
     (void)taem_energy_law_frame_score;
     free(model);
 }

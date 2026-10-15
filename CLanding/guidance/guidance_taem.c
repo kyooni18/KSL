@@ -1691,7 +1691,8 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
     static const char *legs[]={"centreline","turnaround","downwind","HAC","Final line"};
     char status[256];
     int n=snprintf(status,sizeof(status),
-        "MM305 energy law: %s %s, drag level %.2f, path to go %.1f km.",
+        "MM305 energy law RW%02.0f: %s %s, drag level %.2f, path to go %.1f km.",
+        norm_deg(control_model->site.runway_heading)/10.0,
         L->loop?"overhead loop":"straight-in",legs[L->leg<0||L->leg>4?0:L->leg],
         L->k,L->s_go/1000.0);
     /* Make a withheld Final handoff visible in the live status line. */
@@ -1759,14 +1760,32 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        end, instead of inheriting an MM304 preview priced at hypersonic turn
        radius (2026-10-14: RW09 kept while the vehicle passed abeam RW09 at
        42 km crossrange; it overflew, turned back and landed short). */
+    bool end_choice_open=!g->taem_energy_law.initialized ||
+        g->taem_energy_law.leg==TEL_LEG_OUT||g->taem_energy_law.leg==TEL_LEG_DOWN;
+    if (g->taem_energy_law.initialized&&end_choice_open) {
+        const TerminalModel *active=mm305_model_for_end(model,end);
+        TaemGeometryState choice_geo;
+        end_choice_open=taem_geometry_state(active,&current,&choice_geo);
+        if (end_choice_open) {
+            TelContext choice_c;TelPoint choice_s;
+            tel_setup(active,&choice_geo,current.mass_kg,t->angle_of_attack,t->roll,
+                &choice_c,&choice_s);
+            end_choice_open=tel_plan_open(&g->taem_energy_law,&choice_c,&choice_s)&&
+                choice_s.h+choice_s.v*choice_s.v/(2.0*TEL_G0)>choice_c.e_station;
+        }
+    }
     if (cfg->guidance.taem_energy_law && !g->mm305_route_committed &&
-            !g->taem_energy_law.initialized && cfg->site.allow_reciprocal_runway &&
-            !g->taem_runway_end_scored) {
-        /* Once per TAEM: re-initialising the law (e.g. after attitude
-           recovery) must not re-pick the end (live 20261014T052206Z flipped
-           RW27/RW09/RW27/RW27). */
+            cfg->site.allow_reciprocal_runway &&
+            (cfg->guidance.sts_trajectory_delivery?end_choice_open:
+             (!g->taem_energy_law.initialized&&!g->taem_runway_end_scored)) &&
+            (!g->taem_runway_end_scored||
+             t->ut-g->taem_runway_end_score_ut>=TEL_UPDATE_S)) {
+        bool first_choice=!g->taem_runway_end_scored;
         g->taem_runway_end_scored=true;
+        g->taem_runway_end_score_ut=t->ut;
         double score[2]={INFINITY,INFINITY};
+        double first_bank[2]={NAN,NAN};
+        bool delivery_feasible[2]={false,false};
         for (int e=0;e<2;++e) {
             TerminalModel trial;
             const TerminalModel *trial_end=mm305_model_for_end(model,e);
@@ -1780,16 +1799,35 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
             TaemGeometryState trial_geometry;
             if (taem_geometry_state(&trial,&current,&trial_geometry))
                 score[e]=taem_energy_law_frame_score(&trial,&trial_geometry,
-                    current.mass_kg,t->angle_of_attack,t->roll);
+                    current.mass_kg,t->angle_of_attack,t->roll,&first_bank[e],
+                    &delivery_feasible[e]);
         }
         if (isfinite(score[0])||isfinite(score[1])) {
             int other=1-end;
-            if (score[other]<score[end]) end=other;
+            double margin=first_choice?0.0:TEL_REPLAN_MARGIN;
+            if (!first_choice&&isfinite(first_bank[other])) {
+                GuidanceAttitudeLimits limits=decision_guidance_attitude_limits(t,
+                    &cfg->guidance,PHASE_TAEM,false);
+                double capture=decision_axis_capture_time(first_bank[other]-t->roll,
+                    t->roll_rate,limits.accel_deg_s2,limits.rate_deg_s);
+                if (isfinite(capture)) margin+=t->horizontal_speed*capture;
+            }
+            /* A smaller infeasibility score is not permission to abandon a
+               captured route for another known-short turn. Reconsider the
+               end only when the alternative predicts actual delivery. */
+            if ((first_choice||delivery_feasible[other])&&
+                    score[other]<score[end]-margin) end=other;
+            bool changed=end!=g->runway_end_index;
+            if (changed&&g->taem_energy_law.initialized) {
+                g->taem_energy_law=(TaemEnergyLawState){0};
+                g->terminal_final_handoff_latched=false;
+            }
             g->runway_end_index=end;
             g->runway_end_preview_valid=true;
             g->runway_end_committed=true;
-            fprintf(stderr,"MM305 energy-law runway end: RW%s end=%d score09=%.0f score27=%.0f\n",
-                end==1?"27":"09",end,score[0],score[1]);
+            if (!g->diagnostic_shadow&&(first_choice||changed))
+                fprintf(stderr,"MM305 energy-law runway end: UT %.1f RW%s end=%d score09=%.0f score27=%.0f\n",
+                    t->ut,end==1?"27":"09",end,score[0],score[1]);
         }
     }
     const TerminalModel *end_model=mm305_model_for_end(model,end);

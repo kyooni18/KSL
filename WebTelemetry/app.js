@@ -1725,7 +1725,8 @@
     const entryFeedback = /ENTRY|MM304/.test(phase) && g.entryFeedback?.valid === true
       ? g.entryFeedback : null;
     const energyLaw = terminalPhase && g.energyLaw?.active === true ? g.energyLaw : null;
-    const terminalState = energyLaw ? "ENERGY LAW" : g.terminalPathComplete ? "COMPLETE" : g.terminalPathCaptured ? "CAPTURED" : g.terminalPathCommitted ? "COMMITTED" : g.terminalCandidateValid ? "CANDIDATE" : g.terminalPredictionValid ? "PREDICT" : "WAIT";
+    const finalControl = terminalPhase && g.finalCaptured === true && /FINAL|PREFLARE|FLARE|TOUCHDOWN|ROLLOUT/.test(phase);
+    const terminalState = finalControl ? phase : energyLaw ? "ENERGY LAW" : g.terminalPathComplete ? "COMPLETE" : g.terminalPathCaptured ? "CAPTURED" : g.terminalPathCommitted ? "COMMITTED" : g.terminalCandidateValid ? "CANDIDATE" : g.terminalPredictionValid ? "PREDICT" : "WAIT";
     let smartStatus;
     if (orbitMode) {
       const orbitalStatus = [];
@@ -1738,7 +1739,9 @@
       smartStatus = orbitalStatus.join(" · ");
     } else {
       const statusParts = [];
-      if (energyLaw) {
+      if (finalControl) {
+        statusParts.push(snapshot.statusMessage || phase);
+      } else if (energyLaw) {
         statusParts.push(snapshot.statusMessage || `ENERGY GUIDANCE · path ${distance(energyLaw.pathToGo)} · drag ${fmt(energyLaw.dragLevel,2)}`);
       } else if (terminalPhase) {
         statusParts.push(terminalState);
@@ -1785,7 +1788,8 @@
         ? `Burn ${countdown(toBurn)} · ΔV ${finite(plannedDV) ? n(plannedDV).toFixed(1) : "—"} m/s · post-burn PE ${distance(plan.predictedPostBurnPeriapsisAltitude)} · ${burnAlignment ? "burn alignment" : "retrograde error"} ${fmt(retroErr,1,"°")}`
         : `No current deorbit plan · AP ${distance(t.apoapsisAltitude)} · PE ${distance(t.periapsisAltitude)}`);
     } else if (terminalPhase) {
-      if (energyLaw) { planChip = "ENERGY GUIDANCE"; planTone = "warn"; }
+      if (finalControl) { planChip = /ROLLOUT|TOUCHDOWN/.test(phase) ? "ROLLOUT CONTROL" : "FINAL GUIDANCE"; planTone = snapshot.warningMessage ? "warn" : ""; }
+      else if (energyLaw) { planChip = "ENERGY GUIDANCE"; planTone = "warn"; }
       else if (terminalPlanProven && referenceCount >= 2) { planChip = "REF COMMITTED"; planTone = "good"; }
       else if (terminalPlanProven && plannedCount >= 2) { planChip = "PLAN COMMITTED"; planTone = "good"; }
       else if (plannedCount >= 2 && snapshot.planProvisionalKind === "acquisition") { planChip = "ACQ GUIDANCE"; planTone = "warn"; }
