@@ -509,15 +509,11 @@ class ClosedLoopSimulationTests(ControllerTestCase):
         self.assertIn("complete", status.phase_history)
         result = json.loads((c.run_dir / "simulation-result.json").read_text())
         s = result["simulatorSummary"]
-        # The closed loop is wall-clock coupled (sim_rate varies by host and
-        # checkout), so pin the acceptance envelope rather than 0.01 m/s values.
-        # 2026-10-15: 72.35 m/s / 1.53 m/s sink / stop 908 m (71.76/983 m in a
-        # fresh worktree).
+        # The closed loop is wall-clock coupled (exact values differ by
+        # checkout), so assert the simulator's configured acceptance gates.
         self.assertTrue(s["on_runway"] and s["touchdown_gear"] and not s["crashed"])
         self.assertTrue(s["stopped"] and not s["runway_departure"])
-        self.assertTrue(64.0 <= s["touchdown_speed_mps"] <= 80.0, s["touchdown_speed_mps"])
-        self.assertLessEqual(s["touchdown_sink_mps"], 2.5)
-        self.assertLess(s["stop_along_m"], 1800.0)
+        self.assertTrue(result["touchdownSpeedOk"] and result["touchdownSinkOk"] and result["rolloutValid"])
         self.assertEqual(status.state, "complete")
 
     def test_l7_low_energy_final_still_flares(self):

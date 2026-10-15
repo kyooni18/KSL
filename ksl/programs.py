@@ -353,9 +353,6 @@ class AscentProgram(Program):
 
 # --- orbit ---------------------------------------------------------------------------
 
-ORBIT_RETARGET_TOLERANCE_M = 5000.0
-
-
 def established_orbit_retarget(config: MissionConfig) -> str | None:
     """Refuse to silently move an orbit this run did not insert.
 
@@ -375,7 +372,8 @@ def established_orbit_retarget(config: MissionConfig) -> str | None:
     if info.get("situation") != "orbiting" or ap is None or pe is None or pe <= depth:
         return None
     target = config.target_altitude_m
-    if max(abs(ap - target), abs(pe - target)) <= ORBIT_RETARGET_TOLERANCE_M:
+    # The profile's own achieved-orbit altitude tolerance decides "far".
+    if max(abs(ap - target), abs(pe - target)) <= config["intelligentAscent"]["altitudeToleranceM"]:
         return None
     return (f"orbit trim refused: the current orbit ({ap / 1000:.1f} x {pe / 1000:.1f} km) is far from the "
             f"configured {target / 1000:.0f} km target. A saved checkpoint does not restore the original run's "
