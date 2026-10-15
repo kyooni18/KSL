@@ -3,7 +3,7 @@
  * function is called. The observation archive is opened READ_ONLY only.
  *
  * Usage: polar_reentry_replay FIXTURE OUTPUT_PREFIX MODE [ARG...]
- * MODE: vacuum | forces CSV | recorded CSV CLOCK FORCE | shadow LABEL [prior]
+ * MODE: execute-burn [DT] | vacuum | forces CSV | recorded CSV CLOCK FORCE | shadow LABEL [prior]
  *       candidate OFFSET_S NORMAL_DEG PERIAPSIS_M [prior] | plan [prior]
  * CLOCK: raw | kinematic; FORCE: prior | envelope | measured
  * "measured" is a dynamics reconstruction, never a predictive certificate.
@@ -168,6 +168,61 @@ static void candidate(double offset,double normal,double peri,bool prior){if(pri
     Candidate c={0};double delivered;c.after=retro_burn_scenario(coast,dv,t.available_thrust,config.guidance.deorbit_maximum_throttle,config.guidance.deorbit_throttle_ramp_duration,&planet,0,normal,&c.duration,&delivered,calibration.physics);c.dv=dv;c.burn_ut=start+.5*c.duration;c.peri=predictor_postburn_periapsis(c.after,&planet);c.burn_normal_angle=normal;
     printf("candidate offset=%.1f normal=%.4f peri=%.1f solved=1 dv=%.9f duration=%.9f state_elapsed=%.9f delivered=%.9f\n",offset,normal,peri,dv,c.duration,c.after.ut-coast.ut,delivered);EntryPrediction result=deorbit_executable_policy_witness(&c,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,&t,terminal,true,true);prediction_summary(&result,c.after);entry_prediction_clear(&result);free(terminal);
 }
+/* Execute the recorded plan with fresh measured-state periapsis feedback.
+   This isolates the burn controller from the atmospheric forecast's wall time. */
+static void execute_burn(double dt){
+    if(!(dt>0.0)||dt>1.0)fail("burn timestep must be in (0, 1] seconds");
+    load_history();load_terminal();Telemetry t;
+    VehicleState initial=load_state(object(0,"planningSample"),&t);
+    int pp=object(0,"planParameters");DeorbitPlan plan={0};
+    plan.burn_ut=number(pp,"burnUT");plan.estimated_burn_duration=number(pp,"estimatedBurnDuration");
+    plan.delta_v=number(pp,"deltaV");plan.burn_normal_angle=number(pp,"burnNormalAngle");
+    plan.predicted_post_burn_periapsis_altitude=number(pp,"predictedPostBurnPeriapsisAltitude");
+    plan.execution_qualified=true;
+    double burnstart=plan.burn_ut-.5*plan.estimated_burn_duration;
+    VehicleState state=predictor_propagate_vacuum(initial,burnstart,&planet,dt);
+    GuidanceMachine g;guidance_machine_init(&g);guidance_set_engaged(&g,true);
+    g.has_previous_ut=true;g.previous_ut=state.ut-dt;t.autopilot_error=0.0;
+    double last_throttle=0.0,impulse=0.0;
+    FILE*f=create_output("-burn.csv");fprintf(f,"ut,periapsis,throttle,delivered_delta_v\n");
+    for(double elapsed=0;elapsed<2.0*plan.estimated_burn_duration;elapsed+=dt){
+        t.ut=state.ut;t.mass=state.mass;t.mean_altitude=vmag(state.position)-planet.radius;
+        t.periapsis_altitude=predictor_postburn_periapsis(state,&planet);
+        t.current_thrust=t.available_thrust*last_throttle;
+        GuidanceResult r=guidance_update(&g,&t,&state,&plan,&planet,envelope.regimes[2],&config);
+        fprintf(f,"%.9f,%.9f,%.9f,%.9f\n",state.ut,t.periapsis_altitude,r.command.target_throttle,g.delivered_delta_v);
+        if(g.deorbit_burn_completed){guidance_result_clear(&r);break;}
+        last_throttle=r.command.target_throttle;
+        double thrust=t.available_thrust*last_throttle;
+        Vector3 force=vscale(r.command.inertial_direction,thrust/state.mass);
+        impulse+=vmag(force)*dt;
+        state=measured_force_step(state,dt,force);
+        state.mass=vessel_physics_burn_mass(&physics,state.mass,thrust,dt);
+        guidance_result_clear(&r);
+    }
+    fclose(f);
+    printf("feedback_burn dt=%.3f duration=%.3f completed=%d peri=%.3f target=%.3f impulse=%.6f delivered=%.6f\n",
+        dt,state.ut-burnstart,g.deorbit_burn_completed,predictor_postburn_periapsis(state,&planet),
+        plan.predicted_post_burn_periapsis_altitude,impulse,g.delivered_delta_v);
+    if(!g.deorbit_burn_completed)fail("feedback burn did not finish");
+    /* Freeze an entry checkpoint in ShuttleSim's canonical longitude frame. */
+    double entry_alt=planet.atmosphere_depth+config.guidance.entry_interface_altitude_margin;
+    double coast_limit=state.ut+2.0*LANDER_PI*sqrt(pow(vmag(initial.position),3)/planet.gravitational_parameter);
+    while(vmag(state.position)-planet.radius>entry_alt||vdot(state.position,state.velocity)>=0){
+        if(state.ut>=coast_limit)fail("feedback orbit did not reach entry within one period");
+        state=rk4_gravity(state,dt,&planet);
+    }
+    double phase=atan2(planet.prime_meridian_at_epoch.y,planet.prime_meridian_at_epoch.x)-
+        planet.rotational_speed*planet.epoch_ut;
+    KerbinWorld simulator_world;world_seed_kerbin(&simulator_world);
+    double rotation=simulator_world.rotation_phase_rad_at_ut0-phase;
+    Vector3 position=vrotate(state.position,planet.north_axis,rotation);
+    Vector3 velocity=vrotate(state.velocity,planet.north_axis,rotation);
+    f=create_output("-entry.ini");
+    fprintf(f,"name=recorded-plan-feedback-entry\nut0=%.17g\nposition_x_m=%.17g\nposition_y_m=%.17g\nposition_z_m=%.17g\nvelocity_x_mps=%.17g\nvelocity_y_mps=%.17g\nvelocity_z_mps=%.17g\nmass_kg=%.17g\ninitial_aoa_deg=0\ninitial_bank_deg=0\ndeorbit_delta_v_mps=0\ndeorbit_duration_s=0\ndeorbit_delay_s=0\nrunway_latitude_deg=%.17g\nrunway_longitude_deg=%.17g\nrunway_elevation_m=%.17g\nrunway_heading_deg=%.17g\nrunway_length_m=%.17g\nrunway_width_m=%.17g\n",state.ut,position.x,position.y,position.z,velocity.x,velocity.y,velocity.z,state.mass,config.site.latitude,config.site.longitude,config.site.altitude,config.site.runway_heading,config.site.runway_length,config.site.runway_width);
+    fclose(f);free(terminal);
+}
+
 /* Full native deorbit planner from the recorded pre-plan orbit, then the
    closed-loop executable witness for the selected burn (offline, read-only). */
 static void plan_mode(bool prior){if(prior)load_history();load_terminal();Telemetry t;
@@ -189,6 +244,7 @@ static void plan_mode(bool prior){if(prior)load_history();load_terminal();Teleme
 int main(int argc,char**argv){if(argc<4)fail("usage: polar_reentry_replay FIXTURE OUTPUT_PREFIX MODE [ARGS]");output=argv[2];FILE*f=fopen(argv[1],"rb");if(!f)fail("fixture not found");if(fseek(f,0,SEEK_END))fail("fixture seek");long n=ftell(f);if(n<0||n>10000000)fail("fixture size");rewind(f);char*text=calloc((size_t)n+1,1);JsonToken*tokens=calloc(TOKEN_CAPACITY,sizeof(*tokens));if(!text||!tokens||fread(text,1,(size_t)n,f)!=(size_t)n)fail("fixture read");fclose(f);if(json_parse(text,tokens,TOKEN_CAPACITY,&doc)<0)fail("fixture JSON parse");config=landing_configuration_default();if(!landing_configuration_from_json(&config,&doc,object(0,"configuration")))fail("configuration parse");load_planet();setvbuf(stdout,NULL,_IOLBF,0);
     if(!strcmp(argv[3],"vacuum"))vacuum();
     else if(!strcmp(argv[3],"burn"))burn_study();
+    else if(!strcmp(argv[3],"execute-burn"))execute_burn(argc>4?strtod(argv[4],NULL):.1);
     else if(!strcmp(argv[3],"close-burn"))close_burn(argc>4?strtod(argv[4],NULL):.1);
     else if(!strcmp(argv[3],"forces")&&argc==5)forces(argv[4]);
     else if(!strcmp(argv[3],"recorded")&&argc==7)recorded(argv[4],argv[5],argv[6]);

@@ -217,6 +217,18 @@ static void dynamic_prediction(LandingController*c,Telemetry*t,const VehicleStat
        c->guidance.phase==PHASE_ENTRY_ENERGY||
        (c->guidance.phase==PHASE_ENTRY_INTERFACE&&!postburn_verify)){prediction_cache_apply(c,t,cfg);return;}
     bool burn_cutoff_predict=c->has_plan&&c->guidance.has_burn_command_started&&!c->guidance.deorbit_burn_completed&&planet_atmospheric_density(p,t->mean_altitude)<=DBL_EPSILON;
+    /* STS closes its burn on measured periapsis. The advisory atmospheric
+       cutoff rollout must not hold the previous throttle while it runs: the
+       2026-10-15 orbit return lost 4.64 s here and overshot Pe by 1.96 km.
+       Missing periapsis retains the existing forecast fallback. Post-burn
+       achieved-state verification above still runs after thrust is zero. */
+    bool sts_periapsis_closure=cfg->guidance.taem_energy_law&&
+        !strcmp(cfg->vehicle.model_id,"STS")&&burn_cutoff_predict&&
+        c->plan.predicted_post_burn_periapsis_altitude>10000&&
+        c->plan.predicted_post_burn_periapsis_altitude<p->atmosphere_depth&&
+        isfinite(t->periapsis_altitude)&&t->periapsis_altitude>-p->radius*.5;
+    if(sts_periapsis_closure){prediction_cache_apply(c,t,cfg);return;}
+
     /* Do not run the full atmospheric propagator while guidance is idle.
        In an in-atmosphere restart this control thread used to spend several
        wall-clock seconds solving a forecast while holding the controller mutex,

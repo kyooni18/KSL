@@ -142,6 +142,7 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
         Telemetry coherent=t;
         coherent.pitch=coherent.flight_path_angle+coherent.angle_of_attack;
         coherent.heading=coherent.ground_track_heading=course;
+        GuidanceMachine energy=live;
         GuidanceResult outcome=guidance_update_with_terminal_model(&live,&coherent,
             &state,NULL,p,aero,cfg,model);
         assert(live.entry_exec.entry_complete);
@@ -152,6 +153,17 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
         printf("forced live handoff: phase=%d route=%d pending=%d status=%s\n",
             outcome.phase,live.mm305_route_committed?1:0,live.mm305_planning_needed?1:0,
             outcome.status);
+        guidance_result_clear(&outcome);
+        /* The STS energy-law alternative must receive ownership without an
+           unused fixed-HAC job blocking the simulator's planning barrier. */
+        LandingConfiguration energy_cfg=*cfg;
+        energy_cfg.guidance.taem_energy_law=true;
+        assert(terminal_model_capture(model,&files,&energy_cfg,42,reason,sizeof(reason)));
+        outcome=guidance_update_with_terminal_model(&energy,&coherent,&state,
+            NULL,p,aero,&energy_cfg,model);
+        assert(taem_exec_owns_vehicle(&energy.taem_exec));
+        assert(!energy.mm305_planning_needed);
+        assert(!energy.mm305_route_committed);
         guidance_result_clear(&outcome);
         free(model);
     }

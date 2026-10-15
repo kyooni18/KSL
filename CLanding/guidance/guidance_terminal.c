@@ -382,7 +382,9 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
                 return entry;
             }
             g->mm305_admission_needed=false;
-            if (!g->mm305_route_committed) {
+            /* The STS energy law owns its path. A fixed-HAC request here
+               blocked the lockstep simulator on an unused route search. */
+            if (!g->mm305_route_committed && !cfg->guidance.taem_energy_law) {
                 g->mm305_planning_needed=true;
                 g->mm305_plan_request_ut=t->ut;
                 g->mm305_last_plan_attempt_ut=t->ut;
