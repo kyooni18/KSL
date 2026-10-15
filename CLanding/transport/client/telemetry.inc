@@ -303,7 +303,16 @@ bool krpc_cnano_client_read(KrpcCNanoClient *client,
 
     t->speed_of_sound = client->cached_speed_of_sound > 1.0
         ? client->cached_speed_of_sound : planet_atmospheric_speed_of_sound(&client->planet, t->mean_altitude);
-    t->mach = t->true_air_speed / fmax(1.0, t->speed_of_sound);
+    /* Above the atmosphere KSP reports no speed of sound; a 1 m/s floor made
+       Mach equal TAS (2,293 at 72 km on the 2026-10-15 polar flight).  Use the
+       profile's value just inside the atmosphere top as the Mach reference;
+       the published speed of sound itself stays zero there. */
+    double mach_reference = t->speed_of_sound;
+    if (!(mach_reference > 1.0) && isfinite(client->planet.atmosphere_depth) &&
+        client->planet.atmosphere_depth > 1.0)
+        mach_reference = planet_atmospheric_speed_of_sound(&client->planet,
+            client->planet.atmosphere_depth - 1.0);
+    t->mach = t->true_air_speed / fmax(1.0, isfinite(mach_reference) ? mach_reference : 1.0);
     t->static_pressure = client->cached_static_pressure;
     t->g_force = client->cached_g_force;
     t->dry_mass = client->cached_dry_mass;
