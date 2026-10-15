@@ -589,6 +589,9 @@ class KSLApp(App[int]):
 
     @on(DataTable.RowHighlighted, "#operations")
     def select_operation(self, event: DataTable.RowHighlighted) -> None:
+        # A queued table event can arrive after the screen starts unmounting.
+        if not self.query("#start-btn"):
+            return
         if event.row_key and event.row_key.value:
             self.selected_operation = str(event.row_key.value)
             self.invalidate_review()
@@ -596,7 +599,10 @@ class KSLApp(App[int]):
 
     def invalidate_review(self) -> None:
         self.reviewed_signature = None
-        self.query_one("#start-btn", Button).disabled = True
+        buttons = self.query("#start-btn")
+        if not buttons:
+            return
+        buttons.first(Button).disabled = True
         self._show_plan("Select an operation, then Review.")
 
     @on(Input.Changed)
