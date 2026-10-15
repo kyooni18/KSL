@@ -357,3 +357,9 @@ The deorbit trace from `ksl-20261015T113418Z-sts-incl60-full-orbit` explains the
 Live (`runs/*-sts-incl60-deorbit-fix`): the burn was flown as planned, but the handoff did not move. It came at Mach 2.50, 23.0 km altitude, 22 km before RW27, heading error -93 deg. TAEM began ~4 km short (sGo 40.4 vs sReq 36.1 km). Final started at 1.0 km altitude 8.7 km out, and the orbiter hit the ground 1,383 m short of the RW27 threshold at 20 m/s sink: destroyed (3 parts). Mission stopped with SIGINT; KSP paused.
 
 Why the handoff did not move: `0ce1035`'s turn reserve, R*(theta - sin theta) at the handoff-speed radius, exceeds the TAEM reach at a perpendicular arrival. That clamped MM304's handoff target to the 8 km alignment distance. MM304 therefore flew 0 deg bank to carry energy in close ("target 8.0 km", "+17.5 km short at 0 deg"), overriding the deorbit plan's 92.6 km handoff. The reserve should come out, or be reformulated, before the next attempt.
+
+## 2026-10-16 — 60 deg consistent run: delivered short again; deorbit refine targeted the wrong range
+- The live run from the orbit save reached MM305 at Mach 2.5, 25 km, 74.5 km cross, hdgErr -109 deg. MM304 flew wings-level for the whole entry yet still read +22..+35 km short; the user judged it energy-short and stopped live tests.
+- Root cause: the deorbit inlet scan sampled 28.4 / 23.7 / 126 / 157 / 252 km (STS target 40.2 km), but the secant refine bracketed the *configured* 96.5 km inlet range (found 92.8 km). The STS ranking rejected that, so the plan kept the coarse 28.4 km sample.
+- Fix: the refine aims at `sts_handoff_target` when it is finite. Not verified live yet (live tests on hold).
+- Also, ea05f0a: excluded SSMEs are shut down (`Engine.Active=false`) before burns; they had ignited during the deorbit burn.

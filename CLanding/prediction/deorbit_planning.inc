@@ -1127,7 +1127,12 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
        than the learned envelope).  Secant-refine inside the adjacent pair that
        brackets the nominal range; candidates are ranked by the same rule. */
     {
-        double nominal=entry_taem_range_target(p,s);
+        /* Experimental STS ranks toward MM304's handoff target, so refine
+           toward it too; refining toward the configured inlet range found
+           92.8 km, which that ranking rejected, leaving the coarse 28 km
+           sample that delivered MM305 short (60 deg live, 2026-10-16). */
+        double nominal=isfinite(sts_handoff_target)?sts_handoff_target:
+            entry_taem_range_target(p,s);
         for(int i=0;i<scan_count;i++)for(int j=i+1;j<scan_count;j++)
             if(scan_dt[j]<scan_dt[i]){double t=scan_dt[i];scan_dt[i]=scan_dt[j];scan_dt[j]=t;
                 t=scan_range[i];scan_range[i]=scan_range[j];scan_range[j]=t;}
