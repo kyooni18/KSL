@@ -295,6 +295,9 @@ typedef struct {
     bool terminal_aero_sample_valid;
     double terminal_predicted_touchdown_speed;
     double terminal_speedbrake_cda; /* learned speedbrake drag area, m^2 (0 = unknown) */
+    /* Split-fin opening commanded by Final, and its learned full-open drag
+       area (m^2 per unit opening; 0 = not yet measured). */
+    double terminal_speedbrake_fraction, terminal_split_fin_cda;
     double terminal_vs_prev, terminal_vs_prev_ut, terminal_vs_rate_ema;
     /* Observed lift/q and drag/q (m^2) in 1 deg incidence bins 0..20 deg. */
     double terminal_lift_q[21], terminal_drag_q[21];

@@ -294,8 +294,9 @@ static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command
     double throttle=command&&command->control_profile==PROFILE_ORBITAL?
         clampd(command->target_throttle,0.0,1.0):0.0;
     bool gear=s->has_last_telemetry?s->last_telemetry.gear:false,brakes=s->has_last_telemetry?s->last_telemetry.brakes:false;
-    bool airbrakes=false;double wheel_steering=0.0;
-    if(command){if(command->has_target_aoa&&isfinite(command->target_aoa))aoa=command->target_aoa;if(isfinite(command->target_roll))bank=command->target_roll;gear=command->gear;brakes=command->brakes;airbrakes=command->airbrakes;wheel_steering=clampd(command->wheel_steering,-1.0,1.0);}
+    bool airbrakes=false;double wheel_steering=0.0,speedbrake=0.0;
+    if(command){if(command->has_target_aoa&&isfinite(command->target_aoa))aoa=command->target_aoa;if(isfinite(command->target_roll))bank=command->target_roll;gear=command->gear;brakes=command->brakes;airbrakes=command->airbrakes;wheel_steering=clampd(command->wheel_steering,-1.0,1.0);
+        if(isfinite(command->speedbrake_fraction))speedbrake=clampd(command->speedbrake_fraction,0.0,1.0);}
     if(fc)wheel_steering=clampd(fc->wheel_steering,-1.0,1.0);
     char thrust_dir[120]="";
     if(command&&command->control_profile==PROFILE_ORBITAL&&command->use_inertial_direction&&throttle>0.0&&
@@ -304,8 +305,8 @@ static bool sim_send_guidance_inputs(KRPCSession*s,const GuidanceCommand*command
     char inputs[160]="";
     if(fc)snprintf(inputs,sizeof(inputs),",\"pitch_input\":%.9f,\"roll_input\":%.9f,\"yaw_input\":%.9f",
         clampd(fc->pitch,-1.0,1.0),clampd(fc->roll,-1.0,1.0),clampd(fc->yaw,-1.0,1.0));
-    char msg[800];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.9f,\"throttle\":%.9f%s%s,\"step\":%s}",
-        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",wheel_steering,throttle,thrust_dir,inputs,step?"true":"false");
+    char msg[800];snprintf(msg,sizeof(msg),"{\"type\":\"guidance\",\"aoa_deg\":%.9f,\"bank_deg\":%.9f,\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"speedbrake\":%.6f,\"wheel_steering\":%.9f,\"throttle\":%.9f%s%s,\"step\":%s}",
+        aoa,bank,gear?"true":"false",brakes?"true":"false",airbrakes?"true":"false",speedbrake,wheel_steering,throttle,thrust_dir,inputs,step?"true":"false");
     ssize_t n=sendto(s->sim_tx_fd,msg,strlen(msg),0,(struct sockaddr*)&s->sim_command_addr,sizeof(s->sim_command_addr));
     if(n<0){set_error(error,error_size,"Could not send ShuttleSim command: %s",strerror(errno));return false;}
     if(step)s->sim_need_packet=true;return true;
@@ -522,13 +523,15 @@ bool krpc_apply(KRPCSession *s,const GuidanceCommand *command,unsigned airbrake_
                 command,attitude_ptr,dt,&fc);
         }
         if(!valid||!fc.valid){set_error(error,error_size,"Native %s flight-control law rejected profile %s",inertial_entry?"inertial-entry":"atmospheric",profile_string(command->control_profile));return false;}
-        /* The unpowered campaign keeps main-engine recovery and split-rudder
-           speedbrakes off. Its separate attitude-only RCS capture may rotate from
-           the retrograde deorbit attitude before useful aerodynamic authority. */
+        /* The unpowered campaign keeps main-engine recovery off. Its separate
+           attitude-only RCS capture may rotate from the retrograde deorbit
+           attitude before useful aerodynamic authority.  The split-rudder
+           speedbrake is unpowered drag owned by guidance: TAEM stows it in that
+           campaign and Final opens it only when the configuration enables it. */
         const char *unpowered=getenv("KSP_LANDER_UNPOWERED_ONLY");
         bool unpowered_only=unpowered&&strcmp(unpowered,"1")==0;
         if(unpowered_only)fc.throttle=0.0;
-        double speedbrake_fraction=unpowered_only?0.0:command->speedbrake_fraction;
+        double speedbrake_fraction=command->speedbrake_fraction;
         /* Keep the transport transparent: FlightControlOutput is expressed in
            the same direct-control axis convention consumed by native kRPC. Any
            sideslip/yaw sign or coordinate correction belongs in the flight-control

@@ -16,6 +16,13 @@
 #define GUIDANCE_HARD_AOA_LIMIT_DEG 40.0
 #define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
 #define MM304_COORDINATION_BETA_SCALE_DEG 5.0
+/* Split-fin speedbrake opening limits shared by TAEM and Final: the cap is
+   the operator's 50% limit; nominal is the TAEM acquisition opening; slews
+   are fraction per second. */
+#define SPEEDBRAKE_CAP 0.50
+#define SPEEDBRAKE_NOMINAL 0.25
+#define SPEEDBRAKE_DEPLOY_SLEW 0.05
+#define SPEEDBRAKE_STOW_SLEW 0.20
 
 
 /* Shared live MM304→MM305 capture contract.  The terminal owner must use the

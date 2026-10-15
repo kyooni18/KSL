@@ -191,10 +191,10 @@ void sim_apply_deorbit_initial(Simulation *sim){
 void sim_set_attitude(Simulation *sim,double aoa_deg,double bank_deg){attitude_set_command(&sim->state.attitude,deg2rad(aoa_deg),deg2rad(bank_deg));}
 void sim_apply_command(Simulation *sim,const SimCommand *c){
     if(getenv("SHUTTLESIM_COMMAND_DIAG")){
-        fprintf(stderr,"SHUTTLESIM_CMD t=%.3f attitude=%d aoa=%.3f bank=%.3f gear=%d brakes=%d airbrakes=%d wheel=%.3f throttle=%.4f step=%d pause=%d resume=%d\n",
+        fprintf(stderr,"SHUTTLESIM_CMD t=%.3f attitude=%d aoa=%.3f bank=%.3f gear=%d brakes=%d airbrakes=%d speedbrake=%.3f wheel=%.3f throttle=%.4f step=%d pause=%d resume=%d\n",
             sim?sim->state.sim_elapsed_s:0.0,c->has_attitude,c->aoa_deg,c->bank_deg,
             c->has_gear?c->gear_down:-1,c->has_brakes?c->brakes:-1,
-            c->has_airbrakes?c->airbrakes:-1,c->has_wheel_steering?c->wheel_steering:(sim?sim->state.wheel_steering:0.0),
+            c->has_airbrakes?c->airbrakes:-1,c->has_speedbrake?c->speedbrake:-1.0,c->has_wheel_steering?c->wheel_steering:(sim?sim->state.wheel_steering:0.0),
             c->has_throttle?c->throttle:(sim?sim->commanded_throttle:0.0),
             c->step,c->pause,c->resume);
     }
@@ -203,6 +203,7 @@ void sim_apply_command(Simulation *sim,const SimCommand *c){
     if(c->has_gear) sim->state.gear_down=c->gear_down;
     if(c->has_brakes) sim->state.brakes=c->brakes;
     if(c->has_airbrakes) sim->state.airbrakes=c->airbrakes;
+    if(c->has_speedbrake) sim->state.speedbrake_fraction=c->speedbrake;
     if(c->has_wheel_steering) sim->state.wheel_steering=fmin(1.0,fmax(-1.0,c->wheel_steering));
     if(c->has_throttle) sim->commanded_throttle=fmin(1.0,fmax(0.0,c->throttle));
     if(c->has_thrust_dir){sim->has_thrust_dir_command=true;sim->thrust_dir_command=v3_normalized(ss_v3(c->thrust_dir[0],c->thrust_dir[1],c->thrust_dir[2]));}
@@ -519,13 +520,17 @@ void sim_step(Simulation *sim,double dt){
         if(va>1e-6)s->velocity_i_mps=v3_sub(s->velocity_i_mps,v3_scale(vair,fmin(dv,va)/va));
     }
     s->ground_airbrake_decel_mps2=0.0;
-    if(s->airbrakes&&s->aero.airspeed_mps>1.0){
+    /* The split fin opens proportionally (deploy limiter) or fully (action
+       group); its drag area scales with the opening. */
+    double fin_open=s->airbrakes?1.0:s->speedbrake_fraction;
+    if(fin_open>0.0&&s->aero.airspeed_mps>1.0){
         /* Deployed speedbrake: parasite drag along the air-relative velocity. */
         Vec3 vair=v3_sub(s->velocity_i_mps,world_atmosphere_velocity_i(&sim->world,s->position_i_m));
-        double dv=s->aero.dynamic_pressure_pa*sim->ground_airbrake_cda_m2/s->mass_kg*dt;
+        double cda=sim->ground_airbrake_cda_m2*fin_open;
+        double dv=s->aero.dynamic_pressure_pa*cda/s->mass_kg*dt;
         double va=v3_norm(vair);
         if(va>1e-6)s->velocity_i_mps=v3_sub(s->velocity_i_mps,v3_scale(vair,fmin(dv,va)/va));
-        s->aero.drag_n+=s->aero.dynamic_pressure_pa*sim->ground_airbrake_cda_m2;
+        s->aero.drag_n+=s->aero.dynamic_pressure_pa*cda;
         s->ground_airbrake_decel_mps2=dv/dt;
     }
 
@@ -576,7 +581,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"aero\":{\"mach\":%.6f,\"q_pa\":%.6f,\"lift_n\":%.6f,\"drag_n\":%.6f},"
              "\"vehicle\":{\"mass_kg\":%.6f,\"available_thrust_n\":%.6f,\"current_thrust_n\":%.6f,\"throttle\":%.9f,\"propellant_used_kg\":%.6f,\"engine_dv_mps\":%.6f},"
              "\"runway\":{\"along_m\":%.3f,\"cross_m\":%.3f,\"vertical_m\":%.3f,\"length_m\":%.3f,\"width_m\":%.3f,\"heading_deg\":%.6f},"
-             "\"ground\":{\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"wheel_steering\":%.6f,\"steering_lateral_accel_mps2\":%.6f,\"airbrake_decel_mps2\":%.6f,\"on_ground\":%s,\"stopped\":%s,\"touchdown_seen\":%s,\"on_runway_touchdown\":%s,"
+             "\"ground\":{\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"speedbrake\":%.4f,\"wheel_steering\":%.6f,\"steering_lateral_accel_mps2\":%.6f,\"airbrake_decel_mps2\":%.6f,\"on_ground\":%s,\"stopped\":%s,\"touchdown_seen\":%s,\"on_runway_touchdown\":%s,"
              "\"main_contact\":%s,\"nose_contact\":%s,\"pitch_released\":%s,\"main_load_n\":%.1f,\"nose_load_n\":%.1f,\"tail_load_n\":%.1f,\"bounce_count\":%d,\"runway_departure\":%s,\"pitch_deg\":%.4f}}",
              sim->scenario.name,s->ut,s->sim_elapsed_s,rate,sim->world.radius_m,sim->world.mu_m3_s2,sim->world.rotation_rate_rad_s,sim->world.atmosphere_top_m,sim->world.rotation_phase_rad_at_ut0,s->position_i_m.x,s->position_i_m.y,s->position_i_m.z,rad2deg(l.lat_rad),rad2deg(l.lon_rad),l.altitude_m,
              s->velocity_i_mps.x,s->velocity_i_mps.y,s->velocity_i_mps.z,v3_norm(s->velocity_i_mps),v3_norm(surf),v3_norm(air),horizontal,vu,rad2deg(fpa),
@@ -597,7 +602,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              sim->scenario.orbital_engine_available_thrust_n*sim->commanded_throttle,
              sim->commanded_throttle,sim->propellant_used_kg,sim->delivered_dv_mps,
              along,cross,vertical,sim->runway.length_m,sim->runway.width_m,rad2deg(sim->runway.heading_rad),
-             s->gear_down?"true":"false",s->brakes?"true":"false",s->airbrakes?"true":"false",s->wheel_steering,
+             s->gear_down?"true":"false",s->brakes?"true":"false",s->airbrakes?"true":"false",s->speedbrake_fraction,s->wheel_steering,
              s->ground_lateral_accel_mps2,s->ground_airbrake_decel_mps2,s->on_ground?"true":"false",stopped?"true":"false",
              s->touchdown_seen?"true":"false",s->on_runway_at_touchdown?"true":"false",
              s->main_contact?"true":"false",s->nose_contact?"true":"false",s->pitch_released?"true":"false",

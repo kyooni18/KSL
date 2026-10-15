@@ -23,6 +23,8 @@ typedef struct {
     bool brakes;
     bool has_airbrakes;
     bool airbrakes;
+    bool has_speedbrake;
+    double speedbrake;           /* split-fin opening, 0 (stowed) .. 1 (full) */
     bool has_wheel_steering;
     double wheel_steering;
     bool has_thrust_dir;         /* commanded inertial thrust axis (unit, sim frame) */

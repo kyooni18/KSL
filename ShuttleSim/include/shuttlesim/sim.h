@@ -19,6 +19,7 @@ typedef struct {
     bool gear_down;
     bool brakes;
     bool airbrakes;
+    double speedbrake_fraction;
     double wheel_steering;
     double ground_lateral_accel_mps2;
     double ground_airbrake_decel_mps2;

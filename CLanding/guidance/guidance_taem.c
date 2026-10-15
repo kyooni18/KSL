@@ -2265,8 +2265,8 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
        corrective authority only, never a nominal 25% bias.  Opening stays
        deliberately slow, while stowing is faster so a falling energy error does
        not turn into an unrecoverable underspeed several seconds later. */
-    const double sb_cap=0.50, sb_acquisition_nominal=0.25;
-    const double sb_deploy_slew_per_s=0.05, sb_stow_slew_per_s=0.20;
+    const double sb_cap=SPEEDBRAKE_CAP, sb_acquisition_nominal=SPEEDBRAKE_NOMINAL;
+    const double sb_deploy_slew_per_s=SPEEDBRAKE_DEPLOY_SLEW, sb_stow_slew_per_s=SPEEDBRAKE_STOW_SLEW;
     const double sb_stow_remaining_m=500.0, sb_fade_m=2500.0;
     double sb_dt=g->taem_speedbrake_ut>0.0&&t->ut>g->taem_speedbrake_ut?
         fmin(t->ut-g->taem_speedbrake_ut,1.0):0.0;

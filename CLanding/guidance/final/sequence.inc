@@ -70,6 +70,22 @@ static void terminal_learn_aero(GuidanceMachine*g,const Telemetry*t,const Vehicl
         tc.drag_force=t->drag_force-g->terminal_speedbrake_cda*q;
         t=&tc;
     }
+    else if(g->terminal_speedbrake_fraction>0.0){
+        /* Split fin opened by Final: its drag per unit opening is the excess
+           over the clean incidence drag, measured at openings of at least the
+           nominal (smaller ones are within the clean-drag uncertainty).
+           Remove it before clean learning; skip clean learning until known. */
+        double f=g->terminal_speedbrake_fraction;
+        if(f>=SPEEDBRAKE_NOMINAL){
+            double L=0.0,D=0.0;terminal_aero_q(g,t,v,t->angle_of_attack,&L,&D);
+            double k=D>0.0?(t->drag_force/q-D)/f:NAN;
+            if(isfinite(k)&&k>0.0)g->terminal_split_fin_cda=g->terminal_split_fin_cda>0.0?
+                g->terminal_split_fin_cda*.9+k*.1:k;
+        }
+        if(!(g->terminal_split_fin_cda>0.0))return;
+        tc.drag_force=t->drag_force-g->terminal_split_fin_cda*f*q;
+        t=&tc;
+    }
     if(lf>.05&&t->lift_force>0.0){
         double k=t->lift_force/(q*lf);
         g->terminal_lift_area_ema=g->terminal_lift_area_ema>0.0?g->terminal_lift_area_ema*.9+k*.1:k;
@@ -536,8 +552,48 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
             sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed))));
     }
     g->terminal_predicted_touchdown_speed=predicted_touchdown_speed;
+    /* Split-fin speedbrake (when enabled): hold the outer-glide reference
+       speed with drag, as the Shuttle did, instead of shallowing the glide;
+       on an unpowered vehicle a shallower glide turns excess speed into range
+       and floats past the runway.  The extra drag that dissipates the excess
+       kinetic energy before the aim point is sized with the learned split-fin
+       drag area; until that is measured the fin opens to its nominal to
+       measure it. */
+    /* In the preflare and float the fin sheds the total energy above
+       touchdown (speed and height) over the distance left to the touchdown
+       target, net of the clean drag already acting; past the target it
+       opens fully so the mains go down on the runway that remains. */
+    double speedbrake_target=0.0;
+    if(s->terminal_speedbrake&&t->dynamic_pressure>0.0){
+        double extra_drag=0.0;
+        if(!g->terminal_pull_latch){
+            if(isfinite(speed_ref)&&V>speed_ref)
+                extra_drag=t->mass*(V*V-speed_ref*speed_ref)/(2.0*aim_distance);
+        }else{
+            double to_target=touchdown_target-along;
+            double fin_drag=g->terminal_split_fin_cda*g->terminal_speedbrake_fraction*t->dynamic_pressure;
+            double clean_drag=fmax(0.0,t->drag_force-fin_drag);
+            double excess_energy=V*V-v_td*v_td+2.0*g0*fmax(0.0,height);
+            extra_drag=to_target>0.0?
+                t->mass*excess_energy/(2.0*fmax(120.0,to_target))-clean_drag:INFINITY;
+        }
+        if(extra_drag>0.0)
+            speedbrake_target=g->terminal_split_fin_cda>0.0?
+                extra_drag/(t->dynamic_pressure*g->terminal_split_fin_cda):SPEEDBRAKE_NOMINAL;
+        speedbrake_target=clampd(speedbrake_target,0.0,SPEEDBRAKE_CAP);
+    }
+    {   double step=clampd(dt,0.0,1.0);
+        g->terminal_speedbrake_fraction=s->terminal_speedbrake?
+            clampd(speedbrake_target,
+                g->terminal_speedbrake_fraction-SPEEDBRAKE_STOW_SLEW*step,
+                g->terminal_speedbrake_fraction+SPEEDBRAKE_DEPLOY_SLEW*step):0.0;
+    }
+    /* The glide still closes any overspeed the fin cannot absorb (capped). */
+    double glide_speed_error=V-speed_ref;
+    if(s->terminal_speedbrake&&glide_speed_error>0.0&&
+       g->terminal_speedbrake_fraction<SPEEDBRAKE_CAP)glide_speed_error=0.0;
     if(!g->terminal_pull_latch&&isfinite(speed_ref))
-        glide_fpa=clampd(glide_fpa+clampd(.8*(V-speed_ref),-12.0,6.0)*DEG2RAD,
+        glide_fpa=clampd(glide_fpa+clampd(.8*glide_speed_error,-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);
     /* Low-energy stretch: no steeper than the best glide while the speed still
        covers a flare to touchdown speed.  Steeper only converts range the
@@ -769,6 +825,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
 
     GuidanceCommand c=atmospheric(t,target_course,bank,v,0.0,
         g->airbrakes_deployed,flaring?PROFILE_FLARE:PROFILE_APPROACH);
+    c.speedbrake_fraction=g->terminal_speedbrake_fraction;
     c.has_target_aoa=true;
     c.target_aoa=aoa;
     c.target_pitch=t->flight_path_angle+aoa;
@@ -798,13 +855,13 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     r=stabilized(g,r,t,v,s,dt);
     if(getenv("KSP_LANDER_FINAL_TRACE"))
         fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
-            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d vtd=%.1f\n",
+            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d vtd=%.1f sb=%.2f sbOn=%d finCdA=%.2f\n",
             (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
             g->preflare_trigger_altitude,g->terminal_preflare_plan_valid?1:0,
             g->preflare_reference_speed,response,arrest_accel,g->terminal_aim_along,
             glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
             vertical_accel,aoa,touchdown_attitude_floor,touchdown_aoa_floor,
-            aoa,r.command.target_aoa,ld_float,long_landing,predicted_touchdown_speed);
+            aoa,r.command.target_aoa,ld_float,long_landing,predicted_touchdown_speed,g->terminal_speedbrake_fraction,s->terminal_speedbrake?1:0,g->terminal_split_fin_cda);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
         fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f\n",

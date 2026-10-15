@@ -41,6 +41,7 @@ bool protocol_parse_command(const char *json,SimCommand *cmd){
     bool gear=false; if(json_bool(json,"gear_down",&gear)){cmd->has_gear=true;cmd->gear_down=gear;}
     bool brakes=false; if(json_bool(json,"brakes",&brakes)){cmd->has_brakes=true;cmd->brakes=brakes;}
     bool airbrakes=false; if(json_bool(json,"airbrakes",&airbrakes)){cmd->has_airbrakes=true;cmd->airbrakes=airbrakes;}
+    double speedbrake=0.0; if(json_number(json,"speedbrake",&speedbrake)&&isfinite(speedbrake)){cmd->has_speedbrake=true;cmd->speedbrake=speedbrake<0.0?0.0:speedbrake>1.0?1.0:speedbrake;}
     bool hw=json_number(json,"wheel_steering",&wheel_steering);if(!hw)hw=json_number(json,"wheelSteering",&wheel_steering);
     if(hw){if(wheel_steering>1.0)wheel_steering=1.0;else if(wheel_steering< -1.0)wheel_steering=-1.0;cmd->has_wheel_steering=true;cmd->wheel_steering=wheel_steering;}
     double pi=0,ri=0,yi=0;
@@ -54,7 +55,7 @@ bool protocol_parse_command(const char *json,SimCommand *cmd){
     /* type matching without regex */
     if(strstr(json,"\"type\":\"pause\"")||strstr(json,"\"type\": \"pause\""))cmd->pause=true;
     if(strstr(json,"\"type\":\"resume\"")||strstr(json,"\"type\": \"resume\""))cmd->resume=true;
-    return cmd->has_attitude||cmd->has_inputs||cmd->has_gear||cmd->has_brakes||cmd->has_airbrakes||cmd->has_wheel_steering||cmd->has_throttle||cmd->pause||cmd->resume||cmd->step;
+    return cmd->has_attitude||cmd->has_inputs||cmd->has_gear||cmd->has_brakes||cmd->has_airbrakes||cmd->has_speedbrake||cmd->has_wheel_steering||cmd->has_throttle||cmd->pause||cmd->resume||cmd->step;
 }
 bool protocol_open(Protocol *p,int command_port,const char *host,int telemetry_port,int web_telemetry_port){
     memset(p,0,sizeof(*p)); p->command_fd=-1;p->telemetry_fd=-1;
