@@ -170,7 +170,11 @@ static void candidate(double offset,double normal,double peri,bool prior){if(pri
 }
 /* Full native deorbit planner from the recorded pre-plan orbit, then the
    closed-loop executable witness for the selected burn (offline, read-only). */
-static void plan_mode(bool prior){if(prior)load_history();load_terminal();Telemetry t;VehicleState initial=load_state(object(0,"orbitalSample"),&t);
+static void plan_mode(bool prior){if(prior)load_history();load_terminal();Telemetry t;
+    /* Replay the actual createPlan sample, not an earlier connect sample. */
+    int initial_sample=object(0,"planningSample");
+    if(initial_sample<0)initial_sample=object(0,"orbitalSample");
+    VehicleState initial=load_state(initial_sample,&t);
     double r=vmag(initial.position),a=1/(2/r-vdot(initial.velocity,initial.velocity)/planet.gravitational_parameter),period=2*M_PI*sqrt(a*a*a/planet.gravitational_parameter);
     DeorbitPlan out;memset(&out,0,sizeof(out));bool ok=deorbit_plan_create_with_terminal_model(&out,initial,period,&planet,envelope.regimes[2],&envelope,&calibration,&config.site,&config.vehicle,&config.guidance,t.available_thrust,&t,terminal);
     printf("plan ok=%d burnUT=%.3f dv=%.4f normal=%.4f duration=%.3f taemDist=%.1f taemErr=%.1f closest=%.1f peri=%.1f nominal=%d robust=%d/%d inlet=%d route=%d final=%d exec=%d degraded=%d note=%s\n",ok,out.burn_ut,out.delta_v,out.burn_normal_angle,out.estimated_burn_duration,out.predicted_taem_distance,out.predicted_taem_range_error,out.predicted_closest_distance,out.predicted_post_burn_periapsis_altitude,out.nominal_capture_achieved,out.robustness_passed,out.robustness_scenarios,out.terminal_inlet_qualified,out.terminal_native_path_committed,out.terminal_final_approach_captured,out.execution_qualified,out.execution_degraded,out.note);
