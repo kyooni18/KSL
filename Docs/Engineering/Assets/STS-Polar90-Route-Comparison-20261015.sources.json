@@ -1,0 +1,27 @@
+{
+  "description": "Recorded live v3 MM305 trace (aborted before Final) and nominal ideal-servo replays sharing its kinematic inlet. No confidence band or live counterfactual proof. Nominal mass25661.98kg versus last recorded inlet mass25644.29kg; online aerodynamic calibration differs.",
+  "coordinates": "Runway09 frame: along/east positive, north=-cross; km. Altitude MSL; UT seconds; airspeed m/s.",
+  "sampling": "Plot uses all decoded rows. CSV subsamples each series to approximately500 rows for source inspection. No interpolation.",
+  "sources": [
+    {
+      "path": "runs/20261015T075551Z-sts-polar90-live-delivery-v3/telemetry.jsonl",
+      "sha256": "2b0ceb7842d06e95bb51f954bfda06c081e503aefff9ffe4f2be6ee8be5edcc3"
+    },
+    {
+      "path": "ShuttleSim/runs/mm304-mm305-v3-choice-20261015T081730Z-l_851twf/simulator-telemetry.jsonl.gz",
+      "sha256": "020786f1651e7556c414ba5fa72947fe7c88d63e057e146e05ea34eb008465ed"
+    },
+    {
+      "path": "ShuttleSim/runs/mm304-mm305-v3-choice-20261015T081730Z-l_851twf/manifest.json",
+      "sha256": "7195bbe6bb4a18a75bcf1b900db9a0b1b2d58b278d423257d660840007fa61ec"
+    },
+    {
+      "path": "ShuttleSim/runs/mm304-mm305-v3-configured-station-20261015T081920Z-tsgj4_3g/simulator-telemetry.jsonl.gz",
+      "sha256": "b4436f459d4d36df6baec615e5d29e0bba755b94dec4e8c67f89314815483cbb"
+    },
+    {
+      "path": "ShuttleSim/runs/mm304-mm305-v3-configured-station-20261015T081920Z-tsgj4_3g/manifest.json",
+      "sha256": "907080ddf885ceea293b690fff32273752ac7754c63dcc71a3d3611efd4fb586"
+    }
+  ]
+}
