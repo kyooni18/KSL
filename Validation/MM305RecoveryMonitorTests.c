@@ -215,8 +215,17 @@ static void test_sts_confirmed_main_contact_precedes_airborne_recovery(void) {
     assert(r.phase==PHASE_TOUCHDOWN&&!r.has_warning);
     assert(g.ground_contact_latched&&!g.attitude_recovery);
     guidance_result_clear(&r);
-    t.ut+=.1;t.pitch=0.0;t.surface_speed=t.true_air_speed=t.horizontal_speed=.6;
+    t.ut+=.1;t.pitch=0.0;
     t.has_nose_gear_grounded=t.nose_gear_grounded=true;
+    r=guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase==PHASE_ROLLOUT&&g.phase==PHASE_ROLLOUT);
+    guidance_result_clear(&r);
+    t.ut+=.1;t.nose_gear_grounded=false;t.pitch=3.0;
+    r=guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
+    assert(r.phase==PHASE_ROLLOUT&&r.command.brakes);
+    guidance_result_clear(&r);
+    t.ut+=.1;t.pitch=0.0;t.surface_speed=t.true_air_speed=t.horizontal_speed=.6;
+    t.nose_gear_grounded=true;
     snprintf(t.vessel_situation,sizeof(t.vessel_situation),"landed");
     r=guidance_update(&g,&t,&state,NULL,&planet,aero,&cfg);
     assert(r.phase==PHASE_COMPLETE&&r.command.brakes&&!g.terminal_landing_warning_latched);

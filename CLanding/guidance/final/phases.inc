@@ -59,8 +59,11 @@ GuidanceResult touchdown(GuidanceMachine*g,const Telemetry*t,
     c.navball_speed_mode=SPEED_SURFACE;
     c.control_profile=PROFILE_ROLLOUT;
 
+    bool sts_delivery=cfg->guidance.sts_trajectory_delivery&&
+        !strcmp(cfg->vehicle.model_id,"STS");
     bool nose_gear_contact=(t->has_nose_gear_grounded&&t->nose_gear_grounded)||
-                           (t->pitch<=0.5);
+                           (t->pitch<=0.5)||
+                           (sts_delivery&&(g->phase==PHASE_ROLLOUT||g->phase==PHASE_COMPLETE));
 
     char status[160];GuidancePhase phase;
     if(!isfinite(t->surface_speed)||t->surface_speed<0.0)
