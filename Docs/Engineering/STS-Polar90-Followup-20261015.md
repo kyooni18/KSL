@@ -177,3 +177,46 @@ through the STS planner and table-based shadow, validate a positive inlet
 energy reserve and achievable route, then retest from orbit. Long touchdown
 and the small bounce remain separate open issues. No reliable orbit-start
 landing has been demonstrated by this follow-up.
+
+## Delivery-policy follow-up (2026-10-15 afternoon)
+
+The user requested fixes followed by live reruns, including investigation of a smoother drawn RW09 alternative. These changes are isolated behind `guidance.stsTrajectoryDelivery` and model ID `STS`; `Configuration/sts-live-delivery.json` opts in. The default general program and archived L5/L7 scenarios retain their existing control behavior. Mission aero profiles now use `sts-live-20261015-live-only`; archived scenarios remain on 20261010.
+
+### Source provenance correction
+
+The original cell fitter accepted simulator vehicle logs. Source classification now requires an STS session with TCP transport and reported live applied-control feedback, rejects explicit simulator identities and ambiguous sources, deduplicates content, and groups rotated logs by session. The replacement table has 47 measured cells from 206 verified live sessions. Unmeasured cells come from the explicitly provisional original table, rather than inheriting the later mixed-source fits. Input hashes, classifications, base hash and cell support are retained in `ShuttleSim/reference-model/sts_aero_cells20261015_live_only.json`. This is still provisional evidence, not certification or independent-flight count. The historical mixed-source profile is retained for replay.
+
+Commits: `8fcfb15` source guard, `aef430f` replacement profile. A minimal source-provenance regression prevents matching STS/schema fields from overriding simulator identity or substituting for actual live-source evidence.
+
+### New STS-only route and energy controls
+
+Commit `8a9d741` adds the explicit opt-in delivery policy. It rejects the wide direct option whose Dubins pricing did not match pursuit steering, forecasts spatial delivery with both height and speed, honors the same speed/q/load bank boundaries as live commands, prices compact HACs at their predicted speed instead of a guessed future-speed floor, and derives the maximum-range pressure endpoint from the table's best L/D and banked load. The versioned policy owns the configured STS incidence envelope instead of silently inheriting the STS-N 15-degree terminal cap; explicit overrides remain supported. Runway reconsideration requires a forecast-deliverable alternative, with roll-capture cost and hysteresis, before the energy/capture window closes. None of this certifies a candidate merely because it is the least infeasible option.
+
+The original broad changes regressed the archived L5 and L7 tests. They were isolated rather than changing those tests' requirements; the full suite passed again. A missing `<string.h>` declaration and a null model dereference in a pure-geometry fixture were found and repaired. Fixed-pattern locking and an alternate scoring preference were tested, failed to improve acceptance, and reverted. The proposed mid-drag bank penalty explanation was rejected: its measured penalty was zero in the inspected candidates.
+
+### Confirmed runway-switch initialization bug
+
+Live `20261015T070522Z-sts-polar90-live-delivery-v1` started from the earlier 72 km save at `6533a98`. Early measured/model lift agreed within about 1%, with filtered drag about 6% high. At UT 26015.1, the scorer chose RW09 with score 484 versus RW27 15955. In that frame the vehicle was +33.767 km along, -5.006 km cross, 23.459 km above runway, 768.7 m/s, with heading error +105.8 degrees.
+
+The scorer called `tel_plan` unconditionally. Live initialization instead waited for `tel_plan_open`; its cross-track-only bootstrap gate was already closed, leaving `loop=false`, a wrong-bank direct pursuit, and a 178.918 km displayed path instead of the scored HAC. Resetting near the centreline also disabled the spatial forecast despite the large heading error. Commit `fa13783` makes every new STS policy instance plan on its first tick and always use spatial forecasting, including near-centreline runway switches. A regression reproduces the exact recorded switched-frame state.
+
+The invalid v1 diagnostic was stopped through the owning mission's abort handler (exit 130), and both processes exited before rerun. KSP remained paused, airborne at 11.781 km; it was not restarted. Its automatic 45 km checkpoint is `ksl-20261015T070522Z-sts-polar90-live-delivery-v1-descent-45km` (UT 25828.09).
+
+### Confirmed duplicate flare reference shaping
+
+With initialization fixed, the old-inlet replay reached the runway but touched down at 14.768 m/s sink. `FINAL_TRACE` showed the generic jerk limiter overshooting a relaxing pull, followed by a late arrest: at wheel height 0.9 m, Final's own rate-bounded request was 27.1 degrees while the delivered reference was 15.6 degrees. The resulting balloon and re-descent consumed speed and height.
+
+Commit `263f309` delivers the STS program's already rate-bounded incidence reference once; it retains the shared bank handling and incidence bounds. Legacy/general behavior is unchanged. It also repairs the offline verification parser: the new timestamped runway commitment line had been missed, so a valid RW27 rollout was checked against RW09 and falsely reported 180-degree error. A focused parser regression covers both log formats; no flight gate was relaxed.
+
+### Closed-loop acceptance and next live attempt
+
+`mm304-mm305-polar90-single-flare-verified-20261015T072711Z-kaxpk9hg` passes all existing closed-loop gates from the recorded failed flight's first TAEM inlet:
+
+- Selected RW27; simulator RW09-frame touchdown along 925.601 m (about 1574.4 m past RW27 threshold), cross 0.813 m.
+- Speed 56.739 m/s, sink 2.251 m/s; gear down, no bounce, no tail strike.
+- Stopped at RW09-frame along 208.509 m, about 209 m remaining in the RW27 direction; rollout heading error 0.0409 degrees.
+- This remains one nominal model replay, not live or robustness proof. Touchdown remains long and stopping reserve is small.
+
+Latest full check before live v2: `/tmp/ksl-sts-live-v2-full-test.log`: **221 passed, 56 subtests passed, two pre-existing asynchronous test-cleanup warnings**, 63.82 seconds. Earlier test failures and rejected flight replays remain recorded; they are not successful validation.
+
+Live v2 is `runs/20261015T072920Z-sts-polar90-live-delivery-v2`, executing `263f309` from the saved 45 km checkpoint with `Configuration/sts-live-delivery.json`, source-verified model, and adaptive flare disabled. Console `/tmp/ksl-live-delivery-v2.log`; native stderr in the run directory includes force diagnostics and Final trace. At this note it is in MM304; actual landing outcome is still pending. KSP was not restarted.
