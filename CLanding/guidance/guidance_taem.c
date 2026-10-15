@@ -1700,6 +1700,14 @@ static GuidanceResult taem_energy_law_guidance(GuidanceMachine *g,const Telemetr
         snprintf(status+n,sizeof(status)-(size_t)n," Final blocked: %s.",final_blocked);
     GuidanceResult r=stabilized(g,result_make(PHASE_TAEM,command,status,NULL),
         t,&cfg->vehicle,&cfg->guidance,dt);
+    /* Publish the same selected-law continuation used for range pricing.
+       It is a model reference, not a certified landing prediction. */
+    if (!g->diagnostic_shadow&&cfg->guidance.sts_trajectory_delivery&&
+            fabs(t->ut-L->last_pred_ut)<1e-6) {
+        TelContext display;TelPoint point;
+        tel_setup(control_model,geometry,current->mass_kg,t->angle_of_attack,t->roll,&display,&point);
+        (void)tel_predict_pattern_trace(L,&display,&point,L->k,NULL,&r.reference,t->ut);
+    }
     g->phase=PHASE_TAEM;
     return r;
 }

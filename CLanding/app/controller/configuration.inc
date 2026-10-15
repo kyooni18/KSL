@@ -123,6 +123,11 @@ static bool replace_reference_trajectory(LandingController*c,const Trajectory*ne
     if(c&&c->guidance.phase==PHASE_ENTRY_ENERGY&&
        (!source||source->count<2)&&c->has_plan&&c->plan.trajectory.count>=2)
         source=&c->plan.trajectory;
+    if(c&&c->guidance.phase==PHASE_TAEM&&c->configuration.guidance.sts_trajectory_delivery&&
+       (!source||source->count<2)&&c->snapshot.reference_trajectory.count>=2&&
+       c->snapshot.telemetry.ut-c->snapshot.reference_trajectory.points[0].ut>=0.0&&
+       c->snapshot.telemetry.ut-c->snapshot.reference_trajectory.points[0].ut<=2.5)
+        source=&c->snapshot.reference_trajectory;
     if(!source)return false;
     if(trajectory_equal(&c->snapshot.reference_trajectory,source))return true;
     if(!trajectory_copy(&c->snapshot.reference_trajectory,source))return false;

@@ -2322,6 +2322,8 @@ def apply_ksl_run_overlay(snapshot: dict[str, Any], root: Path, max_age: float =
             command.update(record["command"])
         if isinstance(record.get("guidanceState"), dict):
             snapshot["guidanceState"] = dict(record["guidanceState"])
+        if isinstance(record.get("referenceTrajectory"), list):
+            snapshot["referenceTrajectory"] = record["referenceTrajectory"]
         alignment = optional_number(record.get("autopilotError"))
         if alignment is not None:
             snapshot.setdefault("telemetry", {})["autopilotError"] = alignment

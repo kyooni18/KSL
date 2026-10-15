@@ -250,5 +250,7 @@ def snapshot_summary(snapshot: Snapshot) -> dict[str, Any]:
     for key in ("statusMessage", "warningMessage", "decisionReason", "automationEngaged", "paused"):
         if key in snapshot:
             out[key] = snapshot[key]
+    if isinstance(snapshot.get("referenceTrajectory"), list):
+        out["referenceTrajectory"] = snapshot["referenceTrajectory"]
     out["backendPhase"] = snapshot.get("phase")
     return out

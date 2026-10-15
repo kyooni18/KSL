@@ -1191,7 +1191,7 @@
     if (!Array.isArray(points) || points.length < 3) return;
     const g = snapshot?.guidanceState || {};
     const radius = finite(g.hacRadius) && n(g.hacRadius) > 0 ? n(g.hacRadius) : n(g.terminalCandidateRadius);
-    const state = g.terminalPathCaptured || g.hacCaptured ? "HAC CAPTURE" : g.terminalPathCommitted ? "HAC COMMIT" : g.terminalPathSelected ? "HAC SELECT" : "HAC CAND";
+    const state = g.energyLaw?.active === true ? "ENERGY LAW" : g.terminalPathCaptured || g.hacCaptured ? "HAC CAPTURE" : g.terminalPathCommitted ? "HAC COMMIT" : g.terminalPathSelected ? "HAC SELECT" : "HAC CAND";
     const point = points[Math.max(1, Math.min(points.length - 2, Math.floor(points.length * .52)))];
     const label = `${state}${radius > 0 ? ` · R${(radius / 1000).toFixed(1)}K` : ""}`;
     drawTrajectoryTag(point, width, height, color, label, currentUt, 12, 18);
@@ -1204,7 +1204,7 @@
     const predicted = futurePredictionTrajectory(snapshot);
     const planned = displayableGuidanceTrajectory(snapshot);
     const planLabel = $("map-plan-label");
-    if (planLabel) planLabel.textContent = mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    if (planLabel) planLabel.textContent = g.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
     const orbital = trajectoryCount(snapshot?.deorbitPlan?.trajectory) >= 2
       ? [] : (snapshot?.orbitalTrajectory || []);
     const orbitMeta = snapshot?.orbitalTrajectoryMeta || {};
@@ -2093,7 +2093,7 @@
     mapCtx.restore();
 
     const planLabel = $("map-plan-label");
-    if (planLabel) planLabel.textContent = mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    if (planLabel) planLabel.textContent = g.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
     const c = C();
     drawPath(displayableGuidanceTrajectory(snapshot), width, height, c.orange, 2.8, [], 1.4, 1);
     drawPath(snapshot.actualTrajectory || [], width, height, c.cyan, 2, [], 1.8, .9);

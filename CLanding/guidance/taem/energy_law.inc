@@ -658,8 +658,8 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
    kept maximum bank until the heading was captured.  It also counted travel
    away from the station as useful range.  Integrate the shared lateral law and
    its lift-dependent turn rate; only reduction of remaining route counts. */
-static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *c,
-        const TelPoint *s,double k,double *bank_over_deg) {
+static double tel_predict_pattern_trace(const TaemEnergyLawState *L,const TelContext *c,
+        const TelPoint *s,double k,double *bank_over_deg,Trajectory *trace,double ut) {
     TaemEnergyLawState route=*L;
     route.k=k;
     route.s_req=route.s_go=0.0; /* no unpriced surplus weave in a range probe */
@@ -670,6 +670,16 @@ static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *
     double rr=c->model->world.radius_m+c->model->site.altitude;
     bool delivered=false;
     for (unsigned i=0;i<1500;++i) {
+        if (trace&&i%10==0&&p.h>=0.0&&p.v>=1.0) {
+            double heading=c->model->site.runway_heading*DEG2RAD;
+            GeoPoint origin={c->model->site.latitude,c->model->site.longitude,c->model->site.altitude};
+            GeoPoint point=local_point(origin,p.x*sin(heading)-p.y*cos(heading),
+                p.x*cos(heading)+p.y*sin(heading),c->model->world.radius_m,
+                c->model->site.altitude+p.h);
+            trajectory_append(trace,(TrajectoryPoint){.ut=ut+i*dt,
+                .latitude=point.latitude,.longitude=point.longitude,.altitude=point.altitude,
+                .speed=p.v,.phase=PHASE_TAEM,.kind=TRAJ_REFERENCE});
+        }
         if (p.h<0.0||p.v<1.0||(!tel_delivery_policy(c)&&
                 p.h+p.v*p.v/(2.0*TEL_G0)<=c->e_station)) break;
         if (tel_delivery_policy(c)&&route.leg==TEL_LEG_FINAL&&p.x>=-c->d_station&&
@@ -721,6 +731,11 @@ static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *
     double remaining=tel_sum(segs,tel_segments(&route,c,&p,segs));
     if (delivered) remaining=fabs(p.y);
     return initial-remaining+fmin(0.0,reserve)+(delivered?fmax(0.0,reserve):0.0);
+}
+
+static double tel_predict_pattern(const TaemEnergyLawState *L,const TelContext *c,
+        const TelPoint *s,double k,double *bank_over_deg) {
+    return tel_predict_pattern_trace(L,c,s,k,bank_over_deg,NULL,0.0);
 }
 
 /* One guidance tick.  Returns false when the inputs are unusable. */
