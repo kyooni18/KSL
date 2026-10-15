@@ -17,7 +17,7 @@ static double final_lift_aoa_limit(const Telemetry *t, const VehicleProfile *v);
 static void terminal_learn_aero(GuidanceMachine*g,const Telemetry*t,const VehicleProfile*v);
 static double terminal_predict_touchdown_speed(const GuidanceMachine*g,const Telemetry*t,
         const VehicleProfile*v,double height,double V,double sink,bool latched,
-        const TerminalFlarePlan*p);
+        const TerminalFlarePlan*p,double *ground_range);
 static double terminal_wheel_height(const Telemetry*t,const LandingConfiguration*cfg);
 static TerminalFlarePlan terminal_flare_plan(const GuidanceMachine*g,const Telemetry*t,
         const PlanetModel*p,const LandingConfiguration*cfg,double trigger_altitude);

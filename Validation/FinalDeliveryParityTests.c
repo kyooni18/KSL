@@ -120,6 +120,32 @@ static void test_touchdown_forecast_handoff_parity(void) {
     assert(lateral_aoa>vertical_aoa);
     assert(fabs(turn_aoa-lateral)<1e-6);
 
+    /* A finite touchdown-speed forecast does not prove runway range. The
+       range-short correction is current-state guidance, not a latched degraded
+       admission that may float a later healthy state below approach speed. */
+    {
+        GuidanceMachine range_g;guidance_machine_init(&range_g);
+        Telemetry range_t=t;
+        /* V5 first-Final vertical state, with the runway displaced beyond its
+           finite predicted range to exercise speed-valid/range-short behavior. */
+        range_t.ut=26289.79;range_t.mean_altitude=range_t.radar_altitude=2374.993;
+        range_t.mass=25222.799;range_t.true_air_speed=124.128;
+        range_t.horizontal_speed=119.066;range_t.vertical_speed=-35.085;
+        range_t.flight_path_angle=-16.418;range_t.angle_of_attack=3.482;
+        range_t.dynamic_pressure=6427.306;range_t.atmospheric_density=.842758;
+        range_t.mach=.361222;range_t.lift_force=252746.914;range_t.drag_force=114253.696;
+        range_t.runway_along_track=-50000.0;
+        LandingConfiguration range_cfg=delivery;
+        range_cfg.guidance.sts_trajectory_delivery=true;
+        range_cfg.vehicle.terminal_maximum_lift_angle_of_attack=range_cfg.vehicle.maximum_angle_of_attack;
+        Trajectory reference;trajectory_init(&reference);
+        GuidanceResult range=terminal_approach_sequence(&range_g,&range_t,270.0,
+            &planet,gate_aero,&range_cfg,&reference,.1);
+        assert(strstr(range.status,"Range-stretch glide"));
+        assert(!range_g.terminal_final_low_energy);
+        guidance_result_clear(&range);trajectory_clear(&reference);
+    }
+
     /* Cold handoff and a handoff retaining MM305's observed aero history. */
     for(int pass=0;pass<2;++pass){
         GuidanceMachine before=g;
