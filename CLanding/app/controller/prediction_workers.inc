@@ -5,7 +5,10 @@ static double entry_policy_handoff_distance(const EntryPrediction *f,const Plane
         const LandingConfiguration *cfg){
     if(!f||!p||!cfg)return NAN;
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
-    double mach_handoff=cfg->guidance.mm305_target_mach+cfg->guidance.mm305_mach_half_width;
+    /* Experimental STS hands over at the band centre (guidance_terminal.c). */
+    double mach_handoff=cfg->guidance.mm305_target_mach+
+        (cfg->guidance.sts_trajectory_delivery&&!strcmp(cfg->vehicle.model_id,"STS")?
+         0.0:cfg->guidance.mm305_mach_half_width);
     double prev_excess=NAN,prev_range=NAN;
     for(size_t i=0;i<f->trajectory.count;++i){
         const TrajectoryPoint *pt=&f->trajectory.points[i];
@@ -342,7 +345,10 @@ static void *terminal_prediction_worker(void *arg){
                 double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);
                 double lo=0.0,f_lo=NAN,f_hi=NAN;
                 double sound_floor=planet_atmospheric_speed_of_sound(&planet,cfg.guidance.mm305_max_altitude);
-                double mach_handoff=cfg.guidance.mm305_target_mach+cfg.guidance.mm305_mach_half_width;
+                /* Experimental STS hands over at the band centre (guidance_terminal.c). */
+                double mach_handoff=cfg.guidance.mm305_target_mach+
+                    (cfg.guidance.sts_trajectory_delivery&&!strcmp(cfg.vehicle.model_id,"STS")?
+                     0.0:cfg.guidance.mm305_mach_half_width);
                 double bound=2.0*telemetry.range_to_site/fmax(1.0,mach_handoff*sound_floor);
                 for(int iteration=0;;++iteration){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);

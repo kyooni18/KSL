@@ -104,6 +104,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     GeoPoint current_point={t->latitude,t->longitude,t->mean_altitude};
     double alignment_range=great_circle_distance(current_point,alignment_point,ground_radius);
     bool sts_delivery=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
+    double sts_turn_deg=NAN;
     if(sts_delivery&&cfg->site.allow_reciprocal_runway){
         /* Experimental STS: deliver to the approach side of the runway end
            TAEM will fly.  The 60 deg full test steered for the RW09 aimpoint
@@ -140,6 +141,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         }
         alignment_point=aims[end];
         alignment_range=range[end];
+        sts_turn_deg=turn[end];
     }
     if(!alignment.valid||!isfinite(alignment_range)||!isfinite(alignment_altitude))
         return entry_program_contract_hold(g,t,cfg,dt,
@@ -196,10 +198,24 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
             interface_altitude-cfg->site.altitude,handoff_speed,t->mass);
         if(isfinite(handoff_speed)&&handoff_speed>0.0&&isfinite(reach)&&
            t->true_air_speed>handoff_speed){
+            /* Experimental STS: TAEM must also fly the turn onto the runway
+               from the arrival direction, at no less than the handoff-speed
+               radius.  The extra path of that turn over the straight chord,
+               R*(theta - sin theta), is TAEM reach MM304 must not spend; the
+               60 deg rerun handed over perpendicular and swung 24 km past the
+               centreline at Mach 2.5. */
+            double turn_extra=0.0;
+            if(sts_delivery&&isfinite(sts_turn_deg)&&v->maximum_bank_angle>0.0){
+                double theta=fmin(sts_turn_deg,180.0)*DEG2RAD;
+                double radius=handoff_speed*handoff_speed/
+                    (planet_surface_gravity(p)*tan(fmin(v->maximum_bank_angle,89.0)*DEG2RAD));
+                turn_extra=radius*(theta-sin(theta));
+            }
             drag_in.taem_velocity=handoff_speed;
             drag_in.taem_altitude=interface_altitude;
-            g->entry_handoff_target_range=reach+alignment.distance_m;
-            drag_in.taem_range=reach;
+            g->entry_handoff_target_range=fmax(alignment.distance_m,
+                reach+alignment.distance_m-turn_extra);
+            drag_in.taem_range=fmax(0.0,reach-turn_extra);
         }
     }
     EntryDragReferenceOutput drag=entry_drag_reference_compute(&drag_in,&drag_cfg);
