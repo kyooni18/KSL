@@ -1615,12 +1615,12 @@
       $("sim-status-line")?.setAttribute("hidden", "");
     }
 
-    const retroErr = cmd.useInertialDirection && finite(t.autopilotError)
-      ? Math.abs(n(t.autopilotError)) : retrogradeError(t);
+    const burnAlignment = cmd.useInertialDirection && finite(t.autopilotError);
+    const retroErr = burnAlignment ? Math.abs(n(t.autopilotError)) : retrogradeError(t);
     $("pitch-label").textContent = orbitMode ? "ATT PITCH" : "PITCH";
     $("roll-label").textContent = orbitMode ? "ATT ROLL" : "ROLL";
     $("heading-label").textContent = orbitMode ? "ATT HDG" : "HDG";
-    $("aoa-label").textContent = orbitMode ? "RETRO ERR" : "AOA";
+    $("aoa-label").textContent = orbitMode ? (burnAlignment ? "BURN ALIGN" : "RETRO ERR") : "AOA";
     $("pitch").textContent = fmtSigned(t.pitch,1,"°");
     $("roll").textContent = fmtSigned(t.roll,1,"°");
     $("heading").textContent = fmt(t.heading,1,"°");
@@ -1664,7 +1664,8 @@
     const toBurn = finite(burnStartUT) && finite(t.ut) ? n(burnStartUT) - n(t.ut) : null;
     const currentThrust = finite(t.currentThrust) ? n(t.currentThrust) : finite(t.thrust) ? n(t.thrust) : 0;
     const availableThrust = finite(t.availableThrust) ? Math.max(0,n(t.availableThrust)) : 0;
-    const throttleValue = cmd.autopilotEngaged && finite(cmd.targetThrottle) ? cmd.targetThrottle : t.throttle;
+    const commandedThrottle = cmd.autopilotEngaged && finite(cmd.targetThrottle);
+    const throttleValue = commandedThrottle ? cmd.targetThrottle : t.throttle;
     const throttle = finite(throttleValue) ? Math.max(0,Math.min(1,n(throttleValue))) : 0;
     const engineOn = currentThrust > Math.max(500, availableThrust * .005) || throttle > .02;
     const deliveredDV = finite(g.deliveredDeltaV) ? Math.max(0,n(g.deliveredDeltaV)) : 0;
@@ -1680,6 +1681,9 @@
     $("orbit-t-burn").textContent = plan ? countdown(toBurn) : "—";
     $("orbit-burn-dv").textContent = finite(plannedDV) ? `${n(plannedDV).toFixed(1)} m/s` : "—";
     $("orbit-dv-rem").textContent = finite(remainingDV) ? `${n(remainingDV).toFixed(1)} m/s` : "—";
+    $("orbit-throttle-label").textContent = commandedThrottle ? "CMD THROTTLE" : "THROTTLE";
+    $("orbit-alignment-label").textContent = burnAlignment ? "BURN ALIGN" : "RETRO ERR";
+    setTitle("orbit-retro-error", burnAlignment ? "Backend alignment error to the commanded inertial burn direction (including the planned normal component)" : "Nose angle from orbital retrograde");
     $("orbit-throttle").textContent = finite(throttleValue) ? `${Math.round(throttle*100)}%` : "—";
     $("orbit-thrust").textContent = thrust(currentThrust);
     $("orbit-retro-error").textContent = fmt(retroErr,1,"°");
@@ -1768,7 +1772,7 @@
         planTone = qualified ? "good" : "warn";
       } else { planChip = "ORBIT HOLD"; }
       setTitle("plan-valid", plan
-        ? `Burn ${countdown(toBurn)} · ΔV ${finite(plannedDV) ? n(plannedDV).toFixed(1) : "—"} m/s · post-burn PE ${distance(plan.predictedPostBurnPeriapsisAltitude)} · retrograde error ${fmt(retroErr,1,"°")}`
+        ? `Burn ${countdown(toBurn)} · ΔV ${finite(plannedDV) ? n(plannedDV).toFixed(1) : "—"} m/s · post-burn PE ${distance(plan.predictedPostBurnPeriapsisAltitude)} · ${burnAlignment ? "burn alignment" : "retrograde error"} ${fmt(retroErr,1,"°")}`
         : `No current deorbit plan · AP ${distance(t.apoapsisAltitude)} · PE ${distance(t.periapsisAltitude)}`);
     } else if (terminalPhase) {
       if (terminalPlanProven && referenceCount >= 2) { planChip = "REF COMMITTED"; planTone = "good"; }

@@ -99,3 +99,81 @@ The 72 km replay (`ksl simulate ShuttleSim/scenarios/sts-polar90-72km.ini --from
 - Settle telemetry before qualifying after a save load.
 - The flare produced a small bounce.
 - Touchdown was long: about 1.55 km past the threshold, with 0.79 km of runway left at the stop.
+
+## Orbit-start failure and telemetry repair (2026-10-15, afternoon)
+
+The orbit-start run `20261015T043321Z-sts-polar90-live-orbit` **failed** at
+14:08:27 KST. It flew Orbit → Deorbit → MM304 → MM305 → Rollout → Abort;
+it never reached Final. At abort the vehicle reported landed, 48.65 km from
+KSC, with runway cross-track magnitude 40.23 km. This does not invalidate the
+v2c checkpoint landing, but that landing is not evidence of a reliable return
+from orbit. KSP was not restarted or commanded during this follow-up.
+
+The engaged plan was already unqualified: burn UT 24907.368, ΔV 34.096 m/s,
+normal angle 34.475°, predicted TAEM range error −39.49 km, inlet energy
+margin −238.49 kJ/kg, robustness 0/15. The run used the diagnostic unqualified
+execution override. Do not classify this whole failure as a shadow-only false
+negative: the flight itself ran out of energy before reaching the runway.
+
+Decoded vehicle keyframes/deltas show that the flights diverged before TAEM:
+
+| Descending altitude | v2c latitude / speed | Orbit-start latitude / speed |
+| --- | --- | --- |
+| 69 km | 68.628° N / 2302.4 m/s | 65.789° N / 2300.9 m/s |
+| 60 km | 83.366° N / 2303.9 m/s | 88.223° N / 2304.4 m/s |
+| 50 km | 47.813° N / 2193.4 m/s | 55.186° N / 2199.9 m/s |
+| 40 km | 24.955° N / 1917.4 m/s | 31.701° N / 1925.7 m/s |
+| 30 km | 11.409° N / 1370.9 m/s | 17.523° N / 1354.8 m/s |
+| 26 km | 6.382° N / 894.7 m/s | 12.227° N / 867.2 m/s |
+
+TAEM first records: v2c 25.75 km / 864.1 m/s / 6.113° N; orbit-start
+25.98 km / 865.2 m/s / 12.209° N. The latter's STS energy log prices a
+136.3 km remaining path against an 86.3 km required energy-dissipation path.
+These observations locate a substantial deficit at handoff; they do not yet
+prove whether burn selection, prediction-model mismatch, or entry execution
+is the dominant cause. Flare tuning alone cannot repair this run.
+
+Telemetry repair `b7b124b` preserves the backend command, guidanceState,
+autopilotError, statusMessage and warningMessage in mission telemetry and
+merges them through the run overlay. Full targetPitch takes priority over the
+legacy FPA+AoA reconstruction. Stale records do not supply full command,
+alignment or burn-progress state during warp. Older flattened records retain
+the fallback path. The frontend uses commanded throttle while engaged and the
+backend's alignment error for inertial burns. A follow-up labels these readings
+CMD THROTTLE and BURN ALIGN: this plan's normal component means the commanded
+burn direction is not pure retrograde. No flight-guidance code was changed.
+
+Validation:
+- `make test`: **219 passed, 56 subtests passed**, 2 warnings, no failures
+  (62.02 s). Both warnings are test background threads trying to write temporary
+  run status after directory cleanup (`ksl-mission`, `ksl-commands`). Full output
+  is `/tmp/ksl-make-test.log`.
+- The focused overlay test and `node --check WebTelemetry/app.js` passed after
+  the final message/label changes.
+- Offline browser fixture, deliberately conflicting with observer values:
+  **18% command, 4.0° burn alignment, 10.6 m/s remaining** from 23.5 m/s
+  delivered against the archived 34.096 m/s plan. This is synthetic regression
+  evidence, not a live burn measurement.
+- Archived v2c screenshots at MM304 (UT 25943.1), TAEM (26038.5), and Final
+  (26291.0) confirm phase/command rendering. The old archive lacks full burn
+  guidance state; this is not end-to-end validation of a new live flight.
+- Screenshots and the temporary offline fixture script are in
+  `work/telemetry-verification-20261015/` (ignored local diagnostics).
+- The read-only observer on port 8789 reloaded the repair. Its supervisor
+  automatically relaunched it; a redundant manual start hit Address already
+  in use and exited. No duplicate observer was left running.
+
+The rebuilt offline `benchmark_deorbit_planning --polar90-terminal` with
+`KSP_LANDER_MODEL_PROFILE=sts-live-20261015` still gives **inlet=false,
+route=false, final=false, robustness 0/15**, despite entry-stage execution=true.
+It selects burn UT 25037.674 and inlet margin −210.9 kJ/kg. This fixture uses an
+older frozen orbit/aero envelope, not the exact latest orbit-start state;
+it must not be presented as reproduction or validation of a live fix.
+Output: `/tmp/ksl-polar90-plan.log`. An initial stale benchmark binary rejected
+the newer profile; rebuilding the benchmark resolved that tooling issue.
+
+Remaining work: reproduce the exact latest orbital state and calibration
+through the STS planner and table-based shadow, validate a positive inlet
+energy reserve and achievable route, then retest from orbit. Long touchdown
+and the small bounce remain separate open issues. No reliable orbit-start
+landing has been demonstrated by this follow-up.
