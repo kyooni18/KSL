@@ -560,10 +560,10 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
     double body_roll=atan2(-v3_dot(body_right,lf.up),v3_dot(body_up,lf.up));
     AtmosphereSample atm=world_atmosphere_sample_state(&sim->world,s->position_i_m,s->ut);
     double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);
-    if(sim->scenario.runway_slope_deg!=0.0){
-        RunwayPlane plane=runway_plane_at(sim,s->ut);
-        runway_plane_coords(&plane,s->position_i_m,NULL,NULL,&vertical);
-    }
+    /* Contact uses the finite planar deck even at zero slope. Report the
+       same local clearance; spherical altitude overstates it at the far end. */
+    RunwayPlane telemetry_plane=runway_plane_at(sim,s->ut);
+    vertical=ground_height(sim,&telemetry_plane,s->position_i_m,NULL,NULL,NULL,NULL);
     snprintf(out,n,"{\"schema\":1,\"type\":\"telemetry\",\"source\":\"sim\",\"scenario\":\"%s\",\"ut\":%.6f,\"sim_time\":%.6f,\"sim_rate\":%.2f,"
              "\"world\":{\"radius_m\":%.9g,\"mu_m3_s2\":%.12g,\"rotation_rate_rad_s\":%.12g,\"atmosphere_top_m\":%.9g,\"rotation_phase_rad_at_ut0\":%.12g},"
              "\"position\":{\"x\":%.6f,\"y\":%.6f,\"z\":%.6f,\"lat_deg\":%.9f,\"lon_deg\":%.9f,\"altitude_m\":%.3f},"

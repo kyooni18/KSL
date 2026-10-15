@@ -158,6 +158,10 @@ static double terminal_wheel_height(const Telemetry*t,const LandingConfiguration
     if(isfinite(t->radar_altitude)&&t->radar_altitude>=0.0&&
             terminal_runway_contact_position(t,cfg))
         height=t->radar_altitude;
+    else if(cfg->guidance.sts_trajectory_delivery&&
+            !strcmp(cfg->vehicle.model_id,"STS")&&
+            isfinite(t->radar_altitude)&&t->radar_altitude>=0.0)
+        height=fmin(height,t->radar_altitude);
     double pitch=(t->flight_path_angle+t->angle_of_attack)*DEG2RAD;
     return fmax(0.0,height-3.1535*cos(pitch)-.9058*sin(pitch));
 }

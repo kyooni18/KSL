@@ -74,6 +74,13 @@ int main(void){
     if(!sim.state.touchdown_seen||!sim.state.on_runway_at_touchdown||
        fabs(sim.state.touchdown_sink_mps-1.5)>.6)return 7;
 
+    /* The zero-slope far threshold uses the same planar clearance too. */
+    seed(&sc);sim_init(&sim,&sc);
+    place(&sim,sim.runway.length_m+30.0,0.0,3.40,70.0,1.5,8.0);
+    sim_build_telemetry_json(&sim,1.0,packet,sizeof(packet));
+    height=strstr(packet,"\"vertical_m\":");
+    if(!height||fabs(strtod(height+13,NULL)-3.40)>.002)return 8;
+
     /* 1. Gentle gear-down landing at 8 deg: mains first, sink recorded, the
           released nose comes down to the measured stance, brakes stop it on
           the runway with no departure and a bounded gear load. */
