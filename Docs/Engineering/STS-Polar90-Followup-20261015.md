@@ -75,3 +75,27 @@ The 72 km replay (`ksl simulate ShuttleSim/scenarios/sts-polar90-72km.ini --from
 - Switch the STS missions to the `sts-live-20261015` profile after a live check.
 - Drag above Mach 7.1 is still unmeasured.
 - The split-fin drag area is learned in flight but has not yet been measured live.
+
+## Live verification (2026-10-15 13:06–13:26 KST)
+
+**Run.** `runs/20261015T040616Z-sts-polar90-live-v2c` (label `sts-polar90-live-v2c`) used profile `sts-live-20261015` at a515a09 and flew from the 72 km save. Result: **COMPLETE.** It flew MM304, MM305, Final, Touchdown, Rollout and Complete in sequence, and the vehicle stopped on the runway.
+
+**Approach**
+- MM305 handoff: 25.5 km, 838 m/s, 61.6 km cross-track.
+- Final: RW27, 113.6 m/s about 366 m above the runway and 456 m before the threshold. The previous live run was at 136 m/s and about 1,180 m up 1 km before the threshold.
+
+**Touchdown and rollout**
+- Touchdown about 1.55 km past the RW27 threshold at about 54 m/s.
+- Small bounce: the first ground sample reads +2.35 m/s upward, then a second contact at −1.24 m/s.
+- Stopped 787 m before the runway end, 18 m off the centreline. The previous live run stopped 783 m past the end.
+
+**Engage gate.** Engage needed `KSP_LANDER_CONTINUE_UNQUALIFIED=1`.
+- The closed-loop shadow's MM304 prediction uses the scalar L/D and ballistic-coefficient model, not the aero table. It therefore predicts 60 km short on either profile.
+- `KSP_LANDER_SIM_SHADOW=1` now runs that shadow in ShuttleSim, for diagnosis.
+- A first attempt engaged right after `--load-save` and was rejected on unsettled telemetry: peak q 0, range error +1,278 km.
+
+**Open items**
+- The shadow's MM304 aero model should come from the table.
+- Settle telemetry before qualifying after a save load.
+- The flare produced a small bounce.
+- Touchdown was long: about 1.55 km past the threshold, with 0.79 km of runway left at the stop.

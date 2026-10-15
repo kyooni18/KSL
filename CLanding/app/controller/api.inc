@@ -113,7 +113,10 @@ void landing_controller_engage_reentry(LandingController*c){
     }
 
     const PlanetModel*p=krpc_session_planet(c->session);
-    bool simulator_fast_qualification=krpc_session_is_simulator(c->session);
+    /* KSP_LANDER_SIM_SHADOW=1 runs the live closed-loop shadow in the simulator. */
+    const char*sim_shadow=getenv("KSP_LANDER_SIM_SHADOW");
+    bool simulator_fast_qualification=krpc_session_is_simulator(c->session)&&
+        !(sim_shadow&&strcmp(sim_shadow,"1")==0);
     bool airborne=strcasecmp(t.vessel_situation,"landed")&&
         strcasecmp(t.vessel_situation,"splashed")&&
         strcasecmp(t.vessel_situation,"pre-launch");
