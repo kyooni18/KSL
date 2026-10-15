@@ -375,13 +375,13 @@ static TerminalPreflarePlan terminal_preflare_plan_floor(const GuidanceMachine*g
        runway-frame intercept is actually inside the runway. */
     bool runway_aligned=terminal_preflare_alignment_valid(g,t,course,cfg);
     if(!runway_aligned){
-        if(getenv("KSP_LANDER_GATE_TRACE"))fprintf(stderr,"GATE_TRACE ut=%.2f not-aligned hac=%d\n",t->ut,g->hac_completed?1:0);
+        if(!g->diagnostic_shadow&&getenv("KSP_LANDER_GATE_TRACE"))fprintf(stderr,"GATE_TRACE ut=%.2f not-aligned hac=%d\n",t->ut,g->hac_completed?1:0);
         return false;
     }
     double lateral_time=0.0;
     DecisionMargin capture_time=decision_margin(time_to_preflare,lateral_time);
 
-    if(getenv("KSP_LANDER_GATE_TRACE"))fprintf(stderr,
+    if(!g->diagnostic_shadow&&getenv("KSP_LANDER_GATE_TRACE"))fprintf(stderr,
         "GATE_TRACE ut=%.2f along=%.0f runway=%.1f vrec=%.1f speed=%.1f q=%.1f load=%.2f capture=%d/%.1f kin=%.0f hac=%d\n",
         t->ut,t->runway_along_track,envelope.runway_remaining.margin,
         envelope.vertical_recovery.margin,envelope.speed.margin,
