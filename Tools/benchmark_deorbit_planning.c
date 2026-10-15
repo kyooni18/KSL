@@ -25,9 +25,11 @@ int main(int argc,char **argv){
         !strcmp(argv[1],"--polar-terminal"));
     bool fourth=argc>1&&(!strcmp(argv[1],"--fourth-polar-plan")||
         !strcmp(argv[1],"--fourth-polar-terminal"));
+    bool polar90=argc>1&&(!strcmp(argv[1],"--polar90-plan")||
+        !strcmp(argv[1],"--polar90-terminal"));
     bool terminal=argc>1&&(!strcmp(argv[1],"--polar-terminal")||
-        !strcmp(argv[1],"--fourth-polar-terminal"));
-    bool plan=polar||fourth||(argc>1&&!strcmp(argv[1],"--plan"));
+        !strcmp(argv[1],"--fourth-polar-terminal")||!strcmp(argv[1],"--polar90-terminal"));
+    bool plan=polar||fourth||polar90||(argc>1&&!strcmp(argv[1],"--plan"));
     double r=p.radius+100000.0,peri=p.radius+50000.0;
     double speed=sqrt(p.gravitational_parameter*(2.0/r-2.0/(r+peri)));
     if(plan)speed=sqrt(p.gravitational_parameter/r);
@@ -69,6 +71,26 @@ int main(int argc,char **argv){
         env.regimes[3]=(AerodynamicModel){.48723219035857,377.98466463495,.938729947916751};
         aero=env.regimes[2];
         thrust=59195.8164168286;
+    }
+    if(polar90){
+        /* 2026-10-15 STS Polar 90 overnight flight (runs/20261014T165854Z-
+           sts-polar90-full-20261015): 90x90 km, 90 deg orbit at the first
+           planner keyframe (FlightLogs/2026-10-14T17-13-23Z-STS-*.jsonl).
+           Live plan: 34.10 m/s at UT 24907.3, inlet 52.9 km, 0/15 robust. */
+        state=(VehicleState){.position={2219.13676456443,-47907.0699445931,688322.621677755},
+            .velocity={-104.544949171373,2254.47710891782,157.234779185572},
+            .mass=26079.892578125,.ut=17824.0440527901};
+        p.epoch_ut=17823.6240527901;
+        p.prime_meridian_at_epoch=(Vector3){.884923327697923,.46573673260334,0};
+        p.north_axis=(Vector3){0,0,1};
+        env.regimes[0]=(AerodynamicModel){.210447664232515,212.666804854348,.929034048981827};
+        env.regimes[1]=(AerodynamicModel){.719109898754759,547.838751558048,.894447833323352};
+        env.regimes[2]=(AerodynamicModel){.569978140008743,593.484721345546,.95807714856939};
+        env.regimes[3]=(AerodynamicModel){.345045068425475,296.835172804911,.93682526914633};
+        aero=env.regimes[2];
+        thrust=118391.63773776;
+        r=sqrt(state.position.x*state.position.x+state.position.y*state.position.y+
+            state.position.z*state.position.z);
     }
     TerminalModel*terminal_model=NULL;
     if(terminal){
