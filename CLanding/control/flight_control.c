@@ -943,6 +943,15 @@ bool flight_control_step_attitude(FlightControlState *state,
             (residual_trim ? -0.25 : (taem_trim ? -0.60 : -0.35));
         double trim_max = in_approach ? 0.42 :
             (residual_trim ? 0.25 : (taem_trim ? 0.90 : 0.50));
+        /* Experimental STS Final: live v9 held the trim on the 0.42 cap
+           through the whole preflare pull with a 2.5-4 deg AoA deficit, so
+           only ~2 m/s^2 of the 5-11 m/s^2 commanded sink arrest was flown.
+           Let the trim span the real elevator travel; the total-demand
+           anti-windup above is the only limit. */
+        if (in_approach && command->terminal_roll_trim_enabled) {
+            trim_min = -1.0;
+            trim_max = 1.0;
+        }
         state->pitch_trim =
             fc_clamp(state->pitch_trim, trim_min, trim_max);
     } else {

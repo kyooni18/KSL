@@ -288,7 +288,25 @@ static void sts_final_removes_sustained_bank_error(void){
     assert(enabled.roll_trim==0.0);
 }
 
+static void sts_final_pitch_trim_uses_elevator_travel(void){
+    FlightControlState enabled,legacy;
+    flight_control_init(&enabled,.1);flight_control_init(&legacy,.1);
+    Telemetry t=atmospheric_sample();
+    t.angle_of_attack=5.0;t.radar_altitude=300.0;
+    GuidanceCommand c={0};c.autopilot_engaged=true;c.control_profile=PROFILE_FLARE;
+    c.has_target_aoa=true;c.target_aoa=6.0;
+    FlightControlOutput on={0},off={0};
+    for(int i=0;i<600;++i){
+        t.ut+=.1;c.terminal_roll_trim_enabled=false;
+        assert(flight_control_step(&legacy,&t,&c,.1,&off));
+        c.terminal_roll_trim_enabled=true;
+        assert(flight_control_step(&enabled,&t,&c,.1,&on));
+    }
+    assert(legacy.pitch_trim<=.42+1e-9&&enabled.pitch_trim>.42);
+}
+
 int main(void){
+    sts_final_pitch_trim_uses_elevator_travel();
     sts_final_removes_sustained_bank_error();
     live_weak_roll_response_displaces_report_gradually();
     recovery_arrests_body_rotation_before_chasing_attitude();
