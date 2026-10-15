@@ -120,7 +120,7 @@ def test_review_waits_replans_and_executes_only_the_reviewed_revision(review_run
         commands.submit("execute-plan", "stale")
     replan = commands.submit("replan", revision)
     wait_for(lambda: controller.status.plan_revision not in (None, revision))
-    assert commands.read(replan["id"])["state"] == "completed"
+    wait_for(lambda: commands.read(replan["id"])["state"] == "completed")
     execute = commands.submit("execute-plan", controller.status.plan_revision)
     wait_for(lambda: controller.status.finished_at is not None)
     assert controller.status.state == "complete"
