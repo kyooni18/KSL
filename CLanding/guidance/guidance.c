@@ -14,8 +14,12 @@ static GuidanceResult terminal_warning_recovery(GuidanceMachine *g,
         const Telemetry *t,const PlanetModel *p,AerodynamicModel aero,
         const LandingConfiguration *cfg,const char *reason,double dt) {
     GuidanceCommand c; guidance_command_init(&c);
+    /* A splashdown is also surface contact: without it a vehicle stopped in
+       the water short of the runway stayed in recovery indefinitely (live
+       cond-mm305-a, 2026-10-16). */
     bool grounded=t->main_gear_grounded||t->nose_gear_grounded||
-        !strcasecmp(t->vessel_situation,"landed");
+        !strcasecmp(t->vessel_situation,"landed")||
+        !strcasecmp(t->vessel_situation,"splashed");
     if (grounded) g->terminal_landing_warning_latched=true;
     /* A failed landing can still brake to a stop, but cannot replan its way
        back into a successful mission. Match touchdown's rollout stop gate. */
