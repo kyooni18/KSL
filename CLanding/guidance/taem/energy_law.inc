@@ -569,17 +569,7 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
         /* Far off axis, capture the actual station.  A positive lookahead
            assumes the station is ahead in x; after an abeam pass it instead
            aims farther east and can never close the along-track separation. */
-        /* Aim one turn outside the station, and hold that aim while still
-           flying away from the runway heading: aiming at the station itself
-           from a downwind-like start (live 2026-10-16: 27 km abeam, heading
-           reversed) arrived needing a 100 deg turn at the station and joined
-           the line 3.6 km out, 454 m off. */
-        double r_in=fmax(TEL_R_TURN,c->v_station*c->v_station/(TEL_G0*tan(45.0*DEG2RAD)));
-        double x_aim=-D-2.0*r_in;
-        bool outbound=fabs(tel_wrap(s->psi))>0.5*TEL_PI;
-        bool aim_station=L->capture_forecast&&!L->loop&&
-            (fabs(s->y)>6000.0||(outbound&&s->x>x_aim));
-        course_cmd=aim_station?atan2(-s->y,x_aim-s->x):atan2(-s->y,look);
+        course_cmd=L->capture_forecast&&!L->loop&&fabs(s->y)>6000.0?atan2(-s->y,-D-s->x):atan2(-s->y,look);
         if(!L->loop&&tel_final_line_ready(c,s))L->leg=TEL_LEG_FINAL;
         if(tel_delivery_policy(c)&&L->leg==TEL_LEG_FINAL&&s->x<0.0&&
            c->model->site.runway_length>0.0&&c->model->site.runway_width>0.0){
@@ -831,13 +821,19 @@ static void tel_plan(TaemEnergyLawState *L,const TelContext *c,const TelPoint *s
     /* A wide "direct" option used Dubins pricing but pursuit steering.
        Until actually aligned, compare trackable tangent/HAC patterns only. */
     bool direct_ready=tel_line_aligned(c,s);
-    double cur_score=tel_delivery_policy(c)&&!cur.loop&&!direct_ready?
-        INFINITY:tel_score(&cur,c,s);
+    /* Flying away from the runway heading, a pursuit has to reverse at the
+       station: live 2026-10-16 (sts-live, no delivery policy) kept straight-in
+       from 27 km abeam heading reversed and joined the line 3.6 km out, 454 m
+       off.  Price only trackable HAC patterns until inbound, as the delivery
+       policy already does until aligned. */
+    bool outbound=fabs(tel_wrap(s->psi))>0.5*TEL_PI;
+    bool patterns_only=(tel_delivery_policy(c)&&!direct_ready)||outbound;
+    double cur_score=patterns_only&&!cur.loop?INFINITY:tel_score(&cur,c,s);
     double best_score=cur_score;
     TaemEnergyLawState p=*L;
     p.loop=false;p.leg=TEL_LEG_OUT;
-    if (tel_delivery_policy(c)?direct_ready:
-            (s->x<-D-TEL_MODE_FREEZE || (L->capture_forecast&&fabs(s->y)>6000.0))) {
+    if (!outbound&&(tel_delivery_policy(c)?direct_ready:
+            (s->x<-D-TEL_MODE_FREEZE || (L->capture_forecast&&fabs(s->y)>6000.0)))) {
         double sc=tel_score(&p,c,s);
         if (sc<best_score) { best_score=sc; best=p; }
     }
