@@ -98,10 +98,32 @@ typedef struct {
     double latency_seconds;
 } CNanoWarpState;
 
+static bool read_warp_state_once(KrpcCNanoClient *client,
+                                 CNanoWarpState *state,
+                                 char *error,
+                                 size_t error_size);
+
+/* A single decode failure while KSP is packing/unpacking during warp
+   (sts-night-3/4: UT and WarpRate decode faults) is transient; re-read the
+   whole state a few times before failing the backend. */
 static bool read_warp_state(KrpcCNanoClient *client,
                             CNanoWarpState *state,
                             char *error,
                             size_t error_size) {
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        if (read_warp_state_once(client, state, error, error_size))
+            return true;
+        if (!client || !state) return false;
+        struct timespec pause = {0, 200000000L};
+        nanosleep(&pause, NULL);
+    }
+    return false;
+}
+
+static bool read_warp_state_once(KrpcCNanoClient *client,
+                                 CNanoWarpState *state,
+                                 char *error,
+                                 size_t error_size) {
     if (!client || !state) return false;
     if (!krpc_cnano_transport_begin_deadline(client->connection)) {
         set_error(error, error_size,
