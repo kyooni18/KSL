@@ -42,6 +42,8 @@
 #define TEL_LOW_ENERGY_DWELL_S 3.0
 /* drag level at or below which the law is energy-short (flying maximum range) */
 #define TEL_K_SHORT 0.05
+/* energy-height error (m) spanning half the drag range on the runway line */
+#define TEL_FINAL_ENERGY_SPAN_M 400.0
 /* Jet assist for a persistent MM305 energy shortfall.  The throttle scales with
    the measured deficit (J/kg) and never drops below the floor while requested.
    The full-scale deficit is an untuned placeholder pending flight data. */
@@ -990,6 +992,17 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
     if (ut>=L->last_pred_ut+TEL_UPDATE_S) {
         L->last_pred_ut=ut;
         L->k=tel_solve_k(L,&ce,&s,&L->s_req);
+        /* Inside the station on the runway line the effective station is the
+           vehicle itself, so s_go is ~0 and the range solve always returns
+           maximum drag.  Live 2026-10-16 (10 deg): MM305 joined the line
+           energy-balanced at 9.3 km, then flew k=1 for 90 s while Final was
+           still gated, arriving 27 m/s slow and handing off at 265 m.  Set the
+           drag level from the energy error against the glide reference here. */
+        if (L->leg==TEL_LEG_FINAL&&ce.d_station<c.d_station) {
+            double e_now=s.h+s.v*s.v/(2.0*TEL_G0);
+            L->k=clampd(TEL_K_PLAN+(e_now-ce.e_station)/TEL_FINAL_ENERGY_SPAN_M,0.0,1.0);
+            L->s_req=L->s_go;
+        }
     }
 
     *bank_cmd=tel_lateral(L,&c,&s);
