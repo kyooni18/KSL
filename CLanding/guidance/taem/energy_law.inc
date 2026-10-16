@@ -569,7 +569,17 @@ static double tel_lateral(TaemEnergyLawState *L,const TelContext *c,const TelPoi
         /* Far off axis, capture the actual station.  A positive lookahead
            assumes the station is ahead in x; after an abeam pass it instead
            aims farther east and can never close the along-track separation. */
-        course_cmd=L->capture_forecast&&!L->loop&&fabs(s->y)>6000.0?atan2(-s->y,-D-s->x):atan2(-s->y,look);
+        /* Aim one turn outside the station, and hold that aim while still
+           flying away from the runway heading: aiming at the station itself
+           from a downwind-like start (live 2026-10-16: 27 km abeam, heading
+           reversed) arrived needing a 100 deg turn at the station and joined
+           the line 3.6 km out, 454 m off. */
+        double r_in=fmax(TEL_R_TURN,c->v_station*c->v_station/(TEL_G0*tan(45.0*DEG2RAD)));
+        double x_aim=-D-2.0*r_in;
+        bool outbound=fabs(tel_wrap(s->psi))>0.5*TEL_PI;
+        bool aim_station=L->capture_forecast&&!L->loop&&
+            (fabs(s->y)>6000.0||(outbound&&s->x>x_aim));
+        course_cmd=aim_station?atan2(-s->y,x_aim-s->x):atan2(-s->y,look);
         if(!L->loop&&tel_final_line_ready(c,s))L->leg=TEL_LEG_FINAL;
         if(tel_delivery_policy(c)&&L->leg==TEL_LEG_FINAL&&s->x<0.0&&
            c->model->site.runway_length>0.0&&c->model->site.runway_width>0.0){
