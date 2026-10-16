@@ -368,6 +368,16 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         isfinite(t->trajectory_range_residual)?fabs(t->trajectory_range_residual):0.0,
         isfinite(t->predicted_raw_published_position_delta_30s)?
             fabs(t->predicted_raw_published_position_delta_30s):0.0);
+    /* Energy-short (the live replan is short even at 0 deg bank): nulling
+       crossrange to zero spends range MM304 does not have.  Live 2026-10-16
+       (10 deg): 40 deg of purely lateral bank from 57 to 44 km nulled 100 km
+       of crossrange, overshot to +22 km and turned a surplus into a deficit;
+       MM305 then flew the 21 km offset without difficulty.  Accept a
+       TAEM-sized crossrange while short. */
+    if(s->sts_trajectory_delivery&&g->entry_policy_valid&&
+       isfinite(g->entry_policy_bank_deg)&&g->entry_policy_bank_deg<=0.5)
+        lateral.crossrange_uncertainty_m=fmax(lateral.crossrange_uncertainty_m,
+            MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M);
     lateral.has_sideslip=isfinite(t->sideslip)&&
         isfinite(cfg->calibration.maximum_sideslip)&&cfg->calibration.maximum_sideslip>0.0;
     lateral.sideslip_deg=lateral.has_sideslip?t->sideslip:0.0;
