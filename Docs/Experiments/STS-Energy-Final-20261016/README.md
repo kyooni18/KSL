@@ -30,3 +30,11 @@ Energy is now positive through MM305 and Final. The new failure is lateral. This
 
 - Straight-in runway-line capture: the energy law's centreline pursuit joins too close to the threshold.
 - Final's lateral closure rate is too low for a 100 m offset.
+
+## Straight-in line capture fix (`0cc3faf`): `runs/*-sts-10deg-hac-fix`
+
+- **Cause.** Without `stsTrajectoryDelivery`, `tel_plan` kept a straight-in pursuit for a vehicle 44 km past the threshold, 27 km abeam and flying away from the runway heading. It priced the cheap chord and required a 2 km margin before switching. The pursuit reversed at the station and joined the line 3.6 km out.
+- **Fix.** While outbound (|course error| > 90°), the plan prices only HAC patterns, which matches the delivery-policy rule.
+- **Live result from the same orbit save.** The vehicle flew a downwind and a 4.2 km HAC and was on the line at the 9 km station, 57 m off with a 2° heading error. Final took over at 1.4 km altitude, 6.4 km out, 3 m off the centreline. Touchdown sink was about 3.2 m/s, and the vehicle stopped on the runway 10 m off the centreline. Result: **COMPLETE**.
+- **Rejected.** Ungating Final's STS reversal sizing for sts-live. For a 115 m offset the needed bank already equals the 10° cap, so it does not help. For small offsets it raises the gain about 5× and cost the L7 low-energy regression its runway (5.8 m/s sink, 1.2 km short).
+- **Still open.** On the HAC path MM305 runs at k = 0 and reaches Final slow (100 m/s against 112 m/s), so the flare is firm. The remaining energy margin is thin.
