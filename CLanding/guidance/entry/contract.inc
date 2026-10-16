@@ -374,7 +374,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
        of crossrange, overshot to +22 km and turned a surplus into a deficit;
        MM305 then flew the 21 km offset without difficulty.  Accept a
        TAEM-sized crossrange while short. */
-    if(s->sts_trajectory_delivery&&g->entry_policy_valid&&
+    if(g->entry_policy_valid&&
        isfinite(g->entry_policy_bank_deg)&&g->entry_policy_bank_deg<=0.5)
         lateral.crossrange_uncertainty_m=fmax(lateral.crossrange_uncertainty_m,
             MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M);

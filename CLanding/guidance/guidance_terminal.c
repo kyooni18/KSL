@@ -173,7 +173,11 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     bool reported_landed=!strcasecmp(t->vessel_situation,"landed");
     /* Confirmed STS wheel contact owns rollout before the airborne departure
        monitor can interpret strut/terrain contact rates as a flight upset. */
-    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&
+    /* Not only under stsTrajectoryDelivery: on sts-live a +1.3 m/s bounce
+       after a 3.4 m/s touchdown left one airborne sample in Touchdown, the
+       departure monitor fired at 3 m radar and aborted a stopped-on-runway
+       landing (live 2026-10-16). */
+    if(!strcmp(v->model_id,"STS")&&
        g->final_approach_captured&&t->gear&&
        (reported_landed||(t->has_main_gear_grounded&&t->main_gear_grounded))){
         if(!terminal_runway_contact_position(t,cfg))

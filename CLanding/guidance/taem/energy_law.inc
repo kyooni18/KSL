@@ -998,9 +998,11 @@ static bool taem_energy_law_step(TaemEnergyLawState *L,const TerminalModel *mode
            energy-balanced at 9.3 km, then flew k=1 for 90 s while Final was
            still gated, arriving 27 m/s slow and handing off at 265 m.  Set the
            drag level from the energy error against the glide reference here. */
-        if (L->leg==TEL_LEG_FINAL&&ce.d_station<c.d_station) {
+        if (L->leg==TEL_LEG_FINAL&&s.x>-c.d_station) {
+            double d_ref=fmax(500.0,-s.x);
+            double e_ref=d_ref*tan(c.slope_deg*DEG2RAD)+c.v_station*c.v_station/(2.0*TEL_G0);
             double e_now=s.h+s.v*s.v/(2.0*TEL_G0);
-            L->k=clampd(TEL_K_PLAN+(e_now-ce.e_station)/TEL_FINAL_ENERGY_SPAN_M,0.0,1.0);
+            L->k=clampd(TEL_K_PLAN+(e_now-e_ref)/TEL_FINAL_ENERGY_SPAN_M,0.0,1.0);
             L->s_req=L->s_go;
         }
     }
