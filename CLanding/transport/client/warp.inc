@@ -235,6 +235,13 @@ bool krpc_cnano_client_warp_with_progress(KrpcCNanoClient *client,double ut,
         return false;
     double factor_command_latency = stop_latency;
 
+    /* A paused game cannot advance UT: an earlier run's pause outlived it and
+       the warp then timed out with no progress (2026-10-16). */
+    bool game_paused = false;
+    if (krpc_KRPC_Paused(client->connection, &game_paused) == KRPC_OK &&
+            game_paused)
+        RPC_OPTIONAL(client, krpc_KRPC_set_Paused(client->connection, false));
+
     int32_t maximum_factor = 0;
     if (!read_maximum_rails_factor(
             client, &maximum_factor, error, error_size))
