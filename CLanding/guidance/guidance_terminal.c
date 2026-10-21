@@ -415,8 +415,8 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             }
             if(forced_handoff)
                 fprintf(stderr,
-                    "MM304->MM305 physical handoff: UT %.2f h %.0f m Mach %.2f routeQualified=%d routeCommitted=%d; native MM305 owns recovery.\n",
-                    t->ut,t->mean_altitude,t->mach,admission_route_qualified?1:0,
+                    "MM304->MM305 physical handoff: UT %.2f h %.0f m Mach %.2f HAC energy excess %.0f m routeQualified=%d routeCommitted=%d; native MM305 owns recovery.\n",
+                    t->ut,t->mean_altitude,t->mach,g->entry_hac_energy_excess,admission_route_qualified?1:0,
                     g->mm305_route_committed?1:0);
         }
         if (g->diagnostic_shadow && g->diagnostic_stop_at_taem) {

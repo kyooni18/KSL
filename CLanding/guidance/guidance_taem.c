@@ -59,11 +59,10 @@ double mm305_energy_law_handoff_reach(const TerminalModel *model,
    from the station, so MM305 starts on its reference with a nominal HAC
    instead of correcting an arbitrary inlet.  Priced on the live-corrected
    polar the law itself flies. */
-bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *live,
-        double mass_kg,double mach,double *altitude_above_site_m,double *speed_mps,
-        double *station_range_m) {
-    if (!model||!isfinite(mass_kg)||!(mass_kg>0.0)||!isfinite(mach)||!(mach>0.0))
-        return false;
+/* The HAC reference MM304 budgets against, cached per thread: rebuilt on a
+   new model, a mass change over 1 % or fresh live aero. */
+static const TaemHacReference *mm305_hac_cached_reference(const TerminalModel *model,
+        const TaemHacLiveAero *live,double mass_kg,double mach,HacCtx *x) {
     static _Thread_local TaemHacReference ref;
     static _Thread_local const TerminalModel *ref_model;
     static _Thread_local double ref_mass,ref_live_ut;
@@ -71,28 +70,52 @@ bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *l
     geo.runway_along_m=-INFINITY;
     geo.altitude_above_runway_m=20000.0;
     geo.airspeed_mps=geo.ground_speed_mps=mach*300.0;
-    HacCtx x;TelPoint pt;
-    hac_context(&x,model,&model->aero,live,&geo,mass_kg,NAN,0.0,&pt);
+    TelPoint pt;
+    hac_context(x,model,&model->aero,live,&geo,mass_kg,NAN,0.0,&pt);
     double live_ut=live?live->last_ut:0.0;
     if (!ref.valid||ref_model!=model||fabs(ref_mass-mass_kg)>0.01*mass_kg||
             fabs(live_ut-ref_live_ut)>HAC_REF_REBUILD_S*5.0) {
-        hac_reference_build(&ref,&x,live_ut);
+        hac_reference_build(&ref,x,live_ut);
         ref_model=model; ref_mass=mass_kg; ref_live_ut=live_ut;
     }
+    return &ref;
+}
+
+bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *live,
+        double mass_kg,double mach,double *altitude_above_site_m,double *speed_mps,
+        double *station_range_m) {
+    if (!model||!isfinite(mass_kg)||!(mass_kg>0.0)||!isfinite(mach)||!(mach>0.0))
+        return false;
+    HacCtx x;
+    const TaemHacReference *R=mm305_hac_cached_reference(model,live,mass_kg,mach,&x);
     double prev_mach=NAN;
     for (int i=0;i<TAEM_HAC_REF_N;++i) {
         double q,m;
-        tel_air(&x.c,ref.h[i],ref.v[i],&q,&m);
+        tel_air(&x.c,R->h[i],R->v[i],&q,&m);
         if (i>0&&m>=mach&&prev_mach<mach) {
             double f=(mach-prev_mach)/fmax(1e-9,m-prev_mach);
-            if (altitude_above_site_m) *altitude_above_site_m=ref.h[i-1]+f*(ref.h[i]-ref.h[i-1]);
-            if (speed_mps) *speed_mps=ref.v[i-1]+f*(ref.v[i]-ref.v[i-1]);
-            if (station_range_m) *station_range_m=(i-1+f)*ref.ds;
+            if (altitude_above_site_m) *altitude_above_site_m=R->h[i-1]+f*(R->h[i]-R->h[i-1]);
+            if (speed_mps) *speed_mps=R->v[i-1]+f*(R->v[i]-R->v[i-1]);
+            if (station_range_m) *station_range_m=(i-1+f)*R->ds;
             return true;
         }
         prev_mach=m;
     }
     return false;
+}
+
+/* Energy height (above the site) of the HAC reference at a path length from
+   the Final station: what MM305 expects to start with there. */
+bool mm305_hac_reference_energy(const TerminalModel *model,const TaemHacLiveAero *live,
+        double mass_kg,double station_range_m,double *energy_m) {
+    if (!model||!isfinite(mass_kg)||!(mass_kg>0.0)||!isfinite(station_range_m)||
+        !(station_range_m>=0.0)||!energy_m)
+        return false;
+    HacCtx x;
+    const TaemHacReference *R=mm305_hac_cached_reference(model,live,mass_kg,2.5,&x);
+    if (!R->valid||station_range_m>(TAEM_HAC_REF_N-1)*R->ds) return false;
+    hac_reference_at(R,station_range_m,energy_m,NULL,NULL,NULL,NULL);
+    return isfinite(*energy_m);
 }
 
 /* MM304 measures the polar too: the supersonic bins MM305 prices its HAC

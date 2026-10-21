@@ -195,6 +195,14 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     double hac_h=NAN,hac_v=NAN,hac_range=NAN;
     if(cfg->guidance.taem_hac_law&&g->entry_terminal_model){
         mm305_hac_observe_aero(g,t);
+        /* Live energy against the reference at the measured path to the
+           station (the handoff gate in guidance_terminal.c reads it). */
+        double e_ref=NAN;
+        g->entry_hac_energy_excess=mm305_hac_reference_energy(g->entry_terminal_model,
+            &g->taem_hac_live_aero,t->mass,fmax(0.0,energy_range),&e_ref)?
+            t->mean_altitude-cfg->site.altitude+
+            t->true_air_speed*t->true_air_speed/(2.0*planet_surface_gravity(p))-e_ref:NAN;
+        g->entry_hac_energy_ut=t->ut;
         if(mm305_hac_handoff_state(g->entry_terminal_model,&g->taem_hac_live_aero,t->mass,
                s->mm305_target_mach,&hac_h,&hac_v,&hac_range)&&t->true_air_speed>hac_v){
             drag_in.taem_velocity=hac_v;

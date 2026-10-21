@@ -422,7 +422,7 @@ def main():
         "--atmosphere",args.atmosphere,
         "--aero",args.aero,
         "--attitude",args.attitude,
-        "--dt",str(args.dt),"--rate","max","--telemetry-hz",str(args.telemetry_hz),
+        "--dt",str(args.dt),"--rate",os.environ.get("SHUTTLESIM_RATE","max"),"--telemetry-hz",str(args.telemetry_hz),
         "--max-sim-time",str(args.max_sim_time),
         "--command-port",str(args.command_port),"--telemetry-port",str(args.telemetry_port),"--web-telemetry-port",str(args.web_telemetry_port),
         "--record",str(sim_log),"--lockstep","--quiet"
