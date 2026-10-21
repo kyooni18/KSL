@@ -135,6 +135,47 @@ typedef struct {
     double station_slope_deg;
 } TaemEnergyLawState;
 
+/* MM305 Shuttle heading-alignment-cone TAEM (guidance/taem/hac_law.inc). */
+#define TAEM_HAC_REF_N 480
+#define TAEM_HAC_KAPPA_BINS 15
+#define TAEM_HAC_REF_MACH_N 41
+typedef struct {
+    /* Live drag/lift over the recorded polar, per Mach bin (0.25 wide).
+       Kept across HAC/runway re-selection: it is a measurement, not a plan. */
+    double drag[TAEM_HAC_KAPPA_BINS], lift[TAEM_HAC_KAPPA_BINS];
+    double weight[TAEM_HAC_KAPPA_BINS];
+    double last_ut;
+} TaemHacLiveAero;
+
+typedef struct {
+    bool valid;
+    double ds, mass, built_ut;
+    /* reference incidence and lift coefficient per 0.1 Mach (live-corrected) */
+    double aoa[TAEM_HAC_REF_MACH_N], cl[TAEM_HAC_REF_MACH_N];
+    /* range-to-go from the HAC exit (Final station) -> energy, altitude, speed */
+    double e[TAEM_HAC_REF_N], h[TAEM_HAC_REF_N], v[TAEM_HAC_REF_N];
+} TaemHacReference;
+
+typedef struct {
+    bool initialized, final_line;
+    int phase;            /* TAEM_HAC_PHASE_* */
+    int side;             /* +1 HAC centre left of the runway line (left turn) */
+    int s_turn_sign;
+    double rf;            /* spiral radius at the HAC exit */
+    double psi;           /* remaining HAC turn angle (rad) */
+    double last_ang;
+    double s_go, e_ref, h_ref, v_ref, e_err, energy_level;
+    double tangent_x, tangent_y, tangent_dist, turn_cost;
+    double sdot, last_sgo, last_sgo_ut;
+    double eta_live;      /* measured energy height lost per ground metre */
+    double last_plan_ut, last_side_ut, last_ut;
+    double speedbrake_integral;
+    double station_slope_deg;
+    bool admit_pending; double admit_since_ut;
+    bool low_energy_pending; double low_energy_since_ut;
+    TaemHacReference ref;
+} TaemHacLawState;
+
 /* Adaptive flare (guidance/final/adaptive_flare.inc): online incidence-response
    identification and the flare plan chosen on its forward predictor. */
 typedef struct {
@@ -353,6 +394,8 @@ typedef struct {
     JerkLimiter pitch_limiter, roll_limiter, heading_limiter; SlewLimiter throttle_limiter;
     GuidancePhase last_stabilized_phase; bool has_last_stabilized_phase;
     TaemEnergyLawState taem_energy_law;
+    TaemHacLawState taem_hac_law;
+    TaemHacLiveAero taem_hac_live_aero;
     AdaptiveFlareState adaptive_flare;
     /* Set by the MM305 energy-short path each tick; copied into the command. */
     double jet_assist_throttle;

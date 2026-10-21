@@ -39,10 +39,12 @@ static bool mm305_physical_handoff_due(const Telemetry *t,const PlanetModel *p,
        (the 60 deg full test arrived at the Mach 2.85 edge too fast to turn). */
     bool sts_delivery=cfg->guidance.sts_trajectory_delivery&&
         !strcmp(cfg->vehicle.model_id,"STS");
+    /* The HAC TAEM interface is the band centre MM304 targets on its reference. */
+    bool centre=sts_delivery||cfg->guidance.taem_hac_law;
     return isfinite(mach)&&
         t->mean_altitude<=cfg->guidance.mm305_max_altitude &&
         mach<=cfg->guidance.mm305_target_mach+
-            (sts_delivery?0.0:cfg->guidance.mm305_mach_half_width);
+            (centre?0.0:cfg->guidance.mm305_mach_half_width);
 }
 
 /* Translation-unit private helpers. */
@@ -363,6 +365,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         g->mm305_acquisition_route_valid=false;
         g->mm305_acquisition_route_ut=-INFINITY;
         g->taem_energy_law=(TaemEnergyLawState){0};
+        g->taem_hac_law=(TaemHacLawState){0};
         g->mm305_acquisition_sweep_rad=NAN;
         g->mm305_planning_needed=false;
         g->mm305_plan_request_ut=NAN;
@@ -404,7 +407,8 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             g->mm305_admission_needed=false;
             /* The STS energy law owns its path. A fixed-HAC request here
                blocked the lockstep simulator on an unused route search. */
-            if (!g->mm305_route_committed && !cfg->guidance.taem_energy_law) {
+            if (!g->mm305_route_committed && !cfg->guidance.taem_energy_law &&
+                    !cfg->guidance.taem_hac_law) {
                 g->mm305_planning_needed=true;
                 g->mm305_plan_request_ut=t->ut;
                 g->mm305_last_plan_attempt_ut=t->ut;

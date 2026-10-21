@@ -21,11 +21,15 @@ static TaemExecInputs taem_exec_inputs_live_with_contract(
        line (Runway Alignment) once its final leg is reached. */
     bool energy_law_route=cfg&&cfg->guidance.taem_energy_law&&
         g->taem_energy_law.initialized&&g->taem_energy_law.leg==TEL_LEG_FINAL;
+    /* The HAC law is on the runway line once its prefinal is line-ready. */
+    bool hac_law_route=cfg&&cfg->guidance.taem_hac_law&&
+        g->taem_hac_law.initialized&&g->taem_hac_law.final_line;
     inputs.terminal_path_selected=g->terminal_final_test_mode||native_route||direct_route||
-        energy_law_route;
+        energy_law_route||hac_law_route;
     inputs.terminal_path_captured=inputs.terminal_path_selected;
     inputs.final_intercept_ready=g->terminal_final_test_mode||
-        ((native_route||direct_route||energy_law_route)&&g->mm305_hac_exit_reached);
+        ((native_route||direct_route||energy_law_route||hac_law_route)&&
+         g->mm305_hac_exit_reached);
     inputs.final_approach_ready=has_final_approach_override?
         final_approach_override:g->final_approach_captured;
     if(terminal_contract)inputs.terminal_contract=*terminal_contract;

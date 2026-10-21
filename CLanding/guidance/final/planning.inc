@@ -779,7 +779,8 @@ bool guidance_begin_final_test(GuidanceMachine*g,const Telemetry*t,double course
    otherwise retain the authority-aware centreline acquisition law. */
 bool terminal_pavement_intercept_rate(const Telemetry*t,const LandingConfiguration*cfg,
         double *rate){
-    if(!t||!cfg||!rate||!cfg->guidance.sts_trajectory_delivery||
+    if(!t||!cfg||!rate||!(cfg->guidance.sts_trajectory_delivery||
+       cfg->guidance.taem_hac_law)||
        strcmp(cfg->vehicle.model_id,"STS")||!(t->runway_along_track<0.0)||
        !(t->horizontal_speed>0.0)||!(cfg->site.runway_length>0.0)||
        !(cfg->site.runway_width>0.0)||!isfinite(t->runway_cross_track))return false;

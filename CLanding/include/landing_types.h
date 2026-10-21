@@ -90,6 +90,9 @@ typedef struct {
     /* Fly MM305 with the predictive drag-modulation/overhead-loop energy law
        (guidance/taem_energy_law.c) instead of the route planner. */
     bool taem_energy_law, sts_trajectory_delivery; double minimum_planning_lead_time;
+    /* MM305 flies the Shuttle heading-alignment-cone TAEM (guidance/taem/hac_law.inc)
+       and MM304 targets its interface; takes precedence over taem_energy_law. */
+    bool taem_hac_law;
     /* Split-fin speedbrake holds the terminal reference speed (STS). */
     bool terminal_speedbrake;
     /* Fly the flare from the predictive adaptive flare law

@@ -76,6 +76,7 @@
     "touchdownSinkRate": -1.5,
     "useTimeWarp": false,
     "taemEnergyLaw": true,
+    "taemHeadingAlignmentCone": true,
     "terminalSpeedbrake": true,
     "adaptiveFlare": false,
     "touchdownAimAlong": 150,
