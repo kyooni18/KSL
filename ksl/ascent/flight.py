@@ -280,6 +280,7 @@ def run(args):
             print(f'Ascent trajectory: {end.time:.1f} s; '
                   f'{preplanned.propellant/1000:.1f} t propellant; '
                   f'Ap/Pe {end.apoapsis/1000:.2f}/{end.periapsis/1000:.2f} km; '
+                  f'SRB limiter {preplanned.booster_limit:.3f}; '
                   f'feasible={preplanned.feasible}; saved {plan_path}')
             emit_event('ascent-plan', feasible=preplanned.feasible, path=plan_path,
                        propellant_kg=preplanned.propellant, duration_s=end.time)
@@ -373,6 +374,9 @@ def run(args):
         signal.signal(signal.SIGTERM, _terminate_as_exception)
         try:
             control.throttle = 0
+            if preplanned is not None:
+                for engine in shuttle.solid_boosters:
+                    engine.thrust_limit = preplanned.booster_limit
             control.sas = False
             ap.reference_frame = v.surface_reference_frame
             initial_direction = direction_for_pitch_heading(initial_pitch, args.heading)
@@ -1014,12 +1018,24 @@ def run(args):
                             ap.ctrl.reset_integral()
                             ap.ctrl._last_slow = 0.0
                             sep_handled = True
+                        was_separated = shuttle.separated
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
                             dt=control_dt, throttle_slew=args.throttle_slew,
                             dynamic_pressure=flight.dynamic_pressure,
                             separation_max_q=args.booster_separation_max_q,
                             post_booster_coast_seconds=args.post_booster_coast_seconds)
+                        if (not was_separated and shuttle.separated and state == 'ASCENT'):
+                            # Change nose-pitch commands to thrust-pitch commands
+                            # without stepping the physical nose by the SSME cant.
+                            nose = v.direction(v.surface_reference_frame)
+                            offset = thrust_axis_offset(conn, v, v.surface_reference_frame)
+                            force_direction = tuple(n+o for n, o in zip(nose, offset))
+                            nose_pitch, _ = pitch_heading_for_direction(nose)
+                            thrust_pitch, _ = pitch_heading_for_direction(force_direction)
+                            commanded_pitch += thrust_pitch-nose_pitch
+                            target_pitch = commanded_pitch
+                            target_direction = direction_for_pitch_heading(target_pitch, args.heading)
                         if state == 'ASCENT':
                             solid_boosters_burning = (
                                 bool(shuttle.solid_boosters) and not shuttle.separated and

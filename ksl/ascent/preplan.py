@@ -6,7 +6,7 @@ this module has no kRPC or control side effects. The model is planar, with
 mass/CoM depletion, fixed boosters, pressure-dependent propulsion, attitude lag,
 trim and load limits. It is an engineering prediction, not a 6-DOF certificate.
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import bisect
 import json
 import math
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .geometry import slew_value
 from .guidance import aoa_limit_deg, thrust_correction_blend
-from .vehicle import G0, SSME_TRIM_MIN, SSME_TRIM_MAX, post_sep_throttle_cap
+from .vehicle import G0, SSME_TRIM_MIN, SSME_TRIM_MAX, post_sep_throttle_cap, solid_core_limit
 
 
 def interp(table, x):
@@ -196,6 +196,7 @@ class Trajectory:
     feasible: bool
     violations: dict
     evaluations: int = 0
+    booster_limit: float | None = None
 
     def reference(self, elapsed):
         times = [s.time for s in self.samples]
@@ -230,10 +231,14 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
     Parameters are burn duration and six pitch knots after the roll. Pitch is
     physically slew/load limited; engine trim is recomputed at the depleted CoM.
     """
-    if (len(parameters) != 7 or not math.isfinite(dt) or dt <= 0 or
+    if (len(parameters) not in (7, 8) or not math.isfinite(dt) or dt <= 0 or
             not all(math.isfinite(x) for x in parameters) or parameters[0] <= 0):
         raise ValueError('Invalid ascent shooting parameters or integration step')
-    duration, *knots = map(float, parameters)
+    if len(parameters) == 8:
+        if not .1 <= parameters[7] <= model.booster_limit:
+            raise ValueError('Planned SRB limiter exceeds configured maximum')
+        model = replace(model, booster_limit=float(parameters[7]))
+    duration, *knots = map(float, parameters[:7])
     liquid0 = sum(p.mass for p in model.points if p.pool == 'liquid')
     solid0 = sum(p.mass for p in model.points if p.pool == 'solid')
     liquid, solid = liquid0, solid0
@@ -255,6 +260,7 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
     t = 0.
     failed = 0.
     while t < duration-1e-8:
+        just_separated = False
         step_dt = min(dt, duration-t)
         if attached and solid > 1e-5 and solid_flow > 0:
             step_dt = min(step_dt, solid/solid_flow)
@@ -275,6 +281,7 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
             roll_done = roll_start+model.roll_duration
         if attached and solid <= 1e-5 and q <= model.separation_max_q:
             attached, sep_time = False, t
+            just_separated = True
             mass, com, inertia = model.mass_state(liquid/liquid0, 0., False)
         if sep_time is not None and upright_start is None and t-sep_time >= model.upright_delay and q <= model.upright_max_q:
             upright_start = t
@@ -289,8 +296,9 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
         core_moment = sum(moment(m, f) for m, f in zip(model.core, core_thrusts))
         booster_moment = sum(moment(m, f) for m, f in zip(model.boosters, booster_thrusts))
         if attached and solid > 1e-5:
-            desired_limit = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX,
-                -booster_moment/core_moment if abs(core_moment) > 1e4 else model.initial_core_limit))
+            desired_limit = solid_core_limit(
+                -booster_moment/core_moment if abs(core_moment) > 1e4 else model.initial_core_limit,
+                mass, sum(booster_thrusts), sum(core_thrusts), model.max_g)
         elif attached:
             desired_limit = 0.
         else:
@@ -314,6 +322,11 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
         fy = sum(f*m.direction[1] for m, f in forces)
         force = math.hypot(fx, fy)
         cant = math.degrees(math.atan2(fx, fy))
+        if just_separated:
+            # Commands/flown attitude were nose pitch while SRBs were attached.
+            # Keep the physical nose continuous when changing to thrust pitch.
+            command += cant
+            flown += cant
         trim = abs(core_moment*limit+booster_moment)
         authority = sum(f*math.hypot(m.position[1]-com[1], m.position[2]-com[2])*math.sin(m.gimbal)
                         for m, f in forces)
@@ -411,7 +424,7 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
                 violations['insertion_below_atmosphere_m'] <= 100.)
     if retain:
         samples.append(Sample(t, h, vr, vh, mass, command, limit, 0., ap, pe, com, not attached))
-    return Trajectory(list(map(float, parameters)), samples, target_ap, target_pe, used, score, feasible, violations)
+    return Trajectory(list(map(float, parameters)), samples, target_ap, target_pe, used, score, feasible, violations, booster_limit=model.booster_limit)
 
 
 def optimize(model, target_ap, target_pe, max_evaluations=5000, dt=1.):
@@ -427,7 +440,7 @@ def optimize(model, target_ap, target_pe, max_evaluations=5000, dt=1.):
             not any(p.pool == 'liquid' and p.mass > 0 for p in model.points) or
             not any(p.pool == 'solid' and p.mass > 0 for p in model.points)):
         raise ValueError('Invalid staged ascent model or target')
-    bounds = [(150., 700.)]+[(-30., 89.)]*6
+    bounds = [(150., 700.)]+[(-30., 89.)]*6+[(max(.1, .65*model.booster_limit), model.booster_limit)]
     best, count = None, 0
     integration_dt = dt
     def objective(x):
@@ -438,7 +451,7 @@ def optimize(model, target_ap, target_pe, max_evaluations=5000, dt=1.):
             best = trial
         return trial.score
     differential_evolution(objective, bounds, popsize=7,
-                           maxiter=max(1, int(max_evaluations*.7)//49-1),
+                           maxiter=max(1, int(max_evaluations*.7)//56-1),
                            tol=.0001, polish=False, rng=7)
     minimize(objective, best.parameters, method='Nelder-Mead', bounds=bounds,
              options={'maxfev': max(100, int(max_evaluations*.15)), 'xatol': .001, 'fatol': .001})
