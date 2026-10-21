@@ -490,6 +490,22 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     const double AIM_BIAS=150.0;
     double aim=touchdown_target+AIM_BIAS-arc_distance-float_distance+preflare_height/glide_tan;
     aim=clampd(aim,touchdown_target-6000.0,touchdown_target+AIM_BIAS);
+    /* The preflare latch only arms the arc.  Its floor is the admission
+       trigger, which the projected speed bleed can put kilometres up (live
+       flight 4: 1820 m; 70 km quicksave replay: 2535 m).  Until the measured
+       sink reaches the arc the outer glide keeps flying the aim point and the
+       speed: freezing both at the latch dived 2 km down a stale aim. */
+    bool glide_owns=!g->terminal_pull_latch||!g->terminal_arc_started;
+    /* The aim sizing above is a point-mass rule of thumb; on the HAC law the
+       live forecast (learned lift/drag, measured sink and speed, the flare
+       profile actually flown) moves the aim until it lands on the target. */
+    if(s->taem_hac_law&&!s->adaptive_flare&&glide_owns&&g->terminal_aim_valid&&
+       isfinite(g->terminal_predicted_touchdown_along)){
+        double err=clampd(touchdown_target-g->terminal_predicted_touchdown_along,-300.0,300.0);
+        g->terminal_aim_shift=clampd(g->terminal_aim_shift+clampd(dt,0.0,.5)*err/6.0,-1500.0,1500.0);
+        aim=clampd(aim+g->terminal_aim_shift,touchdown_target-6000.0,
+            touchdown_target+AIM_BIAS+fmax(0.0,g->terminal_aim_shift));
+    }
     if(s->adaptive_flare&&!g->terminal_pull_latch){
         /* The aim above is sized for the fixed flare's float.  Correct it with
            the adaptive predictor's own touchdown forecast (previous cycle):
@@ -502,7 +518,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         aim=clampd(aim+F->aim_shift,touchdown_target-6000.0,
             touchdown_target+AIM_BIAS+fmax(0.0,F->aim_shift));
     }
-    if(!g->terminal_pull_latch){
+    if(glide_owns){
         if(!g->terminal_aim_valid){
             double seed_distance=height/fmax(tan(4.0*DEG2RAD),tan(handoff_slope*DEG2RAD));
             double seed_aim=clampd(along+seed_distance,touchdown_target-6000.0,touchdown_target);
@@ -572,12 +588,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         terminal_final_speed_target(g,v,s,fmax(0.0,-along));
     double speed_ref=fmax(station_speed,1.6*fmax(speed_1g,v_td));
     double predicted_touchdown_speed=NAN,predicted_ground_range=NAN;
-    if(!g->terminal_pull_latch){
+    if(glide_owns){
         predicted_touchdown_speed=terminal_predict_touchdown_speed(g,t,v,height,V,sink_now,false,&flare_plan,&predicted_ground_range);
         speed_ref=fmax(station_speed,fmax(1.5*fmax(speed_1g,v_td),
             sqrt(fmax(0.0,V*V+v_td*v_td-predicted_touchdown_speed*predicted_touchdown_speed))));
     }
-    bool range_short=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&
+    g->terminal_predicted_touchdown_along=isfinite(predicted_ground_range)?
+        along+predicted_ground_range:NAN;
+    bool range_short=(s->sts_trajectory_delivery||s->taem_hac_law)&&!strcmp(v->model_id,"STS")&&
         isfinite(predicted_ground_range)&&predicted_ground_range<-along+touchdown_target;
     if(range_short)
         speed_ref=fmax(1.5*fmax(speed_1g,v_td),
@@ -599,7 +617,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double speedbrake_target=0.0;
     if(s->terminal_speedbrake&&t->dynamic_pressure>0.0){
         double extra_drag=0.0;
-        if(!g->terminal_pull_latch){
+        if(glide_owns){
             if(isfinite(speed_ref)&&V>speed_ref)
                 extra_drag=t->mass*(V*V-speed_ref*speed_ref)/(2.0*aim_distance);
         }else{
@@ -625,13 +643,13 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double glide_speed_error=V-speed_ref;
     if(s->terminal_speedbrake&&glide_speed_error>0.0&&
        g->terminal_speedbrake_fraction<SPEEDBRAKE_CAP)glide_speed_error=0.0;
-    if(!g->terminal_pull_latch&&isfinite(speed_ref))
+    if(glide_owns&&isfinite(speed_ref))
         glide_fpa=clampd(glide_fpa+clampd(.8*glide_speed_error,-12.0,6.0)*DEG2RAD,
             -35.0*DEG2RAD,-3.0*DEG2RAD);
     /* Low-energy stretch: no steeper than the best glide while the speed still
        covers a flare to touchdown speed.  Steeper only converts range the
        vehicle does not have into speed it does not need. */
-    if((g->terminal_final_low_energy||range_short)&&!g->terminal_pull_latch){
+    if((g->terminal_final_low_energy||range_short)&&glide_owns){
         double best_glide=-atan(1.0/terminal_learned_max_lift_to_drag(g,t,v,aoa_max));
         double floor=g->terminal_final_low_energy?v_td:fmax(v_td,v->final_approach_speed);
         double stretch=clampd((V-floor)/(.15*v_td),0.0,1.0);
@@ -649,6 +667,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
     double reference_fpa=glide_fpa;
     double sink_rate_ff=0.0;
     double arc_accel=NAN;
+    double settle_sink=float_sink; /* sink the touchdown attitude floor must not arrest below */
     if(flaring&&height>SGS_HEIGHT){
         /* Preflare arc: the deceleration that takes the present sink to the
            shallow-glide sink at the shallow-glide height, less the height
@@ -687,8 +706,9 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         double glide_sink=fmax(SGS_SINK,-V*sin(glide_fpa));
         double onset_room=fmax(0.0,height-SGS_HEIGHT-fmax(0.0,sink)*(response+1.0));
         double onset_sink=sqrt(SGS_SINK*SGS_SINK+2.0*arrest_accel*onset_room);
-        bool on_arc=sink<.92*glide_sink||onset_sink<sink;
         bool sts_gentle=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
+        if(onset_sink<sink||sink<=SGS_SINK)g->terminal_arc_started=true;
+        bool on_arc=g->terminal_arc_started||(sts_gentle&&sink<.92*glide_sink);
         if(sink>SGS_SINK&&!on_arc&&sts_gentle){
             /* Experimental STS: live v10 held the outer glide from a 303 m
                latch to ~37 m, then stepped to a ~9 m/s^2 catch-up pull that
@@ -731,6 +751,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            2 s time constant behind a 1.5 s incidence lag starts the arrest
            after the flare is already over and the mains hit at the
            shallow-glide sink. */
+        g->terminal_arc_started=true;
         const double NO_PUSH_HEIGHT=3.0*H_FLOAT,FLARE_TAU=1.0,FLARE_LEAD=1.0;
         double lead_height=fmax(0.0,height-fmax(0.0,sink)*FLARE_LEAD);
         double profile_sink=terminal_sink_profile(lead_height,float_height,float_sink,
@@ -750,9 +771,39 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
                     fmax(0.0,lead_height)*Vh/(-along));
             }
         }
+        /* Floating costs speed at the measured drag deceleration, and below
+           the 1-g speed at the incidence limit the mains drop in at whatever
+           sink is left (45 km replay: arrested at 4 m, floated from 69 to
+           60 m/s at up to 15 deg, touched at 3.4 m/s).  Settle onto the
+           runway within the float time the measured speed margin still
+           buys, never faster than two-thirds of the sink gate. */
+        const double SETTLE_SINK_MAX=2.0;
+        double decel=isfinite(t->drag_force)&&t->mass>1.0?t->drag_force/t->mass:NAN;
+        bool settling=false;
+        if(isfinite(decel)&&decel>.1&&isfinite(speed_1g)&&height>0.0){
+            double float_time=(V-1.05*speed_1g)/decel;
+            double settle=float_time>0.0?height/float_time:INFINITY;
+            if(fmin(settle,SETTLE_SINK_MAX)>reference_sink){
+                reference_sink=fmin(settle,SETTLE_SINK_MAX);
+                settling=true;
+            }
+        }
+        settle_sink=reference_sink;
         double flare_top=terminal_final_flare_height(float_height,float_sink,FINAL_FLARE_ACCEL,SGS_SINK);
         double ff=lead_height>float_height&&lead_height<=flare_top&&sink>float_sink?FINAL_FLARE_ACCEL:0.0;
-        arc_accel=ff+(sink-reference_sink)/FLARE_TAU;
+        /* Close on the sink half an incidence lag ahead (measured lift), as
+           the arc does.  On the present sink the 45 km replay arrested at
+           4 m, floated and dropped in at 3.4-3.6 m/s; a full 1 s lead eased
+           the MM305 replay's pull at 11 m while still sinking 4.7 m/s, and
+           the 2 deg/s incidence response could not re-pull (4.1 m/s).
+           0.35-0.5 s holds both under the gate. */
+        const double FLARE_RESPONSE_LEAD=.5;
+        double lead_sink=sink;
+        if(isfinite(t->lift_force)&&t->mass>1.0)
+            lead_sink=sink+FLARE_RESPONSE_LEAD*(g0*cos(gamma)-
+                t->lift_force*cos(bank*DEG2RAD)/t->mass);
+        arc_accel=ff+(lead_sink-reference_sink)/FLARE_TAU;
+        if(settling)arc_accel=fmax(arc_accel,-.1*g0);
         reference_fpa=fmax(glide_fpa,-asin(fmin(.95,reference_sink/V)));
     }
     double reference_sink=V*sin(reference_fpa);
@@ -835,7 +886,7 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
            (+2.7 m/s), touching down 750 m long at 51 m/s.  Once the sink is
            down to the float sink, cap it by the measured lift at a slightly
            sub-1-g level instead, so the vehicle keeps settling. */
-        if(sink<float_sink&&isfinite(t->lift_force)&&t->dynamic_pressure>100.0){
+        if(sink<settle_sink&&isfinite(t->lift_force)&&t->dynamic_pressure>100.0){
             double La=0.0,Da=0.0,Lb=0.0,Db=0.0,a0=clampd(t->angle_of_attack,0.0,aoa_max);
             terminal_aero_q(g,t,v,fmax(0.0,a0-1.0),&La,&Da);
             terminal_aero_q(g,t,v,fmin(aoa_max+1.0,a0+1.0),&Lb,&Db);
@@ -925,14 +976,14 @@ static GuidanceResult terminal_landing_guidance(GuidanceMachine*g,const Telemetr
         g->pitch_limiter.has_value=false;
     }
     if(!g->diagnostic_shadow&&getenv("KSP_LANDER_FINAL_TRACE"))
-        fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d "
-            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d low=%d short=%d tdRange=%.0f vtd=%.1f sb=%.2f sbOn=%d finCdA=%.2f\n",
-            (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,preflare_height,
+        fprintf(stderr,"FINAL_TRACE g=%p ut=%.2f h=%.1f x=%.0f V=%.1f Vref=%.1f sink=%.1f latch=%d arc=%d "
+            "pfh=%.0f trigger=%.0f plan=%d planSpeed=%.1f resp=%.1f arr=%.2f aim=%.0f glide=%.1f ref=%.1f acc=%.2f aoa=%.1f tdPitch=%.1f tdAoA=%.1f reqAoA=%.1f cmdAoA=%.1f ld=%.2f long=%d low=%d short=%d tdRange=%.0f vtd=%.1f sb=%.2f sbOn=%d finCdA=%.2f v1g=%.1f aoaMax=%.1f lr=%.2f\n",
+            (void*)g,t->ut,height,along,V,speed_ref,sink_now,g->terminal_pull_latch,g->terminal_arc_started,preflare_height,
             g->preflare_trigger_altitude,g->terminal_preflare_plan_valid?1:0,
             g->preflare_reference_speed,response,arrest_accel,g->terminal_aim_along,
             glide_fpa*RAD2DEG,reference_fpa*RAD2DEG,
             vertical_accel,aoa,touchdown_attitude_floor,touchdown_aoa_floor,
-            aoa,r.command.target_aoa,ld_float,long_landing,g->terminal_final_low_energy,range_short,predicted_ground_range,predicted_touchdown_speed,g->terminal_speedbrake_fraction,s->terminal_speedbrake?1:0,g->terminal_split_fin_cda);
+            aoa,r.command.target_aoa,ld_float,long_landing,g->terminal_final_low_energy,range_short,predicted_ground_range,predicted_touchdown_speed,g->terminal_speedbrake_fraction,s->terminal_speedbrake?1:0,g->terminal_split_fin_cda,speed_1g,aoa_max,g->terminal_lift_ratio);
     const char*lat_diag=getenv("KSP_LANDER_FINAL_LATERAL_DIAGNOSTICS");
     if(lat_diag&&strcmp(lat_diag,"1")==0&&fmod(t->ut,1.0)<dt*.999)
         fprintf(stderr,"FINAL_LAT ut=%.3f x=%.1f cross=%.1f course=%.2f track=%.2f runway=%.2f trackErr=%.2f crossRate=%.2f omega=%.3f lat=%.3f bankLimit=%.2f rawBank=%.2f targetHeading=%.2f targetRoll=%.2f actualRoll=%.2f rollRate=%.2f omegaLim=%.3f rateGain=%.3f reversal=%.2f laterBank=%.2f desired=%.2f pave=%d\n",

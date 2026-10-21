@@ -223,6 +223,8 @@ typedef struct {
        distance. Re-solved every forecast cycle from live telemetry. */
     bool entry_policy_valid; double entry_policy_bank_deg, entry_policy_aoa_deg, entry_policy_ut;
     double entry_handoff_target_range; /* site distance MM304 aims to hand off at */
+    double entry_hac_energy_excess;    /* measured energy minus the HAC reference at the measured path, m */
+    double entry_hac_energy_ut;        /* UT of that measurement */
     bool taem_runway_end_scored;
     double taem_runway_end_score_ut; /* re-evaluate only before the capture arc */
 
@@ -351,8 +353,11 @@ typedef struct {
     double taem_speedbrake_integral, taem_speedbrake_ut;   /* TAEM energy-excess PI */
     double taem_speedbrake_fraction;                       /* slew-limited output */
     bool terminal_pull_latch;
+    bool terminal_arc_started;   /* measured sink reached the preflare arc */
     bool terminal_aim_valid;
     double terminal_aim_along;   /* energy-placed outer-glide aim point, runway along-track m */
+    double terminal_aim_shift;   /* integrated live touchdown-forecast error, m */
+    double terminal_predicted_touchdown_along; /* previous cycle's forecast, NAN if none */
     double terminal_aim_ut;
     double terminal_lift_ratio; /* Pull-up ramp done; holding the sink profile. */
     double terminal_positive_aoa_rate_ema, terminal_sink_accel_ema, terminal_pitch_response_delay_ema;
