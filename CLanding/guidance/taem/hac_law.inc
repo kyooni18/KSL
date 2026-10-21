@@ -225,8 +225,12 @@ static void hac_reference_build(TaemHacReference *R,const HacCtx *x,double ut) {
     R->valid=true;
     if (getenv("KSP_LANDER_HAC_REF_TRACE")) {
         static _Thread_local int dumped=0;
-        if (!dumped++) for (int i=0;i<TAEM_HAC_REF_N;i+=(i<40?2:20))
-            fprintf(stderr,"HAC_REF s=%.0f e=%.0f h=%.0f v=%.1f\n",i*R->ds,R->e[i],R->h[i],R->v[i]);
+        if (!dumped++) for (int i=0;i<TAEM_HAC_REF_N;i+=(i<40?2:20)) {
+            double q,mach;
+            tel_air(&x->c,R->h[i],R->v[i],&q,&mach);
+            fprintf(stderr,"HAC_REF s=%.0f e=%.0f h=%.0f v=%.1f M=%.2f q=%.0f\n",
+                i*R->ds,R->e[i],R->h[i],R->v[i],mach,q);
+        }
     }
 }
 
