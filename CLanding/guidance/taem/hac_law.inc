@@ -12,6 +12,9 @@
  *           radial position/rate law with centrifugal feed-forward, prefinal
  *           lateral position/rate law;
  *   TGSBC   speedbrake on energy error (subsonic).
+ *   Supersonic, ahead of these, a drag-energy phase (not in Moore): this
+ *   airframe's supersonic L/D is under 1, so energy is shed with drag as in
+ *   entry until the subsonic gate on the reference.
  *   Spiral adjustment of RF while turning (Shuttle shrinks it when low; with
  *   no nominal speedbrake bias here it also grows it when high).
  *
@@ -25,7 +28,8 @@
  * polar corrected by live measured lift/drag per Mach bin.  Measured forces are
  * authoritative; the recorded polar only fills Mach regimes not yet flown. */
 
-enum { TAEM_HAC_PHASE_STURN=0, TAEM_HAC_PHASE_ACQ, TAEM_HAC_PHASE_HAC, TAEM_HAC_PHASE_PREFINAL };
+enum { TAEM_HAC_PHASE_DRAG=0, TAEM_HAC_PHASE_STURN, TAEM_HAC_PHASE_ACQ, TAEM_HAC_PHASE_HAC,
+    TAEM_HAC_PHASE_PREFINAL };
 
 /* Shuttle spiral coefficient 0.093 ft/deg^2 in m/rad^2. */
 #define HAC_R2 93.0
@@ -53,12 +57,26 @@ enum { TAEM_HAC_PHASE_STURN=0, TAEM_HAC_PHASE_ACQ, TAEM_HAC_PHASE_HAC, TAEM_HAC_
 #define HAC_SELECT_FREEZE_M 10000.0
 #define HAC_SELECT_MARGIN_M 1500.0
 #define HAC_UPDATE_S 2.0
+/* Drag-energy phase: subsonic gate on the reference, exit Mach, shortest
+   path the required drag is spread over, load and bank limits, flight-path
+   time constant and the bank-reversal heading deadband. */
+#define HAC_GATE_MACH 0.95
+#define HAC_DRAG_EXIT_MACH 1.0
+#define HAC_DRAG_MIN_RUN 3000.0
+#define HAC_DRAG_MAX_LOAD 2.5
+#define HAC_DRAG_BANK_MAX 70.0
+#define HAC_DRAG_GAMMA_TAU 6.0
+#define HAC_DRAG_DEADBAND_DEG 15.0
+#define HAC_DRAG_STURN_DEG 45.0     /* S-turn heading swing off the gate bearing */
+#define HAC_DRAG_LOOKAHEAD 15000.0  /* centreline capture distance */
+#define HAC_DRAG_AOA_SLEW 2.0       /* deg/s: the handoff incidence is MM304's (to 28 deg) */
 
 typedef struct {
     TelContext c;
     const AeroTable *aero;          /* recorded polar (unscaled) */
     const TaemHacLiveAero *live;
     double mass;
+    double aoa_supersonic;          /* configured limit; the trim ceiling starts subsonic */
 } HacCtx;
 
 static int hac_bin(double mach) {
@@ -114,14 +132,25 @@ static void hac_aero(const HacCtx *x,double mach,double aoa,double *cl,double *c
     *cd*=hac_kappa(x->live,mach,false);
 }
 
-static double hac_lift_aoa(const HacCtx *x,double mach,double q,double lift_needed) {
-    double area=x->aero->reference_area_m2,lo=-5.0,hi=x->c.aoa_max;
+static double hac_lift_aoa_to(const HacCtx *x,double mach,double q,double lift_needed,
+        double hi) {
+    double area=x->aero->reference_area_m2,lo=-5.0;
     for (int i=0;i<30;++i) {
         double mid=0.5*(lo+hi),cl,cd;
         hac_aero(x,mach,mid,&cl,&cd);
         if (cl*q*area<lift_needed) lo=mid; else hi=mid;
     }
     return 0.5*(lo+hi);
+}
+static double hac_lift_aoa(const HacCtx *x,double mach,double q,double lift_needed) {
+    return hac_lift_aoa_to(x,mach,q,lift_needed,x->c.aoa_max);
+}
+
+/* Drag-phase incidence ceiling: the vehicle's supersonic limit, blending to
+   the subsonic maximum-lift incidence through Mach 1.5-1.0. */
+static double hac_drag_aoa_ceiling(const HacCtx *x,double mach) {
+    double sup=fmax(x->c.aoa_max,x->aoa_supersonic);
+    return x->c.aoa_max+(sup-x->c.aoa_max)*clampd((mach-1.0)/0.5,0.0,1.0);
 }
 
 /* Reference incidence per Mach: the front-side incidence where the
@@ -221,6 +250,35 @@ static void hac_reference_build(TaemHacReference *R,const HacCtx *x,double ut) {
         double k2=hac_eta(x,R,e+0.5*R->ds*k1,s+0.5*R->ds,0.0);
         R->e[i]=e+R->ds*k2;
         hac_split_ref(x,R,R->e[i],s+R->ds,&R->h[i],&R->v[i]);
+    }
+    memcpy(R->h_eq,R->h,sizeof(R->h));
+    memcpy(R->v_eq,R->v,sizeof(R->v));
+    /* Subsonic gate: where the reference first reaches HAC_GATE_MACH. */
+    R->s_gate=0.0; R->e_gate=R->e[0]; R->h_gate=R->h[0];
+    for (int i=1;i<TAEM_HAC_REF_N;++i) {
+        double q,m0,m1;
+        tel_air(&x->c,R->h[i-1],R->v[i-1],&q,&m0);
+        tel_air(&x->c,R->h[i],R->v[i],&q,&m1);
+        if (m1>=HAC_GATE_MACH&&m0<HAC_GATE_MACH) {
+            double f=(HAC_GATE_MACH-m0)/fmax(1e-9,m1-m0);
+            R->s_gate=(i-1+f)*R->ds;
+            R->e_gate=R->e[i-1]+f*(R->e[i]-R->e[i-1]);
+            R->h_gate=R->h[i-1]+f*(R->h[i]-R->h[i-1]);
+            /* Beyond the gate the drag-energy phase owns the supersonic
+               flight, so the reference stays the subsonic glide: the gate's
+               slope, surplus as altitude.  The equilibrium reference there
+               climbs at the transonic drag rise (2+ m/m) and reads a vehicle
+               just through Mach 1 as kilometres short. */
+            double slope=INFINITY,v_gate=R->v[i-1]+f*(R->v[i]-R->v[i-1]);
+            for (int j=i/2>1?i/2:1;j<i;++j) slope=fmin(slope,(R->e[j]-R->e[j-1])/R->ds);
+            if (!isfinite(slope)) slope=(R->e[i]-R->e[i-1])/R->ds;
+            for (int k=i;k<TAEM_HAC_REF_N;++k) {
+                R->e[k]=R->e_gate+slope*(k*R->ds-R->s_gate);
+                R->h[k]=R->h_gate+(R->e[k]-R->e_gate);
+                R->v[k]=v_gate;
+            }
+            break;
+        }
     }
     R->valid=true;
     if (getenv("KSP_LANDER_HAC_REF_TRACE")) {
@@ -386,6 +444,7 @@ static void hac_context(HacCtx *x,const TerminalModel *control,const AeroTable *
     x->aero=recorded;
     x->live=live;
     x->mass=mass;
+    x->aoa_supersonic=x->c.aoa_max;
 }
 
 /* Choose side and exit radius: the pair whose predicted energy is nearest the
@@ -414,6 +473,14 @@ static void hac_initialize(TaemHacLawState *H,const HacCtx *x,const TelPoint *s,
         .last_side_ut=ut,.last_ut=ut,.eta_live=NAN,.sdot=NAN,.tangent_dist=INFINITY};
     hac_reference_build(&H->ref,x,ut);
     (void)hac_select(H,x,s,false);
+    double q,mach;
+    tel_air(&x->c,s->h,s->v,&q,&mach);
+    if (mach>HAC_DRAG_EXIT_MACH) {
+        H->phase=TAEM_HAC_PHASE_DRAG;
+        H->drag_flown=true;
+        H->drag_aoa_cmd=s->aoa;
+        H->drag_bank_cmd=NAN;
+    }
 }
 
 /* TGNZC: altitude tracking with energy and speed mid-value limits -> incidence. */
@@ -460,7 +527,12 @@ static double hac_vertical(const TaemHacLawState *H,const HacCtx *x,const TelPoi
     if (s->g>6.0*DEG2RAD) gdot=fmin(gdot,0.0);
     gdot=clampd(gdot,-0.08,0.08);
     double lift=s->m*(grav*cos(s->g)+v*gdot)/cphi;
-    return clampd(hac_lift_aoa(x,mach,q,lift),TEL_AOA_MIN,x->c.aoa_max);
+    double aoa=hac_lift_aoa(x,mach,q,lift);
+    /* energy low: stretch at best L/D; pulling past it to hold the altitude
+       reference only bleeds speed on the back side */
+    if (H->e_err<-hac_band_low(x,H->e_ref)&&s->v>v_min+15.0)
+        aoa=fmin(aoa,tel_best_ld_aoa(&x->c,mach));
+    return clampd(aoa,TEL_AOA_MIN,x->c.aoa_max);
 }
 
 /* TGPHIC: positive return is a LEFT bank (callers negate). */
@@ -500,6 +572,133 @@ static double hac_lateral_left(TaemHacLawState *H,const HacCtx *x,const TelPoint
     return clampd(bank,-lim,lim);
 }
 
+/* Drag-energy phase.  Supersonic this airframe's L/D is 0.8-0.9, so a glide
+   reference cannot be tracked by pitching down: a low-incidence dive is its
+   minimum-drag (stretch) mode, which is how the 70 km quicksave replay grew a
+   6.8 km surplus to 20-30 km and overflew.  As in entry, the surplus over the
+   subsonic reference for the path still to fly is shed with drag before the
+   gate (where the reference reaches Mach 0.95):
+     - incidence: the drag that sheds that surplus over the path to the gate,
+       up to the vehicle's supersonic incidence limit and 2.5 g;
+     - bank magnitude: the lift the descent to the gate altitude does not
+       need; the path outranks the drag (lift short of it raises incidence);
+     - bank sign: steers along the approach centreline (past the gate, for the
+       nearer HAC), with +-45 deg S-turns while even full drag cannot shed the
+       surplus over that distance.
+   The runway end is held: supersonic turn radii are 25-50 km, so a reciprocal
+   end means overflying the field and looping back.
+   Positive bank is LEFT, as hac_lateral_left. */
+/* Path to the station as the subsonic law will fly it from here: the turn
+   to the nearer HAC's tangent at the gate speed (supersonic it is priced at
+   a 25-50 km radius the vehicle will not keep), the line and the HAC.
+   Before the gate this is the straight-in path; past it, the turn back and
+   the overhead HAC still to be flown. */
+static void hac_drag_path(const TaemHacLawState *H,const HacCtx *x,const TelPoint *s,
+        double *s_go,double *e_tgt,double *bearing) {
+    double D=x->c.d_station,gx=-D-H->ref.s_gate;
+    double v_gate;
+    hac_reference_at(&H->ref,H->ref.s_gate,NULL,NULL,&v_gate,NULL,NULL);
+    TelPoint sub=*s;
+    if (s->v>v_gate) {
+        double k=v_gate/s->v;
+        sub.v*=k;
+        sub.ground_speed*=k;
+    }
+    double best=INFINITY,best_e=NAN,bx=-D,by=0.0;
+    for (int side=-1;side<=1;side+=2) {
+        HacPrediction p=hac_predict_acquisition(x,&H->ref,side,H->rf,&sub);
+        double len,e,tx,ty;
+        if (p.valid) {
+            len=p.s_go; e=p.e_ref; tx=p.tx; ty=p.ty;
+        } else {
+            /* inside this HAC: out to its rim and once round */
+            len=H->rf+hac_arc_length(H->rf,2.0*TEL_PI);
+            hac_reference_at(&H->ref,len,&e,NULL,NULL,NULL,NULL);
+            e+=hac_turn_cost(x,&H->ref,H->rf,2.0*TEL_PI,0.0,0.0,len);
+            tx=-D; ty=side*2.0*H->rf;
+        }
+        if (!isfinite(best_e)||e<best_e) { best=len; best_e=e; bx=tx; by=ty; }
+    }
+    *s_go=best;
+    *e_tgt=best_e;
+    /* before the gate: the centreline ahead, never back to the gate point,
+       which a supersonic vehicle would overrun and loop back to */
+    if (s->x<gx) {
+        bx=fmin(-D,fmax(gx,s->x+HAC_DRAG_LOOKAHEAD));
+        by=0.0;
+    }
+    *bearing=atan2(by-s->y,bx-s->x);
+}
+
+static void hac_drag_command(TaemHacLawState *H,const HacCtx *x,const TelPoint *s,
+        double *aoa_out,double *bank_left_out) {
+    double q,mach;
+    tel_air(&x->c,s->h,s->v,&q,&mach);
+    double grav=tel_gravity(&x->c,s->h),v=fmax(s->v,1.0);
+    double vh=fmax(1.0,s->ground_speed>0.0?s->ground_speed:v*cos(s->g));
+    double area=x->aero->reference_area_m2;
+    double s_go,bearing,e_tgt,deds;
+    hac_drag_path(H,x,s,&s_go,&e_tgt,&bearing);
+    hac_reference_at(&H->ref,s_go,NULL,NULL,NULL,NULL,&deds);
+    /* the surplus over the reference for that path is shed before the gate */
+    double run=fmax(HAC_DRAG_MIN_RUN,s_go-H->ref.s_gate);
+    /* energy height per ground metre <-> drag acceleration (eta = D v / g vh) */
+    double per_metre=grav*vh/v;
+    double drag_req=fmax(0.0,deds+(hac_energy(s)-e_tgt)/run)*per_metre;
+    double ceiling=hac_drag_aoa_ceiling(x,mach);
+    double a_max=fmin(ceiling,hac_lift_aoa_to(x,mach,q,HAC_DRAG_MAX_LOAD*s->m*grav,ceiling));
+    double cl,cd;
+    hac_aero(x,mach,a_max,&cl,&cd);
+    double drag_max=cd*q*area/s->m;
+    double lo=TEL_AOA_MIN,hi=fmax(TEL_AOA_MIN,a_max);
+    for (int i=0;i<30;++i) {
+        double mid=0.5*(lo+hi);
+        hac_aero(x,mach,mid,&cl,&cd);
+        if (cd*q*area/s->m<drag_req) lo=mid; else hi=mid;
+    }
+    double aoa=0.5*(lo+hi);
+    /* S-turn while full drag cannot shed the surplus over the distance:
+       swing off the bearing and reverse on reaching the swing */
+    if (drag_req>drag_max) H->drag_away=true;
+    else if (drag_req<0.7*drag_max) H->drag_away=false;
+    double dpsi_gate=tel_wrap(bearing-s->psi);
+    if (!H->drag_away_sign) H->drag_away_sign=dpsi_gate>=0.0?-1:1;
+    double swing=HAC_DRAG_STURN_DEG*DEG2RAD;
+    if (H->drag_away&&H->drag_away_sign*-dpsi_gate>=swing-5.0*DEG2RAD)
+        H->drag_away_sign=-H->drag_away_sign;
+    double target=H->drag_away?bearing+H->drag_away_sign*swing:bearing;
+    double dpsi=tel_wrap(target-s->psi);
+    /* descend to the gate altitude over the longer of the distance to the
+       gate and the distance full drag needs to shed the surplus: a dive
+       sized on the distance alone overspeeds while turning away */
+    double shed=drag_max>0.0?fmax(0.0,hac_energy(s)-e_tgt)*per_metre/drag_max:0.0;
+    double g_ref=-atan2(fmax(0.0,s->h-H->ref.h_gate),fmax(run,shed));
+    double gdot=clampd((g_ref-s->g)/HAC_DRAG_GAMMA_TAU,-0.08,0.08);
+    if (s->g>3.0*DEG2RAD) gdot=fmin(gdot,0.0);
+    if (s->g<-35.0*DEG2RAD) gdot=fmax(gdot,0.0);
+    double lift_v=s->m*(grav*cos(s->g)+v*gdot);
+    hac_aero(x,mach,aoa,&cl,&cd);
+    double lift=cl*q*area;
+    double lim=fmin(HAC_DRAG_BANK_MAX,x->c.model->vehicle.maximum_bank_angle);
+    double steer=clampd(HAC_GPHI*dpsi*RAD2DEG,-lim,lim);
+    double bank=lift>lift_v&&lift>0.0?
+        acos(clampd(lift_v/lift,cos(lim*DEG2RAD),1.0))*RAD2DEG:0.0;
+    /* reversals only outside the heading deadband: at 4.5-6 deg/s each one
+       takes 20+ s */
+    if (!H->drag_sign||fabs(dpsi)*RAD2DEG>HAC_DRAG_DEADBAND_DEG) {
+        H->drag_sign=dpsi>=0.0?1:-1;
+        bank=fmax(bank,fabs(steer));
+    }
+    double need=lift_v/fmax(0.2,cos(bank*DEG2RAD));
+    if (lift<need) aoa=fmax(aoa,fmin(a_max,hac_lift_aoa_to(x,mach,q,need,ceiling)));
+    double lift_now,drag_now;
+    tel_forces(&x->c,s,s->aoa,&q,&mach,&lift_now,&drag_now);
+    lim=entry_bank_authority_limit(s->v,q,lift_now/(s->m*TEL_G0),&x->c.model->vehicle,lim);
+    H->drag_required=drag_req;
+    *aoa_out=clampd(aoa,TEL_AOA_MIN,ceiling);
+    *bank_left_out=H->drag_sign*clampd(bank,0.0,lim);
+}
+
 /* One guidance tick of phase logic (TGTRAN), references (TGCOMP) and spiral
    adjustment.  Returns the acquisition prediction used for steering. */
 static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoint *s,
@@ -523,13 +722,26 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
             (void)hac_select(H,x,s,true);
         }
         acq=hac_predict_acquisition(x,&H->ref,H->side,H->rf,s);
+        /* well inside the selected HAC (the drag-energy phase ends wherever
+           Mach 1 falls): choose again rather than capture a cone the vehicle
+           is not on */
+        if (!acq.valid&&H->phase!=TAEM_HAC_PHASE_DRAG&&
+                hypot(s->x+D,s->y-H->side*H->rf)<0.9*hac_radius_at(H->rf,
+                    hac_point_psi(H->side,H->rf,D,s->x,s->y))) {
+            H->last_side_ut=ut;
+            (void)hac_select(H,x,s,false);
+            acq=hac_predict_acquisition(x,&H->ref,H->side,H->rf,s);
+        }
         double cx=-D,cy=H->side*H->rf,rc=hypot(s->x-cx,s->y-cy);
         /* TGTRAN: start the turn within 10% of the spiral radius at the turn
            angle the tangent joins it (the position angle alone is ambiguous
            by the tangent offset until the vehicle is on the circle) */
         double psi_j=acq.valid?acq.psi_t:hac_point_psi(H->side,H->rf,D,s->x,s->y);
-        bool inside=!acq.valid||rc<1.1*hac_radius_at(H->rf,psi_j);
-        if (inside) {
+        /* ... and flying round it the HAC's way, within 60 deg of its tangent */
+        double along_hac=tel_wrap(s->psi-(atan2(s->y-cy,s->x-cx)+H->side*0.5*TEL_PI));
+        bool inside=(!acq.valid||rc<1.1*hac_radius_at(H->rf,psi_j))&&
+            fabs(along_hac)<TEL_PI/3.0;
+        if (inside&&H->phase!=TAEM_HAC_PHASE_DRAG) {
             H->phase=TAEM_HAC_PHASE_HAC;
             H->psi=psi_j;
             if (H->psi>2.0*TEL_PI-0.3) H->psi=0.0;
@@ -607,6 +819,24 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
     }
     H->last_sgo=H->s_go; H->last_sgo_ut=ut;
 
+    /* Drag-energy phase ends subsonic, at the gate, or once the energy is
+       down to the gate's: below it the low-drag glide of the acquisition
+       law is the stretch. */
+    if (H->phase==TAEM_HAC_PHASE_DRAG) {
+        double q,mach;
+        tel_air(&x->c,s->h,s->v,&q,&mach);
+        double s_go,bearing,e_tgt;
+        hac_drag_path(H,x,s,&s_go,&e_tgt,&bearing);
+        H->s_go=s_go;
+        H->e_ref=e_tgt;
+        H->e_err=e-e_tgt;
+        if (mach<=HAC_DRAG_EXIT_MACH||e<=H->ref.e_gate) {
+            H->phase=TAEM_HAC_PHASE_ACQ;
+            if (H->trace)
+                fprintf(stderr,"MM305 HAC drag-energy phase ends: UT %.1f Mach %.2f path %.1f km "
+                    "E %.0f m path E %.0f m\n",ut,mach,s_go/1000.0,e,e_tgt);
+        }
+    }
     /* TGTRAN S-turn: energy above the S-turn line, far enough out, small turn */
     if (H->phase==TAEM_HAC_PHASE_ACQ&&H->e_err>hac_band_sturn(x,H->e_ref)&&
             H->s_go>HAC_STURN_MIN_RANGE&&H->psi<HAC_STURN_MAX_PSI) {

@@ -91,11 +91,11 @@ bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *l
     double prev_mach=NAN;
     for (int i=0;i<TAEM_HAC_REF_N;++i) {
         double q,m;
-        tel_air(&x.c,R->h[i],R->v[i],&q,&m);
+        tel_air(&x.c,R->h_eq[i],R->v_eq[i],&q,&m);
         if (i>0&&m>=mach&&prev_mach<mach) {
             double f=(mach-prev_mach)/fmax(1e-9,m-prev_mach);
-            if (altitude_above_site_m) *altitude_above_site_m=R->h[i-1]+f*(R->h[i]-R->h[i-1]);
-            if (speed_mps) *speed_mps=R->v[i-1]+f*(R->v[i]-R->v[i-1]);
+            if (altitude_above_site_m) *altitude_above_site_m=R->h_eq[i-1]+f*(R->h_eq[i]-R->h_eq[i-1]);
+            if (speed_mps) *speed_mps=R->v_eq[i-1]+f*(R->v_eq[i]-R->v_eq[i-1]);
             if (station_range_m) *station_range_m=(i-1+f)*R->ds;
             return true;
         }
@@ -1816,7 +1816,9 @@ static GuidanceResult taem_hac_law_guidance(GuidanceMachine *g,const Telemetry *
     HacCtx x;TelPoint s;
     hac_context(&x,control_model,recorded,&g->taem_hac_live_aero,geometry,
         current->mass_kg,t->angle_of_attack,t->roll,&s);
+    x.aoa_supersonic=cfg->vehicle.maximum_angle_of_attack;
     if (!H->initialized) hac_initialize(H,&x,&s,t->ut);
+    H->trace=!g->diagnostic_shadow;
     hac_live_aero_observe(&g->taem_hac_live_aero,recorded,t,g->taem_speedbrake_fraction);
     double drag_accel=t->physics_sample_valid&&t->mass>0.0&&isfinite(t->drag_force)?
         fabs(t->drag_force)/t->mass:NAN;
@@ -1826,8 +1828,26 @@ static GuidanceResult taem_hac_law_guidance(GuidanceMachine *g,const Telemetry *
         drag_accel=drag/s.m;
     }
     HacPrediction acq=hac_update(H,&x,&s,t->ut,drag_accel);
-    double bank=-hac_lateral_left(H,&x,&s,&acq);
-    double aoa=hac_vertical(H,&x,&s,bank,drag_accel);
+    double bank,aoa;
+    if (H->phase==TAEM_HAC_PHASE_DRAG) {
+        double left;
+        hac_drag_command(H,&x,&s,&aoa,&left);
+        bank=-left;
+        /* slewed from MM304's attitude: a step to the drag command (L7: 42 ->
+           70 deg bank, 27.5 -> 8 deg) held attitude recovery 160 s */
+        double step=clampd(dt,0.0,1.0);
+        if (!isfinite(H->drag_aoa_cmd)) H->drag_aoa_cmd=t->angle_of_attack;
+        if (!isfinite(H->drag_bank_cmd)) H->drag_bank_cmd=t->roll;
+        H->drag_aoa_cmd=clampd(aoa,H->drag_aoa_cmd-HAC_DRAG_AOA_SLEW*step,
+            H->drag_aoa_cmd+HAC_DRAG_AOA_SLEW*step);
+        double roll_slew=fmax(1.0,cfg->guidance.taem_roll_rate)*step;
+        H->drag_bank_cmd=clampd(bank,H->drag_bank_cmd-roll_slew,H->drag_bank_cmd+roll_slew);
+        aoa=H->drag_aoa_cmd;
+        bank=H->drag_bank_cmd;
+    } else {
+        bank=-hac_lateral_left(H,&x,&s,&acq);
+        aoa=hac_vertical(H,&x,&s,bank,drag_accel);
+    }
     if (!isfinite(aoa)||!isfinite(bank))
         return terminal_abort(g,"MM305 HAC guidance could not produce a bounded command.");
     H->station_slope_deg=x.c.slope_deg;
@@ -1837,7 +1857,7 @@ static GuidanceResult taem_hac_law_guidance(GuidanceMachine *g,const Telemetry *
     }
     g->terminal_final_handoff_latched=true;
     g->terminal_final_handoff_slope_deg=H->station_slope_deg;
-    static const char *phases[]={"S-turn","acquisition","heading alignment","prefinal"};
+    static const char *phases[]={"drag energy","S-turn","acquisition","heading alignment","prefinal"};
     static _Thread_local double trace_last_ut=-INFINITY;
     if (!g->diagnostic_shadow&&(!isfinite(trace_last_ut)||t->ut<trace_last_ut||
             t->ut-trace_last_ut>=2.0)) {
@@ -1846,7 +1866,7 @@ static GuidanceResult taem_hac_law_guidance(GuidanceMachine *g,const Telemetry *
             "TAEM_HAC ut=%.1f phase=%s side=%+d RF=%.0f psi=%.0f sGo=%.0f tan=%.0f along=%+.0f cross=%+.0f h=%.0f href=%.0f V=%.1f Vref=%.1f M=%.2f E=%.0f Eref=%.0f dE=%+.0f turn=%.0f eta=%.2f kD=%.2f kL=%.2f aoa=%.1f/%.1f bank=%+.1f/%+.1f sb=%.2f\n",
             t->ut,phases[H->phase],H->side,H->rf,H->psi*RAD2DEG,H->s_go,H->tangent_dist,
             geometry->runway_along_m,geometry->runway_cross_m,s.h,H->h_ref,s.v,H->v_ref,t->mach,
-            hac_energy(&s),H->e_ref,H->e_err,H->turn_cost,H->eta_live,
+            hac_energy(&s),H->e_ref,H->e_err,H->turn_cost,H->phase==TAEM_HAC_PHASE_DRAG?H->drag_required:H->eta_live,
             hac_kappa(&g->taem_hac_live_aero,t->mach,false),
             hac_kappa(&g->taem_hac_live_aero,t->mach,true),t->angle_of_attack,aoa,t->roll,bank,
             g->taem_speedbrake_fraction);
@@ -1900,21 +1920,41 @@ static GuidanceResult taem_hac_law_guidance(GuidanceMachine *g,const Telemetry *
         snprintf(status+n,sizeof(status)-(size_t)n," Final blocked: %s.",final_blocked);
     GuidanceResult r=stabilized(g,result_make(PHASE_TAEM,command,status,NULL),
         t,&cfg->vehicle,&cfg->guidance,dt);
-    /* Publish the planned ground track at the reference altitude. */
+    /* Publish the planned ground track at the reference altitude: while the
+       HAC is being acquired, the line to its tangent point first, then the
+       spiral to the HAC exit (the Final station). */
     if (!g->diagnostic_shadow&&r.reference.count==0) {
         double hd=control_model->site.runway_heading*DEG2RAD;
         GeoPoint origin={control_model->site.latitude,control_model->site.longitude,
             control_model->site.altitude};
-        double D=x.c.d_station;
-        for (int i=0;i<=48;++i) {
-            double psi=H->psi*(1.0-i/48.0),r_s=hac_radius_at(H->rf,psi);
-            double ang=hac_exit_angle(H->side)-H->side*psi;
-            double px=-D+r_s*cos(ang),py=H->side*H->rf+r_s*sin(ang),h_r;
-            hac_reference_at(&H->ref,hac_arc_length(H->rf,psi),NULL,&h_r,NULL,NULL,NULL);
+        double D=x.c.d_station,psi0=H->psi;
+        HacPrediction line={0};
+        if (H->phase<=TAEM_HAC_PHASE_ACQ) {
+            line=hac_predict_acquisition(&x,&H->ref,H->side,H->rf,&s);
+            if (line.valid) psi0=line.psi_t;
+        }
+        double arc0=hac_arc_length(H->rf,psi0);
+        const int n_line=line.valid?12:0,n_arc=48;
+        for (int i=0;i<=n_line+n_arc;++i) {
+            double px,py,s_ref;
+            if (i<n_line) {
+                double f=(double)i/n_line;
+                px=s.x+f*(line.tx-s.x);
+                py=s.y+f*(line.ty-s.y);
+                s_ref=arc0+hypot(line.tx-px,line.ty-py);
+            } else {
+                double psi=psi0*(1.0-(double)(i-n_line)/n_arc),r_s=hac_radius_at(H->rf,psi);
+                double ang=hac_exit_angle(H->side)-H->side*psi;
+                px=-D+r_s*cos(ang);
+                py=H->side*H->rf+r_s*sin(ang);
+                s_ref=hac_arc_length(H->rf,psi);
+            }
+            double h_r,v_r;
+            hac_reference_at(&H->ref,s_ref,NULL,&h_r,&v_r,NULL,NULL);
             GeoPoint pt=local_point(origin,px*sin(hd)-py*cos(hd),px*cos(hd)+py*sin(hd),
                 control_model->world.radius_m,control_model->site.altitude+h_r);
             trajectory_append(&r.reference,(TrajectoryPoint){.ut=t->ut,.latitude=pt.latitude,
-                .longitude=pt.longitude,.altitude=pt.altitude,.speed=H->v_ref,
+                .longitude=pt.longitude,.altitude=pt.altitude,.speed=v_r,
                 .phase=PHASE_TAEM,.kind=TRAJ_REFERENCE});
         }
     }
@@ -1998,15 +2038,17 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
     if (cfg->guidance.taem_hac_law && !g->mm305_route_committed &&
             cfg->site.allow_reciprocal_runway) {
         TaemHacLawState *H=&g->taem_hac_law;
-        bool open=!H->initialized||(H->phase<=TAEM_HAC_PHASE_ACQ&&
-            H->tangent_dist>HAC_SELECT_FREEZE_M);
+        /* the drag-energy phase sheds the surplus for the held end's own
+           path, so that end is kept through the subsonic law as well */
+        bool open=!H->initialized||(!H->drag_flown&&
+            H->phase<=TAEM_HAC_PHASE_ACQ&&H->tangent_dist>HAC_SELECT_FREEZE_M);
         if (open&&(!g->taem_runway_end_scored||
                 t->ut-g->taem_runway_end_score_ut>=HAC_UPDATE_S)) {
             bool first_choice=!g->taem_runway_end_scored;
             g->taem_runway_end_scored=true;
             g->taem_runway_end_score_ut=t->ut;
             double score[2]={INFINITY,INFINITY};
-            bool feasible[2]={false,false};
+            bool feasible[2]={false,false},approach_side[2]={false,false};
             for (int e=0;e<2;++e) {
                 TerminalModel trial;
                 const TerminalModel *trial_end=mm305_model_for_end(model,e);
@@ -2014,14 +2056,22 @@ GuidanceResult taem_guidance_native(GuidanceMachine *g,const Telemetry *t,
                     mm305_final_alignment_distance(g,trial_end,&current),t->mach,
                     1.0,1.0,current.trim_aoa_ceiling_rad);
                 TaemGeometryState trial_geometry;
-                if (taem_geometry_state(&trial,&current,&trial_geometry))
+                if (taem_geometry_state(&trial,&current,&trial_geometry)) {
+                    approach_side[e]=trial_geometry.runway_along_m<0.0;
                     score[e]=taem_hac_law_frame_score(&trial,&model->aero,
                         &g->taem_hac_live_aero,&trial_geometry,current.mass_kg,
                         t->angle_of_attack,t->roll,&feasible[e]);
+                }
             }
             /* Runway selection is made at the interface; afterwards only a
                held end that has become energy-infeasible is abandoned. */
             int other=1-end;
+            /* Supersonic, the HAC prediction prices each end at a 25-50 km
+               turn radius; the drag-energy phase sheds the surplus on the
+               way in, so the end being approached is kept rather than
+               overflying the field and looping back (2026-10-21 70 km
+               quicksave: RW27 chosen 49 km short of RW09, 20 km loop). */
+            if (first_choice&&t->mach>HAC_DRAG_EXIT_MACH&&approach_side[end]) other=end;
             if (first_choice?score[other]<score[end]:
                     (!feasible[end]&&feasible[other]&&score[other]<score[end]))
                 end=other;

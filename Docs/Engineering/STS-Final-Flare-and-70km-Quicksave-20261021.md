@@ -58,3 +58,35 @@ From the 70 km quicksave at 2x pacing, every run crashed in MM305:
 The supersonic part of MM305 needs its own design for a vehicle with L/D below 1:
 - dissipate with high AoA and bank, as entry does, rather than diving to a reference altitude;
 - or continue MM304-style flight to subsonic and start the HAC there.
+
+## Supersonic TAEM redesign: the drag-energy phase
+
+MM305 under `taemHeadingAlignmentCone` now starts in a **drag-energy phase** when it takes over above Mach 1, and hands to the HAC acquisition law at Mach 1 (or once energy is down to the gate's).
+
+| Piece | What it does |
+|---|---|
+| Gate | Where the HAC reference first reaches Mach 0.95, about 17 km of path from the Final station at about 16 km of energy. |
+| Reference beyond the gate | Kept as the **subsonic** glide: the shallowest subsonic slope (about 0.49 m/m), with the surplus held as altitude. The equilibrium reference climbed at the transonic drag rise (1.2 to 2+ m/m) and read a vehicle just through Mach 1 as 7 to 17 km short. |
+| Equilibrium profile | Still kept (`h_eq`, `v_eq`), but only for MM304's handoff point (the reference's Mach 2.5 point). Without it MM304 found no handoff target and delivered Mach 2.5 overhead the field. |
+| Target | The energy the subsonic law needs for the path from here. That path is the turn to the nearer HAC's tangent, priced at the gate speed rather than the current supersonic one, plus the line and the HAC, plus the HAC bank cost. |
+| Incidence | Sheds the surplus over the path to the gate, up to the vehicle's supersonic limit (`maximumAngleOfAttack`, 28 deg) and 2.5 g. The trim ceiling starts at the subsonic 15 deg, where supersonic flight sheds only about 1.1 m/m. Slewed from MM304's attitude at 2 deg/s, and bank at the TAEM roll rate. |
+| Bank | The lift the descent to the gate altitude does not need. Steers along the centreline ahead (past the gate, for the HAC tangent), with +-45 deg S-turns while even full drag cannot shed the surplus. |
+| Runway end | Held. A supersonic start keeps the end being approached, because the HAC prediction prices each end at a 25-50 km turn radius. After the drag phase, end selection does not reopen. |
+| HAC capture | Now also requires the heading to be within 60 deg of the HAC tangent direction. After the drag phase a vehicle within 10 % of the radius but flying round the wrong way was "captured", and held wings level for 80 s. |
+| Map | The HAC law publishes the line to the tangent and the spiral to the station as the reference trajectory, not just the remaining arc (empty at psi 0). |
+
+### Results
+
+| Scenario | Before | After |
+|---|---|---|
+| 70 km quicksave, 2x pacing | crash (loop beyond the field, then RW27) | **pass**: RW09 straight-in, Mach 1 about 18 km out at +1.2 km over the path's need, Final at 5.9 km; touchdown 62.9 m/s, sink 1.58, 387 m past the threshold. Before the acquisition turn was priced into the drag path: 736 m short. |
+| MM305 from that handoff (`sts-kerbin-20261021-quicksave-mm305`) | - | **pass**: 65.5 m/s, sink 2.62, 197 m past the threshold |
+| MM305 live-failure replay (Mach 2.85, 38.7 km out) | pass by luck (RW27) | fail, 3.7 km short: the field is overflown supersonic, and the turn-back costs more than is left |
+| MM304 45 km, max rate | pass 1.51 | fail, 2.4 km short (sink 2.48): the max-rate handoff is late (32 km), same overflight |
+| L5 golden | pass 56.0 / 1.71 | pass 56.0 / 1.71 |
+| L7 golden | pass 76.5 / 1.59 | **fail**, 1.77 km short |
+| final-aligned | fail | fail (pre-existing) |
+
+**L7.** The scenario's plant collapses from the logged 27.5 deg AoA to -1 deg in the first second, and attitude recovery triggers at 0.4 s in both versions. Whether recovery releases within 15 s depends chaotically on the first tick's roll target (0.6 deg bank difference). The committed code released at 11 s; this version times out, and bounded recovery flies wings level to Mach 0.34. The drag law's own commands (stepped or slewed) do not change the outcome.
+
+**Open.** On an earlier paced 70 km run, Final was held by `terminal_preflare_alignment_valid` ("runway capture gate") from the 9.5 km station to 4.4 km. The prefinal weaves a few hundred metres across the centreline, and Final then flew a 30 deg dive into a short preflare. The final run handed over at 5.9 km.

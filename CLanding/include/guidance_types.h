@@ -154,6 +154,10 @@ typedef struct {
     double aoa[TAEM_HAC_REF_MACH_N], cl[TAEM_HAC_REF_MACH_N];
     /* range-to-go from the HAC exit (Final station) -> energy, altitude, speed */
     double e[TAEM_HAC_REF_N], h[TAEM_HAC_REF_N], v[TAEM_HAC_REF_N];
+    /* the equilibrium glide continued supersonic: where MM304 hands over */
+    double h_eq[TAEM_HAC_REF_N], v_eq[TAEM_HAC_REF_N];
+    /* subsonic gate: path, energy and altitude where it reaches the gate Mach */
+    double s_gate, e_gate, h_gate;
 } TaemHacReference;
 
 typedef struct {
@@ -161,6 +165,13 @@ typedef struct {
     int phase;            /* TAEM_HAC_PHASE_* */
     int side;             /* +1 HAC centre left of the runway line (left turn) */
     int s_turn_sign;
+    int drag_sign;        /* drag-energy phase bank side, +1 left */
+    int drag_away_sign;   /* drag-energy S-turn side, +1 left of the gate bearing */
+    bool drag_away;
+    bool drag_flown;      /* started supersonic: the runway end is held */
+    double drag_aoa_cmd, drag_bank_cmd;  /* drag-phase commands, slewed from the measured */       /* drag-energy S-turn: full drag cannot shed the surplus */
+    bool trace;           /* the guiding instance (not a scoring/shadow copy) */
+    double drag_required; /* drag-energy phase drag acceleration demand, m/s^2 */
     double rf;            /* spiral radius at the HAC exit */
     double psi;           /* remaining HAC turn angle (rad) */
     double last_ang;
