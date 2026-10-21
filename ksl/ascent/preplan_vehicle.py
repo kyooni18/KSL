@@ -3,6 +3,46 @@ import math
 from .preplan import MassPoint, Motor, VehicleModel
 
 
+def estimate_drag_area(vessel, frame, parts):
+    """Estimate Cd*A without accepting KSP renderer sentinel bounds.
+
+    Some launch-clamp/renderless parts make Vessel.BoundingBox return enormous
+    finite coordinates. Validate against the actual part-position envelope.
+    """
+    positions = [tuple(p.position(frame)) for p in parts]
+    if not positions or not all(math.isfinite(x) for p in positions for x in p):
+        raise ValueError('Cannot estimate drag from invalid part positions; set --plan-drag-area')
+    lo = tuple(min(p[i] for p in positions) for i in range(3))
+    hi = tuple(max(p[i] for p in positions) for i in range(3))
+
+    def valid(box):
+        low, high = box
+        return (len(low) == len(high) == 3 and
+                all(math.isfinite(x) for x in (*low, *high)) and
+                all(0 <= high[i]-low[i] <= hi[i]-lo[i]+40. and
+                    lo[i]-20. <= low[i] <= high[i] <= hi[i]+20. for i in range(3)))
+
+    try:
+        box = vessel.bounding_box(frame)
+        if valid(box) and box[1][0] > box[0][0] and box[1][2] > box[0][2]:
+            return .3*(box[1][0]-box[0][0])*(box[1][2]-box[0][2]), 'estimated: validated vessel bounding box'
+    except Exception:
+        pass
+    boxes = []
+    for part in parts:
+        try:
+            box = part.bounding_box(frame)
+            if valid(box):
+                boxes.append(box)
+        except Exception:
+            pass
+    # Include every part centre, even parts with no renderer. A 1 m allowance
+    # on each side covers missing extents; this remains a labeled estimate.
+    low = tuple(min([lo[i]-1.] + [b[0][i] for b in boxes]) for i in range(3))
+    high = tuple(max([hi[i]+1.] + [b[1][i] for b in boxes]) for i in range(3))
+    return .3*(high[0]-low[0])*(high[2]-low[2]), 'estimated: part geometry; invalid vessel bounds discarded'
+
+
 def snapshot(shuttle, args):
     if shuttle.vehicle_kind != 'orbiter-shuttle' or not shuttle.solid_boosters:
         raise ValueError('Preplanned ascent currently requires STS with solid boosters')
@@ -55,13 +95,13 @@ def snapshot(shuttle, args):
     elif abs(math.cos(inclination)) > math.cos(latitude):
         raise ValueError('Target inclination is below the launch latitude')
     rotation = vrot*max(-1., min(1., east_fraction))
-    low, high = v.bounding_box(frame)
     # Cd*A cannot be measured on the stationary pad. Save its provenance and
     # permit an explicit calibrated value rather than pretending geometry is Cd.
     drag_area = args.plan_drag_area
-    source = 'configured Cd*A' if drag_area is not None else 'estimated: 0.3 * frontal bounding box'
+    source = 'configured Cd*A'
     if drag_area is None:
-        drag_area = .3*abs(high[0]-low[0])*abs(high[2]-low[2])
+        drag_area, source = estimate_drag_area(v, frame,
+            [p for p in v.parts.all if p not in clamps])
     expected_mass = v.mass-sum(p.mass for p in clamps)
     if abs(sum(p.mass for p in points)-expected_mass) > max(10., .01*expected_mass):
         raise ValueError('Part-mass snapshot does not match live vessel mass')

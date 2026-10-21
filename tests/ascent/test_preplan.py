@@ -66,3 +66,33 @@ def test_saved_plan_is_reproducible_and_feedback_is_bounded(tmp_path):
     assert math.isinf(restored.separation_max_q)
     assert restored.mass_state(.5, .25, True) == m.mass_state(.5, .25, True)
     assert document['trajectory']['feasible'] == result.feasible
+
+
+def test_corrupt_renderer_bounds_do_not_become_astronomical_drag():
+    from types import SimpleNamespace
+    from ksl.ascent.preplan_vehicle import estimate_drag_area
+    parts = [SimpleNamespace(position=lambda frame: (-5., -10., -3.),
+                             bounding_box=lambda frame: ((-6., -11., -4.), (-4., -9., -2.))),
+             SimpleNamespace(position=lambda frame: (5., 10., 3.),
+                             bounding_box=lambda frame: ((-1e38,)*3, (1e38,)*3))]
+    vessel = SimpleNamespace(bounding_box=lambda frame: ((-1e38,)*3, (1e38,)*3))
+    area, source = estimate_drag_area(vessel, 'body', parts)
+    assert area == pytest.approx(.3*12.*8.)
+    assert 'invalid vessel bounds discarded' in source
+    # Valid measured extents still take precedence over the fallback estimate.
+    vessel.bounding_box = lambda frame: ((-7., -12., -5.), (7., 12., 5.))
+    assert estimate_drag_area(vessel, 'body', parts)[0] == pytest.approx(.3*14.*10.)
+
+
+def test_impossible_drag_input_is_rejected_before_search():
+    with pytest.raises(ValueError, match='environment or vehicle limits'):
+        replace(model(), drag_area=6.817162944202548e35)
+
+
+def test_booster_floating_point_residue_does_not_abort_at_zero_dt():
+    m = model()
+    m = replace(m, points=tuple(replace(p, mass=1e-9) if p.pool == 'solid' else p
+                               for p in m.points))
+    result = evaluate(m, 90000., 60000., FIXTURE['reference_parameters'], dt=.25)
+    assert result.samples[0].separated
+    assert result.samples[-1].time >= .25

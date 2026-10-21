@@ -98,6 +98,7 @@ class VehicleModel:
                     self.max_q, self.max_g, self.upper_g, self.pitch_slew,
                     self.throttle_slew, self.attitude_lag, self.upright_duration)
         if (any(not math.isfinite(x) or x <= 0 for x in positive) or
+                self.drag_area > 10000. or
                 not 0 < self.booster_limit <= 1 or not 0 <= self.initial_core_limit <= 1 or
                 len(self.atmosphere) < 2 or
                 any(not all(math.isfinite(x) for x in row) or row[1] < 0 or row[2] < 0
@@ -255,7 +256,7 @@ def evaluate(model, target_ap, target_pe, parameters, dt=1., retain=True):
     failed = 0.
     while t < duration-1e-8:
         step_dt = min(dt, duration-t)
-        if attached and solid > 0 and solid_flow > 0:
+        if attached and solid > 1e-5 and solid_flow > 0:
             step_dt = min(step_dt, solid/solid_flow)
         for event in ((None if roll_start is None or roll_done is not None else roll_start+model.roll_duration),
                       (None if upright_start is None or upright_done is not None else upright_start+model.upright_duration)):
