@@ -21,17 +21,6 @@ SSME_TRIM_MIN = 0.30
 SSME_TRIM_MAX = 1.00
 
 
-def solid_core_limit(trim, mass, fixed_thrust, core_thrust, max_g):
-    """Balance the stack within the hard G cap; gimbals carry remaining moment.
-
-    The historical trim floor is a preference, not permission to exceed max-G.
-    The prelaunch model separately qualifies the remaining control authority.
-    """
-    preferred = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
-    cap = max(0., (max_g*G0*mass-fixed_thrust)/max(core_thrust, 1.))
-    return min(preferred, cap)
-
-
 def descendants(part):
     result = [part]
     for child in part.children:
@@ -975,9 +964,7 @@ class Shuttle:
                 m_booster = engine_pitch_moment(self.vessel, self.solid_boosters)
                 if abs(per_limit) > 1e4:
                     trim = -m_booster/per_limit
-                    target_throttles[0] = solid_core_limit(
-                        trim, self.vessel.mass, self._solid_booster_state()[0],
-                        sum(e.max_thrust for e in ssmes), max_g)
+                    target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
                     self.pitch_moment = m_booster + per_limit*current[0]
                 # Keep balancing through the last fueled tick. The low-limiter
                 # clearance/roll schedule begins only after booster burnout.

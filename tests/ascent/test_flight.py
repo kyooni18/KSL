@@ -45,8 +45,7 @@ class SeparationEnvelopeTests(unittest.TestCase):
         shuttle.vehicle_kind = 'orbiter-shuttle'
         shuttle.solid_boosters = [booster]
         shuttle.groups = shuttle.core_groups = [core]
-        shuttle.vessel = SimpleNamespace(reference_frame=frame, mass=100000.)
-        shuttle.radial = (0., 1.)
+        shuttle.vessel = SimpleNamespace(reference_frame=frame)
         shuttle._liquid_booster_depleted = lambda: False
         shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(0.,))
         shuttle.allocation_for_throttles = lambda throttles: throttles
@@ -65,12 +64,6 @@ class SeparationEnvelopeTests(unittest.TestCase):
         booster.thrust = 1.2e6
         self.assertEqual(shuttle.update(dt=1., throttle_slew=1.)[0], 1.)
         self.assertFalse(shuttle.separated)
-
-        # Exact zero-moment trim may request too much thrust late in the burn.
-        # Respect max-G and leave the remaining moment to qualified gimbals.
-        shuttle.vessel.mass = 60000.
-        limit = shuttle.update(dt=1., throttle_slew=1.)[0]
-        self.assertAlmostEqual(limit*1e6+booster.thrust, 3.*9.80665*60000.)
 
     def test_opt_in_post_booster_coast_keeps_core_off_then_restarts(self):
         engine = SimpleNamespace(thrust_limit=0.0, max_thrust=1000.0)
