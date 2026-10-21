@@ -15,6 +15,16 @@ PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
+def separation_thrust_blend(now, separation_ut, roll_start=None, roll_done=None):
+    """Bring in cant compensation continuously across separation and upright roll."""
+    blend = min(1., max(0., (now-separation_ut)/4.))
+    if roll_done is not None:
+        return blend*min(1., max(0., (now-roll_done)/6.))
+    if roll_start is not None:
+        return blend*max(0., 1.-(now-roll_start)/4.)
+    return blend
+
+
 def maneuver_roll_rate(error_deg, duration_s, limit_deg_s):
     """Bound the maneuver schedule by the operator's physical roll-rate cap."""
     return min(limit_deg_s, max(3.0, min(30.0, 1.4*abs(error_deg)/duration_s)))

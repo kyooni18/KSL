@@ -18,7 +18,7 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel,
                             restore_unexpected_ssme_shutdown, control_interval)
-from ksl.ascent.guidance import post_booster_master_throttle
+from ksl.ascent.guidance import post_booster_master_throttle, separation_thrust_blend
 from ksl.ascent.vehicle import delay_booster_separation
 
 
@@ -64,6 +64,42 @@ class SeparationEnvelopeTests(unittest.TestCase):
         booster.thrust = 1.2e6
         self.assertEqual(shuttle.update(dt=1., throttle_slew=1.)[0], 1.)
         self.assertFalse(shuttle.separated)
+
+    def test_srb_separation_caps_core_before_detach_without_waiting_for_slew(self):
+        core = SimpleNamespace(thrust_limit=.91, max_thrust=3e6)
+        booster = SimpleNamespace(thrust_limit=.9, active=True)
+        observed = []
+        shuttle = Shuttle.__new__(Shuttle)
+        shuttle.vehicle_kind = 'orbiter-shuttle'
+        shuttle.vessel = SimpleNamespace(mass=183000.)
+        shuttle.sc = SimpleNamespace(ut=100.)
+        shuttle.et_attached = True
+        shuttle.separated = False
+        shuttle.core_groups = shuttle.groups = [[core]]
+        shuttle.liquid_boosters = []
+        shuttle.solid_boosters = [booster]
+        shuttle.sepmotors = []
+        shuttle.booster_decouplers = [SimpleNamespace(decouple=lambda: observed.append(core.thrust_limit))]
+        shuttle.cruise_control_moment_budget = 1.
+        shuttle.top_off = lambda: None
+        shuttle._liquid_booster_depleted = lambda: False
+        shuttle._solid_boosters_depleted = lambda: True
+        shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(.9,))
+        shuttle.allocation_for_throttles = lambda throttles: throttles
+        result = shuttle.update(dt=.1, throttle_slew=.01)
+        self.assertEqual(observed, [.3])
+        self.assertEqual(result, (.3,))
+
+    def test_thrust_cant_blend_is_continuous_at_separation_and_roll(self):
+        self.assertEqual(separation_thrust_blend(100., 100.), 0.)
+        self.assertEqual(separation_thrust_blend(102., 100.), .5)
+        self.assertEqual(separation_thrust_blend(104., 100.), 1.)
+        # An early roll starts during the separation blend, without a step.
+        self.assertEqual(separation_thrust_blend(102., 100., 102.), .5)
+        self.assertEqual(separation_thrust_blend(106., 100., 102.), 0.)
+        self.assertEqual(separation_thrust_blend(120., 100., 102., 120.), 0.)
+        self.assertEqual(separation_thrust_blend(123., 100., 102., 120.), .5)
+        self.assertEqual(separation_thrust_blend(126., 100., 102., 120.), 1.)
 
     def test_opt_in_post_booster_coast_keeps_core_off_then_restarts(self):
         engine = SimpleNamespace(thrust_limit=0.0, max_thrust=1000.0)
@@ -520,6 +556,7 @@ class FlightTests(unittest.TestCase):
         sepmotors = [Engine() for _ in range(4)]
         decouplers = [Decoupler() for _ in range(4)]
         fake = SimpleNamespace(
+            vehicle_kind="legacy-liquid", solid_boosters=[],
             liquid_boosters=boosters, sepmotors=sepmotors, booster_decouplers=decouplers,
             separated=False, booster_separation_ut=None, sc=SimpleNamespace(ut=123.0),
             core_groups=[[Engine()], [Engine()]], groups=[],

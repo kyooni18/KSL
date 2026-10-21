@@ -136,6 +136,7 @@ class AttitudeController:
         self._moi = (1.0, 1.0, 1.0)
         self._torque = (1.0, 1.0, 1.0)
         self._last_slow = 0.0
+        self._dynamics_dirty = threading.Event()
         self._running = True
         self._thread = threading.Thread(target=self._run, name='attitude', daemon=True)
         self._thread.start()
@@ -147,6 +148,21 @@ class AttitudeController:
 
     def reset_integral(self):
         self._integral = [0.0, 0.0, 0.0]
+
+    def invalidate_dynamics(self):
+        """Request a topology refresh on the control thread before its next step."""
+        self._dynamics_dirty.set()
+
+    def _update_dynamics(self, now):
+        dirty = self._dynamics_dirty.is_set()
+        if dirty or now-self._last_slow > 0.4:
+            if dirty:
+                # Clear before reading so an invalidation during RPC reads is
+                # retained for the following step too.
+                self._dynamics_dirty.clear()
+                self.reset_integral()
+            self._refresh_slow()
+            self._last_slow = now
 
     def stop(self):
         self._running = False
@@ -180,9 +196,7 @@ class AttitudeController:
                     time.sleep(self.dt)
                     continue
                 idle_written = False
-                if t0-self._last_slow > 0.4:
-                    self._refresh_slow()
-                    self._last_slow = t0
+                self._update_dynamics(t0)
                 self._step()
             except Exception:
                 pass

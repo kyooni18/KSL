@@ -895,6 +895,13 @@ class Shuttle:
             not engine_has_fuel(engine) for engine in self.solid_boosters)
 
     def _separate_boosters(self):
+        if self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters:
+            # Burnout removes the balancing SRB moment. Apply the clearance
+            # cap before detachment, rather than slewing down from ~90% while
+            # the lighter vehicle is already flying on canted SSMEs alone.
+            for group in self.core_groups:
+                for engine in group:
+                    engine.thrust_limit = min(engine.thrust_limit, POST_SEP_CAP_FLOOR)
         # Cut every controlled booster motor before detaching the full pair.
         for engine in self.liquid_boosters + getattr(self, 'solid_boosters', []):
             try:
