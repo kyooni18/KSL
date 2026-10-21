@@ -90,16 +90,17 @@ class SeparationEnvelopeTests(unittest.TestCase):
         self.assertEqual(observed, [.3])
         self.assertEqual(result, (.3,))
 
-    def test_thrust_cant_blend_is_continuous_at_separation_and_roll(self):
+    def test_thrust_cant_blend_waits_for_hold_then_is_continuous_through_roll(self):
         self.assertEqual(separation_thrust_blend(100., 100.), 0.)
-        self.assertEqual(separation_thrust_blend(102., 100.), .5)
-        self.assertEqual(separation_thrust_blend(104., 100.), 1.)
-        # An early roll starts during the separation blend, without a step.
-        self.assertEqual(separation_thrust_blend(102., 100., 102.), .5)
-        self.assertEqual(separation_thrust_blend(106., 100., 102.), 0.)
-        self.assertEqual(separation_thrust_blend(120., 100., 102., 120.), 0.)
-        self.assertEqual(separation_thrust_blend(123., 100., 102., 120.), .5)
-        self.assertEqual(separation_thrust_blend(126., 100., 102., 120.), 1.)
+        self.assertEqual(separation_thrust_blend(104.999, 100.), 0.)
+        self.assertEqual(separation_thrust_blend(105., 100.), 0.)
+        self.assertEqual(separation_thrust_blend(107., 100.), .5)
+        self.assertEqual(separation_thrust_blend(109., 100.), 1.)
+        self.assertEqual(separation_thrust_blend(107., 100., 107.), .5)
+        self.assertEqual(separation_thrust_blend(111., 100., 107.), 0.)
+        self.assertEqual(separation_thrust_blend(120., 100., 107., 120.), 0.)
+        self.assertEqual(separation_thrust_blend(123., 100., 107., 120.), .5)
+        self.assertEqual(separation_thrust_blend(126., 100., 107., 120.), 1.)
 
     def test_opt_in_post_booster_coast_keeps_core_off_then_restarts(self):
         engine = SimpleNamespace(thrust_limit=0.0, max_thrust=1000.0)

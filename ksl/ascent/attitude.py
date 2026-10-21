@@ -109,10 +109,13 @@ class AttitudeController:
         self.nrf = self.vessel.orbit.body.non_rotating_reference_frame
         self._rotation = self.conn.add_stream(self.vessel.rotation, self.nrf)
         self._angvel = self.conn.add_stream(self.vessel.angular_velocity, self.nrf)
+        self._ut = self.conn.add_stream(getattr, self.sc, 'ut')
         self.dt = 1.0/hz
         self.lock = threading.Lock()
         self.forward = None        # target nose direction, inertial (nrf)
         self.roof = None           # target roof (-z) direction, inertial; None = roll free
+        self._hold_until = None
+        self._held_attitude = None
         self.engaged = False
         # tuning
         self.tau = (2.0, 2.0, 2.0)         # attitude time constant per axis (x, y, z), s
@@ -145,6 +148,24 @@ class AttitudeController:
         with self.lock:
             self.forward = _unit(forward)
             self.roof = None if roof is None else _unit(roof)
+
+    def hold_attitude(self, until_ut):
+        """Hold measured nose and roof in inertial space until simulation UT."""
+        rotation = self._rotation()
+        attitude = (qrot(rotation, (0., 1., 0.)), qrot(rotation, (0., 0., -1.)))
+        with self.lock:
+            self._held_attitude = attitude
+            self._hold_until = until_ut
+        return attitude[0]
+
+    def _target_for_step(self):
+        with self.lock:
+            if self._hold_until is not None:
+                if self._ut() < self._hold_until:
+                    return self._held_attitude
+                self._hold_until = None
+                self._held_attitude = None
+            return self.forward, self.roof
 
     def reset_integral(self):
         self._integral = [0.0, 0.0, 0.0]
@@ -203,8 +224,7 @@ class AttitudeController:
             time.sleep(max(0.0, self.dt-(time.monotonic()-t0)))
 
     def _step(self):
-        with self.lock:
-            forward, roof = self.forward, self.roof
+        forward, roof = self._target_for_step()
         q = self._rotation()
         qi = qconj(q)
         w = qrot(qi, self._angvel())

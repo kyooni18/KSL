@@ -13,11 +13,12 @@ LAUNCH_TARGET_G = 1.08
 THROTTLE_SLEW_PER_SECOND = 0.25
 PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
+SEPARATION_ATTITUDE_HOLD_SECONDS = 5.0
 
 
 def separation_thrust_blend(now, separation_ut, roll_start=None, roll_done=None):
     """Bring in cant compensation continuously across separation and upright roll."""
-    blend = min(1., max(0., (now-separation_ut)/4.))
+    blend = min(1., max(0., (now-separation_ut-SEPARATION_ATTITUDE_HOLD_SECONDS)/4.))
     if roll_done is not None:
         return blend*min(1., max(0., (now-roll_done)/6.))
     if roll_start is not None:

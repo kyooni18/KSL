@@ -29,3 +29,20 @@ and continuous compensation. This is an offline correction based on recorded
 flight evidence. No live validation, kRPC client, launch, warp, or save change
 was performed. Jev was not available. The legacy gravity-turn/PEG path and the
 original elapsed-UT slew fix remain; calculated-ascent optimization is not added.
+
+## User-directed five-second hold
+
+The separation handoff now captures the measured inertial nose and roof and
+holds both for five KSP UT seconds after booster separation. The FCS ignores
+changing guidance targets during this interval, while still actively damping
+rotation. The guidance pitch/heading reference is also held at the captured
+orientation so it does not accumulate a hidden turn during the pause. The
+upright-roll trigger is inhibited throughout the hold, and thrust-cant blending
+starts only after the five seconds expire. Existing dynamic-pressure limits can
+delay the upright roll further. Throttle remains under the separation cap and
+live safety control; this is an attitude hold, not an engine shutdown.
+
+The new controller regression verifies that changing pitch/yaw and roof targets
+cannot override the hold and that release occurs at exactly five simulation
+seconds. Total ascent regression count is now 96 passing tests. No live flight
+was started to verify this behavior.

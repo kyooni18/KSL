@@ -11,7 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -317,6 +317,7 @@ def run(args):
         upright_configured = False
         et_cleared = False
         sep_handled = False
+        separation_hold_direction = None
         ssme_restarts = 0
         ssme_relight_verify_ut = None
         roll_maneuver = None
@@ -531,6 +532,9 @@ def run(args):
                         raise RuntimeError('Mission timeout')
                     altitude = flight.mean_altitude
                     altitude_gain = max(0.0, altitude-launch_altitude)
+                    separation_hold_active = (
+                        shuttle.booster_separation_ut is not None and
+                        conn.space_center.ut-shuttle.booster_separation_ut < SEPARATION_ATTITUDE_HOLD_SECONDS)
                     if state == 'ASCENT' and shuttle.et_attached:
                         core_engines = [e for group in shuttle.core_groups
                                         for e in group]
@@ -596,6 +600,9 @@ def run(args):
                         ap.roll_pid_gains = (0.0, 0.0, 0.0)
                         ap.target_roll = float('nan')
                     target_roll = launch_roll if not mission_roll_commanded else None
+                    if separation_hold_active:
+                        reset_due = False
+                        earthward_mode = True
                     if (reset_due and not roll_reset and
                             flight.dynamic_pressure > args.upright_max_q):
                         # Rolling a winged orbiter in thick air snaps a wing:
@@ -809,6 +816,12 @@ def run(args):
                                                       min(peg_dv, max(0.0, energy_dv))/5.0/G0))
                             except Exception:
                                 peg_dv = None
+                        if separation_hold_active and separation_hold_direction is not None:
+                            held_surface = conn.space_center.transform_direction(
+                                separation_hold_direction, nrf, v.surface_reference_frame)
+                            held_pitch, held_heading = pitch_heading_for_direction(held_surface)
+                            raw_pitch = commanded_pitch = held_pitch
+                            args.heading += wrap_roll(held_heading-args.heading)
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
                             pitch_slew_rate, control_dt)
@@ -944,6 +957,10 @@ def run(args):
                             # Staging happened inside update(): invalidate the FCS
                             # on this tick, not after another slow guidance loop.
                             ap.ctrl.invalidate_dynamics()
+                            separation_hold_direction = ap.ctrl.hold_attitude(
+                                shuttle.booster_separation_ut+SEPARATION_ATTITUDE_HOLD_SECONDS)
+                            separation_hold_active = True
+                            print('Holding separation attitude for 5 s before pitch/yaw/roll changes')
                             sep_handled = True
                         if state == 'ASCENT':
                             solid_boosters_burning = (
