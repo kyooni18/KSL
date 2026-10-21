@@ -15,6 +15,15 @@ PITCH_SLEW_DEG_PER_SECOND = 0.8
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 
 
+def thrust_correction_blend(now, roll_start, roll_done):
+    """Blend thrust-axis compensation out during the roll and back in afterward."""
+    if roll_done is not None:
+        return min(1., max(0., (now-roll_done)/6.))
+    if roll_start is not None:
+        return max(0., 1.-(now-roll_start)/4.)
+    return 1.
+
+
 def maneuver_roll_rate(error_deg, duration_s, limit_deg_s):
     """Bound the maneuver schedule by the operator's physical roll-rate cap."""
     return min(limit_deg_s, max(3.0, min(30.0, 1.4*abs(error_deg)/duration_s)))

@@ -243,6 +243,19 @@ and a small perigee phasing burn that retunes P_semi. `insertionLongitudeDeg` (d
 −60°) is only the pre-flight estimate used to design the ET apoapsis; after MECO the
 plan is recomputed from the measured perigee.
 
+### Precalculated ascent trajectory
+
+STS with solid boosters now defaults to a vehicle-specific prelaunch trajectory
+search. It models mass/CoM depletion, engine trim and authority, staging, aero
+loads, and achievable attitude response, and minimizes propellant while targeting
+both ET insertion apsides. It saves the complete reference beside telemetry and
+tracks it with bounded feedback. See [Preplanned ascent](Preplanned.md) for
+inputs, acceptance checks, calibration limits, and offline replay.
+
+The historical scheduled turn below remains available with
+`--turn-profile scheduled`. Transfer profiles and other vehicle layouts currently
+require that explicit selection.
+
 ### Ascent trajectory following (`ksl/ascent/trajectory.py`)
 
 Recorded flights (e.g. run 20261012T123634Z) lofted to Ap 105 km for an 85 km target

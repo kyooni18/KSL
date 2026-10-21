@@ -7,7 +7,7 @@ name = "ksl"
 version = "1.0.0"
 description = "Unified KSP Space Shuttle flight control: launch, ascent, orbit, deorbit, entry, TAEM, landing and rollout"
 requires-python = ">=3.10"
-dependencies = ["krpc>=0.5.4,<0.7", "textual>=0.80"]
+dependencies = ["krpc>=0.5.4,<0.7", "textual>=0.80", "scipy>=1.15,<2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

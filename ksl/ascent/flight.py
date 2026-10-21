@@ -11,7 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, thrust_correction_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -257,6 +257,34 @@ def run(args):
         if shuttle.boosters:
             nominal_burn = shuttle.booster_nominal_burn_time()
             print(f'Booster full-throttle burn estimate at current pressure: {nominal_burn:.1f} s')
+        preplanned = None
+        if getattr(args, 'turn_profile', 'optimized') == 'optimized':
+            from .preplan import optimize
+            from .preplan_vehicle import snapshot
+            if args.transfer:
+                raise ValueError('Transfer profiles require --turn-profile scheduled until transfer optimization is supported')
+            if args.plane_target:
+                # Resolve the plane before optimization without consuming the
+                # launch window while the offline search is running.
+                from . import orbit_math as om
+                r_target, v_target = plane_target_state(conn.space_center, body, args.plane_target)
+                normal = om.unit(om.cross(om.from_krpc(r_target), om.from_krpc(v_target)))
+                args.inclination = math.degrees(math.acos(max(-1., min(1., normal[2]))))
+            model = snapshot(shuttle, args)
+            print(f'Precalculating ascent: {model.initial_mass/1000:.1f} t; '
+                  f'Cd*A {model.drag_area:.1f} m2 ({model.drag_source})')
+            preplanned = optimize(model, args.orbit, args.meco_periapsis)
+            plan_path = args.telemetry + '.trajectory.json'
+            preplanned.save(plan_path, model)
+            end = preplanned.samples[-1]
+            print(f'Ascent trajectory: {end.time:.1f} s; '
+                  f'{preplanned.propellant/1000:.1f} t propellant; '
+                  f'Ap/Pe {end.apoapsis/1000:.2f}/{end.periapsis/1000:.2f} km; '
+                  f'feasible={preplanned.feasible}; saved {plan_path}')
+            emit_event('ascent-plan', feasible=preplanned.feasible, path=plan_path,
+                       propellant_kg=preplanned.propellant, duration_s=end.time)
+            if not preplanned.feasible:
+                raise ValueError(f'No feasible prelaunch ascent trajectory: {preplanned.violations}')
         if not args.launch:
             emit_event('preflight', ok=True)
             print('Read-only preflight complete. Use --launch to fly.')
@@ -275,6 +303,8 @@ def run(args):
                              stream_port=args.stream_port)
         control = v.control
         started = conn.space_center.ut
+        trajectory_epoch = None
+        trajectory_finished_reported = False
         state = 'ASCENT'
         next_report = 0
         mission_roll = 0.0
@@ -362,7 +392,7 @@ def run(args):
             launch_altitude = flight.mean_altitude
             print(f'Pad roll {launch_roll:.1f} deg; physical heads-down roll starts after '
                   f'+{args.roll_start:.0f} m climb; manual roll cap {args.roll_rate:.1f} deg/s; '
-                  f'gravity turn uses prograde-AoA guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
+                  f'gravity turn uses {args.turn_profile} guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
             clamps = list(v.parts.launch_clamps)
             # The pad stack is the last intact reference before staging. A wing
             # joint can fail at clamp release, before the first ascent sample.
@@ -515,13 +545,26 @@ def run(args):
                                  'actual_pitch_deg', 'actual_heading_deg', 'target_pitch_deg',
                                  'control_moment_budget_Nm', 'engine_limit_state',
                                  'engine_gimbal_actuation', 'available_torque_Nm',
-                                 'orbit_inclination_deg', 'guidance_dv_mps'])
+                                 'orbit_inclination_deg', 'guidance_dv_mps',
+                                 'trajectory_elapsed_s', 'reference_altitude_m',
+                                 'reference_vertical_speed_mps', 'reference_horizontal_speed_mps',
+                                 'reference_pitch_deg', 'reference_core_limit'])
                 previous_control_ut = None
                 while True:
                     tick = time.monotonic()
                     control_ut = conn.space_center.ut
                     control_dt = control_interval(control_ut, previous_control_ut)
+                    trajectory_elapsed = 0. if trajectory_epoch is None else control_ut-trajectory_epoch
+                    plan_active = (preplanned is not None and
+                                   trajectory_elapsed <= preplanned.samples[-1].time)
                     previous_control_ut = control_ut
+                    if (preplanned is not None and not plan_active and
+                            not trajectory_finished_reported and state == 'ASCENT'):
+                        trajectory_finished_reported = True
+                        emit_event('ascent-reference-ended', elapsed_s=trajectory_elapsed)
+                        print('Ascent reference ended; closed-loop insertion handles remaining orbit error')
+                        if not shuttle.separated:
+                            raise RuntimeError('Boosters still attached after planned insertion time')
                     if conn.space_center.active_vessel != v:
                         raise RuntimeError('Active vessel changed')
                     recovered_autopilot = ensure_autopilot_engaged(control, ap)
@@ -570,6 +613,7 @@ def run(args):
                     if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
                         initial_roll_set = True
                         liftoff_ut = conn.space_center.ut
+                        trajectory_epoch = liftoff_ut
                         print(f'Liftoff: holding pad roll {launch_roll:.1f} deg; physical heads-down roll deferred')
                     earthward_mode, reset_due = earthward_roll_target(
                         initial_roll_set, shuttle.booster_separation_ut,
@@ -660,6 +704,26 @@ def run(args):
                                 else min(args.heading_slew, 0.7), control_dt)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
+                        elif plan_active:
+                            raw_pitch = preplanned.tracking_pitch(
+                                trajectory_elapsed, altitude, flight.vertical_speed,
+                                flight.horizontal_speed+model.rotation_speed*
+                                (model.radius+altitude)/(model.radius+model.pad_altitude))
+                            if flight.dynamic_pressure > 100.:
+                                prograde = math.degrees(math.atan2(
+                                    flight.vertical_speed, max(.5, flight.horizontal_speed)))
+                                alpha = aoa_limit_deg(flight.dynamic_pressure)
+                                nose_offset = 0.
+                                if shuttle.separated:
+                                    nose = v.direction(v.surface_reference_frame)
+                                    offset = thrust_axis_offset(conn, v, v.surface_reference_frame)
+                                    force_direction = tuple(n+o for n, o in zip(nose, offset))
+                                    nose_pitch, _ = pitch_heading_for_direction(nose)
+                                    thrust_pitch, _ = pitch_heading_for_direction(force_direction)
+                                    nose_offset = (nose_pitch-thrust_pitch)*thrust_correction_blend(
+                                        control_ut, roll_reset_ut, shuttle.post_sep_roll_done_ut)
+                                raw_pitch = max(prograde-alpha-nose_offset,
+                                                min(prograde+alpha-nose_offset, raw_pitch))
                         else:
                             raw_pitch = scheduled_turn_pitch(
                                 altitude, reference_apoapsis, flight.vertical_speed,
@@ -676,7 +740,7 @@ def run(args):
                         # slew limiter as the gravity turn. A post-slew clamp
                         # can command an instantaneous 89-to-0 degree jump.
                         pitch_slew_rate = args.pitch_slew
-                        if (not args.transfer and
+                        if (not plan_active and not args.transfer and
                                 v.orbit.apoapsis_altitude >= 0.8*args.orbit and
                                 v.orbit.periapsis_altitude < args.meco_periapsis):
                             # Apoapsis is approaching target: spend the remaining
@@ -693,7 +757,7 @@ def run(args):
                                 - min(15.0, 1.5*ap_excess/1000.0)
                             raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
                             pitch_slew_rate = max(args.pitch_slew, 3.0)
-                        if shuttle.separated:
+                        if shuttle.separated and not plan_active:
                             # Attitude-planned insertion: the burnout point is chosen by
                             # flying the closed loop (PEG, slew, roll hold, limiter ramp,
                             # attitude lag) ahead, so the climb is never left running at a
@@ -752,6 +816,10 @@ def run(args):
                                 pitch_slew_rate = args.post_sep_hold_slew
                             else:
                                 pitch_slew_rate = max(args.pitch_slew, 2.0)
+                        if plan_active and shuttle.separated:
+                            pitch_slew_rate = (args.post_sep_hold_slew
+                                               if shuttle.post_sep_roll_done_ut is None
+                                               else max(args.pitch_slew, 2.0))
                         peg_dv = None
                         energy_done = False
                         peg_phase_g = None
@@ -790,7 +858,8 @@ def run(args):
                                 # velocity-to-be-gained solution only steers heading.
                                 args.heading = slew_value(args.heading, peg_hold[1],
                                                           3.0, control_dt)
-                                pitch_slew_rate = max(pitch_slew_rate, 4.0)
+                                if not plan_active:
+                                    pitch_slew_rate = max(pitch_slew_rate, 4.0)
                                 target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
                                 sma_now = v.orbit.semi_major_axis
                                 energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
@@ -931,9 +1000,14 @@ def run(args):
                             phase_max_g = final_phase_g(
                                 v.orbit.periapsis_altitude, args.meco_periapsis,
                                 min(args.max_g, args.upper_g))
-                            if peg_phase_g is not None:
+                            if peg_phase_g is not None and not plan_active:
                                 phase_max_g = peg_phase_g
                             target_g = min(target_g, phase_max_g)
+                            if plan_active:
+                                planned_limit = preplanned.reference(trajectory_elapsed)['throttle']
+                                full_core = sum(e.max_thrust for group in shuttle.core_groups for e in group)
+                                target_g = min(args.max_g, args.upper_g,
+                                               planned_limit*full_core/max(v.mass*G0, 1.))
                         if shuttle.separated and not sep_handled:
                             # New vehicle: the integrator holds the stack's trim and the
                             # disturbance model the old CoM; start both fresh.
@@ -995,14 +1069,9 @@ def run(args):
                                 # The canted thrust axis sweeps a cone about the nose while
                                 # rolling, so hold the nose itself on target during the upright
                                 # roll and blend the thrust correction back in over 6 s after.
-                                if roll_reset and shuttle.post_sep_roll_done_ut is None:
-                                    # ramp out over 4 s: an instant switch steps the nose 15 deg
-                                    blend = max(0.0, 1.0-(conn.space_center.ut-roll_reset_ut)/4.0)
-                                elif shuttle.post_sep_roll_done_ut is not None:
-                                    blend = min(1.0, (conn.space_center.ut -
-                                                      shuttle.post_sep_roll_done_ut)/6.0)
-                                else:
-                                    blend = 1.0
+                                blend = thrust_correction_blend(
+                                    conn.space_center.ut, roll_reset_ut,
+                                    shuttle.post_sep_roll_done_ut)
                                 raw = tuple(target_direction[i]-blend*offset[i] for i in range(3))
                                 n = math.sqrt(sum(c*c for c in raw)) or 1.0
                                 aim_direction = tuple(c/n for c in raw)
@@ -1180,6 +1249,7 @@ def run(args):
                         except Exception:
                             available_torque = ()
                         emit_telemetry(ut=conn.space_center.ut, state=state, altitude=altitude, apoapsis=v.orbit.apoapsis_altitude, periapsis=v.orbit.periapsis_altitude, mass=v.mass, verticalSpeed=flight.vertical_speed, horizontalSpeed=flight.horizontal_speed, dynamicPressure=flight.dynamic_pressure, gForce=flight.g_force, commandedG=commanded_g, pitch=actual_pitch, heading=actual_heading, roll=actual_roll)
+                        reference = preplanned.reference(trajectory_elapsed) if plan_active else None
                         writer.writerow([conn.space_center.ut, state, altitude,
                                          v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
                                          v.mass, flight.vertical_speed, flight.horizontal_speed,
@@ -1201,7 +1271,10 @@ def run(args):
                                          shuttle.control_moment_budget, engine_limits,
                                          gimbal_actuation, available_torque,
                                          round(math.degrees(v.orbit.inclination), 3),
-                                         '' if peg_dv is None else round(peg_dv, 2)])
+                                         '' if peg_dv is None else round(peg_dv, 2),
+                                         trajectory_elapsed if reference else '',
+                                         *([reference[key] for key in ('altitude', 'radial', 'horizontal', 'pitch', 'throttle')]
+                                           if reference else ['']*5)])
                         log.flush()
                         print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
                         next_report = conn.space_center.ut+2
@@ -1266,6 +1339,10 @@ def main():
                         help='Launch-azimuth turn rate in deg/s after the roll settles')
     parser.add_argument('--heading', type=float, default=None,
                         help='Explicit final launch heading; default derives from --inclination')
+    parser.add_argument('--turn-profile', choices=('optimized', 'scheduled'), default='optimized',
+                        help='Vehicle-specific precomputed minimum-propellant trajectory (default), or historical scheduled turn')
+    parser.add_argument('--plan-drag-area', type=float, default=None,
+                        help='Calibrated ascent Cd*A in m2; default records a geometry-based estimate')
     parser.add_argument('--turn-start', type=float, default=500,
                         help='Altitude in m where the post-roll gravity turn begins; low enough that '
                              'the pitch-over happens at low dynamic pressure, where the q*alpha '
@@ -1356,6 +1433,8 @@ def main():
     parser.add_argument('--telemetry', default='telemetry.csv')
     args = parser.parse_args()
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
+            (args.plan_drag_area is not None and
+             (not math.isfinite(args.plan_drag_area) or args.plan_drag_area <= 0)) or
             args.timeout <= 0 or args.ssme_lead_time < 0 or
             not 0 < args.pitch_slew <= 20 or
             args.roll_reset_delay < 0 or args.roll_start < 0 or
