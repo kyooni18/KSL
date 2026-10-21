@@ -1,0 +1,101 @@
+{
+  "provenance": "Synthetic staged-vehicle experiments, not identified STS or live flight qualification. Coaxial engine mounting; geometry-based inertia and gimbal authority; ideal planar model with attitude lag.",
+  "cases": [
+    {
+      "name": "baseline",
+      "initial_mass_kg": 520000.0,
+      "feasible": true,
+      "parameters": [
+        225.8588632146145,
+        14.503245965009578,
+        57.966224106063585,
+        35.03029766258603,
+        -21.72321104909114,
+        -26.47318578583838,
+        -13.82995844798696
+      ],
+      "propellant_kg": 340216.6749184916,
+      "cutoff": {
+        "time": 225.8588632146145,
+        "altitude": 75823.78462931787,
+        "radial": 51.12234437806315,
+        "horizontal": 2285.1422324943333,
+        "mass": 129783.32508149915,
+        "pitch": -13.82995844798696,
+        "throttle": 0.5941688255384433,
+        "q": 0.0,
+        "apoapsis": 90790.08033741952,
+        "periapsis": 60564.22949760244,
+        "com": [
+          0.0,
+          1.9262875245568658,
+          0.0
+        ],
+        "separated": true
+      },
+      "violations": {
+        "apoapsis_m": 790.0803374195239,
+        "periapsis_m": 564.2294976024423,
+        "q_fraction": 0.0,
+        "g_fraction": 0.0,
+        "trim_fraction": 0.0,
+        "aoa_excess_deg": 0.0,
+        "peak_apoapsis_m": 0.0,
+        "insertion_below_atmosphere_m": 0.0,
+        "failed": 0.0
+      },
+      "evaluations": 5467,
+      "maximum_q_pa": 15230.501388258455,
+      "peak_apoapsis_m": 90790.08033741952,
+      "model_file": "baseline-model.json"
+    },
+    {
+      "name": "payload-plus-10t",
+      "initial_mass_kg": 530000.0,
+      "feasible": true,
+      "parameters": [
+        249.1098903997751,
+        -16.375488319058285,
+        -2.6016144263280445,
+        46.695723131379694,
+        27.409148780985937,
+        -15.323863235224195,
+        -15.074785403961744
+      ],
+      "propellant_kg": 343735.87988270994,
+      "cutoff": {
+        "time": 249.1098903997751,
+        "altitude": 71052.4137239737,
+        "radial": 50.08919552536145,
+        "horizontal": 2300.6618705601227,
+        "mass": 136264.12011730584,
+        "pitch": -15.074785403961744,
+        "throttle": 0.623841791907976,
+        "q": 0.0,
+        "apoapsis": 90545.32863233087,
+        "periapsis": 59970.307089753565,
+        "com": [
+          0.0,
+          2.421767371454148,
+          0.07338689004406508
+        ],
+        "separated": true
+      },
+      "violations": {
+        "apoapsis_m": 545.3286323308712,
+        "periapsis_m": -29.69291024643462,
+        "q_fraction": 0.0,
+        "g_fraction": 0.0,
+        "trim_fraction": 0.0,
+        "aoa_excess_deg": 0.02998611223467762,
+        "peak_apoapsis_m": 0.0,
+        "insertion_below_atmosphere_m": 0.0,
+        "failed": 0.0
+      },
+      "evaluations": 5499,
+      "maximum_q_pa": 15596.984829030474,
+      "peak_apoapsis_m": 90545.32863233087,
+      "model_file": "payload-plus-10t-model.json"
+    }
+  ]
+}
