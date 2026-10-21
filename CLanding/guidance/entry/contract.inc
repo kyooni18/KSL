@@ -104,7 +104,10 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     GeoPoint current_point={t->latitude,t->longitude,t->mean_altitude};
     double alignment_range=great_circle_distance(current_point,alignment_point,ground_radius);
     bool sts_delivery=s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS");
-    if(sts_delivery&&cfg->site.allow_reciprocal_runway){
+    /* The HAC law also wants the approach side: a straight-in cone instead
+       of a 180+ deg overhead turn priced from a supersonic inlet. */
+    bool hac_delivery=s->taem_hac_law&&!strcmp(v->model_id,"STS");
+    if((sts_delivery||hac_delivery)&&cfg->site.allow_reciprocal_runway){
         /* Experimental STS: deliver to the approach side of the runway end
            TAEM will fly.  The 60 deg full test steered for the RW09 aimpoint
            while TAEM chose RW27, and handed over abeam at Mach 2.85 needing a
@@ -185,7 +188,27 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
        Final station, instead of extrapolating MM304's drag profile down to
        Final speed (2026-10-14: handoff 100 km out needing 94 km of path with
        79 km of TAEM reach). */
-    if(cfg->guidance.taem_energy_law&&g->entry_terminal_model){
+    /* HAC law: MM304 delivers the point of MM305's own energy reference at
+       the band-centre Mach (mm305_hac_handoff_state), not a straight-in
+       reach at full drag: the 2026-10-21 live run handed over high and
+       energy-rich on that reach and MM305 overran. */
+    double hac_h=NAN,hac_v=NAN,hac_range=NAN;
+    if(cfg->guidance.taem_hac_law&&g->entry_terminal_model){
+        mm305_hac_observe_aero(g,t);
+        if(mm305_hac_handoff_state(g->entry_terminal_model,&g->taem_hac_live_aero,t->mass,
+               s->mm305_target_mach,&hac_h,&hac_v,&hac_range)&&t->true_air_speed>hac_v){
+            drag_in.taem_velocity=hac_v;
+            drag_in.taem_altitude=hac_h+cfg->site.altitude;
+            double target=hac_range+alignment.distance_m;
+            if(!g->diagnostic_shadow&&!(fabs(target-g->entry_handoff_target_range)<2000.0))
+                fprintf(stderr,"MM304 HAC handoff target: UT %.1f Mach %.2f h %.0f m V %.0f m/s "
+                    "station range %.1f km, site %.1f km\n",t->ut,s->mm305_target_mach,hac_h,hac_v,
+                    hac_range/1000.0,target/1000.0);
+            g->entry_handoff_target_range=target;
+            drag_in.taem_range=hac_range;
+        }
+    }
+    else if(cfg->guidance.taem_energy_law&&g->entry_terminal_model){
         double interface_altitude=s->taem_interface_altitude;
         double sound=planet_atmospheric_speed_of_sound(p,interface_altitude);
         /* Experimental STS budgets the handoff band centre, not its upper

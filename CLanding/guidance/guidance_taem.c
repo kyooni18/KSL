@@ -52,6 +52,55 @@ double mm305_energy_law_handoff_reach(const TerminalModel *model,
     double reach=tel_predict_range(&c,&p,1.0,INFINITY,straight,1);
     return isfinite(reach)&&reach>0.0?reach:NAN;
 }
+
+/* MM304 -> MM305 interface on the HAC law's own energy reference: the point
+   where the reference integrated back from the Final station reaches the
+   handoff Mach.  MM304 delivers that altitude and speed at that path length
+   from the station, so MM305 starts on its reference with a nominal HAC
+   instead of correcting an arbitrary inlet.  Priced on the live-corrected
+   polar the law itself flies. */
+bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *live,
+        double mass_kg,double mach,double *altitude_above_site_m,double *speed_mps,
+        double *station_range_m) {
+    if (!model||!isfinite(mass_kg)||!(mass_kg>0.0)||!isfinite(mach)||!(mach>0.0))
+        return false;
+    static _Thread_local TaemHacReference ref;
+    static _Thread_local const TerminalModel *ref_model;
+    static _Thread_local double ref_mass,ref_live_ut;
+    TaemGeometryState geo={0};
+    geo.runway_along_m=-INFINITY;
+    geo.altitude_above_runway_m=20000.0;
+    geo.airspeed_mps=geo.ground_speed_mps=mach*300.0;
+    HacCtx x;TelPoint pt;
+    hac_context(&x,model,&model->aero,live,&geo,mass_kg,NAN,0.0,&pt);
+    double live_ut=live?live->last_ut:0.0;
+    if (!ref.valid||ref_model!=model||fabs(ref_mass-mass_kg)>0.01*mass_kg||
+            fabs(live_ut-ref_live_ut)>HAC_REF_REBUILD_S*5.0) {
+        hac_reference_build(&ref,&x,live_ut);
+        ref_model=model; ref_mass=mass_kg; ref_live_ut=live_ut;
+    }
+    double prev_mach=NAN;
+    for (int i=0;i<TAEM_HAC_REF_N;++i) {
+        double q,m;
+        tel_air(&x.c,ref.h[i],ref.v[i],&q,&m);
+        if (i>0&&m>=mach&&prev_mach<mach) {
+            double f=(mach-prev_mach)/fmax(1e-9,m-prev_mach);
+            if (altitude_above_site_m) *altitude_above_site_m=ref.h[i-1]+f*(ref.h[i]-ref.h[i-1]);
+            if (speed_mps) *speed_mps=ref.v[i-1]+f*(ref.v[i]-ref.v[i-1]);
+            if (station_range_m) *station_range_m=(i-1+f)*ref.ds;
+            return true;
+        }
+        prev_mach=m;
+    }
+    return false;
+}
+
+/* MM304 measures the polar too: the supersonic bins MM305 prices its HAC
+   with are flown during entry. */
+void mm305_hac_observe_aero(GuidanceMachine *g,const Telemetry *t) {
+    if (g&&t&&g->entry_terminal_model)
+        hac_live_aero_observe(&g->taem_hac_live_aero,&g->entry_terminal_model->aero,t,0.0);
+}
 #include "taem/executive_bridge.inc"
 
 double terminal_energy_commit_tolerance = NAN;

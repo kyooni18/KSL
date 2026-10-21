@@ -7,8 +7,8 @@ static double entry_policy_handoff_distance(const EntryPrediction *f,const Plane
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     /* Experimental STS hands over at the band centre (guidance_terminal.c). */
     double mach_handoff=cfg->guidance.mm305_target_mach+
-        (cfg->guidance.sts_trajectory_delivery&&!strcmp(cfg->vehicle.model_id,"STS")?
-         0.0:cfg->guidance.mm305_mach_half_width);
+        ((cfg->guidance.sts_trajectory_delivery||cfg->guidance.taem_hac_law)&&
+         !strcmp(cfg->vehicle.model_id,"STS")?0.0:cfg->guidance.mm305_mach_half_width);
     double prev_excess=NAN,prev_range=NAN;
     for(size_t i=0;i<f->trajectory.count;++i){
         const TrajectoryPoint *pt=&f->trajectory.points[i];
@@ -338,7 +338,8 @@ static void *terminal_prediction_worker(void *arg){
                ceiling) at the target site distance. More bank sheds more
                energy and hands off further out, so the miss is monotone. */
             double target=guidance.entry_handoff_target_range;
-            if(cfg.guidance.taem_energy_law&&isfinite(target)&&isfinite(telemetry.range_to_site)){
+            if((cfg.guidance.taem_energy_law||cfg.guidance.taem_hac_law)&&isfinite(target)&&
+               isfinite(telemetry.range_to_site)){
                 double aoa=guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
                     guidance.entry_alpha_target:telemetry.angle_of_attack;
                 double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
@@ -347,8 +348,8 @@ static void *terminal_prediction_worker(void *arg){
                 double sound_floor=planet_atmospheric_speed_of_sound(&planet,cfg.guidance.mm305_max_altitude);
                 /* Experimental STS hands over at the band centre (guidance_terminal.c). */
                 double mach_handoff=cfg.guidance.mm305_target_mach+
-                    (cfg.guidance.sts_trajectory_delivery&&!strcmp(cfg.vehicle.model_id,"STS")?
-                     0.0:cfg.guidance.mm305_mach_half_width);
+                    ((cfg.guidance.sts_trajectory_delivery||cfg.guidance.taem_hac_law)&&
+                     !strcmp(cfg.vehicle.model_id,"STS")?0.0:cfg.guidance.mm305_mach_half_width);
                 double bound=2.0*telemetry.range_to_site/fmax(1.0,mach_handoff*sound_floor);
                 for(int iteration=0;;++iteration){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);

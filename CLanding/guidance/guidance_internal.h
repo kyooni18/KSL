@@ -117,6 +117,10 @@ bool entry_taem_tangent_target_geometry(const TaemInterfaceTarget*q,
         const LandingConfiguration*cfg);
 double mm305_energy_law_handoff_reach(const struct TerminalModel *model,
         double altitude_above_site_m,double speed_mps,double mass_kg);
+bool mm305_hac_handoff_state(const struct TerminalModel *model,const TaemHacLiveAero *live,
+        double mass_kg,double mach,double *altitude_above_site_m,double *speed_mps,
+        double *station_range_m);
+void mm305_hac_observe_aero(GuidanceMachine *g,const Telemetry *t);
 GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         const VehicleState*state,double course,const PlanetModel*p,AerodynamicModel aero,
         const LandingConfiguration*cfg,double dt);

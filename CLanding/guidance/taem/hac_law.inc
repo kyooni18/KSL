@@ -36,6 +36,7 @@ enum { TAEM_HAC_PHASE_STURN=0, TAEM_HAC_PHASE_ACQ, TAEM_HAC_PHASE_HAC, TAEM_HAC_
 #define HAC_RF_RATE 15.0
 /* reference L/D as a fraction of the maximum (front side of the polar) */
 #define HAC_LD_FRACTION 0.9
+#define HAC_STATION_MARGIN_M 300.0
 #define HAC_BANK_SIZING 55.0
 #define HAC_OGS_FULL_M 1500.0
 #define HAC_OGS_BLEND_M 5000.0
@@ -208,9 +209,12 @@ static void hac_reference_build(TaemHacReference *R,const HacCtx *x,double ut) {
     R->mass=x->mass;
     R->built_ut=ut;
     hac_reference_incidence(R,x);
-    R->e[0]=x->c.e_station;
+    /* Deliver a small surplus as speed on the glide: a shortfall at the
+       station is unrecoverable (Final stretches into the stall), a surplus is
+       Final's speedbrake trim. */
+    R->e[0]=x->c.e_station+HAC_STATION_MARGIN_M;
     R->h[0]=x->c.h_station;
-    R->v[0]=x->c.v_station;
+    R->v[0]=sqrt(2.0*TEL_G0*(R->e[0]-R->h[0]));
     for (int i=1;i<TAEM_HAC_REF_N;++i) {
         double s=(i-1)*R->ds,e=R->e[i-1];
         double k1=hac_eta(x,R,e,s,0.0);
@@ -540,7 +544,7 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
         /* the turn angle only shrinks along the HAC; a vehicle cut inside
            the cone must not wind it up by whole turns */
         if (isfinite(H->last_ang)) H->psi=clampd(H->psi-H->side*tel_wrap(ang-H->last_ang),
-            0.0,H->psi+0.02);
+            0.0,H->psi);
         H->last_ang=ang;
         double e_hac;
         hac_reference_at(&H->ref,hac_arc_length(H->rf,H->psi),&e_hac,NULL,NULL,NULL,NULL);
@@ -560,14 +564,18 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
             double rf_min=fmax(fmax(HAC_RF_MIN,x->c.v_station*x->c.v_station/
                 (TEL_G0*tan(50.0*DEG2RAD))),s->v*s->v/(TEL_G0*tan(HAC_BANK_SIZING*DEG2RAD))-
                 HAC_R2*H->psi*H->psi);
+            /* the floor is approached at the same rate: a jump moves the
+               centre under the vehicle */
+            rf_target=clampd(rf_target,rf_min,HAC_RF_MAX);
             double rf_new=clampd(H->rf+clampd(0.15*(rf_target-H->rf),-HAC_RF_RATE,HAC_RF_RATE)*dt,
-                rf_min,HAC_RF_MAX);
+                HAC_RF_MIN,HAC_RF_MAX);
             /* the exit point stays on the runway line; re-derive the turn
                angle about the moved centre, unwrapped next to the old one */
+            double moved=fabs(rf_new-H->rf)/fmax(1.0,H->rf);
             H->rf=rf_new;
             double p=hac_point_psi(H->side,H->rf,D,s->x,s->y);
             p+=2.0*TEL_PI*round((H->psi-p)/(2.0*TEL_PI));
-            H->psi=fmax(0.0,p);
+            H->psi=clampd(p,0.0,H->psi+moved);
             H->last_ang=atan2(s->y-H->side*H->rf,s->x-cx);
         }
         double rc=hypot(s->x-cx,s->y-H->side*H->rf);

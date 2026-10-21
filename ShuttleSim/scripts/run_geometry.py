@@ -7,9 +7,9 @@ import re
 
 
 def energy_law_runway_end(text: str) -> int | None:
-    """Read both archived and timestamped native runway commitments."""
+    """Read both archived and timestamped native runway commitments (energy or HAC law)."""
     ends = re.findall(
-        r"^MM305 energy-law runway end: (?:UT \S+ )?RW\S+ end=([01])\b",
+        r"^MM305 (?:energy-law|HAC) runway end: (?:UT \S+ )?RW\S+ end=([01])\b",
         text, re.MULTILINE,
     )
     return int(ends[-1]) if ends else None
