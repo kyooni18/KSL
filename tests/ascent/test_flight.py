@@ -17,7 +17,7 @@ from ksl.ascent.flight import (Shuttle, ascent_pitch, ascent_target_g, attitude_
                             ensure_autopilot_engaged, pause_structural_failure,
                             release_controls, roll_for_heading,
                             run, set_autopilot_engaged, validate_launch_vessel,
-                            restore_unexpected_ssme_shutdown)
+                            restore_unexpected_ssme_shutdown, control_interval)
 from ksl.ascent.guidance import post_booster_master_throttle
 from ksl.ascent.vehicle import delay_booster_separation
 
@@ -255,6 +255,21 @@ class FlightTests(unittest.TestCase):
         self.assertAlmostEqual(slew_value(.5, 1.0, .25, .1), .525)
         self.assertAlmostEqual(slew_value(.5, 0.0, .25, .1), .475)
         self.assertAlmostEqual(slew_value(.5, .51, .25, .1), .51)
+
+    def test_ascent_slew_tracks_simulation_time_despite_slow_rpc_or_pause(self):
+        # The live 90 km ascent turned at only ~0.2 deg/s with a configured
+        # 0.8 deg/s because each slow RPC cycle used a nominal 0.1 s step.
+        for times in ([0, .1, .2, .3, .4, .5, 1, 2, 3, 4, 5],
+                      [0, .7, 1.9, 1.9, 3.2, 5]):
+            pitch, throttle, previous = 89.0, .3, None
+            for ut in times:
+                dt = control_interval(ut, previous)
+                pitch = slew_value(pitch, 45.0, .8, dt)
+                throttle = slew_value(throttle, 1.0, .1, dt)
+                previous = ut
+            self.assertAlmostEqual(pitch, 85.0)
+            self.assertAlmostEqual(throttle, .8)
+        self.assertEqual(control_interval(99, 100), 0)
 
 
     def test_vector_slew_uses_one_interpolation_factor(self):

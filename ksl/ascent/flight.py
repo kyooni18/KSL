@@ -15,6 +15,14 @@ from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DY
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
+def control_interval(current_ut, previous_ut):
+    """Simulation seconds available to guidance since its previous update.
+
+    RPC latency and KSP physics speed determine the actual update rate; --hz
+    only limits polling. Pauses and clock rewinds must not advance commands.
+    """
+    return 0.0 if previous_ut is None else max(0.0, current_ut-previous_ut)
+
 
 def validate_launch_vessel(vessel, space_center):
     if vessel.name not in ('STS', 'STS-N'):
@@ -508,8 +516,12 @@ def run(args):
                                  'control_moment_budget_Nm', 'engine_limit_state',
                                  'engine_gimbal_actuation', 'available_torque_Nm',
                                  'orbit_inclination_deg', 'guidance_dv_mps'])
+                previous_control_ut = None
                 while True:
                     tick = time.monotonic()
+                    control_ut = conn.space_center.ut
+                    control_dt = control_interval(control_ut, previous_control_ut)
+                    previous_control_ut = control_ut
                     if conn.space_center.active_vessel != v:
                         raise RuntimeError('Active vessel changed')
                     recovered_autopilot = ensure_autopilot_engaged(control, ap)
@@ -645,7 +657,7 @@ def run(args):
                                 args.heading, heading_goal,
                                 3.0 if flight.dynamic_pressure < 1500.0
                                 else args.heading_slew if flight.dynamic_pressure < 5000.0
-                                else min(args.heading_slew, 0.7), 1/args.hz)
+                                else min(args.heading_slew, 0.7), control_dt)
                         if roll_requires_authority or altitude < turn_start_altitude:
                             raw_pitch = initial_pitch
                         else:
@@ -777,7 +789,7 @@ def run(args):
                                 # Pitch stays with the closed-loop PEG above; this
                                 # velocity-to-be-gained solution only steers heading.
                                 args.heading = slew_value(args.heading, peg_hold[1],
-                                                          3.0, 1/args.hz)
+                                                          3.0, control_dt)
                                 pitch_slew_rate = max(pitch_slew_rate, 4.0)
                                 target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
                                 sma_now = v.orbit.semi_major_axis
@@ -799,7 +811,7 @@ def run(args):
                                 peg_dv = None
                         commanded_pitch = slew_value(
                             commanded_pitch, raw_pitch,
-                            pitch_slew_rate, 1/args.hz)
+                            pitch_slew_rate, control_dt)
                         pitch = commanded_pitch
                         target_pitch = pitch
                         target_direction = direction_for_pitch_heading(pitch, args.heading)
@@ -930,7 +942,7 @@ def run(args):
                             sep_handled = True
                         result = shuttle.update(
                             max_g=args.max_g, target_g=target_g, altitude=altitude,
-                            dt=1/args.hz, throttle_slew=args.throttle_slew,
+                            dt=control_dt, throttle_slew=args.throttle_slew,
                             dynamic_pressure=flight.dynamic_pressure,
                             separation_max_q=args.booster_separation_max_q,
                             post_booster_coast_seconds=args.post_booster_coast_seconds)
