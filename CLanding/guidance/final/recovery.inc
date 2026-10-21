@@ -228,6 +228,7 @@ static double observed_signed_roll_rate(const Telemetry *t) {
                 pitch_saturated,yaw_saturated);
         g->attitude_recovery = true;
         g->recovery_duration = g->control_good_duration = 0;
+        g->recovery_pitch_trim = t->has_controls&&isfinite(t->control_pitch)?t->control_pitch:0.0;
         /* Recovery is an aerodynamic attitude-unload maneuver, not a hold of
            whatever heading happened to exist when the upset was detected.
            Preserve the prograde surface direction so that, once roll/yaw
@@ -267,13 +268,29 @@ static double observed_signed_roll_rate(const Telemetry *t) {
        pulse as instability kept control_good_duration pinned at zero until
        the 15 s recovery timeout aborted an otherwise recovered vehicle. */
     bool destabilizing_roll_saturation = roll_saturated && !roll_rate_braking;
-    bool destabilizing_pitch_saturation = pitch_saturated &&
+    /* Holding the recovery incidence supersonic takes a steady 0.35-0.5
+       elevator: that is trim, not saturation.  L7 sat settled (roll < 1 deg,
+       rates < 2 deg/s, AoA 8.5 for 10) on 0.36-0.49 elevator while the
+       braking exemption flickered with a 1.8 deg/s pitch wobble, so release
+       never held 2 s and recovery timed out.  Count saturation as deflection
+       well away from the measured trim, or at the stop. */
+    if (t->has_controls&&isfinite(t->control_pitch))
+        g->recovery_pitch_trim+=dt/(3.0+dt)*(t->control_pitch-g->recovery_pitch_trim);
+    bool pitch_off_trim = t->has_controls && (fabs(t->control_pitch)>=.95 ||
+        fabs(t->control_pitch-g->recovery_pitch_trim)>=.35);
+    bool destabilizing_pitch_saturation = pitch_saturated && pitch_off_trim &&
         !corrective_pitch_saturation && !pitch_rate_braking;
     bool destabilizing_yaw_saturation = !hac_control_tuning && yaw_saturated &&
         (sideslip > 8 || body_yaw_rate > 5);
     bool stable = pitch_captured&&roll_rate < 5 && pitch_rate < 5 && fabs(norm_signed_deg(t->roll)) < 10 &&
         (!aero_loaded || (sideslip < 8 && !destabilizing_roll_saturation &&
             !destabilizing_pitch_saturation && !destabilizing_yaw_saturation));
+    if(!g->diagnostic_shadow&&getenv("KSP_LANDER_RECOVERY_TRACE"))fprintf(stderr,
+        "RECOVERY_TRACE ut=%.2f aoa=%.2f rec=%.1f tgt=%.2f roll=%.2f rr=%.2f pr=%.2f beta=%.2f ctl=%.3f/%.3f/%.3f cap=%d psat=%d corr=%d brake=%d rsat=%d rbrake=%d ysat=%d good=%.2f dur=%.2f\n",
+        t->ut,t->angle_of_attack,recovery_aoa,target_aoa,t->roll,roll_rate,pitch_rate,sideslip,
+        t->control_pitch,t->control_roll,t->control_yaw,pitch_captured,pitch_saturated,
+        corrective_pitch_saturation,pitch_rate_braking,roll_saturated,roll_rate_braking,
+        destabilizing_yaw_saturation,g->control_good_duration,g->recovery_duration);
     g->control_good_duration = stable ? g->control_good_duration + dt : 0;
     if (g->control_good_duration >= 2) {
         g->attitude_recovery = false;

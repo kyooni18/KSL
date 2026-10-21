@@ -90,3 +90,17 @@ MM305 under `taemHeadingAlignmentCone` now starts in a **drag-energy phase** whe
 **L7.** The scenario's plant collapses from the logged 27.5 deg AoA to -1 deg in the first second, and attitude recovery triggers at 0.4 s in both versions. Whether recovery releases within 15 s depends chaotically on the first tick's roll target (0.6 deg bank difference). The committed code released at 11 s; this version times out, and bounded recovery flies wings level to Mach 0.34. The drag law's own commands (stepped or slewed) do not change the outcome.
 
 **Open.** On an earlier paced 70 km run, Final was held by `terminal_preflare_alignment_valid` ("runway capture gate") from the 9.5 km station to 4.4 km. The prefinal weaves a few hundred metres across the centreline, and Final then flew a 30 deg dive into a short preflare. The final run handed over at 5.9 km.
+
+## Attitude-recovery release: trim is not saturation (L7)
+
+L7's start transient (the plant drops from 27.5 deg to -1 deg AoA in a second) triggers recovery in every version. `KSP_LANDER_RECOVERY_TRACE=1` shows the vehicle settled from UT 6580: roll < 1 deg, roll rate 0.05 deg/s, AoA 8-8.5 deg for the 10 deg recovery target. But holding that at Mach 2.5 takes a steady 0.36-0.49 elevator. Release counted |elevator| >= 0.35 as saturation, and the braking exemption flickered with a +-1.8 deg/s pitch wobble. So the 2 s stable timer never held, and recovery timed out at 15 s. The committed code escaped it by chance.
+
+Release now measures the elevator trim during recovery (3 s mean). Pitch saturation counts only as deflection 0.35 or more away from that trim, or at the stop (0.95). The trigger logic is unchanged.
+
+| Scenario | Before | After |
+|---|---|---|
+| L7 | recovery timeout, 1.77 km short | recovery releases at 14 s; on runway, 70.7 m/s, **sink 3.31 (fails the 3.0 gate)** |
+| L5 | pass 56.0 / 1.71 | pass 67.4 / 1.61 |
+| quicksave MM305, 45 km, MM305 replay, final-aligned | as above | unchanged |
+
+L7's remaining failure is the late Final handoff. The HAC is captured from 860 m inside the spiral at 16 deg to go, and flown wings level to an exit 470 m off the line. The runway-line law then closes that offset with a ~25 s time constant, so Final's pavement-projection gate holds until 5.2 km. Final then dives steeply (87 m/s sink) into the flare.

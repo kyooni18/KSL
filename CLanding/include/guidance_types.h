@@ -377,6 +377,7 @@ typedef struct {
     double preflare_predicted_kinetic_margin, preflare_effective_accel;
     double preflare_response_time, preflare_plan_source_ut;
     bool attitude_recovery; double control_bad_duration, control_good_duration, recovery_duration, recovery_heading, recovery_aoa;
+    double recovery_pitch_trim; /* measured elevator trim during recovery (3 s mean) */
     /* Roll-limit-cycle monitor.  Unlike the ordinary departure detector this
        tracks repeated high-energy relative-rate reversals even when each
        instantaneous aileron command is correctly signed as braking. */
