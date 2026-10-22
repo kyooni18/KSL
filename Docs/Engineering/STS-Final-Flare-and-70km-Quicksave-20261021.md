@@ -145,3 +145,32 @@ Commit 0d6f9f7. L7's late Final handoff came from the HAC capture, not from Fina
 - **Past-station reference on the outer glide at constant speed.** It assumed shedding 0.36 m/m. The live eta at station conditions is 0.65-0.76 m/m: this airframe cannot hold 165 m/s on a 20 deg glide. TAEM then delivered the vehicle diving 22.6 deg at the station energy, and Final's range stretch bled the flare to 77 m/s (quicksave MM305, sink 3.8).
 - **Forecasting Final's touchdown along the aim line instead of the present path.** The quicksave pass it gave came from forecasting a line shallower than the best glide. Bounded by the best glide it fails again (3.79), and unbounded it broke the genuine range-short parity test.
 - **Open.** With Final at the station, Final's own range-stretch logic now has 8 km to act on, where it had 5 km before. The TAEM-to-Final energy margin at the station deserves its own look.
+
+## TAEM-to-Final energy at the station
+
+Commit bc0a2c5. The live 86 km flight reached the station 1.3 km of energy low. The vehicle was on altitude but stretching at 108 m/s. The live trace shows where that energy went:
+
+| Mechanism | Evidence | Fix |
+|---|---|---|
+| The drag target priced the supersonic flight still to come at the subsonic glide slope | Reference past the gate: 0.61 m/m (sim). Mach 1.6 to 1.0 live cost 9.1 km over 7.0 km (1.29 m/m); supersonic L/D is under 1. | Target += (eta_sup - slope) * d, where d = (V^2 - V1^2) / (2 g eta_sup) and eta_sup is 1/(L/D) at the live polar's best L/D at the mid Mach. |
+| Short of the target, the drag law pulled to hold its descent to the gate altitude | Live AoA 17-22 deg from Mach 1.5 to 1.0 with dE -4 to -14 km | Short: cap at the live polar's best-L/D incidence and let the path steepen (not past -30 deg), as `hac_vertical` does subsonic. |
+| The live drag ratio leaked across Mach 1 | kD 1.28 measured at Mach 1.0-1.25 was lent to Mach 0.9. Live post-gate reference: 0.94 m/m at Mach 1, against 0.485 m/m flown from Mach 1 to the station. | `hac_kappa` borrows only from measured bins on the same side of Mach 1. |
+
+ShuttleSim's aero matches the table (kD 1.00), so the third fix is live-only and the second is mostly live-only.
+
+New scenario `sts-kerbin-20261022-live-orbit86-mm305`: the live handoff state, with the mass estimated from the orbit mass less the burn.
+
+| Scenario | Before | After |
+|---|---|---|
+| live-orbit86 MM305 handoff | station -740 m, Final at 110 m/s; sink 3.72-3.87 (fail) | station -2 m, 175 m/s; **pass** 62.9 / 2.95 |
+| 70 km quicksave, 2x pacing (KSP closed) | pass 64.8 / 2.47 | pass 64.7 / **2.09** |
+| L7 | pass 79.9 / 1.73 | pass 81.7 / 1.99 |
+| quicksave MM305, L5 | pass | unchanged |
+| MM304 45 km, MM305 live-failure replay | 2.6 / 3.0 km short | 1.8 / 1.8 km short |
+| final-aligned | fail | unchanged |
+
+**Still open.**
+
+- **45 km and the replay are a different failure.** MM304 hands off supersonic only 32-39 km out with a huge surplus (+38 km on 45 km). The vehicle overflies the field and loses its energy in a 130-150 deg turn back.
+- **The post-gate reference is still the fast glide.** It extends at 0.61 m/m, while the vehicle flies the subsonic leg at about 0.49. That errs high, toward a surplus, which the subsonic speedbrake absorbs.
+- **The live fixes are unverified live.** They are not yet flown; the live drag factors cannot be reproduced in ShuttleSim.
