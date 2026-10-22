@@ -86,7 +86,10 @@ static int hac_bin(double mach) {
 }
 
 /* Live/recorded ratio at this Mach: the bin's own measurement, else the
-   nearest measured bin fading toward the polar with Mach distance. */
+   nearest measured bin on the same side of Mach 1, fading toward the polar
+   with Mach distance.  A transonic drag rise is no property of the subsonic
+   polar: live, kD 1.28 measured at Mach 1.0-1.25 was lent to Mach 0.9 and
+   steepened the subsonic reference to 0.94 m/m (flown: 0.49). */
 static double hac_kappa(const TaemHacLiveAero *A,double mach,bool lift) {
     if (!A) return 1.0;
     int b=hac_bin(mach);
@@ -95,6 +98,7 @@ static double hac_kappa(const TaemHacLiveAero *A,double mach,bool lift) {
     double best=INFINITY,value=1.0;
     for (int i=0;i<TAEM_HAC_KAPPA_BINS;++i) {
         if (!(A->weight[i]>0.0&&r[i]>0.0)) continue;
+        if (((i+0.5)*0.25<1.0)!=(mach<1.0)) continue;
         double dm=fabs(mach-(i+0.5)*0.25);
         if (dm<best) { best=dm; value=r[i]; }
     }
@@ -142,6 +146,16 @@ static double hac_lift_aoa_to(const HacCtx *x,double mach,double q,double lift_n
         if (cl*q*area<lift_needed) lo=mid; else hi=mid;
     }
     return 0.5*(lo+hi);
+}
+/* Incidence of the live-corrected polar's best L/D, up to `hi`. */
+static double hac_best_ld_aoa(const HacCtx *x,double mach,double hi) {
+    double best_aoa=hi,best=-INFINITY;
+    for (double a=TEL_AOA_MIN;a<=hi+1e-9;a+=0.25) {
+        double cl,cd;
+        hac_aero(x,mach,a,&cl,&cd);
+        if (cd>1e-4&&cl/cd>best) { best=cl/cd; best_aoa=a; }
+    }
+    return best_aoa;
 }
 static double hac_lift_aoa(const HacCtx *x,double mach,double q,double lift_needed) {
     return hac_lift_aoa_to(x,mach,q,lift_needed,x->c.aoa_max);
@@ -621,6 +635,21 @@ static void hac_drag_path(const TaemHacLawState *H,const HacCtx *x,const TelPoin
         }
         if (!isfinite(best_e)||e<best_e) { best=len; best_e=e; bx=tx; by=ty; }
     }
+    /* The supersonic flight still to come is priced at its own rate, not the
+       subsonic glide's: from Mach M the speed down to Mach 1 is shed at best
+       the polar's 1/(L/D) per metre (L/D under 1).  Priced at the 0.6 m/m
+       glide, a live-orbit handoff reached Mach 1 short and the station
+       0.7-1.3 km low. */
+    double q,mach;
+    tel_air(&x->c,s->h,s->v,&q,&mach);
+    if (mach>1.0) {
+        double m_mid=0.5*(mach+1.0),cl,cd;
+        hac_aero(x,m_mid,hac_best_ld_aoa(x,m_mid,hac_drag_aoa_ceiling(x,m_mid)),&cl,&cd);
+        double eta_sup=cl>1e-3?cd/cl:1.0,v1=s->v/mach,slope;
+        hac_reference_at(&H->ref,best,NULL,NULL,NULL,NULL,&slope);
+        double d=(s->v*s->v-v1*v1)/(2.0*TEL_G0*fmax(0.3,eta_sup));
+        best_e+=fmax(0.0,eta_sup-slope)*d;
+    }
     *s_go=best;
     *e_tgt=best_e;
     /* before the gate: the centreline ahead, never back to the gate point,
@@ -693,6 +722,12 @@ static void hac_drag_command(TaemHacLawState *H,const HacCtx *x,const TelPoint *
     }
     double need=lift_v/fmax(0.2,cos(bank*DEG2RAD));
     if (lift<need) aoa=fmax(aoa,fmin(a_max,hac_lift_aoa_to(x,mach,q,need,ceiling)));
+    /* Energy short of the path: the descent steepens rather than pulling
+       past best L/D to hold it.  Live, 17-22 deg held the descent to the
+       gate from Mach 1.5 to 1 at 1.29 m/m (L/D under 1) and the vehicle
+       reached the station 1.3 km low. */
+    if (hac_energy(s)<e_tgt&&s->g>-30.0*DEG2RAD)
+        aoa=fmin(aoa,fmax(TEL_AOA_MIN,hac_best_ld_aoa(x,mach,ceiling)));
     double lift_now,drag_now;
     tel_forces(&x->c,s,s->aoa,&q,&mach,&lift_now,&drag_now);
     lim=entry_bank_authority_limit(s->v,q,lift_now/(s->m*TEL_G0),&x->c.model->vehicle,lim);
