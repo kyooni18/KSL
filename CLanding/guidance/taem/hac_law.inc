@@ -51,6 +51,7 @@ enum { TAEM_HAC_PHASE_DRAG=0, TAEM_HAC_PHASE_STURN, TAEM_HAC_PHASE_ACQ, TAEM_HAC
 #define HAC_KAPPA_REACH 1.5
 #define HAC_KAPPA_TAU_S 6.0
 #define HAC_GPHI 2.5
+#define HAC_BANK_OUTWARD 30.0
 #define HAC_RERRLM 2100.0
 #define HAC_STURN_MIN_RANGE 15000.0
 #define HAC_STURN_MAX_PSI (200.0*DEG2RAD)
@@ -557,7 +558,8 @@ static double hac_lateral_left(TaemHacLawState *H,const HacCtx *x,const TelPoint
         double rdot_ref=-vh*2.0*HAC_R2*H->psi/fmax(1.0,r);
         /* wn 0.074, zeta 1.5; centrifugal feed-forward */
         double acc=vh*vh/r+0.0055*(rc-r)+0.222*(rdot-rdot_ref);
-        bank=H->side*clampd(atan(acc/(TEL_G0*cos(s->g)))*RAD2DEG,0.0,lim);
+        /* outward bank too: inside the spiral, wings level cuts the chord */
+        bank=H->side*clampd(atan(acc/(TEL_G0*cos(s->g)))*RAD2DEG,-HAC_BANK_OUTWARD,lim);
     } else {
         double ydot=vh*sin(s->psi);
         double acc=-(0.0225*s->y+0.219*ydot);   /* wn 0.15, zeta 0.73 */
@@ -739,14 +741,21 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
         double psi_j=acq.valid?acq.psi_t:hac_point_psi(H->side,H->rf,D,s->x,s->y);
         /* ... and flying round it the HAC's way, within 60 deg of its tangent */
         double along_hac=tel_wrap(s->psi-(atan2(s->y-cy,s->x-cx)+H->side*0.5*TEL_PI));
-        bool inside=(!acq.valid||rc<1.1*hac_radius_at(H->rf,psi_j))&&
+        /* ... and at the tangent point: a shallow straight-in line runs
+           within 10% of the radius for kilometres, and captured there it
+           flew a chord inside the circle to an exit 470 m off the line (L7) */
+        double vh_cap=fmax(1.0,s->ground_speed>0.0?s->ground_speed:s->v*cos(s->g));
+        bool inside=(!acq.valid||(rc<1.1*hac_radius_at(H->rf,psi_j)&&
+                acq.tangent_dist<fmax(500.0,4.0*vh_cap)))&&
             fabs(along_hac)<TEL_PI/3.0;
         if (inside&&H->phase!=TAEM_HAC_PHASE_DRAG) {
             H->phase=TAEM_HAC_PHASE_HAC;
             H->psi=psi_j;
             if (H->psi>2.0*TEL_PI-0.3) H->psi=0.0;
             H->last_ang=atan2(s->y-cy,s->x-cx);
-        } else {
+        } else if (acq.valid) {
+            /* an invalid prediction (inside the HAC, not yet flying round it)
+               keeps the last path: its zeros read as a 15 km surplus */
             H->s_go=acq.s_go;
             H->turn_cost=acq.turn_cost;
             H->tangent_x=acq.tx; H->tangent_y=acq.ty;
