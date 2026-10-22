@@ -104,3 +104,44 @@ Release now measures the elevator trim during recovery (3 s mean). Pitch saturat
 | quicksave MM305, 45 km, MM305 replay, final-aligned | as above | unchanged |
 
 L7's remaining failure is the late Final handoff. The HAC is captured from 860 m inside the spiral at 16 deg to go, and flown wings level to an exit 470 m off the line. The runway-line law then closes that offset with a ~25 s time constant, so Final's pavement-projection gate holds until 5.2 km. Final then dives steeply (87 m/s sink) into the flare.
+
+## HAC capture and exit: Final takes over at the station
+
+Commit 0d6f9f7. L7's late Final handoff came from the HAC capture, not from Final:
+
+- **Capture.** A shallow straight-in line (16 deg to go) stays within 10 % of the HAC radius for kilometres, so the vehicle was captured 1.7 km before the tangent point.
+- **Chord.** The spiral law could only bank into the turn (`clampd(..., 0, lim)`), so it flew a wings-level chord inside the circle.
+- **Exit.** The chord ended at an exit 470 m off the line with an 18 deg heading error. The pavement-projection gate (projected track within the runway half-width at both ends) then held Final until 5.2 km.
+
+| Change | Why |
+|---|---|
+| Capture also requires the tangent point within about 4 s (`max(500 m, 4 vh)`) | Captures where the spiral actually starts. |
+| The spiral law may bank up to 30 deg outward (`HAC_BANK_OUTWARD`) | Inside the spiral, wings level cuts the chord. |
+| An invalid acquisition prediction keeps the last path | Inside the HAC but not yet flying round it, the zeros read Eref 0 (a 15 km surplus) and commanded a 1 deg AoA dive. |
+
+### Results
+
+| Scenario | Before | After |
+|---|---|---|
+| L7 | Final at 5.2 km, sink 3.31 (fail) | Final at **8.0 km**, 40-50 m off the line; **pass** 80.0 m/s, sink 1.73 |
+| quicksave MM305 | Final at 5.2 km; pass 65.5 / 2.62 | Final at **7.85 km**, 21 m off; **pass** 62.7 / 2.67 |
+| L5 | pass 67.4 / 1.61 | unchanged |
+| MM305 live-failure replay | 3.7 km short | 3.0 km short (supersonic overflight, open) |
+| final-aligned | fail | unchanged (bit-identical) |
+| 45 km max rate, 70 km paced | see above | not comparable: KSP was running (load ~10), which starves MM304's wall-clock worker. The paced 70 km handed off 21.6 km out instead of 49.6 km. |
+
+`make -C CLanding test` passes; pytest: 226 passed.
+
+**Live flight.** Run `runs/20261022T000455Z-orbit86-hac-exit`, from the user's 86 km / 0 deg checkpoint. A backup of it is saved as `saves/shuttletester/ksl-20261022-orbit86-checkpoint.sfs`.
+
+- Deorbit: 31.5 m/s burn, under the guarded recovery plan.
+- MM305 handoff: Mach 2.49, 82 km out, +10.5 km of energy.
+- The drag phase shed the surplus. The straight-in HAC (RF 9000) exited 39 m off the line, converging to 6 m.
+- Final took over 8.3 km out at 108 m/s, 1.3 km of energy low.
+- Touchdown: 717 m past the threshold, 2.1 m off the centreline, 53.0 m/s, sink 1.93 m/s. The vehicle stopped at 903 m, landed, with all 26 parts.
+
+### Rejected while doing this
+
+- **Past-station reference on the outer glide at constant speed.** It assumed shedding 0.36 m/m. The live eta at station conditions is 0.65-0.76 m/m: this airframe cannot hold 165 m/s on a 20 deg glide. TAEM then delivered the vehicle diving 22.6 deg at the station energy, and Final's range stretch bled the flare to 77 m/s (quicksave MM305, sink 3.8).
+- **Forecasting Final's touchdown along the aim line instead of the present path.** The quicksave pass it gave came from forecasting a line shallower than the best glide. Bounded by the best glide it fails again (3.79), and unbounded it broke the genuine range-short parity test.
+- **Open.** With Final at the station, Final's own range-stretch logic now has 8 km to act on, where it had 5 km before. The TAEM-to-Final energy margin at the station deserves its own look.
