@@ -41,7 +41,7 @@ DEFAULTS: dict[str, Any] = {
         # Pad preparation (values flown by the former shuttle.mission entry point).
         "srbThrustLimit": 0.9,
         "ssmeThrustLimit": 0.38,
-        "padSettleSeconds": 25.0,
+        "padSettleSeconds": 10.0,
         "revertToLaunch": False,
         # Extra raw flags for ksl.ascent.flight (e.g. ["--max-q", "22000"]).
         "extraArgs": [],
