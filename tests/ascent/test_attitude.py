@@ -1,9 +1,11 @@
 """Topology changes must refresh dynamics before the next control step."""
 import threading
+import math
 from types import SimpleNamespace
 from unittest.mock import Mock
 from ksl.ascent.attitude import AttitudeController
 from ksl.ascent.vehicle import Shuttle
+from ksl.ascent.geometry import direction_error_deg, slew_direction
 
 
 def test_separation_invalidation_refreshes_dynamics_without_waiting_for_timer():
@@ -85,3 +87,14 @@ def test_capture_callback_runs_before_detachment():
     shuttle.allocation_for_throttles = lambda values: values
     shuttle.update(before_booster_separation=lambda: events.append('capture'))
     assert events == ['capture', 'separate']
+
+
+def test_thrust_correction_jump_is_limited_by_simulation_time():
+    previous = (0., 1., 0.)
+    target = (math.sin(math.radians(27.)), math.cos(math.radians(27.)), 0.)
+    first = slew_direction(previous, target, 2., .1)
+    assert abs(direction_error_deg(previous, first) - .2) < 1e-8
+    assert direction_error_deg(slew_direction(first, target, 2., 20.), target) < 1e-6
+    assert direction_error_deg(previous, slew_direction(previous, target, 2., 0.)) < 1e-6
+    opposite = slew_direction(previous, (0., -1., 0.), 2., 1.)
+    assert abs(direction_error_deg(previous, opposite) - 2.) < 1e-8

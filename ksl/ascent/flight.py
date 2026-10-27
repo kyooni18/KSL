@@ -9,7 +9,7 @@ from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
-from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
+from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_direction, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
@@ -319,6 +319,7 @@ def run(args):
         et_cleared = False
         sep_handled = False
         separation_hold_direction = None
+        previous_aim_direction = None
 
         def prepare_separation_hold():
             nonlocal separation_hold_direction
@@ -812,7 +813,8 @@ def run(args):
                                 # velocity-to-be-gained solution only steers heading.
                                 args.heading = slew_value(args.heading, peg_hold[1],
                                                           3.0, control_dt)
-                                pitch_slew_rate = max(pitch_slew_rate, 4.0)
+                                # Match the pitch slew used by the insertion predictor.
+                                pitch_slew_rate = max(pitch_slew_rate, 2.0)
                                 target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
                                 sma_now = v.orbit.semi_major_axis
                                 energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
@@ -1035,6 +1037,16 @@ def run(args):
                                 aim_direction = tuple(c/n for c in raw)
                             except Exception:
                                 aim_direction = target_direction
+                        if state == 'ASCENT':
+                            if shuttle.separated and previous_aim_direction is not None:
+                                # The thrust-axis correction is calculated after the
+                                # pitch slew above and can jump when engine thrust
+                                # temporarily reads zero. Bound the actual nose target,
+                                # including that correction, to the planner's slew.
+                                aim_direction = slew_direction(
+                                    previous_aim_direction, aim_direction,
+                                    max(args.pitch_slew, 2.0), control_dt)
+                            previous_aim_direction = aim_direction
                         if not shuttle.separated:
                             ap.target_direction = aim_direction
                             ap.target_roll = float('nan')

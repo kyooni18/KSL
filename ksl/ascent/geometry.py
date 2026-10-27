@@ -67,6 +67,24 @@ def direction_error_deg(actual, target):
     return math.degrees(math.acos(max(-1.0, min(1.0, dot))))
 
 
+def slew_direction(current, target, rate_deg_s, dt):
+    """Move a unit direction along the shortest great-circle arc at a bounded rate."""
+    a, b = _unit(current), _unit(target)
+    if _norm(a) < 1e-12 or _norm(b) < 1e-12:
+        raise ValueError('Direction must be nonzero')
+    angle = math.acos(max(-1.0, min(1.0, _dot(a, b))))
+    step = math.radians(max(0.0, rate_deg_s)*max(0.0, dt))
+    if angle <= step or angle < 1e-10:
+        return b
+    tangent = tuple(b[i]-math.cos(angle)*a[i] for i in range(3))
+    if _norm(tangent) < 1e-10:
+        basis = min(((1., 0., 0.), (0., 1., 0.), (0., 0., 1.)),
+                    key=lambda v: abs(_dot(a, v)))
+        tangent = _cross(a, basis)
+    tangent = _unit(tangent)
+    return tuple(math.cos(step)*a[i] + math.sin(step)*tangent[i] for i in range(3))
+
+
 def surface_up_for_pitch_heading(pitch, heading):
     """Return a unit surface-up vector perpendicular to the launch direction."""
     pitch, heading = math.radians(pitch), math.radians(heading)
