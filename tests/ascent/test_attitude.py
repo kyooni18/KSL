@@ -1,7 +1,9 @@
 """Topology changes must refresh dynamics before the next control step."""
 import threading
+from types import SimpleNamespace
 from unittest.mock import Mock
 from ksl.ascent.attitude import AttitudeController
+from ksl.ascent.vehicle import Shuttle
 
 
 def test_separation_invalidation_refreshes_dynamics_without_waiting_for_timer():
@@ -43,3 +45,43 @@ def test_separation_hold_keeps_measured_nose_and_roll_for_five_simulation_second
     now[0] = 105.
     assert controller._target_for_step() == ((1., 0., 0.), (0., 1., 0.))
     assert controller._hold_until is None
+
+
+def test_preseparation_capture_is_preserved_until_after_actual_staging():
+    controller = AttitudeController.__new__(AttitudeController)
+    controller.lock = threading.Lock()
+    controller._rotation = lambda: (0., 0., 0., 1.)
+    now = [96.]
+    controller._ut = lambda: now[0]
+    controller.forward = (1., 0., 0.)
+    controller.roof = None
+    controller._hold_until = None
+    controller._held_attitude = None
+    assert not controller.extend_attitude_hold(105.)
+    controller.hold_attitude(float('inf'))
+    controller._rotation = lambda: (0., 0., 1., 0.)
+    now[0] = 100.
+    assert controller.extend_attitude_hold(105.)
+    assert controller._target_for_step() == ((0., 1., 0.), (0., 0., -1.))
+    now[0] = 105.
+    assert controller._target_for_step() == (controller.forward, None)
+
+
+def test_capture_callback_runs_before_detachment():
+    shuttle = Shuttle.__new__(Shuttle)
+    shuttle.et_attached = False
+    shuttle.separated = False
+    shuttle.vehicle_kind = 'other'
+    shuttle.solid_boosters = []
+    shuttle._liquid_booster_depleted = lambda: True
+    shuttle._solid_boosters_depleted = lambda: False
+    events = []
+    def separate():
+        events.append('separate')
+        shuttle.separated = True
+    shuttle._separate_boosters = separate
+    shuttle.groups = [[SimpleNamespace(thrust_limit=.5)]]
+    shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(.5,))
+    shuttle.allocation_for_throttles = lambda values: values
+    shuttle.update(before_booster_separation=lambda: events.append('capture'))
+    assert events == ['capture', 'separate']

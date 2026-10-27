@@ -272,7 +272,8 @@ def run(args):
         from .attitude import CustomAutopilot
         # Own attitude controller (not the kRPC AutoPilot): see shuttle/attitude.py.
         ap = CustomAutopilot(conn, v, address=args.address, rpc_port=args.rpc_port,
-                             stream_port=args.stream_port)
+                             stream_port=args.stream_port,
+                             telemetry_path=args.telemetry + '.attitude.csv')
         control = v.control
         started = conn.space_center.ut
         state = 'ASCENT'
@@ -318,6 +319,13 @@ def run(args):
         et_cleared = False
         sep_handled = False
         separation_hold_direction = None
+
+        def prepare_separation_hold():
+            nonlocal separation_hold_direction
+            if separation_hold_direction is None:
+                separation_hold_direction = ap.ctrl.hold_attitude(float('inf'))
+                print('Captured attitude for booster separation')
+
         ssme_restarts = 0
         ssme_relight_verify_ut = None
         roll_maneuver = None
@@ -532,9 +540,16 @@ def run(args):
                         raise RuntimeError('Mission timeout')
                     altitude = flight.mean_altitude
                     altitude_gain = max(0.0, altitude-launch_altitude)
+                    if (state == 'ASCENT' and shuttle.vehicle_kind == 'orbiter-shuttle'
+                            and shuttle.solid_boosters and not shuttle.separated
+                            and initial_roll_set and separation_hold_direction is None
+                            and flight.dynamic_pressure <= args.booster_separation_max_q
+                            and shuttle.booster_nominal_burn_time() <= 4.0):
+                        prepare_separation_hold()
                     separation_hold_active = (
-                        shuttle.booster_separation_ut is not None and
-                        conn.space_center.ut-shuttle.booster_separation_ut < SEPARATION_ATTITUDE_HOLD_SECONDS)
+                        separation_hold_direction is not None and
+                        (shuttle.booster_separation_ut is None or
+                         conn.space_center.ut-shuttle.booster_separation_ut < SEPARATION_ATTITUDE_HOLD_SECONDS))
                     if state == 'ASCENT' and shuttle.et_attached:
                         core_engines = [e for group in shuttle.core_groups
                                         for e in group]
@@ -952,12 +967,13 @@ def run(args):
                             dt=control_dt, throttle_slew=args.throttle_slew,
                             dynamic_pressure=flight.dynamic_pressure,
                             separation_max_q=args.booster_separation_max_q,
-                            post_booster_coast_seconds=args.post_booster_coast_seconds)
+                            post_booster_coast_seconds=args.post_booster_coast_seconds,
+                            before_booster_separation=prepare_separation_hold)
                         if shuttle.separated and not sep_handled:
                             # Staging happened inside update(): invalidate the FCS
                             # on this tick, not after another slow guidance loop.
                             ap.ctrl.invalidate_dynamics()
-                            separation_hold_direction = ap.ctrl.hold_attitude(
+                            ap.ctrl.extend_attitude_hold(
                                 shuttle.booster_separation_ut+SEPARATION_ATTITUDE_HOLD_SECONDS)
                             separation_hold_active = True
                             print('Holding separation attitude for 5 s before pitch/yaw/roll changes')

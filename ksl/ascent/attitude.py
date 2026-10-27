@@ -16,6 +16,7 @@ so the gimbals are pre-positioned instead of waiting for an integrator. A slow
 integrator removes what the model misses.
 """
 
+import csv
 import math
 import threading
 import time
@@ -99,7 +100,8 @@ class AttitudeController:
     # control input k produces torque along -axis k (calibrated); axis order x, y, z
     INPUTS = (('pitch', 0), ('roll', 1), ('yaw', 2))
 
-    def __init__(self, address='127.0.0.1', rpc_port=50000, stream_port=50001, hz=25.0):
+    def __init__(self, address='127.0.0.1', rpc_port=50000, stream_port=50001, hz=25.0,
+                 telemetry_path=None):
         self.conn = krpc.connect(name='attitude-controller', address=address,
                                  rpc_port=rpc_port, stream_port=stream_port)
         self.sc = self.conn.space_center
@@ -140,6 +142,14 @@ class AttitudeController:
         self._torque = (1.0, 1.0, 1.0)
         self._last_slow = 0.0
         self._dynamics_dirty = threading.Event()
+        self._telemetry_file = open(telemetry_path, 'w', newline='', buffering=1) if telemetry_path else None
+        self._telemetry = csv.writer(self._telemetry_file) if self._telemetry_file else None
+        if self._telemetry:
+            self._telemetry.writerow(['ut', 'qx', 'qy', 'qz', 'qw', 'wx', 'wy', 'wz',
+                                      'target_fx', 'target_fy', 'target_fz',
+                                      'target_rx', 'target_ry', 'target_rz',
+                                      'pitch', 'roll', 'yaw', 'mx', 'my', 'mz',
+                                      'tx', 'ty', 'tz', 'ix', 'iy', 'iz'])
         self._running = True
         self._thread = threading.Thread(target=self._run, name='attitude', daemon=True)
         self._thread.start()
@@ -157,6 +167,14 @@ class AttitudeController:
             self._held_attitude = attitude
             self._hold_until = until_ut
         return attitude[0]
+
+    def extend_attitude_hold(self, until_ut):
+        """Keep the already captured attitude through the actual staging time."""
+        with self.lock:
+            if self._held_attitude is None:
+                return False
+            self._hold_until = until_ut
+            return True
 
     def _target_for_step(self):
         with self.lock:
@@ -188,6 +206,8 @@ class AttitudeController:
     def stop(self):
         self._running = False
         self._thread.join(timeout=2.0)
+        if self._telemetry_file and not self._thread.is_alive():
+            self._telemetry_file.close()
         try:
             self.control.pitch = self.control.yaw = self.control.roll = 0.0
         except Exception:
@@ -279,6 +299,14 @@ class AttitudeController:
         self.control.roll = inputs[1]
         self.control.yaw = inputs[2]
         self.inputs = tuple(inputs)
+        if self._telemetry:
+            try:
+                self._telemetry.writerow([self._ut(), *q, *w, *forward,
+                                          *(roof if roof is not None else (None,)*3),
+                                          *inputs, *self.disturbance, *self._torque, *self._moi])
+            except OSError:
+                # Logging must not prevent subsequent flight-control steps.
+                self._telemetry = None
 
 
 class CustomAutopilot:

@@ -926,13 +926,13 @@ class Shuttle:
         self.booster_separation_ut = self.sc.ut
         self.groups = list(self.core_groups)
         self.control_moment_budget = self.cruise_control_moment_budget
-        emit_event('booster-separation')
+        emit_event('booster-separation', ut=self.booster_separation_ut)
         print('Boosters shut down/burned out and separated')
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
                throttle_slew=THROTTLE_SLEW_PER_SECOND,
                dynamic_pressure=None, separation_max_q=float('inf'),
-               post_booster_coast_seconds=0.0):
+               post_booster_coast_seconds=0.0, before_booster_separation=None):
         if self.et_attached:
             self.top_off()
         depleted = (not self.separated and
@@ -949,6 +949,8 @@ class Shuttle:
             elif self.sc.ut - self.booster_separation_hold_ut > 30.0:
                 raise RuntimeError('Dynamic pressure did not fall enough for SRB separation within 30 s')
         if depleted and not hold_separation:
+            if before_booster_separation is not None:
+                before_booster_separation()
             self._separate_boosters()
         target = self.allocation(max_g=max_g, target_g=target_g, altitude=altitude)
         current = tuple(
