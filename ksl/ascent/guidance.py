@@ -78,6 +78,15 @@ def roll_attitude_settled(roll_error, roll_rate, nose_error,
     return (abs(roll_error) <= angle_limit and abs(roll_rate) <= rate_limit and
             abs(nose_error) <= nose_limit)
 
+
+def launch_roll_handoff_ready(commanded_pitch, actual_pitch, target_pitch,
+                              roll_error, roll_rate, nose_error):
+    """Release the turn near the pitch target once roll and pointing are controlled."""
+    return (abs(commanded_pitch-target_pitch) <= 2.5 and
+            abs(actual_pitch-target_pitch) <= 8.0 and
+            roll_attitude_settled(roll_error, roll_rate, nose_error,
+                                  angle_limit=7.0, rate_limit=3.0, nose_limit=8.0))
+
 def hold_turn_for_roll(roll_active, roll_reset):
     """Keep launch pitch fixed for the entire dedicated roll phase."""
     return roll_active and not roll_reset
