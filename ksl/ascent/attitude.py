@@ -96,6 +96,51 @@ def engine_moment(vessel, frame, min_thrust=1.0, axis_override=None):
     return tuple(moment)
 
 
+def rcs_up_translation_moment(vessel, frame):
+    """Estimate the body-frame torque for full roofward translation.
+
+    Weight reported nozzle vectors by their roofward component and scale each
+    block to its available roofward force. If a mod reports unusable nozzle
+    axes, use the block position and available force instead. The game's
+    allocation between nozzles is not exposed, so this remains an estimate.
+    """
+    moment = [0.0, 0.0, 0.0]
+    usable = False
+    try:
+        for block in vessel.parts.rcs:
+            if not block.enabled or not block.up_enabled:
+                continue
+            _, negative = block.available_force
+            force = abs(negative[2])
+            if not math.isfinite(force):
+                return None
+            if force <= 0:
+                continue
+            nozzles = []
+            for nozzle in block.thrusters:
+                direction = nozzle.thrust_direction(frame)
+                if any(not math.isfinite(x) for x in direction):
+                    return None
+                weight = max(0.0, -direction[2])
+                if weight > 1e-6:
+                    nozzles.append((nozzle.thrust_position(frame), direction, weight))
+            projection = sum(weight*(-direction[2]) for _, direction, weight in nozzles)
+            if projection <= 1e-9:
+                contribution = _cross(block.part.position(frame), (0.0, 0.0, -force))
+                moment = [moment[i]+contribution[i] for i in range(3)]
+            else:
+                for position, direction, weight in nozzles:
+                    vector = tuple(force*weight*x/projection for x in direction)
+                    contribution = _cross(position, vector)
+                    moment = [moment[i]+contribution[i] for i in range(3)]
+            usable = True
+    except Exception:
+        return None
+    if any(not math.isfinite(x) for x in moment):
+        return None
+    return tuple(moment) if usable else None
+
+
 class AttitudeController:
     # control input k produces torque along -axis k (calibrated); axis order x, y, z
     INPUTS = (('pitch', 0), ('roll', 1), ('yaw', 2))
@@ -139,6 +184,7 @@ class AttitudeController:
         self.roll_error_deg = 0.0
         self.inputs = (0.0, 0.0, 0.0)
         self.disturbance = (0.0, 0.0, 0.0)
+        self.translation_moment = (0.0, 0.0, 0.0)
         self._integral = [0.0, 0.0, 0.0]
         self._moi = (1.0, 1.0, 1.0)
         self._torque = (1.0, 1.0, 1.0)
@@ -180,6 +226,20 @@ class AttitudeController:
                 return False
             self._hold_until = until_ut
             return True
+
+    def hold_commanded_attitude(self, until_ut):
+        """Freeze the current inertial target while feedback damps the vehicle."""
+        with self.lock:
+            if self.forward is None:
+                return False
+            self._held_attitude = (self.forward, self.roof)
+            self._hold_until = until_ut
+            return True
+
+    def release_attitude_hold(self):
+        with self.lock:
+            self._hold_until = None
+            self._held_attitude = None
 
     def _target_for_step(self):
         with self.lock:
@@ -289,7 +349,8 @@ class AttitudeController:
         for i in range(3):
             err = w_des[i]-w[i]
             t_avail = self._torque[i] * (self.roll_authority_fraction if i == 1 else 1.0)
-            cmd = self._moi[i]*err/self.rate_tau + self._integral[i] - self.disturbance[i]
+            cmd = (self._moi[i]*err/self.rate_tau + self._integral[i]
+                   - self.disturbance[i] - self.translation_moment[i])
             torque_cmd[i] = cmd
             u = -cmd/t_avail
             limit = self.roll_input_limit if i == 1 else 1.0

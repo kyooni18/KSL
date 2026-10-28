@@ -11,7 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_direction, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -269,7 +269,7 @@ def run(args):
         plane_normal = None
         if args.plane_target:
             plane_normal = wait_for_plane_window(conn, v, args)
-        from .attitude import CustomAutopilot
+        from .attitude import CustomAutopilot, rcs_up_translation_moment
         # Own attitude controller (not the kRPC AutoPilot): see shuttle/attitude.py.
         ap = CustomAutopilot(conn, v, address=args.address, rpc_port=args.rpc_port,
                              stream_port=args.stream_port,
@@ -297,6 +297,7 @@ def run(args):
         args.heading = 90.0  # pad orientation; slewed to target_heading after the roll settles
         post_booster_roll = roll_for_heading(args.heading)
         initial_pitch = 89.0
+        roll_pitch = 78.0
         commanded_pitch = initial_pitch
         launch_roll = None
         mission_roll_commanded = False
@@ -306,6 +307,10 @@ def run(args):
         liftoff_ut = None
         baseline_part_count = None
         meco_ut = None
+        meco_preparing = False
+        meco_preparing_ut = None
+        meco_settled_since = None
+        coast_settled_since = None
         peg_dv = None
         peg_hold = None
         insertion_guide = None
@@ -694,13 +699,15 @@ def run(args):
                                     3.0 if flight.dynamic_pressure < 1500.0
                                     else args.heading_slew if flight.dynamic_pressure < 5000.0
                                     else min(args.heading_slew, 0.7), control_dt)
-                            if roll_requires_authority or altitude < turn_start_altitude:
+                            if not mission_roll_commanded:
                                 raw_pitch = initial_pitch
+                            elif roll_requires_authority or altitude < turn_start_altitude:
+                                raw_pitch = roll_pitch
                             else:
                                 raw_pitch = scheduled_turn_pitch(
                                     altitude, reference_apoapsis, flight.vertical_speed,
                                     flight.horizontal_speed, flight.dynamic_pressure,
-                                    initial_pitch)
+                                    roll_pitch)
                                 if not args.no_corridor and not shuttle.separated:
                                     raw_pitch = corridor_pitch(
                                         raw_pitch,
@@ -728,7 +735,7 @@ def run(args):
                                     + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
                                     - min(15.0, 1.5*ap_excess/1000.0)
                                 raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
-                                pitch_slew_rate = max(args.pitch_slew, 3.0)
+                                pitch_slew_rate = args.pitch_slew
                             if shuttle.separated:
                                 # Attitude-planned insertion: the burnout point is chosen by
                                 # flying the closed loop (PEG, slew, roll hold, limiter ramp,
@@ -766,7 +773,7 @@ def run(args):
                                         body.equatorial_radius+args.orbit,
                                         body.equatorial_radius+args.meco_periapsis,
                                         body.equatorial_radius+insertion_altitude,
-                                        slew=max(args.pitch_slew, 2.0),
+                                        slew=args.pitch_slew,
                                         hold_slew=args.post_sep_hold_slew)
                                 planned_r = insertion_guide.r_t
                                 raw_pitch = insertion_guide.command(
@@ -787,7 +794,7 @@ def run(args):
                                     # a stale pitch for the whole roll.
                                     pitch_slew_rate = args.post_sep_hold_slew
                                 else:
-                                    pitch_slew_rate = max(args.pitch_slew, 2.0)
+                                    pitch_slew_rate = args.pitch_slew
                             peg_dv = None
                             energy_done = False
                             peg_phase_g = None
@@ -823,10 +830,11 @@ def run(args):
                                                         min(target_heading+40.0, peg_heading)))
                                     # Pitch stays with the closed-loop PEG above; this
                                     # velocity-to-be-gained solution only steers heading.
-                                    args.heading = slew_value(args.heading, peg_hold[1],
-                                                              3.0, control_dt)
+                                    if not meco_preparing:
+                                        args.heading = slew_value(args.heading, peg_hold[1],
+                                                                  3.0, control_dt)
                                     # Match the pitch slew used by the insertion predictor.
-                                    pitch_slew_rate = max(pitch_slew_rate, 2.0)
+                                    pitch_slew_rate = args.pitch_slew
                                     target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
                                     sma_now = v.orbit.semi_major_axis
                                     energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
@@ -851,6 +859,19 @@ def run(args):
                                 held_pitch, held_heading = pitch_heading_for_direction(held_surface)
                                 raw_pitch = commanded_pitch = held_pitch
                                 args.heading += wrap_roll(held_heading-args.heading)
+                            if (shuttle.separated and shuttle.post_sep_roll_done_ut is not None
+                                    and not meco_preparing and
+                                    ((peg_dv is not None and peg_dv < 25.0) or
+                                     meco_ready(v.orbit.apoapsis_altitude,
+                                                v.orbit.periapsis_altitude,
+                                                args.orbit-3000.0, args.meco_periapsis-300.0))
+                                    and ap.ctrl.hold_commanded_attitude(float('inf'))):
+                                meco_preparing = True
+                                meco_preparing_ut = conn.space_center.ut
+                                print('Holding the planned MECO attitude while damping rotation')
+                            if meco_preparing:
+                                raw_pitch = commanded_pitch
+                                peg_phase_g = 0.15
                             commanded_pitch = slew_value(
                                 commanded_pitch, raw_pitch,
                                 pitch_slew_rate, control_dt)
@@ -863,18 +884,37 @@ def run(args):
                             # Do not release the ET until the measured *two* apsides
                             # reach the executable handoff orbit. Depletion below is
                             # separately reported as a failed/partial insertion.
-                            if (shuttle.separated and
+                            settled_now = (meco_preparing and attitude_settled(
+                                ap.ctrl.error_deg, ap.ctrl.roll_error_deg,
+                                v.angular_velocity(nrf)))
+                            if settled_now:
+                                if meco_settled_since is None:
+                                    meco_settled_since = conn.space_center.ut
+                            else:
+                                meco_settled_since = None
+                            meco_attitude_ready = (meco_settled_since is not None and
+                                                   conn.space_center.ut-meco_settled_since >= 2.0)
+                            if (meco_preparing and not meco_attitude_ready and
+                                    conn.space_center.ut-meco_preparing_ut > 30.0):
+                                warn_once('meco-attitude', 'MECO attitude has not settled')
+                            if (shuttle.separated and meco_attitude_ready and
                                     meco_ready(v.orbit.apoapsis_altitude,
                                                v.orbit.periapsis_altitude,
                                                args.orbit-3000.0,
                                                args.meco_periapsis-300.0)):
                                 control.throttle = 0
+                                ap.ctrl.hold_attitude(float('inf'))
+                                control.rcs = True
+                                ap.ctrl.invalidate_dynamics()
                                 state = 'COAST'
                                 emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                                 print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
                                       f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
                             elif shuttle.separated and tanks_empty(shuttle):
                                 control.throttle = 0
+                                ap.ctrl.hold_attitude(float('inf'))
+                                control.rcs = True
+                                ap.ctrl.invalidate_dynamics()
                                 # Depleted-ET cutoff is not a normal completed
                                 # insertion. However an atmospheric periapsis is
                                 # permitted here: OMS may finish orbit capture.
@@ -906,25 +946,58 @@ def run(args):
                             if shuttle.et_attached and conn.space_center.ut-meco_ut < args.et_sep_delay:
                                 time.sleep(1/args.hz)
                                 continue
+                            if shuttle.et_attached:
+                                if attitude_settled(ap.ctrl.error_deg, ap.ctrl.roll_error_deg,
+                                                    v.angular_velocity(nrf)):
+                                    if coast_settled_since is None:
+                                        coast_settled_since = conn.space_center.ut
+                                else:
+                                    coast_settled_since = None
+                                if (coast_settled_since is None or
+                                        conn.space_center.ut-coast_settled_since < 2.0):
+                                    if conn.space_center.ut-meco_ut > 30.0:
+                                        warn_once('et-attitude', 'Waiting for attitude to settle before ET release')
+                                    time.sleep(1/args.hz)
+                                    continue
                             if shuttle.et_attached and not shuttle.release_et():
                                 time.sleep(1/args.hz)
                                 continue
                             if not et_cleared:
-                                # Translate the orbiter roof-ward (control.up = vessel -z, away
-                                # from the tank) on RCS so it cannot touch the ET.
                                 control.rcs = True
                                 control.up = 0.0
-                                # Ramp the push up and back down so the pair separates
-                                # with a soft, low relative velocity.
-                                clear_start = time.monotonic()
-                                while True:
-                                    frac = (time.monotonic()-clear_start)/args.et_clear_time
-                                    if frac >= 1:
-                                        break
-                                    control.up = args.et_clear_thrust*math.sin(math.pi*frac)
-                                    time.sleep(0.05)
-                                control.up = 0.0
+                                ap.ctrl.invalidate_dynamics()
+                                moment = rcs_up_translation_moment(v, v.reference_frame)
+                                if moment is None:
+                                    warn_once('rcs-clearance-geometry',
+                                              'RCS translation geometry unavailable; holding attitude')
+                                    time.sleep(1/args.hz)
+                                    continue
+                                # Advance the soft pulse only while attitude and rates
+                                # remain settled; compensate the estimated RCS moment.
+                                clear_progress = 0.0
+                                clear_previous_ut = conn.space_center.ut
+                                try:
+                                    while clear_progress < args.et_clear_time:
+                                        now_ut = conn.space_center.ut
+                                        dt_clear = max(0.0, now_ut-clear_previous_ut)
+                                        clear_previous_ut = now_ut
+                                        stable = attitude_settled(
+                                            ap.ctrl.error_deg, ap.ctrl.roll_error_deg,
+                                            v.angular_velocity(nrf))
+                                        if stable:
+                                            clear_progress = min(args.et_clear_time,
+                                                                 clear_progress+dt_clear)
+                                        command = (args.et_clear_thrust *
+                                                   math.sin(math.pi*clear_progress/args.et_clear_time)
+                                                   if stable else 0.0)
+                                        ap.ctrl.translation_moment = tuple(command*x for x in moment)
+                                        control.up = command
+                                        time.sleep(0.05)
+                                finally:
+                                    control.up = 0.0
+                                    ap.ctrl.translation_moment = (0.0, 0.0, 0.0)
                                 control.rcs = False
+                                ap.ctrl.release_attitude_hold()
                                 et_cleared = True
                                 print(f'Translated away from the ET for {args.et_clear_time:.0f} s on RCS')
                                 if shuttle.vehicle_kind == 'orbiter-shuttle':
@@ -1061,7 +1134,7 @@ def run(args):
                                     # including that correction, to the planner's slew.
                                     aim_direction = slew_direction(
                                         previous_aim_direction, aim_direction,
-                                        max(args.pitch_slew, 2.0), control_dt)
+                                        args.pitch_slew, control_dt)
                                 previous_aim_direction = aim_direction
                             # Keep nose and roof targets together; setting only
                             # target_direction briefly clears the roll target.
@@ -1131,7 +1204,7 @@ def run(args):
                                     ap.overshoot = (0.03, 0.01, 0.03)
                                     upright_configured = True
                                 if upright_phase:
-                                    control.rcs = True
+                                    control.rcs = False
                             # Size each roll maneuver to finish in a set time: the rate limit is
                             # chosen from the angle still to go when the maneuver starts.
                             maneuver = ('upright' if upright_phase else
@@ -1177,10 +1250,13 @@ def run(args):
                                     print(f'WARNING: upright roll not settled after 25 s '
                                           f'(error {roll_error:.0f} deg); releasing climb anyway')
                             if not mission_roll_settled:
-                                if roll_attitude_settled(
+                                actual_roll_pitch, _ = pitch_heading_for_direction(actual_direction)
+                                if (abs(commanded_pitch-roll_pitch) <= 1.0 and
+                                        abs(actual_roll_pitch-roll_pitch) <= 3.0 and
+                                        roll_attitude_settled(
                                         roll_error, body_roll_rate,
                                         settle_nose_error, angle_limit=5.0,
-                                        rate_limit=1.5):
+                                        rate_limit=1.5)):
                                     if roll_settle_since is None:
                                         roll_settle_since = conn.space_center.ut
                                     elif (conn.space_center.ut-roll_settle_since >=
@@ -1357,7 +1433,7 @@ def main():
                              '(default: derived from --orbit and --meco-periapsis)')
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
-    parser.add_argument('--post-sep-hold-slew', type=float, default=0.5,
+    parser.add_argument('--post-sep-hold-slew', type=float, default=0.3,
                         help='Pitch-command slew (deg/s) toward the insertion plan during '
                              'the post-separation upright roll; 0 holds pitch')
     parser.add_argument('--pitch-slew', type=float,
@@ -1381,9 +1457,9 @@ def main():
                         help='Fixed SSME thrust limiter held through SRB burn')
     parser.add_argument('--upper-g', type=float, default=1.4,
                         help='Acceleration cap for the SSME-only phase after booster separation')
-    parser.add_argument('--et-clear-time', type=float, default=8.0,
+    parser.add_argument('--et-clear-time', type=float, default=20.0,
                         help='Seconds of RCS up-translation after ET separation')
-    parser.add_argument('--et-clear-thrust', type=float, default=0.35,
+    parser.add_argument('--et-clear-thrust', type=float, default=0.12,
                         help='Peak RCS up-translation fraction (half-sine ramp) after ET separation')
     parser.add_argument('--et-sep-delay', type=float, default=8.0,
                         help='Seconds to hold attitude after MECO before external-tank separation')

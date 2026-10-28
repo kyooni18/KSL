@@ -5,7 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from krpc.schema import KRPC_pb2
 import pytest
-from ksl.ascent.attitude import AttitudeController
+from ksl.ascent.attitude import AttitudeController, rcs_up_translation_moment
+from ksl.ascent.guidance import attitude_settled
 from ksl.ascent.vehicle import Shuttle, separate_sts_boosters_batch
 from ksl.ascent.geometry import direction_error_deg, slew_direction
 
@@ -84,6 +85,44 @@ def test_separation_hold_does_not_freeze_existing_roll_error():
     assert controller._target_for_step() == ((0., 1., 0.), controller.roof)
 
 
+def test_meco_target_hold_and_settle_check_include_all_axis_rates():
+    controller = AttitudeController.__new__(AttitudeController)
+    controller.lock = threading.Lock()
+    controller._ut = lambda: 100.
+    controller.forward = (0., 1., 0.)
+    controller.roof = (0., 0., -1.)
+    controller._hold_until = None
+    controller._held_attitude = None
+    assert controller.hold_commanded_attitude(105.)
+    controller.set_target((1., 0., 0.), (0., 1., 0.))
+    assert controller._target_for_step() == ((0., 1., 0.), (0., 0., -1.))
+    assert attitude_settled(2., 1., (0., 0., math.radians(.4)))
+    assert not attitude_settled(2., 1., (0., 0., math.radians(.6)))
+    assert not attitude_settled(2., 4., (0., 0., 0.))
+    controller.release_attitude_hold()
+    assert controller._target_for_step() == ((1., 0., 0.), (0., 1., 0.))
+
+
+def test_rcs_roofward_moment_accounts_for_each_block_location():
+    def block(y, thrust):
+        return SimpleNamespace(enabled=True, up_enabled=True,
+                               available_force=((0., 0., 0.), (0., 0., -thrust)),
+                               part=SimpleNamespace(position=lambda _: (0., y, 0.)),
+                               thrusters=[SimpleNamespace(
+                                   thrust_direction=lambda _: (0., 0., -1.),
+                                   thrust_position=lambda _: (0., y, 0.))])
+    vessel = SimpleNamespace(parts=SimpleNamespace(rcs=[block(10., 100.), block(-5., 100.)]))
+    assert rcs_up_translation_moment(vessel, object()) == (-500., 0., 0.)
+    angled = block(10., 80.)
+    angled.thrusters[0].thrust_direction = lambda _: (.6, 0., -.8)
+    vessel.parts.rcs = [angled]
+    assert rcs_up_translation_moment(vessel, object()) == pytest.approx((-800., 0., -600.))
+    angled.thrusters[0].thrust_direction = lambda _: (0., 1., 0.)
+    assert rcs_up_translation_moment(vessel, object()) == pytest.approx((-800., 0., 0.))
+    vessel.parts.rcs = []
+    assert rcs_up_translation_moment(vessel, object()) is None
+
+
 def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
     controller = AttitudeController.__new__(AttitudeController)
     controller._target_for_step = lambda: ((0., 1., 0.), (.1, 0., -math.sqrt(.99)))
@@ -99,6 +138,7 @@ def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
     controller.rate_tau = .6
     controller._integral = [0., 0., 0.]
     controller.disturbance = (0., 0., 0.)
+    controller.translation_moment = (0., 0., 0.)
     controller.int_limit = .35
     controller.int_time = 6.
     controller.dt = .04

@@ -11,9 +11,16 @@ ROLL_RESET_GRACE = 60.0
 
 LAUNCH_TARGET_G = 1.08
 THROTTLE_SLEW_PER_SECOND = 0.25
-PITCH_SLEW_DEG_PER_SECOND = 0.8
+PITCH_SLEW_DEG_PER_SECOND = 0.4
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 SEPARATION_ATTITUDE_HOLD_SECONDS = 5.0
+
+
+def attitude_settled(nose_error, roll_error, angular_velocity,
+                     angle_limit=3.0, rate_limit_deg_s=0.5):
+    """Require all-axis rate damping as well as nose and roll alignment."""
+    return (abs(nose_error) <= angle_limit and abs(roll_error) <= angle_limit and
+            math.degrees(math.sqrt(sum(x*x for x in angular_velocity))) <= rate_limit_deg_s)
 
 
 def separation_thrust_blend(now, separation_ut, roll_start=None, roll_done=None):
