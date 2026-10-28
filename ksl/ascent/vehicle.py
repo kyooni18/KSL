@@ -348,7 +348,8 @@ def engine_pitch_moment(vessel, engines, full_thrust=False):
 
 
 def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
-                          pitch_moment_per_limit, g_limit=BOOSTER_G_LIMIT):
+                          pitch_moment_per_limit, g_limit=BOOSTER_G_LIMIT,
+                          master_throttle=1.0):
     """Reduce the SSME limiter for G only when a conservative gimbal model permits it.
 
     Uses the measured G and thrust to predict G at the new limiter, and the
@@ -357,11 +358,12 @@ def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
     telemetry or insufficient authority leaves the attitude trim unchanged.
     """
     if (actual_g is None or not all(math.isfinite(x) for x in
-                                     (actual_g, current, trim, pitch_moment_per_limit, g_limit))):
+                                     (actual_g, current, trim, pitch_moment_per_limit, g_limit,
+                                      master_throttle)) or not 0.0 < master_throttle <= 1.0):
         return trim, 'unavailable'
     try:
         mass = vessel.mass
-        full_core_thrust = sum(e.max_thrust for e in ssmes if e.active and e.has_fuel)
+        full_core_thrust = master_throttle * sum(e.max_thrust for e in ssmes if e.active and e.has_fuel)
         if mass <= 0 or full_core_thrust <= 0 or not math.isfinite(mass):
             return trim, 'unavailable'
         g_per_limit = full_core_thrust/(mass*G0)
@@ -383,7 +385,7 @@ def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
                     authority <= GIMBAL_RESERVE_DEG or
                     any(not math.isfinite(x) for x in inputs)):
                 return trim, 'gimbal-margin'
-            thrust = (engine.max_thrust*candidate if engine in ssmes else engine.thrust)
+            thrust = (engine.max_thrust*candidate*master_throttle if engine in ssmes else engine.thrust)
             position = engine.part.position(frame)
             direction = engine.part.direction(frame)
             gain += thrust*(position[1]*direction[1] + position[2]*direction[2])*math.radians(authority)
@@ -398,6 +400,23 @@ def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
         return candidate, 'limited' if required >= 0 else 'boosters-exceed-limit'
     except Exception:
         return trim, 'unavailable'
+
+
+def pitch_trim_feedback(bias, gimbal_pitch, moment_per_limit, dt, pointing_error,
+                        pitch_rate_deg_s, rate=.01, max_bias=.2):
+    """Slowly remove sustained pitch-gimbal effort while attitude is settled.
+
+    The gimbal input sign follows the attitude controller's calibrated convention:
+    positive pitch input produces negative body-x torque. Transient steering is
+    deliberately excluded so the throttle trim does not fight pitch maneuvers.
+    """
+    values = (bias, gimbal_pitch, moment_per_limit, dt, pointing_error, pitch_rate_deg_s)
+    if (not all(math.isfinite(x) for x in values) or dt <= 0 or
+            abs(moment_per_limit) < 1e4 or pointing_error > 3. or
+            abs(pitch_rate_deg_s) > 1.0):
+        return bias
+    bias -= math.copysign(1., moment_per_limit)*max(-1., min(1., gimbal_pitch))*rate*dt
+    return max(-max_bias, min(max_bias, bias))
 
 
 class Shuttle:
@@ -1086,6 +1105,7 @@ class Shuttle:
                 except Exception:
                     pass
         self.separated = True
+        self._pitch_trim_bias = 0.0
         self.booster_separation_ut = separation_timing[1] if separation_timing else self.sc.ut
         self.groups = list(self.core_groups)
         self.control_moment_budget = self.cruise_control_moment_budget
@@ -1098,7 +1118,8 @@ class Shuttle:
                throttle_slew=THROTTLE_SLEW_PER_SECOND,
                dynamic_pressure=None, separation_max_q=float('inf'),
                post_booster_coast_seconds=0.0, before_booster_separation=None,
-               actual_g=None):
+               actual_g=None, master_throttle=1.0, pointing_error=None,
+               pitch_rate_deg_s=None):
         if self.et_attached:
             self.top_off()
         depleted = (not self.separated and
@@ -1135,24 +1156,45 @@ class Shuttle:
                 # Trim the SSME limiter so the canted SSME moment cancels the SRB
                 # thrust-line moment as the CoM moves; the gimbals then only fly
                 # the vehicle instead of sitting saturated against the offset.
-                per_limit = engine_pitch_moment(self.vessel, ssmes, full_thrust=True)
+                master = max(0.0, min(1.0, master_throttle))
+                per_limit = engine_pitch_moment(self.vessel, ssmes, full_thrust=True)*master
                 m_booster = engine_pitch_moment(self.vessel, self.solid_boosters)
                 if abs(per_limit) > 1e4:
                     trim = -m_booster/per_limit
-                    target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
+                    bias = getattr(self, '_pitch_trim_bias', 0.0)
+                    if pointing_error is not None and pitch_rate_deg_s is not None:
+                        try:
+                            engines = [e for e in ssmes+self.solid_boosters
+                                       if e.active and e.gimballed and e.thrust > 1.]
+                            thrust = sum(e.thrust for e in engines)
+                            if thrust > 0.:
+                                pitch_input = sum(e.thrust*e.gimbal_actuation[0] for e in engines)/thrust
+                                bias = pitch_trim_feedback(bias, pitch_input, per_limit, min(dt, 1.),
+                                                           pointing_error, pitch_rate_deg_s)
+                                self._pitch_trim_bias = bias
+                        except Exception as exc:
+                            if not getattr(self, '_pitch_feedback_warning', False):
+                                self._pitch_feedback_warning = True
+                                print(f'WARNING: pitch-gimbal feedback unavailable: {exc}')
+                    target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim+bias))
                     self.pitch_moment = m_booster + per_limit*current[0]
+                    self.pitch_trim_geometry = trim
+                    self.pitch_trim_target = target_throttles[0]
                     guarded, status = guarded_ssme_g_target(
                         self.vessel, ssmes, self.solid_boosters, current[0],
-                        target_throttles[0], actual_g, per_limit)
+                        target_throttles[0], actual_g, per_limit, master_throttle=master)
                     target_throttles[0] = guarded
+                    self.pitch_trim_target = guarded
                     if status != getattr(self, '_booster_g_status', None):
                         self._booster_g_status = status
                         if status in ('limited', 'boosters-exceed-limit', 'gimbal-margin'):
                             print(f'Booster 3 G governor: {status}, SSME target {guarded:.2f}')
                 # Keep balancing through the last fueled tick. The low-limiter
                 # clearance/roll schedule begins only after booster burnout.
-            except Exception:
-                pass
+            except Exception as exc:
+                if not getattr(self, '_pitch_trim_warning', False):
+                    self._pitch_trim_warning = True
+                    print(f'WARNING: SSME pitch trim unavailable: {exc}')
             target_throttles = tuple(target_throttles)
         elif hold_separation:
             target_throttles = tuple(0.0 for _ in self.groups)

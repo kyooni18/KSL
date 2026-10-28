@@ -548,7 +548,9 @@ def run(args):
                                  'actual_pitch_deg', 'actual_heading_deg', 'target_pitch_deg',
                                  'control_moment_budget_Nm', 'engine_limit_state',
                                  'engine_gimbal_actuation', 'available_torque_Nm',
-                                 'orbit_inclination_deg', 'guidance_dv_mps'])
+                                 'orbit_inclination_deg', 'guidance_dv_mps',
+                                 'master_throttle', 'pitch_trim_geometry', 'pitch_trim_bias',
+                                 'pitch_trim_target', 'pitch_trim_moment_Nm'])
                 previous_control_ut = None
                 last_flight_error_report = 0.0
                 while True:
@@ -1217,6 +1219,13 @@ def run(args):
                                                 apoapsis_guard_unavoidable = True
                                     except Exception as exc:
                                         warn_once('apoapsis-guard', f'Apoapsis prediction unavailable: {exc}')
+                            trim_pitch_rate = None
+                            if (state == 'ASCENT' and shuttle.solid_boosters and
+                                    not shuttle.separated):
+                                try:
+                                    trim_pitch_rate = math.degrees(v.angular_velocity(v.reference_frame)[0])
+                                except Exception:
+                                    pass
                             result = shuttle.update(
                                 max_g=args.max_g, target_g=target_g, altitude=altitude,
                                 dt=control_dt, throttle_slew=args.throttle_slew,
@@ -1224,7 +1233,8 @@ def run(args):
                                 separation_max_q=args.booster_separation_max_q,
                                 post_booster_coast_seconds=args.post_booster_coast_seconds,
                                 before_booster_separation=prepare_separation_hold,
-                                actual_g=flight.g_force)
+                                actual_g=flight.g_force, master_throttle=control.throttle,
+                                pointing_error=ap.ctrl.error_deg, pitch_rate_deg_s=trim_pitch_rate)
                             if shuttle.separated and not sep_handled:
                                 # Staging happened inside update(): invalidate the FCS
                                 # on this tick, not after another slow guidance loop.
@@ -1523,7 +1533,11 @@ def run(args):
                                              shuttle.control_moment_budget, engine_limits,
                                              gimbal_actuation, available_torque,
                                              round(math.degrees(v.orbit.inclination), 3),
-                                             '' if peg_dv is None else round(peg_dv, 2)])
+                                             '' if peg_dv is None else round(peg_dv, 2),
+                                             control.throttle, getattr(shuttle, 'pitch_trim_geometry', ''),
+                                             getattr(shuttle, '_pitch_trim_bias', ''),
+                                             getattr(shuttle, 'pitch_trim_target', ''),
+                                             getattr(shuttle, 'pitch_moment', '')])
                             log.flush()
                             print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
                             next_report = conn.space_center.ut+2
