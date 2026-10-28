@@ -10,7 +10,9 @@ predicted orbit, so no sign or frame conventions are assumed):
 
 import argparse
 import math
+import os
 import time
+from pathlib import Path
 
 import krpc
 
@@ -468,6 +470,7 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         mass_start = vessel.mass
         prop_start = oms_propellant_mass(vessel)
         attitude_warned = False
+        next_burn_sample = t_prev
         while True:
             # Count only OMS propellant: RCS monopropellant use is not burn delta-v.
             burned = max(0.0, prop_start-oms_propellant_mass(vessel))
@@ -514,6 +517,16 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 window = [0.0, 0.0, 0.0]
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
+            if t_now >= next_burn_sample:
+                next_burn_sample = t_now+2.0
+                try:
+                    emit_event('trim-burn-sample', ut=t_now, remaining_mps=remaining,
+                               spent_mps=spent, aim_error_deg=ap.error,
+                               node_direction_nrf=node.direction(nrf),
+                               remaining_vector_nrf=node.remaining_burn_vector(nrf),
+                               throttle=ctl.throttle)
+                except Exception:
+                    pass  # Missing diagnostics must not interrupt a burn.
             throttle_dt = max(0.0, t_now-throttle_previous_ut)
             throttle_previous_ut = t_now
             ctl.throttle = oms_throttle_command(ctl.throttle, remaining, accel,
@@ -565,7 +578,11 @@ def prepare(conn):
     from .attitude import CustomAutopilot
     # Own attitude controller (no kRPC AutoPilot). OMS burns use reaction wheels
     # only, so the attitude loop is kept slow and gentle.
-    CUSTOM_AP['ap'] = CustomAutopilot(conn, conn.space_center.active_vessel)
+    controls_path = os.environ.get('KSL_CONTROLS')
+    telemetry_path = (str(Path(controls_path).parent / 'orbit-trim.attitude.csv')
+                      if controls_path else None)
+    CUSTOM_AP['ap'] = CustomAutopilot(conn, conn.space_center.active_vessel,
+                                      telemetry_path=telemetry_path)
     # RCS is off: the reaction wheels are the only actuator, so allow their full
     # rate authority (the wheel torque limit is the real bound), and feed the OMS
     # thrust-line moment forward using the measured thrust axis.
