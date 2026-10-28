@@ -11,6 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, inertial_velocity_components, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, smooth_value, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
+from .full_plan import BoosterState, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
@@ -316,6 +317,8 @@ def run(args):
         peg_dv = None
         peg_hold = None
         insertion_guide = None
+        ascent_plan = None
+        ascent_plan_ut = None
         apoapsis_guard_active = False
         apoapsis_guard_unavoidable = False
         nrf = body.non_rotating_reference_frame
@@ -743,6 +746,88 @@ def run(args):
                                     + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
                                     - min(15.0, 1.5*ap_excess/1000.0)
                                 raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
+                            if (state == 'ASCENT' and not shuttle.separated and
+                                    shuttle.vehicle_kind == 'orbiter-shuttle' and
+                                    shuttle.solid_boosters and mission_roll_settled and
+                                    altitude >= turn_start_altitude and not separation_hold_active and
+                                    not args.transfer and not args.no_corridor):
+                                now_ut = conn.space_center.ut
+                                if ascent_plan_ut is None or now_ut-ascent_plan_ut >= 10.0:
+                                    # Re-seed the entire forecast from measured propulsion,
+                                    # air loads and motion; never extrapolate a stale stage.
+                                    ascent_plan_ut = now_ut
+                                    try:
+                                        cores = shuttle.core_groups[0]
+                                        boosters = shuttle.solid_boosters
+                                        core_thrust, core_flow, upper_thrust, upper_flow = engine_measurements(cores)
+                                        booster_thrust, booster_flow, _, _ = engine_measurements(boosters)
+                                        remaining = shuttle.booster_nominal_burn_time()
+                                        if min(core_thrust, booster_thrust, core_flow, booster_flow,
+                                               upper_thrust, upper_flow, remaining) <= 0.:
+                                            raise ValueError('powered engine or burn estimate unavailable')
+                                        radius, vr, vh = inertial_velocity_components(
+                                            v.position(nrf), v.velocity(nrf))
+                                        frame = v.surface_reference_frame
+                                        nose = v.direction(frame)
+                                        offset = thrust_axis_offset(conn, v, frame)
+                                        thrust_direction = _unit(tuple(nose[i]+offset[i] for i in range(3)))
+                                        flown_pitch, _ = pitch_heading_for_direction(thrust_direction)
+                                        lift = conn.space_center.transform_direction(
+                                            flight.lift, body.reference_frame, frame)
+                                        heading = math.radians(args.heading)
+                                        booster_parts = {p for branch in shuttle.booster_branch_parts
+                                                         for p in branch}
+                                        dry_mass = sum(p.dry_mass for p in booster_parts)
+                                        measured = BoosterState(
+                                            radius, vr, vh, flight.horizontal_speed, v.mass,
+                                            commanded_pitch, flown_pitch, core_thrust, core_flow,
+                                            booster_thrust, booster_flow, remaining, dry_mass,
+                                            flight.dynamic_pressure, _norm(flight.drag)/v.mass,
+                                            lift[0]/v.mass,
+                                            (lift[1]*math.cos(heading)+lift[2]*math.sin(heading))/v.mass)
+                                        ascent_plan = plan_ascent(
+                                            measured, body.gravitational_parameter,
+                                            body.equatorial_radius, args.orbit, args.meco_periapsis,
+                                            insertion_altitude, upper_thrust, upper_thrust/upper_flow,
+                                            min(args.max_g, args.upper_g)*G0)
+                                        sep = ascent_plan['separation']
+                                        pred = ascent_plan['insertion']
+                                        emit_event('ascent-plan', phase='booster', ut=now_ut,
+                                                   radius_m=radius, radial_speed_mps=vr,
+                                                   horizontal_speed_mps=vh, surface_horizontal_speed_mps=flight.horizontal_speed,
+                                                   mass_kg=measured.mass, thrust_pitch_deg=flown_pitch,
+                                                   thrust_direction_surface=thrust_direction,
+                                                   commanded_pitch_deg=commanded_pitch,
+                                                   core_thrust_n=core_thrust, booster_thrust_n=booster_thrust,
+                                                   core_mass_flow_kg_s=core_flow, booster_mass_flow_kg_s=booster_flow,
+                                                   core_full_thrust_n=upper_thrust,
+                                                   core_full_mass_flow_kg_s=upper_flow,
+                                                   booster_time_s=remaining, booster_dry_mass_kg=dry_mass,
+                                                   dynamic_pressure_pa=measured.dynamic_pressure,
+                                                   drag_acceleration_mps2=measured.drag_acceleration,
+                                                   lift_radial_mps2=measured.lift_radial,
+                                                   lift_horizontal_mps2=measured.lift_horizontal,
+                                                   pitch_bias_deg=ascent_plan['bias'],
+                                                   predicted_separation_radius_m=sep['radius'],
+                                                   predicted_cutoff_apoapsis_radius_m=pred['apoapsis_r'],
+                                                   predicted_cutoff_periapsis_radius_m=pred['periapsis_r'])
+                                        print(f'Ascent plan: bias {ascent_plan["bias"]:+.1f} deg; '
+                                              f'separation {(sep["radius"]-body.equatorial_radius)/1000:.1f} km; '
+                                              f'cutoff {(pred["apoapsis_r"]-body.equatorial_radius)/1000:.1f} x '
+                                              f'{(pred["periapsis_r"]-body.equatorial_radius)/1000:.1f} km; '
+                                              f'core/SRB {core_thrust/1000:.0f}/{booster_thrust/1000:.0f} kN, '
+                                              f'flow {core_flow+booster_flow:.0f} kg/s')
+                                    except Exception as exc:
+                                        ascent_plan = None
+                                        emit_event('ascent-plan-unavailable', phase='booster',
+                                                   ut=now_ut, reason=str(exc))
+                                        warn_once('ascent-plan', f'Ascent forecast unavailable: {exc}')
+                                if ascent_plan is not None:
+                                    prograde = math.degrees(math.atan2(max(0., flight.vertical_speed),
+                                                                       max(.5, flight.horizontal_speed)))
+                                    alpha = aoa_limit_deg(flight.dynamic_pressure)
+                                    raw_pitch = min(prograde+1., max(prograde-alpha,
+                                                                     raw_pitch+ascent_plan['bias']))
                             if shuttle.separated:
                                 # Attitude-planned insertion: the burnout point is chosen by
                                 # flying the closed loop (PEG, slew, roll hold, limiter ramp,
@@ -763,9 +848,18 @@ def run(args):
                                     warn_once('insertion-thrust-axis',
                                               f'Unable to measure thrust direction for insertion plan: {exc}')
                                 ssmes = shuttle.core_groups[0]
-                                full_thrust = sum(e.max_thrust for e in ssmes)
-                                isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
-                                       / max(1, len(ssmes)))
+                                try:
+                                    _, _, full_thrust, full_flow = engine_measurements(ssmes)
+                                    if full_thrust <= 0. or full_flow <= 0.:
+                                        raise ValueError('SSME thrust or mass flow unavailable')
+                                    exhaust_velocity = full_thrust/full_flow
+                                except Exception as exc:
+                                    warn_once('insertion-propulsion',
+                                              f'Live propulsion estimate unavailable: {exc}')
+                                    full_thrust = sum(e.max_thrust for e in ssmes)
+                                    isp = sum(e.specific_impulse or e.vacuum_specific_impulse
+                                              for e in ssmes)/max(1, len(ssmes))
+                                    exhaust_velocity = max(isp, 1.)*G0
                                 roll_done = shuttle.post_sep_roll_done_ut
                                 # Mirror the vehicle's limiter schedule exactly; a planner that
                                 # assumes a lower cap than the engines fly lofts the climb.
@@ -792,12 +886,25 @@ def run(args):
                                         pitch_bounds=(-90.0, 90.0),
                                         pitch_response_seconds=ASCENT_PITCH_RESPONSE_SECONDS)
                                 planned_r = insertion_guide.r_t
+                                previous_plan_ut = insertion_guide.planned_at
                                 raw_pitch = insertion_guide.command(
                                     now_ut, r_now, vr_inertial, vh_inertial, v.mass,
-                                    full_thrust, max(isp, 1.0)*G0, g_limit, accel_now,
+                                    full_thrust, exhaust_velocity, g_limit, accel_now,
                                     full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
                                     hold_left, ramp_left, cap_now,
-                                    flown_pitch=measured_thrust_pitch)
+                                    flown_pitch=measured_thrust_pitch,
+                                    attitude_hold=max(0., SEPARATION_ATTITUDE_HOLD_SECONDS-since_sep))
+                                if insertion_guide.planned_at != previous_plan_ut:
+                                    pred = insertion_guide.prediction
+                                    emit_event('ascent-plan', phase='post-booster', ut=now_ut,
+                                               radius_m=r_now, radial_speed_mps=vr_inertial,
+                                               horizontal_speed_mps=vh_inertial, mass_kg=v.mass,
+                                               thrust_pitch_deg=measured_thrust_pitch,
+                                               commanded_pitch_deg=commanded_pitch,
+                                               full_thrust_n=full_thrust,
+                                               exhaust_velocity_mps=exhaust_velocity,
+                                               predicted_cutoff_apoapsis_radius_m=pred['apoapsis_r'],
+                                               predicted_cutoff_periapsis_radius_m=pred['periapsis_r'])
                                 if insertion_guide.r_t != planned_r:
                                     pred = insertion_guide.prediction
                                     R0 = body.equatorial_radius
@@ -1105,6 +1212,11 @@ def run(args):
                             if shuttle.separated and not sep_handled:
                                 # Staging happened inside update(): invalidate the FCS
                                 # on this tick, not after another slow guidance loop.
+                                # The booster-phase measurements describe a different
+                                # vehicle. Start insertion with fresh samples and guide.
+                                ascent_plan = ascent_plan_ut = None
+                                insertion_guide = None
+                                inertial_sample = measured_thrust_pitch = measured_thrust_offset = None
                                 ap.ctrl.invalidate_dynamics()
                                 ap.ctrl.extend_attitude_hold(
                                     shuttle.booster_separation_ut+SEPARATION_ATTITUDE_HOLD_SECONDS)
