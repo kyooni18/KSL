@@ -149,6 +149,11 @@ def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
     controller._step()
     baseline = abs(controller.control.roll)
     controller._integral = [0., 0., 0.]
+    controller.roll_authority_fraction = .5
+    controller.roll_input_limit = .5
+    controller._step()
+    assert abs(controller.control.roll) == pytest.approx(2*baseline)
+    controller._integral = [0., 0., 0.]
     controller.roll_authority_fraction = .25
     controller.roll_input_limit = .5
     controller._step()

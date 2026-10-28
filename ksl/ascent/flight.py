@@ -1205,8 +1205,11 @@ def run(args):
                                              shuttle.post_sep_roll_done_ut is None)
                             if (shuttle.vehicle_kind == 'orbiter-shuttle' and
                                     shuttle.solid_boosters and not shuttle.separated and
-                                    mission_roll_settled):
-                                ap.ctrl.roll_authority_fraction = .25
+                                    mission_roll_commanded):
+                                # Reported torque overstates the roll response;
+                                # use more control during the maneuver, then retain
+                                # the stronger calibrated hold after it settles.
+                                ap.ctrl.roll_authority_fraction = .25 if mission_roll_settled else .5
                                 ap.ctrl.roll_input_limit = args.roll_control_limit
                             else:
                                 ap.ctrl.roll_authority_fraction = 1.0
@@ -1508,11 +1511,11 @@ def main():
                         help='Start the post-separation upright roll only below this dynamic pressure (Pa)')
     parser.add_argument('--upright-roll-rate', type=float, default=15.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
-    parser.add_argument('--roll-time', type=float, default=25.0,
+    parser.add_argument('--roll-time', type=float, default=18.0,
                         help='Duration of the heads-down roll maneuver (s)')
     parser.add_argument('--upright-roll-time', type=float, default=10.0,
                         help='Duration of the post-separation upright roll (s)')
-    parser.add_argument('--roll-rate', type=float, default=6.0,
+    parser.add_argument('--roll-rate', type=float, default=8.0,
                         help='Launch roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')

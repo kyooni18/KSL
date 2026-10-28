@@ -243,6 +243,7 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(maneuver_roll_rate(180, 10, 5), 5)
         self.assertEqual(maneuver_roll_rate(20, 10, 15), 3)
         self.assertAlmostEqual(maneuver_roll_rate(89, 25, 6), 4.984)
+        self.assertAlmostEqual(maneuver_roll_rate(91, 18, 8), 91*1.4/18)
 
     def test_structural_abort_releases_controls_and_pauses_ksp(self):
         conn = SimpleNamespace(krpc=SimpleNamespace(paused=False), space_center=MagicMock())
