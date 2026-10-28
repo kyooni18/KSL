@@ -39,7 +39,37 @@ def test_full_plan_returns_stage_and_cutoff_forecasts(state):
 def test_unreachable_forecasts_are_not_accepted(state, radial_speed):
     with pytest.raises(ValueError, match='No candidate reaches'):
         plan_ascent(replace(state, radial_speed=radial_speed), 3.5316e12, 600000., 90000., 60000., 72000.,
-                    2811000., 315.*9.80665, 1.4*9.80665, biases=(-6., 6.))
+                    2811000., 315.*9.80665, 1.4*9.80665, biases=(-6., 6.),
+                    acceleration_fractions=(1.,))
+
+
+def test_thrust_search_builds_timed_fuel_feasible_handoff(state):
+    # The formerly rejected seed becomes reachable by choosing lower upper-stage
+    # acceleration, not by loosening the target orbit tolerances.
+    plan = plan_ascent(replace(state, radial_speed=260.), 3.5316e12, 600000.,
+                       90000., 60000., 72000., 2811000., 315.*9.80665, 1.4*9.80665,
+                       biases=(-6., 6.), start_ut=1000., core_propellant=110000.)
+    assert plan['upper_acceleration'] == pytest.approx(.8*1.4*9.80665)
+    sep, cutoff = plan['milestones']['separation'], plan['milestones']['meco']
+    assert sep['ut'] == 1035.
+    assert cutoff['ut'] == 1035.+plan['insertion']['time']
+    assert 87000. <= cutoff['apoapsis'] <= 93000.
+    assert cutoff['periapsis'] >= 59700.
+    assert plan['core_propellant_used'] <= 110000.
+    assert cutoff['mass'] == pytest.approx(
+        state.mass-state.booster_dry_mass-state.booster_mass_flow*35.-plan['core_propellant_used'])
+    trajectory = plan['insertion']['trajectory']
+    for a, b in zip(trajectory, trajectory[1:]):
+        assert b['mass'] == pytest.approx(a['mass']-a['mass_flow']*(b['time']-a['time']))
+        assert a['thrust'] <= 2811000.
+    with pytest.raises(ValueError, match='Insufficient core propellant'):
+        plan_ascent(state, 3.5316e12, 600000., 90000., 60000., 72000.,
+                    2811000., 315.*9.80665, 1.4*9.80665, core_propellant=100.)
+    with pytest.raises(ValueError, match='No candidate reaches'):
+        plan_ascent(state, 3.5316e12, 600000., 90000., 60000., 72000.,
+                    2811000., 315.*9.80665, 1.4*9.80665,
+                    biases=(-6., 6.), core_propellant=20000.)
+    assert any(m['action'] == 'pitch-up' for m in plan['maneuvers']['insertion'])
 
 
 def test_engine_measurements_follow_each_active_engine():

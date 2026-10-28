@@ -11,6 +11,7 @@ All speeds are inertial. Pure math; no kRPC.
 import math
 from .geometry import smooth_value
 from .guidance import separation_pitch_transition
+from .plan_timeline import sample_trajectory, track_trajectory
 
 G0 = 9.80665
 
@@ -170,7 +171,7 @@ class InsertionGuidance:
     def __init__(self, mu, apoapsis_r, periapsis_r, min_insertion_r, slew=2.0,
                  hold_slew=0.5, lag=2.0, pitch_bounds=(-30.0, 45.0), replan_period=10.0,
                  apoapsis_tolerance=3000.0, periapsis_tolerance=300.0,
-                 pitch_response_seconds=None):
+                 pitch_response_seconds=None, follow_trajectory=False):
         self.mu, self.ra, self.rp = mu, apoapsis_r, periapsis_r
         self.min_insertion_r = min_insertion_r
         self.slew, self.hold_slew = slew, hold_slew
@@ -183,6 +184,8 @@ class InsertionGuidance:
         self.r_t = None
         self.planned_at = None
         self.prediction = None
+        self.follow_trajectory = follow_trajectory
+        self.planned_sample = None
 
     def done(self, r, vr, vh):
         ra, rp = apsides(self.mu, r, vr, vh)
@@ -220,12 +223,13 @@ class InsertionGuidance:
 
     def fly(self, r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0.,
             ramp=15., cap_now=1., dt=1., t_max=500., flown=None, attitude_hold=0.,
-            transition_anchor=None, since_separation=0.):
+            transition_anchor=None, since_separation=0., record=False, dry_mass=0.):
         """Closed-loop point-mass prediction to cutoff; returns a summary dict."""
         mu = self.mu
         guide = PoweredExplicitGuidance(mu)
         m0, t, peak_ra, saturated = mass, 0., 0., 0.
         flown = pitch if flown is None else flown
+        trajectory = []
         while t < t_max:
             cap = self._throttle_cap(t, hold_left, ramp, cap_now)
             a_avail = thrust*cap/mass
@@ -236,6 +240,12 @@ class InsertionGuidance:
             cmd = _clamp(cmd, self.lo, self.hi)
             if transition_anchor is not None:
                 cmd = separation_pitch_transition(transition_anchor, cmd, since_separation+t)
+            if record:
+                trajectory.append(dict(time=t, radius=r, radial_speed=vr, horizontal_speed=vh,
+                                       mass=mass, raw_pitch=pitch if t < attitude_hold else cmd,
+                                       commanded_pitch=pitch, flown_pitch=flown,
+                                       thrust=a*mass, mass_flow=a*mass/ve,
+                                       throttle=a*mass/thrust))
             if t < attitude_hold:
                 pass  # The separation controller holds the measured attitude.
             elif self.pitch_response_seconds is None:
@@ -256,7 +266,7 @@ class InsertionGuidance:
             t += dt
             ra, rp = apsides(mu, r, vr, vh)
             peak_ra = max(peak_ra, min(ra, 10*self.ra))
-            if self.done(r, vr, vh) or mass < .2*m0:
+            if self.done(r, vr, vh) or mass < max(dry_mass, .2*m0):
                 break
         ra, rp = apsides(mu, r, vr, vh)
         dv = ve*math.log(m0/max(mass, 1.))
@@ -264,12 +274,23 @@ class InsertionGuidance:
         # (50 m/s weighs like 1 km).
         score = (abs(min(ra, 10*self.ra)-self.ra)+abs(rp-self.rp) +
                  2*max(0., peak_ra-self.ra-self.ap_tol) + 20*dv + 500*saturated)
-        return dict(r_t=r_t, score=score, apoapsis_r=ra, periapsis_r=rp,
-                    peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated)
+        result = dict(r_t=r_t, score=score, apoapsis_r=ra, periapsis_r=rp,
+                      peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated,
+                      radius=r, radial_speed=vr, horizontal_speed=vh, mass=mass,
+                      propellant_used=m0-mass, fuel_feasible=mass >= dry_mass,
+                      target_feasible=(self.ra-self.ap_tol <= ra <= self.ra+self.ap_tol and
+                                       rp >= self.rp-self.pe_tol and
+                                       peak_ra <= self.ra+self.ap_tol))
+        if record:
+            trajectory.append(dict(trajectory[-1], time=t, radius=r, radial_speed=vr,
+                                   horizontal_speed=vh, mass=mass,
+                                   commanded_pitch=pitch, flown_pitch=flown))
+            result['trajectory'] = trajectory
+        return result
 
     def plan(self, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0., ramp=15.,
              cap_now=1., candidates=8, flown_pitch=None, attitude_hold=0.,
-             transition_anchor=None, since_separation=0.):
+             transition_anchor=None, since_separation=0., dry_mass=0.):
         low = max(self.min_insertion_r, r+2000.)
         high = self.ra-self.ap_tol
         radii = ([low+(high-low)*i/(candidates-1) for i in range(candidates)] if low < high
@@ -279,27 +300,33 @@ class InsertionGuidance:
             result = self.fly(r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
                               hold_left, ramp, cap_now, dt=2., flown=flown_pitch,
                               attitude_hold=attitude_hold, transition_anchor=transition_anchor,
-                              since_separation=since_separation)
+                              since_separation=since_separation, record=True, dry_mass=dry_mass)
+            if not result['fuel_feasible']:
+                result['score'] = float('inf')
             if best is None or result['score'] < best['score']:
                 best = result
         return best
 
     def command(self, t, r, vr, vh, mass, thrust, ve, g_limit, accel, constant_accel,
                 pitch, hold_left=0., ramp=15., cap_now=1., flown_pitch=None,
-                attitude_hold=0., transition_anchor=None, since_separation=0.):
+                attitude_hold=0., transition_anchor=None, since_separation=0., dry_mass=0.):
         """Plan using commanded pitch and, when available, measured thrust pitch."""
         end = self.guide.tgo is not None and self.guide.tgo < 2*self.guide.freeze_tgo
-        if self.r_t is None or (not end and t-self.planned_at >= self.replan_period):
+        if (self.r_t is None or t < self.planned_at or
+                (self.follow_trajectory and t-self.planned_at >= self.prediction['time']) or
+                (not end and t-self.planned_at >= self.replan_period)):
             best = self.plan(r, vr, vh, mass, thrust, ve, g_limit, pitch,
                              hold_left, ramp, cap_now, flown_pitch=flown_pitch,
                              attitude_hold=attitude_hold, transition_anchor=transition_anchor,
-                             since_separation=since_separation)
+                             since_separation=since_separation, dry_mass=dry_mass)
             keep = None
             if self.r_t is not None:
                 keep = self.fly(self.r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
                                 hold_left, ramp, cap_now, dt=2., flown=flown_pitch,
                                 attitude_hold=attitude_hold, transition_anchor=transition_anchor,
-                                since_separation=since_separation)
+                                since_separation=since_separation, record=True, dry_mass=dry_mass)
+                if not keep['fuel_feasible']:
+                    keep['score'] = float('inf')
             # Switching burnout points steps the command; only do it for a clear gain,
             # or when the current plan no longer reaches the target apoapsis at all.
             keep_missing = (keep is not None and
@@ -312,5 +339,12 @@ class InsertionGuidance:
             else:
                 self.prediction = keep
             self.planned_at = t
+        if self.follow_trajectory:
+            if not math.isfinite(self.prediction['score']):
+                raise ValueError('No fuel-feasible insertion trajectory')
+            elapsed = t-self.planned_at
+            self.planned_sample = sample_trajectory(self.prediction['trajectory'], elapsed)
+            return _clamp(track_trajectory(self.planned_sample, r, vr, vh,
+                                           self.prediction['time']-elapsed), self.lo, self.hi)
         cmd = self.steer(self.guide, t, r, vr, vh, accel, ve, self.r_t, constant_accel, pitch)
         return _clamp(cmd, self.lo, self.hi)

@@ -12,12 +12,12 @@ MU, R, G0 = 3.5316e12, 600000., 9.80665
 
 def fly(h, vr, vh, mass, pitch, hold=34., ramp=15., thrust=2811e3, isp=315.,
         slew=2., lag=2., upper_g=1.4, dt=.2, pitch_response_seconds=None,
-        pitch_bounds=(-30., 45.)):
+        pitch_bounds=(-30., 45.), follow_trajectory=False):
     """Point-mass truth plant: slew-limited command, lagged attitude, roll-hold limiter."""
     ve = isp*G0
     guide = InsertionGuidance(MU, R+90000., R+60000., R+72000., slew=slew, lag=lag,
                               pitch_response_seconds=pitch_response_seconds,
-                              pitch_bounds=pitch_bounds)
+                              pitch_bounds=pitch_bounds, follow_trajectory=follow_trajectory)
     r, t, cmd, flown, peak = R+h, 0., pitch, pitch, 0.
     while t < 400.:
         cap = guide._throttle_cap(t, hold, ramp, .3)
@@ -26,6 +26,8 @@ def fly(h, vr, vh, mass, pitch, hold=34., ramp=15., thrust=2811e3, isp=315.,
         ramp_left = ramp if t < hold else max(0., ramp-(t-hold))
         raw = guide.command(t, r, vr, vh, mass, thrust, ve, upper_g*G0, a, a < .99*a_avail,
                             cmd, max(0., hold-t), ramp_left, cap)
+        if follow_trajectory:
+            a = min(a, guide.planned_sample['thrust']/mass)
         rate = .5 if t < hold else slew
         if pitch_response_seconds is None:
             cmd += max(-rate*dt, min(rate*dt, raw-cmd))
@@ -57,9 +59,11 @@ def test_planned_insertion_reaches_target_without_apoapsis_overshoot(state):
     assert peak <= 93000.
 
 
-def test_smooth_pitch_plan_reaches_recorded_separation_scenario():
+@pytest.mark.parametrize('follow_trajectory', [False, True])
+def test_smooth_pitch_plan_reaches_recorded_separation_scenario(follow_trajectory):
     ap, pe, peak = fly(24012., 779.3, 759.6, 184632., 46.18,
-                       pitch_response_seconds=5., pitch_bounds=(-90., 90.))
+                       pitch_response_seconds=5., pitch_bounds=(-90., 90.),
+                       follow_trajectory=follow_trajectory)
     assert 87000. <= ap <= 93000.
     assert pe >= 59700.
     assert peak <= 93000.
