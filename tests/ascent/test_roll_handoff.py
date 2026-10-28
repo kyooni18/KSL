@@ -1,4 +1,5 @@
-from ksl.ascent.guidance import launch_roll_handoff_ready, progressive_turn_ready
+from ksl.ascent.guidance import (launch_roll_handoff_ready, meco_prepare_ready,
+                                 progressive_turn_ready)
 
 
 def test_recorded_launch_can_release_gravity_turn_without_waiting_for_exact_pitch():
@@ -23,3 +24,10 @@ def test_gravity_turn_can_progress_while_roll_finishes():
     assert not progressive_turn_ready(84., 78., 78., 37., 4., 4.)
     assert not progressive_turn_ready(78., 78., 78., 60., 4., 4.)
     assert not progressive_turn_ready(78., 78., 78., 37., 7., 4.)
+
+
+def test_meco_hold_requires_both_apsides_near_target():
+    assert not meco_prepare_ready(89000., 52000., 90000., 60000.)
+    assert not meco_prepare_ready(96000., 59000., 90000., 60000.)
+    assert meco_prepare_ready(89000., 58000., 90000., 60000.)
+    assert not meco_prepare_ready(96000., 59000., 90000., 60000., tolerance=5000.)

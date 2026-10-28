@@ -64,6 +64,13 @@ def meco_ready(apoapsis_altitude, periapsis_altitude, target_apoapsis, minimum_p
             periapsis_altitude >= minimum_periapsis)
 
 
+def meco_prepare_ready(apoapsis, periapsis, target_apoapsis, target_periapsis,
+                       tolerance=3000.):
+    """Enter an attitude hold only when both measured apsides are near target."""
+    return (target_apoapsis-tolerance <= apoapsis <= target_apoapsis+tolerance and
+            periapsis >= target_periapsis-tolerance)
+
+
 def mission_roll_allowed(liftoff, altitude_gain, roll_start_gain,
                          surface_speed, minimum_speed=40.0):
     """Wait for both pad clearance and sufficient surface speed before rolling."""
