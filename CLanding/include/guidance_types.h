@@ -3,6 +3,24 @@
 #define MM304_PLANNED_MAX_BANK_DEG 40.0
 /* crossrange MM304 leaves to MM305 while energy-short (see entry/contract.inc) */
 #define MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M 15000.0
+/* MM304 S-turn azimuth deadband: wide while hypersonic, narrowing to MM305. */
+#define MM304_AZIMUTH_DEADBAND_HIGH_DEG 10.5
+#define MM304_AZIMUTH_DEADBAND_LOW_DEG 4.0
+#define MM304_AZIMUTH_DEADBAND_HIGH_SPEED 1800.0
+#define MM304_AZIMUTH_DEADBAND_LOW_SPEED 900.0
+/* MM304 S-turn plan: next-reversal search grid and refinement. */
+#define MM304_S_TURN_PLAN_STEP_S 30.0
+#define MM304_S_TURN_PLAN_FIRST_S 5.0
+#define MM304_S_TURN_PLAN_HORIZON_S 400.0
+#define MM304_S_TURN_PLAN_RESOLUTION_S 2.0
+#define MM304_S_TURN_PLAN_MAX_AGE_S 600.0
+#define MM304_S_TURN_PLAN_MIN_LEG_S 60.0
+#define MM304_S_TURN_PLAN_MAX_LEG_S 300.0
+#define MM304_S_TURN_PLAN_LEG_STEP_S 60.0
+#define MM304_S_TURN_PLAN_MIN_BANK_DEG 15.0
+#define MM304_S_TURN_PLAN_BANK_STEP_DEG 10.0
+#define MM304_S_TURN_PLAN_AOA_STEP_DEG 5.0
+#define MM304_S_TURN_PLAN_AOA_MARGIN_DEG 2.0
 /* Bank the runway-line capture plans to stop its cross-track rate with
    (Final and the TAEM line controller); its admission gate uses the same. */
 #define TERMINAL_LINE_CAPTURE_BANK_DEG 10.0
@@ -100,6 +118,9 @@ typedef struct {
     bool has_planned_reversal, planned_reversal_is_final, final_heading_lock;
     double planned_reversal_ut, planned_reversal_range, planned_reversal_sign;
     unsigned predicted_reversals;
+    /* Planned S-turn: reversal times (alternating sides from the present one);
+       a forecast flies exactly these, with no lateral logic of its own. */
+    unsigned schedule_count; double schedule_ut[4];
 } EntryControlPlan;
 
 typedef enum {

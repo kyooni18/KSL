@@ -27,6 +27,26 @@ static double entry_policy_handoff_distance(const EntryPrediction *f,const Plane
     return NAN;
 }
 
+/* Heading error to the site where the forecast reaches the MM305 handoff
+   (deg, NAN without a handoff): the S-turn's arrival quality. */
+static double entry_policy_handoff_heading_error(const EntryPrediction *f,const PlanetModel *p,
+        const LandingConfiguration *cfg){
+    if(!f||!p||!cfg)return NAN;
+    GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
+    double mach_handoff=cfg->guidance.mm305_target_mach+
+        ((cfg->guidance.sts_trajectory_delivery||cfg->guidance.taem_hac_law)&&
+         !strcmp(cfg->vehicle.model_id,"STS")?0.0:cfg->guidance.mm305_mach_half_width);
+    for(size_t i=1;i<f->trajectory.count;++i){
+        const TrajectoryPoint *a=&f->trajectory.points[i-1],*b=&f->trajectory.points[i];
+        double sound=planet_atmospheric_speed_of_sound(p,b->altitude);
+        if(!(sound>0.0)||b->speed>mach_handoff*sound||b->altitude>cfg->guidance.mm305_max_altitude)continue;
+        GeoPoint ga={a->latitude,a->longitude,a->altitude},gb={b->latitude,b->longitude,b->altitude};
+        if(great_circle_distance(ga,gb,p->radius)<1.0)continue;
+        return fabs(norm_signed_deg(initial_bearing(gb,site)-initial_bearing(ga,gb)));
+    }
+    return NAN;
+}
+
 static double entry_supervision_horizon(const GuidanceSettings *settings){
     if(!settings||!isfinite(settings->prediction_interval)||
        settings->prediction_interval<=0.0)return 0.0;
@@ -249,6 +269,11 @@ static void *terminal_prediction_worker(void *arg){
             }
             double cadence_anchor=fmax(c->last_terminal_prediction_request_ut,c->last_terminal_prediction_completion_ut);
             double now_wall=monotonic_seconds();
+            /* ShuttleSim lockstep: the cooldown elapses in UT, as it would live at 1x */
+            if(krpc_session_is_simulator(c->session)&&isfinite(c->last_terminal_prediction_completion_ut)&&
+               c->last_terminal_prediction_completion_ut>-1e299)
+                now_wall=c->last_terminal_prediction_completion_wall+
+                    (c->latest_telemetry.ut-c->last_terminal_prediction_completion_ut);
             if(async_prediction_request_due(c->latest_telemetry.ut,cadence_anchor,now_wall,
                     c->last_terminal_prediction_completion_wall,c->last_terminal_prediction_solve_wall,
                     c->configuration.guidance.prediction_interval)){
@@ -340,8 +365,7 @@ static void *terminal_prediction_worker(void *arg){
             double target=guidance.entry_handoff_target_range;
             if((cfg.guidance.taem_energy_law||cfg.guidance.taem_hac_law)&&isfinite(target)&&
                isfinite(telemetry.range_to_site)){
-                double aoa=guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
-                    guidance.entry_alpha_target:telemetry.angle_of_attack;
+                double aoa=NAN; /* forecasts fly the live MM304 alpha schedule, not a frozen target */
                 double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
                 double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);
                 double lo=0.0,f_lo=NAN,f_hi=NAN;
@@ -377,6 +401,67 @@ static void *terminal_prediction_worker(void *arg){
                     fprintf(stderr,"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %.1f deg "
                         "(miss at 0 deg %+.1f km, at max %+.1f km, best %+.1f km)\n",request_ut,target/1000.0,
                         solved,policy_aoa,f_lo/1000.0,f_hi/1000.0,best_miss/1000.0);
+                    /* S-turn plan: the alternating reversal schedule (first
+                       reversal t1, then equal legs) whose forecast arrives at the
+                       MM305 handoff pointed at the site.  Crossrange is free to
+                       build between the planned reversals. */
+                    double sched[4]={0};unsigned n=0;
+                    EntryPrediction f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound);
+                    double hold_err=entry_policy_handoff_heading_error(&f,&planet,&cfg),best_err=hold_err;
+                    double wall0=monotonic_seconds(),plan_bank=solved;
+                    /* The forecast's energy is not trusted alone (live arrived
+                       short while forecasts said long): bank magnitude and the
+                       schedule are chosen together for an arrival at the hand-off
+                       distance AND pointed at the site. */
+                    best_err=isfinite(hold_err)?hold_err+fabs(entry_policy_handoff_distance(&f,&planet,&cfg)-target)/1000.0:NAN;
+                    entry_prediction_clear(&f);
+                    double plan_aoa=cfg.vehicle.entry_angle_of_attack;
+                    for(double cand_aoa=cfg.vehicle.entry_angle_of_attack;cand_aoa<=cfg.vehicle.maximum_angle_of_attack+1e-6;cand_aoa+=MM304_S_TURN_PLAN_AOA_STEP_DEG)
+                    for(double bank=solved;bank>=MM304_S_TURN_PLAN_MIN_BANK_DEG-1e-6;bank-=MM304_S_TURN_PLAN_BANK_STEP_DEG)
+                    /* t1 starts inside one replan interval, or the plan procrastinates */
+                    for(double t1=MM304_S_TURN_PLAN_FIRST_S;t1<=MM304_S_TURN_PLAN_HORIZON_S;t1+=MM304_S_TURN_PLAN_STEP_S)
+                    for(double leg=MM304_S_TURN_PLAN_MIN_LEG_S;leg<=MM304_S_TURN_PLAN_MAX_LEG_S;leg+=MM304_S_TURN_PLAN_LEG_STEP_S){
+                        double cand[4];
+                        for(unsigned i=0;i<4;i++)cand[i]=request_ut+t1+i*leg;
+                        f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
+                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound);
+                        double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg);
+                        double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
+                        double err=heading+fabs(handoff-target)/1000.0; /* deg + km */
+                        /* reversals the forecast never reached are not part of the plan */
+                        unsigned used=f.s_turn_reversals>4?4:f.s_turn_reversals;
+                        if(getenv("KSP_LANDER_TRACE_S_TURN"))
+                            fprintf(stderr,"S_TURN_CANDIDATE aoa=%.0f bank=%.0f t1=+%.0fs leg=%.0fs heading=%.1f handoff=%.1fkm cost=%.1f rev=%u\n",
+                                cand_aoa,bank,t1,leg,heading,handoff/1000.0,err,used);
+                        if(getenv("KSP_LANDER_TRACE_S_TURN")&&fabs(bank-solved)<1e-6&&fabs(t1-80)<1&&fabs(leg-300)<1)
+                            for(size_t i=0;i<f.trajectory.count;i+=10)
+                                fprintf(stderr,"S_TURN_FORECAST t=%.0f h=%.0f v=%.0f\n",f.trajectory.points[i].ut-request_ut,
+                                    f.trajectory.points[i].altitude,f.trajectory.points[i].speed);
+                        entry_prediction_clear(&f);
+                        if(isfinite(err)&&(!isfinite(best_err)||err<best_err)){
+                            best_err=err;n=used;plan_bank=bank;plan_aoa=cand_aoa;for(unsigned i=0;i<4;i++)sched[i]=cand[i];
+                        }
+                    }
+                    if(getenv("KSP_LANDER_TRACE_S_TURN"))
+                        fprintf(stderr,"S_TURN_SEARCH wall=%.2fs\n",monotonic_seconds()-wall0);
+                    EntryControlPlan*plan_out=&guidance.entry_s_turn_plan;
+                    if(isfinite(best_err)){
+                        plan_out->valid=true;
+                        plan_out->planned_ut=request_ut;
+                        plan_out->target_bank=side*plan_bank;
+                        guidance.entry_policy_bank_deg=plan_bank;
+                        plan_out->target_aoa=plan_aoa;
+                        plan_out->cost=best_err;
+                        plan_out->schedule_count=n;
+                        for(unsigned i=0;i<4;i++)plan_out->schedule_ut[i]=i<n?sched[i]:NAN;
+                        plan_out->has_planned_reversal=n>0;
+                        plan_out->planned_reversal_ut=n?sched[0]:NAN;
+                        plan_out->planned_reversal_sign=n?-side:0.0;
+                        plan_out->planned_reversal_is_final=false;
+                        fprintf(stderr,"MM304 S-turn plan: ut=%.1f side %+.0f aoa %.0f bank %.0f reversals %u at +%.1f +%.1f s (cost %.1f; hold heading %.1f deg)\n",
+                            request_ut,side,plan_aoa,plan_bank,n,n>0?sched[0]-request_ut:NAN,n>1?sched[1]-request_ut:NAN,best_err,hold_err);
+                    }
                 }
             }
         }else pr=predictor_simulate_terminal_shadow_ensemble(state,&telemetry,&guidance,

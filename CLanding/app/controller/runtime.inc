@@ -341,8 +341,12 @@ static void *control_thread(void*arg){
             c->last_terminal_prediction_completion_ut);
         bool request_outstanding=c->last_terminal_prediction_request_ut>
             c->last_terminal_prediction_completion_ut+1e-6;
+        /* ShuttleSim lockstep: the cooldown elapses in UT, as it would live at 1x */
+        double sim_wall=fast_sim&&c->last_terminal_prediction_completion_ut>-1e299&&c->has_latest?
+            c->last_terminal_prediction_completion_wall+
+                (c->latest_telemetry.ut-c->last_terminal_prediction_completion_ut):monotonic_seconds();
         bool request_due=c->has_latest&&async_prediction_request_due(
-            c->latest_telemetry.ut,cadence_anchor,monotonic_seconds(),
+            c->latest_telemetry.ut,cadence_anchor,sim_wall,
             c->last_terminal_prediction_completion_wall,c->last_terminal_prediction_solve_wall,
             c->configuration.guidance.prediction_interval);
         bool sim_plan_barrier=fast_sim&&c->guidance.phase==PHASE_ENTRY_ENERGY&&

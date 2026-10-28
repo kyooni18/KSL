@@ -321,13 +321,13 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
            capture-point miss and loses that range. t_go uses the present speed,
            which overstates the demand slightly: the error is toward margin. */
         double lift=a->lift_accel;
-        if(lift>0.0&&a->speed>1.0&&range>0.0){
+        if(!g->schedule_count&&lift>0.0&&a->speed>1.0&&range>0.0){
             double vertical=lift*cos(mag*DEG2RAD);
             double t_go=range/a->speed;
             double lateral=2.0*fabs(range*sin(he*DEG2RAD))/(t_go*t_go);
             if(hypot(vertical,lateral)>lift){
                 mag=clampd(atan2(lateral,vertical)*RAD2DEG,0,env);
-                if((he>=0?1:-1)!=g->sign)predictor_change_sign(g,he>=0?1:-1);
+                if(!g->schedule_count&&(he>=0?1:-1)!=g->sign)predictor_change_sign(g,he>=0?1:-1);
             }
         }
     }else if(drag_deficit>.01&&isfinite(minimum_radius)){
@@ -527,7 +527,19 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
     bool replay_geometry_ready=replay_arc_ready;
     bool replay_due=event_due&&replay_geometry_ready;
     bool deadline_action=delivery_target?terminal_reversal_due:terminal_deadline_roll_ready;
-    bool reverse_due=g->replay_event?replay_due:
+    if(g->schedule_count){
+        /* planned S-turn: exactly the scheduled reversals */
+        if(g->schedule_next<g->schedule_count&&s.ut>=g->schedule_ut[g->schedule_next]&&!g->final_heading_lock){
+            g->schedule_next++;
+            double old_sign=g->sign;
+            predictor_change_sign(g,-g->sign);
+            if(!g->has_first_reversal&&old_sign!=0){
+                g->has_first_reversal=true;g->first_reversal_final=false;
+                g->first_reversal_ut=s.ut;g->first_reversal_range=range;g->first_reversal_sign=g->sign;
+            }
+        }
+    }
+    bool reverse_due=g->schedule_count?false:g->replay_event?replay_due:
         (live_setup_reversal_due||measured_reversal_due||deadline_action);
     bool reversal_dwell_ready=minleg||(!g->replay_event&&
         ((deadline_action&&configured_minleg)||(live_setup_reversal_due&&configured_minleg)));
@@ -561,7 +573,16 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
 
     double qr=a->q/fmax(v->maximum_dynamic_pressure,1),gr=(a->non_gravity/fmax(grav,.1))/fmax(v->maximum_g_load,.1);
     double protective_aoa=entry_low_q_protective_aoa_floor(a->q,v);
-    double aoa=forced_policy?clampd(g->forced_aoa,protective_aoa,v->maximum_angle_of_attack):
+    double policy_aoa=g->forced_aoa;
+    if(forced_policy&&!isfinite(policy_aoa)){
+        /* NAN policy AoA: fly the live MM304 velocity-scheduled alpha */
+        EntryAlphaSchedule alpha_schedule;
+        entry_alpha_schedule_default(&alpha_schedule,v,
+            fmax(entry_taem_speed_target(v,set,p),set->taem_force_handoff_speed));
+        policy_aoa=entry_alpha_schedule_interpolate(&alpha_schedule,a->speed);
+        if(!isfinite(policy_aoa))policy_aoa=v->entry_angle_of_attack;
+    }
+    double aoa=forced_policy?clampd(policy_aoa,protective_aoa,v->maximum_angle_of_attack):
         v->entry_angle_of_attack+(v->maximum_angle_of_attack-v->entry_angle_of_attack)*drag_deficit;
     /* Vertical debt is paid with bank/path geometry. The predictor must mirror
        live guidance and never buy sink by exposing the orbiter at low incidence. */
@@ -671,7 +692,11 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
     LandingConfiguration interface_cfg={.site=*site,.vehicle=*v,.guidance=*set};
     /* Never seed an established leg on the opposite measured bank. */
     if(g.sign*g.actual_bank<=0||fabs(g.actual_bank)<4){g.established=false;g.leg_elapsed=0;}
-    if(replay&&replay->has_planned_reversal&&isfinite(replay->planned_reversal_ut)&&
+    if(replay&&replay->schedule_count){
+        g.schedule_count=replay->schedule_count>4?4:replay->schedule_count;
+        for(unsigned i=0;i<g.schedule_count;i++)g.schedule_ut[i]=replay->schedule_ut[i];
+    }
+    else     if(replay&&replay->has_planned_reversal&&isfinite(replay->planned_reversal_ut)&&
             fabs(replay->planned_reversal_sign)>.1){
         g.replay_event=true;g.replay_event_ut=replay->planned_reversal_ut;
         g.replay_event_sign=replay->planned_reversal_sign;
@@ -813,6 +838,9 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
             target_aoa=aoa;
         }
         predictor_attitude_step(&g,bank,target_aoa,&at,v,set,dt,cal0->physics);
+        if(getenv("KSP_LANDER_TRACE_PRED_AERO")&&replay&&replay->schedule_count&&fabs(geo.altitude-1000.0*floor(geo.altitude/1000.0+0.5))<dt*fabs(vs)*0.5+1&&(int)floor(geo.altitude/1000.0+0.5)%4==0)
+            fprintf(stderr,"PRED_AERO h=%.0f v=%.0f mach=%.2f q=%.0f rho=%.3e aoa=%.1f bank=%.1f D=%.2f L=%.2f table=%d direct=%d\n",
+                geo.altitude,at.speed,at.mach,at.q,at.density,g.actual_aoa,g.actual_bank,at.drag_accel,at.lift_accel,ctx.entry_table!=NULL,at.direct_aero);
         if(out.entered_atmosphere&&!out.reached_taem)out.maximum_abs_angle_of_attack=fmax(out.maximum_abs_angle_of_attack,fabs(g.actual_aoa));
         ctx.bank=g.actual_bank;ctx.aoa=g.actual_aoa;ctx.ut=state.ut;
         ctx.airbrakes=predictor_speedbrake_state(&g,geo,&at,p,cal0,v,site,set,state.mass,false,dt);
@@ -852,6 +880,21 @@ EntryPrediction predictor_simulate_entry_policy(VehicleState state,const PlanetM
     return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,v->maximum_bank_angle,
         sign*bank_deg,0,aoa_deg,0,sign,0,false,maxdur,true,true,bank_deg,aoa_deg,maxdur,maxdur,
         false,false,NULL,NULL);
+}
+/* The same policy flying exactly the S-turn reversals at reversal_ut[]
+   (alternating sides from sign); no lateral logic of the predictor's own. */
+EntryPrediction predictor_simulate_entry_policy_reversal(VehicleState state,const PlanetModel*p,AerodynamicModel aero,
+        const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,
+        const LandingSite*site,const GuidanceSettings*set,double bank_deg,double aoa_deg,
+        double sign,unsigned count,const double*reversal_ut,double maxdur){
+    EntryControlPlan replay;memset(&replay,0,sizeof(replay));
+    replay.valid=true;replay.target_bank=sign*bank_deg;
+    /* an empty schedule still disables the predictor's own reversals */
+    replay.schedule_count=count?(count>4?4:count):1;
+    for(unsigned i=0;i<replay.schedule_count;i++)replay.schedule_ut[i]=count?reversal_ut[i]:INFINITY;
+    return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,v->maximum_bank_angle,
+        sign*bank_deg,0,aoa_deg,0,sign,0,false,maxdur,true,true,bank_deg,aoa_deg,maxdur,maxdur,
+        false,false,&replay,NULL);
 }
 EntryPrediction predictor_simulate_entry(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_sign,double initial_leg,double maxdur,bool include){
     return predictor_simulate_entry_with_rate(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,0,initial_sign,initial_leg,maxdur,include);

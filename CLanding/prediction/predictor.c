@@ -2,6 +2,7 @@
 #include "decision_envelope.h"
 #include "async_prediction_policy.h"
 #include "taem_candidate_search.h"
+#include "entry_alpha.h"
 
 #include <float.h>
 #include <math.h>
@@ -20,6 +21,7 @@ typedef struct {
     bool has_first_reversal, first_reversal_final, final_heading_lock;
     double first_reversal_ut, first_reversal_range, first_reversal_sign;
     bool replay_event, replay_event_final; double replay_event_ut, replay_event_sign;
+    unsigned schedule_count, schedule_next; double schedule_ut[4];
     double entry_score; bool has_entry_score;
     double actual_bank,actual_bank_rate,actual_aoa,actual_aoa_rate,entry_speed;
     bool has_interface_target,enforce_terminal_delivery_budget; TaemInterfaceTarget interface_target;

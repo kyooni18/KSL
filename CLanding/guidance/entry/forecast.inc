@@ -31,6 +31,15 @@ bool guidance_accept_entry_plan(GuidanceMachine*g,const GuidanceMachine*request,
         g->entry_s_turn_plan.taem_energy_error=result->entry_s_turn_plan.taem_energy_error;
         g->entry_s_turn_plan.predicted_reversals=result->entry_s_turn_plan.predicted_reversals;
         g->entry_s_turn_plan.cost=result->entry_s_turn_plan.cost;
+        g->entry_s_turn_plan.planned_ut=result->entry_s_turn_plan.planned_ut;
+        g->entry_s_turn_plan.target_bank=result->entry_s_turn_plan.target_bank;
+        g->entry_s_turn_plan.target_aoa=result->entry_s_turn_plan.target_aoa;
+        g->entry_s_turn_plan.has_planned_reversal=result->entry_s_turn_plan.has_planned_reversal;
+        g->entry_s_turn_plan.planned_reversal_ut=result->entry_s_turn_plan.planned_reversal_ut;
+        g->entry_s_turn_plan.planned_reversal_sign=result->entry_s_turn_plan.planned_reversal_sign;
+        g->entry_s_turn_plan.planned_reversal_is_final=result->entry_s_turn_plan.planned_reversal_is_final;
+        g->entry_s_turn_plan.schedule_count=result->entry_s_turn_plan.schedule_count;
+        memcpy(g->entry_s_turn_plan.schedule_ut,result->entry_s_turn_plan.schedule_ut,sizeof(g->entry_s_turn_plan.schedule_ut));
     }
     if(result->entry_policy_valid&&isfinite(result->entry_policy_bank_deg)){
         g->entry_policy_valid=true;

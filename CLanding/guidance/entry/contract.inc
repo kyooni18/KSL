@@ -301,6 +301,17 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         double hold=isfinite(nominal)?fmin(t->angle_of_attack,nominal):t->angle_of_attack;
         alpha_ceiling=alpha_ceiling+(hold-alpha_ceiling)*yaw_use;
     }
+    {
+        /* A fresh S-turn plan owns incidence: its forecast was flown at
+           target_aoa, so drag modulation may not buy energy loss above it
+           (28 deg halves L/D and the plan would arrive short). */
+        const EntryControlPlan*plan=&g->entry_s_turn_plan;
+        if(plan->valid&&isfinite(plan->target_aoa)&&isfinite(plan->planned_ut)&&
+           t->ut-plan->planned_ut<=MM304_S_TURN_PLAN_MAX_AGE_S){
+            for(size_t i=0;i<alpha_schedule.point_count;i++)alpha_schedule.alpha[i]=plan->target_aoa;
+            alpha_ceiling=fmin(alpha_ceiling,plan->target_aoa+MM304_S_TURN_PLAN_AOA_MARGIN_DEG);
+        }
+    }
     alpha_ceiling=fmax(alpha_ceiling,alpha_schedule.minimum_protective_aoa);
     EntryAlphaInput alpha_in={
         .relative_velocity=t->true_air_speed,
@@ -409,6 +420,21 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
        isfinite(g->entry_policy_bank_deg)&&g->entry_policy_bank_deg<=0.5)
         lateral.crossrange_uncertainty_m=fmax(lateral.crossrange_uncertainty_m,
             MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M);
+    /* S-turn: crossrange is allowed to build while banked; a reversal comes
+       only when the azimuth error to the capture point leaves a velocity-
+       scheduled deadband (Shuttle entry lateral logic), and swings the
+       built-up crossrange back.  With only the navigation uncertainty as the
+       deadband (0.0 deg logged) the live 2026-10-28 entry reversed at 9.9 deg
+       right after EI and three more times. */
+    if(isfinite(alignment_range)&&alignment_range>0.0&&isfinite(t->true_air_speed)){
+        double v=t->true_air_speed;
+        double deadband=v>=MM304_AZIMUTH_DEADBAND_HIGH_SPEED?MM304_AZIMUTH_DEADBAND_HIGH_DEG:
+            v<=MM304_AZIMUTH_DEADBAND_LOW_SPEED?MM304_AZIMUTH_DEADBAND_LOW_DEG:
+            MM304_AZIMUTH_DEADBAND_LOW_DEG+(MM304_AZIMUTH_DEADBAND_HIGH_DEG-MM304_AZIMUTH_DEADBAND_LOW_DEG)*
+                (v-MM304_AZIMUTH_DEADBAND_LOW_SPEED)/(MM304_AZIMUTH_DEADBAND_HIGH_SPEED-MM304_AZIMUTH_DEADBAND_LOW_SPEED);
+        lateral.crossrange_uncertainty_m=fmax(lateral.crossrange_uncertainty_m,
+            alignment_range*tan(deadband*DEG2RAD));
+    }
     lateral.has_sideslip=isfinite(t->sideslip)&&
         isfinite(cfg->calibration.maximum_sideslip)&&cfg->calibration.maximum_sideslip>0.0;
     lateral.sideslip_deg=lateral.has_sideslip?t->sideslip:0.0;
@@ -529,6 +555,16 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         }
     }
 
+    {
+        const EntryControlPlan*plan=&g->entry_s_turn_plan;
+        if(plan->valid&&isfinite(plan->planned_ut)&&t->ut-plan->planned_ut<=MM304_S_TURN_PLAN_MAX_AGE_S&&
+           fabs(plan->target_bank)>DBL_EPSILON){
+            double planned=plan->target_bank>=0.0?1.0:-1.0;
+            for(unsigned i=0;i<plan->schedule_count&&i<4;i++)if(t->ut>=plan->schedule_ut[i])planned=-planned;
+            lateral.has_planned_side=true;
+            lateral.planned_side=planned;
+        }
+    }
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;
     EntryLateralOutput lateral_out=entry_lateral_update(&g->entry_lateral,&lateral,&limits);
     if(!lateral_out.valid)

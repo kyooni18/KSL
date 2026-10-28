@@ -448,7 +448,14 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
            either discontinuity can otherwise reverse the aircraft away from
            a target that is still behind it. Resume crossrange capture once the
            target is ahead of the aircraft. */
-        if(point_target_behind)
+        if(input->has_planned_side&&fabs(input->planned_side)>0.5){
+            /* Planned S-turn: the side follows the forecast plan, which lets
+               crossrange build on this leg and reverses where the plan
+               arrives at the target. */
+            demanded_sign=unit_sign(input->planned_side);
+            crossrange_demand=0.0;
+        }
+        else if(point_target_behind)
             demanded_sign=state->bank_sign;
         else if(output.lateral_demand_binding&&
                 fabs(output.zero_effort_crossrange_m)>DBL_EPSILON){
@@ -465,7 +472,7 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
            is inside its azimuth deadband. Do not discard that measured
            prediction merely because the runway bearing looks centered. */
         if (authority_valid &&
-            (fabs(error) > deadband || crossrange_demand != 0.0) &&
+            (input->has_planned_side || fabs(error) > deadband || crossrange_demand != 0.0) &&
             demanded_sign * state->bank_sign < 0.0) {
             state->reversal_armed = true;
             if (captured_or_small && reversal_ready) {

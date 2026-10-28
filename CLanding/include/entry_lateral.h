@@ -68,6 +68,10 @@ typedef struct {
        deg, positive = target to the right) and its reversal deadband.  This is
        heading-independent: a right bank always turns toward a target on the
        right, whatever the flight direction. */
+    /* Planned S-turn side (sign of bank) from the MM304 forecast plan: when
+       present it, not the measured crossrange or azimuth, decides reversals. */
+    bool has_planned_side;
+    double planned_side;
     bool has_azimuth_error;
     double azimuth_error_deg;
     double azimuth_deadband_deg;
