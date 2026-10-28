@@ -147,3 +147,36 @@ def test_srb_cutoff_ignition_and_detachment_share_one_request():
     conn._rpc_connection.fail = True
     with pytest.raises(RuntimeError, match='staging may be partial'):
         separate_sts_boosters_batch(conn, [[core]], [], motors, decouplers)
+
+
+def test_batch_failure_finishes_only_attached_branch_without_aborting():
+    detached, attached, motor_part = object(), object(), object()
+    class Decoupler:
+        def __init__(self, part):
+            self.part = part
+            self.decoupled = False
+            self.calls = 0
+        def decouple(self):
+            self.calls += 1
+            self.decoupled = True
+    first, second = Decoupler(detached), Decoupler(attached)
+    motor = SimpleNamespace(part=motor_part, active=False, has_fuel=True, thrust_limit=0.)
+    shuttle = Shuttle.__new__(Shuttle)
+    shuttle.vehicle_kind = 'orbiter-shuttle'
+    shuttle.vessel = SimpleNamespace(parts=SimpleNamespace(all=[attached, motor_part]))
+    shuttle.conn = object()
+    shuttle.sc = SimpleNamespace(ut=100.)
+    shuttle.core_groups = [[object()]]
+    shuttle.liquid_boosters = []
+    shuttle.solid_boosters = [object(), object()]
+    shuttle.sepmotors = [motor]
+    shuttle.booster_branch_parts = [[detached], [attached, motor_part]]
+    shuttle.booster_decouplers = [first, second]
+    shuttle.cruise_control_moment_budget = 1.
+    with patch('ksl.ascent.vehicle.separate_sts_boosters_batch',
+               side_effect=RuntimeError('server failure')) as batch:
+        assert shuttle._separate_boosters()
+        batch.assert_called_once()
+    assert first.calls == 0 and second.calls == 1
+    assert motor.active and motor.thrust_limit == 1.
+    assert shuttle.separated and shuttle.booster_separation_ut == 100.

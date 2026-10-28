@@ -955,14 +955,58 @@ class Shuttle:
         return bool(self.solid_boosters) and all(
             not engine_has_fuel(engine) for engine in self.solid_boosters)
 
+    def _recover_sts_separation(self):
+        """Finish only branches confirmed still attached after an uncertain batch."""
+        try:
+            attached_parts = set(self.vessel.parts.all)
+        except Exception as exc:
+            print(f'WARNING: cannot inspect booster separation state: {exc}')
+            return False
+        unresolved = False
+        for index, decoupler in enumerate(self.booster_decouplers):
+            try:
+                part = decoupler.part
+                if part not in attached_parts or decoupler.decoupled:
+                    continue
+                branch = set(self.booster_branch_parts[index])
+                for engine in self.sepmotors:
+                    try:
+                        if engine.part in branch:
+                            engine.thrust_limit = 1.0
+                            if not engine.active and engine.has_fuel:
+                                engine.active = True
+                    except Exception as exc:
+                        print(f'WARNING: separator motor could not be checked: {exc}')
+                decoupler.decouple()
+                if not decoupler.decoupled:
+                    unresolved = True
+            except Exception as exc:
+                unresolved = True
+                print(f'WARNING: booster {index+1} separation uncertain: {exc}')
+        return not unresolved
+
     def _separate_boosters(self):
         separation_timing = None
         if self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters:
-            separation_timing = separate_sts_boosters_batch(
-                self.conn, self.core_groups, self.liquid_boosters + self.solid_boosters,
-                self.sepmotors, self.booster_decouplers)
-            print(f'Ignited {len(self.sepmotors)} separator motors and detached '
-                  'both boosters in one kRPC request')
+            if not getattr(self, '_separation_batch_attempted', False):
+                self._separation_batch_attempted = True
+                try:
+                    separation_timing = separate_sts_boosters_batch(
+                        self.conn, self.core_groups, self.liquid_boosters + self.solid_boosters,
+                        self.sepmotors, self.booster_decouplers)
+                    print(f'Ignited {len(self.sepmotors)} separator motors and detached '
+                          'both boosters in one kRPC request')
+                except Exception as exc:
+                    print(f'WARNING: separation batch failed: {exc}; checking each branch')
+                    emit_event('booster-separation-warning', error=str(exc))
+                    for group in self.core_groups:
+                        for engine in group:
+                            try:
+                                engine.thrust_limit = min(engine.thrust_limit, POST_SEP_CAP_FLOOR)
+                            except Exception as cap_error:
+                                print(f'WARNING: SSME separation cap unavailable: {cap_error}')
+            if separation_timing is None and not self._recover_sts_separation():
+                return False
             if separation_timing and separation_timing[1] > separation_timing[0]:
                 print(f'WARNING: staging batch spanned '
                       f'{separation_timing[1]-separation_timing[0]:.3f} simulation seconds')
@@ -992,6 +1036,7 @@ class Shuttle:
         emit_event('booster-separation', ut=self.booster_separation_ut,
                    batch_start_ut=separation_timing[0] if separation_timing else None)
         print('Boosters shut down/burned out and separated')
+        return True
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
                throttle_slew=THROTTLE_SLEW_PER_SECOND,
@@ -1011,7 +1056,7 @@ class Shuttle:
                            max_q_pa=separation_max_q)
                 print(f'Coasting spent SRBs until q <= {separation_max_q:.0f} Pa')
             elif self.sc.ut - self.booster_separation_hold_ut > 30.0:
-                raise RuntimeError('Dynamic pressure did not fall enough for SRB separation within 30 s')
+                print('WARNING: SRB separation still waiting for the requested dynamic pressure')
         if depleted and not hold_separation:
             if before_booster_separation is not None:
                 before_booster_separation()

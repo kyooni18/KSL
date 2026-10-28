@@ -91,6 +91,7 @@ class SeparationEnvelopeTests(unittest.TestCase):
             core.thrust_limit = min(core.thrust_limit, .3)
             for decoupler in decouplers:
                 decoupler.decouple()
+            return (100., 100.)
         with patch('ksl.ascent.vehicle.separate_sts_boosters_batch', side_effect=stage):
             result = shuttle.update(dt=.1, throttle_slew=.01)
         self.assertEqual(observed, [.3])

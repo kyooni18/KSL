@@ -320,6 +320,13 @@ def run(args):
         sep_handled = False
         separation_hold_direction = None
         previous_aim_direction = None
+        flight_warnings = set()
+
+        def warn_once(key, message):
+            if key not in flight_warnings:
+                flight_warnings.add(key)
+                print(f'WARNING: {message}; flight continues until manually stopped')
+                emit_event('flight-warning', warning=key, message=message)
 
         def prepare_separation_hold():
             nonlocal separation_hold_direction
@@ -465,39 +472,41 @@ def run(args):
                 print(f'{len(shuttle.sepmotors)} separator motors inhibited until SRB separation')
                 # The next stage ignites the Clydesdales and releases the clamps;
                 # Mites share that stage, so they are disabled again immediately.
-                control.activate_next_stage()
-                if conn.space_center.active_vessel != v:
-                    raise RuntimeError('Active vessel changed during booster ignition staging')
-                # They share the Clydesdale ignition stage on this craft, so
-                # immediately shut them down while the configured zero limiter
-                # protects their propellant until booster separation.
-                for engine in shuttle.sepmotors:
-                    engine.thrust_limit = 0.0
-                    engine.active = False
-                booster_deadline = time.monotonic() + 5.0
-                expected_booster_thrust = sum(engine.max_thrust
-                                              for engine in shuttle.solid_boosters)
-                while time.monotonic() < booster_deadline:
-                    booster_thrust = sum(engine_thrust(engine)
-                                         for engine in shuttle.solid_boosters)
-                    if (all(engine.active for engine in shuttle.solid_boosters) and
-                            booster_thrust >= expected_booster_thrust * .5):
-                        break
-                    time.sleep(.05)
-                else:
-                    raise RuntimeError('Clydesdale ignition failed after stage activation')
-                expected_after_clamps = prelaunch_part_count - len(clamps)
-                actual_after_clamps = len(v.parts.all)
-                if actual_after_clamps < expected_after_clamps:
-                    control.throttle = 0
-                    raise RuntimeError(
-                        'Part loss at clamp release: expected at least '
-                        f'{expected_after_clamps} parts after {len(clamps)} clamps, '
-                        f'found {actual_after_clamps}')
-                baseline_part_count = expected_after_clamps
-                emit_event('liftoff')
-                print(f'Clydesdales ignited; clamps released; booster thrust '
-                      f'{booster_thrust/1000:.0f} kN')
+                try:
+                    control.activate_next_stage()
+                    if conn.space_center.active_vessel != v:
+                        warn_once('staging-vessel', 'Active vessel changed during booster ignition staging')
+                    # They share the Clydesdale ignition stage on this craft, so
+                    # immediately shut them down while the configured zero limiter
+                    # protects their propellant until booster separation.
+                    for engine in shuttle.sepmotors:
+                        engine.thrust_limit = 0.0
+                        engine.active = False
+                    booster_deadline = time.monotonic() + 5.0
+                    expected_booster_thrust = sum(engine.max_thrust
+                                                  for engine in shuttle.solid_boosters)
+                    while time.monotonic() < booster_deadline:
+                        booster_thrust = sum(engine_thrust(engine)
+                                             for engine in shuttle.solid_boosters)
+                        if (all(engine.active for engine in shuttle.solid_boosters) and
+                                booster_thrust >= expected_booster_thrust * .5):
+                            break
+                        time.sleep(.05)
+                    else:
+                        warn_once('booster-ignition', 'Clydesdale ignition not verified after stage activation')
+                    expected_after_clamps = prelaunch_part_count - len(clamps)
+                    actual_after_clamps = len(v.parts.all)
+                    if actual_after_clamps < expected_after_clamps:
+                        warn_once('clamp-part-loss',
+                            'Part loss at clamp release: expected at least '
+                            f'{expected_after_clamps} parts after {len(clamps)} clamps, '
+                            f'found {actual_after_clamps}')
+                    baseline_part_count = expected_after_clamps
+                    emit_event('liftoff')
+                    print(f'Clydesdales ignited; clamps released; booster thrust '
+                          f'{booster_thrust/1000:.0f} kN')
+                except Exception as exc:
+                    warn_once('booster-stage-error', f'Booster ignition staging error: {exc}')
             else:
                 for group, u in zip(shuttle.groups[core_group_count:],
                                     result.throttles[core_group_count:]):
@@ -527,755 +536,766 @@ def run(args):
                                  'engine_gimbal_actuation', 'available_torque_Nm',
                                  'orbit_inclination_deg', 'guidance_dv_mps'])
                 previous_control_ut = None
+                last_flight_error_report = 0.0
                 while True:
-                    tick = time.monotonic()
-                    control_ut = conn.space_center.ut
-                    control_dt = control_interval(control_ut, previous_control_ut)
-                    previous_control_ut = control_ut
-                    if conn.space_center.active_vessel != v:
-                        raise RuntimeError('Active vessel changed')
-                    recovered_autopilot = ensure_autopilot_engaged(control, ap)
-                    if recovered_autopilot:
-                        print('AutoPilot unexpectedly disengaged; re-engaged')
-                    if conn.space_center.ut-started > args.timeout:
-                        raise RuntimeError('Mission timeout')
-                    altitude = flight.mean_altitude
-                    altitude_gain = max(0.0, altitude-launch_altitude)
-                    if (state == 'ASCENT' and shuttle.vehicle_kind == 'orbiter-shuttle'
-                            and shuttle.solid_boosters and not shuttle.separated
-                            and initial_roll_set and separation_hold_direction is None
-                            and flight.dynamic_pressure <= args.booster_separation_max_q
-                            and shuttle.booster_nominal_burn_time() <= 4.0):
-                        prepare_separation_hold()
-                    separation_hold_active = (
-                        separation_hold_direction is not None and
-                        (shuttle.booster_separation_ut is None or
-                         conn.space_center.ut-shuttle.booster_separation_ut < SEPARATION_ATTITUDE_HOLD_SECONDS))
-                    if state == 'ASCENT' and shuttle.et_attached:
-                        core_engines = [e for group in shuttle.core_groups
-                                        for e in group]
-                        unexpectedly_off = [e for e in core_engines if not e.active]
-                        if unexpectedly_off:
-                            if ssme_restarts >= 2:
-                                raise RuntimeError(
-                                    'SSME shutdown recurred after two automatic restart attempts')
-                            attitude_error = direction_error_deg(
-                                v.direction(ap.reference_frame), ap.target_direction)
-                            if attitude_error > 25.0 and flight.dynamic_pressure > 5000.0:
-                                raise RuntimeError(
-                                    f'SSME shutdown at q={flight.dynamic_pressure:.0f} Pa, '
-                                    f'nose error={attitude_error:.1f} deg; unsafe to relight')
-                            count = restore_unexpected_ssme_shutdown(core_engines)
-                            ssme_restarts += 1
-                            ssme_relight_verify_ut = conn.space_center.ut + 3.0
-                            emit_event('ssme-auto-restart', engines=count,
-                                       altitude_m=altitude,
-                                       dynamic_pressure_pa=flight.dynamic_pressure,
-                                       attempt=ssme_restarts)
-                            print(f'WARNING: {count} SSME(s) unexpectedly disabled at '
-                                  f'{altitude:.0f} m; KSP relight accepted '
-                                  f'(attempt {ssme_restarts}/2)')
-                        if (ssme_relight_verify_ut is not None and
-                                conn.space_center.ut >= ssme_relight_verify_ut):
-                            weak = [e for e in core_engines
-                                    if not e.active or
-                                    (control.throttle > 0.5 and
-                                     engine_thrust(e) < .05*e.max_thrust*e.thrust_limit)]
-                            if weak:
-                                raise RuntimeError(
-                                    f'SSME restart produced no sustained thrust after 3 s '
-                                    f'({len(weak)} core engine(s) inactive/weak)')
-                            print(f'SSME relight verified at UT {conn.space_center.ut:.1f}')
-                            ssme_relight_verify_ut = None
-                    if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
-                        initial_roll_set = True
-                        liftoff_ut = conn.space_center.ut
-                        print(f'Liftoff: holding pad roll {launch_roll:.1f} deg; physical heads-down roll deferred')
-                    earthward_mode, reset_due = earthward_roll_target(
-                        initial_roll_set, shuttle.booster_separation_ut,
-                        conn.space_center.ut, args.roll_reset_delay)
-                    roll_allowed = mission_roll_allowed(
-                        initial_roll_set, altitude_gain, args.roll_start)
-                    if roll_allowed and not mission_roll_commanded:
-                        saved_auto_tune = ap.auto_tune
-                        saved_roll_pid = ap.roll_pid_gains
-                        roll_surface_states = limit_aero_roll(v)
-                        ap.auto_tune = False
-                        ap.roll_pid_gains = (0.0, 0.0, 0.0)
-                        ap.target_roll = float('nan')
-                        mission_roll_commanded = True
-                        # Roll once, straight to the launch-azimuth roof orientation: with
-                        # the pad heading kept, the roll stopped short and had to roll
-                        # again when the heading slewed (94 deg on a polar launch).
-                        args.heading = target_heading
-                        print(f'Physical orbiter-side roll started: earthward; '
-                              f'elevon roll enabled at 60% authority')
-                    roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
-                    if recovered_autopilot and roll_active:
-                        ap.auto_tune = False
-                        ap.roll_pid_gains = (0.0, 0.0, 0.0)
-                        ap.target_roll = float('nan')
-                    target_roll = launch_roll if not mission_roll_commanded else None
-                    if separation_hold_active:
-                        reset_due = False
-                        earthward_mode = True
-                    if (reset_due and not roll_reset and
-                            flight.dynamic_pressure > args.upright_max_q):
-                        # Rolling a winged orbiter in thick air snaps a wing:
-                        # wait for the air to thin before the upright roll.
-                        reset_due = False
-                        earthward_mode = True
-                    elif roll_reset:
-                        earthward_mode = False
-                    if reset_due and not roll_reset:
-                        roll_reset = True
-                        roll_reset_ut = conn.space_center.ut
-                        print(f'Post-booster physical roll: orbiter side now targets spaceward '
-                              f'(q {flight.dynamic_pressure:.0f} Pa)')
-                    roll_requires_authority = False
-                    if state == 'ASCENT':
-                        roll_requires_authority = mission_roll_commanded and not mission_roll_settled
-                        if mission_roll_settled:
-                            heading_goal = target_heading
-                            if flight.horizontal_speed > 450.0 and peg_dv is None:
-                                # (PEG owns the heading once it is active; two slewed heading
-                                # laws cancelled and left ~50 m/s of cross-track uncorrected.)
-                                # The velocity vector lags the nose heading by many
-                                # degrees at speed, so steer on the measured surface
-                                # velocity azimuth: lead the nose past the target by a
-                                # gain times the azimuth error.
-                                svel = conn.space_center.transform_direction(
-                                    v.velocity(body.reference_frame), body.reference_frame,
-                                    v.surface_reference_frame)
-                                vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
-                                # Desired surface azimuth at the current speed so the
-                                # *inertial* velocity azimuth equals the one that gives
-                                # the target inclination.
+                    try:
+                        tick = time.monotonic()
+                        control_ut = conn.space_center.ut
+                        control_dt = control_interval(control_ut, previous_control_ut)
+                        previous_control_ut = control_ut
+                        if conn.space_center.active_vessel != v:
+                            raise RuntimeError('Active vessel changed')
+                        recovered_autopilot = ensure_autopilot_engaged(control, ap)
+                        if recovered_autopilot:
+                            print('AutoPilot unexpectedly disengaged; re-engaged')
+                        if conn.space_center.ut-started > args.timeout:
+                            warn_once('timeout', 'Mission time limit exceeded')
+                        altitude = flight.mean_altitude
+                        altitude_gain = max(0.0, altitude-launch_altitude)
+                        if (state == 'ASCENT' and shuttle.vehicle_kind == 'orbiter-shuttle'
+                                and shuttle.solid_boosters and not shuttle.separated
+                                and initial_roll_set and separation_hold_direction is None
+                                and flight.dynamic_pressure <= args.booster_separation_max_q
+                                and shuttle.booster_nominal_burn_time() <= 4.0):
+                            prepare_separation_hold()
+                        separation_hold_active = (
+                            separation_hold_direction is not None and
+                            (shuttle.booster_separation_ut is None or
+                             conn.space_center.ut-shuttle.booster_separation_ut < SEPARATION_ATTITUDE_HOLD_SECONDS))
+                        if state == 'ASCENT' and shuttle.et_attached:
+                            core_engines = [e for group in shuttle.core_groups
+                                            for e in group]
+                            unexpectedly_off = [e for e in core_engines if not e.active]
+                            if unexpectedly_off:
+                                if ssme_restarts >= 2:
+                                    warn_once('ssme-restarts', 'SSME shutdown recurred after two restart attempts')
+                                attitude_error = direction_error_deg(
+                                    v.direction(ap.reference_frame), ap.target_direction)
+                                if attitude_error > 25.0 and flight.dynamic_pressure > 5000.0:
+                                    warn_once('ssme-relight-attitude',
+                                        f'SSME shutdown at q={flight.dynamic_pressure:.0f} Pa, '
+                                        f'nose error={attitude_error:.1f} deg; relight deferred')
+                                elif ssme_restarts < 2:
+                                    try:
+                                        count = restore_unexpected_ssme_shutdown(core_engines)
+                                        ssme_relight_verify_ut = conn.space_center.ut + 3.0
+                                        emit_event('ssme-auto-restart', engines=count,
+                                                   altitude_m=altitude,
+                                                   dynamic_pressure_pa=flight.dynamic_pressure,
+                                                   attempt=ssme_restarts+1)
+                                    except Exception as exc:
+                                        warn_once('ssme-relight', f'SSME restart failed: {exc}')
+                                    ssme_restarts += 1
+                            if (ssme_relight_verify_ut is not None and
+                                    conn.space_center.ut >= ssme_relight_verify_ut):
+                                weak = [e for e in core_engines
+                                        if not e.active or
+                                        (control.throttle > 0.5 and
+                                         engine_thrust(e) < .05*e.max_thrust*e.thrust_limit)]
+                                if weak:
+                                    warn_once('ssme-weak',
+                                        f'SSME restart produced no sustained thrust after 3 s '
+                                        f'({len(weak)} core engine(s) inactive/weak)')
+                                else:
+                                    print(f'SSME relight verified at UT {conn.space_center.ut:.1f}')
+                                ssme_relight_verify_ut = None
+                        if not initial_roll_set and v.situation != conn.space_center.VesselSituation.pre_launch:
+                            initial_roll_set = True
+                            liftoff_ut = conn.space_center.ut
+                            print(f'Liftoff: holding pad roll {launch_roll:.1f} deg; physical heads-down roll deferred')
+                        earthward_mode, reset_due = earthward_roll_target(
+                            initial_roll_set, shuttle.booster_separation_ut,
+                            conn.space_center.ut, args.roll_reset_delay)
+                        roll_allowed = mission_roll_allowed(
+                            initial_roll_set, altitude_gain, args.roll_start)
+                        if roll_allowed and not mission_roll_commanded:
+                            saved_auto_tune = ap.auto_tune
+                            saved_roll_pid = ap.roll_pid_gains
+                            roll_surface_states = limit_aero_roll(v)
+                            ap.auto_tune = False
+                            ap.roll_pid_gains = (0.0, 0.0, 0.0)
+                            ap.target_roll = float('nan')
+                            mission_roll_commanded = True
+                            # Roll once, straight to the launch-azimuth roof orientation: with
+                            # the pad heading kept, the roll stopped short and had to roll
+                            # again when the heading slewed (94 deg on a polar launch).
+                            args.heading = target_heading
+                            print(f'Physical orbiter-side roll started: earthward; '
+                                  f'elevon roll enabled at 60% authority')
+                        roll_active = mission_roll_commanded and state in ('ASCENT', 'ORBITER_ASCENT')
+                        if recovered_autopilot and roll_active:
+                            ap.auto_tune = False
+                            ap.roll_pid_gains = (0.0, 0.0, 0.0)
+                            ap.target_roll = float('nan')
+                        target_roll = launch_roll if not mission_roll_commanded else None
+                        if separation_hold_active:
+                            reset_due = False
+                            earthward_mode = True
+                        if (reset_due and not roll_reset and
+                                flight.dynamic_pressure > args.upright_max_q):
+                            # Rolling a winged orbiter in thick air snaps a wing:
+                            # wait for the air to thin before the upright roll.
+                            reset_due = False
+                            earthward_mode = True
+                        elif roll_reset:
+                            earthward_mode = False
+                        if reset_due and not roll_reset:
+                            roll_reset = True
+                            roll_reset_ut = conn.space_center.ut
+                            print(f'Post-booster physical roll: orbiter side now targets spaceward '
+                                  f'(q {flight.dynamic_pressure:.0f} Pa)')
+                        roll_requires_authority = False
+                        if state == 'ASCENT':
+                            roll_requires_authority = mission_roll_commanded and not mission_roll_settled
+                            if mission_roll_settled:
+                                heading_goal = target_heading
+                                if flight.horizontal_speed > 450.0 and peg_dv is None:
+                                    # (PEG owns the heading once it is active; two slewed heading
+                                    # laws cancelled and left ~50 m/s of cross-track uncorrected.)
+                                    # The velocity vector lags the nose heading by many
+                                    # degrees at speed, so steer on the measured surface
+                                    # velocity azimuth: lead the nose past the target by a
+                                    # gain times the azimuth error.
+                                    svel = conn.space_center.transform_direction(
+                                        v.velocity(body.reference_frame), body.reference_frame,
+                                        v.surface_reference_frame)
+                                    vel_azimuth = math.degrees(math.atan2(svel[2], svel[1])) % 360
+                                    # Desired surface azimuth at the current speed so the
+                                    # *inertial* velocity azimuth equals the one that gives
+                                    # the target inclination.
+                                    lat_now = math.radians(flight.latitude)
+                                    v_rot_now = (body.rotational_speed*
+                                                 (body.equatorial_radius+flight.mean_altitude)*
+                                                 math.cos(lat_now))
+                                    east_in = svel[2]+v_rot_now
+                                    vh_in = math.hypot(east_in, svel[1])
+                                    orbit_inc = math.degrees(v.orbit.inclination)
+                                    aim_inclination = args.inclination + max(-1.5, min(
+                                        1.5, 0.5*(args.inclination-orbit_inc)))
+                                    a_inertial = math.asin(max(-1.0, min(1.0,
+                                        math.cos(math.radians(aim_inclination))/
+                                        max(0.05, math.cos(lat_now)))))
+                                    desired = math.degrees(math.atan2(
+                                        vh_in*math.sin(a_inertial)-v_rot_now,
+                                        vh_in*math.cos(a_inertial))) % 360
+                                    heading_goal = args.heading + wrap_roll(desired-args.heading)
+                                    azimuth_error = wrap_roll(desired-vel_azimuth)
+                                    # Keep side loads small while the air is thick.
+                                    lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
+                                                  else 15.0)
+                                    # Runs yy/zz overshot the plane by ~1.5 deg at 55-70 km with
+                                    # a 1.5x / 30 deg lead; a softer lead converges without it.
+                                    heading_goal += max(-lead_limit,
+                                                        min(lead_limit, 1.0*azimuth_error))
+                                if peg_dv is None:
+                                    args.heading = slew_value(
+                                    args.heading, heading_goal,
+                                    3.0 if flight.dynamic_pressure < 1500.0
+                                    else args.heading_slew if flight.dynamic_pressure < 5000.0
+                                    else min(args.heading_slew, 0.7), control_dt)
+                            if roll_requires_authority or altitude < turn_start_altitude:
+                                raw_pitch = initial_pitch
+                            else:
+                                raw_pitch = scheduled_turn_pitch(
+                                    altitude, reference_apoapsis, flight.vertical_speed,
+                                    flight.horizontal_speed, flight.dynamic_pressure,
+                                    initial_pitch)
+                                if not args.no_corridor and not shuttle.separated:
+                                    raw_pitch = corridor_pitch(
+                                        raw_pitch,
+                                        math.degrees(math.atan2(max(0.0, flight.vertical_speed),
+                                                                max(0.5, flight.horizontal_speed))),
+                                        altitude, v.orbit.apoapsis_altitude, reference_apoapsis,
+                                        flight.dynamic_pressure)
+                            # Apply the MECO energy-build pitch through the same
+                            # slew limiter as the gravity turn. A post-slew clamp
+                            # can command an instantaneous 89-to-0 degree jump.
+                            pitch_slew_rate = args.pitch_slew
+                            if (not args.transfer and
+                                    v.orbit.apoapsis_altitude >= 0.8*args.orbit and
+                                    v.orbit.periapsis_altitude < args.meco_periapsis):
+                                # Apoapsis is approaching target: spend the remaining
+                                # energy on horizontal speed. Damp the climb with
+                                # vertical speed and keep the burnout altitude low in the
+                                # target band (the insertion point of a low-perigee ellipse
+                                # lies below the mid-altitude), instead of letting Ap run away.
+                                band_center = (args.meco_periapsis +
+                                               0.4*(args.orbit-args.meco_periapsis))
+                                ap_excess = max(0.0, v.orbit.apoapsis_altitude-args.orbit)
+                                hold = args.meco_pitch + 5.0 \
+                                    - 0.2*flight.vertical_speed \
+                                    + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
+                                    - min(15.0, 1.5*ap_excess/1000.0)
+                                raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
+                                pitch_slew_rate = max(args.pitch_slew, 3.0)
+                            if shuttle.separated:
+                                # Attitude-planned insertion: the burnout point is chosen by
+                                # flying the closed loop (PEG, slew, roll hold, limiter ramp,
+                                # attitude lag) ahead, so the climb is never left running at a
+                                # stale pitch and then cancelled nose-down.
+                                now_ut = conn.space_center.ut
+                                r_now = body.equatorial_radius+altitude
                                 lat_now = math.radians(flight.latitude)
-                                v_rot_now = (body.rotational_speed*
-                                             (body.equatorial_radius+flight.mean_altitude)*
-                                             math.cos(lat_now))
-                                east_in = svel[2]+v_rot_now
-                                vh_in = math.hypot(east_in, svel[1])
-                                orbit_inc = math.degrees(v.orbit.inclination)
-                                aim_inclination = args.inclination + max(-1.5, min(
-                                    1.5, 0.5*(args.inclination-orbit_inc)))
-                                a_inertial = math.asin(max(-1.0, min(1.0,
-                                    math.cos(math.radians(aim_inclination))/
-                                    max(0.05, math.cos(lat_now)))))
-                                desired = math.degrees(math.atan2(
-                                    vh_in*math.sin(a_inertial)-v_rot_now,
-                                    vh_in*math.cos(a_inertial))) % 360
-                                heading_goal = args.heading + wrap_roll(desired-args.heading)
-                                azimuth_error = wrap_roll(desired-vel_azimuth)
-                                # Keep side loads small while the air is thick.
-                                lead_limit = (8.0 if flight.dynamic_pressure > 8000.0
-                                              else 15.0)
-                                # Runs yy/zz overshot the plane by ~1.5 deg at 55-70 km with
-                                # a 1.5x / 30 deg lead; a softer lead converges without it.
-                                heading_goal += max(-lead_limit,
-                                                    min(lead_limit, 1.0*azimuth_error))
-                            if peg_dv is None:
-                                args.heading = slew_value(
-                                args.heading, heading_goal,
-                                3.0 if flight.dynamic_pressure < 1500.0
-                                else args.heading_slew if flight.dynamic_pressure < 5000.0
-                                else min(args.heading_slew, 0.7), control_dt)
-                        if roll_requires_authority or altitude < turn_start_altitude:
-                            raw_pitch = initial_pitch
+                                vh_inertial = flight.horizontal_speed + \
+                                    body.rotational_speed*r_now*math.cos(lat_now)
+                                ssmes = shuttle.core_groups[0]
+                                full_thrust = sum(e.max_thrust for e in ssmes)
+                                isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
+                                       / max(1, len(ssmes)))
+                                roll_done = shuttle.post_sep_roll_done_ut
+                                # Mirror the vehicle's limiter schedule exactly; a planner that
+                                # assumes a lower cap than the engines fly lofts the climb.
+                                since_sep = now_ut-shuttle.booster_separation_ut
+                                if roll_done is None:
+                                    rolling_for = 0.0 if roll_reset_ut is None else now_ut-roll_reset_ut
+                                    hold_left = max(0.0, min(25.0-rolling_for,
+                                                             POST_SEP_CAP_TIMEOUT-since_sep))
+                                    into_ramp = since_sep-POST_SEP_CAP_TIMEOUT
+                                else:
+                                    hold_left = 0.0
+                                    into_ramp = now_ut-roll_done
+                                ramp_left = max(0.0, POST_SEP_CAP_RAMP-max(0.0, into_ramp))
+                                cap_now = post_sep_throttle_cap(
+                                    since_sep, None if roll_done is None else now_ut-roll_done)
+                                g_limit = min(args.max_g, args.upper_g)*G0
+                                accel_now = max(v.thrust, 1.0)/v.mass
+                                if insertion_guide is None:
+                                    insertion_guide = InsertionGuidance(
+                                        body.gravitational_parameter,
+                                        body.equatorial_radius+args.orbit,
+                                        body.equatorial_radius+args.meco_periapsis,
+                                        body.equatorial_radius+insertion_altitude,
+                                        slew=max(args.pitch_slew, 2.0),
+                                        hold_slew=args.post_sep_hold_slew)
+                                planned_r = insertion_guide.r_t
+                                raw_pitch = insertion_guide.command(
+                                    now_ut, r_now, flight.vertical_speed, vh_inertial, v.mass,
+                                    full_thrust, max(isp, 1.0)*G0, g_limit, accel_now,
+                                    full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
+                                    hold_left, ramp_left, cap_now)
+                                if insertion_guide.r_t != planned_r:
+                                    pred = insertion_guide.prediction
+                                    R0 = body.equatorial_radius
+                                    print(f'Insertion plan: burnout {(insertion_guide.r_t-R0)/1000:.1f} km; '
+                                          f'predicted cutoff {(pred["apoapsis_r"]-R0)/1000:.1f} x '
+                                          f'{(pred["periapsis_r"]-R0)/1000:.1f} km, peak Ap '
+                                          f'{(pred["peak_apoapsis_r"]-R0)/1000:.1f} km, '
+                                          f'{pred["time"]:.0f} s')
+                                if roll_done is None:
+                                    # Upright roll: drift toward the plan slowly, never hold
+                                    # a stale pitch for the whole roll.
+                                    pitch_slew_rate = args.post_sep_hold_slew
+                                else:
+                                    pitch_slew_rate = max(args.pitch_slew, 2.0)
+                            peg_dv = None
+                            energy_done = False
+                            peg_phase_g = None
+                            if (shuttle.separated and
+                                    v.orbit.apoapsis_altitude > args.orbit+90000.0 and
+                                    v.orbit.periapsis_altitude > 0):
+                                warn_once('guidance-runaway',
+                                          f'Guidance runaway: Ap {v.orbit.apoapsis_altitude/1000:.0f} km')
+                            if shuttle.separated and flight.speed > 1400.0:
+                                try:
+                                    sc = conn.space_center
+                                    pos_n = v.position(nrf)
+                                    vel_n = v.velocity(nrf)
+                                    surf_vel = sc.transform_direction(
+                                        v.velocity(body.reference_frame), body.reference_frame, nrf)
+                                    rot_vel = _combine((1.0, vel_n), (-1.0, surf_vel))
+                                    accel = max(flight.g_force, 0.3)*G0
+                                    d_n, peg_dv, peg_tgo = terminal_guidance(
+                                        pos_n, vel_n, rot_vel, body.gravitational_parameter,
+                                        body.equatorial_radius, args.orbit, args.meco_periapsis,
+                                        # Steer to the true target plane: an exaggerated plane
+                                        # target (target + 2x error) never converges, so the
+                                        # dv stalled ~120 m/s and the energy cutoff fired with
+                                        # the wrong shape (runs yy/zz 85x65 @34.9).
+                                        args.inclination,
+                                        accel, plane_normal=plane_normal)
+                                    d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
+                                    peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
+                                    peg_heading = target_heading + wrap_roll(peg_heading-target_heading)
+                                    if peg_tgo > 4.0 or peg_hold is None:
+                                        peg_hold = (max(-60.0, min(25.0, peg_pitch)),
+                                                    max(target_heading-40.0,
+                                                        min(target_heading+40.0, peg_heading)))
+                                    # Pitch stays with the closed-loop PEG above; this
+                                    # velocity-to-be-gained solution only steers heading.
+                                    args.heading = slew_value(args.heading, peg_hold[1],
+                                                              3.0, control_dt)
+                                    # Match the pitch slew used by the insertion predictor.
+                                    pitch_slew_rate = max(pitch_slew_rate, 2.0)
+                                    target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
+                                    sma_now = v.orbit.semi_major_axis
+                                    energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
+                                                 / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
+                                    energy_done = sma_now >= target_sma
+                                    if int(conn.space_center.ut*2) % 4 == 0:
+                                        g = GUIDANCE_DEBUG
+                                        print(f'PEG: dv {peg_dv:.1f} (radial {g["radial"]:.1f}, along '
+                                              f'{g["along"]:.1f}, cross {g["cross"]:.1f}); vr {g["vr"]:.1f}/'
+                                              f'{g["vr_target"]:.1f}, vh {g["vh"]:.1f}/{g["vh_target"]:.1f}; '
+                                              f'sma {(sma_now-target_sma)/1000:+.1f} km')
+                                    # Taper to 0.15 G for the last metres per second so the
+                                    # 10 Hz cutoff resolves ~0.15 m/s (~0.2 km of periapsis).
+                                    peg_phase_g = max(0.15 if peg_dv < 8.0 else 0.5,
+                                                      min(args.upper_g,
+                                                          min(peg_dv, max(0.0, energy_dv))/5.0/G0))
+                                except Exception:
+                                    peg_dv = None
+                            if separation_hold_active and separation_hold_direction is not None:
+                                held_surface = conn.space_center.transform_direction(
+                                    separation_hold_direction, nrf, v.surface_reference_frame)
+                                held_pitch, held_heading = pitch_heading_for_direction(held_surface)
+                                raw_pitch = commanded_pitch = held_pitch
+                                args.heading += wrap_roll(held_heading-args.heading)
+                            commanded_pitch = slew_value(
+                                commanded_pitch, raw_pitch,
+                                pitch_slew_rate, control_dt)
+                            pitch = commanded_pitch
+                            target_pitch = pitch
+                            target_direction = direction_for_pitch_heading(pitch, args.heading)
+                            # A small PEG residual or target semi-major axis is
+                            # insufficient: a 100 km Ap / underground Pe trajectory
+                            # can satisfy energy_done while being nowhere near orbit.
+                            # Do not release the ET until the measured *two* apsides
+                            # reach the executable handoff orbit. Depletion below is
+                            # separately reported as a failed/partial insertion.
+                            if (shuttle.separated and
+                                    meco_ready(v.orbit.apoapsis_altitude,
+                                               v.orbit.periapsis_altitude,
+                                               args.orbit-3000.0,
+                                               args.meco_periapsis-300.0)):
+                                control.throttle = 0
+                                state = 'COAST'
+                                emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
+                                print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
+                                      f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
+                            elif shuttle.separated and tanks_empty(shuttle):
+                                control.throttle = 0
+                                # Depleted-ET cutoff is not a normal completed
+                                # insertion. However an atmospheric periapsis is
+                                # permitted here: OMS may finish orbit capture.
+                                # Report a physically impossible below-surface Pe
+                                # rather than insisting on Pe > 70 km at MECO.
+                                if v.orbit.periapsis_altitude < 0.0:
+                                    warn_once('et-depleted',
+                                        'ET propellant exhausted with sub-surface periapsis: '
+                                        f'Ap {v.orbit.apoapsis_altitude:.0f} m, '
+                                        f'Pe {v.orbit.periapsis_altitude:.0f} m')
+                                state = 'COAST'
+                                emit_event('meco', depleted=True, apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
+                                print(f'MECO (propellant depleted): Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
+                                      f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
+                        elif state == 'ORBITER_ASCENT':
+                            target_pitch = 5
+                            target_direction = direction_for_pitch_heading(5, args.heading)
+                            control.throttle = min(1, max(.05, (args.orbit-v.orbit.apoapsis_altitude)/5000))
+                            if v.orbit.apoapsis_altitude >= args.orbit:
+                                control.throttle = 0
+                                state = 'COAST'
+                        elif state == 'COAST':
+                            target_pitch = None
+                            control.throttle = 0
+                            if not shuttle.separated:
+                                warn_once('premature-target', 'Target reached before booster separation')
+                            if meco_ut is None:
+                                meco_ut = conn.space_center.ut
+                            if shuttle.et_attached and conn.space_center.ut-meco_ut < args.et_sep_delay:
+                                time.sleep(1/args.hz)
+                                continue
+                            if shuttle.et_attached and not shuttle.release_et():
+                                time.sleep(1/args.hz)
+                                continue
+                            if not et_cleared:
+                                # Translate the orbiter roof-ward (control.up = vessel -z, away
+                                # from the tank) on RCS so it cannot touch the ET.
+                                control.rcs = True
+                                control.up = 0.0
+                                # Ramp the push up and back down so the pair separates
+                                # with a soft, low relative velocity.
+                                clear_start = time.monotonic()
+                                while True:
+                                    frac = (time.monotonic()-clear_start)/args.et_clear_time
+                                    if frac >= 1:
+                                        break
+                                    control.up = args.et_clear_thrust*math.sin(math.pi*frac)
+                                    time.sleep(0.05)
+                                control.up = 0.0
+                                control.rcs = False
+                                et_cleared = True
+                                print(f'Translated away from the ET for {args.et_clear_time:.0f} s on RCS')
+                                if shuttle.vehicle_kind == 'orbiter-shuttle':
+                                    try:
+                                        check_orbiter_integrity({
+                                            "ready": True,
+                                            "partNames": [part.name for part in v.parts.all],
+                                        })
+                                    except GuardError as exc:
+                                        warn_once('orbiter-integrity', str(exc))
+                            if args.meco_periapsis < args.orbit-5000:
+                                o = v.orbit
+                                print(f'Target orbit reached: Ap {o.apoapsis_altitude/1000:.1f} km; '
+                                      f'Pe {o.periapsis_altitude/1000:.1f} km; '
+                                      f'inclination {math.degrees(o.inclination):.2f} deg')
+                                return
+                            ap.reference_frame = v.orbital_reference_frame
+                            # Orbital-frame x points anti-radially (toward the body).
+                            roll_up_reference = (-1, 0, 0)
+                            target_direction = (0, 1, 0)
+                            radius = body.equatorial_radius+v.orbit.apoapsis_altitude
+                            dv = max(0, math.sqrt(body.gravitational_parameter/radius)-math.sqrt(body.gravitational_parameter*(2/radius-1/v.orbit.semi_major_axis)))
+                            orbital_thrust = sum(
+                                engine.max_thrust for engine in
+                                getattr(shuttle, 'orbiter_engines', [shuttle.skiff]))
+                            acceleration = orbital_thrust/v.mass
+                            if acceleration <= 0:
+                                warn_once('insertion-thrust', 'Orbiter engines have no thrust for insertion')
+                            elif v.orbit.time_to_apoapsis <= dv/acceleration/2+1:
+                                state = 'INSERTION'
+                        elif state == 'INSERTION':
+                            target_pitch = None
+                            target_direction = (0, 1, 0)
+                            control.throttle = min(1, max(.03, (args.orbit-v.orbit.periapsis_altitude)/10000))
+                            if v.orbit.periapsis_altitude >= args.orbit-1000:
+                                emit_event('insertion', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
+                                print('Orbital insertion complete')
+                                return
+                            if flight.mean_altitude < body.atmosphere_depth:
+                                warn_once('insertion-reentry', 'Insertion trajectory reentered atmosphere')
+                        booster_elapsed = (None if liftoff_ut is None else
+                                           max(0.0, conn.space_center.ut-liftoff_ut))
+                        if shuttle.et_attached:
+                            target_g = ascent_target_g(
+                                altitude, body.atmosphere_depth, args.max_g, args.launch_g,
+                                args.booster_min_g if not shuttle.separated else 0.0)
+                            phase_max_g = args.max_g
+                            if state == 'ASCENT' and shuttle.separated:
+                                phase_max_g = final_phase_g(
+                                    v.orbit.periapsis_altitude, args.meco_periapsis,
+                                    min(args.max_g, args.upper_g))
+                                if peg_phase_g is not None:
+                                    phase_max_g = peg_phase_g
+                                target_g = min(target_g, phase_max_g)
+                            result = shuttle.update(
+                                max_g=args.max_g, target_g=target_g, altitude=altitude,
+                                dt=control_dt, throttle_slew=args.throttle_slew,
+                                dynamic_pressure=flight.dynamic_pressure,
+                                separation_max_q=args.booster_separation_max_q,
+                                post_booster_coast_seconds=args.post_booster_coast_seconds,
+                                before_booster_separation=prepare_separation_hold)
+                            if shuttle.separated and not sep_handled:
+                                # Staging happened inside update(): invalidate the FCS
+                                # on this tick, not after another slow guidance loop.
+                                ap.ctrl.invalidate_dynamics()
+                                ap.ctrl.extend_attitude_hold(
+                                    shuttle.booster_separation_ut+SEPARATION_ATTITUDE_HOLD_SECONDS)
+                                separation_hold_active = True
+                                print('Holding separation attitude for 5 s before pitch/yaw/roll changes')
+                                sep_handled = True
+                            if state == 'ASCENT':
+                                solid_boosters_burning = (
+                                    bool(shuttle.solid_boosters) and not shuttle.separated and
+                                    any(engine.active and engine.has_fuel
+                                        for engine in shuttle.solid_boosters))
+                                if solid_boosters_burning and shuttle.vehicle_kind == 'orbiter-shuttle':
+                                    # The SSME limiter balances fixed SRB pitch torque;
+                                    # a stale master reduction would undo that balance.
+                                    control.throttle = 1.0
+                                elif not solid_boosters_burning:
+                                    # Engine thrust_limit already follows target_g
+                                    # and PEG's phase_max_g each FCS tick. Reapplying
+                                    # that *same* low-G target to the master throttle
+                                    # made it decay to zero irrecoverably as the
+                                    # vehicle approached the desired orbit. Master
+                                    # throttle is a hard G/Q guard, not a second
+                                    # copy of the phase-trim allocator; recompute it
+                                    # from full each tick to prevent a zero latch.
+                                    if shuttle.separated:
+                                        control.throttle = post_booster_master_throttle(
+                                            flight.g_force, args.max_g,
+                                            flight.dynamic_pressure, args.max_q)
+                                    else:
+                                        control.throttle = dynamic_pressure_throttle(
+                                            g_force_throttle(control.throttle, flight.g_force,
+                                                             min(args.max_g, phase_max_g)),
+                                            flight.dynamic_pressure, args.max_q)
                         else:
-                            raw_pitch = scheduled_turn_pitch(
-                                altitude, reference_apoapsis, flight.vertical_speed,
-                                flight.horizontal_speed, flight.dynamic_pressure,
-                                initial_pitch)
-                            if not args.no_corridor and not shuttle.separated:
-                                raw_pitch = corridor_pitch(
-                                    raw_pitch,
-                                    math.degrees(math.atan2(max(0.0, flight.vertical_speed),
-                                                            max(0.5, flight.horizontal_speed))),
-                                    altitude, v.orbit.apoapsis_altitude, reference_apoapsis,
-                                    flight.dynamic_pressure)
-                        # Apply the MECO energy-build pitch through the same
-                        # slew limiter as the gravity turn. A post-slew clamp
-                        # can command an instantaneous 89-to-0 degree jump.
-                        pitch_slew_rate = args.pitch_slew
-                        if (not args.transfer and
-                                v.orbit.apoapsis_altitude >= 0.8*args.orbit and
-                                v.orbit.periapsis_altitude < args.meco_periapsis):
-                            # Apoapsis is approaching target: spend the remaining
-                            # energy on horizontal speed. Damp the climb with
-                            # vertical speed and keep the burnout altitude low in the
-                            # target band (the insertion point of a low-perigee ellipse
-                            # lies below the mid-altitude), instead of letting Ap run away.
-                            band_center = (args.meco_periapsis +
-                                           0.4*(args.orbit-args.meco_periapsis))
-                            ap_excess = max(0.0, v.orbit.apoapsis_altitude-args.orbit)
-                            hold = args.meco_pitch + 5.0 \
-                                - 0.2*flight.vertical_speed \
-                                + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
-                                - min(15.0, 1.5*ap_excess/1000.0)
-                            raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
-                            pitch_slew_rate = max(args.pitch_slew, 3.0)
-                        if shuttle.separated:
-                            # Attitude-planned insertion: the burnout point is chosen by
-                            # flying the closed loop (PEG, slew, roll hold, limiter ramp,
-                            # attitude lag) ahead, so the climb is never left running at a
-                            # stale pitch and then cancelled nose-down.
-                            now_ut = conn.space_center.ut
-                            r_now = body.equatorial_radius+altitude
-                            lat_now = math.radians(flight.latitude)
-                            vh_inertial = flight.horizontal_speed + \
-                                body.rotational_speed*r_now*math.cos(lat_now)
-                            ssmes = shuttle.core_groups[0]
-                            full_thrust = sum(e.max_thrust for e in ssmes)
-                            isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
-                                   / max(1, len(ssmes)))
-                            roll_done = shuttle.post_sep_roll_done_ut
-                            # Mirror the vehicle's limiter schedule exactly; a planner that
-                            # assumes a lower cap than the engines fly lofts the climb.
-                            since_sep = now_ut-shuttle.booster_separation_ut
-                            if roll_done is None:
-                                rolling_for = 0.0 if roll_reset_ut is None else now_ut-roll_reset_ut
-                                hold_left = max(0.0, min(25.0-rolling_for,
-                                                         POST_SEP_CAP_TIMEOUT-since_sep))
-                                into_ramp = since_sep-POST_SEP_CAP_TIMEOUT
+                            shuttle.skiff.thrust_limit = 1
+                        actual_roll = ''
+                        roll_control = 0.0
+                        aim_direction = target_direction
+                        if roll_active and state in ('ASCENT', 'ORBITER_ASCENT'):
+                            # AutoPilot owns pitch/yaw only. Direct roll control keeps the
+                            # real orbiter-mounted side (-Z) on the requested Earth/space side.
+                            if roll_surface_states:
+                                schedule_roll_authority(
+                                    roll_surface_states, flight.dynamic_pressure,
+                                    low_q_limit=60.0 if mission_roll_settled else 35.0,
+                                    high_q_limit=30.0)
+                            aim_direction = target_direction
+                            if state == 'ASCENT' and shuttle.separated:
+                                # Guidance pitch is a thrust pitch: the SSMEs are canted ~15 deg
+                                # off the nose, so aim the resultant thrust (not the nose).
+                                try:
+                                    offset = thrust_axis_offset(conn, v, ap.reference_frame)
+                                    # The canted thrust axis sweeps a cone about the nose while
+                                    # rolling, so hold the nose itself on target during the upright
+                                    # roll and blend the thrust correction back in over 6 s after.
+                                    blend = separation_thrust_blend(
+                                        conn.space_center.ut, shuttle.booster_separation_ut,
+                                        roll_reset_ut, shuttle.post_sep_roll_done_ut)
+                                    raw = tuple(target_direction[i]-blend*offset[i] for i in range(3))
+                                    n = math.sqrt(sum(c*c for c in raw)) or 1.0
+                                    aim_direction = tuple(c/n for c in raw)
+                                except Exception:
+                                    aim_direction = target_direction
+                            if state == 'ASCENT':
+                                if shuttle.separated and previous_aim_direction is not None:
+                                    # The thrust-axis correction is calculated after the
+                                    # pitch slew above and can jump when engine thrust
+                                    # temporarily reads zero. Bound the actual nose target,
+                                    # including that correction, to the planner's slew.
+                                    aim_direction = slew_direction(
+                                        previous_aim_direction, aim_direction,
+                                        max(args.pitch_slew, 2.0), control_dt)
+                                previous_aim_direction = aim_direction
+                            if not shuttle.separated:
+                                ap.target_direction = aim_direction
+                                ap.target_roll = float('nan')
+                            surface_frame = v.surface_reference_frame
+                            actual_direction = v.direction(surface_frame)
+                            roll_up_reference = surface_up_for_pitch_heading(
+                                target_pitch, args.heading)
+                            actual_side = conn.space_center.transform_direction(
+                                (0, 0, -1), v.reference_frame, surface_frame)
+                            target_side = desired_orbiter_side(
+                                target_pitch, args.heading, bool(earthward_mode))
+                            actual_roll = roll_for_roof(
+                                actual_direction, roll_up_reference, actual_side)
+                            physical_target_roll = roll_for_roof(
+                                actual_direction, roll_up_reference, target_side)
+                            target_roll = physical_target_roll
+                            roll_error_signed = roll_delta(
+                                actual_roll, physical_target_roll)
+                            roll_error = abs(roll_error_signed)
+                            body_roll_rate = body_roll_rate_deg_s(v)
+                            roll_rate = body_roll_rate
+                            pitch_error, heading_error = surface_axis_errors(
+                                actual_direction, target_pitch, args.heading)
+                            # Feed the live torque authority and moment of inertia
+                            # (centre-of-mass movement, propellant burn, booster
+                            # separation, thrust-dependent gimbal torque) into the
+                            # roll loop instead of the pad calibration.
+                            live_roll_accel = roll_accel_authority_deg_s2(v)
+                            if live_roll_accel > 1.0:
+                                # available_torque overstates what the roll axis really
+                                # delivers (gimbal roll, elevons at low q), so bound the
+                                # live estimate between 8 and 40 deg/s^2.
+                                roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
+                            upright_phase = (shuttle.separated and roll_reset and
+                                             shuttle.post_sep_roll_done_ut is None)
+                            if shuttle.separated:
+                                # After separation the autopilot owns all three axes. Its
+                                # output replaces a direct control.roll command, so the
+                                # upright roll is flown as an attitude target (nose on the
+                                # thrust aim, orbiter roof on the requested side), auto-tuned
+                                # continuously from the live inertia, CoM and torque.
+                                if not ap_owns_roll:
+                                    ap.auto_tune = True
+                                    ap.time_to_peak = (3.0, 2.0, 3.0)
+                                    ap.overshoot = (0.03, 0.02, 0.03)
+                                    ap.max_angular_velocity = (
+                                        1.0, math.radians(args.upright_roll_rate), 1.0)
+                                    ap_owns_roll = True
+                                    print('Autopilot owns pitch/yaw/roll after separation '
+                                          '(auto-tuned, 3 s time-to-peak)')
+                                if upright_phase and not upright_configured:
+                                    # Pitch/yaw keep priority during the roll: roll is suppressed
+                                    # whenever the nose is more than 8 deg off and fully engaged
+                                    # inside 5 deg (a tighter gate chattered roll on/off and
+                                    # limit-cycled at +-15 deg/s); stiffer pitch/yaw while rolling.
+                                    ap.roll_start_angle = 8.0
+                                    ap.roll_engage_angle = 5.0
+                                    ap.time_to_peak = (2.0, 2.5, 2.0)
+                                    ap.overshoot = (0.03, 0.01, 0.03)
+                                    upright_configured = True
+                                if upright_phase:
+                                    control.rcs = True
+                            # Size each roll maneuver to finish in a set time: the rate limit is
+                            # chosen from the angle still to go when the maneuver starts.
+                            maneuver = ('upright' if upright_phase else
+                                        'headsdown' if not mission_roll_settled else None)
+                            if maneuver and maneuver != roll_maneuver:
+                                roll_maneuver = maneuver
+                                duration = (args.upright_roll_time if maneuver == 'upright'
+                                            else args.roll_time)
+                                limit = (args.upright_roll_rate if maneuver == 'upright'
+                                         else args.roll_rate)
+                                rate = maneuver_roll_rate(roll_error, duration, limit)
+                                p_rate, _, y_rate = ap.ctrl.max_rate
+                                ap.ctrl.max_rate = (p_rate, math.radians(rate), y_rate)
+                                print(f'{maneuver} roll: {roll_error:.0f} deg in ~{duration:.0f} s '
+                                      f'(rate limit {rate:.1f} deg/s)')
+                            # The attitude controller owns all three axes; the roll program is
+                            # an orbiter-roof target (heads-down before separation, upright after).
+                            ap.set_direction_and_up(aim_direction, target_side, 0.0)
+                            roll_control = ap.ctrl.inputs[1]
+                            settle_nose_error = direction_error_deg(
+                                actual_direction, aim_direction)
+                            # Pause roll whenever the nose is being pulled away from
+                            # the commanded ascent vector; resume once pitch/yaw recover.
+                            if settle_nose_error > 5.0:
+                                roll_control = 0.0
+                            if upright_phase:
+                                if roll_error < 6.0 and abs(body_roll_rate) < 3.0:
+                                    if upright_since is None:
+                                        upright_since = conn.space_center.ut
+                                    elif conn.space_center.ut-upright_since >= 1.0:
+                                        shuttle.post_sep_roll_done_ut = conn.space_center.ut
+                                        control.rcs = False
+                                        ap.time_to_peak = (3.0, 3.0, 3.0)
+                                        ap.max_angular_velocity = (1.0, math.radians(3.0), 1.0)
+                                        print(f'Upright after {conn.space_center.ut-roll_reset_ut:.1f} s; '
+                                              f'SSME limiter ramp released')
+                                else:
+                                    upright_since = None
+                                if (shuttle.post_sep_roll_done_ut is None and
+                                        conn.space_center.ut-roll_reset_ut > 25.0):
+                                    shuttle.post_sep_roll_done_ut = conn.space_center.ut
+                                    control.rcs = False
+                                    print(f'WARNING: upright roll not settled after 25 s '
+                                          f'(error {roll_error:.0f} deg); releasing climb anyway')
+                            if not mission_roll_settled:
+                                if roll_attitude_settled(
+                                        roll_error, body_roll_rate,
+                                        settle_nose_error, angle_limit=5.0,
+                                        rate_limit=1.5):
+                                    if roll_settle_since is None:
+                                        roll_settle_since = conn.space_center.ut
+                                    elif (conn.space_center.ut-roll_settle_since >=
+                                          args.roll_settle_time):
+                                        mission_roll_settled = True
+                                        print('Limited elevon roll authority retained for ascent attitude hold')
+                                        emit_event('gravity-turn')
+                                        print('Physical heads-down roll settled; gravity turn released')
+                                else:
+                                    roll_settle_since = None
+                        elif target_roll is not None:
+                            if state in ('ASCENT', 'ORBITER_ASCENT'):
+                                roll_up_reference = surface_up_for_pitch_heading(
+                                    target_pitch, args.heading)
+                                surface_frame = v.surface_reference_frame
+                                actual_direction = v.direction(surface_frame)
+                                roof_direction = conn.space_center.transform_direction(
+                                    (0, 0, -1), v.reference_frame, surface_frame)
+                                actual_roll = roll_for_roof(actual_direction, roll_up_reference, roof_direction)
                             else:
-                                hold_left = 0.0
-                                into_ramp = now_ut-roll_done
-                            ramp_left = max(0.0, POST_SEP_CAP_RAMP-max(0.0, into_ramp))
-                            cap_now = post_sep_throttle_cap(
-                                since_sep, None if roll_done is None else now_ut-roll_done)
-                            g_limit = min(args.max_g, args.upper_g)*G0
-                            accel_now = max(v.thrust, 1.0)/v.mass
-                            if insertion_guide is None:
-                                insertion_guide = InsertionGuidance(
-                                    body.gravitational_parameter,
-                                    body.equatorial_radius+args.orbit,
-                                    body.equatorial_radius+args.meco_periapsis,
-                                    body.equatorial_radius+insertion_altitude,
-                                    slew=max(args.pitch_slew, 2.0),
-                                    hold_slew=args.post_sep_hold_slew)
-                            planned_r = insertion_guide.r_t
-                            raw_pitch = insertion_guide.command(
-                                now_ut, r_now, flight.vertical_speed, vh_inertial, v.mass,
-                                full_thrust, max(isp, 1.0)*G0, g_limit, accel_now,
-                                full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
-                                hold_left, ramp_left, cap_now)
-                            if insertion_guide.r_t != planned_r:
-                                pred = insertion_guide.prediction
-                                R0 = body.equatorial_radius
-                                print(f'Insertion plan: burnout {(insertion_guide.r_t-R0)/1000:.1f} km; '
-                                      f'predicted cutoff {(pred["apoapsis_r"]-R0)/1000:.1f} x '
-                                      f'{(pred["periapsis_r"]-R0)/1000:.1f} km, peak Ap '
-                                      f'{(pred["peak_apoapsis_r"]-R0)/1000:.1f} km, '
-                                      f'{pred["time"]:.0f} s')
-                            if roll_done is None:
-                                # Upright roll: drift toward the plan slowly, never hold
-                                # a stale pitch for the whole roll.
-                                pitch_slew_rate = args.post_sep_hold_slew
+                                # Orbital-frame x points anti-radially (toward the body).
+                                roll_up_reference = (-1, 0, 0)
+                            ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
+                            if state in ('ASCENT', 'ORBITER_ASCENT'):
+                                roll_error = abs(roll_delta(actual_roll, target_roll))
+                                pitch_error, heading_error = surface_axis_errors(
+                                    actual_direction, target_pitch, args.heading)
                             else:
-                                pitch_slew_rate = max(args.pitch_slew, 2.0)
-                        peg_dv = None
-                        energy_done = False
-                        peg_phase_g = None
-                        if (shuttle.separated and
-                                v.orbit.apoapsis_altitude > args.orbit+90000.0 and
-                                v.orbit.periapsis_altitude > 0):
-                            control.throttle = 0
-                            raise RuntimeError(
-                                f'Guidance runaway: Ap {v.orbit.apoapsis_altitude/1000:.0f} km; engines cut')
-                        if shuttle.separated and flight.speed > 1400.0:
+                                # Orbital-frame attitude errors are diagnostic only here.
+                                try:
+                                    roll_error = abs(ap.roll_error)
+                                except Exception:
+                                    roll_error = 0.0
+                                pitch_error = 0.0
+                                heading_error = 0.0
+                        else:
+                            ap.target_direction = target_direction
+                            roll_error = 0.0
+                            pitch_error = 0.0
+                            heading_error = 0.0
+                        nose_error = direction_error_deg(v.direction(ap.reference_frame), aim_direction)
+                        try:
+                            autopilot_error = ap.error
+                        except Exception:
+                            autopilot_error = ''
+                        if conn.space_center.ut >= next_report:
+                            actual_pitch, actual_heading = pitch_heading_for_direction(
+                                v.direction(v.surface_reference_frame))
+                            booster_thrust, booster_lf, booster_ox, booster_sf, booster_fraction = shuttle.booster_telemetry()
+                            commanded_g = (shuttle.commanded_g(result, control.throttle)
+                                           if shuttle.et_attached else 0.0)
+                            booster_full_time = shuttle.booster_nominal_burn_time()
+                            engine_limits = shuttle.engine_limit_telemetry()
+                            gimbal_actuation = shuttle.gimbal_telemetry()
                             try:
-                                sc = conn.space_center
-                                pos_n = v.position(nrf)
-                                vel_n = v.velocity(nrf)
-                                surf_vel = sc.transform_direction(
-                                    v.velocity(body.reference_frame), body.reference_frame, nrf)
-                                rot_vel = _combine((1.0, vel_n), (-1.0, surf_vel))
-                                accel = max(flight.g_force, 0.3)*G0
-                                d_n, peg_dv, peg_tgo = terminal_guidance(
-                                    pos_n, vel_n, rot_vel, body.gravitational_parameter,
-                                    body.equatorial_radius, args.orbit, args.meco_periapsis,
-                                    # Steer to the true target plane: an exaggerated plane
-                                    # target (target + 2x error) never converges, so the
-                                    # dv stalled ~120 m/s and the energy cutoff fired with
-                                    # the wrong shape (runs yy/zz 85x65 @34.9).
-                                    args.inclination,
-                                    accel, plane_normal=plane_normal)
-                                d_s = sc.transform_direction(d_n, nrf, v.surface_reference_frame)
-                                peg_pitch, peg_heading = pitch_heading_for_direction(d_s)
-                                peg_heading = target_heading + wrap_roll(peg_heading-target_heading)
-                                if peg_tgo > 4.0 or peg_hold is None:
-                                    peg_hold = (max(-60.0, min(25.0, peg_pitch)),
-                                                max(target_heading-40.0,
-                                                    min(target_heading+40.0, peg_heading)))
-                                # Pitch stays with the closed-loop PEG above; this
-                                # velocity-to-be-gained solution only steers heading.
-                                args.heading = slew_value(args.heading, peg_hold[1],
-                                                          3.0, control_dt)
-                                # Match the pitch slew used by the insertion predictor.
-                                pitch_slew_rate = max(pitch_slew_rate, 2.0)
-                                target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
-                                sma_now = v.orbit.semi_major_axis
-                                energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
-                                             / (2.0*sma_now*sma_now*max(1.0, v.orbit.speed)))
-                                energy_done = sma_now >= target_sma
-                                if int(conn.space_center.ut*2) % 4 == 0:
-                                    g = GUIDANCE_DEBUG
-                                    print(f'PEG: dv {peg_dv:.1f} (radial {g["radial"]:.1f}, along '
-                                          f'{g["along"]:.1f}, cross {g["cross"]:.1f}); vr {g["vr"]:.1f}/'
-                                          f'{g["vr_target"]:.1f}, vh {g["vh"]:.1f}/{g["vh_target"]:.1f}; '
-                                          f'sma {(sma_now-target_sma)/1000:+.1f} km')
-                                # Taper to 0.15 G for the last metres per second so the
-                                # 10 Hz cutoff resolves ~0.15 m/s (~0.2 km of periapsis).
-                                peg_phase_g = max(0.15 if peg_dv < 8.0 else 0.5,
-                                                  min(args.upper_g,
-                                                      min(peg_dv, max(0.0, energy_dv))/5.0/G0))
+                                available_torque = tuple(
+                                    tuple(round(x, 1) for x in side)
+                                    for side in v.available_torque)
                             except Exception:
-                                peg_dv = None
-                        if separation_hold_active and separation_hold_direction is not None:
-                            held_surface = conn.space_center.transform_direction(
-                                separation_hold_direction, nrf, v.surface_reference_frame)
-                            held_pitch, held_heading = pitch_heading_for_direction(held_surface)
-                            raw_pitch = commanded_pitch = held_pitch
-                            args.heading += wrap_roll(held_heading-args.heading)
-                        commanded_pitch = slew_value(
-                            commanded_pitch, raw_pitch,
-                            pitch_slew_rate, control_dt)
-                        pitch = commanded_pitch
-                        target_pitch = pitch
-                        target_direction = direction_for_pitch_heading(pitch, args.heading)
-                        # A small PEG residual or target semi-major axis is
-                        # insufficient: a 100 km Ap / underground Pe trajectory
-                        # can satisfy energy_done while being nowhere near orbit.
-                        # Do not release the ET until the measured *two* apsides
-                        # reach the executable handoff orbit. Depletion below is
-                        # separately reported as a failed/partial insertion.
-                        if (shuttle.separated and
-                                meco_ready(v.orbit.apoapsis_altitude,
-                                           v.orbit.periapsis_altitude,
-                                           args.orbit-3000.0,
-                                           args.meco_periapsis-300.0)):
-                            control.throttle = 0
-                            state = 'COAST'
-                            emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
-                            print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
-                                  f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
-                        elif shuttle.separated and tanks_empty(shuttle):
-                            control.throttle = 0
-                            # Depleted-ET cutoff is not a normal completed
-                            # insertion. However an atmospheric periapsis is
-                            # permitted here: OMS may finish orbit capture.
-                            # Report a physically impossible below-surface Pe
-                            # rather than insisting on Pe > 70 km at MECO.
-                            if v.orbit.periapsis_altitude < 0.0:
-                                raise RuntimeError(
-                                    'ET propellant exhausted with sub-surface periapsis: '
-                                    f'Ap {v.orbit.apoapsis_altitude:.0f} m, '
-                                    f'Pe {v.orbit.periapsis_altitude:.0f} m')
-                            state = 'COAST'
-                            emit_event('meco', depleted=True, apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
-                            print(f'MECO (propellant depleted): Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
-                                  f'Pe {v.orbit.periapsis_altitude/1000:.1f} km')
-                    elif state == 'ORBITER_ASCENT':
-                        target_pitch = 5
-                        target_direction = direction_for_pitch_heading(5, args.heading)
-                        control.throttle = min(1, max(.05, (args.orbit-v.orbit.apoapsis_altitude)/5000))
-                        if v.orbit.apoapsis_altitude >= args.orbit:
-                            control.throttle = 0
-                            state = 'COAST'
-                    elif state == 'COAST':
-                        target_pitch = None
-                        control.throttle = 0
-                        if not shuttle.separated:
-                            raise RuntimeError('Target reached before booster separation')
-                        if meco_ut is None:
-                            meco_ut = conn.space_center.ut
-                        if shuttle.et_attached and conn.space_center.ut-meco_ut < args.et_sep_delay:
-                            time.sleep(1/args.hz)
-                            continue
-                        if shuttle.et_attached and not shuttle.release_et():
-                            time.sleep(1/args.hz)
-                            continue
-                        if not et_cleared:
-                            # Translate the orbiter roof-ward (control.up = vessel -z, away
-                            # from the tank) on RCS so it cannot touch the ET.
-                            control.rcs = True
-                            control.up = 0.0
-                            # Ramp the push up and back down so the pair separates
-                            # with a soft, low relative velocity.
-                            clear_start = time.monotonic()
-                            while True:
-                                frac = (time.monotonic()-clear_start)/args.et_clear_time
-                                if frac >= 1:
-                                    break
-                                control.up = args.et_clear_thrust*math.sin(math.pi*frac)
-                                time.sleep(0.05)
-                            control.up = 0.0
-                            control.rcs = False
-                            et_cleared = True
-                            print(f'Translated away from the ET for {args.et_clear_time:.0f} s on RCS')
-                            if shuttle.vehicle_kind == 'orbiter-shuttle':
+                                available_torque = ()
+                            emit_telemetry(ut=conn.space_center.ut, state=state, altitude=altitude, apoapsis=v.orbit.apoapsis_altitude, periapsis=v.orbit.periapsis_altitude, mass=v.mass, verticalSpeed=flight.vertical_speed, horizontalSpeed=flight.horizontal_speed, dynamicPressure=flight.dynamic_pressure, gForce=flight.g_force, commandedG=commanded_g, pitch=actual_pitch, heading=actual_heading, roll=actual_roll)
+                            writer.writerow([conn.space_center.ut, state, altitude,
+                                             v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
+                                             v.mass, flight.vertical_speed, flight.horizontal_speed,
+                                             flight.dynamic_pressure, flight.g_force,
+                                             '' if booster_elapsed is None else booster_elapsed,
+                                             booster_thrust, booster_lf, booster_ox, booster_sf,
+                                             booster_fraction, booster_full_time, commanded_g,
+                                             shuttle.et_resource_amount('LiquidFuel'),
+                                             shuttle.et_resource_amount('Oxidizer'),
+                                             result.throttles if shuttle.et_attached else (1,),
+                                             result.residual if shuttle.et_attached else 0,
+                                             result.feasible if shuttle.et_attached else True,
+                                             '' if target_roll is None else target_roll,
+                                             nose_error, autopilot_error, actual_roll, roll_error, roll_rate,
+                                             body_roll_rate, roll_control, pitch_error, heading_error,
+                                             ap.roll_control_oscillation,
+                                             actual_pitch, actual_heading,
+                                             '' if target_pitch is None else target_pitch,
+                                             shuttle.control_moment_budget, engine_limits,
+                                             gimbal_actuation, available_torque,
+                                             round(math.degrees(v.orbit.inclination), 3),
+                                             '' if peg_dv is None else round(peg_dv, 2)])
+                            log.flush()
+                            print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
+                            next_report = conn.space_center.ut+2
+                        since_roll_reset = (None if roll_reset_ut is None else
+                                            conn.space_center.ut-roll_reset_ut)
+                        if liftoff_ut is not None:
+                            part_count = len(v.parts.all)
+                            if baseline_part_count is None:
+                                baseline_part_count = part_count
+                            elif (not shuttle.separated and
+                                  part_count < baseline_part_count):
+                                warn_once('part-loss',
+                                    f'Part loss detected before booster separation: '
+                                    f'{baseline_part_count} -> {part_count} parts')
+                        if (shuttle.vehicle_kind == 'orbiter-shuttle' and
+                                shuttle.separated and
+                                conn.space_center.ut - shuttle.booster_separation_ut >= 1.0):
+                            # A wing can detach several seconds after the impulse,
+                            # once the damaged joint sees sustained engine/aero load.
+                            try:
                                 check_orbiter_integrity({
                                     "ready": True,
                                     "partNames": [part.name for part in v.parts.all],
                                 })
-                        if args.meco_periapsis < args.orbit-5000:
-                            o = v.orbit
-                            print(f'Target orbit reached: Ap {o.apoapsis_altitude/1000:.1f} km; '
-                                  f'Pe {o.periapsis_altitude/1000:.1f} km; '
-                                  f'inclination {math.degrees(o.inclination):.2f} deg')
-                            return
-                        ap.reference_frame = v.orbital_reference_frame
-                        # Orbital-frame x points anti-radially (toward the body).
-                        roll_up_reference = (-1, 0, 0)
-                        target_direction = (0, 1, 0)
-                        radius = body.equatorial_radius+v.orbit.apoapsis_altitude
-                        dv = max(0, math.sqrt(body.gravitational_parameter/radius)-math.sqrt(body.gravitational_parameter*(2/radius-1/v.orbit.semi_major_axis)))
-                        orbital_thrust = sum(
-                            engine.max_thrust for engine in
-                            getattr(shuttle, 'orbiter_engines', [shuttle.skiff]))
-                        acceleration = orbital_thrust/v.mass
-                        if acceleration <= 0:
-                            raise RuntimeError('Orbiter engines have no thrust for insertion')
-                        if v.orbit.time_to_apoapsis <= dv/acceleration/2+1:
-                            state = 'INSERTION'
-                    elif state == 'INSERTION':
-                        target_pitch = None
-                        target_direction = (0, 1, 0)
-                        control.throttle = min(1, max(.03, (args.orbit-v.orbit.periapsis_altitude)/10000))
-                        if v.orbit.periapsis_altitude >= args.orbit-1000:
-                            emit_event('insertion', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
-                            print('Orbital insertion complete')
-                            return
-                        if flight.mean_altitude < body.atmosphere_depth:
-                            raise RuntimeError('Insertion trajectory reentered atmosphere')
-                    booster_elapsed = (None if liftoff_ut is None else
-                                       max(0.0, conn.space_center.ut-liftoff_ut))
-                    if shuttle.et_attached:
-                        target_g = ascent_target_g(
-                            altitude, body.atmosphere_depth, args.max_g, args.launch_g,
-                            args.booster_min_g if not shuttle.separated else 0.0)
-                        phase_max_g = args.max_g
-                        if state == 'ASCENT' and shuttle.separated:
-                            phase_max_g = final_phase_g(
-                                v.orbit.periapsis_altitude, args.meco_periapsis,
-                                min(args.max_g, args.upper_g))
-                            if peg_phase_g is not None:
-                                phase_max_g = peg_phase_g
-                            target_g = min(target_g, phase_max_g)
-                        result = shuttle.update(
-                            max_g=args.max_g, target_g=target_g, altitude=altitude,
-                            dt=control_dt, throttle_slew=args.throttle_slew,
-                            dynamic_pressure=flight.dynamic_pressure,
-                            separation_max_q=args.booster_separation_max_q,
-                            post_booster_coast_seconds=args.post_booster_coast_seconds,
-                            before_booster_separation=prepare_separation_hold)
-                        if shuttle.separated and not sep_handled:
-                            # Staging happened inside update(): invalidate the FCS
-                            # on this tick, not after another slow guidance loop.
-                            ap.ctrl.invalidate_dynamics()
-                            ap.ctrl.extend_attitude_hold(
-                                shuttle.booster_separation_ut+SEPARATION_ATTITUDE_HOLD_SECONDS)
-                            separation_hold_active = True
-                            print('Holding separation attitude for 5 s before pitch/yaw/roll changes')
-                            sep_handled = True
-                        if state == 'ASCENT':
-                            solid_boosters_burning = (
-                                bool(shuttle.solid_boosters) and not shuttle.separated and
-                                any(engine.active and engine.has_fuel
-                                    for engine in shuttle.solid_boosters))
-                            if solid_boosters_burning and shuttle.vehicle_kind == 'orbiter-shuttle':
-                                # The SSME limiter balances fixed SRB pitch torque;
-                                # a stale master reduction would undo that balance.
-                                control.throttle = 1.0
-                            elif not solid_boosters_burning:
-                                # Engine thrust_limit already follows target_g
-                                # and PEG's phase_max_g each FCS tick. Reapplying
-                                # that *same* low-G target to the master throttle
-                                # made it decay to zero irrecoverably as the
-                                # vehicle approached the desired orbit. Master
-                                # throttle is a hard G/Q guard, not a second
-                                # copy of the phase-trim allocator; recompute it
-                                # from full each tick to prevent a zero latch.
-                                if shuttle.separated:
-                                    control.throttle = post_booster_master_throttle(
-                                        flight.g_force, args.max_g,
-                                        flight.dynamic_pressure, args.max_q)
-                                else:
-                                    control.throttle = dynamic_pressure_throttle(
-                                        g_force_throttle(control.throttle, flight.g_force,
-                                                         min(args.max_g, phase_max_g)),
-                                        flight.dynamic_pressure, args.max_q)
-                    else:
-                        shuttle.skiff.thrust_limit = 1
-                    actual_roll = ''
-                    roll_control = 0.0
-                    aim_direction = target_direction
-                    if roll_active and state in ('ASCENT', 'ORBITER_ASCENT'):
-                        # AutoPilot owns pitch/yaw only. Direct roll control keeps the
-                        # real orbiter-mounted side (-Z) on the requested Earth/space side.
-                        if roll_surface_states:
-                            schedule_roll_authority(
-                                roll_surface_states, flight.dynamic_pressure,
-                                low_q_limit=60.0 if mission_roll_settled else 35.0,
-                                high_q_limit=30.0)
-                        aim_direction = target_direction
-                        if state == 'ASCENT' and shuttle.separated:
-                            # Guidance pitch is a thrust pitch: the SSMEs are canted ~15 deg
-                            # off the nose, so aim the resultant thrust (not the nose).
-                            try:
-                                offset = thrust_axis_offset(conn, v, ap.reference_frame)
-                                # The canted thrust axis sweeps a cone about the nose while
-                                # rolling, so hold the nose itself on target during the upright
-                                # roll and blend the thrust correction back in over 6 s after.
-                                blend = separation_thrust_blend(
-                                    conn.space_center.ut, shuttle.booster_separation_ut,
-                                    roll_reset_ut, shuttle.post_sep_roll_done_ut)
-                                raw = tuple(target_direction[i]-blend*offset[i] for i in range(3))
-                                n = math.sqrt(sum(c*c for c in raw)) or 1.0
-                                aim_direction = tuple(c/n for c in raw)
-                            except Exception:
-                                aim_direction = target_direction
-                        if state == 'ASCENT':
-                            if shuttle.separated and previous_aim_direction is not None:
-                                # The thrust-axis correction is calculated after the
-                                # pitch slew above and can jump when engine thrust
-                                # temporarily reads zero. Bound the actual nose target,
-                                # including that correction, to the planner's slew.
-                                aim_direction = slew_direction(
-                                    previous_aim_direction, aim_direction,
-                                    max(args.pitch_slew, 2.0), control_dt)
-                            previous_aim_direction = aim_direction
-                        if not shuttle.separated:
-                            ap.target_direction = aim_direction
-                            ap.target_roll = float('nan')
-                        surface_frame = v.surface_reference_frame
-                        actual_direction = v.direction(surface_frame)
-                        roll_up_reference = surface_up_for_pitch_heading(
-                            target_pitch, args.heading)
-                        actual_side = conn.space_center.transform_direction(
-                            (0, 0, -1), v.reference_frame, surface_frame)
-                        target_side = desired_orbiter_side(
-                            target_pitch, args.heading, bool(earthward_mode))
-                        actual_roll = roll_for_roof(
-                            actual_direction, roll_up_reference, actual_side)
-                        physical_target_roll = roll_for_roof(
-                            actual_direction, roll_up_reference, target_side)
-                        target_roll = physical_target_roll
-                        roll_error_signed = roll_delta(
-                            actual_roll, physical_target_roll)
-                        roll_error = abs(roll_error_signed)
-                        body_roll_rate = body_roll_rate_deg_s(v)
-                        roll_rate = body_roll_rate
-                        pitch_error, heading_error = surface_axis_errors(
-                            actual_direction, target_pitch, args.heading)
-                        # Feed the live torque authority and moment of inertia
-                        # (centre-of-mass movement, propellant burn, booster
-                        # separation, thrust-dependent gimbal torque) into the
-                        # roll loop instead of the pad calibration.
-                        live_roll_accel = roll_accel_authority_deg_s2(v)
-                        if live_roll_accel > 1.0:
-                            # available_torque overstates what the roll axis really
-                            # delivers (gimbal roll, elevons at low q), so bound the
-                            # live estimate between 8 and 40 deg/s^2.
-                            roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
-                        upright_phase = (shuttle.separated and roll_reset and
-                                         shuttle.post_sep_roll_done_ut is None)
-                        if shuttle.separated:
-                            # After separation the autopilot owns all three axes. Its
-                            # output replaces a direct control.roll command, so the
-                            # upright roll is flown as an attitude target (nose on the
-                            # thrust aim, orbiter roof on the requested side), auto-tuned
-                            # continuously from the live inertia, CoM and torque.
-                            if not ap_owns_roll:
-                                ap.auto_tune = True
-                                ap.time_to_peak = (3.0, 2.0, 3.0)
-                                ap.overshoot = (0.03, 0.02, 0.03)
-                                ap.max_angular_velocity = (
-                                    1.0, math.radians(args.upright_roll_rate), 1.0)
-                                ap_owns_roll = True
-                                print('Autopilot owns pitch/yaw/roll after separation '
-                                      '(auto-tuned, 3 s time-to-peak)')
-                            if upright_phase and not upright_configured:
-                                # Pitch/yaw keep priority during the roll: roll is suppressed
-                                # whenever the nose is more than 8 deg off and fully engaged
-                                # inside 5 deg (a tighter gate chattered roll on/off and
-                                # limit-cycled at +-15 deg/s); stiffer pitch/yaw while rolling.
-                                ap.roll_start_angle = 8.0
-                                ap.roll_engage_angle = 5.0
-                                ap.time_to_peak = (2.0, 2.5, 2.0)
-                                ap.overshoot = (0.03, 0.01, 0.03)
-                                upright_configured = True
-                            if upright_phase:
-                                control.rcs = True
-                        # Size each roll maneuver to finish in a set time: the rate limit is
-                        # chosen from the angle still to go when the maneuver starts.
-                        maneuver = ('upright' if upright_phase else
-                                    'headsdown' if not mission_roll_settled else None)
-                        if maneuver and maneuver != roll_maneuver:
-                            roll_maneuver = maneuver
-                            duration = (args.upright_roll_time if maneuver == 'upright'
-                                        else args.roll_time)
-                            limit = (args.upright_roll_rate if maneuver == 'upright'
-                                     else args.roll_rate)
-                            rate = maneuver_roll_rate(roll_error, duration, limit)
-                            p_rate, _, y_rate = ap.ctrl.max_rate
-                            ap.ctrl.max_rate = (p_rate, math.radians(rate), y_rate)
-                            print(f'{maneuver} roll: {roll_error:.0f} deg in ~{duration:.0f} s '
-                                  f'(rate limit {rate:.1f} deg/s)')
-                        # The attitude controller owns all three axes; the roll program is
-                        # an orbiter-roof target (heads-down before separation, upright after).
-                        ap.set_direction_and_up(aim_direction, target_side, 0.0)
-                        roll_control = ap.ctrl.inputs[1]
-                        settle_nose_error = direction_error_deg(
-                            actual_direction, aim_direction)
-                        # Pause roll whenever the nose is being pulled away from
-                        # the commanded ascent vector; resume once pitch/yaw recover.
-                        if settle_nose_error > 5.0:
-                            roll_control = 0.0
-                        if upright_phase:
-                            if roll_error < 6.0 and abs(body_roll_rate) < 3.0:
-                                if upright_since is None:
-                                    upright_since = conn.space_center.ut
-                                elif conn.space_center.ut-upright_since >= 1.0:
-                                    shuttle.post_sep_roll_done_ut = conn.space_center.ut
-                                    control.rcs = False
-                                    ap.time_to_peak = (3.0, 3.0, 3.0)
-                                    ap.max_angular_velocity = (1.0, math.radians(3.0), 1.0)
-                                    print(f'Upright after {conn.space_center.ut-roll_reset_ut:.1f} s; '
-                                          f'SSME limiter ramp released')
-                            else:
-                                upright_since = None
-                            if (shuttle.post_sep_roll_done_ut is None and
-                                    conn.space_center.ut-roll_reset_ut > 25.0):
-                                shuttle.post_sep_roll_done_ut = conn.space_center.ut
-                                control.rcs = False
-                                print(f'WARNING: upright roll not settled after 25 s '
-                                      f'(error {roll_error:.0f} deg); releasing climb anyway')
-                        if not mission_roll_settled:
-                            if roll_attitude_settled(
-                                    roll_error, body_roll_rate,
-                                    settle_nose_error, angle_limit=5.0,
-                                    rate_limit=1.5):
-                                if roll_settle_since is None:
-                                    roll_settle_since = conn.space_center.ut
-                                elif (conn.space_center.ut-roll_settle_since >=
-                                      args.roll_settle_time):
-                                    mission_roll_settled = True
-                                    print('Limited elevon roll authority retained for ascent attitude hold')
-                                    emit_event('gravity-turn')
-                                    print('Physical heads-down roll settled; gravity turn released')
-                            else:
-                                roll_settle_since = None
-                    elif target_roll is not None:
-                        if state in ('ASCENT', 'ORBITER_ASCENT'):
-                            roll_up_reference = surface_up_for_pitch_heading(
-                                target_pitch, args.heading)
-                            surface_frame = v.surface_reference_frame
-                            actual_direction = v.direction(surface_frame)
-                            roof_direction = conn.space_center.transform_direction(
-                                (0, 0, -1), v.reference_frame, surface_frame)
-                            actual_roll = roll_for_roof(actual_direction, roll_up_reference, roof_direction)
-                        else:
-                            # Orbital-frame x points anti-radially (toward the body).
-                            roll_up_reference = (-1, 0, 0)
-                        ap.set_direction_and_up(target_direction, roll_up_reference, target_roll)
-                        if state in ('ASCENT', 'ORBITER_ASCENT'):
-                            roll_error = abs(roll_delta(actual_roll, target_roll))
-                            pitch_error, heading_error = surface_axis_errors(
-                                actual_direction, target_pitch, args.heading)
-                        else:
-                            # Orbital-frame attitude errors are diagnostic only here.
-                            try:
-                                roll_error = abs(ap.roll_error)
-                            except Exception:
-                                roll_error = 0.0
-                            pitch_error = 0.0
-                            heading_error = 0.0
-                    else:
-                        ap.target_direction = target_direction
-                        roll_error = 0.0
-                        pitch_error = 0.0
-                        heading_error = 0.0
-                    nose_error = direction_error_deg(v.direction(ap.reference_frame), aim_direction)
-                    try:
-                        autopilot_error = ap.error
-                    except Exception:
-                        autopilot_error = ''
-                    if conn.space_center.ut >= next_report:
-                        actual_pitch, actual_heading = pitch_heading_for_direction(
-                            v.direction(v.surface_reference_frame))
-                        booster_thrust, booster_lf, booster_ox, booster_sf, booster_fraction = shuttle.booster_telemetry()
-                        commanded_g = (shuttle.commanded_g(result, control.throttle)
-                                       if shuttle.et_attached else 0.0)
-                        booster_full_time = shuttle.booster_nominal_burn_time()
-                        engine_limits = shuttle.engine_limit_telemetry()
-                        gimbal_actuation = shuttle.gimbal_telemetry()
-                        try:
-                            available_torque = tuple(
-                                tuple(round(x, 1) for x in side)
-                                for side in v.available_torque)
-                        except Exception:
-                            available_torque = ()
-                        emit_telemetry(ut=conn.space_center.ut, state=state, altitude=altitude, apoapsis=v.orbit.apoapsis_altitude, periapsis=v.orbit.periapsis_altitude, mass=v.mass, verticalSpeed=flight.vertical_speed, horizontalSpeed=flight.horizontal_speed, dynamicPressure=flight.dynamic_pressure, gForce=flight.g_force, commandedG=commanded_g, pitch=actual_pitch, heading=actual_heading, roll=actual_roll)
-                        writer.writerow([conn.space_center.ut, state, altitude,
-                                         v.orbit.apoapsis_altitude, v.orbit.periapsis_altitude,
-                                         v.mass, flight.vertical_speed, flight.horizontal_speed,
-                                         flight.dynamic_pressure, flight.g_force,
-                                         '' if booster_elapsed is None else booster_elapsed,
-                                         booster_thrust, booster_lf, booster_ox, booster_sf,
-                                         booster_fraction, booster_full_time, commanded_g,
-                                         shuttle.et_resource_amount('LiquidFuel'),
-                                         shuttle.et_resource_amount('Oxidizer'),
-                                         result.throttles if shuttle.et_attached else (1,),
-                                         result.residual if shuttle.et_attached else 0,
-                                         result.feasible if shuttle.et_attached else True,
-                                         '' if target_roll is None else target_roll,
-                                         nose_error, autopilot_error, actual_roll, roll_error, roll_rate,
-                                         body_roll_rate, roll_control, pitch_error, heading_error,
-                                         ap.roll_control_oscillation,
-                                         actual_pitch, actual_heading,
-                                         '' if target_pitch is None else target_pitch,
-                                         shuttle.control_moment_budget, engine_limits,
-                                         gimbal_actuation, available_torque,
-                                         round(math.degrees(v.orbit.inclination), 3),
-                                         '' if peg_dv is None else round(peg_dv, 2)])
-                        log.flush()
-                        print(f'{state}: altitude {altitude/1000:.1f} km; Ap {v.orbit.apoapsis_altitude/1000:.1f} km; residual {result.residual:.0f} N m; budget {shuttle.control_moment_budget:.0f} N m; cmd {commanded_g:.2f} G; actual {flight.g_force:.2f} G; nose {nose_error:.1f} deg; roll {roll_error:.1f} deg; rate {roll_rate:.1f}/{body_roll_rate:.1f} deg/s; ctl {roll_control:.2f}; gimbal {gimbal_actuation}; torque {available_torque}')
-                        next_report = conn.space_center.ut+2
-                    since_roll_reset = (None if roll_reset_ut is None else
-                                        conn.space_center.ut-roll_reset_ut)
-                    if liftoff_ut is not None:
-                        part_count = len(v.parts.all)
-                        if baseline_part_count is None:
-                            baseline_part_count = part_count
-                        elif (not shuttle.separated and
-                              part_count < baseline_part_count):
-                            control.roll = 0
-                            pause_structural_failure(conn, control, ap)
-                            raise RuntimeError(
-                                f'Part loss detected before booster separation: '
-                                f'{baseline_part_count} -> {part_count} parts')
-                    if (shuttle.vehicle_kind == 'orbiter-shuttle' and
-                            shuttle.separated and
-                            conn.space_center.ut - shuttle.booster_separation_ut >= 1.0):
-                        # A wing can detach several seconds after the impulse,
-                        # once the damaged joint sees sustained engine/aero load.
-                        try:
-                            check_orbiter_integrity({
-                                "ready": True,
-                                "partNames": [part.name for part in v.parts.all],
-                            })
-                        except GuardError:
-                            pause_structural_failure(conn, control, ap)
-                            raise
-                    if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
-                        raise RuntimeError(f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
-                    orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])
-                    if not shuttle.et_attached and not any(e.has_fuel for e in orbital_engines):
-                        raise RuntimeError('Orbiter engines out of fuel')
-                    time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
+                            except GuardError as exc:
+                                warn_once('orbiter-integrity', str(exc))
+                        if attitude_error_exceeded(nose_error, altitude, since_roll_reset):
+                            warn_once('nose-error', f'Nose attitude error {nose_error:.1f} deg exceeds 45 degrees')
+                        orbital_engines = getattr(shuttle, 'orbiter_engines', [shuttle.skiff])
+                        if not shuttle.et_attached and not any(e.has_fuel for e in orbital_engines):
+                            warn_once('orbiter-fuel', 'Orbiter engines out of fuel')
+                        time.sleep(max(0, 1/args.hz-(time.monotonic()-tick)))
+                    except Exception as exc:
+                        # Preserve the last commands and the attitude controller.
+                        # Only an operator stop may terminate an active ascent.
+                        now = time.monotonic()
+                        if now-last_flight_error_report >= 5.0:
+                            last_flight_error_report = now
+                            print(f'WARNING: flight control tick failed: {type(exc).__name__}: {exc}; retrying', flush=True)
+                            emit_event('flight-warning', warning='control-tick', message=str(exc))
+                        time.sleep(0.2)
         finally:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
             try:
