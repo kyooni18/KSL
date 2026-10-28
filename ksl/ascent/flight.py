@@ -11,6 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_direction, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
+from .apoapsis_guard import apoapsis_guard_g
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
@@ -314,6 +315,8 @@ def run(args):
         peg_dv = None
         peg_hold = None
         insertion_guide = None
+        apoapsis_guard_active = False
+        apoapsis_guard_unavoidable = False
         nrf = body.non_rotating_reference_frame
         upper_autotune = False
         roll_reset = False
@@ -1052,6 +1055,50 @@ def run(args):
                                 if peg_phase_g is not None:
                                     phase_max_g = peg_phase_g
                                 target_g = min(target_g, phase_max_g)
+                                if not args.transfer and not meco_preparing:
+                                    try:
+                                        position = v.position(nrf)
+                                        velocity = v.velocity(nrf)
+                                        radius = _norm(position)
+                                        vr = _dot(position, velocity)/radius
+                                        vh = math.sqrt(max(0.0, _dot(velocity, velocity)-vr*vr))
+                                        frame = v.surface_reference_frame
+                                        nose = v.direction(frame)
+                                        offset = thrust_axis_offset(conn, v, frame)
+                                        thrust_direction = _unit(tuple(nose[i]+offset[i] for i in range(3)))
+                                        thrust_pitch, _ = pitch_heading_for_direction(thrust_direction)
+                                        pitch_rate = (args.post_sep_hold_slew if
+                                                      shuttle.post_sep_roll_done_ut is None else
+                                                      args.pitch_slew)
+                                        # A configured pitch hold must still be
+                                        # guarded; approximate it as a very slow turn.
+                                        pitch_rate = max(0.01, pitch_rate)
+                                        if pitch_rate > 0:
+                                            hold_left = (max(0.0, SEPARATION_ATTITUDE_HOLD_SECONDS-
+                                                             (conn.space_center.ut-shuttle.booster_separation_ut))
+                                                         if separation_hold_active else 0.0)
+                                            guarded_g, predicted_ap, feasible = apoapsis_guard_g(
+                                                body.gravitational_parameter, radius, vr, vh,
+                                                thrust_pitch, pitch_rate,
+                                                body.equatorial_radius+args.orbit, target_g,
+                                                hold_seconds=hold_left)
+                                            limited = guarded_g < target_g-0.01
+                                            target_g = min(target_g, guarded_g)
+                                            if limited != apoapsis_guard_active:
+                                                apoapsis_guard_active = limited
+                                                if limited:
+                                                    print(f'Apoapsis guard: {guarded_g:.2f} G; '
+                                                          f'predicted peak {(predicted_ap-body.equatorial_radius)/1000:.1f} km'
+                                                          + ('' if feasible else ' (minimum thrust still exceeds target)'))
+                                                else:
+                                                    print('Apoapsis guard released')
+                                            if limited and not feasible and not apoapsis_guard_unavoidable:
+                                                warn_once('apoapsis-unavoidable',
+                                                          f'Predicted apoapsis {(predicted_ap-body.equatorial_radius)/1000:.1f} km '
+                                                          'exceeds the target at minimum guided thrust')
+                                                apoapsis_guard_unavoidable = True
+                                    except Exception as exc:
+                                        warn_once('apoapsis-guard', f'Apoapsis prediction unavailable: {exc}')
                             result = shuttle.update(
                                 max_g=args.max_g, target_g=target_g, altitude=altitude,
                                 dt=control_dt, throttle_slew=args.throttle_slew,
