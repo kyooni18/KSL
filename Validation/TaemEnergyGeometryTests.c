@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include "../CLanding/include/sim_telemetry.h"
 #include "../CLanding/guidance/taem/energy_law.inc"
+/* The white-box fixture exercises cone capture, not every private HAC law. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#include "../CLanding/guidance/taem/hac_law.inc"
+#pragma GCC diagnostic pop
 
 /* The 14:24 KST run reached this inlet before the operator's engine
    firings.  Maximum drag modulation must not be selected while the actual
@@ -31,6 +36,25 @@ static void recorded_capture_range(void) {
     TelContext c={.model=model,.d_station=9000.0,.v_station=160.0,.aoa_max=15.0};
     c.h_station=c.d_station*tan(20.0*DEG2RAD);
     c.e_station=c.h_station+160.0*160.0/(2.0*TEL_G0);
+    /* A Mach-2.5 replay later entered the cone pointing across its radius.
+       No forward tangent exists; centre pursuit must yield to radial capture
+       before crossing the diameter and acquiring an extra half orbit. */
+    HacCtx hx={.c=c,.aero=&model->aero,.mass=25602,.aoa_supersonic=28};
+    TelPoint inside={.x=-5782,.y=4935,.h=10949,.v=219,.g=-30*DEG2RAD,
+        .psi=-120*DEG2RAD,.m=25602,.aoa=14};
+    TaemHacLawState cone={.initialized=true,.phase=TAEM_HAC_PHASE_ACQ,
+        .side=1,.rf=2600,.last_ut=100,.last_side_ut=100,.last_ang=NAN,
+        .last_sgo=NAN,.tangent_dist=0};
+    hac_reference_build(&cone.ref,&hx,100);
+    assert(!hac_predict_acquisition(&hx,&cone.ref,cone.side,cone.rf,&inside).valid);
+    TaemHacLawState high_energy_cone=cone;
+    TelPoint high_energy_inside=inside;
+    high_energy_inside.h+=10000;
+    hac_update(&high_energy_cone,&hx,&high_energy_inside,100,5);
+    assert(high_energy_cone.phase==TAEM_HAC_PHASE_ACQ);
+    HacPrediction capture=hac_update(&cone,&hx,&inside,100,5);
+    assert(cone.phase==TAEM_HAC_PHASE_HAC);
+    assert(isfinite(hac_lateral_left(&cone,&hx,&inside,&capture)));
     TelPoint inlet={.x=-38498.0,.y=41727.0,.h=25789.0,.v=864.0,
         .g=-6.788758*DEG2RAD,.psi=28.984301*DEG2RAD,.m=24073.0,
         .aoa=17.83,.bank=37.3};

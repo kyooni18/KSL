@@ -780,9 +780,22 @@ static HacPrediction hac_update(TaemHacLawState *H,const HacCtx *x,const TelPoin
            within 10% of the radius for kilometres, and captured there it
            flew a chord inside the circle to an exit 470 m off the line (L7) */
         double vh_cap=fmax(1.0,s->ground_speed>0.0?s->ground_speed:s->v*cos(s->g));
-        bool inside=(!acq.valid||(rc<1.1*hac_radius_at(H->rf,psi_j)&&
-                acq.tangent_dist<fmax(500.0,4.0*vh_cap)))&&
-            fabs(along_hac)<TEL_PI/3.0;
+        /* With no tangent, centre pursuit crosses the diameter before the
+           normal heading capture. If even the remaining local arc is beyond
+           the energy budget, that detour cannot be afforded: capture radially
+           using the existing outward-bank authority. With adequate energy,
+           retain acquisition so a high-speed radial inlet is not mistaken for
+           an established orbit and given the shorter arc's energy reference. */
+        double radial_energy=INFINITY;
+        if (!acq.valid&&rc<hac_radius_at(H->rf,psi_j)) {
+            hac_reference_at(&H->ref,hac_arc_length(H->rf,psi_j),
+                &radial_energy,NULL,NULL,NULL,NULL);
+            radial_energy+=hac_turn_cost(x,&H->ref,H->rf,psi_j,0.0,0.0,0.0);
+        }
+        bool radial_recovery=!acq.valid&&isfinite(radial_energy)&&e<radial_energy;
+        bool inside=radial_recovery||((!acq.valid||
+            (rc<1.1*hac_radius_at(H->rf,psi_j)&&
+             acq.tangent_dist<fmax(500.0,4.0*vh_cap)))&&fabs(along_hac)<TEL_PI/3.0);
         if (inside&&H->phase!=TAEM_HAC_PHASE_DRAG) {
             H->phase=TAEM_HAC_PHASE_HAC;
             H->psi=psi_j;
