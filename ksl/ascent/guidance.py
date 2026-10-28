@@ -90,6 +90,15 @@ def launch_roll_handoff_ready(commanded_pitch, actual_pitch, target_pitch,
             roll_attitude_settled(roll_error, roll_rate, nose_error,
                                   angle_limit=7.0, rate_limit=3.0, nose_limit=8.0))
 
+
+def progressive_turn_ready(commanded_pitch, actual_pitch, target_pitch,
+                           roll_error, roll_rate, nose_error):
+    """Allow the smooth turn to begin while the roll loop is still correcting."""
+    return (abs(commanded_pitch-target_pitch) <= 2.5 and
+            abs(actual_pitch-target_pitch) <= 8.0 and
+            abs(roll_error) <= 45.0 and abs(roll_rate) <= 6.0 and
+            abs(nose_error) <= 8.0)
+
 def hold_turn_for_roll(roll_active, roll_reset):
     """Keep launch pitch fixed for the entire dedicated roll phase."""
     return roll_active and not roll_reset

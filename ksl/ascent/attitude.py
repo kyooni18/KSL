@@ -180,12 +180,14 @@ class AttitudeController:
         self.roll_authority_fraction = 1.0
         self.roll_input_limit = 1.0
         self.roll_gate = (8.0, 5.0)        # nose error (deg) above which roll is suppressed / fully on
+        self.roll_min_authority = 0.0       # optional roll-hold fraction while nose error is high
         # telemetry
         self.error_deg = 0.0
         self.roll_error_deg = 0.0
         self.inputs = (0.0, 0.0, 0.0)
         self.disturbance = (0.0, 0.0, 0.0)
         self.translation_moment = (0.0, 0.0, 0.0)
+        self.aerodynamic_moment = (0.0, 0.0, 0.0)
         self._integral = [0.0, 0.0, 0.0]
         self._moi = (1.0, 1.0, 1.0)
         self._torque = (1.0, 1.0, 1.0)
@@ -198,7 +200,8 @@ class AttitudeController:
                                       'target_fx', 'target_fy', 'target_fz',
                                       'target_rx', 'target_ry', 'target_rz',
                                       'pitch', 'roll', 'yaw', 'mx', 'my', 'mz',
-                                      'tx', 'ty', 'tz', 'ix', 'iy', 'iz'])
+                                      'tx', 'ty', 'tz', 'ix', 'iy', 'iz',
+                                      'aero_mx', 'aero_my', 'aero_mz'])
         self._running = True
         self._thread = threading.Thread(target=self._run, name='attitude', daemon=True)
         self._thread.start()
@@ -278,7 +281,6 @@ class AttitudeController:
             self.control.pitch = self.control.yaw = self.control.roll = 0.0
         except Exception:
             pass
-
     def _refresh_slow(self):
         try:
             self._moi = tuple(max(1.0, x) for x in self.vessel.moment_of_inertia)
@@ -289,6 +291,12 @@ class AttitudeController:
                                 if self.feedforward else (0.0, 0.0, 0.0))
         except Exception:
             pass
+        try:
+            aero = tuple(self.vessel.flight(self.frame).aerodynamic_torque)
+            self.aerodynamic_moment = (aero if len(aero) == 3 and
+                                       all(math.isfinite(x) for x in aero) else (0., 0., 0.))
+        except Exception:
+            self.aerodynamic_moment = (0., 0., 0.)
 
     def _run(self):
         idle_written = False
@@ -335,6 +343,7 @@ class AttitudeController:
                 roll_angle = math.atan2(_dot(nose, _cross(cur, u)), _dot(cur, _unit(u)))
                 start, full = self.roll_gate
                 roll_on = max(0.0, min(1.0, (start-self.error_deg)/max(1e-3, start-full)))
+                roll_on = max(getattr(self, 'roll_min_authority', 0.0), roll_on)
                 phi[1] = roll_angle*roll_on
                 self.roll_error_deg = math.degrees(roll_angle)
         # Time-optimal-ish slew: fast while far, but never faster than the speed
@@ -371,7 +380,8 @@ class AttitudeController:
             try:
                 self._telemetry.writerow([self._ut(), *q, *w, *forward,
                                           *(roof if roof is not None else (None,)*3),
-                                          *inputs, *self.disturbance, *self._torque, *self._moi])
+                                          *inputs, *self.disturbance, *self._torque, *self._moi,
+                                          *self.aerodynamic_moment])
             except OSError:
                 # Logging must not prevent subsequent flight-control steps.
                 self._telemetry = None

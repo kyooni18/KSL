@@ -162,6 +162,19 @@ def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
     controller._step()
     assert abs(controller.control.roll) <= .5
 
+    # A large nose error normally gates roll completely. During booster
+    # flight the configured minimum must retain feedback toward the roof.
+    nose = (math.sin(math.radians(15.)), math.cos(math.radians(15.)), 0.)
+    controller._target_for_step = lambda: (nose, (1., 0., 0.))
+    controller._integral = [0., 0., 0.]
+    controller.roll_min_authority = 0.
+    controller._step()
+    assert controller.control.roll == pytest.approx(0.)
+    controller._integral = [0., 0., 0.]
+    controller.roll_min_authority = .25
+    controller._step()
+    assert abs(controller.control.roll) > .01
+
 
 def test_capture_callback_runs_before_detachment():
     shuttle = Shuttle.__new__(Shuttle)

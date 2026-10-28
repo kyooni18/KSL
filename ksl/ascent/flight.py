@@ -13,7 +13,7 @@ from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orb
 from .peg import InsertionGuidance
 from .full_plan import BoosterState, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -305,6 +305,7 @@ def run(args):
         launch_roll = None
         mission_roll_commanded = False
         mission_roll_settled = False
+        gravity_turn_released = False
         roll_settle_since = None
         initial_roll_set = False
         liftoff_ut = None
@@ -714,7 +715,7 @@ def run(args):
                                     else min(args.heading_slew, 0.7), control_dt)
                             if not mission_roll_commanded:
                                 raw_pitch = initial_pitch
-                            elif roll_requires_authority or altitude < turn_start_altitude:
+                            elif (roll_requires_authority and not gravity_turn_released) or altitude < turn_start_altitude:
                                 raw_pitch = roll_pitch
                             else:
                                 raw_pitch = scheduled_turn_pitch(
@@ -1330,9 +1331,14 @@ def run(args):
                                 # the stronger calibrated hold after it settles.
                                 ap.ctrl.roll_authority_fraction = .25 if mission_roll_settled else .5
                                 ap.ctrl.roll_input_limit = args.roll_control_limit
+                                # Keep some roll attitude feedback while pitch/yaw
+                                # recover; otherwise a large nose error can strand
+                                # the stack far from its heads-down attitude.
+                                ap.ctrl.roll_min_authority = .25
                             else:
                                 ap.ctrl.roll_authority_fraction = 1.0
                                 ap.ctrl.roll_input_limit = 1.0
+                                ap.ctrl.roll_min_authority = 0.0
                             if shuttle.separated:
                                 # After separation the autopilot owns all three axes. Its
                                 # output replaces a direct control.roll command, so the
@@ -1381,10 +1387,9 @@ def run(args):
                             roll_control = ap.ctrl.inputs[1]
                             settle_nose_error = direction_error_deg(
                                 actual_direction, aim_direction)
-                            # Pause roll whenever the nose is being pulled away from
-                            # the commanded ascent vector; resume once pitch/yaw recover.
-                            if settle_nose_error > 5.0:
-                                roll_control = 0.0
+                            # Log the controller's actual roll input. The controller
+                            # itself gates roll on nose error; changing this local
+                            # diagnostic does not change the actuator command.
                             if upright_phase:
                                 if roll_error < 6.0 and abs(body_roll_rate) < 3.0:
                                     if upright_since is None:
@@ -1406,9 +1411,20 @@ def run(args):
                                           f'(error {roll_error:.0f} deg); releasing climb anyway')
                             if not mission_roll_settled:
                                 actual_roll_pitch, _ = pitch_heading_for_direction(actual_direction)
-                                if launch_roll_handoff_ready(
+                                if (not gravity_turn_released and
+                                        progressive_turn_ready(commanded_pitch, actual_roll_pitch,
+                                                               roll_pitch, roll_error, body_roll_rate,
+                                                               settle_nose_error)):
+                                    gravity_turn_released = True
+                                    emit_event('gravity-turn-released', roll_error_deg=roll_error,
+                                               nose_error_deg=settle_nose_error)
+                                    print('Progressive gravity turn released while roll continues')
+                                if ((gravity_turn_released and roll_attitude_settled(
+                                        roll_error, body_roll_rate, settle_nose_error,
+                                        angle_limit=7., rate_limit=3., nose_limit=8.)) or
+                                    (not gravity_turn_released and launch_roll_handoff_ready(
                                         commanded_pitch, actual_roll_pitch, roll_pitch,
-                                        roll_error, body_roll_rate, settle_nose_error):
+                                        roll_error, body_roll_rate, settle_nose_error))):
                                     if roll_settle_since is None:
                                         roll_settle_since = conn.space_center.ut
                                     elif (conn.space_center.ut-roll_settle_since >=
