@@ -86,7 +86,13 @@ class SeparationEnvelopeTests(unittest.TestCase):
         shuttle._solid_boosters_depleted = lambda: True
         shuttle.allocation = lambda **kwargs: SimpleNamespace(throttles=(.9,))
         shuttle.allocation_for_throttles = lambda throttles: throttles
-        result = shuttle.update(dt=.1, throttle_slew=.01)
+        shuttle.conn = object()
+        def stage(conn, groups, boosters, motors, decouplers):
+            core.thrust_limit = min(core.thrust_limit, .3)
+            for decoupler in decouplers:
+                decoupler.decouple()
+        with patch('ksl.ascent.vehicle.separate_sts_boosters_batch', side_effect=stage):
+            result = shuttle.update(dt=.1, throttle_slew=.01)
         self.assertEqual(observed, [.3])
         self.assertEqual(result, (.3,))
 

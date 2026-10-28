@@ -1,6 +1,8 @@
 """STS vehicle model from kRPC parts: engine groups, boosters, external tank, staging and thrust allocation."""
 import math
 import time
+from krpc.schema import KRPC_pb2
+from krpc.decoder import Decoder
 
 from .allocation import Allocation, allocate
 from .events import emit_event
@@ -167,6 +169,65 @@ def is_separator_motor(engine):
     part = engine.part
     return (getattr(part, 'name', '') in ('sepMotor1', 'Mite') or
             'Mite' in getattr(part, 'title', ''))
+
+
+def separate_sts_boosters_batch(conn, core_groups, boosters, motors, decouplers):
+    """Submit the SRB cutoff, separator ignition and detach as one kRPC request.
+
+    The Python client exposes only individual setters, so build the documented
+    multi-call protocol request using the same types as its generated setters.
+    An error can leave a partially executed request: never retry it blindly.
+    """
+    types = conn._types
+    engine_type = types.class_type('SpaceCenter', 'Engine')
+    calls = []
+    labels = []
+
+    def setter(engine, name, value, value_type):
+        calls.append(conn._build_call('SpaceCenter', 'Engine_set_' + name,
+                                      [engine, value], ['self', 'value'],
+                                      [engine_type, value_type], None))
+        labels.append('engine ' + name)
+
+    for group in core_groups:
+        for engine in group:
+            setter(engine, 'ThrustLimit', min(engine.thrust_limit, POST_SEP_CAP_FLOOR),
+                   types.float_type)
+    for engine in boosters:
+        setter(engine, 'ThrustLimit', 0.0, types.float_type)
+        setter(engine, 'Active', False, types.bool_type)
+    # Set every limit before any motor is ignited. Motors then ignite and
+    # both branches detach in the same server request, in that order.
+    for engine in motors:
+        setter(engine, 'ThrustLimit', 1.0, types.float_type)
+    start_index = len(calls)
+    calls.append(conn.get_call(getattr, conn.space_center, 'ut'))
+    labels.append('start time')
+    for engine in motors:
+        setter(engine, 'Active', True, types.bool_type)
+    for decoupler in decouplers:
+        calls.append(conn.get_call(decoupler.decouple))
+        labels.append('booster decoupler')
+    end_index = len(calls)
+    calls.append(conn.get_call(getattr, conn.space_center, 'ut'))
+    labels.append('end time')
+    request = KRPC_pb2.Request()
+    request.calls.extend(calls)
+    with conn._rpc_connection_lock:
+        conn._rpc_connection.send_message(request)
+        response = conn._rpc_connection.receive_message(KRPC_pb2.Response)
+    if response.HasField('error'):
+        raise RuntimeError('Booster separation batch failed; staging may be partial: '
+                           + response.error.description)
+    failures = [f'{label}: {result.error.description}'
+                for label, result in zip(labels, response.results)
+                if result.HasField('error')]
+    if len(response.results) != len(calls) or failures:
+        raise RuntimeError('Booster separation batch incomplete; staging may be partial: '
+                           + '; '.join(failures))
+    start = Decoder.decode(conn, response.results[start_index].value, types.double_type)
+    end = Decoder.decode(conn, response.results[end_index].value, types.double_type)
+    return start, end
 
 
 def delay_booster_separation(vehicle_kind, solid_boosters, depleted,
@@ -895,38 +956,41 @@ class Shuttle:
             not engine_has_fuel(engine) for engine in self.solid_boosters)
 
     def _separate_boosters(self):
+        separation_timing = None
         if self.vehicle_kind == 'orbiter-shuttle' and self.solid_boosters:
-            # Burnout removes the balancing SRB moment. Apply the clearance
-            # cap before detachment, rather than slewing down from ~90% while
-            # the lighter vehicle is already flying on canted SSMEs alone.
-            for group in self.core_groups:
-                for engine in group:
-                    engine.thrust_limit = min(engine.thrust_limit, POST_SEP_CAP_FLOOR)
-        # Cut every controlled booster motor before detaching the full pair.
-        for engine in self.liquid_boosters + getattr(self, 'solid_boosters', []):
-            try:
-                engine.thrust_limit = 0.0
-                engine.active = False
-            except Exception:
-                pass
-        for engine in self.sepmotors:
-            try:
-                engine.thrust_limit = 1.0
-                engine.active = True
-            except Exception:
-                pass
-        if self.sepmotors:
-            print(f'Igniting {len(self.sepmotors)} separator motors with booster separation')
-        for decoupler in self.booster_decouplers:
-            try:
-                decoupler.decouple()
-            except Exception:
-                pass
+            separation_timing = separate_sts_boosters_batch(
+                self.conn, self.core_groups, self.liquid_boosters + self.solid_boosters,
+                self.sepmotors, self.booster_decouplers)
+            print(f'Ignited {len(self.sepmotors)} separator motors and detached '
+                  'both boosters in one kRPC request')
+            if separation_timing and separation_timing[1] > separation_timing[0]:
+                print(f'WARNING: staging batch spanned '
+                      f'{separation_timing[1]-separation_timing[0]:.3f} simulation seconds')
+        else:
+            # Other vehicle families retain their existing staging sequence.
+            for engine in self.liquid_boosters + getattr(self, 'solid_boosters', []):
+                try:
+                    engine.thrust_limit = 0.0
+                    engine.active = False
+                except Exception:
+                    pass
+            for engine in self.sepmotors:
+                try:
+                    engine.thrust_limit = 1.0
+                    engine.active = True
+                except Exception:
+                    pass
+            for decoupler in self.booster_decouplers:
+                try:
+                    decoupler.decouple()
+                except Exception:
+                    pass
         self.separated = True
-        self.booster_separation_ut = self.sc.ut
+        self.booster_separation_ut = separation_timing[1] if separation_timing else self.sc.ut
         self.groups = list(self.core_groups)
         self.control_moment_budget = self.cruise_control_moment_budget
-        emit_event('booster-separation', ut=self.booster_separation_ut)
+        emit_event('booster-separation', ut=self.booster_separation_ut,
+                   batch_start_ut=separation_timing[0] if separation_timing else None)
         print('Boosters shut down/burned out and separated')
 
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,

@@ -2,9 +2,11 @@
 import threading
 import math
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+from krpc.schema import KRPC_pb2
+import pytest
 from ksl.ascent.attitude import AttitudeController
-from ksl.ascent.vehicle import Shuttle
+from ksl.ascent.vehicle import Shuttle, separate_sts_boosters_batch
 from ksl.ascent.geometry import direction_error_deg, slew_direction
 
 
@@ -98,3 +100,50 @@ def test_thrust_correction_jump_is_limited_by_simulation_time():
     assert direction_error_deg(previous, slew_direction(previous, target, 2., 0.)) < 1e-6
     opposite = slew_direction(previous, (0., -1., 0.), 2., 1.)
     assert abs(direction_error_deg(previous, opposite) - 2.) < 1e-8
+
+
+def test_srb_cutoff_ignition_and_detachment_share_one_request():
+    class Socket:
+        def __init__(self):
+            self.requests = []
+            self.fail = False
+        def send_message(self, request):
+            self.requests.append(request)
+        def receive_message(self, response_type):
+            response = response_type()
+            for _ in self.requests[-1].calls:
+                response.results.add()
+            if self.fail:
+                response.results[-1].error.description = 'decoupler failed'
+            return response
+
+    class Client:
+        def __init__(self):
+            self._rpc_connection = Socket()
+            self._rpc_connection_lock = threading.Lock()
+            self._types = SimpleNamespace(class_type=lambda *args: object(),
+                                          float_type=object(), bool_type=object(),
+                                          double_type=object())
+            self.space_center = object()
+        def _build_call(self, service, procedure, args, *rest):
+            return KRPC_pb2.ProcedureCall(service=service, procedure=procedure)
+        def get_call(self, method, *args):
+            procedure = 'get_UT' if method is getattr else 'Decoupler_Decouple'
+            return KRPC_pb2.ProcedureCall(service='SpaceCenter', procedure=procedure)
+
+    conn = Client()
+    core = SimpleNamespace(thrust_limit=.9)
+    motors = [object(), object()]
+    decouplers = [SimpleNamespace(decouple=Mock()), SimpleNamespace(decouple=Mock())]
+    with patch('ksl.ascent.vehicle.Decoder.decode', return_value=123.0):
+        assert separate_sts_boosters_batch(conn, [[core]], [object(), object()],
+                                           motors, decouplers) == (123., 123.)
+    assert len(conn._rpc_connection.requests) == 1
+    procedures = [c.procedure for c in conn._rpc_connection.requests[0].calls]
+    assert procedures == (['Engine_set_ThrustLimit'] +
+                          ['Engine_set_ThrustLimit', 'Engine_set_Active']*2 +
+                          ['Engine_set_ThrustLimit']*2 + ['get_UT'] +
+                          ['Engine_set_Active']*2 + ['Decoupler_Decouple']*2 + ['get_UT'])
+    conn._rpc_connection.fail = True
+    with pytest.raises(RuntimeError, match='staging may be partial'):
+        separate_sts_boosters_batch(conn, [[core]], [], motors, decouplers)
