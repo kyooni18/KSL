@@ -5,7 +5,7 @@ import pytest
 
 from ksl.ascent.peg import InsertionGuidance, apsides
 from ksl.ascent.geometry import inertial_velocity_components, smooth_value
-from ksl.ascent.guidance import separation_pitch_transition
+from ksl.ascent.guidance import insertion_prediction_g, separation_pitch_transition
 
 MU, R, G0 = 3.5316e12, 600000., 9.80665
 
@@ -101,6 +101,13 @@ def test_separation_pitch_handoff_gradually_releases_insertion_command():
     blended = guide.fly(*args, dt=1., t_max=15., flown=45.,
                         transition_anchor=45., since_separation=5.)
     assert blended['apoapsis_r'] != pytest.approx(regular['apoapsis_r'], abs=1.)
+
+
+def test_insertion_forecast_uses_governed_acceleration():
+    assert insertion_prediction_g(1.4, .2, True) == .2
+    assert insertion_prediction_g(1.4, .2, False) == 1.4
+    assert insertion_prediction_g(1.4, 0., True) == 1.4
+    assert insertion_prediction_g(1.4, 2., True) == 1.4
 
 
 def test_inertial_velocity_decomposition_does_not_add_rotation_as_scalar_speed():

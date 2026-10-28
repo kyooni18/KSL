@@ -107,6 +107,13 @@ def progressive_turn_ready(commanded_pitch, actual_pitch, target_pitch,
             abs(roll_error) <= 45.0 and abs(roll_rate) <= 6.0 and
             abs(nose_error) <= 8.0)
 
+
+def insertion_prediction_g(configured_g, measured_g, governor_active):
+    """Seed the upper-stage forecast with the governed acceleration when limited."""
+    if governor_active and math.isfinite(measured_g) and measured_g > 0.:
+        return min(configured_g, max(.15, measured_g))
+    return configured_g
+
 def hold_turn_for_roll(roll_active, roll_reset):
     """Keep launch pitch fixed for the entire dedicated roll phase."""
     return roll_active and not roll_reset

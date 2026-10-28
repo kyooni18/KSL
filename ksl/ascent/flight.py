@@ -13,7 +13,7 @@ from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orb
 from .peg import InsertionGuidance
 from .full_plan import BoosterState, attached_booster_dry_mass, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -874,7 +874,9 @@ def run(args):
                                 ramp_left = max(0.0, POST_SEP_CAP_RAMP-max(0.0, into_ramp))
                                 cap_now = post_sep_throttle_cap(
                                     since_sep, None if roll_done is None else now_ut-roll_done)
-                                g_limit = min(args.max_g, args.upper_g)*G0
+                                g_limit = insertion_prediction_g(
+                                    min(args.max_g, args.upper_g), flight.g_force,
+                                    apoapsis_guard_active)*G0
                                 accel_now = max(v.thrust, 1.0)/v.mass
                                 if insertion_guide is None:
                                     insertion_guide = InsertionGuidance(
