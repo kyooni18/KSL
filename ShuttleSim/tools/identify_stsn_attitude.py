@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Identify the STS-N rigid-body pitch/roll/yaw plant from live KSP telemetry.
 
-Uses the applied stick (appliedControl.reportedPitch/Roll/Yaw) and body rates
+Uses the applied control (appliedControl.diagnosticPitch/Roll/Yaw from native
+flight control when applied, else the reported stick) and body rates
 (attitude.bodyPitchRate/bodyRollRate/bodyYawRate, deg/s; bodyPitchRate matches
 d(pitch)/dt with slope 1.00 in level flight) logged at ~10 Hz by live KSP
 flights.  Angular acceleration is the forward difference of consecutive body
@@ -81,10 +82,21 @@ def _log_samples(path, vehicle_model="STS-N"):
                 wp=_f(_g(state, "attitude", "bodyPitchRate")),
                 wr=_f(_g(state, "attitude", "bodyRollRate")),
                 wy=_f(_g(state, "attitude", "bodyYawRate")),
-                dp=_f(ac.get("reportedPitch")), dr=_f(ac.get("reportedRoll")),
-                dy=_f(ac.get("reportedYaw")),
+                dp=_control(ac, "Pitch"), dr=_control(ac, "Roll"),
+                dy=_control(ac, "Yaw"),
                 thrust=_f(_g(state, "vehicle", "currentThrust"))))
     return out
+
+
+def _control(ac, axis):
+    """The native flight-control command when one was applied, else the stick.
+
+    Native direct control drives the surfaces itself; KSP's reported stick then
+    stays at the last pilot input (roll 0 through 70 deg of bank on the
+    2026-10-28 STS flight), which no plant can be fitted to."""
+    if ac.get("applySucceeded") and ac.get("diagnostic" + axis) is not None:
+        return _f(ac.get("diagnostic" + axis))
+    return _f(ac.get("reported" + axis))
 
 
 def pairs(seq, args):
