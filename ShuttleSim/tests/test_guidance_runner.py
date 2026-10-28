@@ -120,6 +120,28 @@ class MailboxTests(unittest.TestCase):
                 backend.wait(lambda m: m.get("type") == "response", 10)
 
 
+class RunwayFixtureTests(unittest.TestCase):
+    def test_replay_runway_matches_configuration_not_opposite_threshold(self):
+        from run_geometry import validate_runway_geometry
+        root = pathlib.Path(__file__).resolve().parents[1]
+        site = dict(latitude=-0.0486111111, longitude=-74.7283333333,
+                    altitude=68.44, runwayHeading=90, runwayLength=2500, runwayWidth=70)
+        for name in ("sts-kerbin-20261028-live-entry-72km", "sts-kerbin-20261028-live-overhead-mm305"):
+            validate_runway_geometry(root / "scenarios" / (name + ".ini"), {"site": site})
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".ini") as fixture:
+            fixture.write("runway_latitude_deg=-0.0486106891290587\n"
+                          "runway_longitude_deg=-74.4896008327406\nrunway_heading_deg=90\n")
+            fixture.flush()
+            with self.assertRaisesRegex(ValueError, "runway mismatch"):
+                validate_runway_geometry(fixture.name, {"site": site})
+            # East threshold with a westbound heading is the same runway.
+            fixture.seek(0); fixture.truncate()
+            fixture.write("runway_latitude_deg=-0.0486106891290587\n"
+                          "runway_longitude_deg=-74.4896008327406\nrunway_heading_deg=270\n")
+            fixture.flush()
+            validate_runway_geometry(fixture.name, {"site": site})
+
+
 class HacGeometryTests(unittest.TestCase):
     @staticmethod
     def record(side=1.0, angle=120.0, radius=3200.0, distance=2800.0):

@@ -60,3 +60,45 @@ def fixed_hac_geometry_evidence(text: str, final_distance: float | None = None) 
             "center": points["center"], "entry": points["entry"],
             "exit": points["exit"], "leadLength": lead, "arcLength": arc}
 
+
+
+def validate_runway_geometry(scenario_path, config):
+    """Reject a plant runway displaced from the configured landing segment.
+
+    Defaults match scenario_seed_86km; the offline world is Kerbin (600 km).
+    Reversing both threshold and heading describes the same physical runway.
+    """
+    fields = dict(runway_latitude_deg=-0.0486, runway_longitude_deg=-74.7240,
+                  runway_elevation_m=70.0, runway_heading_deg=90.0,
+                  runway_length_m=2500.0, runway_width_m=70.0)
+    with open(scenario_path, encoding="utf-8") as source:
+        for line in source:
+            key, sep, value = line.partition("=")
+            if sep and key.strip() in fields:
+                fields[key.strip()] = float(value.split("#")[0].strip())
+    site = config["site"]
+
+    def endpoints(lat, lon, heading, length):
+        lat, lon, heading = map(math.radians, (lat, lon, heading))
+        arc = length / 600000.0
+        end_lat = math.asin(math.sin(lat)*math.cos(arc) +
+                            math.cos(lat)*math.sin(arc)*math.cos(heading))
+        end_lon = lon + math.atan2(math.sin(heading)*math.sin(arc)*math.cos(lat),
+                                  math.cos(arc)-math.sin(lat)*math.sin(end_lat))
+        def xyz(a, b):
+            return tuple(600000.0*x for x in
+                         (math.cos(a)*math.cos(b), math.cos(a)*math.sin(b), math.sin(a)))
+        return xyz(lat, lon), xyz(end_lat, end_lon)
+
+    actual = endpoints(fields["runway_latitude_deg"], fields["runway_longitude_deg"],
+                       fields["runway_heading_deg"], fields["runway_length_m"])
+    expected = endpoints(site["latitude"], site["longitude"],
+                         site["runwayHeading"], site["runwayLength"])
+    error = min(max(math.dist(a, b) for a, b in zip(actual, order))
+                for order in (expected, expected[::-1]))
+    # Allow rounded survey coordinates/elevation, never a different runway end.
+    if (not math.isfinite(error) or error > 5.0 or
+            abs(fields["runway_elevation_m"]-site["altitude"]) > 5.0 or
+            abs(fields["runway_width_m"]-site["runwayWidth"]) > 1.0):
+        raise ValueError(f"scenario/configuration runway mismatch: endpoint error {error:.1f} m; "
+                         "use the same physical runway threshold, heading and dimensions")
