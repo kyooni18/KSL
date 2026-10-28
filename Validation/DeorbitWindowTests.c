@@ -42,12 +42,25 @@ static void entry_policy_model_parity(void){
   assert(fabs(a.lift_accel*state.mass/a.q-lift)<1e-8);
  }
  EntryPrediction a=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
-  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model);
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL);
  cal.density_scale=.7;cal.speed_of_sound_scale=1.2;cal.drag_scale=.5;cal.lift_scale=2;
  EntryPrediction b=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
-  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model);
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL);
  assert(vmag(vsub(a.final_state.velocity,b.final_state.velocity))<1e-9);
- entry_prediction_clear(&a);entry_prediction_clear(&b);free(model);
+ entry_prediction_clear(&a);entry_prediction_clear(&b);
+ a=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,1000,model,NULL);
+ assert(a.trajectory.count>1);
+ TrajectoryPoint last=a.trajectory.points[a.trajectory.count-1];
+ native=world_lla_to_inertial(&model->world,last.latitude*DEG2RAD,
+  last.longitude*DEG2RAD,last.altitude,last.ut);
+ air=world_atmosphere_sample_state(&model->world,native,last.ut);
+ double handoff=cfg.guidance.mm305_target_mach+
+  ((cfg.guidance.sts_trajectory_delivery||cfg.guidance.taem_hac_law)?0:cfg.guidance.mm305_mach_half_width);
+ assert(last.speed/air.speed_of_sound_mps<=handoff);
+ assert(last.speed/air.speed_of_sound_mps>handoff-.05);
+ assert(last.altitude<=cfg.guidance.mm305_max_altitude);
+ entry_prediction_clear(&a);free(model);
 }
 int main(void){
  entry_policy_model_parity();

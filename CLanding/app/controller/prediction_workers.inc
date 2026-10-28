@@ -1,8 +1,20 @@
+static double entry_policy_sound(const TrajectoryPoint *pt,const PlanetModel *p,
+        const LandingConfiguration *cfg,const TerminalModel *model){
+    if(cfg->guidance.taem_energy_law&&!strcmp(cfg->vehicle.model_id,"STS")&&
+       terminal_model_policy_matches(model,&cfg->site,&cfg->vehicle,&cfg->guidance)&&
+       terminal_model_planet_matches(model,p)){
+        Vec3 pos=world_lla_to_inertial(&model->world,pt->latitude*DEG2RAD,
+            pt->longitude*DEG2RAD,pt->altitude,pt->ut);
+        return world_atmosphere_sample_state(&model->world,pos,pt->ut).speed_of_sound_mps;
+    }
+    return planet_atmospheric_speed_of_sound(p,pt->altitude);
+}
+
 /* Site distance at the first forecast point inside the live MM305 physical
    handoff (Mach <= target+half-width, altitude <= MM305 ceiling), interpolated
    between recorded samples. NAN when the forecast never gets there. */
 static double entry_policy_handoff_distance(const EntryPrediction *f,const PlanetModel *p,
-        const LandingConfiguration *cfg){
+        const LandingConfiguration *cfg,const TerminalModel *model){
     if(!f||!p||!cfg)return NAN;
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     /* Experimental STS hands over at the band centre (guidance_terminal.c). */
@@ -12,7 +24,7 @@ static double entry_policy_handoff_distance(const EntryPrediction *f,const Plane
     double prev_excess=NAN,prev_range=NAN;
     for(size_t i=0;i<f->trajectory.count;++i){
         const TrajectoryPoint *pt=&f->trajectory.points[i];
-        double sound=planet_atmospheric_speed_of_sound(p,pt->altitude);
+        double sound=entry_policy_sound(pt,p,cfg,model);
         if(!(sound>0.0))continue;
         GeoPoint geo={pt->latitude,pt->longitude,pt->altitude};
         double range=great_circle_distance(geo,site,p->radius);
@@ -30,7 +42,7 @@ static double entry_policy_handoff_distance(const EntryPrediction *f,const Plane
 /* Heading error to the site where the forecast reaches the MM305 handoff
    (deg, NAN without a handoff): the S-turn's arrival quality. */
 static double entry_policy_handoff_heading_error(const EntryPrediction *f,const PlanetModel *p,
-        const LandingConfiguration *cfg){
+        const LandingConfiguration *cfg,const TerminalModel *model){
     if(!f||!p||!cfg)return NAN;
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     double mach_handoff=cfg->guidance.mm305_target_mach+
@@ -38,7 +50,7 @@ static double entry_policy_handoff_heading_error(const EntryPrediction *f,const 
          !strcmp(cfg->vehicle.model_id,"STS")?0.0:cfg->guidance.mm305_mach_half_width);
     for(size_t i=1;i<f->trajectory.count;++i){
         const TrajectoryPoint *a=&f->trajectory.points[i-1],*b=&f->trajectory.points[i];
-        double sound=planet_atmospheric_speed_of_sound(p,b->altitude);
+        double sound=entry_policy_sound(b,p,cfg,model);
         if(!(sound>0.0)||b->speed>mach_handoff*sound||b->altitude>cfg->guidance.mm305_max_altitude)continue;
         GeoPoint ga={a->latitude,a->longitude,a->altitude},gb={b->latitude,b->longitude,b->altitude};
         if(great_circle_distance(ga,gb,p->radius)<1.0)continue;
@@ -378,8 +390,8 @@ static void *terminal_prediction_worker(void *arg){
                 for(int iteration=0;;++iteration){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);
                     EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound,supervision_terminal_model);
-                    double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound,supervision_terminal_model,&telemetry);
+                    double handoff=entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model);
                     entry_prediction_clear(&f);
                     double miss=handoff-target; /* + : hands off too far out (short) */
                     if(iteration==0){f_lo=miss;if(!(miss<0.0))break;continue;}
@@ -407,14 +419,14 @@ static void *terminal_prediction_worker(void *arg){
                        build between the planned reversals. */
                     double sched[4]={0};unsigned n=0;
                     EntryPrediction f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound,supervision_terminal_model);
-                    double hold_err=entry_policy_handoff_heading_error(&f,&planet,&cfg),best_err=hold_err;
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound,supervision_terminal_model,&telemetry);
+                    double hold_err=entry_policy_handoff_heading_error(&f,&planet,&cfg,supervision_terminal_model),best_err=hold_err;
                     double wall0=monotonic_seconds(),plan_bank=solved;
                     /* The forecast's energy is not trusted alone (live arrived
                        short while forecasts said long): bank magnitude and the
                        schedule are chosen together for an arrival at the hand-off
                        distance AND pointed at the site. */
-                    best_err=isfinite(hold_err)?hold_err+fabs(entry_policy_handoff_distance(&f,&planet,&cfg)-target)/1000.0:NAN;
+                    best_err=isfinite(hold_err)?hold_err+fabs(entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model)-target)/1000.0:NAN;
                     entry_prediction_clear(&f);
                     double plan_aoa=cfg.vehicle.entry_angle_of_attack;
                     for(double cand_aoa=cfg.vehicle.entry_angle_of_attack;cand_aoa<=cfg.vehicle.maximum_angle_of_attack+1e-6;cand_aoa+=MM304_S_TURN_PLAN_AOA_STEP_DEG)
@@ -425,9 +437,9 @@ static void *terminal_prediction_worker(void *arg){
                         double cand[4];
                         for(unsigned i=0;i<4;i++)cand[i]=request_ut+t1+i*leg;
                         f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound,supervision_terminal_model);
-                        double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg);
-                        double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
+                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound,supervision_terminal_model,&telemetry);
+                        double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg,supervision_terminal_model);
+                        double handoff=entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model);
                         double err=heading+fabs(handoff-target)/1000.0; /* deg + km */
                         /* reversals the forecast never reached are not part of the plan */
                         unsigned used=f.s_turn_reversals>4?4:f.s_turn_reversals;
