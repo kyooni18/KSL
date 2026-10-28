@@ -1,6 +1,26 @@
 import unittest
 
 from ksl.ascent import orbit_trim
+import pytest
+
+
+def test_oms_throttle_ramps_and_never_exceeds_the_gentle_cap():
+    throttle = 0.0
+    for _ in range(100):
+        previous = throttle
+        throttle = orbit_trim.oms_throttle_command(throttle, 20., 4.,
+                                                  orbit_trim.OMS_THROTTLE_CAP, .1)
+        assert abs(throttle-previous) <= orbit_trim.OMS_THROTTLE_SLEW*.1 + 1e-12
+        assert throttle <= .2
+    assert throttle == pytest.approx(.2)
+    assert orbit_trim.oms_throttle_command(.2, .1, 4., .2, 1.) == pytest.approx(.15)
+
+
+def test_oms_burn_timing_uses_reduced_throttle_and_ramp():
+    duration, centroid = orbit_trim.oms_burn_profile(20., 20000., 80000., 300., .2)
+    full_throttle_time = 20. / 4.
+    assert duration > 5*full_throttle_time
+    assert 0. < centroid < duration
 
 
 class RcsBudgetTests(unittest.TestCase):

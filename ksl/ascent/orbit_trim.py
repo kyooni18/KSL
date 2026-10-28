@@ -28,7 +28,43 @@ ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
 # alignment.
 RCS_TRIM_MAX_DV = 2.0  # m/s
 RCS_TRIM_TIMEOUT = 180.0  # s of wall time
+OMS_THROTTLE_CAP = 0.20
+OMS_FINE_THROTTLE_CAP = 0.10
+OMS_THROTTLE_SLEW = 0.05  # throttle fraction per simulation second
 RUNTIME = {}  # 'controls': operator runtime controls (auto-warp, trim hold/disable)
+
+
+def oms_throttle_command(current, remaining, acceleration, cap, dt):
+    """Slew OMS thrust gently while tapering for a fine cutoff."""
+    if dt <= 0:
+        return current
+    target = max(0.01, min(cap, max(0.0, remaining)/max(acceleration, 0.1)/1.5))
+    step = OMS_THROTTLE_SLEW*dt
+    return max(0.0, min(cap, current + max(-step, min(step, target-current))))
+
+
+def oms_burn_profile(dv, mass, thrust, isp, cap, tolerance=0.03):
+    """Approximate duration and impulse centroid using the commanded throttle law."""
+    ve = isp*9.80665
+    if min(mass, thrust, ve, cap) <= 0 or dv < 0:
+        raise ValueError('Invalid OMS burn parameters')
+    elapsed = impulse = weighted_time = throttle = 0.0
+    dt = 0.1
+    remaining = dv
+    for _ in range(36000):
+        if remaining <= tolerance:
+            break
+        accel = thrust/mass
+        throttle = oms_throttle_command(throttle, remaining, accel, cap, dt)
+        delta_v = min(remaining, accel*throttle*dt)
+        weighted_time += (elapsed+dt/2)*delta_v
+        impulse += delta_v
+        remaining -= delta_v
+        mass *= math.exp(-delta_v/ve)
+        elapsed += dt
+    else:
+        raise ValueError('OMS burn exceeds profile calculation horizon')
+    return elapsed, weighted_time/impulse if impulse else 0.0
 
 
 def controls():
@@ -391,9 +427,10 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         raise RuntimeError('No OMS thrust available (fuel exhausted or engines inactive)')
     dv = node.delta_v
     mass = vessel.mass
-    burn_time = isp*9.80665*mass*(1.0-math.exp(-dv/(isp*9.80665)))/thrust
-    start = node.ut - 0.5*burn_time
-    print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s, T-{node.time_to:.0f} s, '
+    cap = OMS_FINE_THROTTLE_CAP if dv < 5.0 else OMS_THROTTLE_CAP
+    burn_time, impulse_centroid = oms_burn_profile(dv, mass, thrust, isp, cap, tolerance)
+    start = node.ut - impulse_centroid
+    print(f'Node dv {dv:.2f} m/s, burn {burn_time:.1f} s at <= {cap:.0%}, T-{node.time_to:.0f} s, '
           f'EC {vessel.resources.amount("ElectricCharge"):.0f}')
     # Whatever happens below, the engines must never be left running.
     try:
@@ -421,14 +458,16 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         align_limit = 2.0 if dv < 5.0 else 3.0
         align_for_burn(conn, vessel, engines, ap, node.reference_frame,
                        burn_dir, align_limit)
-        ctl.throttle = 1.0
+        ctl.throttle = 0.0
         body = vessel.orbit.body
         nrf = body.non_rotating_reference_frame
         mu = body.gravitational_parameter
         v_prev, t_prev = vessel.velocity(nrf), sc.ut
+        throttle_previous_ut = t_prev
         window = [0.0, 0.0, 0.0]
         mass_start = vessel.mass
         prop_start = oms_propellant_mass(vessel)
+        attitude_warned = False
         while True:
             # Count only OMS propellant: RCS monopropellant use is not burn delta-v.
             burned = max(0.0, prop_start-oms_propellant_mass(vessel))
@@ -446,10 +485,9 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             if vessel.available_thrust <= 0.0:
                 print('OMS thrust lost; stopping burn')
                 break
-            if ap.error > 10.0:
-                ctl.throttle = 0.0
-                align_for_burn(conn, vessel, engines, ap, node.reference_frame,
-                               burn_dir, 3.0, timeout=60.0)
+            if ap.error > 10.0 and not attitude_warned:
+                print(f'WARNING: OMS attitude error {ap.error:.1f} deg; continuing guidance')
+                attitude_warned = True
             # Measure the real thrust axis: velocity change minus gravity, in the body frame.
             v_now, t_now = vessel.velocity(nrf), sc.ut
             r = vessel.position(nrf)
@@ -476,9 +514,10 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
                 window = [0.0, 0.0, 0.0]
             aim(conn, vessel, engines, ap, node.reference_frame, burn_dir)
             accel = thrust/vessel.mass
-            # Fine trims fly at a low throttle so cutoff resolution is ~1 cm/s.
-            cap = 0.1 if dv < 5.0 else 1.0
-            ctl.throttle = max(0.01, min(cap, remaining/max(accel, 0.1)/1.5))
+            throttle_dt = max(0.0, t_now-throttle_previous_ut)
+            throttle_previous_ut = t_now
+            ctl.throttle = oms_throttle_command(ctl.throttle, remaining, accel,
+                                                cap, throttle_dt)
             time.sleep(0.02)
     finally:
         ctl.throttle = 0.0
