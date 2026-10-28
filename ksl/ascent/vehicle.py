@@ -404,18 +404,25 @@ def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
 
 def pitch_trim_feedback(bias, gimbal_pitch, moment_per_limit, dt, pointing_error,
                         pitch_rate_deg_s, rate=.01, max_bias=.2):
-    """Slowly remove sustained pitch-gimbal effort while attitude is settled.
+    """Trim steady gimbal effort and add core thrust during saturated recovery.
 
     The gimbal input sign follows the attitude controller's calibrated convention:
     positive pitch input produces negative body-x torque. Transient steering is
-    deliberately excluded so the throttle trim does not fight pitch maneuvers.
+    normally excluded so the throttle trim does not fight pitch maneuvers.
+    When a large pointing error coincides with near-full gimbal demand, allow
+    only the correction that increases SSME thrust: the logged booster ascent
+    could otherwise remain stuck at full gimbal with its trim frozen.
     """
     values = (bias, gimbal_pitch, moment_per_limit, dt, pointing_error, pitch_rate_deg_s)
     if (not all(math.isfinite(x) for x in values) or dt <= 0 or
-            abs(moment_per_limit) < 1e4 or pointing_error > 3. or
-            abs(pitch_rate_deg_s) > 1.0):
+            abs(moment_per_limit) < 1e4):
         return bias
-    bias -= math.copysign(1., moment_per_limit)*max(-1., min(1., gimbal_pitch))*rate*dt
+    correction = -math.copysign(1., moment_per_limit)*max(-1., min(1., gimbal_pitch))*rate*dt
+    settled = pointing_error <= 3. and abs(pitch_rate_deg_s) <= 1.0
+    saturated_recovery = pointing_error > 3. and abs(gimbal_pitch) >= .9 and correction > 0.
+    if not settled and not saturated_recovery:
+        return bias
+    bias += correction
     return max(-max_bias, min(max_bias, bias))
 
 

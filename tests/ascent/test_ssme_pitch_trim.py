@@ -12,6 +12,19 @@ def test_gimbal_feedback_only_integrates_when_pointing_is_settled():
     assert pitch_trim_feedback(.19, -1., 1e6, 10., 1., 0.) == .2
 
 
+def test_saturated_pitch_recovery_increases_core_trim_only_in_helpful_direction():
+    # Recorded launch: positive core moment per limiter, full negative pitch
+    # gimbal and >14 degrees of nose error. The limiter must rise from the
+    # frozen negative trim, even while the vehicle is still rotating.
+    assert pitch_trim_feedback(-.035, -1., 4.4e6, 2., 14., 2.) == pytest.approx(-.015)
+    assert pitch_trim_feedback(.19, -1., 4.4e6, 10., 25., 3.) == .2
+    # Unsaturated steering, or geometry where more thrust would worsen the
+    # saturated moment, must not integrate while attitude is unsettled.
+    assert pitch_trim_feedback(.02, -.8, 4.4e6, 2., 14., 2.) == .02
+    assert pitch_trim_feedback(.02, -1., -4.4e6, 2., 14., 2.) == .02
+    assert pitch_trim_feedback(.02, -1., 4.4e6, 0., 14., 2.) == .02
+
+
 def test_trim_accounts_for_master_throttle():
     frame = object()
     core = [NS(thrust_limit=.3, max_thrust=1e6, thrust=150000., has_fuel=True,
