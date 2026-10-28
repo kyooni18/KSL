@@ -378,7 +378,7 @@ static void *terminal_prediction_worker(void *arg){
                 for(int iteration=0;;++iteration){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);
                     EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound);
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound,supervision_terminal_model);
                     double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
                     entry_prediction_clear(&f);
                     double miss=handoff-target; /* + : hands off too far out (short) */
@@ -407,7 +407,7 @@ static void *terminal_prediction_worker(void *arg){
                        build between the planned reversals. */
                     double sched[4]={0};unsigned n=0;
                     EntryPrediction f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound);
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound,supervision_terminal_model);
                     double hold_err=entry_policy_handoff_heading_error(&f,&planet,&cfg),best_err=hold_err;
                     double wall0=monotonic_seconds(),plan_bank=solved;
                     /* The forecast's energy is not trusted alone (live arrived
@@ -425,7 +425,7 @@ static void *terminal_prediction_worker(void *arg){
                         double cand[4];
                         for(unsigned i=0;i<4;i++)cand[i]=request_ut+t1+i*leg;
                         f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound);
+                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound,supervision_terminal_model);
                         double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg);
                         double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
                         double err=heading+fabs(handoff-target)/1000.0; /* deg + km */

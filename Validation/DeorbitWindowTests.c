@@ -2,7 +2,55 @@
    or the expensive atmospheric certification search. */
 #include "../CLanding/prediction/predictor.c"
 #include <assert.h>
+#include "sim_telemetry.h"
+/* Scheduled entry must use the captured whole-vessel model, even when no
+   online force samples exist. A scalar residual must not distort that table. */
+static void entry_policy_model_parity(void){
+ LandingConfiguration cfg=landing_configuration_default();
+ snprintf(cfg.vehicle.model_id,sizeof(cfg.vehicle.model_id),"STS");
+ cfg.guidance.taem_energy_law=true;
+ TerminalModelSourceFiles files={
+  "ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+  "ShuttleSim/reference-model/sts_aero_cells20261015_live_only.csv",
+  "none","ShuttleSim/reference-model/stsn_attitude_identified.ini"};
+ TerminalModel *model=calloc(1,sizeof(*model));char reason[256];PlanetModel planet;
+ assert(model&&shuttle_sim_load_planet(files.atmosphere_csv,&planet,reason,sizeof(reason)));
+ assert(terminal_model_capture(model,&files,&cfg,9001,reason,sizeof(reason)));
+ assert(terminal_model_align_planet_frame(model,&planet,reason,sizeof(reason)));
+ AerodynamicModel fallback={.lift_to_drag=.3,.ballistic_coefficient=900,.confidence=.1};
+ AerodynamicEnvelope env={.regimes={fallback,fallback,fallback,fallback}};
+ TrajectoryCalibrationModel cal={.density_scale=1.2,.speed_of_sound_scale=.9,
+  .drag_scale=2,.lift_scale=.5,.bank_effectiveness=1};
+ VehicleState state={.ut=148743700,.mass=25602};
+ GeoPoint geo={25,-100,32000};
+ state.position=predictor_inertial_position(geo,&planet,state.ut);
+ Vector3 up=vnorm(state.position,v3(0,0,1));
+ Vector3 east=vnorm(vcross(planet.north_axis,up),v3(0,1,0));
+ Vec3 native=world_lla_to_inertial(&model->world,geo.latitude*DEG2RAD,
+  geo.longitude*DEG2RAD,geo.altitude,state.ut);
+ AtmosphereSample air=world_atmosphere_sample_state(&model->world,native,state.ut);
+ for(double mach=2.5;mach<=5;mach+=.5)for(double alpha=18;alpha<=28;alpha+=5){
+  state.velocity=vadd(vscale(east,mach*air.speed_of_sound_mps),
+   vcross(planet_rotation_vector(&planet),state.position));
+  AeroContext ctx={.p=&planet,.e=&env,.c=&cal,.v=&cfg.vehicle,
+   .entry_table=model,.aoa=alpha,.bank=30,.mass=state.mass,.ut=state.ut};
+  AtmosState a=atmosphere(state.position,state.velocity,&ctx);
+  double lift,drag;aero_force_per_q(&model->aero,a.q,mach,alpha,&lift,&drag);
+  assert(fabs(a.density/air.density_kg_m3-1)<1e-9);
+  assert(fabs(a.mach-mach)<1e-9);
+  assert(fabs(a.drag_accel*state.mass/a.q-drag)<1e-8);
+  assert(fabs(a.lift_accel*state.mass/a.q-lift)<1e-8);
+ }
+ EntryPrediction a=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model);
+ cal.density_scale=.7;cal.speed_of_sound_scale=1.2;cal.drag_scale=.5;cal.lift_scale=2;
+ EntryPrediction b=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model);
+ assert(vmag(vsub(a.final_state.velocity,b.final_state.velocity))<1e-9);
+ entry_prediction_clear(&a);entry_prediction_clear(&b);free(model);
+}
 int main(void){
+ entry_policy_model_parity();
  PlanetModel p={0};p.radius=600000;p.gravitational_parameter=3.5316e12;p.rotational_speed=.0002915709;p.atmosphere_depth=70000;p.north_axis=v3(0,0,1);p.prime_meridian_at_epoch=v3(1,0,0);
  LandingConfiguration cfg=landing_configuration_default();
  GeoPoint west=destination_point((GeoPoint){cfg.site.latitude,
