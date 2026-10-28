@@ -1,6 +1,8 @@
 # MM304 predictor / plant parity — 2026-10-28
 
-Status: completed replay investigation; **landing acceptance failed, not merge/flight-qualified**. Work is isolated on
+Status: offline checkpoint complete; **not regression-free or live-qualified**.
+The earlier short-landing interpretation below is superseded by the runway-fixture
+correction documented at the end of this report. Work is isolated on
 `mm304-planned-sturn` from `d2a05bc`. Main's local changes and flyable binary
 are untouched. No merge or live rebuild is authorized by these results.
 
@@ -227,3 +229,120 @@ Per-run manifests and compressed telemetry are retained in the worktree's
 `ShuttleSim/runs/`. The final regression IDs begin `mm304-parity-continuation-`.
 The baseline used a separately compiled d2a05bc source archive; no main build
 or user WIP files were used as build output.
+
+
+## Continued offline validation: runway fixture correction
+
+`0ca2b64` corrects an independent validation-fixture defect. Both October 28
+scenarios used the east/RW27 threshold (`-74.4896008327406`) with heading 90°,
+while the recorded backend configuration targeted the west/RW09 threshold
+(`-74.7283333333`). Those thresholds are one runway length (2,500 m) apart.
+The simulator therefore placed its physical runway beyond the controller's
+selected runway. This explains the exact 2,500 m discrepancy between snapshot
+telemetry and Final's reframed status coordinates. It is not evidence that
+Final needs another 2,500 m of range tuning.
+
+Both fixtures now use the recorded configuration's west threshold. Vehicle
+initial position, velocity, attitude, mass and UT are unchanged. A runner
+preflight check rejects inconsistent physical runway endpoints, elevation or
+width before launching processes; an actual reciprocal threshold/heading pair
+is accepted. The focused test reproduces the original error and exercises both
+corrected fixtures and reciprocal orientation.
+
+The corrected overhead MM305 replay passes at +1,891.369 m along / +0.117 m
+cross, 1.863 m/s sink, valid rollout, no tail strike or departure:
+`mm304-parity-runway-parity-sts-kerbin-20261028-live-overhead-mm305-20261028T061353Z-cr4g6zsx`.
+This is a new replay, not an arithmetic relabeling of the old result; moving the
+plant runway also corrects its ground-contact geometry.
+
+The three previously passing cases still pass: orbit86 MM304 at +815.619 m /
+-0.467 m, sink 2.938; orbit86 MM305 at +662.171 m / -0.009 m, sink 2.948;
+quicksave MM305 at +674.383 m / -0.116 m, sink 2.672.
+Full-entry and remaining regressions are pending. C tests pass; Python discovery
+passes 20 tests with nine integration tests skipped (29 discovered).
+
+
+## MM305 inside-cone recovery checkpoint (`523eb26`)
+
+The first corrected full replay (`mm304-runway-parity-20261028T061255Z-143n9ta0`)
+did not pass: -7,262 m along / -1,761 m cross, sink 14.73 m/s. Its final
+MM304 forecast cost was 15.8; the realized handoff at UT 148743777.186316
+had range 45,599.26 m, heading error 11.6047°, and cost **15.6055** against
+the 49,600 m range target. The late forecast is now accurate; the remaining
+failure occurs in MM305 acquisition.
+
+Inside the heading-alignment cone, no forward tangent sometimes exists.
+The acquisition law then steered toward the centre while waiting for tangent
+heading capture. It crossed the diameter, acquired an additional half orbit,
+and delivered Final at only 783 m altitude, 9 km before the runway. The
+existing radial HAC controller has outward-bank authority to recover from
+inside, but previously never owned this state.
+
+An unrestricted early radial-capture experiment passed the frozen handoff
+but regressed the quicksave MM305 case. It prematurely assigned the shorter
+established-arc energy reference to a fast radial inlet. That experiment is
+rejected; its unfinished full-entry/old-entry runs were stopped deliberately.
+The committed recovery uses the existing model's energy requirement for the
+remaining local arc: it captures radially only when no tangent exists, the
+vehicle is inside the cone, and that arc already costs more energy than is
+available. Normal acquisition remains unchanged with sufficient energy.
+
+`sts-kerbin-20261028-predictor-mm305.ini` freezes the corrected full replay's
+Mach-2.5 state with a fresh guidance machine. It is a diagnostic supplement,
+not a replacement for full-entry validation. Before recovery it crashes;
+after recovery it passes at +283.184 m / +8.280 m, sink 2.927 m/s, speed
+65.618 m/s, no bounce/tail strike/departure, valid rollout to +1,143 m.
+The focused C regression exercises the recorded inside-cone geometry with
+both short and adequate energy. The full C test suite passes.
+
+All three MM305 cases and the 40 km entry retain passes with this refinement.
+The corrected-fixture OMS72 replay before the cone change also passes
+(+799.561 m / +0.364 m, sink 2.940); run9 still fails (+39,582.962 m /
++3,627.569 m, sink 47.316). Final full-entry and old-entry results are recorded below.
+
+
+## Final offline results and limitations
+
+At `523eb26`, the corrected full 72 km entry replay
+`mm304-cone-energy-full-20261028T062901Z-ird9ouzj` passed: touchdown
++703.663 m along / +3.242 m cross, sink 2.648 m/s, speed 63.420 m/s,
+gear down, no tail strike or runway departure, and valid rollout to +1,527 m.
+The forecast costs at Mach 5, 4.5, 4, 3.5, 3 and 2.5 were respectively
+7.6, 5.7, 8.9, 12.3, 13.3 and 14.6. At the realized Mach 2.5 handoff,
+the actual heading-and-range cost was 14.43 versus the last forecast 14.6.
+The replay produced 256 replans; timing depends on solver wall time.
+
+For an equal-geometry comparison, the original `d2a05bc` binary with the
+corrected 72 km runway fixture crashed at -79.157 m along / -26,302.869 m
+cross, sink 47.167 m/s (`/tmp/mm304-runway-baseline.log`). This is a single
+replay for each version, not a statistical reliability claim.
+
+The final six-scenario regression results, in metres (sink in m/s), are:
+
+| Scenario | Result | Along | Cross | Sink |
+|---|---|---:|---:|---:|
+| sts-live-oms72-entry-20261009 | crash | +1,263.043 | -505.755 | 89.297 |
+| sts72km-run9-entry-interface | crash | +39,069.409 | -1,635.159 | 47.315 |
+| sts-kerbin-20261022-live-orbit86-mm304-40km | pass | +815.619 | -0.467 | 2.938 |
+| sts-kerbin-20261028-live-overhead-mm305 | pass | +1,891.369 | +0.117 | 1.863 |
+| sts-kerbin-20261022-live-orbit86-mm305 | pass | +662.171 | -0.009 | 2.948 |
+| sts-kerbin-20261021-quicksave-mm305 | pass | +674.383 | -0.116 | 2.672 |
+
+Both old entry scenarios also crashed on the original branch baseline. OMS72
+passed in the intermediate corrected-runway run before the cone change; the
+final failure is therefore an unresolved regression relative to that run,
+although differing replan timing also changes its inlet. Its cause has not
+been isolated. No claim that the final branch has no regressions is justified.
+
+A frozen-inlet sensitivity check with both plant lift and drag scaled to 0.90
+reached the runway at +856.043 m / +0.719 m and stopped on it, but failed the
+3 m/s touchdown sink limit at 3.506 m/s. It is a simple sensitivity check,
+not a reconstruction of the recorded flight. The measured live force
+residuals described above remain uncorrected; live testing was not performed.
+The optional diagnostic traces remain because the requested clean-up was
+conditional on successful replay **and** no regressions. Do not merge or
+rebuild the flyable binary on the strength of this checkpoint alone.
+
+The user's storage cleanup losslessly compressed completed experiment stderr
+and older flight logs; some archived backend logs are now named
+`backend.stderr.log.gz`. Replay telemetry and summaries were retained.
