@@ -5,6 +5,7 @@ import pytest
 
 from ksl.ascent.peg import InsertionGuidance, apsides
 from ksl.ascent.geometry import inertial_velocity_components, smooth_value
+from ksl.ascent.guidance import separation_pitch_transition
 
 MU, R, G0 = 3.5316e12, 600000., 9.80665
 
@@ -86,6 +87,20 @@ def test_separation_attitude_hold_is_distinct_from_engine_limiter_hold():
     moving = guide.fly(*args, hold_left=25., dt=1., t_max=5., flown=45.)
     held = guide.fly(*args, hold_left=25., dt=1., t_max=5., flown=45., attitude_hold=5.)
     assert held['apoapsis_r'] != pytest.approx(moving['apoapsis_r'], abs=1.)
+
+
+def test_separation_pitch_handoff_gradually_releases_insertion_command():
+    assert separation_pitch_transition(78., -30., 5.) == 78.
+    assert separation_pitch_transition(78., -30., 8.) == pytest.approx(66.768)
+    assert separation_pitch_transition(78., -30., 20.) == -30.
+    guide = InsertionGuidance(MU, R+90000., R+60000., R+72000.,
+                              pitch_response_seconds=5., pitch_bounds=(-90., 90.))
+    args = (R+74000., R+30000., 500., 1000., 180000., 2811000.,
+            315.*G0, 1.4*G0, 45.)
+    regular = guide.fly(*args, dt=1., t_max=15., flown=45.)
+    blended = guide.fly(*args, dt=1., t_max=15., flown=45.,
+                        transition_anchor=45., since_separation=5.)
+    assert blended['apoapsis_r'] != pytest.approx(regular['apoapsis_r'], abs=1.)
 
 
 def test_inertial_velocity_decomposition_does_not_add_rotation_as_scalar_speed():

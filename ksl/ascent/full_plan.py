@@ -130,7 +130,8 @@ def plan_ascent(state, mu, body_radius, target_apoapsis, target_periapsis,
         prediction = guide.plan(sep['radius'], sep['radial_speed'], sep['horizontal_speed'],
                                 sep['mass'], upper_thrust, upper_ve, upper_g,
                                 sep['commanded_pitch'], hold_left=25., ramp=15., cap_now=.3,
-                                candidates=4, flown_pitch=sep['flown_pitch'], attitude_hold=5.)
+                                candidates=4, flown_pitch=sep['flown_pitch'], attitude_hold=5.,
+                                transition_anchor=sep['commanded_pitch'], since_separation=0.)
         candidates.append(dict(bias=bias, separation=sep, insertion=prediction))
     feasible = [c for c in candidates if
                 math.isfinite(c['insertion']['score']) and

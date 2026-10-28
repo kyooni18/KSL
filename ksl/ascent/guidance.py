@@ -15,6 +15,14 @@ PITCH_SLEW_DEG_PER_SECOND = 0.4
 ASCENT_PITCH_RESPONSE_SECONDS = 5.0
 MAX_DYNAMIC_PRESSURE_PA = 25000.0
 SEPARATION_ATTITUDE_HOLD_SECONDS = 5.0
+SEPARATION_PITCH_BLEND_SECONDS = 15.0
+
+
+def separation_pitch_transition(anchor_pitch, desired_pitch, since_separation):
+    """Blend the held separation pitch into insertion steering smoothly."""
+    fraction = smoothstep01((since_separation-SEPARATION_ATTITUDE_HOLD_SECONDS) /
+                            SEPARATION_PITCH_BLEND_SECONDS)
+    return anchor_pitch + fraction*(desired_pitch-anchor_pitch)
 
 
 def attitude_settled(nose_error, roll_error, angular_velocity,

@@ -10,6 +10,7 @@ All speeds are inertial. Pure math; no kRPC.
 """
 import math
 from .geometry import smooth_value
+from .guidance import separation_pitch_transition
 
 G0 = 9.80665
 
@@ -218,7 +219,8 @@ class InsertionGuidance:
         return cmd
 
     def fly(self, r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0.,
-            ramp=15., cap_now=1., dt=1., t_max=500., flown=None, attitude_hold=0.):
+            ramp=15., cap_now=1., dt=1., t_max=500., flown=None, attitude_hold=0.,
+            transition_anchor=None, since_separation=0.):
         """Closed-loop point-mass prediction to cutoff; returns a summary dict."""
         mu = self.mu
         guide = PoweredExplicitGuidance(mu)
@@ -232,6 +234,8 @@ class InsertionGuidance:
             if cmd < self.lo or cmd > self.hi:
                 saturated += dt
             cmd = _clamp(cmd, self.lo, self.hi)
+            if transition_anchor is not None:
+                cmd = separation_pitch_transition(transition_anchor, cmd, since_separation+t)
             if t < attitude_hold:
                 pass  # The separation controller holds the measured attitude.
             elif self.pitch_response_seconds is None:
@@ -264,7 +268,8 @@ class InsertionGuidance:
                     peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated)
 
     def plan(self, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0., ramp=15.,
-             cap_now=1., candidates=8, flown_pitch=None, attitude_hold=0.):
+             cap_now=1., candidates=8, flown_pitch=None, attitude_hold=0.,
+             transition_anchor=None, since_separation=0.):
         low = max(self.min_insertion_r, r+2000.)
         high = self.ra-self.ap_tol
         radii = ([low+(high-low)*i/(candidates-1) for i in range(candidates)] if low < high
@@ -273,25 +278,28 @@ class InsertionGuidance:
         for r_t in radii:
             result = self.fly(r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
                               hold_left, ramp, cap_now, dt=2., flown=flown_pitch,
-                              attitude_hold=attitude_hold)
+                              attitude_hold=attitude_hold, transition_anchor=transition_anchor,
+                              since_separation=since_separation)
             if best is None or result['score'] < best['score']:
                 best = result
         return best
 
     def command(self, t, r, vr, vh, mass, thrust, ve, g_limit, accel, constant_accel,
                 pitch, hold_left=0., ramp=15., cap_now=1., flown_pitch=None,
-                attitude_hold=0.):
+                attitude_hold=0., transition_anchor=None, since_separation=0.):
         """Plan using commanded pitch and, when available, measured thrust pitch."""
         end = self.guide.tgo is not None and self.guide.tgo < 2*self.guide.freeze_tgo
         if self.r_t is None or (not end and t-self.planned_at >= self.replan_period):
             best = self.plan(r, vr, vh, mass, thrust, ve, g_limit, pitch,
                              hold_left, ramp, cap_now, flown_pitch=flown_pitch,
-                             attitude_hold=attitude_hold)
+                             attitude_hold=attitude_hold, transition_anchor=transition_anchor,
+                             since_separation=since_separation)
             keep = None
             if self.r_t is not None:
                 keep = self.fly(self.r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
                                 hold_left, ramp, cap_now, dt=2., flown=flown_pitch,
-                                attitude_hold=attitude_hold)
+                                attitude_hold=attitude_hold, transition_anchor=transition_anchor,
+                                since_separation=since_separation)
             # Switching burnout points steps the command; only do it for a clear gain,
             # or when the current plan no longer reaches the target apoapsis at all.
             keep_missing = (keep is not None and

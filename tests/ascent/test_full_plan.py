@@ -20,7 +20,7 @@ def test_forecast_propagates_propellant_and_drops_boosters(state):
 
 
 def test_full_plan_returns_stage_and_cutoff_forecasts(state):
-    plan = plan_ascent(replace(state, radial_speed=260.), 3.5316e12, 600000., 90000., 60000., 72000.,
+    plan = plan_ascent(state, 3.5316e12, 600000., 90000., 60000., 72000.,
                        2811000., 315.*9.80665, 1.4*9.80665,
                        biases=(-6., 6.))
     assert plan['bias'] in (-6., 6.)
@@ -31,7 +31,7 @@ def test_full_plan_returns_stage_and_cutoff_forecasts(state):
 
 def test_unreachable_forecasts_are_not_accepted(state):
     with pytest.raises(ValueError, match='No candidate reaches'):
-        plan_ascent(state, 3.5316e12, 600000., 90000., 60000., 72000.,
+        plan_ascent(replace(state, radial_speed=260.), 3.5316e12, 600000., 90000., 60000., 72000.,
                     2811000., 315.*9.80665, 1.4*9.80665, biases=(-6., 6.))
 
 

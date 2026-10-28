@@ -13,7 +13,7 @@ from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orb
 from .peg import InsertionGuidance
 from .full_plan import BoosterState, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -886,6 +886,11 @@ def run(args):
                                         body.equatorial_radius+insertion_altitude,
                                         pitch_bounds=(-90.0, 90.0),
                                         pitch_response_seconds=ASCENT_PITCH_RESPONSE_SECONDS)
+                                transition_anchor = None
+                                if separation_hold_direction is not None:
+                                    held_surface = conn.space_center.transform_direction(
+                                        separation_hold_direction, nrf, v.surface_reference_frame)
+                                    transition_anchor, _ = pitch_heading_for_direction(held_surface)
                                 planned_r = insertion_guide.r_t
                                 previous_plan_ut = insertion_guide.planned_at
                                 raw_pitch = insertion_guide.command(
@@ -894,7 +899,11 @@ def run(args):
                                     full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
                                     hold_left, ramp_left, cap_now,
                                     flown_pitch=measured_thrust_pitch,
-                                    attitude_hold=max(0., SEPARATION_ATTITUDE_HOLD_SECONDS-since_sep))
+                                    attitude_hold=max(0., SEPARATION_ATTITUDE_HOLD_SECONDS-since_sep),
+                                    transition_anchor=transition_anchor, since_separation=since_sep)
+                                if transition_anchor is not None:
+                                    raw_pitch = separation_pitch_transition(transition_anchor, raw_pitch,
+                                                                            since_sep)
                                 if insertion_guide.planned_at != previous_plan_ut:
                                     pred = insertion_guide.prediction
                                     emit_event('ascent-plan', phase='post-booster', ut=now_ut,
@@ -1369,7 +1378,8 @@ def run(args):
                             # Size each roll maneuver to finish in a set time: the rate limit is
                             # chosen from the angle still to go when the maneuver starts.
                             maneuver = ('upright' if upright_phase else
-                                        'headsdown' if not mission_roll_settled else None)
+                                        'headsdown' if not shuttle.separated and
+                                        not mission_roll_settled else None)
                             if maneuver and maneuver != roll_maneuver:
                                 roll_maneuver = maneuver
                                 duration = (args.upright_roll_time if maneuver == 'upright'
@@ -1409,7 +1419,7 @@ def run(args):
                                     control.rcs = False
                                     print(f'WARNING: upright roll not settled after 25 s '
                                           f'(error {roll_error:.0f} deg); releasing climb anyway')
-                            if not mission_roll_settled:
+                            if not shuttle.separated and not mission_roll_settled:
                                 actual_roll_pitch, _ = pitch_heading_for_direction(actual_direction)
                                 if (not gravity_turn_released and
                                         progressive_turn_ready(commanded_pitch, actual_roll_pitch,
