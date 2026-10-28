@@ -174,6 +174,10 @@ typedef struct {
 typedef void (*KRPCWarpProgress)(void *context,double ut,double target_ut,int factor,double rate);
 bool krpc_warp_with_progress(KRPCSession *s,double ut,KRPCWarpProgress progress,
     void *context,char *error,size_t error_size);
+bool krpc_shutdown_burn_engines(KRPCSession *s,char *error,size_t error_size);
+/* Physics warp factor 0..3 (1..4x); rails reports a rails warp in progress. */
+bool krpc_read_physics_warp(KRPCSession *s,int *factor,double *rate,bool *rails,char *error,size_t error_size);
+bool krpc_set_physics_warp(KRPCSession *s,int factor,char *error,size_t error_size);
 KRPCSession *krpc_session_open(const LandingConfiguration *cfg,char *error,size_t error_size); void krpc_session_close(KRPCSession *s); const PlanetModel *krpc_session_planet(const KRPCSession *s); const char *krpc_session_vessel(const KRPCSession *s);
 const char *krpc_session_transport(const KRPCSession *s); const char *krpc_session_library_version(const KRPCSession *s); KRPCTransportBudget krpc_session_transport_budget(const KRPCSession *s); bool krpc_session_is_simulator(const KRPCSession *s);
 const char *krpc_session_physics_structure_id(const KRPCSession *s); const char *krpc_session_physics_environment_id(const KRPCSession *s); const char *krpc_session_physics_storage(const KRPCSession *s); unsigned krpc_session_physics_history_count(const KRPCSession *s);

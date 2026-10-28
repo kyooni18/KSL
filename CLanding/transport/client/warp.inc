@@ -362,3 +362,26 @@ bool krpc_cnano_client_warp_with_progress(KrpcCNanoClient *client,double ut,
         state = next;
     }
 }
+
+/* Physics warp (KSP factor 0..3 = 1..4x), read and set each control tick. */
+bool krpc_cnano_client_physics_warp(KrpcCNanoClient *client, int *factor, double *rate,
+                                    bool *rails, char *error, size_t error_size) {
+    if (!client || !factor || !rate || !rails) return false;
+    krpc_SpaceCenter_WarpMode_t mode;
+    float warp_rate = 1.0f;
+    int32_t physics = 0;
+    RPC_REQUIRED(client, krpc_SpaceCenter_WarpMode(client->connection, &mode), error, error_size);
+    RPC_REQUIRED(client, krpc_SpaceCenter_WarpRate(client->connection, &warp_rate), error, error_size);
+    RPC_REQUIRED(client, krpc_SpaceCenter_PhysicsWarpFactor(client->connection, &physics), error, error_size);
+    *rails = mode == KRPC_SPACECENTER_WARPMODE_RAILS;
+    *factor = mode == KRPC_SPACECENTER_WARPMODE_PHYSICS ? (int)physics : 0;
+    *rate = isfinite(warp_rate) && warp_rate > 0.0f ? (double)warp_rate : 1.0;
+    return true;
+}
+
+bool krpc_cnano_client_set_physics_warp(KrpcCNanoClient *client, int factor,
+                                        char *error, size_t error_size) {
+    if (!client || factor < 0 || factor > 3) return false;
+    RPC_REQUIRED(client, krpc_SpaceCenter_set_PhysicsWarpFactor(client->connection, (int32_t)factor), error, error_size);
+    return true;
+}

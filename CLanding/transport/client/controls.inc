@@ -347,3 +347,19 @@ bool krpc_cnano_client_deploy_parachutes(KrpcCNanoClient *client,char *error,siz
     RPC_REQUIRED(client,krpc_SpaceCenter_Control_set_Parachutes(client->connection,client->control,true),error,error_size);
     return true;
 }
+
+/* After the deorbit burn: shut the burn (selected rocket) engines down, not
+   only throttle them to zero, so no later throttle or staging can relight the
+   OMS during entry. */
+bool krpc_cnano_client_shutdown_burn_engines(KrpcCNanoClient *client, char *error, size_t error_size) {
+    if (!client) return false;
+    for (size_t i = 0; i < client->engine_count; ++i) {
+        CommandableEngine *engine = &client->engines[i];
+        if (engine->airbreathing || !engine->selected) continue;
+        RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Throttle(client->connection, engine->object, 0.0f), error, error_size);
+        RPC_REQUIRED(client, krpc_SpaceCenter_Engine_set_Active(client->connection, engine->object, false), error, error_size);
+        engine->activated_by_client = false;
+        fprintf(stderr, "Deorbit complete: shut down burn engine %zu\n", i);
+    }
+    return true;
+}

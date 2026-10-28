@@ -90,6 +90,9 @@ struct LandingController {
     double last_tick_wall;
     bool has_last_tick_wall;
     bool time_warp_issued;
+    /* Physics-warp governor (user-initiated 2-4x through entry). */
+    double warp_step_ut; double warp_last_roll_rate; int warp_roll_reversals; double warp_reversal_window_ut;
+    bool burn_engines_shut_down;
     uint64_t tick_sequence, log_sequence, vehicle_record_sequence;
     SnapshotCallback callback;
     void *callback_context;

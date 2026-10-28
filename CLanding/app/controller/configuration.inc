@@ -55,11 +55,18 @@ static bool entry_forecast_matches_guidance(const LandingController*c){
     if(c->guidance.phase!=PHASE_ENTRY_ENERGY)return true;
     return !(c->guidance.entry_control_plan_valid&&c->guidance.entry_s_turn_plan.valid);
 }
+static bool telemetry_warped(const Telemetry*t){return t->has_warp&&(t->warp_rails||t->warp_rate>1.0001);}
 /* All read paths publish an indivisible telemetry/state pair, including events. */
 static bool read_live_sample(LandingController *c,LandingConfiguration *cfg,Telemetry *t,VehicleState *state,char *error,size_t error_size){
     if(!krpc_read_telemetry(c->session,cfg,t,state,error,error_size))return false;
+    int warp_factor=0;double warp_rate=1.0;bool warp_rails=false;
+    if(krpc_read_physics_warp(c->session,&warp_factor,&warp_rate,&warp_rails,NULL,0)){
+        t->has_warp=true;t->physics_warp_factor=warp_factor;t->warp_rate=warp_rate;t->warp_rails=warp_rails;
+    }
     const PlanetModel*p=krpc_session_planet(c->session);
-    vessel_physics_observe(&c->physics,t,state,p);
+    /* A warped sample is a coarser KSP integration step: fly on it, but do not
+       learn the vehicle's physics from it. */
+    if(!telemetry_warped(t))vessel_physics_observe(&c->physics,t,state,p);
     c->trajectory_calibration.physics=&c->physics;
     c->latest_telemetry=*t;c->latest_state=*state;c->has_latest=true;
     landing_snapshot_set_sample(&c->snapshot,t,state);

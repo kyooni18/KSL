@@ -244,6 +244,8 @@ typedef struct {
     bool has_torque; double available_pitch_torque, available_roll_torque, available_yaw_torque;
     bool has_inertia; double pitch_moment_of_inertia, roll_moment_of_inertia, yaw_moment_of_inertia;
     bool has_loop_wall_delta, has_telemetry_latency, has_guidance_compute, has_apply_latency, has_control_loop;
+    /* KSP time warp at this sample: physics factor 0..3 (1..4x), rate, rails. */
+    bool has_warp, warp_rails; int physics_warp_factor; double warp_rate;
     double loop_wall_delta_ms, telemetry_latency_ms, guidance_compute_ms, apply_latency_ms, control_loop_ms;
     bool has_rpc_budget;
     unsigned rpc_read_calls, rpc_read_wire_requests, rpc_apply_calls, rpc_apply_wire_requests;

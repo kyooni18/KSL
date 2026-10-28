@@ -91,6 +91,7 @@ typedef struct {
     VehicleLogSurfaceSample control_surfaces[LANDING_CONTROL_SURFACE_MAX];
 
     bool has_loop_wall_delta, has_telemetry_latency, has_guidance_compute, has_apply_latency, has_control_loop;
+    bool has_warp; double warp_rate;
     double loop_wall_delta_ms, telemetry_latency_ms, guidance_compute_ms, apply_latency_ms, control_loop_ms;
 
     bool automation_engaged, paused, constraint_active;

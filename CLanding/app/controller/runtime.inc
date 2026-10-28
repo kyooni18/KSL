@@ -71,10 +71,80 @@ static bool apply_command_logged(LandingController*c,const GuidanceCommand*cmd,u
     bool ok=krpc_apply(c->session,cmd,group,phase_string(phase),status,warning,predicted,reference,out,err,err_size);*finished=monotonic_seconds();return ok;
 }
 
+/* Physics warp is the user's to start: up to 4x on the post-burn coast and
+   MM304 above 72 km, 2x in MM304 below it, never through the burn, TAEM or
+   the approach.  Guidance integrates on UT, so 2-4x keeps its loops in
+   game time; warped samples are logged with warpRate and kept out of the
+   learners.  On poor tracking (AoA/bank error, body rate) or a roll wobble
+   the governor steps the warp down one factor at a time, 3 s of game time
+   apart; it never raises it. */
+#define WARP_ENTRY_ALTITUDE_M 72000.0
+#define WARP_STEP_HOLD_S 3.0
+#define WARP_AOA_ERROR_DEG 5.0
+#define WARP_BANK_ERROR_DEG 15.0
+#define WARP_BODY_RATE_DEG_S 8.0
+#define WARP_WOBBLE_REVERSALS 3
+#define WARP_WOBBLE_WINDOW_S 6.0
+static int warp_allowed_factor(GuidancePhase phase,const Telemetry*t){
+    if(phase==PHASE_ENTRY_INTERFACE)return t->mean_altitude>WARP_ENTRY_ALTITUDE_M?3:1;
+    if(phase==PHASE_ENTRY_ENERGY)return t->mean_altitude>WARP_ENTRY_ALTITUDE_M?3:1;
+    return 0;
+}
+static void govern_physics_warp(LandingController*c,const Telemetry*t,const GuidanceResult*r){
+    if(!t->has_warp||t->warp_rails||krpc_session_is_simulator(c->session))return;
+    int factor=t->physics_warp_factor;
+    if(factor<=0){c->warp_roll_reversals=0;return;}
+    const GuidanceCommand*cmd=&r->command;
+    double aoa_error=cmd->has_target_aoa?fabs(t->angle_of_attack-cmd->target_aoa):0.0;
+    double bank_error=fabs(fmod(t->roll-cmd->target_roll+540.0,360.0)-180.0);
+    double rate=0.0;
+    if(t->has_body_pitch_rate)rate=fmax(rate,fabs(t->body_pitch_rate));
+    if(t->has_body_roll_rate)rate=fmax(rate,fabs(t->body_roll_rate));
+    if(t->has_body_yaw_rate)rate=fmax(rate,fabs(t->body_yaw_rate));
+    /* wobble: roll rate reversing sign above 2 deg/s, repeatedly */
+    if(t->has_body_roll_rate&&fabs(t->body_roll_rate)>2.0){
+        if(c->warp_last_roll_rate*t->body_roll_rate<0.0){
+            if(t->ut-c->warp_reversal_window_ut>WARP_WOBBLE_WINDOW_S){c->warp_reversal_window_ut=t->ut;c->warp_roll_reversals=0;}
+            c->warp_roll_reversals++;
+        }
+        c->warp_last_roll_rate=t->body_roll_rate;
+    }
+    int allowed=warp_allowed_factor(r->phase,t);
+    const char*why=NULL;
+    if(factor>allowed)why=allowed?"phase/altitude limit":"phase does not allow warp";
+    else if(aoa_error>WARP_AOA_ERROR_DEG)why="AoA tracking error";
+    else if(bank_error>WARP_BANK_ERROR_DEG)why="bank tracking error";
+    else if(rate>WARP_BODY_RATE_DEG_S)why="body rate";
+    else if(c->warp_roll_reversals>=WARP_WOBBLE_REVERSALS)why="roll wobble";
+    if(!why)return;
+    /* leaving a warp-free phase is not gradual: drop at once */
+    int next=allowed==0?0:factor-1;
+    if(allowed>0&&t->ut-c->warp_step_ut<WARP_STEP_HOLD_S)return;
+    char err[256]={0};
+    if(!krpc_set_physics_warp(c->session,next,err,sizeof(err)))return;
+    c->warp_step_ut=t->ut;c->warp_roll_reversals=0;
+    char reason[256];
+    snprintf(reason,sizeof(reason),"event=physics-warp-reduced; from=%dx; to=%dx; reason=%s; aoa_error=%.2f; bank_error=%.2f; body_rate=%.2f; altitude=%.0f",
+        factor+1,next+1,why,aoa_error,bank_error,rate,t->mean_altitude);
+    log_state_event(c,reason,true);
+    snprintf(c->snapshot.warning_message,sizeof(c->snapshot.warning_message),"Time warp reduced to %dx (%s).",next+1,why);
+}
+
+/* The deorbit burn is complete: shut the OMS down for entry, once. */
+static void shut_down_burn_engines(LandingController*c){
+    if(c->burn_engines_shut_down||!c->guidance.deorbit_burn_completed||!c->guidance.has_burn_command_started)return;
+    char err[256]={0};
+    if(!krpc_shutdown_burn_engines(c->session,err,sizeof(err))){
+        char reason[384];snprintf(reason,sizeof(reason),"event=oms-shutdown-failed; error=%s",err);log_state_event(c,reason,true);return;
+    }
+    c->burn_engines_shut_down=true;
+    log_state_event(c,"event=oms-shutdown; reason=deorbit-burn-complete",true);
+}
+
 static void tick_locked(LandingController*c){if(!c->session)return;char err[768]={0};double wall_start=monotonic_seconds();LandingConfiguration cfg=effective_config(c);double tele_start=monotonic_seconds();Telemetry t;telemetry_init(&t);VehicleState state={0};bool have_telemetry=false,apply_attempted=false,apply_succeeded=false;KRPCApplyResult applied={0};double apply_started=0,apply_finished=0,command_computed=0;if(!read_live_sample(c,&cfg,&t,&state,err,sizeof(err)))goto failure;have_telemetry=true;KRPCTransportBudget read_budget=krpc_session_transport_budget(c->session);t.has_rpc_budget=true;t.rpc_read_calls=read_budget.read_calls;t.rpc_read_wire_requests=read_budget.read_wire_requests;t.rpc_total_calls=read_budget.total_calls;t.rpc_total_wire_requests=read_budget.total_wire_requests;t.has_telemetry_latency=true;t.telemetry_latency_ms=(monotonic_seconds()-tele_start)*1000;double dt=c->has_last_tick_ut?clampd(t.ut-c->last_tick_ut,.01,1):.1;c->last_tick_ut=t.ut;c->has_last_tick_ut=true;if(c->has_last_tick_wall){t.has_loop_wall_delta=true;t.loop_wall_delta_ms=(wall_start-c->last_tick_wall)*1000;}c->last_tick_wall=wall_start;c->has_last_tick_wall=true;double compute=monotonic_seconds();
     c->tick_sequence++;c->snapshot.tick_sequence=c->tick_sequence;
     c->prediction_lineage_discontinuity=false;
-    bool was_cal=c->glide.active,sampling=false,finished=false;double progress=0,target_aoa=0;GuidanceResult glide=glide_calibration_update(&c->glide,&t,&cfg.vehicle,&c->configuration.calibration,&sampling,&finished,&progress,&target_aoa);bool nominal_learning=!c->guidance.aborted&&!c->guidance.attitude_recovery&&c->snapshot.phase!=PHASE_ABORT&&c->snapshot.phase!=PHASE_FAULT&&c->snapshot.phase!=PHASE_ATTITUDE_RECOVERY;CalibrationSnapshot cal_snap;AerodynamicModel shadow_current,shadow_planning;AerodynamicEnvelope shadow_envelope;adaptive_calibrator_update(&c->adaptive,&t,&c->configuration.calibration,&c->configuration.vehicle,&c->last_command,dt,nominal_learning,c->glide.active,sampling,c->glide.state,progress,target_aoa,c->glide.state==CAL_IDLE?NULL:glide.status,glide.has_warning?glide.warning:NULL,&shadow_current,&shadow_planning,&shadow_envelope,&c->adaptive_profile,&cal_snap);(void)shadow_current;(void)shadow_planning;(void)shadow_envelope;if(!c->glide.active)snprintf(cal_snap.status,sizeof(cal_snap.status),"Shadow flight-test reconstruction: certified prior-flight aerodynamics remain frozen for this session.");c->aerodynamics=envelope_at_controller(&c->envelope,t.mach);c->trajectory_calibration=trajectory_calibrator_update(&c->trajectory_calibrator,&t,&state,krpc_session_planet(c->session),&cfg.site,&c->envelope,&cfg.vehicle,&c->last_command,&c->configuration.calibration,nominal_learning,dt);
+    bool was_cal=c->glide.active,sampling=false,finished=false;double progress=0,target_aoa=0;GuidanceResult glide=glide_calibration_update(&c->glide,&t,&cfg.vehicle,&c->configuration.calibration,&sampling,&finished,&progress,&target_aoa);bool nominal_learning=!telemetry_warped(&t)&&!c->guidance.aborted&&!c->guidance.attitude_recovery&&c->snapshot.phase!=PHASE_ABORT&&c->snapshot.phase!=PHASE_FAULT&&c->snapshot.phase!=PHASE_ATTITUDE_RECOVERY;CalibrationSnapshot cal_snap;AerodynamicModel shadow_current,shadow_planning;AerodynamicEnvelope shadow_envelope;adaptive_calibrator_update(&c->adaptive,&t,&c->configuration.calibration,&c->configuration.vehicle,&c->last_command,dt,nominal_learning,c->glide.active,sampling,c->glide.state,progress,target_aoa,c->glide.state==CAL_IDLE?NULL:glide.status,glide.has_warning?glide.warning:NULL,&shadow_current,&shadow_planning,&shadow_envelope,&c->adaptive_profile,&cal_snap);(void)shadow_current;(void)shadow_planning;(void)shadow_envelope;if(!c->glide.active)snprintf(cal_snap.status,sizeof(cal_snap.status),"Shadow flight-test reconstruction: certified prior-flight aerodynamics remain frozen for this session.");c->aerodynamics=envelope_at_controller(&c->envelope,t.mach);c->trajectory_calibration=trajectory_calibrator_update(&c->trajectory_calibrator,&t,&state,krpc_session_planet(c->session),&cfg.site,&c->envelope,&cfg.vehicle,&c->last_command,&c->configuration.calibration,nominal_learning,dt);
     c->trajectory_calibration.physics=&c->physics;
     t.estimated_lift_to_drag=c->aerodynamics.lift_to_drag;t.estimated_ballistic_coefficient=c->aerodynamics.ballistic_coefficient;t.aerodynamic_confidence=c->aerodynamics.confidence;t.calibrated_best_glide_angle_of_attack=cal_snap.best_glide_angle_of_attack;t.calibrated_stall_speed=cal_snap.estimated_stall_speed;t.trajectory_density_scale=c->trajectory_calibration.density_scale;t.trajectory_drag_scale=c->trajectory_calibration.drag_scale;t.trajectory_lift_scale=c->trajectory_calibration.lift_scale;t.bank_effectiveness=c->trajectory_calibration.bank_effectiveness;t.trajectory_calibration_confidence=c->trajectory_calibration.confidence;t.trajectory_altitude_residual=c->trajectory_calibration.altitude_residual;t.trajectory_speed_residual=c->trajectory_calibration.speed_residual;t.trajectory_range_residual=c->trajectory_calibration.range_residual;t.predicted_miss_distance=c->has_plan?c->plan.predicted_closest_distance:0;t.predicted_taem_distance=c->has_plan?c->plan.predicted_taem_distance:0;t.predicted_taem_range_error=c->has_plan?c->plan.predicted_taem_range_error:0;const PlanetModel*planet=krpc_session_planet(c->session);t.energy_excess_range=NAN;
     c->guidance.entry_planning_deferred=true;
@@ -175,6 +245,8 @@ static void tick_locked(LandingController*c){if(!c->session)return;char err[768]
     if(t.has_attitude_quaternion)
         memcpy(c->snapshot.attitude_quaternion,t.attitude_quaternion,sizeof(t.attitude_quaternion));
     snprintf(c->snapshot.attitude_reference_frame,sizeof(c->snapshot.attitude_reference_frame),"%s",t.attitude_reference_frame);
+    shut_down_burn_engines(c);
+    govern_physics_warp(c,&t,&r);
     c->snapshot.command_computed_wall_seconds=command_computed;
     c->snapshot.command_apply_attempted=apply_attempted;
     c->snapshot.command_apply_started_wall_seconds=apply_started;
