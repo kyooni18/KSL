@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="/styles.css?v=launch-console-1">
+  <link rel="stylesheet" href="/styles.css?v=launch-console-2">
 </head>
 <body>
   <nav class="telemetry-pages" aria-label="Telemetry views">
@@ -166,12 +166,21 @@
         </article>
       </div>
       <div class="launch-body">
-        <div class="launch-chart">
-          <div class="launch-chart-head">
-            <span>ALTITUDE HISTORY</span>
-            <span class="launch-legend"><i class="swatch actual"></i>ALTITUDE<i class="swatch apo"></i>APOAPSIS</span>
+        <div class="launch-main">
+          <div class="launch-chart">
+            <div class="launch-chart-head">
+              <span>ALTITUDE</span>
+              <span class="launch-legend"><i class="swatch actual"></i>ACTUAL<i class="swatch planned"></i>PLAN<i class="swatch apo"></i>APOAPSIS</span>
+            </div>
+            <canvas id="launch-altitude-chart" aria-label="Altitude versus elapsed time with planned ascent profile" role="img"></canvas>
           </div>
-          <canvas id="launch-altitude-chart" aria-label="Altitude versus elapsed time" role="img"></canvas>
+          <div class="launch-chart">
+            <div class="launch-chart-head">
+              <span>3D TRAJECTORY</span>
+              <span class="launch-legend"><i class="swatch actual"></i>FLIGHT<i class="swatch track"></i>GROUND TRACK<span>DRAG TO ROTATE</span></span>
+            </div>
+            <canvas id="launch-3d" aria-label="3D ascent trajectory relative to the launch site" role="img"></canvas>
+          </div>
         </div>
         <div class="launch-side">
           <section class="launch-card" aria-label="Attitude">
@@ -252,6 +261,6 @@
   </aside>
 
   <script src="/runway-geometry.js?v=20260924-ksc-runway-1"></script>
-  <script src="/app.js?v=launch-console-1"></script>
+  <script src="/app.js?v=launch-console-2"></script>
 </body>
 </html>

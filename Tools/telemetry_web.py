@@ -245,6 +245,55 @@ def log_is_simulator(root: Path, path: Path) -> bool:
     return pid is not None and pid in simulator_backend_pids(root)
 
 
+KERBIN_RADIUS_M = 600000.0
+_ascent_plan_cache: dict[str, Any] = {"key": None, "points": []}
+
+
+def ascent_plan_profile(root: Path, current_ut: float | None) -> list[dict[str, float]]:
+    """Planned altitude-vs-UT from the newest launch run's booster and insertion plans."""
+    runs = Path(os.environ.get("KSL_RUNS_DIR") or root / "runs")
+    try:
+        launch = max(runs.glob("*-launch"), key=lambda p: p.name, default=None)
+    except OSError:
+        return []
+    if launch is None:
+        return []
+    files = [launch / "ascent.csv.booster-plan.json", launch / "ascent.csv.insertion-plan.json"]
+    try:
+        key = tuple((str(f), f.stat().st_mtime) for f in files if f.exists())
+    except OSError:
+        return []
+    if key != _ascent_plan_cache["key"]:
+        points: list[dict[str, float]] = []
+        for path in files:
+            try:
+                plan = json.loads(path.read_text())
+            except (OSError, ValueError):
+                continue
+            start = optional_number(plan.get("start_ut"))
+            # The booster plan nests its trajectory under "separation"; insertion stores it at the top.
+            stages = [(plan.get("separation") or {}).get("trajectory"), (plan.get("insertion") or {}).get("trajectory")] \
+                if "separation" in plan else [plan.get("trajectory")]
+            if "separation" not in plan and start is not None:
+                # A later insertion replan supersedes the booster plan's own insertion tail.
+                points = [p for p in points if p["ut"] < start]
+            offset = 0.0
+            for stage in stages:
+                if start is None or not isinstance(stage, list):
+                    continue
+                for p in stage:
+                    t, r = optional_number(p.get("time")), optional_number(p.get("radius"))
+                    if t is not None and r is not None:
+                        points.append({"ut": start + offset + t, "altitude": r - KERBIN_RADIUS_M})
+                offset += optional_number((stage[-1] if stage else {}).get("time")) or 0.0
+        points.sort(key=lambda p: p["ut"])
+        _ascent_plan_cache.update(key=key, points=points)
+    points = _ascent_plan_cache["points"]
+    if not points or current_ut is None or not (points[0]["ut"] - 600 <= current_ut <= points[-1]["ut"] + 1800):
+        return []
+    return points
+
+
 def actual_trajectory_history_path(root: Path) -> Path:
     return root / "Runtime" / "WebTelemetry" / "actual-trajectory.json"
 
@@ -3653,6 +3702,7 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
                 "referenceTrajectory": [],
                 "deorbitPlan": None,
                 "actualTrajectory": actual,
+                "ascentPlan": ascent_plan_profile(root, ut),
                 "orbitalTrajectory": orbital_trajectory,
                 "orbitalTrajectoryMeta": orbital_trajectory_meta,
                 "site": display_configuration.get("site", {}),

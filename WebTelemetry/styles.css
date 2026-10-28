@@ -512,7 +512,10 @@ body.launch-page .map-footer, body.launch-page .scene3d-panel { display: none; }
 .launch-chart { min-width: 0; background: #0b1726; border: 1px solid #28415c; border-radius: 6px; overflow: hidden; }
 .launch-chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 10px 12px 0; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
 .launch-legend { display: flex; align-items: center; gap: 8px; }
-.launch-legend .swatch.apo { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--orange); }
+.launch-legend .swatch.apo { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--muted); }
+.launch-legend .swatch.track { height: 0; background: transparent; border-top: 2px dashed currentColor; color: var(--muted); }
+.launch-main { display: grid; gap: 12px; min-width: 0; align-content: start; }
+#launch-3d { display: block; width: 100%; height: 300px; cursor: grab; touch-action: none; }
 #launch-altitude-chart { display: block; width: 100%; height: 260px; }
 
 .launch-side { display: grid; gap: 12px; min-width: 0; align-content: start; }
@@ -545,4 +548,5 @@ body.launch-page .map-footer, body.launch-page .scene3d-panel { display: none; }
   .launch-body { padding: 10px; }
   .launch-side { grid-template-columns: 1fr; }
   #launch-altitude-chart { height: 210px; }
+  #launch-3d { height: 240px; }
 }

@@ -1882,6 +1882,7 @@
   const G0 = 9.80665;
   // Stock Kerbin atmosphere top, used to label periapsis.
   const KERBIN_ATMOSPHERE_M = 70000;
+  const KERBIN_RADIUS_M = 600000;
 
   function setAlert(id, message) {
     const element = $(id);
@@ -1982,9 +1983,13 @@
     }
     const altitudeOf = (p) => Math.max(0, n(p.altitude ?? p.meanAltitude));
     const apoapsis = finite(snapshot?.telemetry?.apoapsisAltitude) ? n(snapshot.telemetry.apoapsisAltitude) : null;
-    const start = n(points[0].ut), span = Math.max(1, n(points[points.length - 1].ut) - start);
+    const plan = (snapshot?.ascentPlan || []).filter(p => finite(p.ut) && finite(p.altitude));
+    const start = n(points[0].ut);
+    // The time axis extends to the end of the plan so the remaining profile stays visible ahead of the vehicle.
+    const end = Math.max(n(points[points.length - 1].ut), plan.length ? n(plan[plan.length - 1].ut) : -Infinity);
+    const span = Math.max(1, end - start);
     // Round the vertical scale up to a whole tick step so the top gridline clears the highest sample and the apoapsis.
-    const highest = Math.max(1000, ...points.map(altitudeOf), apoapsis !== null && apoapsis > 0 ? apoapsis : 0);
+    const highest = Math.max(1000, ...points.map(altitudeOf), ...plan.map(p => n(p.altitude)), apoapsis !== null && apoapsis > 0 ? apoapsis : 0);
     const topAltitude = niceMapDistance(highest / 4) * 4;
     const left = 58, right = width - 14, top = 12, bottom = height - 24;
     const xOf = (ut) => left + (ut - start) / span * (right - left);
@@ -1995,7 +2000,7 @@
       const altitude = topAltitude * i / 4, y = yOf(altitude);
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
       ctx.fillText(`${(altitude / 1000).toFixed(altitude >= 10000 ? 0 : 1)} km`, 6, y + 4);
-      ctx.fillText(clockText(span * i / 4), xOf(start + span * i / 4) - 12, height - 8);
+      ctx.fillText(clockText(span * i / 4), Math.min(xOf(start + span * i / 4) - 12, right - 34), height - 8);
     }
 
     const tracePath = () => {
@@ -2015,17 +2020,92 @@
     if (apoapsis !== null && apoapsis > 0) {
       const y = yOf(apoapsis);
       ctx.save();
-      ctx.setLineDash([6, 5]); ctx.strokeStyle = "#ff9b52"; ctx.lineWidth = 1.2;
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = "#899fb5"; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
       ctx.restore();
-      ctx.fillStyle = "#ff9b52";
+      ctx.fillStyle = "#899fb5";
       ctx.fillText(`AP ${(apoapsis / 1000).toFixed(1)} km`, right - 92, y - 6);
+    }
+
+    if (plan.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(left, top, right - left, bottom - top); ctx.clip();
+      ctx.beginPath();
+      plan.forEach((p, i) => {
+        const x = xOf(n(p.ut)), y = yOf(Math.max(0, n(p.altitude)));
+        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      });
+      ctx.strokeStyle = "#ff9b52"; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.restore();
     }
 
     tracePath();
     ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#eef2f4";
     ctx.beginPath(); ctx.arc(xOf(n(last.ut)), yOf(altitudeOf(last)), 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Orbit-camera angles for the launch 3D view; dragging changes them.
+  const launch3dView = { yaw: -0.6, pitch: 0.45 };
+
+  // Draws the flown path in a local east/north/up frame (km) centred on the first sample.
+  function drawLaunch3d() {
+    if (!document.body.classList.contains("launch-page")) return;
+    const canvas = $("launch-3d"), ctx = canvas.getContext("2d");
+    const { width, height } = resizeCanvas(canvas, ctx);
+    ctx.clearRect(0, 0, width, height);
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = "#899fb5";
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.latitude) && finite(p.longitude) && finite(p.altitude ?? p.meanAltitude));
+    if (points.length < 2) {
+      ctx.fillText("Waiting for trajectory…", 16, height / 2);
+      return;
+    }
+    const origin = points[0], lat0 = n(origin.latitude) * Math.PI / 180, kmPerDeg = KERBIN_RADIUS_M * Math.PI / 180 / 1000;
+    const local = points.map(p => {
+      let dLon = n(p.longitude) - n(origin.longitude);
+      while (dLon > 180) dLon -= 360;
+      while (dLon < -180) dLon += 360;
+      return [dLon * kmPerDeg * Math.cos(lat0), (n(p.latitude) - n(origin.latitude)) * kmPerDeg, Math.max(0, n(p.altitude ?? p.meanAltitude)) / 1000];
+    });
+    // One shared scale keeps downrange and altitude in true proportion.
+    const extent = Math.max(5, ...local.map(([x, y, z]) => Math.max(Math.abs(x), Math.abs(y), z)));
+    const grid = niceMapDistance(extent * 1000 / 2) / 1000, half = Math.ceil(extent / grid) * grid;
+    const { yaw, pitch } = launch3dView, cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const scale = Math.min(width, height) * 0.36 / half;
+    const project = ([x, y, z]) => {
+      const rx = x * cy - y * sy, ry = x * sy + y * cy;
+      return [width / 2 + rx * scale, height * 0.62 - (z * cp + ry * sp) * scale];
+    };
+    const line = (pts, color, lineWidth, dash = []) => {
+      ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      pts.forEach((p, i) => { const [x, y] = project(p); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+      ctx.stroke(); ctx.restore();
+    };
+
+    for (let v = -half; v <= half + 1e-9; v += grid) {
+      line([[v, -half, 0], [v, half, 0]], "#1c3047", 1);
+      line([[-half, v, 0], [half, v, 0]], "#1c3047", 1);
+    }
+    line([[0, 0, 0], [0, 0, half]], "#28415c", 1);
+    ctx.fillStyle = "#899fb5";
+    for (const [label, p] of [["E", [half, 0, 0]], ["N", [0, half, 0]], [`${half.toFixed(0)} km`, [0, 0, half]]]) {
+      const [x, y] = project(p); ctx.fillText(label, x + 4, y - 4);
+    }
+
+    line(local.map(([x, y]) => [x, y, 0]), "#5d738a", 1.2, [4, 4]);
+    line(local, "#66d8ef", 2);
+    const last = local[local.length - 1];
+    line([last, [last[0], last[1], 0]], "rgba(238,242,244,.35)", 1, [2, 3]);
+    const [px, py] = project(last), [sx, sy0] = project([0, 0, 0]);
+    ctx.fillStyle = "#ff9b52"; ctx.beginPath(); ctx.arc(sx, sy0, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillText("PAD", sx + 6, sy0 + 12);
+    ctx.fillStyle = "#eef2f4"; ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+    const downrange = Math.hypot(last[0], last[1]);
+    ctx.fillStyle = "#899fb5";
+    ctx.fillText(`DOWNRANGE ${downrange.toFixed(1)} km · ALT ${last[2].toFixed(1)} km`, 12, height - 10);
   }
 
   function drawLaunchMap() {
@@ -2047,7 +2127,7 @@
     mapCtx.restore();
 
     const planLabel = $("map-plan-label");
-    if (planLabel) planLabel.textContent = g.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
+    if (planLabel) planLabel.textContent = snapshot.guidanceState?.energyLaw?.active === true ? "LAW REF" : mapUsesLiveProjection(snapshot) ? "GUIDANCE" : "PLAN";
     const c = C();
     drawPath(displayableGuidanceTrajectory(snapshot), width, height, c.orange, 2.8, [], 1.4, 1);
     drawPath(snapshot.actualTrajectory || [], width, height, c.cyan, 2, [], 1.8, .9);
@@ -2064,7 +2144,7 @@
 
   function render() {
     updateText(); drawNavball();
-    if (document.body.classList.contains("launch-page")) { drawLaunchMap(); drawLaunchAltitude(); }
+    if (document.body.classList.contains("launch-page")) { drawLaunchMap(); drawLaunchAltitude(); drawLaunch3d(); }
     else drawMap();
   }
 
@@ -2636,8 +2716,22 @@
     else if (archiveReplay.active) showReplayFrame(archiveReplay.index);
   });
   const resizeObserver = new ResizeObserver(render);
-  resizeObserver.observe(nav); resizeObserver.observe(map); resizeObserver.observe($("launch-altitude-chart"));
+  resizeObserver.observe(nav); resizeObserver.observe(map); resizeObserver.observe($("launch-altitude-chart")); resizeObserver.observe($("launch-3d"));
   window.addEventListener("resize", () => { clampMapView(); render(); });
+  {
+    const canvas3d = $("launch-3d");
+    let drag = null;
+    canvas3d.addEventListener("pointerdown", (event) => { drag = { x: event.clientX, y: event.clientY }; canvas3d.setPointerCapture(event.pointerId); });
+    canvas3d.addEventListener("pointermove", (event) => {
+      if (!drag) return;
+      launch3dView.yaw += (event.clientX - drag.x) * 0.01;
+      launch3dView.pitch = Math.max(0, Math.min(Math.PI / 2, launch3dView.pitch + (event.clientY - drag.y) * 0.01));
+      drag = { x: event.clientX, y: event.clientY };
+      drawLaunch3d();
+    });
+    canvas3d.addEventListener("pointerup", () => { drag = null; });
+    canvas3d.addEventListener("pointercancel", () => { drag = null; });
+  }
   kerbin.addEventListener("load", refreshMap);
   window.addEventListener("visibilitychange", () => {
     if (!document.hidden && !eventSource) connect();
