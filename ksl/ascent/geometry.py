@@ -14,6 +14,15 @@ def slew_value(current, target, rate_per_second, dt):
     return current + max(-step, min(step, target-current))
 
 
+def smooth_value(current, target, response_seconds, dt):
+    """Continuous first-order command response without a fixed rate cap."""
+    if dt <= 0:
+        return current
+    if response_seconds <= 0:
+        return target
+    return current + (target-current)*(-math.expm1(-dt/response_seconds))
+
+
 def slew_vector(current, target, rate_per_second, dt):
     """Move all actuator channels with one interpolation factor."""
     if len(current) != len(target):

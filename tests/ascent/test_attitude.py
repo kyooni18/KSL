@@ -5,10 +5,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from krpc.schema import KRPC_pb2
 import pytest
-from ksl.ascent.attitude import AttitudeController, rcs_up_translation_moment
+from ksl.ascent.attitude import AttitudeController, CustomAutopilot, rcs_up_translation_moment
 from ksl.ascent.guidance import attitude_settled
 from ksl.ascent.vehicle import Shuttle, separate_sts_boosters_batch
-from ksl.ascent.geometry import direction_error_deg, slew_direction
+from ksl.ascent.geometry import direction_error_deg, slew_direction, smooth_value
 
 
 def test_separation_invalidation_refreshes_dynamics_without_waiting_for_timer():
@@ -187,6 +187,19 @@ def test_thrust_correction_jump_is_limited_by_simulation_time():
     assert direction_error_deg(previous, slew_direction(previous, target, 2., 0.)) < 1e-6
     opposite = slew_direction(previous, (0., -1., 0.), 2., 1.)
     assert abs(direction_error_deg(previous, opposite) - 2.) < 1e-8
+
+
+def test_ascent_pitch_response_is_smooth_without_a_fixed_rate_cap():
+    command = smooth_value(89., 29., 5., 1.)
+    assert 29. < command < 89.
+    assert 89.-command > 0.4
+    assert smooth_value(89., 29., 5., 0.) == 89.
+    ap = CustomAutopilot.__new__(CustomAutopilot)
+    object.__setattr__(ap, 'ctrl', SimpleNamespace(unlimited_pitch_rate=True))
+    ap.max_angular_velocity = (1., .2, 1.)
+    assert math.isinf(ap.ctrl.max_rate[0])
+    assert ap.ctrl.max_rate[1] == .2
+    assert ap.ctrl.max_rate[2] == pytest.approx(math.radians(5.))
 
 
 def test_srb_cutoff_ignition_and_detachment_share_one_request():

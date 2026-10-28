@@ -3,15 +3,19 @@ import math
 import pytest
 
 from ksl.ascent.peg import InsertionGuidance, apsides
+from ksl.ascent.geometry import smooth_value
 
 MU, R, G0 = 3.5316e12, 600000., 9.80665
 
 
 def fly(h, vr, vh, mass, pitch, hold=34., ramp=15., thrust=2811e3, isp=315.,
-        slew=2., lag=2., upper_g=1.4, dt=.2):
+        slew=2., lag=2., upper_g=1.4, dt=.2, pitch_response_seconds=None,
+        pitch_bounds=(-30., 45.)):
     """Point-mass truth plant: slew-limited command, lagged attitude, roll-hold limiter."""
     ve = isp*G0
-    guide = InsertionGuidance(MU, R+90000., R+60000., R+72000., slew=slew, lag=lag)
+    guide = InsertionGuidance(MU, R+90000., R+60000., R+72000., slew=slew, lag=lag,
+                              pitch_response_seconds=pitch_response_seconds,
+                              pitch_bounds=pitch_bounds)
     r, t, cmd, flown, peak = R+h, 0., pitch, pitch, 0.
     while t < 400.:
         cap = guide._throttle_cap(t, hold, ramp, .3)
@@ -21,7 +25,10 @@ def fly(h, vr, vh, mass, pitch, hold=34., ramp=15., thrust=2811e3, isp=315.,
         raw = guide.command(t, r, vr, vh, mass, thrust, ve, upper_g*G0, a, a < .99*a_avail,
                             cmd, max(0., hold-t), ramp_left, cap)
         rate = .5 if t < hold else slew
-        cmd += max(-rate*dt, min(rate*dt, raw-cmd))
+        if pitch_response_seconds is None:
+            cmd += max(-rate*dt, min(rate*dt, raw-cmd))
+        else:
+            cmd = smooth_value(cmd, raw, pitch_response_seconds, dt)
         flown += (cmd-flown)*dt/lag
         p = math.radians(flown)
         vr += (a*math.sin(p)-MU/r**2+vh*vh/r)*dt
@@ -43,6 +50,14 @@ def fly(h, vr, vh, mass, pitch, hold=34., ramp=15., thrust=2811e3, isp=315.,
     (24012.0, 779.3, 759.6, 184632., 46.18)])
 def test_planned_insertion_reaches_target_without_apoapsis_overshoot(state):
     ap, pe, peak = fly(*state)
+    assert 87000. <= ap <= 93000.
+    assert pe >= 59700.
+    assert peak <= 93000.
+
+
+def test_smooth_pitch_plan_reaches_recorded_separation_scenario():
+    ap, pe, peak = fly(24012., 779.3, 759.6, 184632., 46.18,
+                       pitch_response_seconds=5., pitch_bounds=(-90., 90.))
     assert 87000. <= ap <= 93000.
     assert pe >= 59700.
     assert peak <= 93000.

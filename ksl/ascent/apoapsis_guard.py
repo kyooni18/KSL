@@ -2,34 +2,35 @@
 import math
 
 from .peg import apsides
+from .geometry import smooth_value
 
 G0 = 9.80665
 
 
 def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
-                       pitch_slew, acceleration, response_lag=2.0, dt=1.0,
+                       pitch_response_seconds, acceleration, response_lag=2.0, dt=1.0,
                        hold_seconds=0.0):
-    """Coast-or-burn prediction until a gradually slewed thrust vector is horizontal.
+    """Coast-or-burn prediction while a smooth thrust target becomes horizontal.
 
     The planar model uses inertial radial/horizontal velocity and constant thrust
     acceleration, neglecting drag and mass change. A small response lag makes
-    the predicted pitch follow the requested slew rather than instantly moving.
+    the predicted pitch follow the commanded response rather than instantly moving.
     """
     if (not all(math.isfinite(x) for x in (mu, radius, radial_speed, horizontal_speed,
-                                            thrust_pitch, pitch_slew, acceleration,
+                                            thrust_pitch, pitch_response_seconds, acceleration,
                                             response_lag, dt, hold_seconds)) or
-            min(mu, radius, pitch_slew, dt) <= 0 or acceleration < 0):
+            min(mu, radius, pitch_response_seconds, dt) <= 0 or acceleration < 0):
         raise ValueError('Invalid apoapsis prediction input')
     r, vr, vh = radius, radial_speed, horizontal_speed
     pitch = max(0.0, min(90.0, thrust_pitch))
     commanded = pitch
-    horizon = min(360.0, hold_seconds+pitch/pitch_slew + 3*response_lag+10.0)
+    horizon = hold_seconds+5*pitch_response_seconds+3*response_lag+10.0
     peak = apsides(mu, r, vr, vh)[0]
     elapsed = 0.0
     while elapsed < horizon:
         step = min(dt, horizon-elapsed)
         if elapsed >= hold_seconds:
-            commanded = max(0.0, commanded-pitch_slew*step)
+            commanded = smooth_value(commanded, 0.0, pitch_response_seconds, step)
         pitch += (commanded-pitch)*min(1.0, step/max(response_lag, 0.01))
         angle = math.radians(pitch)
         def derivative(r_, vr_, vh_):
@@ -44,7 +45,7 @@ def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
 
 
 def apoapsis_guard_g(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
-                     pitch_slew, target_radius, requested_g, floor_g=0.15,
+                     pitch_response_seconds, target_radius, requested_g, floor_g=0.15,
                      margin_m=1000.0, hold_seconds=0.0):
     """Find a bounded G target whose predicted peak apoapsis stays below target.
 
@@ -58,7 +59,7 @@ def apoapsis_guard_g(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
     limit = target_radius-margin_m
     def predict(g):
         return projected_apoapsis(mu, radius, radial_speed, horizontal_speed,
-                                  thrust_pitch, pitch_slew, g*G0,
+                                  thrust_pitch, pitch_response_seconds, g*G0,
                                   hold_seconds=hold_seconds)
     full_peak = predict(ceiling)
     if full_peak <= limit:

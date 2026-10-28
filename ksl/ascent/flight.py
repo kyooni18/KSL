@@ -9,10 +9,10 @@ from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
-from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, slew_direction, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
+from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, smooth_value, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -275,6 +275,7 @@ def run(args):
         ap = CustomAutopilot(conn, v, address=args.address, rpc_port=args.rpc_port,
                              stream_port=args.stream_port,
                              telemetry_path=args.telemetry + '.attitude.csv')
+        ap.ctrl.unlimited_pitch_rate = True
         control = v.control
         started = conn.space_center.ut
         state = 'ASCENT'
@@ -327,7 +328,7 @@ def run(args):
         et_cleared = False
         sep_handled = False
         separation_hold_direction = None
-        previous_aim_direction = None
+        smoothed_thrust_offset = (0.0, 0.0, 0.0)
         flight_warnings = set()
 
         def warn_once(key, message):
@@ -718,10 +719,8 @@ def run(args):
                                                                 max(0.5, flight.horizontal_speed))),
                                         altitude, v.orbit.apoapsis_altitude, reference_apoapsis,
                                         flight.dynamic_pressure)
-                            # Apply the MECO energy-build pitch through the same
-                            # slew limiter as the gravity turn. A post-slew clamp
-                            # can command an instantaneous 89-to-0 degree jump.
-                            pitch_slew_rate = args.pitch_slew
+                            # Smooth energy-build and gravity-turn targets through
+                            # the same continuous command response.
                             if (not args.transfer and
                                     v.orbit.apoapsis_altitude >= 0.8*args.orbit and
                                     v.orbit.periapsis_altitude < args.meco_periapsis):
@@ -738,7 +737,6 @@ def run(args):
                                     + max(-10.0, min(10.0, (altitude-band_center)/-1500.0)) \
                                     - min(15.0, 1.5*ap_excess/1000.0)
                                 raw_pitch = min(raw_pitch, max(-45.0, min(5.0, hold)))
-                                pitch_slew_rate = args.pitch_slew
                             if shuttle.separated:
                                 # Attitude-planned insertion: the burnout point is chosen by
                                 # flying the closed loop (PEG, slew, roll hold, limiter ramp,
@@ -776,8 +774,8 @@ def run(args):
                                         body.equatorial_radius+args.orbit,
                                         body.equatorial_radius+args.meco_periapsis,
                                         body.equatorial_radius+insertion_altitude,
-                                        slew=args.pitch_slew,
-                                        hold_slew=args.post_sep_hold_slew)
+                                        pitch_bounds=(-90.0, 90.0),
+                                        pitch_response_seconds=ASCENT_PITCH_RESPONSE_SECONDS)
                                 planned_r = insertion_guide.r_t
                                 raw_pitch = insertion_guide.command(
                                     now_ut, r_now, flight.vertical_speed, vh_inertial, v.mass,
@@ -792,12 +790,6 @@ def run(args):
                                           f'{(pred["periapsis_r"]-R0)/1000:.1f} km, peak Ap '
                                           f'{(pred["peak_apoapsis_r"]-R0)/1000:.1f} km, '
                                           f'{pred["time"]:.0f} s')
-                                if roll_done is None:
-                                    # Upright roll: drift toward the plan slowly, never hold
-                                    # a stale pitch for the whole roll.
-                                    pitch_slew_rate = args.post_sep_hold_slew
-                                else:
-                                    pitch_slew_rate = args.pitch_slew
                             peg_dv = None
                             energy_done = False
                             peg_phase_g = None
@@ -837,7 +829,6 @@ def run(args):
                                         args.heading = slew_value(args.heading, peg_hold[1],
                                                                   3.0, control_dt)
                                     # Match the pitch slew used by the insertion predictor.
-                                    pitch_slew_rate = args.pitch_slew
                                     target_sma = body.equatorial_radius + 0.5*(args.orbit+args.meco_periapsis)
                                     sma_now = v.orbit.semi_major_axis
                                     energy_dv = ((target_sma-sma_now)*body.gravitational_parameter
@@ -875,9 +866,9 @@ def run(args):
                             if meco_preparing:
                                 raw_pitch = commanded_pitch
                                 peg_phase_g = 0.15
-                            commanded_pitch = slew_value(
+                            commanded_pitch = smooth_value(
                                 commanded_pitch, raw_pitch,
-                                pitch_slew_rate, control_dt)
+                                ASCENT_PITCH_RESPONSE_SECONDS, control_dt)
                             pitch = commanded_pitch
                             target_pitch = pitch
                             target_direction = direction_for_pitch_heading(pitch, args.heading)
@@ -1067,19 +1058,14 @@ def run(args):
                                         offset = thrust_axis_offset(conn, v, frame)
                                         thrust_direction = _unit(tuple(nose[i]+offset[i] for i in range(3)))
                                         thrust_pitch, _ = pitch_heading_for_direction(thrust_direction)
-                                        pitch_rate = (args.post_sep_hold_slew if
-                                                      shuttle.post_sep_roll_done_ut is None else
-                                                      args.pitch_slew)
-                                        # A configured pitch hold must still be
-                                        # guarded; approximate it as a very slow turn.
-                                        pitch_rate = max(0.01, pitch_rate)
-                                        if pitch_rate > 0:
+                                        pitch_response = ASCENT_PITCH_RESPONSE_SECONDS
+                                        if pitch_response > 0:
                                             hold_left = (max(0.0, SEPARATION_ATTITUDE_HOLD_SECONDS-
                                                              (conn.space_center.ut-shuttle.booster_separation_ut))
                                                          if separation_hold_active else 0.0)
                                             guarded_g, predicted_ap, feasible = apoapsis_guard_g(
                                                 body.gravitational_parameter, radius, vr, vh,
-                                                thrust_pitch, pitch_rate,
+                                                thrust_pitch, pitch_response,
                                                 body.equatorial_radius+args.orbit, target_g,
                                                 hold_seconds=hold_left)
                                             limited = guarded_g < target_g-0.01
@@ -1095,7 +1081,7 @@ def run(args):
                                             if limited and not feasible and not apoapsis_guard_unavoidable:
                                                 warn_once('apoapsis-unavoidable',
                                                           f'Predicted apoapsis {(predicted_ap-body.equatorial_radius)/1000:.1f} km '
-                                                          'exceeds the target at minimum guided thrust')
+                                                          'exceeds the target buffer at minimum guided thrust')
                                                 apoapsis_guard_unavoidable = True
                                     except Exception as exc:
                                         warn_once('apoapsis-guard', f'Apoapsis prediction unavailable: {exc}')
@@ -1168,21 +1154,18 @@ def run(args):
                                     blend = separation_thrust_blend(
                                         conn.space_center.ut, shuttle.booster_separation_ut,
                                         roll_reset_ut, shuttle.post_sep_roll_done_ut)
-                                    raw = tuple(target_direction[i]-blend*offset[i] for i in range(3))
+                                    smoothed_thrust_offset = tuple(
+                                        smooth_value(smoothed_thrust_offset[i], blend*offset[i],
+                                                     ASCENT_PITCH_RESPONSE_SECONDS, control_dt)
+                                        for i in range(3))
+                                    raw = tuple(target_direction[i]-smoothed_thrust_offset[i] for i in range(3))
                                     n = math.sqrt(sum(c*c for c in raw)) or 1.0
                                     aim_direction = tuple(c/n for c in raw)
                                 except Exception:
-                                    aim_direction = target_direction
-                            if state == 'ASCENT':
-                                if shuttle.separated and previous_aim_direction is not None:
-                                    # The thrust-axis correction is calculated after the
-                                    # pitch slew above and can jump when engine thrust
-                                    # temporarily reads zero. Bound the actual nose target,
-                                    # including that correction, to the planner's slew.
-                                    aim_direction = slew_direction(
-                                        previous_aim_direction, aim_direction,
-                                        args.pitch_slew, control_dt)
-                                previous_aim_direction = aim_direction
+                                    raw = tuple(target_direction[i]-smoothed_thrust_offset[i]
+                                                for i in range(3))
+                                    n = math.sqrt(sum(c*c for c in raw)) or 1.0
+                                    aim_direction = tuple(c/n for c in raw)
                             # Keep nose and roof targets together; setting only
                             # target_direction briefly clears the roll target.
                             surface_frame = v.surface_reference_frame
@@ -1478,11 +1461,10 @@ def main():
     parser.add_argument('--turn-end', type=float, default=55000,
                         help='Altitude in m where the smoothed gravity turn reaches minimum pitch')
     parser.add_argument('--post-sep-hold-slew', type=float, default=0.3,
-                        help='Pitch-command slew (deg/s) toward the insertion plan during '
-                             'the post-separation upright roll; 0 holds pitch')
+                        help='Deprecated; accepted for compatibility and ignored')
     parser.add_argument('--pitch-slew', type=float,
                         default=PITCH_SLEW_DEG_PER_SECOND,
-                        help='Maximum pitch-command change in deg/s')
+                        help='Deprecated; accepted for compatibility and ignored')
     parser.add_argument('--meco-periapsis', type=float, default=60000,
                         help='Minimum periapsis altitude required for normal MECO in m')
     parser.add_argument('--booster-separation-max-q', type=float, default=float('inf'),
@@ -1545,7 +1527,6 @@ def main():
     args = parser.parse_args()
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
             args.timeout <= 0 or args.ssme_lead_time < 0 or
-            not 0 < args.pitch_slew <= 20 or
             args.roll_reset_delay < 0 or args.roll_start < 0 or
             not 0 < args.roll_rate <= 30 or not 0 < args.roll_attenuation <= 90 or
             args.roll_time_to_peak <= 0 or not 0 <= args.roll_overshoot <= 1 or

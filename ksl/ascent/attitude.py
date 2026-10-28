@@ -168,6 +168,7 @@ class AttitudeController:
         self.tau = (2.0, 2.0, 2.0)         # attitude time constant per axis (x, y, z), s
         self.rate_tau = 0.6                # rate-loop time constant, s
         self.max_rate = tuple(math.radians(x) for x in (4.0, 8.0, 4.0))
+        self.unlimited_pitch_rate = False
         self.int_time = 6.0
         self.int_limit = 0.35              # fraction of available torque
         self.feedforward = True
@@ -473,10 +474,11 @@ class CustomAutopilot:
 
     @max_angular_velocity.setter
     def max_angular_velocity(self, value):
-        # (pitch, roll, yaw) in rad/s; pitch/yaw are kept gentle for the stack.
+        # (pitch, roll, yaw) in rad/s; ascent can opt out of the fixed pitch cap.
         p, r, y = value
         cap = math.radians(5.0)
-        self.ctrl.max_rate = (min(p, cap), r, min(y, cap))
+        self.ctrl.max_rate = (math.inf if getattr(self.ctrl, 'unlimited_pitch_rate', False) else min(p, cap),
+                              r, min(y, cap))
 
     @property
     def roll_start_angle(self):

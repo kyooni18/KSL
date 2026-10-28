@@ -9,6 +9,7 @@ overshot and then cancelled by pitching nose-down.
 All speeds are inertial. Pure math; no kRPC.
 """
 import math
+from .geometry import smooth_value
 
 G0 = 9.80665
 
@@ -157,20 +158,22 @@ class InsertionGuidance:
     """Attitude-aware closed-loop insertion to one target ellipse.
 
     PEG alone assumes the thrust can point anywhere instantly. The shuttle's
-    commanded pitch moves at a few deg/s, is held during the post-separation
-    upright roll, and the SSME limiter ramps up afterwards. Plans that ignore this
+    commanded pitch has a gradual response, is held briefly at separation,
+    and the SSME limiter ramps up afterwards. Plans that ignore this
     leave the stack climbing at the old pitch for tens of seconds: apoapsis runs
     past target and is then cancelled at a saturated nose-down limit. The burnout
     point is therefore chosen by flying each candidate through the same closed
-    loop (PEG + slew + hold + throttle schedule) and scoring the cutoff orbit.
+    loop (PEG + command response + hold + throttle schedule) and scoring the cutoff orbit.
     """
 
     def __init__(self, mu, apoapsis_r, periapsis_r, min_insertion_r, slew=2.0,
                  hold_slew=0.5, lag=2.0, pitch_bounds=(-30.0, 45.0), replan_period=10.0,
-                 apoapsis_tolerance=3000.0, periapsis_tolerance=300.0):
+                 apoapsis_tolerance=3000.0, periapsis_tolerance=300.0,
+                 pitch_response_seconds=None):
         self.mu, self.ra, self.rp = mu, apoapsis_r, periapsis_r
         self.min_insertion_r = min_insertion_r
         self.slew, self.hold_slew = slew, hold_slew
+        self.pitch_response_seconds = pitch_response_seconds
         self.lag = lag  # attitude response time constant behind the command, s
         self.lo, self.hi = pitch_bounds
         self.replan_period = replan_period
@@ -229,8 +232,11 @@ class InsertionGuidance:
             if cmd < self.lo or cmd > self.hi:
                 saturated += dt
             cmd = _clamp(cmd, self.lo, self.hi)
-            rate = self.hold_slew if t < hold_left else self.slew
-            pitch += _clamp(cmd-pitch, -rate*dt, rate*dt)
+            if self.pitch_response_seconds is None:
+                rate = self.hold_slew if t < hold_left else self.slew
+                pitch += _clamp(cmd-pitch, -rate*dt, rate*dt)
+            else:
+                pitch = smooth_value(pitch, cmd, self.pitch_response_seconds, dt)
             flown += (pitch-flown)*min(1., dt/max(self.lag, 1e-3))
             p = math.radians(flown)
             # Midpoint step of the planar inertial equations.
