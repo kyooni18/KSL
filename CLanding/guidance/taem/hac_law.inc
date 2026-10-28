@@ -726,8 +726,15 @@ static void hac_drag_command(TaemHacLawState *H,const HacCtx *x,const TelPoint *
        past best L/D to hold it.  Live, 17-22 deg held the descent to the
        gate from Mach 1.5 to 1 at 1.29 m/m (L/D under 1) and the vehicle
        reached the station 1.3 km low. */
-    if (hac_energy(s)<e_tgt&&s->g>-30.0*DEG2RAD)
-        aoa=fmin(aoa,fmax(TEL_AOA_MIN,hac_best_ld_aoa(x,mach,ceiling)));
+    /* The steering bank does not lift that cap: live (2026-10-28), turning
+       back from overhead at 60-70 deg bank raised the lift need to 20 deg and
+       took the energy from +0.3 to -5.8 km by Mach 1.3; the orbiter landed
+       10.6 km short.  Short, the path steepens instead; gdot still keeps the
+       dive above -35 deg. */
+    if (hac_energy(s)<e_tgt) {
+        double a_ld=fmax(TEL_AOA_MIN,hac_best_ld_aoa(x,mach,ceiling));
+        aoa=fmin(aoa,a_ld);
+    }
     double lift_now,drag_now;
     tel_forces(&x->c,s,s->aoa,&q,&mach,&lift_now,&drag_now);
     lim=entry_bank_authority_limit(s->v,q,lift_now/(s->m*TEL_G0),&x->c.model->vehicle,lim);
