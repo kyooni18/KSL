@@ -175,6 +175,12 @@ def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
     controller._step()
     assert abs(controller.control.roll) > .01
 
+    controller._integral = [0., 0., 0.]
+    controller._step(simulation_dt=0.)
+    assert controller._integral == [0., 0., 0.]
+    controller._step(simulation_dt=.2)
+    assert abs(controller._integral[1]) > 0.
+
 
 def test_capture_callback_runs_before_detachment():
     shuttle = Shuttle.__new__(Shuttle)

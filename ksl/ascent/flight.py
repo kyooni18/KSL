@@ -441,8 +441,8 @@ def run(args):
             if expected_core_thrust <= 0:
                 raise RuntimeError('Launch allocation leaves the core engines at zero thrust')
             ignition_fraction = .95 if full_ssme_before_srb else .5
-            ignition_deadline = time.monotonic() + 8.0
-            while time.monotonic() < ignition_deadline:
+            ignition_deadline = conn.space_center.ut + 8.0
+            while conn.space_center.ut < ignition_deadline:
                 if conn.space_center.active_vessel != v:
                     raise RuntimeError('Active vessel changed during core-engine ignition')
                 core_thrust = sum(engine_thrust(engine) for engine in core_engines)
@@ -466,8 +466,8 @@ def run(args):
 
             # Make the liquid-engine-first sequence observable and give the
             # SSMEs a real lead interval while the launch clamps still hold.
-            lead_deadline = time.monotonic() + args.ssme_lead_time
-            while time.monotonic() < lead_deadline:
+            lead_deadline = conn.space_center.ut + args.ssme_lead_time
+            while conn.space_center.ut < lead_deadline:
                 if conn.space_center.active_vessel != v:
                     raise RuntimeError('Active vessel changed during SSME lead interval')
                 if not all(engine.active for engine in core_engines):
@@ -477,7 +477,7 @@ def run(args):
                         expected_core_thrust * .95):
                     raise RuntimeError('SSMEs fell below 95% thrust during lead interval; '
                                        'boosters remain unignited')
-                time.sleep(min(.05, max(0.0, lead_deadline - time.monotonic())))
+                time.sleep(.05)
 
             if shuttle.vehicle_kind == 'orbiter-shuttle' and shuttle.solid_boosters:
                 for engine in shuttle.sepmotors:
@@ -496,10 +496,10 @@ def run(args):
                     for engine in shuttle.sepmotors:
                         engine.thrust_limit = 0.0
                         engine.active = False
-                    booster_deadline = time.monotonic() + 5.0
+                    booster_deadline = conn.space_center.ut + 5.0
                     expected_booster_thrust = sum(engine.max_thrust
                                                   for engine in shuttle.solid_boosters)
-                    while time.monotonic() < booster_deadline:
+                    while conn.space_center.ut < booster_deadline:
                         booster_thrust = sum(engine_thrust(engine)
                                              for engine in shuttle.solid_boosters)
                         if (all(engine.active for engine in shuttle.solid_boosters) and

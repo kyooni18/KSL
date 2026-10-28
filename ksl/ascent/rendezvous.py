@@ -77,9 +77,9 @@ def final_approach(sc, vessel, target, stop, timeout=1800.0):
     except Exception:
         pass
     ctl.rcs = True
-    start = time.monotonic()
+    start = sc.ut
     try:
-        while time.monotonic() - start < timeout:
+        while sc.ut - start < timeout:
             rel_pos = target.position(vessel.reference_frame)
             rel_vel_nrf = om.add(target.velocity(nrf), vessel.velocity(nrf), -1.0)
             rel_vel = sc.transform_direction(rel_vel_nrf, nrf, vessel.reference_frame)

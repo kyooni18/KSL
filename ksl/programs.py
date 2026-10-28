@@ -84,6 +84,22 @@ class Program:
 
 # --- child-process plumbing ------------------------------------------------------
 
+def wait_simulation_seconds(read_ut, stop_event, duration, poll_interval=.1):
+    """Wait for simulation time, while allowing an operator stop during pauses."""
+    start = read_ut()
+    previous = start
+    while True:
+        if stop_event.is_set():
+            raise InterruptedError("stopped on the pad before ignition")
+        now = read_ut()
+        if now < previous:
+            start = now
+        if now-start >= max(0., duration):
+            return
+        previous = now
+        if stop_event.wait(poll_interval):
+            raise InterruptedError("stopped on the pad before ignition")
+
 def run_child(ctx: Context, name: str, argv: list[str], env: dict[str, str] | None,
               on_event: Callable[[dict[str, Any]], None],
               on_line: Callable[[str], None] | None = None) -> tuple[int, list[str]]:
@@ -290,16 +306,14 @@ class AscentProgram(Program):
             ctx.log.log("Reverting flight to launch")
             with connect(ctx.config, "ksl-revert") as conn:
                 conn.space_center.revert_to_launch()
-            time.sleep(3.0)
         wait_for_flight_scene(ctx.config)
         ctx.log.update(connection="connected")
         settle = float(a["padSettleSeconds"])
         ctx.log.log(f"Pad: settling {settle:.0f} s before launch")
-        if ctx.stop_event.wait(settle):
-            raise InterruptedError("stopped on the pad before ignition")
-        if a["guidanceMode"] == "intelligent":
-            return
         with connect(ctx.config, "ksl-pad") as conn:
+            wait_simulation_seconds(lambda: conn.space_center.ut, ctx.stop_event, settle)
+            if a["guidanceMode"] == "intelligent":
+                return
             count = 0
             for engine in conn.space_center.active_vessel.parts.engines:
                 if "Clydesdale" in engine.part.title:
@@ -589,7 +603,8 @@ class LandingProgram(Program):
         ctx.log.update(operation_stage="flying")
         ctx.log.log(f"Guidance engaged ({'engage' if start == Phase.DEORBIT else BACKEND_ENGAGE[start]})")
 
-        deadline = time.monotonic() + float(landing["flightTimeoutSeconds"])
+        flight_start_ut = None
+        previous_ut = None
         while True:
             if ctx.stop_event.is_set():
                 client.send("abort", timeout=30.0)
@@ -597,9 +612,15 @@ class LandingProgram(Program):
                 return Outcome(False, "landing aborted by operator; backend safe-control path applied", aborted=True)
             if client.process.poll() is not None:
                 raise BackendError(f"landing backend exited with code {client.process.returncode}")
-            if time.monotonic() > deadline:
-                raise TimeoutError("landing exceeded landing.flightTimeoutSeconds")
             client.pump(0.5)
+            telemetry = (client.latest_snapshot or {}).get("telemetry") or {}
+            ut = telemetry.get("ut")
+            if isinstance(ut, (int, float)) and math.isfinite(ut):
+                if flight_start_ut is None or (previous_ut is not None and ut < previous_ut):
+                    flight_start_ut = ut
+                previous_ut = ut
+                if ut-flight_start_ut > float(landing["flightTimeoutSeconds"]):
+                    raise TimeoutError("landing exceeded landing.flightTimeoutSeconds")
             state.flush(client)
             if controls.auto_warp != auto_warp:
                 auto_warp = controls.auto_warp

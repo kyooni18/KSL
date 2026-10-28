@@ -878,9 +878,9 @@ class Shuttle:
             engine.active = True
         target_thrust = sum(engine.max_thrust for engine in engines)
         control.throttle = 1.0
-        deadline = time.monotonic() + timeout
+        deadline = self.sc.ut + timeout
         actual_thrust = 0.0
-        while time.monotonic() < deadline:
+        while self.sc.ut < deadline:
             actual_thrust = sum(engine_thrust(engine) for engine in engines)
             if target_thrust <= 0 or actual_thrust >= target_thrust * 0.5:
                 break
@@ -1169,7 +1169,7 @@ class Shuttle:
                             thrust = sum(e.thrust for e in engines)
                             if thrust > 0.:
                                 pitch_input = sum(e.thrust*e.gimbal_actuation[0] for e in engines)/thrust
-                                bias = pitch_trim_feedback(bias, pitch_input, per_limit, min(dt, 1.),
+                                bias = pitch_trim_feedback(bias, pitch_input, per_limit, dt,
                                                            pointing_error, pitch_rate_deg_s)
                                 self._pitch_trim_bias = bias
                         except Exception as exc:

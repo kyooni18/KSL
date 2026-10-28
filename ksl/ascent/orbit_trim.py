@@ -29,7 +29,7 @@ ALIGN_LEAD = 30.0  # s of attitude alignment before every burn
 # short OMS burn makes it tumble, while forward translation needs no thrust-vector
 # alignment.
 RCS_TRIM_MAX_DV = 2.0  # m/s
-RCS_TRIM_TIMEOUT = 180.0  # s of wall time
+RCS_TRIM_TIMEOUT = 180.0  # simulation seconds
 OMS_THROTTLE_CAP = 0.20
 OMS_FINE_THROTTLE_CAP = 0.10
 OMS_THROTTLE_SLEW = 0.05  # throttle fraction per simulation second
@@ -193,10 +193,10 @@ def aim(conn, vessel, engines, ap, frame, direction):
 def align_for_burn(conn, vessel, engines, ap, frame, direction, limit,
                    timeout=120.0, rcs_after=5.0):
     """Use RCS briefly if reaction wheels cannot reacquire the OMS vector."""
-    start = time.monotonic()
+    start = conn.space_center.ut
     try:
         while ap.error > limit:
-            elapsed = time.monotonic() - start
+            elapsed = conn.space_center.ut - start
             if elapsed > timeout:
                 raise RuntimeError(f'OMS burn attitude did not align within {timeout:.0f} s')
             if elapsed > rcs_after:
@@ -263,9 +263,9 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
         while sc.ut < node.ut-0.0:
             ap.target_direction = burn_dir
             time.sleep(0.1)
-        start = time.monotonic()
+        start = sc.ut
         while ap.error > 2.0:  # reaction wheels only, RCS stays off
-            if time.monotonic()-start > 120.0:
+            if sc.ut-start > 120.0:
                 raise RuntimeError('RCS trim attitude did not align within 120 s')
             ap.target_direction = burn_dir
             time.sleep(0.1)
@@ -274,9 +274,9 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
             r.right_enabled = r.up_enabled = False
             r.forward_enabled = True
         ctl.rcs = True
-        burn_start = time.monotonic()
+        burn_start = sc.ut
         timeout = max(RCS_TRIM_TIMEOUT, 120.0*node.delta_v)  # ~0.01-0.05 m/s^2 of RCS accel
-        while time.monotonic()-burn_start < timeout:
+        while sc.ut-burn_start < timeout:
             try:
                 remaining = node.remaining_delta_v
             except RuntimeError:
@@ -288,7 +288,7 @@ def execute_rcs_forward(conn, vessel, node, tolerance=0.03):
                 break
             ctl.forward = max(0.05, min(1.0, remaining/0.3))
             time.sleep(0.05)
-        print(f'RCS forward trim end after {time.monotonic()-burn_start:.1f} s, '
+        print(f'RCS forward trim end after {sc.ut-burn_start:.1f} s, '
               f'aim error {ap.error:.1f} deg')
     finally:
         ctl.forward = 0.0

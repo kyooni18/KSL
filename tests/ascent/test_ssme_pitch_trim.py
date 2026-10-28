@@ -40,10 +40,13 @@ def test_trim_accounts_for_master_throttle():
         e.active, e.gimballed, e.gimbal_actuation = True, True, (-.8, 0., 0.)
     # Here increasing the limiter adds negative x torque, so the correction
     # has the opposite sign from a positive moment arm.
-    before = shuttle.update(dt=1., throttle_slew=1., master_throttle=.5,
+    before = shuttle.update(dt=3., throttle_slew=1., master_throttle=.5,
                             pointing_error=1., pitch_rate_deg_s=.1)[0]
-    assert before < .6
+    assert before == pytest.approx(.6-.024)
     bias = shuttle._pitch_trim_bias
+    shuttle.update(dt=0., throttle_slew=1., master_throttle=.5,
+                   pointing_error=1., pitch_rate_deg_s=.1)
+    assert shuttle._pitch_trim_bias == bias
     shuttle.update(dt=1., throttle_slew=1., master_throttle=.5,
                    pointing_error=8., pitch_rate_deg_s=.1)
     assert shuttle._pitch_trim_bias == bias

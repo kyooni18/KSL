@@ -21,7 +21,11 @@ def emit_event(name, **data):
 
 
 def emit_telemetry(**sample):
-    """Emit a telemetry event at most once per wall-clock second."""
+    """Pace UI/log delivery in wall time; sample UT is the flight timestamp.
+
+    This transport throttle must never be used to derive a control interval
+    or flight deadline. The full-rate CSV remains available for analysis.
+    """
     global _last_telemetry_event
     now = time.monotonic()
     if now - _last_telemetry_event >= 1.0:

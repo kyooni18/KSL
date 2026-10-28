@@ -33,8 +33,9 @@ def heading_for(inclination, latitude):
 
 
 class Propulsion:
-    def __init__(self, model):
+    def __init__(self, model, space_center):
         self.model = model
+        self.space_center = space_center
         self.separated = set()
         self.ignited = set()
         self.depleted_since = {}
@@ -57,6 +58,10 @@ class Propulsion:
         return True
 
     def update(self):
+        now = self.space_center.ut
+        if now < getattr(self, '_last_update_ut', now):
+            self.depleted_since.clear()
+        self._last_update_ut = now
         attached = set(self.model.vessel.parts.all)
         groups = {}
         waiting_for_separation = False
@@ -69,8 +74,8 @@ class Propulsion:
             if not ready:
                 self.depleted_since.pop(token, None)
                 continue
-            since = self.depleted_since.setdefault(token, time.monotonic())
-            if time.monotonic()-since < 2.:
+            since = self.depleted_since.setdefault(token, now)
+            if now-since < 2.:
                 waiting_for_separation = True
                 continue
             for key in group:
@@ -163,7 +168,7 @@ def coast_until(conn, vessel, ut, controls, deadline, lead=20.):
     try:
         while sc.ut < ut-lead:
             require_owned_flight(conn, vessel)
-            if time.monotonic() > deadline:
+            if sc.ut > deadline:
                 raise RuntimeError('Insertion coast timed out')
             auto = controls.auto_warp
             if auto != last_auto:
@@ -192,12 +197,12 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
     from .insertion import plan_node, recovery_direction
     sc, ap = conn.space_center, vessel.auto_pilot
     frame = vessel.orbit.body.non_rotating_reference_frame
-    deadline = time.monotonic()+timeout
+    deadline = sc.ut+timeout
     from ...controls import Controls
     controls = Controls.from_env()
     for attempt in range(8):
         require_owned_flight(conn, vessel)
-        if time.monotonic() > deadline:
+        if sc.ut > deadline:
             raise RuntimeError('Insertion timed out')
         o = vessel.orbit
         if achieved(o.apoapsis_altitude, o.periapsis_altitude, math.degrees(o.inclination), target):
@@ -215,9 +220,9 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
             # A search failure is not proof of an infeasible orbit. Build energy
             # for a bounded interval and retry from fresh telemetry.
             emit_event('insertion-recovery', attempt=attempt+1)
-            until = min(deadline, time.monotonic()+15.)
+            until = min(deadline, sc.ut+15.)
             try:
-                while time.monotonic() < until:
+                while sc.ut < until:
                     require_owned_flight(conn, vessel)
                     direction = recovery_direction(vessel.position(frame), vessel.velocity(frame), target.mu)
                     error = aim(conn, vessel, frame, direction)
@@ -241,16 +246,16 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
                 coast_until(conn, vessel, start, controls, deadline, lead=align_lead)
             while sc.ut < start:
                 require_owned_flight(conn, vessel)
-                if time.monotonic() > deadline:
+                if sc.ut > deadline:
                     raise RuntimeError('Insertion coast timed out')
                 if vessel.flight().mean_altitude < target.atmosphere and vessel.flight(vessel.orbit.body.reference_frame).vertical_speed < 0:
                     raise RuntimeError('Insertion coast is descending into atmosphere')
                 time.sleep(.1)
             initial = norm(node.remaining_burn_vector(frame))
             previous = initial
-            last_progress = time.monotonic()
+            last_progress = sc.ut
             best_remaining = initial
-            while time.monotonic() < deadline:
+            while sc.ut < deadline:
                 require_owned_flight(conn, vessel)
                 dv = node.remaining_burn_vector(frame)
                 remaining = norm(dv)
@@ -258,8 +263,8 @@ def correct_orbit(conn, vessel, propulsion, target, timeout):
                     break
                 previous = remaining
                 if remaining < best_remaining-.5:
-                    best_remaining, last_progress = remaining, time.monotonic()
-                elif time.monotonic()-last_progress > max(30., align_lead):
+                    best_remaining, last_progress = remaining, sc.ut
+                elif sc.ut-last_progress > max(30., align_lead):
                     emit_event('insertion-replan', reason='burn is not making progress')
                     break
                 error = aim(conn, vessel, frame, dv)
@@ -314,11 +319,11 @@ def fly(conn, config, output, launch):
         return
     if str(vessel.situation).split('.')[-1] not in ('pre_launch', 'landed'):
         raise RuntimeError('Intelligent launch requires a vessel on the pad; refusing in-flight takeover')
-    propulsion = Propulsion(model)
+    propulsion = Propulsion(model, sc)
     planner = Planner(target, settings['maxDynamicPressurePa'], settings['maxG'])
     ctl, ap = vessel.control, vessel.auto_pilot
     start = sc.ut
-    wall_deadline = time.monotonic()+settings['timeoutSeconds']
+    flight_deadline = start+settings['timeoutSeconds']
     heading = heading_for(target.inclination, vessel.flight().latitude)
     last = start
     turn_announced = False
@@ -338,7 +343,7 @@ def fly(conn, config, output, launch):
                 raise RuntimeError('No fueled launch engines')
             ctl.throttle = 1.
             # Clamp release is explicit and never invokes the staging stack.
-            ignition_deadline = time.monotonic()+30.
+            ignition_deadline = sc.ut+30.
             while True:
                 body_force = resultant_force(vessel)
                 thrust = sc.transform_direction(body_force, vessel.reference_frame,
@@ -346,18 +351,25 @@ def fly(conn, config, output, launch):
                 weight = vessel.mass*target.mu/(target.radius+vessel.flight().mean_altitude)**2
                 if thrust >= weight:
                     break
-                if time.monotonic() >= ignition_deadline:
+                if sc.ut >= ignition_deadline:
                     raise RuntimeError('Measured thrust remained below lift-off requirement after ignition settling')
                 time.sleep(.2)
             for clamp in vessel.parts.launch_clamps:
                 clamp.release()
             emit_event('liftoff', guidance='intelligent')
-            while time.monotonic() < wall_deadline:
+            while sc.ut < flight_deadline:
                 now = sc.ut
+                if now < last:
+                    # A new UT epoch must not wait for the old timestamp to
+                    # catch up or charge the discontinuity to guidance.
+                    flight_deadline += now-last
+                    start += now-last
+                    no_thrust_since = None
+                    last = now
                 if now <= last:
                     time.sleep(.1)
                     continue
-                dt, last = min(2., now-last), now
+                dt, last = now-last, now
                 if sc.active_vessel != vessel:
                     raise RuntimeError('Active vessel changed; releasing guidance')
                 engines = propulsion.update()
@@ -380,8 +392,8 @@ def fly(conn, config, output, launch):
                               fixed_thrust, f.horizontal_speed,
                               lift[0]/vessel.mass, horizontal_lift, mass_flow, fixed_flow)
                 if thrust <= 0 and not coasting:
-                    no_thrust_since = no_thrust_since or time.monotonic()
-                    if time.monotonic()-no_thrust_since > 15.:
+                    no_thrust_since = now if no_thrust_since is None else no_thrust_since
+                    if now-no_thrust_since > 15.:
                         raise RuntimeError('No fueled propulsion remains during ascent after staging grace')
                     ctl.throttle = 0.
                     time.sleep(.1)
@@ -402,7 +414,7 @@ def fly(conn, config, output, launch):
                     if state.altitude > target.atmosphere+1000:
                         break
                     if state.radial > 0:
-                        emit_telemetry(phase='coast', altitude=state.altitude, verticalSpeed=state.radial,
+                        emit_telemetry(ut=now, phase='coast', altitude=state.altitude, verticalSpeed=state.radial,
                                        apoapsis=vessel.orbit.apoapsis_altitude, periapsis=vessel.orbit.periapsis_altitude)
                         time.sleep(.1)
                         continue
@@ -433,7 +445,7 @@ def fly(conn, config, output, launch):
                 time.sleep(.1)
             else:
                 raise RuntimeError('Ascent timed out')
-            correct_orbit(conn, vessel, propulsion, target, max(1., wall_deadline-time.monotonic()))
+            correct_orbit(conn, vessel, propulsion, target, max(1., flight_deadline-sc.ut))
             o = vessel.orbit
             report = dict(apoapsis=o.apoapsis_altitude, periapsis=o.periapsis_altitude,
                           inclination=math.degrees(o.inclination))

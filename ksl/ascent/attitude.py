@@ -158,6 +158,7 @@ class AttitudeController:
         self._angvel = self.conn.add_stream(self.vessel.angular_velocity, self.nrf)
         self._ut = self.conn.add_stream(getattr, self.sc, 'ut')
         self.dt = 1.0/hz
+        self._last_step_ut = None
         self.lock = threading.Lock()
         self.forward = None        # target nose direction, inertial (nrf)
         self.roof = None           # target roof (-z) direction, inertial; None = roll free
@@ -308,16 +309,25 @@ class AttitudeController:
                         self.control.pitch = self.control.yaw = self.control.roll = 0.0
                         idle_written = True
                     self.reset_integral()
+                    self._last_step_ut = None
                     time.sleep(self.dt)
                     continue
                 idle_written = False
-                self._update_dynamics(t0)
-                self._step()
+                now_ut = self._ut()
+                previous_ut = self._last_step_ut
+                if previous_ut is not None and now_ut < previous_ut:
+                    self.reset_integral()
+                    self._last_slow = float('-inf')
+                step_dt = 0.0 if previous_ut is None else max(0.0, now_ut-previous_ut)
+                self._last_step_ut = now_ut
+                self._update_dynamics(now_ut)
+                self._step(step_dt)
             except Exception:
                 pass
             time.sleep(max(0.0, self.dt-(time.monotonic()-t0)))
 
-    def _step(self):
+    def _step(self, simulation_dt=None):
+        simulation_dt = self.dt if simulation_dt is None else max(0., simulation_dt)
         forward, roof = self._target_for_step()
         q = self._rotation()
         qi = qconj(q)
@@ -368,7 +378,7 @@ class AttitudeController:
             if not saturated or (u > 0) != (err*-1 > 0):
                 lim = self.int_limit*t_avail
                 self._integral[i] = max(-lim, min(lim, self._integral[i] +
-                                                  self._moi[i]*err/self.int_time*self.dt))
+                                                  self._moi[i]*err/self.int_time*simulation_dt))
             u = max(-limit, min(limit, u))
             # small deadband: holding attitude must not drain the wheels' power
             inputs[i] = 0.0 if abs(u) < self.deadband else u
