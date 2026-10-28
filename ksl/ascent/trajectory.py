@@ -12,6 +12,8 @@ for any payload — a heavy stack simply takes longer to follow it.
 """
 import math
 
+from .guidance import constrain_turn_pitch
+
 # (altitude / target apoapsis, reference apoapsis / target apoapsis)
 CORRIDOR = (
     (0.00, 0.00),
@@ -57,13 +59,15 @@ def corridor_pitch(base_pitch, prograde_pitch, altitude, apoapsis, target_apoaps
     """Apply the corridor correction without breaking the q*alpha load bound.
 
     The corrected pitch may not trail the surface velocity by more than the
-    allowed angle of attack, and may lead it by at most 1 degree.
+    allowed angle of attack. Corrections also stay near the progressive climb
+    reference, so apoapsis feedback cannot erase the early turn profile.
     """
     if altitude < min_altitude:
         return base_pitch
     pitch = base_pitch + corridor_correction_deg(altitude, apoapsis, target_apoapsis)
-    alpha = max(alpha_floor, min(alpha_ceiling, q_alpha/max(1.0, dynamic_pressure)))
-    return min(prograde_pitch + 1.0, max(pitch, prograde_pitch - alpha))
+    return constrain_turn_pitch(pitch, altitude, target_apoapsis, prograde_pitch,
+                                dynamic_pressure, q_alpha=q_alpha,
+                                alpha_floor=alpha_floor, alpha_ceiling=alpha_ceiling)
 
 
 def energy_fraction(altitude, inertial_speed, mu, radius, target_altitude, pad_speed):

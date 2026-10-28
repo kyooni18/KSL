@@ -13,7 +13,7 @@ from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orb
 from .peg import InsertionGuidance
 from .full_plan import BoosterState, attached_booster_dry_mass, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_prepare_ready, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, constrain_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_prepare_ready, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -824,11 +824,16 @@ def run(args):
                                                    ut=now_ut, reason=str(exc))
                                         warn_once('ascent-plan', f'Ascent forecast unavailable: {exc}')
                                 if ascent_plan is not None:
-                                    prograde = math.degrees(math.atan2(max(0., flight.vertical_speed),
-                                                                       max(.5, flight.horizontal_speed)))
-                                    alpha = aoa_limit_deg(flight.dynamic_pressure)
-                                    raw_pitch = min(prograde+1., max(prograde-alpha,
-                                                                     raw_pitch+ascent_plan['bias']))
+                                    raw_pitch += ascent_plan['bias']
+                            if (mission_roll_commanded and gravity_turn_released and
+                                    not shuttle.separated and altitude >= turn_start_altitude):
+                                # Apply the same profile envelope as the continuous forecast,
+                                # after all corridor, energy and planner corrections.
+                                prograde = math.degrees(math.atan2(max(0., flight.vertical_speed),
+                                                                   max(.5, flight.horizontal_speed)))
+                                raw_pitch = constrain_turn_pitch(
+                                    raw_pitch, altitude, reference_apoapsis, prograde,
+                                    flight.dynamic_pressure, roll_pitch)
                             if shuttle.separated:
                                 # Attitude-planned insertion: the burnout point is chosen by
                                 # flying the closed loop (PEG, slew, roll hold, limiter ramp,

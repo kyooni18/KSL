@@ -244,30 +244,59 @@ def aoa_limit_deg(dynamic_pressure, q_alpha=50000.0, floor=1.5, ceiling=20.0):
     return max(floor, min(ceiling, q_alpha/max(1.0, dynamic_pressure)))
 
 
-def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
-                         dynamic_pressure=0.0, initial_pitch=89.0, minimum_pitch=5.0):
-    """Drag- and load-aware gravity turn scaled to the target orbit.
+# Reference nose pitch for a 90 km ascent, after the velocity-gated 78 deg roll.
+# Monotone cubic interpolation keeps pitch and its altitude slope continuous.
+TURN_PROFILE = ((500., 78.), (5000., 75.), (10000., 68.), (20000., 55.),
+                (30000., 42.), (40000., 28.), (55000., 12.), (65000., 5.))
 
-    The reference passes through 45 deg at 20% of the target apoapsis altitude
-    (15 km for a 75 km orbit) and flattens near the target altitude. The nose
-    follows the surface velocity vector, i.e. a zero-lift gravity turn, and may
-    lead it only by an angle of attack allowed by a q*alpha bound, so the stack
-    turns fastest in thin air and nearly zero-lift through max-Q.
+
+def turn_reference_pitch(altitude, target_apoapsis, initial_pitch=78., minimum_pitch=5.):
+    """Progressive Kerbin climb reference; insertion guidance owns the final orbit."""
+    h = max(0., altitude)*90000./max(1000., target_apoapsis)
+    points = TURN_PROFILE
+    if h <= points[0][0]:
+        return initial_pitch
+    if h >= points[-1][0]:
+        return minimum_pitch
+    slopes = [(b[1]-a[1])/(b[0]-a[0]) for a, b in zip(points, points[1:])]
+    # Harmonic interior tangents preserve monotonicity; flat endpoint tangents
+    # join the roll target and terminal reference without corners.
+    tangents = [0.] + [2*a*b/(a+b) for a, b in zip(slopes, slopes[1:])] + [0.]
+    for i, ((x0, y0), (x1, y1)) in enumerate(zip(points, points[1:])):
+        if h <= x1:
+            u = (h-x0)/(x1-x0)
+            pitch = ((2*u**3-3*u**2+1)*y0 + (u**3-2*u**2+u)*(x1-x0)*tangents[i]
+                     + (-2*u**3+3*u**2)*y1 + (u**3-u**2)*(x1-x0)*tangents[i+1])
+            fraction = (pitch-5.)/73.
+            return minimum_pitch + (initial_pitch-minimum_pitch)*fraction
+
+
+def constrain_turn_pitch(pitch, altitude, target_apoapsis, prograde_pitch,
+                         dynamic_pressure, initial_pitch=78., minimum_pitch=5.,
+                         q_alpha=50000., alpha_floor=1.5, alpha_ceiling=20.):
+    """Keep planning corrections near the climb reference, within the AoA bound.
+
+    Recovery toward a steeper reference may use positive AoA as well as negative
+    AoA. Aerodynamic authority takes precedence when an already-shallow flight
+    cannot regain the corridor immediately. This is not a pitch-rate limit.
     """
-    reference = 1.05 * max(1000.0, target_apoapsis)
-    exponent = math.log(0.5) / math.log(0.2 / 1.05)
-    fraction = min(1.0, max(0.0, altitude) / reference) ** exponent
-    scheduled = initial_pitch * (1.0 - fraction)
-    x = max(0.0, altitude) / reference
-    if x > 0.2:
-        # Past the 45-degree point, flatten faster so the climb is spent before the
-        # terminal burn instead of arriving with a large vertical speed to cancel.
-        scheduled = min(scheduled, 45.0 * max(0.0, 1.0 - (x-0.2)/0.3) ** 1.2)
+    reference = turn_reference_pitch(altitude, target_apoapsis, initial_pitch, minimum_pitch)
+    h = max(0., altitude)*90000./max(1000., target_apoapsis)
+    margin = 3. + 12.*smoothstep01((h-10000.)/35000.)
+    desired = max(reference-margin, min(reference+margin, pitch))
+    alpha = aoa_limit_deg(dynamic_pressure, q_alpha, alpha_floor, alpha_ceiling)
+    bounded = max(prograde_pitch-alpha, min(prograde_pitch+alpha, desired))
+    return min(initial_pitch, max(minimum_pitch, bounded))
+
+
+def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
+                         dynamic_pressure=0.0, initial_pitch=78.0, minimum_pitch=5.0):
+    """Follow the smooth climb reference within the measured q*alpha envelope."""
+    reference = turn_reference_pitch(altitude, target_apoapsis, initial_pitch, minimum_pitch)
     prograde = math.degrees(math.atan2(max(0.0, vertical_speed),
-                                       max(0.5, horizontal_speed)))
-    alpha = aoa_limit_deg(dynamic_pressure)
-    pitch = min(prograde + 1.0, max(scheduled, prograde - alpha))
-    return min(initial_pitch, max(minimum_pitch, pitch))
+                                      max(0.5, horizontal_speed)))
+    return constrain_turn_pitch(reference, altitude, target_apoapsis, prograde,
+                                dynamic_pressure, initial_pitch, minimum_pitch)
 
 
 def attitude_error_exceeded(error, altitude, since_roll_reset=None):

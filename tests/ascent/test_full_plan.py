@@ -21,6 +21,11 @@ def test_forecast_propagates_propellant_and_drops_boosters(state):
 
 
 def test_full_plan_returns_stage_and_cutoff_forecasts(state):
+    # Seed a climb on the new 10 km corridor. The old 42 degree / 350 m/s
+    # surface-horizontal seed is already shallow and is no longer a reachable
+    # recovery case under this profile and its aerodynamic load bound.
+    state = replace(state, horizontal_speed=300., surface_horizontal_speed=150.,
+                    commanded_pitch=68., flown_pitch=66.)
     plan = plan_ascent(state, 3.5316e12, 600000., 90000., 60000., 72000.,
                        2811000., 315.*9.80665, 1.4*9.80665,
                        biases=(-6., 6.))
@@ -30,9 +35,10 @@ def test_full_plan_returns_stage_and_cutoff_forecasts(state):
     assert plan['insertion']['r_t'] >= 672000.
 
 
-def test_unreachable_forecasts_are_not_accepted(state):
+@pytest.mark.parametrize('radial_speed', [260., 300.])
+def test_unreachable_forecasts_are_not_accepted(state, radial_speed):
     with pytest.raises(ValueError, match='No candidate reaches'):
-        plan_ascent(replace(state, radial_speed=260.), 3.5316e12, 600000., 90000., 60000., 72000.,
+        plan_ascent(replace(state, radial_speed=radial_speed), 3.5316e12, 600000., 90000., 60000., 72000.,
                     2811000., 315.*9.80665, 1.4*9.80665, biases=(-6., 6.))
 
 

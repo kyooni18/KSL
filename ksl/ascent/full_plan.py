@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import math
 
 from .geometry import smooth_value
-from .guidance import scheduled_turn_pitch
+from .guidance import scheduled_turn_pitch, constrain_turn_pitch
 from .peg import InsertionGuidance, apsides
 from .trajectory import corridor_pitch
 
@@ -95,8 +95,7 @@ def predict_booster(state, mu, body_radius, target_altitude, bias,
                                                             max(.5, surface_h))),
                               r-body_radius, ap-body_radius, target_altitude, q)
         prograde = math.degrees(math.atan2(max(0., vr), max(.5, surface_h)))
-        alpha = max(1.5, min(20., 50000./max(1., q)))
-        raw = max(prograde-alpha, min(prograde+1., base+bias))
+        raw = constrain_turn_pitch(base+bias, r-body_radius, target_altitude, prograde, q)
         command = smooth_value(command, raw, response_seconds, step)
         flown = smooth_value(flown, command, attitude_seconds, step)
         angle = math.radians(flown)
