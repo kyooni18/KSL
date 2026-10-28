@@ -984,7 +984,8 @@ def run(args):
                                 dynamic_pressure=flight.dynamic_pressure,
                                 separation_max_q=args.booster_separation_max_q,
                                 post_booster_coast_seconds=args.post_booster_coast_seconds,
-                                before_booster_separation=prepare_separation_hold)
+                                before_booster_separation=prepare_separation_hold,
+                                actual_g=flight.g_force)
                             if shuttle.separated and not sep_handled:
                                 # Staging happened inside update(): invalidate the FCS
                                 # on this tick, not after another slow guidance loop.

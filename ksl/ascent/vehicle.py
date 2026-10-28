@@ -21,6 +21,8 @@ OUTER_SKIPPER_PAD_CAP = 0.45
 
 SSME_TRIM_MIN = 0.30
 SSME_TRIM_MAX = 1.00
+BOOSTER_G_LIMIT = 3.0
+GIMBAL_RESERVE_DEG = 1.0
 
 
 def descendants(part):
@@ -342,6 +344,59 @@ def engine_pitch_moment(vessel, engines, full_thrust=False):
         p = engine.part.position(frame)
         moment += thrust*(p[1]*d[2] - p[2]*d[1])
     return moment
+
+
+def guarded_ssme_g_target(vessel, ssmes, boosters, current, trim, actual_g,
+                          pitch_moment_per_limit, g_limit=BOOSTER_G_LIMIT):
+    """Reduce the SSME limiter for G only when a conservative gimbal model permits it.
+
+    Uses the measured G and thrust to predict G at the new limiter, and the
+    mounted engine geometry to estimate the extra common pitch-gimbal command.
+    All three current gimbal inputs contribute to the one-degree reserve. Missing
+    telemetry or insufficient authority leaves the attitude trim unchanged.
+    """
+    if (actual_g is None or not all(math.isfinite(x) for x in
+                                     (actual_g, current, trim, pitch_moment_per_limit, g_limit))):
+        return trim, 'unavailable'
+    try:
+        mass = vessel.mass
+        full_core_thrust = sum(e.max_thrust for e in ssmes if e.active and e.has_fuel)
+        if mass <= 0 or full_core_thrust <= 0 or not math.isfinite(mass):
+            return trim, 'unavailable'
+        g_per_limit = full_core_thrust/(mass*G0)
+        required = current + (g_limit-actual_g)/g_per_limit
+        if required >= trim:
+            return trim, 'within-limit'
+        candidate = max(0.0, min(trim, required))
+        # Do not anticipate a lower load using a reduction that has not yet
+        # happened; re-evaluate the margin as the limiter slews down.
+        frame = vessel.reference_frame
+        gain = 0.0
+        actuators = []
+        for engine in list(ssmes) + list(boosters):
+            if not engine.active or not engine.gimballed:
+                continue
+            authority = engine.gimbal_range*engine.gimbal_limit
+            inputs = tuple(engine.gimbal_actuation)
+            if (len(inputs) != 3 or not math.isfinite(authority) or
+                    authority <= GIMBAL_RESERVE_DEG or
+                    any(not math.isfinite(x) for x in inputs)):
+                return trim, 'gimbal-margin'
+            thrust = (engine.max_thrust*candidate if engine in ssmes else engine.thrust)
+            position = engine.part.position(frame)
+            direction = engine.part.direction(frame)
+            gain += thrust*(position[1]*direction[1] + position[2]*direction[2])*math.radians(authority)
+            actuators.append((authority, inputs))
+        if not actuators or not math.isfinite(gain) or abs(gain) < 1e-6:
+            return trim, 'gimbal-margin'
+        extra_pitch = abs(pitch_moment_per_limit*(candidate-current)/gain)
+        for authority, inputs in actuators:
+            demand = math.sqrt((abs(inputs[0])+extra_pitch)**2 + inputs[1]**2 + inputs[2]**2)
+            if demand*authority > authority-GIMBAL_RESERVE_DEG:
+                return trim, 'gimbal-margin'
+        return candidate, 'limited' if required >= 0 else 'boosters-exceed-limit'
+    except Exception:
+        return trim, 'unavailable'
 
 
 class Shuttle:
@@ -1041,7 +1096,8 @@ class Shuttle:
     def update(self, max_g=3.0, target_g=None, altitude=0.0, dt=0.1,
                throttle_slew=THROTTLE_SLEW_PER_SECOND,
                dynamic_pressure=None, separation_max_q=float('inf'),
-               post_booster_coast_seconds=0.0, before_booster_separation=None):
+               post_booster_coast_seconds=0.0, before_booster_separation=None,
+               actual_g=None):
         if self.et_attached:
             self.top_off()
         depleted = (not self.separated and
@@ -1084,6 +1140,14 @@ class Shuttle:
                     trim = -m_booster/per_limit
                     target_throttles[0] = max(SSME_TRIM_MIN, min(SSME_TRIM_MAX, trim))
                     self.pitch_moment = m_booster + per_limit*current[0]
+                    guarded, status = guarded_ssme_g_target(
+                        self.vessel, ssmes, self.solid_boosters, current[0],
+                        target_throttles[0], actual_g, per_limit)
+                    target_throttles[0] = guarded
+                    if status != getattr(self, '_booster_g_status', None):
+                        self._booster_g_status = status
+                        if status in ('limited', 'boosters-exceed-limit', 'gimbal-margin'):
+                            print(f'Booster 3 G governor: {status}, SSME target {guarded:.2f}')
                 # Keep balancing through the last fueled tick. The low-limiter
                 # clearance/roll schedule begins only after booster burnout.
             except Exception:
