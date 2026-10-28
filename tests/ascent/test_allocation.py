@@ -74,6 +74,23 @@ class AllocationTests(unittest.TestCase):
         self.assertAlmostEqual(r.thrust, 3143515, delta=.001)
         self.assertLess(abs(r.residual), 1e-5)
 
+    def test_equal_thrust_prefers_lower_residual_despite_roundoff(self):
+        r = allocate([568032.0813194743, 914579.6753411496, 363834.38808737614,
+                      207308.27662700103, 452830.86389981577],
+                     [-2.9665432161016705, -.47660132596111904, -2.807070618206075,
+                      -2.0225609217896507, 2.6871016104297203],
+                     fixed_moment=-105001.06862438272, target=-61144.67696214543,
+                     thrust_cap=578437.102535567,
+                     upper_bounds=[.12721418101478466, .4359637808282145,
+                                   .45651848084388036, .16050671020098228,
+                                   .3140734267141292],
+                     mass_flows=[86.28540266544259, 62.236951489405556,
+                                 95.55530531716332, 55.838726958652586,
+                                 37.95768711828921],
+                     moment_tolerance=78224.302783043)
+        self.assertAlmostEqual(r.thrust, 578437.102535567, delta=.001)
+        self.assertAlmostEqual(r.residual, 0., delta=1e-5)
+
 
 if __name__ == '__main__':
     unittest.main()

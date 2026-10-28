@@ -74,3 +74,16 @@ def attitude_step(controller, rotation, angular_velocity, forward, roof, dt):
     output = AttitudeOutput()
     _attitude_step(ctypes.byref(p), ctypes.byref(output))
     return output
+
+_allocate = _function('ksl_allocate', [ctypes.c_size_t, *([ctypes.POINTER(_d)]*4),
+                                      _d, _d, _d, _d, ctypes.POINTER(_d)], _b)
+
+
+def allocate(thrusts, arms, bounds, flows, fixed, target, cap, tolerance):
+    n = len(thrusts)
+    array = _d*n
+    output = array()
+    if not _allocate(n, array(*thrusts), array(*arms), array(*bounds), array(*flows),
+                     fixed, target, cap, tolerance, output):
+        raise ArithmeticError('No allocation vertex found')
+    return tuple(output)
