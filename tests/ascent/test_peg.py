@@ -1,9 +1,10 @@
 import math
+from unittest.mock import patch
 
 import pytest
 
 from ksl.ascent.peg import InsertionGuidance, apsides
-from ksl.ascent.geometry import smooth_value
+from ksl.ascent.geometry import inertial_velocity_components, smooth_value
 
 MU, R, G0 = 3.5316e12, 600000., 9.80665
 
@@ -61,3 +62,25 @@ def test_smooth_pitch_plan_reaches_recorded_separation_scenario():
     assert 87000. <= ap <= 93000.
     assert pe >= 59700.
     assert peak <= 93000.
+
+
+def test_prediction_starts_from_measured_thrust_pitch():
+    guide = InsertionGuidance(MU, R+90000., R+60000., R+72000.,
+                              pitch_response_seconds=5., pitch_bounds=(-90., 90.))
+    args = (R+74000., R+74000., 63., 2140., 112000., 2811000.,
+            315.*G0, 1.4*G0, 0.)
+    low = guide.fly(*args, dt=1., t_max=10., flown=-35.)
+    high = guide.fly(*args, dt=1., t_max=10., flown=40.)
+    assert high['peak_apoapsis_r'] > low['peak_apoapsis_r'] + 1000.
+    with patch.object(guide, 'plan', wraps=guide.plan) as plan:
+        guide.command(0., R+74000., 63., 2140., 112000., 2811000.,
+                      315.*G0, 1.4*G0, 5., False, 0., flown_pitch=40.)
+        assert plan.call_args.kwargs['flown_pitch'] == 40.
+
+
+def test_inertial_velocity_decomposition_does_not_add_rotation_as_scalar_speed():
+    radius, radial, horizontal = inertial_velocity_components(
+        (600000., 0., 0.), (10., 100., 100.))
+    assert radius == 600000.
+    assert radial == 10.
+    assert horizontal == pytest.approx(math.sqrt(20000.))

@@ -261,7 +261,7 @@ class InsertionGuidance:
                     peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated)
 
     def plan(self, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0., ramp=15.,
-             cap_now=1., candidates=8):
+             cap_now=1., candidates=8, flown_pitch=None):
         low = max(self.min_insertion_r, r+2000.)
         high = self.ra-self.ap_tol
         radii = ([low+(high-low)*i/(candidates-1) for i in range(candidates)] if low < high
@@ -269,21 +269,22 @@ class InsertionGuidance:
         best = None
         for r_t in radii:
             result = self.fly(r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
-                              hold_left, ramp, cap_now, dt=2.)
+                              hold_left, ramp, cap_now, dt=2., flown=flown_pitch)
             if best is None or result['score'] < best['score']:
                 best = result
         return best
 
     def command(self, t, r, vr, vh, mass, thrust, ve, g_limit, accel, constant_accel,
-                pitch, hold_left=0., ramp=15., cap_now=1.):
-        """Thrust pitch (deg) for this cycle. ``pitch`` is the current commanded pitch."""
+                pitch, hold_left=0., ramp=15., cap_now=1., flown_pitch=None):
+        """Plan using commanded pitch and, when available, measured thrust pitch."""
         end = self.guide.tgo is not None and self.guide.tgo < 2*self.guide.freeze_tgo
         if self.r_t is None or (not end and t-self.planned_at >= self.replan_period):
-            best = self.plan(r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left, ramp, cap_now)
+            best = self.plan(r, vr, vh, mass, thrust, ve, g_limit, pitch,
+                             hold_left, ramp, cap_now, flown_pitch=flown_pitch)
             keep = None
             if self.r_t is not None:
                 keep = self.fly(self.r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
-                                hold_left, ramp, cap_now, dt=2.)
+                                hold_left, ramp, cap_now, dt=2., flown=flown_pitch)
             # Switching burnout points steps the command; only do it for a clear gain,
             # or when the current plan no longer reaches the target apoapsis at all.
             keep_missing = (keep is not None and

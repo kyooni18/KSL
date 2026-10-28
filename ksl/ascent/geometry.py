@@ -23,6 +23,18 @@ def smooth_value(current, target, response_seconds, dt):
     return current + (target-current)*(-math.expm1(-dt/response_seconds))
 
 
+def inertial_velocity_components(position, velocity):
+    """Return radius, radial speed and horizontal speed in a common inertial frame."""
+    radius = math.sqrt(sum(x*x for x in position))
+    if not math.isfinite(radius) or radius <= 0:
+        raise ValueError('Invalid inertial position')
+    radial = sum(p*v for p, v in zip(position, velocity))/radius
+    speed2 = sum(v*v for v in velocity)
+    if not math.isfinite(radial) or not math.isfinite(speed2):
+        raise ValueError('Invalid inertial velocity')
+    return radius, radial, math.sqrt(max(0.0, speed2-radial*radial))
+
+
 def slew_vector(current, target, rate_per_second, dt):
     """Move all actuator channels with one interpolation factor."""
     if len(current) != len(target):

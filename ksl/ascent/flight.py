@@ -9,7 +9,7 @@ from ..kspguard import GuardError, check_orbiter_integrity
 from .allocation import Allocation, allocate
 from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
-from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, smooth_value, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
+from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, inertial_velocity_components, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, smooth_value, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
 from .apoapsis_guard import apoapsis_guard_g
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
@@ -563,6 +563,9 @@ def run(args):
                             warn_once('timeout', 'Mission time limit exceeded')
                         altitude = flight.mean_altitude
                         altitude_gain = max(0.0, altitude-launch_altitude)
+                        inertial_sample = None
+                        measured_thrust_pitch = None
+                        measured_thrust_offset = None
                         if (state == 'ASCENT' and shuttle.vehicle_kind == 'orbiter-shuttle'
                                 and shuttle.solid_boosters and not shuttle.separated
                                 and initial_roll_set and separation_hold_direction is None
@@ -746,10 +749,19 @@ def run(args):
                                 # attitude lag) ahead, so the climb is never left running at a
                                 # stale pitch and then cancelled nose-down.
                                 now_ut = conn.space_center.ut
-                                r_now = body.equatorial_radius+altitude
-                                lat_now = math.radians(flight.latitude)
-                                vh_inertial = flight.horizontal_speed + \
-                                    body.rotational_speed*r_now*math.cos(lat_now)
+                                inertial_sample = inertial_velocity_components(
+                                    v.position(nrf), v.velocity(nrf))
+                                r_now, vr_inertial, vh_inertial = inertial_sample
+                                try:
+                                    frame = v.surface_reference_frame
+                                    nose = v.direction(frame)
+                                    measured_thrust_offset = thrust_axis_offset(conn, v, frame)
+                                    actual_thrust = _unit(tuple(nose[i]+measured_thrust_offset[i]
+                                                                for i in range(3)))
+                                    measured_thrust_pitch, _ = pitch_heading_for_direction(actual_thrust)
+                                except Exception as exc:
+                                    warn_once('insertion-thrust-axis',
+                                              f'Unable to measure thrust direction for insertion plan: {exc}')
                                 ssmes = shuttle.core_groups[0]
                                 full_thrust = sum(e.max_thrust for e in ssmes)
                                 isp = (sum(e.specific_impulse or e.vacuum_specific_impulse for e in ssmes)
@@ -781,10 +793,11 @@ def run(args):
                                         pitch_response_seconds=ASCENT_PITCH_RESPONSE_SECONDS)
                                 planned_r = insertion_guide.r_t
                                 raw_pitch = insertion_guide.command(
-                                    now_ut, r_now, flight.vertical_speed, vh_inertial, v.mass,
+                                    now_ut, r_now, vr_inertial, vh_inertial, v.mass,
                                     full_thrust, max(isp, 1.0)*G0, g_limit, accel_now,
                                     full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
-                                    hold_left, ramp_left, cap_now)
+                                    hold_left, ramp_left, cap_now,
+                                    flown_pitch=measured_thrust_pitch)
                                 if insertion_guide.r_t != planned_r:
                                     pred = insertion_guide.prediction
                                     R0 = body.equatorial_radius
@@ -1051,16 +1064,9 @@ def run(args):
                                 target_g = min(target_g, phase_max_g)
                                 if not args.transfer and not meco_preparing:
                                     try:
-                                        position = v.position(nrf)
-                                        velocity = v.velocity(nrf)
-                                        radius = _norm(position)
-                                        vr = _dot(position, velocity)/radius
-                                        vh = math.sqrt(max(0.0, _dot(velocity, velocity)-vr*vr))
-                                        frame = v.surface_reference_frame
-                                        nose = v.direction(frame)
-                                        offset = thrust_axis_offset(conn, v, frame)
-                                        thrust_direction = _unit(tuple(nose[i]+offset[i] for i in range(3)))
-                                        thrust_pitch, _ = pitch_heading_for_direction(thrust_direction)
+                                        if inertial_sample is None or measured_thrust_pitch is None:
+                                            raise ValueError('inertial state or measured thrust direction unavailable')
+                                        radius, vr, vh = inertial_sample
                                         pitch_response = ASCENT_PITCH_RESPONSE_SECONDS
                                         if pitch_response > 0:
                                             hold_left = (max(0.0, SEPARATION_ATTITUDE_HOLD_SECONDS-
@@ -1068,7 +1074,7 @@ def run(args):
                                                          if separation_hold_active else 0.0)
                                             guarded_g, predicted_ap, feasible = apoapsis_guard_g(
                                                 body.gravitational_parameter, radius, vr, vh,
-                                                thrust_pitch, pitch_response,
+                                                measured_thrust_pitch, pitch_response,
                                                 body.equatorial_radius+args.orbit, target_g,
                                                 hold_seconds=hold_left)
                                             limited = guarded_g < target_g-0.01
@@ -1150,7 +1156,8 @@ def run(args):
                                 # Guidance pitch is a thrust pitch: the SSMEs are canted ~15 deg
                                 # off the nose, so aim the resultant thrust (not the nose).
                                 try:
-                                    offset = thrust_axis_offset(conn, v, ap.reference_frame)
+                                    offset = (measured_thrust_offset if measured_thrust_offset is not None
+                                              else thrust_axis_offset(conn, v, ap.reference_frame))
                                     # The canted thrust axis sweeps a cone about the nose while
                                     # rolling, so hold the nose itself on target during the upright
                                     # roll and blend the thrust correction back in over 6 s after.
