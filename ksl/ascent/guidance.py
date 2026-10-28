@@ -106,15 +106,6 @@ def launch_roll_handoff_ready(commanded_pitch, actual_pitch, target_pitch,
                                   angle_limit=7.0, rate_limit=3.0, nose_limit=8.0))
 
 
-def progressive_turn_ready(commanded_pitch, actual_pitch, target_pitch,
-                           roll_error, roll_rate, nose_error):
-    """Allow the smooth turn to begin while the roll loop is still correcting."""
-    return (abs(commanded_pitch-target_pitch) <= 2.5 and
-            abs(actual_pitch-target_pitch) <= 8.0 and
-            abs(roll_error) <= 45.0 and abs(roll_rate) <= 6.0 and
-            abs(nose_error) <= 8.0)
-
-
 def insertion_prediction_g(configured_g, measured_g, governor_active):
     """Seed the upper-stage forecast with the governed acceleration when limited."""
     if governor_active and math.isfinite(measured_g) and measured_g > 0.:

@@ -7,8 +7,8 @@ profile bounds the search; it is also an explicit fallback if planning fails.
 from dataclasses import dataclass
 import math
 
-from .geometry import smooth_value, smoothstep01
-from .guidance import scheduled_turn_pitch, constrain_turn_pitch
+from .geometry import smooth_value, smoothstep01, slew_value
+from .guidance import scheduled_turn_pitch, constrain_turn_pitch, PITCH_SLEW_DEG_PER_SECOND
 from .peg import InsertionGuidance, apsides
 from .trajectory import corridor_pitch
 from .plan_timeline import pitch_maneuvers
@@ -64,7 +64,7 @@ class BoosterState:
 
 def predict_booster(state, mu, body_radius, target_altitude, bias,
                     response_seconds=5., attitude_seconds=2., dt=1.,
-                    end_bias=None, record=False):
+                    end_bias=None, record=False, pitch_slew=PITCH_SLEW_DEG_PER_SECOND):
     """Propagate a smooth gravity turn to booster separation.
 
     Drag is calibrated at the seed point and extrapolated using airspeed squared
@@ -72,10 +72,10 @@ def predict_booster(state, mu, body_radius, target_altitude, bias,
     values; caller must treat the result as an approximation.
     """
     values = tuple(vars(state).values()) + (mu, body_radius, target_altitude,
-                                             response_seconds, attitude_seconds, dt)
+                                             response_seconds, attitude_seconds, dt, pitch_slew)
     if (not all(math.isfinite(x) for x in values) or state.mass <= 0 or
             state.radius <= 0 or mu <= 0 or dt <= 0 or response_seconds <= 0 or
-            attitude_seconds <= 0 or state.booster_time < 0 or
+            attitude_seconds <= 0 or pitch_slew <= 0 or state.booster_time < 0 or
             state.booster_dry_mass < 0 or state.booster_dry_mass >= state.mass or
             min(state.core_thrust, state.core_mass_flow, state.booster_thrust,
                 state.booster_mass_flow, state.dynamic_pressure, state.drag_acceleration) < 0):
@@ -109,7 +109,8 @@ def predict_booster(state, mu, body_radius, target_altitude, bias,
                                    core_thrust=state.core_thrust, booster_thrust=state.booster_thrust,
                                    mass_flow=state.core_mass_flow+state.booster_mass_flow,
                                    dynamic_pressure=q))
-        command = smooth_value(command, raw, response_seconds, step)
+        command = slew_value(command, smooth_value(command, raw, response_seconds, step),
+                             pitch_slew, step)
         flown = smooth_value(flown, command, attitude_seconds, step)
         angle = math.radians(flown)
         thrust = state.core_thrust+state.booster_thrust
@@ -143,7 +144,7 @@ def predict_booster(state, mu, body_radius, target_altitude, bias,
 def plan_ascent(state, mu, body_radius, target_apoapsis, target_periapsis,
                 min_insertion_altitude, upper_thrust, upper_ve, upper_g,
                 biases=(-6., 0., 6.), *, start_ut=0., core_propellant=None,
-                acceleration_fractions=(.8, 1.)):
+                acceleration_fractions=(.8, 1.), pitch_slew=PITCH_SLEW_DEG_PER_SECOND):
     """Plan pitch, thrust, mass and the initial handoff through separation/MECO.
 
     Booster/core thrust is fixed at the measured trim-balanced value during
@@ -168,7 +169,7 @@ def plan_ascent(state, mu, body_radius, target_apoapsis, target_periapsis,
     for bias in biases:
         for end_bias in biases:
             sep = predict_booster(state, mu, body_radius, target_apoapsis, bias,
-                                  end_bias=end_bias, record=True)
+                                  end_bias=end_bias, record=True, pitch_slew=pitch_slew)
             dry_mass = (0. if core_propellant is None else
                         max(0., sep['mass']-(core_propellant-core_used)))
             for fraction in acceleration_fractions:

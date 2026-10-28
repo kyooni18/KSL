@@ -1,5 +1,4 @@
-from ksl.ascent.guidance import (launch_roll_handoff_ready, meco_prepare_ready,
-                                 progressive_turn_ready)
+from ksl.ascent.guidance import launch_roll_handoff_ready, meco_prepare_ready
 
 
 def test_recorded_launch_can_release_gravity_turn_without_waiting_for_exact_pitch():
@@ -17,13 +16,8 @@ def test_handoff_still_requires_controlled_roll_and_pointing():
     assert not launch_roll_handoff_ready(78., 78., 78., 1., 0., 9.)
 
 
-def test_gravity_turn_can_progress_while_roll_finishes():
-    # 20261028T034252Z at 2 km: pitch had reached the requested 12-degree
-    # pitch-over, but waiting for exact roll caused further pointing divergence.
-    assert progressive_turn_ready(78.1, 73.6, 78., 37.2, 4.3, 4.8)
-    assert not progressive_turn_ready(84., 78., 78., 37., 4., 4.)
-    assert not progressive_turn_ready(78., 78., 78., 60., 4., 4.)
-    assert not progressive_turn_ready(78., 78., 78., 37., 7., 4.)
+def test_large_roll_error_does_not_release_turn():
+    assert not launch_roll_handoff_ready(78.1, 73.6, 78., 37.2, 4.3, 4.8)
 
 
 def test_meco_hold_requires_both_apsides_near_target():
