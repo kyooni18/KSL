@@ -30,6 +30,15 @@ def engine_measurements(engines):
     return thrust, flow, maximum, maximum_flow
 
 
+def attached_booster_dry_mass(branches, attached_parts):
+    """Ignore launch clamps and other handles detached since discovery."""
+    attached = set(attached_parts)
+    boosters = {part for branch in branches for part in branch if part in attached}
+    if not boosters:
+        raise ValueError('Attached booster parts unavailable')
+    return sum(part.dry_mass for part in boosters)
+
+
 @dataclass(frozen=True)
 class BoosterState:
     radius: float

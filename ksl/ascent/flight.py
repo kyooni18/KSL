@@ -11,7 +11,7 @@ from .events import emit_event, emit_telemetry
 from .trajectory import corridor_pitch
 from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orbiter_side, direction_error_deg, direction_for_pitch_heading, dot3, inertial_velocity_components, normalize3, pitch_heading_for_direction, project_perpendicular, roll_delta, roll_error_to_side, roll_for_heading, roll_for_roof, smooth_value, slew_roll, slew_value, slew_vector, smoothstep01, surface_axis_errors, surface_up_for_pitch_heading, wrap_roll)
 from .peg import InsertionGuidance
-from .full_plan import BoosterState, engine_measurements, plan_ascent
+from .full_plan import BoosterState, attached_booster_dry_mass, engine_measurements, plan_ascent
 from .apoapsis_guard import apoapsis_guard_g
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, hold_turn_for_roll, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
@@ -776,9 +776,8 @@ def run(args):
                                         lift = conn.space_center.transform_direction(
                                             flight.lift, body.reference_frame, frame)
                                         heading = math.radians(args.heading)
-                                        booster_parts = {p for branch in shuttle.booster_branch_parts
-                                                         for p in branch}
-                                        dry_mass = sum(p.dry_mass for p in booster_parts)
+                                        dry_mass = attached_booster_dry_mass(
+                                            shuttle.booster_branch_parts, v.parts.all)
                                         measured = BoosterState(
                                             radius, vr, vh, flight.horizontal_speed, v.mass,
                                             commanded_pitch, flown_pitch, core_thrust, core_flow,

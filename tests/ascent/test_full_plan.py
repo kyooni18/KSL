@@ -2,7 +2,8 @@ from dataclasses import replace
 from types import SimpleNamespace
 import pytest
 
-from ksl.ascent.full_plan import BoosterState, engine_measurements, plan_ascent, predict_booster
+from ksl.ascent.full_plan import (BoosterState, attached_booster_dry_mass,
+                                  engine_measurements, plan_ascent, predict_booster)
 
 
 @pytest.fixture
@@ -46,6 +47,16 @@ def test_engine_measurements_follow_each_active_engine():
     assert full_flow == pytest.approx((2000./200.+4000./400.)/9.80665)
     engines[0].thrust = 200.
     assert engine_measurements(engines)[0] == 3200.
+
+
+def test_booster_mass_skips_detached_parts_and_counts_each_part_once():
+    class Part:
+        def __init__(self, mass):
+            self.dry_mass = mass
+    a, b, detached = Part(20.), Part(30.), Part(999.)
+    assert attached_booster_dry_mass([[a, detached], [b, a]], [a, b]) == 50.
+    with pytest.raises(ValueError, match='Attached booster parts unavailable'):
+        attached_booster_dry_mass([[detached]], [a, b])
 
 
 def test_reseeded_forecast_responds_to_measured_thrust_and_aerodynamics(state):
