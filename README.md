@@ -14,8 +14,9 @@ It combines two former projects that now share one repository and history:
   touchdown and rollout guidance, plus the atmospheric flight-control system.
   It speaks kRPC directly through the vendored C-Nano client.
 - **Launcher** (formerly KSPShuttleLauncher, imported with full history). Python
-  kRPC programs own the STS ascent (SSME/SRB allocation, roll program, gravity
-  turn, SRB and ET separation, PEG MECO) and the OMS orbit trim.
+  kRPC programs own the STS ascent and OMS orbit trim. Roll handoff and the
+  gravity-turn pitch envelope run in a Rust library called through Python;
+  the remaining ascent controller and planner are still Python.
 
 The `ksl` mission controller sequences both through one explicit phase state
 machine. It uses one mission profile, one run record (events, telemetry,
@@ -25,7 +26,7 @@ status, checkpoints), one CLI and one TUI.
 
 ```sh
 make setup          # .venv with krpc, textual, pytest
-make                # build the native landing backend and ShuttleSim
+make                # build the landing backend, ShuttleSim, and Rust ascent library
 make test           # offline regression gate (~25 s, no KSP needed)
 
 bin/ksl validate --connect              # profile, build, deps, and a read-only KSP probe
@@ -33,6 +34,11 @@ bin/ksl run --dry-run                   # print the full mission plan, fly nothi
 bin/ksl simulate l5-mm305               # offline closed-loop landing (native backend + ShuttleSim)
 bin/ksl tui                             # persistent flight operations console
 ```
+
+The Rust toolchain is required to build ascent guidance. On macOS with an
+x86-64 Python interpreter, install its Rust target with
+`rustup target add x86_64-apple-darwin`. `bin/ksl` builds the library for the
+project interpreter; run `make ascent` before invoking Python modules directly.
 
 `bin/ksl` runs from a checkout. `pip install -e .` installs the same CLI as `ksl`.
 The `connection.timeoutSeconds` profile setting bounds Python kRPC handshakes;

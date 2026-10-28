@@ -13,6 +13,7 @@
 *.code-workspace
 
 # C/C++ and CMake build products
+/rust/ascent/target/
 /.build/
 **/.build/
 **/build/

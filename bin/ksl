@@ -7,5 +7,6 @@ PY="$ROOT/.venv/bin/python"
 if [ ! -x "$ROOT/CLanding/build/landing_backend" ]; then
   make -s -C "$ROOT/CLanding" >&2 || exit 2
 fi
+make -s -C "$ROOT" ascent PYTHON="$PY" >&2 || exit 2
 export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 exec "$PY" -m ksl "$@"

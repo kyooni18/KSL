@@ -4,6 +4,7 @@ Pure functions of measured state; ksl.ascent.flight applies them through kRPC.
 """
 import math
 
+from . import native
 from .geometry import _combine, _cross, _dot, _norm, _unit, smoothstep01
 
 ROLL_RESET_GRACE = 60.0
@@ -44,7 +45,7 @@ def separation_thrust_blend(now, separation_ut, roll_start=None, roll_done=None)
 
 def maneuver_roll_rate(error_deg, duration_s, limit_deg_s):
     """Bound the maneuver schedule by the operator's physical roll-rate cap."""
-    return min(limit_deg_s, max(3.0, min(30.0, 1.4*abs(error_deg)/duration_s)))
+    return native.maneuver_roll_rate(error_deg, duration_s, limit_deg_s)
 
 
 def ascent_target_g(altitude, atmosphere_depth, max_g, launch_g=LAUNCH_TARGET_G,
@@ -74,8 +75,8 @@ def meco_prepare_ready(apoapsis, periapsis, target_apoapsis, target_periapsis,
 def mission_roll_allowed(liftoff, altitude_gain, roll_start_gain,
                          surface_speed, minimum_speed=40.0):
     """Wait for both pad clearance and sufficient surface speed before rolling."""
-    return (liftoff and altitude_gain >= roll_start_gain and
-            math.isfinite(surface_speed) and surface_speed >= minimum_speed)
+    return native.roll_allowed(liftoff, altitude_gain, roll_start_gain,
+                               surface_speed, minimum_speed)
 
 
 def manual_roll_command(error_deg, rate_deg_s, accel_deg_s2, rate_limit_deg_s,
@@ -93,17 +94,15 @@ def manual_roll_command(error_deg, rate_deg_s, accel_deg_s2, rate_limit_deg_s,
 
 def roll_attitude_settled(roll_error, roll_rate, nose_error,
                           angle_limit=2.0, rate_limit=.75, nose_limit=3.0):
-    return (abs(roll_error) <= angle_limit and abs(roll_rate) <= rate_limit and
-            abs(nose_error) <= nose_limit)
+    return native.roll_settled(roll_error, roll_rate, nose_error,
+                               angle_limit, rate_limit, nose_limit)
 
 
 def launch_roll_handoff_ready(commanded_pitch, actual_pitch, target_pitch,
                               roll_error, roll_rate, nose_error):
     """Release the turn near the pitch target once roll and pointing are controlled."""
-    return (abs(commanded_pitch-target_pitch) <= 2.5 and
-            abs(actual_pitch-target_pitch) <= 8.0 and
-            roll_attitude_settled(roll_error, roll_rate, nose_error,
-                                  angle_limit=7.0, rate_limit=3.0, nose_limit=8.0))
+    return native.launch_roll_handoff(commanded_pitch, actual_pitch, target_pitch,
+                                      roll_error, roll_rate, nose_error)
 
 
 def insertion_prediction_g(configured_g, measured_g, governor_active):
@@ -243,23 +242,7 @@ TURN_PROFILE = ((500., 78.), (5000., 75.), (10000., 68.), (20000., 55.),
 
 def turn_reference_pitch(altitude, target_apoapsis, initial_pitch=78., minimum_pitch=5.):
     """Progressive Kerbin climb reference; insertion guidance owns the final orbit."""
-    h = max(0., altitude)*90000./max(1000., target_apoapsis)
-    points = TURN_PROFILE
-    if h <= points[0][0]:
-        return initial_pitch
-    if h >= points[-1][0]:
-        return minimum_pitch
-    slopes = [(b[1]-a[1])/(b[0]-a[0]) for a, b in zip(points, points[1:])]
-    # Harmonic interior tangents preserve monotonicity; flat endpoint tangents
-    # join the roll target and terminal reference without corners.
-    tangents = [0.] + [2*a*b/(a+b) for a, b in zip(slopes, slopes[1:])] + [0.]
-    for i, ((x0, y0), (x1, y1)) in enumerate(zip(points, points[1:])):
-        if h <= x1:
-            u = (h-x0)/(x1-x0)
-            pitch = ((2*u**3-3*u**2+1)*y0 + (u**3-2*u**2+u)*(x1-x0)*tangents[i]
-                     + (-2*u**3+3*u**2)*y1 + (u**3-u**2)*(x1-x0)*tangents[i+1])
-            fraction = (pitch-5.)/73.
-            return minimum_pitch + (initial_pitch-minimum_pitch)*fraction
+    return native.turn_reference(altitude, target_apoapsis, initial_pitch, minimum_pitch)
 
 
 def constrain_turn_pitch(pitch, altitude, target_apoapsis, prograde_pitch,
@@ -271,13 +254,9 @@ def constrain_turn_pitch(pitch, altitude, target_apoapsis, prograde_pitch,
     AoA. Aerodynamic authority takes precedence when an already-shallow flight
     cannot regain the corridor immediately. This is not a pitch-rate limit.
     """
-    reference = turn_reference_pitch(altitude, target_apoapsis, initial_pitch, minimum_pitch)
-    h = max(0., altitude)*90000./max(1000., target_apoapsis)
-    margin = 3. + 12.*smoothstep01((h-10000.)/35000.)
-    desired = max(reference-margin, min(reference+margin, pitch))
-    alpha = aoa_limit_deg(dynamic_pressure, q_alpha, alpha_floor, alpha_ceiling)
-    bounded = max(prograde_pitch-alpha, min(prograde_pitch+alpha, desired))
-    return min(initial_pitch, max(minimum_pitch, bounded))
+    return native.constrain_turn(pitch, altitude, target_apoapsis, prograde_pitch,
+                                 dynamic_pressure, initial_pitch, minimum_pitch,
+                                 q_alpha, alpha_floor, alpha_ceiling)
 
 
 def scheduled_turn_pitch(altitude, target_apoapsis, vertical_speed, horizontal_speed,
