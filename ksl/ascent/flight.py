@@ -388,7 +388,8 @@ def run(args):
             ap.set_direction_and_up(initial_direction, initial_up, launch_roll)
             launch_altitude = flight.mean_altitude
             print(f'Pad roll {launch_roll:.1f} deg; physical heads-down roll starts after '
-                  f'+{args.roll_start:.0f} m climb; manual roll cap {args.roll_rate:.1f} deg/s; '
+                  f'+{args.roll_start:.0f} m climb and {args.roll_start_speed:.0f} m/s; '
+                  f'roll cap {args.roll_rate:.1f} deg/s; '
                   f'gravity turn uses prograde-AoA guidance; flip to spaceward {args.roll_reset_delay:.0f} s after booster separation')
             clamps = list(v.parts.launch_clamps)
             # The pad stack is the last intact reference before staging. A wing
@@ -617,7 +618,9 @@ def run(args):
                             initial_roll_set, shuttle.booster_separation_ut,
                             conn.space_center.ut, args.roll_reset_delay)
                         roll_allowed = mission_roll_allowed(
-                            initial_roll_set, altitude_gain, args.roll_start)
+                            initial_roll_set, altitude_gain, args.roll_start,
+                            math.hypot(flight.vertical_speed, flight.horizontal_speed),
+                            args.roll_start_speed)
                         if roll_allowed and not mission_roll_commanded:
                             saved_auto_tune = ap.auto_tune
                             saved_roll_pid = ap.roll_pid_gains
@@ -1498,17 +1501,19 @@ def main():
     parser.add_argument('--roll-reset-delay', type=float, default=2.0,
                         help='Seconds after booster separation before the delayed 180-degree roll')
     parser.add_argument('--roll-start', type=float, default=30,
-                        help='Climb above launch point in m before starting the mission roll')
+                        help='Minimum climb above launch point in m before the mission roll')
+    parser.add_argument('--roll-start-speed', type=float, default=40.0,
+                        help='Minimum surface speed in m/s before the mission roll')
     parser.add_argument('--upright-max-q', type=float, default=800.0,
                         help='Start the post-separation upright roll only below this dynamic pressure (Pa)')
     parser.add_argument('--upright-roll-rate', type=float, default=15.0,
                         help='Roll rate limit (deg/s) for the upright roll after booster separation')
-    parser.add_argument('--roll-time', type=float, default=10.0,
+    parser.add_argument('--roll-time', type=float, default=25.0,
                         help='Duration of the heads-down roll maneuver (s)')
     parser.add_argument('--upright-roll-time', type=float, default=10.0,
                         help='Duration of the post-separation upright roll (s)')
-    parser.add_argument('--roll-rate', type=float, default=15.0,
-                        help='Direct physical-roll angular-rate cap in deg/s')
+    parser.add_argument('--roll-rate', type=float, default=6.0,
+                        help='Launch roll angular-rate cap in deg/s')
     parser.add_argument('--roll-attenuation', type=float, default=5.0,
                         help='Roll-error angle in deg where AutoPilot starts slowing the roll')
     parser.add_argument('--roll-time-to-peak', type=float, default=2.5,
@@ -1528,6 +1533,7 @@ def main():
     if (not 0 < args.hz <= 50 or not 0 <= args.turn_start < args.turn_end or
             args.timeout <= 0 or args.ssme_lead_time < 0 or
             args.roll_reset_delay < 0 or args.roll_start < 0 or
+            not math.isfinite(args.roll_start_speed) or args.roll_start_speed < 0 or
             not 0 < args.roll_rate <= 30 or not 0 < args.roll_attenuation <= 90 or
             args.roll_time_to_peak <= 0 or not 0 <= args.roll_overshoot <= 1 or
             args.roll_settle_time < 0 or not 0 < args.roll_control_limit <= 1 or

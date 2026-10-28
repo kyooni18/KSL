@@ -56,9 +56,11 @@ def meco_ready(apoapsis_altitude, periapsis_altitude, target_apoapsis, minimum_p
             periapsis_altitude >= minimum_periapsis)
 
 
-def mission_roll_allowed(liftoff, altitude_gain, roll_start_gain):
-    """Start the mission roll only after climbing the requested height above the pad."""
-    return liftoff and altitude_gain >= roll_start_gain
+def mission_roll_allowed(liftoff, altitude_gain, roll_start_gain,
+                         surface_speed, minimum_speed=40.0):
+    """Wait for both pad clearance and sufficient surface speed before rolling."""
+    return (liftoff and altitude_gain >= roll_start_gain and
+            math.isfinite(surface_speed) and surface_speed >= minimum_speed)
 
 
 def manual_roll_command(error_deg, rate_deg_s, accel_deg_s2, rate_limit_deg_s,

@@ -242,6 +242,7 @@ class FlightTests(unittest.TestCase):
         self.assertEqual(maneuver_roll_rate(180, 10, 15), 15)
         self.assertEqual(maneuver_roll_rate(180, 10, 5), 5)
         self.assertEqual(maneuver_roll_rate(20, 10, 15), 3)
+        self.assertAlmostEqual(maneuver_roll_rate(89, 25, 6), 4.984)
 
     def test_structural_abort_releases_controls_and_pauses_ksp(self):
         conn = SimpleNamespace(krpc=SimpleNamespace(paused=False), space_center=MagicMock())
@@ -256,10 +257,12 @@ class FlightTests(unittest.TestCase):
         self.assertTrue(conn.space_center.save.call_args.args[0].startswith('ksl-structural-'))
 
     def test_mission_roll_starts_after_climbing_above_the_pad(self):
-        self.assertFalse(mission_roll_allowed(False, 100, 30))
-        self.assertFalse(mission_roll_allowed(True, 29.9, 30))
-        self.assertTrue(mission_roll_allowed(True, 30, 30))
-        self.assertTrue(mission_roll_allowed(True, 100, 30))
+        self.assertFalse(mission_roll_allowed(False, 100, 30, 50))
+        self.assertFalse(mission_roll_allowed(True, 29.9, 30, 50))
+        self.assertFalse(mission_roll_allowed(True, 100, 30, 39.9))
+        self.assertFalse(mission_roll_allowed(True, 100, 30, float('nan')))
+        self.assertTrue(mission_roll_allowed(True, 30, 30, 40))
+        self.assertTrue(mission_roll_allowed(True, 100, 30, 50))
 
     def test_roll_settle_requires_low_rate_and_small_nose_error(self):
         self.assertTrue(roll_attitude_settled(2, .5, 2))
