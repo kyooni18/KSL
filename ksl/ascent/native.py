@@ -208,3 +208,87 @@ def insertion_fly(guide, r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
         result['trajectory'] = [{name: getattr(row, name) for name, _ in InsertionRow._fields_}
                                 for row in rows[:count]]
     return result
+
+
+class IntelligentState(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('altitude', 'radial', 'horizontal', 'mass',
+                'thrust', 'isp', 'q', 'drag', 'fixed_thrust', 'surface_horizontal',
+                'lift_radial', 'lift_horizontal', 'mass_flow', 'fixed_mass_flow')]
+
+
+class IntelligentTarget(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('radius', 'mu', 'atmosphere', 'apoapsis',
+                'periapsis', 'inclination', 'altitude_tolerance', 'inclination_tolerance')]
+
+
+class IntelligentPlanner(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('max_q', 'max_g', 'slew', 'pitch', 'clock')] + [
+        ('peg', PegState), ('has_peg', _b), ('peg_active', _b), ('has_plan', _b),
+        ('plan_rt', _d), ('plan_rp', _d)]
+
+
+class IntelligentCommand(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('pitch', 'throttle', 'predicted_apoapsis', 'horizon')] + [
+        ('status', ctypes.c_int)]
+
+
+_intelligent_command = _function('ksl_intelligent_command',
+    [ctypes.POINTER(IntelligentPlanner), ctypes.POINTER(IntelligentState),
+     ctypes.POINTER(IntelligentTarget), _d, ctypes.POINTER(IntelligentCommand)], None)
+_intelligent_step = _function('ksl_intelligent_step',
+    [ctypes.POINTER(IntelligentState), ctypes.POINTER(IntelligentTarget), _d, _d, _d,
+     ctypes.POINTER(IntelligentState)], None)
+_intelligent_apsides = _function('ksl_intelligent_apsides',
+    [ctypes.POINTER(IntelligentState), ctypes.POINTER(IntelligentTarget), ctypes.POINTER(_d)], None)
+_intelligent_coast = _function('ksl_intelligent_coast',
+    [ctypes.POINTER(IntelligentState), ctypes.POINTER(IntelligentTarget)], _d)
+
+
+def _native_struct(cls, value):
+    return cls(*(getattr(value, name) for name, _ in cls._fields_))
+
+
+def intelligent_step(state, target, pitch, throttle, dt):
+    s, t = _native_struct(IntelligentState, state), _native_struct(IntelligentTarget, target)
+    out = IntelligentState()
+    _intelligent_step(ctypes.byref(s), ctypes.byref(t), pitch, throttle, dt, ctypes.byref(out))
+    return {name: getattr(out, name) for name, _ in IntelligentState._fields_}
+
+
+def intelligent_apsides(state, target):
+    s, t = _native_struct(IntelligentState, state), _native_struct(IntelligentTarget, target)
+    out = (_d * 2)()
+    _intelligent_apsides(ctypes.byref(s), ctypes.byref(t), out)
+    return tuple(out)
+
+
+def intelligent_coast(state, target):
+    s, t = _native_struct(IntelligentState, state), _native_struct(IntelligentTarget, target)
+    return _intelligent_coast(ctypes.byref(s), ctypes.byref(t))
+
+
+def intelligent_command(planner, state, target, dt):
+    guide = planner.peg
+    if guide is None:
+        peg = PegState(target.mu, 8., 0., 0., 0., 0., 0., 0., False, False, False, False)
+    else:
+        peg = PegState(guide.mu, guide.freeze_tgo, guide.A or 0., guide.B or 0.,
+                       guide.tgo or 0., guide._last_t or 0., guide.hold or 0., guide.peak,
+                       guide.A is not None, guide._last_t is not None,
+                       guide.hold is not None, guide.converged)
+    plan = planner.peg_plan
+    p = IntelligentPlanner(planner.max_q, planner.max_g, planner.slew, planner.pitch,
+                           planner.clock, peg, guide is not None, planner.peg_active,
+                           plan is not None, *(plan if plan is not None else (0., 0.)))
+    s, t = _native_struct(IntelligentState, state), _native_struct(IntelligentTarget, target)
+    out = IntelligentCommand()
+    _intelligent_command(ctypes.byref(p), ctypes.byref(s), ctypes.byref(t), dt, ctypes.byref(out))
+    planner.pitch, planner.clock, planner.peg_active = p.pitch, p.clock, p.peg_active
+    planner.peg_plan = (p.plan_rt, p.plan_rp) if p.has_plan else None
+    if guide is not None:
+        guide.A, guide.B = (p.peg.a, p.peg.b) if p.peg.has_solution else (None, None)
+        guide.tgo = p.peg.tgo if p.peg.has_last_t else None
+        guide._last_t = p.peg.last_t if p.peg.has_last_t else None
+        guide.hold = p.peg.hold if p.peg.has_hold else None
+        guide.peak, guide.converged = p.peg.peak, p.peg.converged
+    return out.pitch, out.throttle, out.predicted_apoapsis, out.horizon, ('powered', 'peg', 'cutoff')[out.status]

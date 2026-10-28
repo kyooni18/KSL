@@ -152,3 +152,5 @@ mod booster;
 mod peg;
 
 mod insertion;
+
+mod intelligent;

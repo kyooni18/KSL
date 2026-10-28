@@ -217,3 +217,17 @@ def test_low_speed_pad_drift_does_not_pitch_a_low_twr_stack_over():
     for _ in range(25):
         command = planner.command(s, .4)
     assert command.pitch > 85.
+
+
+def test_vacuum_planner_selects_and_retains_insertion_target():
+    target = Target(600000., 3.5316e12, 70000., 90000., 60000., 45.)
+    planner = Planner(target)
+    state = State(50000., 400., 1600., 80000., 1000000., 320., q=100.)
+    first = planner.command(state, .4)
+    assert first.status == 'peg'
+    assert planner.peg_plan == pytest.approx((664642.8571428572, 510000.))
+    assert first.horizon == pytest.approx(44.70773094373897, abs=1e-6)
+    second = planner.command(state, .4)
+    assert second.status == 'peg'
+    assert planner.peg_plan == pytest.approx((664642.8571428572, 510000.))
+    assert second.pitch == pytest.approx(88.4)
