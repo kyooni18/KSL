@@ -87,3 +87,42 @@ def allocate(thrusts, arms, bounds, flows, fixed, target, cap, tolerance):
                      fixed, target, cap, tolerance, output):
         raise ArithmeticError('No allocation vertex found')
     return tuple(output)
+
+
+class BoosterState(ctypes.Structure):
+    _fields_ = [(name, _d) for name in (
+        'radius', 'radial_speed', 'horizontal_speed', 'surface_horizontal_speed',
+        'mass', 'commanded_pitch', 'flown_pitch', 'core_thrust', 'core_mass_flow',
+        'booster_thrust', 'booster_mass_flow', 'booster_time', 'booster_dry_mass',
+        'dynamic_pressure', 'drag_acceleration', 'lift_radial', 'lift_horizontal')]
+
+
+class BoosterRow(ctypes.Structure):
+    _fields_ = [(name, _d) for name in (
+        'time', 'radius', 'radial_speed', 'horizontal_speed', 'mass', 'raw_pitch',
+        'commanded_pitch', 'flown_pitch', 'thrust', 'core_thrust', 'booster_thrust',
+        'mass_flow', 'dynamic_pressure')]
+
+
+_predict_booster = _function('ksl_predict_booster',
+    [ctypes.POINTER(BoosterState), _d, _d, _d, _d, _d, _b, _d, _d, _d, _d,
+     ctypes.POINTER(BoosterRow), ctypes.c_size_t], ctypes.c_ssize_t)
+
+
+def predict_booster(state, mu, body_radius, target_altitude, bias, end_bias,
+                    response, attitude, dt, pitch_slew):
+    import math
+    seed = BoosterState(*(getattr(state, name) for name, _ in BoosterState._fields_))
+    # A partial final integration step and the terminal sample each need a slot.
+    capacity = math.ceil(state.booster_time / dt) + 2
+    rows = (BoosterRow * capacity)()
+    count = _predict_booster(ctypes.byref(seed), mu, body_radius, target_altitude,
+                             bias, 0. if end_bias is None else end_bias,
+                             end_bias is not None, response, attitude, dt, pitch_slew,
+                             rows, capacity)
+    if count == -1:
+        raise ValueError('Predicted propellant consumption exceeds vehicle mass')
+    if count < 0:
+        raise ArithmeticError('Booster forecast exceeded trajectory capacity')
+    return [{name: getattr(row, name) for name, _ in BoosterRow._fields_}
+            for row in rows[:count]]

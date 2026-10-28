@@ -27,6 +27,21 @@ def test_booster_forecast_obeys_pitch_slew(state):
         assert abs(b['commanded_pitch'] - a['commanded_pitch']) <= .4 * (b['time'] - a['time']) + 1e-9
 
 
+def test_booster_forecast_tracks_recorded_reference_and_empty_burn(state):
+    result = predict_booster(state, 3.5316e12, 600000., 90000., -6.,
+                             end_bias=6., record=True)
+    sample = result['trajectory'][20]
+    assert sample['radius'] == pytest.approx(617185.9882994395, abs=1e-6)
+    assert sample['radial_speed'] == pytest.approx(426.0230435953513, abs=1e-8)
+    assert sample['commanded_pitch'] == pytest.approx(38.488459128752744, abs=1e-8)
+    assert result['radius'] == pytest.approx(624528.0041481444, abs=1e-6)
+    empty = predict_booster(replace(state, booster_time=0.), 3.5316e12,
+                            600000., 90000., 0., record=True)
+    assert len(empty['trajectory']) == 1
+    assert empty['time'] == 0.
+    assert empty['mass'] == state.mass - state.booster_dry_mass
+
+
 def test_full_plan_returns_stage_and_cutoff_forecasts(state):
     # Seed a climb on the new 10 km corridor. The old 42 degree / 350 m/s
     # surface-horizontal seed is already shallow and is no longer a reachable

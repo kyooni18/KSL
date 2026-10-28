@@ -146,3 +146,5 @@ pub extern "C" fn ksl_smooth_value(current: f64, target: f64, response: f64, dt:
 mod attitude;
 
 mod allocation;
+
+mod booster;

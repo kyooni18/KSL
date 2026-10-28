@@ -7,10 +7,9 @@ profile bounds the search; it is also an explicit fallback if planning fails.
 from dataclasses import dataclass
 import math
 
-from .geometry import smooth_value, smoothstep01, slew_value
-from .guidance import scheduled_turn_pitch, constrain_turn_pitch, PITCH_SLEW_DEG_PER_SECOND
-from .peg import InsertionGuidance, apsides
-from .trajectory import corridor_pitch
+from . import native
+from .guidance import PITCH_SLEW_DEG_PER_SECOND
+from .peg import InsertionGuidance
 from .plan_timeline import pitch_maneuvers
 
 
@@ -80,63 +79,16 @@ def predict_booster(state, mu, body_radius, target_altitude, bias,
             min(state.core_thrust, state.core_mass_flow, state.booster_thrust,
                 state.booster_mass_flow, state.dynamic_pressure, state.drag_acceleration) < 0):
         raise ValueError('Invalid booster forecast state')
-    r, vr, vh, mass = state.radius, state.radial_speed, state.horizontal_speed, state.mass
-    command, flown, t = state.commanded_pitch, state.flown_pitch, 0.
-    rotation = vh - state.surface_horizontal_speed
-    seed_speed = math.hypot(vr, state.surface_horizontal_speed)
-    trajectory = []
-    while t < state.booster_time:
-        step = min(dt, state.booster_time-t)
-        surface_h = vh-rotation
-        speed = math.hypot(vr, surface_h)
-        density_ratio = math.exp(max(-20., min(20., (state.radius-r)/6000.)))
-        ratio = density_ratio*(speed/max(seed_speed, 1.))**2
-        q = state.dynamic_pressure*ratio
-        drag = state.drag_acceleration*ratio*state.mass/mass
-        base = scheduled_turn_pitch(r-body_radius, target_altitude, vr, surface_h, q, 78.)
-        ap, _ = apsides(mu, r, vr, vh)
-        base = corridor_pitch(base, math.degrees(math.atan2(max(0., vr),
-                                                            max(.5, surface_h))),
-                              r-body_radius, ap-body_radius, target_altitude, q)
-        prograde = math.degrees(math.atan2(max(0., vr), max(.5, surface_h)))
-        bias_now = bias if end_bias is None else bias + (end_bias-bias)*smoothstep01(
-            t/max(state.booster_time, 1e-6))
-        raw = constrain_turn_pitch(base+bias_now, r-body_radius, target_altitude, prograde, q)
-        if record:
-            trajectory.append(dict(time=t, radius=r, radial_speed=vr, horizontal_speed=vh,
-                                   mass=mass, raw_pitch=raw, commanded_pitch=command,
-                                   flown_pitch=flown, thrust=state.core_thrust+state.booster_thrust,
-                                   core_thrust=state.core_thrust, booster_thrust=state.booster_thrust,
-                                   mass_flow=state.core_mass_flow+state.booster_mass_flow,
-                                   dynamic_pressure=q))
-        command = slew_value(command, smooth_value(command, raw, response_seconds, step),
-                             pitch_slew, step)
-        flown = smooth_value(flown, command, attitude_seconds, step)
-        angle = math.radians(flown)
-        thrust = state.core_thrust+state.booster_thrust
-        acceleration = thrust/mass
-        a_r = (acceleration*math.sin(angle)-mu/r**2+vh**2/r-drag*vr/max(speed, 1.)
-               + state.lift_radial*ratio*state.mass/mass)
-        a_h = (acceleration*math.cos(angle)-vr*vh/r-drag*surface_h/max(speed, 1.)
-               + state.lift_horizontal*ratio*state.mass/mass)
-        r += vr*step + .5*a_r*step**2
-        vr += a_r*step
-        vh += a_h*step
-        mass -= (state.core_mass_flow+state.booster_mass_flow)*step
-        if mass <= state.booster_dry_mass:
-            raise ValueError('Predicted propellant consumption exceeds vehicle mass')
-        t += step
-    result = dict(radius=r, radial_speed=vr, horizontal_speed=vh,
-                mass=mass-state.booster_dry_mass, commanded_pitch=command,
-                flown_pitch=flown, time=t)
+    trajectory = native.predict_booster(state, mu, body_radius, target_altitude, bias,
+                                        end_bias, response_seconds, attitude_seconds,
+                                        dt, pitch_slew)
+    endpoint = trajectory[-1]
+    result = dict(radius=endpoint['radius'], radial_speed=endpoint['radial_speed'],
+                  horizontal_speed=endpoint['horizontal_speed'],
+                  mass=endpoint['mass']-state.booster_dry_mass,
+                  commanded_pitch=endpoint['commanded_pitch'],
+                  flown_pitch=endpoint['flown_pitch'], time=endpoint['time'])
     if record:
-        endpoint = dict(time=t, radius=r, radial_speed=vr, horizontal_speed=vh, mass=mass,
-                        raw_pitch=command, commanded_pitch=command, flown_pitch=flown,
-                        thrust=state.core_thrust+state.booster_thrust,
-                        core_thrust=state.core_thrust, booster_thrust=state.booster_thrust,
-                        mass_flow=state.core_mass_flow+state.booster_mass_flow,
-                        dynamic_pressure=state.dynamic_pressure if not trajectory else q)
-        trajectory.append(endpoint)
         result['trajectory'] = trajectory
     return result
 
