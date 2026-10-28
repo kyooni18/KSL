@@ -16,11 +16,39 @@ from pathlib import Path
 
 def telemetry(path):
     opener = gzip.open if path.suffix == '.gz' else open
+    state = {}
+    def merge(target, patch):
+        for key, value in patch.items():
+            if isinstance(value, dict):
+                if not isinstance(target.get(key), dict):
+                    target[key] = {}
+                merge(target[key], value)
+            else:
+                target[key] = value
     with opener(path, 'rt') as stream:
         for line in stream:
             row = json.loads(line)
             if row.get('type') == 'telemetry':
                 yield row
+            elif row.get('recordType') in ('vehicleKeyframe', 'vehicleDelta'):
+                if row['recordType'] == 'vehicleKeyframe':
+                    state = {}
+                merge(state, row.get('fields', {}))
+                a, t = state.get('aero') or {}, state.get('attitude') or {}
+                pos, vehicle = state.get('position') or {}, state.get('vehicle') or {}
+                if not all(a.get(k) is not None for k in ('mach', 'dynamicPressure', 'density', 'dragForce', 'liftForce')):
+                    continue
+                if t.get('angleOfAttack') is None or not vehicle.get('mass'):
+                    continue
+                command = state.get('command') or {}
+                yield dict(type='telemetry', ut=row['ut'],
+                           position=dict(altitude_m=pos['altitude']),
+                           aero=dict(mach=a['mach'], q_pa=a['dynamicPressure'],
+                                     drag_n=a['dragForce'], lift_n=a['liftForce']),
+                           attitude=dict(aoa_deg=t['angleOfAttack'],
+                                         cmd_aoa_deg=command.get('targetAoA')),
+                           atmosphere=dict(density_kg_m3=a['density']),
+                           vehicle=dict(mass_kg=vehicle['mass']))
 
 
 def compare(trace, plant):

@@ -347,7 +347,7 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
     g->entry_alpha_modulation=alpha.modulation;
 
     EntryLateralLimits limits=entry_lateral_default_limits();
-    limits.maximum_bank_deg=fmin(dynamic_bank_limit(t,v),MM304_PLANNED_MAX_BANK_DEG);
+    limits.maximum_bank_deg=dynamic_bank_limit(t,v);
     limits.maximum_roll_rate_deg_s=s->entry_roll_rate;
     limits.maximum_roll_accel_deg_s2=s->entry_roll_acceleration;
     /* Roll authority follows yaw reserve: the less rudder margin remains, the
@@ -462,8 +462,8 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
        lift inside the lateral allocator.  Supplying a separate precomputed bank
        magnitude here bypasses that contract. */
     lateral.has_bank_magnitude=false;
-    /* 40 deg is MM304's nominal planning ceiling, not a promise that the
-       airframe can coordinate that bank at every q/Mach point.  Coordination
+    /* The configured bank limit is not a promise that the airframe can
+       coordinate that bank at every q/Mach point.  Coordination
        feasibility is predictive: compare the measured time for beta to reach
        the established 5 deg runaway scale with the time the airframe needs to
        unload its present bank.  If beta is escaping faster than bank can be
@@ -563,6 +563,10 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
             for(unsigned i=0;i<plan->schedule_count&&i<4;i++)if(t->ut>=plan->schedule_ut[i])planned=-planned;
             lateral.has_planned_side=true;
             lateral.planned_side=planned;
+            /* The schedule forecast prices this magnitude. A second
+               crossrange demand must not silently spend more vertical lift. */
+            lateral.has_bank_magnitude=true;
+            lateral.bank_magnitude_deg=fabs(plan->target_bank);
         }
     }
     double previous_side=g->s_turn_sign>=0.0?1.0:-1.0;

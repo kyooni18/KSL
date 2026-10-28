@@ -22,6 +22,8 @@ typedef struct {
     double first_reversal_ut, first_reversal_range, first_reversal_sign;
     bool replay_event, replay_event_final; double replay_event_ut, replay_event_sign;
     unsigned schedule_count, schedule_next; double schedule_ut[4];
+    EntryLateralState policy_lateral;
+    bool has_policy_attitude; AttitudeModel policy_attitude;
     double entry_score; bool has_entry_score;
     double actual_bank,actual_bank_rate,actual_aoa,actual_aoa_rate,entry_speed;
     bool has_interface_target,enforce_terminal_delivery_budget; TaemInterfaceTarget interface_target;

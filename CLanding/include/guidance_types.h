@@ -1,6 +1,5 @@
 #ifndef KSP_LANDER_GUIDANCE_TYPES_H
 #define KSP_LANDER_GUIDANCE_TYPES_H
-#define MM304_PLANNED_MAX_BANK_DEG 40.0
 /* crossrange MM304 leaves to MM305 while energy-short (see entry/contract.inc) */
 #define MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M 15000.0
 /* MM304 S-turn azimuth deadband: wide while hypersonic, narrowing to MM305. */

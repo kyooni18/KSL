@@ -41,15 +41,32 @@ static void entry_policy_model_parity(void){
   assert(fabs(a.drag_accel*state.mass/a.q-drag)<1e-8);
   assert(fabs(a.lift_accel*state.mass/a.q-lift)<1e-8);
  }
+ /* An immediately due reversal must wait for the same capture/dwell rule
+    as live guidance; the schedule may not teleport the commanded bank. */
+ PredictorGuidance g={.sign=1,.actual_bank=40,.actual_aoa=28,
+  .force_control=true,.forced_until_ut=state.ut+1000,.forced_bank=40,.forced_aoa=28,
+  .schedule_count=1,.schedule_ut={state.ut}};
+ entry_lateral_state_init(&g.policy_lateral,state.ut,1,40);
+ g.policy_lateral.leg_captured=true;g.policy_lateral.last_reversal_ut=state.ut;
+ AeroContext ctx={.p=&planet,.e=&env,.c=&cal,.v=&cfg.vehicle,
+  .entry_table=model,.aoa=28,.bank=40,.mass=state.mass,.ut=state.ut};
+ AtmosState at=atmosphere(state.position,state.velocity,&ctx);double alpha;
+ double command=entry_bank(&g,state,geo,&at,&planet,fallback,&cal,&cfg.vehicle,
+  &cfg.site,&cfg.guidance,70,.1,&alpha);
+ assert(g.sign==-1&&g.policy_lateral.bank_sign==1&&fabs(command-40)<1e-9);
+ state.ut+=100;
+ entry_bank(&g,state,geo,&at,&planet,fallback,&cal,&cfg.vehicle,
+  &cfg.site,&cfg.guidance,70,.1,&alpha);
+ assert(g.policy_lateral.bank_sign==-1);
  EntryPrediction a=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
-  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL);
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL,NULL);
  cal.density_scale=.7;cal.speed_of_sound_scale=1.2;cal.drag_scale=.5;cal.lift_scale=2;
  EntryPrediction b=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
-  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL);
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,.01,model,NULL,NULL);
  assert(vmag(vsub(a.final_state.velocity,b.final_state.velocity))<1e-9);
  entry_prediction_clear(&a);entry_prediction_clear(&b);
  a=predictor_simulate_entry_policy_reversal(state,&planet,fallback,&env,&cal,
-  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,1000,model,NULL);
+  &cfg.vehicle,&cfg.site,&cfg.guidance,30,23,1,0,NULL,1000,model,NULL,NULL);
  assert(a.trajectory.count>1);
  TrajectoryPoint last=a.trajectory.points[a.trajectory.count-1];
  native=world_lla_to_inertial(&model->world,last.latitude*DEG2RAD,

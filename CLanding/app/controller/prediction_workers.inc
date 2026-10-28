@@ -379,7 +379,8 @@ static void *terminal_prediction_worker(void *arg){
                isfinite(telemetry.range_to_site)){
                 double aoa=NAN; /* forecasts fly the live MM304 alpha schedule, not a frozen target */
                 double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
-                double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);
+                double search_bank_limit=cfg.vehicle.maximum_bank_angle;
+                double hi=search_bank_limit;
                 double lo=0.0,f_lo=NAN,f_hi=NAN;
                 double sound_floor=planet_atmospheric_speed_of_sound(&planet,cfg.guidance.mm305_max_altitude);
                 /* Experimental STS hands over at the band centre (guidance_terminal.c). */
@@ -390,7 +391,7 @@ static void *terminal_prediction_worker(void *arg){
                 for(int iteration=0;;++iteration){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);
                     EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound,supervision_terminal_model,&telemetry);
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound,supervision_terminal_model,&telemetry,&guidance.entry_lateral);
                     double handoff=entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model);
                     entry_prediction_clear(&f);
                     double miss=handoff-target; /* + : hands off too far out (short) */
@@ -419,7 +420,7 @@ static void *terminal_prediction_worker(void *arg){
                        build between the planned reversals. */
                     double sched[4]={0};unsigned n=0;
                     EntryPrediction f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound,supervision_terminal_model,&telemetry);
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,solved,aoa,side,0,sched,bound,supervision_terminal_model,&telemetry,&guidance.entry_lateral);
                     double hold_err=entry_policy_handoff_heading_error(&f,&planet,&cfg,supervision_terminal_model),best_err=hold_err;
                     double wall0=monotonic_seconds(),plan_bank=solved;
                     /* The forecast's energy is not trusted alone (live arrived
@@ -428,16 +429,50 @@ static void *terminal_prediction_worker(void *arg){
                        distance AND pointed at the site. */
                     best_err=isfinite(hold_err)?hold_err+fabs(entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model)-target)/1000.0:NAN;
                     entry_prediction_clear(&f);
-                    double plan_aoa=cfg.vehicle.entry_angle_of_attack;
+                    double plan_aoa=cfg.vehicle.entry_angle_of_attack,plan_side=side;
+                    /* The incumbent is not generally on a new request-relative
+                       grid. Re-evaluate its exact remaining deadlines before
+                       replacing it, or replanning itself creates extra reversals. */
+                    const EntryControlPlan *incumbent=&guidance.entry_s_turn_plan;
+                    if(incumbent->valid&&isfinite(incumbent->target_aoa)&&
+                       isfinite(incumbent->target_bank)&&isfinite(incumbent->planned_ut)&&
+                       request_ut-incumbent->planned_ut<=MM304_S_TURN_PLAN_MAX_AGE_S){
+                        double remaining[4]={0},inc_side=incumbent->target_bank>=0?1:-1;
+                        unsigned count=0;
+                        for(unsigned i=0;i<incumbent->schedule_count&&i<4;i++){
+                            if(incumbent->schedule_ut[i]<=request_ut)inc_side=-inc_side;
+                            else remaining[count++]=incumbent->schedule_ut[i];
+                        }
+                        f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
+                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,
+                            fabs(incumbent->target_bank),incumbent->target_aoa,inc_side,count,
+                            remaining,bound,supervision_terminal_model,&telemetry,&guidance.entry_lateral);
+                        double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg,supervision_terminal_model);
+                        double handoff=entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model);
+                        double cost=heading+fabs(handoff-target)/1000.0;
+                        if(isfinite(cost)&&(!isfinite(best_err)||cost<best_err)){
+                            best_err=cost;plan_bank=fabs(incumbent->target_bank);
+                            plan_aoa=incumbent->target_aoa;plan_side=inc_side;
+                            n=f.s_turn_reversals<count?f.s_turn_reversals:count;
+                            for(unsigned i=0;i<4;i++)sched[i]=remaining[i];
+                        }
+                        entry_prediction_clear(&f);
+                    }
                     for(double cand_aoa=cfg.vehicle.entry_angle_of_attack;cand_aoa<=cfg.vehicle.maximum_angle_of_attack+1e-6;cand_aoa+=MM304_S_TURN_PLAN_AOA_STEP_DEG)
-                    for(double bank=solved;bank>=MM304_S_TURN_PLAN_MIN_BANK_DEG-1e-6;bank-=MM304_S_TURN_PLAN_BANK_STEP_DEG)
-                    /* t1 starts inside one replan interval, or the plan procrastinates */
-                    for(double t1=MM304_S_TURN_PLAN_FIRST_S;t1<=MM304_S_TURN_PLAN_HORIZON_S;t1+=MM304_S_TURN_PLAN_STEP_S)
+                    /* The scalar energy solve is not a lateral-authority bound.
+                       Search the configured envelope even when its straight
+                       policy says wings level: a reversal can trade crossrange
+                       for energy while arriving pointed toward the site. */
+                    for(double bank=search_bank_limit;bank>=MM304_S_TURN_PLAN_MIN_BANK_DEG-1e-6;bank-=MM304_S_TURN_PLAN_BANK_STEP_DEG)
+                    /* Always offer a due-now reversal. A positive minimum
+                       delay can be pushed forward forever by faster replans. */
+                    for(double t1=0;t1<=MM304_S_TURN_PLAN_HORIZON_S;
+                        t1=t1==0?MM304_S_TURN_PLAN_FIRST_S:t1+MM304_S_TURN_PLAN_STEP_S)
                     for(double leg=MM304_S_TURN_PLAN_MIN_LEG_S;leg<=MM304_S_TURN_PLAN_MAX_LEG_S;leg+=MM304_S_TURN_PLAN_LEG_STEP_S){
                         double cand[4];
                         for(unsigned i=0;i<4;i++)cand[i]=request_ut+t1+i*leg;
                         f=predictor_simulate_entry_policy_reversal(state,&planet,aero,&envelope,
-                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound,supervision_terminal_model,&telemetry);
+                            &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,cand_aoa,side,4,cand,bound,supervision_terminal_model,&telemetry,&guidance.entry_lateral);
                         double heading=entry_policy_handoff_heading_error(&f,&planet,&cfg,supervision_terminal_model);
                         double handoff=entry_policy_handoff_distance(&f,&planet,&cfg,supervision_terminal_model);
                         double err=heading+fabs(handoff-target)/1000.0; /* deg + km */
@@ -452,7 +487,7 @@ static void *terminal_prediction_worker(void *arg){
                                     f.trajectory.points[i].altitude,f.trajectory.points[i].speed);
                         entry_prediction_clear(&f);
                         if(isfinite(err)&&(!isfinite(best_err)||err<best_err)){
-                            best_err=err;n=used;plan_bank=bank;plan_aoa=cand_aoa;for(unsigned i=0;i<4;i++)sched[i]=cand[i];
+                            best_err=err;n=used;plan_bank=bank;plan_aoa=cand_aoa;plan_side=side;for(unsigned i=0;i<4;i++)sched[i]=cand[i];
                         }
                     }
                     if(getenv("KSP_LANDER_TRACE_S_TURN"))
@@ -461,7 +496,7 @@ static void *terminal_prediction_worker(void *arg){
                     if(isfinite(best_err)){
                         plan_out->valid=true;
                         plan_out->planned_ut=request_ut;
-                        plan_out->target_bank=side*plan_bank;
+                        plan_out->target_bank=plan_side*plan_bank;
                         guidance.entry_policy_bank_deg=plan_bank;
                         plan_out->target_aoa=plan_aoa;
                         plan_out->cost=best_err;
@@ -469,10 +504,10 @@ static void *terminal_prediction_worker(void *arg){
                         for(unsigned i=0;i<4;i++)plan_out->schedule_ut[i]=i<n?sched[i]:NAN;
                         plan_out->has_planned_reversal=n>0;
                         plan_out->planned_reversal_ut=n?sched[0]:NAN;
-                        plan_out->planned_reversal_sign=n?-side:0.0;
+                        plan_out->planned_reversal_sign=n?-plan_side:0.0;
                         plan_out->planned_reversal_is_final=false;
                         fprintf(stderr,"MM304 S-turn plan: ut=%.1f side %+.0f aoa %.0f bank %.0f reversals %u at +%.1f +%.1f s (cost %.1f; hold heading %.1f deg)\n",
-                            request_ut,side,plan_aoa,plan_bank,n,n>0?sched[0]-request_ut:NAN,n>1?sched[1]-request_ut:NAN,best_err,hold_err);
+                            request_ut,plan_side,plan_aoa,plan_bank,n,n>0?sched[0]-request_ut:NAN,n>1?sched[1]-request_ut:NAN,best_err,hold_err);
                     }
                 }
             }

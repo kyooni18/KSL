@@ -231,6 +231,19 @@ static double entry_required_average_drag(GeoPoint geo,double speed,double range
 }
 static void predictor_change_sign(PredictorGuidance*g,double sign){sign=sign>=0?1:-1;if(g->sign==sign)return;if(g->sign!=0)g->reversals++;g->sign=sign;g->leg_elapsed=0;g->established=false;g->configured_leg_dwell_satisfied=false;}
 static void predictor_attitude_step(PredictorGuidance*g,double target_bank,double target_aoa,const AtmosState*a,const VehicleProfile*v,const GuidanceSettings*set,double dt,const VesselPhysicsModel *physics){
+    if(g->has_policy_attitude){
+        /* The captured response includes q-dependent torque/rate authority.
+           Integrate at its physics cadence, not with the trajectory RK step. */
+        attitude_set_command(&g->policy_attitude,target_aoa*DEG2RAD,target_bank*DEG2RAD);
+        unsigned steps=(unsigned)ceil(dt/.02);
+        double step=dt/fmax(1u,steps);
+        for(unsigned i=0;i<steps;i++)attitude_step(&g->policy_attitude,a->q,step);
+        g->actual_bank=g->policy_attitude.bank_rad*RAD2DEG;
+        g->actual_bank_rate=g->policy_attitude.bank_rate_rad_s*RAD2DEG;
+        g->actual_aoa=g->policy_attitude.aoa_rad*RAD2DEG;
+        g->actual_aoa_rate=g->policy_attitude.aoa_rate_rad_s*RAD2DEG;
+        return;
+    }
     bool measured_roll=physics&&physics->authority_confidence[1]>0&&isfinite(physics->authority[1])&&physics->authority[1]>1e-6;
     bool measured_pitch=physics&&physics->authority_confidence[0]>0&&isfinite(physics->authority[0])&&physics->authority[0]>1e-6;
     if(measured_roll)
@@ -615,7 +628,25 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
             env,course,bearing,response);
         if(targetbank*g->sign<0.0&&fabs(targetbank)>18.0)targetbank=-g->sign*18.0;
     }else targetbank=g->sign*fmin(env,command_mag);
-    double limited=norm_signed_deg(jerk_angle_update(&g->limiter,targetbank,set->entry_roll_rate*rs,set->entry_roll_acceleration*as,dt));
+    double limited;
+    if(forced_policy&&g->schedule_count){
+        /* A planned reversal is a demand, not an instantaneous bank exchange.
+           Use the executive's allocator so capture/dwell and reference lead
+           limits are identical to those which will execute this schedule. */
+        EntryLateralLimits limits=entry_lateral_default_limits();
+        limits.maximum_bank_deg=env;
+        limits.maximum_roll_rate_deg_s=set->entry_roll_rate;
+        limits.maximum_roll_accel_deg_s2=set->entry_roll_acceleration;
+        EntryLateralInput input={.ut=s.ut,.dt=dt,.relative_speed=a->speed,
+            .measured_bank_deg=g->actual_bank,.measured_bank_rate_deg_s=g->actual_bank_rate,
+            .bank_effectiveness=1,.lift_accel=a->lift_accel,
+            .has_simulated_lift_observation=true,.has_bank_magnitude=true,
+            .bank_magnitude_deg=mag,.has_planned_side=true,.planned_side=g->sign,
+            .has_azimuth_error=true,.azimuth_error_deg=he};
+        EntryLateralOutput output=entry_lateral_update(&g->policy_lateral,&input,&limits);
+        limited=output.valid?output.target_bank_deg:g->actual_bank;
+    }else limited=norm_signed_deg(jerk_angle_update(&g->limiter,targetbank,
+        set->entry_roll_rate*rs,set->entry_roll_acceleration*as,dt));
     double predicted_g_force=a->non_gravity/fmax(planet_surface_gravity(p),.1);
     double predicted_stall_fraction=vessel_physics_conservative_stall_fraction(a->speed,g->actual_aoa,a->q,v);
     if(!g->entry_loaded&&a->non_gravity>=1.5)g->entry_loaded=true;
@@ -687,7 +718,7 @@ static double predictor_step_size(const AtmosState*a,const PlanetModel*p,
 
 
 void entry_prediction_clear(EntryPrediction*p){if(!p)return;trajectory_clear(&p->trajectory);memset(p,0,sizeof(*p));}
-static EntryPrediction predictor_simulate_entry_core(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env0,const TrajectoryCalibrationModel*cal0,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double initial_sign,double initial_leg,bool initial_final_heading_lock,double maxdur,bool include,bool force_control,double forced_bank,double forced_aoa,double forced_duration,double control_horizon_duration,bool stop_at_taem,bool enforce_terminal_delivery_budget,const EntryControlPlan*replay,const TaemInterfaceTarget*interface_target,const TerminalModel*entry_model){
+static EntryPrediction predictor_simulate_entry_core(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env0,const TrajectoryCalibrationModel*cal0,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double initial_sign,double initial_leg,bool initial_final_heading_lock,double maxdur,bool include,bool force_control,double forced_bank,double forced_aoa,double forced_duration,double control_horizon_duration,bool stop_at_taem,bool enforce_terminal_delivery_budget,const EntryControlPlan*replay,const TaemInterfaceTarget*interface_target,const TerminalModel*entry_model,const EntryLateralState*initial_lateral){
     EntryPrediction out;memset(&out,0,sizeof(out));trajectory_init(&out.trajectory);out.closest_distance=DBL_MAX;out.taem_distance=DBL_MAX;out.taem_altitude=NAN;out.taem_desired_altitude=NAN;out.minimum_entry_speed=DBL_MAX;out.minimum_bank_control_margin=INFINITY;out.minimum_aoa_control_margin=INFINITY;
     AerodynamicEnvelope uniform;if(!env0){for(int i=0;i<4;i++)uniform.regimes[i]=aero;env0=&uniform;}
     TrajectoryCalibrationModel dc={
@@ -696,6 +727,7 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
         .altitude_residual=0,.speed_residual=0,.range_residual=0,.confidence=.05,.accepted_samples=0
     };if(!cal0)cal0=&dc;
     PredictorGuidance g;memset(&g,0,sizeof(g));g.sign=fabs(initial_sign)>.1?(initial_sign>=0?1:-1):0;g.leg_elapsed=fmax(0,initial_leg);g.established=initial_leg>0;g.final_heading_lock=initial_final_heading_lock;g.limiter.has_value=true;g.limiter.value=norm_deg(initial_bank);g.limiter.rate=0;g.actual_bank=norm_signed_deg(initial_bank);g.actual_bank_rate=clampd(initial_bank_rate,-60,60);g.actual_aoa=isfinite(initial_aoa)?clampd(initial_aoa,-v->maximum_angle_of_attack*1.5,v->maximum_angle_of_attack*1.5):scheduled_aoa(vmag(state.position)-p->radius,p,v);g.actual_aoa_rate=isfinite(initial_aoa_rate)?clampd(initial_aoa_rate,-15,15):0;g.force_control=force_control&&forced_duration>0;g.forced_until_ut=state.ut+fmax(0,forced_duration);g.control_horizon_ut=state.ut+fmax(0,control_horizon_duration);g.forced_bank=forced_bank;g.forced_aoa=forced_aoa;g.enforce_terminal_delivery_budget=enforce_terminal_delivery_budget;
+    if(initial_lateral)g.policy_lateral=*initial_lateral;
     g.entry_loaded=initial_leg>0;
     g.configured_leg_dwell_satisfied=initial_leg+1e-6>=set->s_turn_minimum_leg_duration;
     if(interface_target&&interface_target->valid){g.has_interface_target=true;g.interface_target=*interface_target;}
@@ -722,6 +754,14 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
        terminal_model_policy_matches(entry_model,site,v,set)&&
        terminal_model_planet_matches(entry_model,p)&&!ctx.gear&&!ctx.airbrakes)
         ctx.entry_table=entry_model;
+    if(force_control&&ctx.entry_table&&!entry_model->attitude.direct){
+        g.has_policy_attitude=true;
+        g.policy_attitude=entry_model->attitude;
+        g.policy_attitude.aoa_rad=g.actual_aoa*DEG2RAD;
+        g.policy_attitude.bank_rad=g.actual_bank*DEG2RAD;
+        g.policy_attitude.aoa_rate_rad_s=g.actual_aoa_rate*DEG2RAD;
+        g.policy_attitude.bank_rate_rad_s=g.actual_bank_rate*DEG2RAD;
+    }
     while(elapsed<maxdur){
         GeoPoint geo=predictor_geo_point(state.position,p,state.ut);double range=great_circle_distance(geo,target,p->radius);
         AtmosState at=atmosphere(state.position,state.velocity,&ctx);Vector3 up=vnorm(state.position,v3(0,1,0));double vs=vdot(at.air_velocity,up),hs=vmag(vproject_plane(at.air_velocity,up)),fpa=atan2(vs,fmax(hs,.1))*RAD2DEG;
@@ -893,7 +933,7 @@ static EntryPrediction predictor_simulate_entry_core(VehicleState state,const Pl
 }
 
 EntryPrediction predictor_simulate_entry_with_attitude(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_bank_rate,double initial_aoa,double initial_aoa_rate,double initial_sign,double initial_leg,double maxdur,bool include){
-    return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,initial_bank_rate,initial_aoa,initial_aoa_rate,initial_sign,initial_leg,false,maxdur,include,false,0,0,0,0,false,false,NULL,NULL,NULL);
+    return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,initial_bank_rate,initial_aoa,initial_aoa_rate,initial_sign,initial_leg,false,maxdur,include,false,0,0,0,0,false,false,NULL,NULL,NULL,NULL);
 }
 
 EntryPrediction predictor_simulate_entry_with_rate(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_bank_rate,double initial_sign,double initial_leg,double maxdur,bool include){
@@ -906,20 +946,20 @@ EntryPrediction predictor_simulate_entry_with_rate(VehicleState state,const Plan
 EntryPrediction predictor_simulate_entry_policy(VehicleState state,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,
         const LandingSite*site,const GuidanceSettings*set,double bank_deg,double aoa_deg,
-        double sign,double maxdur,const TerminalModel*entry_model,const Telemetry*initial){
+        double sign,double maxdur,const TerminalModel*entry_model,const Telemetry*initial,const EntryLateralState*initial_lateral){
     return predictor_simulate_entry_core(state,p,aero,env,cal,v,site,set,v->maximum_bank_angle,
         initial?initial->roll:sign*bank_deg,initial?initial->roll_rate:0,
         initial?initial->angle_of_attack:aoa_deg,
         initial&&initial->has_angle_of_attack_rate?initial->angle_of_attack_rate:0,
         sign,0,false,maxdur,true,true,bank_deg,aoa_deg,maxdur,maxdur,
-        false,false,NULL,NULL,entry_model);
+        false,false,NULL,NULL,entry_model,initial_lateral);
 }
 /* The same policy flying exactly the S-turn reversals at reversal_ut[]
    (alternating sides from sign); no lateral logic of the predictor's own. */
 EntryPrediction predictor_simulate_entry_policy_reversal(VehicleState state,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,
         const LandingSite*site,const GuidanceSettings*set,double bank_deg,double aoa_deg,
-        double sign,unsigned count,const double*reversal_ut,double maxdur,const TerminalModel*entry_model,const Telemetry*initial){
+        double sign,unsigned count,const double*reversal_ut,double maxdur,const TerminalModel*entry_model,const Telemetry*initial,const EntryLateralState*initial_lateral){
     EntryControlPlan replay;memset(&replay,0,sizeof(replay));
     replay.valid=true;replay.target_bank=sign*bank_deg;
     /* an empty schedule still disables the predictor's own reversals */
@@ -930,7 +970,7 @@ EntryPrediction predictor_simulate_entry_policy_reversal(VehicleState state,cons
         initial?initial->angle_of_attack:aoa_deg,
         initial&&initial->has_angle_of_attack_rate?initial->angle_of_attack_rate:0,
         sign,0,false,maxdur,true,true,bank_deg,aoa_deg,maxdur,maxdur,
-        false,false,&replay,NULL,entry_model);
+        false,false,&replay,NULL,entry_model,initial_lateral);
 }
 EntryPrediction predictor_simulate_entry(VehicleState state,const PlanetModel*p,AerodynamicModel aero,const AerodynamicEnvelope*env,const TrajectoryCalibrationModel*cal,const VehicleProfile*v,const LandingSite*site,const GuidanceSettings*set,double maxbank,double initial_bank,double initial_sign,double initial_leg,double maxdur,bool include){
     return predictor_simulate_entry_with_rate(state,p,aero,env,cal,v,site,set,maxbank,initial_bank,0,initial_sign,initial_leg,maxdur,include);
