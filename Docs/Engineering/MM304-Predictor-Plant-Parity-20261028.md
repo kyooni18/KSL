@@ -1,6 +1,6 @@
 # MM304 predictor / plant parity — 2026-10-28
 
-Status: investigation, not flight-qualified. Work is isolated on
+Status: completed replay investigation; **landing acceptance failed, not merge/flight-qualified**. Work is isolated on
 `mm304-planned-sturn` from `d2a05bc`. Main's local changes and flyable binary
 are untouched. No merge or live rebuild is authorized by these results.
 
@@ -134,8 +134,8 @@ an explicitly evaluated continuation candidate. Rebuilding only a coarse grid
 relative to each request omitted the very policy currently being flown, and
 successive replans introduced bank exchanges not present in earlier forecasts.
 The continuation competes on the same score; there is no switching penalty or
-new timing threshold. These last two experiments are still awaiting complete
-replay/regression evidence and are not flight-qualified.
+new timing threshold. Complete results for these last two experiments are recorded below. Neither
+is flight-qualified.
 
 ## Regression comparison before the envelope experiment
 
@@ -152,3 +152,78 @@ scenarios and configuration. Touchdown values are identical:
 | sts-kerbin-20261021-quicksave-mm305 | 674.383 / −0.116 | Pass |
 
 Unchanged pre-existing failures are not counted as passes.
+
+
+## Captured-response-only result
+
+`mm304-captured-response-20261028T054626Z-_efvu9jo` landed at −4095.348 m
+along / −2.726 m cross, with 15.905 m/s sink and a tail strike. It is rejected
+as a landing solution.
+
+
+## Final checkpoint result (a14f910)
+
+Run `mm304-continuation-20261028T055005Z-pnozsmov` completed without a simulator
+crash, but `success=false`, `on_runway=false`: touchdown **−1540.809 m along /
+−2.542 m cross**, sink **4.052 m/s**, speed 60.677 m/s, gear down. Compared
+with the supplied branch witness (+17.474 / −16.477 km, crash), this is a
+large improvement in delivery, but it does not meet landing acceptance.
+
+The remaining forecast error at handoff is much smaller than the original
+late-entry divergence:
+
+| Plant Mach | Latest plan score |
+|---:|---:|
+| 5.0 | 7.1 |
+| 4.5 | 5.4 |
+| 4.0 | 8.9 |
+| 3.5 | 12.6 |
+| 3.0 | 15.1 |
+| 2.5 | 14.7 |
+
+At the first plant sample inside Mach 2.5 below 30 km (UT 148743778.286316),
+altitude is 25487.030 m, speed 756.591 m/s, distance to the configured site
+46247.510 m, course 147.692°, bearing 135.844°. The independently calculated
+realized score is **15.20** (11.85° heading error plus 3.35 km distance error
+against the logged 49.6 km target), versus the latest forecast **14.7**.
+That is a useful handoff forecast, not evidence of runway landing success.
+The remaining short touchdown must be investigated from this inlet through
+MM305/Final; this work does not establish which downstream component owns it.
+
+Final six-scenario comparison, all using the same requested profile and
+`runs/20261027T235952Z-deorbit/backend-configuration.json` for both baseline
+and candidate:
+
+| Scenario | d2a05bc result | Final along / cross (m) | Final result |
+|---|---|---:|---|
+| sts-live-oms72-entry-20261009 | Crash, +134996 / +6692 m | −533.476 / +59.956 | No crash; short/off runway |
+| sts72km-run9-entry-interface | Crash, +217638 / −10436 m | +39970.550 / +5027.852 | Crash |
+| sts-kerbin-20261022-live-orbit86-mm304-40km | Pass | +815.619 / −0.467 | Pass, sink 2.938 m/s |
+| sts-kerbin-20261028-live-overhead-mm305 | Runway failure | −597.938 / +0.114 | Same runway failure |
+| sts-kerbin-20261022-live-orbit86-mm305 | Pass | +662.171 / −0.009 | Pass, unchanged |
+| sts-kerbin-20261021-quicksave-mm305 | Pass | +674.383 / −0.116 | Pass, unchanged |
+
+All previously passing scenarios remain passing. The other three remain
+failures, not qualification successes. Final `make -C CLanding test` passed;
+no additional broad test runs were needed after the final documentation edit.
+All replay processes have finished. Trace instrumentation is retained because
+the requested landing condition remains unmet. Main was not merged or rebuilt.
+
+### Reproduction
+
+Worktree: `/Users/kyooni18/.codex/worktrees/mm304-predictor/KSL`.
+From its ShuttleSim directory, the final replay used:
+
+```sh
+KSP_LANDER_MODEL_PROFILE=sts-live-20261015-live-only \
+KSP_LANDER_TRACE_S_TURN=1 python3 scripts/run_guidance.py \
+  --scenario scenarios/sts-kerbin-20261028-live-entry-72km.ini \
+  --engage engageReentry \
+  --configuration /Users/kyooni18/Code/KSL/runs/20261027T235952Z-deorbit/backend-configuration.json \
+  --quiet-progress --compact-guidance-log --skip-build --label continuation
+```
+
+Per-run manifests and compressed telemetry are retained in the worktree's
+`ShuttleSim/runs/`. The final regression IDs begin `mm304-parity-continuation-`.
+The baseline used a separately compiled d2a05bc source archive; no main build
+or user WIP files were used as build output.
