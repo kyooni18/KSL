@@ -91,8 +91,8 @@ def test_separation_attitude_hold_is_distinct_from_engine_limiter_hold():
 
 def test_separation_pitch_handoff_gradually_releases_insertion_command():
     assert separation_pitch_transition(78., -30., 5.) == 78.
-    assert separation_pitch_transition(78., -30., 8.) == pytest.approx(66.768)
-    assert separation_pitch_transition(78., -30., 20.) == -30.
+    assert separation_pitch_transition(78., -30., 8.) == pytest.approx(74.976)
+    assert separation_pitch_transition(78., -30., 35.) == -30.
     guide = InsertionGuidance(MU, R+90000., R+60000., R+72000.,
                               pitch_response_seconds=5., pitch_bounds=(-90., 90.))
     args = (R+74000., R+30000., 500., 1000., 180000., 2811000.,

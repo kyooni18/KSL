@@ -220,7 +220,8 @@ def separate_sts_boosters_batch(conn, core_groups, boosters, motors, decouplers)
         response = conn._rpc_connection.receive_message(KRPC_pb2.Response)
     if response.HasField('error'):
         raise RuntimeError('Booster separation batch failed; staging may be partial: '
-                           + response.error.description)
+                           + response.error.description +
+                           ('\n' + response.error.stack_trace if response.error.stack_trace else ''))
     failures = [f'{label}: {result.error.description}'
                 for label, result in zip(labels, response.results)
                 if result.HasField('error')]

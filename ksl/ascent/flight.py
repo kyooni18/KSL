@@ -344,8 +344,7 @@ def run(args):
         def prepare_separation_hold():
             nonlocal separation_hold_direction
             if separation_hold_direction is None:
-                separation_hold_direction = ap.ctrl.hold_attitude(
-                    float('inf'), preserve_target_roof=True)
+                separation_hold_direction = ap.ctrl.hold_attitude(float('inf'))
                 print('Captured attitude for booster separation')
 
         ssme_restarts = 0
