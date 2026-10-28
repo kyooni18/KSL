@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <link rel="stylesheet" href="/styles.css?v=launch-console-2">
+  <link rel="stylesheet" href="/styles.css?v=launch-console-3">
 </head>
 <body>
   <nav class="telemetry-pages" aria-label="Telemetry views">
@@ -135,7 +135,7 @@
         <div class="launch-title">
           <span class="launch-kicker">LAUNCH · LIVE STATUS</span>
           <span id="launch-situation" class="chip">—</span>
-          <span id="launch-clock" class="launch-clock" title="Elapsed since the first recorded ascent sample">ASCENT —</span>
+          <span id="launch-clock" class="launch-clock" title="Mission elapsed time since liftoff">MET —</span>
         </div>
         <div id="launch-status" class="launch-status muted">Waiting for telemetry</div>
       </header>
@@ -177,7 +177,7 @@
           <div class="launch-chart">
             <div class="launch-chart-head">
               <span>3D TRAJECTORY</span>
-              <span class="launch-legend"><i class="swatch actual"></i>FLIGHT<i class="swatch track"></i>GROUND TRACK<span>DRAG TO ROTATE</span></span>
+              <span class="launch-legend"><i class="swatch actual"></i>FLIGHT<i class="swatch planned"></i>PLAN<i class="swatch track"></i>GROUND TRACK<span>DRAG TO ROTATE</span></span>
             </div>
             <canvas id="launch-3d" aria-label="3D ascent trajectory relative to the launch site" role="img"></canvas>
           </div>
@@ -261,6 +261,6 @@
   </aside>
 
   <script src="/runway-geometry.js?v=20260924-ksc-runway-1"></script>
-  <script src="/app.js?v=launch-console-2"></script>
+  <script src="/app.js?v=launch-console-3"></script>
 </body>
 </html>

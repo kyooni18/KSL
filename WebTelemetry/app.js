@@ -1302,7 +1302,7 @@
   }
 
 
-  function drawShuttleMapIndicator(t, width, height, colors) {
+  function drawShuttleMapIndicator(t, width, height, colors, dot = false) {
     if (!finite(t?.latitude) || !finite(t?.longitude)) return;
     const p = mapPoint(t, width, height);
     if (p.y < -40 || p.y > height + 40) return;
@@ -1313,6 +1313,12 @@
       ? p.x + Math.round((width / 2 - p.x) / span) * span
       : p.x;
     if (x < -40 || x > width + 40) return;
+
+    if (dot) {
+      mapCtx.fillStyle = "#ffffff"; mapCtx.strokeStyle = "#0b1726"; mapCtx.lineWidth = 2;
+      mapCtx.beginPath(); mapCtx.arc(x, p.y, 5, 0, Math.PI * 2); mapCtx.fill(); mapCtx.stroke();
+      return;
+    }
 
     const heading = finite(t.heading) ? n(t.heading) : n(t.groundTrackHeading);
     const angle = heading * Math.PI / 180;
@@ -1883,6 +1889,7 @@
   // Stock Kerbin atmosphere top, used to label periapsis.
   const KERBIN_ATMOSPHERE_M = 70000;
   const KERBIN_RADIUS_M = 600000;
+  const KERBIN_ROTATION_PERIOD_S = 21549.425;
 
   function setAlert(id, message) {
     const element = $(id);
@@ -1908,8 +1915,17 @@
     return finite(value) ? `${(n(value) / 1000).toFixed(0)} kN` : "—";
   }
 
-  // Elapsed time across the recorded ascent samples; the first sample is not necessarily liftoff.
+  // Liftoff UT from KSP's mission elapsed time; without MET (e.g. replays) fall back to the first recorded sample.
+  function launchLiftoffUt() {
+    const t = snapshot?.telemetry || {};
+    if (finite(t.ut) && finite(t.missionElapsedTime) && n(t.missionElapsedTime) > 0) return n(t.ut) - n(t.missionElapsedTime);
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut));
+    return points.length ? n(points[0].ut) : null;
+  }
+
   function launchElapsedSeconds() {
+    const t = snapshot?.telemetry || {};
+    if (finite(t.missionElapsedTime) && n(t.missionElapsedTime) > 0) return n(t.missionElapsedTime);
     const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut));
     return points.length < 2 ? null : n(points[points.length - 1].ut) - n(points[0].ut);
   }
@@ -1928,7 +1944,7 @@
     const thrustWeight = finite(t.availableThrust) && finite(t.mass) && n(t.mass) > 0
       ? n(t.availableThrust) / (n(t.mass) * G0)
       : null;
-    put("launch-clock", elapsed === null ? "ASCENT —" : `ASCENT ${clockText(elapsed)}`);
+    put("launch-clock", elapsed === null ? "MET —" : `MET ${clockText(elapsed)}`);
 
     put("launch-altitude", distance(t.meanAltitude));
     put("launch-radar", `RADAR ${distance(t.radarAltitude)}`);
@@ -1984,7 +2000,7 @@
     const altitudeOf = (p) => Math.max(0, n(p.altitude ?? p.meanAltitude));
     const apoapsis = finite(snapshot?.telemetry?.apoapsisAltitude) ? n(snapshot.telemetry.apoapsisAltitude) : null;
     const plan = (snapshot?.ascentPlan || []).filter(p => finite(p.ut) && finite(p.altitude));
-    const start = n(points[0].ut);
+    const start = launchLiftoffUt() ?? n(points[0].ut);
     // The time axis extends to the end of the plan so the remaining profile stays visible ahead of the vehicle.
     const end = Math.max(n(points[points.length - 1].ut), plan.length ? n(plan[plan.length - 1].ut) : -Infinity);
     const span = Math.max(1, end - start);
@@ -2000,7 +2016,7 @@
       const altitude = topAltitude * i / 4, y = yOf(altitude);
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
       ctx.fillText(`${(altitude / 1000).toFixed(altitude >= 10000 ? 0 : 1)} km`, 6, y + 4);
-      ctx.fillText(clockText(span * i / 4), Math.min(xOf(start + span * i / 4) - 12, right - 34), height - 8);
+      ctx.fillText(`T+${clockText(span * i / 4)}`, Math.min(xOf(start + span * i / 4) - 12, right - 52), height - 8);
     }
 
     const tracePath = () => {
@@ -2011,6 +2027,8 @@
       });
     };
     const last = points[points.length - 1];
+    ctx.save();
+    ctx.beginPath(); ctx.rect(left, top, right - left, bottom - top); ctx.clip();
     tracePath();
     ctx.lineTo(xOf(n(last.ut)), bottom); ctx.lineTo(left, bottom); ctx.closePath();
     const fill = ctx.createLinearGradient(0, top, 0, bottom);
@@ -2042,6 +2060,7 @@
 
     tracePath();
     ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
     ctx.fillStyle = "#eef2f4";
     ctx.beginPath(); ctx.arc(xOf(n(last.ut)), yOf(altitudeOf(last)), 3.5, 0, Math.PI * 2); ctx.fill();
   }
@@ -2069,8 +2088,9 @@
       while (dLon < -180) dLon += 360;
       return [dLon * kmPerDeg * Math.cos(lat0), (n(p.latitude) - n(origin.latitude)) * kmPerDeg, Math.max(0, n(p.altitude ?? p.meanAltitude)) / 1000];
     });
+    const planned = launchPlan3d(points, local, lat0);
     // One shared scale keeps downrange and altitude in true proportion.
-    const extent = Math.max(5, ...local.map(([x, y, z]) => Math.max(Math.abs(x), Math.abs(y), z)));
+    const extent = Math.max(5, ...local.concat(planned).map(([x, y, z]) => Math.max(Math.abs(x), Math.abs(y), z)));
     const grid = niceMapDistance(extent * 1000 / 2) / 1000, half = Math.ceil(extent / grid) * grid;
     const { yaw, pitch } = launch3dView, cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
     const scale = Math.min(width, height) * 0.36 / half;
@@ -2096,6 +2116,7 @@
     }
 
     line(local.map(([x, y]) => [x, y, 0]), "#5d738a", 1.2, [4, 4]);
+    if (planned.length > 1) line(planned, "#ff9b52", 1.6);
     line(local, "#66d8ef", 2);
     const last = local[local.length - 1];
     line([last, [last[0], last[1], 0]], "rgba(238,242,244,.35)", 1, [2, 3]);
@@ -2106,6 +2127,30 @@
     const downrange = Math.hypot(last[0], last[1]);
     ctx.fillStyle = "#899fb5";
     ctx.fillText(`DOWNRANGE ${downrange.toFixed(1)} km · ALT ${last[2].toFixed(1)} km`, 12, height - 10);
+  }
+
+  // The plan carries only altitude and inertial horizontal speed, so it is laid out along the flown
+  // track direction at the plan start, with Kerbin's rotation removed to get surface downrange.
+  function launchPlan3d(points, local, lat0) {
+    const plan = (snapshot?.ascentPlan || []).filter(p => finite(p.ut) && finite(p.altitude) && finite(p.horizontalSpeed));
+    if (plan.length < 2) return [];
+    const startUt = n(plan[0].ut);
+    let anchor = 0;
+    points.forEach((p, i) => { if (Math.abs(n(p.ut) - startUt) < Math.abs(n(points[anchor].ut) - startUt)) anchor = i; });
+    let back = anchor;
+    while (back > 0 && n(points[anchor].ut) - n(points[back].ut) < 10) back--;
+    const dx = local[anchor][0] - local[back][0], dy = local[anchor][1] - local[back][1], len = Math.hypot(dx, dy);
+    if (!(len > 1e-3)) return [];
+    const ex = dx / len, ey = dy / len;
+    const rotation = 2 * Math.PI * KERBIN_RADIUS_M / KERBIN_ROTATION_PERIOD_S * Math.cos(lat0) * ex;
+    let downrange = 0;
+    return plan.map((p, i) => {
+      if (i) {
+        const prev = plan[i - 1];
+        downrange += ((n(prev.horizontalSpeed) + n(p.horizontalSpeed)) / 2 - rotation) * (n(p.ut) - n(prev.ut)) / 1000;
+      }
+      return [local[anchor][0] + ex * downrange, local[anchor][1] + ey * downrange, Math.max(0, n(p.altitude)) / 1000];
+    });
   }
 
   function drawLaunchMap() {
@@ -2133,7 +2178,7 @@
     drawPath(snapshot.actualTrajectory || [], width, height, c.cyan, 2, [], 1.8, .9);
     const site = snapshot.site || {};
     if (finite(site.latitude) && finite(site.longitude)) drawEndpointMarker(site, width, height, c.orange, "KSC", snapshot.telemetry?.ut);
-    drawShuttleMapIndicator(snapshot.telemetry || {}, width, height, { cyan: c.cyan, green: c.green, orange: c.orange, text: c.text });
+    drawShuttleMapIndicator(snapshot.telemetry || {}, width, height, { cyan: c.cyan, green: c.green, orange: c.orange, text: c.text }, true);
   }
 
   // Pan, zoom and resize paths call this so the open page keeps its own map.

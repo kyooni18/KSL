@@ -284,7 +284,9 @@ def ascent_plan_profile(root: Path, current_ut: float | None) -> list[dict[str, 
                 for p in stage:
                     t, r = optional_number(p.get("time")), optional_number(p.get("radius"))
                     if t is not None and r is not None:
-                        points.append({"ut": start + offset + t, "altitude": r - KERBIN_RADIUS_M})
+                        # Inertial horizontal speed lets the page integrate downrange for the 3D view.
+                        points.append({"ut": start + offset + t, "altitude": r - KERBIN_RADIUS_M,
+                                       "horizontalSpeed": optional_number(p.get("horizontal_speed"))})
                 offset += optional_number((stage[-1] if stage else {}).get("time")) or 0.0
         points.sort(key=lambda p: p["ut"])
         _ascent_plan_cache.update(key=key, points=points)
@@ -3578,6 +3580,8 @@ def collector_loop(store: SnapshotStore, root: Path, configuration: dict[str, An
             telemetry = {
                 "ut": ut,
                 "vesselName": str(read_optional(vessel, "name", "—")),
+                # KSP's MET starts at liftoff (first stage activation), so ut - MET is the liftoff UT.
+                "missionElapsedTime": optional_number(read_optional(vessel, "met")),
                 "latitude": latitude,
                 "longitude": longitude,
                 "meanAltitude": altitude,
