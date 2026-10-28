@@ -71,6 +71,53 @@ def test_preseparation_capture_is_preserved_until_after_actual_staging():
     assert controller._target_for_step() == (controller.forward, None)
 
 
+def test_separation_hold_does_not_freeze_existing_roll_error():
+    controller = AttitudeController.__new__(AttitudeController)
+    controller.lock = threading.Lock()
+    controller._rotation = lambda: (0., 0., 0., 1.)
+    controller._ut = lambda: 96.
+    controller.forward = (0., 1., 0.)
+    controller.roof = (.5, 0., -math.sqrt(.75))
+    controller._hold_until = None
+    controller._held_attitude = None
+    controller.hold_attitude(105., preserve_target_roof=True)
+    assert controller._target_for_step() == ((0., 1., 0.), controller.roof)
+
+
+def test_settled_booster_roll_uses_conservative_authority_and_input_limit():
+    controller = AttitudeController.__new__(AttitudeController)
+    controller._target_for_step = lambda: ((0., 1., 0.), (.1, 0., -math.sqrt(.99)))
+    controller._rotation = lambda: (0., 0., 0., 1.)
+    controller._angvel = lambda: (0., 0., 0.)
+    controller.control = SimpleNamespace(pitch=0., roll=0., yaw=0.)
+    controller.roll_gate = (8., 5.)
+    controller._torque = (100., 100., 100.)
+    controller._moi = (10., 10., 10.)
+    controller.brake_fraction = (.6, .25, .6)
+    controller.max_rate = (1., 1., 1.)
+    controller.tau = (2., 2., 2.)
+    controller.rate_tau = .6
+    controller._integral = [0., 0., 0.]
+    controller.disturbance = (0., 0., 0.)
+    controller.int_limit = .35
+    controller.int_time = 6.
+    controller.dt = .04
+    controller.deadband = 0.
+    controller._telemetry = None
+    controller.roll_authority_fraction = 1.
+    controller.roll_input_limit = 1.
+    controller._step()
+    baseline = abs(controller.control.roll)
+    controller._integral = [0., 0., 0.]
+    controller.roll_authority_fraction = .25
+    controller.roll_input_limit = .5
+    controller._step()
+    assert abs(controller.control.roll) == pytest.approx(4*baseline)
+    controller._target_for_step = lambda: ((0., 1., 0.), (1., 0., 0.))
+    controller._step()
+    assert abs(controller.control.roll) <= .5
+
+
 def test_capture_callback_runs_before_detachment():
     shuttle = Shuttle.__new__(Shuttle)
     shuttle.et_attached = False

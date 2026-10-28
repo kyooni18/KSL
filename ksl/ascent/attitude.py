@@ -131,6 +131,8 @@ class AttitudeController:
         # Fraction of the reported torque trusted for braking. available_torque
         # overstates roll (in-line SSME gimbals give little roll), so roll brakes early.
         self.brake_fraction = (0.6, 0.25, 0.6)
+        self.roll_authority_fraction = 1.0
+        self.roll_input_limit = 1.0
         self.roll_gate = (8.0, 5.0)        # nose error (deg) above which roll is suppressed / fully on
         # telemetry
         self.error_deg = 0.0
@@ -159,11 +161,14 @@ class AttitudeController:
             self.forward = _unit(forward)
             self.roof = None if roof is None else _unit(roof)
 
-    def hold_attitude(self, until_ut):
-        """Hold measured nose and roof in inertial space until simulation UT."""
+    def hold_attitude(self, until_ut, preserve_target_roof=False):
+        """Hold the measured nose and either the measured or commanded roof."""
         rotation = self._rotation()
-        attitude = (qrot(rotation, (0., 1., 0.)), qrot(rotation, (0., 0., -1.)))
+        forward = qrot(rotation, (0., 1., 0.))
+        measured_roof = qrot(rotation, (0., 0., -1.))
         with self.lock:
+            roof = self.roof if preserve_target_roof and self.roof is not None else measured_roof
+            attitude = (forward, roof)
             self._held_attitude = attitude
             self._hold_until = until_ut
         return attitude[0]
@@ -283,16 +288,17 @@ class AttitudeController:
         inputs = [0.0, 0.0, 0.0]
         for i in range(3):
             err = w_des[i]-w[i]
-            t_avail = self._torque[i]
+            t_avail = self._torque[i] * (self.roll_authority_fraction if i == 1 else 1.0)
             cmd = self._moi[i]*err/self.rate_tau + self._integral[i] - self.disturbance[i]
             torque_cmd[i] = cmd
             u = -cmd/t_avail
-            saturated = abs(u) >= 1.0
+            limit = self.roll_input_limit if i == 1 else 1.0
+            saturated = abs(u) >= limit
             if not saturated or (u > 0) != (err*-1 > 0):
                 lim = self.int_limit*t_avail
                 self._integral[i] = max(-lim, min(lim, self._integral[i] +
                                                   self._moi[i]*err/self.int_time*self.dt))
-            u = max(-1.0, min(1.0, u))
+            u = max(-limit, min(limit, u))
             # small deadband: holding attitude must not drain the wheels' power
             inputs[i] = 0.0 if abs(u) < self.deadband else u
         self.control.pitch = inputs[0]

@@ -331,7 +331,8 @@ def run(args):
         def prepare_separation_hold():
             nonlocal separation_hold_direction
             if separation_hold_direction is None:
-                separation_hold_direction = ap.ctrl.hold_attitude(float('inf'))
+                separation_hold_direction = ap.ctrl.hold_attitude(
+                    float('inf'), preserve_target_roof=True)
                 print('Captured attitude for booster separation')
 
         ssme_restarts = 0
@@ -1062,9 +1063,8 @@ def run(args):
                                         previous_aim_direction, aim_direction,
                                         max(args.pitch_slew, 2.0), control_dt)
                                 previous_aim_direction = aim_direction
-                            if not shuttle.separated:
-                                ap.target_direction = aim_direction
-                                ap.target_roll = float('nan')
+                            # Keep nose and roof targets together; setting only
+                            # target_direction briefly clears the roll target.
                             surface_frame = v.surface_reference_frame
                             actual_direction = v.direction(surface_frame)
                             roll_up_reference = surface_up_for_pitch_heading(
@@ -1097,6 +1097,14 @@ def run(args):
                                 roll_accel_reference = max(8.0, min(40.0, live_roll_accel))
                             upright_phase = (shuttle.separated and roll_reset and
                                              shuttle.post_sep_roll_done_ut is None)
+                            if (shuttle.vehicle_kind == 'orbiter-shuttle' and
+                                    shuttle.solid_boosters and not shuttle.separated and
+                                    mission_roll_settled):
+                                ap.ctrl.roll_authority_fraction = .25
+                                ap.ctrl.roll_input_limit = args.roll_control_limit
+                            else:
+                                ap.ctrl.roll_authority_fraction = 1.0
+                                ap.ctrl.roll_input_limit = 1.0
                             if shuttle.separated:
                                 # After separation the autopilot owns all three axes. Its
                                 # output replaces a direct control.roll command, so the
