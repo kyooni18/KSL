@@ -24,6 +24,7 @@ import time
 import krpc
 
 from .engine_roles import is_oms_engine
+from .native import attitude_step
 
 
 def _dot(a, b):
@@ -330,58 +331,12 @@ class AttitudeController:
         simulation_dt = self.dt if simulation_dt is None else max(0., simulation_dt)
         forward, roof = self._target_for_step()
         q = self._rotation()
-        qi = qconj(q)
-        w = qrot(qi, self._angvel())
-        f = _unit(qrot(qi, forward))
-        nose = (0.0, 1.0, 0.0)
-        axis = _cross(nose, f)
-        s = _norm(axis)
-        angle = math.atan2(s, _dot(nose, f))
-        if s > 1e-9:
-            phi = [axis[i]/s*angle for i in range(3)]
-        elif angle > 1.0:
-            phi = [angle, 0.0, 0.0]
-        else:
-            phi = [0.0, 0.0, 0.0]
-        self.error_deg = math.degrees(angle)
-        roll_on = 0.0
-        if roof is not None:
-            u = qrot(qi, roof)
-            u = (u[0], 0.0, u[2])
-            if _norm(u) > 1e-6:
-                cur = (0.0, 0.0, -1.0)
-                roll_angle = math.atan2(_dot(nose, _cross(cur, u)), _dot(cur, _unit(u)))
-                start, full = self.roll_gate
-                roll_on = max(0.0, min(1.0, (start-self.error_deg)/max(1e-3, start-full)))
-                roll_on = max(getattr(self, 'roll_min_authority', 0.0), roll_on)
-                phi[1] = roll_angle*roll_on
-                self.roll_error_deg = math.degrees(roll_angle)
-        # Time-optimal-ish slew: fast while far, but never faster than the speed
-        # that can still be braked to zero over the remaining angle (alpha = T/I).
-        w_des = []
-        for i in range(3):
-            alpha = self._torque[i]/self._moi[i]
-            brake = math.sqrt(2.0*self.brake_fraction[i]*alpha*abs(phi[i]))
-            mag = min(self.max_rate[i], abs(phi[i])/self.tau[i], brake)
-            w_des.append(math.copysign(mag, phi[i]))
-        torque_cmd = [0.0, 0.0, 0.0]
-        inputs = [0.0, 0.0, 0.0]
-        for i in range(3):
-            err = w_des[i]-w[i]
-            t_avail = self._torque[i] * (self.roll_authority_fraction if i == 1 else 1.0)
-            cmd = (self._moi[i]*err/self.rate_tau + self._integral[i]
-                   - self.disturbance[i] - self.translation_moment[i])
-            torque_cmd[i] = cmd
-            u = -cmd/t_avail
-            limit = self.roll_input_limit if i == 1 else 1.0
-            saturated = abs(u) >= limit
-            if not saturated or (u > 0) != (err*-1 > 0):
-                lim = self.int_limit*t_avail
-                self._integral[i] = max(-lim, min(lim, self._integral[i] +
-                                                  self._moi[i]*err/self.int_time*simulation_dt))
-            u = max(-limit, min(limit, u))
-            # small deadband: holding attitude must not drain the wheels' power
-            inputs[i] = 0.0 if abs(u) < self.deadband else u
+        result = attitude_step(self, q, self._angvel(), forward, roof, simulation_dt)
+        w = tuple(result.angular_velocity)
+        self.error_deg = result.error_deg
+        self.roll_error_deg = result.roll_error_deg
+        self._integral = list(result.integral)
+        inputs = tuple(result.inputs)
         self.control.pitch = inputs[0]
         self.control.roll = inputs[1]
         self.control.yaw = inputs[2]

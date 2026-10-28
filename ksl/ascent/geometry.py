@@ -1,26 +1,19 @@
 """Frame, vector and roll geometry for ascent attitude guidance (pure functions)."""
 import math
+from . import native
 
 
 def smoothstep01(value):
-    x = min(1.0, max(0.0, value))
-    return x*x*(3.0-2.0*x)
+    return native.smoothstep(value)
 
 
 def slew_value(current, target, rate_per_second, dt):
-    if dt <= 0 or rate_per_second <= 0:
-        return current
-    step = rate_per_second*dt
-    return current + max(-step, min(step, target-current))
+    return native.slew_value(current, target, rate_per_second, dt)
 
 
 def smooth_value(current, target, response_seconds, dt):
     """Continuous first-order command response without a fixed rate cap."""
-    if dt <= 0:
-        return current
-    if response_seconds <= 0:
-        return target
-    return current + (target-current)*(-math.expm1(-dt/response_seconds))
+    return native.smooth_value(current, target, response_seconds, dt)
 
 
 def inertial_velocity_components(position, velocity):

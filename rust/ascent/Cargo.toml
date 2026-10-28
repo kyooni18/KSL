@@ -5,3 +5,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
+
+# Rust 1.96's stripped Mach-O output can be rejected by macOS 27 dyld.
+[profile.release]
+debug = 1

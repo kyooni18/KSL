@@ -15,8 +15,8 @@ It combines two former projects that now share one repository and history:
   It speaks kRPC directly through the vendored C-Nano client.
 - **Launcher** (formerly KSPShuttleLauncher, imported with full history). Python
   kRPC programs own the STS ascent and OMS orbit trim. Roll handoff and the
-  gravity-turn pitch envelope run in a Rust library called through Python;
-  the remaining ascent controller and planner are still Python.
+  gravity-turn pitch envelope and attitude control law run in a Rust library
+  called through Python; the remaining ascent sequencing and planner are still Python.
 
 The `ksl` mission controller sequences both through one explicit phase state
 machine. It uses one mission profile, one run record (events, telemetry,
