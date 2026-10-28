@@ -126,3 +126,85 @@ def predict_booster(state, mu, body_radius, target_altitude, bias, end_bias,
         raise ArithmeticError('Booster forecast exceeded trajectory capacity')
     return [{name: getattr(row, name) for name, _ in BoosterRow._fields_}
             for row in rows[:count]]
+
+
+class PegState(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('mu', 'freeze_tgo', 'a', 'b', 'tgo',
+                                          'last_t', 'hold', 'peak')] + [
+                  (name, _b) for name in ('has_solution', 'has_last_t', 'has_hold', 'converged')]
+
+
+_peg_update = _function('ksl_peg_update',
+    [ctypes.POINTER(PegState), *([_d] * 9), _b, ctypes.POINTER(_d), ctypes.POINTER(_d)], _b)
+
+
+def peg_update(guide, t, r, vr, vh, accel, ve, r_t, vr_t, vh_t, constant_accel):
+    state = PegState(guide.mu, guide.freeze_tgo, guide.A or 0., guide.B or 0.,
+                     guide.tgo or 0., guide._last_t or 0., guide.hold or 0., guide.peak,
+                     guide.A is not None, guide._last_t is not None, guide.hold is not None,
+                     guide.converged)
+    pitch, time = _d(), _d()
+    valid = _peg_update(ctypes.byref(state), t, r, vr, vh, accel, ve, r_t, vr_t, vh_t,
+                        constant_accel, ctypes.byref(pitch), ctypes.byref(time))
+    guide.A = state.a if state.has_solution else None
+    guide.B = state.b if state.has_solution else None
+    guide.tgo = state.tgo
+    guide._last_t = state.last_t if state.has_last_t else None
+    guide.hold = state.hold if state.has_hold else None
+    guide.peak = state.peak
+    guide.converged = state.converged
+    return (pitch.value if valid else None), time.value
+
+
+class InsertionInput(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('mu', 'ra', 'rp', 'ap_tol', 'pe_tol', 'slew',
+                'hold_slew', 'lag', 'lo', 'hi', 'response')] + [('has_response', _b)] + [
+                (name, _d) for name in ('rt', 'r', 'vr', 'vh', 'mass', 'thrust', 've',
+                 'g_limit', 'pitch', 'hold_left', 'ramp', 'cap_now', 'dt', 't_max',
+                 'flown', 'attitude_hold', 'anchor')] + [('has_anchor', _b)] + [
+                ('since_separation', _d), ('dry_mass', _d)]
+
+
+class InsertionRow(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('time', 'radius', 'radial_speed',
+                'horizontal_speed', 'mass', 'raw_pitch', 'commanded_pitch',
+                'flown_pitch', 'thrust', 'mass_flow', 'throttle')]
+
+
+class InsertionOutput(ctypes.Structure):
+    _fields_ = [(name, _d) for name in ('score', 'apoapsis_r', 'periapsis_r',
+                'peak_apoapsis_r', 'time', 'dv', 'saturated', 'radius', 'radial_speed',
+                'horizontal_speed', 'mass', 'propellant_used')] + [
+                ('fuel_feasible', _b), ('target_feasible', _b)]
+
+
+_insertion_fly = _function('ksl_insertion_fly',
+    [ctypes.POINTER(InsertionInput), ctypes.POINTER(InsertionOutput),
+     ctypes.POINTER(InsertionRow), ctypes.c_size_t], ctypes.c_ssize_t)
+
+
+def insertion_fly(guide, r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch,
+                  hold_left, ramp, cap_now, dt, t_max, flown, attitude_hold,
+                  transition_anchor, since_separation, record, dry_mass):
+    import math
+    if not math.isfinite(dt) or dt <= 0 or not math.isfinite(t_max) or t_max < 0:
+        raise ValueError('Invalid insertion forecast time step or duration')
+    data = InsertionInput(guide.mu, guide.ra, guide.rp, guide.ap_tol, guide.pe_tol,
+        guide.slew, guide.hold_slew, guide.lag, guide.lo, guide.hi,
+        guide.pitch_response_seconds or 0., guide.pitch_response_seconds is not None,
+        r_t, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left, ramp, cap_now,
+        dt, t_max, pitch if flown is None else flown, attitude_hold,
+        transition_anchor or 0., transition_anchor is not None, since_separation, dry_mass)
+    capacity = math.ceil(t_max / dt) + 2
+    rows = (InsertionRow * capacity)()
+    output = InsertionOutput()
+    count = _insertion_fly(ctypes.byref(data), ctypes.byref(output), rows, capacity)
+    if count < 0:
+        raise ArithmeticError('Insertion forecast exceeded trajectory capacity')
+    result = {'r_t': r_t, **{name: getattr(output, name) for name, _ in InsertionOutput._fields_}}
+    if record:
+        if count == 0:
+            raise ValueError('Cannot record a zero-duration insertion forecast')
+        result['trajectory'] = [{name: getattr(row, name) for name, _ in InsertionRow._fields_}
+                                for row in rows[:count]]
+    return result

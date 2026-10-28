@@ -9,8 +9,7 @@ overshot and then cancelled by pitching nose-down.
 All speeds are inertial. Pure math; no kRPC.
 """
 import math
-from .geometry import smooth_value
-from .guidance import separation_pitch_transition
+from . import native
 from .plan_timeline import sample_trajectory, track_trajectory
 
 G0 = 9.80665
@@ -35,88 +34,11 @@ class PoweredExplicitGuidance:
         self.A = self.B = self.tgo = self._last_t = self.hold = None
         self.converged = False
 
-    def _integrals(self, T, accel, ve, constant):
-        if constant:
-            return accel*T, accel*T*T/2, accel*T*T/2, accel*T**3/6
-        tau = ve/accel
-        T = min(T, .999*tau)
-        b0 = -ve*math.log(1-T/tau)
-        b1 = b0*tau-ve*T
-        c0 = b0*T-b1
-        c1 = c0*tau-ve*T*T/2
-        return b0, b1, c0, c1
-
     def update(self, t, r, vr, vh, accel, ve, r_t, vr_t, vh_t, constant_accel=False):
-        """Return (pitch_deg, time_to_go). ``constant_accel`` models a G-limited burn."""
-        accel = max(accel, .05)
-        ve = max(ve, 50.)
-        tau = ve/accel
-        if self._last_t is not None and self.A is not None:
-            dt = max(0., t-self._last_t)
-            self.A += self.B*dt
-            self.tgo = max(0., self.tgo-dt)
-        self._last_t = t
-        if self.A is None:
-            dv = math.hypot(vh_t-vh, vr_t-vr)
-            self.tgo = dv/accel if constant_accel else tau*(1-math.exp(-min(dv, 5*ve)/ve))
-        mu = self.mu
-        T = max(self.tgo, .1)
-        C = (mu/(r*r)-vh*vh/r)/accel
-        dh = r_t*vh_t-r*vh
-        need = dh/((r+r_t)/2)  # horizontal speed to gain, from angular momentum
-        peak = 0.
-        T_cap = 5000. if constant_accel else .98*tau
-        for _ in range(25):
-            if T > self.freeze_tgo or self.A is None:
-                b0, b1, c0, c1 = self._integrals(T, accel, ve, constant_accel)
-                det = b0*c1-b1*c0
-                if abs(det) < 1e-9:
-                    break
-                k1 = vr_t-vr
-                k2 = r_t-r-vr*T
-                self.A = (c1*k1-b1*k2)/det
-                self.B = (b0*k2-c0*k1)/det
-            # Horizontal velocity the planned steering delivers in T (Simpson rule).
-            a_t = accel if constant_accel else accel/(1-min(T, .999*tau)/tau)
-            C_t = (mu/(r_t*r_t)-vh_t*vh_t/r_t)/a_t
-            gain = 0.
-            peak = 0.
-            n = 16
-            for i in range(n+1):
-                x = T*i/n
-                a_x = accel if constant_accel else accel/(1-x/tau)
-                fr = self.A+self.B*x+C+(C_t-C)*x/T
-                peak = max(peak, abs(fr))
-                fr = _clamp(fr, -1., 1.)
-                w = 1 if i in (0, n) else 4 if i % 2 else 2
-                gain += w*a_x*math.sqrt(1-fr*fr)
-            gain *= T/(3*n)
-            if need <= 0.:
-                T = 0.
-                break
-            ratio = _clamp(need/max(gain, 1e-6), .7, 1.4)
-            T_new = min(T_cap, T*ratio)
-            done = abs(T_new-T) < .02
-            T = T_new
-            if done:
-                break
-        if self.A is None:
-            return None, T
-        # Feasible: the planned steering never asks for more than ~72 deg off horizontal.
-        self.peak = peak if T > 0. else 0.
-        self.converged = math.isfinite(T) and T < T_cap and self.peak < .95
-        self.tgo = T
-        fr = _clamp(self.A+C, -1., 1.)
-        pitch = math.degrees(math.asin(fr))
-        # Final seconds: hold the attitude reached at freeze. Extrapolating A+B*t
-        # while a throttle taper stretches the burn walks the nose away and trades
-        # apoapsis for periapsis at cutoff.
-        if T <= self.freeze_tgo:
-            if self.hold is None:
-                self.hold = pitch
-            return self.hold, T
-        self.hold = None
-        return pitch, T
+        """Return the Rust PEG solution and time to go for the measured state."""
+        return native.peg_update(self, t, r, vr, vh, accel, ve, r_t, vr_t, vh_t,
+                                 constant_accel)
+
 
 
 def orbit_state_at(mu, apoapsis_r, periapsis_r, insertion_r):
@@ -225,68 +147,10 @@ class InsertionGuidance:
             ramp=15., cap_now=1., dt=1., t_max=500., flown=None, attitude_hold=0.,
             transition_anchor=None, since_separation=0., record=False, dry_mass=0.):
         """Closed-loop point-mass prediction to cutoff; returns a summary dict."""
-        mu = self.mu
-        guide = PoweredExplicitGuidance(mu)
-        m0, t, peak_ra, saturated = mass, 0., 0., 0.
-        flown = pitch if flown is None else flown
-        trajectory = []
-        while t < t_max:
-            cap = self._throttle_cap(t, hold_left, ramp, cap_now)
-            a_avail = thrust*cap/mass
-            a = min(a_avail, g_limit)
-            cmd = self.steer(guide, t, r, vr, vh, a, ve, r_t, a < .99*a_avail, pitch)
-            if cmd < self.lo or cmd > self.hi:
-                saturated += dt
-            cmd = _clamp(cmd, self.lo, self.hi)
-            if transition_anchor is not None:
-                cmd = separation_pitch_transition(transition_anchor, cmd, since_separation+t)
-            if record:
-                trajectory.append(dict(time=t, radius=r, radial_speed=vr, horizontal_speed=vh,
-                                       mass=mass, raw_pitch=pitch if t < attitude_hold else cmd,
-                                       commanded_pitch=pitch, flown_pitch=flown,
-                                       thrust=a*mass, mass_flow=a*mass/ve,
-                                       throttle=a*mass/thrust))
-            if t < attitude_hold:
-                pass  # The separation controller holds the measured attitude.
-            elif self.pitch_response_seconds is None:
-                rate = self.hold_slew if t < hold_left else self.slew
-                pitch += _clamp(cmd-pitch, -rate*dt, rate*dt)
-            else:
-                pitch = smooth_value(pitch, cmd, self.pitch_response_seconds, dt)
-            if t >= attitude_hold:
-                flown += (pitch-flown)*min(1., dt/max(self.lag, 1e-3))
-            p = math.radians(flown)
-            # Midpoint step of the planar inertial equations.
-            def deriv(r_, vr_, vh_):
-                return (vr_, a*math.sin(p)-mu/(r_*r_)+vh_*vh_/r_, a*math.cos(p)-vr_*vh_/r_)
-            k = deriv(r, vr, vh)
-            k = deriv(r+k[0]*dt/2, vr+k[1]*dt/2, vh+k[2]*dt/2)
-            r, vr, vh = r+k[0]*dt, vr+k[1]*dt, vh+k[2]*dt
-            mass -= a*mass/ve*dt
-            t += dt
-            ra, rp = apsides(mu, r, vr, vh)
-            peak_ra = max(peak_ra, min(ra, 10*self.ra))
-            if self.done(r, vr, vh) or mass < max(dry_mass, .2*m0):
-                break
-        ra, rp = apsides(mu, r, vr, vh)
-        dv = ve*math.log(m0/max(mass, 1.))
-        # Cutoff orbit error, any apoapsis overshoot on the way, and propellant
-        # (50 m/s weighs like 1 km).
-        score = (abs(min(ra, 10*self.ra)-self.ra)+abs(rp-self.rp) +
-                 2*max(0., peak_ra-self.ra-self.ap_tol) + 20*dv + 500*saturated)
-        result = dict(r_t=r_t, score=score, apoapsis_r=ra, periapsis_r=rp,
-                      peak_apoapsis_r=peak_ra, time=t, dv=dv, saturated=saturated,
-                      radius=r, radial_speed=vr, horizontal_speed=vh, mass=mass,
-                      propellant_used=m0-mass, fuel_feasible=mass >= dry_mass,
-                      target_feasible=(self.ra-self.ap_tol <= ra <= self.ra+self.ap_tol and
-                                       rp >= self.rp-self.pe_tol and
-                                       peak_ra <= self.ra+self.ap_tol))
-        if record:
-            trajectory.append(dict(trajectory[-1], time=t, radius=r, radial_speed=vr,
-                                   horizontal_speed=vh, mass=mass,
-                                   commanded_pitch=pitch, flown_pitch=flown))
-            result['trajectory'] = trajectory
-        return result
+        return native.insertion_fly(self, r_t, r, vr, vh, mass, thrust, ve, g_limit,
+                                    pitch, hold_left, ramp, cap_now, dt, t_max, flown,
+                                    attitude_hold, transition_anchor, since_separation,
+                                    record, dry_mass)
 
     def plan(self, r, vr, vh, mass, thrust, ve, g_limit, pitch, hold_left=0., ramp=15.,
              cap_now=1., candidates=8, flown_pitch=None, attitude_hold=0.,

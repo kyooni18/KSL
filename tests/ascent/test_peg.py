@@ -83,6 +83,20 @@ def test_prediction_starts_from_measured_thrust_pitch():
         assert plan.call_args.kwargs['flown_pitch'] == 40.
 
 
+def test_insertion_forecast_preserves_recorded_reference_trajectory():
+    guide = InsertionGuidance(MU, R+90000., R+60000., R+72000.,
+                              pitch_response_seconds=5., pitch_bounds=(-90., 90.))
+    result = guide.fly(R+74000., R+24012., 779.3, 759.6, 184632., 2811000.,
+                       315.*G0, 1.4*G0, 46.18, hold_left=25., ramp=15.,
+                       cap_now=.3, dt=2., t_max=300., flown=46.18,
+                       attitude_hold=5., transition_anchor=46.18, record=True)
+    assert result['time'] == 142.
+    assert result['radius'] == pytest.approx(674038.2265752547, abs=1e-6)
+    assert result['mass'] == pytest.approx(107613.71783463474, abs=1e-6)
+    assert result['trajectory'][10]['commanded_pitch'] == pytest.approx(
+        37.777787172359105, abs=1e-8)
+
+
 def test_separation_attitude_hold_is_distinct_from_engine_limiter_hold():
     guide = InsertionGuidance(MU, R+90000., R+60000., R+72000.,
                               pitch_response_seconds=5., pitch_bounds=(-90., 90.))
