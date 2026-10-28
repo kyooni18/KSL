@@ -531,6 +531,12 @@ class LandingProgram(Program):
         if client._read_message(10.0).get("type") != "ready":
             raise BackendError("landing backend did not announce ready")
         backend_configuration = ctx.config.backend_configuration()
+        # The TUI auto-warp toggle [g] also governs the backend's coast warp to
+        # the deorbit burn; it is followed live below.
+        from .controls import ENV_VAR, Controls
+        controls = Controls(controls_env(ctx)[ENV_VAR])
+        auto_warp = controls.auto_warp
+        backend_configuration["guidance"]["useTimeWarp"] = auto_warp
         ctx.log.write_json("backend-configuration.json", backend_configuration)
         client.send("updateConfiguration", configuration=backend_configuration)
         ctx.log.update(connection="connecting")
@@ -595,6 +601,11 @@ class LandingProgram(Program):
                 raise TimeoutError("landing exceeded landing.flightTimeoutSeconds")
             client.pump(0.5)
             state.flush(client)
+            if controls.auto_warp != auto_warp:
+                auto_warp = controls.auto_warp
+                backend_configuration["guidance"]["useTimeWarp"] = auto_warp
+                client.send("updateConfiguration", configuration=backend_configuration)
+                ctx.log.log(f"Coast time warp {'enabled' if auto_warp else 'disabled'} by operator")
             phase = (client.latest_snapshot or {}).get("phase")
             if phase == "Complete":
                 state.terminal = True

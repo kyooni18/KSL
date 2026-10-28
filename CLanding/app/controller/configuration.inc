@@ -41,7 +41,7 @@ static bool vehicle_profile_equal(const VehicleProfile*a,const VehicleProfile*b)
     a->airbrake_action_group==b->airbrake_action_group;
 }
 static bool configuration_equal(const LandingConfiguration*a,const LandingConfiguration*b){JsonWriter wa,wb;jw_init(&wa);jw_init(&wb);landing_configuration_json(&wa,a);landing_configuration_json(&wb,b);bool same=!wa.failed&&!wb.failed&&wa.data&&wb.data&&!strcmp(wa.data,wb.data);jw_free(&wa);jw_free(&wb);return same;}
-static bool planning_configuration_equal(const LandingConfiguration*a,const LandingConfiguration*b){LandingConfiguration aa=*a,bb=*b;memset(&aa.connection,0,sizeof(aa.connection));memset(&bb.connection,0,sizeof(bb.connection));memset(&aa.calibration,0,sizeof(aa.calibration));memset(&bb.calibration,0,sizeof(bb.calibration));return configuration_equal(&aa,&bb);}
+static bool planning_configuration_equal(const LandingConfiguration*a,const LandingConfiguration*b){LandingConfiguration aa=*a,bb=*b;memset(&aa.connection,0,sizeof(aa.connection));memset(&bb.connection,0,sizeof(bb.connection));memset(&aa.calibration,0,sizeof(aa.calibration));memset(&bb.calibration,0,sizeof(bb.calibration));/* coast warp is the operator's runtime toggle, not a planning input */aa.guidance.use_time_warp=bb.guidance.use_time_warp=false;return configuration_equal(&aa,&bb);}
 static bool entry_forecast_matches_guidance(const LandingController*c){
     if(!c)return true;
     /* A forecast tagged to an MM304 executable plan becomes stale not only when that

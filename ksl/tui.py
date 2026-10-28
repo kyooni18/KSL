@@ -180,7 +180,7 @@ class KSLApp(App[int]):
         Binding("v", "toggle_verbose", "Raw output"),
         Binding("f", "control('warpNow')", "Warp now"),
         Binding("x", "control('warpStop')", "Stop warp"),
-        Binding("g", "control('autoWarp')", "Auto-warp"),
+        Binding("g", "control('autoWarp')", "Coast warp"),
         Binding("o", "control('trim')", "Orbit trim"),
         Binding("h", "control('holdTrim')", "Hold"),
         Binding("t", "control('trimNow')", "Trim now"),
@@ -379,7 +379,7 @@ class KSLApp(App[int]):
                     for wid, label, val in (
                         ("launch-window", "Wait for plane / rendezvous launch window", pr["launchWindow"]),
                         ("target-longitude", "Phase GTO apogee onto GEO longitude", pr["targetLongitude"]),
-                        ("auto-warp", "Allow automatic orbit time warp", base["operations"]["autoWarp"]),
+                        ("auto-warp", "Allow automatic coast time warp (launch and landing)", base["operations"]["autoWarp"]),
                         ("orbit-trim", "Include orbit operations in automatic missions", base["orbit"]["trim"]),
                         ("hold-trim", "Automatic missions wait for Trim now", base["orbit"]["holdForTrigger"]),
                     ):
@@ -683,7 +683,7 @@ class KSLApp(App[int]):
             return
         c = controls.read()
         on = lambda flag: "ON" if flag else "off"  # noqa: E731
-        panel.show("Controls", [("auto-warp [g]", on(c["autoWarp"])), ("orbit trim [o]", on(c["trim"])),
+        panel.show("Controls", [("coast warp [g]", on(c["autoWarp"])), ("orbit trim [o]", on(c["trim"])),
                                 ("hold [h]", on(c["holdTrim"])), ("warp now [f]", str(c["warpNow"])),
                                 ("trim now [t]", str(c["trimNow"]))])
 
