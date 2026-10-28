@@ -41,7 +41,6 @@ DEFAULTS: dict[str, Any] = {
         # Pad preparation (values flown by the former shuttle.mission entry point).
         "srbThrustLimit": 0.9,
         "ssmeThrustLimit": 0.38,
-        "padSettleSeconds": 10.0,
         "revertToLaunch": False,
         # Extra raw flags for ksl.ascent.flight (e.g. ["--max-q", "22000"]).
         "extraArgs": [],
@@ -251,7 +250,7 @@ class MissionConfig:
                              ("simulation", "maxSimTimeSeconds")):
             if self.data[section][key] <= 0:
                 problems.append(f"{section}.{key} must be positive")
-        for section, key in (("ascent", "padSettleSeconds"), ("ascent", "insertionOffsetKm"),
+        for section, key in (("ascent", "insertionOffsetKm"),
                              ("ascent", "minimumInsertionPeriapsisKm"), ("orbit", "minBurnDeltaV")):
             if self.data[section][key] < 0:
                 problems.append(f"{section}.{key} must be nonnegative")

@@ -84,22 +84,6 @@ class Program:
 
 # --- child-process plumbing ------------------------------------------------------
 
-def wait_simulation_seconds(read_ut, stop_event, duration, poll_interval=.1):
-    """Wait for simulation time, while allowing an operator stop during pauses."""
-    start = read_ut()
-    previous = start
-    while True:
-        if stop_event.is_set():
-            raise InterruptedError("stopped on the pad before ignition")
-        now = read_ut()
-        if now < previous:
-            start = now
-        if now-start >= max(0., duration):
-            return
-        previous = now
-        if stop_event.wait(poll_interval):
-            raise InterruptedError("stopped on the pad before ignition")
-
 def run_child(ctx: Context, name: str, argv: list[str], env: dict[str, str] | None,
               on_event: Callable[[dict[str, Any]], None],
               on_line: Callable[[str], None] | None = None) -> tuple[int, list[str]]:
@@ -293,7 +277,7 @@ class AscentProgram(Program):
         steps = []
         if a["revertToLaunch"]:
             steps.append("ascent: revert the current flight to launch")
-        steps += [f"ascent: wait for the flight scene, settle {a['padSettleSeconds']:.0f} s, "
+        steps += [f"ascent: wait for the flight scene, "
                   f"set Clydesdale limiters to {a['srbThrustLimit']}",
                   f"ascent: fly to {ascent_target_args(ctx.config)[0]} "
                   "(SSME lead, SRB/ET separation, corridor-tracked gravity turn, PEG MECO)",
@@ -308,12 +292,11 @@ class AscentProgram(Program):
                 conn.space_center.revert_to_launch()
         wait_for_flight_scene(ctx.config)
         ctx.log.update(connection="connected")
-        settle = float(a["padSettleSeconds"])
-        ctx.log.log(f"Pad: settling {settle:.0f} s before launch")
+        if ctx.stop_event.is_set():
+            raise InterruptedError("stopped on the pad before ignition")
+        if a["guidanceMode"] == "intelligent":
+            return
         with connect(ctx.config, "ksl-pad") as conn:
-            wait_simulation_seconds(lambda: conn.space_center.ut, ctx.stop_event, settle)
-            if a["guidanceMode"] == "intelligent":
-                return
             count = 0
             for engine in conn.space_center.active_vessel.parts.engines:
                 if "Clydesdale" in engine.part.title:

@@ -179,7 +179,7 @@ mission. Unset keys take the defaults in `ksl/config.py`.
 | Section | Contents |
 |---|---|
 | `connection` | kRPC address/ports, shared by the Python programs and the C backend |
-| `ascent` | target altitude/inclination, insertion offset, SRB/SSME limiters, pad settle, extra flags |
+| `ascent` | target altitude/inclination, insertion offset, SRB/SSME limiters, extra flags |
 | `orbit` | OMS trim on/off, `minBurnDeltaV` (corrections at or below it are skipped; default 0.1 m/s) |
 | `landing` | backend configuration file, `KSP_LANDER_MODEL_PROFILE`, auto-warp, strict-plan policy, timeouts |
 | `simulation` | default scenario, telemetry rate, max sim time |

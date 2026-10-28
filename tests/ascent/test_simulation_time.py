@@ -1,34 +1,29 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 from types import SimpleNamespace as NS
 import threading
 
 import pytest
 
-from ksl.programs import wait_simulation_seconds
 from ksl.ascent.attitude import AttitudeController
 from ksl.ascent.intelligent.flight import Propulsion
+from ksl.programs import AscentProgram
 
 
-def test_pad_settle_uses_simulation_time_and_ignores_pause():
-    values = iter([100., 100., 100., 105., 109.9, 110.])
-    stop = Mock()
-    stop.is_set.return_value = False
-    stop.wait.return_value = False
-    wait_simulation_seconds(lambda: next(values), stop, 10.)
-    assert stop.wait.call_count == 4
-
-
-def test_pad_settle_restarts_after_clock_rewind_and_can_be_stopped():
-    values = iter([100., 105., 20., 29., 30.])
-    stop = Mock()
-    stop.is_set.return_value = False
-    stop.wait.return_value = False
-    wait_simulation_seconds(lambda: next(values), stop, 10.)
-    assert stop.wait.call_count == 3
-    stop.wait.return_value = True
-    values = iter([0., 0.])
-    with pytest.raises(InterruptedError):
-        wait_simulation_seconds(lambda: next(values), stop, 10.)
+@pytest.mark.parametrize('mode', ['legacy', 'intelligent'])
+def test_pad_preparation_does_not_wait_for_simulation_time(monkeypatch, mode):
+    engine = NS(part=NS(title='Clydesdale'), thrust_limit=0.)
+    conn = NS(space_center=NS(active_vessel=NS(parts=NS(engines=[engine]))))
+    connection = MagicMock()
+    connection.__enter__.return_value = conn
+    connect = Mock(return_value=connection)
+    monkeypatch.setattr('ksl.programs.connect', connect)
+    monkeypatch.setattr('ksl.programs.wait_for_flight_scene', Mock())
+    ctx = NS(config={'ascent': {'revertToLaunch': False, 'guidanceMode': mode,
+                                'srbThrustLimit': .9, 'padSettleSeconds': 100.}},
+             stop_event=threading.Event(), log=Mock())
+    AscentProgram()._pad_prep(ctx)
+    assert engine.thrust_limit == (.9 if mode == 'legacy' else 0.)
+    assert connect.call_count == (1 if mode == 'legacy' else 0)
 
 
 def test_attitude_loop_uses_full_ut_intervals_and_refreshes_after_rewind(monkeypatch):
