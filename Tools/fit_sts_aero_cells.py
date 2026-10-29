@@ -167,20 +167,50 @@ def main():
         report[f"M{mr:.3f} a{ar:g}"] = dict(n=n, flights=len(by_flight), cl=cl, cd=cd,
                                            cl_ratio=cl / bcl if bcl else None, cd_ratio=cd / bcd)
 
-    out = []
-    for mr in machs:
+    # Live data overrides the table.  Unmeasured alpha nodes in a measured row
+    # take the measured/table ratio interpolated between the bracketing
+    # measured nodes (nearest one outside them); unmeasured rows above the
+    # highest measured row inherit that row's per-node ratios, because the
+    # base rows there are unmeasured copies.
+    def row_ratios(mr):
         alphas = sorted(base[mr])
         known = [ar for ar in alphas if (mr, ar) in measured]
+        if not known:
+            return None
+        def ratio(ar):
+            bcl, bcd = base[mr][ar]
+            mcl, mcd = measured[(mr, ar)]
+            return (mcl / bcl if bcl else 1.0, mcd / bcd)
+        out_r = {}
         for ar in alphas:
+            if (mr, ar) in measured:
+                out_r[ar] = ratio(ar)
+                continue
+            lo = [k for k in known if k < ar]
+            hi = [k for k in known if k > ar]
+            if lo and hi:
+                k0, k1 = lo[-1], hi[0]
+                r0, r1 = ratio(k0), ratio(k1)
+                u = (ar - k0) / (k1 - k0)
+                out_r[ar] = tuple(x0 + (x1 - x0) * u for x0, x1 in zip(r0, r1))
+            else:
+                out_r[ar] = ratio(lo[-1] if lo else hi[0])
+        return out_r
+
+    ratios = {mr: row_ratios(mr) for mr in machs}
+    measured_rows = [mr for mr in machs if ratios[mr]]
+    top = measured_rows[-1] if measured_rows else None
+    out = []
+    for mr in machs:
+        r = ratios[mr]
+        if r is None and top is not None and mr > top:
+            r = {ar: ratios[top].get(ar, (1.0, 1.0)) for ar in base[mr]}
+        for ar in sorted(base[mr]):
             bcl, bcd = base[mr][ar]
             if (mr, ar) in measured:
                 cl, cd = measured[(mr, ar)]
-            elif known:
-                k = min(known, key=lambda x: abs(x - ar))
-                kcl, kcd = base[mr][k]
-                mcl, mcd = measured[(mr, k)]
-                cl = bcl * (mcl / kcl if kcl else 1.0)
-                cd = bcd * mcd / kcd
+            elif r:
+                cl, cd = bcl * r[ar][0], bcd * r[ar][1]
             else:
                 cl, cd = bcl, bcd
             out.append((mr, ar, cl, cd))
@@ -189,7 +219,7 @@ def main():
         f.write(f"# PROVISIONAL STS live aero: {len(measured)} cells measured from "
                 f"{len({s['session'] for s in sources if s['session']})} verified live sessions "
                 f"(q>={a.q_min:g} Pa, |beta|<={a.max_sideslip:g} deg, unpowered, gear up, airbrakes stowed); "
-                f"other cells from {os.path.basename(a.base)} scaled by the nearest measured cell in their Mach row. "
+                f"other cells from {os.path.basename(a.base)} scaled by measured/table ratios interpolated across their Mach row; rows above the highest measured row inherit its ratios. "
                 f"Not certified. Area {a.area:g} m2 is normalization only. Logs and per-cell evidence: {os.path.basename(a.report)}\n")
         f.write("mach,alpha_deg,cl,cd\n")
         for mr, ar, cl, cd in out:
