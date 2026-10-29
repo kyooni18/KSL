@@ -697,9 +697,10 @@ static double deorbit_sts_handoff_target(const TerminalModel*model,const PlanetM
    distance past the handoff target. */
 static double deorbit_witness_handoff_miss(const EntryPrediction*w,const PlanetModel*p,
         const VehicleProfile*v,const GuidanceSettings*s,double sts_handoff_target){
-    if(!w||!w->reached_taem)return NAN;
+    if(!w)return NAN;
     if(s->taem_hac_law&&!strcmp(v->model_id,"STS"))
         return w->taem_hac_energy_valid?-w->taem_hac_energy_excess:NAN;
+    if(!w->reached_taem)return NAN;
     double target=isfinite(sts_handoff_target)?sts_handoff_target:entry_taem_range_target(p,s);
     return isfinite(w->taem_distance)?w->taem_distance-target:NAN;
 }

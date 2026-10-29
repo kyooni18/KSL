@@ -195,6 +195,14 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             out.mm304_gate_flight_path_angle=synthetic.flight_path_angle;
         }
         if(out.entered_atmosphere)out.closest_distance=fmin(out.closest_distance,range);
+        /* HAC energy at the handoff Mach whether or not MM305 takes ownership:
+           a shadow MM304 that keeps the vehicle (MM305 projection unconverged)
+           must still price the deorbit, not drop out of the ranking. */
+        if(cfg->guidance.taem_hac_law&&out.entered_atmosphere&&!out.taem_hac_energy_valid&&
+           at.mach<=cfg->guidance.mm305_target_mach&&isfinite(shadow.entry_hac_energy_excess)){
+            out.taem_hac_energy_valid=true;
+            out.taem_hac_energy_excess=shadow.entry_hac_energy_excess;
+        }
         if(out.entered_atmosphere&&!out.reached_taem)out.minimum_entry_speed=fmin(out.minimum_entry_speed,at.speed);
         out.maximum_abs_angle_of_attack=fmax(out.maximum_abs_angle_of_attack,fabs(response.actual_aoa));
         out.peak_dynamic_pressure=fmax(out.peak_dynamic_pressure,at.q);out.peak_g_load=fmax(out.peak_g_load,synthetic.g_force);
@@ -317,9 +325,6 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             out.taem_along_track=synthetic.runway_along_track;
             out.taem_cross_track=synthetic.runway_cross_track;
             out.taem_course=synthetic.ground_track_heading;
-            out.taem_hac_energy_valid=cfg->guidance.taem_hac_law&&
-                isfinite(shadow.entry_hac_energy_excess);
-            out.taem_hac_energy_excess=shadow.entry_hac_energy_excess;
             out.taem_energy_error=entry_remaining_specific_energy(
                 geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
                 cfg->guidance.taem_interface_altitude,
