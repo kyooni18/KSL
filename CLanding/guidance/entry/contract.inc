@@ -656,9 +656,13 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
             t->ut-g->entry_policy_ut<=3.0*fmax(s->prediction_interval,1.0);
         bool dragref_short=drag.predicted_range_error<0.0&&
             drag.drag_range_scale<=drag_cfg.minimum_drag_scale+1e-6;
-        if((policy_fresh&&g->entry_policy_bank_deg<=0.5)||dragref_short)
+        /* Latch on a wings-level forecast that is genuinely short and release
+           once it reaches the target, so a policy bank answer hovering near
+           0 deg cannot toggle the cap every replan. */
+        double zero_bank_miss=policy_fresh?g->entry_policy_zero_bank_miss:NAN;
+        if((isfinite(zero_bank_miss)&&zero_bank_miss>2000.0)||dragref_short)
             g->entry_energy_short_latched=true;
-        else if(policy_fresh&&g->entry_policy_bank_deg>=10.0)
+        else if(isfinite(zero_bank_miss)&&zero_bank_miss<0.0)
             g->entry_energy_short_latched=false;
         if(g->entry_energy_short_latched){
             double best=entry_max_lift_to_drag_aoa(g->entry_terminal_model,

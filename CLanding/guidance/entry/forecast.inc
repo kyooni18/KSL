@@ -37,6 +37,7 @@ bool guidance_accept_entry_plan(GuidanceMachine*g,const GuidanceMachine*request,
         g->entry_policy_bank_deg=result->entry_policy_bank_deg;
         g->entry_policy_aoa_deg=result->entry_policy_aoa_deg;
         g->entry_policy_ut=result->entry_policy_ut;
+        g->entry_policy_zero_bank_miss=result->entry_policy_zero_bank_miss;
     }
     g->entry_planning_needed=false;
     return true;
