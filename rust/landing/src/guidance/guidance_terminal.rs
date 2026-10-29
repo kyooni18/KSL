@@ -1746,6 +1746,7 @@ pub struct GuidanceMachine {
     pub taem_hac_live_aero: TaemHacLiveAero,
     pub adaptive_flare: AdaptiveFlareState,
     pub jet_assist_throttle: ::core::ffi::c_double,
+    pub mm304: crate::mm304::Mm304State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

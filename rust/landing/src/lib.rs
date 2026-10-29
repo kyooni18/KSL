@@ -3,6 +3,7 @@
 #![allow(clashing_extern_declarations, unused_must_use, unused_imports, static_mut_refs)]
 #![allow(unsafe_op_in_unsafe_fn, improper_ctypes, improper_ctypes_definitions, mutable_transmutes, unused_comparisons, overflowing_literals, arithmetic_overflow, unconditional_panic)]
 pub mod sys;
+pub mod mm304;
 pub mod taem_candidate_search;
 pub mod taem_frames_energy;
 pub mod taem_geometry;

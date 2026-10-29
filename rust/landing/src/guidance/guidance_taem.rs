@@ -1800,6 +1800,7 @@ pub struct GuidanceMachine {
     pub taem_hac_live_aero: TaemHacLiveAero,
     pub adaptive_flare: AdaptiveFlareState,
     pub jet_assist_throttle: ::core::ffi::c_double,
+    pub mm304: crate::mm304::Mm304State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -5858,6 +5859,7 @@ unsafe extern "C" fn mm305_request_from_state(
                 plan_ut: 0.,
             },
             jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
         },
         hac_radius_m: 0.,
         final_approach_distance_m: 0.,
@@ -6893,6 +6895,7 @@ pub unsafe extern "C" fn guidance_mm305_plan_request(
                     plan_ut: 0.,
                 },
                 jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
             },
             hac_radius_m: 0.,
             final_approach_distance_m: 0.,
@@ -7848,6 +7851,7 @@ pub unsafe extern "C" fn guidance_mm305_admission_request(
                     plan_ut: 0.,
                 },
                 jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
             },
             hac_radius_m: 0.,
             final_approach_distance_m: 0.,

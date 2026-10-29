@@ -186,6 +186,22 @@ extern "C" {
         settings: *const GuidanceSettings,
         planet: *const PlanetModel,
     ) -> ::core::ffi::c_double;
+    fn mm304_plan_update(
+        m: *mut crate::mm304::Mm304State,
+        state: VehicleState,
+        p: *const PlanetModel,
+        env: *const AerodynamicEnvelope,
+        cal: *const TrajectoryCalibrationModel,
+        v: *const VehicleProfile,
+        site: *const LandingSite,
+        set: *const GuidanceSettings,
+        model: *const TerminalModel,
+        live_aero: *const ::core::ffi::c_void,
+        measured_bank: ::core::ffi::c_double,
+        measured_bank_rate: ::core::ffi::c_double,
+        measured_aoa: ::core::ffi::c_double,
+        range_to_site: ::core::ffi::c_double,
+    ) -> bool;
     fn predictor_simulate_entry_policy(
         state: VehicleState,
         planet: *const PlanetModel,
@@ -2494,6 +2510,7 @@ pub struct GuidanceMachine {
     pub taem_hac_live_aero: TaemHacLiveAero,
     pub adaptive_flare: AdaptiveFlareState,
     pub jet_assist_throttle: ::core::ffi::c_double,
+    pub mm304: crate::mm304::Mm304State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -6395,6 +6412,7 @@ pub unsafe extern "C" fn landing_controller_engage_reentry(
             plan_ut: 0.,
         },
         jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
     };
     guidance_initialize_reentry_continuation(
         &raw mut qualification_guidance,
@@ -13670,6 +13688,7 @@ unsafe extern "C" fn terminal_prediction_worker(
                 plan_ut: 0.,
             },
             jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
         };
         let mut entry_request: GuidanceMachine = GuidanceMachine {
             phase: PHASE_IDLE,
@@ -14481,6 +14500,7 @@ unsafe extern "C" fn terminal_prediction_worker(
                 plan_ut: 0.,
             },
             jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
         };
         let mut entry_job: bool = false_0 != 0;
         let mut entry_planning_job: bool = false_0 != 0;
@@ -14936,179 +14956,42 @@ unsafe extern "C" fn terminal_prediction_worker(
                         );
                         calibration.forecast_drag_scale = forecast_drag;
                         calibration.forecast_lift_scale = forecast_lift;
-                        let mut aoa: ::core::ffi::c_double = if guidance
-                            .entry_control_plan_valid as ::core::ffi::c_int != 0
-                            && guidance.entry_control_aoa.is_finite() as i32 != 0
+                        let mut measured_bank: ::core::ffi::c_double = if telemetry
+                            .roll
+                            .is_finite() as i32 != 0
                         {
-                            guidance.entry_control_aoa
-                        } else if guidance.entry_alpha_has_target as ::core::ffi::c_int
-                            != 0 && guidance.entry_alpha_target.is_finite() as i32 != 0
-                        {
-                            guidance.entry_alpha_target
+                            norm_signed_deg(telemetry.roll)
                         } else {
-                            telemetry.angle_of_attack
-                        };
-                        let mut side: ::core::ffi::c_double = if guidance.s_turn_sign
-                            >= 0.0f64
-                        {
-                            1.0f64
-                        } else {
-                            -1.0f64
-                        };
-                        let mut hi: ::core::ffi::c_double = fmin(
-                            MM304_PLANNED_MAX_BANK_DEG,
-                            cfg.vehicle.maximum_bank_angle,
-                        );
-                        let mut lo: ::core::ffi::c_double = 0.0f64;
-                        let mut f_lo: ::core::ffi::c_double = ::core::f32::NAN
-                            as ::core::ffi::c_double;
-                        let mut f_hi: ::core::ffi::c_double = ::core::f32::NAN
-                            as ::core::ffi::c_double;
-                        let mut sound_floor: ::core::ffi::c_double = planet_atmospheric_speed_of_sound(
-                            &raw mut planet,
-                            cfg.guidance.mm305_max_altitude,
-                        );
-                        let mut mach_handoff: ::core::ffi::c_double = cfg
-                            .guidance
-                            .mm305_target_mach
-                            + (if (cfg.guidance.sts_trajectory_delivery
-                                as ::core::ffi::c_int != 0
-                                || cfg.guidance.taem_hac_law as ::core::ffi::c_int != 0)
-                                && strcmp(
-                                    &raw mut cfg.vehicle.model_id as *mut ::core::ffi::c_char,
-                                    b"STS\0" as *const u8 as *const ::core::ffi::c_char,
-                                ) == 0
-                            {
-                                0.0f64
-                            } else {
-                                cfg.guidance.mm305_mach_half_width
-                            });
-                        let mut bound: ::core::ffi::c_double = 2.0f64
-                            * telemetry.range_to_site
-                            / fmax(1.0f64, mach_handoff * sound_floor);
-                        let mut iteration: ::core::ffi::c_int = 0 as ::core::ffi::c_int;
-                        loop {
-                            let mut bank: ::core::ffi::c_double = if iteration
-                                == 0 as ::core::ffi::c_int
-                            {
-                                lo
-                            } else if iteration == 1 as ::core::ffi::c_int {
-                                hi
-                            } else {
-                                0.5f64 * (lo + hi)
-                            };
-                            let mut f: EntryPrediction = predictor_simulate_entry_policy(
-                                state,
-                                &raw mut planet,
-                                aero,
-                                &raw mut envelope,
-                                &raw mut calibration,
-                                &raw mut cfg.vehicle,
-                                &raw mut cfg.site,
-                                &raw mut cfg.guidance,
-                                bank,
-                                aoa,
-                                side,
-                                bound,
-                            );
-                            let mut miss: ::core::ffi::c_double = ::core::f32::NAN
-                                as ::core::ffi::c_double;
-                            if cfg.guidance.taem_hac_law {
-                                miss = entry_policy_handoff_miss(
-                                    &raw mut f,
-                                    &raw mut planet,
-                                    &raw mut cfg,
-                                    &raw mut guidance,
-                                    if terminal_model_valid as ::core::ffi::c_int != 0 {
-                                        &raw mut terminal_model
-                                    } else {
-                                        ::core::ptr::null_mut::<TerminalModel>()
-                                    },
-                                    state.mass,
-                                );
-                            } else {
-                                let mut geo: TaemGeometryState = TaemGeometryState {
-                                    runway_along_m: 0.,
-                                    runway_cross_m: 0.,
-                                    altitude_above_runway_m: 0.,
-                                    ground_speed_mps: 0.,
-                                    airspeed_mps: 0.,
-                                    course_deg: 0.,
-                                    flight_path_angle_deg: 0.,
-                                    heading_error_deg: 0.,
-                                    curvature_right_per_m: 0.,
-                                };
-                                if entry_policy_handoff_geometry(
-                                    &raw mut f,
-                                    &raw mut planet,
-                                    &raw mut cfg,
-                                    &raw mut geo,
-                                ) {
-                                    miss = hypot(geo.runway_along_m, geo.runway_cross_m)
-                                        - target;
-                                }
-                            }
-                            entry_prediction_clear(&raw mut f);
-                            if iteration == 0 as ::core::ffi::c_int {
-                                f_lo = miss;
-                                if !(miss < 0.0f64) {
-                                    break;
-                                }
-                            } else if iteration == 1 as ::core::ffi::c_int {
-                                f_hi = miss;
-                                if !(miss > 0.0f64) {
-                                    break;
-                                }
-                            } else {
-                                if miss.is_finite() as i32 == 0 {
-                                    break;
-                                }
-                                if miss > 0.0f64 {
-                                    hi = bank;
-                                    f_hi = miss;
-                                } else {
-                                    lo = bank;
-                                    f_lo = miss;
-                                }
-                                if hi - lo
-                                    <= cfg.guidance.entry_roll_rate
-                                        / fmax(1.0f64, cfg.guidance.guidance_rate)
-                                {
-                                    break;
-                                }
-                            }
-                            iteration += 1;
-                        }
-                        let mut solved: ::core::ffi::c_double = if f_lo.is_finite()
-                            as i32 != 0 && !(f_lo < 0.0f64)
-                        {
                             0.0f64
-                        } else if f_hi.is_finite() as i32 != 0 && !(f_hi > 0.0f64) {
-                            hi
-                        } else {
-                            0.5f64 * (lo + hi)
                         };
-                        let mut policy_aoa: ::core::ffi::c_double = ::core::f32::NAN
-                            as ::core::ffi::c_double;
-                        let mut best_miss: ::core::ffi::c_double = f_lo;
-                        if f_lo.is_finite() as i32 != 0 || f_hi.is_finite() as i32 != 0 {
-                            guidance.entry_policy_valid = true_0 != 0;
-                            guidance.entry_policy_bank_deg = solved;
-                            guidance.entry_policy_aoa_deg = policy_aoa;
-                            guidance.entry_policy_ut = request_ut;
-                            fprintf(
-                                stderr,
-                                b"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %.1f deg (short at 0 deg %+.1f km, at max %+.1f km, best %+.1f km; HAC law: energy height)\n\0"
-                                    as *const u8 as *const ::core::ffi::c_char,
-                                request_ut,
-                                target / 1000.0f64,
-                                solved,
-                                policy_aoa,
-                                f_lo / 1000.0f64,
-                                f_hi / 1000.0f64,
-                                best_miss / 1000.0f64,
-                            );
-                        }
+                        let mut measured_rate: ::core::ffi::c_double = if telemetry
+                            .roll_rate
+                            .is_finite() as i32 != 0
+                        {
+                            telemetry.roll_rate
+                        } else {
+                            0.0f64
+                        };
+                        mm304_plan_update(
+                            &raw mut guidance.mm304,
+                            state,
+                            &raw mut planet,
+                            &raw mut envelope,
+                            &raw mut calibration,
+                            &raw mut cfg.vehicle,
+                            &raw mut cfg.site,
+                            &raw mut cfg.guidance,
+                            if terminal_model_valid as ::core::ffi::c_int != 0 {
+                                &raw mut terminal_model
+                            } else {
+                                ::core::ptr::null_mut::<TerminalModel>()
+                            },
+                            &raw const guidance.taem_hac_live_aero as *const ::core::ffi::c_void,
+                            measured_bank,
+                            measured_rate,
+                            telemetry.angle_of_attack,
+                            telemetry.range_to_site,
+                        );
                     }
                 } else {
                     pr = predictor_simulate_terminal_shadow_ensemble(

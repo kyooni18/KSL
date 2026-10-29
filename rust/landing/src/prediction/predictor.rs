@@ -1841,6 +1841,7 @@ pub struct GuidanceMachine {
     pub taem_hac_live_aero: TaemHacLiveAero,
     pub adaptive_flare: AdaptiveFlareState,
     pub jet_assist_throttle: ::core::ffi::c_double,
+    pub mm304: crate::mm304::Mm304State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -2276,7 +2277,7 @@ unsafe extern "C" fn context_aoa(
         scheduled_aoa(altitude, (*ctx).p, (*ctx).v)
     };
 }
-unsafe extern "C" fn atmosphere(
+pub unsafe extern "C" fn atmosphere(
     mut pos: Vector3,
     mut vel: Vector3,
     mut ctx: *const AeroContext,
@@ -2427,7 +2428,7 @@ unsafe extern "C" fn rk4_gravity(
     s.ut += dt;
     return s;
 }
-unsafe extern "C" fn rk4_aero(
+pub unsafe extern "C" fn rk4_aero(
     mut s: VehicleState,
     mut dt: ::core::ffi::c_double,
     mut ctx: *mut AeroContext,
@@ -10357,6 +10358,7 @@ unsafe extern "C" fn deorbit_executable_policy_witness(
             plan_ut: 0.,
         },
         jet_assist_throttle: 0.,
+        mm304: crate::mm304::Mm304State::ZERO,
     };
     guidance_initialize_reentry_continuation(
         &raw mut guidance,

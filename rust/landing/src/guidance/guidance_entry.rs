@@ -1674,6 +1674,7 @@ pub struct GuidanceMachine {
     pub taem_hac_live_aero: TaemHacLiveAero,
     pub adaptive_flare: AdaptiveFlareState,
     pub jet_assist_throttle: ::core::ffi::c_double,
+    pub mm304: crate::mm304::Mm304State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -1971,7 +1972,6 @@ pub unsafe extern "C" fn guidance_accept_entry_plan(
         || (*g).phase as ::core::ffi::c_uint
             != PHASE_ENTRY_ENERGY as ::core::ffi::c_int as ::core::ffi::c_uint
         || (*g).control_plan_sequence != (*request).control_plan_sequence
-        || (*g).entry_control_reversals != (*request).entry_control_reversals
     {
         return false_0 != 0;
     }
@@ -2011,6 +2011,36 @@ pub unsafe extern "C" fn guidance_accept_entry_plan(
         (*g).entry_policy_bank_deg = (*result).entry_policy_bank_deg;
         (*g).entry_policy_aoa_deg = (*result).entry_policy_aoa_deg;
         (*g).entry_policy_ut = (*result).entry_policy_ut;
+    }
+    if crate::mm304::live::accept(&mut (*g).mm304, &(*result).mm304) && !(*g).diagnostic_shadow {
+        let mut pl = (*g).mm304.plan;
+        fprintf(
+            stderr,
+            b"MM304 plan #%u %s: ut=%.1f sigma=%+.3f bank=%.1f aoaBias=%+.1f E=%+.0f target=%.0f band=%.0f unc=%.0f Emaxrange=%+.0f Emaxbank=%+.0f limit=%s forecasts=%u revPred=%u conv=%d env=%d handoff along=%.0f cross=%.0f hdgErr=%+.1f h=%.0f V=%.0f\n\0"
+                as *const u8 as *const ::core::ffi::c_char,
+            pl.sequence,
+            crate::mm304::telemetry::decision_cname(pl.decision),
+            pl.ut,
+            pl.sigma,
+            pl.bank,
+            pl.aoa_bias,
+            pl.predicted_energy,
+            pl.target_energy,
+            pl.terminal.band,
+            pl.uncertainty,
+            pl.energy_at_min,
+            pl.energy_at_max,
+            crate::mm304::telemetry::limiting_cname(pl.limiting),
+            pl.forecasts,
+            pl.reversals_predicted,
+            pl.converged as ::core::ffi::c_int,
+            pl.in_envelope as ::core::ffi::c_int,
+            pl.terminal.along,
+            pl.terminal.cross,
+            pl.terminal.heading_error,
+            pl.terminal.altitude,
+            pl.terminal.speed,
+        );
     }
     (*g).entry_planning_needed = false_0 != 0;
     return true_0 != 0;
@@ -3212,11 +3242,92 @@ pub unsafe extern "C" fn entry_program_guidance(
     } else {
         -1.0f64
     };
-    let mut lateral_out: EntryLateralOutput = entry_lateral_update(
-        &raw mut (*g).entry_lateral,
-        &raw mut lateral,
-        &raw mut limits,
+    let mut mm_count: usize = (alpha_schedule.point_count as usize).min(8);
+    let mut mm_ceiling: ::core::ffi::c_double = fmin(alpha_ceiling, (*v).maximum_angle_of_attack);
+    let mut mm_stair_env: *const ::core::ffi::c_char = getenv(
+        b"KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST\0" as *const u8 as *const ::core::ffi::c_char,
     );
+    let mut mm_stair: Option<&str> = if mm_stair_env.is_null() {
+        None
+    } else {
+        ::core::ffi::CStr::from_ptr(mm_stair_env).to_str().ok().filter(|x| !x.is_empty())
+    };
+    crate::mm304::live::set_schedule(
+        &mut (*g).mm304,
+        &alpha_schedule.relative_velocity[..mm_count],
+        &alpha_schedule.alpha[..mm_count],
+        alpha_schedule.target_rate_limit,
+        alpha_schedule.minimum_protective_aoa,
+        mm_ceiling,
+        mm_stair,
+    );
+    let mut mm_max_ld: ::core::ffi::c_double = crate::mm304::predict::max_lift_to_drag_aoa(
+        (*g).entry_terminal_model as *const crate::prediction::predictor::TerminalModel,
+        (*t).dynamic_pressure,
+        (*t).mach,
+        mm_ceiling,
+    );
+    let mut mm_in: crate::mm304::live::LiveInput = crate::mm304::live::LiveInput {
+        ut: (*t).ut,
+        mach: (*t).mach,
+        speed: (*t).true_air_speed,
+        ground_speed: map_speed,
+        altitude: (*t).mean_altitude,
+        latitude: (*t).latitude,
+        longitude: (*t).longitude,
+        course: if course.is_finite() as i32 != 0 { course } else { (*t).ground_track_heading },
+        site_altitude: (*cfg).site.altitude,
+        surface_gravity: planet_surface_gravity(p),
+        radius: ground_radius,
+        lift_accel: lateral.lift_accel,
+        target_latitude: alignment_point.latitude,
+        target_longitude: alignment_point.longitude,
+        station_range: if hac_range.is_finite() as i32 != 0 { hac_range } else { 0.0f64 },
+        handoff_speed: if hac_v.is_finite() as i32 != 0 { hac_v } else { taem_velocity },
+        max_ld_aoa: mm_max_ld,
+        bank_limit: limits.maximum_bank_deg,
+        roll_rate: limits.maximum_roll_rate_deg_s,
+        cross_uncertainty: fmax(
+            lateral.crossrange_uncertainty_m,
+            if (*g).mm304.residual.miss.is_finite() as i32 != 0 {
+                fabs((*g).mm304.residual.miss)
+            } else {
+                0.0f64
+            },
+        ),
+        measured_bank: lateral.measured_bank_deg,
+    };
+    let mut mm = crate::mm304::live::tick(&mut (*g).mm304, &mm_in);
+    let mut mm_law = (*g).mm304.law;
+    let mut lateral_out: EntryLateralOutput = EntryLateralOutput {
+        valid: mm.aoa.is_finite() && mm.bank.is_finite(),
+        reversal_requested: mm.reversal,
+        leg_captured: false,
+        reversal_armed: false,
+        degraded_authority: false,
+        bank_sign: mm_law.bank_sign,
+        bank_magnitude_deg: fabs(mm.bank),
+        energy_bank_magnitude_deg: crate::mm304::law::plan_attitude(
+            if (*g).mm304.plan.valid { (*g).mm304.plan.sigma } else { 0.0f64 },
+            mm.nominal_aoa,
+            mm_max_ld,
+            limits.maximum_bank_deg,
+        ).1,
+        raw_target_bank_deg: mm.bank,
+        target_bank_deg: mm.bank,
+        target_bank_rate_deg_s: 0.0f64,
+        corridor_metric: 0.0f64,
+        course_corridor_deg: 0.0f64,
+        crossrange_corridor_m: mm_in.cross_uncertainty,
+        projected_crossrange_error_m: mm_law.miss_hold,
+        reversal_response_time_s: 0.0f64,
+        required_lateral_lift_accel: mm_law.accel_required,
+        zero_effort_crossrange_m: mm_law.miss,
+        lateral_demand_binding: mm_law.regime == crate::mm304::state::MM304_REGIME_LATERAL,
+        expected_course_rate_deg_s: 0.0f64,
+        sideslip_rate_deg_s: 0.0f64,
+        coordination_roll_rate_limit_deg_s: limits.maximum_roll_rate_deg_s,
+    };
     if !lateral_out.valid {
         return entry_program_contract_hold(
             g,
@@ -3256,149 +3367,43 @@ pub unsafe extern "C" fn entry_program_guidance(
     let mut bank_resolution: ::core::ffi::c_double = sqrt(DBL_EPSILON)
         * fmax(1.0f64, limits.maximum_bank_deg);
     let mut bank_at_limit: bool = limits.maximum_bank_deg > DBL_EPSILON
-        && lateral_out.energy_bank_magnitude_deg
-            >= limits.maximum_bank_deg - bank_resolution;
+        && fabs(bank) >= limits.maximum_bank_deg - bank_resolution;
     let mut structural_clear: bool = (*t).dynamic_pressure.is_finite() as i32 != 0
         && (*t).g_force.is_finite() as i32 != 0
         && (*t).dynamic_pressure < (*v).maximum_dynamic_pressure
         && (*t).g_force < (*v).maximum_g_load;
-    let mut headroom: ::core::ffi::c_double = fmax(
-        0.0f64,
-        (*v).maximum_angle_of_attack - alpha.target_aoa,
-    );
-    let mut need_drag: bool = bank_at_limit as ::core::ffi::c_int != 0
-        && structural_clear as ::core::ffi::c_int != 0 && drag.drag_error_accel > 0.0f64;
-    let mut deficit: ::core::ffi::c_double = if measured_drag_accel.is_finite() as i32
-        != 0 && drag.reference_drag_accel > 1e-6f64
+    let mut aoa: ::core::ffi::c_double = mm.aoa;
+    if alpha.limiting_reason as ::core::ffi::c_uint
+        == ENTRY_ALPHA_LIMIT_STALL_MARGIN as ::core::ffi::c_int as ::core::ffi::c_uint
+        || alpha.limiting_reason as ::core::ffi::c_uint
+            == ENTRY_ALPHA_LIMIT_G_LOAD as ::core::ffi::c_int as ::core::ffi::c_uint
     {
-        clampd(1.0f64 - measured_drag_accel / drag.reference_drag_accel, 0.0f64, 1.0f64)
-    } else {
-        0.0f64
-    };
-    let mut ceiling: ::core::ffi::c_double = fmin(
-        alpha_ceiling,
-        (*v).maximum_angle_of_attack,
-    );
-    if !(*g).entry_alpha_filter_valid {
-        (*g).entry_alpha_deficit_filter = deficit;
-        (*g).entry_alpha_ceiling_filter = ceiling;
-        (*g).entry_alpha_filter_valid = true_0 != 0;
-    } else {
-        let mut a: ::core::ffi::c_double = clampd(dt / 8.0f64, 0.0f64, 1.0f64);
-        (*g).entry_alpha_deficit_filter
-            += (deficit - (*g).entry_alpha_deficit_filter) * a;
-        let mut b: ::core::ffi::c_double = clampd(
-            dt
-                / (if ceiling < (*g).entry_alpha_ceiling_filter {
-                    2.0f64
-                } else {
-                    8.0f64
-                }),
-            0.0f64,
-            1.0f64,
+        aoa = fmin(aoa, alpha.target_aoa);
+    }
+    aoa = clampd(aoa, 0.0f64, (*v).maximum_angle_of_attack);
+    if !(*g).diagnostic_shadow {
+        let (mm_range, _) = crate::mm304::predict::range_bearing(
+            crate::prediction::predictor::GeoPoint {
+                latitude: (*t).latitude,
+                longitude: (*t).longitude,
+                altitude: (*t).mean_altitude,
+            },
+            crate::prediction::predictor::GeoPoint {
+                latitude: alignment_point.latitude,
+                longitude: alignment_point.longitude,
+                altitude: 0.0f64,
+            },
+            ground_radius,
         );
-        (*g).entry_alpha_ceiling_filter
-            += (ceiling - (*g).entry_alpha_ceiling_filter) * b;
-    }
-    let mut proportional: ::core::ffi::c_double = if structural_clear
-        as ::core::ffi::c_int != 0
-    {
-        fmax(0.0f64, (*g).entry_alpha_ceiling_filter - alpha.target_aoa)
-            * (*g).entry_alpha_deficit_filter
-    } else {
-        0.0f64
-    };
-    let mut goal: ::core::ffi::c_double = if need_drag as ::core::ffi::c_int != 0 {
-        headroom
-    } else {
-        fmin(headroom, proportional)
-    };
-    let mut rate: ::core::ffi::c_double = (if need_drag as ::core::ffi::c_int != 0 {
-        1.0f64
-    } else {
-        0.5f64
-    }) * fmax(0.0f64, dt);
-    (*g).entry_alpha_drag_boost = if (*g).entry_alpha_drag_boost < goal {
-        fmin(goal, (*g).entry_alpha_drag_boost + rate)
-    } else {
-        fmax(goal, (*g).entry_alpha_drag_boost - rate)
-    };
-    (*g).entry_alpha_drag_boost = fmin((*g).entry_alpha_drag_boost, headroom);
-    let mut aoa: ::core::ffi::c_double = clampd(
-        alpha.target_aoa + (*g).entry_alpha_drag_boost,
-        0.0f64,
-        (*v).maximum_angle_of_attack,
-    );
-    let mut test_aoa: ::core::ffi::c_double = entry_aoa_staircase_test((*t).mach);
-    if test_aoa.is_finite() as i32 != 0 {
-        if alpha.limiting_reason as ::core::ffi::c_uint
-            == ENTRY_ALPHA_LIMIT_STALL_MARGIN as ::core::ffi::c_int
-                as ::core::ffi::c_uint
-            || alpha.limiting_reason as ::core::ffi::c_uint
-                == ENTRY_ALPHA_LIMIT_G_LOAD as ::core::ffi::c_int as ::core::ffi::c_uint
-        {
-            test_aoa = fmin(test_aoa, alpha.target_aoa);
-        }
-        let mut fresh: bool = (*g).entry_control_plan_valid as ::core::ffi::c_int != 0
-            && (*g).entry_control_aoa.is_finite() as i32 != 0
-            && (*t).ut - (*g).entry_control_plan_ut < 1.0f64;
-        let mut previous: ::core::ffi::c_double = if fresh as ::core::ffi::c_int != 0 {
-            (*g).entry_control_aoa
-        } else {
-            (*t).angle_of_attack
-        };
-        let mut down: ::core::ffi::c_double = alpha_schedule.target_rate_limit
-            * fmax(0.0f64, dt);
-        if previous.is_finite() as i32 != 0 {
-            test_aoa = clampd(test_aoa, previous - down, previous + 0.5f64 * down);
-        }
-        aoa = clampd(test_aoa, 0.0f64, (*v).maximum_angle_of_attack);
-    }
-    let mut policy_fresh: bool = (*g).entry_policy_valid as ::core::ffi::c_int != 0
-        && (*g).entry_policy_bank_deg.is_finite() as i32 != 0
-        && (*g).entry_policy_ut.is_finite() as i32 != 0
-        && (*t).ut - (*g).entry_policy_ut
-            <= 3.0f64 * fmax((*s).prediction_interval, 1.0f64);
-    let mut dragref_short: bool = drag.predicted_range_error < 0.0f64
-        && drag.drag_range_scale <= drag_cfg.minimum_drag_scale + 1e-6f64;
-    if policy_fresh as ::core::ffi::c_int != 0 && (*g).entry_policy_bank_deg <= 0.5f64
-        || dragref_short as ::core::ffi::c_int != 0
-    {
-        (*g).entry_energy_short_latched = true_0 != 0;
-    } else if policy_fresh as ::core::ffi::c_int != 0
-        && (*g).entry_policy_bank_deg >= 10.0f64
-    {
-        (*g).entry_energy_short_latched = false_0 != 0;
-    }
-    if (*g).entry_energy_short_latched {
-        let mut best_0: ::core::ffi::c_double = entry_max_lift_to_drag_aoa(
-            (*g).entry_terminal_model as *const TerminalModel,
-            (*t).dynamic_pressure,
-            (*t).mach,
-            (*v).maximum_angle_of_attack,
-        );
-        if best_0.is_finite() as i32 == 0 {
-            best_0 = (*v).entry_angle_of_attack;
-        }
-        best_0 = fmax(best_0, alpha_schedule.minimum_protective_aoa);
-        if aoa > best_0 {
-            let mut previous_0: ::core::ffi::c_double = if (*g).entry_control_plan_valid
-                as ::core::ffi::c_int != 0
-                && (*g).entry_control_aoa.is_finite() as i32 != 0
-                && (*t).ut - (*g).entry_control_plan_ut < 1.0f64
-            {
-                (*g).entry_control_aoa
-            } else {
-                (*t).angle_of_attack
-            };
-            let mut step: ::core::ffi::c_double = alpha_schedule.target_rate_limit
-                * fmax(0.0f64, dt);
-            aoa = if previous_0.is_finite() as i32 != 0 {
-                fmax(best_0, fmin(aoa, previous_0 - step))
-            } else {
-                best_0
-            };
-        }
+        crate::mm304::telemetry::publish(crate::mm304::telemetry::Published {
+            state: (*g).mm304,
+            ut: (*t).ut,
+            aoa_cmd: aoa,
+            nominal_aoa: mm.nominal_aoa,
+            bank_cmd: bank,
+            max_ld_aoa: mm_max_ld,
+            range: mm_range,
+        });
     }
     let mut heading: ::core::ffi::c_double = if course.is_finite() as i32 != 0 {
         norm_deg(course)
@@ -3579,22 +3584,20 @@ pub unsafe extern "C" fn entry_program_guidance(
     snprintf(
         &raw mut status as *mut ::core::ffi::c_char,
         ::core::mem::size_of::<[::core::ffi::c_char; 448]>() as size_t,
-        b"MM304 %s closed loop: D %.2f/ref %.2f (err %+.2f) m/s2, range %.1f/%.1f km (margin %+.1f km), bank %+.1f deg, cross %+.1f km, AoA %.1f deg, MM305 %s.\0"
+        b"MM304 %s: plan %s sigma %+.2f, HAC energy %+.0f m (target %.0f, band %.0f, unc %.0f), bank %+.1f deg, miss %+.1f km, AoA %.1f deg (sched %.1f), %u rev, MM305 %s.\0"
             as *const u8 as *const ::core::ffi::c_char,
         entry_phase_string((*g).entry_exec.phase),
-        drag.observed_drag_accel,
-        drag.reference_drag_accel,
-        drag.drag_error_accel,
-        drag.predicted_range_to_taem / 1000.0f64,
-        drag.available_range_to_taem / 1000.0f64,
-        drag.predicted_range_error / 1000.0f64,
+        crate::mm304::telemetry::decision_cname((*g).mm304.plan.decision),
+        (*g).mm304.plan.sigma,
+        (*g).mm304.plan.predicted_energy,
+        (*g).mm304.plan.target_energy,
+        (*g).mm304.plan.terminal.band,
+        (*g).mm304.plan.uncertainty,
         bank,
-        if lateral.has_crossrange_error as ::core::ffi::c_int != 0 {
-            lateral.crossrange_error_m / 1000.0f64
-        } else {
-            ::core::f32::NAN as ::core::ffi::c_double
-        },
+        mm_law.miss / 1000.0f64,
         aoa,
+        mm.nominal_aoa,
+        mm_law.reversals,
         if handoff_ready as ::core::ffi::c_int != 0 {
             b"admissible\0" as *const u8 as *const ::core::ffi::c_char
         } else {

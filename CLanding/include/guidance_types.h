@@ -217,6 +217,51 @@ typedef enum {
 } TerminalPathKind;
 
 
+/* MM304 entry guidance state; mirrors rust/landing/src/mm304/state.rs. */
+#define MM304_SAMPLES 48
+#define MM304_SCHEDULE_POINTS 8
+typedef struct {
+    double ut, latitude, longitude, altitude, speed, energy, aoa, bank, miss;
+} Mm304Sample;
+typedef struct {
+    bool valid; uint32_t count;
+    double velocity[MM304_SCHEDULE_POINTS], alpha[MM304_SCHEDULE_POINTS];
+    uint32_t stair_count;
+    double stair_mach[MM304_SCHEDULE_POINTS], stair_alpha[MM304_SCHEDULE_POINTS];
+    double rate_limit, min_aoa, max_aoa;
+} Mm304Schedule;
+typedef struct {
+    bool valid, admissible;
+    double ut, along, cross, heading_error, altitude, speed, flight_path_angle, energy_error, band;
+} Mm304Terminal;
+typedef struct {
+    bool valid, converged, in_envelope;
+    uint32_t sequence, decision, limiting, forecasts, reversals_predicted;
+    double ut, sigma, aoa_bias, bank, target_energy, predicted_energy, uncertainty, cost,
+        energy_at_min, energy_at_max;
+    Mm304Terminal terminal;
+    uint32_t sample_count;
+    Mm304Sample samples[MM304_SAMPLES];
+} Mm304Plan;
+typedef struct {
+    bool initialized; uint32_t regime, reversals;
+    double bank_sign, aoa_cmd, bank_cmd, last_ut, last_reversal_ut, t_go, miss, miss_hold,
+        miss_reverse, accel_capacity, accel_required;
+} Mm304Law;
+typedef struct {
+    uint32_t count, plan_sequence;
+    double ut, horizon, energy, altitude, speed, miss, aoa, bank, energy_rate_rms, aoa_rms, bank_rms;
+} Mm304Residual;
+typedef struct {
+    Mm304Schedule schedule;
+    Mm304Plan plan;
+    Mm304Law law;
+    Mm304Residual residual;
+    bool target_valid;
+    double target_latitude, target_longitude, station_range, handoff_speed, bank_limit,
+        cross_uncertainty;
+} Mm304State;
+
 typedef struct {
     GuidancePhase phase; bool automation_engaged, paused, aborted;
     const struct TerminalModel *entry_terminal_model; /* Borrowed only during guidance_update; never serialized. */
@@ -425,6 +470,7 @@ typedef struct {
     AdaptiveFlareState adaptive_flare;
     /* Set by the MM305 energy-short path each tick; copied into the command. */
     double jet_assist_throttle;
+    Mm304State mm304;
 } GuidanceMachine;
 TaemInterfaceCapture entry_mm305_acquisition_capture(const GuidanceMachine *guidance,
     const TaemInterfaceTarget *target,const Telemetry *telemetry,double course,

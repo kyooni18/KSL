@@ -5977,6 +5977,17 @@ pub unsafe extern "C" fn snapshot_json(
     jw_string(w, b"guidanceState\0" as *const u8 as *const ::core::ffi::c_char);
     jw_char(w, ':' as i32 as ::core::ffi::c_char);
     jw_char(w, '{' as i32 as ::core::ffi::c_char);
+    jw_string(w, b"mm304\0" as *const u8 as *const ::core::ffi::c_char);
+    jw_char(w, ':' as i32 as ::core::ffi::c_char);
+    match crate::mm304::telemetry::latest_json() {
+        Some(block) => {
+            for byte in block.bytes() {
+                jw_char(w, byte as ::core::ffi::c_char);
+            }
+        }
+        None => jw_null(w),
+    }
+    jw_char(w, ',' as i32 as ::core::ffi::c_char);
     jw_string(w, b"activeRunway\0" as *const u8 as *const ::core::ffi::c_char);
     jw_char(w, ':' as i32 as ::core::ffi::c_char);
     active_runway_json(w, s);
@@ -6688,6 +6699,17 @@ pub unsafe extern "C" fn snapshot_log_json(
     jw_string(w, b"guidanceState\0" as *const u8 as *const ::core::ffi::c_char);
     jw_char(w, ':' as i32 as ::core::ffi::c_char);
     jw_char(w, '{' as i32 as ::core::ffi::c_char);
+    jw_string(w, b"mm304\0" as *const u8 as *const ::core::ffi::c_char);
+    jw_char(w, ':' as i32 as ::core::ffi::c_char);
+    match crate::mm304::telemetry::latest_json() {
+        Some(block) => {
+            for byte in block.bytes() {
+                jw_char(w, byte as ::core::ffi::c_char);
+            }
+        }
+        None => jw_null(w),
+    }
+    jw_char(w, ',' as i32 as ::core::ffi::c_char);
     jw_string(w, b"burnStarted\0" as *const u8 as *const ::core::ffi::c_char);
     jw_char(w, ':' as i32 as ::core::ffi::c_char);
     jw_bool(w, (*s).guidance_has_burn_started);
