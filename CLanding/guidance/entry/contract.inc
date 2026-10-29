@@ -620,10 +620,15 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
             if(alpha.limiting_reason==ENTRY_ALPHA_LIMIT_STALL_MARGIN||
                alpha.limiting_reason==ENTRY_ALPHA_LIMIT_G_LOAD)
                 test_aoa=fmin(test_aoa,alpha.target_aoa);
-            double previous=g->entry_control_plan_valid&&isfinite(g->entry_control_aoa)?
-                g->entry_control_aoa:t->angle_of_attack;
-            double step=alpha_schedule.target_rate_limit*fmax(0.0,dt);
-            if(isfinite(previous))test_aoa=clampd(test_aoa,previous-step,previous+step);
+            /* After attitude recovery the last MM304 command is stale; ramp
+               from the measured incidence.  Pitch up at half rate: live
+               flight A3 overshot 40 to 47 deg under full nose-down elevon
+               at q < 60 Pa. */
+            bool fresh=g->entry_control_plan_valid&&isfinite(g->entry_control_aoa)&&
+                t->ut-g->entry_control_plan_ut<1.0;
+            double previous=fresh?g->entry_control_aoa:t->angle_of_attack;
+            double down=alpha_schedule.target_rate_limit*fmax(0.0,dt);
+            if(isfinite(previous))test_aoa=clampd(test_aoa,previous-down,previous+0.5*down);
             aoa=clampd(test_aoa,0.0,v->maximum_angle_of_attack);
         }
     }
