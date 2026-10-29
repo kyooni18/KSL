@@ -1,0 +1,94 @@
+{
+  "constraintOccurrences" : {
+    "insufficientEnergy" : 1
+  },
+  "elapsed" : 0,
+  "evidence" : "offline-model-only",
+  "finalState" : {
+    "aerodynamics" : {
+      "airspeed" : 70.00000000000001,
+      "angleOfAttack" : 0.13962634015954636,
+      "bank" : -2.4283933759762754e-16,
+      "drag" : 70553.9048038629,
+      "dynamicPressure" : 2435.8001945027786,
+      "force" : {
+        "x" : 16553.83389950094,
+        "y" : -212258.99943137422,
+        "z" : -177.42574824426805
+      },
+      "lift" : 200873.3189181778,
+      "mach" : 0.20082533041440676,
+      "measuredForces" : false,
+      "sideslip" : -1.1102230246251565e-16
+    },
+    "angularVelocity" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    },
+    "atmosphere" : {
+      "density" : 0.9942041610215419,
+      "pressure" : 86279.30693685597,
+      "speedOfSound" : 348.56160752009583,
+      "temperature" : 302.3162049851782,
+      "wind" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      }
+    },
+    "attitude" : {
+      "w" : 0.7006827684760446,
+      "x" : -0.7000877923230864,
+      "y" : -0.09722597399682106,
+      "z" : 0.09730288269780253
+    },
+    "contact" : "airborne",
+    "mass" : 25000,
+    "position" : {
+      "x" : 39966.05029586217,
+      "y" : -599738.0549808476,
+      "z" : -499.79553015459805
+    },
+    "radarAltitude" : 1068.4399999999441,
+    "snapshotSpan" : 0,
+    "systems" : {
+      "airbrakes" : false,
+      "brakes" : false,
+      "gearDown" : false,
+      "rcs" : false,
+      "sas" : false,
+      "throttle" : 0,
+      "thrust" : 0
+    },
+    "time" : 1000,
+    "velocity" : {
+      "x" : 64.04100810644829,
+      "y" : 28.262151420469035,
+      "z" : 0.008820221461114644
+    }
+  },
+  "lastPlanningRejections" : {
+
+  },
+  "lastTerminalCandidateCount" : 0,
+  "maximumComputationMilliseconds" : 0.014115,
+  "maximumDynamicPressure" : 2435.8001945027786,
+  "maximumLoadFactor" : 0.8193351202222076,
+  "meanComputationMilliseconds" : 0.014115,
+  "outcome" : "aborted",
+  "phases" : [
+    "abort"
+  ],
+  "saturatedControlFraction" : 0,
+  "scenario" : "nominal-final",
+  "steps" : 0,
+  "violations" : [
+    {
+      "kind" : "insufficientEnergy",
+      "limit" : 6334.007875281339,
+      "message" : "Runway exceeds even the optimistic still-air modeled range",
+      "value" : 120400.00000000004
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "scope": "Saved telemetry samples; 10 Hz nominal-final and 1 Hz other cases, with final records. Sample maxima are not continuous-time bounds.",
+  "cases": [
+    {
+      "case": "nominal-final",
+      "recordedSamples": 1168,
+      "sampledMaximumAbsoluteBankDegrees": 0.0008470144571061797,
+      "sampledMaximumAlphaDegrees": 7.999999999999997,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "nominal-entry",
+      "recordedSamples": 571,
+      "sampledMaximumAbsoluteBankDegrees": 78.25127353593766,
+      "sampledMaximumAlphaDegrees": 22.168122367722177,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-heading-eight",
+      "recordedSamples": 560,
+      "sampledMaximumAbsoluteBankDegrees": 84.54910050394248,
+      "sampledMaximumAlphaDegrees": 22.167533553472968,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "required-spiral",
+      "recordedSamples": 239,
+      "sampledMaximumAbsoluteBankDegrees": 67.52531977592969,
+      "sampledMaximumAlphaDegrees": 17.97204653775003,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-downrange-plus100km",
+      "recordedSamples": 579,
+      "sampledMaximumAbsoluteBankDegrees": 10.522997350393533,
+      "sampledMaximumAlphaDegrees": 22.18363193911964,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-crossrange15km",
+      "recordedSamples": 507,
+      "sampledMaximumAbsoluteBankDegrees": 81.37386083708728,
+      "sampledMaximumAlphaDegrees": 22.16805136694667,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-speed-minus50",
+      "recordedSamples": 655,
+      "sampledMaximumAbsoluteBankDegrees": 80.91801566749137,
+      "sampledMaximumAlphaDegrees": 22.143648877593428,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-speed-plus50",
+      "recordedSamples": 694,
+      "sampledMaximumAbsoluteBankDegrees": 86.53577218859103,
+      "sampledMaximumAlphaDegrees": 22.21562186111997,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-drag-plus10pct",
+      "recordedSamples": 493,
+      "sampledMaximumAbsoluteBankDegrees": 78.24803317482282,
+      "sampledMaximumAlphaDegrees": 22.16813013010254,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "entry-actuator-minus35pct",
+      "recordedSamples": 462,
+      "sampledMaximumAbsoluteBankDegrees": 75.81027987410097,
+      "sampledMaximumAlphaDegrees": 20.96604811328077,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "final-lift-minus20pct",
+      "recordedSamples": 124,
+      "sampledMaximumAbsoluteBankDegrees": 0.0007970087182198922,
+      "sampledMaximumAlphaDegrees": 14.680978327074662,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "final-drag-plus20pct",
+      "recordedSamples": 127,
+      "sampledMaximumAbsoluteBankDegrees": 0.000770969823450619,
+      "sampledMaximumAlphaDegrees": 12.743218059194337,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "final-drag-minus20pct",
+      "recordedSamples": 116,
+      "sampledMaximumAbsoluteBankDegrees": 0.0009323856359058842,
+      "sampledMaximumAlphaDegrees": 7.999999999999997,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "final-density-plus10pct",
+      "recordedSamples": 119,
+      "sampledMaximumAbsoluteBankDegrees": 0.0008187874312418964,
+      "sampledMaximumAlphaDegrees": 7.999999999999997,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "final-crosswind5mps",
+      "recordedSamples": 118,
+      "sampledMaximumAbsoluteBankDegrees": 1.9129877701726592,
+      "sampledMaximumAlphaDegrees": 7.9999890161105345,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "low-energy-unreachable",
+      "recordedSamples": 1,
+      "sampledMaximumAbsoluteBankDegrees": 1.391366914409663e-14,
+      "sampledMaximumAlphaDegrees": 8.0,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "historical-entry-20261028",
+      "recordedSamples": 931,
+      "sampledMaximumAbsoluteBankDegrees": 89.3467541200895,
+      "sampledMaximumAlphaDegrees": 22.439547985059136,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "historical-polar-20261029",
+      "recordedSamples": 962,
+      "sampledMaximumAbsoluteBankDegrees": 73.45377802715586,
+      "sampledMaximumAlphaDegrees": 22.407346420689493,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    },
+    {
+      "case": "archival-heavy-final",
+      "recordedSamples": 6,
+      "sampledMaximumAbsoluteBankDegrees": 68.2675369553943,
+      "sampledMaximumAlphaDegrees": 7.999999999999989,
+      "forbiddenSystemSamples": 0,
+      "airborneBrakeCommands": 0,
+      "nonfiniteKinematicsAttitudeOrCommands": 0
+    }
+  ],
+  "allRecordedControlsRespectUnpoweredPolicy": true
+}

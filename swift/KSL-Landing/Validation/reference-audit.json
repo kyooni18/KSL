@@ -1,0 +1,143 @@
+{
+  "evidence": "supplied archive audit; no external flight verification",
+  "aerodynamicModelStatus": "provisional; not certified",
+  "observedCells": 53,
+  "totalGridCells": 294,
+  "provenanceClassifications": {
+    "live": 19,
+    "simulator": 283
+  },
+  "listedLiveRawLogsPresent": 0,
+  "cellUpdateRatiosVersusBase": {
+    "cl_ratio": {
+      "minimum": 0.5098199564829415,
+      "median": 0.9483809789764338,
+      "maximum": 1.182550200539494,
+      "meaning": "cell update relative to older polar; not holdout residual or certified error bound"
+    },
+    "cd_ratio": {
+      "minimum": 0.4990732589007572,
+      "median": 1.0264945463187327,
+      "maximum": 2.1238683635938114,
+      "meaning": "cell update relative to older polar; not holdout residual or certified error bound"
+    }
+  },
+  "historicalLogAudits": [
+    {
+      "file": "2026-10-29T11-43-41Z-STS-vehicle.jsonl",
+      "sha256": "3ece5b66b5e5c93a1025cd0e826f595994bfc6da8e6e5979223798911580aa74",
+      "statistics": {
+        "duplicateTimes": 6,
+        "evidence": "archived telemetry; flight provenance must be checked separately",
+        "invalidSnapshots": 0,
+        "lines": 916,
+        "malformedLines": 19,
+        "orphanDeltas": 107,
+        "phases": {
+          "Abort": 1,
+          "Attitude Recovery": 10,
+          "MM304 Entry": 766,
+          "Rollout": 7
+        },
+        "sequenceGaps": 0,
+        "sessions": [
+          "2026-10-29T11-43-41Z-64095-188486521833",
+          "2026-10-29T11-43-41Z-64096-188486521820"
+        ],
+        "snapshots": 784
+      },
+      "error": null
+    },
+    {
+      "file": "2026-10-29T13-04-47Z-STS-vehicle.jsonl",
+      "sha256": "881806c675bb6064b9b8e122d60decb4d5f2cedd3cd7c591ecdfc4dabcae70e2",
+      "statistics": {
+        "duplicateTimes": 0,
+        "evidence": "archived telemetry; flight provenance must be checked separately",
+        "invalidSnapshots": 0,
+        "lines": 36,
+        "malformedLines": 5,
+        "orphanDeltas": 31,
+        "phases": {},
+        "sequenceGaps": 0,
+        "sessions": [
+          "2026-10-29T13-04-47Z-589-193353179978",
+          "2026-10-29T13-04-47Z-591-193353182468"
+        ],
+        "snapshots": 0
+      },
+      "error": null
+    },
+    {
+      "file": "2026-10-29T13-05-05Z-STS-vehicle.jsonl",
+      "sha256": "441ed9bf8e23c855b73cf159805923448315fd1d4111dfe4a0741c00a0208848",
+      "statistics": {
+        "duplicateTimes": 4,
+        "evidence": "archived telemetry; flight provenance must be checked separately",
+        "invalidSnapshots": 0,
+        "lines": 712,
+        "malformedLines": 10,
+        "orphanDeltas": 98,
+        "phases": {
+          "Abort": 1,
+          "Attitude Recovery": 8,
+          "MM304 Entry": 581,
+          "Rollout": 9
+        },
+        "sequenceGaps": 0,
+        "sessions": [
+          "2026-10-29T13-05-05Z-1121-193370400126",
+          "2026-10-29T13-05-05Z-1122-193370387288"
+        ],
+        "snapshots": 599
+      },
+      "error": null
+    },
+    {
+      "file": "2026-10-29T13-20-37Z-STS-vehicle.jsonl",
+      "sha256": "12ee9f908ba027d2d338390258e8c218bfc50de364bc044a0b0eadc7bb605222",
+      "statistics": {
+        "duplicateTimes": 0,
+        "evidence": "archived telemetry; flight provenance must be checked separately",
+        "invalidSnapshots": 1,
+        "lines": 487,
+        "malformedLines": 7,
+        "orphanDeltas": 63,
+        "phases": {
+          "MM304 Entry": 341,
+          "TAEM": 75
+        },
+        "sequenceGaps": 0,
+        "sessions": [
+          "2026-10-29T13-20-37Z-7841-194303183445",
+          "2026-10-29T13-20-37Z-7842-194303183282"
+        ],
+        "snapshots": 416
+      },
+      "error": null
+    },
+    {
+      "file": "2026-10-29T13-26-18Z-STS-vehicle.jsonl",
+      "sha256": "25b376202c2febbf847c97bd9b42e836dd112825f5dc0640892f45f468c4250e",
+      "statistics": {
+        "duplicateTimes": 1,
+        "evidence": "archived telemetry; flight provenance must be checked separately",
+        "invalidSnapshots": 0,
+        "lines": 695,
+        "malformedLines": 2,
+        "orphanDeltas": 25,
+        "phases": {
+          "MM304 Entry": 625
+        },
+        "sequenceGaps": 0,
+        "sessions": [
+          "2026-10-29T13-26-18Z-11320-194643582200",
+          "2026-10-29T13-26-18Z-11321-194643581619"
+        ],
+        "snapshots": 625
+      },
+      "error": null
+    }
+  ],
+  "observationsDatabase": "database disk image is malformed"
+}

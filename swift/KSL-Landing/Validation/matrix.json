@@ -1,0 +1,914 @@
+{
+  "evidence": "offline-model-only; no live KSP success",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "architecture": "x86_64",
+  "executableSHA256": "05fa98ea13bd88e84cf5acc769a8c974194363a5ad6d269bdc53314c8316aa63",
+  "sourceSHA256": {
+    "Sources/KSLControl/Attitude/FlightController.swift": "8cb33fdd547a1b2eabea4d151ee6c4e99557c439982f94721698919672b103e2",
+    "Sources/KSLControl/Rollout/RolloutController.swift": "a832e87c2def383cf9973d479f6b17b51942e7c500f611968bfdb9bd6e660976",
+    "Sources/KSLCore/Geometry/PlanetGeometry.swift": "cbc0b50e908cc8258180b2bad01b6e3b8811436d80d87d8018ce0dc2565a90f3",
+    "Sources/KSLCore/Geometry/Quaternion.swift": "0bd9d22a2413c821a22d9e8514fbef1478512c3f88c8c0609e32bb1e9e5bb548",
+    "Sources/KSLCore/Geometry/RunwayGeometry.swift": "f7b2711c74b2f62575fe6988e042c9968466e3f5b2a2610d9dd016ae917280c3",
+    "Sources/KSLCore/Geometry/Scalar.swift": "dd8ef57a7cee05e52633870f515858529799c08e20244f88903523497b29e07c",
+    "Sources/KSLCore/Geometry/Vector3.swift": "e33e40bbf5f973b3a82f167bf32061263e4410b643f4517b9574db35a4145de6",
+    "Sources/KSLCore/Models/Configuration.swift": "261432d3c109f721393a5e65d35ddb2841f4e20d8ea4ce7d304a20aec04967eb",
+    "Sources/KSLCore/Models/ControlCommand.swift": "51cf365c64c39d82fd10767deb8f359c2767840249bca5a78aab0cc91a9738f0",
+    "Sources/KSLCore/Models/GuidanceModels.swift": "fbb7f7abd83def5ca2745b1fd2748505d91c1c2bd2224239e13c3a8aa24fae64",
+    "Sources/KSLCore/Models/VehicleState.swift": "6e3fe7593ce9860b1154dfc51a17cd66da5d827f3febb80180e85510e6ff2ae2",
+    "Sources/KSLCore/Protocols/FlightInterfaces.swift": "29bead5ed4f0b6a2fbf5f10e8f337d31c640bc3af1f6066bb1a2b92eca7451e2",
+    "Sources/KSLDiagnostics/Recording/JSONLRecorder.swift": "ae5e1a57deb2e37b2d72ad43d8038487939792aab08fb1686b91197321f946bf",
+    "Sources/KSLDiagnostics/Replay/JSONLReader.swift": "161a5f561ed2bb5fbcdae5530adc61ba13f281c6ffdcd363ae065b7a23d0f099",
+    "Sources/KSLDiagnostics/Replay/LegacyTelemetryReader.swift": "ec4e69dff86061b8db7eb8accca0f06a26c58070d824c33aff68d8b5dee57601",
+    "Sources/KSLGuidance/Approach/ApproachCapture.swift": "fa610f4fbfb4263452096716b0a2f57ebe27b6446e0a3fb245f9fbfc9d1367c0",
+    "Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift": "2e266144202aa4f9d733628bba0dcc143a299d68531e17e30ba238f2c9264d4a",
+    "Sources/KSLGuidance/Approach/ApproachProfile.swift": "59686d6c151d3ca170f8eb02c1568ee02b09b6e6d9a4d9e10e01f4545543c4dd",
+    "Sources/KSLGuidance/Energy/AerodynamicAuthorityEstimator.swift": "f2e2bd1fd527b508104b25e27e108c086627af3c57846cc1b1572d67a469e4c8",
+    "Sources/KSLGuidance/Energy/EnergyManagementEngine.swift": "dad00ba7acac592ea2398faf2e70671981cb61e30d1aeb7959a78fef6f3f9fa8",
+    "Sources/KSLGuidance/Entry/EntryGuidanceEngine.swift": "0abcee4499da989b69906b56781f7629b7adfbf108ef05efe5a45be2a300eb20",
+    "Sources/KSLGuidance/HAC/HACPlanningEngine.swift": "ac84cad24b24cff6cc7f1b6363bd5a69be0f2535982df8174adf855cc19b83cd",
+    "Sources/KSLGuidance/HAC/PathTrackingEngine.swift": "54f93bfd8f9bb72ac358406adf1ac77fd62ef536863f405da5c52475f0dcae42",
+    "Sources/KSLGuidance/HAC/QuinticAcquisition.swift": "b229c600dfb764413d07c5134b918605b575ed2c304127af16818bf3a40ac380",
+    "Sources/KSLGuidance/HAC/SpiralHAC.swift": "867a773db45124c095d1f89f27593f523f6add1395eb9a320a2217fe4cb9adbf",
+    "Sources/KSLGuidance/HAC/TerminalPlan.swift": "1fd8760a483eb37f34bda6fd641faa547bbd5a70040744621f4f7a7e00f26afc",
+    "Sources/KSLGuidance/Landing/LandingMissionController.swift": "6d587be634b3d4e3678370b50883903ed6439e8fa6783aad1745ad4e7718f2e8",
+    "Sources/KSLGuidance/Landing/TouchdownMonitor.swift": "e0f1bc4e44013760ff83c496eb59bd91362033a482cc0e0097440466f1102ecc",
+    "Sources/KSLKRPC/Protocol/KRPCCodec.swift": "5c0be4a6f65445bec48aef14017457c8cb3394de80f0ebf658d2c7cfb01f9e82",
+    "Sources/KSLKRPC/Protocol/Protobuf.swift": "738efa70c4a1d5a032f8c1e3fe44e85fe9851faa57cb720cdec41b195ec502a5",
+    "Sources/KSLKRPC/Telemetry/KRPCFlightIO.swift": "afeb50aa345f0617d1870bc0bd7b0446e75f044f86b6dd14bb7818b7d3671c0b",
+    "Sources/KSLKRPC/Telemetry/KRPCFrameConverter.swift": "1b2ed0c9a3a7c9448f1c6e92ab6482e2fe785683a140600f0d1715c1f11b8a64",
+    "Sources/KSLKRPC/Transport/KRPCSession.swift": "e64051a978fa966045df157284c3a12e07b200fd8246697e19097193e91f0dd3",
+    "Sources/KSLKRPC/Transport/TCPTransport.swift": "411601447b9fc0b23f072d94fdf9357b5e4cec46cbee5982e1374aee1e045955",
+    "Sources/KSLLanding/Main.swift": "4a6f2fe438da643d3d66df33e1c05d22e7e1ff38a916d1c04ff314308b72ecd0",
+    "Sources/KSLPhysics/Aerodynamics/AerodynamicsEngine.swift": "d589b205769893dd93e794c2dab4c55d16161bfba01e2b0f67992d4fbb288d9d",
+    "Sources/KSLPhysics/Atmosphere/AtmosphericModelEngine.swift": "96c6a9f4c6e0eb4deeda5d486c8afa5de04584b109d5c9b71b330e1fb1acba20",
+    "Sources/KSLPhysics/Dynamics/GroundDynamicsEngine.swift": "db9db44b78917fb3c8d865619d1f86b40806b5392b07adfd05d9e5468cd0ee0d",
+    "Sources/KSLPhysics/Dynamics/RotationalDynamicsEngine.swift": "817d181f05728e83dcd036a9d0b6660e8fa1e36da9e810ddf5fa9e9f1d715f3e",
+    "Sources/KSLPhysics/Dynamics/ShuttlePhysicsEngine.swift": "9892a0c4532b4196ca151aad31f8e9100e02805e7ff78d23177501cb45d8ed87",
+    "Sources/KSLPhysics/Dynamics/TranslationalDynamicsEngine.swift": "65ad63f9ed46bc3f58f7e155c7ba58d3eb66f42c55a77e6d384bbbe70838832f",
+    "Sources/KSLPhysics/Propagation/TrajectoryPropagationEngine.swift": "ad5cbe24aa5661464cb77aa5684dcc1fc38bbf52efbc7c9df3c33e454d4fadfb",
+    "Sources/KSLRuntime/FlightComputer.swift": "8ef4e3d74ebc84a6ceb08e4c39fd58611501146743c68736dade86c44817a95f",
+    "Sources/KSLRuntime/FlightRuntime.swift": "daf0e3e0b70bc00f7c85b71cf0ea4dbb3bc960495c6a777ecae4e96fe510d6a6",
+    "Sources/KSLSimulation/Scenarios/SimulationScenario.swift": "6a320aa02df8cbcbf0353308a4b4a06160f41feb1a3377609f2b57fb81e5b525",
+    "Sources/KSLSimulation/SimulatedFlightIO.swift": "eb5f29a044984fcf18a9a29b72b07bca5ba219b0adb067f6ab7b35fcfc759146",
+    "Sources/KSLSimulation/SimulationEngine.swift": "89b4278839cd6993879108e7e5712efcdac081879a2338ec88162a8f3a54b770",
+    "Tests/ControlTests/ControlTests.swift": "3cf431b7e84167fe0d2c8292538b692ea7f9ab20ca8d823b7d2eda86dcf92258",
+    "Tests/CoreTests/GeometryTests.swift": "0d811cf6d3a75197c181450d002b398648df15eccbf940cb297523ddc161c862",
+    "Tests/GuidanceTests/GuidanceTests.swift": "c850d09ed47fe48ae6bc70ae4e967885f5ab32a2f893c4ebcf10e4f7fef1a7da",
+    "Tests/IntegrationTests/ProtocolTests.swift": "ca88ac7a3b5b9259a3e08113c12ec4b68a04e8e0b04c93407770e290aa9bde4d",
+    "Tests/IntegrationTests/ReplayAndFailureTests.swift": "ddd7a6bd0e2d8841dca3284ac57f442de7094db5c40252bbec4a631219a24474",
+    "Tests/PhysicsTests/PhysicsTests.swift": "d95d59232383dd402b19660411b8ec84c4f3fefe2b4ceefb8451ee9d34017bb5",
+    "Tests/SimulationTests/EndToEndTests.swift": "391e8bac8e6d1e26517b22220f4a6bf86592d7c509eed5e12007ecbb6167a3fc",
+    "Tests/SimulationTests/SimulationTests.swift": "4d62d8f4938b44deff7644ad249f39020923f067deba09cb4b18dd6029d5b123",
+    "Package.swift": "30f97436b01ec85e40fa9355bd28b60b9b7ca7cbd6080a3871687faf044561d9"
+  },
+  "cases": [
+    {
+      "case": "nominal-final",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 116.69999999989386,
+      "touchdownAlongMeters": 487.2663678879318,
+      "touchdownCrossMeters": -0.0020329637820441612,
+      "touchdownHorizontalMps": 78.92278210637133,
+      "touchdownSinkMps": 0.9567572279838357,
+      "touchdownPitchDegrees": 5.753081562869175,
+      "stopAlongMeters": 1353.762240614569,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7501.203053035469,
+      "maximumNormalG": 2.118157591709686,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 0.464701,
+      "meanComputationMilliseconds": 0.005181269691780822,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.1985,
+      "arguments": [],
+      "resultSHA256": "eb33cbd9c9c51cf8c67ecf7793f3c8c932394b76701cbd07d81dfdb0a5563eb1"
+    },
+    {
+      "case": "nominal-entry",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 569.0999997018662,
+      "touchdownAlongMeters": 520.9890960534136,
+      "touchdownCrossMeters": -0.0019825185815302735,
+      "touchdownHorizontalMps": 75.02842795431978,
+      "touchdownSinkMps": 1.0599951799242533,
+      "touchdownPitchDegrees": 6.6097193337825075,
+      "stopAlongMeters": 1324.589164083071,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 15546.518447679779,
+      "maximumNormalG": 1.8781698840654266,
+      "saturatedControlFraction": 0.2115621156211562,
+      "maximumComputationMilliseconds": 232.186151,
+      "meanComputationMilliseconds": 0.7990385955727362,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1396
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 16,
+        "excessiveBank": 12,
+        "excessiveLoad": 3,
+        "insufficientEnergy": 6,
+        "insufficientLift": 71,
+        "terrainCollision": 12
+      },
+      "wallSeconds": 4.8569,
+      "arguments": [
+        "--entry"
+      ],
+      "resultSHA256": "bcaa9163fc1f55451d4363fe50763de119ed72434c2229262e2a6dc450691b91"
+    },
+    {
+      "case": "entry-heading-eight",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 558.8999997072096,
+      "touchdownAlongMeters": 592.7745267261569,
+      "touchdownCrossMeters": -0.002002966939239119,
+      "touchdownHorizontalMps": 76.1349106470305,
+      "touchdownSinkMps": 1.10301699716556,
+      "touchdownPitchDegrees": 6.340585375030031,
+      "stopAlongMeters": 1417.377849742059,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 11734.692749814836,
+      "maximumNormalG": 1.648394995683761,
+      "saturatedControlFraction": 0.22705314009661837,
+      "maximumComputationMilliseconds": 71.18774,
+      "meanComputationMilliseconds": 0.5341174692307685,
+      "spiralFlown": true,
+      "phases": [
+        "entry",
+        "acquisition",
+        "headingAlignment",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1806
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 2,
+        "excessiveBank": 2,
+        "excessiveLoad": 1,
+        "insufficientLift": 112
+      },
+      "wallSeconds": 3.2653,
+      "arguments": [
+        "--entry",
+        "--heading-error",
+        "8"
+      ],
+      "resultSHA256": "ac294cb3e457b97bb301b4923ce4c0a652d6308c99f3c6d8cd3f6e7c81d6db78"
+    },
+    {
+      "case": "required-spiral",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 237.99999999978354,
+      "touchdownAlongMeters": 633.3263972314547,
+      "touchdownCrossMeters": -0.001970768965914764,
+      "touchdownHorizontalMps": 73.78425732755537,
+      "touchdownSinkMps": 1.1113837065442607,
+      "touchdownPitchDegrees": 6.78299578078132,
+      "stopAlongMeters": 1416.4745380048334,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7583.4931421314195,
+      "maximumNormalG": 2.1565815320100783,
+      "saturatedControlFraction": 0.0021008403361344537,
+      "maximumComputationMilliseconds": 24.556856,
+      "meanComputationMilliseconds": 0.020146679966400682,
+      "spiralFlown": true,
+      "phases": [
+        "acquisition",
+        "headingAlignment",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1370
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 12,
+        "excessiveBank": 7,
+        "excessiveLoad": 2,
+        "insufficientLift": 99
+      },
+      "wallSeconds": 0.3469,
+      "arguments": [
+        "--along",
+        "-24000",
+        "--cross",
+        "4000",
+        "--height",
+        "12000",
+        "--speed",
+        "220",
+        "--heading-error",
+        "-20",
+        "--flight-path",
+        "-24",
+        "--spiral-only"
+      ],
+      "resultSHA256": "140edb215a3a318c2ba95e79d844665ec549af4769078f9d5bccf753990740d2"
+    },
+    {
+      "case": "entry-downrange-plus100km",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 577.8999996972561,
+      "touchdownAlongMeters": 596.2619397313557,
+      "touchdownCrossMeters": -0.0020224189671780154,
+      "touchdownHorizontalMps": 77.52379400072765,
+      "touchdownSinkMps": 1.097935165967348,
+      "touchdownPitchDegrees": 6.047961270043555,
+      "stopAlongMeters": 1440.504764505569,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 20876.22076269109,
+      "maximumNormalG": 1.6659699245470514,
+      "saturatedControlFraction": 0.05312337774701505,
+      "maximumComputationMilliseconds": 198.777633,
+      "meanComputationMilliseconds": 0.767149830103804,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1699
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 14,
+        "excessiveBank": 6,
+        "insufficientLift": 58
+      },
+      "wallSeconds": 4.7975,
+      "arguments": [
+        "--entry",
+        "--along",
+        "-550000"
+      ],
+      "resultSHA256": "7c01b43eb1a07ba7f593b5e928d1cd3174be818eb994663e19b0847545eebbd8"
+    },
+    {
+      "case": "entry-crossrange15km",
+      "outcome": "aborted",
+      "elapsedSimulationSeconds": 505.59999973513186,
+      "touchdownAlongMeters": null,
+      "touchdownCrossMeters": null,
+      "touchdownHorizontalMps": null,
+      "touchdownSinkMps": null,
+      "touchdownPitchDegrees": null,
+      "stopAlongMeters": null,
+      "finalSpeedMps": 91.89876274855192,
+      "maximumQPa": 13306.792661330739,
+      "maximumNormalG": 1.8081117813038727,
+      "saturatedControlFraction": 0.24287974683544303,
+      "maximumComputationMilliseconds": 410.69972,
+      "meanComputationMilliseconds": 1.9403053468459504,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "abort"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {
+        "insufficientEnergy": 1
+      },
+      "violations": [
+        {
+          "kind": "insufficientEnergy",
+          "limit": 19785.993173787298,
+          "message": "Runway exceeds even the optimistic still-air modeled range",
+          "value": 19807.640730024475
+        }
+      ],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 10,
+        "excessiveBank": 2,
+        "insufficientEnergy": 12,
+        "insufficientLift": 14,
+        "terrainCollision": 55
+      },
+      "wallSeconds": 10.2098,
+      "arguments": [
+        "--entry",
+        "--cross",
+        "15000",
+        "--heading-error",
+        "3"
+      ],
+      "resultSHA256": "3dcc0ca56719c05880dff89bc90847b73d879e98da55983199280f23bdaca90b"
+    },
+    {
+      "case": "entry-speed-minus50",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 653.9999996573897,
+      "touchdownAlongMeters": 422.74023881047356,
+      "touchdownCrossMeters": -0.0019746598070826938,
+      "touchdownHorizontalMps": 74.99013343351487,
+      "touchdownSinkMps": 1.0013761313811669,
+      "touchdownPitchDegrees": 6.6665565528108095,
+      "stopAlongMeters": 1226.6176523604872,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7806.951983755991,
+      "maximumNormalG": 1.7244584103005316,
+      "saturatedControlFraction": 0.1735474006116208,
+      "maximumComputationMilliseconds": 175.622755,
+      "meanComputationMilliseconds": 0.8281032536309462,
+      "spiralFlown": true,
+      "phases": [
+        "entry",
+        "acquisition",
+        "headingAlignment",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1749
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 6,
+        "excessiveBank": 8,
+        "excessiveLoad": 1,
+        "insufficientEnergy": 1,
+        "insufficientLift": 84,
+        "terrainCollision": 16
+      },
+      "wallSeconds": 5.7851,
+      "arguments": [
+        "--entry",
+        "--speed",
+        "1850"
+      ],
+      "resultSHA256": "dd78d0c473bca1c548fb4c1df645d23c83c8ce9e7da8d3a5aab2d8ce9d0ebc89"
+    },
+    {
+      "case": "entry-speed-plus50",
+      "outcome": "aborted",
+      "elapsedSimulationSeconds": 692.3999996372731,
+      "touchdownAlongMeters": null,
+      "touchdownCrossMeters": null,
+      "touchdownHorizontalMps": null,
+      "touchdownSinkMps": null,
+      "touchdownPitchDegrees": null,
+      "stopAlongMeters": null,
+      "finalSpeedMps": 54.52450191929875,
+      "maximumQPa": 14685.33950451152,
+      "maximumNormalG": 1.9868058695844255,
+      "saturatedControlFraction": 0.18515309069901792,
+      "maximumComputationMilliseconds": 245.930891,
+      "meanComputationMilliseconds": 1.2539886036101102,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "abort"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {
+        "insufficientEnergy": 1
+      },
+      "violations": [
+        {
+          "kind": "insufficientEnergy",
+          "limit": 0,
+          "message": "No complete terminal path or final capture remains",
+          "value": 0
+        }
+      ],
+      "lastPlanningRejections": {
+        "insufficientLift": 114
+      },
+      "wallSeconds": 9.1097,
+      "arguments": [
+        "--entry",
+        "--speed",
+        "1950"
+      ],
+      "resultSHA256": "70a220bd3d9e86f331b87e6cf44b384fc99fe0b1ac9633fc6784ee817722ff1d"
+    },
+    {
+      "case": "entry-drag-plus10pct",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 491.599999742466,
+      "touchdownAlongMeters": 433.5285365157607,
+      "touchdownCrossMeters": -0.0019336291588564903,
+      "touchdownHorizontalMps": 67.1601568199778,
+      "touchdownSinkMps": 0.9700030006733357,
+      "touchdownPitchDegrees": 8.294026043873062,
+      "stopAlongMeters": 1099.2949801706945,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 12546.11297956414,
+      "maximumNormalG": 1.5198632878306233,
+      "saturatedControlFraction": 0.24959316517493899,
+      "maximumComputationMilliseconds": 77.770907,
+      "meanComputationMilliseconds": 0.7634742322554391,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 906
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 20,
+        "excessiveBank": 5,
+        "insufficientLift": 91
+      },
+      "wallSeconds": 4.0335,
+      "arguments": [
+        "--entry",
+        "--drag-scale",
+        "1.1"
+      ],
+      "resultSHA256": "787bad9c9b59bed8ed7692a7d362e1ff2f2909e6541bec02059cd744b41edb16"
+    },
+    {
+      "case": "entry-actuator-minus35pct",
+      "outcome": "crashed",
+      "elapsedSimulationSeconds": 461.1399997584231,
+      "touchdownAlongMeters": 1190.2759042336488,
+      "touchdownCrossMeters": -0.0017199912181931347,
+      "touchdownHorizontalMps": 83.06533668580701,
+      "touchdownSinkMps": 6.07182884885477,
+      "touchdownPitchDegrees": 3.040838443013903,
+      "stopAlongMeters": null,
+      "finalSpeedMps": 83.28695734805216,
+      "maximumQPa": 22808.471385381305,
+      "maximumNormalG": 1.3182486657317947,
+      "saturatedControlFraction": 0.3183000867302689,
+      "maximumComputationMilliseconds": 96.840842,
+      "meanComputationMilliseconds": 0.6937104204249793,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1245
+      },
+      "violations": [
+        {
+          "kind": "contactQuality",
+          "limit": 0,
+          "message": "Invalid ground contact",
+          "value": 0
+        }
+      ],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 8,
+        "excessiveBank": 1,
+        "excessiveLoad": 1,
+        "insufficientLift": 104
+      },
+      "wallSeconds": 3.5008,
+      "arguments": [
+        "--entry",
+        "--actuator-scale",
+        "0.65"
+      ],
+      "resultSHA256": "0fe5c63a116bcc679801cae79ed11533b8aec02bfc8bbf0e58c01f85f44bfe70"
+    },
+    {
+      "case": "final-lift-minus20pct",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 122.5999999998885,
+      "touchdownAlongMeters": 204.92879123465158,
+      "touchdownCrossMeters": -0.0018693199720707025,
+      "touchdownHorizontalMps": 59.91715099542355,
+      "touchdownSinkMps": 1.8670671048133158,
+      "touchdownPitchDegrees": 13.320500470123388,
+      "stopAlongMeters": 767.7485871257657,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7501.203053035469,
+      "maximumNormalG": 1.6945260733677487,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 5.180655,
+      "meanComputationMilliseconds": 0.010081422167889154,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.1094,
+      "arguments": [
+        "--lift-scale",
+        "0.8"
+      ],
+      "resultSHA256": "27d41eb7aa385f9583a31c87db9004336057f3c8699f2796da1356818a775a1d"
+    },
+    {
+      "case": "final-drag-plus20pct",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 125.8999999998855,
+      "touchdownAlongMeters": 162.33950911174392,
+      "touchdownCrossMeters": -0.0018334650376109238,
+      "touchdownHorizontalMps": 58.75622445967064,
+      "touchdownSinkMps": 1.8723649870497934,
+      "touchdownPitchDegrees": 11.052098866143465,
+      "stopAlongMeters": 690.4121469415928,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7501.203053035469,
+      "maximumNormalG": 2.118157591709686,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 0.672942,
+      "meanComputationMilliseconds": 0.003926680952380947,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.0773,
+      "arguments": [
+        "--drag-scale",
+        "1.2"
+      ],
+      "resultSHA256": "657b86410409016692bb60f35f592f3594db55414810cc5662c4d5120892440e"
+    },
+    {
+      "case": "final-drag-minus20pct",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 114.39999999989595,
+      "touchdownAlongMeters": 1094.3467831758016,
+      "touchdownCrossMeters": -0.0021009492586993414,
+      "touchdownHorizontalMps": 91.00838344714872,
+      "touchdownSinkMps": 1.2712583996188074,
+      "touchdownPitchDegrees": 4.02579014228713,
+      "stopAlongMeters": 2231.124046975414,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 10824.981194996833,
+      "maximumNormalG": 2.118157591709686,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 1.284409,
+      "meanComputationMilliseconds": 0.004302165938864625,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.1224,
+      "arguments": [
+        "--drag-scale",
+        "0.8"
+      ],
+      "resultSHA256": "e296fb193c6fa839e7a88980c64ec9fa8b6d604c28a68a5097710ad5ff21d21a"
+    },
+    {
+      "case": "final-density-plus10pct",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 117.29999999989332,
+      "touchdownAlongMeters": 291.05405549503365,
+      "touchdownCrossMeters": -0.002008193505001616,
+      "touchdownHorizontalMps": 80.32893176674065,
+      "touchdownSinkMps": 1.0214926215781461,
+      "touchdownPitchDegrees": 5.367885997455516,
+      "stopAlongMeters": 1163.3152863973621,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 8251.323358339016,
+      "maximumNormalG": 2.3299733508806546,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 0.677688,
+      "meanComputationMilliseconds": 0.006235782793867124,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.1426,
+      "arguments": [
+        "--density-scale",
+        "1.1"
+      ],
+      "resultSHA256": "aa9677ab3be2e804dab449e210e7fb296eef84747b5e547593615a68a82c31ec"
+    },
+    {
+      "case": "final-crosswind5mps",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 116.69999999989386,
+      "touchdownAlongMeters": 478.8121615319984,
+      "touchdownCrossMeters": -2.3842180091157252,
+      "touchdownHorizontalMps": 78.94074719332525,
+      "touchdownSinkMps": 0.9465894078872953,
+      "touchdownPitchDegrees": 5.73415606395411,
+      "stopAlongMeters": 1342.9319112660337,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7509.544182781594,
+      "maximumNormalG": 2.119695621469172,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 0.652265,
+      "meanComputationMilliseconds": 0.003325746575342464,
+      "spiralFlown": false,
+      "phases": [
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {},
+      "violations": [],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.0769,
+      "arguments": [
+        "--wind-north",
+        "5"
+      ],
+      "resultSHA256": "25a5c415a956704f30bc9d6a1064ee1e597072d5dfa27b8ba6aa5ef699e41cb2"
+    },
+    {
+      "case": "low-energy-unreachable",
+      "outcome": "aborted",
+      "elapsedSimulationSeconds": 0,
+      "touchdownAlongMeters": null,
+      "touchdownCrossMeters": null,
+      "touchdownHorizontalMps": null,
+      "touchdownSinkMps": null,
+      "touchdownPitchDegrees": null,
+      "stopAlongMeters": null,
+      "finalSpeedMps": 70.00000000000001,
+      "maximumQPa": 2435.8001945027786,
+      "maximumNormalG": 0.8193351202222076,
+      "saturatedControlFraction": 0,
+      "maximumComputationMilliseconds": 0.014115,
+      "meanComputationMilliseconds": 0.014115,
+      "spiralFlown": false,
+      "phases": [
+        "abort"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {
+        "insufficientEnergy": 1
+      },
+      "violations": [
+        {
+          "kind": "insufficientEnergy",
+          "limit": 6334.007875281339,
+          "message": "Runway exceeds even the optimistic still-air modeled range",
+          "value": 120400.00000000004
+        }
+      ],
+      "lastPlanningRejections": {},
+      "wallSeconds": 0.0634,
+      "arguments": [
+        "--along",
+        "-120000",
+        "--height",
+        "1000",
+        "--speed",
+        "70",
+        "--flight-path",
+        "-20",
+        "--duration",
+        "10"
+      ],
+      "resultSHA256": "4cb2c0d3072cc525fc0a0af3534ddb8a74c42e7cc69fa09dc2c779fa3f70dd0b"
+    },
+    {
+      "case": "historical-entry-20261028",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 929.199999513221,
+      "touchdownAlongMeters": 525.0527992747352,
+      "touchdownCrossMeters": -0.00195553340418037,
+      "touchdownHorizontalMps": 72.93676258427548,
+      "touchdownSinkMps": 1.0664206620684304,
+      "touchdownPitchDegrees": 7.061558392389839,
+      "stopAlongMeters": 1293.805752095254,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 8607.039630561201,
+      "maximumNormalG": 2.231240287229886,
+      "saturatedControlFraction": 0.4492036160137753,
+      "maximumComputationMilliseconds": 93.888175,
+      "meanComputationMilliseconds": 0.7912478531152471,
+      "spiralFlown": true,
+      "phases": [
+        "entry",
+        "acquisition",
+        "headingAlignment",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 1477
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 17,
+        "excessiveBank": 9,
+        "insufficientEnergy": 8,
+        "insufficientLift": 63,
+        "terrainCollision": 21
+      },
+      "wallSeconds": 7.7134,
+      "arguments": [
+        "--scenario",
+        "Fixtures/sts-kerbin-20261028b-live-entry-72km.ini"
+      ],
+      "resultSHA256": "fe39e3690f63fb378cff5d3592fb4536d89d1afa6f0fc8ac9a6a34fffee6e465"
+    },
+    {
+      "case": "historical-polar-20261029",
+      "outcome": "complete",
+      "elapsedSimulationSeconds": 960.8999994966143,
+      "touchdownAlongMeters": 591.9585624980367,
+      "touchdownCrossMeters": -0.0020018229261082186,
+      "touchdownHorizontalMps": 76.10586444485905,
+      "touchdownSinkMps": 1.0943255711692192,
+      "touchdownPitchDegrees": 6.357105322576863,
+      "stopAlongMeters": 1416.175894486775,
+      "finalSpeedMps": 0.0,
+      "maximumQPa": 7820.099489753711,
+      "maximumNormalG": 1.647160391908839,
+      "saturatedControlFraction": 0.363825580185243,
+      "maximumComputationMilliseconds": 207.437653,
+      "meanComputationMilliseconds": 0.9489913506763805,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "acquisition",
+        "approach",
+        "preflare",
+        "flare",
+        "rollout",
+        "complete"
+      ],
+      "nominalPlanPassesBothStressCases": false,
+      "constraintOccurrences": {
+        "modelUncertainty": 2260
+      },
+      "violations": [],
+      "lastPlanningRejections": {
+        "insufficientLift": 113
+      },
+      "wallSeconds": 9.5881,
+      "arguments": [
+        "--scenario",
+        "Fixtures/sts-kerbin-20261029-live-entry-72km.ini"
+      ],
+      "resultSHA256": "a1c2f5892e84ff11ff4e34f69ce5a89dd8120beeaeb35d9f38192f046c7845ab"
+    },
+    {
+      "case": "archival-heavy-final",
+      "outcome": "aborted",
+      "elapsedSimulationSeconds": 4.300000000876025,
+      "touchdownAlongMeters": null,
+      "touchdownCrossMeters": null,
+      "touchdownHorizontalMps": null,
+      "touchdownSinkMps": null,
+      "touchdownPitchDegrees": null,
+      "stopAlongMeters": null,
+      "finalSpeedMps": 166.61437091803683,
+      "maximumQPa": 17173.94514390332,
+      "maximumNormalG": 2.577437179865698,
+      "saturatedControlFraction": 0.06976744186046512,
+      "maximumComputationMilliseconds": 17.171301,
+      "meanComputationMilliseconds": 0.43772550000000016,
+      "spiralFlown": false,
+      "phases": [
+        "entry",
+        "abort"
+      ],
+      "nominalPlanPassesBothStressCases": null,
+      "constraintOccurrences": {
+        "insufficientEnergy": 1
+      },
+      "violations": [
+        {
+          "kind": "insufficientEnergy",
+          "limit": 0,
+          "message": "No complete terminal path or final capture remains",
+          "value": 0
+        }
+      ],
+      "lastPlanningRejections": {
+        "actuatorAuthority": 18,
+        "excessiveBank": 10,
+        "excessiveLoad": 4,
+        "insufficientLift": 46,
+        "terrainCollision": 52
+      },
+      "wallSeconds": 0.0667,
+      "arguments": [
+        "--scenario",
+        "Fixtures/final-ideal-3p5km-v190-fpa20.ini"
+      ],
+      "resultSHA256": "e0d30975293b4226b2acc42e8d35bb9889285ad6dee64735bd941bfe2e7aa61d"
+    }
+  ],
+  "regressionGates": [
+    {
+      "case": "nominal-final",
+      "passed": true
+    },
+    {
+      "case": "nominal-entry",
+      "passed": true
+    },
+    {
+      "case": "entry-heading-eight",
+      "passed": true
+    },
+    {
+      "case": "required-spiral",
+      "passed": true
+    },
+    {
+      "case": "final-lift-minus20pct",
+      "passed": true
+    },
+    {
+      "case": "low-energy-unreachable",
+      "passed": true
+    }
+  ],
+  "passedLandingCases": 14,
+  "totalCases": 19,
+  "scope": "Deterministic bounded matrix, not a statistical reliability estimate or held-out flight qualification"
+}

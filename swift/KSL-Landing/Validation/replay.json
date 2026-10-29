@@ -1,0 +1,12 @@
+{
+  "commandOrGuidanceMismatches" : 0,
+  "evidence" : "snapshot-replay-only",
+  "phases" : [
+    "approach",
+    "preflare",
+    "flare",
+    "rollout",
+    "complete"
+  ],
+  "records" : 1168
+}

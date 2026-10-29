@@ -1,0 +1,113 @@
+{
+  "constraintOccurrences" : {
+    "insufficientEnergy" : 1
+  },
+  "elapsed" : 692.3999996372731,
+  "evidence" : "offline-model-only",
+  "finalState" : {
+    "aerodynamics" : {
+      "airspeed" : 54.52450191929875,
+      "angleOfAttack" : 0.26169941662216295,
+      "bank" : 0.00023595508807922573,
+      "drag" : 88394.00334542098,
+      "dynamicPressure" : 1431.4718856528132,
+      "force" : {
+        "x" : 65653.24748619796,
+        "y" : -235142.91462152658,
+        "z" : 1771.1494298704968
+      },
+      "lift" : 227578.94518362422,
+      "mach" : 0.1563212840740695,
+      "measuredForces" : false,
+      "sideslip" : -4.768782307386948e-05
+    },
+    "angularVelocity" : {
+      "x" : -1.9025366238534628e-07,
+      "y" : -7.44724278066814e-05,
+      "z" : 1.318126096771692e-06
+    },
+    "atmosphere" : {
+      "density" : 0.9630069124639152,
+      "pressure" : 83685.18153300729,
+      "speedOfSound" : 348.7976844756692,
+      "temperature" : 302.7258545666289,
+      "wind" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      }
+    },
+    "attitude" : {
+      "w" : -0.011520686234194489,
+      "x" : 0.1269414535949181,
+      "y" : -0.6904912411163169,
+      "z" : -0.7120217602640743
+    },
+    "contact" : "airborne",
+    "mass" : 25000,
+    "position" : {
+      "x" : 158829.24286575677,
+      "y" : -579899.2314033768,
+      "z" : 3611.8966214631146
+    },
+    "radarAltitude" : 1267.7380075708497,
+    "snapshotSpan" : 0,
+    "systems" : {
+      "airbrakes" : false,
+      "brakes" : false,
+      "gearDown" : false,
+      "rcs" : false,
+      "sas" : false,
+      "throttle" : 0,
+      "thrust" : 0
+    },
+    "time" : 189531.39999963727,
+    "velocity" : {
+      "x" : -53.2817932888146,
+      "y" : 5.543522421000825,
+      "z" : -10.16076634134974
+    }
+  },
+  "lastPlanningRejections" : {
+    "insufficientLift" : 114
+  },
+  "lastRejectedTerminal" : {
+    "feasible" : false,
+    "maximumBank" : 0.9451203388444227,
+    "maximumLoad" : 1.625267311682025,
+    "maximumQ" : 1431.1279967406806,
+    "minimumLiftMargin" : -4.832410861487011,
+    "score" : 1001113.1703840619,
+    "touchdownSpeed" : 51.711601300019126,
+    "uncertaintyFraction" : 0.2,
+    "violations" : [
+      {
+        "kind" : "insufficientLift",
+        "limit" : 11.10601682061952,
+        "message" : "Path demands unavailable lift\/trim authority",
+        "value" : 15.93842768210653
+      }
+    ]
+  },
+  "lastTerminalCandidateCount" : 114,
+  "maximumComputationMilliseconds" : 245.930891,
+  "maximumDynamicPressure" : 14685.33950451152,
+  "maximumLoadFactor" : 1.9868058695844255,
+  "meanComputationMilliseconds" : 1.2539886036101102,
+  "outcome" : "aborted",
+  "phases" : [
+    "entry",
+    "abort"
+  ],
+  "saturatedControlFraction" : 0.18515309069901792,
+  "scenario" : "nominal-entry",
+  "steps" : 6924,
+  "violations" : [
+    {
+      "kind" : "insufficientEnergy",
+      "limit" : 0,
+      "message" : "No complete terminal path or final capture remains",
+      "value" : 0
+    }
+  ]
+}

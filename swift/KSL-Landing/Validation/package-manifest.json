@@ -1,0 +1,801 @@
+{
+  "format": 1,
+  "scope": "All delivered project files except this self-referential manifest. Build products and temporary experiments are excluded.",
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 96,
+      "sha256": "93e7c72d6c89563b0ee34adf7566806f3c00e1821e2f5e20b73a1e251016e501"
+    },
+    {
+      "path": "Documentation/Architecture.md",
+      "bytes": 9619,
+      "sha256": "5c006975bfa404f34d5615a79bc3dd76c7debdbc3bb00c5b08605d0865da3ffb"
+    },
+    {
+      "path": "Documentation/Evidence/krpc.proto",
+      "bytes": 4755,
+      "sha256": "4b5a8bd150070dd23a52df62c3c1aa88e28f6b2f5218b79f2600d0a127e350cd"
+    },
+    {
+      "path": "Documentation/Evidence/source-manifest.json",
+      "bytes": 722,
+      "sha256": "104f6afc8b0a46dcc27da23f060da80b569f77af86154676f5932c4f68925482"
+    },
+    {
+      "path": "Documentation/Evidence/sts_aero_cells20261029.json",
+      "bytes": 73210,
+      "sha256": "7dcde481bdd7aaa3b96fde0795b6db212009812948c0937ea0a4f01cf185ba6f"
+    },
+    {
+      "path": "Documentation/Evidence/sts_attitude_live20261028.ini",
+      "bytes": 850,
+      "sha256": "cdfe83d0529668994844db9fd446cd4ff8558fc08d06e8c2ff0b84f3546f6acd"
+    },
+    {
+      "path": "Documentation/Guidance.md",
+      "bytes": 11225,
+      "sha256": "6f7ab8785eec488e3fb59e8bc281e10bfcce6ae26816e8ef6aafbb2f35c78ca5"
+    },
+    {
+      "path": "Documentation/KRPC-Integration.md",
+      "bytes": 8705,
+      "sha256": "a9309953469c24653ece410e5b86770d184a8b018ccad4398a24528f7b31c9e5"
+    },
+    {
+      "path": "Documentation/Known-Limitations.md",
+      "bytes": 5965,
+      "sha256": "a3a9507df468db1bfe64dc78ad85f48ea3729a54474d9ebc58a6f3a530330ecf"
+    },
+    {
+      "path": "Documentation/Physics-and-Frames.md",
+      "bytes": 10573,
+      "sha256": "3c3fa72a6cddf1f1d5c6d6ae38adce2ad0f3fd56cf72caa806b7fba8cd4077fb"
+    },
+    {
+      "path": "Documentation/Reference-Audit.md",
+      "bytes": 9608,
+      "sha256": "dcbbd76395ecb323bb1bf97f12e8c2d2554774326e7c4c4b4cc3fbddf6f93cd3"
+    },
+    {
+      "path": "Documentation/Validation.md",
+      "bytes": 10862,
+      "sha256": "90b829e0adf9143a8afafe8b33890444a09b73dfee7e935ae728d4a01c4be55b"
+    },
+    {
+      "path": "Fixtures/final-ideal-3p5km-v190-fpa20.ini",
+      "bytes": 642,
+      "sha256": "25fdd32ab13846ee6177c910f516084a7868397f411434920c5845d1cd5d02a2"
+    },
+    {
+      "path": "Fixtures/recorded-posthac-final-align-20260922.ini",
+      "bytes": 726,
+      "sha256": "b992bc4bac887e0e4d2874244df74f57aa1af81960211293fbca392b34106878"
+    },
+    {
+      "path": "Fixtures/sts-kerbin-20261028b-live-entry-72km.ini",
+      "bytes": 794,
+      "sha256": "6d682c74deb8997afae7be54d6845fd9fd645eaf089f4749ab20b37797494d71"
+    },
+    {
+      "path": "Fixtures/sts-kerbin-20261029-live-entry-72km.ini",
+      "bytes": 822,
+      "sha256": "6d67251be7af79e31b07bb006d228c074face21d055cf104b03792d45d5b197e"
+    },
+    {
+      "path": "Fixtures/sts-polar90-72km.ini",
+      "bytes": 796,
+      "sha256": "72725b56126b858264ebefbfac45414627f95d0f6ed8cce51282d49939bb01d3"
+    },
+    {
+      "path": "Package.swift",
+      "bytes": 1784,
+      "sha256": "30f97436b01ec85e40fa9355bd28b60b9b7ca7cbd6080a3871687faf044561d9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7434,
+      "sha256": "bdcabe2c2d002d5cc29daf594f2b49cc521ba4c9456dcb4f5115a7eea8a43dfa"
+    },
+    {
+      "path": "Sources/KSLControl/Attitude/FlightController.swift",
+      "bytes": 5131,
+      "sha256": "8cb33fdd547a1b2eabea4d151ee6c4e99557c439982f94721698919672b103e2"
+    },
+    {
+      "path": "Sources/KSLControl/Rollout/RolloutController.swift",
+      "bytes": 821,
+      "sha256": "a832e87c2def383cf9973d479f6b17b51942e7c500f611968bfdb9bd6e660976"
+    },
+    {
+      "path": "Sources/KSLCore/Geometry/PlanetGeometry.swift",
+      "bytes": 2198,
+      "sha256": "cbc0b50e908cc8258180b2bad01b6e3b8811436d80d87d8018ce0dc2565a90f3"
+    },
+    {
+      "path": "Sources/KSLCore/Geometry/Quaternion.swift",
+      "bytes": 2751,
+      "sha256": "0bd9d22a2413c821a22d9e8514fbef1478512c3f88c8c0609e32bb1e9e5bb548"
+    },
+    {
+      "path": "Sources/KSLCore/Geometry/RunwayGeometry.swift",
+      "bytes": 3316,
+      "sha256": "f7b2711c74b2f62575fe6988e042c9968466e3f5b2a2610d9dd016ae917280c3"
+    },
+    {
+      "path": "Sources/KSLCore/Geometry/Scalar.swift",
+      "bytes": 1593,
+      "sha256": "dd8ef57a7cee05e52633870f515858529799c08e20244f88903523497b29e07c"
+    },
+    {
+      "path": "Sources/KSLCore/Geometry/Vector3.swift",
+      "bytes": 1776,
+      "sha256": "e33e40bbf5f973b3a82f167bf32061263e4410b643f4517b9574db35a4145de6"
+    },
+    {
+      "path": "Sources/KSLCore/Models/Configuration.swift",
+      "bytes": 5819,
+      "sha256": "261432d3c109f721393a5e65d35ddb2841f4e20d8ea4ce7d304a20aec04967eb"
+    },
+    {
+      "path": "Sources/KSLCore/Models/ControlCommand.swift",
+      "bytes": 2304,
+      "sha256": "51cf365c64c39d82fd10767deb8f359c2767840249bca5a78aab0cc91a9738f0"
+    },
+    {
+      "path": "Sources/KSLCore/Models/GuidanceModels.swift",
+      "bytes": 3467,
+      "sha256": "fbb7f7abd83def5ca2745b1fd2748505d91c1c2bd2224239e13c3a8aa24fae64"
+    },
+    {
+      "path": "Sources/KSLCore/Models/VehicleState.swift",
+      "bytes": 4751,
+      "sha256": "6e3fe7593ce9860b1154dfc51a17cd66da5d827f3febb80180e85510e6ff2ae2"
+    },
+    {
+      "path": "Sources/KSLCore/Protocols/FlightInterfaces.swift",
+      "bytes": 859,
+      "sha256": "29bead5ed4f0b6a2fbf5f10e8f337d31c640bc3af1f6066bb1a2b92eca7451e2"
+    },
+    {
+      "path": "Sources/KSLDiagnostics/Recording/JSONLRecorder.swift",
+      "bytes": 1495,
+      "sha256": "ae5e1a57deb2e37b2d72ad43d8038487939792aab08fb1686b91197321f946bf"
+    },
+    {
+      "path": "Sources/KSLDiagnostics/Replay/JSONLReader.swift",
+      "bytes": 2093,
+      "sha256": "161a5f561ed2bb5fbcdae5530adc61ba13f281c6ffdcd363ae065b7a23d0f099"
+    },
+    {
+      "path": "Sources/KSLDiagnostics/Replay/LegacyTelemetryReader.swift",
+      "bytes": 9905,
+      "sha256": "ec4e69dff86061b8db7eb8accca0f06a26c58070d824c33aff68d8b5dee57601"
+    },
+    {
+      "path": "Sources/KSLGuidance/Approach/ApproachCapture.swift",
+      "bytes": 2266,
+      "sha256": "fa610f4fbfb4263452096716b0a2f57ebe27b6446e0a3fb245f9fbfc9d1367c0"
+    },
+    {
+      "path": "Sources/KSLGuidance/Approach/ApproachGuidanceEngine.swift",
+      "bytes": 5457,
+      "sha256": "2e266144202aa4f9d733628bba0dcc143a299d68531e17e30ba238f2c9264d4a"
+    },
+    {
+      "path": "Sources/KSLGuidance/Approach/ApproachProfile.swift",
+      "bytes": 2968,
+      "sha256": "59686d6c151d3ca170f8eb02c1568ee02b09b6e6d9a4d9e10e01f4545543c4dd"
+    },
+    {
+      "path": "Sources/KSLGuidance/Energy/AerodynamicAuthorityEstimator.swift",
+      "bytes": 1342,
+      "sha256": "f2e2bd1fd527b508104b25e27e108c086627af3c57846cc1b1572d67a469e4c8"
+    },
+    {
+      "path": "Sources/KSLGuidance/Energy/EnergyManagementEngine.swift",
+      "bytes": 7011,
+      "sha256": "dad00ba7acac592ea2398faf2e70671981cb61e30d1aeb7959a78fef6f3f9fa8"
+    },
+    {
+      "path": "Sources/KSLGuidance/Entry/EntryGuidanceEngine.swift",
+      "bytes": 7955,
+      "sha256": "0abcee4499da989b69906b56781f7629b7adfbf108ef05efe5a45be2a300eb20"
+    },
+    {
+      "path": "Sources/KSLGuidance/HAC/HACPlanningEngine.swift",
+      "bytes": 8466,
+      "sha256": "ac84cad24b24cff6cc7f1b6363bd5a69be0f2535982df8174adf855cc19b83cd"
+    },
+    {
+      "path": "Sources/KSLGuidance/HAC/PathTrackingEngine.swift",
+      "bytes": 3079,
+      "sha256": "54f93bfd8f9bb72ac358406adf1ac77fd62ef536863f405da5c52475f0dcae42"
+    },
+    {
+      "path": "Sources/KSLGuidance/HAC/QuinticAcquisition.swift",
+      "bytes": 1255,
+      "sha256": "b229c600dfb764413d07c5134b918605b575ed2c304127af16818bf3a40ac380"
+    },
+    {
+      "path": "Sources/KSLGuidance/HAC/SpiralHAC.swift",
+      "bytes": 2451,
+      "sha256": "867a773db45124c095d1f89f27593f523f6add1395eb9a320a2217fe4cb9adbf"
+    },
+    {
+      "path": "Sources/KSLGuidance/HAC/TerminalPlan.swift",
+      "bytes": 3987,
+      "sha256": "1fd8760a483eb37f34bda6fd641faa547bbd5a70040744621f4f7a7e00f26afc"
+    },
+    {
+      "path": "Sources/KSLGuidance/Landing/LandingMissionController.swift",
+      "bytes": 9108,
+      "sha256": "6d587be634b3d4e3678370b50883903ed6439e8fa6783aad1745ad4e7718f2e8"
+    },
+    {
+      "path": "Sources/KSLGuidance/Landing/TouchdownMonitor.swift",
+      "bytes": 2155,
+      "sha256": "e0f1bc4e44013760ff83c496eb59bd91362033a482cc0e0097440466f1102ecc"
+    },
+    {
+      "path": "Sources/KSLKRPC/Protocol/KRPCCodec.swift",
+      "bytes": 5434,
+      "sha256": "5c0be4a6f65445bec48aef14017457c8cb3394de80f0ebf658d2c7cfb01f9e82"
+    },
+    {
+      "path": "Sources/KSLKRPC/Protocol/Protobuf.swift",
+      "bytes": 4034,
+      "sha256": "738efa70c4a1d5a032f8c1e3fe44e85fe9851faa57cb720cdec41b195ec502a5"
+    },
+    {
+      "path": "Sources/KSLKRPC/Telemetry/KRPCFlightIO.swift",
+      "bytes": 14001,
+      "sha256": "afeb50aa345f0617d1870bc0bd7b0446e75f044f86b6dd14bb7818b7d3671c0b"
+    },
+    {
+      "path": "Sources/KSLKRPC/Telemetry/KRPCFrameConverter.swift",
+      "bytes": 1442,
+      "sha256": "1b2ed0c9a3a7c9448f1c6e92ab6482e2fe785683a140600f0d1715c1f11b8a64"
+    },
+    {
+      "path": "Sources/KSLKRPC/Transport/KRPCSession.swift",
+      "bytes": 2873,
+      "sha256": "e64051a978fa966045df157284c3a12e07b200fd8246697e19097193e91f0dd3"
+    },
+    {
+      "path": "Sources/KSLKRPC/Transport/TCPTransport.swift",
+      "bytes": 6214,
+      "sha256": "411601447b9fc0b23f072d94fdf9357b5e4cec46cbee5982e1374aee1e045955"
+    },
+    {
+      "path": "Sources/KSLLanding/Main.swift",
+      "bytes": 11133,
+      "sha256": "4a6f2fe438da643d3d66df33e1c05d22e7e1ff38a916d1c04ff314308b72ecd0"
+    },
+    {
+      "path": "Sources/KSLPhysics/Aerodynamics/AerodynamicsEngine.swift",
+      "bytes": 6468,
+      "sha256": "d589b205769893dd93e794c2dab4c55d16161bfba01e2b0f67992d4fbb288d9d"
+    },
+    {
+      "path": "Sources/KSLPhysics/Atmosphere/AtmosphericModelEngine.swift",
+      "bytes": 4175,
+      "sha256": "96c6a9f4c6e0eb4deeda5d486c8afa5de04584b109d5c9b71b330e1fb1acba20"
+    },
+    {
+      "path": "Sources/KSLPhysics/Dynamics/GroundDynamicsEngine.swift",
+      "bytes": 3627,
+      "sha256": "db9db44b78917fb3c8d865619d1f86b40806b5392b07adfd05d9e5468cd0ee0d"
+    },
+    {
+      "path": "Sources/KSLPhysics/Dynamics/RotationalDynamicsEngine.swift",
+      "bytes": 2875,
+      "sha256": "817d181f05728e83dcd036a9d0b6660e8fa1e36da9e810ddf5fa9e9f1d715f3e"
+    },
+    {
+      "path": "Sources/KSLPhysics/Dynamics/ShuttlePhysicsEngine.swift",
+      "bytes": 3938,
+      "sha256": "9892a0c4532b4196ca151aad31f8e9100e02805e7ff78d23177501cb45d8ed87"
+    },
+    {
+      "path": "Sources/KSLPhysics/Dynamics/TranslationalDynamicsEngine.swift",
+      "bytes": 2023,
+      "sha256": "65ad63f9ed46bc3f58f7e155c7ba58d3eb66f42c55a77e6d384bbbe70838832f"
+    },
+    {
+      "path": "Sources/KSLPhysics/Propagation/TrajectoryPropagationEngine.swift",
+      "bytes": 5423,
+      "sha256": "ad5cbe24aa5661464cb77aa5684dcc1fc38bbf52efbc7c9df3c33e454d4fadfb"
+    },
+    {
+      "path": "Sources/KSLPhysics/Resources/KerbinCurves.json",
+      "bytes": 4110,
+      "sha256": "86a0ca44975b882dbdd1e7510e0fff5b7d0be1698297a19203fbca5fad7fc1ca"
+    },
+    {
+      "path": "Sources/KSLPhysics/Resources/STSAerodynamics.csv",
+      "bytes": 11082,
+      "sha256": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71"
+    },
+    {
+      "path": "Sources/KSLRuntime/FlightComputer.swift",
+      "bytes": 1363,
+      "sha256": "8ef4e3d74ebc84a6ceb08e4c39fd58611501146743c68736dade86c44817a95f"
+    },
+    {
+      "path": "Sources/KSLRuntime/FlightRuntime.swift",
+      "bytes": 3278,
+      "sha256": "daf0e3e0b70bc00f7c85b71cf0ea4dbb3bc960495c6a777ecae4e96fe510d6a6"
+    },
+    {
+      "path": "Sources/KSLSimulation/Scenarios/SimulationScenario.swift",
+      "bytes": 5849,
+      "sha256": "6a320aa02df8cbcbf0353308a4b4a06160f41feb1a3377609f2b57fb81e5b525"
+    },
+    {
+      "path": "Sources/KSLSimulation/SimulatedFlightIO.swift",
+      "bytes": 1179,
+      "sha256": "eb5f29a044984fcf18a9a29b72b07bca5ba219b0adb067f6ab7b35fcfc759146"
+    },
+    {
+      "path": "Sources/KSLSimulation/SimulationEngine.swift",
+      "bytes": 6681,
+      "sha256": "89b4278839cd6993879108e7e5712efcdac081879a2338ec88162a8f3a54b770"
+    },
+    {
+      "path": "Tests/ControlTests/ControlTests.swift",
+      "bytes": 1299,
+      "sha256": "3cf431b7e84167fe0d2c8292538b692ea7f9ab20ca8d823b7d2eda86dcf92258"
+    },
+    {
+      "path": "Tests/CoreTests/GeometryTests.swift",
+      "bytes": 1242,
+      "sha256": "0d811cf6d3a75197c181450d002b398648df15eccbf940cb297523ddc161c862"
+    },
+    {
+      "path": "Tests/GuidanceTests/GuidanceTests.swift",
+      "bytes": 8431,
+      "sha256": "c850d09ed47fe48ae6bc70ae4e967885f5ab32a2f893c4ebcf10e4f7fef1a7da"
+    },
+    {
+      "path": "Tests/IntegrationTests/ProtocolTests.swift",
+      "bytes": 2693,
+      "sha256": "ca88ac7a3b5b9259a3e08113c12ec4b68a04e8e0b04c93407770e290aa9bde4d"
+    },
+    {
+      "path": "Tests/IntegrationTests/ReplayAndFailureTests.swift",
+      "bytes": 4772,
+      "sha256": "ddd7a6bd0e2d8841dca3284ac57f442de7094db5c40252bbec4a631219a24474"
+    },
+    {
+      "path": "Tests/PhysicsTests/PhysicsTests.swift",
+      "bytes": 5471,
+      "sha256": "d95d59232383dd402b19660411b8ec84c4f3fefe2b4ceefb8451ee9d34017bb5"
+    },
+    {
+      "path": "Tests/SimulationTests/EndToEndTests.swift",
+      "bytes": 2146,
+      "sha256": "391e8bac8e6d1e26517b22220f4a6bf86592d7c509eed5e12007ecbb6167a3fc"
+    },
+    {
+      "path": "Tests/SimulationTests/SimulationTests.swift",
+      "bytes": 1604,
+      "sha256": "4d62d8f4938b44deff7644ad249f39020923f067deba09cb4b18dd6029d5b123"
+    },
+    {
+      "path": "Tools/plot_validation.py",
+      "bytes": 7963,
+      "sha256": "88c7903064539202465245348b50794d9a7db8e8540b11bf49f6ef3c60afb2fe"
+    },
+    {
+      "path": "Tools/run-validation.sh",
+      "bytes": 268,
+      "sha256": "5b650a343f5f131ccf5d0b3afd55a7ba5fb813b89071f34da34946aea47f41fc"
+    },
+    {
+      "path": "Tools/summarize_validation.py",
+      "bytes": 14764,
+      "sha256": "dbddfd00bbfd97b0de4b3f133cd3753b585681e24a2d191be393964183f63e91"
+    },
+    {
+      "path": "Tools/validate.py",
+      "bytes": 8766,
+      "sha256": "7c340cfdb167c3f9eedaac8661dfbe73783a0200201cfbb4020ff8d167b3b2df"
+    },
+    {
+      "path": "Tools/verify_mock_krpc.py",
+      "bytes": 13181,
+      "sha256": "94d727f32eccfea54fbb0d6d63afa7594d0aa8b1ca12da1d98e5eeb8f0e0b7be"
+    },
+    {
+      "path": "Validation/build.log",
+      "bytes": 342,
+      "sha256": "e74c28d429802940dac0a9f332622dc1086cf0b6a21c7fa5659d3903ba1dcf98"
+    },
+    {
+      "path": "Validation/cases/archival-heavy-final.json",
+      "bytes": 3067,
+      "sha256": "e0d30975293b4226b2acc42e8d35bb9889285ad6dee64735bd941bfe2e7aa61d"
+    },
+    {
+      "path": "Validation/cases/entry-actuator-minus35pct.json",
+      "bytes": 198160,
+      "sha256": "0fe5c63a116bcc679801cae79ed11533b8aec02bfc8bbf0e58c01f85f44bfe70"
+    },
+    {
+      "path": "Validation/cases/entry-crossrange15km.json",
+      "bytes": 3095,
+      "sha256": "3dcc0ca56719c05880dff89bc90847b73d879e98da55983199280f23bdaca90b"
+    },
+    {
+      "path": "Validation/cases/entry-downrange-plus100km.json",
+      "bytes": 322150,
+      "sha256": "7c01b43eb1a07ba7f593b5e928d1cd3174be818eb994663e19b0847545eebbd8"
+    },
+    {
+      "path": "Validation/cases/entry-drag-plus10pct.json",
+      "bytes": 149436,
+      "sha256": "787bad9c9b59bed8ed7692a7d362e1ff2f2909e6541bec02059cd744b41edb16"
+    },
+    {
+      "path": "Validation/cases/entry-heading-eight.json",
+      "bytes": 208577,
+      "sha256": "ac294cb3e457b97bb301b4923ce4c0a652d6308c99f3c6d8cd3f6e7c81d6db78"
+    },
+    {
+      "path": "Validation/cases/entry-speed-minus50.json",
+      "bytes": 168701,
+      "sha256": "dd78d0c473bca1c548fb4c1df645d23c83c8ce9e7da8d3a5aab2d8ce9d0ebc89"
+    },
+    {
+      "path": "Validation/cases/entry-speed-plus50.json",
+      "bytes": 2998,
+      "sha256": "70a220bd3d9e86f331b87e6cf44b384fc99fe0b1ac9633fc6784ee817722ff1d"
+    },
+    {
+      "path": "Validation/cases/final-crosswind5mps.json",
+      "bytes": 2516,
+      "sha256": "25a5c415a956704f30bc9d6a1064ee1e597072d5dfa27b8ba6aa5ef699e41cb2"
+    },
+    {
+      "path": "Validation/cases/final-density-plus10pct.json",
+      "bytes": 2287,
+      "sha256": "aa9677ab3be2e804dab449e210e7fb296eef84747b5e547593615a68a82c31ec"
+    },
+    {
+      "path": "Validation/cases/final-drag-minus20pct.json",
+      "bytes": 2285,
+      "sha256": "e296fb193c6fa839e7a88980c64ec9fa8b6d604c28a68a5097710ad5ff21d21a"
+    },
+    {
+      "path": "Validation/cases/final-drag-plus20pct.json",
+      "bytes": 2285,
+      "sha256": "657b86410409016692bb60f35f592f3594db55414810cc5662c4d5120892440e"
+    },
+    {
+      "path": "Validation/cases/final-lift-minus20pct.json",
+      "bytes": 2287,
+      "sha256": "27d41eb7aa385f9583a31c87db9004336057f3c8699f2796da1356818a775a1d"
+    },
+    {
+      "path": "Validation/cases/historical-entry-20261028.json",
+      "bytes": 158159,
+      "sha256": "fe39e3690f63fb378cff5d3592fb4536d89d1afa6f0fc8ac9a6a34fffee6e465"
+    },
+    {
+      "path": "Validation/cases/historical-polar-20261029.json",
+      "bytes": 241873,
+      "sha256": "a1c2f5892e84ff11ff4e34f69ce5a89dd8120beeaeb35d9f38192f046c7845ab"
+    },
+    {
+      "path": "Validation/cases/low-energy-unreachable.json",
+      "bytes": 2325,
+      "sha256": "4cb2c0d3072cc525fc0a0af3534ddb8a74c42e7cc69fa09dc2c779fa3f70dd0b"
+    },
+    {
+      "path": "Validation/cases/nominal-entry.json",
+      "bytes": 143164,
+      "sha256": "bcaa9163fc1f55451d4363fe50763de119ed72434c2229262e2a6dc450691b91"
+    },
+    {
+      "path": "Validation/cases/nominal-final.json",
+      "bytes": 2284,
+      "sha256": "eb33cbd9c9c51cf8c67ecf7793f3c8c932394b76701cbd07d81dfdb0a5563eb1"
+    },
+    {
+      "path": "Validation/cases/required-spiral.json",
+      "bytes": 163422,
+      "sha256": "140edb215a3a318c2ba95e79d844665ec549af4769078f9d5bccf753990740d2"
+    },
+    {
+      "path": "Validation/configuration.json",
+      "bytes": 2537,
+      "sha256": "358a18aa5e55348c7ff1a751343355e4318c20487eac244b72a9b217dd7b8553"
+    },
+    {
+      "path": "Validation/figures/approach-and-rollout.png",
+      "bytes": 203693,
+      "sha256": "9507b1315c47f52743c8492f484b6f249527aabfc20cbd67c7a55ef67124f7d5"
+    },
+    {
+      "path": "Validation/figures/entry-and-landing.png",
+      "bytes": 305478,
+      "sha256": "5e0afb28c10c4d25e9cfe098ef40349949bf1a524d0bc70e4049cb22b48b3c55"
+    },
+    {
+      "path": "Validation/krpc-mock.json",
+      "bytes": 2381,
+      "sha256": "5bf8ecc7460d408c2fc1008a21758d746a6512a6df5bb07ad26c00461438faff"
+    },
+    {
+      "path": "Validation/logs/archival-heavy-final.jsonl.gz",
+      "bytes": 3081,
+      "sha256": "60dc60ab57a90bd9929324e042e3365fac27713197bc0af9cb4a009743e1e80c"
+    },
+    {
+      "path": "Validation/logs/entry-actuator-minus35pct.jsonl.gz",
+      "bytes": 181909,
+      "sha256": "8246c31d616fb513151fa19d253320fe6a99eceeeaade5e351e3951fc0760c67"
+    },
+    {
+      "path": "Validation/logs/entry-crossrange15km.jsonl.gz",
+      "bytes": 191849,
+      "sha256": "4db79930423120495e9e3d833c9f0cccc60a5071594cd2172aaca270aaaa6a1b"
+    },
+    {
+      "path": "Validation/logs/entry-downrange-plus100km.jsonl.gz",
+      "bytes": 228911,
+      "sha256": "62e1c3433b4b4e0889a0b501a54a3b97a56bf85add619583c98616e1592660ca"
+    },
+    {
+      "path": "Validation/logs/entry-drag-plus10pct.jsonl.gz",
+      "bytes": 191189,
+      "sha256": "4d78b7895829456594d27e7d5bb18a16ca7fe82c4f2f123ebcc9a75b7e0ee421"
+    },
+    {
+      "path": "Validation/logs/entry-heading-eight.jsonl.gz",
+      "bytes": 219669,
+      "sha256": "48baf62476623a8286d762212746d17186f8dfeacce36c3cabb711fdbaeb34c0"
+    },
+    {
+      "path": "Validation/logs/entry-speed-minus50.jsonl.gz",
+      "bytes": 257475,
+      "sha256": "fbfabe924e56452e6d18bf70275e1c887811ac5974e28aa5a8d1677cfe203d7c"
+    },
+    {
+      "path": "Validation/logs/entry-speed-plus50.jsonl.gz",
+      "bytes": 258953,
+      "sha256": "0527632858fa2c28885f9a812312b41b91d76c1146bc551ae1c9dff1888c8369"
+    },
+    {
+      "path": "Validation/logs/final-crosswind5mps.jsonl.gz",
+      "bytes": 49489,
+      "sha256": "51f580e1887f13e1eb87f4a7f40fd54ef5c8850fb73524aac620e942388f4526"
+    },
+    {
+      "path": "Validation/logs/final-density-plus10pct.jsonl.gz",
+      "bytes": 46109,
+      "sha256": "c9bac4371ed0661e0462f35107a0ba5cea54c04d8b32bd193cffc12146adedd8"
+    },
+    {
+      "path": "Validation/logs/final-drag-minus20pct.jsonl.gz",
+      "bytes": 44603,
+      "sha256": "9a909f4ada28798a160732f74231ec6af3bb09ff8d9b30410906e353adbf3039"
+    },
+    {
+      "path": "Validation/logs/final-drag-plus20pct.jsonl.gz",
+      "bytes": 49885,
+      "sha256": "1870ef33d4400a20d2b77ff46a5f49205c3844a44b0c176480834b7f9e8de761"
+    },
+    {
+      "path": "Validation/logs/final-lift-minus20pct.jsonl.gz",
+      "bytes": 48548,
+      "sha256": "61741bb624fde63b15ed40ac6d964d3e9ba612140eb05499a100c1bff1ebc445"
+    },
+    {
+      "path": "Validation/logs/historical-entry-20261028.jsonl.gz",
+      "bytes": 354514,
+      "sha256": "918dadeb3437f1dbf006cd187e2318380414be5e3d67b7aa81c5e68e642c8035"
+    },
+    {
+      "path": "Validation/logs/historical-polar-20261029.jsonl.gz",
+      "bytes": 367582,
+      "sha256": "e632e96decdb6e2c29d8fff6c8a5e83167603a1f37c45a65fd8376301a4a00f0"
+    },
+    {
+      "path": "Validation/logs/low-energy-unreachable.jsonl.gz",
+      "bytes": 899,
+      "sha256": "a805eae3ffa20c398e0da199bb142c1c788fa51ac096093cf7bd062db1076e62"
+    },
+    {
+      "path": "Validation/logs/nominal-entry.jsonl.gz",
+      "bytes": 222318,
+      "sha256": "f1e596eb3c9718b6e05ac95ef900617e61f97e60e8d69fa1ddf448704e328fd6"
+    },
+    {
+      "path": "Validation/logs/nominal-final.jsonl.gz",
+      "bytes": 419983,
+      "sha256": "ba1a276c7434b7082c38d91d7f4a38e7f991b17a577483ff184c32c5d7bbcbe9"
+    },
+    {
+      "path": "Validation/logs/required-spiral.jsonl.gz",
+      "bytes": 98890,
+      "sha256": "630ba8aaea06b44a00cc938b2bbb966060c0e9833e8e11d68fd9916213fbca77"
+    },
+    {
+      "path": "Validation/matrix.csv",
+      "bytes": 6178,
+      "sha256": "cb2d44cf12046b203adb317b45a3788c8a90d677684e3d56fee8fae330f70828"
+    },
+    {
+      "path": "Validation/matrix.json",
+      "bytes": 33569,
+      "sha256": "c6ede8162c4252ea7fdbedf4fabdb6d171c8a276ff0e1882b2b5f11f1c1b3544"
+    },
+    {
+      "path": "Validation/plans/entry-actuator-minus35pct.json",
+      "bytes": 175169,
+      "sha256": "923dd2a8e1ac38b9afb397d7a0e4929aa66acf936aa3b349a42fb4d90f42335e"
+    },
+    {
+      "path": "Validation/plans/entry-downrange-plus100km.json",
+      "bytes": 288772,
+      "sha256": "641b0f71bbfe346c251eccdc0448fdfabaebbf13ab3262855a999aa0aa10bc21"
+    },
+    {
+      "path": "Validation/plans/entry-drag-plus10pct.json",
+      "bytes": 131129,
+      "sha256": "3ff0e5be5147e3b3fab4d5295daa13a38f11efd3b91778394291bd2e5ffd285f"
+    },
+    {
+      "path": "Validation/plans/entry-heading-eight.json",
+      "bytes": 184932,
+      "sha256": "aba1f11d9ee98c488e39a5fe122e14e7c57950aee7ccb966621c3e25f2054b3a"
+    },
+    {
+      "path": "Validation/plans/entry-speed-minus50.json",
+      "bytes": 148536,
+      "sha256": "78856aa2a6f72508bb1646c73181834611eff97415e908120a625dbbec71ae13"
+    },
+    {
+      "path": "Validation/plans/historical-entry-20261028.json",
+      "bytes": 138955,
+      "sha256": "6efd392c548cc6ba71415924a4ea089be092b4fa85348839f91fa540bfedc606"
+    },
+    {
+      "path": "Validation/plans/historical-polar-20261029.json",
+      "bytes": 215469,
+      "sha256": "d8b184deccbf60092444da18b7e82d835212ec242098f88dce33ef5dc3890044"
+    },
+    {
+      "path": "Validation/plans/nominal-entry.json",
+      "bytes": 125375,
+      "sha256": "18f23832c8202c216ab4d78e6be4b9dfc5a9dc5687fa43c24fd3667742068ac9"
+    },
+    {
+      "path": "Validation/plans/required-spiral.json",
+      "bytes": 143762,
+      "sha256": "c5cead770cdb6c18852d5026b64ed94bf32bb592c034c8690f187d26f0310922"
+    },
+    {
+      "path": "Validation/reference-audit.json",
+      "bytes": 4436,
+      "sha256": "1f5539609f4cbc3ba7445682fffca1fe8be6b245cdcf3daaa4d6d3a0ac3c795e"
+    },
+    {
+      "path": "Validation/replay.json",
+      "bytes": 193,
+      "sha256": "ebd7d3925e4950f2c9eec692e047ceb50f05354a121a83a7df43f9ba7f9dc532"
+    },
+    {
+      "path": "Validation/scenarios/archival-heavy-final.json",
+      "bytes": 4056,
+      "sha256": "8adb0bc52e6c0808cb76630e038333e65dfb5cfd20026afa379d8950d9374e28"
+    },
+    {
+      "path": "Validation/scenarios/entry-actuator-minus35pct.json",
+      "bytes": 4045,
+      "sha256": "6772f935f275c4cb40488b32718757a097b915bd381fb6a18f2d71694518fbd0"
+    },
+    {
+      "path": "Validation/scenarios/entry-crossrange15km.json",
+      "bytes": 4040,
+      "sha256": "4ac96c2a3c1306e0ccc98592d47500925265d0bfbdd806596fd8980b5e12d029"
+    },
+    {
+      "path": "Validation/scenarios/entry-downrange-plus100km.json",
+      "bytes": 4043,
+      "sha256": "fbb302021f186420d2e50980b3084a44cbdb0e4e9e67965a14e459a17e867ac9"
+    },
+    {
+      "path": "Validation/scenarios/entry-drag-plus10pct.json",
+      "bytes": 4045,
+      "sha256": "6772f935f275c4cb40488b32718757a097b915bd381fb6a18f2d71694518fbd0"
+    },
+    {
+      "path": "Validation/scenarios/entry-heading-eight.json",
+      "bytes": 4045,
+      "sha256": "5f4460560a27caac49821b3a088ed60abd23167c0211763000872b6605b84fd1"
+    },
+    {
+      "path": "Validation/scenarios/entry-speed-minus50.json",
+      "bytes": 4045,
+      "sha256": "32d30a19a6f62381b31c54dade7d78eee5f3db18f498cd9c0876caecae723a2d"
+    },
+    {
+      "path": "Validation/scenarios/entry-speed-plus50.json",
+      "bytes": 4044,
+      "sha256": "238c5bec15fc62f91239667f24bec467693337adf7ec925e4b34ccf9b62f39dd"
+    },
+    {
+      "path": "Validation/scenarios/final-crosswind5mps.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/final-density-plus10pct.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/final-drag-minus20pct.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/final-drag-plus20pct.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/final-lift-minus20pct.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/historical-entry-20261028.json",
+      "bytes": 4073,
+      "sha256": "0609fee424edcd3143e32d8494ecdd34b41276ddb7b608ce4d2660482c53bd2c"
+    },
+    {
+      "path": "Validation/scenarios/historical-polar-20261029.json",
+      "bytes": 4072,
+      "sha256": "31fa335c8310113604c920b0b4778b38835c53eaa3d379a256bd0b7037008f60"
+    },
+    {
+      "path": "Validation/scenarios/low-energy-unreachable.json",
+      "bytes": 4041,
+      "sha256": "187532dd0d7881350ae720d08ffc1f21e9151e1fd51a1769939f742da8dbb87c"
+    },
+    {
+      "path": "Validation/scenarios/nominal-entry.json",
+      "bytes": 4045,
+      "sha256": "6772f935f275c4cb40488b32718757a097b915bd381fb6a18f2d71694518fbd0"
+    },
+    {
+      "path": "Validation/scenarios/nominal-final.json",
+      "bytes": 4038,
+      "sha256": "310568db111a691524f7a5fd1c921d06d1b16761bdd61129db94ebc3a21637a2"
+    },
+    {
+      "path": "Validation/scenarios/required-spiral.json",
+      "bytes": 4037,
+      "sha256": "417e838dfba65e636fa3a9353fe8707c41d46ad2968f4e76e7bff0c08370eb34"
+    },
+    {
+      "path": "Validation/swift-tests.log",
+      "bytes": 9632,
+      "sha256": "013b4e13ff0ac172762829bfbd6026366ba1fe15ee9637b36211dc78c812b31a"
+    },
+    {
+      "path": "Validation/telemetry-audit.json",
+      "bytes": 6241,
+      "sha256": "17356561e0d184d64a5f21ce811fbdad7f6ce01851199545fbc482c26099b564"
+    },
+    {
+      "path": "Validation/toolchain.txt",
+      "bytes": 75,
+      "sha256": "b0b8f2656fe883af86488be98fdaefd77793688fde6cb5521d77b437c3558928"
+    }
+  ]
+}

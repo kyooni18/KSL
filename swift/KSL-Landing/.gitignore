@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+*.core
+core
+ksl-live-*.jsonl
+ksl-live-*.jsonl.configuration.json
+__pycache__/

@@ -1,0 +1,104 @@
+{
+  "constraintOccurrences" : {
+
+  },
+  "elapsed" : 125.8999999998855,
+  "evidence" : "offline-model-only",
+  "finalState" : {
+    "aerodynamics" : {
+      "airspeed" : 0,
+      "angleOfAttack" : 0,
+      "bank" : 0,
+      "drag" : 0,
+      "dynamicPressure" : 0,
+      "force" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      },
+      "lift" : 0,
+      "mach" : 0,
+      "measuredForces" : false,
+      "sideslip" : 0
+    },
+    "angularVelocity" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    },
+    "atmosphere" : {
+      "density" : 1.1269721756177766,
+      "pressure" : 100253.85706525594,
+      "speedOfSound" : 352.90512260369746,
+      "temperature" : 309.8976281728614,
+      "wind" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      }
+    },
+    "attitude" : {
+      "w" : 0.701133845164072,
+      "x" : -0.7005392389783485,
+      "y" : -0.09391785230944794,
+      "z" : 0.0939975682380153
+    },
+    "contact" : "stopped",
+    "mass" : 25000,
+    "position" : {
+      "x" : 158722.4403960159,
+      "y" : -578699.3181692046,
+      "z" : -509.11444705426203
+    },
+    "radarAltitude" : 3.1999999997811415,
+    "snapshotSpan" : 0,
+    "systems" : {
+      "airbrakes" : false,
+      "brakes" : true,
+      "gearDown" : true,
+      "rcs" : false,
+      "sas" : false,
+      "throttle" : 0,
+      "thrust" : 0
+    },
+    "time" : 1125.8999999998855,
+    "velocity" : {
+      "x" : 0,
+      "y" : 0,
+      "z" : 0
+    }
+  },
+  "lastPlanningRejections" : {
+
+  },
+  "lastTerminalCandidateCount" : 0,
+  "maximumComputationMilliseconds" : 0.672942,
+  "maximumDynamicPressure" : 7501.203053035469,
+  "maximumLoadFactor" : 2.118157591709686,
+  "meanComputationMilliseconds" : 0.003926680952380947,
+  "outcome" : "complete",
+  "phases" : [
+    "approach",
+    "preflare",
+    "flare",
+    "rollout",
+    "complete"
+  ],
+  "saturatedControlFraction" : 0,
+  "scenario" : "nominal-final",
+  "steps" : 1259,
+  "touchdown" : {
+    "acceptable" : true,
+    "along" : 162.33950911174392,
+    "bank" : 6.722448292499813e-06,
+    "cross" : -0.0018334650376109238,
+    "horizontalSpeed" : 58.75622445967064,
+    "onRunway" : true,
+    "pitch" : 0.19289551447013553,
+    "time" : 1105.459999999904,
+    "verticalSpeed" : -1.8723649870497934
+  },
+  "violations" : [
+
+  ]
+}

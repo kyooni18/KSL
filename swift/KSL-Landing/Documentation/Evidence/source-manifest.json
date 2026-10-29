@@ -1,0 +1,22 @@
+[
+  {
+    "source": "ShuttleSim/reference-model/sts_aero_cells20261029.csv",
+    "sha256": "6853ae2cfa0a0da9b9daf329238550c68f3e9e335f8ed47175be4fd4dcac9f71",
+    "bytes": 11082
+  },
+  {
+    "source": "ShuttleSim/reference-model/sts_aero_cells20261029.json",
+    "sha256": "7dcde481bdd7aaa3b96fde0795b6db212009812948c0937ea0a4f01cf185ba6f",
+    "bytes": 73210
+  },
+  {
+    "source": "ShuttleSim/reference-model/sts_attitude_live20261028.ini",
+    "sha256": "cdfe83d0529668994844db9fd446cd4ff8558fc08d06e8c2ff0b84f3546f6acd",
+    "bytes": 850
+  },
+  {
+    "source": "ThirdParty/krpc-cnano-0.6.0/protobuf/krpc.proto",
+    "sha256": "4b5a8bd150070dd23a52df62c3c1aa88e28f6b2f5218b79f2600d0a127e350cd",
+    "bytes": 4755
+  }
+]

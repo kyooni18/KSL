@@ -1,0 +1,113 @@
+{
+  "evidence": "independent loopback protocol fixture; no live KSP",
+  "cases": [
+    {
+      "case": "inspect",
+      "passed": true,
+      "exitCode": 0,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0244
+    },
+    {
+      "case": "fragmented",
+      "passed": true,
+      "exitCode": 0,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0169
+    },
+    {
+      "case": "wrong-vessel",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 8,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0291
+    },
+    {
+      "case": "vessel-switch",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0149
+    },
+    {
+      "case": "parts-change",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0153
+    },
+    {
+      "case": "snapshot-span",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0126
+    },
+    {
+      "case": "slow",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 40,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.6683
+    },
+    {
+      "case": "malformed",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 0,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0138
+    },
+    {
+      "case": "truncated",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 0,
+      "controlBatches": 0,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0121
+    },
+    {
+      "case": "fly",
+      "passed": true,
+      "exitCode": 2,
+      "rpcCalls": 161,
+      "controlBatches": 4,
+      "socketClosed": true,
+      "elapsedSeconds": 0.3422
+    },
+    {
+      "case": "command-error",
+      "passed": true,
+      "exitCode": 1,
+      "rpcCalls": 55,
+      "controlBatches": 1,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0299
+    },
+    {
+      "case": "cancel",
+      "passed": true,
+      "exitCode": 2,
+      "rpcCalls": 63,
+      "controlBatches": 2,
+      "socketClosed": true,
+      "elapsedSeconds": 0.0609
+    }
+  ]
+}

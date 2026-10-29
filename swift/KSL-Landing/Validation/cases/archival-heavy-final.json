@@ -1,0 +1,117 @@
+{
+  "constraintOccurrences" : {
+    "insufficientEnergy" : 1
+  },
+  "elapsed" : 4.300000000876025,
+  "evidence" : "offline-model-only",
+  "finalState" : {
+    "aerodynamics" : {
+      "airspeed" : 166.61437091803683,
+      "angleOfAttack" : 0.1257513749753864,
+      "bank" : -1.191493292098536,
+      "drag" : 350761.24353928596,
+      "dynamicPressure" : 13553.653195248497,
+      "force" : {
+        "x" : -290260.1478157498,
+        "y" : -531774.5194527087,
+        "z" : 675364.0722296989
+      },
+      "lift" : 833311.350582036,
+      "mach" : 0.481092899091898,
+      "measuredForces" : false,
+      "sideslip" : -0.06598811478257334
+    },
+    "angularVelocity" : {
+      "x" : -0.13032679559920615,
+      "y" : 0.13393550090096207,
+      "z" : -0.08288205552190125
+    },
+    "atmosphere" : {
+      "density" : 0.9764757202652513,
+      "pressure" : 83656.64485683558,
+      "speedOfSound" : 346.32473526949786,
+      "temperature" : 298.44846486322615,
+      "wind" : {
+        "x" : 0,
+        "y" : 0,
+        "z" : 0
+      }
+    },
+    "attitude" : {
+      "w" : 0.20355689983428446,
+      "x" : -0.9482985874539283,
+      "y" : -0.21509519881636074,
+      "z" : -0.11414216139923886
+    },
+    "contact" : "airborne",
+    "mass" : 40252.917969,
+    "position" : {
+      "x" : 155700.60001951613,
+      "y" : -580760.4173400518,
+      "z" : -472.6125844669268
+    },
+    "radarAltitude" : 1269.9581370115047,
+    "snapshotSpan" : 0,
+    "systems" : {
+      "airbrakes" : false,
+      "brakes" : false,
+      "gearDown" : false,
+      "rcs" : false,
+      "sas" : false,
+      "throttle" : 0,
+      "thrust" : 0
+    },
+    "time" : 66772.46981400087,
+    "velocity" : {
+      "x" : 143.07458230988584,
+      "y" : 77.75550724839286,
+      "z" : 35.271710843252
+    }
+  },
+  "lastPlanningRejections" : {
+    "actuatorAuthority" : 18,
+    "excessiveBank" : 10,
+    "excessiveLoad" : 4,
+    "insufficientLift" : 46,
+    "terrainCollision" : 52
+  },
+  "lastRejectedTerminal" : {
+    "feasible" : false,
+    "maximumBank" : 1.1089485359171767,
+    "maximumLoad" : 2.278185266752282,
+    "maximumQ" : 17173.94514390332,
+    "minimumLiftMargin" : 2.857806062822007,
+    "score" : 1000046.0571508441,
+    "touchdownSpeed" : 91.0980956233349,
+    "uncertaintyFraction" : 0.2,
+    "violations" : [
+      {
+        "kind" : "terrainCollision",
+        "limit" : 0,
+        "message" : "Vertical path penetrates runway plane",
+        "value" : 0
+      }
+    ]
+  },
+  "lastTerminalCandidateCount" : 116,
+  "maximumComputationMilliseconds" : 17.171301,
+  "maximumDynamicPressure" : 17173.94514390332,
+  "maximumLoadFactor" : 2.577437179865698,
+  "meanComputationMilliseconds" : 0.43772550000000016,
+  "outcome" : "aborted",
+  "phases" : [
+    "entry",
+    "abort"
+  ],
+  "saturatedControlFraction" : 0.06976744186046512,
+  "scenario" : "final-ideal-3p5km-v190-fpa20",
+  "steps" : 43,
+  "violations" : [
+    {
+      "kind" : "insufficientEnergy",
+      "limit" : 0,
+      "message" : "No complete terminal path or final capture remains",
+      "value" : 0
+    }
+  ]
+}
