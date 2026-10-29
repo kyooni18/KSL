@@ -317,6 +317,9 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
             out.taem_along_track=synthetic.runway_along_track;
             out.taem_cross_track=synthetic.runway_cross_track;
             out.taem_course=synthetic.ground_track_heading;
+            out.taem_hac_energy_valid=cfg->guidance.taem_hac_law&&
+                isfinite(shadow.entry_hac_energy_excess);
+            out.taem_hac_energy_excess=shadow.entry_hac_energy_excess;
             out.taem_energy_error=entry_remaining_specific_energy(
                 geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
                 cfg->guidance.taem_interface_altitude,

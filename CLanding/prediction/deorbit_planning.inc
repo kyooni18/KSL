@@ -688,6 +688,22 @@ static double deorbit_sts_handoff_target(const TerminalModel*model,const PlanetM
     return isfinite(reach)?reach+s->final_approach_distance:NAN;
 }
 
+/* How far a witness hands over beyond what MM304 aims for (+ : short; a
+   later burn lowers it).  HAC law: energy height under MM305's HAC
+   reference at the handoff, because on a pass that crosses the runway at an
+   angle the site distance bottoms out (95 km on the 54 deg pass, 2026-10-29)
+   while the vehicle is still short: ranking by distance kept an entry that
+   forced MM304 off the 40 deg profile from Mach 8.6.  Otherwise the site
+   distance past the handoff target. */
+static double deorbit_witness_handoff_miss(const EntryPrediction*w,const PlanetModel*p,
+        const VehicleProfile*v,const GuidanceSettings*s,double sts_handoff_target){
+    if(!w||!w->reached_taem)return NAN;
+    if(s->taem_hac_law&&!strcmp(v->model_id,"STS"))
+        return w->taem_hac_energy_valid?-w->taem_hac_energy_excess:NAN;
+    double target=isfinite(sts_handoff_target)?sts_handoff_target:entry_taem_range_target(p,s);
+    return isfinite(w->taem_distance)?w->taem_distance-target:NAN;
+}
+
 static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPrediction*aw,
         const Candidate*b,const EntryPrediction*bw,const PlanetModel*p,
         const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,
@@ -715,12 +731,16 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
        configured interface range instead chose a burn MM304 could not reach
        its 39 km target from.  The analytic inlet margin ranked next is
        uniformly -200..-280 kJ/kg across these candidates. */
-    if((s->sts_trajectory_delivery||s->taem_hac_law)&&!strcmp(v->model_id,"STS")&&isfinite(sts_handoff_target)&&
-       aw->reached_taem&&bw->reached_taem&&
-       isfinite(aw->taem_distance)&&isfinite(bw->taem_distance)){
-        double ae=fabs(aw->taem_distance-sts_handoff_target);
-        double be=fabs(bw->taem_distance-sts_handoff_target);
-        if(fabs(ae-be)>1.0)return ae<be;
+    if((s->sts_trajectory_delivery||s->taem_hac_law)&&!strcmp(v->model_id,"STS")){
+        double am=deorbit_witness_handoff_miss(aw,p,v,s,sts_handoff_target);
+        double bm=deorbit_witness_handoff_miss(bw,p,v,s,sts_handoff_target);
+        if(isfinite(am)!=isfinite(bm))return isfinite(am);
+        if(isfinite(am)){
+            /* HAC law: an energy-sufficient handoff beats a short one (MM305
+               sheds surplus; it cannot make up a deficit). */
+            if(s->taem_hac_law&&(am<=0.0)!=(bm<=0.0))return am<=0.0;
+            if(fabs(fabs(am)-fabs(bm))>1.0)return fabs(am)<fabs(bm);
+        }
     }
     bool a_geometry=deorbit_witness_inlet_geometry(aw,p,site,s);
     bool b_geometry=deorbit_witness_inlet_geometry(bw,p,site,s);
@@ -1078,8 +1098,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
     unsigned inlet_candidates_evaluated=1;
     /* (burn-start offset, witness inlet range) of every scanned candidate. */
     double scan_dt[16],scan_range[16];int scan_count=0;
-    if(isfinite(selected_inlet.taem_distance)&&selected_inlet.reached_taem){
-        scan_dt[scan_count]=0.0;scan_range[scan_count++]=selected_inlet.taem_distance;}
+    double selected_miss=deorbit_witness_handoff_miss(&selected_inlet,p,v,s,sts_handoff_target);
+    if(isfinite(selected_miss)){scan_dt[scan_count]=0.0;scan_range[scan_count++]=selected_miss;}
     double scan_origin=timing_best.burn_start;
     double inlet_step=s->target_deorbit_capture_radius/
         fmax(1.0,timing_best.entry_speed);
@@ -1113,20 +1133,19 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             nearby_inlet=full;
         }
         inlet_candidates_evaluated++;
-        if(scan_count<16&&isfinite(nearby_inlet.taem_distance)&&nearby_inlet.reached_taem){
-            scan_dt[scan_count]=offset*inlet_step;scan_range[scan_count++]=nearby_inlet.taem_distance;}
-        if(offset==last_offset&&last_offset<8&&isfinite(sts_handoff_target)&&
-           nearby_inlet.reached_taem&&isfinite(nearby_inlet.taem_distance)&&
-           nearby_inlet.taem_distance>sts_handoff_target)
+        double nearby_miss=deorbit_witness_handoff_miss(&nearby_inlet,p,v,s,sts_handoff_target);
+        if(scan_count<16&&isfinite(nearby_miss)){
+            scan_dt[scan_count]=offset*inlet_step;scan_range[scan_count++]=nearby_miss;}
+        if(offset==last_offset&&last_offset<8&&nearby_miss>0.0)
             last_offset++;
         bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
             &selected,&selected_inlet,p,site,v,s,sts_handoff_target);
         if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
             fprintf(stderr,
-                "DEORBIT_INLET_CANDIDATE dt=%+.1fs burn=%.1f tier=%d safe=%d range=%.1fkm course=%.1fdeg closing=%d geometry=%d energy=%+.0fJ/kg boundaryMiss=%d chosen=%d\n",
+                "DEORBIT_INLET_CANDIDATE dt=%+.1fs burn=%.1f tier=%d safe=%d miss=%+.1fkm range=%.1fkm course=%.1fdeg closing=%d geometry=%d energy=%+.0fJ/kg boundaryMiss=%d chosen=%d\n",
                 offset*inlet_step,nearby.burn_ut,nearby.tier,
                 deorbit_entry_stage_qualified(&nearby_inlet,v,s,nearby.peri,
-                    site->altitude,p->atmosphere_depth,true)?1:0,
+                    site->altitude,p->atmosphere_depth,true)?1:0,nearby_miss/1000.0,
                 nearby_inlet.taem_distance/1000.0,nearby_inlet.taem_course,
                 deorbit_witness_closing(&nearby_inlet,site)?1:0,
                 deorbit_witness_inlet_geometry(&nearby_inlet,p,site,s)?1:0,
@@ -1152,8 +1171,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
            toward it too; refining toward the configured inlet range found
            92.8 km, which that ranking rejected, leaving the coarse 28 km
            sample that delivered MM305 short (60 deg live, 2026-10-16). */
-        double nominal=isfinite(sts_handoff_target)?sts_handoff_target:
-            entry_taem_range_target(p,s);
+        /* scan_range holds the handoff miss: refine to its zero. */
+        double nominal=0.0;
         for(int i=0;i<scan_count;i++)for(int j=i+1;j<scan_count;j++)
             if(scan_dt[j]<scan_dt[i]){double t=scan_dt[i];scan_dt[i]=scan_dt[j];scan_dt[j]=t;
                 t=scan_range[i];scan_range[i]=scan_range[j];scan_range[j]=t;}
@@ -1184,7 +1203,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
                 refined_inlet=full;
             }
             inlet_candidates_evaluated++;
-            double r=refined_inlet.reached_taem?refined_inlet.taem_distance:NAN;
+            double r=deorbit_witness_handoff_miss(&refined_inlet,p,v,s,sts_handoff_target);
             bool better=deorbit_guided_candidate_better(&refined,&refined_inlet,
                 &selected,&selected_inlet,p,site,v,s,sts_handoff_target);
             if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
@@ -1197,7 +1216,7 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             }else{candidate_clear(&refined);entry_prediction_clear(&refined_inlet);}
             if(!isfinite(r))break;
             if((r-nominal)*(lo_r-nominal)>0.0){lo_dt=dt;lo_r=r;}else{hi_dt=dt;hi_r=r;}
-            if(fabs(r-nominal)<5000.0)break;
+            if(fabs(r-nominal)<(s->taem_hac_law?1000.0:5000.0))break;
         }
     }
     if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))

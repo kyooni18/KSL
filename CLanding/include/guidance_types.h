@@ -75,6 +75,8 @@ typedef struct {
     bool taem_dynamic_interface_captured, taem_dynamic_interface_target_valid;
     double entry_range, entry_flight_path_angle, entry_speed, entry_course_error, taem_speed, taem_flight_path_angle;
     double taem_altitude, taem_desired_altitude, taem_along_track, taem_cross_track, taem_course;
+    /* Shadow MM304's energy height over MM305's HAC reference at the handoff, m. */
+    bool taem_hac_energy_valid; double taem_hac_energy_excess;
     bool mm304_gate_recorded;
     double mm304_gate_range, mm304_gate_along_track, mm304_gate_cross_track;
     double mm304_gate_course, mm304_gate_altitude, mm304_gate_speed, mm304_gate_flight_path_angle;
