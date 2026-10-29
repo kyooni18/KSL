@@ -11,7 +11,7 @@ def reentry_before_meco(mu, radius, radial_speed, horizontal_speed, acceleration
                         thrust_pitch, target_pitch, response_seconds, atmosphere_radius,
                         horizon, target_apoapsis_radius, target_periapsis_radius,
                         trim_radius=None, trim_coast_seconds=0., dt=2.):
-    """Predict reentry before cutoff or failure to reach trim altitude afterward.
+    """Predict an unsafe recovery: reentry, excess apoapsis, or failed trim clearance.
 
     This point-mass forecast assumes constant acceleration, a first-order
     command response and two-second attitude lag. It neglects drag and mass
@@ -36,6 +36,8 @@ def reentry_before_meco(mu, radius, radial_speed, horizontal_speed, acceleration
         if r <= atmosphere_radius and vr < 0.:
             return True
         ra, rp = apsides(mu, r, vr, vh)
+        if ra > target_apoapsis_radius+3000.:
+            return True
         if ra >= target_apoapsis_radius-3000. and rp >= target_periapsis_radius-300.:
             break
         step = min(dt, horizon-elapsed)
@@ -52,6 +54,8 @@ def reentry_before_meco(mu, radius, radial_speed, horizontal_speed, acceleration
             return True
         elapsed += step
     if r <= atmosphere_radius and vr < 0.:
+        return True
+    if apsides(mu, r, vr, vh)[0] > target_apoapsis_radius+3000.:
         return True
     if r < trim_radius:
         # If still below the OMS altitude at cutoff, only an ascending coast
@@ -88,47 +92,22 @@ def recovery_pitch(raw_pitch, guard_active, plan_feasible, apoapsis, target_apoa
         return raw_pitch, 'inactive'
     if not reentry_before_meco(target_pitch=0., **forecast):
         return min(raw_pitch, 0.), 'horizontal'
-    # Choose the smallest upward pitch that avoids reentry in the forecast;
-    # the sequence does not require positive vertical velocity at MECO.
-    if reentry_before_meco(target_pitch=90., **forecast):
-        return min(raw_pitch, 0.), 'unavoidable'
-    low, high = 0., 90.
-    for _ in range(10):
-        mid = (low+high)/2.
-        if reentry_before_meco(target_pitch=mid, **forecast):
-            low = mid
-        else:
-            high = mid
-    return max(min(raw_pitch, 0.), high), 'climb-for-clearance'
+    # High pitch can overshoot apoapsis even when an intermediate angle is
+    # viable, so find the first safe interval instead of assuming 90 is safe.
+    low = 0.
+    for high in range(5, 91, 5):
+        if not reentry_before_meco(target_pitch=float(high), **forecast):
+            high = float(high)
+            for _ in range(10):
+                mid = (low+high)/2.
+                if reentry_before_meco(target_pitch=mid, **forecast):
+                    low = mid
+                else:
+                    high = mid
+            return max(min(raw_pitch, 0.), high), 'climb-for-clearance'
+        low = float(high)
+    return min(raw_pitch, 0.), 'unavoidable'
 
-
-def recovery_guidance(raw_pitch, guard_active, plan_feasible, apoapsis, target_apoapsis,
-                      forecast, max_acceleration):
-    """Return pitch and, if required, acceleration to preserve the OMS coast.
-
-    If no pitch at the guarded acceleration can preserve the coast, look for
-    the least extra horizontal acceleration that does. Only try an upward
-    pitch at maximum available acceleration when horizontal thrust cannot.
-    """
-    pitch, status = recovery_pitch(raw_pitch, guard_active, plan_feasible,
-                                   apoapsis, target_apoapsis, forecast)
-    if status != 'unavoidable' or max_acceleration <= forecast['acceleration']:
-        return pitch, status, None
-    maximum = dict(forecast, acceleration=max_acceleration)
-    if not reentry_before_meco(target_pitch=0., **maximum):
-        low, high = forecast['acceleration'], max_acceleration
-        for _ in range(12):
-            mid = (low+high)/2.
-            if reentry_before_meco(target_pitch=0., **dict(forecast, acceleration=mid)):
-                low = mid
-            else:
-                high = mid
-        return min(raw_pitch, 0.), 'horizontal-accelerated', high
-    pitch, status = recovery_pitch(raw_pitch, True, plan_feasible,
-                                   apoapsis, target_apoapsis, maximum)
-    if status != 'unavoidable':
-        return pitch, status, max_acceleration
-    return min(raw_pitch, 0.), 'unavoidable', None
 
 
 def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
@@ -173,8 +152,8 @@ def apoapsis_guard_g(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
                      margin_m=1000.0, hold_seconds=0.0):
     """Find a bounded G target whose predicted peak apoapsis stays below target.
 
-    Never request an engine cutoff: if even the minimum G exceeds the target,
-    retain that minimum and report the predicted excess to the caller.
+    If even the requested floor exceeds the target, return that floor and
+    report the predicted excess. A zero floor allows an engine cutoff.
     """
     if not all(math.isfinite(x) for x in (target_radius, requested_g, floor_g, margin_m)):
         raise ValueError('Invalid apoapsis guard input')

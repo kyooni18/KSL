@@ -14,7 +14,7 @@ from .geometry import (_combine, _cross, _dot, _norm, _unit, cross3, desired_orb
 from .peg import InsertionGuidance
 from .full_plan import BoosterState, attached_booster_dry_mass, engine_measurements, plan_ascent
 from .plan_timeline import sample_trajectory, track_trajectory
-from .apoapsis_guard import apoapsis_guard_g, projected_apoapsis, recovery_guidance
+from .apoapsis_guard import apoapsis_guard_g, recovery_pitch
 from .orbit_trim import ALIGN_LEAD, MIN_BURN_ALTITUDE
 from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, constrain_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_prepare_ready, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
@@ -73,6 +73,15 @@ def ensure_autopilot_engaged(control, autopilot):
         return False
     set_autopilot_engaged(autopilot, True)
     return True
+
+
+def insertion_command_or_cut_throttle(guide, control, *args, **kwargs):
+    """Fail closed when insertion guidance cannot produce a command."""
+    try:
+        return guide.command(*args, **kwargs)
+    except Exception:
+        control.throttle = 0.0
+        raise
 
 
 def release_controls(control, autopilot):
@@ -576,7 +585,6 @@ def run(args):
                         control_dt = control_interval(control_ut, previous_control_ut)
                         previous_control_ut = control_ut
                         planned_target_g = None
-                        recovery_acceleration = None
                         if conn.space_center.active_vessel != v:
                             raise RuntimeError('Active vessel changed')
                         recovered_autopilot = ensure_autopilot_engaged(control, ap)
@@ -943,7 +951,8 @@ def run(args):
                                     transition_anchor, _ = pitch_heading_for_direction(held_surface)
                                 planned_r = insertion_guide.r_t
                                 previous_plan_ut = insertion_guide.planned_at
-                                raw_pitch = insertion_guide.command(
+                                raw_pitch = insertion_command_or_cut_throttle(
+                                    insertion_guide, control,
                                     now_ut, r_now, vr_inertial, vh_inertial, v.mass,
                                     full_thrust, exhaust_velocity, g_limit, accel_now,
                                     full_thrust*cap_now/v.mass > .99*g_limit, commanded_pitch,
@@ -1080,7 +1089,7 @@ def run(args):
                                     forecast_g = min(forecast_g, apoapsis_guard_limit)
                                 time_to_meco = max(0., insertion_guide.prediction['time'] -
                                                    (conn.space_center.ut-insertion_guide.planned_at))
-                                raw_pitch, recovery_status, recovery_acceleration = recovery_guidance(
+                                raw_pitch, recovery_status = recovery_pitch(
                                     raw_pitch, apoapsis_guard_active,
                                     insertion_guide.prediction['target_feasible'],
                                     v.orbit.apoapsis_altitude, args.orbit,
@@ -1095,21 +1104,11 @@ def run(args):
                                          trim_coast_seconds=ALIGN_LEAD,
                                          horizon=time_to_meco,
                                          target_apoapsis_radius=body.equatorial_radius+args.orbit,
-                                         target_periapsis_radius=body.equatorial_radius+args.meco_periapsis),
-                                    min(full_thrust/v.mass, min(args.max_g, args.upper_g)*G0))
+                                         target_periapsis_radius=body.equatorial_radius+args.meco_periapsis))
                                 if recovery_status == 'unavoidable':
                                     warn_once('insertion-reentry-forecast',
-                                              'No recovery pitch at the current thrust is predicted '
-                                              'to avoid reentry and reach OMS trim altitude')
-                                elif recovery_acceleration is not None:
-                                    recovery_peak = projected_apoapsis(
-                                        body.gravitational_parameter, r_forecast, vr_forecast,
-                                        vh_forecast, measured_thrust_pitch,
-                                        ASCENT_PITCH_RESPONSE_SECONDS, recovery_acceleration)
-                                    if recovery_peak > body.equatorial_radius+args.orbit:
-                                        warn_once('insertion-clearance-overshoot',
-                                                  'Thrust needed for predicted OMS clearance may '
-                                                  'overshoot the target apoapsis')
+                                              'No recovery pitch at the guarded thrust is predicted '
+                                              'to meet the apoapsis target and reach OMS trim altitude')
                             next_pitch = smooth_value(commanded_pitch, raw_pitch,
                                                       ASCENT_PITCH_RESPONSE_SECONDS, control_dt)
                             if not shuttle.separated and gravity_turn_released:
@@ -1308,7 +1307,7 @@ def run(args):
                                                 body.gravitational_parameter, radius, vr, vh,
                                                 measured_thrust_pitch, pitch_response,
                                                 body.equatorial_radius+args.orbit, target_g,
-                                                hold_seconds=hold_left)
+                                                floor_g=0.0, hold_seconds=hold_left)
                                             limited = guarded_g < target_g-0.01 or not feasible
                                             target_g = min(target_g, guarded_g)
                                             apoapsis_guard_limit = guarded_g
@@ -1317,20 +1316,16 @@ def run(args):
                                                 if limited:
                                                     print(f'Apoapsis guard: {guarded_g:.2f} G; '
                                                           f'predicted peak {(predicted_ap-body.equatorial_radius)/1000:.1f} km'
-                                                          + ('' if feasible else ' (minimum thrust still exceeds target)'))
+                                                          + ('' if feasible else ' (coasting already exceeds target)'))
                                                 else:
                                                     print('Apoapsis guard released')
                                             if limited and not feasible and not apoapsis_guard_unavoidable:
                                                 warn_once('apoapsis-unavoidable',
                                                           f'Predicted apoapsis {(predicted_ap-body.equatorial_radius)/1000:.1f} km '
-                                                          'exceeds the target buffer at minimum guided thrust')
+                                                          'exceeds the target buffer even without thrust')
                                                 apoapsis_guard_unavoidable = True
                                     except Exception as exc:
                                         warn_once('apoapsis-guard', f'Apoapsis prediction unavailable: {exc}')
-                                if recovery_acceleration is not None:
-                                    # Atmospheric/OMS clearance takes precedence over
-                                    # an apoapsis throttle cap that cannot reach it.
-                                    target_g = max(target_g, recovery_acceleration/G0)
                             trim_pitch_rate = None
                             if (state == 'ASCENT' and shuttle.solid_boosters and
                                     not shuttle.separated):
@@ -1379,7 +1374,10 @@ def run(args):
                                     # throttle is a hard G/Q guard, not a second
                                     # copy of the phase-trim allocator; recompute it
                                     # from full each tick to prevent a zero latch.
-                                    if shuttle.separated:
+                                    if shuttle.separated and apoapsis_guard_active and target_g <= 0.:
+                                        # Do not wait for the engine limiter to slew down.
+                                        control.throttle = 0.0
+                                    elif shuttle.separated:
                                         control.throttle = post_booster_master_throttle(
                                             flight.g_force, args.max_g,
                                             flight.dynamic_pressure, args.max_q)

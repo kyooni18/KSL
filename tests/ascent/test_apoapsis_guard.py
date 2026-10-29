@@ -2,7 +2,7 @@ import pytest
 import json
 
 from ksl.ascent.apoapsis_guard import (apoapsis_guard_g, projected_apoapsis,
-                                       recovery_pitch, recovery_guidance, reentry_before_meco)
+                                       recovery_pitch, reentry_before_meco)
 
 
 MU = 3.5316e12
@@ -52,9 +52,9 @@ def test_unqualified_lofted_insertion_does_not_command_upward_thrust():
 
 
 def test_recovery_allows_descent_but_predicts_return_to_atmosphere_and_trim_clearance():
-    forecast = dict(mu=MU, radius=R+75000., radial_speed=-100., horizontal_speed=1200.,
-                    acceleration=12., thrust_pitch=0., response_seconds=5.,
-                    atmosphere_radius=R+70000., trim_radius=R+74000., horizon=120.,
+    forecast = dict(mu=MU, radius=R+73142., radial_speed=-41., horizontal_speed=1533.,
+                    acceleration=8.04, thrust_pitch=0., response_seconds=5.,
+                    atmosphere_radius=R+70000., trim_radius=R+74000., horizon=57.5,
                     target_apoapsis_radius=R+85000., target_periapsis_radius=R+55000.)
     assert reentry_before_meco(target_pitch=0., **forecast)
     pitch, status = recovery_pitch(60., True, False, 84000., 85000., forecast)
@@ -69,7 +69,7 @@ def test_recovery_allows_descent_but_predicts_return_to_atmosphere_and_trim_clea
     assert recovery_pitch(60., True, False, 84000., 85000., safe) == (0., 'horizontal')
     # If cutoff is still below 74 km, a rising coast can reach the OMS
     # altitude; the same speed downward means that opportunity has passed.
-    coast = dict(safe, radius=R+73000., radial_speed=200., horizon=0.)
+    coast = dict(safe, radius=R+73000., radial_speed=120., horizon=0.)
     assert not reentry_before_meco(target_pitch=0., **coast)
     assert reentry_before_meco(target_pitch=0., **dict(coast, radial_speed=-200.))
     # Being above 74 km at cutoff is not enough if the shuttle will reenter
@@ -85,22 +85,29 @@ def test_recovery_warns_if_no_pitch_at_current_thrust_reaches_trim():
                     atmosphere_radius=R+70000., trim_radius=R+74000., horizon=500.,
                     target_apoapsis_radius=R+85000., target_periapsis_radius=R+55000.)
     assert recovery_pitch(85., True, False, 84000., 85000., forecast) == (0., 'unavoidable')
-    pitch, status, acceleration = recovery_guidance(85., True, False, 84000., 85000.,
-                                                    forecast, 1.4*9.80665)
-    assert pitch == 0.
-    assert status == 'horizontal-accelerated'
-    assert forecast['acceleration'] < acceleration <= 1.4*9.80665
-    assert not reentry_before_meco(target_pitch=0., **dict(forecast, acceleration=acceleration))
+    # The former recovery acceleration would clear the atmosphere only by
+    # overshooting the target; it is not a viable insertion.
+    assert reentry_before_meco(target_pitch=0., **dict(forecast, acceleration=1.4*9.80665))
 
 
-def test_recovery_does_not_override_thrust_if_no_available_acceleration_can_clear():
-    forecast = dict(mu=MU, radius=R+71000., radial_speed=-500., horizontal_speed=800.,
-                    acceleration=1., thrust_pitch=0., response_seconds=5.,
-                    atmosphere_radius=R+70000., trim_radius=R+74000., horizon=100.,
-                    target_apoapsis_radius=R+85000., target_periapsis_radius=R+55000.)
-    pitch, status, acceleration = recovery_guidance(80., True, False, 84000., 85000.,
-                                                    forecast, 1.4*9.80665)
-    assert (pitch, status, acceleration) == (0., 'unavoidable', None)
+def test_guard_can_cut_thrust_when_recorded_overshoot_is_already_unavoidable():
+    g, peak, feasible = apoapsis_guard_g(
+        MU, R+80700., -216., 2066., 0., 5., R+90000., 1.168, floor_g=0.)
+    assert g == 0.
+    assert peak > R+90000.
+    assert not feasible
+
+
+def test_insertion_planner_failure_cuts_throttle_and_propagates_error():
+    from types import SimpleNamespace
+    from ksl.ascent.flight import insertion_command_or_cut_throttle
+    class Guide:
+        def command(self):
+            raise ValueError('No fuel-feasible insertion trajectory')
+    control = SimpleNamespace(throttle=1.)
+    with pytest.raises(ValueError, match='No fuel-feasible'):
+        insertion_command_or_cut_throttle(Guide(), control)
+    assert control.throttle == 0.
 
 
 def test_nonfinite_plan_diagnostics_do_not_break_json_serialization():
