@@ -22,6 +22,12 @@ public actor KRPCFlightIO: FlightIO {
   private var lastSequence: UInt64 = 0
   private var initialPartCount = 0
   private var expectedVesselName: String? = "STS"
+  private var autopilotEngaged = false
+  private var autopilotFrameSet = false
+  /// Fly the airborne attitude target through the game autopilot (as the proven backend does)
+  /// instead of raw pitch/roll/yaw axes.
+  public var useAutopilotAttitude = true
+  public func setUseAutopilotAttitude(_ value: Bool) { useAutopilotAttitude = value }
   public private(set) var identity: KRPCVesselIdentity?
   public init(
     connection: KRPCConnectionConfiguration = .init(),
@@ -49,6 +55,8 @@ public actor KRPCFlightIO: FlightIO {
       let first = try await session.call([
         .init(procedure: "get_ActiveVessel"), .init(service: "KRPC", procedure: "GetStatus"),
       ])
+      autopilotEngaged = false
+      autopilotFrameSet = false
       vessel = try KRPCValue.decodeUInt(first[0])
       let status = try Protobuf.decode(first[1])
       let version =
@@ -140,6 +148,8 @@ public actor KRPCFlightIO: FlightIO {
       throw FlightError.disconnected("Connection shut down while arming")
     }
     armed = true
+    autopilotEngaged = false
+    autopilotFrameSet = false
     lastSequence = 0
     latest = nil
     sampledAt = nil
@@ -292,13 +302,57 @@ public actor KRPCFlightIO: FlightIO {
     defer { busy = false }
     let c = envelope.command
     var calls = safetyCalls()
-    for (name, value) in [
-      ("Pitch", c.pitch), ("Roll", c.roll), ("Yaw", c.yaw), ("WheelSteering", c.wheelSteering),
-    ] {
+    let flyAttitude = useAutopilotAttitude && !latest.contact.isGrounded && envelope.attitude != nil
+    if flyAttitude, let target = envelope.attitude {
+      let local = LocalFrame(position: latest.position)
+      // kRPC surface frame components are (up, north, east).
+      func raw(_ v: Vector3) -> Data {
+        KRPCValue.tuple([
+          KRPCValue.double(v.dot(local.up)), KRPCValue.double(v.dot(local.north)),
+          KRPCValue.double(v.dot(local.east)),
+        ])
+      }
+      if !autopilotFrameSet {
+        calls.append(
+          .init(
+            procedure: "AutoPilot_set_ReferenceFrame",
+            arguments: [KRPCValue.uint(autopilot), KRPCValue.uint(surfaceFrame)]))
+      }
       calls.append(
         .init(
-          procedure: "Control_set_" + name,
-          arguments: [KRPCValue.uint(control), KRPCValue.float(Float(value))]))
+          procedure: "AutoPilot_SetDirectionAndUp",
+          arguments: [
+            KRPCValue.uint(autopilot), raw(target.nose), raw(target.roof), KRPCValue.float(0),
+          ]))
+      if !autopilotEngaged {
+        calls.append(
+          .init(
+            procedure: "AutoPilot_set_Engaged",
+            arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(true)]))
+      }
+    } else {
+      if autopilotEngaged {
+        calls.append(
+          .init(
+            procedure: "AutoPilot_set_Engaged",
+            arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)]))
+      }
+      for (name, value) in [
+        ("Pitch", c.pitch), ("Roll", c.roll), ("Yaw", c.yaw), ("WheelSteering", c.wheelSteering),
+      ] {
+        calls.append(
+          .init(
+            procedure: "Control_set_" + name,
+            arguments: [KRPCValue.uint(control), KRPCValue.float(Float(value))]))
+      }
+    }
+    if !flyAttitude {
+      // WheelSteering is already included above on the raw path.
+    } else {
+      calls.append(
+        .init(
+          procedure: "Control_set_WheelSteering",
+          arguments: [KRPCValue.uint(control), KRPCValue.float(Float(c.wheelSteering))]))
     }
     calls.append(
       .init(
@@ -314,6 +368,8 @@ public actor KRPCFlightIO: FlightIO {
         throw FlightError.disconnected("Connection shut down during command")
       }
       lastSequence = envelope.sequence
+      autopilotFrameSet = autopilotFrameSet || flyAttitude
+      autopilotEngaged = flyAttitude
     } catch {
       // A failed batch leaves the previous control state in KSP; recover() re-asserts safety.
       throw error
@@ -323,12 +379,7 @@ public actor KRPCFlightIO: FlightIO {
     guard armed, !busy else { return }
     busy = true
     defer { busy = false }
-    _ = try await session.call(
-      [
-        .init(
-          procedure: "AutoPilot_set_Engaged",
-          arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
-      ] + safetyCalls())
+    _ = try await session.call(safetyCalls())
   }
   /// Reconnects (fresh handshake and discovery) after a transport fault and re-asserts the
   /// restrictions; a still-open link only discards the cached snapshot.
@@ -351,7 +402,10 @@ public actor KRPCFlightIO: FlightIO {
         KRPCCall(
           procedure: "Control_set_" + $0, arguments: [KRPCValue.uint(control), KRPCValue.float(0)])
       }
-      _ = try? await session.call(safetyCalls() + neutral)
+      let release = KRPCCall(
+        procedure: "AutoPilot_set_Engaged",
+        arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
+      _ = try? await session.call([release] + safetyCalls() + neutral)
       busy = false
     }
     armed = false

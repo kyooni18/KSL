@@ -191,14 +191,29 @@ struct LandingCLI {
           struct Inspection: Encodable {
             let identity: KRPCVesselIdentity
             let state: VehicleState
+            let attitudeCheckDegrees: [String: Double]?
           }
-          try output(Inspection(identity: identity, state: state))
+          // Self-consistency of the autopilot target: the attitude rebuilt from the measured
+          // angle of attack and bank must equal the measured nose/roof directions.
+          var check: [String: Double]?
+          if let t = FlightComputer.attitudeTarget(
+            state: state, angleOfAttack: state.aerodynamics.angleOfAttack,
+            bank: state.aerodynamics.bank)
+          {
+            let nose = state.attitude.rotate(.init(1, 0, 0)), roof = state.attitude.rotate(.init(0, 0, -1))
+            func angle(_ a: Vector3, _ b: Vector3) -> Double {
+              acos(max(-1, min(1, a.dot(b)))) * 180 / .pi
+            }
+            check = ["nose": angle(t.nose, nose), "roof": angle(t.roof, roof)]
+          }
+          try output(Inspection(identity: identity, state: state, attitudeCheckDegrees: check))
           await io.shutdown()
         } else {
           let logPath = option("--log") ?? "ksl-live-\(Int(Date().timeIntervalSince1970)).jsonl"
           try encoder.encode(config).write(
             to: URL(fileURLWithPath: logPath + ".configuration.json"))
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
+          if args.contains("--raw-axes") { await io.setUseAutopilotAttitude(false) }
           try await io.arm()
           let runtime = try FlightRuntime(
             io: io, recorder: recorder, configuration: config,
@@ -243,7 +258,7 @@ struct LandingCLI {
                         [--at-time UT] --output historical-scenario.json
           inspect --host 127.0.0.1 --port 50000 --vessel STS
           fly --host 127.0.0.1 --port 50000 --vessel STS [--log live.jsonl]
-              [--configuration configuration.json] [--airbrake-group 1] [--max-outage 20]
+              [--configuration configuration.json] [--airbrake-group 1] [--max-outage 20] [--raw-axes]
         inspect is read-only. fly takes control of the named vessel after deorbit.
         All simulation output is labeled offline-model-only. No ascent, OMS or deorbit commands exist.
         A full-rate log and its exact configuration are required for command-identical replay.

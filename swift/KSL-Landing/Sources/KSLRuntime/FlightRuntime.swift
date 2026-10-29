@@ -112,7 +112,9 @@ public actor FlightRuntime {
         let record = try computer.step(state)
         try Task.checkCancellation()
         try await io.apply(
-          .init(sequence: record.sequence, stateTime: state.time, command: record.command))
+          .init(
+            sequence: record.sequence, stateTime: state.time, command: record.command,
+            attitude: computer.attitudeTarget(state: state, solution: record.guidance)))
         try await recorder.record(record)
         if outageSince != nil { note("link recovered after \(faults) fault(s)") }
         outageSince = nil

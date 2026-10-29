@@ -185,8 +185,11 @@ class Fixture:
                 return vector(300000*math.cos(math.radians(24)), 0, 300000*math.sin(math.radians(24)))
             if property_name == "Drag":
                 return vector(120000*math.sin(math.radians(24)), 0, -120000*math.cos(math.radians(24)))
-        if name == "AutoPilot_set_Engaged":
-            assert len(args) == 2 and read_varint(args[1])[0] == 0
+        if name in ("AutoPilot_set_Engaged", "AutoPilot_set_ReferenceFrame"):
+            assert len(args) == 2
+            return b""
+        if name == "AutoPilot_SetDirectionAndUp":
+            assert len(args) == 4
             return b""
         if name.startswith("Control_set_") or name == "Control_SetActionGroup":
             assert read_varint(args[0])[0] == 11
@@ -234,7 +237,7 @@ class Fixture:
                             arguments[arg.get(1, [0])[0]] = arg[2][0]
                         calls.append((name, [arguments[i] for i in range(len(arguments))]))
                     telemetry = any(name == "Flight_get_Latitude" for name, _ in calls)
-                    command = any(name == "Control_set_Pitch" for name, _ in calls)
+                    command = any(name in ("Control_set_Pitch", "AutoPilot_SetDirectionAndUp") for name, _ in calls)
                     if telemetry:
                         self.snapshots += 1
                         self.ut += .1
@@ -246,7 +249,7 @@ class Fixture:
                     self.calls.extend(name for name, _ in calls)
                     response = bytearray()
                     for index, (name, args) in enumerate(calls):
-                        if self.mode == "command-error" and name == "Control_set_Pitch":
+                        if self.mode == "command-error" and name in ("Control_set_Pitch", "AutoPilot_SetDirectionAndUp"):
                             error = field(1, b"SpaceCenter")+field(2, b"TestError")+field(3, b"Injected command rejection")
                             response.extend(field(2, field(1, error)))
                         else:

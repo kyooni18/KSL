@@ -32,4 +32,26 @@ public final class FlightComputer {
     sequence += 1
     return .init(sequence: sequence, state: state, guidance: solution, command: command)
   }
+  /// Attitude that realises the guidance angle of attack and bank with zero sideslip, using the
+  /// same wind-axis definitions as the measured bank in the live adapter.
+  public func attitudeTarget(state: VehicleState, solution: GuidanceSolution) -> AttitudeTarget? {
+    Self.attitudeTarget(
+      state: state, angleOfAttack: solution.target.angleOfAttack, bank: solution.target.bank)
+  }
+  public static func attitudeTarget(state: VehicleState, angleOfAttack alpha: Double, bank: Double)
+    -> AttitudeTarget?
+  {
+    let v = state.velocity
+    guard v.length > 20 else { return nil }
+    let va = v.normalized
+    let upHere = state.position.normalized
+    let right = va.cross(upHere)
+    guard right.length > 1e-6 else { return nil }
+    let windRight = right.normalized
+    let windUp = windRight.cross(va)
+    let roofWind = windUp * cos(bank) + windRight * sin(bank)
+    let nose = (va * cos(alpha) + roofWind * sin(alpha)).normalized
+    let roof = (roofWind * cos(alpha) - va * sin(alpha)).normalized
+    return AttitudeTarget(nose: nose, roof: roof)
+  }
 }

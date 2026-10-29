@@ -32,14 +32,30 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   }
 }
 
+/// Desired vehicle nose and roof directions (unit vectors in the planet-fixed local frame).
+public struct AttitudeTarget: Sendable, Equatable {
+  public let nose: Vector3
+  public let roof: Vector3
+  public init(nose: Vector3, roof: Vector3) {
+    self.nose = nose
+    self.roof = roof
+  }
+}
+
 public struct CommandEnvelope: Sendable {
   public let sequence: UInt64
   public let stateTime: Double
   public let command: ControlCommand
-  public init(sequence: UInt64, stateTime: Double, command: ControlCommand) {
+  /// Optional attitude form of the same guidance target; live adapters may fly this through
+  /// the game's autopilot instead of raw axes.
+  public let attitude: AttitudeTarget?
+  public init(
+    sequence: UInt64, stateTime: Double, command: ControlCommand, attitude: AttitudeTarget? = nil
+  ) {
     self.sequence = sequence
     self.stateTime = stateTime
     self.command = command
+    self.attitude = attitude
   }
 }
 
