@@ -20,8 +20,9 @@ extern "C" {
 }
 
 const G0: f64 = 9.80665;
-/// Bank the MM304 plan may use, the same cap as live guidance.
-pub const MM304_PLANNED_MAX_BANK_DEG: f64 = 40.0;
+/// Bank the MM304 plan may use, the same cap as live guidance: the vehicle's
+/// 70 deg entry limit (a low-L/D orbiter needs Shuttle-like bank to shed energy).
+pub const MM304_PLANNED_MAX_BANK_DEG: f64 = 70.0;
 
 /// Bank authority at a flight condition: the vehicle's q/g/speed authority, capped.
 pub unsafe fn bank_limit(speed: f64, q: f64, g_force: f64, v: *const VehicleProfile) -> f64 {

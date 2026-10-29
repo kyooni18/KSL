@@ -1947,7 +1947,7 @@ pub struct EntryDragReferenceOutput {
 pub const LANDER_PI: ::core::ffi::c_double = 3.14159265358979323846264338327950288f64;
 pub const DEG2RAD: ::core::ffi::c_double = LANDER_PI / 180.0f64;
 pub const RAD2DEG: ::core::ffi::c_double = 180.0f64 / LANDER_PI;
-pub const MM304_PLANNED_MAX_BANK_DEG: ::core::ffi::c_double = 40.0f64;
+pub const MM304_PLANNED_MAX_BANK_DEG: ::core::ffi::c_double = 70.0f64;
 pub const MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M: ::core::ffi::c_double = 15000.0f64;
 #[no_mangle]
 pub unsafe extern "C" fn guidance_accept_entry_plan(
@@ -2790,10 +2790,12 @@ pub unsafe extern "C" fn entry_program_guidance(
     };
     let mut alpha_ceiling: ::core::ffi::c_double = (*v).maximum_angle_of_attack;
     if yaw_use > 0.0f64 && (*t).angle_of_attack.is_finite() as i32 != 0 {
-        let mut nominal: ::core::ffi::c_double = entry_alpha_schedule_interpolate(
-            &raw mut alpha_schedule,
-            (*t).true_air_speed,
-        );
+        // Hold toward MM304's own schedule, the AoA the law actually commands.
+        let mut nominal: ::core::ffi::c_double = if (*g).mm304.schedule.valid {
+            crate::mm304::law::schedule_aoa(&(*g).mm304.schedule, (*t).mach, (*t).true_air_speed)
+        } else {
+            entry_alpha_schedule_interpolate(&raw mut alpha_schedule, (*t).true_air_speed)
+        };
         let mut hold: ::core::ffi::c_double = if nominal.is_finite() as i32 != 0 {
             fmin((*t).angle_of_attack, nominal)
         } else {
@@ -3190,10 +3192,11 @@ pub unsafe extern "C" fn entry_program_guidance(
     } else {
         ::core::ffi::CStr::from_ptr(mm_stair_env).to_str().ok().filter(|x| !x.is_empty())
     };
+    let _ = mm_count;
     crate::mm304::live::set_schedule(
         &mut (*g).mm304,
-        &alpha_schedule.relative_velocity[..mm_count],
-        &alpha_schedule.alpha[..mm_count],
+        &crate::mm304::law::SHUTTLE_ALPHA_VELOCITY,
+        &crate::mm304::law::SHUTTLE_ALPHA,
         alpha_schedule.target_rate_limit,
         alpha_schedule.minimum_protective_aoa,
         mm_ceiling,

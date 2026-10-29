@@ -3056,7 +3056,7 @@ unsafe extern "C" fn taem_route_remaining_at_index(
     }
     return fmax(0.0f64, (*route).length_m - station);
 }
-pub const MM304_PLANNED_MAX_BANK_DEG: ::core::ffi::c_double = 40.0f64;
+pub const MM304_PLANNED_MAX_BANK_DEG: ::core::ffi::c_double = 70.0f64;
 pub const FORECAST_FIT_WINDOW_S: ::core::ffi::c_double = 30.0f64;
 pub const FORECAST_FIT_MIN_Q_PA: ::core::ffi::c_double = 100.0f64;
 pub const FORECAST_SCALE_MIN: ::core::ffi::c_double = 0.5f64;

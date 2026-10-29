@@ -40,6 +40,15 @@ pub struct LawOutput {
     pub reversal: bool,
 }
 
+/// MM304's AoA schedule (earth-relative speed m/s, AoA deg): the Shuttle 40-30
+/// I-load scaled to Kerbin (Docs/Engineering/MM304-Shuttle-Entry-Guidance-Rewrite-Plan.md
+/// section 5): a 40 deg hold above 0.89 V_circ, 30 deg by 0.70 V_circ, then the
+/// ramp to 20 deg at the Mach 2.2 TAEM handoff, above max-L/D so the vehicle
+/// reaches MM305 higher and slower. High AoA costs almost no L/D hypersonically
+/// but carries about 40% more drag.
+pub const SHUTTLE_ALPHA_VELOCITY: [f64; 4] = [650.0, 1600.0, 2040.0, 2600.0];
+pub const SHUTTLE_ALPHA: [f64; 4] = [20.0, 30.0, 40.0, 40.0];
+
 pub fn schedule_aoa(s: &Mm304Schedule, mach: f64, speed: f64) -> f64 {
     let stairs = (s.stair_count as usize).min(MM304_SCHEDULE_POINTS);
     if stairs > 0 && mach.is_finite() {
