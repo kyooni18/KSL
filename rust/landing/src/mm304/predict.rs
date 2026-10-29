@@ -15,10 +15,18 @@ use crate::prediction::predictor::{
 };
 
 extern "C" {
+    fn entry_bank_authority_limit(speed: f64, q: f64, g_force: f64, v: *const VehicleProfile, maximum_bank: f64) -> f64;
     fn aero_force_per_q(table: *const c_void, q: f64, mach: f64, alpha_deg: f64, lift_per_q: *mut f64, drag_per_q: *mut f64);
 }
 
 const G0: f64 = 9.80665;
+/// Bank the MM304 plan may use, the same cap as live guidance.
+pub const MM304_PLANNED_MAX_BANK_DEG: f64 = 40.0;
+
+/// Bank authority at a flight condition: the vehicle's q/g/speed authority, capped.
+pub unsafe fn bank_limit(speed: f64, q: f64, g_force: f64, v: *const VehicleProfile) -> f64 {
+    entry_bank_authority_limit(speed, q, g_force, v, (*v).maximum_bank_angle).min(MM304_PLANNED_MAX_BANK_DEG)
+}
 
 pub struct PredictInput {
     pub state: VehicleState,
@@ -36,7 +44,8 @@ pub struct PredictInput {
     pub handoff_mach: f64,
     pub min_altitude: f64,
     pub max_altitude: f64,
-    pub bank_limit: f64,
+    /// Live coordination reduction of the bank authority (1 when none).
+    pub bank_limit_scale: f64,
     pub roll_rate: f64,
     pub roll_accel: f64,
     pub cross_uncertainty: f64,
@@ -155,7 +164,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
     let mut next_ld_ut = f64::NEG_INFINITY;
     let mut spacing = 15.0;
     let mut next_sample_ut = st.ut;
-    let mut prev: Option<(f64, GeoPoint, f64, f64, f64, f64, f64)> = None;
+    let mut prev: Option<(f64, GeoPoint, f64, f64, f64, f64, f64, f64)> = None;
     let max_q = (*x.vehicle).maximum_dynamic_pressure;
     let max_g = (*x.vehicle).maximum_g_load;
     let t_end = st.ut + x.max_duration;
@@ -171,11 +180,17 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
         let course = ve.atan2(vn).to_degrees().rem_euclid(360.0);
         let fpa = vu.atan2(ground).to_degrees();
         let excess = atm.speed - x.handoff_mach * atm.speed_of_sound;
-        if geo.altitude <= x.max_altitude && excess <= 0.0 {
-            // Interpolate the crossing of the handoff Mach.
+        let (range, bearing) = range_bearing(geo, x.target, r);
+        let to_go = range - x.station_range.max(0.0);
+        // The handoff is the first of: the handoff Mach inside the MM305 band, the
+        // HAC station (to-go reaches zero), or closest approach to it. Ending at the
+        // station makes an overshoot a surplus, so terminal energy stays monotone.
+        let mach_cross = geo.altitude <= x.max_altitude && excess <= 0.0;
+        let station = to_go <= 0.0 || prev.is_some_and(|q| to_go > q.7);
+        if mach_cross || station {
             let (ut, point, speed, gs, crs, gamma) = match prev {
-                Some((pu, pg, pex, ps, pgs, pc, pf)) if pex > 0.0 => {
-                    let k = pex / (pex - excess);
+                Some((pu, pg, pex, ps, pgs, pc, pf, ptg)) if (mach_cross && pex > 0.0) || (to_go <= 0.0 && ptg > 0.0) => {
+                    let k = if mach_cross && pex > 0.0 { pex / (pex - excess) } else { ptg / (ptg - to_go) };
                     let lerp = |a: f64, b: f64| a + k * (b - a);
                     let pt = GeoPoint {
                         latitude: lerp(pg.latitude, geo.latitude),
@@ -194,6 +209,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
                 x.min_altitude,
                 x.max_altitude,
             );
+            out.terminal.admissible &= mach_cross;
             out.converged = true;
             break;
         }
@@ -207,7 +223,6 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
             max_ld = max_lift_to_drag_aoa(x.model, atm.q, atm.mach, x.schedule.max_aoa);
             next_ld_ut = st.ut + 5.0;
         }
-        let (range, bearing) = range_bearing(geo, x.target, r);
         let input = LawInput {
             ut: st.ut,
             mach: atm.mach,
@@ -219,7 +234,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
             station_range: x.station_range,
             handoff_speed: x.handoff_mach * atm.speed_of_sound,
             max_ld_aoa: max_ld,
-            bank_limit: x.bank_limit,
+            bank_limit: bank_limit(atm.speed, atm.q, atm.non_gravity / G0, x.vehicle) * x.bank_limit_scale,
             roll_rate: x.roll_rate,
             cross_uncertainty: x.cross_uncertainty,
             measured_bank: bank,
@@ -228,7 +243,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
         if out.first_aoa.is_nan() {
             out.first_aoa = cmd.aoa;
             out.first_nominal = cmd.nominal_aoa;
-            out.first_energy_bank = law::plan_attitude(sigma, cmd.nominal_aoa, max_ld, x.bank_limit).1;
+            out.first_energy_bank = law::plan_attitude(sigma, cmd.nominal_aoa, max_ld, input.bank_limit).1;
         }
         if st.ut >= next_sample_ut {
             if out.sample_count == MM304_SAMPLES {
@@ -256,7 +271,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
         track_roll(&mut bank, &mut bank_rate, cmd.bank, x.roll_rate, x.roll_accel, dt);
         ctx.bank = bank;
         ctx.aoa = cmd.aoa;
-        prev = Some((st.ut, geo, excess, atm.speed, ground, course, fpa));
+        prev = Some((st.ut, geo, excess, atm.speed, ground, course, fpa, to_go));
         st = rk4_aero(st, dt, &mut ctx);
     }
     out.reversals = law.reversals - reversals0;

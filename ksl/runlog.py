@@ -107,6 +107,9 @@ class RunLog:
         self._subscribers: list[Callable[[Event], None]] = []
         self._events = open(directory / "events.jsonl", "a", encoding="utf-8")
         self._telemetry = open(directory / "telemetry.jsonl", "a", encoding="utf-8")
+        self._mm304 = None
+        self._mm304_plan_sequence = None
+        self._mm304_residual_count = None
         self._last_status_write = 0.0
         self.write_status(force=True)
 
@@ -148,10 +151,38 @@ class RunLog:
             self.update(warning=message)
         return self.emit(Event("log", message, level=level, data=data))
 
+    def _split_mm304(self, clean: dict[str, Any]) -> list[dict[str, Any]]:
+        """Move MM304 plans and residuals to mm304.jsonl records; keep a trajectory-free
+        copy of the block in the telemetry sample."""
+        guidance = clean.get("guidanceState")
+        block = guidance.get("mm304") if isinstance(guidance, dict) else None
+        if not isinstance(block, dict):
+            return []
+        records: list[dict[str, Any]] = []
+        plan, residual = block.get("plan"), block.get("residual")
+        if isinstance(plan, dict) and plan.get("sequence") != self._mm304_plan_sequence:
+            self._mm304_plan_sequence = plan.get("sequence")
+            records.append({"type": "mm304Plan", "command": block.get("command"), "target": block.get("target"), **plan})
+        if isinstance(residual, dict) and residual.get("count") and residual.get("count") != self._mm304_residual_count:
+            self._mm304_residual_count = residual.get("count")
+            records.append({"type": "mm304Residual", **residual})
+        if isinstance(plan, dict) and "trajectory" in plan:
+            slim = {k: v for k, v in plan.items() if k != "trajectory"}
+            clean["guidanceState"] = {**guidance, "mm304": {**block, "plan": slim}}
+        return records
+
     def telemetry(self, sample: dict[str, Any], source: str) -> None:
         clean = {k: _finite(v) for k, v in sample.items()}
         record = {"time": time.time(), "source": source, "phase": self.status.phase, **clean}
         with self._lock:
+            mm304 = self._split_mm304(clean)
+            record.update(clean)
+            if mm304:
+                if self._mm304 is None:
+                    self._mm304 = open(self.directory / "mm304.jsonl", "a", encoding="utf-8")
+                for item in mm304:
+                    self._mm304.write(json.dumps({"time": record["time"], **item}, separators=(",", ":"), default=str) + "\n")
+                self._mm304.flush()
             self._telemetry.write(json.dumps(record, separators=(",", ":"), default=str) + "\n")
             self._telemetry.flush()
             self.status.telemetry = clean
@@ -182,7 +213,9 @@ class RunLog:
     def close(self) -> None:
         with self._lock:
             self.write_status(force=True)
-            for handle in (self._events, self._telemetry):
+            for handle in (self._events, self._telemetry, self._mm304):
+                if handle is None:
+                    continue
                 try:
                     handle.close()
                 except OSError:

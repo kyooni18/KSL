@@ -4,6 +4,8 @@
 
 pub const MM304_SAMPLES: usize = 48;
 pub const MM304_SCHEDULE_POINTS: usize = 8;
+/// How long one forecast is compared against the flown state before the next.
+pub const MM304_RESIDUAL_HORIZON_S: f64 = 60.0;
 
 /// Why the active plan is what it is.
 pub const MM304_DECISION_NONE: u32 = 0;
@@ -151,6 +153,8 @@ pub struct Mm304Residual {
 pub struct Mm304State {
     pub schedule: Mm304Schedule,
     pub plan: Mm304Plan,
+    /// The plan residuals are measured against, held for `MM304_RESIDUAL_HORIZON_S`.
+    pub reference: Mm304Plan,
     pub law: Mm304Law,
     pub residual: Mm304Residual,
     /// Lateral target (final alignment aimpoint) and the handoff it must reach.

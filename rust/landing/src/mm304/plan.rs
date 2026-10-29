@@ -111,7 +111,7 @@ pub unsafe extern "C" fn mm304_plan_update(
         handoff_mach: s.mm305_target_mach,
         min_altitude: s.mm305_min_altitude,
         max_altitude: s.mm305_max_altitude,
-        bank_limit: m.bank_limit,
+        bank_limit_scale: 1.0,
         roll_rate: s.entry_roll_rate,
         roll_accel: s.entry_roll_acceleration,
         cross_uncertainty: m.cross_uncertainty,
@@ -141,7 +141,7 @@ pub unsafe extern "C" fn mm304_plan_update(
     if previous.valid && previous.energy_at_min.is_finite() && previous.energy_at_max.is_finite() {
         slope = (previous.energy_at_min - previous.energy_at_max).abs() / 2.0;
     }
-    let resolution = if slope.is_finite() && m.bank_limit > 0.0 { slope / m.bank_limit } else { 0.0 };
+    let resolution = if slope.is_finite() { slope / predict::MM304_PLANNED_MAX_BANK_DEG } else { 0.0 };
     let tolerance = if uncertainty.is_finite() { uncertainty.max(resolution) } else { resolution };
     let e_active = active.energy();
     plan.uncertainty = tolerance;
@@ -182,12 +182,17 @@ pub unsafe extern "C" fn mm304_plan_update(
             let (mut b, mut fb) = if e_hi.is_finite() { (1.0, e_hi - target) } else { (active_sigma, e_active - target) };
             let mut best = (f64::INFINITY, active_sigma, None::<Forecast>);
             let mut side = 0;
-            for _ in 0..7 {
+            for _ in 0..8 {
                 if !(fa.is_finite() && fb.is_finite()) || fa == fb {
                     break;
                 }
-                let c = (b - (fb * (b - a) / (fb - fa))).clamp(-1.0, 1.0);
-                let f = run(c, &mut plan);
+                let mut c = (b - (fb * (b - a) / (fb - fa))).clamp(-1.0, 1.0);
+                let mut f = run(c, &mut plan);
+                if !f.energy().is_finite() {
+                    // An unscorable forecast inside the bracket: fall back to bisection.
+                    c = 0.5 * (a + b);
+                    f = run(c, &mut plan);
+                }
                 let fc = f.energy() - target;
                 if !fc.is_finite() {
                     break;

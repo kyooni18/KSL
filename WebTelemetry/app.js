@@ -1343,6 +1343,47 @@
     mapCtx.restore();
   }
 
+  // MM304 forecast: [ut, lat, lon, alt, speed, energy, aoa, bank, miss] rows plus the handoff.
+  function mm304Trajectory(source) {
+    const plan = source?.guidanceState?.mm304?.plan;
+    if (!plan || !Array.isArray(plan.trajectory)) return [];
+    const points = plan.trajectory.map((r) => ({ ut: r[0], latitude: r[1], longitude: r[2], altitude: r[3], kind: "mm304" }));
+    return points.filter((p) => finite(p.latitude) && finite(p.longitude));
+  }
+
+  const mm304Timeline = [];
+  function updateMm304() {
+    const block = document.getElementById("mm304-block");
+    if (!block) return;
+    const m = snapshot?.guidanceState?.mm304;
+    const inEntry = m && finite(m.ut) && Math.abs(n(snapshot?.telemetry?.ut) - n(m.ut)) < 30;
+    block.hidden = !inEntry;
+    if (!inEntry) return;
+    const c = m.command || {}, p = m.plan || {}, r = m.residual || {}, te = p.terminal || {};
+    const f = (v, d = 1, u = "") => finite(v) ? `${n(v).toFixed(d)}${u}` : "—";
+    const km = (v) => finite(v) ? `${(n(v) / 1000).toFixed(1)} km` : "—";
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    set("mm304-decision", p.sequence ? `#${p.sequence} ${String(p.decision || "").toUpperCase()}` : "NO PLAN");
+    set("mm304-sigma", f(p.sigma, 2));
+    set("mm304-aoa", `${f(c.aoa)}° / ${f(c.nominalAoa)}°`);
+    set("mm304-bank", `${f(c.bank)}° / ${f(c.bankLimit, 0)}°`);
+    set("mm304-lateral", `${(c.regime || "—").toUpperCase()} ${km(c.miss)} · ${c.reversals ?? 0} REV`);
+    set("mm304-energy", f(p.predictedEnergy, 0, " m"));
+    set("mm304-target", `${f(p.targetEnergy, 0)} / ${f(te.band, 0)} ±${f(p.uncertainty, 0)}`);
+    set("mm304-handoff", `${te.admissible ? "ADMISSIBLE" : "NOT ADM"} ${km(te.along)} / ${km(te.cross)} · ${f(te.headingError)}°`);
+    set("mm304-residual", `${f(r.energy, 0, " m")} @${f(r.horizon, 0, "s")}`);
+    set("mm304-limit", `limit: ${p.limiting || "—"} · ${p.forecasts ?? 0} forecasts · conv ${p.converged} · env ${p.inEnvelope}`);
+    const chip = document.getElementById("mm304-decision");
+    if (chip) chip.className = "chip " + (te.admissible ? "ok" : String(p.decision || "").startsWith("infeasible") ? "bad" : "");
+    if (p.sequence && (!mm304Timeline.length || mm304Timeline[0].sequence !== p.sequence) && p.decision !== "kept") {
+      mm304Timeline.unshift({ sequence: p.sequence, ut: p.ut, text: `${f(p.ut, 0)} #${p.sequence} ${p.decision} σ ${f(p.sigma, 2)} ΔE ${f(p.predictedEnergy, 0)} (${p.limiting})`,
+        cls: String(p.decision).startsWith("infeasible") ? "bad" : te.admissible ? "ok" : "" });
+      mm304Timeline.length = Math.min(mm304Timeline.length, 40);
+      const list = document.getElementById("mm304-timeline");
+      if (list) list.replaceChildren(...mm304Timeline.map((e) => { const li = document.createElement("li"); li.textContent = e.text; li.className = e.cls; return li; }));
+    }
+  }
+
   function drawMap() {
     const { width, height } = resizeCanvas(map, mapCtx);
     if (!focusMapOnFlight(width, height)) clampMapView(width, height);
@@ -1388,6 +1429,11 @@
     const plannedSegments = drawPath(planned, width, height, c.orange, 2.8, [], 1.4, 1);
     const burnSegments = orbitMode && burn.points.length >= 2 ? drawPath(burn.points, width, height, c.orange, 3.0, [], 3.2, 1) : [];
     drawPath(actual, width, height, c.cyan, 2.0, [], 1.8, .90);
+    const mm304Track = mm304Trajectory(snapshot);
+    if (mm304Track.length >= 2) {
+      drawPath(mm304Track, width, height, c.green, 1.8, [6, 5], 1.0, .9);
+      drawEndpointMarker(mm304Track[mm304Track.length - 1], width, height, c.green, "MM304 HANDOFF", t.ut);
+    }
 
     drawChevrons(orbitalSegments, c.cyan, 120, .42);
     if (burnSegments.length) drawChevrons(burnSegments, c.orange, 46, .92);
@@ -2209,7 +2255,7 @@
   }
 
   function render() {
-    updateText(); drawNavball();
+    updateText(); updateMm304(); drawNavball();
     if (document.body.classList.contains("launch-page")) { drawLaunchMap(); drawLaunchAltitude(); drawLaunch3d(); }
     else drawMap();
   }

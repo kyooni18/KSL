@@ -103,6 +103,36 @@ class PhaseStrip(Static):
         self.update(text)
 
 
+def mm304_rows(block: dict[str, Any] | None) -> list[tuple[str, str]]:
+    """Rows for the MM304 panel from guidanceState.mm304."""
+    if not isinstance(block, dict):
+        return []
+    cmd, plan, res = block.get("command") or {}, block.get("plan") or {}, block.get("residual") or {}
+    term = plan.get("terminal") or {}
+    rows = [
+        ("command", f"AoA {_fmt(cmd.get('aoa'))} (sched {_fmt(cmd.get('nominalAoa'))}, L/D {_fmt(cmd.get('maxLiftToDragAoa'))})"
+                    f" · bank {_fmt(cmd.get('bank'))} / {_fmt(cmd.get('bankLimit'))} deg"),
+        ("lateral", f"{cmd.get('regime', '—')} · miss {_fmt(cmd.get('miss'), 1e-3, 'km')} · hold {_fmt(cmd.get('missHold'), 1e-3, 'km')}"
+                    f" · {cmd.get('reversals', 0)} rev · T-go {_fmt(cmd.get('timeToGo'), unit='s', digits=0)}"),
+    ]
+    if plan:
+        rows += [
+            ("plan", f"#{plan.get('sequence')} {plan.get('decision')} · sigma {_fmt(plan.get('sigma'), digits=2)}"
+                     f" · bank {_fmt(plan.get('bank'))} · AoA bias {_fmt(plan.get('aoaBias'))}"),
+            ("HAC energy", f"{_fmt(plan.get('predictedEnergy'), unit='m', digits=0)} → target {_fmt(plan.get('targetEnergy'), unit='m', digits=0)}"
+                           f" (band {_fmt(term.get('band'), unit='m', digits=0)}, ±{_fmt(plan.get('uncertainty'), unit='m', digits=0)})"),
+            ("reach", f"max range {_fmt(plan.get('energyAtMaxRange'), unit='m', digits=0)} · max bank {_fmt(plan.get('energyAtMaxBank'), unit='m', digits=0)}"),
+            ("handoff", f"{'ADMISSIBLE' if term.get('admissible') else 'not admissible'} · along {_fmt(term.get('along'), 1e-3, 'km')}"
+                        f" cross {_fmt(term.get('cross'), 1e-3, 'km')} hdg {_fmt(term.get('headingError'))} · h {_fmt(term.get('altitude'), 1e-3, 'km')}"),
+            ("limit", f"{plan.get('limiting')} · conv {plan.get('converged')} env {plan.get('inEnvelope')} · {plan.get('forecasts')} forecasts"),
+        ]
+    if res.get("count"):
+        rows.append(("residual", f"E {_fmt(res.get('energy'), unit='m', digits=0)} @{_fmt(res.get('horizon'), unit='s', digits=0)}"
+                                 f" · h {_fmt(res.get('altitude'), unit='m', digits=0)} · AoA {_fmt(res.get('aoa'))} bank {_fmt(res.get('bank'))}"
+                                 f" · rate rms {_fmt(res.get('energyRateRms'), unit='m/s', digits=2)}"))
+    return rows
+
+
 class KeyValue(Static):
     def show(self, title: str, rows: list[tuple[str, str]], style: str = "") -> None:
         text = Text(f"{title}\n", style="bold")
@@ -354,6 +384,7 @@ class KSLApp(App[int]):
                     with Collapsible(title="Guidance and live orbit controls", collapsed=True):
                         with Horizontal():
                             yield KeyValue(id="guidance-panel", classes="panel")
+                            yield KeyValue(id="mm304-panel", classes="panel")
                             yield KeyValue(id="controls-panel", classes="panel")
                         with Horizontal(classes="actionrow"):
                             yield Button("Warp now", id="warp-now")
@@ -628,6 +659,7 @@ class KSLApp(App[int]):
             self.query_one("#controls-panel", KeyValue).show("Controls", [("run", "—")])
             vehicle.show("Vehicle", [("altitude", "—")])
             guidance.show("Guidance", [("program", "—")])
+            self.query_one("#mm304-panel", KeyValue).show("MM304 entry", [("plan", "—")])
             return
         running = status.state == MissionState.RUNNING.value
         stale = running and time.time() - (status.updated_at or 0) > STALE_SECONDS
@@ -668,7 +700,17 @@ class KSLApp(App[int]):
             ("status", (status.status_message or "—")[:60]),
         ], style="")
         guidance.styles.border = ("round", conn_style)
+        self._render_mm304(t)
         self._render_controls()
+
+    def _render_mm304(self, t: dict[str, Any]) -> None:
+        panel = self.query_one("#mm304-panel", KeyValue)
+        rows = mm304_rows((t.get("guidanceState") or {}).get("mm304"))
+        panel.show("MM304 entry", rows or [("plan", "— (not in MM304)")])
+        plan = ((t.get("guidanceState") or {}).get("mm304") or {}).get("plan") or {}
+        terminal = plan.get("terminal") or {}
+        panel.styles.border = ("round", "grey" if not plan else "green" if terminal.get("admissible")
+                               else "red" if str(plan.get("decision", "")).startswith("infeasible") else "yellow")
 
     def _controls(self) -> Controls | None:
         if self.watcher is None:

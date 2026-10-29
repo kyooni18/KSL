@@ -85,17 +85,17 @@ fn interpolate(plan: &Mm304Plan, ut: f64) -> Option<Mm304Sample> {
 }
 
 fn update_residual(m: &mut Mm304State, x: &LiveInput, cmd: &LawOutput) {
-    if !m.plan.valid || x.ut - m.residual.ut < 2.0 {
+    if !m.reference.valid || x.ut - m.residual.ut < 2.0 {
         return;
     }
-    let Some(p) = interpolate(&m.plan, x.ut) else { return };
-    let horizon = x.ut - m.plan.ut;
+    let Some(p) = interpolate(&m.reference, x.ut) else { return };
+    let horizon = x.ut - m.reference.ut;
     if horizon < 5.0 {
         return;
     }
     let r = &mut m.residual;
     r.ut = x.ut;
-    r.plan_sequence = m.plan.sequence;
+    r.plan_sequence = m.reference.sequence;
     r.horizon = horizon;
     r.energy = energy_height(x.altitude, x.site_altitude, x.speed, x.surface_gravity) - p.energy;
     r.altitude = x.altitude - p.altitude;
@@ -152,5 +152,8 @@ pub fn accept(m: &mut Mm304State, result: &Mm304State) -> bool {
         return false;
     }
     m.plan = result.plan;
+    if !m.reference.valid || m.plan.ut - m.reference.ut >= MM304_RESIDUAL_HORIZON_S {
+        m.reference = m.plan;
+    }
     true
 }

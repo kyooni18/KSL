@@ -255,6 +255,7 @@ typedef struct {
 typedef struct {
     Mm304Schedule schedule;
     Mm304Plan plan;
+    Mm304Plan reference;
     Mm304Law law;
     Mm304Residual residual;
     bool target_valid;
