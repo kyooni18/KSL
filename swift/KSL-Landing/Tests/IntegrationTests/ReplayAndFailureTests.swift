@@ -44,7 +44,8 @@ struct ReplayAndFailureTests {
     for failure in [FailureFixture.Failure.read, .command, .invalid] {
       let io = try FailureFixture(failure)
       let recorder = RecorderFixture()
-      let runtime = try FlightRuntime(io: io, recorder: recorder, configuration: .init())
+      let runtime = try FlightRuntime(
+        io: io, recorder: recorder, configuration: .init(), maximumOutage: 0.3)
       do {
         _ = try await runtime.run(realTime: false)
         Issue.record("Failure was swallowed")
@@ -61,7 +62,8 @@ struct ReplayAndFailureTests {
     let recorder = RecorderFixture()
     var c = MissionConfiguration()
     c.guidance.maximumTelemetryAge = 0.08
-    let runtime = try FlightRuntime(io: io, recorder: recorder, configuration: c)
+    let runtime = try FlightRuntime(
+      io: io, recorder: recorder, configuration: c, maximumOutage: 0.3, maximumPause: 0.3)
     do {
       _ = try await runtime.run(realTime: false)
       Issue.record("Frozen telemetry accepted")

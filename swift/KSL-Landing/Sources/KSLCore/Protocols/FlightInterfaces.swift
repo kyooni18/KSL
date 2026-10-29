@@ -6,6 +6,14 @@ public protocol FlightStateProviding: Sendable {
 public protocol FlightCommanding: Sendable {
   func apply(_ envelope: CommandEnvelope) async throws
   func shutdown() async
+  /// Re-establish a usable link after a transient fault; never replays commands.
+  func recover() async throws
+  /// Re-assert the forbidden-system restrictions (throttle, SAS, RCS, airbrakes) now.
+  func assertSafety() async throws
+}
+extension FlightCommanding {
+  public func recover() async throws {}
+  public func assertSafety() async throws {}
 }
 public protocol FlightIO: FlightStateProviding, FlightCommanding {}
 

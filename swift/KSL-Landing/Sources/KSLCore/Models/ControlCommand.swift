@@ -52,6 +52,17 @@ public enum FlightError: Error, Sendable, CustomStringConvertible {
   case deadlineExceeded, staleTelemetry
   case infeasible(String)
   case io(String)
+  /// Faults that a link or game hiccup can cause and that a retry can clear. Identity changes
+  /// (another vessel, different parts or planet), time reversal and bad commands stay fatal.
+  public var isRecoverable: Bool {
+    switch self {
+    case .deadlineExceeded, .staleTelemetry, .disconnected, .io: true
+    case .invalidTelemetry(let s):
+      !(s.hasPrefix("Active vessel") || s.hasPrefix("Vessel part count")
+        || s.hasPrefix("Planet") || s.hasPrefix("Time moved backwards"))
+    case .invalidConfiguration, .invalidCommand, .protocolViolation, .infeasible: false
+    }
+  }
   public var description: String {
     switch self {
     case .invalidConfiguration(let s): "Configuration: \(s)"

@@ -19,6 +19,7 @@ public actor KRPCSession {
     self.transport = transport
     injected = true
   }
+  public var isConnected: Bool { clientIdentifier != nil }
   public func connect() throws {
     try configuration.validate()
     if clientIdentifier != nil { return }

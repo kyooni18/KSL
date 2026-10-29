@@ -200,7 +200,9 @@ struct LandingCLI {
             to: URL(fileURLWithPath: logPath + ".configuration.json"))
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
           try await io.arm()
-          let runtime = try FlightRuntime(io: io, recorder: recorder, configuration: config)
+          let runtime = try FlightRuntime(
+            io: io, recorder: recorder, configuration: config,
+            maximumOutage: Double(option("--max-outage") ?? "20") ?? 20)
           let task = Task {
             try await runtime.run(maximumDuration: Double(option("--duration") ?? "2400") ?? 2400)
           }
@@ -241,7 +243,7 @@ struct LandingCLI {
                         [--at-time UT] --output historical-scenario.json
           inspect --host 127.0.0.1 --port 50000 --vessel STS
           fly --host 127.0.0.1 --port 50000 --vessel STS [--log live.jsonl]
-              [--configuration configuration.json] [--airbrake-group 1]
+              [--configuration configuration.json] [--airbrake-group 1] [--max-outage 20]
         inspect is read-only. fly takes control of the named vessel after deorbit.
         All simulation output is labeled offline-model-only. No ascent, OMS or deorbit commands exist.
         A full-rate log and its exact configuration are required for command-identical replay.

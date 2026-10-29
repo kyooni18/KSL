@@ -8,7 +8,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.3653
+      "elapsedSeconds": 0.2682
     },
     {
       "case": "fragmented",
@@ -17,7 +17,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.015
+      "elapsedSeconds": 0.0117
     },
     {
       "case": "wrong-vessel",
@@ -26,7 +26,7 @@
       "rpcCalls": 8,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0113
+      "elapsedSeconds": 0.0088
     },
     {
       "case": "vessel-switch",
@@ -35,7 +35,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.014
+      "elapsedSeconds": 0.0097
     },
     {
       "case": "parts-change",
@@ -44,7 +44,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0136
+      "elapsedSeconds": 0.0096
     },
     {
       "case": "snapshot-span",
@@ -53,7 +53,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0137
+      "elapsedSeconds": 0.0095
     },
     {
       "case": "slow",
@@ -62,7 +62,7 @@
       "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.6689
+      "elapsedSeconds": 0.6656
     },
     {
       "case": "malformed",
@@ -71,7 +71,7 @@
       "rpcCalls": 0,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.015
+      "elapsedSeconds": 0.0145
     },
     {
       "case": "truncated",
@@ -80,7 +80,7 @@
       "rpcCalls": 0,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0116
+      "elapsedSeconds": 0.0112
     },
     {
       "case": "fly",
@@ -89,7 +89,7 @@
       "rpcCalls": 163,
       "controlBatches": 4,
       "socketClosed": true,
-      "elapsedSeconds": 0.3296
+      "elapsedSeconds": 0.3374
     },
     {
       "case": "command-error",
@@ -98,7 +98,7 @@
       "rpcCalls": 57,
       "controlBatches": 1,
       "socketClosed": true,
-      "elapsedSeconds": 0.0243
+      "elapsedSeconds": 0.0252
     },
     {
       "case": "cancel",
@@ -107,7 +107,7 @@
       "rpcCalls": 65,
       "controlBatches": 2,
       "socketClosed": true,
-      "elapsedSeconds": 0.0571
+      "elapsedSeconds": 0.0535
     }
   ]
 }

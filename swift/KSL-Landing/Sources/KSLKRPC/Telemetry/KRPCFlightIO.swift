@@ -21,6 +21,7 @@ public actor KRPCFlightIO: FlightIO {
   private var sampledAt: ContinuousClock.Instant?
   private var lastSequence: UInt64 = 0
   private var initialPartCount = 0
+  private var expectedVesselName: String? = "STS"
   public private(set) var identity: KRPCVesselIdentity?
   public init(
     connection: KRPCConnectionConfiguration = .init(),
@@ -40,6 +41,7 @@ public actor KRPCFlightIO: FlightIO {
     }
     guard !busy else { throw FlightError.invalidCommand("Concurrent kRPC operation") }
     busy = true
+    self.expectedVesselName = expectedVesselName
     let operationGeneration = generation
     defer { busy = false }
     do {
@@ -197,7 +199,7 @@ public actor KRPCFlightIO: FlightIO {
     let t1 = try KRPCValue.decodeDouble(values[25])
     let span = t1 - t0
     guard span >= 0, span <= configuration.guidance.maximumSnapshotSpan else {
-      throw FlightError.invalidTelemetry("kRPC batch spans \(span) s")
+      throw FlightError.staleTelemetry
     }
     guard try KRPCValue.decodeUInt(values[23]) == vessel else {
       throw FlightError.invalidTelemetry("Active vessel changed")
@@ -313,8 +315,32 @@ public actor KRPCFlightIO: FlightIO {
       }
       lastSequence = envelope.sequence
     } catch {
-      armed = false
+      // A failed batch leaves the previous control state in KSP; recover() re-asserts safety.
       throw error
+    }
+  }
+  public func assertSafety() async throws {
+    guard armed, !busy else { return }
+    busy = true
+    defer { busy = false }
+    _ = try await session.call(
+      [
+        .init(
+          procedure: "AutoPilot_set_Engaged",
+          arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
+      ] + safetyCalls())
+  }
+  /// Reconnects (fresh handshake and discovery) after a transport fault and re-asserts the
+  /// restrictions; a still-open link only discards the cached snapshot.
+  public func recover() async throws {
+    guard !busy else { return }
+    latest = nil
+    sampledAt = nil
+    if await session.isConnected == false {
+      await session.close()
+      identity = nil
+      _ = try await connect(expectedVesselName: expectedVesselName)
+      try await assertSafety()
     }
   }
   public func shutdown() async {
