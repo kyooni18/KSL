@@ -32,7 +32,7 @@ from .backend import BackendClient, BackendError, snapshot_summary, validate_pla
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
 from .kspguard import GuardError, ensure_payload_bay_closed, prepare_reentry_direct_control, probe_orbiter_integrity
-from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM, SWIFT_BINARY
+from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM, SWIFT_BINARY, repo_path
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
 from .scenarios import Scenario
@@ -482,6 +482,12 @@ class LandingProgram(Program):
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         landing = ctx.config["landing"]
         start = max(start, Phase.DEORBIT, key=lambda p: p.index)
+        if landing.get("engine", "c") == "swift":
+            conn = ctx.config["connection"]
+            return ["landing: engine=swift (no deorbit planner; airborne takeover from mm304)",
+                    "landing: inspect and close payload bay, verify direct-control handoff",
+                    f"landing: {SWIFT_BINARY} fly --host {conn['address']} --port {conn['rpcPort']} "
+                    f"--vessel {landing['swiftVessel']} --airbrake-group {landing['swiftAirbrakeGroup']}"]
         steps = [f"landing: start {BACKEND} (KSP_LANDER_MODEL_PROFILE={landing['modelProfile']}, "
                  f"configuration {landing['backendConfiguration']})",
                  f"landing: connect to kRPC {ctx.config['connection']['address']}:{ctx.config['connection']['rpcPort']}",
@@ -503,6 +509,8 @@ class LandingProgram(Program):
             raise ProgramUnavailable("LandingProgram flies live KSP; use SimulationProgram offline")
         landing = ctx.config["landing"]
         start = Phase.DEORBIT if start.index < Phase.DEORBIT.index else start
+        if landing.get("engine", "c") == "swift":
+            return self._run_swift_live(ctx, start)
         env = {"KSP_LANDER_MODEL_PROFILE": str(landing["modelProfile"]),
                "KSP_LANDER_ROOT": str(DATA_ROOT), **krpc_env(ctx.config)}
         # The payload-bay preflight below closes the bay before any planning or
@@ -524,6 +532,87 @@ class LandingProgram(Program):
                         pass
                 client.shutdown()
                 ctx.log.update(connection="disconnected")
+
+    def _run_swift_live(self, ctx: Context, start: Phase) -> Outcome:
+        """Fly the airborne phases with the Swift 6 engine (`ksl-landing fly`) against live KSP."""
+        landing, conn = ctx.config["landing"], ctx.config["connection"]
+        if start.index < Phase.MM304.index:
+            raise ProgramUnavailable("The Swift landing engine has no deorbit planner; start at mm304, mm305 or "
+                                     "final-approach, or set landing.engine=c")
+        if not SWIFT_BINARY.is_file():
+            raise ProgramUnavailable(f"Swift landing engine not built: {SWIFT_BINARY} (run `make swift`)")
+        env = {"KSP_LANDER_ROOT": str(DATA_ROOT), **krpc_env(ctx.config)}
+        try:
+            bay = ensure_payload_bay_closed(env=env)
+            ctx.log.log(f"Payload bay preflight: {bay.get('status') or 'unknown'}")
+        except (GuardError, TimeoutError, OSError) as exc:
+            ctx.log.log(f"Payload-bay closure not verified: {exc}; proceeding", "warning")
+        payload = prepare_reentry_direct_control(env=env)
+        ctx.log.log(f"Direct-control handoff verified at {float(payload.get('meanAltitude') or 0) / 1000:.1f} km")
+        ctx.advance(start)
+        log_path = ctx.log.directory / "swift-live.jsonl"
+        argv = [str(SWIFT_BINARY), "fly", "--host", str(conn["address"]), "--port", str(conn["rpcPort"]),
+                "--vessel", str(landing["swiftVessel"]), "--airbrake-group", str(int(landing["swiftAirbrakeGroup"])),
+                "--duration", str(float(landing["flightTimeoutSeconds"])), "--log", str(log_path)]
+        if landing.get("swiftConfiguration"):
+            argv += ["--configuration", str(repo_path(landing["swiftConfiguration"]))]
+        ctx.log.update(connection="connecting")
+        done = threading.Event()
+
+        def tail() -> None:
+            """Follow the engine's flight log to drive mission phases and telemetry."""
+            position, last = 0, 0.0
+            while not done.is_set():
+                time.sleep(0.5)
+                try:
+                    with open(log_path, "rb") as handle:
+                        handle.seek(position)
+                        chunk = handle.read()
+                except OSError:
+                    continue
+                end = chunk.rfind(b"\n")
+                if end < 0:
+                    continue
+                position += end + 1
+                record = None
+                for line in chunk[:end].splitlines():
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    phase = SWIFT_PHASES.get((record.get("guidance") or {}).get("phase"))
+                    if phase is not None and phase.index > Phase(ctx.log.status.phase).index:
+                        ctx.advance(phase)
+                if record is not None and time.monotonic() - last >= 1.0:
+                    last = time.monotonic()
+                    ctx.log.update(connection="connected")
+                    ctx.log.telemetry({"altitude": (record.get("state") or {}).get("radarAltitude"),
+                                       "backendPhase": (record.get("guidance") or {}).get("phase")}, "swift-live")
+
+        threading.Thread(target=tail, name="swift-live-tail", daemon=True).start()
+        last_json: dict[str, Any] = {}
+
+        def on_line(line: str) -> None:
+            nonlocal last_json
+            if line.startswith("{") and line.endswith("}"):
+                try:
+                    last_json = json.loads(line)
+                except json.JSONDecodeError:
+                    pass
+
+        ctx.log.log("Swift engine engaged (airbrake group {}, vessel {})".format(
+            landing["swiftAirbrakeGroup"], landing["swiftVessel"]))
+        try:
+            code, tail_lines = run_child(ctx, "swift-live", argv, env, lambda _e: None, on_line)
+        finally:
+            done.set()
+            ctx.log.update(connection="disconnected")
+        if ctx.stop_event.is_set():
+            return Outcome(False, "landing aborted by operator; Swift engine neutralized controls", aborted=True)
+        if code == 0 and last_json.get("outcome") == "complete":
+            return Outcome(True, "rollout complete; vehicle stopped (Swift engine)")
+        reason = last_json.get("outcome") or (tail_lines[-1] if tail_lines else f"exit {code}")
+        return Outcome(False, f"Swift engine ended without completing: {reason}")
 
     def _fly(self, ctx: Context, client: BackendClient, state: "_LandingState",
              start: Phase, env: dict[str, str]) -> Outcome:
@@ -826,7 +915,7 @@ _PROGRESS = re.compile(
 # Swift report phase names -> mission phases.
 SWIFT_PHASES = {"entry": Phase.MM304, "acquisition": Phase.MM305, "headingAlignment": Phase.MM305,
                 "approach": Phase.FINAL_APPROACH, "preflare": Phase.FINAL_APPROACH, "flare": Phase.FINAL_APPROACH,
-                "rollout": Phase.ROLLOUT, "complete": Phase.COMPLETE}
+                "touchdown": Phase.TOUCHDOWN, "rollout": Phase.ROLLOUT, "complete": Phase.COMPLETE}
 
 
 class SimulationProgram(Program):

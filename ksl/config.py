@@ -89,6 +89,12 @@ DEFAULTS: dict[str, Any] = {
         "backendConfiguration": "Configuration/sts-live.json",
         "modelProfile": "sts-live-20261029",
         "autoWarp": True,
+        # "c" = native C backend (deorbit..rollout); "swift" = swift/KSL-Landing
+        # (airborne takeover from mm304 on; it has no deorbit/orbit commands).
+        "engine": "c",
+        "swiftVessel": "STS",
+        "swiftAirbrakeGroup": 1,
+        "swiftConfiguration": "",     # optional Swift MissionConfiguration JSON (repo-relative)
         "requireStrictPlan": False,
         "planTimeoutSeconds": 600.0,
         "flightTimeoutSeconds": 7200.0,
@@ -260,6 +266,10 @@ class MissionConfig:
                              ("landing", "modelProfile"), ("simulation", "scenario")):
             if not self.data[section][key].strip():
                 problems.append(f"{section}.{key} must not be empty")
+        if self.data["landing"].get("engine", "c") not in ("c", "swift"):
+            problems.append("landing.engine must be 'c' or 'swift'")
+        if self.data["landing"].get("engine") == "swift" and not 0 <= int(self.data["landing"]["swiftAirbrakeGroup"]) <= 9:
+            problems.append("landing.swiftAirbrakeGroup must be 0-9")
         landing_path = repo_path(self.data["landing"]["backendConfiguration"])
         if not landing_path.is_file():
             problems.append(f"landing.backendConfiguration not found: {landing_path}")

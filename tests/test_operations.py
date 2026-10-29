@@ -166,3 +166,26 @@ def test_tui_executes_an_external_reviewed_plan(review_run, tmp_path):
             assert controller.status.state == "complete"
             assert "completed" in str(app.query_one("#command-result").render())
     asyncio.run(exercise())
+
+
+def test_swift_live_engine_flies_through_fly_command(tmp_path, monkeypatch):
+    """landing.engine=swift hands off, runs `ksl-landing fly`, and follows its log (no KSP)."""
+    from ksl import programs
+    fake = tmp_path / "ksl-landing"
+    fake.write_text("""#!/bin/sh
+while [ $# -gt 0 ]; do [ "$1" = --log ] && LOG="$2"; shift; done
+for p in entry approach flare rollout complete; do
+  echo "{\\"guidance\\":{\\"phase\\":\\"$p\\"},\\"state\\":{\\"radarAltitude\\":100}}" >> "$LOG"; sleep 0.7
+done
+echo '{"outcome":"complete","evidence":"live-kRPC-telemetry"}'
+""")
+    fake.chmod(0o755)
+    monkeypatch.setattr(programs, "SWIFT_BINARY", fake)
+    monkeypatch.setattr(programs, "ensure_payload_bay_closed", lambda env=None: {"status": "closed"})
+    monkeypatch.setattr(programs, "prepare_reentry_direct_control", lambda env=None: {"meanAltitude": 80000})
+    config = load_config(overrides=["landing.engine=swift"])
+    controller = OperationRequest("entry", config, "live").build(tmp_path)
+    controller.precondition = None
+    status = controller.run()
+    assert status.state == "complete"
+    assert status.phase_history[-1] == "complete" and "final-approach" in status.phase_history
