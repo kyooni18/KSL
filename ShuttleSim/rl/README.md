@@ -8,9 +8,8 @@
 From the repository root (C11 compiler, CMake, Python 3 standard library):
 
 ```sh
-cmake -S ShuttleSim -B ShuttleSim/build-offline -DSHUTTLESIM_OFFLINE_API=ON
-cmake --build ShuttleSim/build-offline -j2
-python3 ShuttleSim/rl/test_physics.py ShuttleSim/build-offline/libshuttlesim_offline.dylib
+cargo build --release --manifest-path rust/shuttlesim/Cargo.toml
+python3 ShuttleSim/rl/test_physics.py rust/shuttlesim/target/release/libshuttlesim.dylib
 python3 -m unittest discover -s ShuttleSim/rl -p test_environment.py
 sh ShuttleSim/tests/run_all.sh
 python3 ShuttleSim/rl/experiment.py train --simulator-only --output /tmp/shuttle-train
@@ -31,17 +30,15 @@ customize run size. Evaluation does not update weights or simulator parameters.
 
 ## Architecture and integration boundary
 
-`physics.c` wraps existing `sim_init`, `sim_apply_command`, and `sim_step` in
+`rust/shuttlesim/src/offline.rs` wraps existing `sim_init`, `sim_apply_command`, and `sim_step` in
 independent handles. The offline duration ABI advances the calculated
 simulator interval directly; it derives exact RK4 substeps from the configured
 physics timestep and has no fixed tick-count or wall-clock pacing rule. The
 native executable remains available with a configured small `--dt` for
-high-fidelity validation. `expert.c` adapts telemetry to the
-existing CLanding deterministic guidance, linked into a separate offline
-library. `Environment(simulator_only=True)` is the guidance adapter: reset,
+high-fidelity validation. `rust/shuttlesim/src/expert.rs` adapts telemetry to the
+landing crate's deterministic guidance in the same library. `Environment(simulator_only=True)` is the guidance adapter: reset,
 observe, project, execute a calculated duration, terminate, and log. It opens
-no network connections and never calls kRPC. The CMake option defaults OFF;
-normal UDP operation remains separate. The raw physics ABI is not a safety
+no network connections and never calls kRPC. Normal UDP operation remains separate. The raw physics ABI is not a safety
 controller and must not be used as a shortcut around `Environment.step`.
 
 `reset(seed, policy_version)` returns observation and metadata;

@@ -619,8 +619,9 @@ class Environment:
         # as a fixed tick count or a wall-clock wait.
         self.guidance_interval_s = 1.0
         suffix = ".dylib" if sys.platform == "darwin" else ".so"
-        self.lib = C.CDLL(str(SIM / "build-offline" / ("libshuttlesim_offline" + suffix)))
-        self.teacher = C.CDLL(str(SIM / "build-offline" / ("libshuttlesim_expert" + suffix)))
+        # One Rust library (rust/shuttlesim) carries both the physics ABI and the teacher.
+        self.lib = C.CDLL(str(SIM.parent / "rust" / "shuttlesim" / "target" / "release" / ("libshuttlesim" + suffix)))
+        self.teacher = self.lib
         signatures = [
             (self.lib, "offline_create", [C.c_char_p] * 4, C.c_void_p),
             (self.lib, "offline_destroy", [C.c_void_p], None),

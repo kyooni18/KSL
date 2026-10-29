@@ -1,0 +1,25 @@
+[package]
+name = "shuttlesim"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "ShuttleSim: deterministic lockstep Kerbin shuttle simulator"
+
+[dependencies]
+landing = { package = "ksl-landing", path = "../landing" }
+libc = "0.2"
+
+[lib]
+name = "shuttlesim"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "shuttlesim"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 2
+panic = "abort"
+# The system `strip` misaligns the cdylib string pool and dyld then refuses it.
+strip = false
