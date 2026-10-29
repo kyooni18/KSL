@@ -66,6 +66,15 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    # Live data overrides the table: 2026-10-29 refit including the Phase 0
+    # 30-45 deg AoA entries (Tools/fit_sts_aero_cells.py); provisional.
+    "sts-live-20261029": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_cells20261029.csv",
+        "aero_book": None,
+        "attitude": "reference-model/stsn_attitude_identified.ini",
+        "certified_prior": None,
+    },
     "identified": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/stsn_aero_identified.csv",
@@ -99,6 +108,7 @@ PROFILE_VEHICLES = {
     "sts-live-20261011": "STS",
     "sts-live-20261015": "STS",
     "sts-live-20261015-live-only": "STS",
+    "sts-live-20261029": "STS",
     "fitted-legacy": "STS-N",
     "reference-b": "STS-N",
 }

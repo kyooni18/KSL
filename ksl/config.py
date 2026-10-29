@@ -87,7 +87,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "landing": {
         "backendConfiguration": "Configuration/sts-live.json",
-        "modelProfile": "sts-live-20261015-live-only",
+        "modelProfile": "sts-live-20261029",
         "autoWarp": True,
         "requireStrictPlan": False,
         "planTimeoutSeconds": 600.0,

@@ -1,6 +1,6 @@
 {
   "description": "STS to a 100 km polar orbit (inclination 90 deg), then unpowered return to KSC runway 09.",
   "ascent": {"targetAltitudeKm": 100, "inclinationDeg": 90},
-  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261015-live-only", "requireStrictPlan": false},
+  "landing": {"backendConfiguration": "Configuration/sts-live.json", "modelProfile": "sts-live-20261029", "requireStrictPlan": false},
   "checkpoints": {"kspSaveOnDescendingAltitudesKm": ["72", "45"]}
 }

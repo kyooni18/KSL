@@ -613,6 +613,13 @@ static const struct {
                          "none",
                          "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                          "none"}},
+    /* Live data overrides the table: 2026-10-29 refit including the Phase 0
+       30-45 deg AoA entries (L/D 0.16-0.19 at 40 deg, Mach 6.6-7.1). */
+    {"sts-live-20261029", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_cells20261029.csv",
+                         "none",
+                         "ShuttleSim/reference-model/stsn_attitude_identified.ini",
+                         "none"}},
     {"fitted-legacy", "STS-N", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",
