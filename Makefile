@@ -1,14 +1,17 @@
 # KSL developer entry points. See README.md.
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
-.PHONY: all backend sim ascent setup test test-c test-py qualification clean help
+.PHONY: all backend sim ascent swift setup test test-c test-py qualification clean help
 
-all: backend sim ascent                ## build native components
+all: backend sim ascent swift                ## build native components
 
 ascent:                                ## build Rust ascent guidance for the Python interpreter
 	@if [ "$$(uname -s)" = Darwin ] && [ "$$($(PYTHON) -c 'import platform; print(platform.machine())')" = x86_64 ]; then \
 		cargo build --release --target x86_64-apple-darwin --manifest-path rust/ascent/Cargo.toml; \
 	else cargo build --release --manifest-path rust/ascent/Cargo.toml; fi
+
+swift:                                 ## build swift/KSL-Landing/.build/release/ksl-landing
+	swift build -c release --package-path swift/KSL-Landing
 
 backend:                               ## build CLanding/build/landing_backend
 	$(MAKE) -C CLanding

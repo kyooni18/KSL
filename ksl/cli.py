@@ -20,7 +20,7 @@ from . import __version__
 from .config import ConfigError, available_profiles, load_config
 from .controller import (EXIT_ABORTED, EXIT_CONNECTION, EXIT_FAILED, EXIT_OK, EXIT_USAGE, MissionController,
                          continue_phase, holdable)
-from .paths import BACKEND
+from .paths import BACKEND, SWIFT_BINARY, SWIFT_LANDING
 from .phases import ENTRY_PHASES, SEQUENCE, Phase, PhaseTransitionError, validate_range
 from .runlog import Event, list_runs, read_status, resolve_run
 from .scenarios import SCENARIOS, resolve_scenario
@@ -171,6 +171,18 @@ def cmd_simulate(args: argparse.Namespace) -> int:
     controller = MissionController(config, "dry-run" if args.dry_run else "sim", scenario.start, stop,
                                    scenario=scenario, label=args.label)
     return _fly(args, controller)
+
+
+def cmd_swift(args: argparse.Namespace) -> int:
+    """Run the native Swift 6 landing engine (swift/KSL-Landing), building it on demand."""
+    import subprocess
+    if not SWIFT_BINARY.is_file():
+        print("ksl: building Swift landing engine ...", file=sys.stderr)
+        built = subprocess.run(["swift", "build", "-c", "release", "--package-path", str(SWIFT_LANDING)])
+        if built.returncode != 0 or not SWIFT_BINARY.is_file():
+            raise FileNotFoundError(f"Swift landing engine failed to build: {SWIFT_BINARY}")
+    rest = [a for a in args.swift_args if a != "--"]
+    return subprocess.run([str(SWIFT_BINARY), *rest]).returncode
 
 
 def _status_text(run_dir: Path, status: Any) -> str:
@@ -543,6 +555,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--revision", help="reviewed plan revision required for execute-plan")
     p.add_argument("--result", help="read acknowledgement for this command id")
     p.set_defaults(func=cmd_control)
+
+    p = sub.add_parser("swift", help="native Swift 6 landing engine: simulate, plan, replay, inspect, fly")
+    p.add_argument("swift_args", nargs=argparse.REMAINDER, metavar="ARGS",
+                   help="passed to ksl-landing (e.g. `ksl swift simulate --entry --require-success`)")
+    p.set_defaults(func=cmd_swift)
     return parser
 
 

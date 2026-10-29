@@ -12,6 +12,8 @@ RUNS_DIR = Path(os.environ.get("KSL_RUNS_DIR") or ROOT / "runs")
 CLANDING = ROOT / "CLanding"
 BACKEND = Path(os.environ.get("KSL_BACKEND") or CLANDING / "build" / "landing_backend")
 SHUTTLESIM = ROOT / "ShuttleSim"
+SWIFT_LANDING = ROOT / "swift" / "KSL-Landing"
+SWIFT_BINARY = Path(os.environ.get("KSL_SWIFT_BINARY") or SWIFT_LANDING / ".build" / "release" / "ksl-landing")
 TOOLS = ROOT / "Tools"
 
 
