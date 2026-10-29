@@ -591,14 +591,10 @@ class LandingProgram(Program):
 
         threading.Thread(target=tail, name="swift-live-tail", daemon=True).start()
         last_json: dict[str, Any] = {}
+        output: list[str] = []
 
         def on_line(line: str) -> None:
-            nonlocal last_json
-            if line.startswith("{") and line.endswith("}"):
-                try:
-                    last_json = json.loads(line)
-                except json.JSONDecodeError:
-                    pass
+            output.append(line)
 
         ctx.log.log("Swift engine engaged (airbrake group {}, vessel {})".format(
             landing["swiftAirbrakeGroup"], landing["swiftVessel"]))
@@ -607,6 +603,12 @@ class LandingProgram(Program):
         finally:
             done.set()
             ctx.log.update(connection="disconnected")
+        start_at = next((i for i, l in enumerate(output) if l.startswith("{")), None)
+        if start_at is not None:
+            try:
+                last_json = json.loads("\n".join(output[start_at:]))
+            except json.JSONDecodeError:
+                pass
         if ctx.stop_event.is_set():
             return Outcome(False, "landing aborted by operator; Swift engine neutralized controls", aborted=True)
         if code == 0 and last_json.get("outcome") == "complete":
