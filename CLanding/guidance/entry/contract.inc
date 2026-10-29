@@ -18,6 +18,24 @@ static double entry_diagnostic_milestone_due(GuidanceMachine*g,double range_m){
     return NAN;
 }
 
+/* KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST: test-only incidence staircase for the
+   aero-cell campaign; NAN when unset or below the last Mach threshold. */
+static double entry_aoa_staircase_test(double mach){
+    const char*spec=getenv("KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST");
+    if(!spec||!*spec||!isfinite(mach))return NAN;
+    for(const char*p=spec;p&&*p;){
+        char*end=NULL;
+        double threshold=strtod(p,&end);
+        if(end==p||*end!=':')return NAN;
+        p=end+1;
+        double aoa=strtod(p,&end);
+        if(end==p)return NAN;
+        if(mach>=threshold)return aoa;
+        p=*end==','?end+1:NULL;
+    }
+    return NAN;
+}
+
 static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,double dt,const char*warning){
     const VehicleProfile*v=&cfg->vehicle;
@@ -591,6 +609,24 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         g->entry_alpha_drag_boost=fmin(g->entry_alpha_drag_boost,headroom);
     }
     double aoa=clampd(alpha.target_aoa+g->entry_alpha_drag_boost,0.0,v->maximum_angle_of_attack);
+    {
+        /* Aero-cell campaign only (MM304 rewrite Phase 0): hold a Mach-keyed
+           incidence staircase so 25-45 deg cells at Mach 4-8 get steady
+           samples.  Format "mach:aoa,..." with descending Mach; each AoA is
+           held while Mach >= its threshold, normal guidance below the last.
+           Stall and g-load protection still win. */
+        double test_aoa=entry_aoa_staircase_test(t->mach);
+        if(isfinite(test_aoa)){
+            if(alpha.limiting_reason==ENTRY_ALPHA_LIMIT_STALL_MARGIN||
+               alpha.limiting_reason==ENTRY_ALPHA_LIMIT_G_LOAD)
+                test_aoa=fmin(test_aoa,alpha.target_aoa);
+            double previous=g->entry_control_plan_valid&&isfinite(g->entry_control_aoa)?
+                g->entry_control_aoa:t->angle_of_attack;
+            double step=alpha_schedule.target_rate_limit*fmax(0.0,dt);
+            if(isfinite(previous))test_aoa=clampd(test_aoa,previous-step,previous+step);
+            aoa=clampd(test_aoa,0.0,v->maximum_angle_of_attack);
+        }
+    }
     double heading=isfinite(course)?norm_deg(course):norm_deg(t->heading);
 
     g->entry_feedback=(EntryGuidanceFeedback){

@@ -13,7 +13,11 @@
    is an operational planning target, not a controller/recovery boundary.  The
    planner must stay inside that target while downstream control keeps the full
    physical authority needed to track and brake the maneuver. */
-#define GUIDANCE_HARD_AOA_LIMIT_DEG 40.0
+/* 46 deg admits the Shuttle 40 deg entry hold plus its 3 deg modulation; every
+   use is min'd with the vehicle's configured maximum_angle_of_attack. */
+#define GUIDANCE_HARD_AOA_LIMIT_DEG 46.0
+/* Final attitude-recovery trigger; stays at the pre-Shuttle-entry hard limit. */
+#define GUIDANCE_RECOVERY_AOA_THREAT_DEG 40.0
 #define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
 #define MM304_COORDINATION_BETA_SCALE_DEG 5.0
 /* Split-fin speedbrake opening limits shared by TAEM and Final: the cap is

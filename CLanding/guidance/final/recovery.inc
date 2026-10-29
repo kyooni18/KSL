@@ -37,7 +37,7 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         outward_aoa_rate=(signed_aoa>=0.0?1.0:-1.0)*t->angle_of_attack_rate;
     double projected_abs_aoa=fabs(signed_aoa)+
         fmax(0.0,outward_aoa_rate)*GUIDANCE_ATTITUDE_LOOKAHEAD_S;
-    bool attitude_envelope_threat=projected_abs_aoa>=GUIDANCE_HARD_AOA_LIMIT_DEG;
+    bool attitude_envelope_threat=projected_abs_aoa>=GUIDANCE_RECOVERY_AOA_THREAT_DEG;
     double beta_rate=0.0;
     if(g->has_previous_sideslip&&dt>1e-4)
         beta_rate=norm_signed_deg(t->sideslip-g->previous_sideslip)/dt;
