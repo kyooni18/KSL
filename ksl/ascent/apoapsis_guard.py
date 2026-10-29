@@ -112,7 +112,7 @@ def recovery_pitch(raw_pitch, guard_active, plan_feasible, apoapsis, target_apoa
 
 def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
                        pitch_response_seconds, acceleration, response_lag=2.0, dt=1.0,
-                       hold_seconds=0.0):
+                       hold_seconds=0.0, horizon_seconds=None):
     """Coast-or-burn prediction while a smooth thrust target becomes horizontal.
 
     The planar model uses inertial radial/horizontal velocity and constant thrust
@@ -124,10 +124,13 @@ def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
                                             response_lag, dt, hold_seconds)) or
             min(mu, radius, pitch_response_seconds, dt) <= 0 or acceleration < 0):
         raise ValueError('Invalid apoapsis prediction input')
+    if horizon_seconds is not None and (not math.isfinite(horizon_seconds) or horizon_seconds <= 0.):
+        raise ValueError('Invalid apoapsis prediction horizon')
     r, vr, vh = radius, radial_speed, horizontal_speed
     pitch = max(0.0, min(90.0, thrust_pitch))
     commanded = pitch
-    horizon = hold_seconds+5*pitch_response_seconds+3*response_lag+10.0
+    horizon = (hold_seconds+5*pitch_response_seconds+3*response_lag+10.0
+               if horizon_seconds is None else horizon_seconds)
     peak = apsides(mu, r, vr, vh)[0]
     elapsed = 0.0
     while elapsed < horizon:
@@ -149,7 +152,7 @@ def projected_apoapsis(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
 
 def apoapsis_guard_g(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
                      pitch_response_seconds, target_radius, requested_g, floor_g=0.15,
-                     margin_m=1000.0, hold_seconds=0.0):
+                     margin_m=1000.0, hold_seconds=0.0, horizon_seconds=None):
     """Find a bounded G target whose predicted peak apoapsis stays below target.
 
     If even the requested floor exceeds the target, return that floor and
@@ -163,7 +166,7 @@ def apoapsis_guard_g(mu, radius, radial_speed, horizontal_speed, thrust_pitch,
     def predict(g):
         return projected_apoapsis(mu, radius, radial_speed, horizontal_speed,
                                   thrust_pitch, pitch_response_seconds, g*G0,
-                                  hold_seconds=hold_seconds)
+                                  hold_seconds=hold_seconds, horizon_seconds=horizon_seconds)
     full_peak = predict(ceiling)
     if full_peak <= limit:
         return ceiling, full_peak, True

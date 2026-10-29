@@ -98,6 +98,20 @@ def test_guard_can_cut_thrust_when_recorded_overshoot_is_already_unavoidable():
     assert not feasible
 
 
+def test_receding_guard_does_not_starve_the_recorded_near_orbit_state():
+    # UT 168290: the long fixed-thrust forecast held this insertion at 0.067 G.
+    args = (MU, R+84630.95, -13.69, 2242.5, -.02, 5., R+90000., 1.4)
+    long_g, _, _ = apoapsis_guard_g(*args, floor_g=0.)
+    short_g, peak, feasible = apoapsis_guard_g(*args, floor_g=0., horizon_seconds=8.)
+    assert long_g < .08
+    assert short_g > .3
+    assert feasible and peak <= R+89000.
+    # An already overshot trajectory remains guarded, even on a short horizon.
+    g, _, feasible = apoapsis_guard_g(MU, R+80700., -216., 2066., 0., 5.,
+                                      R+90000., 1.168, floor_g=0., horizon_seconds=8.)
+    assert g == 0. and not feasible
+
+
 def test_insertion_planner_failure_cuts_throttle_and_propagates_error():
     from types import SimpleNamespace
     from ksl.ascent.flight import insertion_command_or_cut_throttle

@@ -696,9 +696,10 @@ def run(args):
                             roll_requires_authority = mission_roll_commanded and not mission_roll_settled
                             if mission_roll_settled:
                                 heading_goal = target_heading
-                                if flight.horizontal_speed > 450.0 and peg_dv is None:
-                                    # (PEG owns the heading once it is active; two slewed heading
-                                    # laws cancelled and left ~50 m/s of cross-track uncorrected.)
+                                if flight.horizontal_speed > 450.0 and (peg_dv is None or plane_normal is None):
+                                    # For an inclination-only launch, steer by inertial
+                                    # velocity azimuth rather than the increasingly
+                                    # ill-conditioned terminal velocity residual.
                                     # The velocity vector lags the nose heading by many
                                     # degrees at speed, so steer on the measured surface
                                     # velocity azimuth: lead the nose past the target by a
@@ -734,7 +735,7 @@ def run(args):
                                     # a 1.5x / 30 deg lead; a softer lead converges without it.
                                     heading_goal += max(-lead_limit,
                                                         min(lead_limit, 1.0*azimuth_error))
-                                if peg_dv is None:
+                                if peg_dv is None or plane_normal is None:
                                     args.heading = slew_value(
                                     args.heading, heading_goal,
                                     3.0 if flight.dynamic_pressure < 1500.0
@@ -1029,7 +1030,7 @@ def run(args):
                                                         min(target_heading+40.0, peg_heading)))
                                     # Pitch stays with the closed-loop PEG above; this
                                     # velocity-to-be-gained solution only steers heading.
-                                    if not meco_preparing:
+                                    if not meco_preparing and plane_normal is not None:
                                         args.heading = slew_value(args.heading, peg_hold[1],
                                                                   3.0, control_dt)
                                     # Match the pitch slew used by the insertion predictor.
@@ -1303,11 +1304,15 @@ def run(args):
                                             hold_left = (max(0.0, SEPARATION_ATTITUDE_HOLD_SECONDS-
                                                              (conn.space_center.ut-shuttle.booster_separation_ut))
                                                          if separation_hold_active else 0.0)
+                                            # Recompute this short lookahead each tick. A long
+                                            # constant-thrust projection keeps throttling down
+                                            # even though the planner will change thrust at MECO.
                                             guarded_g, predicted_ap, feasible = apoapsis_guard_g(
                                                 body.gravitational_parameter, radius, vr, vh,
                                                 measured_thrust_pitch, pitch_response,
                                                 body.equatorial_radius+args.orbit, target_g,
-                                                floor_g=0.0, hold_seconds=hold_left)
+                                                floor_g=0.0, hold_seconds=hold_left,
+                                                horizon_seconds=hold_left+8.0)
                                             limited = guarded_g < target_g-0.01 or not feasible
                                             target_g = min(target_g, guarded_g)
                                             apoapsis_guard_limit = guarded_g
