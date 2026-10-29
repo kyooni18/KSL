@@ -340,7 +340,11 @@ static void *terminal_prediction_worker(void *arg){
             double target=guidance.entry_handoff_target_range;
             if((cfg.guidance.taem_energy_law||cfg.guidance.taem_hac_law)&&isfinite(target)&&
                isfinite(telemetry.range_to_site)){
-                double aoa=guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
+                /* Forecast the incidence MM304 actually commands (staircase,
+                   drag boost and low-energy cap included), not the schedule. */
+                double aoa=guidance.entry_control_plan_valid&&isfinite(guidance.entry_control_aoa)?
+                    guidance.entry_control_aoa:
+                    guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
                     guidance.entry_alpha_target:telemetry.angle_of_attack;
                 double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
                 double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);

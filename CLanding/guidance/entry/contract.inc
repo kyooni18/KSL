@@ -36,6 +36,19 @@ static double entry_aoa_staircase_test(double mach){
     return NAN;
 }
 
+/* Max-L/D incidence at this Mach from the (live-fitted) aero table. */
+static double entry_max_lift_to_drag_aoa(const TerminalModel*m,double q,double mach,
+        double ceiling){
+    if(!m||!isfinite(mach)||!isfinite(ceiling)||ceiling<=0.0)return NAN;
+    double best=NAN,best_ld=-INFINITY;
+    for(double a=4.0;a<=ceiling+1e-9;a+=0.5){
+        double lq=0.0,dq=0.0;
+        aero_force_per_q(&m->aero,fmax(q,1.0),mach,a,&lq,&dq);
+        if(dq>DBL_MIN&&lq/dq>best_ld){best_ld=lq/dq;best=a;}
+    }
+    return best;
+}
+
 static GuidanceResult entry_program_contract_hold(GuidanceMachine*g,const Telemetry*t,
         const LandingConfiguration*cfg,double dt,const char*warning){
     const VehicleProfile*v=&cfg->vehicle;
@@ -630,6 +643,34 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
             double down=alpha_schedule.target_rate_limit*fmax(0.0,dt);
             if(isfinite(previous))test_aoa=clampd(test_aoa,previous-down,previous+0.5*down);
             aoa=clampd(test_aoa,0.0,v->maximum_angle_of_attack);
+        }
+    }
+    {
+        /* Low-energy logic (Shuttle ILEFLG): when even wings-level cannot
+           reach the handoff, high incidence only throws range away (live
+           L/D 0.16-0.19 at 40 deg against ~0.5 at 20 deg).  Cap AoA at the
+           max-L/D incidence until the forecast at that incidence shows a
+           real surplus again. */
+        bool policy_fresh=g->entry_policy_valid&&isfinite(g->entry_policy_bank_deg)&&
+            isfinite(g->entry_policy_ut)&&
+            t->ut-g->entry_policy_ut<=3.0*fmax(s->prediction_interval,1.0);
+        bool dragref_short=drag.predicted_range_error<0.0&&
+            drag.drag_range_scale<=drag_cfg.minimum_drag_scale+1e-6;
+        if((policy_fresh&&g->entry_policy_bank_deg<=0.5)||dragref_short)
+            g->entry_energy_short_latched=true;
+        else if(policy_fresh&&g->entry_policy_bank_deg>=10.0)
+            g->entry_energy_short_latched=false;
+        if(g->entry_energy_short_latched){
+            double best=entry_max_lift_to_drag_aoa(g->entry_terminal_model,
+                t->dynamic_pressure,t->mach,v->maximum_angle_of_attack);
+            if(!isfinite(best))best=v->entry_angle_of_attack;
+            best=fmax(best,alpha_schedule.minimum_protective_aoa);
+            if(aoa>best){
+                double previous=g->entry_control_plan_valid&&isfinite(g->entry_control_aoa)&&
+                    t->ut-g->entry_control_plan_ut<1.0?g->entry_control_aoa:t->angle_of_attack;
+                double step=alpha_schedule.target_rate_limit*fmax(0.0,dt);
+                aoa=isfinite(previous)?fmax(best,fmin(aoa,previous-step)):best;
+            }
         }
     }
     double heading=isfinite(course)?norm_deg(course):norm_deg(t->heading);
