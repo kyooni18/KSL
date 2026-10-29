@@ -256,10 +256,10 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
     if (!g->terminal_region_entered && !g->final_approach_captured) {
         g->phase=PHASE_ENTRY_ENERGY;
         GuidanceResult entry=entry_program_guidance(g,t,state,course,p,aero,cfg,dt);
-        /* Nominal admission still qualifies a route, but is no longer allowed
-           to hold MM304 once the physical MM305 window is reached. A validated
-           native model is required to actually fly MM305; diagnostic shadows
-           that stop at the boundary do not need one. */
+        /* A Mach/altitude boundary is a request for downstream qualification,
+           never evidence that acquisition and Final delivery are reachable.
+           Diagnostic shadows may stop at that boundary, but cannot authorize
+           the live ownership transfer. */
         bool handoff_due=mm305_physical_handoff_due(t,p,cfg);
         bool model_available=terminal_model&&terminal_model->replay_validated;
         bool forced_handoff=handoff_due &&
@@ -274,15 +274,13 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             if (snapshot!=0) {
                 admission_route_qualified=
                     guidance_mm305_admission_qualified(g,t,true,snapshot);
-                /* Do not adopt a previous-tick route at the forced boundary
-                   without revalidating it against the measured handoff state. */
-                if(forced_handoff&&g->mm305_admission_result_ut!=t->ut)
-                    admission_route_qualified=false;
-                if(!forced_handoff&&g->mm305_admission_valid&&g->mm305_admission_found&&
+                /* Reprove held geometry from the measured state at every
+                   ownership boundary, including a physical-window request. */
+                if(g->mm305_admission_valid&&g->mm305_admission_found&&
                    g->mm305_admission_result_ut!=t->ut)
                     admission_route_qualified=guidance_mm305_revalidate_admission(
                         g,t,state,cfg,terminal_model);
-                if (!forced_handoff && !admission_route_qualified &&
+                if (!admission_route_qualified &&
                     g->mm305_admission_needed && !g->mm305_async_planning) {
                     /* No worker (offline tools/tests): make one immediate attempt,
                        retain MM304 when the search finds no qualified route. */
@@ -299,7 +297,8 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
         } else if (!physical_handoff && !g->diagnostic_shadow) {
             guidance_mm305_admission_qualified(g,t,false,0);
         }
-        if (!physical_handoff || (!forced_handoff&&!admission_route_qualified)) {
+        bool diagnostic_boundary=g->diagnostic_shadow&&g->diagnostic_stop_at_taem;
+        if (!physical_handoff || (!diagnostic_boundary&&!admission_route_qualified)) {
             if(handoff_due&&!model_available&&!g->diagnostic_shadow){
                 entry.has_warning=true;
                 snprintf(entry.warning,sizeof(entry.warning),
@@ -307,7 +306,7 @@ static GuidanceResult terminal_guidance(GuidanceMachine *g, const Telemetry *t,
             } else if(physical_handoff&&!admission_route_qualified){
                 entry.has_warning=true;
                 snprintf(entry.warning,sizeof(entry.warning),
-                    "MM305 inlet energy screening passed; no bounded-control route qualifies Final arrival. Retaining MM304; preserve energy and reduce lateral displacement.");
+                    "MM305 acquisition/energy envelope unqualified: no native trajectory proves Final delivery. Retaining MM304; preserve attainable range and lift.");
             }
             double low=0.0,high=0.0;
             entry_taem_handoff_altitude_bounds(s,&low,&high);
