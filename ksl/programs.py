@@ -32,7 +32,7 @@ from .backend import BackendClient, BackendError, snapshot_summary, validate_pla
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
 from .kspguard import GuardError, ensure_payload_bay_closed, prepare_reentry_direct_control, probe_orbiter_integrity
-from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM
+from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM, SWIFT_BINARY
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
 from .scenarios import Scenario
@@ -823,6 +823,12 @@ _PROGRESS = re.compile(
     r"along=(?P<runwayAlongTrack>\S+) cross=(?P<runwayCrossTrack>\S+) aoa=(?P<angleOfAttack>\S+) bank=(?P<roll>\S+)$")
 
 
+# Swift report phase names -> mission phases.
+SWIFT_PHASES = {"entry": Phase.MM304, "acquisition": Phase.MM305, "headingAlignment": Phase.MM305,
+                "approach": Phase.FINAL_APPROACH, "preflare": Phase.FINAL_APPROACH, "flare": Phase.FINAL_APPROACH,
+                "rollout": Phase.ROLLOUT, "complete": Phase.COMPLETE}
+
+
 class SimulationProgram(Program):
     """Deorbit/entry/landing closed loop: native backend + ShuttleSim plant."""
     name = "simulation"
@@ -843,9 +849,51 @@ class SimulationProgram(Program):
             argv += ["--stop-at-phase", SIM_STOP_AT[stop]]
         return argv
 
+    def _swift_argv(self, ctx: Context, scenario: Scenario) -> list[str]:
+        argv = [str(SWIFT_BINARY), "simulate", *scenario.extra_args,
+                "--log", str(ctx.log.directory / "swift-log.jsonl"), "--log-every", "10",
+                "--output", str(ctx.log.directory / "swift-report.json")]
+        if scenario.scenario:
+            argv += ["--scenario", str(scenario.paths()[0])]
+        return argv
+
+    def _run_swift(self, ctx: Context, scenario: Scenario) -> Outcome:
+        missing = [str(p) for p in scenario.paths() if not p.is_file()]
+        if missing:
+            raise ProgramUnavailable("scenario inputs missing: " + ", ".join(missing))
+        if not SWIFT_BINARY.is_file():
+            raise ProgramUnavailable(f"Swift landing engine not built: {SWIFT_BINARY} (run `make swift`)")
+        ctx.log.update(connection="simulator")
+        ctx.advance(scenario.start)
+        code, tail = run_child(ctx, "swift-simulation", self._swift_argv(ctx, scenario), None, lambda _e: None)
+        if ctx.stop_event.is_set():
+            return Outcome(False, "simulation stopped by operator", aborted=True)
+        report_path = ctx.log.directory / "swift-report.json"
+        if not report_path.is_file():
+            return Outcome(False, f"Swift simulation produced no report (exit {code}): " + (tail[-1] if tail else ""))
+        report = json.loads(report_path.read_text())
+        ctx.log.write_json("simulation-result.json", report)
+        current = Phase(ctx.log.status.phase)
+        for name in report.get("phases") or []:
+            phase = SWIFT_PHASES.get(name)
+            if phase is not None and phase.index > current.index:
+                ctx.advance(phase)
+                current = phase
+        final = report.get("finalState") or {}
+        ctx.log.emit(Event("milestone", "swift {}: {} steps, {:.0f} s, max load {:.2f} g, max q {:.0f} Pa, contact {}".format(
+            report.get("outcome"), report.get("steps", 0), report.get("elapsed", 0),
+            report.get("maximumLoadFactor", 0), report.get("maximumDynamicPressure", 0), final.get("contact")),
+            data={"outcome": report.get("outcome"), "evidence": report.get("evidence")}))
+        if report.get("outcome") == "complete":
+            return Outcome(True, "Swift offline model landed and stopped (offline-model-only evidence)")
+        return Outcome(False, f"Swift simulation did not complete ({report.get('outcome')})")
+
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         scenario = ctx.scenario
         assert scenario is not None
+        if scenario.sim_engine == "swift":
+            return [f"simulation: Swift engine scenario {scenario.name} ({scenario.description})",
+                    "  $ " + " ".join(self._swift_argv(ctx, scenario))]
         return [f"simulation: ShuttleSim scenario {scenario.name} ({scenario.description})",
                 f"simulation: KSP_LANDER_MODEL_PROFILE={scenario.model_profile}, engage {scenario.engage}",
                 "  $ " + " ".join(self._argv(ctx, scenario, stop))]
@@ -854,6 +902,8 @@ class SimulationProgram(Program):
         scenario = ctx.scenario
         if scenario is None:
             raise ProgramUnavailable("simulation mode needs a scenario (`ksl simulate --list`)")
+        if scenario.sim_engine == "swift":
+            return self._run_swift(ctx, scenario)
         missing = [str(p) for p in scenario.paths() if not p.is_file()]
         if missing:
             raise ProgramUnavailable("scenario inputs missing: " + ", ".join(missing))

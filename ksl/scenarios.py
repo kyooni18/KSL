@@ -32,6 +32,7 @@ class Scenario:
     direct_control: bool = False        # fly the native FCS against the moment plant
     baseline: str = ""
     extra_args: tuple[str, ...] = field(default_factory=tuple)
+    sim_engine: str = "shuttlesim"      # "shuttlesim" (native C backend) or "swift" (swift/KSL-Landing)
 
     @property
     def engage(self) -> str:
@@ -39,10 +40,29 @@ class Scenario:
         return BACKEND_ENGAGE[self.start]
 
     def paths(self) -> list[Path]:
+        if self.sim_engine == "swift":
+            return [repo_path(self.scenario)] if self.scenario else []
         return [repo_path(p) for p in (self.scenario, self.configuration, self.attitude) if p]
 
 
+SWIFT_FIXTURES = "swift/KSL-Landing/Fixtures"
+
 SCENARIOS: dict[str, Scenario] = {s.name: s for s in (
+    Scenario(
+        name="swift-entry",
+        description="Swift 6 engine: nominal entry with an 8 deg heading error through spiral HAC, final, flare and rollout.",
+        start=Phase.MM304, scenario="", configuration="", model_profile="swift", sim_engine="swift",
+        extra_args=("--entry", "--heading-error", "8"),
+        baseline="Swift offline model: complete, stopped on runway (5589 steps)"),
+    Scenario(
+        name="swift-final",
+        description="Swift 6 engine: nominal final approach, flare, touchdown and rollout.",
+        start=Phase.FINAL_APPROACH, scenario="", configuration="", model_profile="swift", sim_engine="swift"),
+    Scenario(
+        name="swift-sts-polar-entry",
+        description="Swift 6 engine: STS Kerbin polar 72 km entry state recorded in the 2026-10-29 live flight.",
+        start=Phase.MM304, scenario=f"{SWIFT_FIXTURES}/sts-kerbin-20261029-live-entry-72km.ini",
+        configuration="", model_profile="swift", sim_engine="swift"),
     Scenario(
         name="l5-mm305",
         description="STS from the archived L5 live MM305 checkpoint through Final, flare, touchdown and rollout (native FCS).",
