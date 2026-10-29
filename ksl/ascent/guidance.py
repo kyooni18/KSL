@@ -105,6 +105,15 @@ def launch_roll_handoff_ready(commanded_pitch, actual_pitch, target_pitch,
                                       roll_error, roll_rate, nose_error)
 
 
+def progressive_turn_ready(commanded_pitch, actual_pitch, target_pitch,
+                           roll_error, roll_rate, nose_error):
+    """Start the pitch program while the remaining roll is controlled."""
+    return (abs(commanded_pitch-target_pitch) <= 2.5 and
+            abs(actual_pitch-target_pitch) <= 8.0 and
+            roll_attitude_settled(roll_error, roll_rate, nose_error,
+                                  angle_limit=45., rate_limit=6., nose_limit=8.))
+
+
 def insertion_prediction_g(configured_g, measured_g, governor_active):
     """Seed the upper-stage forecast with the governed acceleration when limited."""
     if governor_active and math.isfinite(measured_g) and measured_g > 0.:

@@ -15,7 +15,7 @@ from .peg import InsertionGuidance
 from .full_plan import BoosterState, attached_booster_dry_mass, engine_measurements, plan_ascent
 from .plan_timeline import sample_trajectory, track_trajectory
 from .apoapsis_guard import apoapsis_guard_g
-from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, constrain_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, maneuver_roll_rate, manual_roll_command, meco_prepare_ready, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
+from .guidance import (ROLL_RESET_GRACE, GUIDANCE_DEBUG, LAUNCH_TARGET_G, MAX_DYNAMIC_PRESSURE_PA, PITCH_SLEW_DEG_PER_SECOND, ASCENT_PITCH_RESPONSE_SECONDS, THROTTLE_SLEW_PER_SECOND, SEPARATION_ATTITUDE_HOLD_SECONDS, separation_pitch_transition, separation_thrust_blend, aoa_limit_deg, ascent_pitch, ascent_target_g, attitude_error_exceeded, attitude_settled, dynamic_pressure_throttle, earthward_roll_target, final_phase_g, g_force_throttle, post_booster_master_throttle, gravity_turn_pitch, constrain_turn_pitch, hold_turn_for_roll, insertion_prediction_g, launch_roll_handoff_ready, progressive_turn_ready, maneuver_roll_rate, manual_roll_command, meco_prepare_ready, meco_ready, mission_roll_allowed, roll_attitude_settled, scheduled_turn_pitch, terminal_guidance, vertical_profile_pitch)
 from .vehicle import (BOOSTER_MIN_G, BOOSTER_PAD_CAP, POST_SEP_CAP_RAMP, POST_SEP_CAP_TIMEOUT, post_sep_throttle_cap, CONTROL_TORQUE_FRACTION, G0, OUTER_SKIPPER_PAD_CAP, SSME_TRIM_MAX, SSME_TRIM_MIN, Shuttle, body_roll_rate_deg_s, descendants, engine_has_fuel, engine_pitch_moment, engine_thrust, has_resource, is_cub_engine, is_kodiak_engine, is_separator_motor, is_skipper_engine, is_wolfhound_engine, limit_aero_roll, one, part_engine, resource_mass, resource_total, restore_aero_roll, roll_accel_authority_deg_s2, schedule_roll_authority, tanks_empty, thrust_axis_offset)
 
 
@@ -1486,6 +1486,14 @@ def run(args):
                                           f'(error {roll_error:.0f} deg); releasing climb anyway')
                             if not shuttle.separated and not mission_roll_settled:
                                 actual_roll_pitch, _ = pitch_heading_for_direction(actual_direction)
+                                if (not gravity_turn_released and
+                                        progressive_turn_ready(commanded_pitch, actual_roll_pitch,
+                                                               roll_pitch, roll_error, body_roll_rate,
+                                                               settle_nose_error)):
+                                    gravity_turn_released = True
+                                    emit_event('gravity-turn-released', roll_error_deg=roll_error,
+                                               nose_error_deg=settle_nose_error)
+                                    print('Gravity turn released while roll continues')
                                 if ((gravity_turn_released and roll_attitude_settled(
                                         roll_error, body_roll_rate, settle_nose_error,
                                         angle_limit=7., rate_limit=3., nose_limit=8.)) or
@@ -1497,9 +1505,10 @@ def run(args):
                                     elif (conn.space_center.ut-roll_settle_since >=
                                           args.roll_settle_time):
                                         mission_roll_settled = True
-                                        gravity_turn_released = True
-                                        emit_event('gravity-turn-released', roll_error_deg=roll_error,
-                                                   nose_error_deg=settle_nose_error)
+                                        if not gravity_turn_released:
+                                            gravity_turn_released = True
+                                            emit_event('gravity-turn-released', roll_error_deg=roll_error,
+                                                       nose_error_deg=settle_nose_error)
                                         print('Limited elevon roll authority retained for ascent attitude hold')
                                         emit_event('gravity-turn')
                                         print('Physical heads-down roll settled; gravity turn released')
