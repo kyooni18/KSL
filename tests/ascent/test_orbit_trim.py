@@ -1,4 +1,6 @@
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 from ksl.ascent import orbit_trim
 import pytest
@@ -21,6 +23,72 @@ def test_oms_burn_timing_uses_reduced_throttle_and_ramp():
     full_throttle_time = 20. / 4.
     assert duration > 5*full_throttle_time
     assert 0. < centroid < duration
+
+
+def test_oms_burn_cuts_and_stops_when_attitude_slips(monkeypatch):
+    class Clock:
+        value = 0.
+
+        @property
+        def ut(self):
+            self.value += .2
+            return self.value
+
+    class Controls:
+        rcs = False
+        _throttle = 0.
+        max_throttle = 0.
+
+        @property
+        def throttle(self):
+            return self._throttle
+
+        @throttle.setter
+        def throttle(self, value):
+            self._throttle = value
+            self.max_throttle = max(self.max_throttle, value)
+
+    ctl = Controls()
+
+    class Autopilot:
+        engaged = False
+        ctrl = SimpleNamespace()
+
+        @property
+        def error(self):
+            return 30. if ctl.throttle > 0. else 1.
+
+    ap = Autopilot()
+    engine = SimpleNamespace(active=True, available_thrust=80000., specific_impulse=300.)
+    body = SimpleNamespace(non_rotating_reference_frame='inertial', gravitational_parameter=1.)
+    vessel = SimpleNamespace(control=ctl, parts=SimpleNamespace(engines=[engine]),
+                             available_thrust=80000., mass=20000.,
+                             orbit=SimpleNamespace(body=body),
+                             resources=SimpleNamespace(amount=lambda _: 100.),
+                             velocity=lambda _: (0., 0., 0.),
+                             position=lambda _: (600000., 0., 0.))
+    node = SimpleNamespace(delta_v=20., ut=0., time_to=0., reference_frame='node',
+                           remaining_delta_v=20., remove=Mock(),
+                           direction=lambda _: (0., 1., 0.),
+                           remaining_burn_vector=lambda _: (0., 20., 0.))
+    conn = SimpleNamespace(space_center=Clock())
+    events = []
+    monkeypatch.setitem(orbit_trim.CUSTOM_AP, 'ap', ap)
+    monkeypatch.setattr(orbit_trim, 'aim', lambda *args: None)
+    monkeypatch.setattr(orbit_trim, 'align_for_burn', lambda *args: None)
+    monkeypatch.setattr(orbit_trim, 'oms_propellant_mass', lambda _: 1000.)
+    monkeypatch.setattr(orbit_trim.time, 'sleep', lambda _: None)
+    monkeypatch.setattr(orbit_trim, 'emit_event', lambda name, **data: events.append((name, data)))
+
+    with pytest.raises(RuntimeError, match='OMS burn stopped: attitude error 30.0'):
+        orbit_trim.execute(conn, vessel, node, lambda _: False, orbit_cutoff=True)
+
+    assert ctl.throttle == 0.
+    assert ctl.max_throttle > 0.
+    assert not ap.engaged
+    node.remove.assert_called_once()
+    assert any(name == 'trim-burn-cutoff' and data['attitude_error_deg'] == 30.
+               for name, data in events)
 
 
 class RcsBudgetTests(unittest.TestCase):

@@ -33,6 +33,7 @@ RCS_TRIM_TIMEOUT = 180.0  # simulation seconds
 OMS_THROTTLE_CAP = 0.20
 OMS_FINE_THROTTLE_CAP = 0.10
 OMS_THROTTLE_SLEW = 0.05  # throttle fraction per simulation second
+OMS_BURN_MAX_ATTITUDE_ERROR = 10.0  # degrees from the commanded OMS attitude
 RUNTIME = {}  # 'controls': operator runtime controls (auto-warp, trim hold/disable)
 
 
@@ -469,9 +470,18 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
         window = [0.0, 0.0, 0.0]
         mass_start = vessel.mass
         prop_start = oms_propellant_mass(vessel)
-        attitude_warned = False
         next_burn_sample = t_prev
         while True:
+            # A misaligned OMS burn must stop immediately, before telemetry,
+            # thrust-axis estimation, or the next throttle update can run.
+            attitude_error = ap.error
+            if not math.isfinite(attitude_error) or attitude_error > OMS_BURN_MAX_ATTITUDE_ERROR:
+                ctl.throttle = 0.0
+                emit_event('trim-burn-cutoff', reason='attitude-error',
+                           attitude_error_deg=attitude_error if math.isfinite(attitude_error) else None,
+                           limit_deg=OMS_BURN_MAX_ATTITUDE_ERROR)
+                raise RuntimeError(f'OMS burn stopped: attitude error {attitude_error:.1f} deg '
+                                   f'exceeds {OMS_BURN_MAX_ATTITUDE_ERROR:.1f} deg')
             # Count only OMS propellant: RCS monopropellant use is not burn delta-v.
             burned = max(0.0, prop_start-oms_propellant_mass(vessel))
             spent = isp*9.80665*math.log(mass_start/max(1.0, mass_start-burned))
@@ -488,9 +498,6 @@ def execute(conn, vessel, node, done, tolerance=0.03, orbit_cutoff=False):
             if vessel.available_thrust <= 0.0:
                 print('OMS thrust lost; stopping burn')
                 break
-            if ap.error > 10.0 and not attitude_warned:
-                print(f'WARNING: OMS attitude error {ap.error:.1f} deg; continuing guidance')
-                attitude_warned = True
             # Measure the real thrust axis: velocity change minus gravity, in the body frame.
             v_now, t_now = vessel.velocity(nrf), sc.ut
             r = vessel.position(nrf)
