@@ -1992,23 +1992,44 @@
     ctx.clearRect(0, 0, width, height);
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.fillStyle = "#899fb5";
-    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut) && finite(p.altitude ?? p.meanAltitude));
+    const points = (snapshot?.actualTrajectory || []).filter(p => finite(p.ut) && finite(p.latitude) && finite(p.longitude) && finite(p.altitude ?? p.meanAltitude));
     if (points.length < 2) {
       ctx.fillText("Waiting for altitude history…", 16, height / 2);
       return;
     }
     const altitudeOf = (p) => Math.max(0, n(p.altitude ?? p.meanAltitude));
     const apoapsis = finite(snapshot?.telemetry?.apoapsisAltitude) ? n(snapshot.telemetry.apoapsisAltitude) : null;
-    const plan = (snapshot?.ascentPlan || []).filter(p => finite(p.ut) && finite(p.altitude));
-    const start = launchLiftoffUt() ?? n(points[0].ut);
-    // The time axis extends to the end of the plan so the remaining profile stays visible ahead of the vehicle.
-    const end = Math.max(n(points[points.length - 1].ut), plan.length ? n(plan[plan.length - 1].ut) : -Infinity);
-    const span = Math.max(1, end - start);
+    // Accumulate surface distance so turns and longitude wrap remain meaningful.
+    const radians = Math.PI / 180;
+    const distances = [0];
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const lat1 = n(a.latitude) * radians, lat2 = n(b.latitude) * radians;
+      const dLat = lat2 - lat1, dLon = (n(b.longitude) - n(a.longitude)) * radians;
+      const hav = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+      distances.push(distances[i - 1] + 2 * KERBIN_RADIUS_M * Math.asin(Math.sqrt(Math.min(1, Math.max(0, hav)))));
+    }
+    // Use the same surface-relative prediction as the 3D view, anchored to the flown track.
+    const origin = points[0], lat0 = n(origin.latitude) * radians;
+    const local = points.map(p => [signed(n(p.longitude) - n(origin.longitude)) * radians * KERBIN_RADIUS_M * Math.cos(lat0) / 1000,
+      (n(p.latitude) - n(origin.latitude)) * radians * KERBIN_RADIUS_M / 1000, altitudeOf(p) / 1000]);
+    const planPoints = (snapshot?.ascentPlan || []).filter(p => finite(p.ut) && finite(p.altitude) && finite(p.horizontalSpeed));
+    const planned = launchPlan3d(points, local, lat0);
+    let anchor = 0;
+    if (planPoints.length) points.forEach((p, i) => {
+      if (Math.abs(n(p.ut) - n(planPoints[0].ut)) < Math.abs(n(points[anchor].ut) - n(planPoints[0].ut))) anchor = i;
+    });
+    let planDistance = distances[anchor];
+    const plan = planned.map((p, i) => {
+      if (i) planDistance += Math.hypot(p[0] - planned[i - 1][0], p[1] - planned[i - 1][1]) * 1000;
+      return { distance: planDistance, altitude: p[2] * 1000 };
+    });
+    const span = Math.max(1, distances[distances.length - 1], ...plan.map(p => p.distance));
     // Round the vertical scale up to a whole tick step so the top gridline clears the highest sample and the apoapsis.
     const highest = Math.max(1000, ...points.map(altitudeOf), ...plan.map(p => n(p.altitude)), apoapsis !== null && apoapsis > 0 ? apoapsis : 0);
     const topAltitude = niceMapDistance(highest / 4) * 4;
     const left = 58, right = width - 14, top = 12, bottom = height - 24;
-    const xOf = (ut) => left + (ut - start) / span * (right - left);
+    const xOf = (distance) => left + distance / span * (right - left);
     const yOf = (altitude) => bottom - altitude / topAltitude * (bottom - top);
 
     ctx.strokeStyle = "#28415c"; ctx.lineWidth = 1;
@@ -2016,13 +2037,13 @@
       const altitude = topAltitude * i / 4, y = yOf(altitude);
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
       ctx.fillText(`${(altitude / 1000).toFixed(altitude >= 10000 ? 0 : 1)} km`, 6, y + 4);
-      ctx.fillText(`T+${clockText(span * i / 4)}`, Math.min(xOf(start + span * i / 4) - 12, right - 52), height - 8);
+      ctx.fillText(distance(span * i / 4), Math.min(xOf(span * i / 4) - 12, right - 52), height - 8);
     }
 
     const tracePath = () => {
       ctx.beginPath();
       points.forEach((p, i) => {
-        const x = xOf(n(p.ut)), y = yOf(altitudeOf(p));
+        const x = xOf(distances[i]), y = yOf(altitudeOf(p));
         if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
       });
     };
@@ -2030,7 +2051,7 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(left, top, right - left, bottom - top); ctx.clip();
     tracePath();
-    ctx.lineTo(xOf(n(last.ut)), bottom); ctx.lineTo(left, bottom); ctx.closePath();
+    ctx.lineTo(xOf(distances[distances.length - 1]), bottom); ctx.lineTo(left, bottom); ctx.closePath();
     const fill = ctx.createLinearGradient(0, top, 0, bottom);
     fill.addColorStop(0, "rgba(102,216,239,.26)"); fill.addColorStop(1, "rgba(102,216,239,0)");
     ctx.fillStyle = fill; ctx.fill();
@@ -2051,7 +2072,7 @@
       ctx.rect(left, top, right - left, bottom - top); ctx.clip();
       ctx.beginPath();
       plan.forEach((p, i) => {
-        const x = xOf(n(p.ut)), y = yOf(Math.max(0, n(p.altitude)));
+        const x = xOf(p.distance), y = yOf(Math.max(0, n(p.altitude)));
         if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
       });
       ctx.strokeStyle = "#ff9b52"; ctx.lineWidth = 1.6; ctx.stroke();
@@ -2062,7 +2083,7 @@
     ctx.strokeStyle = "#66d8ef"; ctx.lineWidth = 2; ctx.stroke();
     ctx.restore();
     ctx.fillStyle = "#eef2f4";
-    ctx.beginPath(); ctx.arc(xOf(n(last.ut)), yOf(altitudeOf(last)), 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(xOf(distances[distances.length - 1]), yOf(altitudeOf(last)), 3.5, 0, Math.PI * 2); ctx.fill();
   }
 
   // Orbit-camera angles for the launch 3D view; dragging changes them.
