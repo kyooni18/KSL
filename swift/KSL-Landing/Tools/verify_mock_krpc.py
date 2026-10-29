@@ -135,7 +135,8 @@ class Fixture:
         objects = {"get_ActiveVessel": 1, "Vessel_get_Control": 11,
                    "Vessel_get_SurfaceReferenceFrame": 12, "Vessel_get_Orbit": 13,
                    "Vessel_get_Parts": 14, "Vessel_get_AutoPilot": 15,
-                   "Orbit_get_Body": 21, "Vessel_Flight": 16}
+                   "Orbit_get_Body": 21, "Vessel_Flight": 16,
+                   "CelestialBody_get_ReferenceFrame": 22, "ReferenceFrame_static_CreateHybrid": 23}
         if name in objects:
             if name == "get_ActiveVessel" and telemetry and self.mode == "vessel-switch":
                 return varint(2)

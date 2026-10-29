@@ -69,15 +69,30 @@ public actor KRPCFlightIO: FlightIO {
       parts = try KRPCValue.decodeUInt(objects[4])
       autopilot = try KRPCValue.decodeUInt(objects[5])
       let refs = try await session.call([
-        objectCall("Orbit_get_Body", orbit),
-        .init(
-          procedure: "Vessel_Flight",
-          arguments: [KRPCValue.uint(vessel), KRPCValue.uint(surfaceFrame)]),
-        objectCall("Parts_get_All", parts),
+        objectCall("Orbit_get_Body", orbit), objectCall("Parts_get_All", parts),
       ])
       let body = try KRPCValue.decodeUInt(refs[0])
-      flight = try KRPCValue.decodeUInt(refs[1])
-      initialPartCount = try KRPCValue.decodeTuple(refs[2]).count
+      // A Flight created in the vessel surface frame reports zero velocity because that frame
+      // moves with the vessel. This hybrid takes its position and velocity (with the planet's
+      // rotation) from the body-fixed frame and its axes from the local up/north/east frame.
+      let bodyFrame = try KRPCValue.decodeUInt(
+        try await session.call([objectCall("CelestialBody_get_ReferenceFrame", body)])[0])
+      let hybridFrame = try KRPCValue.decodeUInt(
+        try await session.call([
+          .init(
+            procedure: "ReferenceFrame_static_CreateHybrid",
+            arguments: [
+              KRPCValue.uint(bodyFrame), KRPCValue.uint(surfaceFrame), KRPCValue.uint(0),
+              KRPCValue.uint(0),
+            ])
+        ])[0])
+      flight = try KRPCValue.decodeUInt(
+        try await session.call([
+          .init(
+            procedure: "Vessel_Flight",
+            arguments: [KRPCValue.uint(vessel), KRPCValue.uint(hybridFrame)])
+        ])[0])
+      initialPartCount = try KRPCValue.decodeTuple(refs[1]).count
       guard initialPartCount > 0 else {
         throw FlightError.invalidTelemetry("Active vessel has no parts")
       }

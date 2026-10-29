@@ -5,19 +5,19 @@
       "case": "inspect",
       "passed": true,
       "exitCode": 0,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.2587
+      "elapsedSeconds": 0.3653
     },
     {
       "case": "fragmented",
       "passed": true,
       "exitCode": 0,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0177
+      "elapsedSeconds": 0.015
     },
     {
       "case": "wrong-vessel",
@@ -26,43 +26,43 @@
       "rpcCalls": 8,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0147
+      "elapsedSeconds": 0.0113
     },
     {
       "case": "vessel-switch",
       "passed": true,
       "exitCode": 1,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0178
+      "elapsedSeconds": 0.014
     },
     {
       "case": "parts-change",
       "passed": true,
       "exitCode": 1,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0208
+      "elapsedSeconds": 0.0136
     },
     {
       "case": "snapshot-span",
       "passed": true,
       "exitCode": 1,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0298
+      "elapsedSeconds": 0.0137
     },
     {
       "case": "slow",
       "passed": true,
       "exitCode": 1,
-      "rpcCalls": 40,
+      "rpcCalls": 42,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.6855
+      "elapsedSeconds": 0.6689
     },
     {
       "case": "malformed",
@@ -71,7 +71,7 @@
       "rpcCalls": 0,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0306
+      "elapsedSeconds": 0.015
     },
     {
       "case": "truncated",
@@ -80,34 +80,34 @@
       "rpcCalls": 0,
       "controlBatches": 0,
       "socketClosed": true,
-      "elapsedSeconds": 0.0199
+      "elapsedSeconds": 0.0116
     },
     {
       "case": "fly",
       "passed": true,
       "exitCode": 2,
-      "rpcCalls": 161,
+      "rpcCalls": 163,
       "controlBatches": 4,
       "socketClosed": true,
-      "elapsedSeconds": 0.3415
+      "elapsedSeconds": 0.3296
     },
     {
       "case": "command-error",
       "passed": true,
       "exitCode": 1,
-      "rpcCalls": 55,
+      "rpcCalls": 57,
       "controlBatches": 1,
       "socketClosed": true,
-      "elapsedSeconds": 0.0261
+      "elapsedSeconds": 0.0243
     },
     {
       "case": "cancel",
       "passed": true,
       "exitCode": 2,
-      "rpcCalls": 63,
+      "rpcCalls": 65,
       "controlBatches": 2,
       "socketClosed": true,
-      "elapsedSeconds": 0.0653
+      "elapsedSeconds": 0.0571
     }
   ]
 }
