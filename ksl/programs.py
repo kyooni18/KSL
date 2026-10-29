@@ -43,6 +43,9 @@ EVENT_PREFIX = "@@ksl "
 STOP_GRACE_SECONDS = 20.0
 
 
+# Backend phases before the deorbit burn starts; not counted as flight time.
+PRE_BURN_PHASES = frozenset({"Idle", "Planning", "Calibration Glide", "Coast to Burn", "Burn Setup"})
+
 class ProgramUnavailable(RuntimeError):
     """The requested phase cannot be flown in this mode (e.g. no offline ascent plant)."""
 
@@ -598,8 +601,11 @@ class LandingProgram(Program):
             client.pump(0.5)
             telemetry = (client.latest_snapshot or {}).get("telemetry") or {}
             ut = telemetry.get("ut")
-            if isinstance(ut, (int, float)) and math.isfinite(ut):
-                if flight_start_ut is None or (previous_ut is not None and ut < previous_ut):
+            # The timeout bounds the flight, not the orbital wait: a coast to a
+            # deorbit burn can be warped through longer than the whole limit.
+            coasting = (client.latest_snapshot or {}).get("phase") in PRE_BURN_PHASES
+            if isinstance(ut, (int, float)) and math.isfinite(ut) and ut > 0:
+                if flight_start_ut is None or coasting or (previous_ut is not None and ut < previous_ut):
                     flight_start_ut = ut
                 previous_ut = ut
                 if ut-flight_start_ut > float(landing["flightTimeoutSeconds"]):
