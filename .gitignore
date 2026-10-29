@@ -107,3 +107,4 @@ env/
 # Unified mission runtime output (ksl) and legacy launcher run logs
 /runs/
 telemetry*.csv
+/rust/landing/target/

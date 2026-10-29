@@ -42,8 +42,6 @@ double entry_altitude_target_for_speed(double reference_altitude,double referenc
 double entry_altitude_target_for_range(double reference_altitude,double reference_range,double range,double target_altitude,double target_range);
 double entry_thermal_protection_aoa_floor(const VehicleProfile *vehicle);
 double entry_low_q_protective_aoa_floor(double dynamic_pressure,const VehicleProfile *vehicle);
-/* Test-only Mach-keyed MM304 incidence staircase (KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST); NAN when unset. */
-double entry_aoa_staircase_test(double mach);
 double entry_terminal_turn_aoa_floor(double true_air_speed,double dynamic_pressure,const VehicleProfile *vehicle);
 double entry_final_s_turn_aoa_ceiling(const VehicleProfile *vehicle);
 EntryTerminalDemand entry_terminal_demand(double latitude,double altitude,double range,double horizontal_speed,double course_error,double vertical_speed,double true_air_speed,double entry_reference_speed,const PlanetModel *planet,const VehicleProfile *vehicle,const LandingSite *site,const GuidanceSettings *settings);

@@ -239,7 +239,6 @@ typedef struct {
        forecast from measured state reaches the MM305 handoff at the target
        distance. Re-solved every forecast cycle from live telemetry. */
     bool entry_policy_valid; double entry_policy_bank_deg, entry_policy_aoa_deg, entry_policy_ut;
-    double entry_policy_zero_bank_miss; /* wings-level forecast handoff miss, m (+ : short) */
     /* MM304 low-energy latch: flying max-L/D incidence because the forecast
        is short even wings-level (see entry/contract.inc). */
     bool entry_energy_short_latched;

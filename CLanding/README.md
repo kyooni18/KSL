@@ -1,60 +1,41 @@
 # CLanding
 
-`CLanding/` is the canonical native C implementation of the shuttle landing system. The old flat implementation under `../Legacy/CLanding` is reference material only; new flight logic belongs here.
+`CLanding/` is the build entry point and C ABI description of the shuttle landing backend. The backend itself is the Rust crate in [`../rust/landing`](../rust/landing/README.md); the former C implementation was replaced by it and is available from git history (the commit before the Rust rewrite) as the behaviour reference.
 
-## Design
+- `make -C CLanding` builds `rust/landing` with cargo and installs the executable at `CLanding/build/landing_backend`, where the Python mission layer, ShuttleSim runner and tools expect it. `BUILD=<dir>` selects another output directory.
+- `include/` holds the headers describing the C ABI that `liblanding.a` (the crate's static library) exports. The regression tests in `../Validation` and ShuttleSim's optional `shuttlesim_expert` library use that interface.
+- `guidance/guidance_internal.h` is the private guidance plumbing header used by white-box C tests.
 
-The code is split by ownership rather than by historical development order.
+`include/landing.h` is deliberately only a compatibility umbrella. The actual public surface is divided into `landing_types.h`, `guidance_types.h`, `vehicle_types.h`, and `landing_api.h`.
 
-- `app/` owns process startup and top-level controller orchestration.
-- `control/` owns actuator-level flight-control command generation.
-- `prediction/` owns trajectory prediction, decision envelopes, and asynchronous prediction policy.
-- `vehicle/` owns vehicle/planet math, aerodynamics, and learned vessel physics.
-- `calibration/` owns online/offline model calibration.
-- `transport/` owns kRPC/C-Nano communication.
-- `telemetry/` owns simulator telemetry, JSON, planner logs, and flight-log codecs.
-- `persistence/` owns durable physics/model state.
-- `include/` contains the supported public interface.
+## Ownership (module layout of `rust/landing/src`)
 
-`include/landing.h` is deliberately only a compatibility umbrella. The actual public surface is divided into `landing_types.h`, `guidance_types.h`, `vehicle_types.h`, and `landing_api.h`. New code should include the narrowest header it needs.
+- `app/` process startup and top-level controller orchestration.
+- `control/` actuator-level flight-control command generation.
+- `prediction/` trajectory prediction, decision envelopes, asynchronous prediction policy.
+- `vehicle/` vehicle/planet math, aerodynamics, learned vessel physics.
+- `calibration/` online/offline model calibration.
+- `transport/` kRPC/C-Nano communication; `krpc_cnano/` and `nanopb/` are the protocol client.
+- `telemetry/` simulator telemetry, JSON, planner logs, flight-log codecs.
+- `persistence/` durable physics/model state (SQLite).
+- `guidance/` MM304 entry, MM305/TAEM, Final, flare, touchdown, rollout, plus the top-level TAEM planner modules.
+- `physics/` the ShuttleSim flight-physics model the backend shares with the simulator.
 
-## Guidance
-
-Guidance is no longer a single source file.
-
-- `guidance.c` is the public dispatcher.
-- `guidance_core.c` owns shared guidance state/control machinery.
-- `guidance_entry.c` owns MM304 entry orchestration. Its `entry/*.inc` slices separate reference construction, bank allocation, S-turn planning, topology, and handoff-contract logic.
-- `guidance_taem.c` owns the live MM305/TAEM integration boundary and shared TAEM state/energy/executive helpers.
-- `taem_frames_energy.c`, `taem_geometry.c`, `taem_reachability.c`, `taem_planner.c`, `taem_candidate_search.c`, `terminal_model.c`, `terminal_propagator.c`, `terminal_solver.c`, and `taem_tracker.c` form the rebuilt MM305 planning/prediction/tracking stack. The removed legacy HAC planner/path slices are not part of the compatibility surface.
-- `guidance_final.c` owns outer final, preflare, flare, touchdown, rollout, and recovery. Its `final/*.inc` slices separate planning/gates, flight phases, sequencing, and recovery/invalidation.
-- `guidance_terminal.c` owns terminal phase/ownership orchestration.
-- `guidance_internal.h` is private implementation plumbing and is not a supported API.
-
-The remaining `.inc` slices are private implementation modules for Entry, Final, Controller, and the small shared TAEM state/energy bridge. New MM305 reconstruction code uses explicit `.c`/header modules instead of reviving the deleted HAC planner/path slices.
-
-Important behavioral invariants remain unchanged: MM304 hands ownership one-way to MM305/TAEM only after the terminal acquisition state is executable; MM305 has no S-turn or generic energy-dump phase; MM305 uses the fixed runway-anchored HAC geometry and must prove an executable path before commitment; Final/flare/rollout continue through the established public guidance state machine and its existing handoff gates.
-
-See `ARCHITECTURE.md` for the flight-logic ownership and invariants that refactors must preserve.
+Important behavioral invariants remain unchanged: MM304 hands ownership one-way to MM305/TAEM only after the terminal acquisition state is executable; MM305 has no S-turn or generic energy-dump phase; MM305 uses the fixed runway-anchored HAC geometry and must prove an executable path before commitment; Final/flare/rollout continue through the established public guidance state machine and its existing handoff gates. See `ARCHITECTURE.md`.
 
 ## Build
 
     make -C CLanding
-
-For isolated refactor/CI work, use a separate build directory:
-
     make -C CLanding BUILD=build-refactor
 
-ShuttleSim's expert library consumes the same modular guidance sources through `ShuttleSim/CMakeLists.txt`; it does not maintain a second copy of flight logic.
+Cargo features: `mm305-supersonic-active-uncertainty` replaces the former `make MM305_SUPERSONIC_ACTIVE_UNCERTAINTY=1` experiment switch (`cargo build --release --features ...` in `rust/landing`).
 
 ## Tests
 
-Normal development has one small supported regression gate:
-
     make -C CLanding test
 
-It intentionally runs only four high-value tests: the MM304→MM305 architecture/ownership contract, TAEM interface energy/capture semantics, vessel physics, and the external backend protocol. These tests use supported headers/APIs and do not include production `.c` files to reach private helpers.
+runs the Rust white-box tests (`cargo test`) and the C-ABI regression gate: the MM304→MM305 architecture/ownership contract, MM305 admission and recovery, TAEM frames/energy and tracker allocation, vessel physics, flight control, entry laws, Final delivery parity and touchdown quality, deorbit admission, and the external backend protocol. Each C test links against `liblanding.a`.
 
-The older narrow contract/probe files in `Validation/` are historical investigation material. They are not the compatibility surface and must not drive production architecture back toward a monolith. Keep or use one only when a specific investigation still depends on it; otherwise prefer a small public-interface regression.
+`Validation/BackendParity.py REF_BUILD NEW_BUILD [scenario[:engage[:max-sim-s]]]` flies ShuttleSim scenarios with two backends and compares the deterministic simulator telemetry byte for byte. Build the reference backend from the pre-rewrite commit.
 
 No default test connects to live KSP or starts a ShuttleSim campaign.

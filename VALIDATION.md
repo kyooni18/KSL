@@ -1,10 +1,11 @@
 # Validation
 
 All checked-in qualification paths are offline. They build and exercise the
-native C guidance stack without opening KSP, a serial device, or a kRPC server.
+native landing stack without opening KSP, a serial device, or a kRPC server.
 
-- `make -C CLanding clean all` builds the C17 backend with the vendored kRPC
-  C-Nano 0.6.0 and nanopb 0.4.9.1 sources plus SQLite.
+- `make -C CLanding clean all` builds the Rust backend (`rust/landing`, which
+  includes the kRPC C-Nano 0.6.0 and nanopb 0.4.9.1 protocol code) and links
+  SQLite.
 - `make test` (repo root, ~25 s) is the offline gate. It runs
   `make -C CLanding test` (16 fast native targets, listed in
   `Validation/README.md`) and pytest over `tests/` (mission layer, ascent,
