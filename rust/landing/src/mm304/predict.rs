@@ -70,8 +70,13 @@ pub struct Forecast {
 }
 
 impl Forecast {
-    pub fn energy(&self) -> f64 {
-        if self.converged && self.terminal.valid { self.terminal.energy_error } else { f64::NAN }
+    /// Terminal energy error against the route's MM305 requirement.
+    pub fn energy(&self, route: u32) -> f64 {
+        if self.converged && self.terminal.valid { self.terminal.route_energy(route).0 } else { f64::NAN }
+    }
+
+    pub fn band(&self, route: u32) -> f64 {
+        self.terminal.route_energy(route).1
     }
 }
 

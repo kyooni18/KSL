@@ -1363,7 +1363,7 @@
     const f = (v, d = 1, u = "") => finite(v) ? `${n(v).toFixed(d)}${u}` : "—";
     const km = (v) => finite(v) ? `${(n(v) / 1000).toFixed(1)} km` : "—";
     const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-    set("mm304-decision", p.sequence ? `#${p.sequence} ${String(p.decision || "").toUpperCase()}` : "NO PLAN");
+    set("mm304-decision", p.sequence ? `#${p.sequence} ${String(p.decision || "").toUpperCase()} · ${String(p.route || "").toUpperCase()} ${f(te.spiralTurn, 0)}°` : "NO PLAN");
     set("mm304-sigma", f(p.sigma, 2));
     set("mm304-aoa", `${f(c.aoa)}° / ${f(c.nominalAoa)}°`);
     set("mm304-bank", `${f(c.bank)}° / ${f(c.bankLimit, 0)}°`);

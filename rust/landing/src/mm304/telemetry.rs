@@ -122,6 +122,7 @@ pub fn json(p: &Published) -> String {
     if pl.valid {
         o.push('{');
         let _ = write!(o, "\"sequence\":{},\"decision\":\"{}\",\"limiting\":\"{}\",", pl.sequence, decision_name(pl.decision), limiting_name(pl.limiting));
+        let _ = write!(o, "\"route\":\"{}\",", if pl.route == MM304_ROUTE_SHORT { "short" } else { "spiral" });
         let _ = write!(o, "\"converged\":{},\"inEnvelope\":{},\"forecasts\":{},\"reversalsPredicted\":{},", pl.converged, pl.in_envelope, pl.forecasts, pl.reversals_predicted);
         num(&mut o, "ut", pl.ut);
         num(&mut o, "sigma", pl.sigma);
@@ -133,6 +134,8 @@ pub fn json(p: &Published) -> String {
         num(&mut o, "cost", pl.cost);
         num(&mut o, "energyAtMaxRange", pl.energy_at_min);
         num(&mut o, "energyAtMaxBank", pl.energy_at_max);
+        num(&mut o, "spiralEnergyAtMaxRange", pl.spiral_at_max_range);
+        num(&mut o, "spiralTurnAtMaxRange", pl.spiral_turn_at_max_range);
         let t = &pl.terminal;
         let _ = write!(o, "\"terminal\":{{\"valid\":{},\"admissible\":{},", t.valid, t.admissible);
         num(&mut o, "ut", t.ut);
@@ -144,6 +147,9 @@ pub fn json(p: &Published) -> String {
         num(&mut o, "flightPathAngle", t.flight_path_angle);
         num(&mut o, "energyError", t.energy_error);
         num(&mut o, "band", t.band);
+        num(&mut o, "spiralTurn", t.spiral_turn);
+        num(&mut o, "shortRouteEnergyError", t.short_error);
+        num(&mut o, "shortRouteBand", t.short_band);
         close(&mut o);
         o.push_str("},\"trajectory\":[");
         for s in &pl.samples[..(pl.sample_count as usize).min(MM304_SAMPLES)] {

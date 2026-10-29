@@ -2016,10 +2016,15 @@ pub unsafe extern "C" fn guidance_accept_entry_plan(
         let mut pl = (*g).mm304.plan;
         fprintf(
             stderr,
-            b"MM304 plan #%u %s: ut=%.1f sigma=%+.3f bank=%.1f aoaBias=%+.1f E=%+.0f target=%.0f band=%.0f unc=%.0f Emaxrange=%+.0f Emaxbank=%+.0f limit=%s forecasts=%u revPred=%u conv=%d env=%d handoff along=%.0f cross=%.0f hdgErr=%+.1f h=%.0f V=%.0f\n\0"
+            b"MM304 plan #%u %s route=%s: ut=%.1f sigma=%+.3f bank=%.1f aoaBias=%+.1f E=%+.0f target=%.0f band=%.0f unc=%.0f Emaxrange=%+.0f Emaxbank=%+.0f limit=%s forecasts=%u revPred=%u conv=%d env=%d handoff along=%.0f cross=%.0f hdgErr=%+.1f h=%.0f V=%.0f spiral=%.0f spiralAtMaxRange=%+.0f/%.0fdeg\n\0"
                 as *const u8 as *const ::core::ffi::c_char,
             pl.sequence,
             crate::mm304::telemetry::decision_cname(pl.decision),
+            if pl.route == crate::mm304::state::MM304_ROUTE_SHORT {
+                b"short\0" as *const u8 as *const ::core::ffi::c_char
+            } else {
+                b"spiral\0" as *const u8 as *const ::core::ffi::c_char
+            },
             pl.ut,
             pl.sigma,
             pl.bank,
@@ -2040,6 +2045,9 @@ pub unsafe extern "C" fn guidance_accept_entry_plan(
             pl.terminal.heading_error,
             pl.terminal.altitude,
             pl.terminal.speed,
+            pl.terminal.spiral_turn,
+            pl.spiral_at_max_range,
+            pl.spiral_turn_at_max_range,
         );
     }
     (*g).entry_planning_needed = false_0 != 0;
@@ -3345,6 +3353,12 @@ pub unsafe extern "C" fn entry_program_guidance(
     } else {
         crate::mm304::state::Mm304State::ZERO.live_terminal
     };
+    // The deorbit witness ranks burns by this excess: MM305's least-energy route,
+    // the requirement every handoff must meet (the spiral is taken when reachable).
+    if (*g).mm304.live_terminal.valid && (*g).mm304.live_terminal.short_error.is_finite() {
+        (*g).entry_hac_energy_excess = (*g).mm304.live_terminal.short_error;
+        (*g).entry_hac_energy_ut = (*t).ut;
+    }
     let mut mm_law = (*g).mm304.law;
     let mut lateral_out: EntryLateralOutput = EntryLateralOutput {
         valid: mm.aoa.is_finite() && mm.bank.is_finite(),

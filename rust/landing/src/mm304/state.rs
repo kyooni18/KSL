@@ -25,6 +25,11 @@ pub const MM304_LIMIT_LOAD_ENVELOPE: u32 = 4;
 pub const MM304_LIMIT_HANDOFF_ALTITUDE: u32 = 5;
 pub const MM304_LIMIT_HAC_GEOMETRY: u32 = 6;
 
+/// The MM305 route a plan delivers to: the full spiral, or the least-energy HAC
+/// route when the spiral is out of reach even at maximum range.
+pub const MM304_ROUTE_SPIRAL: u32 = 0;
+pub const MM304_ROUTE_SHORT: u32 = 1;
+
 pub const MM304_REGIME_ENERGY: u32 = 0;
 pub const MM304_REGIME_LATERAL: u32 = 1;
 
@@ -79,6 +84,11 @@ pub struct Mm304Terminal {
     pub energy_error: f64,
     /// Surplus MM305 can still shed, m.
     pub band: f64,
+    /// HAC turn of the spiral-side route from this state, deg.
+    pub spiral_turn: f64,
+    /// The same handoff scored on MM305's least-energy route (its drag-path target).
+    pub short_error: f64,
+    pub short_band: f64,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -92,6 +102,7 @@ pub struct Mm304Plan {
     pub limiting: u32,
     pub forecasts: u32,
     pub reversals_predicted: u32,
+    pub route: u32,
     pub ut: f64,
     /// Energy control: -1 max L/D wings level, 0 schedule, +1 schedule at max bank.
     pub sigma: f64,
@@ -103,6 +114,9 @@ pub struct Mm304Plan {
     pub cost: f64,
     pub energy_at_min: f64,
     pub energy_at_max: f64,
+    /// Spiral-route energy error and turn at maximum range (the reachability test).
+    pub spiral_at_max_range: f64,
+    pub spiral_turn_at_max_range: f64,
     pub terminal: Mm304Terminal,
     pub sample_count: u32,
     pub samples: [Mm304Sample; MM304_SAMPLES],

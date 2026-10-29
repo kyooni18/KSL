@@ -2711,12 +2711,13 @@ unsafe extern "C" fn terminal_guidance(
         if physical_handoff as ::core::ffi::c_int != 0 && !admission_route_qualified
             && !(*g).diagnostic_shadow && (*cfg).guidance.taem_hac_law as ::core::ffi::c_int != 0
             && model_available as ::core::ffi::c_int != 0
-            && (*g).mm304.live_terminal.admissible && (*g).mm304.live_terminal.ut == (*t).ut
+            && (*g).mm304.live_terminal.ut == (*t).ut
+            && crate::mm304::terminal::live_admissible(&(*g).mm304, (*s).mm305_min_altitude, (*s).mm305_max_altitude)
         {
             admission_route_qualified = true_0 != 0;
             fprintf(
                 stderr,
-                b"MM305 admitted on HAC energy: UT %.1f M %.2f h %.0f m along %.1f km cross %.1f km heading error %+.1f deg, energy %+.0f m in [0, %.0f]\n\0"
+                b"MM305 admitted on HAC energy: UT %.1f M %.2f h %.0f m along %.1f km cross %.1f km heading error %+.1f deg, spiral energy %+.0f m (band %.0f, spiral %.0f deg), short-route energy %+.0f m (band %.0f), route %s\n\0"
                     as *const u8 as *const ::core::ffi::c_char,
                 (*t).ut,
                 (*t).mach,
@@ -2726,6 +2727,14 @@ unsafe extern "C" fn terminal_guidance(
                 (*g).mm304.live_terminal.heading_error,
                 (*g).mm304.live_terminal.energy_error,
                 (*g).mm304.live_terminal.band,
+                (*g).mm304.live_terminal.spiral_turn,
+                (*g).mm304.live_terminal.short_error,
+                (*g).mm304.live_terminal.short_band,
+                if (*g).mm304.plan.route == crate::mm304::state::MM304_ROUTE_SHORT {
+                    b"short\0" as *const u8 as *const ::core::ffi::c_char
+                } else {
+                    b"spiral\0" as *const u8 as *const ::core::ffi::c_char
+                },
             );
         }
         let mut diagnostic_boundary: bool = (*g).diagnostic_shadow as ::core::ffi::c_int

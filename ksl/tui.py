@@ -117,7 +117,7 @@ def mm304_rows(block: dict[str, Any] | None) -> list[tuple[str, str]]:
     ]
     if plan:
         rows += [
-            ("plan", f"#{plan.get('sequence')} {plan.get('decision')} · sigma {_fmt(plan.get('sigma'), digits=2)}"
+            ("plan", f"#{plan.get('sequence')} {plan.get('decision')} · route {plan.get('route', '—')} · spiral {_fmt(term.get('spiralTurn'), digits=0)}° · sigma {_fmt(plan.get('sigma'), digits=2)}"
                      f" · bank {_fmt(plan.get('bank'))} · AoA bias {_fmt(plan.get('aoaBias'))}"),
             ("HAC energy", f"{_fmt(plan.get('predictedEnergy'), unit='m', digits=0)} → target {_fmt(plan.get('targetEnergy'), unit='m', digits=0)}"
                            f" (band {_fmt(term.get('band'), unit='m', digits=0)}, ±{_fmt(plan.get('uncertainty'), unit='m', digits=0)})"),

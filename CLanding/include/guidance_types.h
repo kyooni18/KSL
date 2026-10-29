@@ -232,13 +232,14 @@ typedef struct {
 } Mm304Schedule;
 typedef struct {
     bool valid, admissible;
-    double ut, along, cross, heading_error, altitude, speed, flight_path_angle, energy_error, band;
+    double ut, along, cross, heading_error, altitude, speed, flight_path_angle, energy_error, band,
+        spiral_turn, short_error, short_band;
 } Mm304Terminal;
 typedef struct {
     bool valid, converged, in_envelope;
-    uint32_t sequence, decision, limiting, forecasts, reversals_predicted;
+    uint32_t sequence, decision, limiting, forecasts, reversals_predicted, route;
     double ut, sigma, aoa_bias, bank, target_energy, predicted_energy, uncertainty, cost,
-        energy_at_min, energy_at_max;
+        energy_at_min, energy_at_max, spiral_at_max_range, spiral_turn_at_max_range;
     Mm304Terminal terminal;
     uint32_t sample_count;
     Mm304Sample samples[MM304_SAMPLES];

@@ -2948,6 +2948,198 @@ pub unsafe extern "C" fn mm305_hac_handoff_energy_error(
     return true_0 != 0;
 }
 #[no_mangle]
+pub unsafe extern "C" fn mm305_hac_spiral_energy_error(
+    mut model: *const TerminalModel,
+    mut live: *const TaemHacLiveAero,
+    mut geo: *const TaemGeometryState,
+    mut mass_kg: ::core::ffi::c_double,
+    mut error_m: *mut ::core::ffi::c_double,
+    mut band_m: *mut ::core::ffi::c_double,
+    mut psi_out: *mut ::core::ffi::c_double,
+) -> bool {
+    if model.is_null() || geo.is_null() || mass_kg.is_finite() as i32 == 0
+        || !(mass_kg > 0.0f64) || (*geo).runway_along_m.is_finite() as i32 == 0
+        || (*geo).runway_cross_m.is_finite() as i32 == 0
+        || (*geo).heading_error_deg.is_finite() as i32 == 0
+    {
+        return false_0 != 0;
+    }
+    let mut x: HacCtx = HacCtx {
+        c: TelContext {
+            model: ::core::ptr::null::<TerminalModel>(),
+            d_station: 0.,
+            h_station: 0.,
+            v_station: 0.,
+            e_station: 0.,
+            aoa_max: 0.,
+            slope_deg: 0.,
+            final_line: false,
+        },
+        aero: ::core::ptr::null::<AeroTable>(),
+        live: ::core::ptr::null::<TaemHacLiveAero>(),
+        mass: 0.,
+        aoa_supersonic: 0.,
+    };
+    let mut R: *const TaemHacReference = mm305_hac_cached_reference(
+        model,
+        live,
+        mass_kg,
+        2.5f64,
+        &raw mut x,
+    );
+    if !(*R).valid {
+        return false_0 != 0;
+    }
+    let mut s: TelPoint = TelPoint {
+        x: 0.,
+        y: 0.,
+        h: 0.,
+        v: 0.,
+        g: 0.,
+        psi: 0.,
+        m: 0.,
+        aoa: 0.,
+        aoa_rate: 0.,
+        bank: 0.,
+        ground_speed: 0.,
+    };
+    hac_context(
+        &raw mut x,
+        model,
+        &raw const (*model).aero,
+        live,
+        geo,
+        mass_kg,
+        ::core::f32::NAN as ::core::ffi::c_double,
+        0.0f64,
+        &raw mut s,
+    );
+    fn H_tls() -> *mut TaemHacLawState {
+        ::std::thread_local! {
+            static CELL: ::core::cell::UnsafeCell<TaemHacLawState> = const { ::core::cell::UnsafeCell::new(TaemHacLawState {
+        initialized: false,
+        final_line: false,
+        phase: 0,
+        side: 0,
+        s_turn_sign: 0,
+        drag_sign: 0,
+        drag_away_sign: 0,
+        drag_away: false,
+        drag_flown: false,
+        drag_aoa_cmd: 0.,
+        drag_bank_cmd: 0.,
+        trace: false,
+        drag_required: 0.,
+        rf: 0.,
+        psi: 0.,
+        last_ang: 0.,
+        s_go: 0.,
+        e_ref: 0.,
+        h_ref: 0.,
+        v_ref: 0.,
+        e_err: 0.,
+        energy_level: 0.,
+        tangent_x: 0.,
+        tangent_y: 0.,
+        tangent_dist: 0.,
+        turn_cost: 0.,
+        sdot: 0.,
+        last_sgo: 0.,
+        last_sgo_ut: 0.,
+        eta_live: 0.,
+        last_plan_ut: 0.,
+        last_side_ut: 0.,
+        last_ut: 0.,
+        speedbrake_integral: 0.,
+        station_slope_deg: 0.,
+        admit_pending: false,
+        admit_since_ut: 0.,
+        low_energy_pending: false,
+        low_energy_since_ut: 0.,
+        ref_0: TaemHacReference {
+            valid: false,
+            ds: 0.,
+            mass: 0.,
+            built_ut: 0.,
+            aoa: [0.; 41],
+            cl: [0.; 41],
+            e: [0.; 480],
+            h: [0.; 480],
+            v: [0.; 480],
+            h_eq: [0.; 480],
+            v_eq: [0.; 480],
+            s_gate: 0.,
+            e_gate: 0.,
+            h_gate: 0.,
+        },
+    }) };
+        }
+        CELL.with(|c| c.get())
+    }
+    (*H_tls()).ref_0 = *R;
+    (*H_tls()).rf = clampd(
+        x.c.v_station * x.c.v_station / (TEL_G0 * tan(HAC_BANK_NOMINAL * DEG2RAD)),
+        HAC_RF_MIN,
+        HAC_RF_MAX,
+    );
+    // The spiral side: the side whose MM305 route turns furthest around the HAC.
+    let mut e_tgt: ::core::ffi::c_double = ::core::f32::NAN as ::core::ffi::c_double;
+    let mut spiral: HacPrediction = HacPrediction {
+        valid: false,
+        s_go: 0.,
+        psi_t: -1.0f64,
+        tx: 0.,
+        ty: 0.,
+        tangent_dist: 0.,
+        acq_turn: 0.,
+        acq_arc: 0.,
+        hac_arc: 0.,
+        turn_cost: 0.,
+        e_ref: 0.,
+    };
+    let mut side: ::core::ffi::c_int = -(1 as ::core::ffi::c_int);
+    while side <= 1 as ::core::ffi::c_int {
+        let mut rf: ::core::ffi::c_double = (*H_tls()).rf;
+        let mut pred: HacPrediction = hac_size_side(&raw mut x, R, side, &raw mut s, &raw mut rf);
+        if pred.valid && pred.psi_t <= 2.0f64 * TEL_PI - 0.05f64 && pred.psi_t > spiral.psi_t {
+            spiral = pred;
+        }
+        side += 2 as ::core::ffi::c_int;
+    }
+    if spiral.valid {
+        e_tgt = spiral.e_ref;
+        // Same supersonic deceleration allowance as the MM305 drag path.
+        let mut q: ::core::ffi::c_double = 0.;
+        let mut mach: ::core::ffi::c_double = 0.;
+        tel_air(&raw const x.c, s.h, s.v, &raw mut q, &raw mut mach);
+        if mach > 1.0f64 {
+            let mut m_mid: ::core::ffi::c_double = 0.5f64 * (mach + 1.0f64);
+            let mut cl: ::core::ffi::c_double = 0.;
+            let mut cd: ::core::ffi::c_double = 0.;
+            hac_aero(&raw mut x, m_mid, hac_best_ld_aoa(&raw mut x, m_mid, hac_drag_aoa_ceiling(&raw mut x, m_mid)), &raw mut cl, &raw mut cd);
+            let mut eta_sup: ::core::ffi::c_double = if cl > 1e-3f64 { cd / cl } else { 1.0f64 };
+            let mut v1: ::core::ffi::c_double = s.v / mach;
+            let mut slope: ::core::ffi::c_double = 0.;
+            hac_reference_at(R, spiral.s_go, ::core::ptr::null_mut(), ::core::ptr::null_mut(), ::core::ptr::null_mut(), ::core::ptr::null_mut(), &raw mut slope);
+            let mut d: ::core::ffi::c_double = (s.v * s.v - v1 * v1) / (2.0f64 * TEL_G0 * fmax(0.3f64, eta_sup));
+            e_tgt += fmax(0.0f64, eta_sup - slope) * d;
+        }
+        if !psi_out.is_null() {
+            *psi_out = spiral.psi_t;
+        }
+    }
+    if e_tgt.is_finite() as i32 == 0 {
+        return false_0 != 0;
+    }
+    if !error_m.is_null() {
+        *error_m = hac_energy(&raw mut s) - e_tgt;
+    }
+    if !band_m.is_null() {
+        *band_m = hac_band_high(&raw mut x, e_tgt);
+    }
+    return true_0 != 0;
+}
+#[no_mangle]
 pub unsafe extern "C" fn mm305_hac_reference_energy(
     mut model: *const TerminalModel,
     mut live: *const TaemHacLiveAero,
