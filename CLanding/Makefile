@@ -318,3 +318,10 @@ $(BUILD)/polar_reentry_replay: $(TOOLS_ROOT)/polar_reentry_replay.c $(TARGET)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $< \
 		$(filter-out $(BUILD)/main.o $(BUILD)/predictor.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
 		$(LDFLAGS) $(LDLIBS) -o $@
+
+.PHONY: spiral-hac-test
+spiral-hac-test: $(TARGET)
+	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) $(VALIDATION_ROOT)/SpiralHACTests.c \
+		$(filter-out $(BUILD)/main.o,$(OBJECTS)) $(CNANO_OBJECTS) $(NANOPB_OBJECTS) \
+		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/spiral_hac_tests
+	cd $(REPO_ROOT) && "$(abspath $(BUILD)/spiral_hac_tests)" $(SPIRAL_ARGS)

@@ -15,6 +15,7 @@ typedef struct {
     double course_deg;
     double flight_path_angle_deg;
     double heading_error_deg;
+    double curvature_right_per_m; /* measured bank/lift at acquisition */
 } TaemGeometryState;
 
 bool taem_geometry_world(const TerminalModel *model, TaemFrameWorld *world);

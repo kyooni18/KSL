@@ -62,7 +62,11 @@ bool taem_geometry_state(const TerminalModel *m,
     double airspeed = taem_vec3_norm(vb);
     if (!isfinite(airspeed)) return false;
 
+    AeroForces flow = aero_compute(&m->world, &m->aero, s->position_i_m,
+        s->velocity_i_mps, s->ut_s, s->mass_kg, s->attitude.aoa_rad, 0.0);
     *out = (TaemGeometryState){
+        .curvature_right_per_m = flow.lift_n * sin(s->attitude.bank_rad) /
+            (s->mass_kg * horizontal * horizontal),
         .runway_along_m = rc.runway_along_m,
         .runway_cross_m = rc.runway_cross_m,
         .altitude_above_runway_m = rc.altitude_above_runway_m,

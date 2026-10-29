@@ -47,6 +47,15 @@ typedef struct {
     double p1_along_m, p1_cross_m;
     double p2_along_m, p2_cross_m;
     double p3_along_m, p3_cross_m;
+    /* Quintic acquisition, exact polar spiral, and curvature-unload geometry.
+       Coordinates are runway-forward / runway-right; positive curvature is right. */
+    TaemPoint2 capture_control[6];
+    double spiral_exit_radius_m;
+    double spiral_coefficient_m;
+    double spiral_exit_heading_rad;
+    double spiral_arc_lut[TAEM_ROUTE_LEAD_LUT_POINTS];
+    double unload_length_m;
+    double settle_length_m;
     double lead_length_m;
     float lead_arc_fraction_lut[TAEM_ROUTE_LEAD_LUT_POINTS];
     double rollout_length_m;

@@ -82,6 +82,9 @@ bool taem_route_limit_initial_vertical_authority(const TerminalModel *model,
 /* Planned (zero-speedbrake) airspeed at a route station, or NAN when the
  * route carries no speed plan. */
 double taem_route_planned_speed(const TaemRoute *route, double station_m);
+/* Horizontal curve at a continuous station, for diagnostics and validation. */
+bool taem_route_sample(const TaemRoute *route, double station_m, TaemRoutePoint *point);
+
 double taem_route_planned_altitude(const TaemRoute *route, double station_m);
 double taem_route_curvature_at_station(const TaemRoute *route, double station_m);
 
