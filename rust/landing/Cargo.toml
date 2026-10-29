@@ -1,0 +1,25 @@
+[package]
+name = "ksl-landing"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "KSL landing backend (deorbit through rollout guidance and flight control)"
+
+[features]
+mm305-supersonic-active-uncertainty = []
+
+[dependencies]
+libc = "0.2"
+
+[lib]
+name = "landing"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[[bin]]
+name = "landing_backend"
+path = "src/bin/landing_backend.rs"
+
+[profile.release]
+opt-level = 2
+panic = "abort"

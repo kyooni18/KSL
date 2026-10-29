@@ -1,5 +1,7 @@
 # CLanding architecture
 
+> The backend is now the Rust crate `rust/landing`. File names below are the former C module names; `x.c` is `rust/landing/src/<dir>/x.rs`, and each `.inc` slice is merged into the module that included it. Function and symbol names are unchanged.
+
 CLanding is organized around explicit subsystem ownership. The public compatibility header remains `include/landing.h`, but new code should prefer the narrow domain headers when practical.
 
 ## Guidance ownership

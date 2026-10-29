@@ -6,6 +6,7 @@ here.
 
 `make -C CLanding test` covers:
 
+- Rust white-box tests (`cargo test`): deorbit window search, polar MM305 inlet and Final capture geometry
 - architecture/ownership contracts (`ShuttleArchitectureContractTests.c`)
 - MM305 admission, TAEM frames/energy, TAEM tracker allocation, MM305 recovery monitor
 - vessel physics, FCS yaw and quaternion attitude
@@ -28,3 +29,8 @@ load guard), model identity, and probe tooling. `STSRepairTests.mk` is used by
 Probes that no longer compiled, or that no build ran, were removed during the
 KSL integration (see `git log -- Validation`). Tests that include production
 `.c` files directly must not be used as a reason to expose private helpers.
+
+`BackendParity.py` is the closed-loop behaviour gate for the Rust backend: it
+flies the same lockstep ShuttleSim scenarios with a reference backend (built
+from the commit before the Rust rewrite) and a candidate and requires
+byte-identical simulator telemetry.

@@ -17,7 +17,7 @@
   flight         orbit_trim             │              run_guidance.py
         │              │                │                 │         │
      Python kRPC    Python kRPC   CLanding/build/      backend   ShuttleSim
-        └──────┬───────┘          landing_backend (C)  (same     plant (C)
+        └──────┬───────┘          landing_backend      (same     plant (C)
                │                        │ C-Nano kRPC   binary)
                └────────── KSP / kRPC ──┘
 ```
@@ -25,7 +25,7 @@
 **Separation rules**
 
 - *Guidance and control laws* live only in `ksl/ascent/{guidance,vehicle,
-  allocation,attitude}.py` (ascent, OMS) and in `CLanding/` (deorbit through
+  allocation,attitude}.py` (ascent, OMS) and in `rust/landing/` (deorbit through
   rollout, atmospheric FCS). The mission layer contains none.
 - *Simulation* is a separate process (`ShuttleSim/`). It never links guidance
   code. The backend sees it through the simulator transport, exactly as it
@@ -33,7 +33,7 @@
 - *Vehicle models*: the ascent vehicle model is discovered at runtime from kRPC
   part topology (`ksl/ascent/vehicle.py`). The landing models (aero,
   atmosphere, attitude) are selected by `KSP_LANDER_MODEL_PROFILE`
-  (`ShuttleSim/scripts/model_paths.py`, `CLanding/telemetry/sim_telemetry.c`).
+  (`ShuttleSim/scripts/model_paths.py`, `rust/landing/src/telemetry/sim_telemetry.rs`).
 - *Interfaces* (CLI, TUI, PyQt, web telemetry) only read run/backend state and
   issue operator commands.
 
@@ -108,7 +108,7 @@ only mappings from program vocabularies to mission phases:
 The machine is forward-only (skips allowed, regressions rejected and logged).
 Backend `Abort`/`Fault` fail the mission. `Idle`, `Paused` and `Attitude Recovery`
 are statuses, not progress. A unit test parses `phase_string()` in
-`CLanding/vehicle/models.c` and fails if a new backend phase is left unmapped.
+`rust/landing/src/vehicle/models.rs` and fails if a new backend phase is left unmapped.
 
 Live holds: `prelaunch` (read-only preflight), `orbit`, `complete`.
 Continuation (`ksl continue`): orbit → deorbit; MM304/MM305/Final resume
@@ -157,5 +157,5 @@ configured runway bounds; an overrun becomes a failed landing after braking.
 | replay / export | `ksl/replay.py` (runs, ascent CSVs, ShuttleSim recordings) |
 
 The native backend's internal structure is documented in
-`CLanding/ARCHITECTURE.md` and `CLanding/README.md`. The ascent control model is
+`CLanding/ARCHITECTURE.md`, `CLanding/README.md` and `rust/landing/README.md`. The ascent control model is
 in `Docs/Ascent/README.md`.

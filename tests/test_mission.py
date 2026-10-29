@@ -50,9 +50,9 @@ class PhaseModelTests(unittest.TestCase):
 
     def test_every_backend_phase_string_is_classified(self):
         # Guards drift between CLanding's phase_string() table and the mission mapping.
-        source = (CLANDING / "vehicle" / "models.c").read_text()
-        table = re.search(r"phase_string\(GuidancePhase p\)\{static const char \*v\[\]=\{([^}]*)\}", source)
-        names = re.findall(r'"([^"]+)"', table.group(1))
+        source = (CLANDING.parent / "rust" / "landing" / "src" / "vehicle" / "models.rs").read_text()
+        table = re.search(r"fn phase_string\(.*?static mut v: \[\*const [^\]]*\] = \[(.*?)\];", source, re.S)
+        names = re.findall(r'b"([^"\\]+)\\0"', table.group(1))
         status_only = {"Idle", "Paused", "Attitude Recovery"}
         unclassified = [n for n in names if n not in BACKEND_PHASES and n not in BACKEND_FAILURE_PHASES
                         and n not in status_only]

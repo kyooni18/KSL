@@ -9,10 +9,10 @@ Prelaunch → Launch → Ascent → Orbit → Deorbit → MM304 Entry → MM305 
 
 It combines two former projects that now share one repository and history:
 
-- **Lander** (this repository, formerly KSPShuttleLander). A native C17 backend
-  owns deorbit planning, entry (MM304), TAEM (MM305), final approach, flare,
-  touchdown and rollout guidance, plus the atmospheric flight-control system.
-  It speaks kRPC directly through the vendored C-Nano client.
+- **Lander** (this repository, formerly KSPShuttleLander). A native Rust backend
+  (`rust/landing`) owns deorbit planning, entry (MM304), TAEM (MM305), final
+  approach, flare, touchdown and rollout guidance, plus the atmospheric
+  flight-control system. It speaks kRPC directly through the C-Nano protocol client.
 - **Launcher** (formerly KSPShuttleLauncher, imported with full history). Python
   kRPC programs own the STS ascent and OMS orbit trim. Roll handoff and the
   gravity-turn pitch envelope and attitude control law run in a Rust library
@@ -184,7 +184,7 @@ mission. Unset keys take the defaults in `ksl/config.py`.
 
 | Section | Contents |
 |---|---|
-| `connection` | kRPC address/ports, shared by the Python programs and the C backend |
+| `connection` | kRPC address/ports, shared by the Python programs and the landing backend |
 | `ascent` | target altitude/inclination, insertion offset, SRB/SSME limiters, extra flags |
 | `orbit` | OMS trim on/off, `minBurnDeltaV` (corrections at or below it are skipped; default 0.1 m/s) |
 | `landing` | backend configuration file, `KSP_LANDER_MODEL_PROFILE`, auto-warp, strict-plan policy, timeouts |
@@ -231,12 +231,13 @@ ksl/                 unified mission system (Python)
     vehicle.py       STS model, staging        geometry.py  frames and roll math
     allocation.py    bounded thrust allocation attitude.py  custom attitude controller
     orbit_trim.py    OMS trim                  events.py    @@ksl milestone lines
-CLanding/            native landing backend (C17; guidance, FCS, kRPC C-Nano, SQLite store)
+rust/landing/        native landing backend (Rust; guidance, FCS, kRPC C-Nano, SQLite store)
+CLanding/            backend build entry point, C ABI headers and docs (build/landing_backend)
 ShuttleSim/          standalone entry-to-landing simulator + closed-loop scripts
 Configuration/       mission profiles, backend configurations, checkpoints, vehicles
 Tools/               headless live harness, kRPC safety guard, analysis/probe tools
 PyQtApp/, WebTelemetry/  legacy PyQt operator UI and web telemetry viewer
-Validation/          C and Python regression tests for the native stack
+Validation/          C-ABI and Python regression tests for the native stack, backend parity gate
 tests/               mission-layer and ascent tests
 Docs/                architecture, algorithms, campaign logs and experiments
 ```
