@@ -6,12 +6,6 @@ extern "C" {
         profile: *const EntryExecProfile,
     ) -> bool;
     fn entry_phase_string(phase: EntryPhase) -> *const ::core::ffi::c_char;
-    fn entry_lateral_default_limits() -> EntryLateralLimits;
-    fn entry_lateral_update(
-        state: *mut EntryLateralState,
-        input: *const EntryLateralInput,
-        limits: *const EntryLateralLimits,
-    ) -> EntryLateralOutput;
     fn asin(__x: ::core::ffi::c_double) -> ::core::ffi::c_double;
     fn atan2(
         __y: ::core::ffi::c_double,
@@ -2212,77 +2206,6 @@ unsafe extern "C" fn entry_diagnostic_milestone_due(
     }
     return ::core::f32::NAN as ::core::ffi::c_double;
 }
-unsafe extern "C" fn entry_aoa_staircase_test(
-    mut mach: ::core::ffi::c_double,
-) -> ::core::ffi::c_double {
-    let mut spec: *const ::core::ffi::c_char = getenv(
-        b"KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST\0" as *const u8
-            as *const ::core::ffi::c_char,
-    );
-    if spec.is_null() || *spec == 0 || mach.is_finite() as i32 == 0 {
-        return ::core::f32::NAN as ::core::ffi::c_double;
-    }
-    let mut p: *const ::core::ffi::c_char = spec;
-    while !p.is_null() && *p as ::core::ffi::c_int != 0 {
-        let mut end: *mut ::core::ffi::c_char = ::core::ptr::null_mut::<
-            ::core::ffi::c_char,
-        >();
-        let mut threshold: ::core::ffi::c_double = strtod(p, &raw mut end);
-        if end == p as *mut ::core::ffi::c_char
-            || *end as ::core::ffi::c_int != ':' as i32
-        {
-            return ::core::f32::NAN as ::core::ffi::c_double;
-        }
-        p = end.offset(1 as ::core::ffi::c_int as isize);
-        let mut aoa: ::core::ffi::c_double = strtod(p, &raw mut end);
-        if end == p as *mut ::core::ffi::c_char {
-            return ::core::f32::NAN as ::core::ffi::c_double;
-        }
-        if mach >= threshold {
-            return aoa;
-        }
-        p = if *end as ::core::ffi::c_int == ',' as i32 {
-            end.offset(1 as ::core::ffi::c_int as isize)
-        } else {
-            ::core::ptr::null_mut::<::core::ffi::c_char>()
-        };
-    }
-    return ::core::f32::NAN as ::core::ffi::c_double;
-}
-unsafe extern "C" fn entry_max_lift_to_drag_aoa(
-    mut m: *const TerminalModel,
-    mut q: ::core::ffi::c_double,
-    mut mach: ::core::ffi::c_double,
-    mut ceiling: ::core::ffi::c_double,
-) -> ::core::ffi::c_double {
-    if m.is_null() || mach.is_finite() as i32 == 0 || ceiling.is_finite() as i32 == 0
-        || ceiling <= 0.0f64
-    {
-        return ::core::f32::NAN as ::core::ffi::c_double;
-    }
-    let mut best: ::core::ffi::c_double = ::core::f32::NAN as ::core::ffi::c_double;
-    let mut best_ld: ::core::ffi::c_double = -::core::f32::INFINITY
-        as ::core::ffi::c_double;
-    let mut a: ::core::ffi::c_double = 4.0f64;
-    while a <= ceiling + 1e-9f64 {
-        let mut lq: ::core::ffi::c_double = 0.0f64;
-        let mut dq: ::core::ffi::c_double = 0.0f64;
-        aero_force_per_q(
-            &raw const (*m).aero,
-            fmax(q, 1.0f64),
-            mach,
-            a,
-            &raw mut lq,
-            &raw mut dq,
-        );
-        if dq > DBL_MIN && lq / dq > best_ld {
-            best_ld = lq / dq;
-            best = a;
-        }
-        a += 0.5f64;
-    }
-    return best;
-}
 unsafe extern "C" fn entry_program_contract_hold(
     mut g: *mut GuidanceMachine,
     mut t: *const Telemetry,
@@ -2925,7 +2848,12 @@ pub unsafe extern "C" fn entry_program_guidance(
     (*g).entry_alpha_target = alpha.target_aoa;
     (*g).entry_alpha_has_modulation = true_0 != 0;
     (*g).entry_alpha_modulation = alpha.modulation;
-    let mut limits: EntryLateralLimits = entry_lateral_default_limits();
+    let mut limits: EntryLateralLimits = EntryLateralLimits {
+        maximum_bank_deg: 0.0f64,
+        maximum_roll_rate_deg_s: 0.0f64,
+        maximum_roll_accel_deg_s2: 0.0f64,
+        minimum_leg_duration_s: 0.0f64,
+    };
     limits.maximum_bank_deg = fmin(dynamic_bank_limit(t, v), MM304_PLANNED_MAX_BANK_DEG);
     limits.maximum_roll_rate_deg_s = (*s).entry_roll_rate;
     limits.maximum_roll_accel_deg_s2 = (*s).entry_roll_acceleration;

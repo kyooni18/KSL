@@ -6,7 +6,6 @@
 #include "decision_envelope.h"
 #include "entry_alpha.h"
 #include "entry_drag_reference.h"
-#include "entry_energy_control.h"
 #include "taem_exec.h"
 #include "taem_planner.h"
 /* AoA retains a true aerodynamic hard limit.  MM304 bank is different: 40 deg

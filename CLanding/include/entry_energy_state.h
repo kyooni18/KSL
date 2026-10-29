@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-/* Persistent state of the MM304 energy/drag-tracking law
-   (entry_energy_control.h).  Kept dependency-free so GuidanceMachine can embed it. */
+/* State of the retired MM304 energy/drag-tracking law; kept only because
+   GuidanceMachine embeds it (layout shared with the Rust backend). */
 typedef struct {
     bool initialized;
     double integral_m_s;

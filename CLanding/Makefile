@@ -49,7 +49,7 @@ CNANO_HEADERS := $(CNANO_COMPAT)/pb.h $(CNANO_COMPAT)/pb_common.h $(CNANO_COMPAT
 
 TARGET := $(BUILD)/landing_backend
 
-.PHONY: all clean rust test qualification deorbit-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test backend-protocol-test mm305-recovery-monitor-test
+.PHONY: all clean rust test qualification deorbit-test architecture-test mm305-admission-test taem-frames-energy-test taem-native-stack-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test backend-protocol-test mm305-recovery-monitor-test
 .SECONDARY: $(CNANO_HEADERS)
 
 all: $(TARGET)
@@ -170,18 +170,6 @@ terminal-propagation-convergence-test: $(TARGET)
 
 test: terminal-propagation-convergence-test
 
-entry-lateral-feedback-test: $(TARGET)
-	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
-		$(VALIDATION_ROOT)/EntryLateralFeedbackTests.c $(RUST_LIB) \
-		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_lateral_feedback_tests
-	$(BUILD)/entry_lateral_feedback_tests
-
-entry-energy-law-test: $(TARGET)
-	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) \
-		$(VALIDATION_ROOT)/EntryEnergyLawTests.c $(RUST_LIB) \
-		$(LDFLAGS) $(LDLIBS) -o $(BUILD)/entry_energy_law_tests
-	$(BUILD)/entry_energy_law_tests
-
 $(BUILD)/sim.o: ../ShuttleSim/src/sim.c | $(BUILD)
 	$(CC) $(PROJECT_CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
@@ -244,7 +232,7 @@ rust-test:
 	$(CARGO) test --release $(RUST_TARGET_FLAG) --manifest-path $(RUST_MANIFEST)
 
 # Fast offline regression gate (~10 s); must pass on every commit.
-test: rust-test entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test entry-lateral-feedback-test entry-energy-law-test backend-protocol-test mm305-recovery-monitor-test touchdown-quality-test deorbit-test
+test: rust-test entry-forecast-admission-test architecture-test mm305-admission-test taem-frames-energy-test vessel-physics-test flight-control-yaw-test flight-control-quaternion-test backend-protocol-test mm305-recovery-monitor-test touchdown-quality-test deorbit-test
 
 # Slow physical gates (~4 min). mm305-feasibility-test is a documented open
 # gate: it currently fails its non-vacuity check (see VALIDATION.md).

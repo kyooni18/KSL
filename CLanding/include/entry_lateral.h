@@ -167,24 +167,4 @@ typedef struct {
     double feasibility_margin_m;
 } EntryLateralTurnEnvelope;
 
-/*
- * Select the locally shorter signed turn toward a runway-frame point. If the
- * point is numerically coincident with the vehicle, target_course_deg is the
- * geometric tie-break. A zero return means the geometry itself is symmetric.
- */
-double entry_lateral_geometry_turn_sign(double current_course_deg,
-    double current_along_m, double current_cross_m,
-    double target_along_m, double target_cross_m,
-    double target_course_deg);
-
-double entry_lateral_crossrange_arrest_distance(double crossrange_rate,
-    double course_alignment,double lift_accel,double effective_bank_deg);
-EntryLateralLimits entry_lateral_default_limits(void);
-void entry_lateral_state_init(EntryLateralState *state, double ut,
-    double bank_sign_hint, double measured_bank_deg);
-EntryLateralOutput entry_lateral_update(EntryLateralState *state,
-    const EntryLateralInput *input, const EntryLateralLimits *limits);
-EntryLateralTurnEnvelope entry_lateral_terminal_turn_envelope(
-    const EntryLateralTurnInput *input);
-
 #endif

@@ -28,9 +28,7 @@ pub mod flight_control;
 pub mod guidance {
 pub mod entry_alpha;
 pub mod entry_drag_reference;
-pub mod entry_energy_control;
 pub mod entry_exec;
-pub mod entry_lateral;
 pub mod guidance;
 pub mod guidance_common;
 pub mod guidance_core;
