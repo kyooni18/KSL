@@ -1077,14 +1077,19 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
     }
     unsigned inlet_candidates_evaluated=1;
     /* (burn-start offset, witness inlet range) of every scanned candidate. */
-    double scan_dt[8],scan_range[8];int scan_count=0;
+    double scan_dt[16],scan_range[16];int scan_count=0;
     if(isfinite(selected_inlet.taem_distance)&&selected_inlet.reached_taem){
         scan_dt[scan_count]=0.0;scan_range[scan_count++]=selected_inlet.taem_distance;}
     double scan_origin=timing_best.burn_start;
     double inlet_step=s->target_deorbit_capture_radius/
         fmax(1.0,timing_best.entry_speed);
     if(!isfinite(inlet_step)||inlet_step<=0.0)inlet_step=0.0;
-    for(int offset=-2;offset<=2&&inlet_step>0.0;offset++){
+    /* A later burn hands over closer.  While the latest scanned handoff is
+       still beyond MM304's target, keep stepping later so the refinement
+       below has a bracket: live 2026-10-29 the +2 step stopped at 95 km
+       against a 44.6 km HAC target and the burn delivered MM305 short. */
+    int last_offset=2;
+    for(int offset=-2;offset<=last_offset&&inlet_step>0.0;offset++){
         if(offset==0)continue;
         double start=timing_best.burn_start+offset*inlet_step;
         if(start<state.ut+lead||start>state.ut+lead+search_horizon)continue;
@@ -1108,8 +1113,12 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
             nearby_inlet=full;
         }
         inlet_candidates_evaluated++;
-        if(scan_count<8&&isfinite(nearby_inlet.taem_distance)&&nearby_inlet.reached_taem){
+        if(scan_count<16&&isfinite(nearby_inlet.taem_distance)&&nearby_inlet.reached_taem){
             scan_dt[scan_count]=offset*inlet_step;scan_range[scan_count++]=nearby_inlet.taem_distance;}
+        if(offset==last_offset&&last_offset<8&&isfinite(sts_handoff_target)&&
+           nearby_inlet.reached_taem&&isfinite(nearby_inlet.taem_distance)&&
+           nearby_inlet.taem_distance>sts_handoff_target)
+            last_offset++;
         bool better=deorbit_guided_candidate_better(&nearby,&nearby_inlet,
             &selected,&selected_inlet,p,site,v,s,sts_handoff_target);
         if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
