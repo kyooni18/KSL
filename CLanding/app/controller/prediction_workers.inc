@@ -3,8 +3,9 @@
    interpolated between recorded samples; course and flight-path angle from
    the bracketing samples.  False when the forecast never gets there. */
 static bool entry_policy_handoff_geometry(const EntryPrediction *f,const PlanetModel *p,
-        const LandingConfiguration *cfg,TaemGeometryState *out){
+        const LandingConfiguration *cfg,TaemGeometryState *out,bool *receding){
     if(!f||!p||!cfg||!out)return false;
+    if(receding)*receding=false;
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     /* Experimental STS hands over at the band centre (guidance_terminal.c). */
     double mach_handoff=cfg->guidance.mm305_target_mach+
@@ -34,6 +35,7 @@ static bool entry_policy_handoff_geometry(const EntryPrediction *f,const PlanetM
                 .ground_speed_mps=speed*cos(fpa),.airspeed_mps=speed,
                 .course_deg=course,.flight_path_angle_deg=fpa*RAD2DEG,
                 .heading_error_deg=norm_signed_deg(course-cfg->site.runway_heading)};
+            if(receding)*receding=fabs(norm_signed_deg(initial_bearing(at,site)-course))>90.0;
             return true;
         }
         prev_excess=excess;
@@ -52,13 +54,27 @@ static double entry_policy_handoff_miss(const EntryPrediction *f,const PlanetMod
         double mass){
     TaemGeometryState geo;
     double error,band;
+    bool receding=false;
     /* The model comes from the worker: a guidance copy's entry_terminal_model
        is bound only inside guidance_update and is NULL here, which left every
        live HAC replan without a forecast (live 2026-10-29). */
-    if(!g||!model||!entry_policy_handoff_geometry(f,p,cfg,&geo)||
+    if(!g||!model||!entry_policy_handoff_geometry(f,p,cfg,&geo,&receding)||
        !mm305_hac_handoff_energy_error(model,&g->taem_hac_live_aero,
            &geo,mass,&error,&band))
         return NAN;
+    if(getenv("KSP_LANDER_TRACE_HANDOFF_FORECAST"))
+        fprintf(stderr,"HANDOFF_FORECAST end_ut=%.1f final_h=%.0f final_V=%.0f along=%.0f cross=%.0f h=%.0f V=%.0f course=%.1f fpa=%.2f "
+            "E=%.0f error=%+.0f band=%.0f live_excess=%+.0f\n",
+            f->final_state.ut,f->taem_altitude,f->taem_speed,geo.runway_along_m,geo.runway_cross_m,
+            geo.altitude_above_runway_m,geo.airspeed_mps,geo.course_deg,geo.flight_path_angle_deg,
+            geo.altitude_above_runway_m+geo.airspeed_mps*geo.airspeed_mps/(2.0*9.81),error,band,
+            g->entry_hac_energy_excess);
+    /* A forecast that reaches the handoff Mach already past the site and
+       flying away has too much energy, however large the HAC path back makes
+       its "error".  Reading that as short (live 2026-10-29 equatorial: handoff
+       forecast 200 km past KSC, -128 km "error") held MM304 wings-level at
+       max L/D and drove it 249 km long. */
+    if(receding)return -fabs(band-error);
     return band-error;
 }
 
@@ -478,8 +494,11 @@ static void *terminal_prediction_worker(void *arg){
                             terminal_model_valid?&terminal_model:NULL,state.mass);
                     else{
                         TaemGeometryState geo;
-                        if(entry_policy_handoff_geometry(&f,&planet,&cfg,&geo))
+                        bool receding=false;
+                        if(entry_policy_handoff_geometry(&f,&planet,&cfg,&geo,&receding)){
                             miss=hypot(geo.runway_along_m,geo.runway_cross_m)-target;
+                            if(receding)miss=-fabs(miss);
+                        }
                     }
                     entry_prediction_clear(&f);
                     if(iteration==0){f_lo=miss;if(!(miss<0.0))break;continue;}
