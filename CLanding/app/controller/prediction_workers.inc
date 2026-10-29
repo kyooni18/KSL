@@ -1,30 +1,65 @@
-/* Site distance at the first forecast point inside the live MM305 physical
-   handoff (Mach <= target+half-width, altitude <= MM305 ceiling), interpolated
-   between recorded samples. NAN when the forecast never gets there. */
-static double entry_policy_handoff_distance(const EntryPrediction *f,const PlanetModel *p,
-        const LandingConfiguration *cfg){
-    if(!f||!p||!cfg)return NAN;
+/* Runway-frame state at the first forecast point inside the live MM305
+   physical handoff (Mach <= target+half-width, altitude <= MM305 ceiling),
+   interpolated between recorded samples; course and flight-path angle from
+   the bracketing samples.  False when the forecast never gets there. */
+static bool entry_policy_handoff_geometry(const EntryPrediction *f,const PlanetModel *p,
+        const LandingConfiguration *cfg,TaemGeometryState *out){
+    if(!f||!p||!cfg||!out)return false;
     GeoPoint site={cfg->site.latitude,cfg->site.longitude,cfg->site.altitude};
     /* Experimental STS hands over at the band centre (guidance_terminal.c). */
     double mach_handoff=cfg->guidance.mm305_target_mach+
         ((cfg->guidance.sts_trajectory_delivery||cfg->guidance.taem_hac_law)&&
          !strcmp(cfg->vehicle.model_id,"STS")?0.0:cfg->guidance.mm305_mach_half_width);
-    double prev_excess=NAN,prev_range=NAN;
+    double prev_excess=NAN;
     for(size_t i=0;i<f->trajectory.count;++i){
         const TrajectoryPoint *pt=&f->trajectory.points[i];
         double sound=planet_atmospheric_speed_of_sound(p,pt->altitude);
         if(!(sound>0.0))continue;
-        GeoPoint geo={pt->latitude,pt->longitude,pt->altitude};
-        double range=great_circle_distance(geo,site,p->radius);
         double excess=pt->speed-mach_handoff*sound;
-        if(excess<=0.0&&pt->altitude<=cfg->guidance.mm305_max_altitude){
-            if(isfinite(prev_excess)&&prev_excess>0.0)
-                return prev_range+(range-prev_range)*prev_excess/(prev_excess-excess);
-            return range;
+        if(i>0&&excess<=0.0&&pt->altitude<=cfg->guidance.mm305_max_altitude){
+            const TrajectoryPoint *q=&f->trajectory.points[i-1];
+            double k=isfinite(prev_excess)&&prev_excess>0.0?prev_excess/(prev_excess-excess):1.0;
+            GeoPoint a={q->latitude,q->longitude,q->altitude},b={pt->latitude,pt->longitude,pt->altitude};
+            double ground=great_circle_distance(a,b,p->radius);
+            if(!(ground>1.0))return false;
+            double course=initial_bearing(a,b);
+            GeoPoint at=destination_point(a,course,k*ground,p->radius);
+            at.altitude=q->altitude+k*(pt->altitude-q->altitude);
+            double speed=q->speed+k*(pt->speed-q->speed);
+            double fpa=atan2(pt->altitude-q->altitude,ground);
+            double along,cross;
+            runway_coordinates(at,site,cfg->site.runway_heading,p->radius,&along,&cross);
+            *out=(TaemGeometryState){.runway_along_m=along,.runway_cross_m=cross,
+                .altitude_above_runway_m=at.altitude-cfg->site.altitude,
+                .ground_speed_mps=speed*cos(fpa),.airspeed_mps=speed,
+                .course_deg=course,.flight_path_angle_deg=fpa*RAD2DEG,
+                .heading_error_deg=norm_signed_deg(course-cfg->site.runway_heading)};
+            return true;
         }
-        prev_excess=excess;prev_range=range;
+        prev_excess=excess;
     }
-    return NAN;
+    return false;
+}
+
+/* MM304 cost of a forecast: the energy-height shortfall at the handoff
+   against what MM305's HAC needs from that position and course plus the
+   law's high band (+ : short).  Measured as MM305 will fly it, so crossrange
+   and course error left at handoff are charged as HAC turn, not ignored by a
+   straight-line site distance (live 2026-10-29: 49.7 km site target, 70 km
+   HAC path flown, no energy left for the HAC). */
+static double entry_policy_handoff_miss(const EntryPrediction *f,const PlanetModel *p,
+        const LandingConfiguration *cfg,const GuidanceMachine *g,const TerminalModel *model,
+        double mass){
+    TaemGeometryState geo;
+    double error,band;
+    /* The model comes from the worker: a guidance copy's entry_terminal_model
+       is bound only inside guidance_update and is NULL here, which left every
+       live HAC replan without a forecast (live 2026-10-29). */
+    if(!g||!model||!entry_policy_handoff_geometry(f,p,cfg,&geo)||
+       !mm305_hac_handoff_energy_error(model,&g->taem_hac_live_aero,
+           &geo,mass,&error,&band))
+        return NAN;
+    return band-error;
 }
 
 static double entry_supervision_horizon(const GuidanceSettings *settings){
@@ -210,6 +245,68 @@ static void *mm305_planner_worker(void *arg){
     return NULL;
 }
 
+/* Inertial speed and radial rate: the two observables the drag and lift
+   scales of a short re-flown forecast are fitted to. */
+static void forecast_observables(const VehicleState *s,double *speed,double *radial){
+    *speed=vmag(s->velocity);
+    *radial=vdot(s->velocity,vnorm(s->position,v3(0,0,1)));
+}
+
+/* Re-fly the last ~30 s from the recorded state with the bank and AoA the
+   vehicle actually held, and correct the forecast drag/lift scales so the
+   re-flown forecast arrives at the measured speed and radial rate.  A
+   forecast that disagrees with the flight it predicts may not keep steering
+   the vehicle (live 2026-10-28: "short" for five minutes, then an overshoot). */
+static void forecast_fit_scales(const ForecastHistorySample *h,int n,const VehicleState *now,
+        const PlanetModel *planet,AerodynamicModel aero,const AerodynamicEnvelope *envelope,
+        const TrajectoryCalibrationModel *calibration,const LandingConfiguration *cfg,
+        double *drag_scale,double *lift_scale){
+    if(n<2)return;
+    int j=-1;
+    for(int i=n-1;i>=0;--i)if(now->ut-h[i].state.ut>=FORECAST_FIT_WINDOW_S){j=i;break;}
+    if(j<0)return;
+    double bank=0,aoa=0,side=0;int m=0;
+    for(int i=j;i<n;++i){
+        if(!(h[i].q>=FORECAST_FIT_MIN_Q_PA))return;               /* fit in sensible air only */
+        if(fabs(h[i].bank)>5.0){
+            double s=h[i].bank>=0?1.0:-1.0;
+            if(side!=0.0&&s!=side)return;                          /* a reversal inside the window */
+            side=s;
+        }
+        bank+=fabs(h[i].bank);aoa+=h[i].aoa;m++;
+    }
+    bank/=m;aoa/=m;if(side==0.0)side=1.0;
+    double duration=now->ut-h[j].state.ut;
+    double k[2]={*drag_scale,*lift_scale},pred[3][2];
+    for(int c=0;c<3;++c){
+        TrajectoryCalibrationModel cal=*calibration;
+        cal.forecast_drag_scale=k[0]*(c==1?1.1:1.0);
+        cal.forecast_lift_scale=k[1]*(c==2?1.1:1.0);
+        cal.forecast_exact_policy_bank=true;
+        EntryPrediction f=predictor_simulate_entry_policy(h[j].state,planet,aero,envelope,&cal,
+            &cfg->vehicle,&cfg->site,&cfg->guidance,bank,aoa,side,duration);
+        VehicleState end=f.final_state;
+        entry_prediction_clear(&f);
+        if(fabs(end.ut-now->ut)>2.0)return;
+        /* carry the forecast to the measurement time along its end velocity */
+        forecast_observables(&end,&pred[c][0],&pred[c][1]);
+    }
+    double act[2];forecast_observables(now,&act[0],&act[1]);
+    double r0=act[0]-pred[0][0],r1=act[1]-pred[0][1];
+    double d=log(1.1);
+    double a=(pred[1][0]-pred[0][0])/d,b=(pred[2][0]-pred[0][0])/d;
+    double cc=(pred[1][1]-pred[0][1])/d,dd=(pred[2][1]-pred[0][1])/d;
+    double det=a*dd-b*cc;
+    if(!(fabs(det)>1e-6))return;
+    double x0=( dd*r0-b*r1)/det,x1=(-cc*r0+a*r1)/det;              /* log-scale steps */
+    x0=clampd(0.5*x0,-0.2,0.2);x1=clampd(0.5*x1,-0.2,0.2);
+    *drag_scale=clampd(k[0]*exp(x0),FORECAST_SCALE_MIN,FORECAST_SCALE_MAX);
+    *lift_scale=clampd(k[1]*exp(x1),FORECAST_SCALE_MIN,FORECAST_SCALE_MAX);
+    if(getenv("KSP_LANDER_TRACE_FORECAST_FIT"))
+        fprintf(stderr,"FORECAST_FIT ut=%.1f window=%.0fs bank=%.1f aoa=%.1f dv=%+.2f dvr=%+.2f -> drag x%.3f lift x%.3f\n",
+            now->ut,duration,bank,aoa,r0,r1,*drag_scale,*lift_scale);
+}
+
 static void *terminal_prediction_worker(void *arg){
     LandingController *c=arg;
     for(;;){
@@ -228,6 +325,8 @@ static void *terminal_prediction_worker(void *arg){
         bool run=false,has_plan=false;
         double request_ut=0,sign=0;
         AsyncPredictionIdentity request_identity={0};
+        ForecastHistorySample history[FORECAST_HISTORY_MAX];int history_count=0;
+        double forecast_drag=1.0,forecast_lift=1.0;
 
         pthread_mutex_lock(&c->mutex);
         if(c->stop_prediction_thread){
@@ -249,11 +348,19 @@ static void *terminal_prediction_worker(void *arg){
             }
             double cadence_anchor=fmax(c->last_terminal_prediction_request_ut,c->last_terminal_prediction_completion_ut);
             double now_wall=monotonic_seconds();
+            /* ShuttleSim lockstep: the cooldown elapses in UT, as it would live at 1x */
+            if(krpc_session_is_simulator(c->session)&&c->last_terminal_prediction_completion_ut>-1e299)
+                now_wall=c->last_terminal_prediction_completion_wall+
+                    (c->latest_telemetry.ut-c->last_terminal_prediction_completion_ut);
             if(async_prediction_request_due(c->latest_telemetry.ut,cadence_anchor,now_wall,
                     c->last_terminal_prediction_completion_wall,c->last_terminal_prediction_solve_wall,
                     c->configuration.guidance.prediction_interval)){
                 state=c->latest_state;
                 telemetry=c->latest_telemetry;
+                history_count=c->forecast_history_count;
+                memcpy(history,c->forecast_history,(size_t)history_count*sizeof(*history));
+                if(c->forecast_drag_scale>0.0)forecast_drag=c->forecast_drag_scale;
+                if(c->forecast_lift_scale>0.0)forecast_lift=c->forecast_lift_scale;
                 cfg=effective_config(c);
                 planet=*krpc_session_planet(c->session);
                 aero=c->aerodynamics;
@@ -340,6 +447,10 @@ static void *terminal_prediction_worker(void *arg){
             double target=guidance.entry_handoff_target_range;
             if((cfg.guidance.taem_energy_law||cfg.guidance.taem_hac_law)&&isfinite(target)&&
                isfinite(telemetry.range_to_site)){
+                forecast_fit_scales(history,history_count,&state,&planet,aero,&envelope,&calibration,&cfg,
+                    &forecast_drag,&forecast_lift);
+                calibration.forecast_drag_scale=forecast_drag;
+                calibration.forecast_lift_scale=forecast_lift;
                 /* Forecast the incidence MM304 actually commands (staircase,
                    drag boost and low-energy cap included), not the schedule. */
                 double aoa=guidance.entry_control_plan_valid&&isfinite(guidance.entry_control_aoa)?
@@ -359,9 +470,18 @@ static void *terminal_prediction_worker(void *arg){
                     double bank=iteration==0?lo:iteration==1?hi:0.5*(lo+hi);
                     EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
                         &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,bank,aoa,side,bound);
-                    double handoff=entry_policy_handoff_distance(&f,&planet,&cfg);
+                    /* + : short.  HAC law: energy height (m) under MM305's HAC
+                       need plus margin; otherwise handoff site distance past target. */
+                    double miss=NAN;
+                    if(cfg.guidance.taem_hac_law)
+                        miss=entry_policy_handoff_miss(&f,&planet,&cfg,&guidance,
+                            terminal_model_valid?&terminal_model:NULL,state.mass);
+                    else{
+                        TaemGeometryState geo;
+                        if(entry_policy_handoff_geometry(&f,&planet,&cfg,&geo))
+                            miss=hypot(geo.runway_along_m,geo.runway_cross_m)-target;
+                    }
                     entry_prediction_clear(&f);
-                    double miss=handoff-target; /* + : hands off too far out (short) */
                     if(iteration==0){f_lo=miss;if(!(miss<0.0))break;continue;}
                     if(iteration==1){f_hi=miss;if(!(miss>0.0))break;continue;}
                     if(!isfinite(miss))break;
@@ -379,7 +499,7 @@ static void *terminal_prediction_worker(void *arg){
                     guidance.entry_policy_aoa_deg=policy_aoa;
                     guidance.entry_policy_ut=request_ut;
                     fprintf(stderr,"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %.1f deg "
-                        "(miss at 0 deg %+.1f km, at max %+.1f km, best %+.1f km)\n",request_ut,target/1000.0,
+                        "(short at 0 deg %+.1f km, at max %+.1f km, best %+.1f km; HAC law: energy height)\n",request_ut,target/1000.0,
                         solved,policy_aoa,f_lo/1000.0,f_hi/1000.0,best_miss/1000.0);
                 }
             }
@@ -394,6 +514,7 @@ static void *terminal_prediction_worker(void *arg){
         deorbit_plan_clear(&plan);
 
         pthread_mutex_lock(&c->mutex);
+        if(entry_job){c->forecast_drag_scale=forecast_drag;c->forecast_lift_scale=forecast_lift;}
         /* Coalesce to the freshest state and impose a wall-clock cooldown tied to
            the cost of the solve. A slow advisory forecast must never become a
            catch-up loop merely because KSP UT advanced while it was computing. */

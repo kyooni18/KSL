@@ -145,24 +145,23 @@ static void check_case(const PlanetModel *p, const LandingConfiguration *cfg,
         GuidanceMachine energy=live;
         GuidanceResult outcome=guidance_update_with_terminal_model(&live,&coherent,
             &state,NULL,p,aero,cfg,model);
-        assert(live.entry_exec.entry_complete);
-        assert(live.entry_exec.last_transition_reason==ENTRY_TRANSITION_TAEM_FORCED_HANDOFF);
-        assert(live.terminal_region_entered);
-        assert(taem_exec_owns_vehicle(&live.taem_exec));
-        assert(live.mm305_planning_needed||live.mm305_route_committed);
-        printf("forced live handoff: phase=%d route=%d pending=%d status=%s\n",
-            outcome.phase,live.mm305_route_committed?1:0,live.mm305_planning_needed?1:0,
-            outcome.status);
+        assert(!live.entry_exec.entry_complete);
+        assert(!live.terminal_region_entered);
+        assert(!taem_exec_owns_vehicle(&live.taem_exec));
+        assert(!live.mm305_route_committed);
+        assert(live.mm305_admission_needed);
+        printf("unqualified physical boundary held: phase=%d pending=%d status=%s\n",
+            outcome.phase,live.mm305_admission_needed?1:0,outcome.status);
         guidance_result_clear(&outcome);
-        /* The STS energy-law alternative must receive ownership without an
-           unused fixed-HAC job blocking the simulator's planning barrier. */
+        /* A legacy guidance-mode setting must not bypass physical admission. */
         LandingConfiguration energy_cfg=*cfg;
         energy_cfg.guidance.taem_energy_law=true;
         assert(terminal_model_capture(model,&files,&energy_cfg,42,reason,sizeof(reason)));
         outcome=guidance_update_with_terminal_model(&energy,&coherent,&state,
             NULL,p,aero,&energy_cfg,model);
-        assert(taem_exec_owns_vehicle(&energy.taem_exec));
-        assert(!energy.mm305_planning_needed);
+        assert(!taem_exec_owns_vehicle(&energy.taem_exec));
+        assert(!energy.entry_exec.entry_complete);
+        assert(energy.mm305_admission_needed);
         assert(!energy.mm305_route_committed);
         guidance_result_clear(&outcome);
         free(model);

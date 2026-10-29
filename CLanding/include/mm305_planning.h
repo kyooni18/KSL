@@ -110,6 +110,9 @@ bool guidance_mm305_revalidate_admission(GuidanceMachine *g,const Telemetry *t,
 bool guidance_mm305_adopt_admission_route(GuidanceMachine *g,
     const LandingConfiguration *cfg);
 
+/* Hand-off energy against the HAC MM305 will fly (guidance_taem.c). */
+bool mm305_hac_handoff_energy_error(const TerminalModel *model,const TaemHacLiveAero *live,
+        const TaemGeometryState *geo,double mass_kg,double *error_m,double *band_m);
 /* MM305's HAC reference point at a handoff Mach (guidance_taem.c). */
 bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *live,
         double mass_kg,double mach,double *altitude_above_site_m,double *speed_mps,

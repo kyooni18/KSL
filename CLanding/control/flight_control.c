@@ -1086,9 +1086,9 @@ bool flight_control_step_attitude(FlightControlState *state,
        Command RCS proactively as dynamic loading builds, before a significant
        bank error has exhausted the surface-control law. Separate hysteresis
        from the existing saturated-axis/beta latch: neither can cancel the
-       other, and neither leaks into approach, flare, or rollout profiles. */
-    bool rcs_profile = profile == PROFILE_ENTRY || profile == PROFILE_TAEM ||
-                       profile == PROFILE_RECOVERY;
+       other. TAEM and subsequent landing profiles use surfaces only; clearing
+       both latches here also turns off any RCS carried over from entry. */
+    bool rcs_profile = profile == PROFILE_ENTRY || profile == PROFILE_RECOVERY;
     bool axis_saturated = false;
     for (int axis = 0; axis < FLIGHT_CONTROL_AXIS_COUNT; axis++)
         if (fabs(state->last_control[axis]) >= 1.0 - DBL_EPSILON) /* decision-literal-ok: normalized actuator command domain */

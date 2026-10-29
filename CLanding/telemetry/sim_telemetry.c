@@ -620,6 +620,18 @@ static const struct {
                          "none",
                          "ShuttleSim/reference-model/stsn_attitude_identified.ini",
                          "none"}},
+    /* sts-live-20261015-live-only re-measured from live sessions 2026-10-16..28. */
+    {"sts-live-20261028", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_cells20261028.csv",
+                         "none",
+                         "ShuttleSim/reference-model/sts_attitude_live20261028.ini",
+                         "none"}},
+    /* live-only aero with the STS attitude response refitted 2026-10-28. */
+    {"sts-live-20261015-att28", "STS", {"ShuttleSim/reference-model/kerbin_atmosphere_identified.csv",
+                         "ShuttleSim/reference-model/sts_aero_cells20261015_live_only.csv",
+                         "none",
+                         "ShuttleSim/reference-model/sts_attitude_live20261028.ini",
+                         "none"}},
     {"fitted-legacy", "STS-N", {"ShuttleSim/data/fitted/kerbin_atmosphere_ksp.csv",
                        "ShuttleSim/data/fitted/stsn_aero_ksp_robust.csv",
                        "ShuttleSim/data/fitted/stsn_force_book.csv",

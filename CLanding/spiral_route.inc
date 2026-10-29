@@ -135,6 +135,10 @@ static bool build_hac(const TerminalModel *m,const TaemGeometryState *start,
     /* Equal nominal lateral acceleration at the two speed endpoints. The
        native profile/replay must prove the intervening speed/curvature pairing. */
     double rf=fmax(ri*vf*vf/(vi*vi),vf*vf/(gravity*tan(bank)));
+    /* Keep r'' <= Rf on partial sweeps. This is a sufficient analytic
+       no-inflection bound for the polar curvature numerator, not a fixed
+       contraction coefficient. Short captures retain a larger exit radius. */
+    rf=fmax(rf,ri/(1+sweep*sweep/12));
     if(!(rf<ri)) return false;
     r->side=side;r->spiral_exit_radius_m=rf;
     r->spiral_coefficient_m=(ri-rf)/pow(sweep,4);

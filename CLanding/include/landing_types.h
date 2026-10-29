@@ -139,6 +139,12 @@ typedef struct {
     /* Explicit robustness multipliers.  Normal flight leaves these at unity;
        stress simulations vary them without mutating the certified data book. */
     double stress_drag_scale, stress_lift_scale;
+    /* Online MM304 forecast correction fitted to the measured flight;
+       zero (unset) means unity. */
+    double forecast_drag_scale, forecast_lift_scale;
+    /* Calibration replay: fly the forced policy bank exactly (no crossrange
+       demand), as the measured flight it is fitted to did. */
+    bool forecast_exact_policy_bank;
     double altitude_residual, speed_residual, range_residual, confidence; int accepted_samples;
 } TrajectoryCalibrationModel;
 typedef struct { double ut; Vector3 position, velocity; double mass; } VehicleState;

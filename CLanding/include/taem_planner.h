@@ -26,8 +26,10 @@ typedef struct {
     const char *reason;
 } TaemPlanResult;
 
-/* Builds an analytic HAC-circle route from the live state.  Radius and Final
- * exit stay fixed while sweep_abs_rad selects the capture point on the circle. */
+/* Build the native quintic acquisition / contracting polar spiral / smooth
+ * curvature-unload route. hac_radius_m is the entry radius; exit radius follows
+ * endpoint speed/authority and the no-inflection bound. Geometry alone is not
+ * a qualification: the full native profile and Final replay must pass. */
 bool taem_route_build_hac(const TerminalModel *model,
         const TaemGeometryState *start, double hac_radius_m, double side,
         double sweep_abs_rad, double point_spacing_m,
@@ -61,7 +63,7 @@ bool taem_route_blend_hac_length(const TerminalModel *model,
         double target_lead_length_m, TaemRoute *route,
         char *reason, size_t reason_size);
 
-/* Peak curvature of the finite C1 lead; INFINITY for an invalid route. */
+/* Peak curvature of the finite G2 acquisition; INFINITY for an invalid route. */
 double taem_route_lead_peak_curvature(const TaemRoute *route);
 
 /* Compatibility/qualification wrapper for the historical full 270-degree HAC. */

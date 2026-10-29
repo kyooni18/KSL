@@ -10,6 +10,9 @@ static AtmosState atmosphere(Vector3 pos,Vector3 vel,const AeroContext*ctx){
     double mach=sp/fmax(sos,1),q=.5*fmax(0,d)*sp*sp;
     AtmosState s={.density=d,.air_velocity=air,.speed=sp,.speed_of_sound=sos,.mach=mach,.q=q};
     s.specific_force=vessel_physics_force_best_estimate_config(ctx->c->physics,q,mach,context_aoa(ctx,alt),0,ctx->mass,ctx->gear,ctx->brakes,ctx->airbrakes,aero_at(ctx->e,mach),ctx->c,ctx->v,&s.physics_confidence,&s.direct_aero,&s.physics_uncertainty);
+    /* Online forecast correction (unset = unity). */
+    if(ctx->c->forecast_drag_scale>0)s.specific_force.x*=ctx->c->forecast_drag_scale;
+    if(ctx->c->forecast_lift_scale>0)s.specific_force.y*=ctx->c->forecast_lift_scale;
     if(ctx->entry_table){
         /* The STS table describes clean-configuration whole-vessel forces.
            Keep the recorded atmosphere/frame and the explicit stress dispersions;
@@ -321,7 +324,7 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
            capture-point miss and loses that range. t_go uses the present speed,
            which overstates the demand slightly: the error is toward margin. */
         double lift=a->lift_accel;
-        if(lift>0.0&&a->speed>1.0&&range>0.0){
+        if(!c->forecast_exact_policy_bank&&lift>0.0&&a->speed>1.0&&range>0.0){
             double vertical=lift*cos(mag*DEG2RAD);
             double t_go=range/a->speed;
             double lateral=2.0*fabs(range*sin(he*DEG2RAD))/(t_go*t_go);

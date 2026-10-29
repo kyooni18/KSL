@@ -104,6 +104,34 @@ bool mm305_hac_handoff_state(const TerminalModel *model,const TaemHacLiveAero *l
     return false;
 }
 
+/* Energy height a hand-off state carries above (+) or below (-) what the HAC
+   law needs to fly from it: the drag-energy path MM305 itself prices (turn to
+   the nearer HAC's tangent, the line, the spiral, and the supersonic flight
+   still to come).  *band_m is the law's high band at that reference: the
+   surplus its drag modulation sheds without S-turns.  MM304 delivers that
+   margin so the HAC is flown instead of a low-energy straight-in. */
+bool mm305_hac_handoff_energy_error(const TerminalModel *model,const TaemHacLiveAero *live,
+        const TaemGeometryState *geo,double mass_kg,double *error_m,double *band_m) {
+    if (!model||!geo||!isfinite(mass_kg)||!(mass_kg>0.0)||!isfinite(geo->runway_along_m)||
+        !isfinite(geo->runway_cross_m)||!isfinite(geo->heading_error_deg))
+        return false;
+    HacCtx x;
+    const TaemHacReference *R=mm305_hac_cached_reference(model,live,mass_kg,2.5,&x);
+    if (!R->valid) return false;
+    TelPoint s;
+    hac_context(&x,model,&model->aero,live,geo,mass_kg,NAN,0.0,&s);
+    static _Thread_local TaemHacLawState H;
+    H.ref=*R;
+    H.rf=clampd(x.c.v_station*x.c.v_station/(TEL_G0*tan(HAC_BANK_NOMINAL*DEG2RAD)),
+        HAC_RF_MIN,HAC_RF_MAX);
+    double s_go,e_tgt,bearing;
+    hac_drag_path(&H,&x,&s,&s_go,&e_tgt,&bearing);
+    if (!isfinite(e_tgt)) return false;
+    if (error_m) *error_m=hac_energy(&s)-e_tgt;
+    if (band_m) *band_m=hac_band_high(&x,e_tgt);
+    return true;
+}
+
 /* Energy height (above the site) of the HAC reference at a path length from
    the Final station: what MM305 expects to start with there. */
 bool mm305_hac_reference_energy(const TerminalModel *model,const TaemHacLiveAero *live,

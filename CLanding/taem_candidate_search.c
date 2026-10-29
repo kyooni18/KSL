@@ -7,16 +7,14 @@
 
 #include "shuttlesim/world.h"
 
-/* Join stations on the fixed analytic HAC circle, expressed as the remaining
- * sweep to the Final exit.  The step is fine enough that a state already part
- * way around the circle finds a join with compatible chord/tangent geometry.
- * The search is hierarchical: cheap geometry/authority pruning and energy
- * ranking of every station, then full native replay of only a few survivors. */
-#define TAEM_JOIN_SWEEP_MAX_DEG 270.0
+/* Remaining unwrapped sweep is a search variable. Geometry and energy pricing
+ * use the same spiral route that native propagation and live guidance sample.
+ * Large sweeps are candidates, not an instruction to add energy-dumping loops. */
+#define TAEM_JOIN_SWEEP_MAX_DEG 540.0
 #define TAEM_JOIN_SWEEP_MIN_DEG 15.0
 #define TAEM_HAC_RADIUS_STEPS 7
 #define TAEM_JOIN_SWEEP_STEP_DEG 30.0
-#define TAEM_JOIN_MAX_STATIONS 48
+#define TAEM_JOIN_MAX_STATIONS 64
 #define TAEM_JOIN_MAX_REPLAYS 2
 #define TAEM_JOIN_MAX_PROFILES 6
 #define TAEM_PROFILE_DT_S 0.5
@@ -317,20 +315,20 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
     bool have_failure = false;
     size_t count = 0;
     char reason[160];
-    for (double sweep_deg = TAEM_JOIN_SWEEP_MAX_DEG;;) {
+    for (double sweep_deg = TAEM_JOIN_SWEEP_MAX_DEG; sweep_deg >= TAEM_JOIN_SWEEP_MIN_DEG;
+            sweep_deg = sweep_deg > TAEM_JOIN_SWEEP_MIN_DEG ?
+                fmax(TAEM_JOIN_SWEEP_MIN_DEG,sweep_deg-TAEM_JOIN_SWEEP_STEP_DEG) : 0.0) {
         double sweep_rad = sweep_deg * 3.14159265358979323846 / 180.0;
-        TaemFixedHacGeometry sweep_geometry;
-        if (!taem_hac_geometry_sweep(model, hac_radius, side, sweep_rad,
-                &sweep_geometry))
+        TaemRoute seed;
+        if (!taem_route_build_hac(model,geometry,hac_radius,side,sweep_rad,
+                spacing,live_curvature,&seed,reason,sizeof(reason)))
             continue;
 
         /* The lead finishes at the HAC join, so its optimistic authority may
            grow only to the density expected at that join—not all the way to
            runway density. */
-        double terminal_height = sweep_geometry.final_length_m *
-            tan(model->guidance.final_glide_slope *
-                3.14159265358979323846 / 180.0);
-        double hac_height = terminal_height + sweep_geometry.arc_length_m *
+        double terminal_height = seed.profile_final_altitude_m-model->site.altitude;
+        double hac_height = terminal_height + (seed.hac.arc_length_m+seed.rollout_length_m) *
             tan(fmin(model->guidance.taem_glide_slope, 12.0) *
                 3.14159265358979323846 / 180.0);
         double rho_join = world_atmosphere_sample(&model->world,
@@ -350,9 +348,7 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
             if (variant == 2 && !isfinite(energy_lead_length)) continue;
 
             bool built = variant == 0 ?
-                taem_route_build_hac(model, geometry, hac_radius, side,
-                    station->sweep_rad, spacing, live_curvature,
-                    &station->route, reason, sizeof(reason)) :
+                (station->route=seed,true) :
                 variant == 1 ?
                 taem_route_build_hac_shortest(model, geometry, hac_radius, side,
                     station->sweep_rad, spacing, live_curvature,
@@ -381,7 +377,8 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                 continue;
 
             double peak = taem_route_lead_peak_curvature(&station->route);
-            double hac_curvature = 1.0 / station->route.hac.radius_m;
+            double hac_curvature = fabs(taem_route_curvature_at_station(
+                &station->route,station->route.lead_length_m));
             if (!isfinite(peak)) continue;
             /* Do not apply the join-density curvature ceiling to the entire lead.
                The live q/speed state evolves along it; native propagation below
@@ -403,9 +400,6 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
                     fmax(profile_length, station->route.hac.radius_m);
             ++count;
         }
-        if (sweep_deg <= TAEM_JOIN_SWEEP_MIN_DEG + 1e-9) break;
-        sweep_deg = fmax(TAEM_JOIN_SWEEP_MIN_DEG,
-            sweep_deg - TAEM_JOIN_SWEEP_STEP_DEG);
     }
     if (count == 0) return best_failure;
     qsort(stations, count, sizeof(stations[0]), compare_station);
@@ -544,14 +538,9 @@ static TaemFixedHacCandidate evaluate_side(const TerminalModel *model,
             const TaemRoute *profile_short_route = i_short ? &a->route : &b->route;
             const TaemRoute *profile_long_route = i_long ? &a->route : &b->route;
 
-            TaemFixedHacGeometry sweep_geometry;
-            if (!taem_hac_geometry_sweep(model, a->route.hac.radius_m, side,
-                    a->sweep_rad, &sweep_geometry))
-                continue;
-            double terminal_height = sweep_geometry.final_length_m *
-                tan(model->guidance.final_glide_slope *
-                    3.14159265358979323846 / 180.0);
-            double hac_height = terminal_height + sweep_geometry.arc_length_m *
+            double terminal_height = a->route.profile_final_altitude_m-model->site.altitude;
+            double hac_height = terminal_height +
+                (a->route.hac.arc_length_m+a->route.rollout_length_m) *
                 tan(fmin(model->guidance.taem_glide_slope, 12.0) *
                     3.14159265358979323846 / 180.0);
             double rho_join = world_atmosphere_sample(&model->world,

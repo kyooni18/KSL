@@ -1,0 +1,1965 @@
+{
+ "status": "provisional; not certified",
+ "base": "sts_aero_cells20261015_live_only.csv",
+ "base_sha256": "128653ebebf7f13237d23353e19453c7ecdb277d362a71ec34eda5de0c23417c",
+ "witness_unit": "live session",
+ "logs": [
+  {
+   "path": "FlightLogs/2026-10-16T04-51-31Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T04-51-31Z-67315-139895649796",
+   "classification": "live",
+   "sha256": "7ae71b437964d79ff4a2be7b150576e8d0faef62468f74c29a7e57a6fbfa5bf5"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T08-29-31Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "41a8a05bdb9b3b2cd511c1039a99b1ee13e262451a1aabedbccfef2596839679"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T08-42-41Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T08-42-41Z-77569-153766443043",
+   "classification": "live",
+   "sha256": "ea944783610c97b7c9cd0074951c3254aa7b6ebf833ed203868881f6b403d5a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T08-43-47Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T08-43-47Z-78929-153832446656",
+   "classification": "live",
+   "sha256": "288974e9a45307d2b5a8f36c34e4f16dc29e64324faf28dac606bf9a4fd4a557"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T08-45-26Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T08-45-26Z-81075-153931197963",
+   "classification": "live",
+   "sha256": "1200905c739a9ef285072d99406b71a872dfc3e611a98cf263af86bf7497e9a4"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-23-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4357c3593528603f276d94736353369bdf172048b39a4503548cf9fea21865e3"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-23-47Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ab607c56e2402b1bcad757da82284e28abfc5c82482d74c6e01a3bedcd703fe1"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-26-43Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7daae60272e328cdce0a64524aed37b8b23d04cdc0860bd885283b6a87b7d9ce"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-26-55Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "be01d7e0059e4075b911d3998cdc065e19dadba326436d67d9afc98e49e26afd"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-27-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "da7cb3edea65e2da500d42d517b028855bee92d9897f8e98298041b537eb0e6a"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-27-50Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "513a1ddd181039a1a2c990504d0d468d6ff1cb60bc7acade724b1b6de9739c97"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-27-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "aea070a9f6b637c35473fccf4e64ccd294df35b90bd033313bd8279d1fb9624a"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-28-28Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T09-28-28Z-12108-156513184878",
+   "classification": "live",
+   "sha256": "e619a1d2ec70994ebbdbe9de809ca108a698c04d0dce87346d607ad076200200"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-51-21Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a7f1dea3d5310608b12bf1008d1d58608f7f1bd25dd66f4e626a017be53af2ff"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T09-55-17Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ead958541255b3e650ef3fbab5fc3138c6d213b9ccf4546c7b9372bd3ab241bf"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T10-00-10Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1951c0b93fd8ce85779540597d372e06d32c99afc2c18c9dc9bf138c7de460b5"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T10-00-21Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2baeb8d96422d47e67737c21865f1f49211d0b10097dd40cfe066217dbf58693"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T10-00-27Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "cae98776a8475476dfbeacdb0bd68e2e410443d081a52d083ebe0f897fa341f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T10-01-26Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T10-01-26Z-34879-158491510310",
+   "classification": "live",
+   "sha256": "1d216b7709d25c37998796428f86c368e10d26ec96f1f87fd5a46611274db93d"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-22-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "81fdd3c2561bd195c30f5f61d5b03f348344dbb146154094f519fbbc166153cd"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-22-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7cfe2a54d53827a086a8452da9512dcc791cf58084fed7c8be99a6ff22b4a36e"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-26-49Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9e41d189a521418cf3f198fb77234e2646cc5455856b81a3b58c6ef41e6a84b3"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-27-02Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "88992017ccdaa7ad717bfca5600ed5d9b7bff073d49c6271290d1b72f3951e9a"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-27-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "45ef29edf36cbb5d00b3d273f80dbc5ab531c8ff9c18c0a4faa395ebea6b1a04"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-28-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b63385ae9c07b4b84ccd5174b03830947c01750bf0f7e2cb2531974c20a824ab"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-28-13Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "90971af5624e167d788fe5fb7084b73cd51085d0bb35a1f0506de552fa15a537"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-28-20Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5b977a6ed2059810e2b324f391cfa1fd5962165c1f029ad46d7253dd55879650"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-29-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1b4bdeabc2298fe19ddab7df2c9fdae38d6930d7bd561a0507a3b0ce2c6fb48b"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-29-23Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "39602757d66b1e84a211fcd2ee1bd683be8fb05e358110f8c3d0ccb4d02aa7f4"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-29-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a947008daa63567670e4bb06594f5bb09971e76e495184b7bc1220db58abbf47"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-30-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7ae69b10b6ad948c920b5e404e2a169320bbe6088524dd27bc1b0d2313b4f84e"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-30-42Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1f9ecb911510e572b0d1a7bf42adb246b0c2148ad6c1a173b364670e8ab3811b"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-30-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d6c4544a75653c43e42ca3fb519c2baa09281ea9f7e5d15158f272b0caf7a153"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-31-52Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b11510635ef641da697b883a0a926ffa4612a66b7893a264e1116ffff7ea36cf"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-32-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "da68afa8915c66c3dc07cb83cf182b05a2def1af4e2f462b2edb150783a7a791"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-32-10Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9d9209127cd03a778b49d1e8b2239111131aca52db7a6722d81c33a72bff51bb"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-32-43Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b79f5f14a7730d423d8df9950327322575611d2a2101cb7bce5be1a4b2ff63b3"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-33-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "788d31ff21b7fb6d41eeb6bf6404266fba7bd1c29fd9d2239c6bfeb8340eb486"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-33-29Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2d2f86174368ac160205c3fe7c799c42bf62d4ba98ede7a616486445344c27b3"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-33-42Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "206ba8039886c8d0b7ffb694e178db0879cc45412bc518387d9d8a1512d1bef0"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-33-52Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8b931898d67c7dcd229f56450fdf7bbef4233887e17d5991e098bd7a9bed7d81"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-34-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9d1259207bb14abf17d42a1dec6a2ef13e960b95978178c81b714ae9dc1c4162"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-34-43Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "248035c597d99ab494d033441f8ef48149da5a32b39d8c7a1f65fd8e368c29be"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-35-02Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fc5aea1a8fdb085b8c9758331f7f81466c375de1e23c5757c8eed75e406687fd"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-35-20Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "820d7fcca999f97446cdd66ad884e579db395d201f3c44d1b1bc8278ef8b0b0a"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-35-34Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b021132dd8bd8ac131a60da3aa96b6c3257768e56be47aebbbab826cf4883664"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-35-50Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "23bbe7ee3a76a4874d54b1e05884a949d5360ff9b7b0facf963bc02937d38d61"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-37-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6b63867e026b234e5179413194e77e729031e88131e6e8ec00d5547d8b1cc0d9"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-37-18Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1e9e9a8b87320ad0635c1e389a7c5c1116f13a30c39d4f8bd7e19b3526a3837b"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-37-26Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "316536f10e35b6975ea0dead0cb103481209847e3985f363c3ae07ea129d5039"
+  },
+  {
+   "path": "FlightLogs/2026-10-16T11-38-26Z-STS-vehicle.jsonl",
+   "session": "2026-10-16T11-38-26Z-2130-164310704889",
+   "classification": "live",
+   "sha256": "e611733fd52b4e826fe2adf63ab7974eb6b588f4bc7629c56222a0b50d4395a5"
+  },
+  {
+   "path": "FlightLogs/2026-10-18T03-21-05Z-STS-vehicle.jsonl",
+   "session": "2026-10-18T03-21-05Z-68923-307270611468",
+   "classification": "live",
+   "sha256": "fbf16a55d362d1b8f6059fd79041d2d9c678e35450a5fdf69f984acc75cdd28a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T05-53-52Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ba678e07d39f7787f594c3c022f2d33deb51d28cd1092ac2391f6453718f7e6e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T05-53-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3fa9b2f3b5bbc79b20c04dc9f03b1ab61fa7a9136e451a6a3c1d0e58d49b53a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T05-54-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "31022ae8c43878ff350bf3f07ef0b38de21a0c9fdb468e58f9d73f5eedc3306e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T10-31-38Z-STS-vehicle.jsonl",
+   "session": "2026-10-21T10-31-38Z-55805-144295878962",
+   "classification": "live",
+   "sha256": "19ad4c02ebd6a146120efb93850533d68bd107cfd29b02a86219f500e8cce1c4"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T10-32-40Z-STS-vehicle.jsonl",
+   "session": "2026-10-21T10-32-40Z-56188-144357179579",
+   "classification": "live",
+   "sha256": "84d4a12587315e8271078cbc9f40015f671a1e2a5f4711c241301db8933a7342"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-18-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b689587b9ee09e08fea20d9bd4ce3446551ace9cdd7764325768931a58ba1f83"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-32-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a06fcb25252ffaf645e86857718727d88a1fafe06b8d2e1dfe8f8a7229518cfd"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-34-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c07f8f41e5e5c4c0234db6b9102ac84c5d82810b036bd120ec3dad80c146363a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-35-33Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3faeb84e0d76f6b6ccbef33e9dd57e4be0f5ed8fb7a262434d425e459033d719"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-35-56Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "58820fc87a67311d4b3f90fb8ca5f24a0f303b6be3c40b41847c5f24b779b5ab"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-38-13Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "805a8a8f4fab3d00ebf0ab7820f09fbcf703c8303a03d52a1dd697123c7ac0a5"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-40-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1713adbbc2a0154fa34f39d5aed2578a8706c8e4afd0d8fb1562415ae2a0e72e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-41-46Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4f5ff66d63933a3841c02b4f36ddbf4691adb43c0bc12b73d99f60e753aff758"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-42-27Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7dda3cb17f7e9b7f03089219bbe85c3dc0594e2396f35cd52818446812214b27"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-43-11Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c5f4113bfde0b5706af49084a998d4f170514fb4b8f351e99ac4d75b9182d4ce"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-45-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7e794d66b41c1a0844afcb2903e9ac378510e949e25243debcf4584f1ff0c002"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-45-25Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "38a6f3c2d8e94f8760552c3217dabfdc9e696576bc5fd57de831a058a117e3fb"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-46-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e30ec9d5b742f5b63232c6ef23f66d1938cc3eaf453432b3d0803dbc1df7e305"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-47-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "08f8ba40f544bb29d1eb8ecf0ec31dd0aa0c595ec8083d35e70ec0d28f123e78"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-48-46Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "cb182f873c4dde656f227417b428dba3afb979e2abd60d741fa57595bb52e2c6"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-49-22Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fcfbfa832322a34aac70de70b4b45b3187cf0192c312b0ae1afae08b4cff0d3a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-49-37Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "96e7232b87bf2f8643d904f8d8faeb57d7cf060df23b2b1385598670a32a6e75"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-49-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fbdefa0734e948efadd41ef98f972a401749ed9d144be30250524ef2c44e448b"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-49-51Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d623684844f2fe750bb5482d0cf663aa25866b43226e9acf00b45243a99c57ad"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-49-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "746cd2b3d931173a311d1ba2ff20365345669c32fc830a1daeaa28d008f7476a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-50-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8f8d9693b0bd9b4bda0d1113434836510fb3e314131d7006c2ce2283dc8c951f"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-50-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "976934ba8398bf73f59e1710c01bd4aa9b95301fdf48d017423d2b0752493646"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-51-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2d9e89513e0aff822dd12edc244c74f8f8264ee484bcf7910604c96a0804d74a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-51-16Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2f844e083f61a52015a9a89ec33fc0ead93020e2f9c6a51a2d1907ecd702cd82"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-51-20Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b3399cd46b2c27b603af7462b01eb8bdf968c18faf74350b8326252d003979e1"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-51-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7ed06ad3a3b3484524795cc2e1153cf95b760b8923f89e1144a978d704a347f7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-52-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d07e76ba379db14e90ebed41e462f269872cf083ec403cde706510f489cad44c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-52-13Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "510d518bd33102c97b23d54a558d39122afa01ddce485c421700e29b6e5abc1c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-52-18Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "89c9707fab3c06f2e45db5f95fa8df53c9091506ca88b6209e8fed762cc44ae2"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-52-49Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4868977c92550985a575f2e8689cd32c1488d23b500845d655d1dcce131342eb"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-53-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d83bce21b1c5cadf2e940b58ec9bb6b7c1fbf418a53fff721fb31c33e6d0eb79"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-53-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "23ae8180c6fbff1d014f3bf5e26e5177393e19377bb3f376a6e680d5c4619f8a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-53-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "81f8d17686ef30379996867f215139f134246935f8d505775c82bbd94b598469"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-55-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ea617b455abc2dc926f9cc65b61a8a9042286aa2137dd12d5d9e2030de6eb390"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-55-18Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e89df78086bf57646ce29e278c90e83c1b90a16926f6cc7ce03ab9f5cdc365e6"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-55-23Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b5221f0edbc4fbc7ae245f874c500e723a9f5b21272d048d1ca0b293e24da584"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-58-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d46613496faec9856050254526edf27aa5331fe19906171db626166d08dca445"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T11-59-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e6f72b82599fbf26534307eb5d5f24831755c11c4ebbc0b8a60878a5796268a7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-00-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1736457660cfa54fb9e0542db1518dbbe44814c724d6dd21da62f7a3c198923a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-00-51Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "24c38452009a073c9a2c4723681a7035eb0e18dd527e02288d4b7b431ac85e22"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-00-56Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "af73b83db3c6d928cb64852262413db997090e3e9e4fa07e54f7adb74c60f06e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-02-29Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "db76f3b49f87c5050bc7ea70be1969cf9c1dcb644b8a94797bd22a2bd716e57d"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-02-35Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "48d3c2181a319ebf44f1952b7e3fede6ab7534ec000d921141034bfcf712c747"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-03-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e6e2a17dc0367b1f4bc469430c8c83148c747be88e5b4cd378448b6d76214c0c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-03-25Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4cc753dd6d0cd37aab57f053c3d9b6b68dafd75bb505239a155b7d21c2426742"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-03-31Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5813a4d94eb8c8cfadc5b95b07e119b2b96e2ddd620dc80c8f7eabafc9451382"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T12-04-19Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fd1c87bb814662678015140989f9e5784c518e71adf1d6b7e944df7b82a7f37a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T13-36-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e1ec2877a81622ef5beff0f9b5dcb6ebdb276252fcc9239b3cf293050866d240"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T13-39-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "49503d3784dfa1b8f31da17f07a26a8e65b2f0c98bc65d79365e59e3de7efc2a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T13-41-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "30ebcdb20dc3a08c27f4e841abb617d699e5a2084487177b86221b998dc1f64f"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T13-43-28Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "af130010d148e8c91d86148568ac96809f307c539feb21dc40f69351fae1c986"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T13-54-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5e693fc37472f135b0122d469f47826ae344a19d4aa0561ff5f6cded7212709b"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-02-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a278f0ecf5d7173b6eb0bf59737607ad191485fec232d66f3611368271fe02d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-04-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6e5420df386ceb80ca2895b29b137130ac271ae7f3dc2f3551cca02bf82e9f30"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-11-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "596d635bef7926d99069400c43a3aa712f1a04da94d35716d4ecdd7aa21182f0"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-11-54Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3ae2edbbbbdda05d860b5ed24dfc897bb30b77705c04dd0332150ebf4cbda49a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-12-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "87d9acb881ab1c10a80f5af73f8aeefc4110d1bc72bab24344df086310462bc0"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-13-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e51311682d0bfb824ea4316548388b4609d11f4f4ce0a4c5961a37e18584f002"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-13-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9fa52c19770cd8317a5257eb1dade5ece89ea3b198e6879e52411ce41b5236dd"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-14-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c5821b83e320af81bb6d7eef4603b7b9596999677f1d9675142c46abce71256a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-14-16Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a0bed054db107e3c24a2ad0df4a0b7960953476f2bfce1c19342b33011384199"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-14-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ee68880ab22fe735666b2eea42f6f383e261f13584bae67f508052e4a651c1f5"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-14-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f611d7a5236e71bd5b9d4e464dd13456f646e07ab928df5a2469f19a1aedb9cf"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-15-29Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e2440bffac398c349518f1dc02b0e9bc88d91587181d55363b8c8d9caa3dfe42"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-15-37Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ec0a0690253d53b1968e7fd26806821f606d7274147130d7dd280b2d211ef5b3"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-03Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "440dcbcb3cc65df96c1773b5fa95fff59437659741487360ebaf48b2d6531a67"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-11Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fc951c05d4d31d0e6ffc73bc9738abf6f778c46253b4e1c3f950ef4f4d994035"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-16Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "52729ae6ba22ebbb205c43714da848c6ffe256a0c3df17ace0168faf8714ed2a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8b551e7a8036a7fd0dd167fe2c44bc2ec6f8b273cd52d67076e9a259a8ffb28c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4850680a1cc0ae9032882386b216196abc7b006ae42441b3867f5925f3d2f7af"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-38Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5e7e2596a7680735abc46497ac817486d73bba917dc04c9fc3f0d188895659b0"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-16-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6f270505724c0e20e2d93710dddd6336002adcdf43f3ea509f4467ca5557c010"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "11fe27e8b368348ed13cbf82c39bba2835756081c0d020a8cd7e43323eae5027"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e78409c9b454fa6cea9de88c6770bba5b8a75b098776a360ff3653f281453f4a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-14Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "25b5212e6b0966e61772d3fe90b027c1aa279cab2d559694f6677af4957f4031"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1186538b67b35670d64c8b8498918245b166368f8a0f3106295c55ae970fd38e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "49eef94ab85ca0a78ba4935b611a502d61562cdf4357d308255681ed6e72647f"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-17-46Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ddf50d594dada0e2f0b83c3c47620e5df08ff4e84c38e41bd126c045f2e29297"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-18-44Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "345f084790f84bb016c3bcfd76ce2e0fc48e997b1ec769e2486cb4801061a69d"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-18-54Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "aef7743e5fd89955e9666966d55a9f0b4321f89c9aa61d5feac4f8584d417d90"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-19-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f9d1fd620327ed64c6a51e169f4bfc52aef3962cbb59d202ea445c074a966823"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-19-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a969ad8fdb3fdfcc85a7cda250584c240f375e4e43867a207dd34857bd8b04b1"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-19-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9f3ed792a1e28d20c8f15ae4504d722539af0cd2ce06f21c4e90599d526846ea"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-19-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6ce17879824273467c4829373f3041f5b55488a2e73df5dd68cb9ccac56d6815"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-20-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "082b0ed620e692506ba584babc5c5112d24851cd71a80c5352bd69ab70412607"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-31-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "889efa0760a55c06b4aa3b19bf7da67f83d209d59fc01d3b079855119a6ee361"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-38-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "94968aabc005fb65a91ea98b4ea75593bcee5654c240d0e9f0d6b3777baad431"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-39-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d92802a405dec58c84428ffe1487d6c8182963f2089eb44ce9fa4e080727d13c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-40-44Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "25519186bb0c80ddb9074a5d21014431a98d4268ce15fd4ef6a64a422c1e27d0"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-43-50Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7f43ffb083a571b8ebfe51961ae807a3519a53c2f676e0a5ced5a6e37d565e0e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-44-35Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "530499f99f21bd065e89ead84d3748938eba0a16cf08b8a462cb1dc5db5e090c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-54-50Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d9499ee5cf010bd88ac1069c99cd151de295be0a42d2c23e7f369c4e66aa71d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T14-55-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "faa3000dcc7ebd9aaaf83c60c959e401bf7bee35425203440c016c484d4f2fd4"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-05-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "23bac590b69cff2d2b0c73f6eb9ce45fbc058c28480b8869b869fb581b3c02cd"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-06-18Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "59b50cf48b419527fe9bcb5dd73e5add3b68a9f4c6c5d99cd17379f9b7ed457c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-08-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6d874b4bc78f00aed47b8b3a3f3bc507256c48f3f427738844b15bb9304b0f7b"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-08-35Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "658e38edb567f8f151a4dcd26d4f32fc5db2b321e03b33905604b71d98e45bb7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-10-12Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8ae12ba5f24a455a658e0850c836f0e3f01d1ba11dfdc5a343b5e31e63b80f67"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-13-23Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9982e9f730a4d8262611f024ac1aa1adf0ce2eb4ea98d0ffaeaf9f7882e4ac51"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-14-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "45561f634e385b26d2dd826bd8f7408dbcea4df36d5161aba9c3464870136fa5"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-14-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "284389512beda80ffe023c5d570842e5b5a1b35522f20cd14ee13211e374ff71"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-25-17Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "16c10e02e710271e5d2768542fb5da6f00bbd5595f1900b893da362093c24a01"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-34-50Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1a600838d4286c2533cd2a74935e65daab8126a6bdc7f68e529ac89874e93c57"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-35-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "77f3abcd4f648ff5058c37abb1e3e3db21523d803580199fea98c82b994c2903"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-44-52Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "650255560e9fb969b4f38499d1b0f48f0b27a24e17d7cd9e21f56eeb855b401c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-45-44Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f8d2b2025ff40ffe060e9979bee65031c6b70fc62819123b58b9afe6cbb639a9"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-45-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3dff8af41e4353a2e01ade7dbe979d0fba31d1d656cbad614e62f08f79932557"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-46-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a8bfe53a55db43616f06da2a3495847c7f1ea56f26a53068970926e2a7d7ff52"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-46-52Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d0c3b73b15ffd3a94aab6957200b804a7ef3498a8fc7a4beadcde3e8bffce873"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-47-27Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "0aa47a30fdd01cab4bac46c5600d82a11f1daa51b52d940cb112548feef895da"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-48-02Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4e0dafd02a0f5e47b820c1f18f6c71c8de0d9e86c7e155643a4232fc1b313a87"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-49-02Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3b0746cb7bc55ba54d39216f1bd40dcf3d4fc7bcc18a5c3985d7708fa128b2bc"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-50-22Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "dd49f2ae52e932c146311ef8908c5a1b4b9532b4027c841d4a32cf4deb39dd72"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-50-28Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "faddb2bfff8e7912122cc0aefee2efe55ea4774c55c9e0f0e14550c472af18c5"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-51-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ebe00441e0ddc416a3525ff1723c23d36f3fa40f0d7b4bb9be32e956b3ffab20"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-51-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9945d9a2679072cfcf620777444519d1d76705db41102c5ec303a92e0e27a5a7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-51-19Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3328f8933d68634f5a3120c2ab2b88dc8612e691e7c4035140e115ef5e622a4a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-51-34Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "445f189d3ea17b07fbc51d95aa4861865f045f1abd98ec6b23d8811ac8308e8e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-51-39Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "fba515a96bb0715eac97f10a96e52533f94dc85292cc2c17ec6baade9f8d1408"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-52-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6bd0c2727bf6ed7c28806bea0099bae57ecd4bb17ee916f73fcbadd38b812620"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T15-52-34Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "be019191370dba644b55b52e92a1e1d00f30d91e9dd8e0c86baa611aa81a2f47"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-01-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a08daf937e576d42a83d476d20af802c6d30bf409a698b7905f3f7aeb84cfd8c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-01-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "33bbf7af26498e4662a32c1273cb20820281edfb97c594bbe39debfd1157eafe"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-01-36Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5c5bdcfdbd4520b195d10b92cc5df4870f525985b0f8f6ace9d835db010ffee7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-51-29Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ddffc1245c683f67e03a3987ac67197936fa1751531963c945c024eda701808e"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-52-03Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ead551f7cf5f2d3d73f621d3b8775de382669c00a22664b6939066aa19b79264"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-53-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ee3564e28634f4f4ff7c49818ad94ae102c1030afb06795bcf4037f096074703"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-54-51Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a08dfcdf128fd2be80f26f77e80d1126e1fa6c9b1ed4a26069a0f19b606ef4fe"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-54-55Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4e9bf7edbb2430d2a47bf9267fd1bb54267df3fa971ade0276a2ec49c042df8c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-54-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1f66114d3eab04c3b09cd6310bf35a95879e7feb35543f4ca9cd847072de9505"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-55-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5a9bd896ce617126510a64653b09ce3999a4673668eca38a7bb9c93ec79b86f6"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T16-55-11Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a85583a7dd3ee8d1cc6517dde95b483e33ddb77ee386a8c555ae3a9093e00595"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-48-23Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "146bdc72a67d612606f0260cfa55d049c1106b4c33e4adfa61f3523c330594e6"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-50-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "24466906b4fcf5b06b89b5dcbc0372318f7dac064b71e7ec5f57d01eb7e54f2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-51-02Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6ff54583386feb932757ce3bbbc78048ab35093966e7d98ff4e697a7eae63f89"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-51-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "808abad50d0eccc66a778f42071bed92360cc362473de590b3ceb6fa19456f2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-51-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d5e4516544ba082984ad6927ad3aa5ad845f030f1a20da79cebf06c365d4f38d"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-51-31Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "47713514b2ecb86aeed6594646587f02ec63aa0c1b1819d75e59ddf046232768"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T17-51-37Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3b287ac3427c0b113c5a8149f6e4e4c898ed98d63353268a56fd0efab1043909"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-07-39Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "29f8aa5b3d93cd6518b814f33b445d02ea4ff6a68ddb47bde4520ab02cb91d67"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-07-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8e314c7ce5f50ff51664cb7a79a513a825b4f72dc3c5c9be6c3b5a5ab567a7bb"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-07-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6ae226086a1cb1840c9e6e5fcb8d094dc50649b24ba021ce19d3caff95a413cf"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-07-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "112d36e46922bb09cff936dd063ff67025fd30bc129351c348bca91a46bf25bc"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-08-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "16b998e2984980d08b9382f648ffd313ae3b43c60bdbef6487756e6191bf5ee3"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T19-23-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3be1440628d766b9ec02d1d11977a48c3e78d21f1498ce2e0e49748f57e1c5cb"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T20-09-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a6c3b26e5ca55b5d0a66c54b785069e09dcb60d66ac5c8d0c56d678d3f63ec9a"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T20-09-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "29203d1b2ec76c6a036da89ed6348d1b2f738f2b94465c1bd6c927a99a8f9b84"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-11-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c7542062a34b175f5495c3c605882131936c3db9bebc82917cc87d765e1e1e1b"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-11-51Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "68b1b1920454c6ab9d46b2c35854f40cdc6f14ee0a882ff74a7faa6307fae81b"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-11-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8894c7d4ece69ef7cdc927e858bb8caef301e7eae940eea66d01d63b9c61fe38"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-27-57Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b4853114903ba2f1d4f1365868d596f860d02d716d7826221e427fd07c81ff87"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-43-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "69b7b3a862afcd4c1452ce86cb4f8c634677b318755320194e003b55641ba49d"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-43-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "aabba1d839473f0cf4ce305d4ead9ceb04a705e43f391ebe38de4b26cbc55cb2"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T21-58-13Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "03850d0b52f3a1a202c0db1128e502e7ff4fa1c17e1fa2d4935c6b76d641f437"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-14-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7964e2db397c89018a5a4397165354b694d9b6c23924fe5564b8a9d643a90349"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-14-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f22da641f4c6f0bba86d0d326b75d37868b6be37cd31aa2b4e05ea72f86bb6b7"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-14-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "21b52f89036d94f7166dc8b983af3eee3301ae392efdd8cce5d5131a09e0dfb2"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-14-22Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "77d44d044c3bfb5108132523319fd78157c9cc2d1e3d43de86a8818e19fb37be"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-43-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5842289c32a5941d3252fd00fa7d1c50b1edaf378078fdf605d7aea1eb3e43fc"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-43-10Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "66df68b23a7916d2fdd60b32d352d484cdd657e23436286f9474058a7c35103c"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T22-43-16Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6fd22978105354ddbe24d19a75cc0bf3d57121cbf80b5abe5ae4aa8d710bf511"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T23-12-19Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4b2764d37e0fdc8b8f3600373fda361f5f5acd090dec6b8d672484ba2a1af732"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T23-12-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "75063a37a368ba52a390116a95210e51f5e7f17d7ab07b693ef5f1b8bdf6d664"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T23-12-32Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b8968622bc1d55cc8f5657dbc5a2f40761450c8bd6f280078f3142bcfc1752e2"
+  },
+  {
+   "path": "FlightLogs/2026-10-21T23-27-37Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8cff4c0baec7c4fef7e6e105bf5e4cceb39a3a1f5141152967231d713b9f5817"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-01-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "409684b0a6643d35d190ffbf488ba36d25ca00806909468ff632f02d7b621dc5"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-02-34Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "8e409de8873fb067a242eba16b4be4c35bee30dc59e884e6329ddbb42e8be12a"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-02-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2832416717d7cfb04ceb507166f4ee9a7f49b633c3ab84ce154edb4daf655bfc"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-02-55Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4cf2c1762f1bcdee2444da6405b03ddf65d87c39353a8176a3f89a536579c9a0"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-03-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "cbc76e56146d6d29918db01b7561c26aa4158eca823551c65b3bcdae3858ce7d"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-03-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "52a326f30bd48ad2450eb993b4777a0f1da9a0121ea706914d4eb8aed02d44a8"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-03-49Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c7f6c02f6dd0c79ce811d5dbb3a1f1ecee2673bf628f620469cb57f9fda4684b"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-04-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "aad1ec547f660aca9d64d7fd8b25514e97d663774fefed57d32da025503aef07"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-04-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "e1634dcd09e261feecf1258d8eabf1a11a6c2b714f67ff21209c1a6c6db8f66e"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T00-05-12Z-STS-vehicle.jsonl",
+   "session": "2026-10-22T00-05-12Z-26460-193109589777",
+   "classification": "live",
+   "sha256": "3b189d3e81750b8ef9b2ea2a09e8802321ab0ead0362266999427504677b78d2"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-50-28Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9e200a76616c7247d1f04240d1599e40d333816179d3cee446629fdecdf5dbee"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-52-15Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "6990941e85fe0957936985f28ffa63c70e65d7d51073d5aa8898b8a5fe98c0bf"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-52-47Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "407542fab1fc05e281af36e665951e076de27a4e85e8832a561da2d487c0bb2c"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-52-53Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "45eea94b6debc581658583efff99431217246bb7655b20f4c8cc4fd4ad97aafe"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-52-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7972b887f175e0af10df92f7649a7b65d188ebe1bba30e33e7f59e69f6227210"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-53-06Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d08cc391bb4e544d7940fd8775395a78022fb517f9207df9ac19deb16fba2b6a"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-53-08Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "22e4d7c62770f174ded1e59999fabada468e1407e0b8740703f783ee66bb2921"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T02-53-17Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f914f259fc6759080672c4db4069ad83a7396f696820cfc5fc30db5b08e23db2"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-02-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "d97def6193d06c453673513be30d75392eacce1e67889d1374c143e3b968dda8"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-02-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1ab77d88f59e9f2dc97990a120be6b9e93b0aba6c31fcaaa5500989fda1c6e58"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-03-39Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7a8b4dbe96107d503d46945821b48a714d238b4e1b23b9001963e3ee0899668a"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-03-56Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2b1661d0707ec3d59018c7a7d63ed1e928eb47bcce1b690a7879b09139d70085"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-04Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "15d37a9a47d62fcf6b0a69f4b8df4cf4034fd5e1c94ec30622dc633abd24da8e"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "17fa0b0ee669f77520cb80110279a8f619171e5c68bc19072223c7b53e2a95c9"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-14Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "df44264d0a656bbdd8052c2290c648b3ddb32d553365b806005e9a098c7f6636"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-21Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "0ca0852930e0a1efeca9a42a6e808642b0621a25725cca5029f2b0bfdd014a51"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4c362b10d16e770076f624880f1b4f1204698763185048f64694ebcadd575868"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-04-33Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b0f9e8f7f446290bc057660f583c46b1eb50e0ac75a9931b54dd538f9d5f7241"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-13-30Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "98e5e81362afc4af36d3a020d86c717ddc61fc1d25ddd8d2442c03813ac7e5aa"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-13-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b22fd2f64ac964259d904dfa6be90d1ab07b157567f334571fec6c7f2e8757d4"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T03-13-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "61b5e5c17e1e9e3ff799ab5cd08d3ae736b2fdd0474d4ae34200b5dab1be8185"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T04-32-39Z-STS-vehicle.jsonl",
+   "session": "2026-10-22T04-32-39Z-68609-209156274883",
+   "classification": "live",
+   "sha256": "39a4392b558a8d51e1665e99e06529b6f92631225c24596a58208a02a6be6e8a"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T04-34-29Z-STS-vehicle.jsonl",
+   "session": "2026-10-22T04-34-29Z-71326-209266342053",
+   "classification": "live",
+   "sha256": "e74d41727ab872654c9a517008a45b05c3e577b39c4fe9aeb792dbbab208eba1"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-06-36Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5113b2a4994b6c7ecf575e3e3c61898995e02b6bf64b52a8fd6edb292c849f99"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-07-07Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "58cc73a1a57ae775e6003cafad16e6d56eebb1c473ce4fe49fc48aabc27720e0"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-07-20Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9213962c9e2ac327a5ae307e28745cace67ba794f4c85f8bbb9fe50b69c390dc"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-07-43Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5521dd3609890242e8fb80de10b6a4b2b080bdf0d17c5667ecfa8298db61fbab"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-07-55Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ffe181d74990e17d049a33a6927565bd0b156215561e17472a1fb41c2df85280"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-09-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9c7df7bb583dc9a611190df163e5dba52a2fb9fbc76a29d2a07054b7ecac61ce"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T05-10-14Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ebaefa597a44ed6130eb389e989f46f595d8dcbe3f9fa2788a3d766f71508c47"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-01-22Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2faaa0202ed8d23efdefb63aaea6e1478c18b2560c6437f24d323590071eefe6"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-01-59Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "055d6dcb3446124d3d3d590c8ff63976ef4078672f60ae6d148cf8fb1bd06243"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-03-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ffdfe502b70e73b20e8c20ff48d550f934c3948a8487159a40c13ff41648d6fa"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-03-17Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "08d494af79e5a239f0759ddf2869b553590841cdea764cd2e566756622a0870c"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-03-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "2220d9b082153bfd8c812c2a10253d2e67bc57e4679d6cf52037b46d3dcea486"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-03-58Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "beb1caf8b5c9b301f562b332d6ed0512a02b4cc035a9d53307a2af866aeb487c"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-04-56Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "508d002605a0dc0804580ff6180d7749659b047f1731441c568250f57d1af6f1"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-05-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "69e3e9a9c9f2176224e27ff59dbf6fb6a41e63be1af3b438ca2625fd3b8a0c07"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-05-38Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "578641beaa619062d999de899566281776dd1efec76995ba7dba4cbfcb857320"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-05-46Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "4d6cf52620796061fb7d8edcae51aba12f5ab2d8cbb0f2f12893ccdf0f69e97d"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-06-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "033fee6d4aa196c3e628c2bb5f82f0158f2aefa44095e79a727afd2cf52efa9c"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-08-19Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5818ea34d31a7e97af3d4592e6fa21a751e163a2c518afa277f2ab1e867ce1c3"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-08-41Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "3b1c6e660e5bea18e4e71909a4d2876b538fe327d99a05832d7a81f114a9595f"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-14-29Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c44e6de0d11fe49fbd9dbf9fe8cf93002783890be0f7416a96d9fe8b2483fa8e"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-19-40Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "80ec659a9197b3d4065884700c1b2e3f0ea5c8be10fd4dbd33abe723af27f370"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-24-20Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "b906c0c7abee3a509584d13da48171a62c55d5dba75ce20589c7edb38a884b2d"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-29-21Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1eeec919b58e0b85e946bcc15e5b4d79b34af25b04e3c24bc8826630851363e8"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-33-35Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "ada30479b2a46730644488d74b8de11742e6037a4fbf598cdb15a9202d47cead"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-38-05Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "27e19e70b7ed0b339c055cb976ded0fd5c75c71db144a53f5e3011ca9d644933"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-42-12Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "89e4262f40beebc417167d464367e95022d5eb2ec90941112e6ccef75b9e88f1"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-50-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "30512392e0bf5d2764043724114943dc68165a492cec3a3eea57ab0a4150481a"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-24Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f2c5d4fc2e3d52ed379e9e5eed6440ed31b9baa85aa3b89dc8cee6dddc6aabd3"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-31Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "c18d19e29088c07c010f17fd487db9969be7ef964a19cf3dc6dccc11aa8dbdaf"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-35Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "95499e24f6d3d806b83e75b5149a481b7bde818014f397495c0e6b5a8b6100ee"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-39Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "bc2f07f3c8e8aebe7c5616f87b1515525779a07dad52414606a11fea077fe78f"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-45Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "cc97880b15a611865c5df0b26634501e89aee02c082712b57bddcca8c58803f3"
+  },
+  {
+   "path": "FlightLogs/2026-10-22T06-54-48Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "a7de50194aad46115473018b2b704f3b385672174d85b9dbea34996bd15755d1"
+  },
+  {
+   "path": "FlightLogs/2026-10-26T05-00-15Z-STS-vehicle.jsonl",
+   "session": "2026-10-26T05-00-15Z-62729-556412154761",
+   "classification": "live",
+   "sha256": "8de953e712972211e8591cf06c53275a37a64f2cc14522eb4e077c92b529d9f7"
+  },
+  {
+   "path": "FlightLogs/2026-10-26T05-01-07Z-STS-vehicle.jsonl",
+   "session": "2026-10-26T05-01-07Z-63055-556464859024",
+   "classification": "live",
+   "sha256": "981ef9fdb3f8552a35d476211f70b6704631392340cc5e231a833b71024668ab"
+  },
+  {
+   "path": "FlightLogs/2026-10-26T10-38-01Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "f8dcb4733d4236fa03598a537002da3e89235d77aebc2427b8d284a1ef6ff57f"
+  },
+  {
+   "path": "FlightLogs/2026-10-26T10-38-09Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9c4ec36c1e4c664c8d4a62ed9c350d5a62a2ffd71bfd288e5559214e21ab3683"
+  },
+  {
+   "path": "FlightLogs/2026-10-26T10-38-13Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "38ea63685a24add9a4cc6c394e677879c4263c95f5f86d8da1923c4545a9c014"
+  },
+  {
+   "path": "FlightLogs/2026-10-27T23-59-56Z-STS-vehicle.jsonl",
+   "session": "2026-10-27T23-59-56Z-91494-59861645272",
+   "classification": "live",
+   "sha256": "2425ec06ca2d261bd8e14b3ed2a33533964252541c8375fc4b4feff82bf7cd4f"
+  },
+  {
+   "path": "FlightLogs/2026-10-28T00-50-46Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "9eb84bd91e204525e8de844f17edc5ef3e788b4094dbde481ced866d62260d6a"
+  },
+  {
+   "path": "FlightLogs/2026-10-28T00-51-22Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "7675cce28c32379288ae06882130691a4dd627d529f1cb46ae729d29ad55d5d3"
+  },
+  {
+   "path": "FlightLogs/2026-10-28T00-51-28Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "1c29843aa519314a522380e6e2d989b2358f955eb181ec0dd1a8a955dd524504"
+  },
+  {
+   "path": "FlightLogs/2026-10-28T00-52-00Z-STS-vehicle.jsonl",
+   "session": null,
+   "classification": "simulator",
+   "sha256": "5dc5e504642212b0e498bb40161fbd30b7f70030cc9fb41668cb4fdcc118e592"
+  }
+ ],
+ "settings": {
+  "area": 250.0,
+  "q_min": 300.0,
+  "max_sideslip": 2.0,
+  "max_pitch_rate": 3.0,
+  "window": 0.25,
+  "min_samples": 200,
+  "min_flights": 2
+ },
+ "cells": {
+  "M2.494 a18": {
+   "n": 220,
+   "flights": 5,
+   "cl": 0.152140914910454,
+   "cd": 0.18647173144933224,
+   "cl_ratio": 0.9265602489557168,
+   "cd_ratio": 0.9210729802874442
+  },
+  "M2.494 a6": {
+   "n": 472,
+   "flights": 6,
+   "cl": 0.057278866669749434,
+   "cd": 0.07818536007262578,
+   "cl_ratio": 0.9696774551582924,
+   "cd_ratio": 1.2370551257551015
+  },
+  "M2.494 a8": {
+   "n": 201,
+   "flights": 8,
+   "cl": 0.07289004878586339,
+   "cd": 0.09421194355032372,
+   "cl_ratio": 0.9933670922446604,
+   "cd_ratio": 1.0451604450745595
+  },
+  "M2.494 a10": {
+   "n": 270,
+   "flights": 8,
+   "cl": 0.09645266749462922,
+   "cd": 0.11910619460110616,
+   "cl_ratio": 1.0616494449540819,
+   "cd_ratio": 1.108019331941942
+  },
+  "M1.758 a12": {
+   "n": 679,
+   "flights": 7,
+   "cl": 0.1263078222928124,
+   "cd": 0.15568086122102942,
+   "cl_ratio": 0.9642363914845291,
+   "cd_ratio": 1.0737137608680634
+  },
+  "M1.207 a14": {
+   "n": 231,
+   "flights": 5,
+   "cl": 0.17924563536660237,
+   "cd": 0.2847447565867343,
+   "cl_ratio": 1.0080095853872806,
+   "cd_ratio": 1.086027538224618
+  },
+  "M0.854 a14": {
+   "n": 622,
+   "flights": 5,
+   "cl": 0.19081596866029538,
+   "cd": 0.15267515507059096,
+   "cl_ratio": 0.9550964001549818,
+   "cd_ratio": 1.0328807542365384
+  },
+  "M0.374 a6": {
+   "n": 3292,
+   "flights": 8,
+   "cl": 0.2513166184384248,
+   "cd": 0.09316470661356097,
+   "cl_ratio": 1.0098271764271407,
+   "cd_ratio": 1.0264945463187327
+  },
+  "M5.626 a22": {
+   "n": 2538,
+   "flights": 8,
+   "cl": 0.13854658210186266,
+   "cd": 0.24305533192439382,
+   "cl_ratio": 0.9947762161546069,
+   "cd_ratio": 0.9994392568677049
+  },
+  "M4.475 a18": {
+   "n": 2503,
+   "flights": 7,
+   "cl": 0.11762001273382586,
+   "cd": 0.19091666835044585,
+   "cl_ratio": 0.9941726774619664,
+   "cd_ratio": 0.9993203662838219
+  },
+  "M3.489 a18": {
+   "n": 1384,
+   "flights": 8,
+   "cl": 0.13359300308339844,
+   "cd": 0.19511224527411025,
+   "cl_ratio": 0.9941161987991135,
+   "cd_ratio": 1.0021410639158443
+  },
+  "M2.494 a14": {
+   "n": 215,
+   "flights": 6,
+   "cl": 0.12711535678452085,
+   "cd": 0.15954420127631777,
+   "cl_ratio": 0.9705442704799296,
+   "cd_ratio": 1.0407624573214331
+  },
+  "M0.374 a8": {
+   "n": 971,
+   "flights": 7,
+   "cl": 0.3113259470940023,
+   "cd": 0.11829957113244438,
+   "cl_ratio": 1.0141787411712717,
+   "cd_ratio": 1.0387137948755347
+  },
+  "M0.374 a4": {
+   "n": 4597,
+   "flights": 8,
+   "cl": 0.17805674925225967,
+   "cd": 0.07440468012041801,
+   "cl_ratio": 1.182550200539494,
+   "cd_ratio": 1.0914017927848505
+  },
+  "M6.604 a22": {
+   "n": 1431,
+   "flights": 4,
+   "cl": 0.13731744705643106,
+   "cd": 0.23627814924298712,
+   "cl_ratio": 0.9682188662097959,
+   "cd_ratio": 0.8931628177465869
+  },
+  "M0.854 a12": {
+   "n": 339,
+   "flights": 2,
+   "cl": 0.16506836874466113,
+   "cd": 0.13352516348638446,
+   "cl_ratio": 0.9894387221642226,
+   "cd_ratio": 0.9997713574664687
+  },
+  "M0.374 a10": {
+   "n": 663,
+   "flights": 4,
+   "cl": 0.4162398111254658,
+   "cd": 0.15216964509308378,
+   "cl_ratio": 1.1251133449371262,
+   "cd_ratio": 1.0576651997942619
+  },
+  "M0.374 a2": {
+   "n": 398,
+   "flights": 2,
+   "cl": 0.09311423347005104,
+   "cd": 0.049307045811549,
+   "cl_ratio": 0.977575509524561,
+   "cd_ratio": 0.8552982458752328
+  },
+  "M0.854 a10": {
+   "n": 280,
+   "flights": 3,
+   "cl": 0.1326177121937808,
+   "cd": 0.1093287695776566,
+   "cl_ratio": 0.8996467641346991,
+   "cd_ratio": 1.0378111874101976
+  }
+ }
+}

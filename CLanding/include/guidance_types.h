@@ -1,6 +1,10 @@
 #ifndef KSP_LANDER_GUIDANCE_TYPES_H
 #define KSP_LANDER_GUIDANCE_TYPES_H
 #define MM304_PLANNED_MAX_BANK_DEG 40.0
+#define FORECAST_FIT_WINDOW_S 30.0
+#define FORECAST_FIT_MIN_Q_PA 100.0
+#define FORECAST_SCALE_MIN 0.5
+#define FORECAST_SCALE_MAX 2.0
 /* crossrange MM304 leaves to MM305 while energy-short (see entry/contract.inc) */
 #define MM304_ENERGY_SHORT_CROSSRANGE_TOLERANCE_M 15000.0
 /* Bank the runway-line capture plans to stop its cross-track rate with

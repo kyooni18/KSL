@@ -1147,6 +1147,7 @@ def run(args):
                                 ap.ctrl.hold_attitude(float('inf'))
                                 control.rcs = True
                                 ap.ctrl.invalidate_dynamics()
+                                shuttle.lock_ssme_gimbals()
                                 state = 'COAST'
                                 emit_event('meco', apoapsis_m=v.orbit.apoapsis_altitude, periapsis_m=v.orbit.periapsis_altitude)
                                 print(f'MECO: Ap {v.orbit.apoapsis_altitude/1000:.1f} km; '
@@ -1156,6 +1157,7 @@ def run(args):
                                 ap.ctrl.hold_attitude(float('inf'))
                                 control.rcs = True
                                 ap.ctrl.invalidate_dynamics()
+                                shuttle.lock_ssme_gimbals()
                                 # Depleted-ET cutoff is not a normal completed
                                 # insertion. However an atmospheric periapsis is
                                 # permitted here: OMS may finish orbit capture.

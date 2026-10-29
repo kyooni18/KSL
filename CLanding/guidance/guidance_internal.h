@@ -127,6 +127,8 @@ bool mm305_hac_handoff_state(const struct TerminalModel *model,const TaemHacLive
         double *station_range_m);
 bool mm305_hac_reference_energy(const struct TerminalModel *model,const TaemHacLiveAero *live,
         double mass_kg,double station_range_m,double *energy_m);
+bool mm305_hac_handoff_energy_error(const struct TerminalModel *model,const TaemHacLiveAero *live,
+        const TaemGeometryState *geo,double mass_kg,double *error_m,double *band_m);
 void mm305_hac_observe_aero(GuidanceMachine *g,const Telemetry *t);
 GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
         const VehicleState*state,double course,const PlanetModel*p,AerodynamicModel aero,

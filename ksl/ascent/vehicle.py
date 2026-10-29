@@ -1238,8 +1238,16 @@ class Shuttle:
         core_throttle = min(core_throttle, sep_cap)
         return tuple(core_throttle for _ in self.groups)
 
+    def lock_ssme_gimbals(self):
+        """Keep the STS main engines fixed after cutoff, including the ET coast."""
+        if self.vehicle_kind == 'orbiter-shuttle' and self.et_attached:
+            for group in self.core_groups:
+                for engine in group:
+                    engine.gimbal_locked = True
+
     def release_et(self):
         self.vessel.control.throttle = 0
+        self.lock_ssme_gimbals()
         if any(not transfer.complete for transfer in self.transfers.values()):
             return False
         if self.vehicle_kind == 'orbiter-shuttle':

@@ -23,6 +23,20 @@ from ksl.ascent.vehicle import delay_booster_separation
 
 
 class SeparationEnvelopeTests(unittest.TestCase):
+    def test_meco_locks_only_attached_sts_main_engine_gimbals(self):
+        for kind, attached, expected in (
+                ('orbiter-shuttle', True, True),
+                ('orbiter-shuttle', False, False),
+                ('nuclear-solid', True, False)):
+            with self.subTest(kind=kind, attached=attached):
+                engines = [SimpleNamespace(gimbal_locked=False) for _ in range(3)]
+                shuttle = Shuttle.__new__(Shuttle)
+                shuttle.vehicle_kind = kind
+                shuttle.et_attached = attached
+                shuttle.core_groups = [engines]
+                shuttle.lock_ssme_gimbals()
+                self.assertEqual([e.gimbal_locked for e in engines], [expected]*3)
+
     def test_ssme_balances_boosters_through_last_fueled_tick(self):
         # A canted core contributes -1 MN m at full thrust. The SRBs
         # contribute +0.9 MN m, beyond the former 70% trim ceiling.

@@ -58,6 +58,40 @@ static TerminalDynamicState state_at(const TerminalModel *m,const TaemGeometrySt
     return s;
 }
 
+/* This diagnostic deliberately records failed propagation as well. A CSV is
+ * not a flight certificate: the unchanged native solver/Final gates decide. */
+static void record_flight(const TerminalModel *m,TerminalDynamicState state,
+        const TaemRoute *route,int side) {
+    char path[256];snprintf(path,sizeof path,"/tmp/ksl-spiral-flown-%s.csv",side>0?"right":"left");
+    FILE *f=fopen(path,"w");assert(f);
+    fputs("t,station,ref_x,ref_y,x,y,ref_h,h,ref_course,course,radius,curvature,bank_cmd,bank,aoa_cmd,aoa,mach,speed,energy_margin_m\n",f);
+    size_t cursor=0;double start=state.ut_s,last=0,max_cross=0;unsigned backwards=0;
+    for(int i=0;i<1200;++i) {
+        TaemGeometryState g;TaemPathReference ref;
+        if(!taem_geometry_state(m,&state,&g)||!taem_route_reference(route,&g,&cursor,&ref,NULL)) break;
+        TaemTrackerOutput command=taem_tracker_update(m,&state,&g,&ref,.5);
+        if(!command.valid) break;
+        AeroForces flow=aero_compute(&m->world,&m->aero,state.position_i_m,state.velocity_i_mps,
+            state.ut_s,state.mass_kg,state.attitude.aoa_rad,state.attitude.bank_rad);
+        double gravity=m->world.mu_m3_s2/pow(m->world.radius_m+m->site.altitude+g.altitude_above_runway_m,2);
+        double vref=taem_route_planned_speed(route,ref.station_m);
+        double margin=isfinite(vref)?m->site.altitude+g.altitude_above_runway_m-ref.altitude_m+
+            (g.airspeed_mps*g.airspeed_mps-vref*vref)/(2*gravity):NAN;
+        fprintf(f,"%.2f,%.6f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.4f,%.4f,%.3f,%.10g,%.4f,%.4f,%.4f,%.4f,%.5f,%.3f,%.3f\n",
+            state.ut_s-start,ref.station_m,ref.runway_along_m,ref.runway_cross_m,g.runway_along_m,g.runway_cross_m,
+            ref.altitude_m,g.altitude_above_runway_m+m->site.altitude,ref.course_deg,g.course_deg,
+            hypot(g.runway_along_m-route->hac.center.x,g.runway_cross_m-route->hac.center.y),ref.curvature_right_per_m,
+            command.control.bank_rad/rad,state.attitude.bank_rad/rad,command.control.angle_of_attack_rad/rad,
+            state.attitude.aoa_rad/rad,flow.mach,g.airspeed_mps,margin);
+        if(ref.station_m<last-1e-6) ++backwards;
+        last=ref.station_m;max_cross=fmax(max_cross,fabs(command.cross_track_error_m));
+        if(g.altitude_above_runway_m<0||ref.station_m>=route->length_m) break;
+        if(terminal_propagator_step(m,&state,&command.control)!=TERMINAL_STEP_OK) break;
+    }
+    fclose(f);
+    printf("flight trace=%s station=%.1f/%.1f maxCross=%.1f backwards=%u (unqualified)\n",path,last,route->length_m,max_cross,backwards);
+}
+
 int main(int argc,char **argv) {
     mathematics();
     LandingConfiguration cfg=landing_configuration_default();
@@ -104,6 +138,7 @@ int main(int argc,char **argv) {
                 TaemRoute trial=r;trial.profile_start_altitude_m=m.site.altitude+altitude;
                 TerminalProfileResult profile=terminal_solver_generate_profile(&m,&s,&trial,.5,600);
                 printf("native side=%d h=%d profile=%d exitV=%.1f reason=%s\n",side,altitude,profile.valid,profile.exit_speed_mps,profile.reason);
+                if(altitude==16000) record_flight(&m,s,&trial,side);
                 if(profile.valid) {
                     TerminalSolverResult replay=terminal_solver_replay(&m,&s,&trial,.5,600);
                     printf("replay status=%d Final=%d crossMax=%.1f courseMax=%.1f exitV=%.1f bank=%.1f reason=%s\n",

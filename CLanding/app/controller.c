@@ -20,6 +20,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#define FORECAST_HISTORY_MAX 64
+typedef struct { VehicleState state; double aoa, bank, q; } ForecastHistorySample;
+
 struct LandingController {
     pthread_mutex_t mutex;
     pthread_t thread;
@@ -93,6 +96,12 @@ struct LandingController {
     /* Physics-warp governor (user-initiated 2-4x through entry). */
     double warp_step_ut; double warp_last_roll_rate; int warp_roll_reversals; double warp_reversal_window_ut;
     bool burn_engines_shut_down;
+    /* Measured flight history (1 s spacing) and the MM304 forecast
+       correction fitted to it: forecasts re-flown over the recent window
+       must land where the vehicle actually is. */
+    ForecastHistorySample forecast_history[FORECAST_HISTORY_MAX];
+    int forecast_history_count;
+    double forecast_drag_scale, forecast_lift_scale;
     uint64_t tick_sequence, log_sequence, vehicle_record_sequence;
     SnapshotCallback callback;
     void *callback_context;

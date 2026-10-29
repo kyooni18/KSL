@@ -59,6 +59,25 @@ PROFILES = {
         "attitude": "reference-model/stsn_attitude_identified.ini",
         "certified_prior": None,
     },
+    # sts-live-20261015-live-only with cells re-measured from the live STS logs of
+    # 2026-10-16..28 (Tools/fit_sts_aero_cells.py, same settings; the earlier
+    # logs are no longer on disk); still provisional/uncertified.
+    "sts-live-20261028": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_cells20261028.csv",
+        "aero_book": None,
+        "attitude": "reference-model/sts_attitude_live20261028.ini",
+        "certified_prior": None,
+    },
+    # sts-live-20261015-live-only aero with the STS attitude response refitted
+    # to live sessions 2026-10-16..26; provisional.
+    "sts-live-20261015-att28": {
+        "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
+        "aero": "reference-model/sts_aero_cells20261015_live_only.csv",
+        "aero_book": None,
+        "attitude": "reference-model/sts_attitude_live20261028.ini",
+        "certified_prior": None,
+    },
     "sts-live-20261015-live-only": {
         "atmosphere": "reference-model/kerbin_atmosphere_identified.csv",
         "aero": "reference-model/sts_aero_cells20261015_live_only.csv",
@@ -107,6 +126,8 @@ PROFILE_VEHICLES = {
     "sts-live-20261010": "STS",
     "sts-live-20261011": "STS",
     "sts-live-20261015": "STS",
+    "sts-live-20261028": "STS",
+    "sts-live-20261015-att28": "STS",
     "sts-live-20261015-live-only": "STS",
     "sts-live-20261029": "STS",
     "fitted-legacy": "STS-N",

@@ -375,6 +375,21 @@ EntryLateralOutput entry_lateral_update(EntryLateralState *state,
         magnitude = authority_valid ? clamp_value(input->bank_magnitude_deg, 0.0,
             fabs(limits->maximum_bank_deg)) : 0.0;
         output.energy_bank_magnitude_deg = magnitude;
+        /* The policy bank is the energy demand only.  Still fly the crossrange
+           zero-effort-miss demand on top, exactly as the policy forecast
+           prices it: wings-level with 350 km of crossrange (live 2026-10-28)
+           left the turn to the last 380 km and overshot by ~50 km. */
+        double lateral = 0.0;
+        if (authority_valid &&
+            lateral_demand(input, &lateral, &output.zero_effort_crossrange_m)) {
+            output.required_lateral_lift_accel = lateral;
+            double vertical = input->lift_accel * cos(magnitude * ENTRY_LATERAL_DEG2RAD);
+            if (hypot(vertical, lateral) > input->lift_accel) {
+                magnitude = clamp_value(atan2(lateral, vertical) * ENTRY_LATERAL_RAD2DEG,
+                    0.0, fabs(limits->maximum_bank_deg));
+                output.lateral_demand_binding = true;
+            }
+        }
     } else {
         authority_valid = bank_magnitude(input, limits, &magnitude,
             &output.energy_bank_magnitude_deg,&output.required_lateral_lift_accel,&output.zero_effort_crossrange_m,
