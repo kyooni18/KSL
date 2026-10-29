@@ -2932,6 +2932,7 @@ pub unsafe extern "C" fn mm305_hac_handoff_energy_error(
         &raw mut (*H_tls()),
         &raw mut x,
         &raw mut s,
+        0 as ::core::ffi::c_int,
         &raw mut s_go,
         &raw mut e_tgt,
         &raw mut bearing,
@@ -2956,6 +2957,22 @@ pub unsafe extern "C" fn mm305_hac_spiral_energy_error(
     mut error_m: *mut ::core::ffi::c_double,
     mut band_m: *mut ::core::ffi::c_double,
     mut psi_out: *mut ::core::ffi::c_double,
+) -> bool {
+    let (mut tx, mut ty, mut tc) = (0.0f64, 0.0f64, 0.0f64);
+    mm305_hac_spiral_tangent(model, live, geo, mass_kg, error_m, band_m, psi_out, &mut tx, &mut ty, &mut tc)
+}
+#[no_mangle]
+pub unsafe extern "C" fn mm305_hac_spiral_tangent(
+    mut model: *const TerminalModel,
+    mut live: *const TaemHacLiveAero,
+    mut geo: *const TaemGeometryState,
+    mut mass_kg: ::core::ffi::c_double,
+    mut error_m: *mut ::core::ffi::c_double,
+    mut band_m: *mut ::core::ffi::c_double,
+    mut psi_out: *mut ::core::ffi::c_double,
+    mut tangent_x: *mut ::core::ffi::c_double,
+    mut tangent_y: *mut ::core::ffi::c_double,
+    mut tangent_course: *mut ::core::ffi::c_double,
 ) -> bool {
     if model.is_null() || geo.is_null() || mass_kg.is_finite() as i32 == 0
         || !(mass_kg > 0.0f64) || (*geo).runway_along_m.is_finite() as i32 == 0
@@ -3097,36 +3114,42 @@ pub unsafe extern "C" fn mm305_hac_spiral_energy_error(
         turn_cost: 0.,
         e_ref: 0.,
     };
+    let mut spiral_side: ::core::ffi::c_int = 0 as ::core::ffi::c_int;
+    let mut spiral_rf: ::core::ffi::c_double = 0.0f64;
     let mut side: ::core::ffi::c_int = -(1 as ::core::ffi::c_int);
     while side <= 1 as ::core::ffi::c_int {
         let mut rf: ::core::ffi::c_double = (*H_tls()).rf;
         let mut pred: HacPrediction = hac_size_side(&raw mut x, R, side, &raw mut s, &raw mut rf);
         if pred.valid && pred.psi_t <= 2.0f64 * TEL_PI - 0.05f64 && pred.psi_t > spiral.psi_t {
             spiral = pred;
+            spiral_side = side;
+            spiral_rf = rf;
         }
         side += 2 as ::core::ffi::c_int;
     }
+    let mut spiral_course: ::core::ffi::c_double = ::core::f32::NAN as ::core::ffi::c_double;
     if spiral.valid {
-        e_tgt = spiral.e_ref;
-        // Same supersonic deceleration allowance as the MM305 drag path.
-        let mut q: ::core::ffi::c_double = 0.;
-        let mut mach: ::core::ffi::c_double = 0.;
-        tel_air(&raw const x.c, s.h, s.v, &raw mut q, &raw mut mach);
-        if mach > 1.0f64 {
-            let mut m_mid: ::core::ffi::c_double = 0.5f64 * (mach + 1.0f64);
-            let mut cl: ::core::ffi::c_double = 0.;
-            let mut cd: ::core::ffi::c_double = 0.;
-            hac_aero(&raw mut x, m_mid, hac_best_ld_aoa(&raw mut x, m_mid, hac_drag_aoa_ceiling(&raw mut x, m_mid)), &raw mut cl, &raw mut cd);
-            let mut eta_sup: ::core::ffi::c_double = if cl > 1e-3f64 { cd / cl } else { 1.0f64 };
-            let mut v1: ::core::ffi::c_double = s.v / mach;
-            let mut slope: ::core::ffi::c_double = 0.;
-            hac_reference_at(R, spiral.s_go, ::core::ptr::null_mut(), ::core::ptr::null_mut(), ::core::ptr::null_mut(), ::core::ptr::null_mut(), &raw mut slope);
-            let mut d: ::core::ffi::c_double = (s.v * s.v - v1 * v1) / (2.0f64 * TEL_G0 * fmax(0.3f64, eta_sup));
-            e_tgt += fmax(0.0f64, eta_sup - slope) * d;
-        }
+        let mut d_station: ::core::ffi::c_double = x.c.d_station;
+        let mut ang: ::core::ffi::c_double = atan2(
+            spiral.ty - spiral_side as ::core::ffi::c_double * spiral_rf,
+            spiral.tx + d_station,
+        );
+        spiral_course = ang + spiral_side as ::core::ffi::c_double * 0.5f64 * TEL_PI;
+        // The requirement is what MM305's drag phase will fly: its drag path held
+        // to the spiral side, on the HAC radius MM305's side sizing gives it, with
+        // the same supersonic allowance.
+        (*H_tls()).rf = spiral_rf;
+        let mut s_go: ::core::ffi::c_double = 0.;
+        let mut bearing: ::core::ffi::c_double = 0.;
+        hac_drag_path(&raw mut (*H_tls()), &raw mut x, &raw mut s, spiral_side, &raw mut s_go, &raw mut e_tgt, &raw mut bearing);
         if !psi_out.is_null() {
             *psi_out = spiral.psi_t;
         }
+        // Tangent point of the spiral-side route and its direction of travel
+        // (MM305 frame: x along, y = -cross, angle counter-clockwise from the runway).
+        *tangent_x = spiral.tx;
+        *tangent_y = spiral.ty;
+        *tangent_course = spiral_course;
     }
     if e_tgt.is_finite() as i32 == 0 {
         return false_0 != 0;
@@ -19298,6 +19321,9 @@ unsafe extern "C" fn hac_select(
         1 as ::core::ffi::c_int
     };
     let mut best_rf: ::core::ffi::c_double = (*H).rf;
+    let (mut q, mut mach) = (0.0f64, 0.0f64);
+    tel_air(&raw const (*x).c, (*s).h, (*s).v, &raw mut q, &raw mut mach);
+    let mut supersonic: bool = mach > HAC_DRAG_EXIT_MACH;
     let mut side: ::core::ffi::c_int = -(1 as ::core::ffi::c_int);
     while side <= 1 as ::core::ffi::c_int {
         let mut rf: ::core::ffi::c_double = (*H).rf;
@@ -19309,7 +19335,19 @@ unsafe extern "C" fn hac_select(
             &raw mut rf,
         );
         if !(!p.valid || p.psi_t > 2.0f64 * TEL_PI - 0.05f64) {
-            let mut cost: ::core::ffi::c_double = hac_energy_cost(e - p.e_ref);
+            let mut e_side: ::core::ffi::c_double = p.e_ref;
+            if supersonic {
+                // Above the drag-phase exit Mach the side is the one whose held drag
+                // path (the energy target the drag phase will fly) fits the energy.
+                let mut held: TaemHacLawState = *H;
+                held.rf = rf;
+                let (mut s_go, mut e_drag, mut bearing) = (0.0f64, f64::NAN, 0.0f64);
+                hac_drag_path(&raw const held, x, s, side, &raw mut s_go, &raw mut e_drag, &raw mut bearing);
+                if e_drag.is_finite() {
+                    e_side = e_drag;
+                }
+            }
+            let mut cost: ::core::ffi::c_double = hac_energy_cost(e - e_side);
             if keep_bias as ::core::ffi::c_int != 0 && side != (*H).side {
                 cost += HAC_SELECT_MARGIN_M;
             }
@@ -19591,10 +19629,15 @@ unsafe extern "C" fn hac_lateral_left(
     );
     return clampd(bank, -lim, lim);
 }
+/// MM305's drag-phase energy target: the route of `side_hold` (±1) when it is
+/// valid, else the least-energy side, plus the supersonic deceleration allowance.
+/// Holding the selected side keeps the drag phase from shedding the energy a
+/// spiral route needs.
 unsafe extern "C" fn hac_drag_path(
     mut H: *const TaemHacLawState,
     mut x: *const HacCtx,
     mut s: *const TelPoint,
+    mut side_hold: ::core::ffi::c_int,
     mut s_go: *mut ::core::ffi::c_double,
     mut e_tgt: *mut ::core::ffi::c_double,
     mut bearing: *mut ::core::ffi::c_double,
@@ -19621,6 +19664,7 @@ unsafe extern "C" fn hac_drag_path(
     let mut best_e: ::core::ffi::c_double = ::core::f32::NAN as ::core::ffi::c_double;
     let mut bx: ::core::ffi::c_double = -D;
     let mut by: ::core::ffi::c_double = 0.0f64;
+    let mut held: (f64, f64, f64, f64) = (f64::NAN, f64::NAN, f64::NAN, f64::NAN);
     let mut side: ::core::ffi::c_int = -(1 as ::core::ffi::c_int);
     while side <= 1 as ::core::ffi::c_int {
         let mut p: HacPrediction = hac_predict_acquisition(
@@ -19669,7 +19713,13 @@ unsafe extern "C" fn hac_drag_path(
             bx = tx;
             by = ty;
         }
+        if p.valid as ::core::ffi::c_int != 0 && side == side_hold {
+            held = (len, e, tx, ty);
+        }
         side += 2 as ::core::ffi::c_int;
+    }
+    if held.1.is_finite() {
+        (best, best_e, bx, by) = held;
     }
     let mut q: ::core::ffi::c_double = 0.;
     let mut mach: ::core::ffi::c_double = 0.;
@@ -19734,7 +19784,7 @@ unsafe extern "C" fn hac_drag_command(
     let mut bearing: ::core::ffi::c_double = 0.;
     let mut e_tgt: ::core::ffi::c_double = 0.;
     let mut deds: ::core::ffi::c_double = 0.;
-    hac_drag_path(H, x, s, &raw mut s_go, &raw mut e_tgt, &raw mut bearing);
+    hac_drag_path(H, x, s, (*H).side, &raw mut s_go, &raw mut e_tgt, &raw mut bearing);
     hac_reference_at(
         &raw mut (*H).ref_0,
         s_go,
@@ -20125,7 +20175,7 @@ unsafe extern "C" fn hac_update(
         let mut s_go: ::core::ffi::c_double = 0.;
         let mut bearing: ::core::ffi::c_double = 0.;
         let mut e_tgt: ::core::ffi::c_double = 0.;
-        hac_drag_path(H, x, s, &raw mut s_go, &raw mut e_tgt, &raw mut bearing);
+        hac_drag_path(H, x, s, (*H).side, &raw mut s_go, &raw mut e_tgt, &raw mut bearing);
         (*H).s_go = s_go;
         (*H).e_ref = e_tgt;
         (*H).e_err = e - e_tgt;

@@ -187,7 +187,11 @@ pub unsafe extern "C" fn mm304_plan_update(
         let hi_f = run(1.0, &mut plan);
         plan.spiral_at_max_range = lo_f.energy(MM304_ROUTE_SPIRAL);
         plan.spiral_turn_at_max_range = lo_f.terminal.spiral_turn;
-        route = if lo_f.energy(MM304_ROUTE_SPIRAL) >= 0.5 * route_band(&lo_f, MM304_ROUTE_SPIRAL) {
+        // Joining the spiral needs maximum range to reach its target (mid-window);
+        // a plan already on it keeps it while maximum range stays inside MM305's
+        // window, so the route does not flip at the threshold.
+        let join = if route == MM304_ROUTE_SPIRAL && previous.valid { 0.0 } else { 0.5 };
+        route = if lo_f.energy(MM304_ROUTE_SPIRAL) >= join * route_band(&lo_f, MM304_ROUTE_SPIRAL) {
             MM304_ROUTE_SPIRAL
         } else {
             MM304_ROUTE_SHORT

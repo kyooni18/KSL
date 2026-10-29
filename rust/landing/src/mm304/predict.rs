@@ -189,7 +189,7 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
         let to_go = range - x.station_range.max(0.0);
         // The handoff is the first of: the handoff Mach inside the MM305 band, the
         // HAC station (to-go reaches zero), or closest approach to it. Ending at the
-        // station makes an overshoot a surplus, so terminal energy stays monotone.
+        // station is scored as a surplus (see below), so terminal energy stays monotone.
         let mach_cross = geo.altitude <= x.max_altitude && excess <= 0.0;
         let station = to_go <= 0.0 || prev.is_some_and(|q| to_go > q.7);
         if mach_cross || station {
@@ -215,6 +215,18 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
                 x.max_altitude,
             );
             out.terminal.admissible &= mach_cross;
+            if !mach_cross && out.terminal.valid {
+                // Reaching the HAC station still above the handoff Mach is too much
+                // energy for MM305 to steer: score it as a surplus of the band plus
+                // the kinetic energy above the handoff speed, so the planner adds drag.
+                let v_h = (speed - excess.max(0.0)).max(0.0);
+                let above = (speed * speed - v_h * v_h).max(0.0) / (2.0 * x.surface_gravity.max(1.0));
+                let t = &mut out.terminal;
+                t.energy_error = t.band.max(0.0) + above;
+                if t.short_band.is_finite() {
+                    t.short_error = t.short_band.max(0.0) + above;
+                }
+            }
             out.converged = true;
             break;
         }

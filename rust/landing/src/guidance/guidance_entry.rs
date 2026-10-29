@@ -3277,9 +3277,25 @@ pub unsafe extern "C" fn entry_program_guidance(
         (*t).mach,
         mm_ceiling,
     );
-    // MM304 delivers to MM305's HAC reference point: the extended centreline at the
-    // final-alignment distance plus the HAC station range from the threshold.
-    let mut hac_point: GeoPoint = if hac_range.is_finite() as i32 != 0 {
+    // MM304 steers onto MM305's spiral-side tangent line: it aims at the point where
+    // that route joins the HAC (scored from the last live state), so the vehicle
+    // arrives already lined up and MM305 needs no acquisition turn. Before the live
+    // state is scored, the HAC reference point on the extended centreline.
+    let mut lt = (*g).mm304.live_terminal;
+    let mut hac_point: GeoPoint = if lt.valid && lt.tangent_along.is_finite() && lt.tangent_cross.is_finite() {
+        let mut q = crate::mm304::terminal::runway_point(
+            &crate::mm304::terminal::Site {
+                latitude: (*cfg).site.latitude,
+                longitude: (*cfg).site.longitude,
+                altitude: (*cfg).site.altitude,
+                runway_heading: (*cfg).site.runway_heading,
+                radius: (*p).radius,
+            },
+            lt.tangent_along,
+            lt.tangent_cross,
+        );
+        GeoPoint { latitude: q.latitude, longitude: q.longitude, altitude: alignment_point.altitude }
+    } else if hac_range.is_finite() as i32 != 0 {
         runway_approach_aimpoint(&raw mut delivery_site, ground_radius, alignment.distance_m + hac_range)
     } else if (*g).mm304.target_valid {
         GeoPoint {
@@ -3305,7 +3321,13 @@ pub unsafe extern "C" fn entry_program_guidance(
         lift_accel: lateral.lift_accel,
         target_latitude: hac_point.latitude,
         target_longitude: hac_point.longitude,
-        station_range: 0.0f64,
+        // The handoff lies MM305's station range short of the tangent point; with the
+        // centreline fallback the target already includes it.
+        station_range: if hac_range.is_finite() as i32 != 0 && lt.valid && lt.tangent_along.is_finite() {
+            hac_range
+        } else {
+            0.0f64
+        },
         handoff_speed: if hac_v.is_finite() as i32 != 0 { hac_v } else { taem_velocity },
         max_ld_aoa: mm_max_ld,
         bank_limit: limits.maximum_bank_deg,

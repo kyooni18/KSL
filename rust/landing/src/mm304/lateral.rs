@@ -9,7 +9,8 @@
 //! so one reversal nulls the miss, and only when holding would miss by more than
 //! the measured cross-range uncertainty. If the miss needs more lateral
 //! acceleration than the energy bank gives, the bank is raised to the bank that
-//! nulls it at constant acceleration (`2y/T²`).
+//! nulls it at constant acceleration (`2y/T²`), while the time to go still
+//! exceeds the time to roll there.
 
 #[derive(Copy, Clone, Debug)]
 pub struct LateralInput {
@@ -54,7 +55,9 @@ pub fn steer(sign: f64, x: &LateralInput) -> LateralOutput {
         capacity,
         required,
     };
-    if lift > 0.0 && required.abs() - capacity > required_noise {
+    // A demand bank is only meaningful when there is time to roll to it.
+    let demand_roll_time = if x.roll_rate > 0.0 { 2.0 * limit / x.roll_rate } else { f64::INFINITY };
+    if lift > 0.0 && t > demand_roll_time && required.abs() - capacity > required_noise {
         let need = (required.abs() / lift).min(limit.to_radians().sin());
         out.bank = need.asin().to_degrees().max(energy_bank);
         out.lateral_regime = true;

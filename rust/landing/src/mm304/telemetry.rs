@@ -150,6 +150,9 @@ pub fn json(p: &Published) -> String {
         num(&mut o, "spiralTurn", t.spiral_turn);
         num(&mut o, "shortRouteEnergyError", t.short_error);
         num(&mut o, "shortRouteBand", t.short_band);
+        num(&mut o, "tangentAlong", t.tangent_along);
+        num(&mut o, "tangentCross", t.tangent_cross);
+        num(&mut o, "tangentCourse", t.tangent_course);
         close(&mut o);
         o.push_str("},\"trajectory\":[");
         for s in &pl.samples[..(pl.sample_count as usize).min(MM304_SAMPLES)] {

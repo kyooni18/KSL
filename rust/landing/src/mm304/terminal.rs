@@ -33,7 +33,7 @@ extern "C" {
         error_m: *mut f64,
         band_m: *mut f64,
     ) -> bool;
-    fn mm305_hac_spiral_energy_error(
+    fn mm305_hac_spiral_tangent(
         model: *const c_void,
         live: *const c_void,
         geo: *const HandoffGeometry,
@@ -41,6 +41,9 @@ extern "C" {
         error_m: *mut f64,
         band_m: *mut f64,
         psi: *mut f64,
+        tangent_x: *mut f64,
+        tangent_y: *mut f64,
+        tangent_course: *mut f64,
     ) -> bool;
 }
 
@@ -89,8 +92,10 @@ pub unsafe fn evaluate(
     let mut error = f64::NAN;
     let mut band = f64::NAN;
     let mut turn = f64::NAN;
+    let (mut tx, mut ty, mut tcourse) = (f64::NAN, f64::NAN, f64::NAN);
     // Scored against MM305's spiral side, the route that turns furthest around the HAC.
-    let scored = !model.is_null() && mm305_hac_spiral_energy_error(model, live, &geo, h.mass, &mut error, &mut band, &mut turn);
+    let scored = !model.is_null()
+        && mm305_hac_spiral_tangent(model, live, &geo, h.mass, &mut error, &mut band, &mut turn, &mut tx, &mut ty, &mut tcourse);
     let (mut short_error, mut short_band) = (f64::NAN, f64::NAN);
     if !model.is_null() && !mm305_hac_handoff_energy_error(model, live, &geo, h.mass, &mut short_error, &mut short_band) {
         short_error = f64::NAN;
@@ -111,6 +116,10 @@ pub unsafe fn evaluate(
         spiral_turn: if scored { turn.to_degrees() } else { f64::NAN },
         short_error,
         short_band,
+        // MM305 frame: y = -cross, angle counter-clockwise from the runway heading.
+        tangent_along: if scored { tx } else { f64::NAN },
+        tangent_cross: if scored { -ty } else { f64::NAN },
+        tangent_course: if scored { norm_signed(site.runway_heading - tcourse.to_degrees()).rem_euclid(360.0) } else { f64::NAN },
     }
 }
 
@@ -127,11 +136,34 @@ impl Mm304Terminal {
     }
 }
 
-/// MM305 admission under the HAC law: the live state inside the window of the route
-/// the active plan delivers to (the spiral unless the plan has fallen back).
+/// MM305 admission under the HAC law: the live state inside the spiral's window, or
+/// inside the short route's window when the active plan has fallen back to it.
 pub fn live_admissible(m: &super::state::Mm304State, min_altitude: f64, max_altitude: f64) -> bool {
-    let route = if m.plan.valid { m.plan.route } else { super::state::MM304_ROUTE_SPIRAL };
-    m.live_terminal.valid && m.live_terminal.admissible_for(route, min_altitude, max_altitude)
+    let t = &m.live_terminal;
+    t.valid
+        && (t.admissible_for(super::state::MM304_ROUTE_SPIRAL, min_altitude, max_altitude)
+            || m.plan.valid && m.plan.route == MM304_ROUTE_SHORT && t.admissible_for(MM304_ROUTE_SHORT, min_altitude, max_altitude))
+}
+
+/// The point at runway coordinates (along, cross) of `site`: an inverse of
+/// `runway_coordinates`, solved by correcting a spherical first guess with it.
+pub unsafe fn runway_point(site: &Site, along: f64, cross: f64) -> GeoPoint {
+    let origin = GeoPoint { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude };
+    let offset = |p: GeoPoint, north: f64, east: f64| GeoPoint {
+        latitude: p.latitude + (north / site.radius).to_degrees(),
+        longitude: p.longitude + (east / (site.radius * p.latitude.to_radians().cos().max(1e-6))).to_degrees(),
+        altitude: p.altitude,
+    };
+    let h = site.runway_heading.to_radians();
+    // Guess with cross positive to the right of the runway heading, then iterate.
+    let mut p = offset(origin, along * h.cos() - cross * h.sin(), along * h.sin() + cross * h.cos());
+    for _ in 0..4 {
+        let (mut a, mut c) = (0.0, 0.0);
+        runway_coordinates(p, origin, site.runway_heading, site.radius, &mut a, &mut c);
+        let (da, dc) = (along - a, cross - c);
+        p = offset(p, da * h.cos() - dc * h.sin(), da * h.sin() + dc * h.cos());
+    }
+    p
 }
 
 pub fn norm_signed(deg: f64) -> f64 {
@@ -142,4 +174,22 @@ pub fn norm_signed(deg: f64) -> f64 {
         d += 360.0;
     }
     d
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `runway_point` inverts `runway_coordinates` on both sides of the runway.
+    #[test]
+    fn runway_point_round_trips() {
+        let site = Site { latitude: -0.0486, longitude: -74.7283, altitude: 68.0, runway_heading: 90.0, radius: 600_000.0 };
+        let origin = GeoPoint { latitude: site.latitude, longitude: site.longitude, altitude: site.altitude };
+        for (along, cross) in [(-20_000.0, 8_000.0), (-12_000.0, -9_000.0), (3_000.0, 500.0)] {
+            let p = unsafe { runway_point(&site, along, cross) };
+            let (mut a, mut c) = (0.0, 0.0);
+            unsafe { runway_coordinates(p, origin, site.runway_heading, site.radius, &mut a, &mut c) };
+            assert!((a - along).abs() < 1.0 && (c - cross).abs() < 1.0, "{along},{cross} -> {a},{c}");
+        }
+    }
 }

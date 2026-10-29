@@ -89,6 +89,11 @@ pub struct Mm304Terminal {
     /// The same handoff scored on MM305's least-energy route (its drag-path target).
     pub short_error: f64,
     pub short_band: f64,
+    /// Where the spiral-side route joins MM305's HAC (runway along/cross, m) and
+    /// its course there, deg; MM304 steers onto this tangent line.
+    pub tangent_along: f64,
+    pub tangent_cross: f64,
+    pub tangent_course: f64,
 }
 
 #[derive(Copy, Clone, Debug)]
