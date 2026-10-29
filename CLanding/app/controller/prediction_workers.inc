@@ -462,12 +462,14 @@ static void *terminal_prediction_worker(void *arg){
                     &forecast_drag,&forecast_lift);
                 calibration.forecast_drag_scale=forecast_drag;
                 calibration.forecast_lift_scale=forecast_lift;
-                /* Forecast the incidence MM304 actually commands (staircase,
-                   drag boost and low-energy cap included), not the schedule. */
-                double aoa=guidance.entry_control_plan_valid&&isfinite(guidance.entry_control_aoa)?
-                    guidance.entry_control_aoa:
-                    guidance.entry_alpha_has_target&&isfinite(guidance.entry_alpha_target)?
-                    guidance.entry_alpha_target:telemetry.angle_of_attack;
+                /* Bank is solved at the incidence MM304 will fly: its schedule
+                   (NAN), or the held max-L/D command while the low-energy cap is
+                   latched.  The cap itself is decided only from the schedule
+                   forecast below, never from a forecast of its own output. */
+                bool capped=guidance.entry_energy_short_latched&&
+                    guidance.entry_control_plan_valid&&isfinite(guidance.entry_control_aoa);
+                double aoa=capped?guidance.entry_control_aoa:NAN;
+                double schedule_zero_bank_miss=NAN;
                 double side=guidance.s_turn_sign>=0.0?1.0:-1.0;
                 double hi=fmin(MM304_PLANNED_MAX_BANK_DEG,cfg.vehicle.maximum_bank_angle);
                 double lo=0.0,f_lo=NAN,f_hi=NAN;
@@ -494,6 +496,7 @@ static void *terminal_prediction_worker(void *arg){
                             miss=to_go-target;
                     }
                     entry_prediction_clear(&f);
+                    if(iteration==0&&!capped)schedule_zero_bank_miss=miss;
                     if(iteration==0){f_lo=miss;if(!(miss<0.0))break;continue;}
                     if(iteration==1){f_hi=miss;if(!(miss>0.0))break;continue;}
                     if(!isfinite(miss))break;
@@ -504,16 +507,30 @@ static void *terminal_prediction_worker(void *arg){
                 }
                 double solved=isfinite(f_lo)&&!(f_lo<0.0)?0.0:
                     isfinite(f_hi)&&!(f_hi>0.0)?hi:0.5*(lo+hi);
-                double policy_aoa=NAN,best_miss=f_lo;
+                if(capped){
+                    EntryPrediction f=predictor_simulate_entry_policy(state,&planet,aero,&envelope,
+                        &calibration,&cfg.vehicle,&cfg.site,&cfg.guidance,0.0,NAN,side,bound);
+                    if(cfg.guidance.taem_hac_law)
+                        schedule_zero_bank_miss=entry_policy_handoff_miss(&f,&planet,&cfg,&guidance,
+                            terminal_model_valid?&terminal_model:NULL,state.mass);
+                    else{
+                        TaemGeometryState geo;double to_go=NAN;
+                        if(entry_policy_handoff_geometry(&f,&planet,&cfg,&geo,&to_go)&&isfinite(to_go))
+                            schedule_zero_bank_miss=to_go-target;
+                    }
+                    entry_prediction_clear(&f);
+                }
+                double policy_aoa=aoa,best_miss=f_lo;
                 if(isfinite(f_lo)||isfinite(f_hi)){
                     guidance.entry_policy_valid=true;
                     guidance.entry_policy_bank_deg=solved;
-                    guidance.entry_policy_zero_bank_miss=f_lo;
+                    guidance.entry_policy_zero_bank_miss=schedule_zero_bank_miss;
                     guidance.entry_policy_aoa_deg=policy_aoa;
                     guidance.entry_policy_ut=request_ut;
-                    fprintf(stderr,"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %.1f deg "
-                        "(short at 0 deg %+.1f km, at max %+.1f km, best %+.1f km; HAC law: energy height)\n",request_ut,target/1000.0,
-                        solved,policy_aoa,f_lo/1000.0,f_hi/1000.0,best_miss/1000.0);
+                    fprintf(stderr,"MM304 live replan: ut=%.1f target %.1f km bank %.1f deg aoa %s%.1f deg "
+                        "(short at 0 deg %+.1f km, at max %+.1f km, best %+.1f km; schedule wings-level %+.1f km)\n",
+                        request_ut,target/1000.0,solved,capped?"capped ":"schedule ",policy_aoa,
+                        f_lo/1000.0,f_hi/1000.0,best_miss/1000.0,schedule_zero_bank_miss/1000.0);
                 }
             }
         }else pr=predictor_simulate_terminal_shadow_ensemble(state,&telemetry,&guidance,

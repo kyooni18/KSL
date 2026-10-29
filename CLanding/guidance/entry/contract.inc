@@ -18,23 +18,6 @@ static double entry_diagnostic_milestone_due(GuidanceMachine*g,double range_m){
     return NAN;
 }
 
-/* KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST: test-only incidence staircase for the
-   aero-cell campaign; NAN when unset or below the last Mach threshold. */
-static double entry_aoa_staircase_test(double mach){
-    const char*spec=getenv("KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST");
-    if(!spec||!*spec||!isfinite(mach))return NAN;
-    for(const char*p=spec;p&&*p;){
-        char*end=NULL;
-        double threshold=strtod(p,&end);
-        if(end==p||*end!=':')return NAN;
-        p=end+1;
-        double aoa=strtod(p,&end);
-        if(end==p)return NAN;
-        if(mach>=threshold)return aoa;
-        p=*end==','?end+1:NULL;
-    }
-    return NAN;
-}
 
 /* Max-L/D incidence at this Mach from the (live-fitted) aero table. */
 static double entry_max_lift_to_drag_aoa(const TerminalModel*m,double q,double mach,
@@ -660,7 +643,9 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
            once it reaches the target, so a policy bank answer hovering near
            0 deg cannot toggle the cap every replan. */
         double zero_bank_miss=policy_fresh?g->entry_policy_zero_bank_miss:NAN;
-        if((isfinite(zero_bank_miss)&&zero_bank_miss>2000.0)||dragref_short)
+        /* The drag-reference range error swings hundreds of km per tick at
+           high alpha; it no longer latches the cap. */
+        if(isfinite(zero_bank_miss)&&zero_bank_miss>2000.0)
             g->entry_energy_short_latched=true;
         else if(isfinite(zero_bank_miss)&&zero_bank_miss<0.0)
             g->entry_energy_short_latched=false;
@@ -676,6 +661,13 @@ GuidanceResult entry_program_guidance(GuidanceMachine*g,const Telemetry*t,
                 aoa=isfinite(previous)?fmax(best,fmin(aoa,previous-step)):best;
             }
         }
+        if(!g->diagnostic_shadow&&getenv("KSP_LANDER_AOA_CHAIN_TRACE"))
+            fprintf(stderr,"AOA_CHAIN ut=%.2f M=%.2f q=%.0f aoaMeas=%.2f alphaTarget=%.2f limit=%d boost=%.2f stair=%.1f "
+                "latched=%d dragrefShort=%d zeroBankMiss=%+.0f policyFresh=%d rangeErr=%+.0f dragScale=%.3f aoaOut=%.2f\n",
+                t->ut,t->mach,t->dynamic_pressure,t->angle_of_attack,alpha.target_aoa,(int)alpha.limiting_reason,
+                g->entry_alpha_drag_boost,entry_aoa_staircase_test(t->mach),g->entry_energy_short_latched?1:0,
+                dragref_short?1:0,zero_bank_miss,policy_fresh?1:0,drag.predicted_range_error,
+                drag.drag_range_scale,aoa);
     }
     double heading=isfinite(course)?norm_deg(course):norm_deg(t->heading);
 

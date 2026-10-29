@@ -1001,3 +1001,21 @@ double aerodynamic_best_glide_aoa(double mach,const VehicleProfile*v){
 void aerodynamic_force_factors(double angle_of_attack,const VehicleProfile*v,double*lift_factor,double*drag_factor){
     aerodynamic_force_factors_mach(5.0,angle_of_attack,v,lift_factor,drag_factor);
 }
+
+/* KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST: test-only incidence staircase for the
+   aero-cell campaign; NAN when unset or below the last Mach threshold. */
+double entry_aoa_staircase_test(double mach){
+    const char*spec=getenv("KSP_LANDER_ENTRY_AOA_STAIRCASE_TEST");
+    if(!spec||!*spec||!isfinite(mach))return NAN;
+    for(const char*p=spec;p&&*p;){
+        char*end=NULL;
+        double threshold=strtod(p,&end);
+        if(end==p||*end!=':')return NAN;
+        p=end+1;
+        double aoa=strtod(p,&end);
+        if(end==p)return NAN;
+        if(mach>=threshold)return aoa;
+        p=*end==','?end+1:NULL;
+    }
+    return NAN;
+}

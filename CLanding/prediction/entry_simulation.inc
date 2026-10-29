@@ -564,7 +564,16 @@ static double entry_bank(PredictorGuidance*g,VehicleState s,GeoPoint geo,const A
 
     double qr=a->q/fmax(v->maximum_dynamic_pressure,1),gr=(a->non_gravity/fmax(grav,.1))/fmax(v->maximum_g_load,.1);
     double protective_aoa=entry_low_q_protective_aoa_floor(a->q,v);
-    double aoa=forced_policy?clampd(g->forced_aoa,protective_aoa,v->maximum_angle_of_attack):
+    /* A NAN forced AoA flies MM304's incidence schedule (the test staircase,
+       else the entry AoA), so a policy forecast does not depend on the
+       command it is deciding (live 2026-10-29: forecasting the current
+       command made the low-energy cap a 5 s limit cycle). */
+    double forced_aoa=g->forced_aoa;
+    if(forced_policy&&!isfinite(forced_aoa)){
+        forced_aoa=entry_aoa_staircase_test(a->mach);
+        if(!isfinite(forced_aoa))forced_aoa=v->entry_angle_of_attack;
+    }
+    double aoa=forced_policy?clampd(forced_aoa,protective_aoa,v->maximum_angle_of_attack):
         v->entry_angle_of_attack+(v->maximum_angle_of_attack-v->entry_angle_of_attack)*drag_deficit;
     /* Vertical debt is paid with bank/path geometry. The predictor must mirror
        live guidance and never buy sink by exposing the orbiter at low incidence. */
