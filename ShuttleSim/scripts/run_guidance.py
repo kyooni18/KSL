@@ -2,7 +2,7 @@
 from __future__ import annotations
 import argparse, hashlib, io, json, math, os, pathlib, re, shutil, socket, subprocess, time
 from run_backend import Backend, stop_process
-from run_geometry import fixed_hac_geometry_evidence, energy_law_runway_end
+from run_geometry import fixed_hac_geometry_evidence, energy_law_runway_end, validate_runway_geometry
 from run_artifacts import allocate_run, compress_recording, write_json
 from model_paths import model_file, active_profile, file_digest, validate_vehicle_profile
 
@@ -291,6 +291,7 @@ def main():
     try:
         config=json.loads(pathlib.Path(args.configuration).read_text(encoding="utf-8"))
         validate_vehicle_profile(config)
+        validate_runway_geometry(args.scenario, config)
     except (OSError, ValueError) as exc:
         ap.error(str(exc))
     if args.no_mirror:
