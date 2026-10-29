@@ -266,8 +266,8 @@ class MissionConfig:
                              ("landing", "modelProfile"), ("simulation", "scenario")):
             if not self.data[section][key].strip():
                 problems.append(f"{section}.{key} must not be empty")
-        if self.data["landing"].get("engine", "c") not in ("c", "swift"):
-            problems.append("landing.engine must be 'c' or 'swift'")
+        if self.data["landing"].get("engine", "c") not in ("c", "swift", "swift-backend"):
+            problems.append("landing.engine must be 'c', 'swift' or 'swift-backend'")
         if self.data["landing"].get("engine") == "swift" and not 0 <= int(self.data["landing"]["swiftAirbrakeGroup"]) <= 9:
             problems.append("landing.swiftAirbrakeGroup must be 0-9")
         landing_path = repo_path(self.data["landing"]["backendConfiguration"])

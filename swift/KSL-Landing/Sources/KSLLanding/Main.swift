@@ -169,6 +169,17 @@ struct LandingCLI {
       } else {
         try output(reader.statistics)
       }
+    case "backend":
+      // NDJSON operator protocol v1 server (drop-in for `landing_backend` in `ksl`).
+      let server = BackendServer(
+        configuration: .init(),
+        vessel: ProcessInfo.processInfo.environment["KSL_SWIFT_VESSEL"] ?? "STS",
+        airbrakeGroup: UInt32(ProcessInfo.processInfo.environment["KSL_SWIFT_AIRBRAKE_GROUP"] ?? "1")
+          ?? 1)
+      await server.ready()
+      while let line = readLine() {
+        if await !server.handle(line: line) { break }
+      }
     case "inspect", "fly":
       var connection = KRPCConnectionConfiguration()
       if let host = option("--host") { connection.host = host }

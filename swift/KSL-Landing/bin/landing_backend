@@ -1,0 +1,4 @@
+#!/bin/sh
+# Drop-in for CLanding/build/landing_backend: set KSL_BACKEND to this file to fly with the Swift engine.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$ROOT/.build/release/ksl-landing" backend "$@"

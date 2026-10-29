@@ -32,7 +32,7 @@ from .backend import BackendClient, BackendError, snapshot_summary, validate_pla
 from .config import MissionConfig
 from .krpc_link import ConnectionFailure, connect, endpoint_args, krpc_env, wait_for_flight_scene
 from .kspguard import GuardError, ensure_payload_bay_closed, prepare_reentry_direct_control, probe_orbiter_integrity
-from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM, SWIFT_BINARY, repo_path
+from .paths import BACKEND, DATA_ROOT, ROOT, SHUTTLESIM, SWIFT_BINARY, SWIFT_LANDING, repo_path
 from .phases import BACKEND_ENGAGE, BACKEND_FAILURE_PHASES, BACKEND_PHASES, ASCENT_EVENTS, Phase
 from .runlog import Event, RunLog
 from .scenarios import Scenario
@@ -517,8 +517,11 @@ class LandingProgram(Program):
         # atmospheric flight, so aero history is keyed to that configuration.
         env["KSP_LANDER_PHYSICS_VARIANT"] = "payload-bay-closed"
         state = _LandingState(ctx)
+        # "swift-backend" flies the full LandingProgram flow (TUI, checkpoints, abort) on the
+        # Swift engine through the same NDJSON protocol.
+        backend_path = SWIFT_LANDING / "bin" / "landing_backend" if landing.get("engine") == "swift-backend" else BACKEND
         with open(ctx.log.directory / "backend.stderr.log", "ab") as stderr:
-            client = BackendClient(BACKEND, snapshot_sink=state.on_snapshot, stderr_target=stderr, env=env)
+            client = BackendClient(backend_path, snapshot_sink=state.on_snapshot, stderr_target=stderr, env=env)
             try:
                 return self._fly(ctx, client, state, start, env)
             except (BackendError, TimeoutError) as exc:
