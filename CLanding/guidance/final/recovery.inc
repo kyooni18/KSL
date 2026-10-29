@@ -37,7 +37,11 @@ static double observed_signed_roll_rate(const Telemetry *t) {
         outward_aoa_rate=(signed_aoa>=0.0?1.0:-1.0)*t->angle_of_attack_rate;
     double projected_abs_aoa=fabs(signed_aoa)+
         fmax(0.0,outward_aoa_rate)*GUIDANCE_ATTITUDE_LOOKAHEAD_S;
-    bool attitude_envelope_threat=projected_abs_aoa>=GUIDANCE_RECOVERY_AOA_THREAT_DEG;
+    /* Threat sits above the vehicle's own incidence limit so a commanded
+       Shuttle-style entry hold is not itself a departure (40 deg for the
+       28 deg STS-N default, as before). */
+    bool attitude_envelope_threat=projected_abs_aoa>=fmax(GUIDANCE_RECOVERY_AOA_THREAT_DEG,
+        v->maximum_angle_of_attack+2.0);
     double beta_rate=0.0;
     if(g->has_previous_sideslip&&dt>1e-4)
         beta_rate=norm_signed_deg(t->sideslip-g->previous_sideslip)/dt;

@@ -16,7 +16,8 @@
 /* 46 deg admits the Shuttle 40 deg entry hold plus its 3 deg modulation; every
    use is min'd with the vehicle's configured maximum_angle_of_attack. */
 #define GUIDANCE_HARD_AOA_LIMIT_DEG 46.0
-/* Final attitude-recovery trigger; stays at the pre-Shuttle-entry hard limit. */
+/* Attitude-recovery AoA threat floor (all phases); raised only above it by
+   the vehicle's configured maximum incidence. */
 #define GUIDANCE_RECOVERY_AOA_THREAT_DEG 40.0
 #define GUIDANCE_ATTITUDE_LOOKAHEAD_S 0.75
 #define MM304_COORDINATION_BETA_SCALE_DEG 5.0
