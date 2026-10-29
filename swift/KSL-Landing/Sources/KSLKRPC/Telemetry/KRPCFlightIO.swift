@@ -112,7 +112,13 @@ public actor KRPCFlightIO: FlightIO {
     busy = true
     let operationGeneration = generation
     defer { busy = false }
-    _ = try await session.call([objectCall("AutoPilot_Disengage", autopilot)] + safetyCalls())
+    // This kRPC build has no AutoPilot.Disengage procedure; Engaged is a property.
+    _ = try await session.call(
+      [
+        .init(
+          procedure: "AutoPilot_set_Engaged",
+          arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
+      ] + safetyCalls())
     guard generation == operationGeneration else {
       throw FlightError.disconnected("Connection shut down while arming")
     }

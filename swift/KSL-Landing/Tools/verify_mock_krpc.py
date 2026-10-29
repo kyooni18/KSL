@@ -184,8 +184,8 @@ class Fixture:
                 return vector(300000*math.cos(math.radians(24)), 0, 300000*math.sin(math.radians(24)))
             if property_name == "Drag":
                 return vector(120000*math.sin(math.radians(24)), 0, -120000*math.cos(math.radians(24)))
-        if name == "AutoPilot_Disengage":
-            assert len(args) == 1
+        if name == "AutoPilot_set_Engaged":
+            assert len(args) == 2 and read_varint(args[1])[0] == 0
             return b""
         if name.startswith("Control_set_") or name == "Control_SetActionGroup":
             assert read_varint(args[0])[0] == 11
@@ -289,7 +289,7 @@ def main():
             assert process.returncode == expected, (mode, process.returncode, stdout, stderr)
             assert fixture.error is None, (mode, fixture.error)
             if not live:
-                assert not any("set_" in name or name in {"Control_SetActionGroup", "AutoPilot_Disengage"} for name in fixture.calls), "Read-only inspect mutated vessel"
+                assert not any("set_" in name or name in {"Control_SetActionGroup", "AutoPilot_set_Engaged"} for name in fixture.calls), "Read-only inspect mutated vessel"
             if mode == "command-error":
                 assert fixture.command_batches == 1, "A failed command was replayed"
             if mode in {"fly", "cancel"}:
