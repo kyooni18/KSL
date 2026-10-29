@@ -22,6 +22,7 @@ actor BackendServer {
   private var status = "Idle"
   private var lastError: String?
   private var telemetry: [String: Any] = [:]
+  private var command: [String: Any] = [:]
   private var finished = false
 
   init(configuration: MissionConfiguration, vessel: String, airbrakeGroup: UInt32) {
@@ -39,7 +40,7 @@ actor BackendServer {
   private func snapshot() -> [String: Any] {
     var s: [String: Any] = [
       "phase": phase, "automationEngaged": engaged, "connectionStatus": connection,
-      "statusMessage": status, "telemetry": telemetry,
+      "statusMessage": status, "telemetry": telemetry, "command": command,
     ]
     if let lastError { s["lastError"] = lastError }
     return s
@@ -74,6 +75,13 @@ actor BackendServer {
       "targetAoA": record.guidance.target.angleOfAttack * 180 / .pi,
       "targetRoll": record.guidance.target.bank * 180 / .pi,
     ]
+    command = [
+      "targetAoA": record.guidance.target.angleOfAttack * 180 / .pi,
+      "targetRoll": record.guidance.target.bank * 180 / .pi,
+    ]
+    if !record.guidance.violations.isEmpty {
+      status = "Swift guidance: " + record.guidance.violations.map { $0.message }.joined(separator: "; ")
+    }
     publish()
   }
 

@@ -23,6 +23,8 @@ public actor KRPCFlightIO: FlightIO {
   private var initialPartCount = 0
   private var expectedVesselName: String? = "STS"
   private var autopilotEngaged = false
+  private var slewedTarget: AttitudeTarget?
+  private var slewedAt: Double?
   private var autopilotFrameSet = false
   /// Fly the airborne attitude target through the game autopilot (as the proven backend does)
   /// instead of raw pitch/roll/yaw axes.
@@ -57,6 +59,7 @@ public actor KRPCFlightIO: FlightIO {
       ])
       autopilotEngaged = false
       autopilotFrameSet = false
+      slewedTarget = nil
       vessel = try KRPCValue.decodeUInt(first[0])
       let status = try Protobuf.decode(first[1])
       let version =
@@ -303,7 +306,8 @@ public actor KRPCFlightIO: FlightIO {
     let c = envelope.command
     var calls = safetyCalls()
     let flyAttitude = useAutopilotAttitude && !latest.contact.isGrounded && envelope.attitude != nil
-    if flyAttitude, let target = envelope.attitude {
+    if flyAttitude, let requested = envelope.attitude {
+      let target = slew(requested, time: envelope.stateTime, dynamicPressure: latest.aerodynamics.dynamicPressure)
       let local = LocalFrame(position: latest.position)
       // kRPC surface frame components are (up, north, east).
       func raw(_ v: Vector3) -> Data {
@@ -383,6 +387,30 @@ public actor KRPCFlightIO: FlightIO {
     _ = try await session.call([
       .init(procedure: "Save", arguments: [KRPCValue.string(name)])
     ])
+  }
+  /// Limits how fast the commanded attitude moves, tighter as dynamic pressure rises: the game
+  /// autopilot's default gains oscillate on a large step in dense air (observed above ~20 kPa).
+  private func slew(_ requested: AttitudeTarget, time: Double, dynamicPressure q: Double)
+    -> AttitudeTarget
+  {
+    defer { slewedAt = time }
+    guard let previous = slewedTarget, let at = slewedAt, time > at, time - at < 1 else {
+      slewedTarget = requested
+      return requested
+    }
+    let rate = max(3.0, 45.0 - 42.0 * min(1, q / 8000)) * .pi / 180  // rad/s
+    func angle(_ a: Vector3, _ b: Vector3) -> Double { acos(max(-1, min(1, a.dot(b)))) }
+    let step = rate * (time - at)
+    let needed = max(angle(previous.nose, requested.nose), angle(previous.roof, requested.roof))
+    let fraction = needed > step ? step / needed : 1
+    let result =
+      fraction >= 1
+      ? requested
+      : AttitudeTarget(
+        nose: (previous.nose * (1 - fraction) + requested.nose * fraction).normalized,
+        roof: (previous.roof * (1 - fraction) + requested.roof * fraction).normalized)
+    slewedTarget = result
+    return result
   }
   public func assertSafety() async throws {
     guard armed, !busy else { return }
