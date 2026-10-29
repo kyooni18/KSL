@@ -1,0 +1,265 @@
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c app/controller.c -o build-spiral/controller.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c app/main.c -o build-spiral/main.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/entry_alpha.c -o build-spiral/entry_alpha.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/entry_drag_reference.c -o build-spiral/entry_drag_reference.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/entry_energy_control.c -o build-spiral/entry_energy_control.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_common.c -o build-spiral/guidance_common.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_core.c -o build-spiral/guidance_core.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_entry.c -o build-spiral/guidance_entry.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_taem.c -o build-spiral/guidance_taem.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_final.c -o build-spiral/guidance_final.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance_terminal.c -o build-spiral/guidance_terminal.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c guidance/guidance.c -o build-spiral/guidance.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c prediction/predictor.c -o build-spiral/predictor.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c prediction/decision_envelope.c -o build-spiral/decision_envelope.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c control/flight_control.c -o build-spiral/flight_control.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c vehicle/vessel_physics.c -o build-spiral/vessel_physics.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c vehicle/aero_certification.c -o build-spiral/aero_certification.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c vehicle/math.c -o build-spiral/math.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c vehicle/models.c -o build-spiral/models.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c calibration/calibration.c -o build-spiral/calibration.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c calibration/calibration_observation.c -o build-spiral/calibration_observation.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c calibration/trajectory_calibration.c -o build-spiral/trajectory_calibration.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c transport/krpc.c -o build-spiral/krpc.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c transport/krpc_cnano_client.c -o build-spiral/krpc_cnano_client.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c telemetry/sim_telemetry.c -o build-spiral/sim_telemetry.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c telemetry/planner_log.c -o build-spiral/planner_log.o
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread -MMD -MP -c persistence/physics_store.c -o build-spiral/physics_store.o
+clang -pthread build-spiral/controller.o build-spiral/main.o build-spiral/entry_alpha.o build-spiral/entry_drag_reference.o build-spiral/entry_energy_control.o build-spiral/entry_lateral.o build-spiral/entry_exec.o build-spiral/taem_exec.o build-spiral/guidance_common.o build-spiral/guidance_core.o build-spiral/guidance_entry.o build-spiral/guidance_taem.o build-spiral/guidance_final.o build-spiral/guidance_terminal.o build-spiral/guidance.o build-spiral/taem_frames_energy.o build-spiral/taem_geometry.o build-spiral/terminal_model.o build-spiral/terminal_propagator.o build-spiral/taem_reachability.o build-spiral/taem_tracker.o build-spiral/taem_planner.o build-spiral/terminal_solver.o build-spiral/taem_candidate_search.o build-spiral/predictor.o build-spiral/decision_envelope.o build-spiral/async_prediction_policy.o build-spiral/flight_control.o build-spiral/vessel_physics.o build-spiral/aero_certification.o build-spiral/math.o build-spiral/models.o build-spiral/calibration.o build-spiral/calibration_observation.o build-spiral/trajectory_calibration.o build-spiral/krpc.o build-spiral/krpc_cnano_client.o build-spiral/krpc_cnano_transport.o build-spiral/krpc_cnano_batch.o build-spiral/json.o build-spiral/sim_telemetry.o build-spiral/planner_log.o build-spiral/flight_log_codec.o build-spiral/physics_store.o build-spiral/flight_physics/math3.o build-spiral/flight_physics/quat.o build-spiral/flight_physics/world.o build-spiral/flight_physics/aero.o build-spiral/flight_physics/attitude.o build-spiral/flight_physics/flight_physics.o build-spiral/cnano/decoder.o build-spiral/cnano/encoder.o build-spiral/cnano/error.o build-spiral/cnano/krpc.o build-spiral/cnano/krpc.pb.o build-spiral/cnano/memory.o build-spiral/cnano/utils.o build-spiral/cnano/communication.o build-spiral/nanopb/pb_common.o build-spiral/nanopb/pb_encode.o build-spiral/nanopb/pb_decode.o -lm -lsqlite3 -o build-spiral/landing_backend
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+		../Validation/MM305FeasibilityPropertyTests.c \
+		build-spiral/controller.o build-spiral/entry_alpha.o build-spiral/entry_drag_reference.o build-spiral/entry_energy_control.o build-spiral/entry_lateral.o build-spiral/entry_exec.o build-spiral/taem_exec.o build-spiral/guidance_common.o build-spiral/guidance_core.o build-spiral/guidance_entry.o build-spiral/guidance_taem.o build-spiral/guidance_final.o build-spiral/guidance_terminal.o build-spiral/guidance.o build-spiral/taem_frames_energy.o build-spiral/taem_geometry.o build-spiral/terminal_model.o build-spiral/terminal_propagator.o build-spiral/taem_reachability.o build-spiral/taem_tracker.o build-spiral/taem_planner.o build-spiral/terminal_solver.o build-spiral/taem_candidate_search.o build-spiral/predictor.o build-spiral/decision_envelope.o build-spiral/async_prediction_policy.o build-spiral/flight_control.o build-spiral/vessel_physics.o build-spiral/aero_certification.o build-spiral/math.o build-spiral/models.o build-spiral/calibration.o build-spiral/calibration_observation.o build-spiral/trajectory_calibration.o build-spiral/krpc.o build-spiral/krpc_cnano_client.o build-spiral/krpc_cnano_transport.o build-spiral/krpc_cnano_batch.o build-spiral/json.o build-spiral/sim_telemetry.o build-spiral/planner_log.o build-spiral/flight_log_codec.o build-spiral/physics_store.o build-spiral/flight_physics/math3.o build-spiral/flight_physics/quat.o build-spiral/flight_physics/world.o build-spiral/flight_physics/aero.o build-spiral/flight_physics/attitude.o build-spiral/flight_physics/flight_physics.o build-spiral/cnano/decoder.o build-spiral/cnano/encoder.o build-spiral/cnano/error.o build-spiral/cnano/krpc.o build-spiral/cnano/krpc.pb.o build-spiral/cnano/memory.o build-spiral/cnano/utils.o build-spiral/cnano/communication.o build-spiral/nanopb/pb_common.o build-spiral/nanopb/pb_encode.o build-spiral/nanopb/pb_decode.o \
+		-pthread -lm -lsqlite3 -o build-spiral/mm305_feasibility_tests
+cd .. && "/Users/kyooni18/Code/KSL/CLanding/build-spiral/mm305_feasibility_tests" 
+MM305 fixture: profile=identified modelId=STS-N massKg=40000.000000 configuration=native-default state=legacy-envelope-property-fixture
+MM305 aero source: ShuttleSim/reference-model/stsn_aero_identified.csv
+MM305 attitude source: ShuttleSim/reference-model/stsn_attitude_identified.ini
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+MM305_ADMISSION rejected: MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] no HAC join has an energy-feasible native vertical profile t0.0;
+sample=0 altitude=26000.0 mach=2.500 along=-30000.0 cross=0.0 found=0 gate=0 solve_wall=20.082
+  rejected (MM304 retains ownership): MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] n
+TAEM profile rejection: side=-1 count=5/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=6/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=5/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=profile propagation did not complete
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=5/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=5/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=6/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=5/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=profile propagation did not complete
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=1/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=alignment profile retains excess energy for Final handoff
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=4/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+MM305_ADMISSION rejected: MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] no HAC join has an energy-feasible native vertical profile t0.0;
+sample=1 altitude=22500.0 mach=2.350 along=-28000.0 cross=-5000.0 found=0 gate=0 solve_wall=18.929
+  rejected (MM304 retains ownership): MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] n
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=-1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=alignment profile is too slow for Final handoff
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=3/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=2/6 reason=route is too short to descend within the slope limit
+TAEM profile rejection: side=+1 count=2/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=2/6 reason=profile exceeded propagation time before route completion
+MM305_ADMISSION rejected: MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] no HAC join has an energy-feasible native vertical profile t0.0;
+sample=2 altitude=26000.0 mach=2.500 along=-60000.0 cross=0.0 found=0 gate=0 solve_wall=65.404
+  rejected (MM304 retains ownership): MM305 route rejected scale=1.000/1.000: [CONF L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [CONF R r18000] n
+sample=3 along=-80000 physically inadmissible (veto 0x10)
+sample=4 along=-70000 physically inadmissible (veto 0x10)
+MM305 downstream-feasibility contract: 3 physically admitted, 0 qualified (handoff), 3 held in MM304, 0 violations.
+FAIL: none of this fixture's tested states qualified an MM305 route; the non-vacuity check failed.
+make: *** [mm305-feasibility-test] Error 1

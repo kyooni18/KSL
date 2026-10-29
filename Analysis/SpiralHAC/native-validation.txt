@@ -1,0 +1,29 @@
+geometry side=-1 Ri=12000.0 Rf=4224.1 sweep=4.700 length=32987.3 lead=3000.0 spiral=28767.0 unload=682.5
+native side=-1 h=14000 profile=0 exitV=69.0 reason=alignment profile is too slow for Final handoff
+native side=-1 h=14500 profile=0 exitV=69.9 reason=alignment profile is too slow for Final handoff
+native side=-1 h=15000 profile=0 exitV=89.1 reason=alignment profile is too slow for Final handoff
+native side=-1 h=15500 profile=0 exitV=89.2 reason=alignment profile is too slow for Final handoff
+native side=-1 h=16000 profile=0 exitV=98.9 reason=alignment profile is too slow for Final handoff
+flight trace=/tmp/ksl-spiral-flown-left.csv station=32987.3/32987.3 maxCross=76.4 backwards=0 (unqualified)
+native side=-1 h=16500 profile=0 exitV=99.2 reason=alignment profile is too slow for Final handoff
+native side=-1 h=17000 profile=0 exitV=99.7 reason=alignment profile is too slow for Final handoff
+native side=-1 h=17500 profile=0 exitV=99.0 reason=alignment profile is too slow for Final handoff
+native side=-1 h=18000 profile=0 exitV=99.5 reason=alignment profile is too slow for Final handoff
+native side=-1 h=18500 profile=0 exitV=99.1 reason=alignment profile is too slow for Final handoff
+native side=-1 h=19000 profile=0 exitV=99.6 reason=alignment profile is too slow for Final handoff
+native side=-1 h=19500 profile=0 exitV=96.9 reason=alignment profile is too slow for Final handoff
+geometry side=1 Ri=12000.0 Rf=4224.1 sweep=4.700 length=32987.3 lead=3000.0 spiral=28767.0 unload=682.5
+native side=1 h=14000 profile=0 exitV=69.0 reason=alignment profile is too slow for Final handoff
+native side=1 h=14500 profile=0 exitV=69.9 reason=alignment profile is too slow for Final handoff
+native side=1 h=15000 profile=0 exitV=89.1 reason=alignment profile is too slow for Final handoff
+native side=1 h=15500 profile=0 exitV=89.2 reason=alignment profile is too slow for Final handoff
+native side=1 h=16000 profile=0 exitV=98.9 reason=alignment profile is too slow for Final handoff
+flight trace=/tmp/ksl-spiral-flown-right.csv station=32987.3/32987.3 maxCross=76.3 backwards=0 (unqualified)
+native side=1 h=16500 profile=0 exitV=99.1 reason=alignment profile is too slow for Final handoff
+native side=1 h=17000 profile=0 exitV=99.7 reason=alignment profile is too slow for Final handoff
+native side=1 h=17500 profile=0 exitV=99.0 reason=alignment profile is too slow for Final handoff
+native side=1 h=18000 profile=0 exitV=99.4 reason=alignment profile is too slow for Final handoff
+native side=1 h=18500 profile=0 exitV=99.1 reason=alignment profile is too slow for Final handoff
+native side=1 h=19000 profile=0 exitV=99.6 reason=alignment profile is too slow for Final handoff
+native side=1 h=19500 profile=0 exitV=96.9 reason=alignment profile is too slow for Final handoff
+Spiral mathematics and geometric continuity passed (not a flight qualification).

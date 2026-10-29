@@ -145,11 +145,14 @@ static bool build_hac(const TerminalModel *m,const TaemGeometryState *start,
     double wn=m->attitude.roll_wn,zeta=m->attitude.roll_zeta;
     double rate=m->attitude.max_roll_rate_rad_s,accel=m->attitude.max_roll_accel_rad_s2;
     if(!(wn>0&&zeta>0&&rate>0&&accel>0)) return false;
-    double exit_bank=atan(vf*vf/(gravity*rf));
+    double turn_ratio=vf*vf/(gravity*rf);
     double settle=4/(wn*zeta);
-    /* Conservative bounds: |bank'|<=1.5*v*k0/g and
-       |bank''|<=6*v^2*k0/(g*L^2), with time derivatives at vf. */
-    double unload_time=fmax(settle,fmax(1.5*exit_bank/rate,sqrt(6*exit_bank/accel)));
+    /* With nominal constant vf, bank=atan(turn_ratio*f(t/T)), where
+       |f'|<=1.5 and |f''|<=6. Bound both derivatives of atan, rather
+       than scaling the bank angle itself. Native replay must still check
+       acceleration/deceleration and vertical lift coupling. */
+    double unload_time=fmax(settle,fmax(1.5*turn_ratio/rate,
+        sqrt((6*turn_ratio+4.5*pow(turn_ratio,3))/accel)));
     r->unload_length_m=vf*unload_time;r->settle_length_m=vf*settle;
     r->rollout_length_m=r->unload_length_m+r->settle_length_m;
     r->spiral_exit_heading_rad=-side*r->unload_length_m/(2*rf);

@@ -1,0 +1,118 @@
+clang -Iinclude -Iapp -Iguidance -Iprediction -Icontrol -Ivehicle -Icalibration -Itransport -Itelemetry -Ipersistence -I../ShuttleSim/include -D_DEFAULT_SOURCE -isystem ../ThirdParty/krpc-cnano-0.6.0/include -isystem build-spiral/cnano_compat -isystem ../ThirdParty/nanopb-0.4.9.1 -DKRPC_COMMUNICATION_CUSTOM=1 -DKRPC_ERROR_MESSAGES=1 -DKRPC_ERROR_MESSAGE_LENGTH=512 -O2 -std=c17 -Wall -Wextra -Werror -pthread \
+		../Validation/TAEMNativeStackTests.c \
+		build-spiral/controller.o build-spiral/entry_alpha.o build-spiral/entry_drag_reference.o build-spiral/entry_energy_control.o build-spiral/entry_lateral.o build-spiral/entry_exec.o build-spiral/taem_exec.o build-spiral/guidance_common.o build-spiral/guidance_core.o build-spiral/guidance_entry.o build-spiral/guidance_taem.o build-spiral/guidance_final.o build-spiral/guidance_terminal.o build-spiral/guidance.o build-spiral/taem_frames_energy.o build-spiral/taem_geometry.o build-spiral/terminal_model.o build-spiral/terminal_propagator.o build-spiral/taem_reachability.o build-spiral/taem_tracker.o build-spiral/taem_planner.o build-spiral/terminal_solver.o build-spiral/taem_candidate_search.o build-spiral/predictor.o build-spiral/decision_envelope.o build-spiral/async_prediction_policy.o build-spiral/flight_control.o build-spiral/vessel_physics.o build-spiral/aero_certification.o build-spiral/math.o build-spiral/models.o build-spiral/calibration.o build-spiral/calibration_observation.o build-spiral/trajectory_calibration.o build-spiral/krpc.o build-spiral/krpc_cnano_client.o build-spiral/krpc_cnano_transport.o build-spiral/krpc_cnano_batch.o build-spiral/json.o build-spiral/sim_telemetry.o build-spiral/planner_log.o build-spiral/flight_log_codec.o build-spiral/physics_store.o build-spiral/flight_physics/math3.o build-spiral/flight_physics/quat.o build-spiral/flight_physics/world.o build-spiral/flight_physics/aero.o build-spiral/flight_physics/attitude.o build-spiral/flight_physics/flight_physics.o build-spiral/cnano/decoder.o build-spiral/cnano/encoder.o build-spiral/cnano/error.o build-spiral/cnano/krpc.o build-spiral/cnano/krpc.pb.o build-spiral/cnano/memory.o build-spiral/cnano/utils.o build-spiral/cnano/communication.o build-spiral/nanopb/pb_common.o build-spiral/nanopb/pb_encode.o build-spiral/nanopb/pb_decode.o \
+		-pthread -lm -lsqlite3 -o build-spiral/taem_native_stack_tests
+cd .. && "/Users/kyooni18/Code/KSL/CLanding/build-spiral/taem_native_stack_tests"
+MM305_REPLAY_EXIT side=-1 radius=18000 sweep=-15.0 lead=33986 refErr=-1.15 runwayCourseErr=-1.05 along=-9180.5 cross=-1.8 h=4077.8 airV=156.4 fpa=-23.79 bank=3.33 aoa=4.53 energy=-5848872.4 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=18000 sweep=30.0 lead=28909 refErr=1.68 runwayCourseErr=1.97 along=-9246.3 cross=-5.0 h=4111.9 airV=159.9 fpa=-23.96 bank=-3.79 aoa=4.49 energy=-5847993.8 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=18000 sweep=15.0 lead=33496 refErr=1.59 runwayCourseErr=1.87 along=-9236.4 cross=-4.9 h=4102.2 airV=158.0 fpa=-23.80 bank=-3.54 aoa=4.51 energy=-5848385.2 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=15500 sweep=15.0 lead=34132 refErr=1.82 runwayCourseErr=1.91 along=-9200.5 cross=-1.7 h=4085.6 airV=157.8 fpa=-23.80 bank=-4.62 aoa=4.51 energy=-5848586.2 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=5/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=5/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+MM305 contract smoke: final=9000 slope=23.96 speed=165.0 acq R=3000 sweep=255.0 lead=41732 arc=7084 path=52164 profile=0 exitV=0.0 replayStatus=0 replayExitV=0.0 reason=route is too long for the available energy qualifier rejected: MM305 route rejected scale=0.500/0.500: [CONF L r12000] Final alignment point was missed t163.0; [CONF R r12000] Final alignment point was missed t134.5; [CONF L r18000] native HAC and runway alignment reach their exit; Final tail qualification is pending t140.5; [CONF R r18000] native HAC and runway alignment reach their exit; Final tail qualification is pending t130.0; [RECIP L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP R r18000] no HAC join has an energy-feasible native vertical profile t0.0;
+MM305_REPLAY_EXIT side=-1 radius=18000 sweep=-15.0 lead=33986 refErr=-1.15 runwayCourseErr=-1.05 along=-9180.5 cross=-1.8 h=4077.8 airV=156.4 fpa=-23.79 bank=3.33 aoa=4.53 energy=-5848872.4 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=18000 sweep=30.0 lead=28909 refErr=1.68 runwayCourseErr=1.97 along=-9246.3 cross=-5.0 h=4111.9 airV=159.9 fpa=-23.96 bank=-3.79 aoa=4.49 energy=-5847993.8 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=18000 sweep=15.0 lead=33496 refErr=1.59 runwayCourseErr=1.87 along=-9236.4 cross=-4.9 h=4102.2 airV=158.0 fpa=-23.80 bank=-3.54 aoa=4.51 energy=-5848385.2 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+MM305_REPLAY_EXIT side=+1 radius=15500 sweep=15.0 lead=34132 refErr=1.82 runwayCourseErr=1.91 along=-9200.5 cross=-1.7 h=4085.6 airV=157.8 fpa=-23.80 bank=-4.62 aoa=4.51 energy=-5848586.2 reason=runway-aligned MM305 exit reached; downstream Final tail is not qualified
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=5/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=-1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=5/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=1/6 reason=route is too long for the available energy
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+TAEM profile rejection: side=+1 count=6/6 reason=profile exceeded propagation time before route completion
+MM305 independent search rejected: MM305 route rejected scale=0.500/0.500: [CONF L r12000] Final alignment point was missed t163.0; [CONF R r12000] Final alignment point was missed t134.5; [CONF L r18000] native HAC and runway alignment reach their exit; Final tail qualification is pending t140.5; [CONF R r18000] native HAC and runway alignment reach their exit; Final tail qualification is pending t130.0; [RECIP L r12000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP R r12000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP L r18000] no HAC join has an energy-feasible native vertical profile t0.0; [RECIP R r18000] no HAC join has an energy-feasible native vertical profile t0.0;\nMM305 native family matrix (Final=9000 slope=23.96 speed=165.0):
+ family R=3000 sweep=15 lead=36853 arc=782 path=39250 profile=0 profileV=0.0 replayStatus=0 replayV=122.4 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=3000 sweep=30 lead=36421 arc=1546 path=39600 profile=0 profileV=0.0 replayStatus=0 replayV=148.1 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=3000 sweep=60 lead=37026 arc=2955 path=41685 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=3000 sweep=120 lead=38807 arc=5064 path=45864 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=3000 sweep=180 lead=77813 arc=6280 path=86568 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=3000 sweep=195 lead=67045 arc=6486 path=76157 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=3000 sweep=240 lead=43772 arc=6960 path=53882 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=3000 sweep=270 lead=38879 arc=7197 path=49634 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=15 lead=36811 arc=1121 path=39226 profile=0 profileV=0.0 replayStatus=0 replayV=138.9 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=4300 sweep=30 lead=35935 arc=2216 path=39458 profile=0 profileV=0.0 replayStatus=0 replayV=148.5 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=4300 sweep=60 lead=36015 arc=4235 path=41606 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=120 lead=94074 arc=7258 path=102891 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=180 lead=124735 arc=9002 path=135631 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=195 lead=104326 arc=9297 path=115623 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=240 lead=62218 arc=9976 path=74560 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=4300 sweep=270 lead=45466 arc=10316 path=58432 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=15 lead=36246 arc=1877 path=39232 profile=0 profileV=0.0 replayStatus=0 replayV=152.4 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=7200 sweep=30 lead=34462 arc=3710 path=39282 profile=0 profileV=0.0 replayStatus=0 replayV=149.3 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=7200 sweep=60 lead=32847 arc=7091 path=41047 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=120 lead=87174 arc=12153 path=100481 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=180 lead=199099 arc=15072 path=215527 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=195 lead=130591 arc=15567 path=147576 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=240 lead=81699 arc=16704 path=100039 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=7200 sweep=270 lead=67410 arc=17272 path=86489 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=15 lead=35024 arc=3129 path=39262 profile=0 profileV=0.0 replayStatus=0 replayV=154.1 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=12000 sweep=30 lead=31990 arc=6184 path=39283 profile=0 profileV=0.0 replayStatus=0 replayV=155.3 quality=0.000 profileReason=terminal propagator rejected input replayReason=Final alignment point was missed
+ family R=12000 sweep=60 lead=28080 arc=11818 path=41007 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=120 lead=89537 arc=20255 path=110901 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=180 lead=62616 arc=25121 path=88846 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=195 lead=175522 arc=25946 path=202576 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=240 lead=95242 arc=27841 path=124286 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=12000 sweep=270 lead=81824 arc=28787 path=111917 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=15 lead=33496 arc=4694 path=39298 profile=0 profileV=0.0 replayStatus=1 replayV=158.0 quality=8.850 profileReason=terminal propagator rejected input replayReason=native HAC and runway alignment reach their exit; Final tail qualification is pending
+ family R=18000 sweep=30 lead=28909 arc=9276 path=39295 profile=0 profileV=0.0 replayStatus=1 replayV=159.9 quality=4.526 profileReason=terminal propagator rejected input replayReason=native HAC and runway alignment reach their exit; Final tail qualification is pending
+ family R=18000 sweep=60 lead=22443 arc=17727 path=41279 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=120 lead=101626 arc=30382 path=133117 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=180 lead=92837 arc=37681 path=131627 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=195 lead=79064 arc=38918 path=119092 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=240 lead=116232 arc=41761 path=159103 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+ family R=18000 sweep=270 lead=89514 arc=43181 path=133805 profile=0 profileV=0.0 replayStatus=0 replayV=0.0 quality=0.000 profileReason=terminal propagator rejected input replayReason=not-run
+Assertion failed: (radius12_sweep30.status == TAEM_PLAN_UNQUALIFIED), function test_mm305_native_family_matrix, file TAEMNativeStackTests.c, line 473.
+/bin/sh: line 1:   564 Abort trap: 6           "/Users/kyooni18/Code/KSL/CLanding/build-spiral/taem_native_stack_tests"
+make: *** [taem-native-stack-test] Error 134
