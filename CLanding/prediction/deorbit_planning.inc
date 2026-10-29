@@ -668,8 +668,20 @@ double mm305_energy_law_handoff_reach(const struct TerminalModel *model,
    altitude, plus the Final alignment distance (guidance/entry/contract.inc).
    NAN when the native terminal model is unavailable. */
 static double deorbit_sts_handoff_target(const TerminalModel*model,const PlanetModel*p,
-        const LandingSite*site,const GuidanceSettings*s,double mass){
-    if(!model||!p||!site||!s)return NAN;
+        const LandingSite*site,const VehicleProfile*v,const GuidanceSettings*s,double mass){
+    if(!model||!p||!site||!v||!s)return NAN;
+    if(s->taem_hac_law){
+        /* HAC law: the site distance live MM304 steers for (contract.inc),
+           MM305's own reference point at the handoff Mach plus the Final leg.
+           Ranking toward the 96.5 km interface range instead chose a burn
+           that handed over 133 km out against a 44.6 km MM304 target
+           (live 2026-10-29), short of the HAC. */
+        TaemHacLiveAero live={0};
+        double h=NAN,speed=NAN,station=NAN;
+        if(!mm305_hac_handoff_state(model,&live,mass,s->mm305_target_mach,&h,&speed,&station))
+            return NAN;
+        return station+final_alignment_distance_for_state(NULL,h+site->altitude,speed,site,v,s);
+    }
     double sound=planet_atmospheric_speed_of_sound(p,s->taem_interface_altitude);
     double reach=mm305_energy_law_handoff_reach(model,
         s->taem_interface_altitude-site->altitude,s->mm305_target_mach*sound,mass);
@@ -703,7 +715,7 @@ static bool deorbit_guided_candidate_better(const Candidate*a,const EntryPredict
        configured interface range instead chose a burn MM304 could not reach
        its 39 km target from.  The analytic inlet margin ranked next is
        uniformly -200..-280 kJ/kg across these candidates. */
-    if(s->sts_trajectory_delivery&&!strcmp(v->model_id,"STS")&&isfinite(sts_handoff_target)&&
+    if((s->sts_trajectory_delivery||s->taem_hac_law)&&!strcmp(v->model_id,"STS")&&isfinite(sts_handoff_target)&&
        aw->reached_taem&&bw->reached_taem&&
        isfinite(aw->taem_distance)&&isfinite(bw->taem_distance)){
         double ae=fabs(aw->taem_distance-sts_handoff_target);
@@ -921,8 +933,8 @@ bool deorbit_plan_create_with_terminal_model(DeorbitPlan*out,VehicleState state,
         !strcmp(v->model_id,"STS")?terminal_model:NULL;
     memset(out,0,sizeof(*out));
     trajectory_init(&out->trajectory);
-    double sts_handoff_target=entry_model&&s->sts_trajectory_delivery?
-        deorbit_sts_handoff_target(entry_model,p,site,s,state.mass):NAN;
+    double sts_handoff_target=entry_model&&(s->sts_trajectory_delivery||s->taem_hac_law)?
+        deorbit_sts_handoff_target(entry_model,p,site,v,s,state.mass):NAN;
     if(getenv("KSP_LANDER_TRACE_DEORBIT_SEARCH"))
         fprintf(stderr,"DEORBIT_STS_HANDOFF_TARGET %.1fkm\n",sts_handoff_target/1000.0);
 

@@ -81,6 +81,16 @@ static bool terminal_shadow_survives(const EntryPrediction*pr,const TerminalShad
     return outcome->final_approach_captured||outcome->terminal_path_committed||outcome->terminal_policy_feasible;
 }
 
+/* Score the shadow against the handoff range its own MM304 aims for (the
+   HAC reference point, ~45 km for STS), not the configured TAEM interface
+   range: live 2026-10-29 the deorbit planner chose a 96.5 km TAEM witness
+   while MM304 steered for 44.6 km, and the vehicle handed over 133 km out. */
+static double shadow_taem_range_target(const GuidanceMachine*shadow,const PlanetModel*p,
+        const LandingConfiguration*cfg){
+    double target=shadow?shadow->entry_handoff_target_range:NAN;
+    return isfinite(target)&&target>0.0?target:entry_taem_range_target(p,&cfg->guidance);
+}
+
 static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState state,const Telemetry*telemetry,
         const GuidanceMachine*guidance,const DeorbitPlan*plan,const PlanetModel*p,AerodynamicModel aero,
         const AerodynamicEnvelope*env0,const TrajectoryCalibrationModel*cal0,const LandingConfiguration*cfg,
@@ -190,12 +200,12 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
         out.peak_dynamic_pressure=fmax(out.peak_dynamic_pressure,at.q);out.peak_g_load=fmax(out.peak_g_load,synthetic.g_force);
         if(at.direct_aero)out.physics_observed_seconds+=fmin(1.0,maxdur-elapsed);else out.physics_fallback_seconds+=fmin(1.0,maxdur-elapsed);
         if(!out.reached_taem){
-            out.taem_distance=range;out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
+            out.taem_distance=range;out.taem_range_error=range-shadow_taem_range_target(&shadow,p,cfg);
             out.taem_speed=at.speed;out.taem_flight_path_angle=synthetic.flight_path_angle;out.taem_altitude=geo.altitude;
             out.taem_energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
                 cfg->guidance.taem_interface_altitude,entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
         }else if(elapsed<=1e-9){
-            out.taem_distance=range;out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
+            out.taem_distance=range;out.taem_range_error=range-shadow_taem_range_target(&shadow,p,cfg);
             out.taem_speed=at.speed;out.taem_flight_path_angle=synthetic.flight_path_angle;out.taem_altitude=geo.altitude;
             out.taem_energy_error=entry_remaining_specific_energy(geo.latitude,geo.altitude,at.speed,cfg->site.latitude,
                 cfg->guidance.taem_interface_altitude,entry_taem_speed_target(&cfg->vehicle,&cfg->guidance,p),p);
@@ -299,7 +309,7 @@ static EntryPrediction predictor_simulate_guidance_shadow_core(VehicleState stat
                     inlet.energy_uncertainty,inlet.path_length_m/1000.0,
                     inlet.minimum_turn_radius_m/1000.0,
                     forced_boundary?1:0);
-            out.taem_range_error=range-entry_taem_range_target(p,&cfg->guidance);
+            out.taem_range_error=range-shadow_taem_range_target(&shadow,p,cfg);
             out.taem_speed=at.speed;
             out.taem_flight_path_angle=synthetic.flight_path_angle;
             out.taem_altitude=geo.altitude;

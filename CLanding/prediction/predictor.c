@@ -2,6 +2,7 @@
 #include "decision_envelope.h"
 #include "async_prediction_policy.h"
 #include "taem_candidate_search.h"
+#include "mm305_planning.h"
 
 #include <float.h>
 #include <math.h>
