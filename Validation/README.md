@@ -34,3 +34,10 @@ KSL integration (see `git log -- Validation`). Tests that include production
 flies the same lockstep ShuttleSim scenarios with a reference backend (built
 from the commit before the Rust rewrite) and a candidate and requires
 byte-identical simulator telemetry.
+
+`ClosedLoopTrace.c` is the deterministic, single-threaded counterpart for the
+scenarios whose asynchronous planners make the process-level run
+non-reproducible (MM304 entry, MM305/HAC): it flies a ShuttleSim scenario with
+`guidance_update_with_terminal_model()` and prints every command and the
+simulator state as exact hex floats.  Link it against two builds of the landing
+library (the reference C objects and `liblanding.a`) and `cmp` the outputs.

@@ -17367,19 +17367,7 @@ unsafe extern "C" fn start_log(mut c: *mut LandingController) {
     );
     mkdir(&raw mut dir as *mut ::core::ffi::c_char, 0o700 as __mode_t);
     let mut now: time_t = time(::core::ptr::null_mut::<time_t>());
-    let mut tm: tm = tm {
-        tm_sec: 0,
-        tm_min: 0,
-        tm_hour: 0,
-        tm_mday: 0,
-        tm_mon: 0,
-        tm_year: 0,
-        tm_wday: 0,
-        tm_yday: 0,
-        tm_isdst: 0,
-        tm_gmtoff: 0,
-        tm_zone: ::core::ptr::null::<::core::ffi::c_char>(),
-    };
+    let mut tm: tm = ::core::mem::zeroed();
     gmtime_r(&raw mut now, &raw mut tm);
     let mut stamp: [::core::ffi::c_char; 64] = [0; 64];
     strftime(

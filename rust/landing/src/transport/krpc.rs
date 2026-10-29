@@ -2893,12 +2893,7 @@ unsafe extern "C" fn sim_session_open(
         );
         return false_0 != 0;
     }
-    let mut rx: sockaddr_in = sockaddr_in {
-        sin_family: 0 as sa_family_t,
-        sin_port: 0,
-        sin_addr: in_addr { s_addr: 0 },
-        sin_zero: [0; 8],
-    };
+    let mut rx: sockaddr_in = ::core::mem::zeroed();
     rx.sin_family = AF_INET as sa_family_t;
     rx.sin_addr.s_addr = __bswap_32(0x7f000001 as ::core::ffi::c_int as __uint32_t)
         as in_addr_t;
