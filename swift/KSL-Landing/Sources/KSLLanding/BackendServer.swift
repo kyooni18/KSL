@@ -143,7 +143,17 @@ actor BackendServer {
       flight?.cancel()
       respond(true)
     case "saveCheckpoint":
-      respond(false, "KSP saves are not implemented in the Swift engine")
+      // Between control steps only: the flight runtime holds the IO busy while commanding.
+      guard let flightIO = io, let name = request["name"] as? String, !name.isEmpty else {
+        respond(false, "saveCheckpoint needs a connection and a name")
+        return true
+      }
+      do {
+        try await flightIO.save(name: name)
+        respond(true)
+      } catch {
+        respond(false, "\(error)")
+      }
     case "shutdown":
       flight?.cancel()
       await flight?.value

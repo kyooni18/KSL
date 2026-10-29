@@ -375,6 +375,15 @@ public actor KRPCFlightIO: FlightIO {
       throw error
     }
   }
+  /// Writes a KSP quicksave with the given name (SpaceCenter.Save); used for phase checkpoints.
+  public func save(name: String) async throws {
+    guard !busy else { throw FlightError.invalidCommand("Concurrent kRPC operation") }
+    busy = true
+    defer { busy = false }
+    _ = try await session.call([
+      .init(procedure: "Save", arguments: [KRPCValue.string(name)])
+    ])
+  }
   public func assertSafety() async throws {
     guard armed, !busy else { return }
     busy = true
