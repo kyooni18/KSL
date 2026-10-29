@@ -261,6 +261,7 @@ typedef struct {
     bool target_valid;
     double target_latitude, target_longitude, station_range, handoff_speed, bank_limit,
         cross_uncertainty;
+    Mm304Terminal live_terminal;
 } Mm304State;
 
 typedef struct {

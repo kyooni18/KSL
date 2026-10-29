@@ -277,3 +277,22 @@ pub unsafe fn forecast(x: &PredictInput, sigma: f64) -> Forecast {
     out.reversals = law.reversals - reversals0;
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Bearing error stays continuous across the 0/360 wrap and an antimeridian crossing.
+    #[test]
+    fn bearing_error_is_continuous_across_wraps() {
+        let r = 600_000.0;
+        let at = |lon: f64| GeoPoint { latitude: 0.0, longitude: lon, altitude: 0.0 };
+        let (d1, b1) = range_bearing(at(179.9), at(-179.9), r);
+        let (d2, b2) = range_bearing(at(-179.9), at(179.9), r);
+        assert!((d1 - d2).abs() < 1e-6 && d1 < 3000.0);
+        assert!((b1 - 90.0).abs() < 1e-6 && (b2 - 270.0).abs() < 1e-6);
+        let e = |bearing: f64, course: f64| terminal::norm_signed(bearing - course);
+        assert!((e(1.0, 359.0) - 2.0).abs() < 1e-9);
+        assert!((e(359.0, 1.0) + 2.0).abs() < 1e-9);
+    }
+}

@@ -165,6 +165,9 @@ pub struct Mm304State {
     pub handoff_speed: f64,
     pub bank_limit: f64,
     pub cross_uncertainty: f64,
+    /// The live state scored as a handoff by MM305's HAC; MM305 admission under the
+    /// HAC law uses exactly this window.
+    pub live_terminal: Mm304Terminal,
 }
 
 impl Mm304State {

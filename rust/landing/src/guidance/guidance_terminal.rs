@@ -2705,6 +2705,29 @@ unsafe extern "C" fn terminal_guidance(
         } else if !physical_handoff && !(*g).diagnostic_shadow {
             guidance_mm305_admission_qualified(g, t, false_0 != 0, 0 as uint64_t);
         }
+        // Under the HAC law MM305 flies to the HAC energy reference, so it is admitted on
+        // that requirement: the MM304 terminal score of the live state, energy inside
+        // MM305's window [0, band] and altitude inside the MM305 band.
+        if physical_handoff as ::core::ffi::c_int != 0 && !admission_route_qualified
+            && !(*g).diagnostic_shadow && (*cfg).guidance.taem_hac_law as ::core::ffi::c_int != 0
+            && model_available as ::core::ffi::c_int != 0
+            && (*g).mm304.live_terminal.admissible && (*g).mm304.live_terminal.ut == (*t).ut
+        {
+            admission_route_qualified = true_0 != 0;
+            fprintf(
+                stderr,
+                b"MM305 admitted on HAC energy: UT %.1f M %.2f h %.0f m along %.1f km cross %.1f km heading error %+.1f deg, energy %+.0f m in [0, %.0f]\n\0"
+                    as *const u8 as *const ::core::ffi::c_char,
+                (*t).ut,
+                (*t).mach,
+                (*t).mean_altitude,
+                (*g).mm304.live_terminal.along / 1000.0f64,
+                (*g).mm304.live_terminal.cross / 1000.0f64,
+                (*g).mm304.live_terminal.heading_error,
+                (*g).mm304.live_terminal.energy_error,
+                (*g).mm304.live_terminal.band,
+            );
+        }
         let mut diagnostic_boundary: bool = (*g).diagnostic_shadow as ::core::ffi::c_int
             != 0 && (*g).diagnostic_stop_at_taem as ::core::ffi::c_int != 0;
         if !physical_handoff || !diagnostic_boundary && !admission_route_qualified {

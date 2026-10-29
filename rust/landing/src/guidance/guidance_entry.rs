@@ -2478,6 +2478,7 @@ pub unsafe extern "C" fn entry_program_guidance(
         alignment_point,
         ground_radius,
     );
+    let mut delivery_site: LandingSite = (*cfg).site;
     let mut sts_delivery: bool = (*s).sts_trajectory_delivery as ::core::ffi::c_int != 0
         && strcmp(
             &raw const (*v).model_id as *const ::core::ffi::c_char,
@@ -2579,6 +2580,7 @@ pub unsafe extern "C" fn entry_program_guidance(
         }
         alignment_point = aims[end as usize];
         alignment_range = range[end as usize];
+        delivery_site = ends[end as usize];
     }
     if !alignment.valid || alignment_range.is_finite() as i32 == 0
         || alignment_altitude.is_finite() as i32 == 0
@@ -3267,6 +3269,19 @@ pub unsafe extern "C" fn entry_program_guidance(
         (*t).mach,
         mm_ceiling,
     );
+    // MM304 delivers to MM305's HAC reference point: the extended centreline at the
+    // final-alignment distance plus the HAC station range from the threshold.
+    let mut hac_point: GeoPoint = if hac_range.is_finite() as i32 != 0 {
+        runway_approach_aimpoint(&raw mut delivery_site, ground_radius, alignment.distance_m + hac_range)
+    } else if (*g).mm304.target_valid {
+        GeoPoint {
+            latitude: (*g).mm304.target_latitude,
+            longitude: (*g).mm304.target_longitude,
+            altitude: alignment_point.altitude,
+        }
+    } else {
+        alignment_point
+    };
     let mut mm_in: crate::mm304::live::LiveInput = crate::mm304::live::LiveInput {
         ut: (*t).ut,
         mach: (*t).mach,
@@ -3280,9 +3295,9 @@ pub unsafe extern "C" fn entry_program_guidance(
         surface_gravity: planet_surface_gravity(p),
         radius: ground_radius,
         lift_accel: lateral.lift_accel,
-        target_latitude: alignment_point.latitude,
-        target_longitude: alignment_point.longitude,
-        station_range: if hac_range.is_finite() as i32 != 0 { hac_range } else { 0.0f64 },
+        target_latitude: hac_point.latitude,
+        target_longitude: hac_point.longitude,
+        station_range: 0.0f64,
         handoff_speed: if hac_v.is_finite() as i32 != 0 { hac_v } else { taem_velocity },
         max_ld_aoa: mm_max_ld,
         bank_limit: limits.maximum_bank_deg,
@@ -3298,6 +3313,38 @@ pub unsafe extern "C" fn entry_program_guidance(
         measured_bank: lateral.measured_bank_deg,
     };
     let mut mm = crate::mm304::live::tick(&mut (*g).mm304, &mm_in);
+    (*g).mm304.live_terminal = if (*cfg).guidance.taem_hac_law as ::core::ffi::c_int != 0
+        && !(*g).entry_terminal_model.is_null()
+    {
+        crate::mm304::terminal::evaluate(
+            &crate::mm304::terminal::Handoff {
+                ut: (*t).ut,
+                point: crate::prediction::predictor::GeoPoint {
+                    latitude: (*t).latitude,
+                    longitude: (*t).longitude,
+                    altitude: (*t).mean_altitude,
+                },
+                airspeed: (*t).true_air_speed,
+                ground_speed: map_speed,
+                course: mm_in.course,
+                flight_path_angle: (*t).flight_path_angle,
+                mass: (*t).mass,
+            },
+            &crate::mm304::terminal::Site {
+                latitude: (*cfg).site.latitude,
+                longitude: (*cfg).site.longitude,
+                altitude: (*cfg).site.altitude,
+                runway_heading: (*cfg).site.runway_heading,
+                radius: (*p).radius,
+            },
+            (*g).entry_terminal_model as *const ::core::ffi::c_void,
+            &raw const (*g).taem_hac_live_aero as *const ::core::ffi::c_void,
+            (*s).mm305_min_altitude,
+            (*s).mm305_max_altitude,
+        )
+    } else {
+        crate::mm304::state::Mm304State::ZERO.live_terminal
+    };
     let mut mm_law = (*g).mm304.law;
     let mut lateral_out: EntryLateralOutput = EntryLateralOutput {
         valid: mm.aoa.is_finite() && mm.bank.is_finite(),
@@ -3389,8 +3436,8 @@ pub unsafe extern "C" fn entry_program_guidance(
                 altitude: (*t).mean_altitude,
             },
             crate::prediction::predictor::GeoPoint {
-                latitude: alignment_point.latitude,
-                longitude: alignment_point.longitude,
+                latitude: hac_point.latitude,
+                longitude: hac_point.longitude,
                 altitude: 0.0f64,
             },
             ground_radius,
