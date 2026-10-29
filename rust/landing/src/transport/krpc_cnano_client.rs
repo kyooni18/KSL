@@ -24257,3 +24257,51 @@ unsafe extern "C" fn engine_propellant_is_intake_air(
 }
 pub const __DBL_EPSILON__: ::core::ffi::c_double = 2.2204460492503131e-16f64;
 pub const __DBL_MAX__: ::core::ffi::c_double = 1.7976931348623157e+308f64;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Deorbit thrust comes only from the orbital engines, never the mains.
+    #[test]
+    fn engine_roles_select_the_orbital_engines() {
+        unsafe {
+            assert_eq!(engine_role_identify(c"SSME".as_ptr(), c"Vector".as_ptr(), c"".as_ptr()), ENGINE_ROLE_MAIN);
+            assert_eq!(
+                engine_role_identify(c"benjee10.AJ10.v2".as_ptr(), c"KJ-10b Viking Orbital Manoeuvring Engine".as_ptr(), c"".as_ptr()),
+                ENGINE_ROLE_OMS
+            );
+            assert_eq!(
+                engine_role_identify(c"liquidEngine3".as_ptr(), c"RE-I5 'Terrier' Liquid Fuel Engine".as_ptr(), c"".as_ptr()),
+                ENGINE_ROLE_OMS
+            );
+            assert_eq!(engine_role_identify(c"unknown".as_ptr(), c"unknown".as_ptr(), c"OMS".as_ptr()), ENGINE_ROLE_OMS);
+            assert!(!engine_role_selected(ENGINE_ROLE_MAIN, true));
+            assert!(!engine_role_selected(ENGINE_ROLE_OTHER, true));
+            assert!(engine_role_selected(ENGINE_ROLE_OMS, true));
+            assert!(!engine_role_selected(ENGINE_ROLE_MAIN, false));
+            assert!(engine_role_selected(ENGINE_ROLE_OTHER, false));
+            assert!(engine_propellant_is_intake_air(c"IntakeAir".as_ptr()));
+            assert!(!engine_propellant_is_intake_air(c"LiquidFuel".as_ptr()));
+            assert!(!engine_propellant_is_intake_air(core::ptr::null()));
+        }
+    }
+
+    /// The commanded attitude points the vessel-frame thrust axis along the burn direction.
+    #[test]
+    fn thrust_alignment_points_the_engine_axis_along_the_burn() {
+        unsafe {
+            let axis = vnorm(v3(0.1, 0.93, 0.34), v3(0.0, 1.0, 0.0));
+            let d = vnorm(v3(-0.8, 0.5, 0.2), v3(0.0, 1.0, 0.0));
+            let u = vnorm(vproject_plane(v3(0.0, 0.0, 1.0), d), v3(0.0, 0.0, 1.0));
+            let (mut nose, mut roof) = (v3(0.0, 0.0, 0.0), v3(0.0, 0.0, 0.0));
+            thrust_alignment_attitude(axis, d, u, &mut nose, &mut roof);
+            let right = vnorm(vcross(nose, roof), v3(1.0, 0.0, 0.0));
+            let actual = vadd(vscale(right, axis.x), vadd(vscale(nose, axis.y), vscale(roof, -axis.z)));
+            assert!(vmag(vsub(actual, d)) < 1e-9);
+            assert!(vdot(nose, roof).abs() < 1e-9);
+            thrust_alignment_attitude(v3(0.0, 1.0, 0.0), d, u, &mut nose, &mut roof);
+            assert!(vmag(vsub(nose, d)) < 1e-9);
+        }
+    }
+}
