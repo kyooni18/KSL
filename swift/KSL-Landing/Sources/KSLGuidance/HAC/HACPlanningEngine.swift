@@ -9,6 +9,42 @@ public struct PlanningResult: Codable, Sendable {
   public let evaluatedCandidates: Int
   public let rejectedConstraints: [String: Int]
   public var closedLoopRejections: [TerminalClosedLoopCase]?
+  /// Physical energy/geometry envelope of the whole examined HAC family.
+  public var envelope: TerminalEnvelopeSummary?
+}
+
+/// What the priced HAC family can physically absorb from one state. A
+/// "completed" candidate was priced to touchdown without a geometry, lift,
+/// bank-rate or envelope violation, so its terminal speed is an energy result.
+public struct TerminalEnvelopeSummary: Codable, Sendable {
+  public var examined = 0
+  public var completed = 0
+  public var feasible = 0
+  /// Slowest/fastest priced touchdown among completed candidates (m/s); a
+  /// path that exhausts kinetic energy counts as zero touchdown speed.
+  public var slowestTouchdown: Double?
+  public var fastestTouchdown: Double?
+  public var shortestFeasibleLength: Double?
+  public var longestFeasibleLength: Double?
+  public var shortestExaminedLength: Double?
+  public var longestExaminedLength: Double?
+  public var violationCounts: [String: Int] = [:]
+  public init() {}
+  mutating func record(length: Double, assessment: TerminalAssessment, completed done: Bool) {
+    examined += 1
+    shortestExaminedLength = min(shortestExaminedLength ?? length, length)
+    longestExaminedLength = max(longestExaminedLength ?? length, length)
+    for violation in assessment.violations { violationCounts[violation.kind.rawValue, default: 0] += 1 }
+    guard done else { return }
+    completed += 1
+    slowestTouchdown = min(slowestTouchdown ?? assessment.touchdownSpeed, assessment.touchdownSpeed)
+    fastestTouchdown = max(fastestTouchdown ?? assessment.touchdownSpeed, assessment.touchdownSpeed)
+    if assessment.feasible {
+      feasible += 1
+      shortestFeasibleLength = min(shortestFeasibleLength ?? length, length)
+      longestFeasibleLength = max(longestFeasibleLength ?? length, length)
+    }
+  }
 }
 
 public final class HACPlanningEngine {
@@ -46,9 +82,12 @@ public final class HACPlanningEngine {
       state.aerodynamics.force / state.mass
       - 2 * omega.cross(state.velocity) - omega.cross(omega.cross(state.position))
     let groundRight = horizontal.cross(state.position.normalized).normalized
-    let startCurvature =
-      acceleration.dot(groundRight)
-      / max(100, state.horizontalSpeed * state.horizontalSpeed)
+    let speedSquared = max(100, state.horizontalSpeed * state.horizontalSpeed)
+    // Physically bounded: no admissible turn exceeds the load envelope.
+    let curvatureLimit = configuration.vehicle.maximumLoadFactor * 9.80665 / speedSquared
+    let measuredCurvature = acceleration.dot(groundRight) / speedSquared
+    let startCurvature = measuredCurvature.isFinite
+      ? clamp(measuredCurvature, -curvatureLimit, curvatureLimit) : 0
     let start = HorizontalPathSample(
       position: p.horizontal, tangent: startTangent, curvature: startCurvature)
     var chosen: TerminalPlan?
@@ -57,6 +96,7 @@ public final class HACPlanningEngine {
     var rejected: TerminalAssessment?
     var count = 0
     var rejectedConstraints: [String: Int] = [:]
+    var envelope = TerminalEnvelopeSummary()
     func examine(_ horizontal: [(HorizontalPathSample, PathSegment)], _ spiral: SpiralHAC?) {
       guard horizontal.count > 2 else { return }
       var distances = [0.0]
@@ -76,19 +116,27 @@ public final class HACPlanningEngine {
       let a = 2 * h0 - 2 * h1 + l * (m0 + m1)
       let b = -3 * h0 + 3 * h1 - l * (2 * m0 + m1)
       let cc = l * m0
+      let cubic = distances.map { d -> (height: Double, slope: Double, verticalCurvature: Double) in
+        let u = d / l
+        let slope = (3 * a * u * u + 2 * b * u + cc) / l
+        let second = (6 * a * u + 2 * b) / (l * l)
+        return (((a * u + b) * u + cc) * u + h0, slope, second / pow(1 + slope * slope, 1.5))
+      }
+      // The cubic ignores energy: from a supersonic TAEM state it keeps the
+      // vehicle high while drag bleeds speed until lift cannot support it.
+      // The q-scheduled profile is the energy-consistent alternative.
+      var profiles = [cubic]
+      if let scheduled = energy.scheduledProfile(distances: distances, horizontal: horizontal.map(\.0),
+        from: state, exitHeight: h1, exitSlope: m1) { profiles.append(scheduled) }
+      for vertical in profiles {
       var stations: [PathStation] = []
       for i in horizontal.indices {
         let (s, segment) = horizontal[i]
-        let d = distances[i]
-        let u = d / l
-        let h = ((a * u + b) * u + cc) * u + h0
-        let slope = (3 * a * u * u + 2 * b * u + cc) / l
-        let second = (6 * a * u + 2 * b) / (l * l)
-        let verticalCurvature = second / pow(1 + slope * slope, 1.5)
         stations.append(
           .init(
-            distance: d, position: s.position, tangent: s.tangent, curvature: s.curvature,
-            height: h, slope: slope, verticalCurvature: verticalCurvature, segment: segment))
+            distance: distances[i], position: s.position, tangent: s.tangent, curvature: s.curvature,
+            height: vertical[i].height, slope: vertical[i].slope,
+            verticalCurvature: vertical[i].verticalCurvature, segment: segment))
       }
       let finalSpan = c.finalDistance + c.touchdownAlong
       let steps = Int(ceil(finalSpan / 40))
@@ -105,6 +153,9 @@ public final class HACPlanningEngine {
       }
       count += 1
       let (priced, assessment) = energy.evaluate(stations: stations, from: state)
+      let energyOnly: Set<FailureClassification> = [.insufficientEnergy, .excessiveEnergy]
+      envelope.record(length: stations.last?.distance ?? 0, assessment: assessment,
+        completed: assessment.violations.allSatisfy { energyOnly.contains($0.kind) })
       if assessment.feasible {
         let u = configuration.vehicle.aerodynamicUncertainty
         let stresses = [(1-u, 1+u), (1+u, 1-u)].map { lift, drag in
@@ -122,6 +173,7 @@ public final class HACPlanningEngine {
           rejectedConstraints[violation.kind.rawValue, default: 0] += 1
         }
         if rejected == nil || assessment.score < rejected!.score { rejected = assessment }
+      }
       }
     }
     if allowDirect && p.along < -c.finalDistance - 1000 {
@@ -160,19 +212,35 @@ public final class HACPlanningEngine {
             start: start, end: inlet, tangentLength: max(500, distance * 1.15))
           let n = max(20, Int(distance / 220))
           let ns = max(25, Int(spiralLength / 220))
-          var horizontal = (0...n).map {
-            (curve.sample(Double($0) / Double(n)), PathSegment.acquisition)
-          }
+          var tail: [(HorizontalPathSample, PathSegment)] = []
           for i in 1...ns {
-            horizontal.append(
+            tail.append(
               (spiral.sample(remainingAngle: theta * (1 - Double(i) / Double(ns))), .spiral))
           }
           let unload = QuinticAcquisition(
             start: spiral.sample(remainingAngle: 0),
             end: .init(position: .init(-c.finalDistance, 0), tangent: .init(1, 0), curvature: 0),
             tangentLength: unloadLength)
-          for i in 1...25 { horizontal.append((unload.sample(Double(i) / 25), .acquisition)) }
-          examine(horizontal, spiral)
+          for i in 1...25 { tail.append((unload.sample(Double(i) / 25), .acquisition)) }
+          examine((0...n).map { (curve.sample(Double($0) / Double(n)), PathSegment.acquisition) } + tail, spiral)
+          // Speed-limited turn/straight/turn acquisition: the quintic's
+          // curvature is independent of speed and is unflyable supersonic.
+          let acquisitionBank = EnergyManagementEngine.acquisitionBank(configuration)
+          let turnRadius = state.horizontalSpeed * state.horizontalSpeed / (9.80665 * tan(acquisitionBank))
+          // Roll through +/- the acquisition bank at the rated roll response.
+          let rollRate = min(configuration.vehicle.controlPlant.maximumRollRate,
+            configuration.guidance.terminalRollRate ?? configuration.guidance.bankSlewRate)
+            * EnergyManagementEngine.bankRateReserve
+          let rollTransition = state.horizontalSpeed * 2 * acquisitionBank / rollRate
+          if turnRadius > radius, abs(inlet.curvature) > 1e-9 {
+            for turn in [-1.0, 1.0] {
+              guard let dubins = DubinsAcquisition(start: start, startRadius: turnRadius, startTurn: turn,
+                end: inlet, endRadius: 1 / abs(inlet.curvature), endTurn: inlet.curvature > 0 ? 1 : -1,
+                transition: rollTransition),
+                dubins.length + spiralLength <= c.maximumPathLength else { continue }
+              examine(dubins.samples.map { ($0, PathSegment.acquisition) } + tail, spiral)
+            }
+          }
         }
       }
     }
@@ -208,6 +276,7 @@ public final class HACPlanningEngine {
     }
     if chosen != nil { nextIdentifier += 1 }
     return .init(plan: chosen, bestRejected: rejected, evaluatedCandidates: count,
-      rejectedConstraints: rejectedConstraints, closedLoopRejections: closedLoopRejections)
+      rejectedConstraints: rejectedConstraints, closedLoopRejections: closedLoopRejections,
+      envelope: envelope)
   }
 }

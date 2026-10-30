@@ -3,6 +3,15 @@ import KSLCore
 import KSLPhysics
 
 public final class EnergyManagementEngine {
+  /// Fraction of rated roll response a path may demand (pricing reserve).
+  public static let bankRateReserve = 0.85
+  /// Bank whose load factor remains available after the configured
+  /// aerodynamic uncertainty: n = min(n_max, 1/cos(bank_max))*(1-u).
+  public static func acquisitionBank(_ c: MissionConfiguration) -> Double {
+    let v = c.vehicle
+    let n = min(v.maximumLoadFactor, 1 / cos(v.maximumBank)) * (1 - v.aerodynamicUncertainty)
+    return n > 1 ? acos(1 / n) : 0
+  }
   private let configuration: MissionConfiguration
   private let atmosphere: AtmosphericModelEngine
   private let aero: AerodynamicsEngine
@@ -25,6 +34,116 @@ public final class EnergyManagementEngine {
     return
       (configuration.planet.gravitationalParameter * (1 / rr - 1 / r) + state.velocity.squaredLength
       / 2) / g
+  }
+  /// Energy-consistent TAEM vertical profile along a horizontal path. Heights
+  /// follow a dynamic-pressure schedule (descend as speed bleeds so lift can
+  /// still support the banked turn), slope changes are limited by vertical
+  /// push-over/pull-up authority (dm/ds <= a/V^2), the glide envelope is respected,
+  /// and the last segment blends into the final-approach exit. The result is
+  /// only a candidate: `evaluate` re-prices it independently.
+  public func scheduledProfile(
+    distances: [Double], horizontal: [HorizontalPathSample], from state: VehicleState,
+    exitHeight h1: Double, exitSlope m1: Double
+  ) -> [(height: Double, slope: Double, verticalCurvature: Double)]? {
+    guard distances.count == horizontal.count, distances.count > 2, let length = distances.last, length > 0
+    else { return nil }
+    let v = configuration.vehicle, gc = configuration.guidance, g0 = 9.80665
+    let p0 = frame.coordinates(of: state.position)
+    // Log-density table at the path start (the atmosphere is horizontally
+    // smooth over a terminal-area footprint).
+    let top = max(p0.height + 2000, 1000.0), step = 250.0
+    let heights = Array(stride(from: 0.0, through: top, by: step))
+    let logDensity = heights.map { log(max(1e-9, atmosphere.sample(
+      position: frame.position(along: p0.along, cross: p0.cross, height: $0), time: state.time).density)) }
+    func height(forDensity rho: Double) -> Double {
+      let target = log(max(1e-9, rho))
+      if target >= logDensity[0] { return 0 }
+      for i in 1..<heights.count where logDensity[i] <= target {
+        let f = (logDensity[i - 1] - target) / max(1e-12, logDensity[i - 1] - logDensity[i])
+        return heights[i - 1] + f * step
+      }
+      return top
+    }
+    let maxGlide = gc.taemGlideAngle ?? gc.outerGlideAngle
+    // Same geometric envelope the pricer enforces; authority limits the rest.
+    let maxDescent = tan(maxGlide), maxClimb = tan(maxGlide)
+    let u = v.aerodynamicUncertainty
+    let turnLoad = 1 / cos(Self.acquisitionBank(configuration))
+    let q0 = max(1, state.aerodynamics.dynamicPressure)
+    var h = p0.height, m = clamp(tan(state.flightPathAngle), -maxDescent, maxClimb)
+    var speed = max(1, state.aerodynamics.airspeed)
+    var out: [(Double, Double, Double)] = []
+    var blendStart: Int?
+    for i in distances.indices {
+      out.append((h, m, 0))
+      if i + 1 == distances.count { blendStart = i; break }
+      let ds = distances[i + 1] - distances[i]
+      let s = horizontal[i]
+      let pos = frame.position(along: s.position.x, cross: s.position.y, height: h)
+      let atm = atmosphere.sample(position: pos, time: state.time)
+      let q = 0.5 * atm.density * speed * speed, mach = speed / atm.speedOfSound
+      let gamma = atan(m), vh = speed * cos(gamma)
+      let lateral = vh * vh * s.curvature
+      let g = configuration.planet.gravitationalParameter / pos.squaredLength
+      let vertical = (g - vh * vh / pos.length) * cos(gamma)
+      let required = hypot(vertical, lateral)
+      let unit = aero.liftSolution(acceleration: 0, mass: state.mass, dynamicPressure: q, mach: mach,
+        minimumAlpha: v.minimumAngleOfAttack, maximumAlpha: v.maximumAngleOfAttack)
+      let minimumLift = max(0, aero.coefficients(mach: mach, alpha: v.minimumAngleOfAttack,
+        dynamicPressure: q, gear: false).lift * q * v.referenceArea / state.mass)
+      // Vertical authority from the aerodynamics: unload toward (never past)
+      // minimum positive lift; pull up within uncertain lift and load limits.
+      let push = max(0, required - minimumLift)
+      let pull = max(0, min(unit.maximumAcceleration * (1 - u), v.maximumLoadFactor * g0) - required)
+      // Lowest q at which uncertain maximum lift still flies the acquisition bank.
+      let qFloor = unit.maximumAcceleration > 0
+        ? q * turnLoad * g0 / (unit.maximumAcceleration * (1 - u)) : v.maximumDynamicPressure
+      let qReference = min(v.maximumDynamicPressure, max(q0, qFloor))
+      let remaining = length - distances[i]
+      // Start the exit blend once rotating onto the exit slope needs the
+      // remaining distance at the available pull-up authority.
+      if remaining <= max(gc.finalDistance, speed * speed * abs(m - m1) / max(0.1, pull)) {
+        blendStart = i; break
+      }
+      let target = clamp(height(forDensity: 2 * qReference / (speed * speed)),
+        h1 + remaining * tan(gc.shallowGlideAngle), h1 + remaining * maxDescent)
+      // Minimum-time approach to the schedule under the vertical authority.
+      let error = target - h
+      let desired = clamp((error < 0 ? -1 : 1) * sqrt(2 * (error < 0 ? push : pull) * abs(error)) / speed,
+        -maxDescent, maxClimb)
+      let inverseSpeed = ds / (speed * speed)
+      m += clamp(desired - m, -push * inverseSpeed, pull * inverseSpeed)
+      h += m * ds
+      // Speed along the path with the same point-mass drag model as pricing.
+      let lift = aero.liftSolution(acceleration: required, mass: state.mass, dynamicPressure: q, mach: mach,
+        minimumAlpha: v.minimumAngleOfAttack, maximumAlpha: v.maximumAngleOfAttack)
+      let cd = aero.coefficients(mach: mach, alpha: lift.alpha, dynamicPressure: q, gear: false).drag
+      let work = q * v.referenceArea * cd / state.mass * ds / max(0.2, cos(gamma))
+      let potential = g * m * ds
+      let next = speed * speed - 2 * (work + potential)
+      if next < 30 * 30 { return nil }
+      speed = sqrt(next)
+    }
+    guard let b = blendStart else { return nil }
+    // Hermite from the scheduled state to the final-approach exit.
+    let hb = out[b].0, mb = out[b].1, l = length - distances[b]
+    guard l > 1 else { return out.map { (height: $0.0, slope: $0.1, verticalCurvature: $0.2) } }
+    let ca = 2 * hb - 2 * h1 + l * (mb + m1), cb = -3 * hb + 3 * h1 - l * (2 * mb + m1), cc = l * mb
+    var result = out.prefix(b).map { (height: $0.0, slope: $0.1, verticalCurvature: 0.0) }
+    for i in b..<distances.count {
+      let x = (distances[i] - distances[b]) / l
+      let hh = ((ca * x + cb) * x + cc) * x + hb
+      let slope = (3 * ca * x * x + 2 * cb * x + cc) / l
+      let second = (6 * ca * x + 2 * cb) / (l * l)
+      result.append((height: hh, slope: slope, verticalCurvature: second / pow(1 + slope * slope, 1.5)))
+    }
+    // Scheduled-segment curvature from the slope sequence.
+    for i in 1..<max(1, b) {
+      let ds = max(1, distances[i + 1] - distances[i - 1])
+      let k = (result[i + 1].slope - result[i - 1].slope) / ds
+      result[i].verticalCurvature = k / pow(1 + result[i].slope * result[i].slope, 1.5)
+    }
+    return result
   }
   public func evaluate(
     stations: [PathStation], from initial: VehicleState, dragMultiplier: Double = 1,
@@ -123,7 +242,7 @@ public final class EnergyManagementEngine {
           && abs(wrapAngle(bank - previousBank)) / max(dt, 0.01)
             > min(v.controlPlant.maximumRollRate,
               (s.segment == .final ? configuration.guidance.approachRollRate : configuration.guidance.terminalRollRate)
-                ?? configuration.guidance.bankSlewRate) * 0.85
+                ?? configuration.guidance.bankSlewRate) * Self.bankRateReserve
         {
           violations.append(
             .init(.actuatorAuthority, "Path bank-rate demand exceeds identified response"))

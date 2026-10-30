@@ -56,6 +56,8 @@ def run(args: argparse.Namespace) -> dict:
     configuration=output/'native-configuration.json';configuration.write_text(json.dumps(native,indent=2))
     controller_args=[str(binary),'shuttlesim-controller','--attitude-model',str(attitude),
                      '--configuration',str(configuration),'--window-index',str(args.window_index)]
+    if args.legacy_window is not None:
+        controller_args+=['--legacy-window',str(args.legacy_window)]
     if args.orbit_experiment:
         controller_args+=['--unqualified-orbit-experiment','--dry-mass',str(args.dry_mass),'--engine-isp','285']
     summary={'outcome':'not-started','evidence':'independent-ShuttleSim-offline-unqualified',
@@ -93,7 +95,7 @@ def run(args: argparse.Namespace) -> dict:
                     continue
                 last_telemetry_ut=telemetry['ut']
                 controller.stdin.write(packet.decode()+'\n');controller.stdin.flush()
-                ready,_,_=select.select([controller.stdout],[],[],min(args.wall_limit,180))
+                ready,_,_=select.select([controller.stdout],[],[],min(args.wall_limit,1800))
                 if not ready:summary['outcome']='controller-response-timeout';break
                 line=controller.stdout.readline()
                 if not line:summary['outcome']='controller-error';break
@@ -159,7 +161,8 @@ def main():
     p.add_argument('--scenario',type=pathlib.Path,default=PACKAGE/'Fixtures/sts-polar100-orbit.ini')
     p.add_argument('--output',type=pathlib.Path,required=True)
     p.add_argument('--orbit-experiment',action='store_true')
-    p.add_argument('--window-index',type=int,default=0)
+    p.add_argument('--window-index',type=int,default=0,help='Rank in the landing-aware deorbit selection')
+    p.add_argument('--legacy-window',type=int,help='Deliberately fly raw orbital-search candidate N (envelope test)')
     p.add_argument('--dry-mass',type=float,default=21000)
     p.add_argument('--lift-scale',type=float,default=1)
     p.add_argument('--drag-scale',type=float,default=1)

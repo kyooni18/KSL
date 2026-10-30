@@ -72,9 +72,11 @@ public final class LandingMissionController {
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let e = configuration.entrySettings
     let h = state.position.length - configuration.planet.radius
+    let hacExitHeight = ApproachProfile(configuration: configuration)
+      .reference(along: -configuration.guidance.finalDistance).height
     // Forecast slightly ahead, but admit only the measured contract below.
     return h <= e.terminalMaximumAltitude + max(0, -state.verticalSpeed) * configuration.guidance.terminalReplanInterval
-      && h >= min(e.terminalMinimumAltitude, configuration.guidance.hacAcquisitionAltitude ?? e.terminalMinimumAltitude)
+      && h >= min(e.terminalMinimumAltitude, configuration.guidance.hacAcquisitionAltitude ?? hacExitHeight, hacExitHeight)
       && state.aerodynamics.mach <= e.terminalTargetMach + e.terminalMachHalfWidth + 0.1
       && state.aerodynamics.airspeed <= (configuration.guidance.terminalPlanningMaximumSpeed ?? 1300)
   }

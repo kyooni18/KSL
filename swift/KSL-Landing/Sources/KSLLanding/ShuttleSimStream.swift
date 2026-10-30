@@ -71,10 +71,49 @@ enum ShuttleSimStream {
           }
           let prop = PropulsionTelemetry(availableThrust: thrust, dryMass: dryMass, specificImpulse: isp, evidence: .provisional)
           let result = try DeorbitWindowSearch(configuration: c).search(from: state, propulsion: prop)
-          guard result.candidates.indices.contains(windowIndex) else { throw FlightError.infeasible("Requested candidate index outside search result") }
-          window = result.candidates[windowIndex]
-          metadata = ["window": try object(window!), "candidates": try object(result.candidates),
-            "executionQualified": false, "limitation": "orbital thrust-axis servo is ShuttleSim-owned; no native vacuum actuator qualification"]
+          metadata = ["candidates": try object(result.candidates), "executionQualified": false,
+            "limitation": "orbital thrust-axis servo is ShuttleSim-owned; no native vacuum actuator qualification"]
+          if let legacy = option("--legacy-window").flatMap(Int.init) {
+            // Deliberate envelope test: fly a raw orbital-geometry candidate
+            // without landing-aware screening, but still report its forecast.
+            guard result.candidates.indices.contains(legacy) else { throw FlightError.infeasible("Requested legacy candidate index outside search result") }
+            window = result.candidates[legacy]
+            let selector = LandingAwareWindowSelector(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+            let forecast = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+              .forecast(from: selector.entryState(window!))
+            metadata!["selection"] = ["mode": "legacy-orbital-geometry", "legacyIndex": legacy,
+              "landingForecast": try object(forecast)]
+            FileHandle.standardError.write(Data("legacy window \(legacy): \(forecast.capture.summary)\n".utf8))
+          } else {
+            let clock = Date()
+            let selection = try LandingAwareWindowSelector(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+              .select(result, from: state, propulsion: prop)
+            for r in selection.survey {
+              let e = r.nominal.capture.envelope
+              FileHandle.standardError.write(Data(String(format: "survey pass %d offset %+.0f EI %.0fkm -> TAEM h=%.0f M=%.2f along=%.1fkm cross=%.1fkm %@ excess=%.0f deficit=%.0f %@\n",
+                r.pass, r.burnOffset, r.window.entryRange/1000, r.nominal.terminalAltitude, r.nominal.terminalMach,
+                r.nominal.terminalAlong/1000, r.nominal.terminalCross/1000, r.nominal.capture.summary,
+                max(-1e9, e.excessEnergyMargin), max(-1e9, e.deficitEnergyMargin),
+                e.dominantViolations.description + " " + (r.nominal.capture.violations.first?.message ?? "")).utf8))
+            }
+            for (i, r) in selection.ranked.enumerated() {
+              FileHandle.standardError.write(Data(("rank \(i) pass \(r.pass) offset \(r.burnOffset) burn \(Int(r.window.burnStart)) "
+                + "EI range \(Int(r.window.entryRange/1000))km \(r.nominal.capture.summary) robust \(r.robustPasses)/\(r.dispersed.count) "
+                + "corridor \(r.corridor ?? [])\n").utf8))
+            }
+            FileHandle.standardError.write(Data("landing-aware selection: \(selection.evaluatedForecasts) forecasts, \(Int(Date().timeIntervalSince(clock)))s\n".utf8))
+            guard selection.ranked.indices.contains(windowIndex) else { throw FlightError.infeasible("Requested landing-aware rank outside selection") }
+            let chosen = selection.ranked[windowIndex]
+            guard chosen.nominal.feasible else {
+              throw FlightError.infeasible("No deorbit window reaches the TAEM capture envelope: \(chosen.rejection ?? "")")
+            }
+            window = chosen.window
+            metadata!["selection"] = ["mode": "landing-aware", "rank": windowIndex,
+              "ranked": try object(selection.ranked.map { r -> LandingAwareCandidate in
+                var v = r; if v.pass != chosen.pass { v.dispersed = [] }; return v }),
+              "survey": try object(selection.survey), "evaluatedForecasts": selection.evaluatedForecasts]
+          }
+          metadata!["window"] = try object(window!)
         }
         let w = window!
         if !burned && state.time >= w.burnStart {

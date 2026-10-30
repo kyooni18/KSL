@@ -15,11 +15,13 @@ public struct MM305Admission: Codable, Sendable {
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
     let altitude = state.position.length - c.planet.radius
     // f1eebdc mm305_acquisition_ready includes the later HAC acquisition
-    // band. These settings enlarge only the search/admission envelope;
-    // the complete closed-loop route certificate is still mandatory.
-    let minimumAltitude = min(e.terminalMinimumAltitude, c.guidance.hacAcquisitionAltitude ?? e.terminalMinimumAltitude)
-    let minimumMach = min(e.terminalTargetMach-e.terminalMachHalfWidth,
-      c.guidance.hacAcquisitionMach ?? e.terminalTargetMach)
+    // band. Below the MM304 band the floor is physical: the HAC exit on the
+    // final-approach reference (lower, final capture owns the vehicle). The
+    // speed floor is the minimum safe speed below; the closed-loop route
+    // certificate remains mandatory either way.
+    let exitHeight = ApproachProfile(configuration: c).reference(along: -c.guidance.finalDistance).height
+    let minimumAltitude = min(e.terminalMinimumAltitude, c.guidance.hacAcquisitionAltitude ?? exitHeight, exitHeight)
+    let minimumMach = c.guidance.hacAcquisitionMach ?? 0
     let altitudeMargin = min(altitude-minimumAltitude, e.terminalMaximumAltitude-altitude)
     let machMargin = min(state.aerodynamics.mach-minimumMach,
       e.terminalTargetMach+e.terminalMachHalfWidth-state.aerodynamics.mach)
