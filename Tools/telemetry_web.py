@@ -1909,46 +1909,48 @@ def _iter_jsonl_dicts(path: Path):
 
 
 def _sample_jsonl_dicts(path: Path, limit: int,
-                        include: Callable[[dict[str, Any]], bool] | None = None
+                        include: Callable[[dict[str, Any]], bool] | None = None,
+                        quick: Callable[[str], bool] | None = None
                         ) -> list[dict[str, Any]]:
-    """Return evenly spaced JSONL objects using memory bounded by ``limit``."""
+    """Return ~evenly spaced JSONL objects, parsing only the lines that are kept.
+
+    Single pass with stride-doubling decimation over raw lines (memory bounded by
+    ``2 * limit`` lines); the first and last lines are always kept. ``quick`` is a cheap
+    raw-line prefilter used for density; ``include`` is the exact filter applied after parsing.
+    """
     limit = max(1, int(limit))
-    selected: list[dict[str, Any]] = []
-    total = 0
-    overflow = False
-    for value in _iter_jsonl_dicts(path):
-        if include is not None and not include(value):
-            continue
-        total += 1
-        if not overflow:
-            if total <= limit:
-                selected.append(value)
-            else:
-                selected.clear()
-                overflow = True
-
-    if not overflow:
-        return selected
-
-    if limit == 1:
-        indices = {total - 1}
-    else:
-        indices = {
-            int(round(i * (total - 1) / float(limit - 1)))
-            for i in range(limit)
-        }
-    selected = []
+    kept: list[str] = []
+    stride = 1
     index = 0
-    for value in _iter_jsonl_dicts(path):
-        if include is not None and not include(value):
+    last = None
+    try:
+        with _open_jsonl_file(path) as handle:
+            for raw in handle:
+                if not raw.strip() or (quick is not None and not quick(raw)):
+                    continue
+                last = raw
+                if index % stride == 0:
+                    kept.append(raw)
+                    if len(kept) >= 2 * limit:
+                        kept = kept[::2]
+                        stride *= 2
+                index += 1
+    except (OSError, UnicodeError, EOFError):
+        pass
+    if last is not None and (not kept or kept[-1] is not last):
+        kept.append(last)
+    if len(kept) > limit:
+        pick = [round(i * (len(kept) - 1) / (limit - 1)) for i in range(limit)] if limit > 1 else [len(kept) - 1]
+        kept = [kept[i] for i in sorted(set(pick))]
+    result: list[dict[str, Any]] = []
+    for raw in kept:
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
             continue
-        if index in indices:
-            selected.append(value)
-        index += 1
-        # A growing active log must not shift the sample after the count pass.
-        if index >= total:
-            break
-    return selected
+        if isinstance(value, dict) and (include is None or include(value)):
+            result.append(value)
+    return result
 
 
 def _extract_run_timestamp(run_id: str, manifest: dict[str, Any], path: Path | None = None) -> float:
@@ -2541,7 +2543,7 @@ def load_simulator_replay_frames(run_dir: Path, run: dict[str, Any],
             return False
         return True
 
-    packets = _sample_jsonl_dicts(path, limit, in_run)
+    packets = _sample_jsonl_dicts(path, limit, in_run, lambda raw: '"source":"sim"' in raw)
 
     if not packets:
         return []
@@ -3339,6 +3341,7 @@ def load_replay_frames(path: Path, max_frames: int = 2000) -> list[dict[str, Any
         path,
         max_frames,
         lambda value: not (value.get("source") == "sim" and value.get("type") == "telemetry"),
+        lambda raw: not ('"source":"sim"' in raw and '"type":"telemetry"' in raw),
     )
     frames: list[dict[str, Any]] = []
     for value in records:
