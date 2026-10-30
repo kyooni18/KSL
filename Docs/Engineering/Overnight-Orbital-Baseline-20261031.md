@@ -663,3 +663,41 @@ by the JSONL writer because the original logs existed; they were retained under
 `original-*.jsonl` before the successful repeat. The substantial pre-existing
 dirty work was not reset or included in this report commit. The other failing
 simulations remain as previously reported.
+
+#### Trim-source counterfactual
+
+As an offline discriminating experiment only, a debug build temporarily forced
+`identifiedTrim` to nil, leaving the provisional trim prior and the rest of
+the controller unchanged. The experiment patch, executable SHA-256, build and
+three logs/results are under the refinement run's `no-identified-trim/` folder.
+The source was restored byte-for-byte and the debug product rebuilt afterward;
+the release binary and live controller were not changed. No flight validation
+is implied and disabling identified trim is **not** a proposed fix.
+
+| Maximum physics step | Baseline touchdown along m | Counterfactual along m | Counterfactual horizontal / vertical m/s |
+|---|---:|---:|---:|
+| 0.020 s | 369.73 | 319.19 | 52.66 / -1.55 |
+| 0.010 s | 517.28 | 322.35 | 52.61 / -1.60 |
+| 0.005 s | 375.18 | 344.09 | 52.92 / -1.68 |
+
+The 0.020 vs 0.010 s modeled discrepancy shrank from 147.55 m to 3.15 m in
+this counterfactual, supporting a causal role for the identified-trim path
+or its interaction with the rest of the controller. It also changes the
+trajectory and the 0.005 s result remains 21.74 m from the 0.010 s result;
+this is not a matched-state isolation of the exact defect, proof of full
+convergence, or evidence that removing measured trim is correct. The next
+experiment should replay identical measured state and trim history across
+source-selection transitions, examining continuity and model support rather
+than weakening the test or suppressing useful identified data.
+
+A further log-only check reconstructed the existing approach/flare trim-settled
+conditions (absolute AoA error <0.5° and AoA rate <0.3°/s) and compared
+successive body pitch-rate differences to the reported pitch authority.
+Of 236, 198 and 234 matching samples in the 0.020, 0.010 and 0.005 s runs,
+respectively, 8 in each exceeded 3% of reported authority; maxima were about
+18%. Most qualifying samples did not exceed 3% (median ratios 0.25–0.42%).
+These finite differences are sampled dynamics, not a direct measurement of
+net trim moment, and the reported authority is provisional in this model.
+The existing trim learning criterion may therefore admit some non-equilibrium
+samples, but this check neither shows they caused the divergence nor justifies
+adding a new threshold. It is a useful target for matched-state examination.
