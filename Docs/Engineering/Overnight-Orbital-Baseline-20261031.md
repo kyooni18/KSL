@@ -749,3 +749,30 @@ reactivate engines after an ambiguous shutdown. A focused binding test covers
 new wrapper IDs, missing/ambiguous part matches and empty identity. This change
 needs controlled live comparison, particularly actual mid-burn and ambiguous
 shutdown, before it can be considered fully validated.
+
+#### Controlled coast-disconnect comparison after rebinding fix
+
+`overnight-live-orbital-disconnect-fixed-20261031` reloaded the same original
+quicksave and used release binary SHA-256
+`a13e55326fa3dac3e77b0d356d2e3bc29d32698d79caeb78719bc19c5e95ab9d`,
+HEAD `8ce050b` plus the run's preserved dirty `source.patch` SHA-256
+`fc975a9d079e1c40583e8191f4db8cbe48f71914cc23bad543e700b4c53b5fb9`.
+Configuration, plan, proxy program and their hashes are in that directory.
+The same proxy closed the actual connection after record 30 (UT 208582.9865),
+and the controller reconnected, logged `link recovered after 1 fault(s)` and
+continued with record 31 at UT 208583.3065 marked `telemetryGapResumed=true`.
+It logged 103 records total, all in orbital coast and throttle zero, before
+intentional cancellation about eight wall seconds after the injected fault.
+This establishes **one real coast-disconnect recovery comparison**; it is not
+an RPC-deadline timeout test, deorbit, mid-burn recovery, landing or full stop.
+
+Independent kRPC after cancellation at UT 208600.2665 reported STS orbiting,
+zero throttle/axes, RCS off, 356.6048 mono and inactive OMS engines. Normal
+runtime shutdown intentionally deactivated the OMS engines on cancellation;
+the original quicksave remains untouched and must be reloaded for another
+flight. Continued RCS use confirms that the upstream pointing/resource problem
+is **not fixed** by engine rebinding. One focused engine-binding test and all
+nine `DeorbitExecutionTests` passed; the previously documented full-suite
+simulation failures remain. The live comparison does not exercise a delayed
+or lost shutdown acknowledgement, changes in vessel topology, or a disconnect
+during a burn, so those remain unvalidated.
