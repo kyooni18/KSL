@@ -575,3 +575,52 @@ and command axes zero, RCS off, and 370.44287 mono in the loaded test state.
 No flight or derived checkpoint was created by these pulse tests. The original
 save was not rewritten. Foundation Memory was searched again but no Foundation
 capability was available in the tool catalog.
+
+### Offline pointing-law hypothesis and rejection
+
+A local, **not flown and not merged**, exploratory one-axis simulation is in
+`runs/overnight-orbital-pointing-prototype-20261031/`. Its fixed combined pitch
+plant uses the measured positive-pulse rate change divided by command interval
+(0.08441 rad/s² per unit), while the original controller receives the
+wheel-only minimum 0.02185 rad/s². The synthetic vehicle starts 0.3 rad off
+its target at zero rate, has a 0.1 s sampling interval and a 600 s simulation;
+there is no moving target, rigid-body coupling, trim, resource model or
+independent measured trajectory. The original stopping law's full reversal
+can persist at effectively full command in this toy plant (one-sample delay:
+599.1 s integral of absolute command), qualitatively resembling the observed
+coast oscillation. This synthetic reproduction does not prove causality.
+
+A smooth candidate used a horizon derived from acceleration, remaining angle
+and assumed sample/actuator latency, plus least-squares acceleration learning.
+With exact knowledge of applied commands and acceleration, its one-sample-delay
+absolute-command integral fell to 2.43 s, but that ideal observer was given
+knowledge unavailable in the flown logs. A follow-up (`stress.py`) instead
+paired the prior issued command with the next measured rate increment and
+assumed one-sample latency; independent Gaussian rate perturbations were scaled
+to the observed 6.43e-6 rad/s standard deviation of a short wheel-only
+post-pulse interval. This is only a noise proxy, not a sensor specification.
+With actual two-sample delay the integral rose to about 88.8 s and estimated
+pitch authority fell to about 0.0759; with three-sample delay it rose to
+275 s and authority fell to about 0.0601, versus the synthetic true 0.08441.
+These results expose latency/identifiability sensitivity, not realistic fuel
+predictions or a validated new control law. The prototype was rejected for
+production and no release binary was changed. A credible next step needs
+aligned applied-command/acceleration evidence, uncertainty over delay and
+control authority, moving-frame tracking, cross-axis effects and matched-state
+closed-loop validation before a controlled live comparison.
+
+A separate least-squares fit (`fit-delay.py`, `fit-delay.txt`) integrates the
+logged sample-and-held pulse command and fits a constant angular acceleration
+and time offset to the measured body-axis rate. Across full-command pulses the
+wheel-only fitted acceleration magnitudes were 0.0221–0.0223, 0.0215–0.0216,
+and 0.1175–0.1183 rad/s² for pitch, yaw and roll; wheel+RCS magnitudes were
+0.0842–0.0891, 0.0844–0.0864 and 0.2863–0.2874. The ±0.2 pulses gave
+0.0869–0.0894, 0.0805–0.0841 and 0.2732–0.2867 respectively. Best-fit time
+offsets were 0.02–0.05 s and individual fit R² values exceeded 0.9996, but
+this is a single pulse with fitted intercept and offset, **not** independent
+validation of the control response. The recorded UT is read before setting
+the command and the rate is read in later RPCs, so the fitted offset conflates
+RPC ordering, game tick sampling, and actuator delay. It must not be treated as
+a physical latency measurement or inserted as a production constant. A
+coherently timestamped command/telemetry experiment with varied pulse widths
+and transitions is needed to separate those effects.
