@@ -93,6 +93,8 @@ final class GuidanceTests: XCTestCase {
     XCTAssertEqual(updated.fit?.previousPlanID, plan.identifier)
     XCTAssertEqual(updated.fit?.continuingSpiral, true)
     XCTAssertEqual(nextPlan.spiral?.side, plan.spiral?.side)
+    XCTAssertLessThanOrEqual(try XCTUnwrap(nextPlan.spiral).turnAngle,
+      try XCTUnwrap(plan.spiral).turnAngle+1e-6)
     XCTAssertEqual(nextPlan.stations.first?.segment, .spiral)
     XCTAssertEqual(try XCTUnwrap(nextPlan.stations.first).height, frame.coordinates(of: changed.position).height, accuracy: 1e-6)
     mission.accept(.init(time: changed.time, entry: nil, terminal: updated), state: changed)

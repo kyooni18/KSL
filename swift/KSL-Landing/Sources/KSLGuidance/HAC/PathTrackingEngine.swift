@@ -69,12 +69,20 @@ public final class PathTrackingEngine {
       ((g - vh * vh / state.position.length) * cos(state.flightPathAngle)
         + (desiredVertical - state.verticalSpeed) / rateTime + state.aerodynamics.airspeed
         * state.aerodynamics.airspeed * ref.verticalCurvature)
-    let bank = clamp(
-      atan2(lateral, max(1, vertical)), -configuration.vehicle.maximumBank,
-      configuration.vehicle.maximumBank)
+    let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
+    let availableLift = aero.liftSolution(acceleration: 0, mass: state.mass,
+      dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
+      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha)
+      .maximumAcceleration * max(0.5, liftEffectiveness)
+    // A low-energy vehicle cannot repay tracking error by banking away the
+    // lift supporting it. Unload the turn until normal force is available.
+    let support = max(0, (g-vh*vh/state.position.length)*cos(state.flightPathAngle))
+    let reservedVertical = max(support, vertical)
+    let bankAuthority = availableLift > reservedVertical
+      ? min(configuration.vehicle.maximumBank, acos(clamp(reservedVertical/availableLift, 0, 1))) : 0
+    let bank = clamp(atan2(lateral, max(1, vertical)), -bankAuthority, bankAuthority)
     let required = clamp(
       vertical / max(0.3, cos(bank)), 0, configuration.vehicle.maximumLoadFactor * 9.80665)
-    let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
     let lift = aero.liftSolution(
       acceleration: required / max(0.5, liftEffectiveness), mass: state.mass,
       dynamicPressure: state.aerodynamics.dynamicPressure,

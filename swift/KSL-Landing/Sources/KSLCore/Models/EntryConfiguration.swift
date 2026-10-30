@@ -16,7 +16,7 @@ public struct EntryConfiguration: Codable, Sendable, Equatable {
   public var terminalTargetAltitude = 25_000.0
   public var terminalTargetRange = 96_500.0
   /// Operator-selected MM304 handoff radius. Separate from the search envelope.
-  public static let defaultCaptureTargetRange = 20_000.0
+  public static let defaultCaptureTargetRange = 5_000.0
   public var captureTargetRange: Double? = Self.defaultCaptureTargetRange
   public var captureRange: Double { captureTargetRange ?? Self.defaultCaptureTargetRange }
   public var handoffAlong = -8000.0

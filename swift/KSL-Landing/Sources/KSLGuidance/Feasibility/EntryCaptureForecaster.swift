@@ -65,7 +65,7 @@ public final class EntryCaptureForecaster {
   /// Candidate lateral aims: on the handoff point and one turning reach to
   /// either side of the runway axis.
   public func lateralAims(at time: Double) -> [Double] {
-    let w = min(turningReach(at: time), configuration.terminalCaptureRange * sin(configuration.entrySettings.headingHalfWidth)); return [0, -w, w]
+    return [0] // Operator target: runway centerline, 5 km before threshold.
   }
 
   /// Forecast from a fresh MM304 executive (deorbit planning).

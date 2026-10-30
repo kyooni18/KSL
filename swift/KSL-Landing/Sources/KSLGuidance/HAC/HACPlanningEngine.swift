@@ -271,7 +271,13 @@ public final class HACPlanningEngine {
     let angleResolution = max(Double.ulpOfOne, turnRate*c.controlInterval)
     let sides = continuing ? [old!.side] : [-1, 1]
     for side in sides {
-      for radius in radii {
+      let radiusStep = old.map { $0.finalRadius*u
+        * min(1, c.terminalReplanInterval/max(c.terminalReplanInterval, response)) } ?? 0
+      let fittedRadii = continuing ? Array(Set(radii.map {
+        clamp($0, max(minimumRadius, old!.finalRadius-radiusStep),
+          max(minimumRadius, min(c.maximumHACRadius, old!.finalRadius+radiusStep)))
+      })) : radii
+      for radius in fittedRadii.sorted() {
         var headingAngle = Double(side)*wrapAngle(runwayHeading-state.course)
         if headingAngle < 0 { headingAngle += 2 * .pi }
         let energyAngle = max(0, desiredLength-directToExit-c.finalDistance)/max(radius, dynamicRadius)
@@ -279,12 +285,17 @@ public final class HACPlanningEngine {
         // from runway heading; heading alone can put the inlet far ahead.
         let geometricAngle = atan2(-exitOffset.x, radius-Double(side)*exitOffset.y)
         let inletAngle = geometricAngle >= 0 ? geometricAngle : geometricAngle+2 * .pi
-        var angles = [headingAngle, energyAngle, inletAngle]
+        var angles = continuing ? [] : [headingAngle, energyAngle, inletAngle]
         if let remaining {
-          angles += [remaining, remaining*(1-u), remaining*(1+u)]
-          if continuing { angles += [max(0, remaining-turnRate*joinTime)] }
+          if continuing {
+            // Refit the remaining winding; never add another loop or replace
+            // a nearly completed turn with a new heading/energy angle.
+            angles += [remaining, max(0, remaining-turnRate*c.terminalReplanInterval)]
+          } else { angles += [remaining, remaining*(1-u), remaining*(1+u)] }
         }
-        for theta in Set(angles.map { clamp($0, angleResolution, SpiralHAC.maximumTurnAngle) }).sorted() {
+        let minimumAngle = continuing
+          ? max(Double.ulpOfOne, min(angleResolution, remaining ?? angleResolution)) : angleResolution
+        for theta in Set(angles.map { clamp($0, minimumAngle, SpiralHAC.maximumTurnAngle) }).sorted() {
           if Task.isCancelled { break }
           let growth = clamp((dynamicRadius-radius)/(theta*theta), radius*Double.ulpOfOne,
             radius/2*GuidanceTargetLimiter.responseReserve)
