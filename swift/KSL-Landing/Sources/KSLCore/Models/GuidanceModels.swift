@@ -50,10 +50,10 @@ public struct GuidanceTarget: Codable, Sendable, Equatable {
 public struct GuidanceSolution: Codable, Sendable {
   public let phase: MissionPhase
   public let target: GuidanceTarget
-  public let violations: [ConstraintViolation]
+  public var violations: [ConstraintViolation]
   public let planID: Int?
   public let pathRemaining: Double
-  public let diagnostic: String
+  public var diagnostic: String
   public var entry: EntryDiagnostics?
   public var approach: ApproachDiagnostics?
   public var admission: TerminalAdmissionDiagnostics?

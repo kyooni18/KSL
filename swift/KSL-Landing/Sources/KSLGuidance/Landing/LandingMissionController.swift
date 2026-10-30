@@ -44,9 +44,10 @@ public final class LandingMissionController {
     if plan != nil {
       plan = nil; tracker.reset(); poorTrackingSince = nil
       if [.acquisition, .headingAlignment].contains(phase) {
-        if state.position.length-configuration.planet.radius >= configuration.entrySettings.terminalMinimumAltitude {
-          phase = .entry
-        } else {
+        // Never give up on a configuration change: fall back to MM304/
+        // final-approach guidance and keep searching for a new HAC.
+        phase = .entry
+        if state.position.length-configuration.planet.radius < configuration.entrySettings.terminalMinimumAltitude {
           invalidationFailure = .init(.modelUncertainty,
             "Payload/configuration changed below the qualified terminal replanning envelope")
         }
@@ -121,10 +122,11 @@ public final class LandingMissionController {
   }
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
     try state.validate(configuration: configuration)
-    if let failure = invalidationFailure {
-      phase = .abort
-      return .init(phase: .abort, target: .init(), violations: [failure])
-    }
+    // Guidance never abandons the vehicle on its own judgement: every
+    // envelope, energy or contact verdict is reported as an advisory while
+    // the best available landing law keeps flying. Only a destroyed vehicle
+    // ends the mission.
+    var advisories: [ConstraintViolation] = invalidationFailure.map { [$0] } ?? []
     entry.environment = environment
     if previousTime == nil && [.approach, .preflare, .flare].contains(phase), !approach.canCapture(state) {
       throw FlightError.invalidCommand("Requested Final phase fails measured capture/energy contract")
@@ -156,16 +158,10 @@ public final class LandingMissionController {
             .excessiveLoad, "Observed normal load exceeds the configured envelope", value: load,
             limit: v.maximumLoadFactor))
       }
-      if !envelope.isEmpty {
-        phase = .abort
-        return .init(phase: .abort, target: .init(), violations: envelope)
-      }
+      advisories += envelope
     }
     let contactFailures = touchdown.observe(state)
-    if !contactFailures.isEmpty {
-      phase = .abort
-      return .init(phase: .abort, target: .init(gearDown: true), violations: contactFailures)
-    }
+    advisories += contactFailures
     if state.contact == .crashed {
       phase = .abort
       return .init(
@@ -174,11 +170,9 @@ public final class LandingMissionController {
     }
     if state.contact.isGrounded {
       let p = frame.coordinates(of: state.position)
-      guard configuration.runway.contains(along: p.along, cross: p.cross) else {
-        phase = .abort
-        return .init(
-          phase: .abort, target: .init(gearDown: true),
-          violations: [.init(.runwayExcursion, "Ground contact outside configured runway")])
+      if !configuration.runway.contains(along: p.along, cross: p.cross) {
+        // Off the pavement the best remaining action is still to stop.
+        advisories.append(.init(.runwayExcursion, "Ground contact outside configured runway"))
       }
       if !wasAirborne {
         throw FlightError.invalidTelemetry(
@@ -194,10 +188,11 @@ public final class LandingMissionController {
       } else {
         stoppedSince = nil
       }
-      return .init(phase: phase, target: .init(gearDown: true), planID: plan?.identifier)
+      return .init(phase: phase, target: .init(gearDown: true), violations: advisories, planID: plan?.identifier)
     }
     wasAirborne = true
-    if phase == .abort || phase == .complete { return .init(phase: phase, target: .init()) }
+    if phase == .complete { return .init(phase: phase, target: .init()) }
+    if phase == .abort { phase = .entry }
     let p = frame.coordinates(of: state.position)
     var raw: GuidanceSolution
     if plan == nil && state.aerodynamics.airspeed < 500 && p.height < 20_000
@@ -219,15 +214,12 @@ public final class LandingMissionController {
       let distance = frame.distance(from: state.position,
         to: frame.position(along: reachableAlong, cross: 0, height: 0))
       if distance > optimisticRange {
-        phase = .abort
-        return .init(
-          phase: .abort, target: .init(),
-          violations: [
+        advisories += [
             .init(
               .insufficientEnergy, "Runway exceeds even the optimistic still-air modeled range",
               value: distance, limit: optimisticRange)
           ] + (lastCapture.map { [.init(Self.classification($0.deficit),
-            "Last MM305 capture verdict: \($0.deficit.rawValue)")] } ?? []))
+            "Last MM305 capture verdict: \($0.deficit.rawValue)")] } ?? [])
       }
     }
     if [.approach, .preflare, .flare].contains(phase) || (plan == nil && approach.canCapture(state))
@@ -293,11 +285,19 @@ public final class LandingMissionController {
             "MM305 capture infeasible: \(capture.deficit.rawValue)",
             value: capture.envelope.energyMargin.isFinite ? max(-1e9, capture.envelope.energyMargin) : 0))
         }
-        raw = .init(
-          phase: failures.isEmpty ? .entry : .abort, target: target, violations: failures,
-          diagnostic:
-            "Entry receding-horizon candidates=\(entry.candidateCount), reversals=\(entry.reversalCount)"
-        )
+        // Out of terminal options near the ground: fly the final-approach
+        // law toward the runway as the best remaining attempt.
+        if !failures.isEmpty {
+          raw = approach.update(
+            state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
+            pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
+            identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
+          raw.violations += failures
+        } else {
+          raw = .init(phase: .entry, target: target)
+        }
+        raw.diagnostic =
+          "Entry receding-horizon candidates=\(entry.candidateCount), reversals=\(entry.reversalCount)"
         raw.entry = entry.diagnostics
       }
     }
@@ -309,6 +309,7 @@ public final class LandingMissionController {
     var solution = GuidanceSolution(
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
+    solution.violations += advisories
     solution.entry = raw.entry
     solution.approach = raw.approach
     if phase == .entry || phase == .acquisition || phase == .headingAlignment || phase == .abort {
