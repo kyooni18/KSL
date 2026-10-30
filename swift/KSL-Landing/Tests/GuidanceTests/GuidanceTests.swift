@@ -31,8 +31,11 @@ final class GuidanceTests: XCTestCase {
     let near = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     _ = near.update(state)
     XCTAssertLessThan(near.diagnostics.requiredRange, slow.diagnostics.requiredRange)
-    c.vehicle.rcsAttitudeControl = false
     memory.previousAlpha = c.vehicle.maximumAngleOfAttack
+    memory.identifiedTrimCeiling = c.entrySettings.nominalAlpha
+    let rcs = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
+    XCTAssertGreaterThan(rcs.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
+    c.vehicle.rcsAttitudeControl = false
     let aerodynamic = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     XCTAssertLessThanOrEqual(aerodynamic.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
   }

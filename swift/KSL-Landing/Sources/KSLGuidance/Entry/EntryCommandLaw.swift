@@ -126,7 +126,10 @@ final class EntryCommandLaw {
       alpha = min(alpha, max(baseAlpha, aero.bestGlideAlpha(mach: a.mach,
         maximumAlpha: c.vehicle.maximumAngleOfAttack, dynamicPressure: a.dynamicPressure)))
     }
-    let trimCeiling = memory.identifiedTrimCeiling ?? c.vehicle.maximumAngleOfAttack
+    // Aerodynamic trim evidence cannot veto the configured RCS attitude
+    // actuator: only an aerodynamic-only vehicle needs that trim ceiling.
+    let trimCeiling = c.vehicle.rcsAttitudeControl ? c.vehicle.maximumAngleOfAttack
+      : (memory.identifiedTrimCeiling ?? e.nominalAlpha)
     alpha = min(alpha, ceilingAlpha, trimCeiling)
     // Separate guidance bandwidth from the measured closed pitch loop. The
     // exponential step is monotone even after a large telemetry interval.
