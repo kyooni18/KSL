@@ -303,7 +303,9 @@ public final class LandingMissionController {
     }
     phase = raw.phase
     let target = limiter.update(raw.target, phase: raw.phase, configuration: configuration, dt: dt,
-      dynamicPressure: state.aerodynamics.dynamicPressure)
+      dynamicPressure: state.aerodynamics.dynamicPressure,
+      rollResponseSeconds: controlFeedback?.rollResponseSeconds,
+      pitchResponseSeconds: controlFeedback?.pitchResponseSeconds)
     var solution = GuidanceSolution(
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)

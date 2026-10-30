@@ -14,7 +14,8 @@ public struct GuidanceTargetLimiter: Sendable {
   public init(previous: GuidanceTarget? = nil) { self.previous = previous }
   public mutating func update(_ requested: GuidanceTarget, phase: MissionPhase,
                               configuration c: MissionConfiguration, dt: Double,
-                              dynamicPressure: Double? = nil) -> GuidanceTarget {
+                              dynamicPressure: Double? = nil, rollResponseSeconds: Double? = nil,
+                              pitchResponseSeconds: Double? = nil) -> GuidanceTarget {
     var target = requested
     if let old = previous {
       let plant = c.vehicle.controlPlant
@@ -32,6 +33,10 @@ public struct GuidanceTargetLimiter: Sendable {
         pitchAcceleration = min(plant.pitchAccelerationMaximum, plant.pitchAccelerationPerKPa * kPa) * reserve
         if phase == .entry { rollAcceleration = min(rollAcceleration, c.entrySettings.rollAcceleration) }
       }
+      // The target feeds a closed attitude loop: changing its rate faster
+      // than that loop's response time only injects feedback noise.
+      if let t = rollResponseSeconds, t > 0 { rollAcceleration = min(rollAcceleration, rollRateLimit / t) }
+      if let t = pitchResponseSeconds, t > 0 { pitchAcceleration = min(pitchAcceleration, pitchRateLimit / t) }
       (target.bank, bankRate) = Self.step(old.bank, toward: old.bank + wrapAngle(target.bank - old.bank),
         rate: bankRate, rateLimit: rollRateLimit, acceleration: rollAcceleration, dt: dt)
       (target.angleOfAttack, alphaRate) = Self.step(old.angleOfAttack, toward: target.angleOfAttack,

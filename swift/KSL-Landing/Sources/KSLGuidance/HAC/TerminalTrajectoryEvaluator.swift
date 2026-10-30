@@ -78,7 +78,9 @@ public final class TerminalTrajectoryEvaluator {
       }
       phase = raw.phase
       let target = limiter.update(raw.target, phase: phase, configuration: c, dt: dt,
-        dynamicPressure: state.aerodynamics.dynamicPressure)
+        dynamicPressure: state.aerodynamics.dynamicPressure,
+        rollResponseSeconds: controller.diagnostics.rollResponseSeconds,
+        pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds)
       if let reference = lastReference { trace?(state, reference, target) }
       do {
         let command = try controller.command(state: state, solution: .init(phase: phase, target: target), dt: dt)
