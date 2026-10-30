@@ -20,7 +20,8 @@ public final class PathTrackingEngine {
     trackingError = 0
   }
   public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1,
-                     identifiedTrimCeiling: Double? = nil) -> (
+                     identifiedTrimCeiling: Double? = nil, rollResponseSeconds: Double? = nil,
+                     pitchResponseSeconds: Double? = nil) -> (
     GuidanceTarget, PathStation
   ) {
     let p = frame.coordinates(of: state.position)
@@ -35,10 +36,16 @@ public final class PathTrackingEngine {
     let headingError = wrapAngle(course - state.course)
     let crossError = -offset.dot(ref.tangent.rightNormal)
     let vh = max(25, state.horizontalSpeed)
-    let timeConstant = ref.segment == .spiral && abs(ref.curvature) > 1e-8
+    // Outer loops must be slower than the attitude loop they drive (a
+    // cascade needs bandwidth separation), so every time constant is
+    // floored at a multiple of the measured closed-loop response.
+    let separation = 1 / (1 - GuidanceTargetLimiter.responseReserve)
+    let rollFloor = (rollResponseSeconds ?? 0) * separation
+    let pitchFloor = (pitchResponseSeconds ?? 0) * separation
+    let timeConstant = max(rollFloor, ref.segment == .spiral && abs(ref.curvature) > 1e-8
       ? max(configuration.guidance.pathLookaheadTime,
           0.65*(configuration.guidance.hacLookaheadAngle ?? radians(16))/(abs(ref.curvature)*vh))
-      : configuration.guidance.pathLookaheadTime
+      : configuration.guidance.pathLookaheadTime)
     let lateral =
       vh * vh * ref.curvature + 2 * 0.9 / timeConstant * vh * sin(headingError) + crossError
       / (timeConstant * timeConstant)
@@ -51,11 +58,12 @@ public final class PathTrackingEngine {
     let exchange = ref.segment != .final && ref.speed > 0
       ? (ref.speed * ref.speed - speed * speed) / (2 * g) : 0
     let heightTarget = ref.height - exchange
+    let rateTime = max(5, pitchFloor), heightTime = rateTime * 12 / 5
     let desiredVertical =
-      speed * sin(gamma) + clamp((heightTarget - p.height) / 12, -35, 35)
+      speed * sin(gamma) + clamp((heightTarget - p.height) / heightTime, -35, 35)
     let vertical =
       ((g - vh * vh / state.position.length) * cos(state.flightPathAngle)
-        + (desiredVertical - state.verticalSpeed) / 5 + state.aerodynamics.airspeed
+        + (desiredVertical - state.verticalSpeed) / rateTime + state.aerodynamics.airspeed
         * state.aerodynamics.airspeed * ref.verticalCurvature)
     let bank = clamp(
       atan2(lateral, max(1, vertical)), -configuration.vehicle.maximumBank,

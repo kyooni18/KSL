@@ -65,7 +65,8 @@ public final class TerminalTrajectoryEvaluator {
           pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds, identifiedTrimCeiling: trim)
       } else {
         let (target, reference) = tracker.update(state, plan: plan, liftEffectiveness: authority.liftEffectiveness,
-          identifiedTrimCeiling: trim)
+          identifiedTrimCeiling: trim,
+          rollResponseSeconds: controller.diagnostics.rollResponseSeconds, pitchResponseSeconds: controller.diagnostics.pitchResponseSeconds)
         lastReference = reference
         maximumTrackingError = max(maximumTrackingError, tracker.trackingError)
         if reference.segment == .final && approach.canCapture(state) {

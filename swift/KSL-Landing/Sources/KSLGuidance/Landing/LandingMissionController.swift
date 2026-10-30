@@ -244,7 +244,8 @@ public final class LandingMissionController {
       if let committed = plan {
         let (target, reference) = tracker.update(
           state, plan: committed, liftEffectiveness: authority.liftEffectiveness,
-          identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
+          identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil,
+          rollResponseSeconds: controlFeedback?.rollResponseSeconds, pitchResponseSeconds: controlFeedback?.pitchResponseSeconds)
         if reference.segment == .final && approach.canCapture(state) {
           raw = approach.update(
             state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
