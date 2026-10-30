@@ -35,6 +35,8 @@ public final class LandingMissionController {
   private var previousTime: Double?
   private var wasAirborne = false
   private var invalidationFailure: ConstraintViolation?
+  /// Seed MM304's lateral aim from the landing-aware deorbit plan.
+  public func planEntryAim(_ crossAim: Double) { entry.setCrossAim(crossAim) }
   public func invalidateDynamics(at state: VehicleState) {
     authority.reset(); entry.invalidatePrediction(); approach.invalidatePrediction()
     controlSnapshot = nil; controlFeedback = nil
@@ -300,7 +302,8 @@ public final class LandingMissionController {
       }
     }
     phase = raw.phase
-    let target = limiter.update(raw.target, phase: raw.phase, configuration: configuration, dt: dt)
+    let target = limiter.update(raw.target, phase: raw.phase, configuration: configuration, dt: dt,
+      dynamicPressure: state.aerodynamics.dynamicPressure)
     var solution = GuidanceSolution(
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
@@ -332,6 +335,7 @@ public final class LandingMissionController {
 
   private func handoffDiagnostics() -> CaptureHandoffDiagnostics {
     var d = CaptureHandoffDiagnostics()
+    d.plannedCrossAim = entry.crossAim
     if let f = entry.captureForecast {
       let e = f.capture.envelope
       d.predictedFeasible = f.feasible; d.predictedDeficit = f.capture.deficit.rawValue
@@ -349,6 +353,7 @@ public final class LandingMissionController {
     }
     if let capture = lastCapture {
       d.mm305Searched = true; d.mm305Deficit = capture.deficit.rawValue
+      d.mm305Violations = Array(capture.violations.prefix(6))
     }
     d.mm305PlanAccepted = plan != nil
     if plan == nil, let admission = lastAdmission, !admission.accepted {

@@ -7,6 +7,9 @@ struct EntryLateralMemory: Sendable {
   var lastReversal = -Double.infinity
   var previousBeta: Double?, previousCrossRate: Double?
   var reversals = 0
+  /// Crossrange TAEM can still turn out at capture (m); nil before any
+  /// capture forecast exists, when the MM305 handoff radius applies.
+  var corridor: Double?
 }
 
 /// C entry_lateral.c azimuth/crossrange feedback and bounded double-integrator
@@ -74,13 +77,17 @@ enum EntryLateralController {
         projected += (futureRate < 0 ? -1 : 1) * futureRate * futureRate / (lateralAuthority * (1 + alignment))
       }
     }
-    let deadband = radians(clamp(3 + a.airspeed / 180, 4, 16))
+    // Reverse only for misses TAEM could not turn out: the corridor is the
+    // capture-state turning reach, and the azimuth deadband is the heading
+    // error that would accumulate that miss over the remaining range.
+    let corridor = max(e.handoffRadius, m.corridor ?? e.handoffRadius)
+    let deadband = atan2(corridor, max(1, range))
     var demandedSign = azimuthError < 0 ? -1.0 : 1.0
     let pointBehind = cos(azimuthError) <= 0
     if pointBehind { demandedSign = m.sign }
-    else if abs(projected) > e.handoffRadius, alignment > 0 { demandedSign = projected < 0 ? -1 : 1 }
+    else if abs(projected) > corridor, alignment > 0 { demandedSign = projected < 0 ? -1 : 1 }
     let requested = demandedSign != m.sign
-      && (abs(azimuthError) > deadband || abs(projected) > e.handoffRadius)
+      && (abs(azimuthError) > deadband || abs(projected) > corridor)
     let ready = s.time - m.lastReversal >= max(e.minimumLegDuration, response)
     if requested && feasible && ready && (m.captured || magnitude < radians(5)) {
       m.sign = demandedSign; m.lastReversal = s.time; m.captured = false; m.reversals += 1

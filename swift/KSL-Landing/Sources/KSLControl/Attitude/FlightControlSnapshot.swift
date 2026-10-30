@@ -11,5 +11,6 @@ public struct FlightControlSnapshot: Sendable {
   let previousState: VehicleState?, previousPhase: MissionPhase?
   let trimModel: AdaptiveTrim
   let previousFeedforward: Double, feedforwardWasIdentified: Bool
+  let feedforwardWasPrior: Bool
   let coupledRollAcceleration: Double
 }

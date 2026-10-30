@@ -244,7 +244,23 @@ public final class HACPlanningEngine {
         }
       }
     }
-    candidates.sort { $0.assessment.score < $1.assessment.score }
+    // Energy-equivalent plans (touchdown speed within the aerodynamic
+    // uncertainty of landing speed) are ordered by total roll travel from the
+    // current bank, so MM305 prefers the predictable, monotonic turn.
+    let landing = configuration.vehicle.landingSpeed
+    let tolerance = configuration.vehicle.aerodynamicUncertainty * landing
+    func rollTravel(_ plan: TerminalPlan) -> Double {
+      var bank = state.aerodynamics.bank, total = 0.0
+      for station in plan.stations { total += abs(wrapAngle(station.bank - bank)); bank = station.bank }
+      return total
+    }
+    candidates = candidates.map { ($0, rollTravel($0)) }.sorted {
+      let ea = abs($0.0.assessment.touchdownSpeed - landing) <= tolerance
+      let eb = abs($1.0.assessment.touchdownSpeed - landing) <= tolerance
+      if ea != eb { return ea }
+      if ea && eb { return $0.1 < $1.1 }
+      return $0.0.assessment.score < $1.0.assessment.score
+    }.map(\.0)
     if preview {
       chosen = candidates.first // Geometry/energy preview carries no closed-loop certificate.
     } else {

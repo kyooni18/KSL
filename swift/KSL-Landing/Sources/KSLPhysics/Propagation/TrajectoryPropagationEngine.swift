@@ -64,7 +64,7 @@ public final class TrajectoryPropagationEngine {
       let dt = min(controlStep, end - s.time)
       let requested = law(s)
       let target = limiter.update(.init(angleOfAttack: requested.alpha, bank: requested.bank),
-        phase: .entry, configuration: configuration, dt: dt)
+        phase: .entry, configuration: configuration, dt: dt, dynamicPressure: s.aerodynamics.dynamicPressure)
       do {
         let command = try controller.command(state: s,
           solution: .init(phase: .entry, target: target), dt: dt)

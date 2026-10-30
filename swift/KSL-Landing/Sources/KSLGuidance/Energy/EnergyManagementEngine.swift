@@ -4,7 +4,7 @@ import KSLPhysics
 
 public final class EnergyManagementEngine {
   /// Fraction of rated roll response a path may demand (pricing reserve).
-  public static let bankRateReserve = 0.85
+  public static let bankRateReserve = GuidanceTargetLimiter.responseReserve
   /// Lowest priced touchdown speed, as a fraction of landing speed.
   public static let minimumTouchdownFraction = 0.82
   /// Bank whose load factor remains available after the configured

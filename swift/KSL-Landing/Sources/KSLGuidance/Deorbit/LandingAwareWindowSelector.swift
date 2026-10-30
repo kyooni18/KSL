@@ -73,9 +73,15 @@ public final class LandingAwareWindowSelector {
       guard start >= earliest,
         let w = try? search.probe(initial: initial, start: start, normal: seed.normalAngle, propulsion: propulsion),
         w.closing else { return nil }
-      count += 1
-      return .init(window: w, pass: pass, burnOffset: offset,
-        nominal: forecaster.forecast(from: entryState(w), certify: certify))
+      // The lateral aim is planned with the window: each burn option is
+      // flown to each candidate aim and keeps the best capture.
+      let entry = entryState(w)
+      let aims = forecaster.lateralAims(at: entry.time)
+      count += aims.count
+      let forecasts = aims.map { forecaster.forecast(from: entry, crossAim: $0) }
+      var best = forecasts.max { rank($0) < rank($1) }!
+      if certify && best.feasible { count += 1; best = forecaster.forecast(from: entry, crossAim: best.crossAim, certify: true) }
+      return .init(window: w, pass: pass, burnOffset: offset, nominal: best)
     }
     for (pass, seed) in seeds.enumerated() {
       // Scan burn timing, extending only in the direction the physics asks:
@@ -150,13 +156,18 @@ public final class LandingAwareWindowSelector {
         let entry = entryState(best.window)
         best.dispersed = [(1 - u, 1 + u), (1 + u, 1 - u), (1 - u, 1), (1, 1 + u)].map {
           count += 1
-          return forecaster.forecast(from: entry, liftScale: $0.0, dragScale: $0.1)
+          return forecaster.forecast(from: entry, crossAim: best.nominal.crossAim, liftScale: $0.0, dragScale: $0.1)
         }.map(compact)
       }
       ranked.append(best)
     }
     ranked.sort(by: better)
     return .init(ranked: ranked, survey: survey, evaluatedForecasts: count)
+  }
+
+  /// Feasible captures first, then the larger energy margin.
+  private func rank(_ f: EntryCaptureForecast) -> Double {
+    (f.feasible ? 1e12 : 0) + max(-1e11, f.capture.envelope.energyMargin)
   }
 
   /// Lexicographic landing-first ordering (see deorbit window policy).
@@ -179,12 +190,7 @@ public final class LandingAwareWindowSelector {
   }
 
   private func compact(_ f: EntryCaptureForecast) -> EntryCaptureForecast {
-    var capture = f.capture; capture.plan = nil
-    return .init(createdAt: f.createdAt, rangeMultiplier: f.rangeMultiplier, liftScale: f.liftScale,
-      dragScale: f.dragScale, reachedTerminalRegion: f.reachedTerminalRegion, violations: f.violations,
-      terminalTime: f.terminalTime, terminalAltitude: f.terminalAltitude, terminalMach: f.terminalMach,
-      terminalAlong: f.terminalAlong, terminalCross: f.terminalCross,
-      maximumDynamicPressure: f.maximumDynamicPressure, maximumLoad: f.maximumLoad, capture: capture, track: [])
+    var v = f; v.capture.plan = nil; v.track = []; return v
   }
   private func compact(_ c: LandingAwareCandidate) -> LandingAwareCandidate {
     var v = LandingAwareCandidate(window: c.window, pass: c.pass, burnOffset: c.burnOffset, nominal: compact(c.nominal))

@@ -1,26 +1,59 @@
 import Foundation
 
 /// Command slew is part of the flight computer, so every forecast starts from
-/// the same last commanded target and uses this exact limiter.
+/// the same last commanded target and uses this exact limiter. Targets are a
+/// second-order reference: bounded rate AND bounded acceleration (the plant's
+/// available roll/pitch acceleration at the current dynamic pressure), with
+/// deceleration ahead of the goal, so the vehicle is never asked to change
+/// attitude rate instantaneously.
 public struct GuidanceTargetLimiter: Sendable {
+  /// Fraction of rated attitude response guidance may demand.
+  public static let responseReserve = 0.85
   public private(set) var previous: GuidanceTarget?
+  private var bankRate = 0.0, alphaRate = 0.0
   public init(previous: GuidanceTarget? = nil) { self.previous = previous }
   public mutating func update(_ requested: GuidanceTarget, phase: MissionPhase,
-                              configuration c: MissionConfiguration, dt: Double) -> GuidanceTarget {
+                              configuration c: MissionConfiguration, dt: Double,
+                              dynamicPressure: Double? = nil) -> GuidanceTarget {
     var target = requested
     if let old = previous {
-      let bankRate = [.approach, .preflare, .flare].contains(phase)
+      let plant = c.vehicle.controlPlant
+      let rollRateLimit = [.approach, .preflare, .flare].contains(phase)
         ? (c.guidance.approachRollRate ?? c.guidance.bankSlewRate)
         : [.acquisition, .headingAlignment].contains(phase)
         ? (c.guidance.terminalRollRate ?? c.guidance.bankSlewRate) : c.entrySettings.rollRate
-      target.bank = old.bank + clamp(wrapAngle(target.bank - old.bank),
-        -bankRate * dt, bankRate * dt)
-      let alphaRate = phase == .preflare || phase == .flare
-        ? c.vehicle.controlPlant.maximumPitchRate * 0.8 : c.guidance.alphaSlewRate
-      target.angleOfAttack = moveToward(old.angleOfAttack, target.angleOfAttack,
-        maximumDelta: alphaRate * dt)
+      let pitchRateLimit = phase == .preflare || phase == .flare
+        ? plant.maximumPitchRate * 0.8 : c.guidance.alphaSlewRate
+      // Without a measured q the limiter keeps its first-order behavior.
+      var rollAcceleration = Double.infinity, pitchAcceleration = Double.infinity
+      if let q = dynamicPressure, q > 0 {
+        let kPa = q / 1000, reserve = Self.responseReserve
+        rollAcceleration = min(plant.rollAccelerationMaximum, plant.rollAccelerationPerKPa * kPa) * reserve
+        pitchAcceleration = min(plant.pitchAccelerationMaximum, plant.pitchAccelerationPerKPa * kPa) * reserve
+        if phase == .entry { rollAcceleration = min(rollAcceleration, c.entrySettings.rollAcceleration) }
+      }
+      (target.bank, bankRate) = Self.step(old.bank, toward: old.bank + wrapAngle(target.bank - old.bank),
+        rate: bankRate, rateLimit: rollRateLimit, acceleration: rollAcceleration, dt: dt)
+      (target.angleOfAttack, alphaRate) = Self.step(old.angleOfAttack, toward: target.angleOfAttack,
+        rate: alphaRate, rateLimit: pitchRateLimit, acceleration: pitchAcceleration, dt: dt)
     }
     previous = target
     return target
+  }
+
+  /// One step of a rate/acceleration-limited reference that arrives at the
+  /// goal with zero rate (minimum-time bang-bang profile).
+  static func step(_ value: Double, toward goal: Double, rate: Double, rateLimit: Double,
+                   acceleration: Double, dt: Double) -> (Double, Double) {
+    guard acceleration.isFinite, acceleration > 0 else {
+      let next = moveToward(value, goal, maximumDelta: rateLimit * dt)
+      return (next, dt > 0 ? (next - value) / dt : 0)
+    }
+    let error = goal - value, direction: Double = error < 0 ? -1 : 1
+    let desired = direction * min(rateLimit, sqrt(2 * acceleration * abs(error)))
+    let newRate = moveToward(rate, desired, maximumDelta: acceleration * dt)
+    let next = value + 0.5 * (rate + newRate) * dt
+    if (goal - value) * (goal - next) <= 0 && abs(newRate) <= acceleration * dt { return (goal, 0) }
+    return (next, newRate)
   }
 }

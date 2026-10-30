@@ -48,6 +48,8 @@ public struct CaptureHandoffDiagnostics: Codable, Sendable {
   public var requiredHeadingChange: Double?
   public var availableTurnRate: Double?
   public var rangeMultiplier: Double?
+  /// Lateral MM304 aim offset planned backward from TAEM capture (m).
+  public var plannedCrossAim: Double?
   /// Sparse predicted path [time, along, cross, height, speed, alpha, bank].
   public var predictedTrack: [[Double]] = []
   /// MM305's own envelope verdict on the current state (when searched).
@@ -55,5 +57,7 @@ public struct CaptureHandoffDiagnostics: Codable, Sendable {
   public var mm305Deficit: String?
   public var mm305PlanAccepted = false
   public var mm305Rejection: String?
+  /// MM305's own physical/closed-loop violations for the last search.
+  public var mm305Violations: [ConstraintViolation] = []
   public init() {}
 }

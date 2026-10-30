@@ -9,6 +9,7 @@ import KSLPhysics
 public struct EntryCaptureForecast: Codable, Sendable {
   public let createdAt: Double
   public let rangeMultiplier: Double
+  public var crossAim = 0.0
   public let liftScale: Double
   public let dragScale: Double
   public let reachedTerminalRegion: Bool
@@ -20,9 +21,9 @@ public struct EntryCaptureForecast: Codable, Sendable {
   public let terminalCross: Double
   public let maximumDynamicPressure: Double
   public let maximumLoad: Double
-  public let capture: TAEMCaptureAssessment
+  public var capture: TAEMCaptureAssessment
   /// Sparse predicted path (time, along, cross, height, speed, alpha, bank).
-  public let track: [[Double]]
+  public var track: [[Double]]
   public var feasible: Bool { reachedTerminalRegion && violations.isEmpty && capture.feasible }
 }
 
@@ -48,11 +49,27 @@ public final class EntryCaptureForecaster {
       position: point.normalized * (configuration.planet.radius + e.terminalTargetAltitude), time: time).speedOfSound
   }
 
+  /// TAEM turning reach at the MM304 terminal speed: the coordinated turn
+  /// radius at the acquisition bank. Lateral aims and the reversal corridor
+  /// are expressed in this physical unit.
+  public func turningReach(at time: Double) -> Double {
+    let v = terminalSpeed(at: time), c = configuration
+    let g = c.planet.gravitationalParameter / pow(c.planet.radius + c.entrySettings.terminalTargetAltitude, 2)
+    return v * v / (g * tan(max(1e-3, EnergyManagementEngine.acquisitionBank(c))))
+  }
+
+  /// Candidate lateral aims: on the handoff point and one turning reach to
+  /// either side of the runway axis.
+  public func lateralAims(at time: Double) -> [Double] {
+    let w = turningReach(at: time); return [0, -w, w]
+  }
+
   /// Forecast from a fresh MM304 executive (deorbit planning).
-  public func forecast(from state: VehicleState, rangeMultiplier: Double = 1,
+  public func forecast(from state: VehicleState, rangeMultiplier: Double = 1, crossAim: Double = 0,
                        liftScale: Double = 1, dragScale: Double = 1,
                        certify: Bool = false) -> EntryCaptureForecast {
-    forecast(from: state, memory: .init(), rangeMultiplier: rangeMultiplier, liftScale: liftScale,
+    var memory = EntryLawMemory(); memory.crossAim = crossAim
+    return forecast(from: state, memory: memory, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
       dragScale: dragScale, certify: certify, controls: nil, previousTarget: nil)
   }
 
@@ -110,10 +127,12 @@ public final class EntryCaptureForecaster {
       let q = frame.coordinates(of: s.position)
       return [s.time, q.along, q.cross, q.height, s.velocity.length, s.angleOfAttack, s.bank]
     }
-    return .init(createdAt: state.time, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
+    var result = EntryCaptureForecast(createdAt: state.time, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
       dragScale: dragScale, reachedTerminalRegion: first.reachedTerminalRegion,
       violations: violations, terminalTime: end.time, terminalAltitude: p.height,
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)
+    result.crossAim = memory.crossAim
+    return result
   }
 }

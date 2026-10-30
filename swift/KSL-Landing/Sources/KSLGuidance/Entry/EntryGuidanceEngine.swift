@@ -19,6 +19,7 @@ public struct EntryPlanningProposal: Codable, Sendable {
   public let terminalRouteFeasible: Bool
   /// Capture forecast of the selected branch (HAC plan stripped).
   public var capture: EntryCaptureForecast?
+  public var crossAim: Double?
 }
 
 /// Fast C-derived MM304 feedback owns commands. Expensive closed-loop forecasts
@@ -52,6 +53,9 @@ public final class EntryGuidanceEngine {
     return .init(state: state, controls: controls, memory: law.memory, rangeMultiplier: rangeMultiplier,
       previousTarget: previousTarget, environment: environment)
   }
+  /// Lateral aim planned backward from TAEM capture (deorbit selection).
+  public func setCrossAim(_ value: Double) { law.memory.crossAim = value }
+  public var crossAim: Double { law.memory.crossAim }
   public func invalidatePrediction() {
     bestPrediction = nil; candidateCount = 0; captureForecast = nil
     rangeMultiplier = 1
@@ -65,6 +69,13 @@ public final class EntryGuidanceEngine {
     rangeMultiplier = proposal.rangeMultiplier
     bestPrediction = proposal.prediction; candidateCount = proposal.candidates
     captureForecast = proposal.capture
+    if let aim = proposal.crossAim { law.memory.crossAim = aim }
+    if let f = proposal.capture, f.feasible, let speed = f.track.last?[4] {
+      let g = configuration.planet.gravitationalParameter
+        / pow(configuration.planet.radius + f.capture.altitude, 2)
+      law.memory.lateral.corridor = speed * speed
+        / (g * tan(max(1e-3, EnergyManagementEngine.acquisitionBank(configuration))))
+    }
   }
   public func update(_ state: VehicleState, synchronousPlanning: Bool = true,
                      controls: FlightControlSnapshot? = nil,
@@ -98,6 +109,15 @@ public final class EntryGuidanceEngine {
       }
     }
     fly(factors)
+    if !forecasts.contains(where: \.feasible) {
+      // The flown aim lost capture: re-plan the lateral aim (same physical
+      // candidates as deorbit planning) before changing the drag profile.
+      for aim in forecaster.lateralAims(at: state.time) where abs(aim - request.memory.crossAim) > 1 && !Task.isCancelled {
+        var memory = request.memory; memory.crossAim = aim
+        forecasts.append(forecaster.forecast(from: state, memory: memory, rangeMultiplier: request.rangeMultiplier,
+          controls: request.controls, previousTarget: request.previousTarget))
+      }
+    }
     if !forecasts.contains(where: \.feasible), let best = forecasts.min(by: { score($0) < score($1) }) {
       // Correct early, in the direction the physics asks: a shorter
       // perceived range commands more drag (excess energy), a longer one less.
@@ -108,21 +128,23 @@ public final class EntryGuidanceEngine {
       }
       fly(factors)
     }
-    let chosen = forecasts.min { score($0) < score($1) }
-    var compact = chosen
-    if let f = chosen {
-      var capture = f.capture; capture.plan = nil
-      compact = .init(createdAt: f.createdAt, rangeMultiplier: f.rangeMultiplier, liftScale: f.liftScale,
-        dragScale: f.dragScale, reachedTerminalRegion: f.reachedTerminalRegion, violations: f.violations,
-        terminalTime: f.terminalTime, terminalAltitude: f.terminalAltitude, terminalMach: f.terminalMach,
-        terminalAlong: f.terminalAlong, terminalCross: f.terminalCross,
-        maximumDynamicPressure: f.maximumDynamicPressure, maximumLoad: f.maximumLoad, capture: capture,
-        track: f.track)
+    var chosen = forecasts.min { score($0) < score($1) }
+    // Hysteresis: keep the flown branch unless it lost capture or another is
+    // better by more than the model uncertainty can resolve.
+    if let current = forecasts.first(where: { abs($0.rangeMultiplier - request.rangeMultiplier) < 1e-12 }),
+      current.feasible, let best = chosen, best.rangeMultiplier != current.rangeMultiplier {
+      let gain = best.capture.envelope.energyMargin - current.capture.envelope.energyMargin
+      if gain <= u * max(abs(current.capture.envelope.energyMargin), abs(best.capture.envelope.energyMargin)) {
+        chosen = current
+      }
     }
+    var compact = chosen
+    compact?.capture.plan = nil
     var proposal = EntryPlanningProposal(createdAt: state.time,
       rangeMultiplier: chosen?.rangeMultiplier ?? request.rangeMultiplier, prediction: nil,
       candidates: forecasts.count, terminalRouteFeasible: chosen?.feasible == true)
     proposal.capture = compact
+    proposal.crossAim = chosen?.crossAim
     return proposal
   }
 }

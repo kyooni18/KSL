@@ -43,9 +43,16 @@ public final class PathTrackingEngine {
       vh * vh * ref.curvature + 2 * 0.9 / timeConstant * vh * sin(headingError) + crossError
       / (timeConstant * timeConstant)
     let gamma = atan(ref.slope)
-    let desiredVertical =
-      state.aerodynamics.airspeed * sin(gamma) + clamp((ref.height - p.height) / 12, -35, 35)
     let g = configuration.planet.gravitationalParameter / pow(state.position.length, 2)
+    // TAEM energy exchange: off the final segment, a speed error is repaid
+    // with its exact energy-height equivalent instead of holding geometric
+    // height with angle of attack (which turns a deficit into more drag).
+    let speed = state.aerodynamics.airspeed
+    let exchange = ref.segment != .final && ref.speed > 0
+      ? (ref.speed * ref.speed - speed * speed) / (2 * g) : 0
+    let heightTarget = ref.height - exchange
+    let desiredVertical =
+      speed * sin(gamma) + clamp((heightTarget - p.height) / 12, -35, 35)
     let vertical =
       ((g - vh * vh / state.position.length) * cos(state.flightPathAngle)
         + (desiredVertical - state.verticalSpeed) / 5 + state.aerodynamics.airspeed

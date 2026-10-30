@@ -16,7 +16,8 @@ public final class TerminalTrajectoryEvaluator {
   }
   public func evaluate(plan: TerminalPlan, from initial: VehicleState,
                        controlSnapshot: FlightControlSnapshot?, previousTarget: GuidanceTarget?,
-                       lift: Double, drag: Double) -> TerminalClosedLoopCase {
+                       lift: Double, drag: Double,
+                       trace: ((VehicleState, PathStation, GuidanceTarget) -> Void)? = nil) -> TerminalClosedLoopCase {
     let c = configuration, dt = c.guidance.controlInterval
     let controller = FlightController(configuration: c, snapshot: controlSnapshot)
     let plant = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere,
@@ -31,6 +32,7 @@ public final class TerminalTrajectoryEvaluator {
     var state = plant.observe(initial), phase = MissionPhase.acquisition
     var failures: [ConstraintViolation] = [], maximumTrackingError = 0.0
     var finalCaptured = false, stoppedSince: Double?, success = false
+    var lastReference: PathStation?
     while state.time-initial.time < c.guidance.maximumPredictionDuration {
       if Task.isCancelled { break }
       if state.contact == .crashed {
@@ -64,6 +66,7 @@ public final class TerminalTrajectoryEvaluator {
       } else {
         let (target, reference) = tracker.update(state, plan: plan, liftEffectiveness: authority.liftEffectiveness,
           identifiedTrimCeiling: trim)
+        lastReference = reference
         maximumTrackingError = max(maximumTrackingError, tracker.trackingError)
         if reference.segment == .final && approach.canCapture(state) {
           finalCaptured = true
@@ -74,7 +77,9 @@ public final class TerminalTrajectoryEvaluator {
         }
       }
       phase = raw.phase
-      let target = limiter.update(raw.target, phase: phase, configuration: c, dt: dt)
+      let target = limiter.update(raw.target, phase: phase, configuration: c, dt: dt,
+        dynamicPressure: state.aerodynamics.dynamicPressure)
+      if let reference = lastReference { trace?(state, reference, target) }
       do {
         let command = try controller.command(state: state, solution: .init(phase: phase, target: target), dt: dt)
         state = try plant.advance(state, command: command, duration: dt, maximumStep: 0.02)

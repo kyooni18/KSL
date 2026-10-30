@@ -9,6 +9,9 @@ struct EntryLawMemory: Sendable {
   var ceiling: Double?
   var identifiedTrimCeiling: Double?
   var lateral = EntryLateralMemory()
+  /// Planned lateral offset of the MM304 aim point from the configured
+  /// handoff point (m); chosen backward from TAEM capture, not fixed.
+  var crossAim = 0.0
 }
 
 /// One owner per live executive or forecast branch. C DRAGREF, ALPHA and
@@ -34,7 +37,8 @@ final class EntryCommandLaw {
     let c = configuration, e = c.entrySettings, a = s.aerodynamics
     let dt = min(1, max(0, s.time - (memory.previousTime ?? (s.time - c.guidance.controlInterval))))
     memory.previousTime = s.time
-    let target = frame.position(along: e.handoffAlong, cross: e.handoffCross, height: 0)
+    let aimCross = e.handoffCross + memory.crossAim
+    let target = frame.position(along: e.handoffAlong, cross: aimCross, height: 0)
     let range = frame.distance(from: s.position, to: target)
     let targetAtmosphere = atmosphere.sample(position: target.normalized * (c.planet.radius + e.terminalTargetAltitude), time: s.time)
     let terminalSpeed = e.terminalTargetMach * targetAtmosphere.speedOfSound
@@ -85,7 +89,7 @@ final class EntryCommandLaw {
     let alignment = horizontal.normalized.dot(forward)
     let azimuth = wrapAngle(frame.bearing(from: s.position, to: target) - s.course)
     let bank = EntryLateralController.update(memory: &memory.lateral, state: s, configuration: c,
-      verticalLift: d.verticalLift, azimuthError: azimuth, crossError: e.handoffCross - p.cross,
+      verticalLift: d.verticalLift, azimuthError: azimuth, crossError: aimCross - p.cross,
       crossRate: -s.velocity.dot(right), alignment: alignment, range: range, dt: dt, diagnostics: &d)
     if alpha >= trimCeiling - 1e-9 && trimCeiling < e.nominalAlpha {
       d.limitingReason += "; identified local pitch-trim envelope limits alpha"

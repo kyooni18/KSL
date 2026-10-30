@@ -66,6 +66,40 @@ struct LandingCLI {
     switch args.first ?? "help" {
     case "shuttlesim-controller":
       try await ShuttleSimStream.run(arguments: args)
+    case "capture-probe":
+      // Diagnostic: run MM305's own closed-loop capture evaluation on a
+      // recorded VehicleState (JSON on stdin) with a run's configuration.
+      guard let path = option("--configuration") else { throw FlightError.invalidConfiguration("--configuration required") }
+      let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+      let state = try JSONDecoder().decode(VehicleState.self, from: FileHandle.standardInput.readDataToEndOfFile())
+      let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+      let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+      var capture = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+        .evaluate(state, certify: true)
+      capture.plan = nil
+      if args.contains("--trace") {
+        // Priced reference vs flown state along the first priced candidate.
+        guard let plan = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+          .plan(from: state, allowDirect: c.guidance.allowDirectTerminal, preview: true).plan else { return }
+        var next = 0.0
+        let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+        _ = TerminalTrajectoryEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+          .evaluate(plan: plan, from: state, controlSnapshot: nil, previousTarget: nil, lift: 1, drag: 1) { s, ref, target in
+            guard ref.distance >= next else { return }
+            next = ref.distance + Double(ProcessInfo.processInfo.environment["KSL_TRACE_STEP"] ?? "2000")!
+            let a = s.aerodynamics
+            print(String(format: "d=%6.0f seg=%@ V ref=%5.1f act=%5.1f | h ref=%6.0f act=%6.0f | alpha ref=%5.1f tgt=%5.1f act=%5.1f | bank ref=%5.1f act=%5.1f | beta=%4.1f CD*q/m=%.2f",
+              ref.distance, ref.segment.rawValue, ref.speed, a.airspeed, ref.height, frame.coordinates(of: s.position).height,
+              ref.angleOfAttack * 57.3, target.angleOfAttack * 57.3, a.angleOfAttack * 57.3, ref.bank * 57.3, a.bank * 57.3, a.sideslip * 57.3,
+              a.drag / s.mass))
+          }
+        return
+      }
+      if args.contains("--closed-loop-cases") {
+        let result = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+          .plan(from: state, allowDirect: c.guidance.allowDirectTerminal)
+        try output(result.closedLoopRejections ?? [])
+      } else { try output(capture) }
     case "simulate":
       var scenario = try scenarioFromOptions()
       if args.contains("--spiral-only") {

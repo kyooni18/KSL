@@ -17,6 +17,7 @@ public final class FlightController {
   private var trimModel = AdaptiveTrim()
   private var previousFeedforward = 0.0
   private var feedforwardWasIdentified = false
+  private var feedforwardWasPrior = false
   private var coupledRollAcceleration = 0.0
   public private(set) var diagnostics = ControlDiagnostics()
 
@@ -29,6 +30,7 @@ public final class FlightController {
       previous = s.previous; previousError = s.previousError; errorRate = s.errorRate
       previousState = s.previousState; previousPhase = s.previousPhase; trimModel = s.trimModel
       previousFeedforward = s.previousFeedforward; feedforwardWasIdentified = s.feedforwardWasIdentified
+      feedforwardWasPrior = s.feedforwardWasPrior
       coupledRollAcceleration = s.coupledRollAcceleration
     }
   }
@@ -38,14 +40,14 @@ public final class FlightController {
       previous: previous, previousError: previousError, errorRate: errorRate,
       previousState: previousState, previousPhase: previousPhase, trimModel: trimModel,
       previousFeedforward: previousFeedforward, feedforwardWasIdentified: feedforwardWasIdentified,
-      coupledRollAcceleration: coupledRollAcceleration)
+      feedforwardWasPrior: feedforwardWasPrior, coupledRollAcceleration: coupledRollAcceleration)
   }
   public func reset() {
     pitchAuthority = .init(); rollAuthority = .init(); yawAuthority = .init()
     betaModel = .init(); pitchTrim = 0; rollTrim = 0; pitchScale = 0.70
     previous = .init(); previousError = nil; errorRate = .zero
     previousState = nil; previousPhase = nil; mainContactLatched = false
-    trimModel = .init(); previousFeedforward = 0; feedforwardWasIdentified = false
+    trimModel = .init(); previousFeedforward = 0; feedforwardWasIdentified = false; feedforwardWasPrior = false
     coupledRollAcceleration = 0
     diagnostics = .init(); rollout = .init(configuration: configuration)
   }
@@ -169,9 +171,13 @@ public final class FlightController {
     let supportedPrior = state.controlAuthority?.evidence == .provisional
       && a.mach <= 0.9 && a.dynamicPressure >= 500 && a.dynamicPressure <= 12000
     let feedforward = identifiedTrim ?? (supportedPrior && pitch > 1e-12 ? momentPrior/pitch : 0)
-    if (identifiedTrim != nil) != feedforwardWasIdentified {
+    // Bumpless transfer whenever the feedforward source changes (identified
+    // trim <-> provisional prior <-> none), not only on identification.
+    if (identifiedTrim != nil) != feedforwardWasIdentified
+      || (identifiedTrim == nil && supportedPrior != feedforwardWasPrior) {
       pitchTrim -= feedforward - previousFeedforward
     }
+    feedforwardWasPrior = identifiedTrim == nil && supportedPrior
     previousFeedforward = feedforward; feedforwardWasIdentified = identifiedTrim != nil
     var targetPitchRate = 0.0
     if solution.phase == .flare {
@@ -190,11 +196,17 @@ public final class FlightController {
     if !mainContactLatched, usedPitch > 1e-12, a.dynamicPressure > 100 {
       let nearGround = terminal && state.radarAltitude < 700
       let taem = [.acquisition, .headingAlignment].contains(solution.phase)
-      let gainPerDegree = nearGround || taem ? 0.025 : 0.008
+      // TAEM: integral time constant equals the PD loop's response time
+      // (2*zeta/wn + lag), which keeps the third-order loop ~4*zeta^2 inside
+      // its Routh limit at every q/Mach. Converted from angular acceleration
+      // to input units by the authority in use.
+      let responseTime = 2 * pitchDamping / max(1e-3, pitchWN) + ControlLaw.pitchLag
+      let taemGain = pitchWN * pitchWN / (responseTime * usedPitch)
+      let gainPerRadian = taem && !nearGround ? taemGain : degrees(nearGround ? 0.025 : 0.008)
       let total = pdPitch + pitchTrim + feedforward
       let windup = (total >= 1 && aerodynamicError > 0) || (total <= -1 && aerodynamicError < 0)
       if !windup, abs(aerodynamicError) > radians(0.20) {
-        pitchTrim += gainPerDegree * degrees(aerodynamicError) * dt
+        pitchTrim += gainPerRadian * aerodynamicError * dt
       }
       pitchTrim = clamp(pitchTrim, nearGround ? -1 : taem ? -0.60 : -0.35,
                          nearGround ? 1 : taem ? 0.90 : 0.50)
