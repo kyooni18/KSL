@@ -241,7 +241,7 @@ public final class HACPlanningEngine {
       rate: rollRate, acceleration: rollAcceleration)
     let response = min(c.maximumPredictionDuration, max(context?.rollResponseSeconds ?? 0,
       exchange.isFinite ? exchange : c.maximumPredictionDuration))
-    let joinTime = min(c.maximumPredictionDuration, max(c.pathLookaheadTime, response/(1-GuidanceTargetLimiter.responseReserve)))
+    let joinTime = min(c.maximumPredictionDuration, max(c.pathLookaheadTime, response))
     let rollTransition = min(c.maximumPathLength, state.horizontalSpeed*joinTime)
     let spacing = max(c.finalSpeed, state.horizontalSpeed)*c.predictionStep
     let unloadLength = c.finalSpeed*c.pathLookaheadTime
@@ -258,10 +258,14 @@ public final class HACPlanningEngine {
     let continuing = context?.onSpiral == true && old != nil
     let remaining = old?.fittedRemainingAngle(at: p.horizontal)
     let u = v.aerodynamicUncertainty
-    let radii = Array(Set([c.minimumHACRadius, c.maximumHACRadius,
+    let minimumRadius = min(c.maximumHACRadius, max(c.minimumHACRadius, nominalExitRadius))
+    let exitOffset = p.horizontal-Vector2(-c.finalDistance-unloadLength, 0)
+    let tangentRadius = abs(exitOffset.y) > Double.leastNormalMagnitude
+      ? exitOffset.dot(exitOffset)/(2*abs(exitOffset.y)) : dynamicRadius
+    let radii = Array(Set([minimumRadius, tangentRadius, c.maximumHACRadius,
       nominalExitRadius, c.hacRadius ?? nominalExitRadius,
       dynamicRadius*(1-u), dynamicRadius, dynamicRadius*(1+u), old?.finalRadius ?? dynamicRadius]
-      .map { clamp($0, c.minimumHACRadius, c.maximumHACRadius) })).sorted()
+      .map { clamp($0, minimumRadius, c.maximumHACRadius) })).sorted()
     let runwayDirection = frame.direction(at: p.horizontal, tangent: .init(1, 0))
     let runwayHeading = state.localFrame.heading(of: runwayDirection)
     let angleResolution = max(Double.ulpOfOne, turnRate*c.controlInterval)
@@ -271,7 +275,11 @@ public final class HACPlanningEngine {
         var headingAngle = Double(side)*wrapAngle(runwayHeading-state.course)
         if headingAngle < 0 { headingAngle += 2 * .pi }
         let energyAngle = max(0, desiredLength-directToExit-c.finalDistance)/max(radius, dynamicRadius)
-        var angles = [headingAngle, energyAngle]
+        // Price an inlet beside the vehicle, rather than only an angle inferred
+        // from runway heading; heading alone can put the inlet far ahead.
+        let geometricAngle = atan2(-exitOffset.x, radius-Double(side)*exitOffset.y)
+        let inletAngle = geometricAngle >= 0 ? geometricAngle : geometricAngle+2 * .pi
+        var angles = [headingAngle, energyAngle, inletAngle]
         if let remaining {
           angles += [remaining, remaining*(1-u), remaining*(1+u)]
           if continuing { angles += [max(0, remaining-turnRate*joinTime)] }
@@ -330,7 +338,24 @@ public final class HACPlanningEngine {
       let pressure = max(0, a.maximumQ/v.maximumDynamicPressure-1)
       let load = max(0, a.maximumLoad/v.maximumLoadFactor-1)
       let rollDistance = rollTravel(plan)*state.horizontalSpeed*response
-      return pathEnergy+liftDeficit+bankDeficit+pressure+load+rollDistance/distanceScale
+      var acquisitionLength = 0.0, spiralLength = 0.0
+      for i in plan.stations.indices.dropFirst() {
+        let station = plan.stations[i]
+        let distance = station.distance-plan.stations[i-1].distance
+        if station.segment == .acquisition { acquisitionLength += distance }
+        if station.segment == .spiral { spiralLength += distance }
+      }
+      // Joining is a response transient. The spiral should do the turning and
+      // energy management, rather than a long acquisition consuming MM305.
+      let acquisitionBudget = max(spacing, state.horizontalSpeed*response)
+      let lateJoin = max(0, acquisitionLength-acquisitionBudget)/distanceScale
+      let acquisitionDominance = max(0, acquisitionLength-spiralLength)/distanceScale
+      let radiusExcess = plan.spiral.map {
+        max(0, $0.finalRadius/max(minimumRadius, dynamicRadius)-1)
+          * spiralLength/distanceScale
+      } ?? 0
+      return pathEnergy+liftDeficit+bankDeficit+pressure+load
+        + rollDistance/distanceScale+lateJoin+acquisitionDominance+radiusExcess
     }
     candidates.sort {
       if $0.assessment.feasible != $1.assessment.feasible { return $0.assessment.feasible }

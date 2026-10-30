@@ -69,6 +69,10 @@ final class GuidanceTests: XCTestCase {
       .plan(from: sample, allowDirect: false)
     let plan = try XCTUnwrap(result.plan)
     XCTAssertNotNil(plan.spiral)
+    let fit = try XCTUnwrap(result.fit)
+    XCTAssertLessThanOrEqual(fit.joinDistance,
+      sample.horizontalSpeed*max(c.guidance.pathLookaheadTime, fit.rollResponseSeconds)+1e-6)
+    XCTAssertGreaterThanOrEqual(try XCTUnwrap(plan.spiral).finalRadius, c.guidance.minimumHACRadius)
     XCTAssertTrue(MM305Admission.evaluate(sample, plan: plan, configuration: c).accepted)
     let mission = LandingMissionController(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
       externalPlanning: true, initialPhase: .acquisition, initialPlan: plan)
