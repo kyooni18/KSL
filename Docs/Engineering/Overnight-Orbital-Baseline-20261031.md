@@ -138,6 +138,10 @@ orbital search or the nominal orbital propagation—is the bottleneck for this
 state. Output and timing are in `orbital-probe.txt` and
 `orbital-probe-time.txt`; probe binary SHA-256
 `4df59c9abf0e86692d2041a11cbd6bb905ef9bcbfb1f40ec5ee61d25d52065c8`.
+The experimental CLI now reports the existing planner's stage, candidate and
+stress-case progress to stderr; this improves observability but does not speed
+the evaluation, change authorization, or prove that a candidate will execute.
+The revised source built in debug; no new live flight was performed with it.
 Rebuild the debug modules and probe, then run against the preserved screen:
 
 ```sh

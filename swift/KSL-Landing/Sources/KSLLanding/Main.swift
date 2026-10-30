@@ -344,7 +344,10 @@ struct LandingCLI {
           let task: Task<RuntimeOutcome, Error>
           if args.contains("--deorbit") {
             let source = try await io.readState()
-            let plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source)
+            let plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source) { progress in
+              let message = "deorbit planning: \(progress.stage) candidate=\(progress.candidate) case=\(progress.stressCase)/\(progress.totalCases)\n"
+              FileHandle.standardError.write(Data(message.utf8))
+            }
             try encoder.encode(plan).write(to: URL(fileURLWithPath: logPath + ".deorbit-plan.json"))
             let reduced = args.contains("--reduced-assurance")
             try plan.authorize(identifier: plan.identifier, reducedAssurance: reduced)
