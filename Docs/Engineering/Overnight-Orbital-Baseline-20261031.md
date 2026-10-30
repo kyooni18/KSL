@@ -181,6 +181,9 @@ remained empty. This is a **planning/authorization outcome**, not an observed
 deorbit, trajectory failure, or landing. At UT 214258.2665 independent kRPC
 showed STS still orbiting, ASL 86215.75 m, speed 2084.19 m/s, throttle zero,
 RCS off. The checkpoint observer made no saves and was stopped.
+The focused existing `testExplicitAuthorizationIsBoundToPlanAndCompleteMatrix`
+passed on the later debug build; it tests the current authorization contract,
+not whether that contract satisfies the requested advisory policy.
 
 This establishes why the explicit path still cannot provide a full-chain
 baseline: full-route model verdicts are a pre-burn execution veto, despite
