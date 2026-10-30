@@ -50,7 +50,8 @@ public struct SystemState: Codable, Sendable, Equatable {
   public var airbrakes = false
   public var brakes = false
   public init() {}
-  public var unpowered: Bool { throttle <= 0.0001 && thrust <= 1 && !sas && !rcs && !airbrakes }
+  /// RCS is a commanded attitude actuator, not propulsion.
+  public var unpowered: Bool { throttle <= 0.0001 && thrust <= 1 && !sas && !airbrakes }
 }
 
 public struct VehicleState: Codable, Sendable, Equatable {

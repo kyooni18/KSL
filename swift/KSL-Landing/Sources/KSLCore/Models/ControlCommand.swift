@@ -1,6 +1,7 @@
 import Foundation
 
-/// The command vocabulary cannot request propulsion, SAS, RCS, or airbrakes.
+/// The command vocabulary cannot request propulsion, SAS, or airbrakes. RCS
+/// is an attitude actuator the FCS may command.
 public struct ControlCommand: Codable, Sendable, Equatable {
   public let pitch: Double
   public let roll: Double
@@ -9,10 +10,13 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   public let wheelBrake: Double
   public let wheelSteering: Double
   public let deployParachutes: Bool?
+  public let rcsEnabled: Bool?
   public init(
     pitch: Double = 0, roll: Double = 0, yaw: Double = 0, gearDown: Bool = false,
-    wheelBrake: Double = 0, wheelSteering: Double = 0, deployParachutes: Bool? = nil
+    wheelBrake: Double = 0, wheelSteering: Double = 0, deployParachutes: Bool? = nil,
+    rcs: Bool = false
   ) {
+    self.rcsEnabled = rcs ? true : nil
     self.pitch = pitch
     self.roll = roll
     self.yaw = yaw
@@ -23,7 +27,7 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   }
   public var throttle: Double { 0 }
   public var sas: Bool { false }
-  public var rcs: Bool { false }
+  public var rcs: Bool { rcsEnabled ?? false }
   public var airbrakes: Bool { false }
   public func validate(grounded: Bool) throws {
     guard [pitch, roll, yaw, wheelSteering].allSatisfy({ $0.isFinite && abs($0) <= 1 }),

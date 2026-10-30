@@ -27,6 +27,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   private var anchorPart: UInt64 = 0, anchorFrame: UInt64 = 0
   private var supportsInertiaTensor = false
   private var supportsActuatorBreakdown = false
+  private var supportsRCSTorque = false
   private var expectedVesselName: String? = "STS"
   private var deorbitPlan: DeorbitPlan?
   private var burnEngines: [UInt64] = []
@@ -59,6 +60,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
       supportsInertiaTensor = services.range(of: Data("Vessel_get_InertiaTensor".utf8)) != nil
       supportsActuatorBreakdown = services.range(of: Data("Vessel_get_AvailableControlSurfaceTorque".utf8)) != nil
         && services.range(of: Data("Vessel_get_AvailableReactionWheelTorque".utf8)) != nil
+      supportsRCSTorque = services.range(of: Data("Vessel_get_AvailableRCSTorque".utf8)) != nil
       let first = try await session.call([
         .init(procedure: "get_ActiveVessel"), .init(service: "KRPC", procedure: "GetStatus"),
       ])
@@ -163,14 +165,14 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     latest = nil
     sampledAt = nil
   }
-  private func safetyCalls(throttle: Double = 0) -> [KRPCCall] {
+  private func safetyCalls(throttle: Double = 0, rcs: Bool = false) -> [KRPCCall] {
     [
       .init(
         procedure: "Control_set_Throttle", arguments: [KRPCValue.uint(control), KRPCValue.float(Float(throttle))]),
       .init(
         procedure: "Control_set_SAS", arguments: [KRPCValue.uint(control), KRPCValue.bool(false)]),
       .init(
-        procedure: "Control_set_RCS", arguments: [KRPCValue.uint(control), KRPCValue.bool(false)]),
+        procedure: "Control_set_RCS", arguments: [KRPCValue.uint(control), KRPCValue.bool(rcs)]),
       .init(
         procedure: "Control_SetActionGroup",
         arguments: [
@@ -252,6 +254,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     if supportsActuatorBreakdown {
       calls += [objectCall("Vessel_get_AvailableControlSurfaceTorque", vessel),
         objectCall("Vessel_get_AvailableReactionWheelTorque", vessel)]
+      if supportsRCSTorque { calls.append(objectCall("Vessel_get_AvailableRCSTorque", vessel)) }
     }
     calls.append(.init(procedure: "get_UT"))
     let started = ContinuousClock.now
@@ -309,9 +312,17 @@ public actor KRPCFlightIO: OrbitalFlightIO {
         let surfaces = try KRPCValue.decodeTuple(values[actuatorIndex], count: 2).map(KRPCValue.decodeVector)
         let reaction = try KRPCValue.decodeTuple(values[actuatorIndex+1], count: 2).map(KRPCValue.decodeVector)
         func magnitude(_ v: Vector3) -> Vector3 { .init(abs(v.x), abs(v.y), abs(v.z)) }
-        authority.positiveTorque = frd(magnitude(surfaces[0])+magnitude(reaction[0]))
-        authority.negativeTorque = -frd(magnitude(surfaces[1])+magnitude(reaction[1]))
+        var positive = magnitude(surfaces[0])+magnitude(reaction[0])
+        var negative = magnitude(surfaces[1])+magnitude(reaction[1])
         authority.actuatorSources = "aerodynamic-surfaces+active-powered-reaction-wheels"
+        // RCS counts only while it is actually enabled (commanded by the FCS).
+        if supportsRCSTorque, try KRPCValue.decodeBool(values[20]) {
+          let rcs = try KRPCValue.decodeTuple(values[actuatorIndex+2], count: 2).map(KRPCValue.decodeVector)
+          positive = positive + magnitude(rcs[0]); negative = negative + magnitude(rcs[1])
+          authority.actuatorSources = (authority.actuatorSources ?? "") + "+rcs"
+        }
+        authority.positiveTorque = frd(positive)
+        authority.negativeTorque = -frd(negative)
       } else {
         authority.positiveTorque = .zero; authority.negativeTorque = .zero
         authority.evidence = .unavailable
@@ -402,7 +413,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     let operationGeneration = generation
     defer { busy = false }
     let c = envelope.command
-    var calls = safetyCalls()
+    var calls = safetyCalls(rcs: c.rcs)
     for (name, value) in [
       ("Pitch", c.pitch), ("Roll", c.roll), ("Yaw", c.yaw), ("WheelSteering", c.wheelSteering),
     ] {

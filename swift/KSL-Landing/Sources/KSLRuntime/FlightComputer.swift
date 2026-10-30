@@ -59,7 +59,7 @@ public final class FlightComputer {
   }
   public func step(_ state: VehicleState) throws -> FlightRecord {
     guard state.systems.unpowered else {
-      throw FlightError.invalidTelemetry("Propulsion, SAS, RCS or airbrakes active")
+      throw FlightError.invalidTelemetry("Propulsion, SAS or airbrakes active")
     }
     try state.validate(configuration: configuration)
     if let previousTime, state.time <= previousTime || state.time-previousTime > 1 {

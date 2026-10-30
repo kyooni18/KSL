@@ -77,7 +77,7 @@ public actor DeorbitRuntime {
       let interval = previousTime.map { state.time-$0 } ?? dt
       previousTime = state.time; lastFresh = tick
       if state.time-plan.createdAt > maximumDuration { return .timedOut }
-      guard !state.systems.sas, !state.systems.rcs, !state.systems.airbrakes else {
+      guard !state.systems.sas, !state.systems.airbrakes else {
         throw FlightError.rearmRequired("An external attitude or airbrake system changed during orbital execution")
       }
       let height = state.position.length-c.planet.radius

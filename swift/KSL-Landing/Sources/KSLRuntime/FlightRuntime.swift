@@ -161,13 +161,13 @@ public actor FlightRuntime {
         }
         if pausedNoted { note("game time resumed"); pausedNoted = false }
         if !state.systems.unpowered {
-          // SAS, RCS, airbrakes or an engine came on (staging, a keypress, a game reload):
+          // SAS, airbrakes or an engine came on (staging, a keypress, a game reload):
           // push the restrictions again and give them a moment before giving up.
           let since = unsafeSince ?? clock.now
           unsafeSince = since
           if since.duration(to: clock.now) > .seconds(maximumUnsafe) {
             throw FlightError.invalidTelemetry(
-              "Propulsion, SAS, RCS or airbrakes stayed active after re-assertion")
+              "Propulsion, SAS or airbrakes stayed active after re-assertion")
           }
           try await io.assertSafety()
           try await clock.sleep(for: .milliseconds(100))
