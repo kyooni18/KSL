@@ -58,6 +58,11 @@ public final class FlightController {
     reset()
     previous = applied; mainContactLatched = contacted
   }
+  /// Preserve the identified plant and trims; discard derivatives across missing samples.
+  public func resumeAfterTelemetryGap(at state: VehicleState) {
+    previousState = nil; previousError = nil; errorRate = .zero
+    previous = state.appliedControls ?? previous
+  }
   public func command(state: VehicleState, solution: GuidanceSolution, dt: Double) throws
     -> ControlCommand {
     guard dt.isFinite, dt > 0, dt <= 1 else { throw FlightError.staleTelemetry }

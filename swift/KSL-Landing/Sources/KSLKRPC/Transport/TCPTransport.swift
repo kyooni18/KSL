@@ -10,7 +10,7 @@ import KSLCore
 public struct KRPCConnectionConfiguration: Codable, Sendable {
   public var host: String = "127.0.0.1"
   public var port: UInt16 = 50000
-  public var timeout: Double = 4
+  public var timeout: Double = 10
   public var clientName: String = "KSL Swift Landing"
   public var maximumFrameBytes: Int = 4 * 1024 * 1024
   public init() {}

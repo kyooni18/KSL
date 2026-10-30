@@ -57,6 +57,11 @@ public final class FlightComputer {
       calibration.setForecast(entry.prediction)
     }
   }
+  public func resumeAfterTelemetryGap(at state: VehicleState) {
+    previousTime = nil
+    mission.resumeAfterTelemetryGap()
+    controller.resumeAfterTelemetryGap(at: state)
+  }
   public func step(_ state: VehicleState) throws -> FlightRecord {
     guard state.systems.unpowered else {
       throw FlightError.invalidTelemetry("Propulsion, SAS or airbrakes active")

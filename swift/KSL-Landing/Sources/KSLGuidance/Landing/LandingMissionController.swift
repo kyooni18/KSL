@@ -143,6 +143,8 @@ public final class LandingMissionController {
     if plan == nil { hacEstablished = phase == .headingAlignment; hacCompleted = false }
     plan = candidate; tracker.reset()
   }
+  /// Keep the active route and target limiter, but restart the sample clock.
+  public func resumeAfterTelemetryGap() { previousTime = nil }
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
     try state.validate(configuration: configuration)
     // Guidance never abandons the vehicle on its own judgement: every

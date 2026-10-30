@@ -183,6 +183,11 @@ public actor FlightRuntime {
         }
         unsafeSince = nil
         let simulationInterval = lastTime.map { state.time - $0 } ?? interval
+        if outageSince != nil || simulationInterval > 1 {
+          // Results and sample derivatives from before the outage are stale.
+          await cancelPlanning()
+          computer.resumeAfterTelemetryGap(at: state)
+        }
         lastTime = state.time
         lastFresh = clock.now
         let acceptedPlanning = try schedulePlanning(from: state)

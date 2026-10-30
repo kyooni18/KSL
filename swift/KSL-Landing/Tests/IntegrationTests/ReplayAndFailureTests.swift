@@ -32,6 +32,25 @@ private actor FailureFixture: FlightIO {
   func shutdown() { closed = true }
 }
 
+private actor ReconnectFixture: FlightIO {
+  private var reads = 0
+  private var state: VehicleState
+  private(set) var commands = 0
+  init() throws {
+    let scenario = SimulationScenario.approach()
+    state = ShuttlePhysicsEngine(configuration: scenario.configuration,
+      atmosphere: try .init(), aerodynamics: try .init()).observe(scenario.initialState)
+  }
+  func readState() throws -> VehicleState {
+    reads += 1
+    if reads == 2 { throw FlightError.deadlineExceeded }
+    if reads > 2 { state.time += 10 }
+    return state
+  }
+  func apply(_ command: CommandEnvelope) { commands += 1 }
+  func shutdown() {}
+}
+
 private actor RecorderFixture: TelemetryRecording {
   private(set) var closed = false
   private(set) var count = 0
@@ -40,6 +59,14 @@ private actor RecorderFixture: TelemetryRecording {
 }
 
 struct ReplayAndFailureTests {
+  @Test func timeoutResumesAfterForwardGap() async throws {
+    let io = try ReconnectFixture()
+    let runtime = try FlightRuntime(io: io, recorder: RecorderFixture(), configuration: .init())
+    let result = try await runtime.run(maximumDuration: 11, realTime: false)
+    #expect(result == .timedOut)
+    #expect(await io.commands == 2)
+  }
+
   @Test func runtimeClosesBothOwnersOnReadAndCommandFailure() async throws {
     for failure in [FailureFixture.Failure.read, .command, .invalid] {
       let io = try FailureFixture(failure)

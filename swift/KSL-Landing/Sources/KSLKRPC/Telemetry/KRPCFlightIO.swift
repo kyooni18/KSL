@@ -17,6 +17,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     parts: UInt64 = 0, autopilot: UInt64 = 0, bodyFrame: UInt64 = 0
   private var wheels = KRPCWheelInventory()
   private var armed = false, busy = false
+  private var landingRecoveryPending = false
   private var generation: UInt64 = 0
   private var latest: VehicleState?
   private var sampledAt: ContinuousClock.Instant?
@@ -29,6 +30,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   private var supportsActuatorBreakdown = false
   private var supportsRCSTorque = false
   private var expectedVesselName: String? = "STS"
+  private var persistentVesselID: String?
   private var deorbitPlan: DeorbitPlan?
   private var burnEngines: [UInt64] = []
   private var burnFinished = false
@@ -74,7 +76,13 @@ public actor KRPCFlightIO: OrbitalFlightIO {
         objectCall("Vessel_get_SurfaceReferenceFrame", vessel),
         objectCall("Vessel_get_Orbit", vessel), objectCall("Vessel_get_Name", vessel),
         objectCall("Vessel_get_Parts", vessel), objectCall("Vessel_get_AutoPilot", vessel),
+        objectCall("Vessel_get_Id", vessel),
       ])
+      let discoveredID = try KRPCValue.decodeString(objects[6])
+      if let persistentVesselID, discoveredID != persistentVesselID {
+        throw FlightError.rearmRequired("Active vessel changed during reconnect")
+      }
+      persistentVesselID = discoveredID
       control = try KRPCValue.decodeUInt(objects[0])
       surfaceFrame = try KRPCValue.decodeUInt(objects[1])
       let orbit = try KRPCValue.decodeUInt(objects[2])
@@ -534,13 +542,15 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     guard armed, burnFinished, !busy else { throw FlightError.invalidCommand("OMS shutdown must precede entry transfer") }
     deorbitPlan = nil; lastSequence = 0; latest = nil; sampledAt = nil
   }
-  /// A reopened transport never resumes the old controller/plan generation.
-  /// Neutralise the recovered link, then require a new operator engage.
+  /// Rebind a dropped link to the same vessel and resume an authorized landing.
+  /// Orbital burn ownership still requires a fresh reviewed engage.
   public func recover() async throws {
     guard !busy else { return }
     latest = nil
     sampledAt = nil
     if await session.isConnected == false {
+      let resumeLanding = landingRecoveryPending || (armed && deorbitPlan == nil)
+      landingRecoveryPending = resumeLanding
       armed = false
       generation &+= 1
       await session.close()
@@ -550,12 +560,17 @@ public actor KRPCFlightIO: OrbitalFlightIO {
         KRPCCall(procedure: "Control_set_" + $0,
           arguments: [KRPCValue.uint(control), KRPCValue.float(0)])
       }
-      _ = try await session.call(safetyCalls() + neutral)
+      _ = try await session.call(safetyCalls(rcs: configuration.vehicle.rcsAttitudeControl) + neutral)
       lastSequence = 0
-      throw FlightError.rearmRequired("kRPC transport reconnected")
+      guard resumeLanding else {
+        throw FlightError.rearmRequired("Orbital transport reconnected")
+      }
+      armed = true
+      landingRecoveryPending = false
     }
   }
   public func shutdown() async {
+    landingRecoveryPending = false
     generation &+= 1
     if armed && !busy {
       busy = true
