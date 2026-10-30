@@ -342,3 +342,32 @@ RPC reconnect during coast or burn is still not implemented by `DeorbitRuntime`,
 and the pre-existing KRPC recovery deliberately requires orbital rearm. Do not
 confuse the changed model policy with a flight-qualified full-chain controller.
 No new live burn, derived checkpoint, touchdown or stop was observed.
+
+### Recorded-plan startup and repeated test suite
+
+The experimental CLI now also accepts `fly --deorbit --deorbit-plan <json>`
+to reuse a recorded computed plan rather than repeat the expensive planner.
+The ordinary fresh-orbit/epoch, plan/configuration and propulsion checks still
+run before arming, as does plan authorization. This option does not bypass
+orbital reconnect requirements and has not flown. A debug build and help
+dispatch succeeded; all seven focused `DeorbitExecutionTests` passed, including
+a JSON-loaded plan's fresh state and rejected altered-mass, expired-window and
+pre-plan-epoch checks. Actual kRPC rearm and mid-burn recovery are untested.
+
+The full debug suite was rerun before this CLI/test addition and still exited
+1: four `SimulationTests.EndToEndTests` failed with 14 assertions. Approach
+step refinement differed by 147.55 m along, 1.56 m/s, and 0.66 m/s sink;
+the entry-to-rollout model crashed after 1050 s of test computation; low-energy
+returned timedOut instead of the legacy aborted expectation; and the 10% lift
+loss model crashed. The low-energy expectation must be interpreted against the
+current non-abandonment policy, not mechanically restored. Entry replay and
+injected landing-runtime timeout/disconnect tests passed. Full output is
+`runs/overnight-ranking-comparison-20261031/final-full-tests.txt`; this suite
+did not include the subsequent loaded-plan addition, and its modeled results
+are not evidence of KSP touchdown.
+
+A later independent, read-only kRPC observation at UT 215514.3065 showed STS
+orbiting at 85848.84 m ASL, surface speed 2086.71 m/s, throttle zero and 26
+parts; UT advanced on a second sample. This was not a new flight or checkpoint.
+The plan-loading route and advisory policy have not resolved the material
+orbital reconnect gap. The user-created original save remains unchanged.

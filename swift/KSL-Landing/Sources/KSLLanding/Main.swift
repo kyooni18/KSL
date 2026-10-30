@@ -349,12 +349,20 @@ struct LandingCLI {
           // ordinary `fly` remains an entry replay for backwards compatibility.
           let task: Task<RuntimeOutcome, Error>
           if args.contains("--deorbit") {
-            let source = try await io.readState()
-            let plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source) { progress in
-              let message = "deorbit planning: \(progress.stage) candidate=\(progress.candidate) case=\(progress.stressCase)/\(progress.totalCases)\n"
-              FileHandle.standardError.write(Data(message.utf8))
+            let plan: DeorbitPlan
+            if let planPath = option("--deorbit-plan") {
+              plan = try JSONDecoder().decode(DeorbitPlan.self, from: Data(contentsOf: URL(fileURLWithPath: planPath)))
+            } else {
+              let source = try await io.readState()
+              plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source) { progress in
+                let message = "deorbit planning: \(progress.stage) candidate=\(progress.candidate) case=\(progress.stressCase)/\(progress.totalCases)\n"
+                FileHandle.standardError.write(Data(message.utf8))
+              }
             }
-            try encoder.encode(plan).write(to: URL(fileURLWithPath: logPath + ".deorbit-plan.json"))
+            let recordedPlanURL = URL(fileURLWithPath: logPath + ".deorbit-plan.json").standardizedFileURL
+            if option("--deorbit-plan").map({ URL(fileURLWithPath: $0).standardizedFileURL }) != recordedPlanURL {
+              try encoder.encode(plan).write(to: recordedPlanURL)
+            }
             let reduced = args.contains("--reduced-assurance")
             try plan.authorize(identifier: plan.identifier, reducedAssurance: reduced)
             let runtime = DeorbitRuntime(io: io, recorder: recorder, plan: plan,
@@ -362,6 +370,9 @@ struct LandingCLI {
               maximumOutage: Double(option("--max-outage") ?? "20") ?? 20)
             task = Task { try await runtime.run(maximumDuration: Double(option("--duration") ?? "36000") ?? 36000) }
           } else {
+            guard option("--deorbit-plan") == nil else {
+              throw FlightError.invalidConfiguration("--deorbit-plan requires --deorbit")
+            }
             try await io.arm()
             let runtime = try FlightRuntime(
               io: io, recorder: recorder, configuration: config,
@@ -408,9 +419,9 @@ struct LandingCLI {
           inspect --host 127.0.0.1 --port 50000 --vessel STS
           fly --host 127.0.0.1 --port 50000 --vessel STS [--log live.jsonl]
               [--configuration configuration.json] [--airbrake-group 1] [--max-outage 20] [--raw-axes]
-              [--deorbit [--reduced-assurance]]
+              [--deorbit [--reduced-assurance] [--deorbit-plan plan.json]]
         inspect is read-only. Without --deorbit, fly starts in entry, not orbit.
-        With --deorbit, fly computes and records a plan and retains existing plan authorization.
+        With --deorbit, fly computes or loads and records a plan; freshness and configuration are checked before arming.
         All simulation output is labeled offline-model-only. No ascent commands exist.
         A full-rate log and its exact configuration are required for command-identical replay.
         """)

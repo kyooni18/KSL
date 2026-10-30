@@ -6,6 +6,20 @@ import KSLPhysics
 @testable import KSLRuntime
 import XCTest
 
+private actor FreshnessOnlyIO: OrbitalFlightIO {
+  func readState() throws -> VehicleState { throw FlightError.io("not used by freshness test") }
+  func apply(_ envelope: CommandEnvelope) throws { throw FlightError.io("not used") }
+  func armDeorbit(plan: DeorbitPlan, reducedAssurance: Bool) throws { throw FlightError.io("not used") }
+  func applyOrbital(sequence: UInt64, stateTime: Double, command: OrbitalControlCommand) throws { throw FlightError.io("not used") }
+  func finishDeorbit() throws { throw FlightError.io("not used") }
+  func beginEntry() throws { throw FlightError.io("not used") }
+  func shutdown() {}
+}
+private actor FreshnessOnlyRecorder: TelemetryRecording {
+  func record(_ record: FlightRecord) {}
+  func close() {}
+}
+
 final class DeorbitExecutionTests: XCTestCase {
   private func source() -> VehicleState {
     let p = PlanetConfiguration(), radius = p.radius+100000
@@ -60,6 +74,26 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertFalse(danger.executionQualified)
     XCTAssertEqual(danger.unsafeCases, 1)
     try danger.authorize(identifier: danger.identifier, reducedAssurance: true)
+  }
+  func testLoadedPlanRequiresFreshOrbitAndCurrentBurnWindow() async throws {
+    let original = plan(cases: cases(passes: Set(0..<15)))
+    let w = original.window
+    let future = DeorbitWindow(burnStart: 100, deltaV: w.deltaV, duration: w.duration,
+      normalAngle: w.normalAngle, periapsisAltitude: w.periapsisAltitude, afterBurn: w.afterBurn,
+      entryInterface: w.entryInterface, entryRange: w.entryRange, entrySpeed: w.entrySpeed,
+      entryFlightPath: w.entryFlightPath, entryCourseError: w.entryCourseError, crossrange: w.crossrange, miss: w.miss)
+    let encoded = try JSONEncoder().encode(DeorbitPlan(source: original.source, configuration: original.configuration,
+      propulsion: original.propulsion, window: future, cases: original.cases, modelLimitations: [], evaluatedWindows: 1))
+    let loaded = try JSONDecoder().decode(DeorbitPlan.self, from: encoded)
+    let runtime = DeorbitRuntime(io: FreshnessOnlyIO(), recorder: FreshnessOnlyRecorder(), plan: loaded,
+      aerodynamics: try AerodynamicsEngine())
+    try await runtime.validateFreshOrbit(loaded.source)
+    var wrongMass = loaded.source; wrongMass.mass *= 2
+    do { try await runtime.validateFreshOrbit(wrongMass); XCTFail("changed mass accepted") } catch {}
+    var late = loaded.source; late.time = future.burnStart
+    do { try await runtime.validateFreshOrbit(late); XCTFail("expired burn accepted") } catch {}
+    var reversed = loaded.source; reversed.time -= 1
+    do { try await runtime.validateFreshOrbit(reversed); XCTFail("pre-plan epoch accepted") } catch {}
   }
   func testCPeriapsisTaperAndNoPrematureCutoff() throws {
     XCTAssertEqual(DeorbitBurnController.periapsisFraction(remainingAltitude: 2000), 1)
