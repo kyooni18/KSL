@@ -69,6 +69,7 @@ public actor FlightRuntime {
     var lastFresh = clock.now
     var outageSince: ContinuousClock.Instant?
     var unsafeSince: ContinuousClock.Instant?
+    var heldAttitude: AttitudeTarget?
     var pausedNoted = false
     var faults = 0
     while true {
@@ -111,10 +112,15 @@ public actor FlightRuntime {
         lastFresh = clock.now
         let record = try computer.step(state)
         try Task.checkCancellation()
+        // On abort keep flying the last good attitude rather than snapping to 0/0.
+        let attitude =
+          record.guidance.phase == .abort && heldAttitude != nil
+          ? heldAttitude : computer.attitudeTarget(state: state, solution: record.guidance)
+        if record.guidance.phase != .abort { heldAttitude = attitude }
         try await io.apply(
           .init(
             sequence: record.sequence, stateTime: state.time, command: record.command,
-            attitude: computer.attitudeTarget(state: state, solution: record.guidance)))
+            attitude: attitude))
         try await recorder.record(record)
         if outageSince != nil { note("link recovered after \(faults) fault(s)") }
         outageSince = nil
