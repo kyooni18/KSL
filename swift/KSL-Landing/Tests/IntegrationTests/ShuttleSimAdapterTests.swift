@@ -63,4 +63,29 @@ final class ShuttleSimAdapterTests: XCTestCase {
     XCTAssertNotNil(record.dynamicsChange)
     XCTAssertNil(record.guidance.approach?.predictedTouchdownAlong)
   }
+  func testProposalRevisionDistinguishesSameTimestampDynamicsChange() async throws {
+    let scenario = SimulationScenario.entry(), c = scenario.configuration
+    let atmosphere = try AtmosphericModelEngine(planet: c.planet), aero = try AerodynamicsEngine()
+    let plant = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let computer = try FlightComputer(configuration: c, atmosphere: atmosphere, aerodynamics: aero, externalPlanning: true)
+    let changedComputer = try FlightComputer(configuration: c, atmosphere: atmosphere, aerodynamics: aero, externalPlanning: true)
+    var state = plant.observe(scenario.initialState)
+    _ = try computer.step(state)
+    _ = try changedComputer.step(state)
+    let worker = MissionPlanningWorker(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    state.time += 0.1
+    let oldRequest = try XCTUnwrap(computer.planningRequest(from: state))
+    let old = await worker.plan(oldRequest)
+    state.mass += 3000
+    let newRequest = try XCTUnwrap(changedComputer.planningRequest(from: state))
+    let fresh = await worker.plan(newRequest)
+    XCTAssertEqual(old.time, fresh.time)
+    XCTAssertEqual(old.dynamicsRevision, 0)
+    XCTAssertEqual(fresh.dynamicsRevision, 1)
+    XCTAssertFalse(changedComputer.accept(old, state: state))
+    let decoded = try JSONDecoder().decode(MissionPlanningProposal.self, from: JSONEncoder().encode(fresh))
+    XCTAssertTrue(changedComputer.accept(decoded, state: state))
+    var legacy = fresh; legacy.dynamicsRevision = nil
+    XCTAssertFalse(changedComputer.accept(legacy, state: state))
+  }
 }

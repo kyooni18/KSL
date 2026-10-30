@@ -12,6 +12,8 @@ public struct MissionPlanningRequest: Sendable {
   public var approach: ApproachPlanningRequest?
   public var environment = EnvironmentCalibration()
   public var hac: HACFitContext? = nil
+  /// Dynamics revision observed before taking the planning snapshot.
+  public var dynamicsRevision: UInt64? = nil
 }
 
 public struct MissionPlanningProposal: Codable, Sendable {
@@ -19,6 +21,8 @@ public struct MissionPlanningProposal: Codable, Sendable {
   public let entry: EntryPlanningProposal?
   public let terminal: PlanningResult?
   public var approach: ApproachPlanningProposal?
+  /// Nil in historical records, which must retain their conservative time rule.
+  public var dynamicsRevision: UInt64? = nil
 }
 
 public struct RecordedPlanningProposal: Sendable {
@@ -45,7 +49,8 @@ public actor MissionPlanningWorker {
   }
   public func plan(_ request: MissionPlanningRequest) -> MissionPlanningProposal {
     if let final = request.approach {
-      return .init(time: request.time, entry: nil, terminal: nil, approach: approach.plan(final))
+      return .init(time: request.time, entry: nil, terminal: nil, approach: approach.plan(final),
+        dynamicsRevision: request.dynamicsRevision)
     }
     let terminalResult = request.terminalState.map {
       let model = request.hac.map { aerodynamics.scaled(lift: $0.liftScale, drag: $0.dragScale) } ?? aerodynamics
@@ -56,7 +61,8 @@ public actor MissionPlanningWorker {
     }
     let entryResult = !Task.isCancelled && request.terminalState == nil
       ? request.entry.map { entry.plan($0) } : nil
-    return .init(time: request.time, entry: entryResult, terminal: terminalResult)
+    return .init(time: request.time, entry: entryResult, terminal: terminalResult,
+      dynamicsRevision: request.dynamicsRevision)
   }
   /// Serialization stays on the planning actor, outside the urgent loop.
   public func recordedPlan(_ request: MissionPlanningRequest) throws -> RecordedPlanningProposal {

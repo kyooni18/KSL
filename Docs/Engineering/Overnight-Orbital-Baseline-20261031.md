@@ -297,3 +297,25 @@ Do not ship this experiment as a validated fix. A next controlled experiment
 should compare consistently priced candidates using physically meaningful
 violation severity and energy-exhaustion treatment, preserving a non-veto
 fallback; measure planner latency and closed-loop tracking before live use.
+
+### Planning proposal dynamics revision
+
+The v21 epoch-equality issue was addressed independently of the ranking
+experiment: a planning request now captures the dynamics revision *after*
+configuration observation, and the worker carries it into the recorded
+proposal. `FlightComputer` accepts only a matching revision; a proposal made
+at exactly the dynamics-change UT can therefore be accepted if it actually
+used the new configuration, while an older same-UT snapshot is rejected.
+Historical proposals with no revision retain the prior conservative timestamp
+rule. No bank, RCS, feasibility or target-limiter limit was changed.
+
+`ShuttleSimAdapterTests` passed all five tests, including a new same-timestamp
+old/fresh revision test, JSON round-trip and legacy rejection; the new test
+took 66.65 s because it runs two real entry planner requests. A current-source
+replay of the older v21 log reported 3,211 command/guidance mismatches out of
+10,587 records both before and after this change, so this comparison only
+shows no change to that aggregate legacy result; it is not command-identical
+replay or live validation. V21 used different flown source and working-tree
+patch. Revision behavior across a telemetry gap with unrecorded configuration
+changes still needs explicit replay testing. The original orbital flight has
+not exercised this fix.

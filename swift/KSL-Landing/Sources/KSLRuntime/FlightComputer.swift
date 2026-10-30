@@ -41,21 +41,29 @@ public final class FlightComputer {
   }
   public func planningRequest(from state: VehicleState) -> MissionPlanningRequest? {
     prepare(state)
-    return mission.planningRequest(from: state, controls: controller.snapshot)
+    guard var request = mission.planningRequest(from: state, controls: controller.snapshot) else { return nil }
+    request.dynamicsRevision = dynamics.revision
+    return request
   }
   private func prepare(_ state: VehicleState) {
     observeConfiguration(state)
     calibration.observe(state)
     mission.environment = calibration.diagnostics.environment
   }
-  public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
+  @discardableResult public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) -> Bool {
     observeConfiguration(state)
-    if let change = dynamics.lastChange, proposal.time <= change.time { return }
+    guard proposal.time <= state.time else { return false }
+    if let revision = proposal.dynamicsRevision {
+      guard revision == dynamics.revision else { return false }
+    } else if let change = dynamics.lastChange, proposal.time <= change.time {
+      return false
+    }
     mission.accept(proposal, state: state)
     if let entry = proposal.entry, entry.createdAt <= state.time,
       state.time-entry.createdAt <= 2*configuration.guidance.entryReplanInterval {
       calibration.setForecast(entry.prediction)
     }
+    return true
   }
   public func resumeAfterTelemetryGap(at state: VehicleState) {
     previousTime = nil
