@@ -67,6 +67,12 @@ struct LandingCLI {
     // particular, `fly --help` must not connect, arm, or command a vessel.
     let command = args.contains("--help") || args.contains("-h") ? "help" : (args.first ?? "help")
     switch command {
+    case "deorbit-trace":
+      guard let input = option("--input"), let path = option("--log") else {
+        throw FlightError.invalidConfiguration("deorbit-trace requires --input plan.json and --log output.jsonl")
+      }
+      let plan = try JSONDecoder().decode(DeorbitPlan.self, from: Data(contentsOf: URL(fileURLWithPath: input)))
+      try await DeorbitDiagnostic.traceNominal(plan: plan, output: URL(fileURLWithPath: path))
     case "deorbit-screen":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("deorbit-screen requires --input state.json and --configuration")
@@ -394,6 +400,7 @@ struct LandingCLI {
              --speed m/s --flight-path degrees --heading-error degrees --mass kg
           configuration [--output configuration.json]
           deorbit-screen --input state.json --configuration configuration.json [--output screen.json]
+          deorbit-trace --input plan.json --log offline-model.jsonl
           replay --input flight.jsonl [--configuration config.json] [--verify-commands]
           legacy-audit --input archive.jsonl [--skip-malformed] [--session id] [--states snapshots.jsonl]
           import-legacy --input archive.jsonl [--skip-malformed] [--session id]

@@ -154,6 +154,77 @@ swiftc -parse-as-library -I "$B" -I swift/KSL-Landing/Sources/CSQLite \
 runs/overnight-deorbit-screen-20261031/orbital_probe runs/overnight-deorbit-screen-20261031
 ```
 
+## Completed qualification attempt, still no flight
+
+Run `overnight-orbit-qualified-attempt-20261031` reloaded the original save
+and used commit `b8f1921` plus the recorded pre-existing working-tree patch.
+At UT 208576.2265 the active STS was orbiting at 86308.45 m ASL, 2084.09 m/s
+surface speed, with apoapsis/periapsis 86323.13/85776.66 m. The configuration
+hash is `7d562b97f847432c84b3c911a22cab7b0315cd314d445579c62edb357f913a45`,
+source-patch hash `8496a2a268555801be45e52c9ad6bbf729253c391dc531963abaede09df48474`,
+and release-binary hash `52d3c96889c01562b414518cd1f9ef4aa35a5eea39115ce451171c114126f093`.
+The run directory also contains the separately copied untracked transition probe.
+
+After approximately 100 minutes, the existing full-route planner returned a
+complete report for plan `E4524116-D9DA-4A59-AC70-BB2AD6D7EA03` (JSON SHA-256
+`0e759311ded77d1499216859c5e64eddb88eb6f88a4893d734f8e9ef7772d103`). Its
+selected screen predicts burn at UT 228885.1291; this is **not** a commanded or
+observed burn. All 15 modeled cases completed the orbital burn, but **zero**
+modeled routes passed; each reported failed ground contact or runway
+containment. Case 14 reported 3.618 g peak load, above the configured 3.5 g
+maximum (modeled q 32047 Pa versus configured 45000 Pa). The other 14 were
+not marked hard-unsafe. These are provisional offline-model results, not
+measured impacts or validated proof of real vehicle limits. The pre-existing
+authorization contract rejected the plan with nominal=false, 0/15 passes,
+one modeled hard-unsafe case; the CLI exited before arming, and the flight log
+remained empty. This is a **planning/authorization outcome**, not an observed
+deorbit, trajectory failure, or landing. At UT 214258.2665 independent kRPC
+showed STS still orbiting, ASL 86215.75 m, speed 2084.19 m/s, throttle zero,
+RCS off. The checkpoint observer made no saves and was stopped.
+
+This establishes why the explicit path still cannot provide a full-chain
+baseline: full-route model verdicts are a pre-burn execution veto, despite
+their stated limitations. A safe redesign must reconcile the user's advisory
+policy with real structural/actuator limits, measured orbital authority,
+current-window freshness and orbital RPC recovery; treating 0/15 provisional
+passes as proven live failure or silently deleting real limits would be wrong.
+
+### Nominal offline trace of that rejected plan
+
+The `deorbit-trace` diagnostic reproduces the nominal orbital plant and
+synchronous native flight computer from the plan, logging at one-second
+intervals. It is an offline analysis, not a flight. It took 209.14 s in the
+release build. One-second sampled peak q was 2706.52 Pa and peak load 0.87049 g,
+consistent with the plan's nominal 2706.52 Pa and 0.87052 g (full-rate peak).
+The trace's binary SHA-256 is
+`7ac1d331bf1e700e5f7b2c45736481a4e7c1962f01a95001db894c513801e402`, and
+`nominal-model-release.jsonl` SHA-256 is
+`4bdf843f7290ab33818f4ea6161a80f96fa772be03427d0d0df2f707e8a7f013`.
+
+| Modeled UT | modeled phase | ASL m | airspeed m/s | q Pa |
+|---:|---|---:|---:|---:|
+| 229356.07 | entry | 69497 | 2114.6 | 0.4 |
+| 229800.17 | entry | 37646 | 1660.1 | 1987.2 |
+| 229892.17 | acquisition | 28937 | 835.0 | — |
+| 230000.17 | acquisition | 17655 | 184.8 | 1088.7 |
+| 230200.17 | acquisition | 7540 | 50.9 | 553.8 |
+| 230400.17 | acquisition | 1860 | 35.3 | 564.5 |
+
+The modeled final contact at UT 230482.556 was off runway, along +36026 m,
+cross -42022 m, horizontal speed 23.37 m/s and sink -21.32 m/s; the plant
+labeled it crashed. The acquisition persisted and energy collapsed long before
+contact. This describes **only the provisional offline model**, with its
+unvalidated high-q attitude/turn model and synchronous planning behavior; it
+does not establish what would happen in KSP or identify the physical first
+point of no return. The one-second trace and final contact summary remain in
+the run directory. Reproduce with the preserved plan and a unique output path:
+
+```sh
+swift/KSL-Landing/.build/release/ksl-landing deorbit-trace \
+  --input runs/overnight-orbit-qualified-attempt-20261031/live.jsonl.deorbit-plan.json \
+  --log runs/overnight-orbit-qualified-attempt-20261031/nominal-model-replay.jsonl
+```
+
 The prior v21 investigation and its uncommitted native probe remain separate;
 its MM304/MM305 findings have not been verified on this orbital attempt. The
 next experiment is to obtain a computed, current, executable orbit plan, with
