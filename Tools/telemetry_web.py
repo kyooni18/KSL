@@ -865,7 +865,7 @@ def _terminal_reference_displayable(exact: dict[str, Any]) -> bool:
 
 def _terminal_phase(value: Any) -> bool:
     phase = str(value or "").upper()
-    return any(token in phase for token in ("TAEM", "HAC", "FINAL", "PREFLARE", "FLARE", "TOUCHDOWN", "ROLLOUT"))
+    return any(token in phase for token in ("TAEM", "HAC", "ACQUISITION", "HEADINGALIGNMENT", "APPROACH", "FINAL", "PREFLARE", "FLARE", "TOUCHDOWN", "ROLLOUT"))
 
 
 def _entry_interface_phase(value: Any) -> bool:
@@ -1414,7 +1414,13 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
     deg = lambda v: math.degrees(v) if isinstance(v, (int, float)) and math.isfinite(v) else None  # noqa: E731
     aoa, bank, gamma = deg(target.get("angleOfAttack")), deg(target.get("bank")), deg(target.get("desiredFlightPath"))
     applied = record.get("command") if isinstance(record.get("command"), dict) else {}
-    phase = str(guidance.get("phase") or "").upper() or "GUIDANCE"
+    native_phase = str(guidance.get("phase") or "").upper() or "GUIDANCE"
+    phase = {"ACQUISITION": "MM305 TAEM ACQUISITION", "HEADINGALIGNMENT": "MM305 HAC",
+             "APPROACH": "FINAL"}.get(native_phase, native_phase)
+    capture = guidance.get("capture") or {}
+    reference = [{"ut": point[0], "latitude": point[1], "longitude": point[2],
+                  "altitude": point[3], "speed": point[4], "phase": "MM305 HAC REFERENCE", "kind": "reference"}
+                 for point in capture.get("activeReference") or [] if isinstance(point, list) and len(point) >= 5]
     return {
         "generatedAt": time.time(),
         "phase": phase,
@@ -1432,7 +1438,22 @@ def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] |
             "rollDemand": applied.get("roll"),
             "yawDemand": applied.get("yaw"),
         },
+        "capture": capture,
+        "admission": guidance.get("admission"),
+        "referenceTrajectory": reference,
+        "plannedTrajectory": reference,
+        "planProvisional": bool(capture.get("mm305Advisory")),
         "guidanceState": {
+            "planID": capture.get("activePlanID"),
+            "terminalPathCommitted": bool(capture.get("mm305PlanAccepted")),
+            "terminalPathCaptured": native_phase == "HEADINGALIGNMENT",
+            "terminalPathRemaining": guidance.get("pathRemaining"),
+            "terminalPlanCreatedAt": capture.get("activePlanCreatedAt"),
+            "hacRadius": capture.get("activeHACRadius"),
+            "hacGrowth": capture.get("activeHACGrowth"),
+            "hacTurnRemaining": deg(capture.get("activeHACTurnAngle")),
+            "hacTrackingError": capture.get("trackingError"),
+            "hacHeadingError": deg(capture.get("referenceHeadingError")),
             "entryPlanValid": bool(entry) and not entry.get("degraded", False),
             "entryPlanTargetBank": bank,
             "entryPlanTargetAoA": aoa,

@@ -73,7 +73,7 @@
     ? value.reduce((count, point) => count + (point && finite(point.latitude) && finite(point.longitude) ? 1 : 0), 0)
     : 0;
   const trajectoryLabel = (label, count) => count >= 2 ? `${label} ${count}` : count === 1 ? `${label} 1PT` : `${label} —`;
-  const isTerminalPhase = (value) => /TAEM|HAC|FINAL|PREFLARE|FLARE|TOUCHDOWN|ROLLOUT/.test(String(value || "").toUpperCase());
+  const isTerminalPhase = (value) => /TAEM|HAC|ACQUISITION|HEADINGALIGNMENT|APPROACH|FINAL|PREFLARE|FLARE|TOUCHDOWN|ROLLOUT/.test(String(value || "").toUpperCase());
   const entryPlanDisplayable = (source) => {
     const g = source?.guidanceState || {};
     return g.entryPlanValid === true && g.entryPlanTerminalReady === true && !isTerminalPhase(source?.phase);
