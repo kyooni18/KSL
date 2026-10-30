@@ -1,0 +1,93 @@
+KSL Swift TAEM capture investigation, 2026-10-30
+
+Status: validation in progress. No landing claimed.
+
+Scope and evidence
+- Original source: 10e7714, 7b5f75a.
+- Original live run: runs/live-swift-v8-checkpoint72-20261030.
+- Analysis: Tools/analyze_capture_run.py under swift/KSL-Landing.
+- Geometry uses the logged planet/runway configuration and RunwayFrame's
+  spherical azimuthal-equidistant chart; cross is positive right of runway 09.
+  Height in the table is radial altitude ASL. Heading error is the wrapped
+  runway-threshold bearing minus velocity course, in the same planet-fixed frame.
+
+Original live geometry (nearest recorded Mach)
+Mach   elapsed(s) altitude(m) range(m) along(m) cross(m) heading error(deg)
+   7      200.98    57102.80  431986.98 -431029.44  -28746.73       7.32
+   5      358.92    38404.05  151960.01 -146599.24  -40006.37      13.98
+ 3.8      399.54    29008.01   98140.60  -91187.26  -36283.06      12.98
+2.95      415.36    25208.36   83119.61  -76241.89  -33106.57       6.99
+ 2.5      424.30    23325.53   76379.84  -69863.98  -30869.15       1.52
+   2      439.00    20721.62   67001.89  -61397.84  -26824.59      -5.55
+   1      465.38    18484.06   56383.71  -52404.69  -20805.55     -14.84
+ 0.5      579.22     9799.51   35548.22  -34805.23   -7229.94     -28.34
+
+This live run was not abeam the runway at Mach 2.5: it was 76.38 km out,
+69.86 km before the threshold, 30.87 km left, and only 1.52 degrees off the
+threshold bearing. The separate polar offline flight is different evidence.
+At Mach 2 it remained 67.00 km from the runway and 77.86 km from the old
+(-8 km, +29.879 km) aim point. requiredRange=0 did NOT mean arrival at
+that point: EntryDragReference subtracted terminalTargetRange=96.5 km
+before clamping to zero. Speed/altitude below the energy anchor also made
+predictedRange=0. The supplied interpretation conflated these quantities.
+
+Exact search gate diagnosis
+At UT 196420.528797551 (+415.36 s), all inTerminalSearchEnvelope gates passed:
+- ASL altitude 25208.363 <= 30000 + 225.644598*5 = 31128.223 m.
+- ASL altitude 25208.363 >= min(22000, HAC exit height) = 3505.548 m.
+- Mach 2.949768 <= 2.5 + 0.35 + 0.1 = 2.95.
+- Airspeed 892.924622 <= fallback terminalPlanningMaximumSpeed 1300 m/s.
+There was no MM305Admission rejection: no terminal result was delivered and
+that gate was never called. The last recorded entry proposal epoch was
+UT 196155.508797690, about 265 s before terminal search eligibility.
+
+The actual blocker was the single planning worker: EntryCaptureForecaster's
+continuation while loop omitted Task.isCancelled. A canceled predict() returns
+without advancing simulated time, so the outer loop could repeat forever.
+Dynamics revisions cancel in-flight planning, exposing this nonprogress loop.
+The existing runtime then refused all new planning requests while that task
+remained outstanding. Cancellation plus a time-progress guard fixes this.
+Terminal requests also preempt entry work and return without waiting for a
+second MM304 solve; search arming is latched until a plan is accepted.
+
+Implementation checkpoints
+0b19121: forecast-armed/latching terminal search, terminal worker priority.
+f59a647: capture geometry and energy objective, heading turning-distance cost,
+  consistent objective replay, decided AoA response shaping, cancellation fix,
+  admission/pricing physical gate consistency, advisory offline-window fallback,
+  geometry/smoothness analysis utility and one regression test.
+a70729c: aerodynamic trim must not veto RCS-controlled entry AoA.
+
+AoA shaping uses tau = measured FCS pitchResponseSeconds /
+(1 - GuidanceTargetLimiter.responseReserve), an exponential monotone filter,
+then the existing command slew and target limiter. The existing limiter's
+no-overshoot step and vehicle maximumBank clamp remain unchanged.
+The aerodynamic-only AoA ceiling uses identified trim/configuration; RCS-enabled
+entry may use the vehicle maximum AoA. RCS remains an attitude actuator,
+not a reason to reject a flight.
+
+Interrupted v9 experiment
+The user observed overshoot and requested restart. The v9 live run still
+limited AoA to approximately 18 degrees because a second min() applied the
+identified aerodynamic trim ceiling after the RCS-aware inversion. At M7,
+target/actual were 18.13/18.10 degrees. At elapsed396.5s, h45551m, M6.29,
+target/actual were 18.30/17.97 degrees; reference/observed drag were 2.85/1.54
+m/s^2, with only 11.93km remaining to the seed objective. Commit a70729c
+removes that clamp for RCS entry and extends the existing regression test.
+No branch had found a feasible capture, so the configured seed objective
+remained active. This is a limitation, not a positive capture certificate.
+
+Run IDs preserved:
+- live-swift-v9-capture-checkpoint72-20261030 (operator canceled; no touchdown).
+- swift-taem-v9-inc28-100-20261030 (interrupted for release rebuild).
+- swift-taem-v9-inc45-100-20261030 (interrupted for release rebuild).
+The offline cases each selected rank0 despite no feasible window, then flew
+the burn and entered MM304. They were stopped to satisfy the rule that no
+release binary is rebuilt while any flight or offline controller is using it.
+
+Validation
+swift test --filter "GuidanceTests|DeorbitWindowDiversityTests":
+10 tests, zero failures (including RCS trim regression), 25.58 s.
+Release rebuild completed after every binary user had exited.
+
+v10 flight outcomes and smoothness: pending.
