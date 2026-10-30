@@ -19,6 +19,7 @@ public actor FlightRuntime {
   private var completedPlan: RecordedPlanningProposal?
   private var planningError: String?
   private var generation: UInt64 = 0
+  private var planningTerminal = false
   private var planningPhase: MissionPhase?
   private var planningTaskGeneration: UInt64?
   private var dynamicsRevision: UInt64 = 0
@@ -103,9 +104,16 @@ public actor FlightRuntime {
       accepted = proposal.encoded
       completedPlan = nil
     }
+    // Terminal capture cannot wait behind a long MM304 forecast. Cancellation
+    // is cooperative in the predictor and the capture continuation loop.
+    if planningTask != nil && !planningTerminal && computer.mission.shouldPrioritizeTerminalSearch(state) {
+      planningTask?.cancel()
+      return accepted
+    }
     if planningTask != nil && planningPhase != computer.mission.phase { planningTask?.cancel(); return accepted }
     guard planningTask == nil, let request = computer.planningRequest(from: state) else { return accepted }
     planningPhase = computer.mission.phase
+    planningTerminal = request.terminalState != nil
     let epoch = generation, worker = planner
     planningTaskGeneration = epoch
     planningTask = Task { [weak self] in

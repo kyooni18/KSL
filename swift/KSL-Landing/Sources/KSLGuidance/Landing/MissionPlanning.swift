@@ -52,7 +52,7 @@ public actor MissionPlanningWorker {
       return planner.plan(from: $0, allowDirect: configuration.guidance.allowDirectTerminal,
         controlSnapshot: request.controls, previousTarget: request.previousTarget)
     }
-    let entryResult = !Task.isCancelled && terminalResult?.plan == nil
+    let entryResult = !Task.isCancelled && request.terminalState == nil
       ? request.entry.map { entry.plan($0) } : nil
     return .init(time: request.time, entry: entryResult, terminal: terminalResult)
   }

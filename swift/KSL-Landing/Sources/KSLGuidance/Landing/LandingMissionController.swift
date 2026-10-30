@@ -75,16 +75,34 @@ public final class LandingMissionController {
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     touchdown = .init(configuration: configuration)
   }
+  private var terminalSearchArmed = false
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let e = configuration.entrySettings
     let h = state.position.length - configuration.planet.radius
     let hacExitHeight = ApproachProfile(configuration: configuration)
       .reference(along: -configuration.guidance.finalDistance).height
-    // Forecast slightly ahead, but admit only the measured contract below.
-    return h <= e.terminalMaximumAltitude + max(0, -state.verticalSpeed) * configuration.guidance.terminalReplanInterval
+    let cadence = configuration.guidance.terminalReplanInterval
+    if let forecast = entry.captureForecast, forecast.reachedTerminalRegion {
+      let capturePosition = frame.position(along: forecast.terminalAlong,
+        cross: forecast.terminalCross, height: forecast.terminalAltitude)
+      let reach = state.aerodynamics.airspeed * cadence
+      if state.time + cadence >= forecast.capture.time
+        || frame.distance(from: state.position, to: capturePosition) <= reach {
+        terminalSearchArmed = true
+      }
+    }
+    // Once armed, continue at MM305 cadence until a plan is admitted, even
+    // after flying through the forecast region or losing the entry aim point.
+    if terminalSearchArmed { return true }
+    let inside = h <= e.terminalMaximumAltitude + max(0, -state.verticalSpeed) * configuration.guidance.terminalReplanInterval
       && h >= min(e.terminalMinimumAltitude, configuration.guidance.hacAcquisitionAltitude ?? hacExitHeight, hacExitHeight)
       && state.aerodynamics.mach <= e.terminalTargetMach + e.terminalMachHalfWidth + 0.1
       && state.aerodynamics.airspeed <= (configuration.guidance.terminalPlanningMaximumSpeed ?? 1300)
+    terminalSearchArmed = inside
+    return inside
+  }
+  public func shouldPrioritizeTerminalSearch(_ state: VehicleState) -> Bool {
+    phase == .entry && plan == nil && inTerminalSearchEnvelope(state)
   }
   public func planningRequest(from state: VehicleState, controls: FlightControlSnapshot?) -> MissionPlanningRequest? {
     guard externalPlanning else { return nil }
