@@ -67,6 +67,25 @@ struct LandingCLI {
     // particular, `fly --help` must not connect, arm, or command a vessel.
     let command = args.contains("--help") || args.contains("-h") ? "help" : (args.first ?? "help")
     switch command {
+    case "deorbit-screen":
+      guard let input = option("--input"), let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("deorbit-screen requires --input state.json and --configuration")
+      }
+      let configuration = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+      let state = try JSONDecoder().decode(VehicleState.self, from: Data(contentsOf: URL(fileURLWithPath: input)))
+      guard let propulsion = state.propulsion, propulsion.evidence == .measured else {
+        throw FlightError.invalidTelemetry("Deorbit screening requires measured propulsion")
+      }
+      let search = try DeorbitWindowSearch(configuration: configuration).search(from: state, propulsion: propulsion)
+      struct ScreenReport: Encodable {
+        let evidence = "offline-orbital-screen-only-not-an-execution-certificate"
+        let evaluated: Int
+        let horizon: Double
+        let rejections: [String: Int]
+        let candidates: [DeorbitWindow]
+      }
+      try output(ScreenReport(evaluated: search.evaluated, horizon: search.horizon,
+        rejections: search.rejections, candidates: search.candidates))
     case "entry-energy-probe":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("entry-energy-probe requires --input and --configuration")
@@ -371,6 +390,7 @@ struct LandingCLI {
           Initial-state options: --along meters --cross meters --height meters
              --speed m/s --flight-path degrees --heading-error degrees --mass kg
           configuration [--output configuration.json]
+          deorbit-screen --input state.json --configuration configuration.json [--output screen.json]
           replay --input flight.jsonl [--configuration config.json] [--verify-commands]
           legacy-audit --input archive.jsonl [--skip-malformed] [--session id] [--states snapshots.jsonl]
           import-legacy --input archive.jsonl [--skip-malformed] [--session id]

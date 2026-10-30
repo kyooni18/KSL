@@ -97,6 +97,34 @@ to the small CLI experiment and not live-flight evidence. Replay/failure tests
 including injected disconnect and timeout recovery passed. Full output is in
 `overnight-orbit-deorbit-attempt-20261031/tests.txt`.
 
+## Orbital screen timing follow-up
+
+`overnight-deorbit-screen-20261031` extracted the first actual baseline
+`VehicleState` at UT 208569.2265 and ran the unchanged native finite-burn
+window search offline, without arming anything. On this host, release search
+took 1.17 s wall time, evaluated 978 probes over a 21549.43 s horizon and
+returned 12 candidates with no reported rejected probes. This isolates the
+observed >19-minute delay to the downstream full-route evaluations, not the
+orbital window search. It does not establish their eventual outcome. The
+new `deorbit-screen` diagnostic emits the native candidates and explicitly
+labels them *screening only*, not flight authorization.
+
+| Screened burn UT | lead s | modeled delta-v m/s | modeled entry FPA | modeled entry crossrange m | modeled miss m |
+|---:|---:|---:|---:|---:|---:|
+| 228885.20 | 20315.97 | 30.89 | -1.67° | 32328 | 32427 |
+| 218472.84 | 9903.61 | 30.91 | -1.67° | 59093 | 59252 |
+| 216408.44 | 7839.21 | 30.79 | -1.68° | 91380 | 91666 |
+| 210114.68 | 1545.46 | 30.72 | -1.68° | 208779 | 208939 |
+
+These are selected examples, in search order except that the last row shows
+the earliest of the returned windows. Search order and modeled geometry are
+not proof of closed-loop execution, capture, safety, or an optimal route.
+The nominally best screened geometry would require more than five hours of
+orbital coast from this snapshot; the earliest returned window has materially
+worse modeled crossrange. The full-route planner could choose differently.
+No burn time or delta-v from this table should be copied into flight guidance.
+The screening run preserves its input/config/source/binary hashes and JSON.
+
 The prior v21 investigation and its uncommitted native probe remain separate;
 its MM304/MM305 findings have not been verified on this orbital attempt. The
 next experiment is to obtain a computed, current, executable orbit plan, with
