@@ -45,7 +45,7 @@ struct ReplayAndFailureTests {
       let io = try FailureFixture(failure)
       let recorder = RecorderFixture()
       let runtime = try FlightRuntime(
-        io: io, recorder: recorder, configuration: .init(), maximumOutage: 0.3)
+        io: io, recorder: recorder, configuration: .init(), maximumOutage: 0.3, maximumPause: 0.3)
       do {
         _ = try await runtime.run(realTime: false)
         Issue.record("Failure was swallowed")
