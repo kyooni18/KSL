@@ -65,6 +65,13 @@ final class GuidanceTests: XCTestCase {
     let sample = physics.observe(.init(time: 0, position: position, velocity: velocity,
       attitude: .windAttitude(position: position, airVelocity: velocity, alpha: c.entrySettings.nominalAlpha, bank: 0),
       mass: c.vehicle.nominalMass))
+    // A missed 5 km delivery must not suppress the earlier MM305 search.
+    var missed = sample
+    missed.position = frame.position(along: 0, cross: -30_000,
+      height: c.entrySettings.terminalTargetAltitude-c.runway.elevation)
+    let searching = LandingMissionController(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero, externalPlanning: true)
+    XCTAssertNotNil(searching.planningRequest(from: missed, controls: nil)?.terminalState)
     let result = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
       .plan(from: sample, allowDirect: false)
     let plan = try XCTUnwrap(result.plan)
