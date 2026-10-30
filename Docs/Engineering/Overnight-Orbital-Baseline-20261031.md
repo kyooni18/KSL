@@ -420,3 +420,52 @@ telemetry and process status; an initial coast is not a complete baseline.
 The selected plan predicts zero full-route passes, with one modeled load
 violation; this was explicitly reported under reduced assurance and is not
 proof of an actual load. No landing is claimed here.
+
+### Observed upstream flight failure: orbital RCS exhaustion
+
+`overnight-orbit-full-v2-20261031` ran from the original quicksave with the
+recorded plan and release binary SHA-256
+`adfdf18e7034a58933551add65ee233c552cd7e7224e250548d2f56b7836d9af`.
+Its flown source is the pre-flight HEAD `7dc1827` plus run `source.patch`
+SHA-256 `38f3268311c578c41f557e40e3579957ab37abd30c7beb4f852c55e596c9b920`;
+the later commit `1f3ac7e` captures the isolated candidate, not the other
+pre-existing dirty work. Config and plan hashes are in the run directory.
+
+The first record was UT 208579.3665. The commanded OMS throttle stayed zero
+and the shuttle remained in orbital coast, but the attitude controller
+chattered its RCS/reaction-wheel axes despite near-zero pointing error. At
+UT 209205.2065 independent kRPC reported MonoPropellant **0**, versus 370.5224
+in the original save; apoapsis had risen from 86323.23 m to 94066.16 m, with
+periapsis 85436.11 m. ElectricCharge was 210, LiquidFuel 305.901 and Oxidizer
+373.879. The configured RCS capability had been consumed before entry, and
+the precomputed burn plan was no longer within its own fresh-orbit reviewed
+dispersions. We cancelled at UT 209217.8065 to investigate and preserve the
+remaining test opportunity. This is an **observed upstream resource/plan
+failure and interrupted flight**, not an observed crash, deorbit, full-chain
+baseline, or landing. No derived save was made.
+
+An independent two-body propagation of the recorded plan source, using its
+planet constants and one-second RK4 steps, compared with measured body-fixed
+states. The deorbit settings were omitted from the old JSON and decode to the
+current defaults (position 50 m, velocity 0.5 m/s, mass fraction 0.03); the
+existing validator adds 1 m, 0.01 m/s, and 0.01 kg numerical allowances.
+
+| First reviewed-dispersion crossing | UT | elapsed s | observed difference |
+|---|---:|---:|---:|
+| velocity | 208593.6465 | 14.28 | 0.512 m/s |
+| position | 208634.0665 | 54.70 | 51.19 m |
+| mass | 208721.5065 | 142.14 | 3.001% |
+
+At +20–60 s the median alignment error was only 0.046°, yet pitch and yaw
+commands were at least 95% magnitude in 76.0% and 58.7% of recorded samples;
+mass fell at about 5.26 kg/s. In +60–120 and +120–180 s similar saturation
+and loss persisted. After propellant depletion, commands mostly became small.
+This strongly associates the actual waste with closed-loop actuator chatter,
+not an MM304 bank sign. The controller's q-free torque model and discrete
+actuator/transport response require matched-state identification before a
+physically justified fix; turning off configured RCS or merely tuning a
+deadband would mask the cause. `coast-analysis.py`, `coast-drift.csv`, summary,
+and full telemetry are local to the run. Monitor startup initially failed due
+to a relative working directory and was corrected before any descent; the
+final event file contains no checkpoint saves. Fresh reload verification and
+an original-orbit full-chain comparison are still required after a fix.
