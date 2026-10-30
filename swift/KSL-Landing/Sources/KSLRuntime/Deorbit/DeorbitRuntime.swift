@@ -25,6 +25,10 @@ public actor DeorbitRuntime {
     running = true
     do {
       try plan.authorize(identifier: plan.identifier, reducedAssurance: reducedAssurance)
+      if reducedAssurance && !plan.executionQualified {
+        let warning = "deorbit advisory: reduced assurance; modeled nominal=\(plan.nominalPassed), passing=\(plan.passedCases)/15, unsafe=\(plan.unsafeCases); this is not a flight safety or landing certificate\n"
+        FileHandle.standardError.write(Data(warning.utf8))
+      }
       let fresh = try await io.readState()
       try validateFreshOrbit(fresh)
       try await io.armDeorbit(plan: plan, reducedAssurance: reducedAssurance)

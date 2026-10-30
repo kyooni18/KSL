@@ -319,3 +319,26 @@ replay or live validation. V21 used different flown source and working-tree
 patch. Revision behavior across a telemetry gap with unrecorded configuration
 changes still needs explicit replay testing. The original orbital flight has
 not exercised this fix.
+
+### Reduced-assurance advisory policy change (not flight-qualified)
+
+After the earlier final-state note, the explicit reduced-assurance path was
+changed so a complete 15-case assessment is not vetoed merely because the
+provisional model predicts failed routes or a load violation. The default
+qualified path is unchanged; explicit reduced assurance remains required, the
+report and all predicted violations remain available, and the orbital runtime
+prints a warning before arming. Plan identity, current orbital window and
+measured-orbit checks, propulsion validation, configuration matching, command
+throttle bounds and existing configured flight limits were not relaxed.
+This is policy alignment, **not** a claim that predicted structural violations
+are harmless or that the selected route is safe. Assessment completeness still
+gates reduced-assurance execution; the design does not yet handle an unfinished
+or unavailable assessment as a fallback plan.
+
+The six `DeorbitExecutionTests` passed on the current debug working tree,
+including zero-pass and modeled-unsafe advisory cases, wrong plan identity and
+incomplete-matrix rejection. This does not establish live recovery: orbital
+RPC reconnect during coast or burn is still not implemented by `DeorbitRuntime`,
+and the pre-existing KRPC recovery deliberately requires orbital rearm. Do not
+confuse the changed model policy with a flight-qualified full-chain controller.
+No new live burn, derived checkpoint, touchdown or stop was observed.

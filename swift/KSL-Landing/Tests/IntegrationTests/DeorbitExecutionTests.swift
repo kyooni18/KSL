@@ -36,14 +36,15 @@ final class DeorbitExecutionTests: XCTestCase {
       propulsion: state.propulsion!, window: window, cases: cases,
       modelLimitations: limitations, evaluatedWindows: 1)
   }
-  func testZeroPassesAndFailedNominalCannotBeAuthorized() {
+  func testFailedModelVerdictsRemainAdvisoryWithExplicitReducedAssurance() throws {
     let zero = plan(cases: cases(passes: []))
     XCTAssertFalse(zero.executionQualified)
-    XCTAssertFalse(zero.permitsExplicitReducedAssurance)
-    XCTAssertThrowsError(try zero.authorize(identifier: zero.identifier, reducedAssurance: true))
+    XCTAssertTrue(zero.permitsExplicitReducedAssurance)
+    XCTAssertThrowsError(try zero.authorize(identifier: zero.identifier, reducedAssurance: false))
+    try zero.authorize(identifier: zero.identifier, reducedAssurance: true)
     let failedNominal = plan(cases: cases(passes: Set(1..<15)))
     XCTAssertFalse(failedNominal.executionQualified)
-    XCTAssertThrowsError(try failedNominal.authorize(identifier: failedNominal.identifier, reducedAssurance: true))
+    try failedNominal.authorize(identifier: failedNominal.identifier, reducedAssurance: true)
   }
   func testExplicitAuthorizationIsBoundToPlanAndCompleteMatrix() throws {
     let provisional = plan(cases: cases(passes: Set(0..<15)), limitations: ["unvalidated moment model"])
@@ -56,7 +57,9 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertFalse(duplicate.hasCompleteStressMatrix)
     XCTAssertThrowsError(try duplicate.authorize(identifier: duplicate.identifier, reducedAssurance: true))
     let danger = plan(cases: cases(passes: Set(0..<15), hardUnsafe: [4]))
-    XCTAssertThrowsError(try danger.authorize(identifier: danger.identifier, reducedAssurance: true))
+    XCTAssertFalse(danger.executionQualified)
+    XCTAssertEqual(danger.unsafeCases, 1)
+    try danger.authorize(identifier: danger.identifier, reducedAssurance: true)
   }
   func testCPeriapsisTaperAndNoPrematureCutoff() throws {
     XCTAssertEqual(DeorbitBurnController.periapsisFraction(remainingAltitude: 2000), 1)

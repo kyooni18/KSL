@@ -77,8 +77,12 @@ public struct DeorbitPlan: Codable, Sendable {
       && passFraction >= configuration.deorbitSettings.minimumRobustPassFraction
   }
   public var executionQualified: Bool { fullRouteQualified && modelLimitations.isEmpty }
+  /// Explicit reduced assurance accepts model assessments as advisories, not
+  /// as evidence that the real vehicle will succeed or remain within limits.
+  /// A complete report is still required for traceability. Actual command,
+  /// propulsion, orbital freshness and configured flight limits are separate.
   public var permitsExplicitReducedAssurance: Bool {
-    hasCompleteStressMatrix && nominalPassed && passedCases > 0 && unsafeCases == 0
+    hasCompleteStressMatrix
   }
   public init(identifier: String = UUID().uuidString, source: VehicleState,
     configuration: MissionConfiguration, propulsion: PropulsionTelemetry, window: DeorbitWindow,
