@@ -17,15 +17,13 @@ final class EntryCaptureObjectivePlanner {
   func objective(from initial: VehicleState, crossAim: Double) -> EntryCaptureObjective {
     if let value = cached[crossAim] { return value }
     let c = configuration, e = c.entrySettings
-    let profile = ApproachProfile(configuration: c)
-    let exit = profile.reference(along: -c.guidance.finalDistance)
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     var best: (EntryCaptureObjective, Double)?
     for altitude in [e.terminalTargetAltitude, e.terminalMinimumAltitude, e.terminalMaximumAltitude] {
       let height = altitude - c.runway.elevation
-      let range = min(e.terminalTargetRange, c.guidance.finalDistance + max(0, height-exit.height)/tan(glide))
+      let range = e.captureRange
       let cross = e.handoffCross + crossAim
       guard abs(cross) < range else { continue }
       let along = -sqrt(range*range-cross*cross)

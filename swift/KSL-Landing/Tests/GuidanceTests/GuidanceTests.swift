@@ -27,7 +27,7 @@ final class GuidanceTests: XCTestCase {
     XCTAssertLessThan(abs(slowTarget.angleOfAttack - memory.previousAlpha!),
       abs(fastTarget.angleOfAttack - memory.previousAlpha!))
     memory.objective = .seed(configuration: c, atmosphere: atmosphere, frame: frame, crossAim: 0, time: state.time)
-    XCTAssertLessThan(hypot(memory.objective!.along, memory.objective!.cross), c.entrySettings.terminalTargetRange)
+    XCTAssertEqual(hypot(memory.objective!.along, memory.objective!.cross), c.entrySettings.captureRange, accuracy: 1e-6)
     XCTAssertEqual(memory.objective!.altitude, c.entrySettings.terminalTargetAltitude)
     var retargeted = memory
     retargeted.retargetCrossAim(c.entrySettings.handoffRadius)
@@ -56,7 +56,7 @@ final class GuidanceTests: XCTestCase {
     let objective = EntryCaptureObjectivePlanner(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
       .objective(from: initial, crossAim: 0)
     XCTAssertGreaterThanOrEqual(objective.altitude, c.entrySettings.terminalMinimumAltitude)
-    XCTAssertLessThan(hypot(objective.along, objective.cross), c.entrySettings.terminalTargetRange)
+    XCTAssertEqual(hypot(objective.along, objective.cross), c.entrySettings.captureRange, accuracy: 1e-6)
     let position = frame.position(along: objective.along, cross: objective.cross,
       height: objective.altitude-c.runway.elevation)
     let forward = frame.origin.normalized.projected(onPlaneWithNormal: position.normalized).normalized

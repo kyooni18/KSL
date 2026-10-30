@@ -15,6 +15,10 @@ public struct EntryConfiguration: Codable, Sendable, Equatable {
   public var terminalMachHalfWidth = 0.35
   public var terminalTargetAltitude = 25_000.0
   public var terminalTargetRange = 96_500.0
+  /// Operator-selected MM304 handoff radius. Separate from the search envelope.
+  public static let defaultCaptureTargetRange = 20_000.0
+  public var captureTargetRange: Double? = Self.defaultCaptureTargetRange
+  public var captureRange: Double { captureTargetRange ?? Self.defaultCaptureTargetRange }
   public var handoffAlong = -8000.0
   public var handoffCross = 0.0
   public var handoffRadius = 1000.0
@@ -27,7 +31,7 @@ public struct EntryConfiguration: Codable, Sendable, Equatable {
       terminalMinimumAltitude > 0, terminalMaximumAltitude > terminalMinimumAltitude,
       terminalTargetAltitude >= terminalMinimumAltitude, terminalTargetAltitude <= terminalMaximumAltitude,
       terminalTargetMach > terminalMachHalfWidth, terminalMachHalfWidth > 0,
-      terminalTargetRange > 0, handoffRadius > 0, headingHalfWidth > 0, headingHalfWidth <= .pi / 2
+      terminalTargetRange > 0, captureRange > 0, captureRange <= terminalTargetRange, handoffRadius > 0, headingHalfWidth > 0, headingHalfWidth <= .pi / 2
     else { throw FlightError.invalidConfiguration("Invalid MM304/MM305 settings") }
     _ = try JSONEncoder().encode(self)
   }

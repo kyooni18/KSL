@@ -33,8 +33,6 @@ final class EntryDragReference {
     let anchor = max(targetSpeed + 1, targetSpeed * 3.40)
     func progress(_ velocity: Double) -> Double { clamp((anchor - velocity) / max(1, anchor - targetSpeed), 0, 1) }
     func velocity(_ progress: Double) -> Double { anchor - progress * (anchor - targetSpeed) }
-    let p = progress(speed)
-    let authority = 0.40 + 0.60 * smooth(p / 0.82)
     let geo = GeodeticPosition(position: s.position, radius: c.planet.radius)
     func rotatingEnergy(radius: Double, latitude: Double, speed: Double) -> Double {
       speed * speed / 2 - c.planet.gravitationalParameter / radius
@@ -58,19 +56,19 @@ final class EntryDragReference {
     let observed = a.measuredForces || a.modelEvidence != nil ? a.drag / s.mass : modeled
     let confidence = a.measuredForces ? 1.0 : a.modelConfidence ?? 0
     let useLocal = observed.isFinite && observed > 0 && qNow > 0
-    let calibration = clamp(observed / max(1e-12, qNow / e.estimatedBallisticCoefficient), 0.35, 3)
-    let currentCD = aero.coefficients(mach: a.mach, alpha: hypot(a.angleOfAttack, a.sideslip),
-      dynamicPressure: qNow, gear: s.systems.gearDown).drag
+    let currentCD = aero.coefficients(mach: a.mach, alpha: a.angleOfAttack,
+      dynamicPressure: qNow, beta: a.sideslip, gear: s.systems.gearDown).drag
     func projectedBounds(_ v: Double) -> (Double, Double) {
       guard useLocal else { return (minimum, maximum) }
       let fraction = clamp((v - targetSpeed) / max(1, speed - targetSpeed), 0, 1)
       let h = targetAltitude + (height - targetAltitude) * smooth(fraction)
       let atm = sample(h), q = 0.5 * atm.density * v * v
-      let cap = clamp(q / e.estimatedBallisticCoefficient * calibration * 1.85, minimum, maximum)
-      var floorAlpha = e.nominalAlpha
-      if q / c.vehicle.maximumDynamicPressure > 0.92 {
-        floorAlpha += radians(3) * smooth((q / c.vehicle.maximumDynamicPressure - 0.92) / 0.08)
-      }
+      let ceiling = c.vehicle.rcsAttitudeControl ? c.vehicle.maximumAngleOfAttack
+        : min(c.vehicle.maximumAngleOfAttack, e.nominalAlpha)
+      let floorAlpha = aero.bestGlideAlpha(mach: v/atm.speedOfSound, maximumAlpha: ceiling, dynamicPressure: q)
+      let ceilingCD = aero.coefficients(mach: v/atm.speedOfSound, alpha: ceiling,
+        dynamicPressure: q, gear: s.systems.gearDown).drag
+      let cap = clamp(observed * q/qNow * ceilingCD/max(Double.leastNormalMagnitude, currentCD), minimum, maximum)
       let floorCD = aero.coefficients(mach: v / atm.speedOfSound, alpha: floorAlpha,
         dynamicPressure: q, gear: s.systems.gearDown).drag
       let floor = clamp(observed * q / qNow * max(0.02, floorCD) / max(0.05, currentCD), minimum, maximum)
@@ -107,8 +105,18 @@ final class EntryDragReference {
       return max(0, kineticRange + other / mean)
     }
     let rangeScale = max(10_000, max(1000, requiredRange) * 0.28)
-    let unshapedError = predictedRange(1) - requiredRange
-    let scale = clamp(exp(0.80 * authority * tanh(unshapedError / rangeScale)), 0.55, 1.75)
+    // Solve the same capture-energy/range integral, within the plant's drag
+    // envelope. A fixed scale floor could keep shedding energy far too early.
+    var low = points.map { $0.2/max(Double.leastNormalMagnitude, $0.1) }.min() ?? 1
+    var high = points.map { $0.3/max(Double.leastNormalMagnitude, $0.1) }.max() ?? 1
+    let tolerance = max(configuration.entrySettings.handoffRadius, s.horizontalSpeed*c.guidance.controlInterval)
+    var scale = (low+high)/2
+    for _ in 0...Double.significandBitCount {
+      scale = (low+high)/2
+      let error = predictedRange(scale)-requiredRange
+      if abs(error) <= tolerance || scale == low || scale == high { break }
+      if error > 0 { low = scale } else { high = scale }
+    }
     let reference = feasible(speed, scale), predicted = predictedRange(scale)
     let errorFraction = (reference - observed) / max(0.25, abs(reference))
     let inertial = c.planet.inertialVelocity(position: s.position, fixedVelocity: s.velocity)

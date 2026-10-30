@@ -73,11 +73,8 @@ public final class LandingMissionController {
   private var terminalSearchArmed = false
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let e = configuration.entrySettings
-    let h = state.position.length - configuration.planet.radius
-    let hacExitHeight = ApproachProfile(configuration: configuration)
-      .reference(along: -configuration.guidance.finalDistance).height
     let cadence = configuration.guidance.terminalReplanInterval
-    if let forecast = entry.captureForecast, forecast.reachedTerminalRegion {
+    if let forecast = entry.captureForecast, forecast.feasible {
       let capturePosition = frame.position(along: forecast.terminalAlong,
         cross: forecast.terminalCross, height: forecast.terminalAltitude)
       let reach = state.aerodynamics.airspeed * cadence
@@ -89,10 +86,10 @@ public final class LandingMissionController {
     // Once armed, continue at MM305 cadence until a plan is admitted, even
     // after flying through the forecast region or losing the entry aim point.
     if terminalSearchArmed { return true }
-    let inside = h <= e.terminalMaximumAltitude + max(0, -state.verticalSpeed) * configuration.guidance.terminalReplanInterval
-      && h >= min(e.terminalMinimumAltitude, configuration.guidance.hacAcquisitionAltitude ?? hacExitHeight, hacExitHeight)
-      && state.aerodynamics.mach <= e.terminalTargetMach + e.terminalMachHalfWidth + 0.1
-      && state.aerodynamics.airspeed <= (configuration.guidance.terminalPlanningMaximumSpeed ?? 1300)
+    // Arm on approach to the operator's runway capture region. Once armed,
+    // no aim-point distance or model verdict can stop MM305 from planning.
+    let runwayRange = frame.distance(from: state.position, to: frame.origin)
+    let inside = runwayRange <= e.captureRange + state.horizontalSpeed*cadence
     terminalSearchArmed = inside
     return inside
   }

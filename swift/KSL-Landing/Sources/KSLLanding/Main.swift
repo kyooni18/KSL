@@ -167,7 +167,9 @@ struct LandingCLI {
       let history = try await store.history(contexts: contexts, excludingSession: option("--exclude-session") ?? "",
         excludingFlight: option("--exclude-flight") ?? "", planet: .init())
       try output(history)
-    case "configuration": try output(MissionConfiguration())
+    case "configuration":
+      var c = MissionConfiguration(); c.entry = c.entrySettings
+      try output(c)
     case "scenario": try output(scenarioFromOptions())
     case "plan":
       let scenario = try scenarioFromOptions()
@@ -266,13 +268,14 @@ struct LandingCLI {
       var connection = KRPCConnectionConfiguration()
       if let host = option("--host") { connection.host = host }
       if let port = option("--port"), let number = UInt16(port) { connection.port = number }
-      let config: MissionConfiguration
+      var config: MissionConfiguration
       if let path = option("--configuration") {
         config = try JSONDecoder().decode(
           MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
       } else {
         config = .init()
       }
+      config.entry = config.entrySettings
       try config.validate()
       let io = KRPCFlightIO(
         connection: connection, configuration: config,

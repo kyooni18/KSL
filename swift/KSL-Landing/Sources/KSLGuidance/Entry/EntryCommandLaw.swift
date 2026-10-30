@@ -13,13 +13,8 @@ public struct EntryCaptureObjective: Codable, Sendable {
   static func seed(configuration c: MissionConfiguration, atmosphere: AtmosphericModelEngine,
                    frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
     let e = c.entrySettings, cross = e.handoffCross + crossAim
-    let exit = ApproachProfile(configuration: c).reference(along: -c.guidance.finalDistance)
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
-    // terminalTargetRange is an outer search bound, not an entry aim radius.
-    // Match the high capture state to the terminal descent path, rather than
-    // stretching that descent across the whole outer search envelope.
-    let descentRange = (e.terminalTargetAltitude - c.runway.elevation - exit.height) / tan(glide)
-    let range = min(e.terminalTargetRange, c.guidance.finalDistance + max(0, descentRange))
+    let range = e.captureRange
     let along = -sqrt(max(0, range * range - cross * cross))
     let radius = c.planet.radius + e.terminalTargetAltitude
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
@@ -110,9 +105,9 @@ final class EntryCommandLaw {
     // transient AoA error: measured drag is referred to the commanded AoA,
     // otherwise the law closes a loop around the pitch response and cycles.
     let commandedAlpha = memory.previousAlpha ?? a.angleOfAttack
-    let actualDragCoefficient = aero.coefficients(mach: a.mach, alpha: a.angleOfAttack).drag
+    let actualDragCoefficient = aero.coefficients(mach: a.mach, alpha: a.angleOfAttack, dynamicPressure: a.dynamicPressure, beta: a.sideslip, gear: s.systems.gearDown).drag
     let attitudeDrag = actualDragCoefficient > 0
-      ? d.observedDrag * aero.coefficients(mach: a.mach, alpha: commandedAlpha).drag / actualDragCoefficient
+      ? d.observedDrag * aero.coefficients(mach: a.mach, alpha: commandedAlpha, dynamicPressure: a.dynamicPressure, beta: a.sideslip, gear: s.systems.gearDown).drag / actualDragCoefficient
       : d.observedDrag
     let error = clamp((d.referenceDrag - attitudeDrag) / max(0.25, abs(d.referenceDrag)), -1.5, 1.5)
     var modulation = radians(3) * error * scales[memory.phase.rawValue] * confidence
@@ -130,11 +125,13 @@ final class EntryCommandLaw {
       maximumAlpha: ceilingAlpha, dynamicPressure: a.dynamicPressure))
     var baseAlpha = e.nominalAlpha
     if a.dynamicPressure > 0, d.referenceDrag > 0 {
-      let required = d.referenceDrag * s.mass / (a.dynamicPressure * aero.referenceArea)
+      let nominalDrag = actualDragCoefficient*a.dynamicPressure*aero.referenceArea/s.mass
+      let measuredGain = nominalDrag > 0 && d.observedDrag > 0 ? d.observedDrag/nominalDrag : 1
+      let required = d.referenceDrag * s.mass / (a.dynamicPressure * aero.referenceArea * measuredGain)
       let steps = 64
       baseAlpha = (0...steps).map { floorAlpha + (ceilingAlpha - floorAlpha) * Double($0) / Double(steps) }
-        .min { abs(aero.coefficients(mach: a.mach, alpha: $0).drag - required)
-          < abs(aero.coefficients(mach: a.mach, alpha: $1).drag - required) } ?? e.nominalAlpha
+        .min { abs(aero.coefficients(mach: a.mach, alpha: $0, dynamicPressure: a.dynamicPressure, beta: a.sideslip, gear: s.systems.gearDown).drag - required)
+          < abs(aero.coefficients(mach: a.mach, alpha: $1, dynamicPressure: a.dynamicPressure, beta: a.sideslip, gear: s.systems.gearDown).drag - required) } ?? e.nominalAlpha
     }
     var alpha = max(baseAlpha, baseAlpha + memory.modulation)
     func smooth(_ value: Double) -> Double { let x = clamp(value, 0, 1); return x * x * (3 - 2 * x) }

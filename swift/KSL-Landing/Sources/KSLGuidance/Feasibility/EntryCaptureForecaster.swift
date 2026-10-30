@@ -65,7 +65,7 @@ public final class EntryCaptureForecaster {
   /// Candidate lateral aims: on the handoff point and one turning reach to
   /// either side of the runway axis.
   public func lateralAims(at time: Double) -> [Double] {
-    let w = turningReach(at: time); return [0, -w, w]
+    let w = min(turningReach(at: time), configuration.entrySettings.captureRange * sin(configuration.entrySettings.headingHalfWidth)); return [0, -w, w]
   }
 
   /// Forecast from a fresh MM304 executive (deorbit planning).
@@ -134,6 +134,10 @@ public final class EntryCaptureForecaster {
         guard s.time >= nextCapture else { return false }
         searched = true; nextCapture = s.time+c.guidance.terminalReplanInterval
         capture = evaluateCapture(s)
+        let runwayRange = self.frame.distance(from: s.position, to: self.frame.origin)
+        if runwayRange > c.entrySettings.captureRange + s.horizontalSpeed*c.guidance.terminalReplanInterval {
+          capture.feasible = false
+        }
         // Verdicts do not end the survey. Keep the same FCS, limiter and
         // physical integrator until a HAC exists or the high capture band ends.
         return capture.feasible || altitude < c.entrySettings.terminalMinimumAltitude
@@ -176,17 +180,23 @@ public final class EntryCaptureForecaster {
     // re-fly the objective; waiting for an already feasible trajectory would
     // leave an infeasible seed objective permanently in command.
     if end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude,
+      frame.distance(from: end.position, to: frame.origin) <= c.entrySettings.captureRange
+        + end.horizontalSpeed*c.guidance.terminalReplanInterval,
       envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.excessEnergyMargin + envelope.deficitEnergyMargin > 0 {
       let gravity = c.planet.gravitationalParameter / pow(end.position.length, 2)
       let energy = capture.envelope.energyHeight
         + (capture.envelope.excessEnergyMargin - capture.envelope.deficitEnergyMargin) / 2
-      // Keep capture speed; center the altitude/energy target between the two
-      // priced HAC energy boundaries, retaining positive room on both sides.
+      // Preserve high capture altitude and center energy through speed,
+      // inside the configured moderate-speed band.
+      let sound = end.atmosphere.speedOfSound
+      let centeredSpeed = clamp(sqrt(max(0, 2*gravity*(energy-p.height))),
+        (c.entrySettings.terminalTargetMach-c.entrySettings.terminalMachHalfWidth)*sound,
+        (c.entrySettings.terminalTargetMach+c.entrySettings.terminalMachHalfWidth)*sound)
       result.suggestedObjective = .init(along: p.along, cross: p.cross,
-        altitude: c.runway.elevation + energy - pow(end.aerodynamics.airspeed, 2) / (2 * gravity),
-        speed: end.aerodynamics.airspeed, energyHeight: energy, flightPath: end.flightPathAngle)
+        altitude: end.position.length-c.planet.radius,
+        speed: centeredSpeed, energyHeight: p.height+centeredSpeed*centeredSpeed/(2*gravity), flightPath: end.flightPathAngle)
     }
     return result
   }
