@@ -104,7 +104,7 @@ public final class EnergyManagementEngine {
       let remaining = length - distances[i]
       // Start the exit blend once rotating onto the exit slope needs the
       // remaining distance at the available pull-up authority.
-      if remaining <= max(gc.finalDistance, speed * speed * abs(m - m1) / max(0.1, pull)) {
+      if pull > 0 && remaining <= max(gc.finalDistance, speed * speed * abs(m - m1) / pull) {
         blendStart = i; break
       }
       let target = clamp(height(forDensity: 2 * qReference / (speed * speed)),
@@ -184,7 +184,7 @@ public final class EnergyManagementEngine {
       let lateral = vh * vh * s.curvature
       let bank = atan2(lateral, max(0.1, vertical))
       let required = hypot(vertical, lateral)
-      let supportedPrior = initial.controlAuthority?.evidence == .provisional
+      let supportedPrior = !v.rcsAttitudeControl && initial.controlAuthority?.evidence == .provisional
         && speed/atm.speedOfSound <= 0.9 && (500...12000).contains(q)
       let maxAlpha = min(
         supportedPrior ? rotation.maximumTrimAlpha(dynamicPressure: q) : v.maximumAngleOfAttack,

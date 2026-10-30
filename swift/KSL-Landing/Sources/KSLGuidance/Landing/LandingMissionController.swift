@@ -26,6 +26,7 @@ public final class LandingMissionController {
   private var lastPlanAttempt = -Double.infinity
   private var stoppedSince: Double?
   private var poorTrackingSince: Double?
+  private var hacEstablished = false, hacCompleted = false
   private var limiter = GuidanceTargetLimiter()
   public let externalPlanning: Bool
   public private(set) var lastAdmission: MM305Admission?
@@ -93,8 +94,19 @@ public final class LandingMissionController {
     terminalSearchArmed = inside
     return inside
   }
+  private func hacContext() -> HACFitContext {
+    var context = HACFitContext()
+    context.previousSpiral = plan?.spiral; context.previousPlanID = plan?.identifier
+    context.onSpiral = (hacEstablished || phase == .headingAlignment) && !hacCompleted
+    context.liftScale = authority.liftEffectiveness; context.dragScale = authority.dragEffectiveness
+    context.rollResponseSeconds = controlFeedback?.rollResponseSeconds
+    context.pitchResponseSeconds = controlFeedback?.pitchResponseSeconds
+    if controlFeedback?.trimEvidence == .identified { context.trimAlphaCeiling = controlFeedback?.trimAlphaCeiling }
+    return context
+  }
   public func shouldPrioritizeTerminalSearch(_ state: VehicleState) -> Bool {
-    phase == .entry && plan == nil && inTerminalSearchEnvelope(state)
+    [.entry, .acquisition, .headingAlignment].contains(phase) && !hacCompleted
+      && (plan != nil || inTerminalSearchEnvelope(state))
   }
   public func planningRequest(from state: VehicleState, controls: FlightControlSnapshot?) -> MissionPlanningRequest? {
     guard externalPlanning else { return nil }
@@ -103,21 +115,22 @@ public final class LandingMissionController {
       return .init(time: state.time, entry: nil, terminalState: nil, controls: nil,
         previousTarget: nil, approach: request, environment: environment)
     }
-    guard plan == nil, phase == .entry else { return nil }
-    let entryRequest = entry.request(from: state, controls: controls, previousTarget: limiter.previous)
+    guard [.entry, .acquisition, .headingAlignment].contains(phase), !hacCompleted else { return nil }
+    let entryRequest = phase == .entry && plan == nil
+      ? entry.request(from: state, controls: controls, previousTarget: limiter.previous) : nil
     var terminalState: VehicleState?
-    if inTerminalSearchEnvelope(state), state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval {
+    if (plan != nil || inTerminalSearchEnvelope(state)), state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval {
       terminalState = state; lastPlanAttempt = state.time
     }
     guard entryRequest != nil || terminalState != nil else { return nil }
     return .init(time: state.time, entry: entryRequest, terminalState: terminalState,
-      controls: controls, previousTarget: limiter.previous, environment: environment)
+      controls: controls, previousTarget: limiter.previous, environment: environment, hac: hacContext())
   }
   public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
     guard proposal.time <= state.time else { return }
     if let result = proposal.approach { approach.accept(result) }
-    guard phase == .entry, plan == nil else { return }
-    if let result = proposal.entry { entry.accept(result, at: state.time) }
+    guard [.entry, .acquisition, .headingAlignment].contains(phase), !hacCompleted else { return }
+    if phase == .entry, plan == nil, let result = proposal.entry { entry.accept(result, at: state.time) }
     if let result = proposal.terminal { acceptTerminal(result, state: state) }
   }
   private func acceptTerminal(_ result: PlanningResult, state: VehicleState) {
@@ -127,6 +140,7 @@ public final class LandingMissionController {
     guard let candidate = result.plan else { return }
     let admission = MM305Admission.evaluate(state, plan: candidate, configuration: configuration)
     lastAdmission = admission
+    if plan == nil { hacEstablished = phase == .headingAlignment; hacCompleted = false }
     plan = candidate; tracker.reset()
   }
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
@@ -239,14 +253,16 @@ public final class LandingMissionController {
         pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
         identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
     } else {
-      if !externalPlanning && plan == nil && inTerminalSearchEnvelope(state)
+      if !externalPlanning && !hacCompleted && (plan != nil || inTerminalSearchEnvelope(state))
         && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
       {
-        let currentPlanner = environment.observedAt == nil ? planner : HACPlanningEngine(
-          configuration: configuration, atmosphere: atmosphere.corrected(environment), aerodynamics: aerodynamics)
+        let context = hacContext()
+        let currentPlanner = HACPlanningEngine(configuration: configuration,
+          atmosphere: atmosphere.corrected(environment),
+          aerodynamics: aerodynamics.scaled(lift: context.liftScale, drag: context.dragScale))
         let result = currentPlanner.plan(
-          from: state, allowDirect: false,
-          controlSnapshot: controlSnapshot, previousTarget: limiter.previous)
+          from: state, allowDirect: false, preview: true,
+          controlSnapshot: controlSnapshot, previousTarget: limiter.previous, context: context)
         lastPlanningResult = result
         lastPlanAttempt = state.time
         acceptTerminal(result, state: state)
@@ -256,7 +272,11 @@ public final class LandingMissionController {
           state, plan: committed, liftEffectiveness: authority.liftEffectiveness,
           identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil,
           rollResponseSeconds: controlFeedback?.rollResponseSeconds, pitchResponseSeconds: controlFeedback?.pitchResponseSeconds)
-        if reference.segment == .final && approach.canCapture(state) {
+        if reference.segment == .spiral { hacEstablished = true }
+        if hacEstablished, let lastSpiral = committed.stations.last(where: { $0.segment == .spiral }),
+          reference.segment != .spiral, reference.distance >= lastSpiral.distance { hacCompleted = true }
+        if reference.segment == .final {
+          _ = approach.canCapture(state)
           raw = approach.update(
             state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
             pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
@@ -372,6 +392,30 @@ public final class LandingMissionController {
       d.mm305Violations = Array(capture.violations.prefix(6))
     }
     d.mm305PlanAccepted = plan != nil
+    if let plan {
+      d.activePlanID = plan.identifier; d.activePlanCreatedAt = plan.createdAt
+      d.activeHACRadius = plan.spiral?.finalRadius; d.activeHACGrowth = plan.spiral?.growth
+      d.activeHACTurnAngle = plan.spiral?.turnAngle; d.activeHACSide = plan.spiral?.side
+      d.activeHACExitAlong = plan.spiral?.exitAlong
+      d.trackingError = tracker.trackingError; d.referenceHeadingError = tracker.headingError
+      if let ref = tracker.reference {
+        d.referenceHeight = ref.height; d.referenceSpeed = ref.speed; d.referenceSegment = ref.segment.rawValue
+      }
+      let stride = max(1, Int(ceil(Double(plan.stations.count)*configuration.guidance.controlInterval
+        / configuration.guidance.pathLookaheadTime)))
+      var reference: [[Double]] = [], elapsed = 0.0, previousDistance = 0.0
+      for (index, station) in plan.stations.enumerated() {
+        elapsed += (station.distance-previousDistance)/max(configuration.vehicle.landingSpeed
+          * EnergyManagementEngine.minimumTouchdownFraction, station.speed)
+        previousDistance = station.distance
+        if index % stride == 0 || index == plan.stations.count-1 {
+          let geo = GeodeticPosition(position: frame.position(along: station.position.x,
+            cross: station.position.y, height: station.height), radius: configuration.planet.radius)
+          reference.append([plan.createdAt+elapsed, degrees(geo.latitude), degrees(geo.longitude), geo.altitude, station.speed])
+        }
+      }
+      d.activeReference = reference
+    }
     if let admission = lastAdmission, !admission.violations.isEmpty {
       d.mm305Advisory = admission.violations.map(\.message).joined(separator: "; ")
     } else if let capture = lastCapture, !capture.feasible {

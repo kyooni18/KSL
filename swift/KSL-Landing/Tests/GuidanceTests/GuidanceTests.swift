@@ -70,6 +70,31 @@ final class GuidanceTests: XCTestCase {
     let plan = try XCTUnwrap(result.plan)
     XCTAssertNotNil(plan.spiral)
     XCTAssertTrue(MM305Admission.evaluate(sample, plan: plan, configuration: c).accepted)
+    let mission = LandingMissionController(configuration: c, atmosphere: atmosphere, aerodynamics: aero,
+      externalPlanning: true, initialPhase: .acquisition, initialPlan: plan)
+    var changed = sample
+    changed.time += c.guidance.terminalReplanInterval
+    changed.position = position.normalized*(position.length-c.entrySettings.handoffRadius)
+    changed.velocity = velocity*(1-c.vehicle.aerodynamicUncertainty)
+    changed = physics.observe(changed)
+    let request = try XCTUnwrap(mission.planningRequest(from: changed, controls: nil))
+    XCTAssertNotNil(request.terminalState)
+    var context = try XCTUnwrap(request.hac)
+    context.onSpiral = true
+    let updated = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+      .plan(from: changed, allowDirect: false, preview: true, context: context)
+    let nextPlan = try XCTUnwrap(updated.plan)
+    XCTAssertEqual(nextPlan.createdAt, changed.time)
+    XCTAssertEqual(updated.fit?.stateTime, changed.time)
+    XCTAssertEqual(updated.fit?.previousPlanID, plan.identifier)
+    XCTAssertEqual(updated.fit?.continuingSpiral, true)
+    XCTAssertEqual(nextPlan.spiral?.side, plan.spiral?.side)
+    XCTAssertEqual(nextPlan.stations.first?.segment, .spiral)
+    XCTAssertEqual(try XCTUnwrap(nextPlan.stations.first).height, frame.coordinates(of: changed.position).height, accuracy: 1e-6)
+    mission.accept(.init(time: changed.time, entry: nil, terminal: updated), state: changed)
+    XCTAssertEqual(mission.plan?.createdAt, changed.time)
+    changed.time += c.guidance.terminalReplanInterval
+    XCTAssertNotNil(mission.planningRequest(from: changed, controls: nil)?.terminalState)
   }
 
   func testSpiralRadiusCurvatureAndMirroring() throws {
@@ -84,6 +109,7 @@ final class GuidanceTests: XCTestCase {
       XCTAssertEqual(a.position.x, b.position.x, accuracy: 1e-9)
       XCTAssertEqual(a.position.y, -b.position.y, accuracy: 1e-9)
       XCTAssertEqual(a.curvature, -b.curvature, accuracy: 1e-12)
+      XCTAssertEqual(right.fittedRemainingAngle(at: a.position), t, accuracy: 1e-9)
       let epsilon = 1e-5
       let p0 = right.sample(remainingAngle: t + epsilon)
       let p1 = right.sample(remainingAngle: t - epsilon)

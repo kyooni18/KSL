@@ -11,13 +11,14 @@ public struct PlanningResult: Codable, Sendable {
   public var closedLoopAdvisories: [TerminalClosedLoopCase]?
   /// Physical energy/geometry envelope of the whole examined HAC family.
   public var envelope: TerminalEnvelopeSummary?
+  public var fit: HACFitDiagnostics? = nil
 }
 
 // Earlier records lack the new advisory fields. Geometry remains replayable;
 // missing historical diagnostics are simply empty.
 extension PlanningResult {
   private enum CodingKeys: String, CodingKey {
-    case plan, bestAdvisory, evaluatedCandidates, advisoryCounts, closedLoopAdvisories, envelope
+    case plan, bestAdvisory, evaluatedCandidates, advisoryCounts, closedLoopAdvisories, envelope, fit
   }
   public init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -27,6 +28,7 @@ extension PlanningResult {
     advisoryCounts = try c.decodeIfPresent([String: Int].self, forKey: .advisoryCounts) ?? [:]
     closedLoopAdvisories = try c.decodeIfPresent([TerminalClosedLoopCase].self, forKey: .closedLoopAdvisories)
     envelope = try c.decodeIfPresent(TerminalEnvelopeSummary.self, forKey: .envelope)
+    fit = try c.decodeIfPresent(HACFitDiagnostics.self, forKey: .fit)
   }
 }
 
@@ -70,23 +72,27 @@ public final class HACPlanningEngine {
   private let approach: ApproachProfile
   private let frame: RunwayFrame
   private let trajectory: TerminalTrajectoryEvaluator
+  private let aero: AerodynamicsEngine
   private var nextIdentifier = 1
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
     aerodynamics: AerodynamicsEngine
   ) {
     self.configuration = configuration
+    aero = aerodynamics
     trajectory = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     energy = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     approach = .init(configuration: configuration)
     frame = .init(runway: configuration.runway, planet: configuration.planet)
   }
   public func plan(from state: VehicleState, allowDirect: Bool = true, preview: Bool = false,
-                   controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil)
+                   controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
+                   context: HACFitContext? = nil)
     -> PlanningResult
   {
     let p = frame.coordinates(of: state.position)
     let c = configuration.guidance
+    nextIdentifier = max(nextIdentifier, Int((state.time/c.controlInterval).rounded()))
     let horizontal = state.velocity.projected(onPlaneWithNormal: state.position.normalized)
       .normalized
     let startTangent = Vector2(horizontal.dot(frame.alongAxis), horizontal.dot(frame.rightAxis))
@@ -206,59 +212,102 @@ public final class HACPlanningEngine {
         examine((0...n).map { (curve.sample(Double($0) / Double(n)), .acquisition) }, nil)
       }
     }
-    let radii =
-      [c.minimumHACRadius, 4500, 6500, 9000, c.hacRadius ?? 12_000, 17_000, 24_000, 32_000, c.maximumHACRadius]
-      .filter { $0 >= c.minimumHACRadius && $0 <= c.maximumHACRadius }
-    for side in [-1, 1] {
-      for radius in Set(radii).sorted() {
-        for angle in [60.0, 100, 150, 210, 270, 330, 390, 450] {
+    // Fit the spiral from the measured state on every planning epoch.
+    // Radius comes from available normal force/bank, angle from heading,
+    // remaining energy and the current winding; none is a fixed angle grid.
+    let v = configuration.vehicle, aState = state.aerodynamics
+    let gravity = configuration.planet.gravitationalParameter/state.position.squaredLength
+    let support = max(0, (gravity-state.horizontalSpeed*state.horizontalSpeed/state.position.length)*cos(state.flightPathAngle))
+    let trimAlpha = RotationalDynamicsEngine(configuration: v, planet: configuration.planet)
+      .supportedTrimAlpha(state, identifiedCeiling: context?.trimAlphaCeiling)
+    let maxLift = aero.liftSolution(acceleration: 0, mass: state.mass,
+      dynamicPressure: aState.dynamicPressure, mach: aState.mach,
+      minimumAlpha: v.minimumAngleOfAttack, maximumAlpha: trimAlpha).maximumAcceleration
+    let normalLimit = min(maxLift, v.maximumLoadFactor*gravity)
+    let bankFromLift = normalLimit > support ? acos(clamp(support/normalLimit, 0, 1)) : 0
+    let bankAuthority = min(v.maximumBank, EnergyManagementEngine.acquisitionBank(configuration), bankFromLift)
+    let lateralAuthority = min(gravity*tan(bankAuthority), normalLimit*sin(bankAuthority))
+    let turnRate = state.horizontalSpeed > 0 ? lateralAuthority/state.horizontalSpeed : 0
+    let dynamicRadius = turnRate > 0 ? clamp(state.horizontalSpeed/turnRate, c.minimumHACRadius, c.maximumHACRadius) : c.maximumHACRadius
+    let rollRate = min(v.controlPlant.maximumRollRate, c.terminalRollRate ?? c.bankSlewRate)
+      * EnergyManagementEngine.bankRateReserve
+    let bodyRoll = state.controlAuthority?.minimumAcceleration.x
+      ?? min(v.controlPlant.rollAccelerationMaximum, v.controlPlant.rollAccelerationPerKPa*aState.dynamicPressure/1000)
+    let bodyYaw = state.controlAuthority?.minimumAcceleration.z
+      ?? min(v.controlPlant.yawAccelerationMaximum, v.controlPlant.yawAccelerationPerKPa*aState.dynamicPressure/1000)
+    let rollAcceleration = min(bodyRoll/max(Double.leastNormalMagnitude, abs(cos(aState.angleOfAttack))),
+      bodyYaw/max(Double.leastNormalMagnitude, abs(sin(aState.angleOfAttack))))
+    let exchange = EntryLateralController.exchangeTime(span: abs(aState.bank)+bankAuthority,
+      rate: rollRate, acceleration: rollAcceleration)
+    let response = min(c.maximumPredictionDuration, max(context?.rollResponseSeconds ?? 0,
+      exchange.isFinite ? exchange : c.maximumPredictionDuration))
+    let joinTime = min(c.maximumPredictionDuration, max(c.pathLookaheadTime, response/(1-GuidanceTargetLimiter.responseReserve)))
+    let rollTransition = min(c.maximumPathLength, state.horizontalSpeed*joinTime)
+    let spacing = max(c.finalSpeed, state.horizontalSpeed)*c.predictionStep
+    let unloadLength = c.finalSpeed*c.pathLookaheadTime
+    let glideAlpha = aero.bestGlideAlpha(mach: aState.mach, maximumAlpha: trimAlpha,
+      dynamicPressure: aState.dynamicPressure)
+    let polar = aero.coefficients(mach: aState.mach, alpha: glideAlpha, dynamicPressure: aState.dynamicPressure)
+    let liftDrag = polar.drag > 0 ? max(0, polar.lift/polar.drag) : configuration.entrySettings.estimatedLiftToDrag
+    let energyHeight = energy.energyHeight(state)
+    let touchdownEnergy = v.landingSpeed*v.landingSpeed/(2*gravity)
+    let desiredLength = max(0, energyHeight-touchdownEnergy)*liftDrag
+    let directToExit = (p.horizontal-Vector2(-c.finalDistance-unloadLength, 0)).length
+    let nominalExitRadius = c.finalSpeed*c.finalSpeed/max(Double.leastNormalMagnitude, gravity*tan(EnergyManagementEngine.acquisitionBank(configuration)))
+    let old = context?.previousSpiral
+    let continuing = context?.onSpiral == true && old != nil
+    let remaining = old?.fittedRemainingAngle(at: p.horizontal)
+    let u = v.aerodynamicUncertainty
+    let radii = Array(Set([c.minimumHACRadius, c.maximumHACRadius,
+      nominalExitRadius, c.hacRadius ?? nominalExitRadius,
+      dynamicRadius*(1-u), dynamicRadius, dynamicRadius*(1+u), old?.finalRadius ?? dynamicRadius]
+      .map { clamp($0, c.minimumHACRadius, c.maximumHACRadius) })).sorted()
+    let runwayDirection = frame.direction(at: p.horizontal, tangent: .init(1, 0))
+    let runwayHeading = state.localFrame.heading(of: runwayDirection)
+    let angleResolution = max(Double.ulpOfOne, turnRate*c.controlInterval)
+    let sides = continuing ? [old!.side] : [-1, 1]
+    for side in sides {
+      for radius in radii {
+        var headingAngle = Double(side)*wrapAngle(runwayHeading-state.course)
+        if headingAngle < 0 { headingAngle += 2 * .pi }
+        let energyAngle = max(0, desiredLength-directToExit-c.finalDistance)/max(radius, dynamicRadius)
+        var angles = [headingAngle, energyAngle]
+        if let remaining {
+          angles += [remaining, remaining*(1-u), remaining*(1+u)]
+          if continuing { angles += [max(0, remaining-turnRate*joinTime)] }
+        }
+        for theta in Set(angles.map { clamp($0, angleResolution, SpiralHAC.maximumTurnAngle) }).sorted() {
           if Task.isCancelled { break }
-          let theta = radians(angle)
-          let dynamicRadius =
-            state.horizontalSpeed * state.horizontalSpeed / (9.80665 * tan(radians(50)))
-          let growth = clamp(
-            (dynamicRadius - radius) / (theta * theta), radius * 0.03, radius * 0.30)
-          let unloadLength = max(1000, c.finalSpeed * 6)
-          guard
-            let spiral = try? SpiralHAC(
-              exitAlong: -c.finalDistance - unloadLength, finalRadius: radius, growth: growth,
-              turnAngle: theta, side: side)
-          else { continue }
+          let growth = clamp((dynamicRadius-radius)/(theta*theta), radius*Double.ulpOfOne,
+            radius/2*GuidanceTargetLimiter.responseReserve)
+          guard let spiral = try? SpiralHAC(exitAlong: -c.finalDistance-unloadLength,
+            finalRadius: radius, growth: growth, turnAngle: theta, side: side) else { continue }
           let inlet = spiral.sample(remainingAngle: theta)
-          let distance = (inlet.position - start.position).length
-          let spiralLength = spiral.length(samples: 64)
+          let distance = (inlet.position-start.position).length
           if distance <= 0 { continue }
-          let curve = QuinticAcquisition(
-            start: start, end: inlet, tangentLength: max(500, distance * 1.15))
-          let n = max(20, Int(distance / 220))
-          let ns = max(25, Int(spiralLength / 220))
+          let curve = QuinticAcquisition(start: start, end: inlet,
+            tangentLength: max(rollTransition, distance/GuidanceTargetLimiter.responseReserve))
+          let n = max(2, Int(ceil(distance/spacing)))
+          let spiralLength = spiral.length(samples: max(2, Int(ceil(radius*theta/spacing))))
+          let ns = max(2, Int(ceil(spiralLength/spacing)))
+          let joinSegment: PathSegment = continuing ? .spiral : .acquisition
           var tail: [(HorizontalPathSample, PathSegment)] = []
           for i in 1...ns {
-            tail.append(
-              (spiral.sample(remainingAngle: theta * (1 - Double(i) / Double(ns))), .spiral))
+            tail.append((spiral.sample(remainingAngle: theta*(1-Double(i)/Double(ns))), .spiral))
           }
-          let unload = QuinticAcquisition(
-            start: spiral.sample(remainingAngle: 0),
+          let unload = QuinticAcquisition(start: spiral.sample(remainingAngle: 0),
             end: .init(position: .init(-c.finalDistance, 0), tangent: .init(1, 0), curvature: 0),
             tangentLength: unloadLength)
-          for i in 1...25 { tail.append((unload.sample(Double(i) / 25), .acquisition)) }
-          examine((0...n).map { (curve.sample(Double($0) / Double(n)), PathSegment.acquisition) } + tail, spiral)
-          // Speed-limited turn/straight/turn acquisition: the quintic's
-          // curvature is independent of speed and is unflyable supersonic.
-          let acquisitionBank = EnergyManagementEngine.acquisitionBank(configuration)
-          let turnRadius = state.horizontalSpeed * state.horizontalSpeed / (9.80665 * tan(acquisitionBank))
-          // Roll through +/- the acquisition bank at the rated roll response.
-          let rollRate = min(configuration.vehicle.controlPlant.maximumRollRate,
-            configuration.guidance.terminalRollRate ?? configuration.guidance.bankSlewRate)
-            * EnergyManagementEngine.bankRateReserve
-          let rollTransition = state.horizontalSpeed * 2 * acquisitionBank / rollRate
-          if turnRadius > radius, abs(inlet.curvature) > 1e-9 {
+          let unloadSamples = max(2, Int(ceil(unloadLength/spacing)))
+          for i in 1...unloadSamples { tail.append((unload.sample(Double(i)/Double(unloadSamples)), .acquisition)) }
+          examine((0...n).map { (curve.sample(Double($0)/Double(n)), joinSegment) } + tail, spiral)
+          if dynamicRadius > radius, abs(inlet.curvature) > Double.ulpOfOne {
             for turn in [-1.0, 1.0] {
-              guard let dubins = DubinsAcquisition(start: start, startRadius: turnRadius, startTurn: turn,
-                end: inlet, endRadius: 1 / abs(inlet.curvature), endTurn: inlet.curvature > 0 ? 1 : -1,
-                transition: rollTransition),
-                dubins.length + spiralLength <= c.maximumPathLength else { continue }
-              examine(dubins.samples.map { ($0, PathSegment.acquisition) } + tail, spiral)
+              if let dubins = DubinsAcquisition(start: start, startRadius: dynamicRadius, startTurn: turn,
+                end: inlet, endRadius: 1/abs(inlet.curvature), endTurn: inlet.curvature > 0 ? 1 : -1,
+                spacing: spacing, transition: rollTransition) {
+                examine(dubins.samples.map { ($0, joinSegment) } + tail, spiral)
+              }
             }
           }
         }
@@ -267,22 +316,26 @@ public final class HACPlanningEngine {
     // Energy-equivalent plans (touchdown speed within the aerodynamic
     // uncertainty of landing speed) are ordered by total roll travel from the
     // current bank, so MM305 prefers the predictable, monotonic turn.
-    let landing = configuration.vehicle.landingSpeed
-    let tolerance = configuration.vehicle.aerodynamicUncertainty * landing
     func rollTravel(_ plan: TerminalPlan) -> Double {
       var bank = state.aerodynamics.bank, total = 0.0
       for station in plan.stations { total += abs(wrapAngle(station.bank - bank)); bank = station.bank }
       return total
     }
-    candidates = candidates.map { ($0, rollTravel($0)) }.sorted {
-      if $0.0.assessment.feasible != $1.0.assessment.feasible { return $0.0.assessment.feasible }
-      if !$0.0.assessment.feasible { return $0.0.assessment.score < $1.0.assessment.score }
-      let ea = abs($0.0.assessment.touchdownSpeed - landing) <= tolerance
-      let eb = abs($1.0.assessment.touchdownSpeed - landing) <= tolerance
-      if ea != eb { return ea }
-      if ea && eb { return $0.1 < $1.1 }
-      return $0.0.assessment.score < $1.0.assessment.score
-    }.map(\.0)
+    func fitCost(_ plan: TerminalPlan) -> Double {
+      let a = plan.assessment
+      let distanceScale = max(state.horizontalSpeed*c.pathLookaheadTime, desiredLength, c.finalDistance)
+      let pathEnergy = abs(plan.length-desiredLength)/distanceScale
+      let liftDeficit = max(0, -a.minimumLiftMargin)/max(gravity, Double.leastNormalMagnitude)
+      let bankDeficit = max(0, a.maximumBank/v.maximumBank-1)
+      let pressure = max(0, a.maximumQ/v.maximumDynamicPressure-1)
+      let load = max(0, a.maximumLoad/v.maximumLoadFactor-1)
+      let rollDistance = rollTravel(plan)*state.horizontalSpeed*response
+      return pathEnergy+liftDeficit+bankDeficit+pressure+load+rollDistance/distanceScale
+    }
+    candidates.sort {
+      if $0.assessment.feasible != $1.assessment.feasible { return $0.assessment.feasible }
+      return fitCost($0) < fitCost($1)
+    }
     // Select before diagnostics. Neither pricing nor a closed-loop prediction
     // may veto this plan; the flight computer always flies the best available HAC.
     chosen = candidates.first
@@ -305,8 +358,13 @@ public final class HACPlanningEngine {
         stressCases: candidate.stressCases, closedLoopCases: cases)
     }
     if chosen != nil { nextIdentifier += 1 }
-    return .init(plan: chosen, bestAdvisory: advisory, evaluatedCandidates: count,
-      advisoryCounts: advisoryCounts, closedLoopAdvisories: closedLoopAdvisories,
-      envelope: envelope)
+    var result = PlanningResult(plan: chosen, bestAdvisory: advisory, evaluatedCandidates: count,
+      advisoryCounts: advisoryCounts, closedLoopAdvisories: closedLoopAdvisories, envelope: envelope)
+    result.fit = .init(stateTime: state.time, previousPlanID: context?.previousPlanID,
+      continuingSpiral: continuing, fittedRemainingAngle: remaining, availableBank: bankAuthority,
+      availableTurnRate: turnRate, turningRadius: dynamicRadius, rollResponseSeconds: response,
+      joinDistance: rollTransition, energyHeight: energyHeight, energyPricedDistance: desiredLength,
+      liftScale: context?.liftScale ?? 1, dragScale: context?.dragScale ?? 1)
+    return result
   }
 }

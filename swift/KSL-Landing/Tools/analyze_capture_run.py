@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Recompute runway geometry and target smoothness from native flight records."""
-import argparse, base64, csv, gzip, json, math, pathlib
+import argparse, base64, csv, gzip, json, math, pathlib, re
 
 def dot(a,b): return sum(x*y for x,y in zip(a,b))
 def scale(a,k): return [x*k for x in a]
@@ -24,6 +24,9 @@ def analyze(path):
     entry=c.get('entry',c.get('entrySettings',{}));minimum=min(entry.get('terminalMinimumAltitude',22000),g.get('hacAcquisitionAltitude',exitheight),exitheight)
     maximum=entry.get('terminalMaximumAltitude',30000);maxmach=entry.get('terminalTargetMach',2.5)+entry.get('terminalMachHalfWidth',.35)+.1
     maxspeed=g.get('terminalPlanningMaximumSpeed',1300)
+    capture_radius=entry.get('captureTargetRange')
+    energy_source=pathlib.Path(__file__).resolve().parents[1]/'Sources/KSLGuidance/Energy/EnergyManagementEngine.swift'
+    touchdown_fraction=float(re.search(r'minimumTouchdownFraction\s*=\s*([0-9.]+)',energy_source.read_text()).group(1))
     file=path/'live.jsonl';opener=open
     if not file.exists():file=path/'controller.jsonl.gz';opener=gzip.open
     rows=[];phases=[];forecasts=[];lastforecast=None;firstsearch=None;handoff=None;touchdown=None;stop=None
@@ -38,6 +41,8 @@ def analyze(path):
         h=norm(p)-R;ae=s['aerodynamics'];t=s['time'];target=d['target'];cap=d.get('capture',{})
         gates=[h<=maximum+max(0,-vertical)*g['terminalReplanInterval'],h>=minimum,ae['mach']<=maxmach,ae['airspeed']<=maxspeed]
         row=dict(time=t,altitude=h,mach=ae['mach'],range=R*angle,along=dot(chart,along),cross=dot(chart,right),course=math.degrees(course),headingError=math.degrees(wrap(bearing-course)),verticalSpeed=vertical,speed=ae['airspeed'],bankTarget=math.degrees(target['bank']),alphaTarget=math.degrees(target['angleOfAttack']),alphaActual=math.degrees(ae['angleOfAttack']),phase=d['phase'],searchEnvelope=all(gates),gateAltitudeUpper=gates[0],gateAltitudeLower=gates[1],gateMach=gates[2],gateSpeed=gates[3],mm305Searched=cap.get('mm305Searched',False),energyMargin=min(cap.get('excessEnergyMargin') or -1e300,cap.get('deficitEnergyMargin') or -1e300))
+        if capture_radius is not None:
+          row['searchEnvelope']=R*angle <= capture_radius+norm(horizontal)*g['terminalReplanInterval']
         if not rows:t0=t
         row['elapsed']=t-t0
         if not phases or phases[-1]['phase']!=d['phase']:phases.append(dict(phase=d['phase'],elapsed=t-t0,altitude=h,mach=ae['mach']))
@@ -49,7 +54,7 @@ def analyze(path):
             slow=envelope.get('slowestTouchdown');fast=envelope.get('fastestTouchdown')
             if slow is not None and fast is not None:
               row['energyMargin']=min(v['maximumTouchdownSpeed']**2-slow**2,
-                fast**2-(v['landingSpeed']*.82)**2)/(2*9.80665)
+                fast**2-(v['landingSpeed']*touchdown_fraction)**2)/(2*9.80665)
         if row['mm305Searched'] and firstsearch is None:firstsearch=row.copy()
         if cap.get('mm305PlanAccepted') and handoff is None:handoff=row.copy()
         if s.get('contact') in ('mainGear','rolling','stopped') and touchdown is None:touchdown=row.copy()
@@ -69,7 +74,7 @@ def analyze(path):
       return dict(signChanges=changes,rateDirectionChanges=sum(a[1]*b[1]<0 for a,b in zip(rates,rates[1:])),peakRate=max(map(lambda x:abs(x[1]),rates),default=0),peakAcceleration=max(map(abs,acc),default=0))
     errors=[r['alphaTarget']-r['alphaActual'] for r in rows if r['phase']=='entry']
     eligible=next((r for r in rows if r['searchEnvelope']),None)
-    result=dict(source=str(file),phases=phases,firstSearchEnvelope=eligible,firstMM305Search=firstsearch,handoff=handoff,touchdown=touchdown,fullStop=stop,lastState=rows[-1],forecastCount=len(forecasts),lastForecast=forecasts[-1] if forecasts else None,bank=metrics('bankTarget'),alpha=metrics('alphaTarget'),alphaTargetMinusActual=dict(mean=sum(errors)/max(1,len(errors)),minimum=min(errors,default=0),maximum=max(errors,default=0),rms=math.sqrt(sum(x*x for x in errors)/max(1,len(errors)))),legacyGateLimits=dict(minimumAltitude=minimum,maximumAltitude=maximum,maximumMach=maxmach,maximumSpeed=maxspeed))
+    result=dict(source=str(file),captureTargetRange=capture_radius,phases=phases,firstSearchEnvelope=eligible,firstMM305Search=firstsearch,handoff=handoff,touchdown=touchdown,fullStop=stop,lastState=rows[-1],forecastCount=len(forecasts),lastForecast=forecasts[-1] if forecasts else None,bank=metrics('bankTarget'),alpha=metrics('alphaTarget'),alphaTargetMinusActual=dict(mean=sum(errors)/max(1,len(errors)),minimum=min(errors,default=0),maximum=max(errors,default=0),rms=math.sqrt(sum(x*x for x in errors)/max(1,len(errors)))),legacyGateLimits=dict(minimumAltitude=minimum,maximumAltitude=maximum,maximumMach=maxmach,maximumSpeed=maxspeed))
     result['machSnapshots']={str(m):min((r for r in rows if r['mach']>0),key=lambda r:abs(r['mach']-m)) for m in [7,5,3.8,2.95,2.5,2,1,.5]}
     with (path/'capture-geometry.csv').open('w') as f:
       writer=csv.DictWriter(f,fieldnames=rows[0].keys());writer.writeheader();writer.writerows(rows)

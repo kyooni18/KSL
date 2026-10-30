@@ -9,6 +9,8 @@ public final class PathTrackingEngine {
   private let rotation: RotationalDynamicsEngine
   public private(set) var index = 0
   public private(set) var trackingError = 0.0
+  public private(set) var reference: PathStation?
+  public private(set) var headingError = 0.0
   public init(configuration: MissionConfiguration, aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration
     frame = .init(runway: configuration.runway, planet: configuration.planet)
@@ -17,7 +19,7 @@ public final class PathTrackingEngine {
   }
   public func reset() {
     index = 0
-    trackingError = 0
+    trackingError = 0; reference = nil; headingError = 0
   }
   public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1,
                      identifiedTrimCeiling: Double? = nil, rollResponseSeconds: Double? = nil,
@@ -29,11 +31,13 @@ public final class PathTrackingEngine {
     let nearest = plan.stations[index]
     let alongOffset = (p.horizontal - nearest.position).dot(nearest.tangent)
     let ref = plan.station(at: clamp(nearest.distance + alongOffset, 0, plan.length))
+    reference = ref
     let offset = p.horizontal - ref.position
     trackingError = offset.length
     let tangent = frame.direction(at: ref.position, tangent: ref.tangent)
     let course = state.localFrame.heading(of: tangent)
     let headingError = wrapAngle(course - state.course)
+    self.headingError = headingError
     let crossError = -offset.dot(ref.tangent.rightNormal)
     let vh = max(25, state.horizontalSpeed)
     // Outer loops must be slower than the attitude loop they drive (a

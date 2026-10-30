@@ -6,7 +6,7 @@ import XCTest
 
 final class ControlTests: XCTestCase {
   func testPositivePitchAndRightBankCommands() throws {
-    let c = MissionConfiguration()
+    var c = MissionConfiguration(); c.vehicle.rcsAttitudeControl = true
     let plant = ShuttlePhysicsEngine(
       configuration: c, atmosphere: try .init(), aerodynamics: try .init())
     let p = Vector3(610_000, 0, 0)
@@ -23,7 +23,12 @@ final class ControlTests: XCTestCase {
     XCTAssertGreaterThan(command.pitch, 0)
     XCTAssertGreaterThan(command.roll, 0)
     XCTAssertEqual(command.throttle, 0)
-    XCTAssertFalse(command.rcs)
+    XCTAssertTrue(command.rcs)
+    var acquired = state; acquired.time += c.guidance.controlInterval
+    let terminal = try controller.command(state: acquired,
+      solution: .init(phase: .acquisition, target: .init(angleOfAttack: radians(10), bank: radians(20))),
+      dt: c.guidance.controlInterval)
+    XCTAssertTrue(terminal.rcs)
     XCTAssertFalse(command.sas)
     XCTAssertFalse(command.airbrakes)
   }

@@ -20,8 +20,8 @@ public struct SimulationResult: Codable, Sendable {
   public let violations: [ConstraintViolation]
   public let constraintOccurrences: [String: Int]
   public let terminalPlan: TerminalPlan?
-  public let lastPlanningRejections: [String: Int]
-  public let lastRejectedTerminal: TerminalAssessment?
+  public let lastPlanningAdvisories: [String: Int]
+  public let lastTerminalAdvisory: TerminalAssessment?
   public let lastTerminalCandidateCount: Int
   public let maximumComputationMilliseconds: Double
   public let meanComputationMilliseconds: Double
@@ -146,8 +146,8 @@ public final class SimulationEngine {
       saturatedControlFraction: Double(saturated) / Double(max(1, steps)), violations: violations,
       constraintOccurrences: occurrences,
       terminalPlan: computer.mission.plan,
-      lastPlanningRejections: computer.mission.lastPlanningResult?.advisoryCounts ?? [:],
-      lastRejectedTerminal: computer.mission.lastPlanningResult?.bestAdvisory,
+      lastPlanningAdvisories: computer.mission.lastPlanningResult?.advisoryCounts ?? [:],
+      lastTerminalAdvisory: computer.mission.lastPlanningResult?.bestAdvisory,
       lastTerminalCandidateCount: computer.mission.lastPlanningResult?.evaluatedCandidates ?? 0,
       maximumComputationMilliseconds: maxCompute,
       meanComputationMilliseconds: totalCompute / Double(max(1, computations)))

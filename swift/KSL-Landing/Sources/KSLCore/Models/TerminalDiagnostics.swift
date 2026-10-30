@@ -56,6 +56,20 @@ public struct CaptureHandoffDiagnostics: Codable, Sendable {
   public var mm305Searched = false
   public var mm305Deficit: String?
   public var mm305PlanAccepted = false
+  public var activePlanID: Int?
+  public var activePlanCreatedAt: Double?
+  public var activeHACRadius: Double?
+  public var activeHACGrowth: Double?
+  public var activeHACTurnAngle: Double?
+  public var activeHACSide: Int?
+  public var activeHACExitAlong: Double?
+  /// Current regenerated reference [UT, latitude deg, longitude deg, ASL altitude, airspeed].
+  public var activeReference: [[Double]]?
+  public var trackingError: Double?
+  public var referenceHeadingError: Double?
+  public var referenceHeight: Double?
+  public var referenceSpeed: Double?
+  public var referenceSegment: String?
   public var mm305Advisory: String?
   /// MM305's own physical/closed-loop violations for the last search.
   public var mm305Violations: [ConstraintViolation] = []

@@ -11,6 +11,7 @@ public struct MissionPlanningRequest: Sendable {
   public let previousTarget: GuidanceTarget?
   public var approach: ApproachPlanningRequest?
   public var environment = EnvironmentCalibration()
+  public var hac: HACFitContext? = nil
 }
 
 public struct MissionPlanningProposal: Codable, Sendable {
@@ -47,10 +48,11 @@ public actor MissionPlanningWorker {
       return .init(time: request.time, entry: nil, terminal: nil, approach: approach.plan(final))
     }
     let terminalResult = request.terminalState.map {
-      let planner = request.environment.observedAt == nil ? terminal : HACPlanningEngine(
-        configuration: configuration, atmosphere: atmosphere.corrected(request.environment), aerodynamics: aerodynamics)
-      return planner.plan(from: $0, allowDirect: false,
-        controlSnapshot: request.controls, previousTarget: request.previousTarget)
+      let model = request.hac.map { aerodynamics.scaled(lift: $0.liftScale, drag: $0.dragScale) } ?? aerodynamics
+      let planner = HACPlanningEngine(configuration: configuration,
+        atmosphere: atmosphere.corrected(request.environment), aerodynamics: model)
+      return planner.plan(from: $0, allowDirect: false, preview: true,
+        controlSnapshot: request.controls, previousTarget: request.previousTarget, context: request.hac)
     }
     let entryResult = !Task.isCancelled && request.terminalState == nil
       ? request.entry.map { entry.plan($0) } : nil
@@ -62,6 +64,6 @@ public actor MissionPlanningWorker {
     return .init(proposal: proposal, encoded: try JSONEncoder().encode(proposal))
   }
   public func planTerminal(from state: VehicleState) -> PlanningResult {
-    terminal.plan(from: state, allowDirect: false)
+    terminal.plan(from: state, allowDirect: false, preview: true)
   }
 }

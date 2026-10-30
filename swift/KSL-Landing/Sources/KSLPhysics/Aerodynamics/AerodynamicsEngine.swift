@@ -192,6 +192,18 @@ public final class AerodynamicsEngine: Sendable {
                              dynamicPressure: Double? = nil, gear: Bool = false) -> Double {
     var best = radians(10)
     var ratio = -Double.infinity
+    if history == nil || dynamicPressure == nil {
+      // At an alpha knot the bilinear polar is just a Mach interpolation.
+      // Reuse that bracket instead of searching the same grids at every knot.
+      let (i, t) = bracket(machs, mach)
+      for (j, a) in alphas.enumerated() where a >= 0 && a <= maximumAlpha {
+        let lift = (liftTable[i][j]*(1-t)+liftTable[i+1][j]*t)*liftScale
+        let drag = max(0, (dragTable[i][j]*(1-t)+dragTable[i+1][j]*t)*dragScale)
+        let ld = lift/max(drag, 1e-8)
+        if ld > ratio { ratio = ld; best = a }
+      }
+      return best
+    }
     for a in alphas where a >= 0 && a <= maximumAlpha {
       let c = coefficients(mach: mach, alpha: a, dynamicPressure: dynamicPressure, gear: gear)
       let ld = c.lift / max(c.drag, 1e-8)

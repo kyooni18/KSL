@@ -80,6 +80,10 @@ class NativeTelemetryPublication:
         ground = telemetry.get("ground", {})
         runway = telemetry.get("runway", {})
         phase = command.get("phase", "unknown")
+        capture = guidance.get("capture") or {}
+        reference = [{"ut": p[0], "latitude": p[1], "longitude": p[2], "altitude": p[3],
+                      "speed": p[4], "phase": "MM305 HAC REFERENCE", "kind": "reference"}
+                     for p in capture.get("activeReference") or [] if isinstance(p,list) and len(p)>=5]
         return {
             "connectionStatus": "connected",
             "phase": phase,
@@ -101,7 +105,17 @@ class NativeTelemetryPublication:
                 "runwayAlongTrack": number(runway.get("along_m")),
                 "runwayCrossTrack": number(runway.get("cross_m")),
                 "planID": guidance.get("planID"),
+                "terminalPathCommitted": bool(capture.get("mm305PlanAccepted")),
+                "terminalPathCaptured": phase == "headingAlignment",
+                "terminalPathRemaining": guidance.get("pathRemaining"),
+                "hacRadius": capture.get("activeHACRadius"),
+                "hacGrowth": capture.get("activeHACGrowth"),
+                "hacTurnRemaining": math.degrees(number(capture.get("activeHACTurnAngle"))),
+                "hacTrackingError": capture.get("trackingError"),
             },
+            "referenceTrajectory": reference,
+            "plannedTrajectory": reference,
+            "planProvisional": bool(capture.get("mm305Advisory")),
             "deorbitPlan": command.get("plan"),
             # Landing-feasibility evidence (additive; existing keys unchanged).
             "capture": guidance.get("capture"),

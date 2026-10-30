@@ -280,9 +280,9 @@ public final class FlightController {
       roll: moveToward(previous.roll, clamp(rollRaw, -1, 1), maximumDelta: delta),
       yaw: moveToward(previous.yaw, clamp(yawRaw, -1, 1), maximumDelta: delta),
       gearDown: solution.target.gearDown,
-      // RCS supplements thin-air entry authority; it is enabled whenever
-      // configured and never required for any other decision.
-      rcs: configuration.vehicle.rcsAttitudeControl && solution.phase == .entry)
+      // The configured RCS attitude actuator remains available throughout flight;
+      // its availability never vetoes a guidance decision.
+      rcs: configuration.vehicle.rcsAttitudeControl)
     var d = ControlDiagnostics()
     d.pitchSaturated = abs(pitchRaw) >= 1; d.rollSaturated = abs(rollRaw) >= 1
     d.yawSaturated = abs(yawRaw) >= 1; d.pitchError = aerodynamicError

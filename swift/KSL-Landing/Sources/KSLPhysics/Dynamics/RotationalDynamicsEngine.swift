@@ -60,6 +60,7 @@ public final class RotationalDynamicsEngine: Sendable {
   /// Never interpret an inherited STS-N subsonic fit as an identified live
   /// STS trim limit. Local identified trim may constrain actual guidance.
   public func supportedTrimAlpha(_ state: VehicleState, identifiedCeiling: Double? = nil) -> Double {
+    if configuration.rcsAttitudeControl { return configuration.maximumAngleOfAttack }
     if let identifiedCeiling, identifiedCeiling.isFinite { return min(configuration.maximumAngleOfAttack, identifiedCeiling) }
     let a = state.aerodynamics
     if state.controlAuthority?.evidence == .provisional && a.mach <= 0.9
