@@ -1774,6 +1774,13 @@
       smartStatus = statusParts.length ? statusParts.join(" · ") : (snapshot.statusMessage || "—");
     }
     $("guidance-status").textContent = smartStatus;
+    if (!archiveReplay.active) {
+      const pos = $("sim-replay-position");
+      if (pos) {
+        pos.textContent = `${$("guidance-phase").textContent || phase} · ${smartStatus}`;
+        pos.title = pos.textContent;
+      }
+    }
     setTone("guidance-status", snapshot.warningMessage ? "warn" : state === "CONNECTED" ? "good" : state === "RECONNECTING" ? "bad" : "");
     setTitle("guidance-status", [snapshot.statusMessage, snapshot.warningMessage ? `WARNING: ${snapshot.warningMessage}` : ""].filter(Boolean).join(" · "));
 

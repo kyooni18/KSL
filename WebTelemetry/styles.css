@@ -255,11 +255,14 @@ body.replay-mode .simulation-status{border-style:dashed}
 .playback-summary{
   min-height:48px;
   display:grid;
-  grid-template-columns:auto auto auto minmax(0,1fr) auto;
+  grid-template-columns:repeat(4,auto) minmax(0,1fr);
   align-items:center;
   gap:8px;
   padding:7px;
 }
+.playback-summary button{white-space:nowrap}
+.playback-summary .playback-context{grid-column:1 / -1;grid-row:2;padding:0 2px}
+.playback-summary .playback-toggle{grid-column:5;grid-row:1;justify-self:end}
 .playback-summary button,.playback-controls button,.playback-controls select,.sim-history-head button{
   appearance:none;
   min-height:34px;
