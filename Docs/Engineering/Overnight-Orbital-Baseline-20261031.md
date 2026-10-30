@@ -248,3 +248,20 @@ observable planning progress and safe handling of stale plan epochs and RPC
 reconnection, then re-fly the original quicksave through the entire chain with
 derived checkpoint saves and continuous evidence. Preserve plan qualification
 and physically based limits; do not silently bypass them to manufacture a flight.
+
+### Final state and focused test
+
+At 07:31 local on 2026-10-31 all six `DeorbitExecutionTests` passed on the
+current debug working tree, including the existing model-verdict authorization
+tests. This does not change the earlier full-suite failure or establish live
+reconnect or landing behavior. The authorization veto remains in place and
+conflicts with the requested advisory-only policy; it is not a demonstrated fix.
+An unqualified attempt to change it and reuse a saved plan was not retained:
+freshness, configuration binding and orbital reconnect require a coherent design
+before flight. No `ksl-landing fly` process was running at the final check.
+
+The existing dirty predictor and investigation work remains uncommitted. The
+dirty `EntryEnergyProbe.swift` and its CLI dispatch in `Main.swift` also contain
+an unfinished offline comparison experiment; neither is a flight-tested fix.
+Foundation Memory tools were not discoverable in this session's available tool
+catalog, so this report is the durable record rather than a claimed memory write.
