@@ -185,7 +185,7 @@ final class EntryCommandLaw {
     let azimuth = wrapAngle(frame.bearing(from: s.position, to: target) - s.course)
     let bank = EntryLateralController.update(memory: &memory.lateral, state: s, configuration: c,
       verticalLift: d.verticalLift, azimuthError: azimuth, crossError: aimCross - p.cross,
-      crossRate: -s.velocity.dot(right), alignment: alignment, range: max(0, objective.along-p.along), dt: dt, diagnostics: &d)
+      crossRate: -s.velocity.dot(right), alignment: alignment, range: abs(objective.along-p.along), dt: dt, diagnostics: &d)
     if alpha >= trimCeiling - 1e-9 && trimCeiling < e.nominalAlpha {
       d.limitingReason += "; identified local pitch-trim envelope limits alpha"
     }

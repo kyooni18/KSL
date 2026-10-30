@@ -7,25 +7,28 @@ import XCTest
 final class GuidanceTests: XCTestCase {
   func testCrossrangeCorrectionReversesWithoutBankLegDwell() {
     let c = MissionConfiguration()
-    for sign in [-1.0, 1.0] {
-      var state = VehicleState(time: 100, position: .init(c.planet.radius+25_000, 0, 0),
-        velocity: .init(0, 300, 0), attitude: .init(), mass: c.vehicle.nominalMass)
-      state.aerodynamics.lift = 20*state.mass
-      state.aerodynamics.dynamicPressure = c.vehicle.maximumDynamicPressure/2
-      var memory = EntryLateralMemory()
-      memory.initialized = true; memory.sign = -sign
-      memory.lastReversal = state.time; memory.captured = false
-      var d = EntryDiagnostics()
-      _ = EntryLateralController.update(memory: &memory, state: state, configuration: c,
-        verticalLift: 9, azimuthError: sign/10, crossError: sign*5_000,
-        crossRate: sign*30, alignment: 1, range: 30_000,
-        dt: c.guidance.controlInterval, diagnostics: &d)
-      XCTAssertEqual(memory.sign, sign)
-      XCTAssertEqual(memory.reversals, 1)
-      XCTAssertLessThanOrEqual(abs(memory.bank), c.vehicle.maximumBank)
-      XCTAssertNotEqual(d.limitingReason, "reversal dwell")
+    for alignment in [-1.0, 1.0] {
+      for sign in [-1.0, 1.0] {
+        var state = VehicleState(time: 100, position: .init(c.planet.radius+25_000, 0, 0),
+          velocity: .init(0, 300, 0), attitude: .init(), mass: c.vehicle.nominalMass)
+        state.aerodynamics.lift = 20*state.mass
+        state.aerodynamics.dynamicPressure = c.vehicle.maximumDynamicPressure/2
+        var memory = EntryLateralMemory()
+        memory.initialized = true; memory.sign = -sign*alignment
+        memory.lastReversal = state.time; memory.captured = false
+        var d = EntryDiagnostics()
+        _ = EntryLateralController.update(memory: &memory, state: state, configuration: c,
+          verticalLift: 9, azimuthError: sign/10, crossError: sign*5_000,
+          crossRate: sign*30, alignment: alignment, range: 30_000,
+          dt: c.guidance.controlInterval, diagnostics: &d)
+        XCTAssertEqual(memory.sign, sign*alignment)
+        XCTAssertEqual(memory.reversals, 1)
+        XCTAssertLessThanOrEqual(abs(memory.bank), c.vehicle.maximumBank)
+        XCTAssertNotEqual(d.limitingReason, "reversal dwell")
+      }
     }
   }
+
 
   func testEntryCaptureObjectiveAndPitchResponseShapeTheDecidedAlpha() throws {
     var c = MissionConfiguration()

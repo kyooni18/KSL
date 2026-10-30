@@ -52,13 +52,17 @@ enum EntryLateralController {
     rateLimit = max(rateLimit, max(0, abs(m.rate) - acceleration * dt))
     let energyBank = lift > 0 ? acos(clamp(verticalLift / lift, cos(c.vehicle.maximumBank), 1)) : 0
     let timeToGo = max(c.guidance.pathLookaheadTime,
-      range / max(1, s.horizontalSpeed*max(0, alignment)))
+      range / max(1, s.horizontalSpeed*abs(alignment)))
     // Cubic endpoint interception: e(T)=0 and eDot(T)=0. crossRate is
     // eDot=-velocityRight, so positive demand is a right-bank correction.
     // Direction and magnitude must come from the same signed acceleration.
-    let signedLateral = alignment > 0
-      ? (6*crossError/(timeToGo*timeToGo)+4*crossRate/timeToGo)/alignment
-      : 2*s.horizontalSpeed*sin(azimuthError)/timeToGo
+    let crossDemand = 6*crossError/(timeToGo*timeToGo)+4*crossRate/timeToGo
+    // Bank-right projects onto runway-right with a signed cosine. A
+    // reciprocal approach reverses that projection, not the desired miss.
+    // Blend to bearing pursuit near perpendicular flight, where inversion
+    // of the runway-axis projection becomes singular.
+    let pursuit = 2*s.horizontalSpeed*sin(azimuthError)/timeToGo
+    let signedLateral = alignment*crossDemand+(1-alignment*alignment)*pursuit
     let lateral = abs(signedLateral)
     // Turn only to correct an actual miss, and only with lift left after
     // vertical recovery. Infeasibility cannot authorize banking away support.
