@@ -776,3 +776,31 @@ nine `DeorbitExecutionTests` passed; the previously documented full-suite
 simulation failures remain. The live comparison does not exercise a delayed
 or lost shutdown acknowledgement, changes in vessel topology, or a disconnect
 during a burn, so those remain unvalidated.
+
+#### Actual ten-second RPC timeout and coast recovery
+
+A separate controlled test `overnight-live-orbital-timeout-20261031` reloaded
+the original quicksave and used the same fixed release binary and runway-27
+plan/configuration. Its local proxy silently withheld traffic after record
+30 for 11.5 wall seconds, then closed the blocked old connections and restored
+forwarding. The unchanged 10-second RPC deadline produced the actual error
+`Transport deadline exceeded`; a first reconnection attempt while the proxy
+was stalled also failed, and the controller subsequently logged `link recovered
+after 2 fault(s)`. Record 30 was UT 208583.0665 and record 31 was UT
+208594.6865 with `telemetryGapResumed=true`; 104 records were captured before
+intentional cancellation. Every logged phase was orbital coast and OMS
+throttle was zero. The test demonstrates one actual RPC timeout and coast
+recovery, not mid-burn or shutdown-acknowledgement recovery.
+
+An important unresolved exposure is that the previously applied commands
+remain in KSP while the network is silent. The logged vessel mass fell from
+24829.6914 kg immediately before the gap to 24769.9707 kg on the first
+post-gap sample, a 59.72 kg loss over 11.62 s; the flight has configured RCS
+active and logged zero OMS throttle, but the gap contains no independent
+resource trace. This is not a measured continuous impulse history. Fresh kRPC
+at UT 208613.6065 after cancellation reported STS orbiting, zero throttle and
+axes, RCS off and 340.5775 mono in the loaded state. Orbital pointing/resource
+and stale-control behavior during outages remain open; this recovery test is
+not a deorbit or landing. The exact source diff, release SHA-256, configuration,
+plan, proxy, events, outputs and log are in the run folder. No timeout was
+increased or controller duplicated.
