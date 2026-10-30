@@ -38,7 +38,8 @@ public final class TrajectoryPropagationEngine {
     var nextRecord = initial.time
     var limiter = GuidanceTargetLimiter(previous: previousTarget)
     s = physics.observe(s)
-    while s.time < end {
+    // A sub-resolution remainder is float residue, not a step to fly.
+    while end - s.time > controlStep * 1e-6 {
       if Task.isCancelled { break }
       let height = s.position.length - configuration.planet.radius
       let load = abs(s.aerodynamics.lift) / (s.mass * 9.80665)
