@@ -398,7 +398,14 @@ public actor KRPCFlightIO: FlightIO {
       slewedTarget = requested
       return requested
     }
-    let rate = max(3.0, 45.0 - 42.0 * min(1, q / 8000)) * .pi / 180  // rad/s
+    // Rate limits come from the identified vehicle plant and guidance configuration, scaled
+    // down by the plant's own dynamic-pressure authority; nothing here is a tuned constant.
+    let plant = configuration.vehicle.controlPlant
+    let slewLimit = min(
+      plant.maximumPitchRate, plant.maximumRollRate, configuration.guidance.alphaSlewRate,
+      configuration.guidance.bankSlewRate)
+    let authority = min(1, max(0, 1 - q / configuration.vehicle.maximumDynamicPressure))
+    let rate = slewLimit * authority  // rad/s
     func angle(_ a: Vector3, _ b: Vector3) -> Double { acos(max(-1, min(1, a.dot(b)))) }
     let step = rate * (time - at)
     let needed = max(angle(previous.nose, requested.nose), angle(previous.roof, requested.roof))

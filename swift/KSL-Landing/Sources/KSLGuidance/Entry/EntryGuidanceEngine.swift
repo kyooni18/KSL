@@ -52,6 +52,13 @@ public final class EntryGuidanceEngine {
     let bank = sign * max(headingBank, energyBank)
     return .init(alpha: alpha, bank: bank)
   }
+  /// Bank reversals only make sense once the airframe can actually realize the commanded
+  /// attitude: below that dynamic pressure the plant cannot trim the nominal alpha, a bank
+  /// swing produces no lateral lift, and reversing only flips the attitude for nothing.
+  private func hasControlAuthority(_ s: VehicleState) -> Bool {
+    let nominal = radians(clamp(15 + (s.aerodynamics.airspeed - 650) / 90, 15, 35))
+    return rotation.maximumTrimAlpha(dynamicPressure: s.aerodynamics.dynamicPressure) >= nominal
+  }
   public func update(_ state: VehicleState) -> GuidanceTarget {
     if state.time - lastSolve >= configuration.guidance.entryReplanInterval {
       solve(state)
@@ -59,7 +66,9 @@ public final class EntryGuidanceEngine {
     }
     let proposed = steering(state, allocation: allocation, preferredSign: bankSign)
     let newSign = proposed.bank < 0 ? -1.0 : 1.0
-    if newSign != bankSign && state.time - lastReversal > 12 && abs(proposed.bank) > radians(5) {
+    if newSign != bankSign && state.time - lastReversal > 12 && abs(proposed.bank) > radians(5)
+      && hasControlAuthority(state)
+    {
       bankSign = newSign
       lastReversal = state.time
       reversalCount += 1
@@ -80,7 +89,8 @@ public final class EntryGuidanceEngine {
       -1.0, -0.5, 0, 0.2, 0.4, 0.6, 0.8, 1.0, clamp(allocation - 0.1, -1, 1),
       clamp(allocation + 0.1, -1, 1),
     ]).sorted()
-    let signs = state.time - lastReversal > 12 ? [bankSign, -bankSign] : [bankSign]
+    let signs =
+      state.time - lastReversal > 12 && hasControlAuthority(state) ? [bankSign, -bankSign] : [bankSign]
     candidateCount = candidates.count * signs.count
     var ranked:
       [(score: Double, allocation: Double, sign: Double, prediction: TrajectoryPrediction)] = []
@@ -99,7 +109,7 @@ public final class EntryGuidanceEngine {
           let proposed = steering(s, allocation: sigma, preferredSign: forecastSign)
           let sign = proposed.bank < 0 ? -1.0 : 1.0
           if sign != forecastSign && s.time - forecastReversal > 12
-            && abs(proposed.bank) > radians(5)
+            && abs(proposed.bank) > radians(5) && hasControlAuthority(s)
           {
             forecastSign = sign
             forecastReversal = s.time
@@ -157,7 +167,7 @@ public final class EntryGuidanceEngine {
         }
       }
     }
-    if bestSign != bankSign && state.time - lastReversal > 12 {
+    if bestSign != bankSign && state.time - lastReversal > 12 && hasControlAuthority(state) {
       bankSign = bestSign
       lastReversal = state.time
       reversalCount += 1
