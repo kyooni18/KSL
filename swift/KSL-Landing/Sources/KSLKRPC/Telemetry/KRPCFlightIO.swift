@@ -30,7 +30,6 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   private var supportsActuatorBreakdown = false
   private var supportsRCSTorque = false
   private var expectedVesselName: String? = "STS"
-  private var persistentVesselID: String?
   private var deorbitPlan: DeorbitPlan?
   private var burnEngines: [UInt64] = []
   private var burnFinished = false
@@ -66,7 +65,11 @@ public actor KRPCFlightIO: OrbitalFlightIO {
       let first = try await session.call([
         .init(procedure: "get_ActiveVessel"), .init(service: "KRPC", procedure: "GetStatus"),
       ])
-      vessel = try KRPCValue.decodeUInt(first[0])
+      let discoveredVessel = try KRPCValue.decodeUInt(first[0])
+      if vessel != 0, discoveredVessel != vessel {
+        throw FlightError.rearmRequired("Active vessel changed during reconnect")
+      }
+      vessel = discoveredVessel
       let status = try Protobuf.decode(first[1])
       let version =
         Protobuf.bytes(status, number: 1).last.flatMap { String(data: $0, encoding: .utf8) }
@@ -76,13 +79,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
         objectCall("Vessel_get_SurfaceReferenceFrame", vessel),
         objectCall("Vessel_get_Orbit", vessel), objectCall("Vessel_get_Name", vessel),
         objectCall("Vessel_get_Parts", vessel), objectCall("Vessel_get_AutoPilot", vessel),
-        objectCall("Vessel_get_Id", vessel),
       ])
-      let discoveredID = try KRPCValue.decodeString(objects[6])
-      if let persistentVesselID, discoveredID != persistentVesselID {
-        throw FlightError.rearmRequired("Active vessel changed during reconnect")
-      }
-      persistentVesselID = discoveredID
       control = try KRPCValue.decodeUInt(objects[0])
       surfaceFrame = try KRPCValue.decodeUInt(objects[1])
       let orbit = try KRPCValue.decodeUInt(objects[2])
