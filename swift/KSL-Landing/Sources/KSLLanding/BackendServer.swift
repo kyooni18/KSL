@@ -111,6 +111,9 @@ actor BackendServer {
         cc.host = host
         cc.port = port
         let flightIO = KRPCFlightIO(connection: cc, airbrakeActionGroup: airbrakeGroup)
+        if ProcessInfo.processInfo.environment["KSL_SWIFT_RAW_AXES"] == "1" {
+          await flightIO.setUseAutopilotAttitude(false)
+        }
         _ = try await flightIO.connect(expectedVesselName: vessel)
         io = flightIO
         connection = "connected"
