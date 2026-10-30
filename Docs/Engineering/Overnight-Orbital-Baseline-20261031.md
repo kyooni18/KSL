@@ -371,3 +371,27 @@ orbiting at 85848.84 m ASL, surface speed 2086.71 m/s, throttle zero and 26
 parts; UT advanced on a second sample. This was not a new flight or checkpoint.
 The plan-loading route and advisory policy have not resolved the material
 orbital reconnect gap. The user-created original save remains unchanged.
+
+### Orbital reconnect prototype rejected before flight
+
+A local prototype added a retry loop, neutralization on reconnect, and a
+forward-gap reset; a fake-IO coast test injected a deadline failure and a
+three-second gap and passed, as did the other seven deorbit tests. The debug
+prototype compiled. This is **not a real kRPC reconnect test**. It was reverted
+and is not included in the guidance commits. Its diagnostic patch is preserved
+locally at `runs/overnight-ranking-comparison-20261031/orbit-recovery-prototype.patch`
+(SHA-256 `4e2cf6e09240c54c98809618b0c534ca3af29d227194cb562abf0ab1c73db257`).
+
+Review found two blocking problems. First, a timeout during OMS shutdown can
+mean the engines actually stopped even though the client did not receive the
+reply; the prototype then tries to rediscover *active* engines and can fail
+to restore control. Reconnection must handle that ambiguous, idempotent
+shutdown case while validating vehicle identity and keeping thrust neutral.
+Second, the prototype adds a maximum possible unobserved impulse directly to
+`deliveredDeltaV`; that is an upper bound, not a measurement. It can trigger
+premature cutoff and mislabel an uncertain quantity as measured. A sound design
+needs separate measured/uncertain impulse bounds and a recovery decision based
+on fresh orbital energy/periapsis and actuator state, not invented history.
+There is also no real transport-injection test or live mid-burn observation.
+No safety or timeout limit was changed to make the fake test pass, and this
+prototype was not flown. The orbital recovery gap therefore remains open.
