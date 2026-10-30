@@ -48,6 +48,11 @@ preflight telemetry helper also errored on an unsupported Python `vessel.id`;
 the independently captured kRPC sample and native flight record above are
 the actual evidence.
 
+The CLI now dispatches `--help` or `-h` to help before any subcommand can
+connect or arm. A debug build succeeded and `ksl-landing fly --help --host
+127.0.0.1 --port 1` exited 0 with help output, without needing a server. This
+is a startup safety fix only, not a deorbit or landing validation.
+
 ## Startup experiment and outstanding risks
 
 An experimental explicit `fly --deorbit --reduced-assurance` connects the

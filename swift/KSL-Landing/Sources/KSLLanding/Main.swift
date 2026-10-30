@@ -63,7 +63,10 @@ struct LandingCLI {
       result.initialState.mass = try number("--mass", result.configuration.vehicle.nominalMass)
       return result
     }
-    switch args.first ?? "help" {
+    // Help must never fall through to an operational subcommand: in
+    // particular, `fly --help` must not connect, arm, or command a vessel.
+    let command = args.contains("--help") || args.contains("-h") ? "help" : (args.first ?? "help")
+    switch command {
     case "entry-energy-probe":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("entry-energy-probe requires --input and --configuration")
