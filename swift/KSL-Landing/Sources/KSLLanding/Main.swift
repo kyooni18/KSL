@@ -64,6 +64,12 @@ struct LandingCLI {
       return result
     }
     switch args.first ?? "help" {
+    case "entry-energy-probe":
+      guard let input = option("--input"), let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("entry-energy-probe requires --input and --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+      try await EntryEnergyProbe.run(input: input, configuration: c)
     case "shuttlesim-controller":
       try await ShuttleSimStream.run(arguments: args)
     case "capture-probe":
