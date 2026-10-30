@@ -217,7 +217,20 @@ contact. This describes **only the provisional offline model**, with its
 unvalidated high-q attitude/turn model and synchronous planning behavior; it
 does not establish what would happen in KSP or identify the physical first
 point of no return. The one-second trace and final contact summary remain in
-the run directory. Reproduce with the preserved plan and a unique output path:
+the run directory.
+
+The same spherical runway frame reconstructed from that sampled model shows
+the early modeled delivery problem more directly: at UT 229800.17, MM304 was
+along +201105 m and cross +18631 m; at the first acquisition sample, UT
+229892.17, it was along +98042 m and cross -22708 m, descending 92.6 m/s,
+with approximately 40° actual and target AoA. At UT 230200.17 it was still
+along +44134 m and cross -41068 m, descending 34.6 m/s at approximately
+40° AoA and 50.9 m/s airspeed. Those are **modeled states**, not measurements;
+they suggest an early energy/delivery problem in this predictor but do not
+resolve whether the live shuttle would behave that way. The along/cross numbers
+are relative to the configured runway-27 threshold, not the site marker.
+
+Reproduce with the preserved plan and a unique output path:
 
 ```sh
 swift/KSL-Landing/.build/release/ksl-landing deorbit-trace \
