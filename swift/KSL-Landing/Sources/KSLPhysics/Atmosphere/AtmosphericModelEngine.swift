@@ -37,6 +37,7 @@ public struct HermiteCurve: Sendable {
 public final class AtmosphericModelEngine: Sendable {
   public let planet: PlanetConfiguration
   public let densityScale: Double
+  public let soundSpeedScale: Double
   public let windENU: Vector3
   private let pressure: HermiteCurve
   private let temperature: HermiteCurve
@@ -44,12 +45,14 @@ public final class AtmosphericModelEngine: Sendable {
   private let latitudeBias: HermiteCurve
   private let latitudeSun: HermiteCurve
   public init(
-    planet: PlanetConfiguration = .init(), densityScale: Double = 1, windENU: Vector3 = .zero
+    planet: PlanetConfiguration = .init(), densityScale: Double = 1, soundSpeedScale: Double = 1,
+    windENU: Vector3 = .zero
   ) throws {
     self.planet = planet
     self.densityScale = densityScale
+    self.soundSpeedScale = soundSpeedScale
     self.windENU = windENU
-    guard densityScale.isFinite, densityScale > 0, windENU.isFinite,
+    guard densityScale.isFinite, densityScale > 0, soundSpeedScale.isFinite, soundSpeedScale > 0, windENU.isFinite,
       let url = Bundle.module.url(forResource: "KerbinCurves", withExtension: "json")
     else { throw FlightError.invalidConfiguration("Missing atmosphere data or invalid dispersion") }
     let curves = try JSONDecoder().decode([String: [[Double]]].self, from: Data(contentsOf: url))
@@ -64,6 +67,20 @@ public final class AtmosphericModelEngine: Sendable {
     sunMultiplier = try curve("KERBIN_TEMPERATURE_SUN_MULT_CURVE")
     latitudeBias = try curve("KERBIN_LATITUDE_BIAS_CURVE")
     latitudeSun = try curve("KERBIN_LATITUDE_SUN_MULT_CURVE")
+  }
+  private init(copy: AtmosphericModelEngine, correction: EnvironmentCalibration) {
+    planet = copy.planet; windENU = copy.windENU
+    densityScale = copy.densityScale*clamp(correction.densityScale, 0.35, 2.5)
+    soundSpeedScale = copy.soundSpeedScale*clamp(correction.soundSpeedScale, 0.7, 1.3)
+    pressure = copy.pressure; temperature = copy.temperature; sunMultiplier = copy.sunMultiplier
+    latitudeBias = copy.latitudeBias; latitudeSun = copy.latitudeSun
+  }
+  /// C vessel_physics_environment bounds extrapolation, retaining the raw
+  /// measured correction in diagnostics. Curves are shared immutable values.
+  public func corrected(_ correction: EnvironmentCalibration) -> AtmosphericModelEngine {
+    guard correction.observedAt != nil, correction.densityScale.isFinite, correction.densityScale > 0,
+      correction.soundSpeedScale.isFinite, correction.soundSpeedScale > 0 else { return self }
+    return .init(copy: self, correction: correction)
   }
   public func sample(position: Vector3, time: Double) -> AtmosphericState {
     let geo = GeodeticPosition(position: position, radius: planet.radius)
@@ -89,7 +106,7 @@ public final class AtmosphericModelEngine: Sendable {
         radius: planet.radius))
     return .init(
       density: p / (gas * t) * densityScale, pressure: p * densityScale, temperature: t,
-      speedOfSound: sqrt(1.39999997615814 * gas * t),
-      wind: local.vector(north: windENU.y, east: windENU.x, up: windENU.z))
+      speedOfSound: sqrt(1.39999997615814 * gas * t)*soundSpeedScale,
+      wind: local.vector(north: windENU.y, east: windENU.x, up: windENU.z), evidence: .provisional)
   }
 }

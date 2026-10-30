@@ -19,7 +19,8 @@ public final class PathTrackingEngine {
     index = 0
     trackingError = 0
   }
-  public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1) -> (
+  public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1,
+                     identifiedTrimCeiling: Double? = nil) -> (
     GuidanceTarget, PathStation
   ) {
     let p = frame.coordinates(of: state.position)
@@ -33,8 +34,11 @@ public final class PathTrackingEngine {
     let course = state.localFrame.heading(of: tangent)
     let headingError = wrapAngle(course - state.course)
     let crossError = -offset.dot(ref.tangent.rightNormal)
-    let timeConstant = configuration.guidance.pathLookaheadTime
     let vh = max(25, state.horizontalSpeed)
+    let timeConstant = ref.segment == .spiral && abs(ref.curvature) > 1e-8
+      ? max(configuration.guidance.pathLookaheadTime,
+          0.65*(configuration.guidance.hacLookaheadAngle ?? radians(16))/(abs(ref.curvature)*vh))
+      : configuration.guidance.pathLookaheadTime
     let lateral =
       vh * vh * ref.curvature + 2 * 0.9 / timeConstant * vh * sin(headingError) + crossError
       / (timeConstant * timeConstant)
@@ -51,7 +55,7 @@ public final class PathTrackingEngine {
       configuration.vehicle.maximumBank)
     let required = clamp(
       vertical / max(0.3, cos(bank)), 0, configuration.vehicle.maximumLoadFactor * 9.80665)
-    let maxAlpha = rotation.maximumTrimAlpha(dynamicPressure: state.aerodynamics.dynamicPressure)
+    let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
     let lift = aero.liftSolution(
       acceleration: required / max(0.5, liftEffectiveness), mass: state.mass,
       dynamicPressure: state.aerodynamics.dynamicPressure,
@@ -60,7 +64,8 @@ public final class PathTrackingEngine {
     return (
       .init(
         angleOfAttack: lift.alpha, bank: bank, desiredSpeed: ref.speed, desiredHeight: ref.height,
-        desiredFlightPath: gamma, gearDown: ref.height < 1500), ref
+        desiredFlightPath: gamma,
+        gearDown: p.height < (configuration.guidance.gearDeploymentAltitude ?? 1500)), ref
     )
   }
 }

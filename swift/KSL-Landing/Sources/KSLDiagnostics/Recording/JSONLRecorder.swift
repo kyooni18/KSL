@@ -6,9 +6,7 @@ public final class JSONLFileWriter {
   private var handle: FileHandle?
   private let encoder: JSONEncoder
   public init(url: URL) throws {
-    guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
-      throw FlightError.io("Cannot create \(url.path)")
-    }
+    try Data().write(to: url, options: .withoutOverwriting)
     handle = try FileHandle(forWritingTo: url)
     encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]

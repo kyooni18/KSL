@@ -26,6 +26,9 @@ public final class TouchdownMonitor {
     let p = frame.coordinates(of: state.position)
     let v = configuration.vehicle
     var failures: [ConstraintViolation] = []
+    if state.wheelContact?.mainGear != true {
+      failures.append(.init(.contactQuality, "Actual main-wheel contact has not been established"))
+    }
     if !configuration.runway.contains(along: p.along, cross: p.cross) {
       failures.append(.init(.runwayExcursion, "Touchdown outside runway"))
     }

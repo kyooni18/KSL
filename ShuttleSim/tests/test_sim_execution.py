@@ -55,6 +55,13 @@ class SimulatorExecutionTests(unittest.TestCase):
                     result = self.run_simulator(option, value)
                     self.assertEqual(result.returncode, 2, result.stderr)
 
+    def test_stop_confirmation_is_opt_in_and_validated(self):
+        self.assertEqual(self.run_simulator("--stop-confirmation-seconds","0").returncode,0)
+        self.assertEqual(self.run_simulator("--stop-confirmation-seconds","3").returncode,0)
+        for value in ("-1","61","nan","inf","1.5garbage"):
+            with self.subTest(value=value):
+                self.assertEqual(self.run_simulator("--stop-confirmation-seconds",value).returncode,2)
+
     def test_invalid_ports_are_rejected_before_launch(self):
         for option in ("--command-port", "--telemetry-port", "--web-telemetry-port"):
             for value in ("-1", "65536", "garbage", "1.5", "999999999999999999999999"):

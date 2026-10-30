@@ -13,10 +13,11 @@ let package = Package(
     .library(name: "KSLKRPC", targets: ["KSLKRPC"]),
   ],
   targets: [
+    .systemLibrary(name: "CSQLite", pkgConfig: "sqlite3"),
     .target(name: "KSLCore"),
-    .target(name: "KSLPhysics", dependencies: ["KSLCore"], resources: [.process("Resources")]),
-    .target(name: "KSLGuidance", dependencies: ["KSLCore", "KSLPhysics"]),
-    .target(name: "KSLControl", dependencies: ["KSLCore", "KSLPhysics"]),
+    .target(name: "KSLPhysics", dependencies: ["KSLCore", "KSLControl", "CSQLite"], resources: [.process("Resources")]),
+    .target(name: "KSLGuidance", dependencies: ["KSLCore", "KSLPhysics", "KSLControl"]),
+    .target(name: "KSLControl", dependencies: ["KSLCore"]),
     .target(name: "KSLKRPC", dependencies: ["KSLCore"]),
     .target(name: "KSLDiagnostics", dependencies: ["KSLCore"]),
     .target(
@@ -27,11 +28,11 @@ let package = Package(
       dependencies: ["KSLCore", "KSLPhysics", "KSLRuntime", "KSLDiagnostics"]),
     .executableTarget(
       name: "KSLLanding",
-      dependencies: ["KSLRuntime", "KSLKRPC", "KSLSimulation", "KSLDiagnostics"]),
+      dependencies: ["KSLRuntime", "KSLKRPC", "KSLSimulation", "KSLDiagnostics", "KSLControl"]),
     .testTarget(name: "CoreTests", dependencies: ["KSLCore"]),
-    .testTarget(name: "PhysicsTests", dependencies: ["KSLPhysics"]),
+    .testTarget(name: "PhysicsTests", dependencies: ["KSLPhysics", "CSQLite"]),
     .testTarget(name: "GuidanceTests", dependencies: ["KSLGuidance"]),
-    .testTarget(name: "ControlTests", dependencies: ["KSLControl"]),
+    .testTarget(name: "ControlTests", dependencies: ["KSLControl", "KSLPhysics"]),
     .testTarget(
       name: "IntegrationTests", dependencies: ["KSLKRPC", "KSLRuntime", "KSLSimulation"]),
     .testTarget(name: "SimulationTests", dependencies: ["KSLSimulation"]),

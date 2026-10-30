@@ -54,6 +54,20 @@ public struct TerminalStressCase: Codable, Sendable {
   public let violations: [ConstraintViolation]
 }
 
+public struct TerminalClosedLoopCase: Codable, Sendable {
+  public let liftMultiplier: Double
+  public let dragMultiplier: Double
+  public let feasible: Bool
+  public let elapsed: Double
+  public let touchdownSpeed: Double?
+  public let touchdownSink: Double?
+  public let touchdownPitch: Double?
+  public let stoppedAlong: Double?
+  public let maximumTrackingError: Double
+  public let violations: [ConstraintViolation]
+  public let evidence: String
+}
+
 public struct TerminalPlan: Codable, Sendable {
   public let identifier: Int
   public let createdAt: Double
@@ -61,10 +75,21 @@ public struct TerminalPlan: Codable, Sendable {
   public let stations: [PathStation]
   public let assessment: TerminalAssessment
   public let stressCases: [TerminalStressCase]
+  public let closedLoopCases: [TerminalClosedLoopCase]?
   public var length: Double { stations.last?.distance ?? 0 }
+  public var nominalQualified: Bool {
+    assessment.feasible && closedLoopCases?.first(where: {
+      abs($0.liftMultiplier-1) < 1e-12 && abs($0.dragMultiplier-1) < 1e-12
+    })?.feasible == true
+  }
+  public var energyRobust: Bool { assessment.feasible && stressCases.count >= 2 && stressCases.allSatisfy(\.feasible) }
+  public var isRobust: Bool {
+    energyRobust && (closedLoopCases?.count ?? 0) >= 3 && closedLoopCases!.allSatisfy(\.feasible)
+  }
   public init(
     identifier: Int, createdAt: Double, spiral: SpiralHAC?, stations: [PathStation],
-    assessment: TerminalAssessment, stressCases: [TerminalStressCase] = []
+    assessment: TerminalAssessment, stressCases: [TerminalStressCase] = [],
+    closedLoopCases: [TerminalClosedLoopCase]? = nil
   ) {
     self.identifier = identifier
     self.createdAt = createdAt
@@ -72,6 +97,7 @@ public struct TerminalPlan: Codable, Sendable {
     self.stations = stations
     self.assessment = assessment
     self.stressCases = stressCases
+    self.closedLoopCases = closedLoopCases
   }
   public func nearest(to p: Vector2, startingAt: Int = 0) -> Int {
     guard !stations.isEmpty else { return 0 }

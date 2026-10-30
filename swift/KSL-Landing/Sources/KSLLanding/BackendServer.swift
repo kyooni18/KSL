@@ -1,197 +1,211 @@
 import Foundation
 import KSLCore
 import KSLDiagnostics
+import KSLGuidance
 import KSLKRPC
 import KSLPhysics
 import KSLRuntime
 
-/// NDJSON operator protocol v1 (the one `ksl` speaks to `landing_backend`) over stdin/stdout.
-/// Supported: updateConfiguration, connect, engageReentry, engageFinalTest, abort, shutdown.
-/// There is no deorbit planner, so createPlan/engage are rejected with an explicit error.
+/// NDJSON protocol v1. Owns operator state; heavy planning and flight control
+/// have separate actors and exchange immutable, generation-bound values.
 actor BackendServer {
-  private let planetRadius: Double
-  private var host = "127.0.0.1"
-  private var port: UInt16 = 50000
-  private let vessel: String
-  private let airbrakeGroup: UInt32
-  private var io: KRPCFlightIO?
-  private var flight: Task<Void, Never>?
-  private var connection = "disconnected"
-  private var phase = "Idle"
-  private var engaged = false
-  private var status = "Idle"
-  private var lastError: String?
-  private var telemetry: [String: Any] = [:]
-  private var command: [String: Any] = [:]
-  private var finished = false
+  var configuration: MissionConfiguration
+  var settings: OperatorConfigurationResult
+  let vessel: String
+  var io: KRPCFlightIO?
+  var flight: Task<Void, Never>?
+  var planning: Task<Void, Never>?
+  var preparing = false
+  var generation: UInt64 = 0
+  var connection = "disconnected", phase = "Idle", status = "Idle"
+  var engaged = false
+  var lastError: String?
+  var telemetry: [String: Any] = [:], command: [String: Any] = [:]
+  var plan: DeorbitPlan?
+  var planningProgress: DeorbitPlanningProgress?
+  var logDirectory: String?
+  var lastPublished: ContinuousClock.Instant?
 
-  init(configuration: MissionConfiguration, vessel: String, airbrakeGroup: UInt32) {
-    planetRadius = configuration.planet.radius
+  init(configuration: MissionConfiguration, vessel: String, airbrakeGroup: UInt32) throws {
     self.vessel = vessel
-    self.airbrakeGroup = airbrakeGroup
+    let path = ProcessInfo.processInfo.environment["KSL_SWIFT_OPERATOR_CONFIGURATION"] ?? "Configuration/sts.json"
+    let data = FileManager.default.fileExists(atPath: path) ? try Data(contentsOf: URL(fileURLWithPath: path)) : Data("{}".utf8)
+    settings = try OperatorConfigurationMapper.map(data, base: configuration, baseAirbrakeGroup: airbrakeGroup)
+    self.configuration = settings.mission
   }
-
-  private func emit(_ object: [String: Any]) {
-    guard let data = try? JSONSerialization.data(withJSONObject: object) else { return }
-    var line = data
-    line.append(10)
-    FileHandle.standardOutput.write(line)
+  func object<T: Encodable>(_ value: T) throws -> Any {
+    try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
   }
-  private func snapshot() -> [String: Any] {
-    var s: [String: Any] = [
-      "phase": phase, "automationEngaged": engaged, "connectionStatus": connection,
-      "statusMessage": status, "telemetry": telemetry, "command": command,
-    ]
-    if let lastError { s["lastError"] = lastError }
-    return s
-  }
-  private func publish() { emit(["type": "snapshot", "snapshot": snapshot()]) }
-  func ready() { emit(["type": "ready", "protocolVersion": 1, "configuration": [:], "snapshot": snapshot()]) }
-
-  static func backendPhase(_ p: MissionPhase) -> String {
-    switch p {
-    case .entry: "MM304 Entry"
-    case .acquisition, .headingAlignment: "TAEM"
-    case .approach, .preflare: "Final Approach"
-    case .flare: "Flare"
-    case .touchdown: "Touchdown"
-    case .rollout: "Rollout"
-    case .complete: "Complete"
-    case .abort: "Abort"
+  func emit(_ object: [String: Any]) {
+    do {
+      var data = try JSONSerialization.data(withJSONObject: object, options: .sortedKeys)
+      data.append(10); FileHandle.standardOutput.write(data)
+    } catch {
+      FileHandle.standardError.write(Data("Operator serialization failed: \(error)\n".utf8))
     }
   }
-
-  func observe(_ record: FlightRecord) {
-    let s = record.state
-    let up = s.position.normalized
-    let a = s.aerodynamics
-    phase = Self.backendPhase(record.guidance.phase)
-    telemetry = [
-      "ut": s.time, "meanAltitude": s.position.length - planetRadius,
-      "surfaceAltitude": s.radarAltitude, "trueAirSpeed": a.airspeed,
-      "verticalSpeed": s.velocity.dot(up), "mach": a.mach, "dynamicPressure": a.dynamicPressure,
-      "angleOfAttack": a.angleOfAttack * 180 / .pi, "roll": a.bank * 180 / .pi,
-      "gForce": a.force.length / max(1, s.mass * 9.80665),
-      "targetAoA": record.guidance.target.angleOfAttack * 180 / .pi,
-      "targetRoll": record.guidance.target.bank * 180 / .pi,
-    ]
-    command = [
-      "targetAoA": record.guidance.target.angleOfAttack * 180 / .pi,
-      "targetRoll": record.guidance.target.bank * 180 / .pi,
-    ]
-    if !record.guidance.violations.isEmpty {
-      status = "Swift guidance: " + record.guidance.violations.map { $0.message }.joined(separator: "; ")
-    }
-    publish()
+  func publish() { emit(["type": "snapshot", "snapshot": snapshot()]) }
+  func ready() {
+    emit(["type": "ready", "protocolVersion": 1,
+      "configuration": (try? JSONSerialization.jsonObject(with: settings.effectiveOperatorJSON)) ?? [:], "snapshot": snapshot()])
   }
-
+  func applyConfiguration(_ input: Any?) async throws {
+    guard let input else { return }
+    guard !engaged, flight == nil, planning == nil, !preparing else {
+      throw FlightError.invalidCommand("Configuration is immutable while planning, preparing or engaged")
+    }
+    let data = try JSONSerialization.data(withJSONObject: input)
+    let mapped = try OperatorConfigurationMapper.map(data, base: configuration,
+      baseConnection: settings.connection, baseAirbrakeGroup: settings.airbrakeGroup,
+      baseAllowReciprocal: settings.allowReciprocal)
+    let changed = mapped.mission != configuration || mapped.connection != settings.connection
+      || mapped.airbrakeGroup != settings.airbrakeGroup || mapped.allowReciprocal != settings.allowReciprocal
+    configuration = mapped.mission; settings = mapped
+    if changed {
+      generation &+= 1; plan = nil
+      if let io { await io.shutdown(); self.io = nil; connection = "disconnected" }
+    }
+    status = "Validated configuration applied"
+  }
+  func connectIfNeeded() async throws -> KRPCFlightIO {
+    if let io { return io }
+    var cc = KRPCConnectionConfiguration()
+    cc.host = settings.connection.host; cc.port = settings.connection.port
+    cc.timeout = settings.connection.timeout; cc.clientName = settings.connection.clientName
+    let value = KRPCFlightIO(connection: cc, configuration: configuration, airbrakeActionGroup: settings.airbrakeGroup)
+    _ = try await value.connect(expectedVesselName: vessel)
+    io = value; connection = "connected"
+    return value
+  }
+  func resolveHistoryAndRunway(sessionID: String? = nil) async throws -> (KRPCFlightIO, VehicleState, AerodynamicsEngine) {
+    let previous = configuration
+    let variant = ProcessInfo.processInfo.environment["KSP_LANDER_PHYSICS_VARIANT"]
+    configuration = try await PhysicsModelLoader.resolvingDefaultArchive(configuration,
+      path: ProcessInfo.processInfo.environment["KSL_SWIFT_PHYSICS_ARCHIVE"] ?? "Runtime/Physics/observations.sqlite3",
+      variant: variant)
+    if let sessionID {
+      configuration.physicsArchive?.excludedSession = sessionID
+      configuration.physicsArchive?.excludedFlight = sessionID
+    }
+    if configuration != previous, let io { await io.shutdown(); self.io = nil }
+    var value = try await connectIfNeeded(), state = try await value.readState()
+    if settings.allowReciprocal {
+      let frame = RunwayFrame(runway: configuration.runway, planet: configuration.planet)
+      if state.velocity.dot(frame.alongAxis) < 0 {
+        configuration.runway = configuration.runway.reciprocal(planet: configuration.planet)
+        await value.shutdown(); io = nil
+        value = try await connectIfNeeded(); state = try await value.readState()
+      }
+    }
+    let aero = try await PhysicsModelLoader.aerodynamics(configuration: configuration)
+    return (value, state, aero)
+  }
+  func recorder(phase: MissionPhase, aero: AerodynamicsEngine, sessionID: String) throws -> ServerRecorder {
+    let directory = URL(fileURLWithPath: "runs/native-swift-"+sessionID, isDirectory: true)
+    let file = try SessionTelemetryRecorder(directory: directory, configuration: configuration,
+      sessionID: sessionID, initialPhase: phase, context: aero.history?.history.contexts.first)
+    logDirectory = directory.standardizedFileURL.path
+    return .init(server: self, file: file)
+  }
   func handle(line: String) async -> Bool {
-    guard let data = line.data(using: .utf8),
-      let request = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let method = request["method"] as? String
-    else { return true }
+    guard let data = line.data(using: .utf8) else { return true }
+    let request: [String: Any]
+    do {
+      guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        throw FlightError.protocolViolation("Request must be an object")
+      }
+      request = value
+    } catch { emit(["type": "response", "id": "", "ok": false, "error": String(describing: error)]); return true }
     let id = request["id"] as? String ?? String(describing: request["id"] ?? "")
     func respond(_ ok: Bool, _ detail: String? = nil) {
-      var m: [String: Any] = ["type": "response", "id": id, "ok": ok]
-      if ok { m["result"] = [String: Any]() } else { m["error"] = detail ?? "failed" }
-      emit(m)
+      var value: [String: Any] = ["type": "response", "id": id, "ok": ok]
+      if ok { value["result"] = ["snapshot": snapshot()] }
+      else { value["error"] = detail ?? "Request failed" }
+      emit(value)
     }
-    switch method {
-    case "updateConfiguration":
-      if let c = request["configuration"] as? [String: Any],
-        let conn = c["connection"] as? [String: Any]
-      {
-        if let a = conn["address"] as? String { host = a }
-        if let p = conn["rpcPort"] as? Int, let n = UInt16(exactly: p) { port = n }
-      }
-      respond(true)
-    case "connect":
-      do {
-        var cc = KRPCConnectionConfiguration()
-        cc.host = host
-        cc.port = port
-        let flightIO = KRPCFlightIO(connection: cc, airbrakeActionGroup: airbrakeGroup)
-        if ProcessInfo.processInfo.environment["KSL_SWIFT_RAW_AXES"] == "1" {
-          await flightIO.setUseAutopilotAttitude(false)
+    do {
+      guard let method = request["method"] as? String else { throw FlightError.protocolViolation("Missing method") }
+      switch method {
+      case "updateConfiguration":
+        guard request["configuration"] != nil else { throw FlightError.invalidConfiguration("Missing configuration") }
+        try await applyConfiguration(request["configuration"])
+      case "connect":
+        guard !engaged, !preparing else { throw FlightError.invalidCommand("Already engaged or preparing") }
+        try await applyConfiguration(request["configuration"])
+        _ = try await connectIfNeeded(); status = "Connected to native Swift flight computer"
+      case "createPlan":
+        try await applyConfiguration(request["configuration"])
+        try await startPlanning()
+      case "engage":
+        try await applyConfiguration(request["configuration"])
+        let authorization = request["authorizeReducedAssurancePlan"] as? String
+        try await engageDeorbit(reviewedPlanID: request["planID"] as? String, authorization: authorization)
+      case "engageReentry", "engageFinalTest", "engageMM305", "engageTAEM":
+        try await applyConfiguration(request["configuration"])
+        let requested: MissionPhase
+        if method == "engageFinalTest" { requested = .approach }
+        else if method == "engageMM305" || method == "engageTAEM" { requested = .acquisition }
+        else if let name = request["phase"] as? String {
+          switch name.lowercased() {
+          case "mm304", "entry": requested = .entry
+          case "mm305", "taem": requested = .acquisition
+          case "final", "approach": requested = .approach
+          default: throw FlightError.invalidCommand("Unknown requested landing phase: \(name)")
+          }
+        } else { requested = .entry }
+        try engageLanding(phase: requested)
+      case "abort":
+        await stopAll(); phase = "Abort"; status = "Control released; a fresh engage is required"
+      case "saveCheckpoint":
+        guard !engaged, !preparing, let io, let name = request["name"] as? String, !name.isEmpty else {
+          throw FlightError.invalidCommand("Checkpoint saving requires an idle connection and a name")
         }
-        _ = try await flightIO.connect(expectedVesselName: vessel)
-        io = flightIO
-        connection = "connected"
-        status = "Connected (Swift engine)"
-        respond(true)
-        publish()
-      } catch {
-        connection = "failed"
-        lastError = "\(error)"
-        respond(false, lastError)
-        publish()
+        try await io.save(name: name)
+      case "disconnect":
+        await stopAll(); plan = nil; phase = "Idle"; status = "Disconnected"
+      case "getSnapshot", "snapshot":
+        break
+      case "shutdown":
+        await stopAll(); respond(true); return false
+      default: throw FlightError.invalidCommand("Unsupported method: \(method)")
       }
-    case "createPlan", "engage":
-      respond(false, "The Swift engine has no deorbit planner; start from mm304, mm305 or final-approach")
-    case "engageReentry", "engageFinalTest":
-      guard let flightIO = io, flight == nil else {
-        respond(false, io == nil ? "Not connected" : "Already engaged")
-        return true
-      }
-      do {
-        try await flightIO.arm()
-        let recorder = ServerRecorder(server: self)
-        let runtime = try FlightRuntime(io: flightIO, recorder: recorder, configuration: .init())
-        engaged = true
-        status = "Swift guidance engaged"
-        phase = "MM304 Entry"
-        respond(true)
-        publish()
-        flight = Task { [weak self] in
-          let outcome = try? await runtime.run(maximumDuration: 7200)
-          await self?.flightEnded(outcome)
-        }
-      } catch {
-        lastError = "\(error)"
-        respond(false, lastError)
-      }
-    case "abort":
-      flight?.cancel()
-      respond(true)
-    case "saveCheckpoint":
-      // Between control steps only: the flight runtime holds the IO busy while commanding.
-      guard let flightIO = io, let name = request["name"] as? String, !name.isEmpty else {
-        respond(false, "saveCheckpoint needs a connection and a name")
-        return true
-      }
-      do {
-        try await flightIO.save(name: name)
-        respond(true)
-      } catch {
-        respond(false, "\(error)")
-      }
-    case "shutdown":
-      flight?.cancel()
-      await flight?.value
-      if let io { await io.shutdown() }
-      respond(true)
-      return false
-    default:
-      respond(false, "Unsupported method: \(method)")
+      lastError = nil; respond(true); publish()
+    } catch {
+      lastError = String(describing: error); status = lastError!
+      respond(false, lastError); publish()
     }
     return true
   }
-
-  private func flightEnded(_ outcome: RuntimeOutcome?) {
-    engaged = false
-    flight = nil
+  func stopAll() async {
+    generation &+= 1
+    let pendingPlan = planning, pendingFlight = flight
+    pendingPlan?.cancel(); pendingFlight?.cancel()
+    await pendingPlan?.value; await pendingFlight?.value
+    planning = nil; flight = nil; preparing = false; engaged = false
+    if let io { await io.shutdown(); self.io = nil }
+    connection = "disconnected"
+  }
+  func flightEnded(_ outcome: RuntimeOutcome?, error: String?, generation epoch: UInt64) {
+    guard epoch == generation else { return }
+    engaged = false; flight = nil; io = nil; connection = "disconnected"
     switch outcome {
-    case .complete: phase = "Complete"; status = "Rollout complete"
-    case .aborted, .cancelled: phase = "Abort"; status = "Aborted"
-    case .timedOut: phase = "Abort"; status = "Timed out"
-    case nil: phase = "Fault"; lastError = lastError ?? "Swift flight runtime failed"; status = "Fault"
+    case .complete: phase = "Complete"; status = "Measured touchdown and full rollout complete"
+    case .aborted: phase = "Abort"; status = "Flight executive aborted; inspect the full-rate record"
+    case .cancelled: phase = "Abort"; status = "Cancelled; native controls released"
+    case .timedOut: phase = "Abort"; status = "Mission time limit reached"
+    case nil: phase = "Fault"; status = error ?? "Runtime failed without an outcome"
     }
+    if let error { lastError = error }
     publish()
   }
 }
 
 struct ServerRecorder: TelemetryRecording {
   let server: BackendServer
-  func record(_ record: FlightRecord) async throws { await server.observe(record) }
-  func close() async throws {}
+  let file: SessionTelemetryRecorder
+  func record(_ record: FlightRecord) async throws {
+    try await file.record(record)
+    await server.observe(record)
+  }
+  func close() async throws { try await file.close() }
 }

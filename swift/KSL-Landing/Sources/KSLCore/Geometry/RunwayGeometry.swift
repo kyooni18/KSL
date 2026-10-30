@@ -12,6 +12,17 @@ public struct RunwayGeometry: Codable, Sendable, Equatable {
   public func contains(along: Double, cross: Double, margin: Double = 0) -> Bool {
     along >= margin && along <= length - margin && abs(cross) <= width / 2 - margin
   }
+  public func reciprocal(planet: PlanetConfiguration) -> Self {
+    let frame = RunwayFrame(runway: self, planet: planet)
+    let end = frame.position(along: length, cross: 0, height: 0)
+    let geo = GeodeticPosition(position: end, radius: planet.radius)
+    let reverse = -frame.direction(at: .init(length, 0), tangent: .init(1, 0))
+    var result = self
+    result.latitude = geo.latitude; result.longitude = geo.longitude
+    result.heading = LocalFrame(position: end).heading(of: reverse)
+    result.name = name+" (reciprocal)"
+    return result
+  }
 }
 
 public struct RunwayCoordinates: Codable, Sendable, Equatable {

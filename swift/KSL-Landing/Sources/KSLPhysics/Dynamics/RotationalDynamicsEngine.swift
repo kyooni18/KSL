@@ -4,6 +4,9 @@ import KSLCore
 public struct SurfaceActuatorState: Sendable {
   public var pitch = 0.0, roll = 0.0, yaw = 0.0
   public init() {}
+  public init(command: ControlCommand) {
+    pitch = command.pitch; roll = command.roll; yaw = command.yaw
+  }
   public mutating func advance(command: ControlCommand, dt: Double, rate: Double) {
     pitch = moveToward(pitch, command.pitch, maximumDelta: rate * dt)
     roll = moveToward(roll, command.roll, maximumDelta: rate * dt)
@@ -11,7 +14,7 @@ public struct SurfaceActuatorState: Sendable {
   }
 }
 
-/// Identified q-dependent moments plus rigid-body gyroscopic coupling.
+/// Provisional q-dependent moment plant plus rigid-body gyroscopic coupling.
 /// Unidentified roll/yaw coefficients remain explicit configuration, not hidden assistance.
 public final class RotationalDynamicsEngine: Sendable {
   public let configuration: VehicleConfiguration
@@ -53,5 +56,16 @@ public final class RotationalDynamicsEngine: Sendable {
     return min(
       configuration.maximumAngleOfAttack,
       p.trimAngleOfAttack + 0.92 * authority / (p.pitchStiffnessPerKPa * kPa))
+  }
+  /// Never interpret an inherited STS-N subsonic fit as an identified live
+  /// STS trim limit. Local identified trim may constrain actual guidance.
+  public func supportedTrimAlpha(_ state: VehicleState, identifiedCeiling: Double? = nil) -> Double {
+    if let identifiedCeiling, identifiedCeiling.isFinite { return min(configuration.maximumAngleOfAttack, identifiedCeiling) }
+    let a = state.aerodynamics
+    if state.controlAuthority?.evidence == .provisional && a.mach <= 0.9
+      && (500...12000).contains(a.dynamicPressure) {
+      return maximumTrimAlpha(dynamicPressure: a.dynamicPressure)
+    }
+    return configuration.maximumAngleOfAttack
   }
 }

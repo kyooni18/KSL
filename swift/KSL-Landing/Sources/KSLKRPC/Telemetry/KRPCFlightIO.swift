@@ -9,27 +9,28 @@ public struct KRPCVesselIdentity: Codable, Sendable {
 }
 
 /// Owns discovery references, coherent snapshots and command sequence. Read-only until arm().
-public actor KRPCFlightIO: FlightIO {
+public actor KRPCFlightIO: OrbitalFlightIO {
   private let session: KRPCSession
   private let configuration: MissionConfiguration
   private let airbrakeGroup: UInt32
   private var vessel: UInt64 = 0, control: UInt64 = 0, surfaceFrame: UInt64 = 0, flight: UInt64 = 0,
-    parts: UInt64 = 0, autopilot: UInt64 = 0
+    parts: UInt64 = 0, autopilot: UInt64 = 0, bodyFrame: UInt64 = 0
+  private var wheels = KRPCWheelInventory()
   private var armed = false, busy = false
   private var generation: UInt64 = 0
   private var latest: VehicleState?
   private var sampledAt: ContinuousClock.Instant?
   private var lastSequence: UInt64 = 0
   private var initialPartCount = 0
+  private var partIdentifiers = Set<UInt64>()
+  private var topologyRevision: UInt64 = 0
+  private var anchorPart: UInt64 = 0, anchorFrame: UInt64 = 0
+  private var supportsInertiaTensor = false
+  private var supportsActuatorBreakdown = false
   private var expectedVesselName: String? = "STS"
-  private var autopilotEngaged = false
-  private var slewedTarget: AttitudeTarget?
-  private var slewedAt: Double?
-  private var autopilotFrameSet = false
-  /// Fly the airborne attitude target through the game autopilot (as the proven backend does)
-  /// instead of raw pitch/roll/yaw axes.
-  public var useAutopilotAttitude = true
-  public func setUseAutopilotAttitude(_ value: Bool) { useAutopilotAttitude = value }
+  private var deorbitPlan: DeorbitPlan?
+  private var burnEngines: [UInt64] = []
+  private var burnFinished = false
   public private(set) var identity: KRPCVesselIdentity?
   public init(
     connection: KRPCConnectionConfiguration = .init(),
@@ -54,12 +55,13 @@ public actor KRPCFlightIO: FlightIO {
     defer { busy = false }
     do {
       try await session.connect()
+      let services = try await session.call([.init(service: "KRPC", procedure: "GetServices")])[0]
+      supportsInertiaTensor = services.range(of: Data("Vessel_get_InertiaTensor".utf8)) != nil
+      supportsActuatorBreakdown = services.range(of: Data("Vessel_get_AvailableControlSurfaceTorque".utf8)) != nil
+        && services.range(of: Data("Vessel_get_AvailableReactionWheelTorque".utf8)) != nil
       let first = try await session.call([
         .init(procedure: "get_ActiveVessel"), .init(service: "KRPC", procedure: "GetStatus"),
       ])
-      autopilotEngaged = false
-      autopilotFrameSet = false
-      slewedTarget = nil
       vessel = try KRPCValue.decodeUInt(first[0])
       let status = try Protobuf.decode(first[1])
       let version =
@@ -88,7 +90,7 @@ public actor KRPCFlightIO: FlightIO {
       // A Flight created in the vessel surface frame reports zero velocity because that frame
       // moves with the vessel. This hybrid takes its position and velocity (with the planet's
       // rotation) from the body-fixed frame and its axes from the local up/north/east frame.
-      let bodyFrame = try KRPCValue.decodeUInt(
+      bodyFrame = try KRPCValue.decodeUInt(
         try await session.call([objectCall("CelestialBody_get_ReferenceFrame", body)])[0])
       let hybridFrame = try KRPCValue.decodeUInt(
         try await session.call([
@@ -105,7 +107,12 @@ public actor KRPCFlightIO: FlightIO {
             procedure: "Vessel_Flight",
             arguments: [KRPCValue.uint(vessel), KRPCValue.uint(hybridFrame)])
         ])[0])
-      initialPartCount = try KRPCValue.decodeTuple(refs[1]).count
+      let allParts = try KRPCValue.decodeTuple(refs[1]).map(KRPCValue.decodeUInt)
+      initialPartCount = allParts.count
+      partIdentifiers = Set(allParts); topologyRevision &+= 1
+      anchorPart = try KRPCValue.decodeUInt(try await session.call([objectCall("Parts_get_Root", parts)])[0])
+      anchorFrame = try KRPCValue.decodeUInt(try await session.call([objectCall("Part_get_ReferenceFrame", anchorPart)])[0])
+      wheels = try await KRPCWheelInventory.discover(session: session, parts: allParts)
       guard initialPartCount > 0 else {
         throw FlightError.invalidTelemetry("Active vessel has no parts")
       }
@@ -151,16 +158,15 @@ public actor KRPCFlightIO: FlightIO {
       throw FlightError.disconnected("Connection shut down while arming")
     }
     armed = true
-    autopilotEngaged = false
-    autopilotFrameSet = false
+    deorbitPlan = nil; burnFinished = true
     lastSequence = 0
     latest = nil
     sampledAt = nil
   }
-  private func safetyCalls() -> [KRPCCall] {
+  private func safetyCalls(throttle: Double = 0) -> [KRPCCall] {
     [
       .init(
-        procedure: "Control_set_Throttle", arguments: [KRPCValue.uint(control), KRPCValue.float(0)]),
+        procedure: "Control_set_Throttle", arguments: [KRPCValue.uint(control), KRPCValue.float(Float(throttle))]),
       .init(
         procedure: "Control_set_SAS", arguments: [KRPCValue.uint(control), KRPCValue.bool(false)]),
       .init(
@@ -179,6 +185,31 @@ public actor KRPCFlightIO: FlightIO {
     busy = true
     let operationGeneration = generation
     defer { busy = false }
+    // Refresh topology BEFORE issuing cached wheel-module calls. A released
+    // payload may remove one of those modules; do not dereference stale IDs.
+    let inventory = try await session.call([objectCall("Parts_get_All", parts)])
+    let currentParts = try KRPCValue.decodeTuple(inventory[0]).map(KRPCValue.decodeUInt)
+    let currentIdentifiers = Set(currentParts)
+    guard !currentIdentifiers.isEmpty else { throw FlightError.invalidTelemetry("Vessel has no parts") }
+    if currentIdentifiers != partIdentifiers {
+      if deorbitPlan != nil && !burnFinished {
+        // The active burn certificate binds mass/engine geometry. Do not fly
+        // an obsolete burn plan across staging or a payload release.
+        _ = try await session.call(safetyCalls())
+        throw FlightError.rearmRequired("Vessel topology changed during bound deorbit execution")
+      }
+      wheels = try await KRPCWheelInventory.discover(session: session, parts: currentParts)
+      if !currentIdentifiers.contains(anchorPart) {
+        anchorPart = try KRPCValue.decodeUInt(try await session.call([objectCall("Parts_get_Root", parts)])[0])
+        anchorFrame = try KRPCValue.decodeUInt(try await session.call([objectCall("Part_get_ReferenceFrame", anchorPart)])[0])
+      }
+      partIdentifiers = currentIdentifiers; initialPartCount = currentParts.count
+      topologyRevision &+= 1
+      latest = nil; sampledAt = nil
+      if let old = identity {
+        identity = .init(name: old.name, body: old.body, partCount: currentParts.count, serverVersion: old.serverVersion)
+      }
+    }
     let properties = [
       "Latitude", "Longitude", "MeanAltitude", "Velocity", "SurfaceAltitude", "DynamicPressure",
       "TrueAirSpeed", "SpeedOfSound", "StaticPressure", "StaticAirTemperature", "Lift", "Drag",
@@ -197,8 +228,32 @@ public actor KRPCFlightIO: FlightIO {
         procedure: "Control_GetActionGroup",
         arguments: [KRPCValue.uint(control), KRPCValue.uint(UInt64(airbrakeGroup))]),
       objectCall("Parts_get_All", parts), .init(procedure: "get_ActiveVessel"),
-      objectCall("Control_get_Brakes", control), .init(procedure: "get_UT"),
+      objectCall("Control_get_Brakes", control),
+      objectCall("Vessel_get_AvailableTorque", vessel),
+      objectCall("Vessel_get_MomentOfInertia", vessel),
+      .init(procedure: "Vessel_AngularVelocity",
+            arguments: [KRPCValue.uint(vessel), KRPCValue.uint(bodyFrame)]),
+      .init(procedure: "Vessel_Rotation",
+            arguments: [KRPCValue.uint(vessel), KRPCValue.uint(bodyFrame)]),
+      objectCall("Control_get_Pitch", control), objectCall("Control_get_Roll", control),
+      objectCall("Control_get_Yaw", control),
+      objectCall("Vessel_get_AvailableThrust", vessel), objectCall("Vessel_get_DryMass", vessel),
+      objectCall("Vessel_get_SpecificImpulse", vessel),
     ]
+    let wheelStart = calls.count
+    calls += wheels.calls
+    let wheelEnd = calls.count
+    let centerOfMassIndex = calls.count
+    calls.append(.init(procedure: "Vessel_Position",
+      arguments: [KRPCValue.uint(vessel), KRPCValue.uint(anchorFrame)]))
+    let tensorIndex: Int? = supportsInertiaTensor ? calls.count : nil
+    if supportsInertiaTensor { calls.append(objectCall("Vessel_get_InertiaTensor", vessel)) }
+    let actuatorIndex: Int? = supportsActuatorBreakdown ? calls.count : nil
+    if supportsActuatorBreakdown {
+      calls += [objectCall("Vessel_get_AvailableControlSurfaceTorque", vessel),
+        objectCall("Vessel_get_AvailableReactionWheelTorque", vessel)]
+    }
+    calls.append(.init(procedure: "get_UT"))
     let started = ContinuousClock.now
     let values = try await session.call(calls)
     guard generation == operationGeneration else {
@@ -209,7 +264,7 @@ public actor KRPCFlightIO: FlightIO {
       throw FlightError.staleTelemetry
     }
     let t0 = try KRPCValue.decodeDouble(values[0])
-    let t1 = try KRPCValue.decodeDouble(values[25])
+    let t1 = try KRPCValue.decodeDouble(values[values.count - 1])
     let span = t1 - t0
     guard span >= 0, span <= configuration.guidance.maximumSnapshotSpan else {
       throw FlightError.staleTelemetry
@@ -217,11 +272,8 @@ public actor KRPCFlightIO: FlightIO {
     guard try KRPCValue.decodeUInt(values[23]) == vessel else {
       throw FlightError.invalidTelemetry("Active vessel changed")
     }
-    let partCount = try KRPCValue.decodeTuple(values[22]).count
-    guard partCount == initialPartCount else {
-      throw FlightError.invalidTelemetry(
-        "Vessel part count changed from \(initialPartCount) to \(partCount)")
-    }
+    let finalParts = Set(try KRPCValue.decodeTuple(values[22]).map(KRPCValue.decodeUInt))
+    guard finalParts == partIdentifiers else { throw FlightError.staleTelemetry }
     let latitude = radians(try KRPCValue.decodeDouble(values[1]))
     let longitude = radians(try KRPCValue.decodeDouble(values[2]))
     let altitude = try KRPCValue.decodeDouble(values[3])
@@ -237,18 +289,44 @@ public actor KRPCFlightIO: FlightIO {
       throw FlightError.invalidTelemetry("Invalid kRPC rotation")
     }
     let attitude = KRPCFrameConverter.attitude(raw: raw, at: position)
-    let rates =
-      latest.map {
-        KRPCFrameConverter.measuredBodyRate(
-          previous: $0.attitude, current: attitude, dt: t1 - $0.time)
-      } ?? .zero
+    let bodyQuaternion = try KRPCValue.decodeTuple(values[28], count: 4).map(KRPCValue.decodeDouble)
+    let rates = KRPCFrameConverter.bodyRate(
+      rawAngularVelocity: try KRPCValue.decodeVector(values[27]),
+      rawBodyRotation: .init(w: bodyQuaternion[3], x: bodyQuaternion[0],
+                             y: bodyQuaternion[1], z: bodyQuaternion[2]))
+    let torque = try KRPCValue.decodeTuple(values[25], count: 2).map(KRPCValue.decodeVector)
+    let inertia = try KRPCValue.decodeVector(values[26])
+    func frd(_ v: Vector3) -> Vector3 { .init(v.y, v.x, v.z) }
+    var authority = ControlAuthorityTelemetry(positiveTorque: frd(torque[0]),
+      negativeTorque: frd(torque[1]), inertia: frd(inertia))
+    authority.actuatorSources = "total-vessel-orbital"
+    // RCS stays disabled even during OMS execution. Total vessel torque can
+    // include disabled RCS or unlit-engine gimbals; never feed that optimistic
+    // envelope to the native pointing controller. Surfaces and active powered
+    // reaction wheels are the demonstrated commandable set in every phase.
+    do {
+      if let actuatorIndex {
+        let surfaces = try KRPCValue.decodeTuple(values[actuatorIndex], count: 2).map(KRPCValue.decodeVector)
+        let reaction = try KRPCValue.decodeTuple(values[actuatorIndex+1], count: 2).map(KRPCValue.decodeVector)
+        func magnitude(_ v: Vector3) -> Vector3 { .init(abs(v.x), abs(v.y), abs(v.z)) }
+        authority.positiveTorque = frd(magnitude(surfaces[0])+magnitude(reaction[0]))
+        authority.negativeTorque = -frd(magnitude(surfaces[1])+magnitude(reaction[1]))
+        authority.actuatorSources = "aerodynamic-surfaces+active-powered-reaction-wheels"
+      } else {
+        authority.positiveTorque = .zero; authority.negativeTorque = .zero
+        authority.evidence = .unavailable
+        authority.actuatorSources = "unavailable-with-RCS-and-engine-gimbals-excluded"
+      }
+    }
+    guard authority.isValid else { throw FlightError.invalidTelemetry("Invalid torque/inertia report") }
+    let wheelContact = try wheels.decode(values[wheelStart..<wheelEnd])
     let speed = try KRPCValue.decodeFloat(values[7])
     let q = try KRPCValue.decodeFloat(values[6])
     let sound = try KRPCValue.decodeFloat(values[8])
     let atmosphere = AtmosphericState(
       density: speed > 1 ? 2 * q / (speed * speed) : 0,
       pressure: try KRPCValue.decodeFloat(values[9]),
-      temperature: try KRPCValue.decodeFloat(values[10]), speedOfSound: max(1, sound))
+      temperature: try KRPCValue.decodeFloat(values[10]), speedOfSound: max(1, sound), evidence: .measured)
     let va = velocity.normalized
     let body = attitude.conjugate.rotate(va)
     let windRight = va.cross(position.normalized).normalized
@@ -279,20 +357,40 @@ public actor KRPCFlightIO: FlightIO {
     systems.airbrakes = try KRPCValue.decodeBool(values[21])
     systems.brakes = try KRPCValue.decodeBool(values[24])
     let situation = try KRPCValue.decodeSInt(values[15])
-    let contact: ContactState =
-      situation == 5
-      ? (velocity.length < 0.5 ? .stopped : .rolling) : situation == 6 ? .crashed : .airborne
-    let state = VehicleState(
+    let contact: ContactState
+    if situation == 6 { contact = .crashed }
+    else if wheelContact.mainGear == true {
+      contact = wheelContact.noseGear == true ? (velocity.length < 0.5 ? .stopped : .rolling) : .mainGear
+    } else if wheelContact.mainGear == nil && situation == 5 {
+      contact = velocity.length < 0.5 ? .stopped : .rolling
+    } else { contact = .airborne }
+    let applied = ControlCommand(pitch: try KRPCValue.decodeFloat(values[29]),
+      roll: try KRPCValue.decodeFloat(values[30]), yaw: try KRPCValue.decodeFloat(values[31]),
+      gearDown: systems.gearDown, wheelBrake: systems.brakes ? 1 : 0)
+    var state = VehicleState(
       time: t1, position: position, velocity: velocity, attitude: attitude, angularVelocity: rates,
       mass: try KRPCValue.decodeFloat(values[14]), atmosphere: atmosphere, aerodynamics: aero,
       contact: contact, systems: systems,
-      radarAltitude: try KRPCValue.decodeDouble(values[5]), snapshotSpan: span)
+      radarAltitude: try KRPCValue.decodeDouble(values[5]), snapshotSpan: span,
+      controlAuthority: authority, wheelContact: wheelContact, appliedControls: applied)
+    state.propulsion = .init(availableThrust: try KRPCValue.decodeFloat(values[32]),
+      dryMass: try KRPCValue.decodeFloat(values[33]), specificImpulse: try KRPCValue.decodeFloat(values[34]))
+    var physical = VesselConfigurationTelemetry(revision: topologyRevision, partCount: partIdentifiers.count,
+      anchorPart: anchorPart, centerOfMassFromAnchor: try KRPCValue.decodeVector(values[centerOfMassIndex]),
+      centerOfMassEvidence: .measured, measuredAt: t1)
+    if let tensorIndex {
+      let raw = try KRPCValue.decodeTuple(values[tensorIndex], count: 9).map(KRPCValue.decodeDouble)
+      let permutation = [1, 0, 2]
+      physical.inertiaTensorFRD = permutation.flatMap { i in permutation.map { j in raw[3*i+j] } }
+    }
+    state.vesselConfiguration = physical
     try state.validate(configuration: configuration)
     latest = state
     sampledAt = ended
     return state
   }
   public func apply(_ envelope: CommandEnvelope) async throws {
+    guard deorbitPlan == nil else { throw FlightError.invalidCommand("Complete the orbital-to-entry ownership transfer first") }
     guard armed, !busy, let latest, let sampledAt else {
       throw FlightError.invalidCommand("Not armed or no coherent snapshot")
     }
@@ -305,58 +403,11 @@ public actor KRPCFlightIO: FlightIO {
     defer { busy = false }
     let c = envelope.command
     var calls = safetyCalls()
-    let flyAttitude = useAutopilotAttitude && !latest.contact.isGrounded && envelope.attitude != nil
-    if flyAttitude, let requested = envelope.attitude {
-      let target = slew(requested, time: envelope.stateTime, dynamicPressure: latest.aerodynamics.dynamicPressure)
-      let local = LocalFrame(position: latest.position)
-      // kRPC surface frame components are (up, north, east).
-      func raw(_ v: Vector3) -> Data {
-        KRPCValue.tuple([
-          KRPCValue.double(v.dot(local.up)), KRPCValue.double(v.dot(local.north)),
-          KRPCValue.double(v.dot(local.east)),
-        ])
-      }
-      if !autopilotFrameSet {
-        calls.append(
-          .init(
-            procedure: "AutoPilot_set_ReferenceFrame",
-            arguments: [KRPCValue.uint(autopilot), KRPCValue.uint(surfaceFrame)]))
-      }
-      calls.append(
-        .init(
-          procedure: "AutoPilot_SetDirectionAndUp",
-          arguments: [
-            KRPCValue.uint(autopilot), raw(target.nose), raw(target.roof), KRPCValue.float(0),
-          ]))
-      if !autopilotEngaged {
-        calls.append(
-          .init(
-            procedure: "AutoPilot_set_Engaged",
-            arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(true)]))
-      }
-    } else {
-      if autopilotEngaged {
-        calls.append(
-          .init(
-            procedure: "AutoPilot_set_Engaged",
-            arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)]))
-      }
-      for (name, value) in [
-        ("Pitch", c.pitch), ("Roll", c.roll), ("Yaw", c.yaw), ("WheelSteering", c.wheelSteering),
-      ] {
-        calls.append(
-          .init(
-            procedure: "Control_set_" + name,
-            arguments: [KRPCValue.uint(control), KRPCValue.float(Float(value))]))
-      }
-    }
-    if !flyAttitude {
-      // WheelSteering is already included above on the raw path.
-    } else {
-      calls.append(
-        .init(
-          procedure: "Control_set_WheelSteering",
-          arguments: [KRPCValue.uint(control), KRPCValue.float(Float(c.wheelSteering))]))
+    for (name, value) in [
+      ("Pitch", c.pitch), ("Roll", c.roll), ("Yaw", c.yaw), ("WheelSteering", c.wheelSteering),
+    ] {
+      calls.append(.init(procedure: "Control_set_" + name,
+        arguments: [KRPCValue.uint(control), KRPCValue.float(Float(value))]))
     }
     calls.append(
       .init(
@@ -366,14 +417,19 @@ public actor KRPCFlightIO: FlightIO {
       .init(
         procedure: "Control_set_Brakes",
         arguments: [KRPCValue.uint(control), KRPCValue.bool(c.wheelBrake > 0.5)]))
+    if c.deployParachutes == true {
+      guard latest.wheelContact?.mainGear == true, (5...100).contains(latest.horizontalSpeed) else {
+        throw FlightError.invalidCommand("Rollout parachutes require measured main-wheel contact and 5...100 m/s")
+      }
+      calls.append(.init(procedure: "Control_set_Parachutes",
+        arguments: [KRPCValue.uint(control), KRPCValue.bool(true)]))
+    }
     do {
       _ = try await session.call(calls)
       guard generation == operationGeneration else {
         throw FlightError.disconnected("Connection shut down during command")
       }
       lastSequence = envelope.sequence
-      autopilotFrameSet = autopilotFrameSet || flyAttitude
-      autopilotEngaged = flyAttitude
     } catch {
       // A failed batch leaves the previous control state in KSP; recover() re-asserts safety.
       throw error
@@ -388,54 +444,102 @@ public actor KRPCFlightIO: FlightIO {
       .init(procedure: "Save", arguments: [KRPCValue.string(name)])
     ])
   }
-  /// Limits how fast the commanded attitude moves, tighter as dynamic pressure rises: the game
-  /// autopilot's default gains oscillate on a large step in dense air (observed above ~20 kPa).
-  private func slew(_ requested: AttitudeTarget, time: Double, dynamicPressure q: Double)
-    -> AttitudeTarget
-  {
-    defer { slewedAt = time }
-    guard let previous = slewedTarget, let at = slewedAt, time > at, time - at < 1 else {
-      slewedTarget = requested
-      return requested
-    }
-    // Rate limits come from the identified vehicle plant and guidance configuration, scaled
-    // down by the plant's own dynamic-pressure authority; nothing here is a tuned constant.
-    let plant = configuration.vehicle.controlPlant
-    let slewLimit = min(
-      plant.maximumPitchRate, plant.maximumRollRate, configuration.guidance.alphaSlewRate,
-      configuration.guidance.bankSlewRate)
-    let authority = min(1, max(0, 1 - q / configuration.vehicle.maximumDynamicPressure))
-    let rate = slewLimit * authority  // rad/s
-    func angle(_ a: Vector3, _ b: Vector3) -> Double { acos(max(-1, min(1, a.dot(b)))) }
-    let step = rate * (time - at)
-    let needed = max(angle(previous.nose, requested.nose), angle(previous.roof, requested.roof))
-    let fraction = needed > step ? step / needed : 1
-    let result =
-      fraction >= 1
-      ? requested
-      : AttitudeTarget(
-        nose: (previous.nose * (1 - fraction) + requested.nose * fraction).normalized,
-        roof: (previous.roof * (1 - fraction) + requested.roof * fraction).normalized)
-    slewedTarget = result
-    return result
-  }
   public func assertSafety() async throws {
     guard armed, !busy else { return }
     busy = true
     defer { busy = false }
     _ = try await session.call(safetyCalls())
   }
-  /// Reconnects (fresh handshake and discovery) after a transport fault and re-asserts the
-  /// restrictions; a still-open link only discards the cached snapshot.
+  public func armDeorbit(plan: DeorbitPlan, reducedAssurance: Bool) async throws {
+    try plan.authorize(identifier: plan.identifier, reducedAssurance: reducedAssurance)
+    guard plan.configuration == configuration else { throw FlightError.invalidConfiguration("Deorbit plan/configuration mismatch") }
+    let state = try await readState()
+    guard state.time < plan.window.burnStart, state.position.length-configuration.planet.radius > configuration.planet.atmosphereTop,
+      let propulsion = state.propulsion else { throw FlightError.invalidCommand("Deorbit plan is stale or vessel is already in the atmosphere") }
+    try propulsion.validate(mass: state.mass)
+    let selected = try await discoverBurnEngines()
+    try await arm()
+    burnEngines = selected; deorbitPlan = plan; burnFinished = false
+  }
+  private func discoverBurnEngines() async throws -> [UInt64] {
+    guard identity != nil, !busy else { throw FlightError.invalidCommand("Concurrent OMS discovery") }
+    busy = true
+    let operationGeneration = generation
+    defer { busy = false }
+    // Read existing active rocket engines. Never stage or activate an unrelated engine.
+    let engineRefs = try KRPCValue.decodeTuple(try await session.call([objectCall("Parts_get_Engines", parts)])[0])
+      .map(KRPCValue.decodeUInt)
+    var selected: [UInt64] = []
+    for engine in engineRefs {
+      let values = try await session.call([objectCall("Engine_get_Active", engine),
+        objectCall("Engine_get_AvailableThrust", engine), objectCall("Engine_get_HasFuel", engine)])
+      if try KRPCValue.decodeBool(values[0]) && KRPCValue.decodeFloat(values[1]) > 0 && KRPCValue.decodeBool(values[2]) {
+        selected.append(engine)
+      }
+    }
+    guard generation == operationGeneration else {
+      throw FlightError.rearmRequired("Connection changed during OMS discovery")
+    }
+    guard !selected.isEmpty else { throw FlightError.infeasible("No active, fuelled OMS engine has measured available thrust") }
+    return selected
+  }
+  public func applyOrbital(sequence: UInt64, stateTime: Double, command: OrbitalControlCommand) async throws {
+    guard armed, !busy, let plan = deorbitPlan, command.planID == plan.identifier,
+      let latest, let sampledAt else { throw FlightError.invalidCommand("No bound orbital execution capability") }
+    guard sequence > lastSequence, abs(stateTime-latest.time) < 1e-6,
+      sampledAt.duration(to: .now) <= .seconds(configuration.guidance.maximumTelemetryAge) else { throw FlightError.staleTelemetry }
+    try command.axes.validate(grounded: false)
+    guard command.throttle.isFinite, (0...plan.configuration.deorbitSettings.maximumThrottle).contains(command.throttle) else {
+      throw FlightError.invalidCommand("Throttle exceeds the reviewed plan")
+    }
+    if command.throttle > 0 {
+      guard !burnFinished, stateTime >= plan.window.burnStart,
+        stateTime <= plan.window.burnStart+max(30, 2*plan.window.duration),
+        latest.position.length-configuration.planet.radius > configuration.planet.atmosphereTop else {
+        throw FlightError.invalidCommand("Propulsion outside the bound deorbit window")
+      }
+    }
+    busy = true; let epoch = generation; defer { busy = false }
+    var calls = safetyCalls(throttle: command.throttle)
+    for (name, value) in [("Pitch", command.axes.pitch), ("Roll", command.axes.roll), ("Yaw", command.axes.yaw)] {
+      calls.append(.init(procedure: "Control_set_"+name,
+        arguments: [KRPCValue.uint(control), KRPCValue.float(Float(value))]))
+    }
+    _ = try await session.call(calls)
+    guard generation == epoch else { throw FlightError.rearmRequired("Orbital connection generation changed") }
+    lastSequence = sequence
+  }
+  public func finishDeorbit() async throws {
+    guard armed, !busy, deorbitPlan != nil else { throw FlightError.invalidCommand("No active deorbit ownership") }
+    busy = true; defer { busy = false }
+    let stop = burnEngines.map { KRPCCall(procedure: "Engine_set_Active",
+      arguments: [KRPCValue.uint($0), KRPCValue.bool(false)]) }
+    _ = try await session.call(safetyCalls()+stop)
+    burnFinished = true
+  }
+  public func beginEntry() async throws {
+    guard armed, burnFinished, !busy else { throw FlightError.invalidCommand("OMS shutdown must precede entry transfer") }
+    deorbitPlan = nil; lastSequence = 0; latest = nil; sampledAt = nil
+  }
+  /// A reopened transport never resumes the old controller/plan generation.
+  /// Neutralise the recovered link, then require a new operator engage.
   public func recover() async throws {
     guard !busy else { return }
     latest = nil
     sampledAt = nil
     if await session.isConnected == false {
+      armed = false
+      generation &+= 1
       await session.close()
       identity = nil
       _ = try await connect(expectedVesselName: expectedVesselName)
-      try await assertSafety()
+      let neutral = ["Pitch", "Roll", "Yaw", "WheelSteering"].map {
+        KRPCCall(procedure: "Control_set_" + $0,
+          arguments: [KRPCValue.uint(control), KRPCValue.float(0)])
+      }
+      _ = try await session.call(safetyCalls() + neutral)
+      lastSequence = 0
+      throw FlightError.rearmRequired("kRPC transport reconnected")
     }
   }
   public func shutdown() async {
@@ -449,7 +553,9 @@ public actor KRPCFlightIO: FlightIO {
       let release = KRPCCall(
         procedure: "AutoPilot_set_Engaged",
         arguments: [KRPCValue.uint(autopilot), KRPCValue.bool(false)])
-      _ = try? await session.call([release] + safetyCalls() + neutral)
+      let engineStop = burnEngines.map { KRPCCall(procedure: "Engine_set_Active",
+        arguments: [KRPCValue.uint($0), KRPCValue.bool(false)]) }
+      _ = try? await session.call([release] + safetyCalls() + neutral + engineStop)
       busy = false
     }
     armed = false
@@ -457,6 +563,7 @@ public actor KRPCFlightIO: FlightIO {
     sampledAt = nil
     await session.close()
     identity = nil
+    deorbitPlan = nil; burnEngines = []; burnFinished = true
   }
   /// Reconnection is read-only. A caller must reacquire state and create a fresh runtime before arming.
   public func reconnect(expectedVesselName: String? = "STS") async throws -> KRPCVesselIdentity {

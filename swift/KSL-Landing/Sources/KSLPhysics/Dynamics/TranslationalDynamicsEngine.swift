@@ -22,20 +22,22 @@ public final class TranslationalDynamicsEngine: Sendable {
     self.atmosphere = atmosphere
     self.aerodynamics = aerodynamics
   }
-  public func acceleration(state: KinematicState, time: Double, mass: Double, attitude: Quaternion)
+  public func acceleration(state: KinematicState, time: Double, mass: Double, attitude: Quaternion,
+                           systems: SystemState = .init())
     -> Vector3
   {
     let atm = atmosphere.sample(position: state.position, time: time)
     let aero = aerodynamics.evaluate(
-      position: state.position, velocity: state.velocity, attitude: attitude, atmosphere: atm)
+      position: state.position, velocity: state.velocity, attitude: attitude, atmosphere: atm,
+      gear: systems.gearDown, brakes: systems.brakes, airbrakes: systems.airbrakes)
     return planet.fixedAcceleration(
       position: state.position, velocity: state.velocity, specificForce: aero.force / mass)
   }
   public func step(
-    _ s: KinematicState, time: Double, mass: Double, attitude: Quaternion, dt: Double
+    _ s: KinematicState, time: Double, mass: Double, attitude: Quaternion, dt: Double, systems: SystemState = .init()
   ) -> KinematicState {
     func derivative(_ p: Vector3, _ v: Vector3, _ t: Double) -> Vector3 {
-      acceleration(state: .init(position: p, velocity: v), time: t, mass: mass, attitude: attitude)
+      acceleration(state: .init(position: p, velocity: v), time: t, mass: mass, attitude: attitude, systems: systems)
     }
     let k1p = s.velocity
     let k1v = derivative(s.position, s.velocity, time)

@@ -17,12 +17,24 @@ public final class AerodynamicsEngine: Sendable {
   public let liftScale: Double
   public let dragScale: Double
   public let maximumLiftToDragRatio: Double
+  public let history: HistoricalAerodynamics?
   private let machs: [Double]
   private let alphas: [Double]
   private let liftTable: [[Double]]
   private let dragTable: [[Double]]
+  private init(copy: AerodynamicsEngine, liftMultiplier: Double, dragMultiplier: Double) {
+    referenceArea = copy.referenceArea; history = copy.history
+    machs = copy.machs; alphas = copy.alphas; liftTable = copy.liftTable; dragTable = copy.dragTable
+    liftScale = copy.liftScale * liftMultiplier; dragScale = copy.dragScale * dragMultiplier
+    maximumLiftToDragRatio = copy.maximumLiftToDragRatio * liftMultiplier / dragMultiplier
+  }
+  public func scaled(lift: Double, drag: Double) -> AerodynamicsEngine {
+    precondition(lift.isFinite && drag.isFinite && lift > 0 && drag > 0)
+    return .init(copy: self, liftMultiplier: lift, dragMultiplier: drag)
+  }
   public init(
-    referenceArea: Double = 250, liftScale: Double = 1, dragScale: Double = 1, csv: String? = nil
+    referenceArea: Double = 250, liftScale: Double = 1, dragScale: Double = 1, csv: String? = nil,
+    history: HistoricalAerodynamics? = nil
   ) throws {
     guard referenceArea > 0, liftScale > 0, dragScale > 0 else {
       throw FlightError.invalidConfiguration("Invalid aerodynamic scaling")
@@ -30,6 +42,7 @@ public final class AerodynamicsEngine: Sendable {
     self.referenceArea = referenceArea
     self.liftScale = liftScale
     self.dragScale = dragScale
+    self.history = history
     let contents: String
     if let csv {
       contents = csv
@@ -81,7 +94,14 @@ public final class AerodynamicsEngine: Sendable {
     }
     return (low, clamp((x - xs[low]) / (xs[low + 1] - xs[low]), 0, 1))
   }
-  public func coefficients(mach: Double, alpha: Double) -> AerodynamicCoefficients {
+  public func coefficients(mach: Double, alpha: Double, dynamicPressure q: Double? = nil,
+                           beta: Double = 0, gear: Bool = false, brakes: Bool = false,
+                           airbrakes: Bool = false) -> AerodynamicCoefficients {
+    if let q, let sample = history?.estimate(q: q, mach: mach, alpha: alpha, beta: beta,
+      gear: gear, brakes: brakes, airbrakes: airbrakes) {
+      return .init(lift: sample.forcePerDynamicPressure.y * liftScale / referenceArea,
+                   drag: sample.forcePerDynamicPressure.x * dragScale / referenceArea)
+    }
     let (i, t) = bracket(machs, mach)
     let (j, u) = bracket(alphas, alpha)
     func interpolate(_ table: [[Double]]) -> Double {
@@ -92,7 +112,8 @@ public final class AerodynamicsEngine: Sendable {
       lift: interpolate(liftTable) * liftScale, drag: max(0, interpolate(dragTable) * dragScale))
   }
   public func evaluate(
-    position: Vector3, velocity: Vector3, attitude: Quaternion, atmosphere: AtmosphericState
+    position: Vector3, velocity: Vector3, attitude: Quaternion, atmosphere: AtmosphericState,
+    gear: Bool = false, brakes: Bool = false, airbrakes: Bool = false
   ) -> AerodynamicState {
     let va = velocity - atmosphere.wind
     let speed = va.length
@@ -110,50 +131,69 @@ public final class AerodynamicsEngine: Sendable {
     let bodyUp = attitude.rotate(.init(0, 0, -1))
     result.bank = atan2(bodyUp.dot(windRight), bodyUp.dot(windUp))
     let c = coefficients(mach: result.mach, alpha: result.angleOfAttack)
-    result.lift = result.dynamicPressure * referenceArea * c.lift
-    result.drag = result.dynamicPressure * referenceArea * c.drag
-    let right = attitude.rotate(.init(0, 1, 0))
-    let liftDirection = right.cross(f).normalized
-    let sideForce = right * (-result.dynamicPressure * referenceArea * 0.25 * result.sideslip)
+    let observed = history?.estimate(q: result.dynamicPressure, mach: result.mach,
+      alpha: result.angleOfAttack, beta: result.sideslip, gear: gear, brakes: brakes, airbrakes: airbrakes)
+    result.lift = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.y * liftScale } ?? (referenceArea * c.lift))
+    result.drag = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.x * dragScale } ?? (referenceArea * c.drag))
+    result.modelEvidence = observed == nil ? .provisional : .measured
+    result.modelConfidence = observed?.localityConfidence
+    let liftDirection = windUp * cos(result.bank) + windRight * sin(result.bank)
+    let sideDirection = windRight * cos(result.bank) - windUp * sin(result.bank)
+    let sideMagnitude = observed.map { $0.forcePerDynamicPressure.z * result.dynamicPressure * liftScale }
+      ?? (-result.dynamicPressure * referenceArea * 0.25 * result.sideslip)
+    let sideForce = sideDirection * sideMagnitude
     result.force = liftDirection * result.lift - f * result.drag + sideForce
     return result
   }
   public func liftSolution(
     acceleration: Double, mass: Double, dynamicPressure q: Double, mach: Double,
-    minimumAlpha: Double = 0, maximumAlpha: Double = radians(40)
+    minimumAlpha: Double = 0, maximumAlpha: Double = radians(40),
+    beta: Double = 0, gear: Bool = false, brakes: Bool = false
   ) -> LiftSolution {
     let factor = q * referenceArea / max(1, mass)
-    let knots =
-      ([minimumAlpha] + alphas.filter { $0 > minimumAlpha && $0 < maximumAlpha } + [maximumAlpha])
-      .sorted()
+    let historical = history?.history.samples.map { $0.observation.alpha } ?? []
+    let knots = Array(Set([minimumAlpha, maximumAlpha]
+      + (alphas + historical).filter { $0 > minimumAlpha && $0 < maximumAlpha })).sorted()
+    func lift(_ alpha: Double) -> Double {
+      coefficients(mach: mach, alpha: alpha, dynamicPressure: q, beta: beta,
+        gear: gear, brakes: brakes).lift * factor
+    }
     var maximum = 0.0
     var best = minimumAlpha
     for alpha in knots {
-      let lift = coefficients(mach: mach, alpha: alpha).lift * factor
-      if lift > maximum {
-        maximum = lift
+      let value = lift(alpha)
+      if value > maximum {
+        maximum = value
         best = alpha
       }
     }
     for (a, b) in zip(knots, knots.dropFirst()) {
-      let la = coefficients(mach: mach, alpha: a).lift * factor
-      let lb = coefficients(mach: mach, alpha: b).lift * factor
+      let la = lift(a)
+      let lb = lift(b)
       if acceleration <= la {
         return .init(alpha: a, achievable: true, maximumAcceleration: maximum)
       }
       if lb >= acceleration && lb > la {
-        return .init(
-          alpha: a + (b - a) * (acceleration - la) / (lb - la), achievable: true,
-          maximumAcceleration: maximum)
+        if history == nil {
+          return .init(alpha: a + (b - a) * (acceleration - la) / (lb - la),
+                       achievable: true, maximumAcceleration: maximum)
+        }
+        var low = a, high = b
+        for _ in 0..<20 {
+          let mid = (low + high) / 2
+          if lift(mid) < acceleration { low = mid } else { high = mid }
+        }
+        return .init(alpha: high, achievable: true, maximumAcceleration: maximum)
       }
     }
     return .init(alpha: best, achievable: acceleration <= maximum, maximumAcceleration: maximum)
   }
-  public func bestGlideAlpha(mach: Double, maximumAlpha: Double = radians(30)) -> Double {
+  public func bestGlideAlpha(mach: Double, maximumAlpha: Double = radians(30),
+                             dynamicPressure: Double? = nil, gear: Bool = false) -> Double {
     var best = radians(10)
     var ratio = -Double.infinity
     for a in alphas where a >= 0 && a <= maximumAlpha {
-      let c = coefficients(mach: mach, alpha: a)
+      let c = coefficients(mach: mach, alpha: a, dynamicPressure: dynamicPressure, gear: gear)
       let ld = c.lift / max(c.drag, 1e-8)
       if ld > ratio {
         ratio = ld

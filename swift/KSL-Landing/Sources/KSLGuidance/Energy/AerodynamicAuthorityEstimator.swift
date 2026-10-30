@@ -11,12 +11,15 @@ public final class AerodynamicAuthorityEstimator {
   public private(set) var liftEffectiveness = 1.0
   public private(set) var dragEffectiveness = 1.0
   public init(model: AerodynamicsEngine) { self.model = model }
+  public func reset() { previousTime = nil; liftEffectiveness = 1; dragEffectiveness = 1 }
   public func observe(_ state: VehicleState) {
     let dt = min(1, max(0, state.time - (previousTime ?? state.time)))
     previousTime = state.time
     let a = state.aerodynamics
     guard a.dynamicPressure > 200, a.lift > 1000, !state.contact.isGrounded else { return }
-    let c = model.coefficients(mach: a.mach, alpha: a.angleOfAttack)
+    let c = model.coefficients(mach: a.mach, alpha: a.angleOfAttack,
+      dynamicPressure: a.dynamicPressure, beta: a.sideslip,
+      gear: state.systems.gearDown, brakes: state.systems.brakes, airbrakes: state.systems.airbrakes)
     let scale = a.dynamicPressure * model.referenceArea
     let filter = 1 - exp(-dt / 2)
     if c.lift > 0.05 {

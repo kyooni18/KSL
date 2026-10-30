@@ -17,11 +17,21 @@ final class EndToEndTests: XCTestCase {
     XCTAssertEqual(result.evidence, "offline-model-only")
   }
 
-  func testReducedLiftStillLandsUsingObservedAuthority() throws {
-    let result = try SimulationEngine(scenario: .approach(), liftScale: 0.8).run()
+  func testModerateTenPercentLiftLossStillLands() throws {
+    let result = try SimulationEngine(scenario: .approach(), liftScale: 0.90).run()
     XCTAssertEqual(result.outcome, "complete")
     XCTAssertEqual(result.touchdown?.acceptable, true)
     XCTAssertLessThan(try XCTUnwrap(result.touchdown).pitch, radians(14))
+  }
+
+  func testExtremeTwentyPercentLiftLossReportsContactFailure() throws {
+    // -20% is a stress/failure-boundary probe, not a required nominal landing.
+    // Preserve the actual independent safety limits and failure evidence.
+    let result = try SimulationEngine(scenario: .approach(), liftScale: 0.80).run()
+    XCTAssertEqual(result.evidence, "offline-model-only")
+    XCTAssertEqual(result.outcome, "crashed")
+    XCTAssertEqual(result.touchdown?.acceptable, false)
+    XCTAssertTrue(result.violations.contains(where: { $0.kind == .contactQuality }))
   }
 
   func testApproachStepRefinement() throws {

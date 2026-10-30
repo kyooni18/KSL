@@ -6,15 +6,17 @@ public struct AtmosphericState: Codable, Sendable, Equatable {
   public var temperature: Double
   public var speedOfSound: Double
   public var wind: Vector3
+  public var evidence: EvidenceKind?
   public init(
     density: Double = 0, pressure: Double = 0, temperature: Double = 186.946,
-    speedOfSound: Double = 274, wind: Vector3 = .zero
+    speedOfSound: Double = 274, wind: Vector3 = .zero, evidence: EvidenceKind? = nil
   ) {
     self.density = density
     self.pressure = pressure
     self.temperature = temperature
     self.speedOfSound = speedOfSound
     self.wind = wind
+    self.evidence = evidence
   }
 }
 
@@ -29,6 +31,8 @@ public struct AerodynamicState: Codable, Sendable, Equatable {
   public var drag: Double = 0
   public var force: Vector3 = .zero
   public var measuredForces: Bool = false
+  public var modelEvidence: EvidenceKind?
+  public var modelConfidence: Double?
   public init() {}
 }
 
@@ -64,12 +68,20 @@ public struct VehicleState: Codable, Sendable, Equatable {
   public var systems: SystemState
   public var radarAltitude: Double
   public var snapshotSpan: Double
+  public var controlAuthority: ControlAuthorityTelemetry?
+  public var wheelContact: WheelContactTelemetry?
+  public var appliedControls: ControlCommand?
+  public var propulsion: PropulsionTelemetry?
+  /// Additive topology and CoM evidence; absent in archived FlightRecords.
+  public var vesselConfiguration: VesselConfigurationTelemetry?
   public init(
     time: Double, position: Vector3, velocity: Vector3, attitude: Quaternion,
     angularVelocity: Vector3 = .zero, mass: Double = 25_000,
     atmosphere: AtmosphericState = .init(), aerodynamics: AerodynamicState = .init(),
     contact: ContactState = .airborne, systems: SystemState = .init(),
-    radarAltitude: Double = 0, snapshotSpan: Double = 0
+    radarAltitude: Double = 0, snapshotSpan: Double = 0,
+    controlAuthority: ControlAuthorityTelemetry? = nil,
+    wheelContact: WheelContactTelemetry? = nil, appliedControls: ControlCommand? = nil
   ) {
     self.time = time
     self.position = position
@@ -83,6 +95,10 @@ public struct VehicleState: Codable, Sendable, Equatable {
     self.systems = systems
     self.radarAltitude = radarAltitude
     self.snapshotSpan = snapshotSpan
+    self.controlAuthority = controlAuthority
+    self.wheelContact = wheelContact
+    self.appliedControls = appliedControls
+    vesselConfiguration = nil
   }
   public var localFrame: LocalFrame { .init(position: position) }
   public var verticalSpeed: Double { velocity.dot(position.normalized) }
@@ -113,7 +129,8 @@ public struct VehicleState: Codable, Sendable, Equatable {
       aerodynamics.force.isFinite,
       atmosphere.pressure >= 0, atmosphere.temperature > 0, atmosphere.speedOfSound > 0,
       atmosphere.wind.isFinite,
-      systems.throttle >= 0, systems.throttle <= 1, systems.thrust >= 0
+      systems.throttle >= 0, systems.throttle <= 1, systems.thrust >= 0,
+      vesselConfiguration?.isCoherent ?? true
     else {
       throw FlightError.invalidTelemetry("Nonfinite, incoherent, or nonphysical flight snapshot")
     }

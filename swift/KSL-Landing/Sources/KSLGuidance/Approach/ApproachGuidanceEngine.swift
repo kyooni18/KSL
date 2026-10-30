@@ -9,19 +9,30 @@ public final class ApproachGuidanceEngine {
   private let aerodynamics: AerodynamicsEngine
   private let rotation: RotationalDynamicsEngine
   private let energy: EnergyManagementEngine
+  private let flare: TerminalFlareController
+  private let outer: TerminalEnergyGuide
+  private let externalPlanning: Bool
   private var capture: ApproachCapture?
   public private(set) var lastCaptureAssessment: TerminalAssessment?
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
-    aerodynamics: AerodynamicsEngine
+    aerodynamics: AerodynamicsEngine, externalPlanning: Bool = false
   ) {
     self.configuration = configuration
+    self.externalPlanning = externalPlanning
     profile = .init(configuration: configuration)
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     self.aerodynamics = aerodynamics
+    flare = .init(configuration: configuration, aerodynamics: aerodynamics)
+    outer = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     rotation = .init(configuration: configuration.vehicle)
     energy = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
   }
+  /// Preserve captured geometry and flare latches; only the old prediction
+  /// and energy-recovery evidence belong to the previous payload state.
+  public func invalidatePrediction() { outer.invalidatePrediction() }
+  public func planningRequest() -> ApproachPlanningRequest? { outer.request() }
+  public func accept(_ proposal: ApproachPlanningProposal) { outer.accept(proposal) }
   public func canCapture(_ state: VehicleState) -> Bool {
     let p = frame.coordinates(of: state.position)
     let reference = profile.reference(along: p.along)
@@ -32,7 +43,7 @@ public final class ApproachGuidanceEngine {
       abs(state.aerodynamics.bank) < radians(25),
       p.height > configuration.vehicle.gearHeight,
       abs(p.height - reference.height) < max(220, reference.height * 0.2),
-      state.aerodynamics.airspeed < 260
+      state.aerodynamics.airspeed <= (configuration.guidance.finalAlignmentSpeed ?? 260)
     else { return false }
     let candidate = ApproachCapture(
       profile: profile, along: p.along, height: p.height, slope: tan(state.flightPathAngle))
@@ -48,7 +59,8 @@ public final class ApproachGuidanceEngine {
   }
 
   public func update(
-    _ state: VehicleState, previousPhase: MissionPhase, liftEffectiveness: Double = 1
+    _ state: VehicleState, previousPhase: MissionPhase, liftEffectiveness: Double = 1, dragEffectiveness: Double = 1,
+    pitchResponseSeconds: Double? = nil, identifiedTrimCeiling: Double? = nil
   ) -> GuidanceSolution {
     let p = frame.coordinates(of: state.position)
     let c = configuration.guidance
@@ -60,40 +72,50 @@ public final class ApproachGuidanceEngine {
     let ref = capture!.reference(along: p.along)
     let speed = max(1, state.aerodynamics.airspeed)
     let vh = max(20, state.horizontalSpeed)
-    var phase: MissionPhase = p.along >= profile.preflareAlong - 100 ? .preflare : .approach
-    if p.height <= c.flareHeight && p.along > profile.preflareAlong || previousPhase == .flare {
-      phase = .flare
-    }
+    let response = pitchResponseSeconds ?? (2 * 1.15 / (1.05 * 1.10) + 0.12)
+    var maxAlpha = min(v.maximumLandingAngleOfAttack,
+      rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling))
+    let flareReference = flare.update(state, liftEffectiveness: liftEffectiveness,
+      responseSeconds: response, maximumAlpha: maxAlpha)
+    let phase: MissionPhase = flareReference.latched
+      ? (flareReference.wheelHeight <= 12 ? .flare : .preflare) : .approach
     let forward = frame.direction(at: p.horizontal, tangent: .init(1, 0))
     let headingError = wrapAngle(state.localFrame.heading(of: forward) - state.course)
     let lateral = 2 * 0.9 / 5 * vh * sin(headingError) - p.cross / 25
     let g = configuration.planet.gravitationalParameter / pow(state.position.length, 2)
-    var desiredVertical: Double
-    var verticalFeedforward = 0.0
-    if phase == .flare {
-      desiredVertical = -clamp(0.11 * max(0, p.height - v.gearHeight) + 1, 1, 3)
+    let desiredVertical: Double
+    let vertical: Double
+    let energyReference = flareReference.arcActive ? nil : outer.update(state, flare: flareReference,
+      maximumAlpha: maxAlpha, lift: liftEffectiveness, drag: dragEffectiveness, synchronousPlanning: !externalPlanning)
+    let desiredSpeed = energyReference?.desiredSpeed ?? v.landingSpeed
+    if flareReference.arcActive {
+      desiredVertical = -flareReference.desiredSink
+      // Convert vertical acceleration to wind-normal lift; at a steep glide
+      // vertical and normal acceleration cannot be used interchangeably.
+      vertical = (g - vh*vh/state.position.length + flareReference.upwardAcceleration
+        + state.aerodynamics.drag/state.mass*sin(state.flightPathAngle))
+        / max(0.3, cos(state.flightPathAngle))
     } else {
-      let speedCorrection = clamp((speed - profile.speed(along: p.along)) * 0.0008, -0.035, 0.035)
-      desiredVertical =
-        speed * sin(atan(ref.slope) + speedCorrection) + clamp((ref.height - p.height) / 7, -30, 30)
-      let preview = capture!.reference(along: p.along + vh * 1.0)
-      verticalFeedforward =
-        speed * speed * preview.secondDerivative / pow(1 + preview.slope * preview.slope, 1.5)
+      let gamma = energyReference?.flightPath ?? atan(ref.slope)
+      desiredVertical = speed*sin(gamma)
+      vertical = (g-vh*vh/state.position.length + (desiredVertical-state.verticalSpeed)/3
+        + state.aerodynamics.drag/state.mass*sin(state.flightPathAngle))
+        / max(0.3, cos(state.flightPathAngle))
     }
-    let tau = phase == .flare ? 1.4 : 3.0
-    let vertical =
-      (g - vh * vh / state.position.length) * cos(state.flightPathAngle)
-      + (desiredVertical - state.verticalSpeed) / tau + verticalFeedforward
     let bankLimit = p.height < 150 ? radians(8) : radians(25)
     let bank = clamp(atan2(lateral, max(2, vertical)), -bankLimit, bankLimit)
     let required = clamp(vertical / max(0.5, cos(bank)), 0, 9.80665 * v.maximumLoadFactor)
-    let maxAlpha = min(
-      v.maximumLandingAngleOfAttack,
-      rotation.maximumTrimAlpha(dynamicPressure: state.aerodynamics.dynamicPressure))
+    if phase == .flare {
+      // AoA is not touchdown pitch. Reserve the observed pitch-rate travel
+      // during actuator lag before the structural touchdown attitude limit.
+      let pitchReserve = max(0, state.angularVelocity.y) * 0.12
+      maxAlpha = min(maxAlpha, v.maximumTouchdownPitch - state.flightPathAngle - pitchReserve)
+    }
     let lift = aerodynamics.liftSolution(
       acceleration: required / max(0.5, liftEffectiveness), mass: state.mass,
       dynamicPressure: state.aerodynamics.dynamicPressure,
-      mach: state.aerodynamics.mach, minimumAlpha: v.minimumAngleOfAttack, maximumAlpha: maxAlpha)
+      mach: state.aerodynamics.mach, minimumAlpha: v.minimumAngleOfAttack, maximumAlpha: maxAlpha,
+      beta: state.aerodynamics.sideslip, gear: state.systems.gearDown)
     var violations: [ConstraintViolation] = []
     if !lift.achievable {
       violations.append(
@@ -104,12 +126,26 @@ public final class ApproachGuidanceEngine {
     if p.along > configuration.runway.length - 200 && !state.contact.isGrounded {
       violations.append(.init(.runwayExcursion, "No usable runway remains ahead"))
     }
-    return .init(
+    var diagnostics = ApproachDiagnostics()
+    diagnostics.wheelHeight = flareReference.wheelHeight; diagnostics.along = p.along
+    diagnostics.preflareLatched = flareReference.latched; diagnostics.arcActive = flareReference.arcActive
+    diagnostics.triggerHeight = flareReference.triggerHeight; diagnostics.desiredSink = flareReference.desiredSink
+    diagnostics.pullAcceleration = flareReference.upwardAcceleration; diagnostics.availablePull = flareReference.availablePull
+    diagnostics.oneGravitySpeed = flareReference.oneGravitySpeed.isFinite ? flareReference.oneGravitySpeed : nil
+    diagnostics.predictedTouchdownAlong = energyReference?.predictedTouchdownAlong
+    diagnostics.predictedTouchdownSpeed = energyReference?.predictedTouchdownSpeed
+    diagnostics.requiredNormalAcceleration = required
+    diagnostics.liftEffectiveness = liftEffectiveness; diagnostics.dragEffectiveness = dragEffectiveness
+    var result = GuidanceSolution(
       phase: phase,
       target: .init(
-        angleOfAttack: lift.alpha, bank: bank, desiredSpeed: profile.speed(along: p.along),
+        angleOfAttack: lift.alpha, bank: bank, desiredSpeed: flareReference.arcActive ? v.landingSpeed : desiredSpeed,
         desiredHeight: ref.height,
-        desiredFlightPath: atan2(desiredVertical, vh), gearDown: true), violations: violations,
+        desiredFlightPath: atan2(desiredVertical, vh),
+        gearDown: state.systems.gearDown || flareReference.latched
+          || p.height <= (c.gearDeploymentAltitude ?? 1500)), violations: violations,
       pathRemaining: max(0, c.touchdownAlong - p.along))
+    result.approach = diagnostics
+    return result
   }
 }

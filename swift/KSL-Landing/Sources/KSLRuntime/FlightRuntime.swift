@@ -1,6 +1,7 @@
 import Foundation
 import KSLCore
 import KSLDiagnostics
+import KSLGuidance
 import KSLPhysics
 
 public enum RuntimeOutcome: String, Codable, Sendable {
@@ -13,13 +14,23 @@ public actor FlightRuntime {
   private let io: any FlightIO
   private let recorder: any TelemetryRecording
   private let computer: FlightComputer
+  private let planner: MissionPlanningWorker
+  private var planningTask: Task<Void, Never>?
+  private var completedPlan: RecordedPlanningProposal?
+  private var planningError: String?
+  private var generation: UInt64 = 0
+  private var planningPhase: MissionPhase?
+  private var planningTaskGeneration: UInt64?
+  private var dynamicsRevision: UInt64 = 0
   private let interval: Double
   private var running = false
   /// Longest tolerated link/telemetry outage, paused-game wait, and forbidden-system persistence.
   private let maximumOutage: Double, maximumPause: Double, maximumUnsafe: Double
   public init(
     io: any FlightIO, recorder: any TelemetryRecording, configuration: MissionConfiguration,
-    maximumOutage: Double = 20, maximumPause: Double = 600, maximumUnsafe: Double = 3
+    maximumOutage: Double = 20, maximumPause: Double = 600, maximumUnsafe: Double = 3,
+    aerodynamics: AerodynamicsEngine? = nil, initialPhase: MissionPhase = .entry,
+    initialPlan: TerminalPlan? = nil
   ) throws {
     self.maximumOutage = maximumOutage
     self.maximumPause = maximumPause
@@ -28,22 +39,27 @@ public actor FlightRuntime {
     self.recorder = recorder
     interval = configuration.guidance.controlInterval
     let atmosphere = try AtmosphericModelEngine(planet: configuration.planet)
-    let aerodynamics = try AerodynamicsEngine(referenceArea: configuration.vehicle.referenceArea)
+    let aerodynamics = try aerodynamics ?? AerodynamicsEngine(referenceArea: configuration.vehicle.referenceArea)
     computer = try .init(
-      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics,
+      externalPlanning: true, initialPhase: initialPhase, initialPlan: initialPlan)
+    planner = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
   }
   public func run(maximumDuration: Double = 2400, realTime: Bool = true) async throws
     -> RuntimeOutcome
   {
     guard !running else { throw FlightError.invalidCommand("Runtime already running") }
     running = true
+    generation += 1
     do {
       let result = try await execute(maximumDuration: maximumDuration, realTime: realTime)
+      await cancelPlanning()
       await io.shutdown()
       try await recorder.close()
       running = false
       return result
     } catch {
+      await cancelPlanning()
       let io = self.io
       let recorder = self.recorder
       // A bounded, explicitly awaited cleanup task is intentionally not a
@@ -59,6 +75,49 @@ public actor FlightRuntime {
       throw error
     }
   }
+  private func cancelPlanning() async {
+    generation += 1
+    let task = planningTask
+    task?.cancel()
+    await task?.value
+    planningTask = nil; completedPlan = nil; planningError = nil
+  }
+  private func receive(_ proposal: RecordedPlanningProposal?, error: String? = nil, generation: UInt64) {
+    guard planningTaskGeneration == generation else { return }
+    planningTask = nil; planningTaskGeneration = nil
+    guard running, generation == self.generation else { return }
+    completedPlan = proposal
+    planningError = error
+  }
+  private func schedulePlanning(from state: VehicleState) throws -> Data? {
+    computer.observeConfiguration(state)
+    if dynamicsRevision != computer.dynamicsRevision {
+      dynamicsRevision = computer.dynamicsRevision
+      generation &+= 1; planningTask?.cancel()
+      completedPlan = nil; planningError = nil
+    }
+    if let planningError { throw FlightError.io("Planning proposal could not be recorded: \(planningError)") }
+    var accepted: Data?
+    if let proposal = completedPlan {
+      computer.accept(proposal.proposal, state: state)
+      accepted = proposal.encoded
+      completedPlan = nil
+    }
+    if planningTask != nil && planningPhase != computer.mission.phase { planningTask?.cancel(); return accepted }
+    guard planningTask == nil, let request = computer.planningRequest(from: state) else { return accepted }
+    planningPhase = computer.mission.phase
+    let epoch = generation, worker = planner
+    planningTaskGeneration = epoch
+    planningTask = Task { [weak self] in
+      do {
+        let proposal = try await worker.recordedPlan(request)
+        await self?.receive(Task.isCancelled ? nil : proposal, generation: epoch)
+      } catch {
+        await self?.receive(nil, error: Task.isCancelled ? nil : String(describing: error), generation: epoch)
+      }
+    }
+    return accepted
+  }
   private func note(_ message: String) {
     FileHandle.standardError.write(Data(("ksl-landing: " + message + "\n").utf8))
   }
@@ -72,13 +131,20 @@ public actor FlightRuntime {
     var heldAttitude: AttitudeTarget?
     var pausedNoted = false
     var faults = 0
+    var previousWallTick: ContinuousClock.Instant?
+    var missedDeadlines: UInt64 = 0
+    func seconds(_ duration: Duration) -> Double {
+      let p = duration.components
+      return Double(p.seconds) + Double(p.attoseconds) / 1e18
+    }
     while true {
       try Task.checkCancellation()
       let tick = clock.now
       do {
         let state = try await io.readState()
+        let acquired = clock.now
         if let lastTime, state.time < lastTime - 1e-6 {
-          throw FlightError.invalidTelemetry("Time moved backwards (revert or quickload)")
+          throw FlightError.rearmRequired("Time moved backwards (revert or quickload)")
         }
         if start == nil { start = state.time }
         if state.time - start! > maximumDuration { return .timedOut }
@@ -108,9 +174,13 @@ public actor FlightRuntime {
           continue
         }
         unsafeSince = nil
+        let simulationInterval = lastTime.map { state.time - $0 } ?? interval
         lastTime = state.time
         lastFresh = clock.now
-        let record = try computer.step(state)
+        let acceptedPlanning = try schedulePlanning(from: state)
+        var record = try computer.step(state)
+        record.planningProposal = acceptedPlanning
+        let computed = clock.now
         try Task.checkCancellation()
         // On abort keep flying the last good attitude rather than snapping to 0/0.
         let attitude =
@@ -121,6 +191,16 @@ public actor FlightRuntime {
           .init(
             sequence: record.sequence, stateTime: state.time, command: record.command,
             attitude: attitude))
+        let applied = clock.now
+        let elapsed = seconds(tick.duration(to: applied))
+        if elapsed > interval { missedDeadlines += UInt64(floor(elapsed / interval)) }
+        record.timing = .init(simulationInterval: simulationInterval,
+          acquisitionSeconds: seconds(tick.duration(to: acquired)),
+          computationSeconds: seconds(acquired.duration(to: computed)),
+          commandSeconds: seconds(computed.duration(to: applied)),
+          wallInterval: previousWallTick.map { seconds($0.duration(to: tick)) } ?? 0,
+          missedDeadlines: missedDeadlines)
+        previousWallTick = tick
         try await recorder.record(record)
         if outageSince != nil { note("link recovered after \(faults) fault(s)") }
         outageSince = nil

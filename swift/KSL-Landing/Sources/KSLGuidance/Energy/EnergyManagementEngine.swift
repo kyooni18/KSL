@@ -63,8 +63,10 @@ public final class EnergyManagementEngine {
       let lateral = vh * vh * s.curvature
       let bank = atan2(lateral, max(0.1, vertical))
       let required = hypot(vertical, lateral)
+      let supportedPrior = initial.controlAuthority?.evidence == .provisional
+        && speed/atm.speedOfSound <= 0.9 && (500...12000).contains(q)
       let maxAlpha = min(
-        rotation.maximumTrimAlpha(dynamicPressure: q),
+        supportedPrior ? rotation.maximumTrimAlpha(dynamicPressure: q) : v.maximumAngleOfAttack,
         s.height < 500 ? v.maximumLandingAngleOfAttack : v.maximumAngleOfAttack)
       let lift = aero.liftSolution(
         acceleration: required / max(0.01, liftMultiplier), mass: initial.mass, dynamicPressure: q,
@@ -102,6 +104,11 @@ public final class EnergyManagementEngine {
       if s.height < v.gearHeight - 0.1 {
         violations.append(.init(.terrainCollision, "Vertical path penetrates runway plane"))
       }
+      if s.segment != .final, let maximumGlide = configuration.guidance.taemGlideAngle,
+        -gamma > max(maximumGlide, configuration.guidance.outerGlideAngle) {
+        violations.append(.init(.invalidGeometry, "Terminal path exceeds configured glide-slope envelope",
+          value: -gamma, limit: max(maximumGlide, configuration.guidance.outerGlideAngle)))
+      }
       result.append(
         .init(
           distance: s.distance, position: s.position, tangent: s.tangent, curvature: s.curvature,
@@ -114,13 +121,16 @@ public final class EnergyManagementEngine {
         let dt = ds / max(5, vh)
         if i > 1
           && abs(wrapAngle(bank - previousBank)) / max(dt, 0.01)
-            > min(v.controlPlant.maximumRollRate, configuration.guidance.bankSlewRate * 0.85)
+            > min(v.controlPlant.maximumRollRate,
+              (s.segment == .final ? configuration.guidance.approachRollRate : configuration.guidance.terminalRollRate)
+                ?? configuration.guidance.bankSlewRate) * 0.85
         {
           violations.append(
             .init(.actuatorAuthority, "Path bank-rate demand exceeds identified response"))
           return (result, finish(speed))
         }
-        let coefficient = aero.coefficients(mach: speed / atm.speedOfSound, alpha: lift.alpha)
+        let coefficient = aero.coefficients(mach: speed / atm.speedOfSound, alpha: lift.alpha,
+          dynamicPressure: q, gear: s.segment == .final)
         let drag = q * v.referenceArea * coefficient.drag * dragMultiplier / initial.mass
         let work = drag * ds / max(0.2, cos(gamma))
         let potential =

@@ -8,9 +8,10 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   public let gearDown: Bool
   public let wheelBrake: Double
   public let wheelSteering: Double
+  public let deployParachutes: Bool?
   public init(
     pitch: Double = 0, roll: Double = 0, yaw: Double = 0, gearDown: Bool = false,
-    wheelBrake: Double = 0, wheelSteering: Double = 0
+    wheelBrake: Double = 0, wheelSteering: Double = 0, deployParachutes: Bool? = nil
   ) {
     self.pitch = pitch
     self.roll = roll
@@ -18,6 +19,7 @@ public struct ControlCommand: Codable, Sendable, Equatable {
     self.gearDown = gearDown
     self.wheelBrake = wheelBrake
     self.wheelSteering = wheelSteering
+    self.deployParachutes = deployParachutes
   }
   public var throttle: Double { 0 }
   public var sas: Bool { false }
@@ -25,7 +27,8 @@ public struct ControlCommand: Codable, Sendable, Equatable {
   public var airbrakes: Bool { false }
   public func validate(grounded: Bool) throws {
     guard [pitch, roll, yaw, wheelSteering].allSatisfy({ $0.isFinite && abs($0) <= 1 }),
-      wheelBrake.isFinite, (0...1).contains(wheelBrake), grounded || wheelBrake == 0
+      wheelBrake.isFinite, (0...1).contains(wheelBrake), grounded || wheelBrake == 0,
+      grounded || deployParachutes != true
     else {
       throw FlightError.invalidCommand("Nonfinite/out-of-range controls or airborne wheel braking")
     }
@@ -46,8 +49,7 @@ public struct CommandEnvelope: Sendable {
   public let sequence: UInt64
   public let stateTime: Double
   public let command: ControlCommand
-  /// Optional attitude form of the same guidance target; live adapters may fly this through
-  /// the game's autopilot instead of raw axes.
+  /// Diagnostic attitude form of the guidance target. Actuation always uses native axis commands.
   public let attitude: AttitudeTarget?
   public init(
     sequence: UInt64, stateTime: Double, command: ControlCommand, attitude: AttitudeTarget? = nil
@@ -68,6 +70,7 @@ public enum FlightError: Error, Sendable, CustomStringConvertible {
   case deadlineExceeded, staleTelemetry
   case infeasible(String)
   case io(String)
+  case rearmRequired(String)
   /// Faults that a link or game hiccup can cause and that a retry can clear. Identity changes
   /// (another vessel, different parts or planet), time reversal and bad commands stay fatal.
   public var isRecoverable: Bool {
@@ -76,7 +79,7 @@ public enum FlightError: Error, Sendable, CustomStringConvertible {
     case .invalidTelemetry(let s):
       !(s.hasPrefix("Active vessel") || s.hasPrefix("Vessel part count")
         || s.hasPrefix("Planet") || s.hasPrefix("Time moved backwards"))
-    case .invalidConfiguration, .invalidCommand, .protocolViolation, .infeasible: false
+    case .invalidConfiguration, .invalidCommand, .protocolViolation, .infeasible, .rearmRequired: false
     }
   }
   public var description: String {
@@ -90,6 +93,7 @@ public enum FlightError: Error, Sendable, CustomStringConvertible {
     case .staleTelemetry: "Telemetry stale or time discontinuity"
     case .infeasible(let s): "Infeasible: \(s)"
     case .io(let s): "I/O: \(s)"
+    case .rearmRequired(let s): "Control disarmed; fresh engage required: \(s)"
     }
   }
 }

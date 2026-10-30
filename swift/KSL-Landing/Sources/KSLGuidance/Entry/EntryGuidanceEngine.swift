@@ -1,178 +1,125 @@
 import Foundation
+import KSLControl
 import KSLCore
 import KSLPhysics
 
-/// Receding-horizon search over a continuous lift-allocation parameter.
-/// Lateral feedback is evaluated inside every candidate rollout, not frozen at t0.
+public struct EntryPlanningRequest: Sendable {
+  public let state: VehicleState
+  public let controls: FlightControlSnapshot?
+  let memory: EntryLawMemory
+  let rangeMultiplier: Double
+  let previousTarget: GuidanceTarget?
+  let environment: EnvironmentCalibration
+}
+public struct EntryPlanningProposal: Codable, Sendable {
+  public let createdAt: Double
+  public let rangeMultiplier: Double
+  public let prediction: TrajectoryPrediction?
+  public let candidates: Int
+  public let terminalRouteFeasible: Bool
+}
+
+/// Fast C-derived MM304 feedback owns commands. Expensive closed-loop forecasts
+/// propose a bounded range correction; they never directly overwrite actuators.
 public final class EntryGuidanceEngine {
   private let configuration: MissionConfiguration
   private let predictor: TrajectoryPropagationEngine
-  private let aerodynamics: AerodynamicsEngine
-  private let rotation: RotationalDynamicsEngine
-  private let frame: RunwayFrame
+  private let law: EntryCommandLaw
   private let terminalPlanner: HACPlanningEngine
+  private let frame: RunwayFrame
+  private var rangeMultiplier = 1.0
   private var lastSolve = -Double.infinity
-  private var allocation = 0.25
-  private var bankSign = 1.0
-  private var lastReversal = -Double.infinity
-  public private(set) var reversalCount = 0
   public private(set) var bestPrediction: TrajectoryPrediction?
   public private(set) var candidateCount = 0
-  public init(
-    configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
-    aerodynamics: AerodynamicsEngine
-  ) {
+  public var reversalCount: Int { law.memory.lateral.reversals }
+  public var diagnostics: EntryDiagnostics { law.diagnostics }
+  public var environment = EnvironmentCalibration()
+  public init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
+              aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration
-    self.aerodynamics = aerodynamics
-    terminalPlanner = .init(
-      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
-    predictor = .init(
-      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
-    rotation = .init(configuration: configuration.vehicle)
+    law = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    predictor = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    terminalPlanner = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     frame = .init(runway: configuration.runway, planet: configuration.planet)
   }
-  private func steering(_ s: VehicleState, allocation: Double, preferredSign: Double)
-    -> PredictionAttitude
-  {
-    let v = configuration.vehicle
-    let speed = s.aerodynamics.airspeed
-    let target = frame.position(
-      along: -configuration.guidance.finalDistance - 12_000, cross: 0, height: 0)
-    let bearing = frame.bearing(from: s.position, to: target)
-    let error = wrapAngle(bearing - s.course)
-    let alphaGlide = aerodynamics.bestGlideAlpha(
-      mach: s.aerodynamics.mach, maximumAlpha: v.maximumAngleOfAttack)
-    let nominal = radians(clamp(15 + (speed - 650) / 90, 15, 35))
-    var alpha = allocation < 0 ? nominal + (-allocation) * (alphaGlide - nominal) : nominal
-    alpha = min(alpha, rotation.maximumTrimAlpha(dynamicPressure: s.aerodynamics.dynamicPressure))
-    let deadband = radians(clamp(3 + speed / 180, 4, 16))
-    let sign = abs(error) > deadband ? (error < 0 ? -1.0 : 1.0) : preferredSign
-    let headingBank = clamp(abs(error) * 0.65, 0, v.maximumBank)
-    let energyBank = max(0, allocation) * v.maximumBank
-    let bank = sign * max(headingBank, energyBank)
-    return .init(alpha: alpha, bank: bank)
+  public func request(from state: VehicleState, controls: FlightControlSnapshot? = nil,
+                      previousTarget: GuidanceTarget? = nil) -> EntryPlanningRequest? {
+    guard state.time - lastSolve >= configuration.guidance.entryReplanInterval else { return nil }
+    lastSolve = state.time
+    return .init(state: state, controls: controls, memory: law.memory, rangeMultiplier: rangeMultiplier,
+      previousTarget: previousTarget, environment: environment)
   }
-  /// Bank reversals only make sense once the airframe can actually realize the commanded
-  /// attitude: below that dynamic pressure the plant cannot trim the nominal alpha, a bank
-  /// swing produces no lateral lift, and reversing only flips the attitude for nothing.
-  private func hasControlAuthority(_ s: VehicleState) -> Bool {
-    let nominal = radians(clamp(15 + (s.aerodynamics.airspeed - 650) / 90, 15, 35))
-    return rotation.maximumTrimAlpha(dynamicPressure: s.aerodynamics.dynamicPressure) >= nominal
+  public func invalidatePrediction() {
+    bestPrediction = nil; candidateCount = 0
+    rangeMultiplier = 1
+    lastSolve = -.infinity
+    law.memory.identifiedTrimCeiling = nil; law.memory.ceiling = nil
+    law.memory.deficit = 0; law.memory.dragBoost = 0
   }
-  public func update(_ state: VehicleState) -> GuidanceTarget {
-    if state.time - lastSolve >= configuration.guidance.entryReplanInterval {
-      solve(state)
-      lastSolve = state.time
+  public func accept(_ proposal: EntryPlanningProposal, at time: Double) {
+    guard proposal.createdAt <= time,
+      time - proposal.createdAt <= 2 * configuration.guidance.entryReplanInterval else { return }
+    rangeMultiplier = proposal.rangeMultiplier
+    bestPrediction = proposal.prediction; candidateCount = proposal.candidates
+  }
+  public func update(_ state: VehicleState, synchronousPlanning: Bool = true,
+                     controls: FlightControlSnapshot? = nil,
+                     previousTarget: GuidanceTarget? = nil,
+                     feedback: ControlDiagnostics? = nil) -> GuidanceTarget {
+    if synchronousPlanning, let request = request(from: state, controls: controls, previousTarget: previousTarget) {
+      accept(plan(request), at: state.time)
     }
-    let proposed = steering(state, allocation: allocation, preferredSign: bankSign)
-    let newSign = proposed.bank < 0 ? -1.0 : 1.0
-    if newSign != bankSign && state.time - lastReversal > 12 && abs(proposed.bank) > radians(5)
-      && hasControlAuthority(state)
-    {
-      bankSign = newSign
-      lastReversal = state.time
-      reversalCount += 1
-    }
-    let bank = abs(proposed.bank) * bankSign
-    return .init(
-      angleOfAttack: proposed.alpha, bank: bank, desiredSpeed: 650,
-      desiredHeight: 25_000, desiredFlightPath: state.flightPathAngle)
+    if feedback?.trimEvidence == .identified { law.memory.identifiedTrimCeiling = feedback?.trimAlphaCeiling }
+    else { law.memory.identifiedTrimCeiling = nil }
+    return law.update(state, rangeMultiplier: rangeMultiplier)
   }
-  private func solve(_ state: VehicleState) {
-    let target = frame.position(
-      along: -configuration.guidance.finalDistance - 12_000, cross: 0, height: 0)
-    var bestScore = Double.infinity
-    var best = allocation
-    var bestSign = bankSign
-    var prediction: TrajectoryPrediction?
-    let candidates = Set([
-      -1.0, -0.5, 0, 0.2, 0.4, 0.6, 0.8, 1.0, clamp(allocation - 0.1, -1, 1),
-      clamp(allocation + 0.1, -1, 1),
-    ]).sorted()
-    let signs =
-      state.time - lastReversal > 12 && hasControlAuthority(state) ? [bankSign, -bankSign] : [bankSign]
-    candidateCount = candidates.count * signs.count
-    var ranked:
-      [(score: Double, allocation: Double, sign: Double, prediction: TrajectoryPrediction)] = []
-    for initialSign in signs {
-      for sigma in candidates {
-        var forecastSign = initialSign
-        var forecastReversal = initialSign == bankSign ? lastReversal : state.time
-        let p = predictor.predict(
-          from: state, duration: configuration.guidance.maximumPredictionDuration,
-          step: configuration.guidance.predictionStep, recordEvery: 10,
-          // A rejected terminal handoff must retain control-dependent forecasts.
-          // Otherwise every candidate returns the current state below 650 m/s.
-          minimumDuration: state.aerodynamics.airspeed < 650
-            ? 4 * configuration.guidance.entryReplanInterval : 0
-        ) { [self] s in
-          let proposed = steering(s, allocation: sigma, preferredSign: forecastSign)
-          let sign = proposed.bank < 0 ? -1.0 : 1.0
-          if sign != forecastSign && s.time - forecastReversal > 12
-            && abs(proposed.bank) > radians(5) && hasControlAuthority(s)
-          {
-            forecastSign = sign
-            forecastReversal = s.time
-          }
-          return .init(alpha: proposed.alpha, bank: abs(proposed.bank) * forecastSign)
+  public func plan(_ request: EntryPlanningRequest) -> EntryPlanningProposal {
+    let state = request.state, c = configuration, e = c.entrySettings
+    let atmosphere = law.atmosphere.corrected(request.environment)
+    let predictor = request.environment.observedAt == nil ? self.predictor : TrajectoryPropagationEngine(
+      configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
+    let terminalPlanner = request.environment.observedAt == nil ? self.terminalPlanner : HACPlanningEngine(
+      configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
+    let terminalPoint = frame.position(along: e.handoffAlong, cross: e.handoffCross, height: 0)
+    let terminalSpeed = e.terminalTargetMach * atmosphere.sample(
+      position: terminalPoint.normalized * (c.planet.radius + e.terminalTargetAltitude), time: state.time).speedOfSound
+    // Range correction is bounded by the configured aerodynamic uncertainty.
+    // A forecast may tune the reference, never certify a failed terminal path.
+    let u = c.vehicle.aerodynamicUncertainty
+    let candidates = Array(Set([max(0.1, 1-u), 1.0, 1+u, request.rangeMultiplier])).sorted()
+    var best = request.rangeMultiplier, bestScore = Double.infinity
+    var bestPrediction: TrajectoryPrediction?, terminalFeasible = false, count = 0
+    for factor in candidates {
+      if Task.isCancelled { break }
+      let branch = EntryCommandLaw(configuration: c, atmosphere: atmosphere,
+        aerodynamics: law.aero, memory: request.memory)
+      let prediction = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
+        step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: terminalSpeed,
+        minimumDuration: state.aerodynamics.airspeed < terminalSpeed ? 4*c.guidance.entryReplanInterval : 0,
+        controlSnapshot: request.controls, previousTarget: request.previousTarget) { s in
+          let target = branch.update(s, rangeMultiplier: factor)
+          return .init(alpha: target.angleOfAttack, bank: target.bank)
         }
-        let end = p.terminalState
-        let pos = frame.coordinates(of: end.position)
-        let range = frame.distance(from: end.position, to: target)
-        let bearing = frame.bearing(from: end.position, to: target)
-        let courseError = abs(wrapAngle(bearing - end.course))
-        // Entry retains a set of possible HAC inlets. No fixed handoff point/heading gate.
-        let alpha = aerodynamics.bestGlideAlpha(mach: end.aerodynamics.mach)
-        let c = aerodynamics.coefficients(mach: end.aerodynamics.mach, alpha: alpha)
-        let ld = max(0.3, c.lift / max(c.drag, 1e-8))
-        let energyHeight = max(0, pos.height) + end.velocity.squaredLength / (2 * 9.80665)
-        let turnDistance =
-          end.horizontalSpeed * end.horizontalSpeed / (9.80665 * tan(radians(45)))
-          * max(0, courseError - .pi / 6)
-        let required = (range + turnDistance + 12_000) / ld + 2200
-        let deficit = max(0, required - energyHeight)
-        let excess = max(0, energyHeight - required - 25_000)
-        var score = pow(range / 50_000, 2) + pow(deficit / 8000, 2) * 8 + pow(excess / 20_000, 2)
-        score +=
-          pow(courseError / .pi, 2) + pow(pos.cross / 80_000, 2) + 0.08 * pow(sigma - allocation, 2)
-        if pos.along > 0 { score += pow(pos.along / 15_000, 2) + 5 }
-        if !p.reachedTerminalRegion { score += 20 }
-        if !p.violations.isEmpty { score += 1000 + Double(p.violations.count) * 100 }
-        score += initialSign == bankSign ? 0 : 0.05
-        ranked.append((score, sigma, initialSign, p))
-        if score < bestScore {
-          bestScore = score
-          best = sigma
-          bestSign = initialSign
-          prediction = p
-        }
+      count += 1
+      let end = prediction.terminalState
+      let p = frame.coordinates(of: end.position)
+      let range = frame.distance(from: end.position, to: terminalPoint)
+      let rangeScale = max(1, e.terminalTargetRange)
+      let heightScale = max(1, e.terminalMaximumAltitude-e.terminalMinimumAltitude)
+      var score = pow((range-e.terminalTargetRange)/rangeScale,2)
+        + pow((p.height-e.terminalTargetAltitude)/heightScale,2)
+        + pow((end.aerodynamics.mach-e.terminalTargetMach)/e.terminalMachHalfWidth,2)
+      let heading = wrapAngle(frame.bearing(from: end.position, to: terminalPoint)-end.course)
+      score += pow(heading / .pi, 2)
+      let route = prediction.reachedTerminalRegion && prediction.violations.isEmpty
+        ? terminalPlanner.plan(from: end, allowDirect: c.guidance.allowDirectTerminal, preview: true).plan : nil
+      if route == nil { score += 100 }
+      if !prediction.violations.isEmpty { score += 1000 + Double(prediction.violations.count)*100 }
+      if score < bestScore {
+        bestScore = score; best = factor; bestPrediction = prediction; terminalFeasible = route?.isRobust == true
       }
     }
-    // The complete terminal trajectory, including flare and rollout margin,
-    // decides among the leading entry forecasts. The geometric entry score
-    // is a fallback when no complete terminal route exists yet.
-    var feasibleScore = Double.infinity
-    for candidate in ranked.sorted(by: { $0.score < $1.score }).prefix(3)
-    where candidate.prediction.reachedTerminalRegion && candidate.prediction.violations.isEmpty {
-      let terminal = terminalPlanner.plan(
-        from: candidate.prediction.terminalState,
-        allowDirect: configuration.guidance.allowDirectTerminal, preview: true)
-      if let plan = terminal.plan {
-        let score = candidate.score + plan.assessment.score / 1000
-        if score < feasibleScore {
-          feasibleScore = score
-          best = candidate.allocation
-          bestSign = candidate.sign
-          prediction = candidate.prediction
-        }
-      }
-    }
-    if bestSign != bankSign && state.time - lastReversal > 12 && hasControlAuthority(state) {
-      bankSign = bestSign
-      lastReversal = state.time
-      reversalCount += 1
-    }
-    allocation = best
-    bestPrediction = prediction
+    return .init(createdAt: state.time, rangeMultiplier: best, prediction: bestPrediction,
+      candidates: count, terminalRouteFeasible: terminalFeasible)
   }
 }

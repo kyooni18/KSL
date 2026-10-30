@@ -33,6 +33,7 @@ static void usage(const char *p){
       "  --rate max|N             Wall-clock pacing; N=sim seconds / real second\n"
       "  --telemetry-hz N         JSONL publication rate in simulated time, default 10\n"
       "  --max-sim-time SEC       Stop limit, default 2400\n"
+      "  --stop-confirmation-seconds SEC  Publish existing stopped-state ticks before exit (default 0)\n"
       "  --fixed-aoa DEG          Test driver; hold AoA command\n"
       "  --plant-lift-scale X     Model-error campaigns: multiply plant lift (default 1)\n"
       "  --plant-drag-scale X     Model-error campaigns: multiply plant drag (default 1)\n"
@@ -64,6 +65,7 @@ int main(int argc,char **argv){
     const char *scenario_path=NULL,*atm_path=NULL,*aero_path=NULL,*aero_book_path=NULL,*attitude_path=NULL,*record_path=NULL,*thost="127.0.0.1",*replay_path=NULL,*replay_mode="command";
     double dt=0.02,rate=0.0,telemetry_hz=10.0,max_time=2400.0,fixed_aoa=0,fixed_bank=0;
     bool has_fixed_aoa=false,has_fixed_bank=false,quiet=false,start_gear=false,start_paused=false,lockstep=false;int command_port=8795,telemetry_port=8796,web_telemetry_port=8797;
+    double stop_confirmation_seconds=0.0;
     for(int i=1;i<argc;i++){
         if(!strcmp(argv[i],"--help")){usage(argv[0]);return 0;}
         else if(!strcmp(argv[i],"--scenario")&&i+1<argc)scenario_path=argv[++i];
@@ -75,6 +77,7 @@ int main(int argc,char **argv){
         else if(!strcmp(argv[i],"--rate")&&i+1<argc){const char *r=argv[++i];rate=!strcmp(r,"max")?0.0:parse_number(r);}
         else if(!strcmp(argv[i],"--telemetry-hz")&&i+1<argc)telemetry_hz=parse_number(argv[++i]);
         else if(!strcmp(argv[i],"--max-sim-time")&&i+1<argc)max_time=parse_number(argv[++i]);
+        else if(!strcmp(argv[i],"--stop-confirmation-seconds")&&i+1<argc)stop_confirmation_seconds=parse_number(argv[++i]);
         else if(!strcmp(argv[i],"--plant-lift-scale")&&i+1<argc)plant_lift_scale=parse_number(argv[++i]);
         else if(!strcmp(argv[i],"--plant-drag-scale")&&i+1<argc)plant_drag_scale=parse_number(argv[++i]);
         else if(!strcmp(argv[i],"--fixed-aoa")&&i+1<argc){fixed_aoa=parse_number(argv[++i]);has_fixed_aoa=true;}
@@ -94,6 +97,7 @@ int main(int argc,char **argv){
     }
     if(!isfinite(dt)||!isfinite(telemetry_hz)||!isfinite(max_time)||!isfinite(rate)||
        !isfinite(fixed_aoa)||!isfinite(fixed_bank)||dt<=0||dt>1||telemetry_hz<=0||max_time<=0||rate<0||
+       !isfinite(stop_confirmation_seconds)||stop_confirmation_seconds<0||stop_confirmation_seconds>60||
        command_port<0||telemetry_port<0||web_telemetry_port<0){
         fprintf(stderr,"Invalid numeric option.\n");return 2;
     }
@@ -134,6 +138,7 @@ int main(int argc,char **argv){
     }
     FILE *record=NULL;
     if(record_path){record=fopen(record_path,"w");if(!record){fprintf(stderr,"Failed to open record file: %s\n",record_path);protocol_close(&proto);replay_free(&replay);return 3;}}
+    double stopped_at=NAN;
     double wall0=monotonic_s(),next_pub=0.0,pub_period=1.0/telemetry_hz;char json[4096];
     const char *resend_env=getenv("SHUTTLESIM_LOCKSTEP_RESEND");
     bool lockstep_resend=resend_env&&strcmp(resend_env,"1")==0;
@@ -203,7 +208,10 @@ int main(int argc,char **argv){
             }
         }
         if(rate>0){double target=sim.state.sim_elapsed_s/rate;double wall=monotonic_s()-wall0;if(target>wall)sleep_s(target-wall);}
-        if(sim.state.on_ground&&sim.state.stopped)break;
+        if(sim.state.on_ground&&sim.state.stopped){
+            if(!isfinite(stopped_at))stopped_at=sim.state.sim_elapsed_s;
+            if(sim.state.sim_elapsed_s-stopped_at+1e-9>=stop_confirmation_seconds)break;
+        }else stopped_at=NAN;
     }
     /* The stop condition can occur between telemetry periods. Preserve the
      * actual terminal state, not the preceding still-moving sample. No further

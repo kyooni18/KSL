@@ -3210,8 +3210,22 @@ def simulator_collector_loop(store: "SnapshotStore", root: Path, stop: threading
                         last_trail_time = sim_time
                         if len(trail) > 900:
                             trail = trail[::2]
-            mirror = read_controller_mirror(root, max_age=None, allow_simulation=True)
             run = read_simulator_run(root)
+            if isinstance(run, dict) and run.get('mode') == 'swift-native-independent':
+                # Never overlay the live KSP controller mirror onto an independent Swift run.
+                mirror = None
+                source = run.get('controllerMirror')
+                if isinstance(source, str) and source:
+                    source_path = Path(source).expanduser().resolve()
+                    if source_path.is_relative_to(root.resolve()) and source_path.is_file():
+                        try:
+                            candidate = json.loads(source_path.read_text(encoding='utf-8'))
+                            if isinstance(candidate, dict):
+                                mirror = candidate
+                        except (OSError, json.JSONDecodeError):
+                            pass
+            else:
+                mirror = read_controller_mirror(root, max_age=None, allow_simulation=True)
             packet_recent = last_packet is not None and time.monotonic() - last_packet_wall < 3.0
             if last_packet is not None:
                 snapshot = merge_simulator_packet(mirror, last_packet, run, trail)

@@ -1,5 +1,6 @@
 import Foundation
 import KSLCore
+import KSLControl
 import KSLPhysics
 
 public struct PlanningResult: Codable, Sendable {
@@ -7,6 +8,7 @@ public struct PlanningResult: Codable, Sendable {
   public let bestRejected: TerminalAssessment?
   public let evaluatedCandidates: Int
   public let rejectedConstraints: [String: Int]
+  public var closedLoopRejections: [TerminalClosedLoopCase]?
 }
 
 public final class HACPlanningEngine {
@@ -14,17 +16,20 @@ public final class HACPlanningEngine {
   private let energy: EnergyManagementEngine
   private let approach: ApproachProfile
   private let frame: RunwayFrame
+  private let trajectory: TerminalTrajectoryEvaluator
   private var nextIdentifier = 1
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
     aerodynamics: AerodynamicsEngine
   ) {
     self.configuration = configuration
+    trajectory = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     energy = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     approach = .init(configuration: configuration)
     frame = .init(runway: configuration.runway, planet: configuration.planet)
   }
-  public func plan(from state: VehicleState, allowDirect: Bool = true, preview: Bool = false)
+  public func plan(from state: VehicleState, allowDirect: Bool = true, preview: Bool = false,
+                   controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil)
     -> PlanningResult
   {
     let p = frame.coordinates(of: state.position)
@@ -47,6 +52,8 @@ public final class HACPlanningEngine {
     let start = HorizontalPathSample(
       position: p.horizontal, tangent: startTangent, curvature: startCurvature)
     var chosen: TerminalPlan?
+    var candidates: [TerminalPlan] = []
+    var closedLoopRejections: [TerminalClosedLoopCase] = []
     var rejected: TerminalAssessment?
     var count = 0
     var rejectedConstraints: [String: Int] = [:]
@@ -99,11 +106,17 @@ public final class HACPlanningEngine {
       count += 1
       let (priced, assessment) = energy.evaluate(stations: stations, from: state)
       if assessment.feasible {
-        if chosen == nil || assessment.score < chosen!.assessment.score {
-          chosen = .init(
-            identifier: nextIdentifier, createdAt: state.time, spiral: spiral, stations: priced,
-            assessment: assessment)
+        let u = configuration.vehicle.aerodynamicUncertainty
+        let stresses = [(1-u, 1+u), (1+u, 1-u)].map { lift, drag in
+          let (_, stressed) = energy.evaluate(stations: priced, from: state,
+            dragMultiplier: drag, liftMultiplier: lift)
+          return TerminalStressCase(liftMultiplier: lift, dragMultiplier: drag,
+            feasible: stressed.feasible, touchdownSpeed: stressed.touchdownSpeed, violations: stressed.violations)
         }
+        // Retain extreme stress failures as evidence; they must not erase
+        // a physically feasible nominal candidate before closed-loop testing.
+        candidates.append(.init(identifier: nextIdentifier, createdAt: state.time,
+          spiral: spiral, stations: priced, assessment: assessment, stressCases: stresses))
       } else {
         for violation in assessment.violations {
           rejectedConstraints[violation.kind.rawValue, default: 0] += 1
@@ -122,11 +135,12 @@ public final class HACPlanningEngine {
       }
     }
     let radii =
-      [c.minimumHACRadius, 4500, 6500, 9000, 12_000, 17_000, 24_000, 32_000, c.maximumHACRadius]
+      [c.minimumHACRadius, 4500, 6500, 9000, c.hacRadius ?? 12_000, 17_000, 24_000, 32_000, c.maximumHACRadius]
       .filter { $0 >= c.minimumHACRadius && $0 <= c.maximumHACRadius }
     for side in [-1, 1] {
       for radius in Set(radii).sorted() {
         for angle in [60.0, 100, 150, 210, 270, 330, 390, 450] {
+          if Task.isCancelled { break }
           let theta = radians(angle)
           let dynamicRadius =
             state.horizontalSpeed * state.horizontalSpeed / (9.80665 * tan(radians(50)))
@@ -162,24 +176,38 @@ public final class HACPlanningEngine {
         }
       }
     }
-    if let nominal = chosen {
-      if !preview {
-        let u = configuration.vehicle.aerodynamicUncertainty
-        let stresses = [(1 - u, 1 + u), (1 + u, 1 - u)].map { lift, drag in
-          let (_, assessment) = energy.evaluate(
-            stations: nominal.stations, from: state, dragMultiplier: drag, liftMultiplier: lift)
-          return TerminalStressCase(
-            liftMultiplier: lift, dragMultiplier: drag, feasible: assessment.feasible,
-            touchdownSpeed: assessment.touchdownSpeed, violations: assessment.violations)
+    candidates.sort { $0.assessment.score < $1.assessment.score }
+    if preview {
+      chosen = candidates.first // Geometry/energy preview carries no closed-loop certificate.
+    } else {
+      let budget = configuration.guidance.terminalCandidateBudget ?? 8
+      let uncertainty = configuration.vehicle.aerodynamicUncertainty
+      for candidate in candidates.prefix(budget) {
+        if Task.isCancelled { break }
+        var cases: [TerminalClosedLoopCase] = []
+        for (lift, drag) in [(1.0, 1.0), (1-uncertainty, 1+uncertainty), (1+uncertainty, 1-uncertainty)] {
+          let result = trajectory.evaluate(plan: candidate, from: state,
+            controlSnapshot: controlSnapshot, previousTarget: previousTarget, lift: lift, drag: drag)
+          cases.append(result)
+          if cases.count == 1 && !result.feasible { break }
         }
-        chosen = .init(
-          identifier: nominal.identifier, createdAt: nominal.createdAt, spiral: nominal.spiral,
-          stations: nominal.stations, assessment: nominal.assessment, stressCases: stresses)
+        if cases.first?.feasible == true {
+          chosen = .init(identifier: candidate.identifier, createdAt: candidate.createdAt,
+            spiral: candidate.spiral, stations: candidate.stations, assessment: candidate.assessment,
+            stressCases: candidate.stressCases, closedLoopCases: cases)
+          break
+        }
+        closedLoopRejections += cases.filter { !$0.feasible }
+        for result in cases { for violation in result.violations {
+          rejectedConstraints[violation.kind.rawValue, default: 0] += 1
+        } }
       }
-      nextIdentifier += 1
+      if chosen == nil && candidates.count > budget {
+        rejectedConstraints[FailureClassification.timeout.rawValue, default: 0] += 1
+      }
     }
-    return .init(
-      plan: chosen, bestRejected: rejected, evaluatedCandidates: count,
-      rejectedConstraints: rejectedConstraints)
+    if chosen != nil { nextIdentifier += 1 }
+    return .init(plan: chosen, bestRejected: rejected, evaluatedCandidates: count,
+      rejectedConstraints: rejectedConstraints, closedLoopRejections: closedLoopRejections)
   }
 }

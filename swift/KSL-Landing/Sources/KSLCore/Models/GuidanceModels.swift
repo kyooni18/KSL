@@ -1,6 +1,7 @@
 import Foundation
 
 public enum MissionPhase: String, Codable, Sendable {
+  case orbitalCoast, burnSetup, deorbitBurn, entryCoast
   case entry, acquisition, headingAlignment, approach, preflare, flare, touchdown, rollout,
     complete, abort
 }
@@ -53,6 +54,9 @@ public struct GuidanceSolution: Codable, Sendable {
   public let planID: Int?
   public let pathRemaining: Double
   public let diagnostic: String
+  public var entry: EntryDiagnostics?
+  public var approach: ApproachDiagnostics?
+  public var admission: TerminalAdmissionDiagnostics?
   public init(
     phase: MissionPhase, target: GuidanceTarget, violations: [ConstraintViolation] = [],
     planID: Int? = nil, pathRemaining: Double = 0, diagnostic: String = ""

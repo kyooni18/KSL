@@ -1,7 +1,8 @@
 import Foundation
 
 public struct ControlPlantConfiguration: Codable, Sendable, Equatable {
-  // STS 2026-10-28 pitch identification. Roll/yaw are provisional, explicitly.
+  // STS-N subsonic identification, inherited by the STS 2026-10-28
+  // simulator. Its use for STS entry, and roll/yaw, remain provisional.
   public var pitchAccelerationPerKPa = radians(12.6211)
   public var pitchAccelerationMaximum = radians(56.7948)
   public var pitchStiffnessPerKPa = 0.61037
@@ -32,6 +33,7 @@ public struct VehicleConfiguration: Codable, Sendable, Equatable {
   public var maximumLandingAngleOfAttack = radians(18)
   public var gearHeight = 3.2
   public var landingSpeed = 85.0
+  public var minimumSafeSpeed: Double?
   public var maximumTouchdownSpeed = 115.0
   public var maximumTouchdownSink = 3.0
   public var maximumTouchdownBank = radians(7)
@@ -47,6 +49,20 @@ public struct GuidanceConfiguration: Codable, Sendable, Equatable {
   public var controlInterval = 0.1
   public var entryReplanInterval = 5.0
   public var terminalReplanInterval = 5.0
+  public var terminalCandidateBudget: Int?
+  public var approachPredictionInterval: Double?
+  public var terminalRollRate: Double?
+  public var approachRollRate: Double?
+  public var gearDeploymentAltitude: Double?
+  public var finalAlignmentSpeed: Double?
+  public var hacRadius: Double?
+  public var hacLookaheadAngle: Double?
+  public var hacAcquisitionAltitude: Double?
+  public var hacAcquisitionMach: Double?
+  public var taemGlideAngle: Double?
+  public var terminalPlanningMaximumSpeed: Double?
+  public var touchdownSinkRate: Double?
+  public var rolloutParachutes: Bool?
   public var maximumPredictionDuration = 1600.0
   public var predictionStep = 2.0
   public var finalDistance = 8000.0
@@ -75,8 +91,17 @@ public struct MissionConfiguration: Codable, Sendable, Equatable {
   public var runway = RunwayGeometry()
   public var vehicle = VehicleConfiguration()
   public var guidance = GuidanceConfiguration()
+  public var physicsArchive: PhysicsArchiveConfiguration?
+  public var entry: EntryConfiguration?
+  public var deorbit: DeorbitConfiguration?
+  public var calibration: CalibrationConfiguration?
+  public var deorbitSettings: DeorbitConfiguration { deorbit ?? .init() }
+  public var entrySettings: EntryConfiguration { entry ?? .init() }
   public init() {}
   public func validate() throws {
+    try entrySettings.validate()
+    try deorbitSettings.validate(planet: planet)
+    try calibration?.validate()
     guard planet.radius > 0, planet.gravitationalParameter > 0,
       vehicle.nominalMass > 0, vehicle.referenceArea > 0,
       vehicle.inertia.x > 0, vehicle.inertia.y > 0, vehicle.inertia.z > 0,
@@ -100,6 +125,30 @@ public struct MissionConfiguration: Codable, Sendable, Equatable {
       guidance.predictionStep > 0, guidance.predictionStep <= 5,
       guidance.entryReplanInterval >= guidance.controlInterval,
       guidance.terminalReplanInterval >= guidance.controlInterval,
+      (1...128).contains(guidance.terminalCandidateBudget ?? 8),
+      (guidance.approachPredictionInterval ?? 1.5) >= guidance.controlInterval,
+      (guidance.terminalRollRate ?? guidance.bankSlewRate) > 0,
+      (guidance.terminalRollRate ?? guidance.bankSlewRate) <= vehicle.controlPlant.maximumRollRate,
+      (guidance.approachRollRate ?? guidance.bankSlewRate) > 0,
+      (guidance.approachRollRate ?? guidance.bankSlewRate) <= vehicle.controlPlant.maximumRollRate,
+      (guidance.gearDeploymentAltitude ?? 1500) > vehicle.gearHeight,
+      (guidance.finalAlignmentSpeed ?? 260) >= guidance.finalSpeed,
+      (guidance.hacRadius ?? 12000) >= guidance.minimumHACRadius,
+      (guidance.hacRadius ?? 12000) <= guidance.maximumHACRadius,
+      (guidance.hacLookaheadAngle ?? radians(16)) > 0,
+      (guidance.hacLookaheadAngle ?? radians(16)) <= .pi,
+      (guidance.hacAcquisitionAltitude ?? entrySettings.terminalMinimumAltitude) > 0,
+      (guidance.hacAcquisitionAltitude ?? entrySettings.terminalMinimumAltitude) <= entrySettings.terminalMaximumAltitude,
+      (guidance.hacAcquisitionMach ?? entrySettings.terminalTargetMach) > 0,
+      (guidance.hacAcquisitionMach ?? entrySettings.terminalTargetMach) <= entrySettings.terminalTargetMach+entrySettings.terminalMachHalfWidth,
+      (guidance.taemGlideAngle ?? guidance.outerGlideAngle) > 0,
+      (guidance.taemGlideAngle ?? guidance.outerGlideAngle) < .pi/3,
+      (guidance.terminalPlanningMaximumSpeed ?? 1300) > guidance.finalSpeed,
+      (guidance.touchdownSinkRate ?? -1) < 0,
+      abs(guidance.touchdownSinkRate ?? -1) < vehicle.maximumTouchdownSink,
+      (vehicle.minimumSafeSpeed ?? vehicle.landingSpeed) >= vehicle.landingSpeed,
+      (vehicle.minimumSafeSpeed ?? vehicle.landingSpeed) < guidance.finalSpeed,
+      guidance.flareHeight > vehicle.gearHeight,
       guidance.bankSlewRate > 0, guidance.bankSlewRate <= vehicle.controlPlant.maximumRollRate,
       guidance.alphaSlewRate > 0, guidance.pathLookaheadTime > 0,
       guidance.maximumTelemetryAge > 0, guidance.maximumSnapshotSpan > 0,

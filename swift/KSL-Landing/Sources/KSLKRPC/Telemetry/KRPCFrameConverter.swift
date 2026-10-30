@@ -2,6 +2,12 @@ import Foundation
 import KSLCore
 
 public enum KRPCFrameConverter {
+  /// Angular velocity is an axial vector. Both the reference-frame reflection
+  /// and the right/forward body permutation must be applied with their signs.
+  public static func bodyRate(rawAngularVelocity: Vector3, rawBodyRotation: Quaternion) -> Vector3 {
+    let rawBody = rawBodyRotation.conjugate.rotate(rawAngularVelocity)
+    return .init(-rawBody.y, -rawBody.x, -rawBody.z)
+  }
   /// kRPC local surface coordinates are (up, north, east), a left-handed basis.
   public static func surfaceVector(_ raw: Vector3, at position: Vector3) -> Vector3 {
     let local = LocalFrame(position: position)

@@ -64,6 +64,8 @@ struct LandingCLI {
       return result
     }
     switch args.first ?? "help" {
+    case "shuttlesim-controller":
+      try await ShuttleSimStream.run(arguments: args)
     case "simulate":
       var scenario = try scenarioFromOptions()
       if args.contains("--spiral-only") {
@@ -85,6 +87,19 @@ struct LandingCLI {
         logEvery: Int(option("--log-every") ?? "1") ?? 1)
       try output(result)
       if args.contains("--require-success") && result.outcome != "complete" { exit(2) }
+    case "physics-audit":
+      guard let path = option("--database"), let structure = option("--structure-id") else {
+        throw FlightError.invalidConfiguration("physics-audit requires --database and --structure-id")
+      }
+      let store = try PhysicsObservationStore(path: path)
+      var contexts = try await store.contexts().filter { $0.structureID == structure }
+      if let environment = option("--environment-id") { contexts = contexts.filter { $0.environmentID == environment } }
+      guard Set(contexts.map(\.environmentID)).count == 1 else {
+        throw FlightError.invalidConfiguration("Select exactly one archived environment with --environment-id")
+      }
+      let history = try await store.history(contexts: contexts, excludingSession: option("--exclude-session") ?? "",
+        excludingFlight: option("--exclude-flight") ?? "", planet: .init())
+      try output(history)
     case "configuration": try output(MissionConfiguration())
     case "scenario": try output(scenarioFromOptions())
     case "plan":
@@ -112,17 +127,17 @@ struct LandingCLI {
       }
       let reader = try FlightReplayReader(url: URL(fileURLWithPath: path))
       defer { try? reader.close() }
-      let computer = try FlightComputer(
+      let computer = try await FlightRecordReplayer(
         configuration: c, atmosphere: try .init(planet: c.planet),
-        aerodynamics: try .init(referenceArea: c.vehicle.referenceArea))
+        aerodynamics: PhysicsModelLoader.aerodynamics(configuration: c))
       var count = 0
       var mismatches = 0
       var phases: [String] = []
       while let record = try reader.next() {
-        let r = try computer.step(record.state)
+        let r = try computer.step(record)
         if phases.last != r.guidance.phase.rawValue { phases.append(r.guidance.phase.rawValue) }
         if r.command != record.command || r.guidance.target != record.guidance.target
-          || r.guidance.phase != record.guidance.phase
+          || r.guidance.phase != record.guidance.phase || r.orbitalCommand != record.orbitalCommand
         {
           mismatches += 1
         }
@@ -137,7 +152,7 @@ struct LandingCLI {
       try output(
         ReplayReport(
           records: count, commandOrGuidanceMismatches: mismatches, phases: phases,
-          evidence: "snapshot-replay-only"))
+          evidence: "full-rate-snapshot-and-accepted-proposal-replay"))
       if args.contains("--verify-commands") && mismatches > 0 { exit(2) }
     case "legacy-audit", "import-legacy":
       guard let path = option("--input") else {
@@ -171,7 +186,7 @@ struct LandingCLI {
       }
     case "backend":
       // NDJSON operator protocol v1 server (drop-in for `landing_backend` in `ksl`).
-      let server = BackendServer(
+      let server = try BackendServer(
         configuration: .init(),
         vessel: ProcessInfo.processInfo.environment["KSL_SWIFT_VESSEL"] ?? "STS",
         airbrakeGroup: UInt32(ProcessInfo.processInfo.environment["KSL_SWIFT_AIRBRAKE_GROUP"] ?? "1")
@@ -204,7 +219,7 @@ struct LandingCLI {
             let state: VehicleState
             let attitudeCheckDegrees: [String: Double]?
           }
-          // Self-consistency of the autopilot target: the attitude rebuilt from the measured
+          // Self-consistency of the native FCS target: the attitude rebuilt from the measured
           // angle of attack and bank must equal the measured nose/roof directions.
           var check: [String: Double]?
           if let t = FlightComputer.attitudeTarget(
@@ -224,11 +239,11 @@ struct LandingCLI {
           try encoder.encode(config).write(
             to: URL(fileURLWithPath: logPath + ".configuration.json"))
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
-          if args.contains("--raw-axes") { await io.setUseAutopilotAttitude(false) }
+          let aero = try await PhysicsModelLoader.aerodynamics(configuration: config)
           try await io.arm()
           let runtime = try FlightRuntime(
             io: io, recorder: recorder, configuration: config,
-            maximumOutage: Double(option("--max-outage") ?? "20") ?? 20)
+            maximumOutage: Double(option("--max-outage") ?? "20") ?? 20, aerodynamics: aero)
           let task = Task {
             try await runtime.run(maximumDuration: Double(option("--duration") ?? "2400") ?? 2400)
           }

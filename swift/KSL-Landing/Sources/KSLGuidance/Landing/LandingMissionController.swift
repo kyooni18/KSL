@@ -1,5 +1,6 @@
 import Foundation
 import KSLCore
+import KSLControl
 import KSLPhysics
 
 /// Owns phase and committed plans. Numerical models and flight control live elsewhere.
@@ -13,37 +14,122 @@ public final class LandingMissionController {
   private let touchdown: TouchdownMonitor
   private let authority: AerodynamicAuthorityEstimator
   private let maximumGlideRatio: Double
+  private let atmosphere: AtmosphericModelEngine
+  private let aerodynamics: AerodynamicsEngine
+  public var environment = EnvironmentCalibration()
+  public var latestEntryPrediction: TrajectoryPrediction? { entry.bestPrediction }
   public private(set) var phase: MissionPhase = .entry
   public private(set) var plan: TerminalPlan?
   public private(set) var lastPlanningResult: PlanningResult?
+  public var controlFeedback: ControlDiagnostics?
+  public var controlSnapshot: FlightControlSnapshot?
   private var lastPlanAttempt = -Double.infinity
   private var stoppedSince: Double?
   private var poorTrackingSince: Double?
-  private var previousTarget: GuidanceTarget?
+  private var limiter = GuidanceTargetLimiter()
+  public let externalPlanning: Bool
+  public private(set) var lastAdmission: MM305Admission?
   private var previousTime: Double?
   private var wasAirborne = false
+  private var invalidationFailure: ConstraintViolation?
+  public func invalidateDynamics(at state: VehicleState) {
+    authority.reset(); entry.invalidatePrediction(); approach.invalidatePrediction()
+    controlSnapshot = nil; controlFeedback = nil
+    lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
+    if plan != nil {
+      plan = nil; tracker.reset(); poorTrackingSince = nil
+      if [.acquisition, .headingAlignment].contains(phase) {
+        if state.position.length-configuration.planet.radius >= configuration.entrySettings.terminalMinimumAltitude {
+          phase = .entry
+        } else {
+          invalidationFailure = .init(.modelUncertainty,
+            "Payload/configuration changed below the qualified terminal replanning envelope")
+        }
+      }
+    }
+  }
   public init(
     configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
-    aerodynamics: AerodynamicsEngine
+    aerodynamics: AerodynamicsEngine, externalPlanning: Bool = false, initialPhase: MissionPhase = .entry,
+    initialPlan: TerminalPlan? = nil
   ) {
     self.configuration = configuration
+    self.atmosphere = atmosphere; self.aerodynamics = aerodynamics
+    self.externalPlanning = externalPlanning
+    phase = initialPhase
+    plan = initialPlan
     entry = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     planner = .init(
       configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     tracker = .init(configuration: configuration, aerodynamics: aerodynamics)
-    approach = .init(
-      configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    approach = .init(configuration: configuration, atmosphere: atmosphere,
+      aerodynamics: aerodynamics, externalPlanning: externalPlanning)
     authority = .init(model: aerodynamics)
     maximumGlideRatio = aerodynamics.maximumLiftToDragRatio
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     touchdown = .init(configuration: configuration)
   }
+  private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
+    let e = configuration.entrySettings
+    let h = state.position.length - configuration.planet.radius
+    // Forecast slightly ahead, but admit only the measured contract below.
+    return h <= e.terminalMaximumAltitude + max(0, -state.verticalSpeed) * configuration.guidance.terminalReplanInterval
+      && h >= min(e.terminalMinimumAltitude, configuration.guidance.hacAcquisitionAltitude ?? e.terminalMinimumAltitude)
+      && state.aerodynamics.mach <= e.terminalTargetMach + e.terminalMachHalfWidth + 0.1
+      && state.aerodynamics.airspeed <= (configuration.guidance.terminalPlanningMaximumSpeed ?? 1300)
+  }
+  public func planningRequest(from state: VehicleState, controls: FlightControlSnapshot?) -> MissionPlanningRequest? {
+    guard externalPlanning else { return nil }
+    entry.environment = environment
+    if [.approach, .preflare, .flare].contains(phase), let request = approach.planningRequest() {
+      return .init(time: state.time, entry: nil, terminalState: nil, controls: nil,
+        previousTarget: nil, approach: request, environment: environment)
+    }
+    guard plan == nil, phase == .entry else { return nil }
+    let entryRequest = entry.request(from: state, controls: controls, previousTarget: limiter.previous)
+    var terminalState: VehicleState?
+    if inTerminalSearchEnvelope(state), state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval {
+      terminalState = state; lastPlanAttempt = state.time
+    }
+    guard entryRequest != nil || terminalState != nil else { return nil }
+    return .init(time: state.time, entry: entryRequest, terminalState: terminalState,
+      controls: controls, previousTarget: limiter.previous, environment: environment)
+  }
+  public func accept(_ proposal: MissionPlanningProposal, state: VehicleState) {
+    guard proposal.time <= state.time else { return }
+    if let result = proposal.approach { approach.accept(result) }
+    guard phase == .entry, plan == nil else { return }
+    if let result = proposal.entry { entry.accept(result, at: state.time) }
+    if let result = proposal.terminal { acceptTerminal(result, state: state) }
+  }
+  private func acceptTerminal(_ result: PlanningResult, state: VehicleState) {
+    lastPlanningResult = result
+    guard let candidate = result.plan else { return }
+    let admission = MM305Admission.evaluate(state, plan: candidate, configuration: configuration)
+    lastAdmission = admission
+    guard admission.accepted else { return }
+    plan = candidate; tracker.reset()
+  }
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
     try state.validate(configuration: configuration)
+    if let failure = invalidationFailure {
+      phase = .abort
+      return .init(phase: .abort, target: .init(), violations: [failure])
+    }
+    entry.environment = environment
+    if previousTime == nil && [.approach, .preflare, .flare].contains(phase), !approach.canCapture(state) {
+      throw FlightError.invalidCommand("Requested Final phase fails measured capture/energy contract")
+    }
+    if previousTime == nil && [.acquisition, .headingAlignment].contains(phase) {
+      guard let plan else { throw FlightError.invalidCommand("MM305 engage requires a qualified terminal plan") }
+      let admission = MM305Admission.evaluate(state, plan: plan, configuration: configuration)
+      lastAdmission = admission
+      guard admission.accepted else { throw FlightError.infeasible("Requested MM305 phase fails measured admission: \(admission.violations.map(\.message))") }
+    }
     authority.observe(state)
     if let t = previousTime, state.time <= t { throw FlightError.staleTelemetry }
     let dt = previousTime.map { state.time - $0 } ?? configuration.guidance.controlInterval
-    if dt > 1 { throw FlightError.staleTelemetry }
+    if dt > 1 { throw FlightError.rearmRequired("Guidance clock skipped \(dt) seconds") }
     previousTime = state.time
     if !state.contact.isGrounded {
       var envelope: [ConstraintViolation] = []
@@ -89,8 +175,9 @@ public final class LandingMissionController {
         throw FlightError.invalidTelemetry(
           "Landing mission must begin airborne; existing parked vessel is not a successful landing")
       }
-      phase = .rollout
-      if state.horizontalSpeed < 0.5 {
+      phase = state.wheelContact?.noseGear == true ? .rollout : .touchdown
+      if state.horizontalSpeed < 0.5 && state.wheelContact?.noseGear == true
+        && state.wheelContact?.mainGear == true {
         if stoppedSince == nil { stoppedSince = state.time }
         if state.time - stoppedSince! >= configuration.guidance.stopConfirmationDuration {
           phase = .complete
@@ -114,9 +201,14 @@ public final class LandingMissionController {
       // favourable uncertainty, and an additional ballistic speed reserve.
       // Failure rejects this modeled envelope, not all possible real craft.
       let optimisticRange = ld * max(0, p.height) + (ld / 2 + 1) * state.velocity.squaredLength / g
-      let distance = frame.distance(
-        from: state.position,
-        to: frame.position(along: configuration.guidance.touchdownAlong, cross: 0, height: 0))
+      // Reachability is to usable pavement ahead. A nominal aim point
+      // already behind the vehicle is not a required return waypoint.
+      let stopping = state.horizontalSpeed*state.horizontalSpeed
+        / (2*configuration.vehicle.brakeFriction*g)
+      let latestTouchdown = max(0, configuration.runway.length-stopping)
+      let reachableAlong = clamp(p.along, 0, latestTouchdown)
+      let distance = frame.distance(from: state.position,
+        to: frame.position(along: reachableAlong, cross: 0, height: 0))
       if distance > optimisticRange {
         phase = .abort
         return .init(
@@ -131,26 +223,31 @@ public final class LandingMissionController {
     if [.approach, .preflare, .flare].contains(phase) || (plan == nil && approach.canCapture(state))
     {
       raw = approach.update(
-        state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness)
+        state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
+        pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
+        identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
     } else {
-      if plan == nil && p.height < 35_000 && state.aerodynamics.airspeed < 800
+      if !externalPlanning && plan == nil && inTerminalSearchEnvelope(state)
         && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
       {
-        let result = planner.plan(
-          from: state, allowDirect: configuration.guidance.allowDirectTerminal)
+        let currentPlanner = environment.observedAt == nil ? planner : HACPlanningEngine(
+          configuration: configuration, atmosphere: atmosphere.corrected(environment), aerodynamics: aerodynamics)
+        let result = currentPlanner.plan(
+          from: state, allowDirect: configuration.guidance.allowDirectTerminal,
+          controlSnapshot: controlSnapshot, previousTarget: limiter.previous)
         lastPlanningResult = result
         lastPlanAttempt = state.time
-        if let candidate = result.plan {
-          plan = candidate
-          tracker.reset()
-        }
+        acceptTerminal(result, state: state)
       }
       if let committed = plan {
         let (target, reference) = tracker.update(
-          state, plan: committed, liftEffectiveness: authority.liftEffectiveness)
-        if reference.segment == .final {
+          state, plan: committed, liftEffectiveness: authority.liftEffectiveness,
+          identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
+        if reference.segment == .final && approach.canCapture(state) {
           raw = approach.update(
-            state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness)
+            state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
+            pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
+            identifiedTrimCeiling: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
         } else {
           raw = .init(
             phase: reference.segment == .spiral ? .headingAlignment : .acquisition, target: target,
@@ -173,7 +270,8 @@ public final class LandingMissionController {
           poorTrackingSince = nil
         }
       } else {
-        let target = entry.update(state)
+        let target = entry.update(state, synchronousPlanning: !externalPlanning,
+          controls: controlSnapshot, previousTarget: limiter.previous, feedback: controlFeedback)
         var failures: [ConstraintViolation] = []
         if p.height < 1200 && !approach.canCapture(state) {
           failures = [
@@ -185,25 +283,23 @@ public final class LandingMissionController {
           diagnostic:
             "Entry receding-horizon candidates=\(entry.candidateCount), reversals=\(entry.reversalCount)"
         )
+        raw.entry = entry.diagnostics
       }
     }
     phase = raw.phase
-    var target = raw.target
-    if let previousTarget {
-      target.bank =
-        previousTarget.bank
-        + clamp(
-          wrapAngle(target.bank - previousTarget.bank), -configuration.guidance.bankSlewRate * dt,
-          configuration.guidance.bankSlewRate * dt)
-      target.angleOfAttack = moveToward(
-        previousTarget.angleOfAttack, target.angleOfAttack,
-        maximumDelta: (raw.phase == .preflare || raw.phase == .flare
-          ? configuration.vehicle.controlPlant.maximumPitchRate * 0.8
-          : configuration.guidance.alphaSlewRate) * dt)
-    }
-    previousTarget = target
-    return .init(
+    let target = limiter.update(raw.target, phase: raw.phase, configuration: configuration, dt: dt)
+    var solution = GuidanceSolution(
       phase: raw.phase, target: target, violations: raw.violations, planID: raw.planID,
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
+    solution.entry = raw.entry
+    solution.approach = raw.approach
+    if let admission = lastAdmission {
+      var value = TerminalAdmissionDiagnostics()
+      value.accepted = admission.accepted; value.altitudeMargin = admission.altitudeMargin
+      value.machMargin = admission.machMargin; value.headingMargin = admission.headingMargin
+      value.planAge = admission.planAge; value.violations = admission.violations
+      solution.admission = value
+    }
+    return solution
   }
 }
