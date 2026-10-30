@@ -701,3 +701,51 @@ net trim moment, and the reported authority is provisional in this model.
 The existing trim learning criterion may therefore admit some non-equilibrium
 samples, but this check neither shows they caused the divergence nor justifies
 adding a new threshold. It is a useful target for matched-state examination.
+
+### Matched-flight response identification limitation
+
+`runs/overnight-orbital-pointing-prototype-20261031/fit-flight.py` regresses the
+v2 coast's measured body-rate increments against an intercept and all three
+previously logged axis commands, for +20–240 s and separately for shorter
+windows. With a one-additional-sample lag the full-window diagonal slopes were
+0.1002, 0.0585 and 0.0463 rad/s² per unit roll, pitch and yaw, with R² 0.630,
+0.677 and 0.662 respectively. In the four subwindows the diagonal slopes
+ranged 0.0804–0.1089, 0.0564–0.0595 and 0.0445–0.0502. These response
+fits explain materially less variance than isolated pulse fits and are smaller
+than the pulse-derived combined authority in several axes. A two-additional-
+sample lag instead produces near-zero or negative diagonals, while a third
+produces negative diagonals with high apparent R². Rapid command reversal
+creates strong autocorrelation, so apparent lag fit quality alone cannot
+identify physical latency or sign. Quaternion/rate transformations, non-atomic
+samples, cross-axis effects and dynamically changing RCS actuation further
+limit this linear regression. These matched-flight calculations reinforce why
+an estimator trained naively on the chatter log or ideal one-axis pulse data
+is not a flight-qualified correction. No production controller was changed.
+
+### Real orbital TCP disconnect revealed OMS rebinding failure
+
+A controlled, short coast-only transport experiment used the original
+quicksave, the prior release binary and recorded plan, with one controller and
+an explicitly logged local TCP proxy (`overnight-live-orbital-disconnect-20261031`).
+The proxy closed the actual client/upstream sockets after 30 flight records;
+this did not change game physics or the ten-second RPC timeout. The controller
+observed `Disconnected: End of stream`, opened a new connection, neutralized
+controls, then exited with `Original OMS engine identity changed during
+reconnect`. The last flight record was UT 208597.3265, orbital coast, throttle
+zero; no burn, checkpoint, landing, or successful resume occurred. Fresh kRPC
+at UT 208624.8665 found STS orbiting, throttle and axes zero, RCS enabled and
+366.0666 mono in the loaded state. This is a real controlled coast-disconnect
+failure, not a mid-burn or ambiguous-shutdown test.
+
+Read-only kRPC inspection then queried the same five engine wrappers three
+successive times: engine object IDs changed each query, while their part IDs
+remained 95–99 and the two active OMS engines remained on parts 98 and 99.
+Thus comparing prior `Engine` wrapper references to a freshly enumerated set
+was demonstrably invalid even without changing the vessel. The current
+candidate rebinds fresh engine wrappers by the originally selected vessel-part
+references after the existing full topology check, and rejects missing or
+multiple engine modules on a selected part instead of guessing. It does not
+reactivate engines after an ambiguous shutdown. A focused binding test covers
+new wrapper IDs, missing/ambiguous part matches and empty identity. This change
+needs controlled live comparison, particularly actual mid-burn and ambiguous
+shutdown, before it can be considered fully validated.

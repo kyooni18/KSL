@@ -34,6 +34,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
   private var expectedVesselName: String? = "STS"
   private var deorbitPlan: DeorbitPlan?
   private var burnEngines: [UInt64] = []
+  private var burnEngineParts: Set<UInt64> = []
   private var burnFinished = false
   public private(set) var identity: KRPCVesselIdentity?
   public init(
@@ -479,9 +480,10 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     try propulsion.validate(mass: state.mass)
     let selected = try await discoverBurnEngines()
     try await arm()
-    burnEngines = selected; deorbitPlan = plan; burnFinished = false
+    burnEngines = selected.engines; burnEngineParts = selected.parts
+    deorbitPlan = plan; burnFinished = false
   }
-  private func discoverBurnEngines() async throws -> [UInt64] {
+  private func discoverBurnEngines() async throws -> (engines: [UInt64], parts: Set<UInt64>) {
     guard identity != nil, !busy else { throw FlightError.invalidCommand("Concurrent OMS discovery") }
     busy = true
     let operationGeneration = generation
@@ -489,30 +491,41 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     // Read existing active rocket engines. Never stage or activate an unrelated engine.
     let engineRefs = try KRPCValue.decodeTuple(try await session.call([objectCall("Parts_get_Engines", parts)])[0])
       .map(KRPCValue.decodeUInt)
-    var selected: [UInt64] = []
+    var selectedParts = Set<UInt64>()
+    var inventory: [(engine: UInt64, part: UInt64)] = []
     for engine in engineRefs {
       let values = try await session.call([objectCall("Engine_get_Active", engine),
-        objectCall("Engine_get_AvailableThrust", engine), objectCall("Engine_get_HasFuel", engine)])
+        objectCall("Engine_get_AvailableThrust", engine), objectCall("Engine_get_HasFuel", engine),
+        objectCall("Engine_get_Part", engine)])
+      let part = try KRPCValue.decodeUInt(values[3])
+      inventory.append((engine, part))
       if try KRPCValue.decodeBool(values[0]) && KRPCValue.decodeFloat(values[1]) > 0 && KRPCValue.decodeBool(values[2]) {
-        selected.append(engine)
+        selectedParts.insert(part)
       }
     }
     guard generation == operationGeneration else {
       throw FlightError.rearmRequired("Connection changed during OMS discovery")
     }
-    guard !selected.isEmpty else { throw FlightError.infeasible("No active, fuelled OMS engine has measured available thrust") }
-    return selected
+    guard !selectedParts.isEmpty else { throw FlightError.infeasible("No active, fuelled OMS engine has measured available thrust") }
+    guard selectedParts.isSubset(of: partIdentifiers) else {
+      throw FlightError.rearmRequired("OMS part not present in the selected vessel")
+    }
+    return (try OrbitalEngineBinding.resolve(parts: selectedParts, inventory: inventory), selectedParts)
   }
-  /// Rebind the same engine objects even if an interrupted shutdown actually
-  /// deactivated them. Never reactivate an engine after an ambiguous response.
+  /// Engine wrappers can receive new object IDs on every inventory read. Rebind
+  /// by the original vessel part, rejecting ambiguous multiple engine modules.
+  /// A shutdown may already have succeeded: never reactivate on reconnect.
   private func rebindBurnEngines() async throws {
-    guard !busy, !burnEngines.isEmpty else { throw FlightError.rearmRequired("Missing original OMS identity") }
+    guard !busy, !burnEngineParts.isEmpty else { throw FlightError.rearmRequired("Missing original OMS identity") }
     busy = true; defer { busy = false }
     let refs = try KRPCValue.decodeTuple(try await session.call([objectCall("Parts_get_Engines", parts)])[0])
       .map(KRPCValue.decodeUInt)
-    guard Set(burnEngines).isSubset(of: Set(refs)) else {
-      throw FlightError.rearmRequired("Original OMS engine identity changed during reconnect")
+    var inventory: [(engine: UInt64, part: UInt64)] = []
+    for engine in refs {
+      let part = try KRPCValue.decodeUInt(try await session.call([objectCall("Engine_get_Part", engine)])[0])
+      inventory.append((engine, part))
     }
+    burnEngines = try OrbitalEngineBinding.resolve(parts: burnEngineParts, inventory: inventory)
   }
   public func applyOrbital(sequence: UInt64, stateTime: Double, command: OrbitalControlCommand) async throws {
     guard armed, !busy, let plan = deorbitPlan, command.planID == plan.identifier,
@@ -613,7 +626,7 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     sampledAt = nil
     await session.close()
     identity = nil
-    deorbitPlan = nil; burnEngines = []; burnFinished = true
+    deorbitPlan = nil; burnEngines = []; burnEngineParts.removeAll(); burnFinished = true
   }
   /// Reconnection is read-only. A caller must reacquire state and create a fresh runtime before arming.
   public func reconnect(expectedVesselName: String? = "STS") async throws -> KRPCVesselIdentity {
