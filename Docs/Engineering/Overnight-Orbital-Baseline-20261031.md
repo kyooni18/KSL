@@ -497,3 +497,81 @@ RCS would not establish or solve the underlying plant mismatch. Check remaining
 propellant and plan-dispersion evolution during a controlled original-save
 comparison before attempting the long coast; independently validate any
 mid-burn reconnect with actual transport interruptions and ambiguous shutdown.
+
+### Isolated original-save orbital actuator pulses
+
+A subsequent **diagnostic, not an autonomous flight** independently reloaded
+`quicksave` for each of six short positive single-axis pulses, with no other
+controller running. The `runs/overnight-orbital-actuator-identification-20261031/`
+`pulse-v2.py` and JSONL contain the commands, UTs, resources and telemetry. The
+script explicitly disabled SAS, held throttle zero, and tested wheel-only and
+wheel-plus-RCS cases separately; it neutralized all axes and disabled RCS at
+the end of each test. RCS was disabled only for this isolated identification,
+not as a proposed mission-control change. These were normal control inputs,
+not altered physics or landing evidence. The untouched original save was
+reloaded for each pulse. The first `pulse.py` iteration measured angular
+velocity relative to the rotating vessel frame and therefore returned zero;
+those angular-rate readings are invalid. Version 2 measures angular velocity
+in the body's nonrotating frame and transforms the vector to vessel axes.
+
+Each nominal pulse was 0.4 s; actual logged command intervals ranged from
+0.38 to 0.42 s (commands and rates are separate RPC calls, not atomic). Table
+entries are the change from mean pre-pulse to mean post-pulse angular rate in
+the corresponding raw vessel axis; sign follows kRPC axes rather than FRD.
+
+| Positive axis pulse | wheel only Δrate rad/s | wheel + RCS Δrate rad/s | RCS case mono consumed |
+|---|---:|---:|---:|
+| pitch | -0.00935 | -0.03376 | 0.35638 |
+| yaw | -0.00863 | -0.03630 | 0.41440 |
+| roll | -0.04960 | -0.10941 | 0.42422 |
+
+The wheel-only responses are broadly consistent in scale with the reported
+20,000/915,375, 20,000/949,934 and 10,000/83,574 rad/s² respectively.
+Enabling RCS substantially increased the observed response and consumed
+propellant on all three axes. At the RCS-enabled pulse start, the kRPC reported
+RCS torque components were approximately positive (5307, 0, 3825) and
+negative (-520, 0, -3825) in raw vessel axes; the control-authority logic
+uses the minimum positive/negative torque. In particular, the reported
+near-zero roll RCS torque does not describe the substantial additional roll
+response actually observed in this experiment. The estimates are pulse
+integrals, not a calibrated linear actuator model: command timing differs by
+up to one telemetry interval, torque may vary with direction/attitude,
+translational RCS effects and cross-axis dynamics are not separately modeled,
+and these initial pulses tested only positive commands. Still, they independently confirm
+that wheel-only minimum torque is not the actual combined plant authority,
+and strongly support plant mismatch as a contributor to the observed chatter.
+They do not validate a production controller or establish a safe resource
+budget for the long coast.
+
+At UT 208590.0465 after the final pulse, fresh kRPC showed STS orbiting,
+throttle and all three command axes zero, RCS off and 370.09818 mono remaining
+in the **loaded test state**. This is not a saved checkpoint; the original
+quicksave remains unchanged. Before the next flight reload the original and
+restore configured RCS through the controller. The next experiment should
+measure response latency and smaller commands, fit an uncertainty-aware
+combined-actuator model, and validate a sampled-data controller against the
+actual resource consumption and plan drift. Do not treat these six pulse
+samples as grounds for a hardcoded gain or for disabling RCS.
+
+A further six negative-command pulses (`pulse-negative.py` and JSONL) also
+started from the original quicksave. Pre-to-post angular-rate changes for
+wheel-only / wheel+RCS were +0.00751 / +0.03557 rad/s pitch,
++0.00864 / +0.03213 yaw, and +0.04226 / +0.11474 roll. Command durations
+were 0.34–0.40 s, varying with sequential-RPC sampling; RCS cases consumed
+0.41574, 0.36047 and 0.44162 mono respectively. Thus increased response with
+RCS is observed in both directions, but these short and variably timed pulses
+are insufficient to determine precise asymmetry or closed-loop stability.
+
+Finally, `pulse-small.py` repeated wheel+RCS pulses at ±0.2 command, again
+reloading the original for each. For negative / positive commands, angular
+rate changes were +0.00752 / -0.00700 rad/s pitch, +0.00639 / -0.00674 yaw,
+and +0.02297 / -0.02176 roll. Command intervals were 0.38–0.42 s and mono
+consumption was 0.0701–0.0871 per pulse. These are approximately proportional
+to the full-command response and fuel usage at this state, subject to the
+sampling caveats above; they are useful evidence that fractional input can
+produce fractional authority here, not proof of global linearity. Fresh kRPC
+after the last small pulse at UT 208581.9265 reported STS orbiting, throttle
+and command axes zero, RCS off, and 370.44287 mono in the loaded test state.
+No flight or derived checkpoint was created by these pulse tests. The original
+save was not rewritten. Foundation Memory was searched again but no Foundation
+capability was available in the tool catalog.
