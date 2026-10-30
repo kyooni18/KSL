@@ -146,8 +146,8 @@ public final class SimulationEngine {
       saturatedControlFraction: Double(saturated) / Double(max(1, steps)), violations: violations,
       constraintOccurrences: occurrences,
       terminalPlan: computer.mission.plan,
-      lastPlanningRejections: computer.mission.lastPlanningResult?.rejectedConstraints ?? [:],
-      lastRejectedTerminal: computer.mission.lastPlanningResult?.bestRejected,
+      lastPlanningRejections: computer.mission.lastPlanningResult?.advisoryCounts ?? [:],
+      lastRejectedTerminal: computer.mission.lastPlanningResult?.bestAdvisory,
       lastTerminalCandidateCount: computer.mission.lastPlanningResult?.evaluatedCandidates ?? 0,
       maximumComputationMilliseconds: maxCompute,
       meanComputationMilliseconds: totalCompute / Double(max(1, computations)))

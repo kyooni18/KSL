@@ -83,7 +83,7 @@ extension BackendServer {
     } else if initialPhase == .acquisition {
       let worker = MissionPlanningWorker(configuration: configuration, atmosphere: atmosphere, aerodynamics: aero)
       let result = await worker.planTerminal(from: state)
-      guard let candidate = result.plan else { throw FlightError.infeasible("No complete robust MM305 route: \(result.rejectedConstraints)") }
+      guard let candidate = result.plan else { throw FlightError.infeasible("No complete robust MM305 route: \(result.advisoryCounts)") }
       let fresh = try await value.readState()
       let admission = MM305Admission.evaluate(fresh, plan: candidate, configuration: configuration)
       guard admission.accepted else { throw FlightError.infeasible("MM305 admission rejected: \(admission.violations.map(\.message))") }

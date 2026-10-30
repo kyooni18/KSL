@@ -101,10 +101,10 @@ public final class TAEMCaptureEvaluator {
     let closed = planner.plan(from: state, allowDirect: false,
       controlSnapshot: controlSnapshot, previousTarget: previousTarget)
     if let plan = closed.plan {
-      a.certified = true; Self.describe(plan, into: &a)
+      a.certified = plan.nominalQualified; Self.describe(plan, into: &a)
     } else {
       a.feasible = false; a.deficit = .closedLoopFailure
-      a.violations = closed.closedLoopRejections?.flatMap(\.violations) ?? []
+      a.violations = closed.closedLoopAdvisories?.flatMap(\.violations) ?? []
     }
     return a
   }
@@ -141,15 +141,17 @@ public final class TAEMCaptureEvaluator {
     }
     guard let candidate = result.plan else {
       a.deficit = classify(summary, headingError: a.headingError, envelope: a.envelope)
-      a.violations = result.bestRejected?.violations ?? []
+      a.violations = result.bestAdvisory?.violations ?? []
       if a.deficit == .none || summary.feasible > 0 {
         // Priced paths existed but none survived closed-loop flight.
         a.deficit = .closedLoopFailure
-        a.violations = result.closedLoopRejections?.flatMap(\.violations) ?? a.violations
+        a.violations = result.closedLoopAdvisories?.flatMap(\.violations) ?? a.violations
       }
       return a
     }
-    a.feasible = true; a.deficit = .none
+    a.feasible = candidate.assessment.feasible
+    a.deficit = a.feasible ? .none : classify(summary, headingError: a.headingError, envelope: a.envelope)
+    a.violations = candidate.assessment.violations
     a.certified = candidate.nominalQualified
     describe(candidate, into: &a)
     return a

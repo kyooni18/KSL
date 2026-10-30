@@ -56,7 +56,7 @@ public struct CaptureHandoffDiagnostics: Codable, Sendable {
   public var mm305Searched = false
   public var mm305Deficit: String?
   public var mm305PlanAccepted = false
-  public var mm305Rejection: String?
+  public var mm305Advisory: String?
   /// MM305's own physical/closed-loop violations for the last search.
   public var mm305Violations: [ConstraintViolation] = []
   public init() {}

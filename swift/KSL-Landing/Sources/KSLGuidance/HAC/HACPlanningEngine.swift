@@ -5,12 +5,29 @@ import KSLPhysics
 
 public struct PlanningResult: Codable, Sendable {
   public let plan: TerminalPlan?
-  public let bestRejected: TerminalAssessment?
+  public let bestAdvisory: TerminalAssessment?
   public let evaluatedCandidates: Int
-  public let rejectedConstraints: [String: Int]
-  public var closedLoopRejections: [TerminalClosedLoopCase]?
+  public let advisoryCounts: [String: Int]
+  public var closedLoopAdvisories: [TerminalClosedLoopCase]?
   /// Physical energy/geometry envelope of the whole examined HAC family.
   public var envelope: TerminalEnvelopeSummary?
+}
+
+// Earlier records lack the new advisory fields. Geometry remains replayable;
+// missing historical diagnostics are simply empty.
+extension PlanningResult {
+  private enum CodingKeys: String, CodingKey {
+    case plan, bestAdvisory, evaluatedCandidates, advisoryCounts, closedLoopAdvisories, envelope
+  }
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    plan = try c.decodeIfPresent(TerminalPlan.self, forKey: .plan)
+    bestAdvisory = try c.decodeIfPresent(TerminalAssessment.self, forKey: .bestAdvisory)
+    evaluatedCandidates = try c.decode(Int.self, forKey: .evaluatedCandidates)
+    advisoryCounts = try c.decodeIfPresent([String: Int].self, forKey: .advisoryCounts) ?? [:]
+    closedLoopAdvisories = try c.decodeIfPresent([TerminalClosedLoopCase].self, forKey: .closedLoopAdvisories)
+    envelope = try c.decodeIfPresent(TerminalEnvelopeSummary.self, forKey: .envelope)
+  }
 }
 
 /// What the priced HAC family can physically absorb from one state. A
@@ -92,10 +109,10 @@ public final class HACPlanningEngine {
       position: p.horizontal, tangent: startTangent, curvature: startCurvature)
     var chosen: TerminalPlan?
     var candidates: [TerminalPlan] = []
-    var closedLoopRejections: [TerminalClosedLoopCase] = []
-    var rejected: TerminalAssessment?
+    var closedLoopAdvisories: [TerminalClosedLoopCase] = []
+    var advisory: TerminalAssessment?
     var count = 0
-    var rejectedConstraints: [String: Int] = [:]
+    var advisoryCounts: [String: Int] = [:]
     var envelope = TerminalEnvelopeSummary()
     func examine(_ horizontal: [(HorizontalPathSample, PathSegment)], _ spiral: SpiralHAC?) {
       guard horizontal.count > 2 else { return }
@@ -105,7 +122,7 @@ public final class HACPlanningEngine {
           distances[i - 1] + (horizontal[i].0.position - horizontal[i - 1].0.position).length)
       }
       let terminalLength = distances.last ?? 0
-      guard terminalLength > 100, terminalLength < c.maximumPathLength else { return }
+      guard terminalLength > 0 else { return }
       let exit = approach.reference(along: -c.finalDistance)
       // Cubic altitude spline matching measured entry FPA and final slope.
       let h0 = p.height
@@ -170,9 +187,12 @@ public final class HACPlanningEngine {
           spiral: spiral, stations: priced, assessment: assessment, stressCases: stresses))
       } else {
         for violation in assessment.violations {
-          rejectedConstraints[violation.kind.rawValue, default: 0] += 1
+          advisoryCounts[violation.kind.rawValue, default: 0] += 1
         }
-        if rejected == nil || assessment.score < rejected!.score { rejected = assessment }
+        if advisory == nil || assessment.score < advisory!.score { advisory = assessment }
+        // A model verdict is an advisory, never a reason to remove a HAC.
+        candidates.append(.init(identifier: nextIdentifier, createdAt: state.time,
+          spiral: spiral, stations: priced + stations.dropFirst(priced.count), assessment: assessment, stressCases: []))
       }
       }
     }
@@ -207,7 +227,7 @@ public final class HACPlanningEngine {
           let inlet = spiral.sample(remainingAngle: theta)
           let distance = (inlet.position - start.position).length
           let spiralLength = spiral.length(samples: 64)
-          if distance + spiralLength > c.maximumPathLength || distance < 100 { continue }
+          if distance <= 0 { continue }
           let curve = QuinticAcquisition(
             start: start, end: inlet, tangentLength: max(500, distance * 1.15))
           let n = max(20, Int(distance / 220))
@@ -255,44 +275,38 @@ public final class HACPlanningEngine {
       return total
     }
     candidates = candidates.map { ($0, rollTravel($0)) }.sorted {
+      if $0.0.assessment.feasible != $1.0.assessment.feasible { return $0.0.assessment.feasible }
+      if !$0.0.assessment.feasible { return $0.0.assessment.score < $1.0.assessment.score }
       let ea = abs($0.0.assessment.touchdownSpeed - landing) <= tolerance
       let eb = abs($1.0.assessment.touchdownSpeed - landing) <= tolerance
       if ea != eb { return ea }
       if ea && eb { return $0.1 < $1.1 }
       return $0.0.assessment.score < $1.0.assessment.score
     }.map(\.0)
-    if preview {
-      chosen = candidates.first // Geometry/energy preview carries no closed-loop certificate.
-    } else {
-      let budget = configuration.guidance.terminalCandidateBudget ?? 8
+    // Select before diagnostics. Neither pricing nor a closed-loop prediction
+    // may veto this plan; the flight computer always flies the best available HAC.
+    chosen = candidates.first
+    if let candidate = chosen, !candidate.assessment.feasible {
+      // Keep survey work bounded: complete the selected advisory reference
+      // once, rather than simulating every poor route to the runway.
+      let (priced, assessment) = energy.evaluate(stations: candidate.stations, from: state, advisoryOnly: true)
+      chosen = .init(identifier: candidate.identifier, createdAt: candidate.createdAt,
+        spiral: candidate.spiral, stations: priced, assessment: assessment, stressCases: candidate.stressCases)
+    }
+    if !preview, let candidate = chosen, candidate.assessment.feasible, !Task.isCancelled {
       let uncertainty = configuration.vehicle.aerodynamicUncertainty
-      for candidate in candidates.prefix(budget) {
-        if Task.isCancelled { break }
-        var cases: [TerminalClosedLoopCase] = []
-        for (lift, drag) in [(1.0, 1.0), (1-uncertainty, 1+uncertainty), (1+uncertainty, 1-uncertainty)] {
-          let result = trajectory.evaluate(plan: candidate, from: state,
-            controlSnapshot: controlSnapshot, previousTarget: previousTarget, lift: lift, drag: drag)
-          cases.append(result)
-          if cases.count == 1 && !result.feasible { break }
-        }
-        if cases.first?.feasible == true {
-          chosen = .init(identifier: candidate.identifier, createdAt: candidate.createdAt,
-            spiral: candidate.spiral, stations: candidate.stations, assessment: candidate.assessment,
-            stressCases: candidate.stressCases, closedLoopCases: cases)
-          break
-        }
-        closedLoopRejections += cases.filter { !$0.feasible }
-        for result in cases { for violation in result.violations {
-          rejectedConstraints[violation.kind.rawValue, default: 0] += 1
-        } }
+      let cases = [(1.0, 1.0), (1-uncertainty, 1+uncertainty), (1+uncertainty, 1-uncertainty)].map { lift, drag in
+        trajectory.evaluate(plan: candidate, from: state,
+          controlSnapshot: controlSnapshot, previousTarget: previousTarget, lift: lift, drag: drag)
       }
-      if chosen == nil && candidates.count > budget {
-        rejectedConstraints[FailureClassification.timeout.rawValue, default: 0] += 1
-      }
+      closedLoopAdvisories = cases.filter { !$0.feasible }
+      chosen = .init(identifier: candidate.identifier, createdAt: candidate.createdAt,
+        spiral: candidate.spiral, stations: candidate.stations, assessment: candidate.assessment,
+        stressCases: candidate.stressCases, closedLoopCases: cases)
     }
     if chosen != nil { nextIdentifier += 1 }
-    return .init(plan: chosen, bestRejected: rejected, evaluatedCandidates: count,
-      rejectedConstraints: rejectedConstraints, closedLoopRejections: closedLoopRejections,
+    return .init(plan: chosen, bestAdvisory: advisory, evaluatedCandidates: count,
+      advisoryCounts: advisoryCounts, closedLoopAdvisories: closedLoopAdvisories,
       envelope: envelope)
   }
 }

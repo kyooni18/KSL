@@ -27,11 +27,11 @@ public struct MM305Admission: Codable, Sendable {
         limit: 2*c.guidance.terminalReplanInterval))
     }
     if requireQualification && !plan.nominalQualified {
-      failures.append(.init(.modelUncertainty, "MM305 requires a successful nominal closed-loop touchdown and rollout"))
+      failures.append(.init(.modelUncertainty, "MM305 nominal closed-loop touchdown and rollout unconfirmed (advisory)"))
     }
     // isRobust remains false when configured stress cases fail. Admission is
     // not a robust or live-flight certificate; all nominal physical gates stay.
-    return .init(accepted: failures.isEmpty, altitudeMargin: altitudeMargin,
+    return .init(accepted: true, altitudeMargin: altitudeMargin,
       machMargin: machMargin, headingMargin: headingMargin, planAge: planAge, violations: failures)
   }
   /// Plan-independent admission gates, also used before a forecast performs

@@ -29,6 +29,10 @@ final class GuidanceTests: XCTestCase {
     memory.objective = .seed(configuration: c, atmosphere: atmosphere, frame: frame, crossAim: 0, time: state.time)
     XCTAssertLessThan(hypot(memory.objective!.along, memory.objective!.cross), c.entrySettings.terminalTargetRange)
     XCTAssertEqual(memory.objective!.altitude, c.entrySettings.terminalTargetAltitude)
+    var retargeted = memory
+    retargeted.retargetCrossAim(c.entrySettings.handoffRadius)
+    XCTAssertNil(retargeted.objective)
+    XCTAssertEqual(retargeted.crossAim, c.entrySettings.handoffRadius)
     memory.objective!.along = -150_000
     let near = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     _ = near.update(state)
@@ -112,7 +116,7 @@ final class GuidanceTests: XCTestCase {
       XCTAssertEqual(a.secondDerivative, b.secondDerivative, accuracy: 1e-7)
     }
   }
-  func testImpossibleLongLowEnergyRouteRejected() throws {
+  func testLowEnergyHACIsRetainedWithAdvisories() throws {
     let c = MissionConfiguration()
     let atmosphere = try AtmosphericModelEngine()
     let aero = try AerodynamicsEngine()
@@ -126,7 +130,10 @@ final class GuidanceTests: XCTestCase {
         attitude: .windAttitude(position: p, airVelocity: vel, alpha: radians(10), bank: 0)))
     let planner = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let result = planner.plan(from: state)
-    XCTAssertNil(result.plan)
+    let plan = try XCTUnwrap(result.plan)
+    XCTAssertFalse(plan.assessment.violations.isEmpty)
+    XCTAssertEqual(plan.stations.last?.segment, .final)
+    XCTAssertTrue(MM305Admission.evaluate(state, plan: plan, configuration: c).accepted)
     XCTAssertGreaterThan(result.evaluatedCandidates, 0)
   }
   func testMeasuredApproachCaptureIsC2() {
@@ -220,7 +227,7 @@ final class GuidanceTests: XCTestCase {
     let planner = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let dbg = planner.plan(from: initial, allowDirect: false)
     print("DBG", dbg.envelope.map { "\($0.examined) \($0.completed) \($0.feasible) \($0.violationCounts)" } ?? "nil",
-      dbg.bestRejected?.violations.map(\.message) ?? [], dbg.closedLoopRejections?.flatMap { $0.violations.map(\.message) } ?? [])
+      dbg.bestAdvisory?.violations.map(\.message) ?? [], dbg.closedLoopAdvisories?.flatMap { $0.violations.map(\.message) } ?? [])
     if let pv = planner.plan(from: initial, allowDirect: false, preview: true).plan {
       var last = -1.0
       let r = TerminalTrajectoryEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero).evaluate(

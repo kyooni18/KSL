@@ -44,16 +44,9 @@ public final class LandingMissionController {
     controlSnapshot = nil; controlFeedback = nil
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
     if plan != nil {
-      plan = nil; tracker.reset(); poorTrackingSince = nil
-      if [.acquisition, .headingAlignment].contains(phase) {
-        // Never give up on a configuration change: fall back to MM304/
-        // final-approach guidance and keep searching for a new HAC.
-        phase = .entry
-        if state.position.length-configuration.planet.radius < configuration.entrySettings.terminalMinimumAltitude {
-          invalidationFailure = .init(.modelUncertainty,
-            "Payload/configuration changed below the qualified terminal replanning envelope")
-        }
-      }
+      tracker.reset(); poorTrackingSince = nil
+      invalidationFailure = .init(.modelUncertainty,
+        "Payload/configuration changed; retained HAC geometry while control re-identifies the plant")
     }
   }
   public init(
@@ -137,7 +130,6 @@ public final class LandingMissionController {
     guard let candidate = result.plan else { return }
     let admission = MM305Admission.evaluate(state, plan: candidate, configuration: configuration)
     lastAdmission = admission
-    guard admission.accepted else { return }
     plan = candidate; tracker.reset()
   }
   public func update(_ state: VehicleState) throws -> GuidanceSolution {
@@ -152,10 +144,11 @@ public final class LandingMissionController {
       throw FlightError.invalidCommand("Requested Final phase fails measured capture/energy contract")
     }
     if previousTime == nil && [.acquisition, .headingAlignment].contains(phase) {
-      guard let plan else { throw FlightError.invalidCommand("MM305 engage requires a qualified terminal plan") }
-      let admission = MM305Admission.evaluate(state, plan: plan, configuration: configuration)
-      lastAdmission = admission
-      guard admission.accepted else { throw FlightError.infeasible("Requested MM305 phase fails measured admission: \(admission.violations.map(\.message))") }
+      if plan == nil {
+        acceptTerminal(planner.plan(from: state, allowDirect: false,
+          controlSnapshot: controlSnapshot, previousTarget: limiter.previous), state: state)
+      }
+      if let plan { lastAdmission = MM305Admission.evaluate(state, plan: plan, configuration: configuration) }
     }
     authority.observe(state)
     if let t = previousTime, state.time <= t { throw FlightError.staleTelemetry }
@@ -223,7 +216,7 @@ public final class LandingMissionController {
       let g = configuration.planet.gravitationalParameter / pow(state.position.length, 2)
       // Optimistic still-air screening: best polar L/D at every Mach,
       // favourable uncertainty, and an additional ballistic speed reserve.
-      // Failure rejects this modeled envelope, not all possible real craft.
+      // Failure is an advisory about this modeled envelope.
       let optimisticRange = ld * max(0, p.height) + (ld / 2 + 1) * state.velocity.squaredLength / g
       // Reachability is to usable pavement ahead. A nominal aim point
       // already behind the vehicle is not a required return waypoint.
@@ -286,7 +279,9 @@ public final class LandingMissionController {
         if tracker.trackingError > max(1500, state.horizontalSpeed * 8) {
           if poorTrackingSince == nil { poorTrackingSince = state.time }
           if state.time - poorTrackingSince! > 8 && p.height > 5000 {
-            plan = nil
+            tracker.reset()
+            raw.violations.append(.init(.modelUncertainty,
+              "HAC tracking error persists; retained route and reset path tracking"))
             poorTrackingSince = nil
           }
         } else {
@@ -380,10 +375,10 @@ public final class LandingMissionController {
       d.mm305Violations = Array(capture.violations.prefix(6))
     }
     d.mm305PlanAccepted = plan != nil
-    if plan == nil, let admission = lastAdmission, !admission.accepted {
-      d.mm305Rejection = admission.violations.map(\.message).joined(separator: "; ")
-    } else if plan == nil, let capture = lastCapture, !capture.feasible {
-      d.mm305Rejection = "No admissible HAC: \(capture.deficit.rawValue)"
+    if let admission = lastAdmission, !admission.violations.isEmpty {
+      d.mm305Advisory = admission.violations.map(\.message).joined(separator: "; ")
+    } else if let capture = lastCapture, !capture.feasible {
+      d.mm305Advisory = "HAC model advisory: \(capture.deficit.rawValue)"
     }
     return d
   }

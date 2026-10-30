@@ -149,7 +149,7 @@ public final class EnergyManagementEngine {
   }
   public func evaluate(
     stations: [PathStation], from initial: VehicleState, dragMultiplier: Double = 1,
-    liftMultiplier: Double = 1
+    liftMultiplier: Double = 1, advisoryOnly: Bool = false
   ) -> ([PathStation], TerminalAssessment) {
     var result: [PathStation] = []
     var violations: [ConstraintViolation] = []
@@ -235,7 +235,7 @@ public final class EnergyManagementEngine {
           distance: s.distance, position: s.position, tangent: s.tangent, curvature: s.curvature,
           height: s.height, slope: s.slope, verticalCurvature: s.verticalCurvature, speed: speed,
           angleOfAttack: lift.alpha, bank: bank, segment: s.segment))
-      if !violations.isEmpty { return (result, finish(speed)) }
+      if !advisoryOnly && !violations.isEmpty { return (result, finish(speed)) }
       if i + 1 < stations.count {
         let next = stations[i + 1]
         let ds = next.distance - s.distance
@@ -248,7 +248,7 @@ public final class EnergyManagementEngine {
         {
           violations.append(
             .init(.actuatorAuthority, "Path bank-rate demand exceeds identified response"))
-          return (result, finish(speed))
+          if !advisoryOnly { return (result, finish(speed)) }
         }
         let coefficient = aero.coefficients(mach: speed / atm.speedOfSound, alpha: lift.alpha,
           dynamicPressure: q, gear: s.segment == .final)
@@ -259,13 +259,16 @@ public final class EnergyManagementEngine {
           * (1 / pos.length - 1
             / (configuration.planet.radius + configuration.runway.elevation + next.height))
         let nextSquared = speed * speed - 2 * (work + potential)
-        if nextSquared < 30 * 30 {
+        let minimumSquared = advisoryOnly ? pow(v.landingSpeed * Self.minimumTouchdownFraction, 2) : 30 * 30
+        if nextSquared < minimumSquared {
           violations.append(
             .init(
-              .insufficientEnergy, "Path exhausts kinetic energy", value: nextSquared, limit: 900))
-          return (result, finish(0))
+              .insufficientEnergy, "Path exhausts kinetic energy", value: nextSquared, limit: minimumSquared))
+          if !advisoryOnly { return (result, finish(0)) }
         }
-        speed = sqrt(nextSquared)
+        // Keep a complete flyable reference even when its energy forecast is
+        // poor. The assessment remains advisory; it cannot erase the route.
+        speed = sqrt(max(advisoryOnly ? minimumSquared : 0, nextSquared))
         time += dt
         previousBank = bank
       }

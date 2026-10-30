@@ -131,7 +131,7 @@ struct LandingCLI {
       if args.contains("--closed-loop-cases") {
         let result = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
           .plan(from: state, allowDirect: c.guidance.allowDirectTerminal)
-        try output(result.closedLoopRejections ?? [])
+        try output(result.closedLoopAdvisories ?? [])
       } else { try output(capture) }
     case "simulate":
       var scenario = try scenarioFromOptions()
