@@ -469,3 +469,31 @@ and full telemetry are local to the run. Monitor startup initially failed due
 to a relative working directory and was corrected before any descent; the
 final event file contains no checkpoint saves. Fresh reload verification and
 an original-orbit full-chain comparison are still required after a fix.
+
+As a preliminary **correlated**, not isolated-actuator, response check over
++20–200 s, regressing successive measured body-rate differences divided by
+sample interval against the preceding command gave slopes approximately
+0.126, 0.052 and 0.049 rad/s² per unit roll, pitch and yaw command, with
+uncentered correlations 0.746, 0.737 and 0.708. A two-sample lag gave slopes
+0.132, 0.058 and 0.055, with correlations 0.781, 0.819 and 0.806. At +60 s
+the reported minimum pitch authority was about 20523/896151 = 0.0229 rad/s²;
+this is substantially below the correlated observed pitch response. These
+numbers may include cross-axis dynamics, wheel/RCS interaction and timing
+alignment; they are not an identification of isolated RCS or a calibrated
+gain. They motivate a matched-state, delayed-actuator comparison and a
+physically derived response controller, not a hardcoded compensation factor.
+
+The actual vacuum controller (`OrbitalAttitudeController.boundedDemand`) uses
+full opposite command whenever its computed stopping distance exceeds the
+remaining error, even when both are very small; its one-hold predictive
+fractional command only applies on the other branch. Combined with uncertain
+minimum rather than identified total authority, sampled telemetry and actuator
+latency, this is a plausible mechanism for a limit cycle, not proof of a unique
+cause. The next discriminating experiment should replay the logged states and
+commands with measured timing and independently characterize the effect of
+wheel and RCS actuation, then compare a discrete-time stopping controller with
+explicit actuator response and uncertainty. A small-error deadband or disabling
+RCS would not establish or solve the underlying plant mismatch. Check remaining
+propellant and plan-dispersion evolution during a controlled original-save
+comparison before attempting the long coast; independently validate any
+mid-burn reconnect with actual transport interruptions and ambiguous shutdown.
