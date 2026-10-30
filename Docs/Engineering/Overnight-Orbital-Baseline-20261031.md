@@ -624,3 +624,42 @@ RPC ordering, game tick sampling, and actuator delay. It must not be treated as
 a physical latency measurement or inserted as a production constant. A
 coherently timestamped command/telemetry experiment with varied pulse widths
 and transitions is needed to separate those effects.
+
+### Simulation step-refinement investigation
+
+A debug native probe (`runs/overnight-simulation-refinement-investigation-20261031/`)
+ran the unchanged nominal `.approach()` simulation with 0.020, 0.010 and
+0.005 s maximum physics steps; guidance remained at its configured 0.1 s
+interval. All three model runs completed with model-acceptable runway contact,
+but touchdown along / horizontal speed / vertical speed were respectively
+369.73 m / 57.60 m/s / -1.55 m/s, 517.28 m / 56.04 m/s / -2.22 m/s,
+and 375.18 m / 57.56 m/s / -1.56 m/s. Thus the 0.010 s result is not between
+the other two and the failing refinement assertion reflects a genuinely
+non-monotonic closed-loop result, not simply a changed contact acceptance
+flag. These are simulations, not live landing evidence.
+
+The full control logs show repeated switches between identified and provisional
+pitch trim evidence (19, 13 and 19 switches respectively). At UT 1034.0,
+for example, the 0.020 and 0.005 s cases used identified feedforward about
+0.201/0.200 with integral trim about -0.101/-0.102, while the 0.010 s case
+used provisional feedforward 0.117 and integral trim -0.006. Transfer attempts
+to preserve the combined command; nevertheless different switching times and
+state histories can create divergent later commands. The first logged pitch
+command difference over 0.01 was at UT 1034.0, and the first target AoA
+difference over 0.01 rad at UT 1042.9. At UT 1074.4 the 0.020 s case had
+entered preflare while 0.010 s was still in approach. These are observations
+and a lead, **not** proof that trim switching uniquely causes the final
+147.55 m discrepancy. A controlled matched-state replay freezing or separating
+trim-source changes is needed before altering the model or the test.
+
+The probe executable SHA-256 is
+`fb88f634a24d5f3e328e01a3aa1705e413b72ac209e5594577f84b34cc57f64c`;
+its Swift source, logs, results, source diff and hashes are in the run folder.
+It initially linked existing debug objects. An incremental debug rebuild of
+the preserved current source followed by relinking and repeating all three
+runs reproduced each touchdown event exactly; the second executable hash and
+build output are in the run folder. The first attempt to repeat was rejected
+by the JSONL writer because the original logs existed; they were retained under
+`original-*.jsonl` before the successful repeat. The substantial pre-existing
+dirty work was not reset or included in this report commit. The other failing
+simulations remain as previously reported.
