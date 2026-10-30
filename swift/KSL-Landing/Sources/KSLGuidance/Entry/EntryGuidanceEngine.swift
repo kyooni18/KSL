@@ -17,6 +17,8 @@ public struct EntryPlanningProposal: Codable, Sendable {
   public let prediction: TrajectoryPrediction?
   public let candidates: Int
   public let terminalRouteFeasible: Bool
+  /// Capture forecast of the selected branch (HAC plan stripped).
+  public var capture: EntryCaptureForecast?
 }
 
 /// Fast C-derived MM304 feedback owns commands. Expensive closed-loop forecasts
@@ -31,6 +33,7 @@ public final class EntryGuidanceEngine {
   private var lastSolve = -Double.infinity
   public private(set) var bestPrediction: TrajectoryPrediction?
   public private(set) var candidateCount = 0
+  public private(set) var captureForecast: EntryCaptureForecast?
   public var reversalCount: Int { law.memory.lateral.reversals }
   public var diagnostics: EntryDiagnostics { law.diagnostics }
   public var environment = EnvironmentCalibration()
@@ -50,7 +53,7 @@ public final class EntryGuidanceEngine {
       previousTarget: previousTarget, environment: environment)
   }
   public func invalidatePrediction() {
-    bestPrediction = nil; candidateCount = 0
+    bestPrediction = nil; candidateCount = 0; captureForecast = nil
     rangeMultiplier = 1
     lastSolve = -.infinity
     law.memory.identifiedTrimCeiling = nil; law.memory.ceiling = nil
@@ -61,6 +64,7 @@ public final class EntryGuidanceEngine {
       time - proposal.createdAt <= 2 * configuration.guidance.entryReplanInterval else { return }
     rangeMultiplier = proposal.rangeMultiplier
     bestPrediction = proposal.prediction; candidateCount = proposal.candidates
+    captureForecast = proposal.capture
   }
   public func update(_ state: VehicleState, synchronousPlanning: Bool = true,
                      controls: FlightControlSnapshot? = nil,
@@ -74,52 +78,51 @@ public final class EntryGuidanceEngine {
     return law.update(state, rangeMultiplier: rangeMultiplier)
   }
   public func plan(_ request: EntryPlanningRequest) -> EntryPlanningProposal {
-    let state = request.state, c = configuration, e = c.entrySettings
+    let state = request.state, c = configuration
     let atmosphere = law.atmosphere.corrected(request.environment)
-    let predictor = request.environment.observedAt == nil ? self.predictor : TrajectoryPropagationEngine(
-      configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
-    let terminalPlanner = request.environment.observedAt == nil ? self.terminalPlanner : HACPlanningEngine(
-      configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
-    let terminalPoint = frame.position(along: e.handoffAlong, cross: e.handoffCross, height: 0)
-    let terminalSpeed = e.terminalTargetMach * atmosphere.sample(
-      position: terminalPoint.normalized * (c.planet.radius + e.terminalTargetAltitude), time: state.time).speedOfSound
-    // Range correction is bounded by the configured aerodynamic uncertainty.
-    // A forecast may tune the reference, never certify a failed terminal path.
+    let forecaster = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere, aerodynamics: law.aero)
+    // Branches span the configured aerodynamic uncertainty. The objective is
+    // the TAEM capture region, judged by the same evaluator as MM305.
     let u = c.vehicle.aerodynamicUncertainty
-    let candidates = Array(Set([max(0.1, 1-u), 1.0, 1+u, request.rangeMultiplier])).sorted()
-    var best = request.rangeMultiplier, bestScore = Double.infinity
-    var bestPrediction: TrajectoryPrediction?, terminalFeasible = false, count = 0
-    for factor in candidates {
-      if Task.isCancelled { break }
-      let branch = EntryCommandLaw(configuration: c, atmosphere: atmosphere,
-        aerodynamics: law.aero, memory: request.memory)
-      let prediction = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
-        step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: terminalSpeed,
-        minimumDuration: state.aerodynamics.airspeed < terminalSpeed ? 4*c.guidance.entryReplanInterval : 0,
-        controlSnapshot: request.controls, previousTarget: request.previousTarget) { s in
-          let target = branch.update(s, rangeMultiplier: factor)
-          return .init(alpha: target.angleOfAttack, bank: target.bank)
-        }
-      count += 1
-      let end = prediction.terminalState
-      let p = frame.coordinates(of: end.position)
-      let range = frame.distance(from: end.position, to: terminalPoint)
-      let rangeScale = max(1, e.terminalTargetRange)
-      let heightScale = max(1, e.terminalMaximumAltitude-e.terminalMinimumAltitude)
-      var score = pow((range-e.terminalTargetRange)/rangeScale,2)
-        + pow((p.height-e.terminalTargetAltitude)/heightScale,2)
-        + pow((end.aerodynamics.mach-e.terminalTargetMach)/e.terminalMachHalfWidth,2)
-      let heading = wrapAngle(frame.bearing(from: end.position, to: terminalPoint)-end.course)
-      score += pow(heading / .pi, 2)
-      let route = prediction.reachedTerminalRegion && prediction.violations.isEmpty
-        ? terminalPlanner.plan(from: end, allowDirect: c.guidance.allowDirectTerminal, preview: true).plan : nil
-      if route == nil { score += 100 }
-      if !prediction.violations.isEmpty { score += 1000 + Double(prediction.violations.count)*100 }
-      if score < bestScore {
-        bestScore = score; best = factor; bestPrediction = prediction; terminalFeasible = route?.isRobust == true
+    var factors = Array(Set([max(0.1, 1-u), 1.0, 1+u, request.rangeMultiplier])).sorted()
+    var forecasts: [EntryCaptureForecast] = []
+    func score(_ f: EntryCaptureForecast) -> Double {
+      if f.feasible { return -f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
+      return (f.violations.isEmpty ? 100 : 1000 + Double(f.violations.count) * 100)
+        + abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
+    }
+    func fly(_ list: [Double]) {
+      for factor in list where !Task.isCancelled {
+        forecasts.append(forecaster.forecast(from: state, memory: request.memory, rangeMultiplier: factor,
+          controls: request.controls, previousTarget: request.previousTarget))
       }
     }
-    return .init(createdAt: state.time, rangeMultiplier: best, prediction: bestPrediction,
-      candidates: count, terminalRouteFeasible: terminalFeasible)
+    fly(factors)
+    if !forecasts.contains(where: \.feasible), let best = forecasts.min(by: { score($0) < score($1) }) {
+      // Correct early, in the direction the physics asks: a shorter
+      // perceived range commands more drag (excess energy), a longer one less.
+      switch best.capture.deficit {
+      case .excessiveEnergy, .terminalRegionNotReached: factors = [max(0.1, factors.first! * (1 - u))]
+      case .insufficientEnergy: factors = [factors.last! * (1 + u)]
+      default: factors = []
+      }
+      fly(factors)
+    }
+    let chosen = forecasts.min { score($0) < score($1) }
+    var compact = chosen
+    if let f = chosen {
+      var capture = f.capture; capture.plan = nil
+      compact = .init(createdAt: f.createdAt, rangeMultiplier: f.rangeMultiplier, liftScale: f.liftScale,
+        dragScale: f.dragScale, reachedTerminalRegion: f.reachedTerminalRegion, violations: f.violations,
+        terminalTime: f.terminalTime, terminalAltitude: f.terminalAltitude, terminalMach: f.terminalMach,
+        terminalAlong: f.terminalAlong, terminalCross: f.terminalCross,
+        maximumDynamicPressure: f.maximumDynamicPressure, maximumLoad: f.maximumLoad, capture: capture,
+        track: f.track)
+    }
+    var proposal = EntryPlanningProposal(createdAt: state.time,
+      rangeMultiplier: chosen?.rangeMultiplier ?? request.rangeMultiplier, prediction: nil,
+      candidates: forecasts.count, terminalRouteFeasible: chosen?.feasible == true)
+    proposal.capture = compact
+    return proposal
   }
 }

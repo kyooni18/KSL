@@ -57,6 +57,7 @@ public struct GuidanceSolution: Codable, Sendable {
   public var entry: EntryDiagnostics?
   public var approach: ApproachDiagnostics?
   public var admission: TerminalAdmissionDiagnostics?
+  public var capture: CaptureHandoffDiagnostics?
   public init(
     phase: MissionPhase, target: GuidanceTarget, violations: [ConstraintViolation] = [],
     planID: Int? = nil, pathRemaining: Double = 0, diagnostic: String = ""

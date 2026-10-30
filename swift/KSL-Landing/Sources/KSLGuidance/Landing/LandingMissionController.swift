@@ -29,6 +29,9 @@ public final class LandingMissionController {
   private var limiter = GuidanceTargetLimiter()
   public let externalPlanning: Bool
   public private(set) var lastAdmission: MM305Admission?
+  /// MM305's own physical verdict on the last searched state.
+  public private(set) var lastCapture: TAEMCaptureAssessment?
+  private var publishedForecastEpoch: Double?
   private var previousTime: Double?
   private var wasAirborne = false
   private var invalidationFailure: ConstraintViolation?
@@ -106,6 +109,8 @@ public final class LandingMissionController {
   }
   private func acceptTerminal(_ result: PlanningResult, state: VehicleState) {
     lastPlanningResult = result
+    var verdict = TAEMCaptureEvaluator.assess(result, state: state, configuration: configuration)
+    verdict.plan = nil; lastCapture = verdict
     guard let candidate = result.plan else { return }
     let admission = MM305Admission.evaluate(state, plan: candidate, configuration: configuration)
     lastAdmission = admission
@@ -219,7 +224,8 @@ public final class LandingMissionController {
             .init(
               .insufficientEnergy, "Runway exceeds even the optimistic still-air modeled range",
               value: distance, limit: optimisticRange)
-          ])
+          ] + (lastCapture.map { [.init(Self.classification($0.deficit),
+            "Last MM305 capture verdict: \($0.deficit.rawValue)")] } ?? []))
       }
     }
     if [.approach, .preflare, .flare].contains(phase) || (plan == nil && approach.canCapture(state))
@@ -280,6 +286,11 @@ public final class LandingMissionController {
             .init(.insufficientEnergy, "No complete terminal path or final capture remains")
           ]
         }
+        if !failures.isEmpty, let capture = lastCapture, !capture.feasible {
+          failures.append(.init(Self.classification(capture.deficit),
+            "MM305 capture infeasible: \(capture.deficit.rawValue)",
+            value: capture.envelope.energyMargin.isFinite ? max(-1e9, capture.envelope.energyMargin) : 0))
+        }
         raw = .init(
           phase: failures.isEmpty ? .entry : .abort, target: target, violations: failures,
           diagnostic:
@@ -295,6 +306,9 @@ public final class LandingMissionController {
       pathRemaining: raw.pathRemaining, diagnostic: raw.diagnostic)
     solution.entry = raw.entry
     solution.approach = raw.approach
+    if phase == .entry || phase == .acquisition || phase == .headingAlignment || phase == .abort {
+      solution.capture = handoffDiagnostics()
+    }
     if let admission = lastAdmission {
       var value = TerminalAdmissionDiagnostics()
       value.accepted = admission.accepted; value.altitudeMargin = admission.altitudeMargin
@@ -303,5 +317,45 @@ public final class LandingMissionController {
       solution.admission = value
     }
     return solution
+  }
+
+  static func classification(_ deficit: TAEMCaptureDeficit) -> FailureClassification {
+    switch deficit {
+    case .excessiveEnergy: return .excessiveEnergy
+    case .insufficientEnergy, .insufficientAltitude, .terminalRegionNotReached: return .insufficientEnergy
+    case .crossrangeBeyondTurningAuthority, .adverseHeading: return .invalidGeometry
+    case .inadequateControlAuthority: return .actuatorAuthority
+    case .envelopeViolation: return .excessiveDynamicPressure
+    case .closedLoopFailure, .none: return .modelUncertainty
+    }
+  }
+
+  private func handoffDiagnostics() -> CaptureHandoffDiagnostics {
+    var d = CaptureHandoffDiagnostics()
+    if let f = entry.captureForecast {
+      let e = f.capture.envelope
+      d.predictedFeasible = f.feasible; d.predictedDeficit = f.capture.deficit.rawValue
+      d.predictedAt = f.createdAt; d.predictedCaptureTime = f.capture.time
+      d.predictedAltitude = f.capture.altitude; d.predictedMach = f.capture.mach
+      d.predictedAlong = f.terminalAlong; d.predictedCross = f.terminalCross
+      d.predictedHACRadius = f.capture.hacRadius; d.predictedHACTurnAngle = f.capture.hacTurnAngle
+      d.predictedHACSide = f.capture.hacSide; d.predictedPathLength = f.capture.planLength
+      d.excessEnergyMargin = e.excessEnergyMargin > -1e12 ? e.excessEnergyMargin : nil
+      d.deficitEnergyMargin = e.deficitEnergyMargin > -1e12 ? e.deficitEnergyMargin : nil
+      d.requiredHeadingChange = e.requiredHeadingChange; d.availableTurnRate = e.availableTurnRate
+      d.rangeMultiplier = f.rangeMultiplier
+      // The sparse track is published once per new forecast.
+      if publishedForecastEpoch != f.createdAt { d.predictedTrack = f.track; publishedForecastEpoch = f.createdAt }
+    }
+    if let capture = lastCapture {
+      d.mm305Searched = true; d.mm305Deficit = capture.deficit.rawValue
+    }
+    d.mm305PlanAccepted = plan != nil
+    if plan == nil, let admission = lastAdmission, !admission.accepted {
+      d.mm305Rejection = admission.violations.map(\.message).joined(separator: "; ")
+    } else if plan == nil, let capture = lastCapture, !capture.feasible {
+      d.mm305Rejection = "No admissible HAC: \(capture.deficit.rawValue)"
+    }
+    return d
   }
 }

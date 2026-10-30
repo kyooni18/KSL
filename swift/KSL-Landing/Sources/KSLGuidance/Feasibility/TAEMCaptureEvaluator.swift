@@ -94,7 +94,25 @@ public final class TAEMCaptureEvaluator {
   public func evaluate(_ state: VehicleState, certify: Bool = false,
                        controlSnapshot: FlightControlSnapshot? = nil,
                        previousTarget: GuidanceTarget? = nil) -> TAEMCaptureAssessment {
-    let c = configuration, v = c.vehicle
+    let c = configuration
+    let preview = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal, preview: true)
+    var a = Self.assess(preview, state: state, configuration: c)
+    guard a.feasible, certify else { return a }
+    let closed = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal,
+      controlSnapshot: controlSnapshot, previousTarget: previousTarget)
+    if let plan = closed.plan {
+      a.certified = true; Self.describe(plan, into: &a)
+    } else {
+      a.feasible = false; a.deficit = .closedLoopFailure
+      a.violations = closed.closedLoopRejections?.flatMap(\.violations) ?? []
+    }
+    return a
+  }
+
+  /// Physical verdict on one HAC planning result (preview or closed-loop).
+  public static func assess(_ result: PlanningResult, state: VehicleState,
+                            configuration c: MissionConfiguration) -> TAEMCaptureAssessment {
+    let v = c.vehicle, frame = RunwayFrame(runway: c.runway, planet: c.planet)
     var a = TAEMCaptureAssessment()
     let p = frame.coordinates(of: state.position)
     let g = c.planet.gravitationalParameter / state.position.length.squared
@@ -105,9 +123,7 @@ public final class TAEMCaptureEvaluator {
     a.envelope.energyHeight = p.height + airspeed * airspeed / (2 * g)
     a.envelope.requiredHeadingChange = abs(a.headingError)
     a.envelope.availableTurnRate = g * tan(v.maximumBank) / airspeed
-
-    let preview = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal, preview: true)
-    let summary = preview.envelope ?? .init()
+    let summary = result.envelope ?? .init()
     a.envelope.candidatesExamined = summary.examined
     a.envelope.candidatesCompleted = summary.completed
     a.envelope.candidatesFeasible = summary.feasible
@@ -121,29 +137,25 @@ public final class TAEMCaptureEvaluator {
       a.envelope.excessEnergyMargin = (v.maximumTouchdownSpeed.squared - slow.squared) / gs
     }
     if let fast = summary.fastestTouchdown {
-      a.envelope.deficitEnergyMargin = (fast.squared - (v.landingSpeed * 0.82).squared) / gs
+      a.envelope.deficitEnergyMargin = (fast.squared - (v.landingSpeed * EnergyManagementEngine.minimumTouchdownFraction).squared) / gs
     }
-
-    guard let candidate = preview.plan else {
+    guard let candidate = result.plan else {
       a.deficit = classify(summary, headingError: a.headingError, envelope: a.envelope)
-      a.violations = preview.bestRejected?.violations ?? []
+      a.violations = result.bestRejected?.violations ?? []
+      if a.deficit == .none || summary.feasible > 0 {
+        // Priced paths existed but none survived closed-loop flight.
+        a.deficit = .closedLoopFailure
+        a.violations = result.closedLoopRejections?.flatMap(\.violations) ?? a.violations
+      }
       return a
     }
     a.feasible = true; a.deficit = .none
+    a.certified = candidate.nominalQualified
     describe(candidate, into: &a)
-    guard certify else { return a }
-    let closed = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal,
-      controlSnapshot: controlSnapshot, previousTarget: previousTarget)
-    if let plan = closed.plan {
-      a.certified = true; describe(plan, into: &a)
-    } else {
-      a.feasible = false; a.deficit = .closedLoopFailure
-      a.violations = closed.closedLoopRejections?.flatMap(\.violations) ?? []
-    }
     return a
   }
 
-  private func describe(_ plan: TerminalPlan, into a: inout TAEMCaptureAssessment) {
+  private static func describe(_ plan: TerminalPlan, into a: inout TAEMCaptureAssessment) {
     a.plan = plan; a.planIdentifier = plan.identifier
     a.planLength = plan.stations.last?.distance
     a.hacRadius = plan.spiral?.finalRadius
@@ -152,7 +164,7 @@ public final class TAEMCaptureEvaluator {
   }
 
   /// Attribute the failure to the mechanism that eliminated the family.
-  private func classify(_ s: TerminalEnvelopeSummary, headingError: Double,
+  private static func classify(_ s: TerminalEnvelopeSummary, headingError: Double,
                         envelope: TAEMReachableEnvelope) -> TAEMCaptureDeficit {
     // No path fits the maximum path length: the runway is out of reach.
     if s.examined == 0 { return abs(headingError) > .pi / 2 ? .adverseHeading : .insufficientEnergy }

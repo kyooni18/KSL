@@ -103,6 +103,20 @@ class NativeTelemetryPublication:
                 "planID": guidance.get("planID"),
             },
             "deorbitPlan": command.get("plan"),
+            # Landing-feasibility evidence (additive; existing keys unchanged).
+            "capture": guidance.get("capture"),
+            "entryGuidance": guidance.get("entry"),
+            "admission": guidance.get("admission"),
+            "violations": guidance.get("violations"),
+            "actual": {
+                "aoa": number(angles.get("aoa_deg")), "bank": number(angles.get("bank_deg")),
+                "altitude": number(telemetry.get("position", {}).get("altitude_m")),
+                "mach": number(telemetry.get("aero", {}).get("mach")),
+                "dynamicPressure": number(telemetry.get("aero", {}).get("q_pa")),
+            },
+            "control": {k: v for k, v in (command.get("record", {}).get("control") or {}).items()
+                        if k in ("pitchSaturated", "rollSaturated", "yawSaturated", "authority",
+                                 "appliedDemand", "trimAlphaCeiling")},
             "server": {
                 "generatedAt": time.time(),
                 "source": "Native Swift / independent ShuttleSim",
@@ -112,6 +126,25 @@ class NativeTelemetryPublication:
 
     def record(self, telemetry: dict, command: dict, step: int) -> None:
         phase = command.get("phase", "unknown")
+        selection = (command.get("plan") or {}).get("selection")
+        if selection:
+            ranked = selection.get("ranked") or []
+            self.manifest["deorbitSelection"] = {
+                "mode": selection.get("mode"), "rank": selection.get("rank"),
+                "evaluatedForecasts": selection.get("evaluatedForecasts"),
+                "candidates": [{
+                    "pass": r.get("pass"), "burnOffset": r.get("burnOffset"),
+                    "burnStart": r.get("window", {}).get("burnStart"),
+                    "entryRange": r.get("window", {}).get("entryRange"),
+                    "corridor": r.get("corridor"),
+                    "feasible": (r.get("nominal") or {}).get("capture", {}).get("feasible"),
+                    "certified": (r.get("nominal") or {}).get("capture", {}).get("certified"),
+                    "deficit": (r.get("nominal") or {}).get("capture", {}).get("deficit"),
+                    "excessEnergyMargin": (r.get("nominal") or {}).get("capture", {}).get("envelope", {}).get("excessEnergyMargin"),
+                    "deficitEnergyMargin": (r.get("nominal") or {}).get("capture", {}).get("envelope", {}).get("deficitEnergyMargin"),
+                    "robustPasses": sum(1 for d in r.get("dispersed") or [] if (d.get("capture") or {}).get("feasible")),
+                    "dispersedCases": len(r.get("dispersed") or []),
+                } for r in ranked]}
         changed = self.last_phase != phase
         self.last_phase = phase
         if step % 10 == 1 or changed or command.get("terminal"):

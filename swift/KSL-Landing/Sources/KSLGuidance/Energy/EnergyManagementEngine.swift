@@ -5,6 +5,8 @@ import KSLPhysics
 public final class EnergyManagementEngine {
   /// Fraction of rated roll response a path may demand (pricing reserve).
   public static let bankRateReserve = 0.85
+  /// Lowest priced touchdown speed, as a fraction of landing speed.
+  public static let minimumTouchdownFraction = 0.82
   /// Bank whose load factor remains available after the configured
   /// aerodynamic uncertainty: n = min(n_max, 1/cos(bank_max))*(1-u).
   public static func acquisitionBank(_ c: MissionConfiguration) -> Double {
@@ -268,11 +270,11 @@ public final class EnergyManagementEngine {
         previousBank = bank
       }
     }
-    if speed < v.landingSpeed * 0.82 {
+    if speed < v.landingSpeed * Self.minimumTouchdownFraction {
       violations.append(
         .init(
           .insufficientEnergy, "Touchdown speed below validated design envelope", value: speed,
-          limit: v.landingSpeed * 0.82))
+          limit: v.landingSpeed * Self.minimumTouchdownFraction))
     }
     if speed > v.maximumTouchdownSpeed {
       violations.append(
