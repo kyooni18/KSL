@@ -36,3 +36,11 @@ public struct EntryConfiguration: Codable, Sendable, Equatable {
     _ = try JSONEncoder().encode(self)
   }
 }
+
+// Deliver beside the compact HAC, rather than at the outer search radius.
+extension MissionConfiguration {
+  public var terminalCaptureRange: Double {
+    min(entrySettings.captureRange, guidance.finalDistance
+      + 2*guidance.minimumHACRadius + entrySettings.handoffRadius)
+  }
+}

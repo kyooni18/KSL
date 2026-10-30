@@ -23,7 +23,7 @@ final class EntryCaptureObjectivePlanner {
     var best: (EntryCaptureObjective, Double)?
     for altitude in [e.terminalTargetAltitude, e.terminalMinimumAltitude, e.terminalMaximumAltitude] {
       let height = altitude - c.runway.elevation
-      let range = e.captureRange
+      let range = c.terminalCaptureRange
       let cross = e.handoffCross + crossAim
       guard abs(cross) < range else { continue }
       let along = -sqrt(range*range-cross*cross)

@@ -348,8 +348,8 @@ public final class HACPlanningEngine {
       // Joining is a response transient. The spiral should do the turning and
       // energy management, rather than a long acquisition consuming MM305.
       let acquisitionBudget = max(spacing, state.horizontalSpeed*response)
-      let lateJoin = max(0, acquisitionLength-acquisitionBudget)/distanceScale
-      let acquisitionDominance = max(0, acquisitionLength-spiralLength)/distanceScale
+      let lateJoin = max(0, acquisitionLength-acquisitionBudget)/acquisitionBudget
+      let acquisitionDominance = max(0, acquisitionLength-spiralLength)/max(spacing, spiralLength)
       let radiusExcess = plan.spiral.map {
         max(0, $0.finalRadius/max(minimumRadius, dynamicRadius)-1)
           * spiralLength/distanceScale
@@ -358,7 +358,6 @@ public final class HACPlanningEngine {
         + rollDistance/distanceScale+lateJoin+acquisitionDominance+radiusExcess
     }
     candidates.sort {
-      if $0.assessment.feasible != $1.assessment.feasible { return $0.assessment.feasible }
       return fitCost($0) < fitCost($1)
     }
     // Select before diagnostics. Neither pricing nor a closed-loop prediction

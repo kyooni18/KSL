@@ -90,7 +90,7 @@ public final class LandingMissionController {
     // Arm on approach to the operator's runway capture region. Once armed,
     // no aim-point distance or model verdict can stop MM305 from planning.
     let runwayRange = frame.distance(from: state.position, to: frame.origin)
-    let inside = runwayRange <= e.captureRange + state.horizontalSpeed*cadence
+    let inside = runwayRange <= configuration.terminalCaptureRange + state.horizontalSpeed*cadence
     terminalSearchArmed = inside
     return inside
   }

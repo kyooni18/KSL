@@ -65,7 +65,7 @@ public final class EntryCaptureForecaster {
   /// Candidate lateral aims: on the handoff point and one turning reach to
   /// either side of the runway axis.
   public func lateralAims(at time: Double) -> [Double] {
-    let w = min(turningReach(at: time), configuration.entrySettings.captureRange * sin(configuration.entrySettings.headingHalfWidth)); return [0, -w, w]
+    let w = min(turningReach(at: time), configuration.terminalCaptureRange * sin(configuration.entrySettings.headingHalfWidth)); return [0, -w, w]
   }
 
   /// Forecast from a fresh MM304 executive (deorbit planning).
@@ -135,7 +135,7 @@ public final class EntryCaptureForecaster {
         searched = true; nextCapture = s.time+c.guidance.terminalReplanInterval
         capture = evaluateCapture(s)
         let runwayRange = self.frame.distance(from: s.position, to: self.frame.origin)
-        if runwayRange > c.entrySettings.captureRange + s.horizontalSpeed*c.guidance.terminalReplanInterval {
+        if runwayRange > c.terminalCaptureRange + s.horizontalSpeed*c.guidance.terminalReplanInterval {
           capture.feasible = false
         }
         // Verdicts do not end the survey. Keep the same FCS, limiter and
@@ -180,7 +180,7 @@ public final class EntryCaptureForecaster {
     // re-fly the objective; waiting for an already feasible trajectory would
     // leave an infeasible seed objective permanently in command.
     if end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude,
-      frame.distance(from: end.position, to: frame.origin) <= c.entrySettings.captureRange
+      frame.distance(from: end.position, to: frame.origin) <= c.terminalCaptureRange
         + end.horizontalSpeed*c.guidance.terminalReplanInterval,
       envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,

@@ -14,7 +14,7 @@ public struct EntryCaptureObjective: Codable, Sendable {
                    frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
     let e = c.entrySettings, cross = e.handoffCross + crossAim
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
-    let range = e.captureRange
+    let range = c.terminalCaptureRange
     let along = -sqrt(max(0, range * range - cross * cross))
     let radius = c.planet.radius + e.terminalTargetAltitude
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
@@ -94,11 +94,20 @@ final class EntryCommandLaw {
       - terminalSlope
     let desiredGamma = atan(interceptSlope)
     let gravity = c.planet.gravitationalParameter / s.position.squaredLength
+    // Spend only energy above the shared capture state over its remaining
+    // horizontal distance. The drag profile must not consume the HAC reserve.
+    let availableEnergy = gravity*(height-targetAltitude)
+      + (a.airspeed*a.airspeed-terminalSpeed*terminalSpeed)/2
+    let energyDragBudget = max(0, availableEnergy)
+      / max(range, s.horizontalSpeed*c.guidance.pathLookaheadTime)
+      * s.horizontalSpeed/max(Double.leastNormalMagnitude, a.airspeed)
+    d.referenceDrag = min(d.referenceDrag, energyDragBudget)
     let support = max(0, (gravity - s.horizontalSpeed * s.horizontalSpeed / s.position.length) * cos(s.flightPathAngle))
     let captureLift = support + a.airspeed * (desiredGamma - s.flightPathAngle) / horizon
     let liftLimit = min(max(0, a.lift / s.mass), c.vehicle.maximumLoadFactor * gravity)
-    let weight = clamp(terminalSpeed * terminalSpeed / max(1, a.airspeed * a.airspeed), 0, 1)
-    d.verticalLift += weight * (clamp(captureLift, 0, liftLimit) - d.verticalLift)
+    // Altitude is energy reserved for HAC. Never bank away lift needed to
+    // reach its vertical state merely to satisfy the drag-only reference.
+    d.verticalLift = max(d.verticalLift, clamp(captureLift, 0, liftLimit))
     let confidence = a.measuredForces || a.modelEvidence != nil ? 1.0 : d.confidence
     let scales = [0.0, 0.35, 0.65, 1.0, 0.45], negative = [1.0, 0.85, 0.50, 0.20, 0.35]
     // Drag modulation answers energy/density errors, not the vehicle's own
@@ -123,7 +132,7 @@ final class EntryCommandLaw {
       : min(c.vehicle.maximumAngleOfAttack, max(e.nominalAlpha, memory.identifiedTrimCeiling ?? e.nominalAlpha))
     let floorAlpha = max(c.vehicle.minimumAngleOfAttack, aero.bestGlideAlpha(mach: a.mach,
       maximumAlpha: ceilingAlpha, dynamicPressure: a.dynamicPressure))
-    var baseAlpha = e.nominalAlpha
+    var baseAlpha = floorAlpha
     if a.dynamicPressure > 0, d.referenceDrag > 0 {
       let nominalDrag = actualDragCoefficient*a.dynamicPressure*aero.referenceArea/s.mass
       let measuredGain = nominalDrag > 0 && d.observedDrag > 0 ? d.observedDrag/nominalDrag : 1
