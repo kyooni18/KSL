@@ -42,6 +42,8 @@ public struct GuidanceTargetLimiter: Sendable {
       (target.angleOfAttack, alphaRate) = Self.step(old.angleOfAttack, toward: target.angleOfAttack,
         rate: alphaRate, rateLimit: pitchRateLimit, acceleration: pitchAcceleration, dt: dt)
     }
+    // Never hand the FCS an attitude outside the vehicle envelope.
+    target.bank = clamp(target.bank, -c.vehicle.maximumBank, c.vehicle.maximumBank)
     previous = target
     return target
   }
@@ -56,9 +58,13 @@ public struct GuidanceTargetLimiter: Sendable {
     }
     let error = goal - value, direction: Double = error < 0 ? -1 : 1
     let desired = direction * min(rateLimit, sqrt(2 * acceleration * abs(error)))
-    let newRate = moveToward(rate, desired, maximumDelta: acceleration * dt)
-    let next = value + 0.5 * (rate + newRate) * dt
-    if (goal - value) * (goal - next) <= 0 && abs(newRate) <= acceleration * dt { return (goal, 0) }
+    // A reference has no inertia to honour: it may never move away from,
+    // or past, its goal, however small the available deceleration is.
+    var newRate = moveToward(rate, desired, maximumDelta: acceleration * dt)
+    if newRate * direction < 0 { newRate = 0 }
+    newRate = direction * min(abs(newRate), abs(error) / max(dt, 1e-9))
+    let next = value + newRate * dt
+    if (goal - value) * (goal - next) <= 0 { return (goal, 0) }
     return (next, newRate)
   }
 }

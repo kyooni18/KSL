@@ -2824,7 +2824,7 @@
   const sourceToggle = $("live-source-toggle");
   if (sourceToggle) {
     const paint = () => {
-      sourceToggle.textContent = "SOURCE: " + liveSourceOverride;
+      sourceToggle.textContent = "SRC " + liveSourceOverride;
       if (!archiveReplay.active) setReplayControlsActive(false);
     };
     sourceToggle.addEventListener("click", () => {

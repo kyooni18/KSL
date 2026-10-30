@@ -261,8 +261,10 @@ body.replay-mode .simulation-status{border-style:dashed}
   padding:7px;
 }
 .playback-summary button{white-space:nowrap}
-.playback-summary .playback-context{grid-column:1 / -1;grid-row:2;padding:0 2px}
-.playback-summary .playback-toggle{grid-column:5;grid-row:1;justify-self:end}
+.playback-summary{grid-template-columns:repeat(4,auto) 1fr;justify-content:stretch}
+.playback-summary .playback-context{grid-column:1 / 5;grid-row:2;padding:0 2px}
+.playback-summary .playback-toggle{grid-column:5;grid-row:2;justify-self:end}
+.playback-summary .playback-runs,.playback-summary .playback-live{min-width:0}
 .playback-summary button,.playback-controls button,.playback-controls select,.sim-history-head button{
   appearance:none;
   min-height:34px;
@@ -559,3 +561,6 @@ body.launch-page .map-footer, body.launch-page .scene3d-panel { display: none; }
 .mm304-timeline li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
 .mm304-timeline li.bad { color: var(--red, #ff6b6b); }
 .mm304-timeline li.ok { color: var(--green, #6bd88a); }
+@media (max-width:480px){
+  .playback-summary button{font-size:10px!important;letter-spacing:0!important;padding:0 6px!important}
+}
