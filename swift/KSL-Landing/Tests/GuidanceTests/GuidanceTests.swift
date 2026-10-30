@@ -5,6 +5,38 @@ import XCTest
 @testable import KSLGuidance
 
 final class GuidanceTests: XCTestCase {
+  func testEntryCaptureObjectiveAndPitchResponseShapeTheDecidedAlpha() throws {
+    var c = MissionConfiguration()
+    c.vehicle.rcsAttitudeControl = true
+    let atmosphere = try AtmosphericModelEngine(), aero = try AerodynamicsEngine()
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let p = frame.position(along: -200_000, cross: 0, height: 40_000)
+    let velocity = frame.direction(at: .init(-200_000, 0), tangent: .init(1, 0)) * 1500
+    let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let state = physics.observe(.init(time: 100, position: p, velocity: velocity,
+      attitude: .windAttitude(position: p, airVelocity: velocity, alpha: c.entrySettings.nominalAlpha, bank: 0)))
+    var memory = EntryLawMemory()
+    memory.previousAlpha = c.entrySettings.nominalAlpha
+    memory.previousTime = state.time - c.guidance.controlInterval
+    memory.pitchResponseSeconds = 2
+    let fast = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
+    let fastTarget = fast.update(state)
+    memory.pitchResponseSeconds = 8
+    let slow = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
+    let slowTarget = slow.update(state)
+    XCTAssertLessThan(abs(slowTarget.angleOfAttack - memory.previousAlpha!),
+      abs(fastTarget.angleOfAttack - memory.previousAlpha!))
+    memory.objective = .seed(configuration: c, atmosphere: atmosphere, frame: frame, crossAim: 0, time: state.time)
+    memory.objective!.along = -150_000
+    let near = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
+    _ = near.update(state)
+    XCTAssertLessThan(near.diagnostics.requiredRange, slow.diagnostics.requiredRange)
+    c.vehicle.rcsAttitudeControl = false
+    memory.previousAlpha = c.vehicle.maximumAngleOfAttack
+    let aerodynamic = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
+    XCTAssertLessThanOrEqual(aerodynamic.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
+  }
+
   func testSpiralRadiusCurvatureAndMirroring() throws {
     let right = try SpiralHAC(
       exitAlong: -8000, finalRadius: 4000, growth: 250, turnAngle: radians(450), side: 1)

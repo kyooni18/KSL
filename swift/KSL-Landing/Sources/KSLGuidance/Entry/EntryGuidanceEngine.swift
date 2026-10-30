@@ -55,9 +55,11 @@ public final class EntryGuidanceEngine {
   }
   /// Lateral aim planned backward from TAEM capture (deorbit selection).
   public func setCrossAim(_ value: Double) { law.memory.crossAim = value }
+  public func setObjective(_ objective: EntryCaptureObjective?) { law.memory.objective = objective }
   public var crossAim: Double { law.memory.crossAim }
   public func invalidatePrediction() {
     bestPrediction = nil; candidateCount = 0; captureForecast = nil
+    law.memory.objective = nil
     rangeMultiplier = 1
     lastSolve = -.infinity
     law.memory.identifiedTrimCeiling = nil; law.memory.ceiling = nil
@@ -69,6 +71,7 @@ public final class EntryGuidanceEngine {
     rangeMultiplier = proposal.rangeMultiplier
     bestPrediction = proposal.prediction; candidateCount = proposal.candidates
     captureForecast = proposal.capture
+    if let objective = proposal.capture?.objective { law.memory.objective = objective }
     if let aim = proposal.crossAim { law.memory.crossAim = aim }
     if let f = proposal.capture, f.feasible, let speed = f.track.last?[4] {
       let g = configuration.planet.gravitationalParameter
@@ -84,6 +87,7 @@ public final class EntryGuidanceEngine {
     if synchronousPlanning, let request = request(from: state, controls: controls, previousTarget: previousTarget) {
       accept(plan(request), at: state.time)
     }
+    law.memory.pitchResponseSeconds = feedback?.pitchResponseSeconds
     if feedback?.trimEvidence == .identified { law.memory.identifiedTrimCeiling = feedback?.trimAlphaCeiling }
     else { law.memory.identifiedTrimCeiling = nil }
     return law.update(state, rangeMultiplier: rangeMultiplier)
@@ -98,9 +102,15 @@ public final class EntryGuidanceEngine {
     var factors = Array(Set([max(0.1, 1-u), 1.0, 1+u, request.rangeMultiplier])).sorted()
     var forecasts: [EntryCaptureForecast] = []
     func score(_ f: EntryCaptureForecast) -> Double {
-      if f.feasible { return -f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
+      // Turning consumes distance before HAC acquisition. Compare its arc
+      // length to the actual runway range, using the forecast's bank authority.
+      let turningDistance = (f.track.last?[4] ?? forecaster.terminalSpeed(at: state.time))
+        * f.capture.envelope.requiredHeadingChange
+        / max(Double.leastNormalMagnitude, f.capture.envelope.availableTurnRate)
+      let headingCost = turningDistance / max(1, f.capture.rangeToRunway)
+      if f.feasible { return headingCost - f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
       return (f.violations.isEmpty ? 100 : 1000 + Double(f.violations.count) * 100)
-        + abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
+        + headingCost + abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
     }
     func fly(_ list: [Double]) {
       for factor in list where !Task.isCancelled {
@@ -137,6 +147,16 @@ public final class EntryGuidanceEngine {
       if gain <= u * max(abs(current.capture.envelope.energyMargin), abs(best.capture.envelope.energyMargin)) {
         chosen = current
       }
+    }
+    // Re-fly a selected admissible capture objective before publishing it:
+    // forecast and live commands must use the very same energy/geometry goal.
+    if let best = chosen, let objective = best.suggestedObjective, best.feasible {
+      var memory = request.memory; memory.objective = objective; memory.crossAim = best.crossAim
+      let consistent = forecaster.forecast(from: state, memory: memory,
+        rangeMultiplier: best.rangeMultiplier, controls: request.controls, previousTarget: request.previousTarget)
+      // Publish exactly the objective that this branch flew, rather than its
+      // next optimizer iterate.
+      var verified = consistent; verified.objective = objective; chosen = verified
     }
     var compact = chosen
     compact?.capture.plan = nil

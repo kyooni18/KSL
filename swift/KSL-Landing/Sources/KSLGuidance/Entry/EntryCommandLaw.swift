@@ -2,7 +2,30 @@ import Foundation
 import KSLCore
 import KSLPhysics
 
+/// A capture state in the runway chart, shared by drag, lateral steering and prediction.
+public struct EntryCaptureObjective: Codable, Sendable {
+  public var along: Double
+  public var cross: Double
+  public var altitude: Double
+  public var speed: Double
+  public var energyHeight: Double
+  static func seed(configuration c: MissionConfiguration, atmosphere: AtmosphericModelEngine,
+                   frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
+    let e = c.entrySettings, cross = e.handoffCross + crossAim
+    let along = -sqrt(max(0, e.terminalTargetRange * e.terminalTargetRange - cross * cross))
+    let radius = c.planet.radius + e.terminalTargetAltitude
+    let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
+    let speed = e.terminalTargetMach * atmosphere.sample(position: position, time: time).speedOfSound
+    let g = c.planet.gravitationalParameter / (radius * radius)
+    return .init(along: along, cross: cross, altitude: e.terminalTargetAltitude, speed: speed,
+      energyHeight: e.terminalTargetAltitude - c.runway.elevation + speed * speed / (2 * g))
+  }
+}
+
 struct EntryLawMemory: Sendable {
+  var objective: EntryCaptureObjective?
+  var pitchResponseSeconds: Double?
+
   var phase: EntryPhase = .preentry
   var previousTime: Double?, previousAlpha: Double?
   var modulation = 0.0, dragBoost = 0.0, deficit = 0.0
@@ -37,11 +60,12 @@ final class EntryCommandLaw {
     let c = configuration, e = c.entrySettings, a = s.aerodynamics
     let dt = min(1, max(0, s.time - (memory.previousTime ?? (s.time - c.guidance.controlInterval))))
     memory.previousTime = s.time
-    let aimCross = e.handoffCross + memory.crossAim
-    let target = frame.position(along: e.handoffAlong, cross: aimCross, height: 0)
+    let objective = memory.objective ?? EntryCaptureObjective.seed(configuration: c,
+      atmosphere: atmosphere, frame: frame, crossAim: memory.crossAim, time: s.time)
+    let aimCross = objective.cross, targetAltitude = objective.altitude
+    let target = frame.position(along: objective.along, cross: aimCross, height: 0)
     let range = frame.distance(from: s.position, to: target)
-    let targetAtmosphere = atmosphere.sample(position: target.normalized * (c.planet.radius + e.terminalTargetAltitude), time: s.time)
-    let terminalSpeed = e.terminalTargetMach * targetAtmosphere.speedOfSound
+    let terminalSpeed = objective.speed
     let anchor = 3.4 * terminalSpeed
     let progress = clamp((anchor - a.airspeed) / max(1, anchor - terminalSpeed), 0, 1)
     let inferred: EntryPhase = a.dynamicPressure <= 0 ? .preentry
@@ -50,7 +74,7 @@ final class EntryCommandLaw {
     // Velocity gates only advance the entry subphase. MM305 owns admission.
     if inferred.rawValue > memory.phase.rawValue { memory.phase = inferred }
     var d = drag.compute(s, phase: memory.phase, range: range * rangeMultiplier,
-      targetAltitude: e.terminalTargetAltitude, targetSpeed: terminalSpeed, targetRange: e.terminalTargetRange)
+      targetAltitude: targetAltitude, targetSpeed: terminalSpeed, targetRange: 0)
     let confidence = a.measuredForces || a.modelEvidence != nil ? 1.0 : d.confidence
     let scales = [0.0, 0.35, 0.65, 1.0, 0.45], negative = [1.0, 0.85, 0.50, 0.20, 0.35]
     // Drag modulation answers energy/density errors, not the vehicle's own
@@ -103,9 +127,17 @@ final class EntryCommandLaw {
         maximumAlpha: c.vehicle.maximumAngleOfAttack, dynamicPressure: a.dynamicPressure)))
     }
     let trimCeiling = memory.identifiedTrimCeiling ?? c.vehicle.maximumAngleOfAttack
-    alpha = min(alpha, c.vehicle.maximumAngleOfAttack, trimCeiling)
+    alpha = min(alpha, ceilingAlpha, trimCeiling)
+    // Separate guidance bandwidth from the measured closed pitch loop. The
+    // exponential step is monotone even after a large telemetry interval.
+    let response = memory.pitchResponseSeconds ?? (c.vehicle.controlPlant.maximumPitchRate
+      / max(Double.leastNormalMagnitude, c.vehicle.controlPlant.pitchAccelerationMaximum))
+    let tau = response / (1 - GuidanceTargetLimiter.responseReserve)
+    let previous = memory.previousAlpha ?? a.angleOfAttack
+    alpha = previous + (alpha - previous) * (-expm1(-dt / tau))
     alpha = moveToward(memory.previousAlpha ?? a.angleOfAttack, alpha,
       maximumDelta: min(radians(2), c.guidance.alphaSlewRate) * dt)
+    alpha = clamp(alpha, c.vehicle.minimumAngleOfAttack, ceilingAlpha)
     memory.previousAlpha = alpha
     let p = frame.coordinates(of: s.position)
     let forward = frame.direction(at: p.horizontal, tangent: .init(1, 0))
@@ -121,6 +153,6 @@ final class EntryCommandLaw {
     }
     diagnostics = d
     return .init(angleOfAttack: alpha, bank: bank, desiredSpeed: terminalSpeed,
-      desiredHeight: e.terminalTargetAltitude, desiredFlightPath: s.flightPathAngle)
+      desiredHeight: targetAltitude, desiredFlightPath: s.flightPathAngle)
   }
 }

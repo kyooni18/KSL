@@ -7,6 +7,8 @@ import KSLPhysics
 /// the TAEM capture evaluator. The predicted ground track is retained so the
 /// actual trajectory can later be compared with the prediction.
 public struct EntryCaptureForecast: Codable, Sendable {
+  public var suggestedObjective: EntryCaptureObjective?
+  public var objective: EntryCaptureObjective?
   public let createdAt: Double
   public let rangeMultiplier: Double
   public var crossAim = 0.0
@@ -83,31 +85,46 @@ public final class EntryCaptureForecaster {
     // Guidance keeps the nominal model: dispersions live in the plant only.
     let law = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics, memory: memory)
     let speed = terminalSpeed(at: state.time)
+      * (c.entrySettings.terminalTargetMach + c.entrySettings.terminalMachHalfWidth) / c.entrySettings.terminalTargetMach
     let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
       step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: speed,
       minimumDuration: state.aerodynamics.airspeed < speed ? 4 * c.guidance.entryReplanInterval : 0,
-      controlSnapshot: controls, previousTarget: previousTarget) { s in
+      controlSnapshot: controls, previousTarget: previousTarget,
+      feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds }) { s in
         let target = law.update(s, rangeMultiplier: rangeMultiplier)
         return .init(alpha: target.angleOfAttack, bank: target.bank)
       }
     var samples = first.samples, violations = first.violations, end = first.terminalState
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    func evaluateCapture(_ state: VehicleState) -> TAEMCaptureAssessment {
+      var assessment = evaluator.evaluate(state)
+      if let plan = assessment.plan {
+        let admission = MM305Admission.evaluate(state, plan: plan, configuration: c, requireQualification: false)
+        if !admission.accepted {
+          assessment.feasible = false; assessment.deficit = .terminalRegionNotReached
+          assessment.violations += admission.violations
+        }
+      }
+      return assessment
+    }
     var capture = TAEMCaptureAssessment()
     if first.reachedTerminalRegion && violations.isEmpty {
       // The capture region is wherever an admissible HAC first exists, not a
       // fixed Mach: keep flying the MM304 law and re-ask at MM305's cadence.
-      capture = evaluator.evaluate(end)
-      while !capture.feasible, capture.deficit != .insufficientEnergy, violations.isEmpty,
+      capture = evaluateCapture(end)
+      while !Task.isCancelled, !capture.feasible, capture.deficit != .insufficientEnergy, violations.isEmpty,
         end.time - state.time < c.guidance.maximumPredictionDuration,
         frame.coordinates(of: end.position).height > c.vehicle.gearHeight {
         let next = predictor.predict(from: end, duration: c.guidance.terminalReplanInterval,
-          step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0) { s in
+          step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
+          feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds }) { s in
             let target = law.update(s, rangeMultiplier: rangeMultiplier)
             return .init(alpha: target.angleOfAttack, bank: target.bank)
           }
+        if next.terminalState.time <= end.time { break }
         samples += next.samples.dropFirst(); violations += next.violations; end = next.terminalState
         if !violations.isEmpty { break }
-        capture = evaluator.evaluate(end)
+        capture = evaluateCapture(end)
       }
       if capture.feasible && certify {
         capture = evaluator.evaluate(end, certify: true, controlSnapshot: controls, previousTarget: previousTarget)
@@ -133,6 +150,18 @@ public final class EntryCaptureForecaster {
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)
     result.crossAim = memory.crossAim
+    result.objective = memory.objective ?? EntryCaptureObjective.seed(configuration: c,
+      atmosphere: atmosphere, frame: frame, crossAim: memory.crossAim, time: state.time)
+    if capture.feasible, capture.envelope.energyMargin > 0 {
+      let gravity = c.planet.gravitationalParameter / pow(end.position.length, 2)
+      let energy = capture.envelope.energyHeight
+        + (capture.envelope.excessEnergyMargin - capture.envelope.deficitEnergyMargin) / 2
+      // Keep capture speed; center the altitude/energy target between the two
+      // priced HAC energy boundaries, retaining positive room on both sides.
+      result.suggestedObjective = .init(along: p.along, cross: p.cross,
+        altitude: c.runway.elevation + energy - pow(end.aerodynamics.airspeed, 2) / (2 * gravity),
+        speed: end.aerodynamics.airspeed, energyHeight: energy)
+    }
     return result
   }
 }

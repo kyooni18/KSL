@@ -22,6 +22,7 @@ public final class TrajectoryPropagationEngine {
     from initial: VehicleState, duration: Double, step: Double = 2, recordEvery: Int = 5,
     terminalSpeed: Double = 650, minimumDuration: Double = 0,
     controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
+    feedback: ((ControlDiagnostics) -> Void)? = nil,
     law: (VehicleState) -> PredictionAttitude
   ) -> TrajectoryPrediction {
     var samples: [TrajectorySample] = [], violations: [ConstraintViolation] = []
@@ -46,7 +47,7 @@ public final class TrajectoryPropagationEngine {
       if height < configuration.runway.elevation + 150 || s.contact == .crashed {
         violations.append(.init(.terrainCollision, "Closed-loop prediction reached terrain before terminal admission")); break
       }
-      if s.aerodynamics.airspeed < terminalSpeed && height < 35_000 && s.verticalSpeed < 0
+      if s.aerodynamics.airspeed < terminalSpeed && height <= configuration.entrySettings.terminalMaximumAltitude && s.verticalSpeed < 0
         && s.time - initial.time >= minimumDuration { reached = true; break }
       if s.aerodynamics.dynamicPressure > configuration.vehicle.maximumDynamicPressure {
         violations.append(.init(.excessiveDynamicPressure, "Closed-loop forecast q limit",
@@ -63,6 +64,7 @@ public final class TrajectoryPropagationEngine {
         nextRecord += step * Double(recordEvery)
       }
       let dt = min(controlStep, end - s.time)
+      feedback?(controller.diagnostics)
       let requested = law(s)
       let target = limiter.update(.init(angleOfAttack: requested.alpha, bank: requested.bank),
         phase: .entry, configuration: configuration, dt: dt, dynamicPressure: s.aerodynamics.dynamicPressure,

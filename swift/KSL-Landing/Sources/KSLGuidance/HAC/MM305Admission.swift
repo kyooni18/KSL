@@ -10,7 +10,7 @@ public struct MM305Admission: Codable, Sendable {
   public let violations: [ConstraintViolation]
 
   public static func evaluate(_ state: VehicleState, plan: TerminalPlan,
-                              configuration c: MissionConfiguration) -> Self {
+                              configuration c: MissionConfiguration, requireQualification: Bool = true) -> Self {
     let e = c.entrySettings
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
     let altitude = state.position.length - c.planet.radius
@@ -35,7 +35,7 @@ public struct MM305Admission: Codable, Sendable {
     let minimumRange = max(c.guidance.finalDistance*1.5,
       c.guidance.finalDistance+(c.guidance.hacRadius ?? 12000))
     let closing = state.velocity.dot(frame.origin.normalized.projected(onPlaneWithNormal: state.position.normalized)) > 0
-    if range < minimumRange || range > e.terminalTargetRange || !closing || state.verticalSpeed >= 0 {
+    if range < minimumRange || range > c.guidance.maximumPathLength || !closing || state.verticalSpeed >= 0 {
       failures.append(.init(.invalidGeometry, "MM305 requires descending, closing acquisition inside the terminal range band", value: range))
     }
     if state.aerodynamics.airspeed < (c.vehicle.minimumSafeSpeed ?? c.vehicle.landingSpeed) {
@@ -48,7 +48,7 @@ public struct MM305Admission: Codable, Sendable {
       failures.append(.init(.telemetry, "MM305 plan no longer matches the measured epoch", value: planAge,
         limit: 2*c.guidance.terminalReplanInterval))
     }
-    if !plan.nominalQualified {
+    if requireQualification && !plan.nominalQualified {
       failures.append(.init(.modelUncertainty, "MM305 requires a successful nominal closed-loop touchdown and rollout"))
     }
     // isRobust remains false when configured stress cases fail. Admission is

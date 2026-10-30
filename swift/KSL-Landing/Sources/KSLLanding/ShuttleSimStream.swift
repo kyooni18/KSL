@@ -104,11 +104,11 @@ enum ShuttleSimStream {
             FileHandle.standardError.write(Data("landing-aware selection: \(selection.evaluatedForecasts) forecasts, \(Int(Date().timeIntervalSince(clock)))s\n".utf8))
             guard selection.ranked.indices.contains(windowIndex) else { throw FlightError.infeasible("Requested landing-aware rank outside selection") }
             let chosen = selection.ranked[windowIndex]
-            guard chosen.nominal.feasible else {
-              throw FlightError.infeasible("No deorbit window reaches the TAEM capture envelope: \(chosen.rejection ?? "")")
+            if !chosen.nominal.feasible {
+              FileHandle.standardError.write(Data("Advisory: flying best-ranked unqualified window: \(chosen.rejection ?? "")\n".utf8))
             }
             window = chosen.window
-            flight.mission.planEntryAim(chosen.nominal.crossAim)
+            flight.mission.planEntryAim(chosen.nominal.crossAim, objective: chosen.nominal.objective)
             metadata!["selection"] = ["mode": "landing-aware", "rank": windowIndex,
               "ranked": try object(selection.ranked.map { r -> LandingAwareCandidate in
                 var v = r; if v.pass != chosen.pass { v.dispersed = [] }; return v }),

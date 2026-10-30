@@ -36,7 +36,9 @@ public final class LandingMissionController {
   private var wasAirborne = false
   private var invalidationFailure: ConstraintViolation?
   /// Seed MM304's lateral aim from the landing-aware deorbit plan.
-  public func planEntryAim(_ crossAim: Double) { entry.setCrossAim(crossAim) }
+  public func planEntryAim(_ crossAim: Double, objective: EntryCaptureObjective? = nil) {
+    entry.setCrossAim(crossAim); entry.setObjective(objective)
+  }
   public func invalidateDynamics(at state: VehicleState) {
     authority.reset(); entry.invalidatePrediction(); approach.invalidatePrediction()
     controlSnapshot = nil; controlFeedback = nil
