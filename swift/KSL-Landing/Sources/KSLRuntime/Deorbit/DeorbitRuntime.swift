@@ -65,23 +65,34 @@ public actor DeorbitRuntime {
   private func execute(maximumDuration: Double, realTime: Bool, encodedPlan: Data) async throws -> RuntimeOutcome {
     let c = plan.configuration, dt = c.guidance.controlInterval
     let orbit = OrbitalMechanics(planet: c.planet), burn = DeorbitBurnController(plan: plan)
-    let coastPointing = OrbitalAttitudeController(), clock = ContinuousClock()
+    var coastPointing = OrbitalAttitudeController()
+    let clock = ContinuousClock()
     var previousTime: Double?, sequence: UInt64 = 0, previousTick: ContinuousClock.Instant?
     var lastFresh = clock.now, shutdownComplete = false, missed: UInt64 = 0
+    var outageSince: ContinuousClock.Instant?, faults = 0
     func seconds(_ duration: Duration) -> Double {
       let p = duration.components; return Double(p.seconds)+Double(p.attoseconds)/1e18
     }
     while true {
       try Task.checkCancellation()
-      let tick = clock.now, state = try await io.readState(), acquired = clock.now
+      let tick = clock.now
+      do {
+      let state = try await io.readState(), acquired = clock.now
       if let t = previousTime {
-        if state.time < t || state.time-t > 1 { throw FlightError.rearmRequired("Orbital clock discontinuity") }
+        if state.time < t { throw FlightError.rearmRequired("Orbital clock moved backwards") }
         if state.time == t {
           if lastFresh.duration(to: tick) > .seconds(600) { throw FlightError.staleTelemetry }
           try await clock.sleep(for: .milliseconds(20)); continue
         }
       }
-      let interval = previousTime.map { state.time-$0 } ?? dt
+      let gap = previousTime.map { state.time-$0 } ?? dt
+      let resumed = outageSince != nil || gap > 1
+      if resumed {
+        if !shutdownComplete { try burn.resumeAfterTelemetryGap(at: state) }
+        coastPointing = OrbitalAttitudeController()
+        if state.time < plan.window.burnStart { try validateFreshOrbit(state) }
+      }
+      let interval = resumed ? dt : gap
       previousTime = state.time; lastFresh = tick
       if state.time-plan.createdAt > maximumDuration { return .timedOut }
       guard !state.systems.sas, !state.systems.airbrakes else {
@@ -108,15 +119,16 @@ public actor DeorbitRuntime {
         if burn.complete { try await io.finishDeorbit(); shutdownComplete = true }
       }
       let computed = clock.now
-      sequence += 1
       try Task.checkCancellation()
-      try await io.applyOrbital(sequence: sequence, stateTime: state.time, command: command)
+      try await io.applyOrbital(sequence: sequence+1, stateTime: state.time, command: command)
+      sequence += 1
       let applied = clock.now
       if seconds(tick.duration(to: applied)) > dt { missed += UInt64(floor(seconds(tick.duration(to: applied))/dt)) }
       var record = FlightRecord(sequence: sequence, state: state,
         guidance: .init(phase: phase, target: .init(angleOfAttack: shutdownComplete ? c.entrySettings.nominalAlpha : 0)),
         command: command.axes, control: control)
       var diagnostics = burn.diagnostics; diagnostics.reducedAssuranceAuthorized = reducedAssurance
+      diagnostics.telemetryGapResumed = resumed
       record.orbital = diagnostics; record.orbitalCommand = command
       record.planningMode = "native-orbital-v1"
       if sequence == 1 { record.initialPhase = .orbitalCoast; record.initialDeorbitPlan = encodedPlan }
@@ -125,6 +137,21 @@ public actor DeorbitRuntime {
         wallInterval: previousTick.map { seconds($0.duration(to: tick)) } ?? 0, missedDeadlines: missed)
       previousTick = tick
       try await recorder.record(record)
+      if outageSince != nil {
+        FileHandle.standardError.write(Data("deorbit: link recovered after \(faults) fault(s)\n".utf8))
+      }
+      outageSince = nil; faults = 0
+      } catch let error as FlightError where error.isRecoverable {
+        let since = outageSince ?? clock.now
+        outageSince = since; faults += 1
+        if since.duration(to: clock.now) > .seconds(maximumOutage) { throw error }
+        if faults == 1 || faults % 10 == 0 {
+          FileHandle.standardError.write(Data("deorbit: recovering from \(error) (fault \(faults))\n".utf8))
+        }
+        try await clock.sleep(for: .milliseconds(150))
+        do { try await io.recover() } catch let retry as FlightError where retry.isRecoverable {}
+        continue
+      }
       if realTime { try await clock.sleep(until: tick.advanced(by: .seconds(dt))) }
     }
   }

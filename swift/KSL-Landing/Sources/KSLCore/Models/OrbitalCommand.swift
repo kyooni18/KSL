@@ -11,6 +11,9 @@ public struct OrbitalControlCommand: Codable, Sendable, Equatable {
 public struct OrbitalExecutionDiagnostics: Codable, Sendable {
   public var planID = ""
   public var deliveredDeltaV = 0.0
+  /// Upper bound on impulse not observed across telemetry gaps, not a measurement.
+  public var unobservedDeltaVUpperBound: Double?
+  public var telemetryGapResumed: Bool?
   public var targetDeltaV = 0.0
   public var periapsisAltitude = 0.0
   public var alignmentError = 0.0

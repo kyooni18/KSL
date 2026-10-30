@@ -52,7 +52,12 @@ public final class FlightRecordReplayer {
     }
     guard let plan = orbitalPlan, let burn else { throw FlightError.protocolViolation("Orbital replay requires its recorded plan seed") }
     let state = recorded.state, c = configuration
-    let dt = previousOrbitalTime.map { state.time-$0 } ?? c.guidance.controlInterval
+    let resumed = recorded.orbital?.telemetryGapResumed == true
+    if resumed {
+      if !burn.complete { try burn.resumeAfterTelemetryGap(at: state) }
+      coast = OrbitalAttitudeController()
+    }
+    let dt = resumed ? c.guidance.controlInterval : (previousOrbitalTime.map { state.time-$0 } ?? c.guidance.controlInterval)
     previousOrbitalTime = state.time
     let phase: MissionPhase, command: OrbitalControlCommand
     if burn.complete {

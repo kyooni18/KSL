@@ -16,8 +16,31 @@ private actor FreshnessOnlyIO: OrbitalFlightIO {
   func shutdown() {}
 }
 private actor FreshnessOnlyRecorder: TelemetryRecording {
-  func record(_ record: FlightRecord) {}
+  var records: [FlightRecord] = []
+  func record(_ record: FlightRecord) { records.append(record) }
   func close() {}
+}
+private actor OrbitalGapFixture: OrbitalFlightIO {
+  let initial: VehicleState, planet: PlanetConfiguration
+  var reads = 0, time = 0.0, recoveries = 0
+  var sequences: [UInt64] = []
+  init(_ state: VehicleState, planet: PlanetConfiguration) { initial = state; self.planet = planet }
+  func readState() throws -> VehicleState {
+    reads += 1
+    if reads == 3 { throw FlightError.deadlineExceeded }
+    if reads > 1 { time += 0.1 }
+    let inertial = try OrbitalMechanics(planet: planet).propagate(.init(fixed: initial, planet: planet), to: time)
+    let fixed = inertial.planetFixed(planet: planet, attitude: initial.attitude)
+    var result = initial; result.time = time; result.position = fixed.position; result.velocity = fixed.velocity
+    return result
+  }
+  func recover() { recoveries += 1; time += 3 }
+  func armDeorbit(plan: DeorbitPlan, reducedAssurance: Bool) {}
+  func applyOrbital(sequence: UInt64, stateTime: Double, command: OrbitalControlCommand) { sequences.append(sequence) }
+  func apply(_ envelope: CommandEnvelope) {}
+  func finishDeorbit() {}
+  func beginEntry() {}
+  func shutdown() {}
 }
 
 final class DeorbitExecutionTests: XCTestCase {
@@ -95,6 +118,31 @@ final class DeorbitExecutionTests: XCTestCase {
     var reversed = loaded.source; reversed.time -= 1
     do { try await runtime.validateFreshOrbit(reversed); XCTFail("pre-plan epoch accepted") } catch {}
   }
+  func testOrbitalCoastRecoversFromTimeoutAndForwardGap() async throws {
+    let original = plan(cases: cases(passes: Set(0..<15))), w = original.window
+    let future = DeorbitWindow(burnStart: 100, deltaV: w.deltaV, duration: w.duration,
+      normalAngle: w.normalAngle, periapsisAltitude: w.periapsisAltitude, afterBurn: w.afterBurn,
+      entryInterface: w.entryInterface, entryRange: w.entryRange, entrySpeed: w.entrySpeed,
+      entryFlightPath: w.entryFlightPath, entryCourseError: w.entryCourseError, crossrange: w.crossrange, miss: w.miss)
+    let p = DeorbitPlan(source: original.source, configuration: original.configuration,
+      propulsion: original.propulsion, window: future, cases: original.cases, modelLimitations: [], evaluatedWindows: 1)
+    let io = OrbitalGapFixture(p.source, planet: p.configuration.planet)
+    let recorder = FreshnessOnlyRecorder(), aero = try AerodynamicsEngine()
+    let runtime = DeorbitRuntime(io: io, recorder: recorder, plan: p, aerodynamics: aero, maximumOutage: 1)
+    let outcome = try await runtime.run(maximumDuration: 3.3, realTime: false)
+    XCTAssertEqual(outcome, .timedOut)
+    let recoveries = await io.recoveries, sequences = await io.sequences
+    XCTAssertEqual(recoveries, 1)
+    XCTAssertEqual(sequences, Array(1...sequences.count).map(UInt64.init))
+    XCTAssertGreaterThanOrEqual(sequences.count, 2)
+    let records = await recorder.records
+    XCTAssertTrue(records.contains { $0.orbital?.telemetryGapResumed == true })
+    let replay = FlightRecordReplayer(configuration: p.configuration,
+      atmosphere: try .init(planet: p.configuration.planet), aerodynamics: aero)
+    for record in records {
+      XCTAssertEqual(try replay.step(record).orbitalCommand, record.orbitalCommand)
+    }
+  }
   func testCPeriapsisTaperAndNoPrematureCutoff() throws {
     XCTAssertEqual(DeorbitBurnController.periapsisFraction(remainingAltitude: 2000), 1)
     XCTAssertEqual(DeorbitBurnController.periapsisFraction(remainingAltitude: 700), 0.3, accuracy: 1e-12)
@@ -110,6 +158,22 @@ final class DeorbitExecutionTests: XCTestCase {
     XCTAssertEqual(cutoff.phase, .entryCoast)
     XCTAssertEqual(cutoff.command.throttle, 0)
     XCTAssertGreaterThan(burn.deliveredDeltaV, 0)
+  }
+  func testBurnGapKeepsMeasuredImpulseSeparateFromUncertaintyBound() throws {
+    let p = plan(cases: []), burn = DeorbitBurnController(plan: p)
+    var state = source()
+    _ = try burn.update(state, periapsisAltitude: 52000)
+    state.time = 0.1; state.systems.thrust = 1000
+    _ = try burn.update(state, periapsisAltitude: 52000)
+    let measured = burn.deliveredDeltaV
+    state.time = 2.1
+    try burn.resumeAfterTelemetryGap(at: state)
+    XCTAssertEqual(burn.deliveredDeltaV, measured, accuracy: 1e-12)
+    let bound = state.propulsion!.availableThrust*p.configuration.deorbitSettings.maximumThrottle/state.mass*2
+    XCTAssertEqual(burn.unobservedDeltaVUpperBound, bound, accuracy: 1e-12)
+    let output = try burn.update(state, periapsisAltitude: 52000)
+    XCTAssertGreaterThan(output.command.throttle, 0)
+    XCTAssertEqual(burn.diagnostics.unobservedDeltaVUpperBound!, bound, accuracy: 1e-12)
   }
   func testPointingAndThrustLossCannotSilentlyMoveBurnWindow() throws {
     var late = source(); late.time = 1

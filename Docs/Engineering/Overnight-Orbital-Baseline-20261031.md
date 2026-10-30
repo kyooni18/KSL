@@ -395,3 +395,28 @@ on fresh orbital energy/periapsis and actuator state, not invented history.
 There is also no real transport-injection test or live mid-burn observation.
 No safety or timeout limit was changed to make the fake test pass, and this
 prototype was not flown. The orbital recovery gap therefore remains open.
+
+### Follow-up candidate and original-save flight in progress
+
+A second experimental recovery candidate separates measured impulse from an
+upper bound on unobserved impulse, neutralizes controls on reconnect, rebinds
+the original OMS references even when a shutdown response is ambiguous, and
+records the gap for replay. It also retains configured RCS in orbital commands.
+Nine focused deorbit tests passed, including a synthetic coast timeout and
+command-identical replay and a separate mid-burn impulse-bound unit test; six
+landing-runtime replay/failure tests passed. Neither test proves real KRPC
+mid-burn recovery. Reconnection, engine identity and the conservative impulse
+bound remain experimental; a large gap could cause an early deorbit cutoff.
+
+The first launch of this candidate (`overnight-orbit-recovery-v2-20261031`)
+was inadvertently interrupted when its launching shell exited: 67 logged
+coast records, no burn or checkpoint. The original save was reloaded. The
+new `overnight-orbit-full-v2-20261031` flight was launched using a persistent
+background job, the original quicksave and the recorded computed plan; its
+source patch, untracked probe, configuration and binary hashes are in its run
+directory. It began in orbital coast with throttle zero and has a read-only
+kRPC checkpoint monitor. Its final outcome must be determined from continuous
+telemetry and process status; an initial coast is not a complete baseline.
+The selected plan predicts zero full-route passes, with one modeled load
+violation; this was explicitly reported under reduced assurance and is not
+proof of an actual load. No landing is claimed here.
