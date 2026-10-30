@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import copy
 import datetime
+import collections
 import gzip
 import json
 import math
@@ -2663,18 +2664,77 @@ def hydrate_archive_replay_frames(guidance_frames: list[dict[str, Any]],
             })
             if len(actual) > 900:
                 actual = actual[::2]
-        base["actualTrajectory"] = copy.deepcopy(actual)
+        base["actualTrajectory"] = list(actual)  # points are never mutated after creation
         base["connectionStatus"] = "connected"
         result.append(base)
 
     return result
 
 
+_SIM_REPLAY_CACHE: "collections.OrderedDict[tuple, dict[str, Any]]" = collections.OrderedDict()
+_SIM_REPLAY_CACHE_LIMIT = 6
+_SIM_REPLAY_CACHE_LOCK = threading.Lock()
+
+
+def _replay_signature(run_dir: Path, manifest: dict[str, Any]) -> tuple:
+    parts = []
+    for value, fallback in ((manifest.get("guidanceSnapshots"), "guidance-snapshots.jsonl"),
+                            (manifest.get("simulatorTelemetry"), "simulator-telemetry.jsonl")):
+        artifact = _simulation_run_artifact(run_dir, value, fallback)
+        try:
+            st = artifact.stat()
+            parts.append((str(artifact), st.st_mtime_ns, st.st_size))
+        except OSError:
+            parts.append((str(artifact), 0, 0))
+    return tuple(parts)
+
+
 def load_simulation_replay(root: Path, run_id: str, max_frames: int = 600) -> dict[str, Any] | None:
+    """Cached wrapper: archived replays are immutable, so reuse until the files change.
+
+    The returned object is shared and must be treated as read-only.
+    """
     discovered = _discover_simulation_run(root, run_id)
     if discovered is None:
         return None
     run_dir, manifest = discovered
+    key = (str(root), run_id, max(20, min(2000, max_frames)), _replay_signature(run_dir, manifest))
+    with _SIM_REPLAY_CACHE_LOCK:
+        hit = _SIM_REPLAY_CACHE.get(key)
+        if hit is not None:
+            _SIM_REPLAY_CACHE.move_to_end(key)
+            return hit
+    result = _load_simulation_replay_uncached(root, run_dir, manifest, max_frames)
+    with _SIM_REPLAY_CACHE_LOCK:
+        _SIM_REPLAY_CACHE[key] = result
+        while len(_SIM_REPLAY_CACHE) > _SIM_REPLAY_CACHE_LIMIT:
+            _SIM_REPLAY_CACHE.popitem(last=False)
+    return result
+
+
+_SERIALIZED_REPLAY_CACHE: "collections.OrderedDict[tuple[int, bool], tuple[dict, bytes]]" = collections.OrderedDict()
+
+
+def _serialized_replay(replay: dict[str, Any], use_gzip: bool) -> bytes:
+    """JSON (optionally gzipped) body for a shared cached replay; the entry pins ``replay`` so its id stays unique."""
+    key = (id(replay), use_gzip)
+    with _SIM_REPLAY_CACHE_LOCK:
+        hit = _SERIALIZED_REPLAY_CACHE.get(key)
+        if hit is not None and hit[0] is replay:
+            _SERIALIZED_REPLAY_CACHE.move_to_end(key)
+            return hit[1]
+    body = json.dumps(json_safe(replay), separators=(",", ":"), allow_nan=False).encode("utf-8")
+    if use_gzip:
+        body = gzip.compress(body, compresslevel=5)
+    with _SIM_REPLAY_CACHE_LOCK:
+        _SERIALIZED_REPLAY_CACHE[key] = (replay, body)
+        while len(_SERIALIZED_REPLAY_CACHE) > _SIM_REPLAY_CACHE_LIMIT * 2:
+            _SERIALIZED_REPLAY_CACHE.popitem(last=False)
+    return body
+
+
+def _load_simulation_replay_uncached(root: Path, run_dir: Path, manifest: dict[str, Any],
+                                     max_frames: int) -> dict[str, Any]:
 
     max_frames = max(20, min(2000, max_frames))
     candidate = manifest.get("guidanceSnapshots")
@@ -3832,9 +3892,13 @@ class TelemetryHandler(BaseHTTPRequestHandler):
         if os.environ.get("KSP_LANDER_WEB_ACCESS_LOG") == "1":
             super().log_message(fmt, *args)
 
-    def send_bytes(self, body: bytes, content_type: str, status: int = 200, cache: str = "no-store") -> None:
+    def send_bytes(self, body: bytes, content_type: str, status: int = 200, cache: str = "no-store",
+                   encoding: str | None = None) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        if encoding:
+            self.send_header("Content-Encoding", encoding)
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", cache)
         self.send_header("Connection", "keep-alive")
@@ -3881,7 +3945,9 @@ class TelemetryHandler(BaseHTTPRequestHandler):
             if replay is None:
                 self.send_json({"error": "simulation run not found"}, HTTPStatus.NOT_FOUND)
             else:
-                self.send_json(replay)
+                use_gzip = "gzip" in (self.headers.get("Accept-Encoding") or "")
+                self.send_bytes(_serialized_replay(replay, use_gzip), "application/json; charset=utf-8",
+                                encoding="gzip" if use_gzip else None)
             return
         if path == "/events":
             self.handle_events()
