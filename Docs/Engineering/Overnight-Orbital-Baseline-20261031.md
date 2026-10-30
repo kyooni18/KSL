@@ -265,3 +265,35 @@ dirty `EntryEnergyProbe.swift` and its CLI dispatch in `Main.swift` also contain
 an unfinished offline comparison experiment; neither is a flight-tested fix.
 Foundation Memory tools were not discoverable in this session's available tool
 catalog, so this report is the durable record rather than a claimed memory write.
+
+### Matched-state ranking experiment (offline, not retained)
+
+At v21's measured UT 196417.088797553 (+402.94 s), we replayed the same
+warm controller/authority history and compared the existing HAC family ranking
+with a local experiment that evaluated every candidate to the end using the
+existing `advisoryOnly` continuation before sorting. The experimental patch,
+one-state probe, builds, timing and outputs are under
+`runs/overnight-ranking-comparison-20261031/`; patch SHA-256 is
+`cea214569b3b0fa0666761febe45dc3a53b3ffb224b67fab8c9a3e73e8aefc0b`.
+The experiment was reverted after measurement; it is not a flight binary.
+
+| Matched-state diagnostic | Existing | Full advisory pricing |
+|---|---:|---:|
+| Candidates / modeled feasible | 47 / 1 | 47 / 1 |
+| Selected modeled feasible | no | no |
+| Selected modeled maximum load | 31.571 g | 2.680 g |
+| Selected modeled minimum lift margin | -302.38 m/s² | -17.77 m/s² |
+| Debug planning wall time, one sample | 0.275 s | 0.887 s |
+
+These are assessments of model references, not measured loads or closed-loop
+captures. Warm-controller reproduction error was below 1e-13 in both runs.
+The result supports the incomplete-pricing diagnosis but disproves the notion
+that full pricing alone will select the known modeled-feasible family member:
+the current fit cost still prefers an infeasible one. It also illustrates
+substantial search cost and thousands of repeated station violations. The
+existing advisory continuation imposes a landing-speed-derived energy floor,
+so its downstream reference after energy exhaustion is not physical evidence.
+Do not ship this experiment as a validated fix. A next controlled experiment
+should compare consistently priced candidates using physically meaningful
+violation severity and energy-exhaustion treatment, preserving a non-veto
+fallback; measure planner latency and closed-loop tracking before live use.
