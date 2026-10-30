@@ -51,13 +51,18 @@ enum EntryLateralController {
     m.previousBeta = a.sideslip
     rateLimit = max(rateLimit, max(0, abs(m.rate) - acceleration * dt))
     let energyBank = lift > 0 ? acos(clamp(verticalLift / lift, cos(c.vehicle.maximumBank), 1)) : 0
-    let timeToGo = range / max(1, s.horizontalSpeed)
-    let zeroEffortMiss = crossError + crossRate * timeToGo
-    let lateral = timeToGo > 0 && alignment > 0 ? 2 * abs(zeroEffortMiss) / (timeToGo * timeToGo * alignment) : 0
-    var magnitude = energyBank
-    if hypot(max(0, verticalLift), lateral) > lift {
-      magnitude = clamp(atan2(lateral, max(0, verticalLift)), 0, c.vehicle.maximumBank)
-    }
+    let timeToGo = max(c.guidance.pathLookaheadTime,
+      range / max(1, s.horizontalSpeed*max(0, alignment)))
+    // Cubic endpoint interception: e(T)=0 and eDot(T)=0. crossRate is
+    // eDot=-velocityRight, so positive demand is a right-bank correction.
+    // Direction and magnitude must come from the same signed acceleration.
+    let signedLateral = alignment > 0
+      ? (6*crossError/(timeToGo*timeToGo)+4*crossRate/timeToGo)/alignment
+      : 2*s.horizontalSpeed*sin(azimuthError)/timeToGo
+    let lateral = abs(signedLateral)
+    // Turn only to correct an actual miss, and only with lift left after
+    // vertical recovery. Infeasibility cannot authorize banking away support.
+    var magnitude = min(energyBank, atan2(lateral, max(Double.leastNormalMagnitude, verticalLift)))
     let protect = a.dynamicPressure >= 0.9 * c.vehicle.maximumDynamicPressure
       || lift >= 0.9 * c.vehicle.maximumLoadFactor * 9.80665
     if protect { magnitude = 0 }
@@ -77,20 +82,14 @@ enum EntryLateralController {
         projected += (futureRate < 0 ? -1 : 1) * futureRate * futureRate / (lateralAuthority * (1 + alignment))
       }
     }
-    // Reverse only for misses TAEM could not turn out: the corridor is the
-    // capture-state turning reach, and the azimuth deadband is the heading
-    // error that would accumulate that miss over the remaining range.
-    let corridor = max(e.handoffRadius, m.corridor ?? e.handoffRadius)
-    let deadband = atan2(corridor, max(1, range))
-    var demandedSign = azimuthError < 0 ? -1.0 : 1.0
-    let pointBehind = cos(azimuthError) <= 0
-    if pointBehind { demandedSign = m.sign }
-    else if abs(projected) > corridor, alignment > 0 { demandedSign = projected < 0 ? -1 : 1 }
-    let requested = demandedSign != m.sign
-      && (abs(azimuthError) > deadband || abs(projected) > corridor)
-    let ready = s.time - m.lastReversal >= max(e.minimumLegDuration, response)
-    if requested && feasible && ready && (m.captured || magnitude < radians(5)) {
-      m.sign = demandedSign; m.lastReversal = s.time; m.captured = false; m.reversals += 1
+    // Arrival precision is the configured handoff tolerance, not the
+    // distance a later HAC might turn out. Necessary steering corrections
+    // are rate-shaped below instead of waiting for an arbitrary bank leg.
+    let demandedSign = signedLateral < 0 ? -1.0 : 1.0
+    let requested = demandedSign != m.sign && lateral > 0
+    if requested {
+      m.sign = demandedSign; m.lastReversal = s.time
+      m.captured = false; m.reversals += 1
     }
     let target = m.sign * magnitude
     if acceleration > 0 && rateLimit > 0 {
@@ -104,6 +103,8 @@ enum EntryLateralController {
       if (target - m.bank) * (target - next) <= 0 { m.bank = target; m.rate = 0 }
       else { m.bank = next }
     }
+    m.bank = clamp(m.bank, -c.vehicle.maximumBank, c.vehicle.maximumBank)
+    if abs(m.bank) >= c.vehicle.maximumBank && m.bank*m.rate > 0 { m.rate = 0 }
     if magnitude > 0 && m.sign * a.bank >= 0.9 * magnitude { m.captured = true }
     d.energyBank = energyBank; d.commandedBank = m.bank
     d.reversalTime = response.isFinite ? response : nil; d.reversalAvailableTime = availableTime
@@ -111,7 +112,7 @@ enum EntryLateralController {
     d.projectedCrossrange = projected; d.rollRateLimit = rateLimit
     d.limitingReason = protect ? "q/load protection" : acceleration <= 0 ? "no atmospheric moment authority"
       : requested && !feasible ? "insufficient coordinated reversal envelope"
-      : requested && !ready ? "reversal dwell" : requested && !m.captured ? "bank leg not captured" : "tracking"
+      : "tracking"
     return m.bank
   }
 }
