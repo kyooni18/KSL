@@ -66,13 +66,23 @@ final class EntryCommandLaw {
     if modulation < 0 { modulation *= negative[memory.phase.rawValue] }
     modulation = clamp(modulation, -radians(4), radians(4))
     memory.modulation = moveToward(memory.modulation, modulation, maximumDelta: radians(0.8) * dt)
-    // With RCS attitude control the hypersonic phase flies the maximum AoA
-    // (heating/drag), blending to the nominal glide AoA across the same
-    // subphase gates the law already uses (temperature control -> transition).
-    func smoothStep(_ value: Double) -> Double { let x = clamp(value, 0, 1); return x * x * (3 - 2 * x) }
-    let baseAlpha = c.vehicle.rcsAttitudeControl
-      ? c.vehicle.maximumAngleOfAttack - (c.vehicle.maximumAngleOfAttack - e.nominalAlpha) * smoothStep((progress - 0.30) / (0.82 - 0.30))
-      : e.nominalAlpha
+    // AoA is decided, not scheduled: choose the AoA whose drag coefficient
+    // delivers the drag acceleration the range reference requires at the
+    // current q, inside the trim envelope (up to the vehicle maximum only
+    // with RCS attitude control). It is driven by the reference, never by
+    // measured drag, so it cannot close a loop around the pitch response.
+    let ceilingAlpha = c.vehicle.rcsAttitudeControl ? c.vehicle.maximumAngleOfAttack
+      : min(c.vehicle.maximumAngleOfAttack, max(e.nominalAlpha, memory.identifiedTrimCeiling ?? e.nominalAlpha))
+    let floorAlpha = max(c.vehicle.minimumAngleOfAttack, aero.bestGlideAlpha(mach: a.mach,
+      maximumAlpha: ceilingAlpha, dynamicPressure: a.dynamicPressure))
+    var baseAlpha = e.nominalAlpha
+    if a.dynamicPressure > 0, d.referenceDrag > 0 {
+      let required = d.referenceDrag * s.mass / (a.dynamicPressure * aero.referenceArea)
+      let steps = 64
+      baseAlpha = (0...steps).map { floorAlpha + (ceilingAlpha - floorAlpha) * Double($0) / Double(steps) }
+        .min { abs(aero.coefficients(mach: a.mach, alpha: $0).drag - required)
+          < abs(aero.coefficients(mach: a.mach, alpha: $1).drag - required) } ?? e.nominalAlpha
+    }
     var alpha = max(baseAlpha, baseAlpha + memory.modulation)
     func smooth(_ value: Double) -> Double { let x = clamp(value, 0, 1); return x * x * (3 - 2 * x) }
     let qRatio = a.dynamicPressure / c.vehicle.maximumDynamicPressure
