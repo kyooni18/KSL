@@ -255,7 +255,7 @@ public final class LandingMissionController {
         let currentPlanner = environment.observedAt == nil ? planner : HACPlanningEngine(
           configuration: configuration, atmosphere: atmosphere.corrected(environment), aerodynamics: aerodynamics)
         let result = currentPlanner.plan(
-          from: state, allowDirect: configuration.guidance.allowDirectTerminal,
+          from: state, allowDirect: false,
           controlSnapshot: controlSnapshot, previousTarget: limiter.previous)
         lastPlanningResult = result
         lastPlanAttempt = state.time

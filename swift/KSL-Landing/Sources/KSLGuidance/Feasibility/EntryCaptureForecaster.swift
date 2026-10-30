@@ -36,11 +36,13 @@ public final class EntryCaptureForecaster {
   private let configuration: MissionConfiguration
   private let atmosphere: AtmosphericModelEngine
   private let aerodynamics: AerodynamicsEngine
+  private let objectivePlanner: EntryCaptureObjectivePlanner
   private let frame: RunwayFrame
   public init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine,
               aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration; self.atmosphere = atmosphere; self.aerodynamics = aerodynamics
     frame = .init(runway: configuration.runway, planet: configuration.planet)
+    objectivePlanner = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
   }
 
   /// MM304's terminal target speed; capture is then searched beyond it.
@@ -79,6 +81,8 @@ public final class EntryCaptureForecaster {
                 liftScale: Double = 1, dragScale: Double = 1, certify: Bool = false,
                 controls: FlightControlSnapshot?, previousTarget: GuidanceTarget?) -> EntryCaptureForecast {
     let c = configuration
+    var memory = memory
+    if memory.objective == nil { memory.objective = objectivePlanner.objective(from: state, crossAim: memory.crossAim) }
     let plantAero = liftScale == 1 && dragScale == 1 ? aerodynamics
       : aerodynamics.scaled(lift: liftScale, drag: dragScale)
     let predictor = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: plantAero)
@@ -97,6 +101,24 @@ public final class EntryCaptureForecaster {
     var samples = first.samples, violations = first.violations, end = first.terminalState
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     func evaluateCapture(_ state: VehicleState) -> TAEMCaptureAssessment {
+      let admission = MM305Admission.physicalAdmission(state, configuration: c)
+      let belowCaptureBand = state.position.length-c.planet.radius < c.entrySettings.terminalMinimumAltitude
+      if !admission.violations.isEmpty || belowCaptureBand {
+        var assessment = TAEMCaptureAssessment()
+        let p = frame.coordinates(of: state.position)
+        let g = c.planet.gravitationalParameter / pow(state.position.length, 2)
+        let speed = state.aerodynamics.airspeed
+        assessment.time = state.time; assessment.altitude = p.height
+        assessment.mach = state.aerodynamics.mach
+        assessment.rangeToRunway = frame.distance(from: state.position, to: frame.origin)
+        assessment.headingError = wrapAngle(frame.bearing(from: state.position, to: frame.origin) - state.course)
+        assessment.envelope.requiredHeadingChange = abs(assessment.headingError)
+        assessment.envelope.availableTurnRate = g * tan(c.vehicle.maximumBank) / max(1, speed)
+        assessment.envelope.energyHeight = p.height + speed * speed / (2 * g)
+        assessment.violations = admission.violations
+        if belowCaptureBand { assessment.deficit = .insufficientAltitude }
+        return assessment
+      }
       var assessment = evaluator.evaluate(state)
       if let plan = assessment.plan {
         let admission = MM305Admission.evaluate(state, plan: plan, configuration: c, requireQualification: false)
@@ -114,7 +136,7 @@ public final class EntryCaptureForecaster {
       capture = evaluateCapture(end)
       while !Task.isCancelled, !capture.feasible, capture.deficit != .insufficientEnergy, violations.isEmpty,
         end.time - state.time < c.guidance.maximumPredictionDuration,
-        frame.coordinates(of: end.position).height > c.vehicle.gearHeight {
+        end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude {
         let next = predictor.predict(from: end, duration: c.guidance.terminalReplanInterval,
           step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
           feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds }) { s in
@@ -131,12 +153,15 @@ public final class EntryCaptureForecaster {
       }
     }
     let p = frame.coordinates(of: end.position)
-    if !(first.reachedTerminalRegion && violations.isEmpty) {
+    if !first.reachedTerminalRegion {
       capture = .init(); capture.time = end.time; capture.altitude = p.height
       capture.mach = end.aerodynamics.mach
       capture.rangeToRunway = frame.distance(from: end.position, to: frame.origin)
       capture.violations = violations
       capture.deficit = violations.isEmpty ? .terminalRegionNotReached : .envelopeViolation
+    }
+    if first.reachedTerminalRegion, !violations.isEmpty {
+      capture.feasible = false; capture.violations += violations; capture.deficit = .envelopeViolation
     }
     var maxQ = 0.0, maxLoad = 0.0
     let track: [[Double]] = samples.map { s in
@@ -152,7 +177,15 @@ public final class EntryCaptureForecaster {
     result.crossAim = memory.crossAim
     result.objective = memory.objective ?? EntryCaptureObjective.seed(configuration: c,
       atmosphere: atmosphere, frame: frame, crossAim: memory.crossAim, time: state.time)
-    if capture.feasible, capture.envelope.energyMargin > 0 {
+    let envelope = capture.envelope
+    // A completed HAC family can bracket a nonempty energy interval even
+    // when the flown state is just outside it. Center that interval, then
+    // re-fly the objective; waiting for an already feasible trajectory would
+    // leave an infeasible seed objective permanently in command.
+    if end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude,
+      envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
+      envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,
+      envelope.excessEnergyMargin + envelope.deficitEnergyMargin > 0 {
       let gravity = c.planet.gravitationalParameter / pow(end.position.length, 2)
       let energy = capture.envelope.energyHeight
         + (capture.envelope.excessEnergyMargin - capture.envelope.deficitEnergyMargin) / 2
@@ -160,7 +193,7 @@ public final class EntryCaptureForecaster {
       // priced HAC energy boundaries, retaining positive room on both sides.
       result.suggestedObjective = .init(along: p.along, cross: p.cross,
         altitude: c.runway.elevation + energy - pow(end.aerodynamics.airspeed, 2) / (2 * gravity),
-        speed: end.aerodynamics.airspeed, energyHeight: energy)
+        speed: end.aerodynamics.airspeed, energyHeight: energy, flightPath: end.flightPathAngle)
     }
     return result
   }

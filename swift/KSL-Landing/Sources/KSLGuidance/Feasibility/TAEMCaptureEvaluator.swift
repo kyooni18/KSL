@@ -95,10 +95,10 @@ public final class TAEMCaptureEvaluator {
                        controlSnapshot: FlightControlSnapshot? = nil,
                        previousTarget: GuidanceTarget? = nil) -> TAEMCaptureAssessment {
     let c = configuration
-    let preview = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal, preview: true)
+    let preview = planner.plan(from: state, allowDirect: false, preview: true)
     var a = Self.assess(preview, state: state, configuration: c)
     guard a.feasible, certify else { return a }
-    let closed = planner.plan(from: state, allowDirect: c.guidance.allowDirectTerminal,
+    let closed = planner.plan(from: state, allowDirect: false,
       controlSnapshot: controlSnapshot, previousTarget: previousTarget)
     if let plan = closed.plan {
       a.certified = true; Self.describe(plan, into: &a)

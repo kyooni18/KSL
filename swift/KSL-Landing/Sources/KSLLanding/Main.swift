@@ -74,6 +74,39 @@ struct LandingCLI {
       let state = try JSONDecoder().decode(VehicleState.self, from: FileHandle.standardInput.readDataToEndOfFile())
       let atmosphere = try AtmosphericModelEngine(planet: c.planet)
       let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+      if args.contains("--scan-objectives") {
+        let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+        let profile = ApproachProfile(configuration: c)
+        let exit = profile.reference(along: -c.guidance.finalDistance)
+        let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+        let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+        let e = c.entrySettings
+        for height in [e.terminalTargetAltitude, e.terminalMinimumAltitude, e.terminalMaximumAltitude] {
+          let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
+          let distance = c.guidance.finalDistance + (height - c.runway.elevation - exit.height) / tan(glide)
+          for mach in [e.terminalTargetMach, e.terminalTargetMach-e.terminalMachHalfWidth] {
+            for range in [distance, e.terminalTargetRange, c.guidance.finalDistance + (distance-c.guidance.finalDistance)/2] {
+              let position = frame.position(along: -range, cross: 0, height: height-c.runway.elevation)
+              let speed = mach * atmosphere.sample(position: position, time: state.time).speedOfSound
+              let forward = frame.direction(at: .init(-range, 0), tangent: .init(1, 0))
+              for gamma in [-glide, atan2(exit.height-(height-c.runway.elevation), range-c.guidance.finalDistance)] {
+                let velocity = (forward*cos(gamma)+position.normalized*sin(gamma))*speed
+                let sample = physics.observe(.init(time: state.time, position: position, velocity: velocity,
+                  attitude: .windAttitude(position: position, airVelocity: velocity, alpha: e.nominalAlpha, bank: 0), mass: state.mass))
+                let capture = evaluator.evaluate(sample)
+                if capture.feasible, args.contains("--first-feasible") {
+                  try output(sample)
+                  return
+                }
+                print(String(format: "OBJECTIVE h=%.0f M=%.2f range=%.0f gamma=%.1f feasible=%@ margin=%.0f deficit=%@ completed=%d violations=%@",
+                  height, mach, range, degrees(gamma), String(capture.feasible), capture.envelope.energyMargin,
+                  capture.deficit.rawValue, capture.envelope.candidatesCompleted, capture.envelope.dominantViolations.description))
+              }
+            }
+          }
+        }
+        return
+      }
       var capture = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
         .evaluate(state, certify: true)
       capture.plan = nil

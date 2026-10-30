@@ -9,16 +9,25 @@ public struct EntryCaptureObjective: Codable, Sendable {
   public var altitude: Double
   public var speed: Double
   public var energyHeight: Double
+  public var flightPath: Double?
   static func seed(configuration c: MissionConfiguration, atmosphere: AtmosphericModelEngine,
                    frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
     let e = c.entrySettings, cross = e.handoffCross + crossAim
-    let along = -sqrt(max(0, e.terminalTargetRange * e.terminalTargetRange - cross * cross))
+    let exit = ApproachProfile(configuration: c).reference(along: -c.guidance.finalDistance)
+    let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
+    // terminalTargetRange is an outer search bound, not an entry aim radius.
+    // Match the high capture state to the terminal descent path, rather than
+    // stretching that descent across the whole outer search envelope.
+    let descentRange = (e.terminalTargetAltitude - c.runway.elevation - exit.height) / tan(glide)
+    let range = min(e.terminalTargetRange, c.guidance.finalDistance + max(0, descentRange))
+    let along = -sqrt(max(0, range * range - cross * cross))
     let radius = c.planet.radius + e.terminalTargetAltitude
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
-    let speed = e.terminalTargetMach * atmosphere.sample(position: position, time: time).speedOfSound
+    let speed = e.terminalTargetMach
+      * atmosphere.sample(position: position, time: time).speedOfSound
     let g = c.planet.gravitationalParameter / (radius * radius)
     return .init(along: along, cross: cross, altitude: e.terminalTargetAltitude, speed: speed,
-      energyHeight: e.terminalTargetAltitude - c.runway.elevation + speed * speed / (2 * g))
+      energyHeight: e.terminalTargetAltitude - c.runway.elevation + speed * speed / (2 * g), flightPath: -glide)
   }
 }
 
@@ -75,6 +84,22 @@ final class EntryCommandLaw {
     if inferred.rawValue > memory.phase.rawValue { memory.phase = inferred }
     var d = drag.compute(s, phase: memory.phase, range: range * rangeMultiplier,
       targetAltitude: targetAltitude, targetSpeed: terminalSpeed, targetRange: 0)
+    // Capture altitude and flight-path angle are part of the terminal state.
+    // A drag-only bank law can keep rolling at maximum bank while falling
+    // through that state. Track the terminal vertical geometry as its energy
+    // becomes comparable to the current energy; AoA still solves drag.
+    let horizon = max(c.guidance.pathLookaheadTime, range / max(1, s.horizontalSpeed))
+    let height = s.position.length - c.planet.radius
+    let terminalSlope = tan(objective.flightPath ?? -(c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle))
+    let interceptSlope = 2 * (targetAltitude - height) / max(range, s.horizontalSpeed * c.guidance.pathLookaheadTime)
+      - terminalSlope
+    let desiredGamma = atan(interceptSlope)
+    let gravity = c.planet.gravitationalParameter / s.position.squaredLength
+    let support = max(0, (gravity - s.horizontalSpeed * s.horizontalSpeed / s.position.length) * cos(s.flightPathAngle))
+    let captureLift = support + a.airspeed * (desiredGamma - s.flightPathAngle) / horizon
+    let liftLimit = min(max(0, a.lift / s.mass), c.vehicle.maximumLoadFactor * gravity)
+    let weight = clamp(terminalSpeed * terminalSpeed / max(1, a.airspeed * a.airspeed), 0, 1)
+    d.verticalLift += weight * (clamp(captureLift, 0, liftLimit) - d.verticalLift)
     let confidence = a.measuredForces || a.modelEvidence != nil ? 1.0 : d.confidence
     let scales = [0.0, 0.35, 0.65, 1.0, 0.45], negative = [1.0, 0.85, 0.50, 0.20, 0.35]
     // Drag modulation answers energy/density errors, not the vehicle's own
@@ -156,6 +181,6 @@ final class EntryCommandLaw {
     }
     diagnostics = d
     return .init(angleOfAttack: alpha, bank: bank, desiredSpeed: terminalSpeed,
-      desiredHeight: targetAltitude, desiredFlightPath: s.flightPathAngle)
+      desiredHeight: targetAltitude, desiredFlightPath: desiredGamma)
   }
 }

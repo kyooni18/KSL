@@ -108,9 +108,19 @@ public final class EntryGuidanceEngine {
         * f.capture.envelope.requiredHeadingChange
         / max(Double.leastNormalMagnitude, f.capture.envelope.availableTurnRate)
       let headingCost = turningDistance / max(1, f.capture.rangeToRunway)
-      if f.feasible { return headingCost - f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
+      let target = EntryCaptureObjective.seed(configuration: c, atmosphere: atmosphere,
+        frame: frame, crossAim: f.crossAim, time: state.time)
+      let rangeCost = f.capture.rangeToRunway / max(1, hypot(target.along, target.cross))
+      let altitudeCost = max(0, c.entrySettings.terminalMinimumAltitude
+        - f.capture.altitude - c.runway.elevation)
+        / (c.entrySettings.terminalMaximumAltitude - c.entrySettings.terminalMinimumAltitude)
+      if f.feasible { return rangeCost + altitudeCost + headingCost - f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
+      let envelope = f.capture.envelope
+      let energyCost = envelope.energyMargin > -Double.greatestFiniteMagnitude
+        ? max(0, -envelope.energyMargin) / max(1, envelope.energyHeight)
+        : abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
       return (f.violations.isEmpty ? 100 : 1000 + Double(f.violations.count) * 100)
-        + headingCost + abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
+        + rangeCost + altitudeCost + headingCost + energyCost
     }
     func fly(_ list: [Double]) {
       for factor in list where !Task.isCancelled {
@@ -133,7 +143,7 @@ public final class EntryGuidanceEngine {
       // perceived range commands more drag (excess energy), a longer one less.
       switch best.capture.deficit {
       case .excessiveEnergy, .terminalRegionNotReached: factors = [max(0.1, factors.first! * (1 - u))]
-      case .insufficientEnergy: factors = [factors.last! * (1 + u)]
+      case .insufficientEnergy, .insufficientAltitude: factors = [factors.last! * (1 + u)]
       default: factors = []
       }
       fly(factors)
@@ -150,13 +160,14 @@ public final class EntryGuidanceEngine {
     }
     // Re-fly a selected admissible capture objective before publishing it:
     // forecast and live commands must use the very same energy/geometry goal.
-    if let best = chosen, let objective = best.suggestedObjective, best.feasible {
+    if let best = chosen, let objective = best.suggestedObjective {
       var memory = request.memory; memory.objective = objective; memory.crossAim = best.crossAim
       let consistent = forecaster.forecast(from: state, memory: memory,
         rangeMultiplier: best.rangeMultiplier, controls: request.controls, previousTarget: request.previousTarget)
       // Publish exactly the objective that this branch flew, rather than its
       // next optimizer iterate.
-      var verified = consistent; verified.objective = objective; chosen = verified
+      var verified = consistent; verified.objective = objective
+      if score(verified) <= score(best) { chosen = verified }
     }
     var compact = chosen
     compact?.capture.plan = nil

@@ -27,6 +27,8 @@ final class GuidanceTests: XCTestCase {
     XCTAssertLessThan(abs(slowTarget.angleOfAttack - memory.previousAlpha!),
       abs(fastTarget.angleOfAttack - memory.previousAlpha!))
     memory.objective = .seed(configuration: c, atmosphere: atmosphere, frame: frame, crossAim: 0, time: state.time)
+    XCTAssertLessThan(hypot(memory.objective!.along, memory.objective!.cross), c.entrySettings.terminalTargetRange)
+    XCTAssertEqual(memory.objective!.altitude, c.entrySettings.terminalTargetAltitude)
     memory.objective!.along = -150_000
     let near = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     _ = near.update(state)
@@ -38,6 +40,32 @@ final class GuidanceTests: XCTestCase {
     c.vehicle.rcsAttitudeControl = false
     let aerodynamic = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aero, memory: memory)
     XCTAssertLessThanOrEqual(aerodynamic.update(state).angleOfAttack, c.entrySettings.nominalAlpha)
+  }
+
+  func testHighCloseCaptureObjectiveProducesAnAdmissibleHAC() throws {
+    let c = MissionConfiguration()
+    let atmosphere = try AtmosphericModelEngine(), aero = try AerodynamicsEngine()
+    let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let initial = VehicleState(time: 0, position: frame.position(along: -200_000, cross: 0, height: 70_000),
+      velocity: .zero, attitude: .init(), mass: c.vehicle.nominalMass)
+    let objective = EntryCaptureObjectivePlanner(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+      .objective(from: initial, crossAim: 0)
+    XCTAssertGreaterThanOrEqual(objective.altitude, c.entrySettings.terminalMinimumAltitude)
+    XCTAssertLessThan(hypot(objective.along, objective.cross), c.entrySettings.terminalTargetRange)
+    let position = frame.position(along: objective.along, cross: objective.cross,
+      height: objective.altitude-c.runway.elevation)
+    let forward = frame.origin.normalized.projected(onPlaneWithNormal: position.normalized).normalized
+    let gamma = try XCTUnwrap(objective.flightPath)
+    let velocity = (forward*cos(gamma)+position.normalized*sin(gamma))*objective.speed
+    let sample = physics.observe(.init(time: 0, position: position, velocity: velocity,
+      attitude: .windAttitude(position: position, airVelocity: velocity, alpha: c.entrySettings.nominalAlpha, bank: 0),
+      mass: c.vehicle.nominalMass))
+    let result = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+      .plan(from: sample, allowDirect: false)
+    let plan = try XCTUnwrap(result.plan)
+    XCTAssertNotNil(plan.spiral)
+    XCTAssertTrue(MM305Admission.evaluate(sample, plan: plan, configuration: c).accepted)
   }
 
   func testSpiralRadiusCurvatureAndMirroring() throws {

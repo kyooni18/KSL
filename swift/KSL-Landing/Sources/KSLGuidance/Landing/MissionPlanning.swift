@@ -49,7 +49,7 @@ public actor MissionPlanningWorker {
     let terminalResult = request.terminalState.map {
       let planner = request.environment.observedAt == nil ? terminal : HACPlanningEngine(
         configuration: configuration, atmosphere: atmosphere.corrected(request.environment), aerodynamics: aerodynamics)
-      return planner.plan(from: $0, allowDirect: configuration.guidance.allowDirectTerminal,
+      return planner.plan(from: $0, allowDirect: false,
         controlSnapshot: request.controls, previousTarget: request.previousTarget)
     }
     let entryResult = !Task.isCancelled && request.terminalState == nil
@@ -62,6 +62,6 @@ public actor MissionPlanningWorker {
     return .init(proposal: proposal, encoded: try JSONEncoder().encode(proposal))
   }
   public func planTerminal(from state: VehicleState) -> PlanningResult {
-    terminal.plan(from: state, allowDirect: configuration.guidance.allowDirectTerminal)
+    terminal.plan(from: state, allowDirect: false)
   }
 }
