@@ -316,12 +316,26 @@ struct LandingCLI {
             to: URL(fileURLWithPath: logPath + ".configuration.json"))
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
           let aero = try await PhysicsModelLoader.aerodynamics(configuration: config)
-          try await io.arm()
-          let runtime = try FlightRuntime(
-            io: io, recorder: recorder, configuration: config,
-            maximumOutage: Double(option("--max-outage") ?? "20") ?? 20, aerodynamics: aero)
-          let task = Task {
-            try await runtime.run(maximumDuration: Double(option("--duration") ?? "2400") ?? 2400)
+          // Orbital execution owns the same IO and recorder through entry and
+          // rollout. Keep its existing qualification and fresh-orbit checks;
+          // ordinary `fly` remains an entry replay for backwards compatibility.
+          let task: Task<RuntimeOutcome, Error>
+          if args.contains("--deorbit") {
+            let source = try await io.readState()
+            let plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source)
+            try encoder.encode(plan).write(to: URL(fileURLWithPath: logPath + ".deorbit-plan.json"))
+            let reduced = args.contains("--reduced-assurance")
+            try plan.authorize(identifier: plan.identifier, reducedAssurance: reduced)
+            let runtime = DeorbitRuntime(io: io, recorder: recorder, plan: plan,
+              aerodynamics: aero, reducedAssurance: reduced,
+              maximumOutage: Double(option("--max-outage") ?? "20") ?? 20)
+            task = Task { try await runtime.run(maximumDuration: Double(option("--duration") ?? "36000") ?? 36000) }
+          } else {
+            try await io.arm()
+            let runtime = try FlightRuntime(
+              io: io, recorder: recorder, configuration: config,
+              maximumOutage: Double(option("--max-outage") ?? "20") ?? 20, aerodynamics: aero)
+            task = Task { try await runtime.run(maximumDuration: Double(option("--duration") ?? "2400") ?? 2400) }
           }
           signal(SIGINT, SIG_IGN)
           let interrupt = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
@@ -361,8 +375,10 @@ struct LandingCLI {
           inspect --host 127.0.0.1 --port 50000 --vessel STS
           fly --host 127.0.0.1 --port 50000 --vessel STS [--log live.jsonl]
               [--configuration configuration.json] [--airbrake-group 1] [--max-outage 20] [--raw-axes]
-        inspect is read-only. fly takes control of the named vessel after deorbit.
-        All simulation output is labeled offline-model-only. No ascent, OMS or deorbit commands exist.
+              [--deorbit [--reduced-assurance]]
+        inspect is read-only. Without --deorbit, fly starts in entry, not orbit.
+        With --deorbit, fly computes and records a plan and retains existing plan authorization.
+        All simulation output is labeled offline-model-only. No ascent commands exist.
         A full-rate log and its exact configuration are required for command-identical replay.
         """)
     }

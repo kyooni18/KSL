@@ -11,11 +11,14 @@ public actor DeorbitRuntime {
   private let plan: DeorbitPlan
   private let aero: AerodynamicsEngine
   private let reducedAssurance: Bool
+  private let maximumOutage: Double
   private var running = false
   public init(io: any OrbitalFlightIO, recorder: any TelemetryRecording,
-              plan: DeorbitPlan, aerodynamics: AerodynamicsEngine, reducedAssurance: Bool = false) {
+              plan: DeorbitPlan, aerodynamics: AerodynamicsEngine, reducedAssurance: Bool = false,
+              maximumOutage: Double = 20) {
     self.io = io; self.recorder = recorder; self.plan = plan; aero = aerodynamics
     self.reducedAssurance = reducedAssurance
+    self.maximumOutage = maximumOutage
   }
   public func run(maximumDuration: Double = 36000, realTime: Bool = true) async throws -> RuntimeOutcome {
     guard !running else { throw FlightError.invalidCommand("Deorbit runtime is already running") }
@@ -84,7 +87,8 @@ public actor DeorbitRuntime {
       if shutdownComplete && height <= c.planet.atmosphereTop-c.deorbitSettings.entryAltitudeMargin && state.verticalSpeed < 0 {
         guard state.systems.unpowered else { throw FlightError.infeasible("OMS thrust persisted after engine shutdown") }
         try await io.beginEntry()
-        let entry = try FlightRuntime(io: io, recorder: recorder, configuration: c, aerodynamics: aero)
+        let entry = try FlightRuntime(io: io, recorder: recorder, configuration: c,
+          maximumOutage: maximumOutage, aerodynamics: aero)
         return try await entry.run(maximumDuration: max(0, maximumDuration-(state.time-plan.createdAt)), realTime: realTime)
       }
       let phase: MissionPhase, command: OrbitalControlCommand, control: ControlDiagnostics
