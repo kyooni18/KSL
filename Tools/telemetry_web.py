@@ -1383,10 +1383,81 @@ def build_orbital_trajectory(
     }
 
 
+def read_swift_live_mirror(root: Path, max_age: float = 3.0) -> dict[str, Any] | None:
+    """Mirror built from the newest fresh `ksl-landing fly` log (runs/live-*/live.jsonl)."""
+    try:
+        logs = [p for p in (root / "runs").glob("live-*/live.jsonl") if time.time() - p.stat().st_mtime <= max_age]
+        if not logs:
+            return None
+        path = max(logs, key=lambda p: p.stat().st_mtime)
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            size = handle.tell()
+            handle.seek(max(0, size - 400_000))
+            lines = handle.read().splitlines()
+        record = None
+        for raw in reversed(lines):
+            try:
+                value = json.loads(raw)
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if isinstance(value, dict) and isinstance(value.get("guidance"), dict):
+                record = value
+                break
+    except OSError:
+        return None
+    if record is None:
+        return None
+    guidance = record["guidance"]
+    target = guidance.get("target") if isinstance(guidance.get("target"), dict) else {}
+    entry = guidance.get("entry") if isinstance(guidance.get("entry"), dict) else {}
+    deg = lambda v: math.degrees(v) if isinstance(v, (int, float)) and math.isfinite(v) else None  # noqa: E731
+    aoa, bank, gamma = deg(target.get("angleOfAttack")), deg(target.get("bank")), deg(target.get("desiredFlightPath"))
+    applied = record.get("command") if isinstance(record.get("command"), dict) else {}
+    phase = str(guidance.get("phase") or "").upper() or "GUIDANCE"
+    return {
+        "generatedAt": time.time(),
+        "phase": phase,
+        "statusMessage": str(guidance.get("diagnostic") or "Swift guidance running"),
+        "automationEngaged": True,
+        "tickSequence": record.get("sequence"),
+        "command": {
+            "autopilotEngaged": True,
+            "targetAoA": aoa,
+            "targetRoll": bank,
+            "targetPitch": gamma + aoa if gamma is not None and aoa is not None else None,
+            "targetHeading": None,
+            "gear": bool(target.get("gearDown")),
+            "pitchDemand": applied.get("pitch"),
+            "rollDemand": applied.get("roll"),
+            "yawDemand": applied.get("yaw"),
+        },
+        "guidanceState": {
+            "entryPlanValid": bool(entry) and not entry.get("degraded", False),
+            "entryPlanTargetBank": bank,
+            "entryPlanTargetAoA": aoa,
+            "limitingReason": entry.get("limitingReason"),
+            "rangeError": entry.get("rangeError"),
+            "predictedRange": entry.get("predictedRange"),
+            "desiredFlightPath": gamma,
+            "desiredSpeed": target.get("desiredSpeed"),
+            "violations": guidance.get("violations"),
+        },
+        "server": {"source": "ksl-landing fly log", "simulation": False},
+    }
+
+
 def read_controller_mirror(root: Path, max_age: float | None = 1.5,
                            allow_simulation: bool = False) -> dict[str, Any] | None:
     """Read the exact backend mirror without crossing source domains."""
     path = root / "Runtime" / "WebTelemetry" / "controller-snapshot.json"
+    if max_age is not None and not allow_simulation:
+        try:
+            fresh = time.time() - path.stat().st_mtime <= max_age
+        except OSError:
+            fresh = False
+        if not fresh:
+            return read_swift_live_mirror(root)
     try:
         if max_age is not None and time.time() - path.stat().st_mtime > max_age:
             return None
