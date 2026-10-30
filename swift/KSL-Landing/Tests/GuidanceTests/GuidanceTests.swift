@@ -155,7 +155,19 @@ final class GuidanceTests: XCTestCase {
         time: 1000, position: position, velocity: velocity,
         attitude: attitude))
     let planner = HACPlanningEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
-    let plan = try XCTUnwrap(planner.plan(from: initial, allowDirect: false).plan)
+    let dbg = planner.plan(from: initial, allowDirect: false)
+    print("DBG", dbg.envelope.map { "\($0.examined) \($0.completed) \($0.feasible) \($0.violationCounts)" } ?? "nil",
+      dbg.bestRejected?.violations.map(\.message) ?? [], dbg.closedLoopRejections?.flatMap { $0.violations.map(\.message) } ?? [])
+    if let pv = planner.plan(from: initial, allowDirect: false, preview: true).plan {
+      var last = -1.0
+      let r = TerminalTrajectoryEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero).evaluate(
+        plan: pv, from: initial, controlSnapshot: nil, previousTarget: nil, lift: 1, drag: 1) { st, ref, tg in
+          if st.time - last >= 2 { last = st.time; let q = frame.coordinates(of: st.position)
+            print(String(format: "TR t=%.0f h=%.0f href=%.0f V=%.0f Vref=%.0f a=%.1f at=%.1f b=%.1f bt=%.1f seg=%@ ce=%.0f", st.time, q.height, ref.height, st.aerodynamics.airspeed, ref.speed,
+              degrees(st.aerodynamics.angleOfAttack), degrees(tg.angleOfAttack), degrees(st.aerodynamics.bank), degrees(tg.bank), "\(ref.segment)", q.cross)) } }
+      print("TRR", r.feasible, r.violations.map(\.message), r.touchdownSpeed ?? -1, r.touchdownSink ?? -1)
+    }
+    let plan = try XCTUnwrap(dbg.plan)
     let dt = 0.002
     let next = try physics.advance(initial, command: .init(), duration: dt, maximumStep: 0.001)
     let right = velocity.projected(onPlaneWithNormal: position.normalized).normalized

@@ -1546,8 +1546,8 @@
       const active = simActive || kspReplay;
       if (!archiveReplay.active) {
         const liveText = $("sim-replay-live")?.querySelector("span:last-child");
-        if (liveText) liveText.textContent = "LIVE " + (simActive ? "SIM" : "KSP");
-        $("playback-run-name").textContent = "LIVE " + (simActive ? "SIM" : "KSP") + " TELEMETRY";
+        if (liveText) liveText.textContent = "LIVE " + liveSourceLabel();
+        $("playback-run-name").textContent = "LIVE " + liveSourceLabel() + " TELEMETRY";
       }
       const replaying = (simActive && String(sim?.sourceMode || "").toLowerCase() === "replay") || kspReplay;
       const replayStatus = kspReplay ? archivedReplay : sim;
@@ -2385,7 +2385,11 @@
     toggle.setAttribute("aria-label", open ? "Collapse playback controls" : "Expand playback controls");
   }
 
+  let liveSourceOverride = "AUTO";
+  try { liveSourceOverride = localStorage.getItem("liveSourceOverride") || "AUTO"; } catch (_) {}
+
   function liveSourceLabel() {
+    if (liveSourceOverride === "SIM" || liveSourceOverride === "KSP") return liveSourceOverride;
     const sim = snapshot && snapshot.simulation;
     const isSim = !!(sim && (sim.active || sim.sourceMode === "simulator"));
     return isSim ? "SIM" : "KSP";
@@ -2810,6 +2814,19 @@
   $("sim-replay-play").addEventListener("click", () => setReplayPlaying(!archiveReplay.playing));
   $("sim-replay-forward").addEventListener("click", () => seekReplayBy(10));
   $("sim-replay-live").addEventListener("click", leaveArchiveReplay);
+  const sourceToggle = $("live-source-toggle");
+  if (sourceToggle) {
+    const paint = () => {
+      sourceToggle.textContent = "SOURCE: " + liveSourceOverride;
+      if (!archiveReplay.active) setReplayControlsActive(false);
+    };
+    sourceToggle.addEventListener("click", () => {
+      liveSourceOverride = {AUTO: "SIM", SIM: "KSP", KSP: "AUTO"}[liveSourceOverride] || "AUTO";
+      try { localStorage.setItem("liveSourceOverride", liveSourceOverride); } catch (_) {}
+      paint();
+    });
+    paint();
+  }
   $("sim-replay-seek").addEventListener("input", (event) => {
     if (!archiveReplay.active) return;
     const targetIndex = Math.max(0, Math.min(
