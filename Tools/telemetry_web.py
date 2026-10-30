@@ -14,6 +14,7 @@ import copy
 import datetime
 import collections
 import gzip
+import hashlib
 import json
 import math
 import mimetypes
@@ -2735,6 +2736,55 @@ def _serialized_replay(replay: dict[str, Any], use_gzip: bool) -> bytes:
     return body
 
 
+_REPLAY_DISK_CACHE = ROOT / "Runtime" / "TelemetryWeb" / "replay-cache"
+
+
+def sim_replay_body(root: Path, run_id: str, max_frames: int, use_gzip: bool) -> bytes | None:
+    """Serialized replay response; archived runs are persisted on disk so first loads are instant."""
+    discovered = _discover_simulation_run(root, run_id)
+    if discovered is None:
+        return None
+    run_dir, manifest = discovered
+    frames = max(20, min(2000, max_frames))
+    signature = repr((str(root), run_id, frames, _replay_signature(run_dir, manifest), manifest.get("state")))
+    cache_file = _REPLAY_DISK_CACHE / (hashlib.sha1(signature.encode()).hexdigest() + ".json.gz")
+    # Never persist runs that may still be growing.
+    settled = str(manifest.get("state") or "") not in ("running", "starting")
+    packed: bytes | None = None
+    if settled:
+        try:
+            packed = cache_file.read_bytes()
+        except OSError:
+            packed = None
+    if packed is None:
+        replay = load_simulation_replay(root, run_id, max_frames)
+        if replay is None:
+            return None
+        packed = _serialized_replay(replay, True)
+        if settled:
+            try:
+                _REPLAY_DISK_CACHE.mkdir(parents=True, exist_ok=True)
+                tmp = cache_file.with_suffix(f".{os.getpid()}.tmp")
+                tmp.write_bytes(packed)
+                tmp.replace(cache_file)
+            except OSError:
+                pass
+    return packed if use_gzip else gzip.decompress(packed)
+
+
+def prewarm_sim_replays(root: Path, max_frames: int = 1600) -> None:
+    """Background: build disk caches for archived runs, newest first."""
+    for row in list_simulation_runs(root):
+        if row.get("hasReplay") and row.get("state") not in ("running", "starting"):
+            try:
+                sim_replay_body(root, row["runId"], max_frames, True)
+            except Exception:  # noqa: BLE001 - best effort
+                pass
+    with _SIM_REPLAY_CACHE_LOCK:
+        _SIM_REPLAY_CACHE.clear()
+        _SERIALIZED_REPLAY_CACHE.clear()
+
+
 def _load_simulation_replay_uncached(root: Path, run_dir: Path, manifest: dict[str, Any],
                                      max_frames: int) -> dict[str, Any]:
 
@@ -3944,13 +3994,12 @@ class TelemetryHandler(BaseHTTPRequestHandler):
                 max_frames = int((query.get("maxFrames") or ["600"])[0])
             except ValueError:
                 max_frames = 600
-            replay = load_simulation_replay(ROOT, run_id, max_frames)
-            if replay is None:
+            use_gzip = "gzip" in (self.headers.get("Accept-Encoding") or "")
+            body = sim_replay_body(ROOT, run_id, max_frames, use_gzip)
+            if body is None:
                 self.send_json({"error": "simulation run not found"}, HTTPStatus.NOT_FOUND)
             else:
-                use_gzip = "gzip" in (self.headers.get("Accept-Encoding") or "")
-                self.send_bytes(_serialized_replay(replay, use_gzip), "application/json; charset=utf-8",
-                                encoding="gzip" if use_gzip else None)
+                self.send_bytes(body, "application/json; charset=utf-8", encoding="gzip" if use_gzip else None)
             return
         if path == "/events":
             self.handle_events()
@@ -4113,6 +4162,7 @@ def main() -> int:
     collector.start()
 
     server = TelemetryHTTPServer((args.host, args.port), store)
+    threading.Thread(target=prewarm_sim_replays, args=(ROOT,), name="replay-prewarm", daemon=True).start()
     server.rl_monitor = RLTrainingMonitor(ROOT, args.rl_output)
     texture = str(server.texture) if server.texture else "not found (map falls back to vector grid)"
     print(f"telemetry web: http://{args.host}:{args.port}  mode={args.mode}  kerbin={texture}", flush=True)

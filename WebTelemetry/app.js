@@ -1544,6 +1544,11 @@
       const simActive = !!(sim && (sim.active || sim.sourceMode === "simulator" || sim.sourceMode === "replay"));
       const kspReplay = !!(archivedReplay && archivedReplay.active && String(archivedReplay.sourceMode || "").toLowerCase() === "ksp-replay");
       const active = simActive || kspReplay;
+      if (!archiveReplay.active) {
+        const liveText = $("sim-replay-live")?.querySelector("span:last-child");
+        if (liveText) liveText.textContent = "LIVE " + (simActive ? "SIM" : "KSP");
+        $("playback-run-name").textContent = "LIVE " + (simActive ? "SIM" : "KSP") + " TELEMETRY";
+      }
       const replaying = (simActive && String(sim?.sourceMode || "").toLowerCase() === "replay") || kspReplay;
       const replayStatus = kspReplay ? archivedReplay : sim;
       simStatus.hidden = !active;
@@ -2380,6 +2385,12 @@
     toggle.setAttribute("aria-label", open ? "Collapse playback controls" : "Expand playback controls");
   }
 
+  function liveSourceLabel() {
+    const sim = snapshot && snapshot.simulation;
+    const isSim = !!(sim && (sim.active || sim.sourceMode === "simulator"));
+    return isSim ? "SIM" : "KSP";
+  }
+
   function setReplayControlsActive(active) {
     const dock = $("playback-dock");
     dock.classList.toggle("replay-active", !!active);
@@ -2389,6 +2400,8 @@
     const kspView = $("ksp-history-open");
     live.classList.toggle("active", !active);
     live.setAttribute("aria-pressed", active ? "false" : "true");
+    const liveText = live.querySelector("span:last-child");
+    if (liveText) liveText.textContent = "LIVE " + liveSourceLabel();
     const simActive = !!active && archiveReplay.kind === "sim";
     const kspActive = !!active && archiveReplay.kind === "ksp";
     simView.classList.toggle("active", simActive);
@@ -2399,7 +2412,7 @@
     if (active) {
       $("playback-run-name").textContent = archiveReplay.run?.runId || "REPLAY";
     } else {
-      $("playback-run-name").textContent = "LIVE KSP TELEMETRY";
+      $("playback-run-name").textContent = "LIVE " + liveSourceLabel() + " TELEMETRY";
       $("sim-replay-play").textContent = "PLAY";
       $("sim-replay-seek").min = "0";
       $("sim-replay-seek").max = "0";
@@ -2641,7 +2654,7 @@
         row.append(dot, main, final);
         if (replayAvailable) row.addEventListener("click", () => startArchiveReplay(run.runId, row, kind).catch((error) => {
           $("sim-replay-position").textContent = "Unable to load run";
-          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE KSP TELEMETRY";
+          $("playback-run-name").textContent = archiveReplay.active ? (archiveReplay.run?.runId || "REPLAY") : "LIVE " + liveSourceLabel() + " TELEMETRY";
           if (!archiveReplay.active) setReplayControlsActive(false);
           setReplayPlaying(false);
         }));
