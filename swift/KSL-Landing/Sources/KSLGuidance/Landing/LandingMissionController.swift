@@ -141,7 +141,7 @@ public final class LandingMissionController {
     var advisories: [ConstraintViolation] = invalidationFailure.map { [$0] } ?? []
     entry.environment = environment
     if previousTime == nil && [.approach, .preflare, .flare].contains(phase), !approach.canCapture(state) {
-      throw FlightError.invalidCommand("Requested Final phase fails measured capture/energy contract")
+      advisories.append(.init(.modelUncertainty, "Initial Final capture/energy model advisory"))
     }
     if previousTime == nil && [.acquisition, .headingAlignment].contains(phase) {
       if plan == nil {

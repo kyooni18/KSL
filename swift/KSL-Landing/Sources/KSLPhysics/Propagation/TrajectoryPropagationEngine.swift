@@ -23,6 +23,7 @@ public final class TrajectoryPropagationEngine {
     terminalSpeed: Double = 650, minimumDuration: Double = 0,
     controlSnapshot: FlightControlSnapshot? = nil, previousTarget: GuidanceTarget? = nil,
     feedback: ((ControlDiagnostics) -> Void)? = nil,
+    terminalCondition: ((VehicleState) -> Bool)? = nil,
     law: (VehicleState) -> PredictionAttitude
   ) -> TrajectoryPrediction {
     var samples: [TrajectorySample] = [], violations: [ConstraintViolation] = []
@@ -57,6 +58,7 @@ public final class TrajectoryPropagationEngine {
         violations.append(.init(.excessiveLoad, "Closed-loop forecast load limit",
           value: load, limit: configuration.vehicle.maximumLoadFactor)); break
       }
+      if terminalCondition?(s) == true { reached = true; break }
       if recordEvery > 0, s.time >= nextRecord {
         samples.append(.init(time: s.time, position: s.position, velocity: s.velocity,
           angleOfAttack: s.aerodynamics.angleOfAttack, bank: s.aerodynamics.bank,

@@ -134,6 +134,12 @@ final class GuidanceTests: XCTestCase {
     XCTAssertFalse(plan.assessment.violations.isEmpty)
     XCTAssertEqual(plan.stations.last?.segment, .final)
     XCTAssertTrue(MM305Admission.evaluate(state, plan: plan, configuration: c).accepted)
+    var offBand = state
+    offBand.time = plan.createdAt + 4*c.guidance.terminalReplanInterval
+    offBand.aerodynamics.dynamicPressure = 0
+    let advisory = MM305Admission.evaluate(offBand, plan: plan, configuration: c)
+    XCTAssertTrue(advisory.accepted)
+    XCTAssertFalse(advisory.violations.isEmpty)
     XCTAssertGreaterThan(result.evaluatedCandidates, 0)
   }
   func testMeasuredApproachCaptureIsC2() {

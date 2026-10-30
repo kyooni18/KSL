@@ -582,7 +582,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              "\"vehicle\":{\"mass_kg\":%.6f,\"available_thrust_n\":%.6f,\"current_thrust_n\":%.6f,\"throttle\":%.9f,\"propellant_used_kg\":%.6f,\"engine_dv_mps\":%.6f},"
              "\"runway\":{\"along_m\":%.3f,\"cross_m\":%.3f,\"vertical_m\":%.3f,\"length_m\":%.3f,\"width_m\":%.3f,\"heading_deg\":%.6f},"
              "\"ground\":{\"gear_down\":%s,\"brakes\":%s,\"airbrakes\":%s,\"speedbrake\":%.4f,\"wheel_steering\":%.6f,\"steering_lateral_accel_mps2\":%.6f,\"airbrake_decel_mps2\":%.6f,\"on_ground\":%s,\"stopped\":%s,\"touchdown_seen\":%s,\"on_runway_touchdown\":%s,"
-             "\"main_contact\":%s,\"nose_contact\":%s,\"pitch_released\":%s,\"main_load_n\":%.1f,\"nose_load_n\":%.1f,\"tail_load_n\":%.1f,\"bounce_count\":%d,\"runway_departure\":%s,\"pitch_deg\":%.4f}}",
+             "\"main_contact\":%s,\"nose_contact\":%s,\"pitch_released\":%s,\"main_load_n\":%.1f,\"nose_load_n\":%.1f,\"tail_load_n\":%.1f,\"bounce_count\":%d,\"runway_departure\":%s,\"crashed\":%s,\"pitch_deg\":%.4f}}",
              sim->scenario.name,s->ut,s->sim_elapsed_s,rate,sim->world.radius_m,sim->world.mu_m3_s2,sim->world.rotation_rate_rad_s,sim->world.atmosphere_top_m,sim->world.rotation_phase_rad_at_ut0,s->position_i_m.x,s->position_i_m.y,s->position_i_m.z,rad2deg(l.lat_rad),rad2deg(l.lon_rad),l.altitude_m,
              s->velocity_i_mps.x,s->velocity_i_mps.y,s->velocity_i_mps.z,v3_norm(s->velocity_i_mps),v3_norm(surf),v3_norm(air),horizontal,vu,rad2deg(fpa),
              rad2deg(s->attitude.aoa_rad),rad2deg(s->attitude.bank_rad),rad2deg(heading),rad2deg(s->attitude.cmd_aoa_rad),rad2deg(s->attitude.cmd_bank_rad),rad2deg(s->attitude.requested_aoa_rad),rad2deg(s->attitude.requested_bank_rad),
@@ -607,7 +607,7 @@ void sim_build_telemetry_json(const Simulation *sim,double rate,char *out,size_t
              s->touchdown_seen?"true":"false",s->on_runway_at_touchdown?"true":"false",
              s->main_contact?"true":"false",s->nose_contact?"true":"false",s->pitch_released?"true":"false",
              s->contact_load_n[0],s->contact_load_n[1],s->contact_load_n[2],s->bounce_count,
-             s->runway_departure?"true":"false",rad2deg(asin(ss_clampd(v3_dot(quat_rotate(s->body_q_i,ss_v3(1,0,0)),lf.up),-1.0,1.0))));
+             s->runway_departure?"true":"false",s->crashed?"true":"false",rad2deg(asin(ss_clampd(v3_dot(quat_rotate(s->body_q_i,ss_v3(1,0,0)),lf.up),-1.0,1.0))));
 }
 void sim_build_summary_json(const Simulation *sim,char *out,size_t n){
     const SimState *s=&sim->state;LLA l=world_lla(&sim->world,s->position_i_m,s->ut);double along,cross,vertical;ss_runway_coordinates(&sim->world,&sim->runway,s->position_i_m,s->ut,&along,&cross,&vertical);

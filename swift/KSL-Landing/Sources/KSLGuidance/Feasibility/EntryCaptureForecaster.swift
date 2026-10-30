@@ -88,17 +88,6 @@ public final class EntryCaptureForecaster {
     let predictor = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: plantAero)
     // Guidance keeps the nominal model: dispersions live in the plant only.
     let law = EntryCommandLaw(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics, memory: memory)
-    let speed = terminalSpeed(at: state.time)
-      * (c.entrySettings.terminalTargetMach + c.entrySettings.terminalMachHalfWidth) / c.entrySettings.terminalTargetMach
-    let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
-      step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: speed,
-      minimumDuration: state.aerodynamics.airspeed < speed ? 4 * c.guidance.entryReplanInterval : 0,
-      controlSnapshot: controls, previousTarget: previousTarget,
-      feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds }) { s in
-        let target = law.update(s, rangeMultiplier: rangeMultiplier)
-        return .init(alpha: target.angleOfAttack, bank: target.bank)
-      }
-    var samples = first.samples, violations = first.violations, end = first.terminalState
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
     func evaluateCapture(_ state: VehicleState) -> TAEMCaptureAssessment {
       let admission = MM305Admission.physicalAdmission(state, configuration: c)
@@ -130,37 +119,41 @@ public final class EntryCaptureForecaster {
       return assessment
     }
     var capture = TAEMCaptureAssessment()
-    if first.reachedTerminalRegion && violations.isEmpty {
-      // The capture region is wherever an admissible HAC first exists, not a
-      // fixed Mach: keep flying the MM304 law and re-ask at MM305's cadence.
-      capture = evaluateCapture(end)
-      while !Task.isCancelled, !capture.feasible, capture.deficit != .insufficientEnergy, violations.isEmpty,
-        end.time - state.time < c.guidance.maximumPredictionDuration,
-        end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude {
-        let next = predictor.predict(from: end, duration: c.guidance.terminalReplanInterval,
-          step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
-          feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds }) { s in
-            let target = law.update(s, rangeMultiplier: rangeMultiplier)
-            return .init(alpha: target.angleOfAttack, bank: target.bank)
-          }
-        if next.terminalState.time <= end.time { break }
-        samples += next.samples.dropFirst(); violations += next.violations; end = next.terminalState
-        if !violations.isEmpty { break }
-        capture = evaluateCapture(end)
+    var searched = false, nextCapture = state.time
+    let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
+      step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
+      controlSnapshot: controls, previousTarget: previousTarget,
+      feedback: { law.memory.pitchResponseSeconds = $0.pitchResponseSeconds },
+      terminalCondition: { s in
+        let altitude = s.position.length-c.planet.radius
+        if !searched {
+          guard altitude <= c.entrySettings.terminalMaximumAltitude,
+            s.aerodynamics.mach <= c.entrySettings.terminalTargetMach+c.entrySettings.terminalMachHalfWidth,
+            s.verticalSpeed < 0 else { return false }
+        }
+        guard s.time >= nextCapture else { return false }
+        searched = true; nextCapture = s.time+c.guidance.terminalReplanInterval
+        capture = evaluateCapture(s)
+        // Verdicts do not end the survey. Keep the same FCS, limiter and
+        // physical integrator until a HAC exists or the high capture band ends.
+        return capture.feasible || altitude < c.entrySettings.terminalMinimumAltitude
+      }) { s in
+        let target = law.update(s, rangeMultiplier: rangeMultiplier)
+        return .init(alpha: target.angleOfAttack, bank: target.bank)
       }
-      if capture.feasible && certify {
-        capture = evaluator.evaluate(end, certify: true, controlSnapshot: controls, previousTarget: previousTarget)
-      }
+    let samples = first.samples, violations = first.violations, end = first.terminalState
+    if capture.feasible && certify {
+      capture = evaluator.evaluate(end, certify: true, controlSnapshot: controls, previousTarget: previousTarget)
     }
     let p = frame.coordinates(of: end.position)
-    if !first.reachedTerminalRegion {
+    if !searched {
       capture = .init(); capture.time = end.time; capture.altitude = p.height
       capture.mach = end.aerodynamics.mach
       capture.rangeToRunway = frame.distance(from: end.position, to: frame.origin)
       capture.violations = violations
       capture.deficit = violations.isEmpty ? .terminalRegionNotReached : .envelopeViolation
     }
-    if first.reachedTerminalRegion, !violations.isEmpty {
+    if searched, !violations.isEmpty {
       capture.feasible = false; capture.violations += violations; capture.deficit = .envelopeViolation
     }
     var maxQ = 0.0, maxLoad = 0.0
@@ -170,7 +163,7 @@ public final class EntryCaptureForecaster {
       return [s.time, q.along, q.cross, q.height, s.velocity.length, s.angleOfAttack, s.bank]
     }
     var result = EntryCaptureForecast(createdAt: state.time, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
-      dragScale: dragScale, reachedTerminalRegion: first.reachedTerminalRegion,
+      dragScale: dragScale, reachedTerminalRegion: searched,
       violations: violations, terminalTime: end.time, terminalAltitude: p.height,
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)

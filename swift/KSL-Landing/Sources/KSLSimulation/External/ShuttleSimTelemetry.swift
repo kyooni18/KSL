@@ -131,7 +131,7 @@ public final class ShuttleSimTelemetryDecoder {
     systems.airbrakes = flag(ground,"airbrakes")
     systems.throttle = try number(vehicle,"throttle"); systems.thrust = try number(vehicle,"current_thrust_n")
     let main = flag(ground,"main_contact"), nose = flag(ground,"nose_contact")
-    let contact: ContactState = flag(ground,"runway_departure") ? .crashed
+    let contact: ContactState = flag(ground,"crashed") ? .crashed
       : main ? (nose ? (flag(ground,"stopped") ? .stopped : .rolling) : .mainGear) : .airborne
     var state = VehicleState(time: time, position: position, velocity: velocity, attitude: attitude,
       angularVelocity: rates, mass: try number(vehicle,"mass_kg"), atmosphere: air, aerodynamics: aero,

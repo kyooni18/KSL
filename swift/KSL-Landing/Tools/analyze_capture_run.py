@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Recompute runway geometry and target smoothness from native flight records."""
-import argparse, csv, gzip, json, math, pathlib
+import argparse, base64, csv, gzip, json, math, pathlib
 
 def dot(a,b): return sum(x*y for x,y in zip(a,b))
 def scale(a,k): return [x*k for x in a]
@@ -41,9 +41,18 @@ def analyze(path):
         if not rows:t0=t
         row['elapsed']=t-t0
         if not phases or phases[-1]['phase']!=d['phase']:phases.append(dict(phase=d['phase'],elapsed=t-t0,altitude=h,mach=ae['mach']))
+        if a.get('planningProposal'):
+          proposal=json.loads(base64.b64decode(a['planningProposal']))
+          terminal=proposal.get('terminal')
+          if terminal:
+            envelope=terminal.get('envelope') or {}
+            slow=envelope.get('slowestTouchdown');fast=envelope.get('fastestTouchdown')
+            if slow is not None and fast is not None:
+              row['energyMargin']=min(v['maximumTouchdownSpeed']**2-slow**2,
+                fast**2-(v['landingSpeed']*.82)**2)/(2*9.80665)
         if row['mm305Searched'] and firstsearch is None:firstsearch=row.copy()
         if cap.get('mm305PlanAccepted') and handoff is None:handoff=row.copy()
-        if s.get('contact') in ('touchdown','rolling','stopped','grounded') and touchdown is None:touchdown=row.copy()
+        if s.get('contact') in ('mainGear','rolling','stopped') and touchdown is None:touchdown=row.copy()
         if d['phase']=='complete':stop=row.copy()
         if cap.get('predictedAt')!=lastforecast and cap.get('predictedAt') is not None:forecasts.append(cap);lastforecast=cap['predictedAt']
         rows.append(row)

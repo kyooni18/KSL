@@ -44,6 +44,10 @@ struct EntryLawMemory: Sendable {
   /// Planned lateral offset of the MM304 aim point from the configured
   /// handoff point (m); chosen backward from TAEM capture, not fixed.
   var crossAim = 0.0
+  mutating func retargetCrossAim(_ value: Double) {
+    crossAim = value
+    objective = nil
+  }
 }
 
 /// One owner per live executive or forecast branch. C DRAGREF, ALPHA and

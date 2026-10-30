@@ -369,7 +369,9 @@ public actor KRPCFlightIO: OrbitalFlightIO {
     systems.brakes = try KRPCValue.decodeBool(values[24])
     let situation = try KRPCValue.decodeSInt(values[15])
     let contact: ContactState
-    if situation == 6 { contact = .crashed }
+    // kRPC situation 6 is SPLASHED, not vessel destruction. Continue
+    // control and report the off-runway contact instead of decision-aborting.
+    if situation == 6 { contact = velocity.length < 0.5 ? .stopped : .rolling }
     else if wheelContact.mainGear == true {
       contact = wheelContact.noseGear == true ? (velocity.length < 0.5 ? .stopped : .rolling) : .mainGear
     } else if wheelContact.mainGear == nil && situation == 5 {

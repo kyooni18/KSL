@@ -30,6 +30,16 @@ final class ShuttleSimAdapterTests: XCTestCase {
     XCTAssertNil(first.state.vesselConfiguration)
     XCTAssertFalse(first.state.aerodynamics.measuredForces)
   }
+  func testRunwayDepartureDoesNotBecomeDestruction() throws {
+    var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: fixture()[0]) as? [String: Any])
+    var ground = raw["ground"] as! [String: Any]
+    ground["main_contact"] = true; ground["nose_contact"] = true
+    ground["runway_departure"] = true; ground["crashed"] = false
+    raw["ground"] = ground
+    XCTAssertTrue(try decoder().decode(JSONSerialization.data(withJSONObject: raw)).state.contact.isGrounded)
+    ground["crashed"] = true; raw["ground"] = ground
+    XCTAssertEqual(try decoder().decode(JSONSerialization.data(withJSONObject: raw)).state.contact, .crashed)
+  }
   func testWrongRotationPhaseCannotSilentlyEnterController() throws {
     var raw = try XCTUnwrap(JSONSerialization.jsonObject(with: fixture()[0]) as? [String: Any])
     var world = raw["world"] as! [String: Any]

@@ -54,7 +54,7 @@ public final class EntryGuidanceEngine {
       previousTarget: previousTarget, environment: environment)
   }
   /// Lateral aim planned backward from TAEM capture (deorbit selection).
-  public func setCrossAim(_ value: Double) { law.memory.crossAim = value }
+  public func setCrossAim(_ value: Double) { law.memory.retargetCrossAim(value) }
   public func setObjective(_ objective: EntryCaptureObjective?) { law.memory.objective = objective }
   public var crossAim: Double { law.memory.crossAim }
   public func invalidatePrediction() {
@@ -133,7 +133,7 @@ public final class EntryGuidanceEngine {
       // The flown aim lost capture: re-plan the lateral aim (same physical
       // candidates as deorbit planning) before changing the drag profile.
       for aim in forecaster.lateralAims(at: state.time) where abs(aim - request.memory.crossAim) > 1 && !Task.isCancelled {
-        var memory = request.memory; memory.crossAim = aim
+        var memory = request.memory; memory.retargetCrossAim(aim)
         forecasts.append(forecaster.forecast(from: state, memory: memory, rangeMultiplier: request.rangeMultiplier,
           controls: request.controls, previousTarget: request.previousTarget))
       }
