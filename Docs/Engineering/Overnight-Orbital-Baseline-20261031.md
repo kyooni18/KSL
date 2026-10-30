@@ -125,6 +125,31 @@ worse modeled crossrange. The full-route planner could choose differently.
 No burn time or delta-v from this table should be copied into flight guidance.
 The screening run preserves its input/config/source/binary hashes and JSON.
 
+To distinguish orbital pointing/burn propagation from atmospheric evaluation,
+`Tools/probe_orbital_screen.swift` also replayed the **nominal model only** for
+all 12 returned windows using the baseline initial attitude, measured vacuum
+authority and propulsion. All 12 modeled burns completed and reached a
+descending interface; modeled FPA was approximately -1.65° to -1.67°. All
+12 took 22.21 s wall time in the debug native probe, versus the full-route
+evaluation still running after 19 minutes. This is not a measured burn, a
+stress matrix, a predictor validation, or permission to bypass safety. It
+corroborates that the expensive atmospheric closed-loop evaluation—not the
+orbital search or the nominal orbital propagation—is the bottleneck for this
+state. Output and timing are in `orbital-probe.txt` and
+`orbital-probe-time.txt`; probe binary SHA-256
+`4df59c9abf0e86692d2041a11cbd6bb905ef9bcbfb1f40ec5ee61d25d52065c8`.
+Rebuild the debug modules and probe, then run against the preserved screen:
+
+```sh
+swift build --package-path swift/KSL-Landing -c debug --product ksl-landing
+B=swift/KSL-Landing/.build/out/Products/Debug
+swiftc -parse-as-library -I "$B" -I swift/KSL-Landing/Sources/CSQLite \
+  swift/KSL-Landing/Tools/probe_orbital_screen.swift \
+  "$B"/{KSLCore,KSLControl,KSLPhysics,KSLGuidance,KSLDiagnostics,KSLRuntime}.o \
+  -lsqlite3 -o runs/overnight-deorbit-screen-20261031/orbital_probe
+runs/overnight-deorbit-screen-20261031/orbital_probe runs/overnight-deorbit-screen-20261031
+```
+
 The prior v21 investigation and its uncommitted native probe remain separate;
 its MM304/MM305 findings have not been verified on this orbital attempt. The
 next experiment is to obtain a computed, current, executable orbit plan, with
