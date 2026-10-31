@@ -32,6 +32,7 @@ public final class EntryGuidanceEngine {
   private let frame: RunwayFrame
   private var rangeMultiplier = 1.0
   private var lastSolve = -Double.infinity
+  private var lastAcceptedProposal = -Double.infinity
   public private(set) var bestPrediction: TrajectoryPrediction?
   public private(set) var candidateCount = 0
   public private(set) var captureForecast: EntryCaptureForecast?
@@ -67,7 +68,9 @@ public final class EntryGuidanceEngine {
   }
   public func accept(_ proposal: EntryPlanningProposal, at time: Double) {
     guard proposal.createdAt <= time,
-      time - proposal.createdAt <= 2 * configuration.guidance.entryReplanInterval else { return }
+      time - proposal.createdAt <= 2 * configuration.guidance.entryReplanInterval,
+      proposal.createdAt > lastAcceptedProposal else { return }
+    lastAcceptedProposal = proposal.createdAt
     rangeMultiplier = proposal.rangeMultiplier
     bestPrediction = proposal.prediction; candidateCount = proposal.candidates
     captureForecast = proposal.capture

@@ -4,6 +4,23 @@ import KSLPhysics
 @testable import KSLGuidance
 
 final class TerminalProposalFreshnessTests: XCTestCase {
+  func testExpiredAndOlderEntryProposalsCannotReplaceCurrentAim() throws {
+    let c = MissionConfiguration()
+    let entry = EntryGuidanceEngine(configuration: c, atmosphere: try AtmosphericModelEngine(),
+      aerodynamics: try AerodynamicsEngine())
+    func proposal(_ time: Double, _ aim: Double) -> EntryPlanningProposal {
+      .init(createdAt: time, rangeMultiplier: 1, prediction: nil, candidates: 1,
+        terminalRouteFeasible: false, crossAim: aim)
+    }
+    entry.accept(proposal(100 - 2*c.guidance.entryReplanInterval - 1, 1), at: 100)
+    XCTAssertEqual(entry.crossAim, 0)
+    entry.accept(proposal(99, 2), at: 100)
+    entry.accept(proposal(98, 3), at: 100)
+    XCTAssertEqual(entry.crossAim, 2)
+    entry.accept(proposal(100, 4), at: 100)
+    XCTAssertEqual(entry.crossAim, 4)
+  }
+
   func testExpiredAndOlderTerminalProposalsCannotReplaceCurrentVerdict() throws {
     let c = MissionConfiguration(), atmosphere = try AtmosphericModelEngine()
     let mission = LandingMissionController(configuration: c, atmosphere: atmosphere,
