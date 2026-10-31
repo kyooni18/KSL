@@ -971,3 +971,62 @@ The replay's control owner was cancelled after the unambiguous water failure;
 fresh kRPC at UT 197055.3088 showed throttle and axes zero, RCS off, and UT
 continued advancing. Original quicksave and old 72 km save remain unchanged;
 no orbital-to-descent checkpoint or runway success has been established.
+
+### HAC candidate pricing experiment and checkpoint flight
+
+The current entry-only run reproduced the v21 lead that the first owned HAC
+was incompletely priced when ranked. At its first terminal proposal, source UT
+196480.5288, the baseline selected advisory reference reported 24.02 g peak
+modeled load. This is model demand, not measured vehicle loading. A focused
+candidate first preserves the normal early-exit assessment, then fully prices
+each failed path as an advisory before fit comparison, and ranks a
+nominal-feasible member ahead of an infeasible member. If all are infeasible,
+it still selects the best available advisory; it does not veto control. The
+existing energy evaluator's advisory continuation uses a provisional speed
+floor after energy exhaustion. Consequently those continuation values are
+**not** physically validated predictions, and fairer pricing is not proof of
+an attainable recovery. No flight limits or MM305 search permission changed.
+
+On the identical warmed v21 state at UT 196417.0888 (+402.94 s), the prior
+planner selected an advisory with 31.57 g modeled peak despite a feasible
+family member; this candidate selected that feasible member, with 1.725 g
+modeled peak. At the identical warmed state of the newer entry flight at UT
+196480.6488, the family had zero feasible members; the selected advisory
+changed from 24.27 g to 1.90 g modeled peak. Debug single-sample planning time
+at that second state rose from 0.839 to 2.952 s, a material scheduling risk;
+these times are not flight RPC latency or validated worst-case bounds. Probe
+inputs, outputs and the experimental patch are in
+`runs/overnight-hac-fair-pricing-20261031/`.
+
+The candidate flew from the same existing 72 km save in
+`overnight-entry72-fair-pricing-20261031`, not from orbit. Initial logged UT
+was 195993.1288 versus baseline 196004.2688, so launch states and trajectories
+were **not matched**. First ownership at UT 196477.9288 was at 24,123.81 m
+ASL, Mach 2.843, 858.11 m/s, along +832 m and cross +25,114 m. Its first
+proposal was sourced UT 196477.7488 and delivered 0.18 s later; the selected
+advisory modeled peak load was 3.41 g, versus the baseline's 24.02 g at its
+different handover state. These values do not establish that those loads were
+actually flown. The run continued to an off-runway water impact: immediately
+before the contact-phase change, at UT 197015.1088 it was at 4.32 m ASL,
+30.40 m/s airspeed and -15.63 m/s vertical speed. At UT 197045.7688,
+independent kRPC reported STS splashed, lat +0.0342207°, lon -73.6855158°,
+26 parts, gear down and essentially zero surface speed. Final logged selected
+threshold distance was 8,464.92 m, along -8,420.36 m, cross +867.36 m.
+The baseline final distance was 26.22 km, but the non-matched starts prevent
+attribution of that difference to the candidate. Water impact is not a
+runway touchdown or rollout, irrespective of the phase label or part count.
+No complete orbital mission was demonstrated.
+
+The flown candidate was HEAD `2458b29` plus recorded dirty source patch
+`d9cb7c0ea2b9a8adee6d7bab444fffa2f0d3ac87673319384ddfd8b135b5151c`;
+candidate-only patch `fb7f55cd5a547a5e1a449b01b9475ca5202b8e30fccd794c86643f99aa9a7a3d`,
+binary `b3e08d0a1ee8893c8921147d30557ac1dcb46084948e6abf326848a1fdd7469e`,
+configuration `7d562b97f847432c84b3c911a22cab7b0315cd314d445579c62edb357f913a45`.
+Subsequent extraction of the same comparator into a testable helper changes
+source and binary identity; it has not itself been live-flown. Three focused
+tests passed: feasible-first ordering, all-infeasible advisory retention, and
+the existing high-close HAC test. The earlier full suite remains failing.
+Post-cancellation kRPC at UT 197086.4488 showed STS splashed, throttle and
+axes zero, RCS off; UT advanced. No controller remained. Further work must
+address late entry delivery and validate the energy-floor continuation, path
+force allocation and latency on matched states, then re-fly from orbit.

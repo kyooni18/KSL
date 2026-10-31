@@ -67,6 +67,9 @@ public struct TerminalEnvelopeSummary: Codable, Sendable {
 }
 
 public final class HACPlanningEngine {
+  static func ranksAhead(feasible: Bool, cost: Double, ofFeasible: Bool, cost otherCost: Double) -> Bool {
+    feasible == ofFeasible ? cost < otherCost : feasible
+  }
   private let configuration: MissionConfiguration
   private let energy: EnergyManagementEngine
   private let approach: ApproachProfile
@@ -196,9 +199,13 @@ public final class HACPlanningEngine {
           advisoryCounts[violation.kind.rawValue, default: 0] += 1
         }
         if advisory == nil || assessment.score < advisory!.score { advisory = assessment }
+        // Price the entire reference before comparing its fit with other
+        // candidates. Advisory continuation after energy exhaustion is a
+        // provisional reference, not a claim of physical feasibility.
+        let (fullReference, fullAssessment) = energy.evaluate(stations: stations, from: state, advisoryOnly: true)
         // A model verdict is an advisory, never a reason to remove a HAC.
         candidates.append(.init(identifier: nextIdentifier, createdAt: state.time,
-          spiral: spiral, stations: priced + stations.dropFirst(priced.count), assessment: assessment, stressCases: []))
+          spiral: spiral, stations: fullReference, assessment: fullAssessment, stressCases: []))
       }
       }
     }
@@ -369,18 +376,14 @@ public final class HACPlanningEngine {
         + rollDistance/distanceScale+lateJoin+acquisitionDominance+radiusExcess
     }
     candidates.sort {
-      return fitCost($0) < fitCost($1)
+      // Prefer an assessed feasible route, but retain all advisory routes as
+      // a fallback when the entire family is infeasible.
+      Self.ranksAhead(feasible: $0.assessment.feasible, cost: fitCost($0),
+        ofFeasible: $1.assessment.feasible, cost: fitCost($1))
     }
     // Select before diagnostics. Neither pricing nor a closed-loop prediction
     // may veto this plan; the flight computer always flies the best available HAC.
     chosen = candidates.first
-    if let candidate = chosen, !candidate.assessment.feasible {
-      // Keep survey work bounded: complete the selected advisory reference
-      // once, rather than simulating every poor route to the runway.
-      let (priced, assessment) = energy.evaluate(stations: candidate.stations, from: state, advisoryOnly: true)
-      chosen = .init(identifier: candidate.identifier, createdAt: candidate.createdAt,
-        spiral: candidate.spiral, stations: priced, assessment: assessment, stressCases: candidate.stressCases)
-    }
     if !preview, let candidate = chosen, candidate.assessment.feasible, !Task.isCancelled {
       let uncertainty = configuration.vehicle.aerodynamicUncertainty
       let cases = [(1.0, 1.0), (1-uncertainty, 1+uncertainty), (1+uncertainty, 1-uncertainty)].map { lift, drag in
