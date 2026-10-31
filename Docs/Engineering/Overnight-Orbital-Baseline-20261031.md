@@ -1030,3 +1030,36 @@ Post-cancellation kRPC at UT 197086.4488 showed STS splashed, throttle and
 axes zero, RCS off; UT advanced. No controller remained. Further work must
 address late entry delivery and validate the energy-floor continuation, path
 force allocation and latency on matched states, then re-fly from orbit.
+
+### Earlier immediate terminal ownership: rejected live counterfactual
+
+For `overnight-entry72-early-terminal-20261031`, an isolated experiment
+removed the target altitude/Mach conditions from search arming while retaining
+the existing configured terminal range. Because current search results are
+immediately accepted, this tested **early ownership**, not an independent
+advisory survey. At UT 196396.4488 it handed control to MM305 at 35,044 m
+ASL, Mach 4.845, 1,582 m/s, along +96.41 km and cross +39.46 km. The first
+selected plan was modeled infeasible. The run continued to water impact:
+fresh independent kRPC at UT 197080.7088 showed STS splashed at latitude
+3.8526135°, longitude -68.4057104°, 21 parts plus three debris vessels. The
+last log was 75.64 km from the selected threshold, along -63.62 km and cross
++40.93 km. This was markedly worse by final distance than the preceding
+fair-pricing checkpoint run's 8.46 km, although the initial logged states
+were not exactly identical. It is not a landing, and is not proof that an
+earlier independent survey would fail. The result does show that blindly
+turning an earlier search into immediate MM305 ownership is not a solution.
+
+The experiment was reverted after the observed failure and cancellation; it
+is not in production. The flown HEAD was `c8ede5f` plus source patch SHA-256
+`28af8a8619fea589608b4c058d12b93469b477625bf2e3fa7e5b13ce9f08b3d8`,
+experiment patch `8cf099dc17b4afa579ea8c53b375966ce360f8b5ca5fbbcbc5f96b0946dc61c8`,
+binary `d394e6e0972ed6a275de4598b89f20ba3f40df6333f979b8dcc45a6565fc5689`,
+configuration `7d562b97f847432c84b3c911a22cab7b0315cd314d445579c62edb357f913a45`.
+The original runway-27 controller configuration and RCS setting remained.
+Three focused guidance tests passed before the flight; the full suite remains
+failing. After restoring source, the release rebuilt successfully with hash
+`9f1499001cd77d4da7c469e5a582271c732e7c96b739d08cd78ba5b045f91306`.
+The next investigation should explicitly separate search, physically credible
+reference/force allocation, admission and ownership, rather than another
+unvalidated earlier-transfer or gain change. No orbital full-chain or runway
+success has been verified.
