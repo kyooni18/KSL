@@ -98,7 +98,15 @@ public final class ApproachGuidanceEngine {
     } else {
       let gamma = energyReference?.flightPath ?? atan(ref.slope)
       desiredVertical = speed*sin(gamma)
-      vertical = (g-vh*vh/state.position.length + (desiredVertical-state.verticalSpeed)/3
+      // Lead the vertical-speed feedback through the measured pitch response
+      // delay. With slow attitude response, reacting to the present sink alone
+      // commands another pull after existing lift has already begun to arrest
+      // it, causing a dive/pull oscillation and excess drag work.
+      let verticalAcceleration = state.aerodynamics.lift/state.mass*cos(state.aerodynamics.bank)
+        * cos(state.flightPathAngle) - state.aerodynamics.drag/state.mass*sin(state.flightPathAngle)
+        - g + vh*vh/state.position.length
+      let predictedVertical = state.verticalSpeed + response*verticalAcceleration
+      vertical = (g-vh*vh/state.position.length + (desiredVertical-predictedVertical)/(3+response)
         + state.aerodynamics.drag/state.mass*sin(state.flightPathAngle))
         / max(0.3, cos(state.flightPathAngle))
     }
