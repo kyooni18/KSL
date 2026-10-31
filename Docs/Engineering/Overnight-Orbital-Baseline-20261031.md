@@ -903,3 +903,71 @@ UT advanced to 208714.4465. RCS was on as saved, then switched off at UT
 208722.9465 for unattended cleanup, with axes and throttle remaining zero.
 This supersedes the earlier statement that its reload was unverified; it remains
 an **orbital** save, not a descent checkpoint or landing evidence.
+
+### Entry-checkpoint flight and derived 1,200 m/s replay
+
+After the orbital attempts above, `overnight-entry72-current-comparison-20261031`
+loaded the pre-existing user `ksl-checkpoint-72km` for a controlled entry-only
+diagnostic, not a substitute for full orbital validation. Fresh post-load
+kRPC at UT 195989.1688 showed STS suborbital, 71,631.70 m ASL, 70,513.14 m
+AGL, surface-frame speed 2,095.54 m/s, vertical speed -67.50 m/s and throttle
+zero. The actual controller log starts UT 196004.2688 at 70,609.07 m ASL.
+The runway-27 config was copied from v21. HEAD was `b9d272d8c156e8702542f2561c74c2ce7f71023f`,
+plus the preserved dirty source patch SHA-256
+`fc975a9d079e1c40583e8191f4db8cbe48f71914cc23bad543e700b4c53b5fb9`;
+release SHA-256 `a13e55326fa3dac3e77b0d356d2e3bc29d32698d79caeb78719bc19c5e95ab9d`,
+configuration SHA-256 `7d562b97f847432c84b3c911a22cab7b0315cd314d445579c62edb357f913a45`.
+Commands, output, recorded config, untracked probe copy and analysis are in the
+run. Different load/start epoch and state mean this is not an identical v21
+comparison or proof of a specific code fix.
+
+| Event | UT | ASL m | Mach | Surface/air speed m/s | Runway 27 along / right cross m |
+|---|---:|---:|---:|---:|---:|
+| Initial log | 196004.2688 | 70,609 | 0 reported at atmosphere edge | 2,099 | +816,671 / -11,695 |
+| MM305 search and ownership | 196480.6488 | 23,817 | 2.844 | 858 | -3,170 / +25,013 |
+| First objective-along crossing | 196483.0688 | 23,627 | 2.757 | 831 | -5,017 / +24,368 |
+| Closest selected threshold | 196488.4688 | 23,167 | 2.656 | 800 | -8,945 / +22,891 |
+| Logged touchdown phase | 196982.6688 | 4 | 0.111 | see log | water, not pavement |
+
+At threshold closest approach the actual spherical distance was 24,576.86 m;
+AoA had fallen to 5.51° and target AoA to 6.73° with actual bank 60.44°,
+while measured turn acceleration was only 2.87 m/s². This reproduces the
+qualitative late, force-starved acquisition lead, not proof that every v21
+contributing mechanism is identical. At UT 197045.8288 fresh independent
+kRPC found active STS **splashed**, lat -0.0610852°, lon -71.9859206°, 15
+parts and multiple STS debris vessels, surface speed near zero. Final log
+was ~26.22 km from the threshold. This is a damaged, off-runway water outcome,
+not a landing or controlled rollout. Controller cancellation followed the
+observed unambiguous failure; its phase label and near-zero speed do not
+certify success.
+
+During this flight the ordinary save API created
+`ksl-overnight-entry72-candidate1200-20261031` at UT 196449.2088–196449.3088:
+27,282.23 m ASL, 25,635.13 m AGL, surface/air speed 1,197.00 m/s, Mach 3.904,
+vertical speed -133.13 m/s, q 6,958 Pa, lat 3.0350344°, lon -77.0669708°,
+pitch 6.749°, heading 107.678°, roll 31.539°, AoA 15.344°, mass 25,541.01 kg,
+mono 302.061, RCS on, gear up, throttle zero. The monitor's angular velocity
+used the vessel's own rotating frame and its zero vector is **invalid rate
+evidence**. The flight log immediately before save instead gives body rates
+(-0.00213, +0.00814, +0.00283) rad/s. The candidate was sub-hypersonic and
+apparently tracking shortly before save, but reload transients make it a
+diagnostic checkpoint, not a demonstrated stable/identical initialization.
+Its file SHA-256 is `6e39809d546e6f3977af2c2f474ce7cc2db0b839f86807dd63fb8a83469d1072`.
+
+The save was reload-verified normally with no controller. At UT 196454.4288,
+STS was flying at 26,548.69 m ASL, 1,180.67 m/s, Mach 3.871, q 7,821 Pa,
+26 parts and 301.814 mono; UT advanced. At this time pitch was -8.06° and
+AoA -0.80° after several uncontrolled seconds following load. Controller
+`overnight-entry1200-reload-comparison-20261031` then started at UT
+196462.7888. At that exact UT the original controlled flight had AoA 15.98°,
+airspeed 1,062.07 m/s, versus replay AoA 10.42° and 1,140.13 m/s. Thus the
+replay is **not matched-state**: scene reload, uncontrolled delay and missing
+controller/model history are confounders. It acquired MM305 at UT
+196484.1688, along -7,975 m, cross +24,636 m, and also ended in water.
+Independent kRPC at UT 197023.7088 found active STS splashed at latitude
+0.6486723°, longitude -67.9863003°, 21 parts plus debris. Its final log
+distance was ~68.49 km from threshold. Both flights retained configured RCS.
+The replay's control owner was cancelled after the unambiguous water failure;
+fresh kRPC at UT 197055.3088 showed throttle and axes zero, RCS off, and UT
+continued advancing. Original quicksave and old 72 km save remain unchanged;
+no orbital-to-descent checkpoint or runway success has been established.
