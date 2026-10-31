@@ -181,9 +181,13 @@ public final class DeorbitWindowSearch {
       windows.append(candidate)
     }
     let offsets = [-1.0, 1.0, -2.0, 2.0]
-    for candidate in refined where windows.count < c.candidateBudget {
-      let spacing = max(step, c.captureRadius/max(1, candidate.entrySpeed))
-      for offset in offsets where windows.count < c.candidateBudget {
+    // Distribute the limited offset budget across passages before spending
+    // additional samples on the same passage. A local entry-range optimum
+    // is not necessarily an attainable MM304-to-HAC trajectory, and using
+    // all offsets on the first seed hides timing alternatives on other passes.
+    for offset in offsets where windows.count < c.candidateBudget {
+      for candidate in refined where windows.count < c.candidateBudget {
+        let spacing = max(step, c.captureRadius/max(1, candidate.entrySpeed))
         let time = candidate.burnStart+offset*spacing
         guard time >= start, time <= start+horizon else { continue }
         if let option = try evaluate(time, candidate.normalAngle), option.closing,

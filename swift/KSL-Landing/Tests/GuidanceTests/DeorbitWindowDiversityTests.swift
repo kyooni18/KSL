@@ -7,7 +7,7 @@ final class DeorbitWindowDiversityTests: XCTestCase {
     var c = MissionConfiguration()
     c.runway.elevation = 70
     var deorbit = c.deorbitSettings
-    deorbit.candidateBudget = 8
+    deorbit.candidateBudget = 12
     c.deorbit = deorbit
     // ShuttleSim orbit_scenarios.py 100x100 km polar fixture. Its inertial
     // coordinates have a +pi/2 origin relative to the native Swift frame.
@@ -28,5 +28,17 @@ final class DeorbitWindowDiversityTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(passages.count, 3)
     XCTAssertTrue(result.candidates.allSatisfy { $0.entryInterface.time > $0.afterBurn.time })
     XCTAssertTrue(result.candidates.allSatisfy { $0.deltaV > 0 && $0.crossrange >= 0 })
+    // The first six are distinct seeds; with remaining budget, the first
+    // two offset samples should explore different seeds rather than spend
+    // all local timing options on the first geometric minimum.
+    XCTAssertGreaterThanOrEqual(result.candidates.count, 8)
+    if result.candidates.count >= 8 {
+      let seeds = Array(result.candidates.prefix(6))
+      let parents = result.candidates.dropFirst(6).prefix(2).map { option in
+        seeds.indices.min { abs(seeds[$0].burnStart-option.burnStart)
+          < abs(seeds[$1].burnStart-option.burnStart) }!
+      }
+      XCTAssertNotEqual(parents[0], parents[1])
+    }
   }
 }
