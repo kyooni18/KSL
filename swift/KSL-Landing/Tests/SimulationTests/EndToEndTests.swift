@@ -51,8 +51,11 @@ final class EndToEndTests: XCTestCase {
       along: -120000, height: 1000, speed: 70, flightPath: -20)
     scenario.maximumDuration = 10
     let result = try SimulationEngine(scenario: scenario).run()
-    XCTAssertEqual(result.outcome, "aborted")
+    // An unreachable runway is an advisory, not permission to abandon the
+    // airborne vehicle. Continue recovery without inventing a landing.
+    XCTAssertEqual(result.outcome, "timedOut")
     XCTAssertNil(result.touchdown)
-    XCTAssertTrue(result.violations.contains(where: { $0.kind == .insufficientEnergy }))
+    XCTAssertGreaterThan(result.constraintOccurrences[FailureClassification.insufficientEnergy.rawValue] ?? 0, 0)
+    XCTAssertFalse(result.phases.contains("complete"))
   }
 }
