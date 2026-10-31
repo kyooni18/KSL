@@ -73,6 +73,11 @@ public final class EntryCaptureForecaster {
                        liftScale: Double = 1, dragScale: Double = 1,
                        certify: Bool = false) -> EntryCaptureForecast {
     var memory = EntryLawMemory(); memory.crossAim = crossAim
+    // A fresh deorbit rollout has no accepted MM304 proposal yet. Match its
+    // native fallback target, rather than silently assuming an optimized
+    // objective was installed in the mission controller before entry.
+    memory.objective = EntryCaptureObjective.seed(configuration: configuration,
+      atmosphere: atmosphere, frame: frame, crossAim: crossAim, time: state.time)
     return forecast(from: state, memory: memory, rangeMultiplier: rangeMultiplier, liftScale: liftScale,
       dragScale: dragScale, certify: certify, controls: nil, previousTarget: nil)
   }
