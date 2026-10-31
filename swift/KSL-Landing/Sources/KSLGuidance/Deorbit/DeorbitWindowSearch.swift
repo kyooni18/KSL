@@ -198,11 +198,16 @@ public final class DeorbitWindowSearch {
     // magnitude or moving to another pair. A budget which expires after only
     // negative offsets cannot discover a later burn that corrects overshoot.
     // Distribute pairs across passages before trying a larger magnitude.
-    for magnitude in [1.0, 2.0] where windows.count < c.candidateBudget {
+    // The first refinement probes half the coarse time-grid interval. The
+    // older capture-radius spacing can skip a narrow native HAC continuation
+    // even when adjacent, much coarser entry-interface misses look similar.
+    // Follow with wider coverage when the configured budget permits it.
+    for magnitude in [0.0, 1.0, 2.0] where windows.count < c.candidateBudget {
       for candidate in refined where windows.count < c.candidateBudget {
-        let spacing = max(step, c.captureRadius/max(1, candidate.entrySpeed))
+        let spacing = magnitude == 0 ? step/2
+          : magnitude * max(step, c.captureRadius/max(1, candidate.entrySpeed))
         for sign in [-1.0, 1.0] where windows.count < c.candidateBudget {
-          let time = candidate.burnStart+sign*magnitude*spacing
+          let time = candidate.burnStart+sign*spacing
           guard time >= start, time <= start+horizon else { continue }
           if let option = try evaluate(time, candidate.normalAngle), option.closing,
             windows.allSatisfy({ abs($0.burnStart-option.burnStart) > max(1, step * 0.25) }) {

@@ -43,6 +43,11 @@ final class DeorbitWindowDiversityTests: XCTestCase {
         }
       }
       XCTAssertFalse(pairedSeeds.isEmpty, "A sampled passage must include earlier and later burns")
+      let samples = max(361, Int(ceil(result.horizon / deorbit.coarseWindowStep)) + 1)
+      let halfGrid = result.horizon / Double(samples - 1) / 2
+      XCTAssertTrue(seeds.contains { seed in
+        offsets.contains { abs(abs($0.burnStart - seed.burnStart) - halfGrid) < 0.01 }
+      }, "The first local timing probes must resolve half the coarse grid")
     }
   }
 }
