@@ -25,11 +25,20 @@ final class DeorbitForecastPolicyTests: XCTestCase {
           alpha: radians(18), bank: 0)))
     let expected = EntryCaptureObjective.seed(configuration: c, atmosphere: atmosphere,
       frame: frame, crossAim: 0, time: state.time)
-    let forecast = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere,
-      aerodynamics: aero).forecast(from: state)
+    let forecaster = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero)
+    let forecast = forecaster.forecast(from: state)
     let actual = try XCTUnwrap(forecast.objective)
     XCTAssertEqual(actual.along, expected.along, accuracy: 1e-6)
     XCTAssertEqual(actual.speed, expected.speed, accuracy: 1e-6)
     XCTAssertEqual(actual.energyHeight, expected.energyHeight, accuracy: 1e-6)
+    // The online planning request starts with the same empty law memory.
+    // It must forecast the policy actually flown before a proposal arrives.
+    let online = forecaster.forecast(from: state, memory: EntryLawMemory(),
+      rangeMultiplier: 1, controls: nil, previousTarget: nil)
+    let onlineObjective = try XCTUnwrap(online.objective)
+    XCTAssertEqual(onlineObjective.along, expected.along, accuracy: 1e-6)
+    XCTAssertEqual(onlineObjective.speed, expected.speed, accuracy: 1e-6)
+    XCTAssertEqual(onlineObjective.energyHeight, expected.energyHeight, accuracy: 1e-6)
   }
 }
