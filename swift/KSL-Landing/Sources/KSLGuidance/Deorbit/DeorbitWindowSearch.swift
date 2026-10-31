@@ -134,19 +134,33 @@ public final class DeorbitWindowSearch {
     // trade against lateral control authority is available.
     var seeds: [DeorbitWindow] = [best]
     let separation = max(120, min(period * 0.20, c.captureRadius/max(1, best.entrySpeed) * 3))
-    func addSeeds(_ ranking: [DeorbitWindow]) {
-      for candidate in ranking where candidate.closing {
-        if seeds.count >= min(c.candidateBudget, 6) { break }
-        if seeds.allSatisfy({ abs($0.burnStart-candidate.burnStart) > separation }) {
-          seeds.append(candidate)
-        }
-      }
-    }
-    addSeeds(coarse.sorted { $0.miss < $1.miss })
-    addSeeds(coarse.sorted {
+    let byMiss = coarse.sorted { $0.miss < $1.miss }
+    let byCrossrange = coarse.sorted {
       if $0.crossrange != $1.crossrange { return $0.crossrange < $1.crossrange }
       return $0.miss < $1.miss
-    })
+    }
+    // Alternate rankings: filling the budget from byMiss first leaves no
+    // low-crossrange candidates for the expensive full-route evaluator.
+    // Separation is shared, so a pass found by both rankings is sampled once.
+    let rankings = [byMiss, byCrossrange]
+    var indices = [0, 0]
+    let seedBudget = min(c.candidateBudget, 6)
+    while seeds.count < seedBudget {
+      var added = false
+      for ranking in rankings.indices where seeds.count < seedBudget {
+        while indices[ranking] < rankings[ranking].count {
+          let candidate = rankings[ranking][indices[ranking]]
+          indices[ranking] += 1
+          guard candidate.closing else { continue }
+          if seeds.allSatisfy({ abs($0.burnStart-candidate.burnStart) > separation }) {
+            seeds.append(candidate)
+            added = true
+            break
+          }
+        }
+      }
+      if !added { break }
+    }
     func refine(_ original: DeorbitWindow) throws -> DeorbitWindow {
       var selected = original
       var increment = step
