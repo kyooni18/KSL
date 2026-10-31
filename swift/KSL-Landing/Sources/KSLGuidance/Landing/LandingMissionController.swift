@@ -163,13 +163,14 @@ public final class LandingMissionController {
   }
   /// Keep the active route and target limiter, but restart the sample clock.
   public func resumeAfterTelemetryGap() { previousTime = nil }
-  public func update(_ state: VehicleState) throws -> GuidanceSolution {
+  private func prepareUpdate(_ state: VehicleState, advisories: inout [ConstraintViolation],
+                             dt: inout Double) throws -> GuidanceSolution? {
     try state.validate(configuration: configuration)
     // Guidance never abandons the vehicle on its own judgement: every
     // envelope, energy or contact verdict is reported as an advisory while
     // the best available landing law keeps flying. Only a destroyed vehicle
     // ends the mission.
-    var advisories: [ConstraintViolation] = invalidationFailure.map { [$0] } ?? []
+    advisories = invalidationFailure.map { [$0] } ?? []
     entry.environment = environment
     if previousTime == nil && [.approach, .preflare, .flare].contains(phase), !approach.canCapture(state) {
       advisories.append(.init(.modelUncertainty, "Initial Final capture/energy model advisory"))
@@ -183,7 +184,7 @@ public final class LandingMissionController {
     }
     authority.observe(state)
     if let t = previousTime, state.time <= t { throw FlightError.staleTelemetry }
-    let dt = previousTime.map { state.time - $0 } ?? configuration.guidance.controlInterval
+    dt = previousTime.map { state.time - $0 } ?? configuration.guidance.controlInterval
     if dt > 1 { throw FlightError.rearmRequired("Guidance clock skipped \(dt) seconds") }
     previousTime = state.time
     if !state.contact.isGrounded {
@@ -237,6 +238,13 @@ public final class LandingMissionController {
     wasAirborne = true
     if phase == .complete { return .init(phase: phase, target: .init()) }
     if phase == .abort { phase = .entry }
+    return nil
+  }
+
+  public func update(_ state: VehicleState) throws -> GuidanceSolution {
+    var advisories: [ConstraintViolation] = []
+    var dt = configuration.guidance.controlInterval
+    if let completed = try prepareUpdate(state, advisories: &advisories, dt: &dt) { return completed }
     let p = frame.coordinates(of: state.position)
     var raw: GuidanceSolution
     if plan == nil && state.aerodynamics.airspeed < 500 && p.height < 20_000
