@@ -33,6 +33,7 @@ public final class LandingMissionController {
   /// MM305's own physical verdict on the last searched state.
   public private(set) var lastCapture: TAEMCaptureAssessment?
   private var publishedForecastEpoch: Double?
+  private var publishedTerminalEpoch: Double?
   private var previousTime: Double?
   private var wasAirborne = false
   private var invalidationFailure: ConstraintViolation?
@@ -44,6 +45,7 @@ public final class LandingMissionController {
     authority.reset(); entry.invalidatePrediction(); approach.invalidatePrediction()
     controlSnapshot = nil; controlFeedback = nil
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
+    publishedTerminalEpoch = nil
     if plan != nil {
       tracker.reset(); poorTrackingSince = nil
       invalidationFailure = .init(.modelUncertainty,
@@ -140,7 +142,14 @@ public final class LandingMissionController {
     if let result = proposal.approach { approach.accept(result) }
     guard [.entry, .acquisition, .headingAlignment].contains(phase), !hacCompleted else { return }
     if phase == .entry, plan == nil, let result = proposal.entry { entry.accept(result, at: state.time) }
-    if let result = proposal.terminal { acceptTerminal(result, state: state) }
+    // Expired or out-of-order terminal work must not overwrite the latest
+    // physical verdict or mutate control ownership.
+    if let result = proposal.terminal,
+      state.time - proposal.time <= 2 * configuration.guidance.terminalReplanInterval,
+      publishedTerminalEpoch.map({ proposal.time > $0 }) ?? true {
+      publishedTerminalEpoch = proposal.time
+      acceptTerminal(result, state: state)
+    }
   }
   private func acceptTerminal(_ result: PlanningResult, state: VehicleState) {
     lastPlanningResult = result
