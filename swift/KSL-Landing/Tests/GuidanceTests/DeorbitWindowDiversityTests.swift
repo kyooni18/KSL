@@ -28,17 +28,21 @@ final class DeorbitWindowDiversityTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(passages.count, 3)
     XCTAssertTrue(result.candidates.allSatisfy { $0.entryInterface.time > $0.afterBurn.time })
     XCTAssertTrue(result.candidates.allSatisfy { $0.deltaV > 0 && $0.crossrange >= 0 })
-    // The first six are distinct seeds; with remaining budget, the first
-    // two offset samples should explore different seeds rather than spend
-    // all local timing options on the first geometric minimum.
+    // The first six are seeds. Sample both timing directions on each of
+    // multiple passages before spending budget on larger offsets.
     XCTAssertGreaterThanOrEqual(result.candidates.count, 8)
     if result.candidates.count >= 8 {
       let seeds = Array(result.candidates.prefix(6))
-      let parents = result.candidates.dropFirst(6).prefix(2).map { option in
-        seeds.indices.min { abs(seeds[$0].burnStart-option.burnStart)
-          < abs(seeds[$1].burnStart-option.burnStart) }!
+      let offsets = Array(result.candidates.dropFirst(6))
+      let pairedSeeds = seeds.filter { seed in
+        offsets.contains { earlier in
+          earlier.burnStart < seed.burnStart && offsets.contains { later in
+            later.burnStart > seed.burnStart
+              && abs((seed.burnStart-earlier.burnStart) - (later.burnStart-seed.burnStart)) < 0.01
+          }
+        }
       }
-      XCTAssertNotEqual(parents[0], parents[1])
+      XCTAssertFalse(pairedSeeds.isEmpty, "A sampled passage must include earlier and later burns")
     }
   }
 }
