@@ -804,3 +804,70 @@ and stale-control behavior during outages remain open; this recovery test is
 not a deorbit or landing. The exact source diff, release SHA-256, configuration,
 plan, proxy, events, outputs and log are in the run folder. No timeout was
 increased or controller duplicated.
+
+### Experimental adaptive pointing: coast improvement, not flight qualification
+
+An isolated, reversible candidate replaced orbital bang-bang pointing with a
+smooth sampled demand and per-axis least-squares acceleration estimate, reset
+when RCS availability changes. The measured-authority floor was the existing
+reported prior; the estimator assumed the logged applied controls corresponded
+to the observed rate interval. That timing assumption, cross-axis coupling,
+estimator bias, controller stability and behavior during burn/reconnect remain
+unvalidated. The experiment patch and complete flown source patch are saved
+in the run directories; the candidate was **not retained in production**.
+
+From separate reloads of the original quicksave, the baseline
+`overnight-orbit-full-v2-20261031` lost 1,482.69 kg in its first 600.00 s of
+orbital coast, whereas `overnight-orbital-adaptive-coast-repeat-v2-20261031`
+lost 36.49 kg in its first 599.98 s. These are logged vessel mass differences,
+not independently measured RCS impulse or a burn validation. Candidate repeat
+ran UT 208581.8065–209182.0665 (600.26 s), with no OMS throttle or exit from
+orbital coast, then was intentionally cancelled. A prior 120.22 s candidate
+coast is `overnight-orbital-adaptive-coast-experiment-20261031`. Initial
+attitude slew still consumes propellant and imparts orbital impulse; the
+experiment does not establish safe long-coast or terminal mission behavior.
+
+On the 120 s candidate run, two-body propagation of the reviewed plan's source
+against logged state exceeded the plan's 0.5 m/s velocity dispersion at UT
+208594.7465 and 50 m position dispersion at UT 208684.1065, allowing the
+existing small numerical tolerances. Extrapolation of the last logged state to
+the old planned burn UT 228885.1291 gives approximately 24.57 km along-track
+displacement and 80.52 m/s velocity-vector difference, assuming unforced
+two-body coast; it is a model extrapolation, not a measured burn error. A fresh
+offline window screen from the perturbed state shifted the first candidate burn
+to UT 228897.4452; it is not a fully assessed or flown plan. The long interval
+to burn and state drift require current-state replanning, not replay of a stale
+review. A controller improvement alone cannot establish a full-chain outcome.
+
+Candidate repeat release SHA-256 was
+`4d42644313fb3dd21adbc21f7d96103147e7567a4ab254f06e6e5bd8cb45eff9`;
+configuration `7d562b97f847432c84b3c911a22cab7b0315cd314d445579c62edb357f913a45`,
+reviewed plan `0e759311ded77d1499216859c5e64eddb88eb6f88a4893d734f8e9ef7772d103`,
+source patch `d277f38936cd0350cfa3f4f0b7b3af2c252c3f28ad2422689e9795fe460783f9`,
+and HEAD `87f0ca49a1be13bfa86f992f83ae958d9f325f91`; command, experiment
+patch, log, events, untracked probe copy and hashes are in that run. Nine
+focused deorbit execution tests passed with the candidate, but these do not
+qualify its controller. After stopping the flight, its source was restored
+to HEAD and release rebuilt successfully; restored executable SHA-256 is
+`a13e55326fa3dac3e77b0d356d2e3bc29d32698d79caeb78719bc19c5e95ab9d`.
+The pre-existing unrelated working-tree changes remain.
+
+Normal game save `ksl-overnight-adaptive-orbit-stabilized-20261031.sfs` was
+created during repeat coast at UT 208708.2065–208708.2665, 86,245.64 m ASL,
+STS orbiting, throttle zero, RCS on and 361.5488 units monopropellant. Its
+file SHA-256 is `b46f450105245ffa0f1caea49070799435ac9f1a0da6e7fc4f0d7242302d87ab`.
+The default-frame speed query reported zero and is not a valid surface-speed
+measurement here. This is an orbital investigation save, **not** a 72 km or
+post-hypersonic descent checkpoint, and it has not been reload-verified. The
+original quicksave remains SHA-256
+`350d430cef02ad41c8f374223a0b6c0691520f0ae01cdd50546d9b80a800d588`.
+Fresh independent kRPC after cancellation found STS orbiting at UT 209191.2265,
+86,144.36 m ASL, throttle/axes zero, RCS off, 361.5488 mono; UT advanced to
+209192.0265. No controller remained. No deorbit, descent checkpoint, landing,
+or rollout was observed in the candidate runs.
+
+Next discriminating work is matched actuator/interval identification and
+closed-loop stability validation of a physically justified estimator, followed
+by replanning from the stabilized measured orbit and monitored original-save
+full-flight testing. Do not treat this experimental controller, the new save,
+or the stale reviewed burn as a qualified landing solution.
