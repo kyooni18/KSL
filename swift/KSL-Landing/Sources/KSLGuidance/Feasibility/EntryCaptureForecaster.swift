@@ -87,13 +87,7 @@ public final class EntryCaptureForecaster {
                 controls: FlightControlSnapshot?, previousTarget: GuidanceTarget?) -> EntryCaptureForecast {
     let c = configuration
     var memory = memory
-    // Match the actual MM304 law when no objective has yet been accepted.
-    // A proposed optimized objective is a different control policy and must
-    // be explicitly flown and compared, not silently substituted here.
-    if memory.objective == nil {
-      memory.objective = EntryCaptureObjective.seed(configuration: c,
-        atmosphere: atmosphere, frame: frame, crossAim: memory.crossAim, time: state.time)
-    }
+    if memory.objective == nil { memory.objective = objectivePlanner.objective(from: state, crossAim: memory.crossAim) }
     let plantAero = liftScale == 1 && dragScale == 1 ? aerodynamics
       : aerodynamics.scaled(lift: liftScale, drag: dragScale)
     let predictor = TrajectoryPropagationEngine(configuration: c, atmosphere: atmosphere, aerodynamics: plantAero)
