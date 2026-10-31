@@ -4,6 +4,14 @@ import KSLPhysics
 @testable import KSLGuidance
 
 final class DeorbitForecastPolicyTests: XCTestCase {
+  func testUnpricedFailuresUseOneRunwayResidual() {
+    let c = MissionConfiguration(), along = c.entrySettings.handoffAlong
+    let close = EntryGuidanceEngine.fallbackDeliveryCost(along: along, cross: 1000, configuration: c)
+    let distant = EntryGuidanceEngine.fallbackDeliveryCost(along: along, cross: 40_000, configuration: c)
+    XCTAssertLessThan(close, distant)
+    XCTAssertEqual(EntryGuidanceEngine.fallbackDeliveryCost(along: along,
+      cross: c.entrySettings.handoffCross, configuration: c), 0, accuracy: 1e-12)
+  }
   func testFreshForecastUsesUnplannedMissionFallbackObjective() throws {
     var c = MissionConfiguration()
     c.guidance.maximumPredictionDuration = 0.1

@@ -92,6 +92,13 @@ public final class EntryGuidanceEngine {
     else { law.memory.identifiedTrimCeiling = nil }
     return law.update(state, rangeMultiplier: rangeMultiplier)
   }
+  /// A common, dimensionless runway residual for ranking unpriced failures.
+  static func fallbackDeliveryCost(along: Double, cross: Double,
+                                   configuration c: MissionConfiguration) -> Double {
+    hypot(along-c.entrySettings.handoffAlong, cross-c.entrySettings.handoffCross)
+      / max(1, c.entrySettings.terminalTargetRange)
+  }
+
   public func plan(_ request: EntryPlanningRequest) -> EntryPlanningProposal {
     let state = request.state, c = configuration
     let atmosphere = law.atmosphere.corrected(request.environment)
@@ -119,8 +126,15 @@ public final class EntryGuidanceEngine {
       let energyCost = envelope.energyMargin > -Double.greatestFiniteMagnitude
         ? max(0, -envelope.energyMargin) / max(1, envelope.energyHeight)
         : abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
+      // Infeasible candidates have no executable terminal route to price.
+      // Compare their residual to the SAME runway delivery objective, not
+      // each candidate's own displaced aim: otherwise a forecast can win
+      // merely by moving its target to its own off-center predicted miss.
+      // This is a fallback ranking, never a gate on feasible return HACs.
+      let deliveryCost = Self.fallbackDeliveryCost(along: f.terminalAlong,
+        cross: f.terminalCross, configuration: c)
       return (f.violations.isEmpty ? 100 : 1000 + Double(f.violations.count) * 100)
-        + rangeCost + altitudeCost + headingCost + energyCost
+        + deliveryCost + altitudeCost + headingCost + energyCost
     }
     func fly(_ list: [Double]) {
       for factor in list where !Task.isCancelled {
