@@ -871,3 +871,35 @@ closed-loop stability validation of a physically justified estimator, followed
 by replanning from the stabilized measured orbit and monitored original-save
 full-flight testing. Do not treat this experimental controller, the new save,
 or the stale reviewed burn as a qualified landing solution.
+
+#### Prior-only counterfactual and orbital-save reload
+
+`overnight-orbital-smooth-prior-only-20261031` isolated the smooth demand from
+the adaptive estimate: it used the existing reported torque/inertia prior
+without online fitting. In approximately the first 120 s of coast, baseline,
+adaptive and prior-only runs logged mass decreases of respectively 628.97,
+36.12 and 20.70 kg. Post-30-second median forward alignment errors were
+0.0442°, 0.00477° and 0.00523°, respectively. These are separate reloads,
+not identical commanded trajectories: initial UTs were 208579.3665,
+208581.6065 and 208592.6065, and initial forward errors 54.33°, 54.70° and
+56.54°. Therefore the data show that the estimator was **not necessary to
+observe improved coast behavior in this comparison**, not that the prior-only
+law is optimal or qualified. A prior-only experimental patch, full source
+patch and binary/configuration/plan hashes are in the run; its release binary
+SHA-256 was `30bcf4c54b0a67065eff89690e1baea72ae2d42d54afc67b4b006c964e32a587`.
+The first launch occurred before the reviewed plan's creation UT and was
+correctly rejected without arming; its separate output is in
+`startup-clock-rejection/`. The retry coast was deliberately cancelled at
+UT 208712.8665 after 120.26 s. No OMS burn occurred. We restored the prior
+orbital source and rebuilt the release product after stopping the controller.
+The smooth law also still needs discrete-time delay, stability and burn tests;
+neither experimental variant was retained.
+
+Subsequently the orbital investigation save was reload-verified through the
+normal game API with no controller. At UT 208713.4665, fresh kRPC found STS
+orbiting at 86,243.26 m ASL, surface-frame speed 2,085.32 m/s, apoapsis
+86,419.64 m, periapsis 86,158.43 m, 361.5488 mono and zero throttle/axes;
+UT advanced to 208714.4465. RCS was on as saved, then switched off at UT
+208722.9465 for unattended cleanup, with axes and throttle remaining zero.
+This supersedes the earlier statement that its reload was unverified; it remains
+an **orbital** save, not a descent checkpoint or landing evidence.
