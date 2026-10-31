@@ -22,6 +22,18 @@ final class OrbitalExecutionModel {
       torque.minimumAcceleration.x > 0, torque.minimumAcceleration.y > 0, torque.minimumAcceleration.z > 0 else {
       throw FlightError.infeasible("No measured three-axis vacuum attitude authority for deorbit execution")
     }
+    // Vacuum pointing may use enabled RCS, but entry below is explicitly
+    // RCS-off. Never carry its torque into the atmospheric plant. Old logs
+    // without the same-snapshot breakdown cannot qualify this handoff.
+    let entryTorque: ControlAuthorityTelemetry
+    if source.systems.rcs {
+      guard let withoutRCS = torque.excludingRCS else {
+        throw FlightError.infeasible("RCS-on orbital state lacks measured RCS-off entry authority")
+      }
+      entryTorque = withoutRCS
+    } else {
+      entryTorque = torque
+    }
     var initial = OrbitalState(fixed: source, planet: c.planet)
     let radial = initial.position.normalized
     initial.position = initial.position+radial*dispersion.position
@@ -64,6 +76,7 @@ final class OrbitalExecutionModel {
       if height <= c.planet.atmosphereTop-c.deorbitSettings.entryAltitudeMargin && state.verticalSpeed < 0 {
         guard burn.complete else { throw FlightError.infeasible("Entered atmosphere before native OMS shutdown") }
         state.systems = .init()
+        state.controlAuthority = entryTorque
         return .init(entry: state, burnCompleted: true, actualBurnEnd: burnEnd ?? state.time)
       }
       let axes: ControlCommand, throttle: Double

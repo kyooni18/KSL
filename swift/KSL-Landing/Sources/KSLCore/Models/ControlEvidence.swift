@@ -13,6 +13,10 @@ public struct ControlAuthorityTelemetry: Codable, Sendable, Equatable {
   public var evidence: EvidenceKind
   /// Optional actuator provenance; legacy archives omit it.
   public var actuatorSources: String?
+  /// Same-snapshot active surface and wheel moments without RCS. These are
+  /// needed to predict an RCS-off atmospheric handoff from an RCS-on orbit.
+  public var rcsExcludedPositiveTorque: Vector3?
+  public var rcsExcludedNegativeTorque: Vector3?
   public init(positiveTorque: Vector3, negativeTorque: Vector3, inertia: Vector3,
               evidence: EvidenceKind = .measured) {
     self.positiveTorque = positiveTorque
@@ -20,6 +24,16 @@ public struct ControlAuthorityTelemetry: Codable, Sendable, Equatable {
     self.inertia = inertia
     self.evidence = evidence
     actuatorSources = nil
+    rcsExcludedPositiveTorque = nil
+    rcsExcludedNegativeTorque = nil
+  }
+  public var excludingRCS: Self? {
+    guard let positive = rcsExcludedPositiveTorque, let negative = rcsExcludedNegativeTorque,
+      positive.isFinite, negative.isFinite else { return nil }
+    var result = self
+    result.positiveTorque = positive; result.negativeTorque = negative
+    result.actuatorSources = "aerodynamic-surfaces+active-powered-reaction-wheels"
+    return result.isValid ? result : nil
   }
   public var acceleration: Vector3 {
     guard isValid else { return .zero }

@@ -322,6 +322,8 @@ public actor KRPCFlightIO: OrbitalFlightIO {
         func magnitude(_ v: Vector3) -> Vector3 { .init(abs(v.x), abs(v.y), abs(v.z)) }
         var positive = magnitude(surfaces[0])+magnitude(reaction[0])
         var negative = magnitude(surfaces[1])+magnitude(reaction[1])
+        authority.rcsExcludedPositiveTorque = frd(positive)
+        authority.rcsExcludedNegativeTorque = -frd(negative)
         authority.actuatorSources = "aerodynamic-surfaces+active-powered-reaction-wheels"
         // RCS counts only while it is actually enabled (commanded by the FCS).
         if supportsRCSTorque, try KRPCValue.decodeBool(values[20]) {
