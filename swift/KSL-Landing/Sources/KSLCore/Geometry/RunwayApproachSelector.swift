@@ -25,7 +25,7 @@ public enum RunwayApproachSelector {
     let inletAlong = c.nepOverheadCaptureAlong
     let inletCross = c.entrySettings.handoffCross
     let pInlet = frame.position(along: inletAlong, cross: inletCross,
-      height: c.entrySettings.terminalTargetAltitude - c.runway.elevation)
+      height: c.mm304DeliveryAltitude - c.runway.elevation)
     let airHorizontal = (state.velocity - state.atmosphere.wind)
       .projected(onPlaneWithNormal: state.position.normalized)
     let track = airHorizontal.length > 1e-3

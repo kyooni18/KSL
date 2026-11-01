@@ -54,7 +54,7 @@ public final class EnergyManagementEngine {
   /// only a candidate: `evaluate` re-prices it independently.
   public func scheduledProfile(
     distances: [Double], horizontal: [HorizontalPathSample], from state: VehicleState,
-    exitHeight h1: Double, exitSlope m1: Double
+    exitHeight h1: Double, exitSlope m1: Double, exitDynamicPressure: Double? = nil
   ) -> [(height: Double, slope: Double, verticalCurvature: Double)]? {
     guard distances.count == horizontal.count, distances.count > 2, let length = distances.last, length > 0
     else { return nil }
@@ -117,8 +117,13 @@ public final class EnergyManagementEngine {
       // Lowest q at which uncertain maximum lift still flies the acquisition bank.
       let qFloor = unit.maximumAcceleration > 0
         ? q * turnLoad * g0 / (unit.maximumAcceleration * (1 - u)) : v.maximumDynamicPressure
-      let qReference = min(v.maximumDynamicPressure, max(q0, qFloor))
       let remaining = length - distances[i]
+      // Plan speed to the solved NEP: ramp q from its measured value to the
+      // NEP's along the path. Holding the inlet q all the way down made the
+      // schedule bleed airspeed as density rose (2244: ~3 kPa at 11.5 km
+      // implies ~75 m/s near the NEP, against a solved 124 m/s).
+      let qPlan = exitDynamicPressure.map { q0 + ($0 - q0) * distances[i] / length } ?? q0
+      let qReference = min(v.maximumDynamicPressure, max(qPlan, qFloor))
       // Start the exit blend once rotating onto the exit slope needs the
       // remaining distance at the available pull-up authority.
       if pull > 0 && remaining <= max(gc.finalDistance, speed * speed * abs(m - m1) / pull) {

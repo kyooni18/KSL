@@ -47,8 +47,9 @@ public final class EntryCaptureForecaster {
   public func terminalSpeed(at time: Double) -> Double {
     let e = configuration.entrySettings
     let point = frame.position(along: configuration.nepOverheadCaptureAlong, cross: e.handoffCross, height: 0)
-    return e.terminalTargetMach * atmosphere.sample(
-      position: point.normalized * (configuration.planet.radius + e.terminalTargetAltitude), time: time).speedOfSound
+    return configuration.mm304DeliveryMach * atmosphere.sample(
+      position: point.normalized * (configuration.planet.radius + configuration.mm304DeliveryAltitude),
+      time: time).speedOfSound
   }
 
   /// Legacy coordinated-level-turn length scale, retained for API compatibility.
@@ -56,7 +57,7 @@ public final class EntryCaptureForecaster {
   /// Capture assessment and the reversal corridor use the priced force envelope.
   public func turningReach(at time: Double) -> Double {
     let v = terminalSpeed(at: time), c = configuration
-    let g = c.planet.gravitationalParameter / pow(c.planet.radius + c.entrySettings.terminalTargetAltitude, 2)
+    let g = c.planet.gravitationalParameter / pow(c.planet.radius + c.mm304DeliveryAltitude, 2)
     return v * v / (g * tan(max(1e-3, EnergyManagementEngine.acquisitionBank(c))))
   }
 
@@ -66,7 +67,7 @@ public final class EntryCaptureForecaster {
   /// The separate closed-loop forecast and HAC fit must judge this candidate.
   public func lateralAims(from state: VehicleState, track: [[Double]]) -> [Double] {
     let c = configuration
-    let targetHeight = c.entrySettings.terminalTargetAltitude-c.runway.elevation
+    let targetHeight = c.mm304DeliveryAltitude-c.runway.elevation
     let sampled = track.filter { $0.count >= 4 }
       .min { abs($0[3]-targetHeight) < abs($1[3]-targetHeight) }
     guard let sampled, sampled[2].isFinite else { return [0] }
@@ -165,7 +166,7 @@ public final class EntryCaptureForecaster {
         // this branch immediately. Never skip the near-inlet survey.
         let cadence = c.guidance.terminalReplanInterval
         let upperInlet = c.entrySettings.terminalMaximumAltitude
-        let lowerInlet = c.entrySettings.terminalMinimumAltitude - c.entrySettings.handoffRadius
+        let lowerInlet = c.mm304DeliveryFloor
         let nextHeight = altitude > upperInlet ? upperInlet : (altitude + lowerInlet) / 2
         let descent = max(1.0, -s.verticalSpeed)
         let travel = max(0, altitude - nextHeight) / descent
@@ -176,8 +177,7 @@ public final class EntryCaptureForecaster {
         // budget and supplies a misleading terminal-energy classification.
         // The operator's 22-km inlet floor is conservatively extended by its
         // allowed position tolerance, not by an arbitrary ground altitude.
-        let predictionFloor = c.entrySettings.terminalMinimumAltitude
-          - c.entrySettings.handoffRadius
+        let predictionFloor = c.mm304DeliveryFloor
         return capture.feasible || altitude <= predictionFloor
       }) { s in
         let target = law.update(s, rangeMultiplier: rangeMultiplier)
@@ -218,7 +218,7 @@ public final class EntryCaptureForecaster {
     // when the flown state is just outside it. Center that interval, then
     // re-fly the objective; waiting for an already feasible trajectory would
     // leave an infeasible seed objective permanently in command.
-    if end.position.length - c.planet.radius >= c.entrySettings.terminalMinimumAltitude,
+    if end.position.length - c.planet.radius >= c.mm304DeliveryMinimumAltitude,
       frame.distance(from: end.position, to: frame.origin) <= c.entrySettings.terminalTargetRange
         + end.horizontalSpeed*c.guidance.terminalReplanInterval,
       envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
@@ -231,8 +231,8 @@ public final class EntryCaptureForecaster {
       // inside the configured moderate-speed band.
       let sound = end.atmosphere.speedOfSound
       let centeredSpeed = clamp(sqrt(max(0, 2*gravity*(energy-p.height))),
-        (c.entrySettings.terminalTargetMach-c.entrySettings.terminalMachHalfWidth)*sound,
-        (c.entrySettings.terminalTargetMach+c.entrySettings.terminalMachHalfWidth)*sound)
+        max(0, c.mm304DeliveryMach-c.entrySettings.terminalMachHalfWidth)*sound,
+        (c.mm304DeliveryMach+c.entrySettings.terminalMachHalfWidth)*sound)
       // The optimizer may refine the capture energy, not move the five-km
       // centerline objective to wherever an unsuccessful rollout happened to end.
       let target = result.objective!

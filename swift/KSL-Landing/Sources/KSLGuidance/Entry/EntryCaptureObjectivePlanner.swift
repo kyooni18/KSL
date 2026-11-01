@@ -38,7 +38,7 @@ final class EntryCaptureObjectivePlanner {
     // dissipated on the HAC overhead; the HAC search still prices it.
     func preferredRange(_ altitude: Double) -> Double { c.nepOverheadCaptureRange }
     var best: (EntryCaptureObjective, Double)?
-    for altitude in [e.terminalTargetAltitude, e.terminalMinimumAltitude, e.terminalMaximumAltitude] {
+    for altitude in [c.mm304DeliveryAltitude] {
       let height = altitude-c.runway.elevation
       let ideal = preferredRange(altitude)
       let distances = [ideal]
@@ -49,7 +49,7 @@ final class EntryCaptureObjectivePlanner {
         let position = frame.position(along: along, cross: cross, height: height)
         let toward = frame.origin.normalized.projected(onPlaneWithNormal: position.normalized).normalized
         let sound = atmosphere.sample(position: position, time: initial.time).speedOfSound
-        for mach in [e.terminalTargetMach, e.terminalTargetMach-e.terminalMachHalfWidth] where !Task.isCancelled {
+        for mach in [c.mm304DeliveryMach, max(0, c.mm304DeliveryMach-e.terminalMachHalfWidth)] where !Task.isCancelled {
           let speed = mach*sound
           let velocity = (toward*cos(glide)-position.normalized*sin(glide))*speed
           let sample = physics.observe(.init(time: initial.time, position: position, velocity: velocity,
@@ -64,16 +64,16 @@ final class EntryCaptureObjectivePlanner {
           let energy = envelope.energyHeight
             + (envelope.excessEnergyMargin-envelope.deficitEnergyMargin)/2
           let centeredSpeed = clamp(sqrt(max(0, 2*g*(energy-height))),
-            (e.terminalTargetMach-e.terminalMachHalfWidth)*sound,
-            (e.terminalTargetMach+e.terminalMachHalfWidth)*sound)
+            max(0, c.mm304DeliveryMach-e.terminalMachHalfWidth)*sound,
+            (c.mm304DeliveryMach+e.terminalMachHalfWidth)*sound)
           let objective = EntryCaptureObjective(along: along, cross: cross,
             altitude: altitude, speed: centeredSpeed,
             energyHeight: height+centeredSpeed*centeredSpeed/(2*g), flightPath: -glide)
           // Prefer the altitude-consistent inlet, not the old shortest
           // centerline intercept. An actual HAC can overrule the ideal range.
           let cost = abs(range-ideal)/e.terminalTargetRange
-            + abs(altitude-e.terminalTargetAltitude)
-              / (e.terminalMaximumAltitude-e.terminalMinimumAltitude)
+            + abs(altitude-c.mm304DeliveryAltitude)
+              / (e.terminalMaximumAltitude-c.mm304DeliveryMinimumAltitude)
             + (capture.planLength ?? range)/c.guidance.maximumPathLength
             - envelope.energyMargin/max(1, envelope.energyHeight)
           if best == nil || cost < best!.1 { best = (objective, cost) }
@@ -82,7 +82,7 @@ final class EntryCaptureObjectivePlanner {
     }
     // An unsuccessful preview is not a landing certificate. Steer toward the
     // same NEP overhead region while the live planner searches for a route.
-    let fallbackRange = preferredRange(e.terminalTargetAltitude)
+    let fallbackRange = preferredRange(c.mm304DeliveryAltitude)
     let fallbackCross = clamp(e.handoffCross+crossAim,
       -fallbackRange+1, fallbackRange-1)
     let fallbackAlong = -sqrt(max(0, fallbackRange*fallbackRange-fallbackCross*fallbackCross))

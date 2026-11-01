@@ -87,6 +87,7 @@ public final class HACPlanningEngine {
   private let frame: RunwayFrame
   private let trajectory: TerminalTrajectoryEvaluator
   private let aero: AerodynamicsEngine
+  private let atmosphere: AtmosphericModelEngine
   private let nepSolver: NominalEnergyPointSolver
   private var nextIdentifier = 1
   public init(
@@ -95,6 +96,7 @@ public final class HACPlanningEngine {
   ) {
     self.configuration = configuration
     aero = aerodynamics
+    self.atmosphere = atmosphere
     nepSolver = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     trajectory = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     energy = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
@@ -196,8 +198,12 @@ public final class HACPlanningEngine {
       }
       // The q-scheduled profile remains a separate energy-aware candidate.
       var profiles = [joined]
+      let exitQ = nep.map { n -> Double in
+        let at = frame.position(along: n.along, cross: 0, height: n.height)
+        return 0.5 * atmosphere.sample(position: at, time: state.time).density * n.airspeed * n.airspeed
+      }
       if let scheduled = energy.scheduledProfile(distances: distances, horizontal: horizontal.map(\.0),
-        from: state, exitHeight: h1, exitSlope: m1) { profiles.append(scheduled) }
+        from: state, exitHeight: h1, exitSlope: m1, exitDynamicPressure: exitQ) { profiles.append(scheduled) }
       for vertical in profiles {
       var stations: [PathStation] = []
       for i in horizontal.indices {
@@ -318,7 +324,14 @@ public final class HACPlanningEngine {
     let liftDrag = polar.drag > 0 ? max(0, polar.lift/polar.drag) : configuration.entrySettings.estimatedLiftToDrag
     let energyHeight = energy.energyHeight(state)
     let touchdownEnergy = v.landingSpeed*v.landingSpeed/(2*gravity)
-    let desiredLength = max(0, energyHeight-touchdownEnergy)*liftDrag
+    // Price the energy-consistent path length over the whole descent: L/D
+    // at the current (often transonic) state badly undervalues the subsonic
+    // remainder, which made the family prefer straight-ins that arrived high.
+    let glide = EquilibriumGlideRange(aero: aero, atmosphere: atmosphere, frame: frame,
+      along: p.along, cross: p.cross, time: state.time, mass: state.mass, gravity: gravity,
+      alphaFloor: max(0, v.minimumAngleOfAttack), alphaCeiling: trimAlpha, gear: state.systems.gearDown)
+    let desiredLength = max(max(0, energyHeight-touchdownEnergy)*liftDrag,
+      glide.range(from: energyHeight, to: touchdownEnergy, derate: 1))
     let directToExit = (p.horizontal-Vector2(-c.finalDistance-unloadLength, 0)).length
     let nominalExitRadius = c.finalSpeed*c.finalSpeed/max(Double.leastNormalMagnitude, gravity*tan(EnergyManagementEngine.acquisitionBank(configuration)))
     let old = context?.previousSpiral

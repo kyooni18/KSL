@@ -23,13 +23,13 @@ public struct EntryCaptureObjective: Codable, Sendable {
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
     let range = c.nepOverheadCaptureRange
     let along = -sqrt(max(0, range * range - cross * cross))
-    let radius = c.planet.radius + e.terminalTargetAltitude
+    let radius = c.planet.radius + c.mm304DeliveryAltitude
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
-    let speed = e.terminalTargetMach
+    let speed = c.mm304DeliveryMach
       * atmosphere.sample(position: position, time: time).speedOfSound
     let g = c.planet.gravitationalParameter / (radius * radius)
-    return .init(along: along, cross: cross, altitude: e.terminalTargetAltitude, speed: speed,
-      energyHeight: e.terminalTargetAltitude - c.runway.elevation + speed * speed / (2 * g), flightPath: -glide)
+    return .init(along: along, cross: cross, altitude: c.mm304DeliveryAltitude, speed: speed,
+      energyHeight: c.mm304DeliveryAltitude - c.runway.elevation + speed * speed / (2 * g), flightPath: -glide)
   }
 }
 

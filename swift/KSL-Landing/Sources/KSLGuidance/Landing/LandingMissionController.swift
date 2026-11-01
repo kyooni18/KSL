@@ -97,12 +97,12 @@ public final class LandingMissionController {
   /// MM304 owns the vehicle until it reaches the NEP overhead capture region
   /// (an admitted plan transfers earlier through admission). Crossing the
   /// upper MM305 altitude is NOT a handoff: that is where MM304 is still far
-  /// up-range. MM304 cannot keep authority to the ground either, so the LOWER
-  /// configured MM305 altitude is the irrevocable deadline.
+  /// up-range. MM304 cannot keep authority to the ground either:
+  /// mm304HandoffDeadlineAltitude is the irrevocable deadline.
   public static func terminalHandoffDue(phase: MissionPhase, plan: TerminalPlan?,
     state: VehicleState, configuration c: MissionConfiguration) -> Bool {
     guard phase == .entry && plan == nil && state.verticalSpeed < 0 else { return false }
-    if state.position.length - c.planet.radius <= c.entrySettings.terminalMinimumAltitude { return true }
+    if state.position.length - c.planet.radius <= c.mm304HandoffDeadlineAltitude { return true }
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
     let p = frame.coordinates(of: state.position)
     // NEP overhead region: the NEP station plus a compact HAC beside it.

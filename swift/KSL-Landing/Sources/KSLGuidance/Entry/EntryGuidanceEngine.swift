@@ -196,14 +196,14 @@ public final class EntryGuidanceEngine {
       // appear artificially good or bad depending on their offset.
       let rangeCost = hypot(f.terminalAlong-target.along, f.terminalCross-target.cross)
         / max(1, c.entrySettings.terminalTargetRange)
-      let altitudeCost = max(0, c.entrySettings.terminalMinimumAltitude
+      let altitudeCost = max(0, c.mm304DeliveryMinimumAltitude
         - f.capture.altitude - c.runway.elevation)
-        / (c.entrySettings.terminalMaximumAltitude - c.entrySettings.terminalMinimumAltitude)
+        / (c.entrySettings.terminalMaximumAltitude - c.mm304DeliveryMinimumAltitude)
       if f.feasible { return rangeCost + altitudeCost + headingCost - f.capture.envelope.energyMargin / max(1, f.capture.envelope.energyHeight) }
       let envelope = f.capture.envelope
       let energyCost = envelope.energyMargin > -Double.greatestFiniteMagnitude
         ? max(0, -envelope.energyMargin) / max(1, envelope.energyHeight)
-        : abs(f.terminalAltitude - c.entrySettings.terminalTargetAltitude) / max(1, c.entrySettings.terminalTargetAltitude)
+        : abs(f.terminalAltitude - c.mm304DeliveryAltitude) / max(1, c.mm304DeliveryAltitude)
       // Infeasible candidates have no executable terminal route to price.
       // Compare their residual to the SAME runway delivery objective, not
       // each candidate's own displaced aim: otherwise a forecast can win

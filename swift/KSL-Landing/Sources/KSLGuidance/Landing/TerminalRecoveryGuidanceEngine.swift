@@ -136,45 +136,12 @@ final class TerminalRecoveryGuidanceEngine {
     // ---- Energy and glide range ----
     let energyHeight = p.height + speed * speed / (2 * g)
     let touchdownEnergyHeight = c.vehicle.landingSpeed * c.vehicle.landingSpeed / (2 * g)
-    /// Still-air range from energy height `top` down to `bottom` on the
-    /// best attainable L/D. Best L/D and its CL change strongly with Mach, so
-    /// each energy level is placed on the EQUILIBRIUM GLIDE: the altitude
-    /// where q*S*CL(best L/D) carries the weight with h + V^2/2g = e. The
-    /// 1 Nov 2211 flight showed that keeping the current Mach-1.5 split for
-    /// the whole descent underestimated the range by a factor of 2-3 (22.7
-    /// km predicted, >47 km flown with energy to spare). Measured force gains
-    /// and the evidenced AoA ceiling are carried along. `derate` applies the
-    /// configured uncertainty: (1-u)/(1+u) for a conservative claim, 1 for
-    /// the nominal model.
+    var glide = EquilibriumGlideRange(aero: aero, atmosphere: atmosphere, frame: frame,
+      along: p.along, cross: p.cross, time: state.time, mass: state.mass, gravity: g,
+      alphaFloor: floor, alphaCeiling: ceiling)
+    glide.liftGain = liftGain; glide.dragGain = dragGain; glide.gear = state.systems.gearDown
     func glideRange(from top: Double, to bottom: Double, derate: Double) -> Double {
-      guard top > bottom else { return 0 }
-      let samples = 12, alphaStep = max(1e-3, (ceiling - floor) / 32)
-      func best(height: Double, speed v: Double) -> (ratio: Double, lift: Double) {
-        let position = frame.position(along: p.along, cross: p.cross, height: height)
-        let air = atmosphere.sample(position: position, time: state.time)
-        let q = air.density * v * v / 2, mach = v / max(1, air.speedOfSound)
-        var result = (ratio: 0.0, lift: 0.0)
-        for alpha in stride(from: floor, through: ceiling, by: alphaStep) {
-          let polar = aero.coefficients(mach: mach, alpha: alpha, dynamicPressure: q,
-            beta: 0, gear: state.systems.gearDown)
-          let ratio = polar.lift * liftGain / max(1e-9, polar.drag * dragGain)
-          if ratio > result.ratio { result = (ratio, q * aero.referenceArea * polar.lift * liftGain / max(1, state.mass)) }
-        }
-        return result
-      }
-      var range = 0.0
-      for k in 0..<samples {
-        let e = top - (top - bottom) * (Double(k) + 0.5) / Double(samples)
-        // Lift surplus falls monotonically with altitude at fixed energy.
-        var low = 0.0, high = max(0, e)
-        for _ in 0..<24 {
-          let mid = (low + high) / 2
-          if best(height: mid, speed: sqrt(max(0, 2 * g * (e - mid)))).lift >= g { low = mid } else { high = mid }
-        }
-        let point = best(height: low, speed: sqrt(max(0, 2 * g * (e - low))))
-        range += point.ratio * derate * (top - bottom) / Double(samples)
-      }
-      return range
+      glide.range(from: top, to: bottom, derate: derate)
     }
     let conservative = (1 - u) / (1 + u)
     let availableRange = glideRange(from: energyHeight, to: touchdownEnergyHeight, derate: conservative)
@@ -233,6 +200,15 @@ final class TerminalRecoveryGuidanceEngine {
     let aimHeight = mode == .alignment ? (lastNEP?.height ?? 0) : 0
     let aim = frame.position(along: aimAlong, cross: 0, height: aimHeight)
     let distance = frame.distance(from: state.position, to: aim)
+    // Speed floor: the solved NEP airspeed (else the configured minimum safe
+    // speed). Excess energy is spent on path length, never by bleeding the
+    // airspeed the HAC/Final need for authority. Below the floor, unload just
+    // enough normal force to steepen the path and regain speed over the
+    // guidance lookahead: g*sin(dgamma) = dV/tau, dgamma/dt = (L-support)/V.
+    let speedFloor = max(lastNEP?.airspeed ?? 0, c.vehicle.minimumSafeSpeed ?? c.vehicle.landingSpeed)
+    let tau = c.guidance.pathLookaheadTime
+    let unloadedLift: Double? = speed < speedFloor
+      ? max(0, support - speed * asin(clamp((speedFloor - speed) / (g * tau), 0, 1)) / tau) : nil
     // Excess energy with no plan and no modeled speedbrake: lengthen the
     // ground track with S-turns about the centerline until the turn-priced
     // path matches the conservatively affordable range. Path per distance
@@ -240,7 +216,9 @@ final class TerminalRecoveryGuidanceEngine {
     // room for a reversal and the final alignment turn (a turn diameter each).
     var dissipationPath = alignmentCost
     var headingOffset = 0.0
-    if mode == .alignment, alignmentRange > alignmentCost * (1 + u), alignmentCost > 4 * radius {
+    // Below the speed floor the excess is in height: trade it for speed first.
+    if mode == .alignment, unloadedLift == nil, alignmentRange > alignmentCost * (1 + u),
+       alignmentCost > 4 * radius {
       dissipationPath = alignmentRange
       headingOffset = (p.cross > 0 ? -1.0 : 1.0) * acos(clamp(alignmentCost / alignmentRange, 0, 1))
     }
@@ -260,14 +238,18 @@ final class TerminalRecoveryGuidanceEngine {
       .lateralAuthority(reserving: support)
     let gear = state.systems.gearDown || p.height <= (c.guidance.gearDeploymentAltitude ?? 1500)
 
-    guard mode == .alignment, let nep = lastNEP else {
+    // Below the speed floor every mode flies the front-side unload toward
+    // its aim (the NEP in alignment) before any drag-budget allocation.
+    guard mode == .alignment, unloadedLift == nil, let nep = lastNEP else {
       // Low energy: fly the attainable glide point; never trade range for a
       // vertical-force or alignment objective the energy cannot pay for.
       // Below the configured minimum safe speed, restore airspeed with the
       // lowest AoA whose L/D is within the model's own uncertainty of best.
       var chosen = glidePoint
-      if speed < (c.vehicle.minimumSafeSpeed ?? c.vehicle.landingSpeed) {
-        chosen = points.filter { ratio($0) >= glideRatio * (1 - u) }.min { $0.alpha < $1.alpha } ?? glidePoint
+      if let target = unloadedLift {
+        // Front side of the polar only: AoA at or below best L/D.
+        chosen = points.filter { $0.alpha <= glidePoint.alpha }
+          .min { abs($0.lift - target) < abs($1.lift - target) } ?? glidePoint
       }
       let lateral = min(abs(demand), chosen.lift * sin(c.vehicle.maximumBank))
       let bank = (demand < 0 ? -1.0 : 1.0) * (chosen.lift > 0 ? asin(clamp(lateral / chosen.lift, 0, 1)) : 0)

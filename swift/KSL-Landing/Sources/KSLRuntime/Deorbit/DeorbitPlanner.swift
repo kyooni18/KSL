@@ -170,7 +170,7 @@ public actor DeorbitPlanner {
                                     entryMiss: Double, configuration c: MissionConfiguration,
                                     terminalSpeed: Double) -> InfeasibleApproachRank {
     let e = c.entrySettings
-    let targetHeight = e.terminalTargetAltitude-c.runway.elevation
+    let targetHeight = c.mm304DeliveryAltitude-c.runway.elevation
     // The track is runway-frame [UT, along, cross, height, speed, alpha, bank].
     let point = track.filter { $0.count >= 5 && $0[1...4].allSatisfy(\.isFinite) }
       .min { abs($0[3]-targetHeight) < abs($1[3]-targetHeight) }
@@ -179,10 +179,10 @@ public actor DeorbitPlanner {
         altitudeRejected: true, machRejected: true, captureMiss: .greatestFiniteMagnitude,
         violationCount: violationCount, entryMiss: entryMiss)
     }
-    let mach = point[4]*e.terminalTargetMach/max(1, terminalSpeed)
+    let mach = point[4]*c.mm304DeliveryMach/max(1, terminalSpeed)
     return .init(hardUnsafe: hardUnsafe, screenFeasible: screenFeasible,
       altitudeRejected: abs(point[3]-targetHeight) > e.handoffRadius,
-      machRejected: abs(mach-e.terminalTargetMach) > e.terminalMachHalfWidth,
+      machRejected: abs(mach-c.mm304DeliveryMach) > e.terminalMachHalfWidth,
       captureMiss: hypot(point[1]-c.nepOverheadCaptureAlong, point[2]-e.handoffCross),
       violationCount: violationCount, entryMiss: entryMiss)
   }

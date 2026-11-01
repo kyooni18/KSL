@@ -104,10 +104,11 @@ public struct MM305Admission: Codable, Sendable {
     let exitASL = ApproachProfile(configuration: c).reference(along: -c.guidance.finalDistance).height
       + c.runway.elevation
     let minimumAltitude = min(e.terminalMinimumAltitude, c.guidance.hacAcquisitionAltitude ?? exitASL, exitASL)
-    let minimumMach = c.guidance.hacAcquisitionMach ?? 0
     let altitudeMargin = min(altitude - minimumAltitude, e.terminalMaximumAltitude - altitude)
-    let machMargin = min(state.aerodynamics.mach - minimumMach,
-      e.terminalTargetMach + e.terminalMachHalfWidth - state.aerodynamics.mach)
+    // hacAcquisitionMach is MM304's delivery target, not an MM305 floor: the
+    // HAC is flown subsonic. The physical lower bound is the configured
+    // minimum safe airspeed, checked below.
+    let machMargin = e.terminalTargetMach + e.terminalMachHalfWidth - state.aerodynamics.mach
     var failures: [ConstraintViolation] = []
     let range = frame.distance(from: state.position, to: frame.origin)
     if range > c.guidance.maximumPathLength || state.verticalSpeed >= 0 {
