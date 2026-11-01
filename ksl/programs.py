@@ -474,7 +474,7 @@ class OrbitTrimProgram(Program):
 # --- landing (live) -------------------------------------------------------------------
 
 class LandingProgram(Program):
-    """Deorbit through rollout on the native C backend against live KSP."""
+    """Deorbit through rollout on the selected native backend against live KSP."""
     name = "landing"
     phases = (Phase.DEORBIT, Phase.MM304, Phase.MM305, Phase.FINAL_APPROACH,
               Phase.TOUCHDOWN, Phase.ROLLOUT, Phase.COMPLETE)
@@ -482,13 +482,16 @@ class LandingProgram(Program):
     def describe(self, ctx: Context, start: Phase, stop: Phase) -> list[str]:
         landing = ctx.config["landing"]
         start = max(start, Phase.DEORBIT, key=lambda p: p.index)
-        if landing.get("engine", "c") == "swift":
+        if landing.get("engine", "swift-backend") == "swift":
             conn = ctx.config["connection"]
             return ["landing: engine=swift (no deorbit planner; airborne takeover from mm304)",
                     "landing: inspect and close payload bay, verify direct-control handoff",
                     f"landing: {SWIFT_BINARY} fly --host {conn['address']} --port {conn['rpcPort']} "
                     f"--vessel {landing['swiftVessel']} --airbrake-group {landing['swiftAirbrakeGroup']}"]
-        steps = [f"landing: start {BACKEND} (KSP_LANDER_MODEL_PROFILE={landing['modelProfile']}, "
+        backend_path = (SWIFT_LANDING / "bin" / "landing_backend"
+                        if landing.get("engine", "swift-backend") == "swift-backend" and not os.environ.get("KSL_BACKEND")
+                        else BACKEND)
+        steps = [f"landing: start {backend_path} (KSP_LANDER_MODEL_PROFILE={landing['modelProfile']}, "
                  f"configuration {landing['backendConfiguration']})",
                  f"landing: connect to kRPC {ctx.config['connection']['address']}:{ctx.config['connection']['rpcPort']}",
                  "landing: inspect and close Benjee STS payload bay before deorbit/reentry"]
@@ -509,7 +512,7 @@ class LandingProgram(Program):
             raise ProgramUnavailable("LandingProgram flies live KSP; use SimulationProgram offline")
         landing = ctx.config["landing"]
         start = Phase.DEORBIT if start.index < Phase.DEORBIT.index else start
-        if landing.get("engine", "c") == "swift":
+        if landing.get("engine", "swift-backend") == "swift":
             return self._run_swift_live(ctx, start)
         env = {"KSP_LANDER_MODEL_PROFILE": str(landing["modelProfile"]),
                "KSP_LANDER_ROOT": str(DATA_ROOT), **krpc_env(ctx.config)}
@@ -519,7 +522,9 @@ class LandingProgram(Program):
         state = _LandingState(ctx)
         # "swift-backend" flies the full LandingProgram flow (TUI, checkpoints, abort) on the
         # Swift engine through the same NDJSON protocol.
-        backend_path = SWIFT_LANDING / "bin" / "landing_backend" if landing.get("engine") == "swift-backend" else BACKEND
+        backend_path = (SWIFT_LANDING / "bin" / "landing_backend"
+                        if landing.get("engine", "swift-backend") == "swift-backend" and not os.environ.get("KSL_BACKEND")
+                        else BACKEND)
         with open(ctx.log.directory / "backend.stderr.log", "ab") as stderr:
             client = BackendClient(backend_path, snapshot_sink=state.on_snapshot, stderr_target=stderr, env=env)
             try:
@@ -726,7 +731,8 @@ class LandingProgram(Program):
         client.send("createPlan", timeout=float(landing["planTimeoutSeconds"]))
         planned = client.latest_snapshot
         if planned is previous or not planned or not planned.get("plan"):
-            planned = client.read_until(lambda s: bool(s.get("plan")) or s.get("phase") == "Fault", 30.0)
+            planned = client.read_until(lambda s: bool(s.get("plan")) or s.get("phase") == "Fault",
+                                        float(landing["planTimeoutSeconds"]))
         if planned.get("phase") == "Fault" or planned.get("lastError"):
             raise BackendError(str(planned.get("lastError") or "planning failed"))
         plan = planned.get("plan") or {}
