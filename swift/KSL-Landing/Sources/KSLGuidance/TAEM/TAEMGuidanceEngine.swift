@@ -57,7 +57,7 @@ final class TAEMGuidanceEngine {
   private let rotation: RotationalDynamicsEngine
   private(set) var status = TAEMStatus()
   var debug = "" // SCRATCH
-  var debugLines: String { guard let l = lines else { return "" }; return stride(from: 0.0, through: 30000, by: 2000).map { d in let n = l.nominal.sample(d), m = l.minimum.sample(d); return String(format: "%.0f: EN %.0f h %.0f q %.0f | EMIN %.0f h %.0f q %.0f", d, n.energy, n.height, n.dynamicPressure, m.energy, m.height, m.dynamicPressure) }.joined(separator: "\n") } // SCRATCH
+  var debugLines: String { guard let l = lines else { return "" }; return stride(from: 0.0, through: 60000, by: 4000).map { d in let n = l.nominal.sample(d), m = l.minimum.sample(d); return String(format: "%.0f: EN %.0f h %.0f q %.0f | EMIN %.0f h %.0f q %.0f", d, n.energy, n.height, n.dynamicPressure, m.energy, m.height, m.dynamicPressure) }.joined(separator: "\n") } // SCRATCH
   private var geometry: (side: Int, finalRadius: Double, growth: Double, turn: Double)?
   private var geometryAdapted = false
   private var lines: (time: Double, side: Int, turn: Double, nominal: TAEMEnergyLine, minimum: TAEMEnergyLine)?
@@ -205,17 +205,16 @@ final class TAEMGuidanceEngine {
     func frontQ(mach: Double, q: Double, load: Double) -> Double {
       g * load * state.mass / max(1e-9, aero.referenceArea * best(mach: mach, q: q).lift * liftGain)
     }
-    // Schedule (cf. QBREF): both lines fly the front-side (best-L/D) q and
-    // rise to the NEP q over the distance the NEP glide slope needs to gain
-    // that speed: kinetic height gained per metre is tan|gamma_NEP| - 1/(L/D).
-    // The nominal line prices the drag the configured aerodynamic
-    // uncertainty allows (cf. EN over EMIN); the vehicle flies the energy
-    // between them off by raising q (see update).
-    let reserve = nominal ? 1 + v.aerodynamicUncertainty : 1
-    // The q at which the modelled drag IS the reserved drag: the front-side
-    // point whose L/D is best L/D / reserve. The nominal line's altitude
-    // (HREF) is where its energy flies that q, so a vehicle tracking HREF
-    // on EN spends the reserve instead of carrying it to the NEP.
+    // Schedule (cf. QBREF): the minimum line flies the front-side (best-L/D)
+    // q; the nominal flies the q at which the modelled drag is the drag the
+    // configured aerodynamic uncertainty allows (best L/D / reserve), so a
+    // vehicle tracking its altitude (HREF) on EN spends that reserve instead
+    // of carrying it to the NEP. Both rise to the NEP q over the distance the
+    // NEP glide slope needs to gain that speed: kinetic height gained per
+    // metre is tan|gamma_NEP| - 1/(L/D). Each line is priced where it is
+    // flown, so near the NEP, where the ramp already exceeds the reserved
+    // q, no reserve is priced that the vehicle could not spend.
+    let reserve = 1 + v.aerodynamicUncertainty
     func reservedQ(mach: Double, q: Double) -> Double {
       let bestAlpha = aero.bestGlideAlpha(mach: mach, maximumAlpha: alphaCeiling, dynamicPressure: q,
         gear: state.systems.gearDown)
@@ -233,11 +232,10 @@ final class TAEMGuidanceEngine {
       return min(v.maximumDynamicPressure,
         g * state.mass / max(1e-9, aero.referenceArea * max(1e-6, coefficients(hi).lift) * liftGain))
     }
-    func scheduledQ(mach: Double, q: Double) -> Double { frontQ(mach: mach, q: q, load: 1) }
     let nepAir = air(nep.height)
     let nepQ = 0.5 * nepAir.density * nep.airspeed * nep.airspeed
     let nepMach = nep.airspeed / max(1, nepAir.speedOfSound)
-    let nepFront = scheduledQ(mach: nepMach, q: nepQ)
+    let nepFront = frontQ(mach: nepMach, q: nepQ, load: 1)
     let nepPolar = best(mach: nepMach, q: nepQ)
     let gain = tan(abs(nep.flightPathAngle)) - nepPolar.drag * dragGain / max(1e-9, nepPolar.lift * liftGain)
     let ramp = max(0, (nepQ - nepFront) / nepAir.density / g) / max(1e-3, gain)
@@ -260,15 +258,16 @@ final class TAEMGuidanceEngine {
         else { load = hypot(1, speed * speed * curvature(d) / g) }
         // No more load than the configured bank limit can fly.
         load = min(load, 1 / cos(v.maximumBank))
-        // Turns are flown at the scheduled q; their load costs induced drag.
-        let target = max(schedule(d), scheduledQ(mach: speed / max(1, a.speedOfSound), q: q))
+        // A turn raises the front-side q by its load (as the flight law's
+        // q floor does), else best L/D could not carry it.
+        let target = max(schedule(d), frontQ(mach: speed / max(1, a.speedOfSound), q: q, load: load))
         if q > target { lo = h } else { hi = h }
       }
       let h = lo, a = air(h), speed = sqrt(max(1, 2 * g * (energy - h)))
       let q = 0.5 * a.density * speed * speed, mach = speed / max(1, a.speedOfSound)
       var reference = h
       if nominal {
-        let spend = max(schedule(d), reservedQ(mach: mach, q: q))
+        let spend = max(q, reservedQ(mach: mach, q: q))
         var lo = 0.0, hi = h
         for _ in 0..<28 {
           let m = (lo + hi) / 2
@@ -278,15 +277,19 @@ final class TAEMGuidanceEngine {
       }
       out.append(range: d, energy: energy, height: reference, dynamicPressure: q,
         frontDynamicPressure: frontQ(mach: mach, q: q, load: load))
-      // Drag of the AoA that carries the load, with measured force gains.
+      // Drag where the line is flown (HREF for the nominal), of the AoA that
+      // carries the load, with measured force gains.
+      let flown = air(reference), flownSpeed = sqrt(max(1, 2 * g * (energy - reference)))
+      let flownQ = 0.5 * flown.density * flownSpeed * flownSpeed
+      let flownMach = flownSpeed / max(1, flown.speedOfSound)
       let lift = aero.liftSolution(acceleration: g * load / max(1e-9, liftGain), mass: state.mass,
-        dynamicPressure: q, mach: mach, minimumAlpha: floor, maximumAlpha: alphaCeiling,
+        dynamicPressure: flownQ, mach: flownMach, minimumAlpha: floor, maximumAlpha: alphaCeiling,
         gear: state.systems.gearDown)
-      let cd = aero.coefficients(mach: mach, alpha: lift.alpha, dynamicPressure: q,
+      let cd = aero.coefficients(mach: flownMach, alpha: lift.alpha, dynamicPressure: flownQ,
         gear: state.systems.gearDown).drag * dragGain
-      let slope = i == 0 ? tan(abs(nep.flightPathAngle)) : (h - previousHeight) / dd
-      previousHeight = h
-      energy += reserve * q * aero.referenceArea * cd / (state.mass * g) * dd * hypot(1, slope)
+      let slope = i == 0 ? tan(abs(nep.flightPathAngle)) : (reference - previousHeight) / dd
+      previousHeight = reference
+      energy += flownQ * aero.referenceArea * cd / (state.mass * g) * dd * hypot(1, slope)
     }
     return out
   }

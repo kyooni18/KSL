@@ -34,7 +34,7 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertLessThan(closing, opening)
   }
 
-  func testTAEMHandoffIsOnInterfaceMachNotAltitudeUpRange() throws {
+  func testTAEMHandoffUsesInterfaceEnergyWithMachAndAltitudeDeadlines() throws {
     let c = MissionConfiguration()
     let atmosphere = try AtmosphericModelEngine()
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: try AerodynamicsEngine())
@@ -49,10 +49,21 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertGreaterThan(fast.aerodynamics.mach, c.mm304DeliveryMach)
     XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
       state: fast, configuration: c), "Crossing 30 km far up-range is not the TAEM interface")
-    let interface = state(along: -96_000, altitude: 25_000, speed: 700)
-    XCTAssertLessThanOrEqual(interface.aerodynamics.mach, c.mm304DeliveryMach)
+    func atMach(_ mach: Double, altitude: Double) -> VehicleState {
+      let position = frame.position(along: -96_000, cross: 0, height: altitude-c.runway.elevation)
+      let airspeed = mach * atmosphere.sample(position: position, time: 100).speedOfSound
+      return state(along: -96_000, altitude: altitude, speed: sqrt(airspeed * airspeed - 90 * 90))
+    }
+    let high = atMach(c.mm304DeliveryMach, altitude: c.mm304DeliveryAltitude + 5_000)
+    XCTAssertFalse(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
+      state: high, configuration: c), "Interface Mach alone must not hand off with excess energy")
+    let interface = atMach(c.mm304DeliveryMach, altitude: c.mm304DeliveryAltitude - 1)
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
-      state: interface, configuration: c), "TAEM starts on interface Mach")
+      state: interface, configuration: c), "TAEM starts when interface energy is reached")
+    let slow = atMach(c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth - 0.01,
+      altitude: c.mm304DeliveryAltitude + 5_000)
+    XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
+      state: slow, configuration: c), "The configured Mach floor must release MM304 ownership")
     let deadline = state(along: -150_000, altitude: c.entrySettings.terminalMinimumAltitude-1, speed: 1200)
     XCTAssertTrue(LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
       state: deadline, configuration: c), "MM304 cannot keep authority below its window")
