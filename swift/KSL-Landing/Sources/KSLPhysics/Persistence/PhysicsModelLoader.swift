@@ -56,7 +56,8 @@ public enum PhysicsModelLoader {
     for (name, expected) in [("radius", planet.radius), ("gravitationalParameter", planet.gravitationalParameter),
                              ("rotationalSpeed", planet.rotationRate), ("atmosphereDepth", planet.atmosphereTop)] {
       guard let actual = p[name] as? Double, actual.isFinite,
-            abs(actual - expected) <= max(1, abs(expected)) * 1e-12 else {
+            // KSP reports rotation from its float period; 2*pi/21549.425 differs by ~1e-8.
+            abs(actual - expected) <= max(Double.leastNormalMagnitude, abs(expected)) * 1e-6 else {
         throw FlightError.invalidConfiguration("Physics archive planet mismatch: " + name)
       }
     }

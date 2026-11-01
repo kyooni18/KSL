@@ -171,6 +171,9 @@ public enum OperatorConfigurationMapper {
       setEffective("guidance", "useTimeWarp", false)
       record("guidance.useTimeWarp", "inactive", "Native continuous-control execution uses 1x; it never requests timewarp")
     }
+    if try number("guidance.deorbitRobustMinimumPassFraction") != nil {
+      record("guidance.deorbitRobustMinimumPassFraction", "inactive", "Native deorbit qualification is the nominal full-route case; no stress pass fraction applies")
+    }
     var deorbit = c.deorbitSettings
     if let speed = try number("guidance.entryRangeReferenceSpeed") { deorbit.entryRangeReferenceSpeed = speed }
     let burns: [(String, WritableKeyPath<DeorbitConfiguration, Double>, Bool)] = [
@@ -182,7 +185,7 @@ public enum OperatorConfigurationMapper {
       ("deorbitThrustUncertaintyFraction", \.thrustUncertainty, false), ("deorbitDeltaVUncertainty", \.deltaVUncertainty, false),
       ("deorbitMassUncertaintyFraction", \.massUncertainty, false), ("deorbitPositionUncertainty", \.positionUncertainty, false),
       ("deorbitVelocityUncertainty", \.velocityUncertainty, false), ("deorbitPointingUncertainty", \.pointingUncertainty, true),
-      ("deorbitAtmosphereUncertaintyFraction", \.atmosphereUncertainty, false), ("deorbitRobustMinimumPassFraction", \.minimumRobustPassFraction, false)]
+      ("deorbitAtmosphereUncertaintyFraction", \.atmosphereUncertainty, false)]
     for (name, key, angle) in burns { if let x = try number("guidance."+name) { deorbit[keyPath: key] = angle ? radians(x) : x } }
     c.deorbit = deorbit
     var calibration = c.calibration ?? .init()
