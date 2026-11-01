@@ -183,7 +183,7 @@ public actor DeorbitPlanner {
     return .init(hardUnsafe: hardUnsafe, screenFeasible: screenFeasible,
       altitudeRejected: abs(point[3]-targetHeight) > e.handoffRadius,
       machRejected: abs(mach-c.mm304DeliveryMach) > e.terminalMachHalfWidth,
-      captureMiss: hypot(point[1]-c.nepOverheadCaptureAlong, point[2]-e.handoffCross),
+      captureMiss: hypot(point[1]-c.taemInterfaceAlong, point[2]-e.handoffCross),
       violationCount: violationCount, entryMiss: entryMiss)
   }
   public func plan(from source: VehicleState,
@@ -252,9 +252,9 @@ public actor DeorbitPlanner {
       // An unreachable HAC is not a valid burn target. When no candidate
       // is feasible, try the smallest modeled inlet miss first, not the
       // closest nominal 70-km entry-interface ground track. The miss is
-      // measured from the same NEP-overhead objective MM304 flies to.
+      // measured from the same TAEM interface objective MM304 flies to.
       let target = configuration.entrySettings
-      let along = configuration.nepOverheadCaptureAlong
+      let along = configuration.taemInterfaceAlong
       let missA = hypot(a.forecast.terminalAlong - along,
         a.forecast.terminalCross - target.handoffCross)
       let missB = hypot(b.forecast.terminalAlong - along,

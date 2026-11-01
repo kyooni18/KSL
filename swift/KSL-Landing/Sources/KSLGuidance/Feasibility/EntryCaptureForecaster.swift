@@ -46,7 +46,7 @@ public final class EntryCaptureForecaster {
   /// MM304's terminal target speed; capture is then searched beyond it.
   public func terminalSpeed(at time: Double) -> Double {
     let e = configuration.entrySettings
-    let point = frame.position(along: configuration.nepOverheadCaptureAlong, cross: e.handoffCross, height: 0)
+    let point = frame.position(along: configuration.taemInterfaceAlong, cross: e.handoffCross, height: 0)
     return configuration.mm304DeliveryMach * atmosphere.sample(
       position: point.normalized * (configuration.planet.radius + configuration.mm304DeliveryAltitude),
       time: time).speedOfSound

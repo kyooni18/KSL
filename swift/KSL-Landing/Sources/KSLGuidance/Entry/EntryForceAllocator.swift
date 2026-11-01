@@ -105,21 +105,23 @@ enum EntryForceAllocator {
           : left < right
       }!)
     }
-    if !supporting.isEmpty {
-      // Low-energy stretch: spend the least drag per achievable steering
-      // acceleration without discarding vertical lift support.
-      let recover = supporting.min { a,b in
-        let al = min(abs(lateralDemand), authority(a))
-        let bl = min(abs(lateralDemand), authority(b))
-        if al > 0 || bl > 0 {
-          let ae = al > 0 ? a.drag/al : Double.greatestFiniteMagnitude
-          let be = bl > 0 ? b.drag/bl : Double.greatestFiniteMagnitude
-          if ae != be { return ae < be }
-        }
-        return a.drag < b.drag
-      }!
-      return project(recover)
+    // Energy short: no incidence meeting the demands fits the energy budget.
+    // Ranging then binds (STS: vertical L/D controls ranging): fly the
+    // greatest VERTICAL L/D with the lateral demand served from the same
+    // lift vector, and let the capture-altitude demand go. Holding it (and
+    // spending altitude on turns) at 20-40 deg spent the TAEM energy before
+    // the interface (2244 replay: drag 8-16 m/s2 against a 1-6 m/s2 budget,
+    // Mach 2.5 reached 75 km out).
+    func stretch() -> EntryForceAllocation? {
+      let sign = lateralDemand < 0 ? -1.0 : 1.0
+      return permitted.filter { $0.lift > 0 }.map { p -> EntryForceAllocation in
+        let lateral = min(abs(lateralDemand), p.lift * sin(maximumBank))
+        let bank = asin(clamp(lateral / p.lift, 0, 1))
+        return .init(alpha: p.alpha, bank: sign * bank, drag: p.drag, vertical: p.lift * cos(bank),
+          lateral: sign * lateral, affordable: false, verticallySupported: p.lift * cos(bank) >= verticalDemand)
+      }.max { a, b in a.vertical / max(1e-9, a.drag) < b.vertical / max(1e-9, b.drag) }
     }
+    if !supporting.isEmpty, let stretch = stretch() { return stretch }
     // No available incidence can meet the demanded vertical support.
     // Holding maximum CL then spends all remaining range on CD even though
     // the extra lift cannot arrest the descent (observed at 40--35 km in STS).
@@ -174,18 +176,10 @@ enum EntryForceAllocator {
       let withinBudget = options.filter {
         $0.point.drag * (1 + uncertainty) <= dragBudget
       }
-      let candidates = withinBudget.isEmpty ? options : withinBudget
-      let best = candidates.max { a, b in
-        if withinBudget.isEmpty {
-          // Every available steering point exceeds the energy budget.
-          // Keep maximum lateral turn per dissipated energy, and report the
-          // impossible drag objective instead of claiming it was tracked.
-          let ae = a.lateral / max(1e-6, a.point.drag * (1 + uncertainty))
-          let be = b.lateral / max(1e-6, b.point.drag * (1 + uncertainty))
-          if ae != be { return ae < be }
-        } else if abs(a.lateral-b.lateral) > 1e-9 {
-          return a.lateral < b.lateral
-        }
+      // Every steering point over the energy budget: range binds.
+      if withinBudget.isEmpty, let stretch = stretch() { return stretch }
+      let best = withinBudget.max { a, b in
+        if abs(a.lateral-b.lateral) > 1e-9 { return a.lateral < b.lateral }
         return a.point.drag > b.point.drag
       }
       if let best {

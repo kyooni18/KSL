@@ -21,7 +21,7 @@ public struct EntryCaptureObjective: Codable, Sendable {
                    frame: RunwayFrame, crossAim: Double, time: Double) -> Self {
     let e = c.entrySettings, cross = e.handoffCross + crossAim
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
-    let range = c.nepOverheadCaptureRange
+    let range = c.taemInterfaceRange
     let along = -sqrt(max(0, range * range - cross * cross))
     let radius = c.planet.radius + c.mm304DeliveryAltitude
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius

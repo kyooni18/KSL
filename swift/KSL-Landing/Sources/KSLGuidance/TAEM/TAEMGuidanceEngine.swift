@@ -1,0 +1,628 @@
+import Foundation
+import KSLCore
+import KSLPhysics
+
+/// TAEM guidance phases, as in JSC-16522 TGTRAN (prefinal is the Final law).
+public enum TAEMPhase: String, Codable, Sendable { case sTurn, acquisition, headingAlignment }
+
+public struct TAEMStatus: Codable, Sendable {
+  public var phase: TAEMPhase = .acquisition
+  /// HAC side: +1 right of the centerline, -1 left.
+  public var side = 1
+  /// Remaining HAC turn to the NEP (rad), ψ_HA.
+  public var remainingTurn = 0.0
+  /// Predicted ground track to the NEP (m), RPRED.
+  public var range = 0.0
+  public var energyHeight = 0.0
+  /// Nominal (EN) and minimum, best-L/D (MEP-like) energy at `range` (m).
+  public var nominalEnergy = 0.0
+  public var minimumEnergy = 0.0
+  public var referenceHeight = 0.0
+  public var referenceDynamicPressure = 0.0
+  /// Front-side bound: q at which best-L/D AoA carries the turn load.
+  public var minimumDynamicPressure = 0.0
+  public var finalRadius = 0.0
+  public var growth = 0.0
+  /// Latched one-time low-energy downmode to the shorter HAC (OHALRT).
+  public var downmoded = false
+  public var insufficientEnergy = false
+}
+
+/// Shuttle TAEM (JSC-16522 / 80-FM-29, 1980) for the KSL vehicle. MM304
+/// hands over at the TAEM interface on Mach; TAEM then owns the vehicle to
+/// the NEP and never waits for an offline path certificate:
+/// - every cycle it predicts the ground track (acquisition, tangent leg,
+///   spiral HAC ending tangent to the centerline at the NEP), RPRED;
+/// - altitude, energy and dynamic-pressure references are functions of
+///   RPRED. They are not tabulated Shuttle constants: the nominal line is
+///   integrated outward from the solved NEP with this vehicle's measured
+///   polar: the minimum line flies best L/D (the front-side q bound), the
+///   nominal flies that q with the configured aerodynamic uncertainty as
+///   margin, and both ramp to the NEP q over the NEP glide's speed gain;
+/// - AoA tracks the altitude reference, bounded so q stays inside
+///   [front-side q, configured maximum q] (TGNZC's QBMNNZ/QBMXNZ limits).
+///   Speed is held by q, never bled to dissipate energy;
+/// - excess energy above EN flies an S-turn (TGTRAN), and the overhead HAC
+///   (up to one full loop) is preferred at selection; energy below the
+///   minimum line downmodes once to the shorter HAC (OHALRT);
+/// - acquisition banks toward the HAC tangent, heading alignment follows the
+///   spiral radius and its rate (TGPHIC).
+/// The configured vehicle has no identified speedbrake drag, so the
+/// speedbrake channel of TGSBC is not flown.
+final class TAEMGuidanceEngine {
+  private let configuration: MissionConfiguration
+  private let atmosphere: AtmosphericModelEngine
+  private let aero: AerodynamicsEngine
+  private let frame: RunwayFrame
+  private let rotation: RotationalDynamicsEngine
+  private(set) var status = TAEMStatus()
+  var debug = "" // SCRATCH
+  var debugLines: String { guard let l = lines else { return "" }; return stride(from: 0.0, through: 30000, by: 2000).map { d in let n = l.nominal.sample(d), m = l.minimum.sample(d); return String(format: "%.0f: EN %.0f h %.0f q %.0f | EMIN %.0f h %.0f q %.0f", d, n.energy, n.height, n.dynamicPressure, m.energy, m.height, m.dynamicPressure) }.joined(separator: "\n") } // SCRATCH
+  private var geometry: (side: Int, finalRadius: Double, growth: Double, turn: Double)?
+  private var geometryAdapted = false
+  private var lines: (time: Double, side: Int, turn: Double, nominal: TAEMEnergyLine, minimum: TAEMEnergyLine)?
+  private var sTurnSign = 0.0
+
+  init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine, aerodynamics: AerodynamicsEngine) {
+    self.configuration = configuration; self.atmosphere = atmosphere; aero = aerodynamics
+    frame = .init(runway: configuration.runway, planet: configuration.planet)
+    rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
+  }
+
+  func reset() {
+    status = .init(); geometry = nil; geometryAdapted = false; lines = nil; sTurnSign = 0
+  }
+
+  // MARK: Geometry (TGXHAC / GTP)
+
+  /// Bank of the nominal geometry: the load factor that remains after the
+  /// configured aerodynamic uncertainty (the same reserve MM305 prices).
+  private var geometryBank: Double { EnergyManagementEngine.acquisitionBank(configuration) }
+  private func turnRadius(speed: Double, gravity: Double) -> Double {
+    speed * speed / (gravity * tan(max(1e-3, geometryBank)))
+  }
+  private var nepAlong: Double { -configuration.guidance.finalDistance }
+
+  /// Spiral length from remaining angle `theta` to the NEP.
+  static func spiralLength(_ s: SpiralHAC, to theta: Double) -> Double {
+    let n = max(8, Int(ceil(theta / 0.05)))
+    var total = 0.0
+    for i in 0..<n {
+      let t = theta * (Double(i) + 0.5) / Double(n)
+      total += hypot(s.radius(at: t), 2 * s.growth * t) * theta / Double(n)
+    }
+    return total
+  }
+
+  /// Remaining HAC angles whose tangent line passes through `point` with the
+  /// spiral ahead of it, from straight-in to one full loop.
+  static func tangencies(of s: SpiralHAC, from point: Vector2, maximumTurn: Double) -> [Double] {
+    func f(_ t: Double) -> Double { let x = s.sample(remainingAngle: t); return x.tangent.cross(point - x.position) }
+    var roots: [Double] = []
+    let step = radians(2)
+    var a = 0.0, fa = f(0)
+    while a < maximumTurn {
+      let b = min(maximumTurn, a + step), fb = f(b)
+      if fa == 0 || fa * fb < 0 {
+        var lo = a, hi = b, flo = fa
+        for _ in 0..<40 {
+          let mid = (lo + hi) / 2, fm = f(mid)
+          if flo * fm <= 0 { hi = mid } else { lo = mid; flo = fm }
+        }
+        let t = (lo + hi) / 2, x = s.sample(remainingAngle: t)
+        if x.tangent.dot(x.position - point) > 0 { roots.append(t) }
+      }
+      a = b; fa = fb
+    }
+    return roots
+  }
+
+  private func spiral(side: Int, finalRadius: Double, growth: Double, turn: Double) -> SpiralHAC? {
+    try? SpiralHAC(exitAlong: nepAlong, finalRadius: finalRadius,
+      growth: min(growth, finalRadius / 2 * (1 - 1e-6)), turnAngle: max(1e-6, turn), side: side)
+  }
+
+  /// HAC size: the final radius flies the NEP airspeed, the spiral grows so
+  /// a full loop's entry radius flies the front-side speed there, both at
+  /// the uncertainty-reserved bank and never below the configured minimum.
+  /// Sized once from the first reference lines, then fixed like the
+  /// Shuttle's R1/R2: a HAC that grows with the lines moves under the
+  /// vehicle approaching it.
+  private func prepareGeometry(nep: NominalEnergyPoint, gravity g: Double, adapt: Bool) {
+    if geometry == nil {
+      let rf = max(configuration.guidance.minimumHACRadius, turnRadius(speed: nep.airspeed, gravity: g))
+      // Provisional minimal growth until the reference line gives the HAC
+      // entry speed (SpiralHAC needs 0 < growth < rf/2). Growing from the
+      // NEP side converges on the compact spiral, not the radius cap.
+      geometry = (1, rf, rf * 1e-3 / (4 * .pi * .pi), 2 * .pi)
+    }
+    if adapt, !geometryAdapted, let line = lines?.minimum, let hac = spiral(side: geometry!.side,
+      finalRadius: geometry!.finalRadius, growth: geometry!.growth, turn: 2 * .pi) {
+      let entry = line.sample(Self.spiralLength(hac, to: 2 * .pi))
+      let entrySpeed = sqrt(max(0, 2 * g * (entry.energy - entry.height)))
+      geometry!.growth = max(geometry!.finalRadius * 1e-3,
+        turnRadius(speed: entrySpeed, gravity: g) - geometry!.finalRadius) / (4 * .pi * .pi)
+      geometryAdapted = true
+    }
+  }
+
+  /// TAEM interface placement (offline): the predicted range whose nominal
+  /// energy equals the interface state's, flying an overhead HAC of `turn`.
+  /// Returns that range and the HAC part of it. The Shuttle's 52 nm comes
+  /// from the orbiter's polar; this vehicle's supersonic L/D is below one.
+  func nominalInterface(state: VehicleState, nep: NominalEnergyPoint, turn: Double = 2 * .pi)
+    -> (range: Double, hacLength: Double)? {
+    let c = configuration
+    let g = c.planet.gravitationalParameter / frame.origin.squaredLength
+    let h = frame.coordinates(of: state.position).height
+    let energy = h + state.aerodynamics.airspeed * state.aerodynamics.airspeed / (2 * g)
+    let ceiling = rotation.supportedTrimAlpha(state, identifiedCeiling: nil)
+    reset()
+    var range = c.entrySettings.terminalTargetRange, hacLength = 0.0
+    for _ in 0..<6 {
+      geometryAdapted = false
+      prepareGeometry(nep: nep, gravity: g, adapt: true)
+      guard let hac = spiral(side: 1, finalRadius: geometry!.finalRadius, growth: geometry!.growth, turn: turn)
+      else { return nil }
+      hacLength = Self.spiralLength(hac, to: turn)
+      let line = makeLine(state: state, nep: nep, maximumRange: 3 * range, hac: hac, hacTurn: turn,
+        liftGain: 1, dragGain: 1, alphaCeiling: ceiling, nominal: true)
+      let minimum = makeLine(state: state, nep: nep, maximumRange: 3 * range, hac: hac, hacTurn: turn,
+        liftGain: 1, dragGain: 1, alphaCeiling: ceiling, nominal: false)
+      lines = (state.time, 1, turn, line, minimum)
+      guard let i = line.energyIndex(atLeast: energy) else { return nil }
+      range = line.rangeValue(i)
+    }
+    reset()
+    return (range, hacLength)
+  }
+
+  // MARK: Reference lines (TGCOMP)
+
+  private func makeLine(state: VehicleState, nep: NominalEnergyPoint, maximumRange: Double,
+                        hac: SpiralHAC?, hacTurn: Double,
+                        acquisition: (span: ClosedRange<Double>, load: Double)? = nil,
+                        liftGain: Double, dragGain: Double,
+                        alphaCeiling: Double, nominal: Bool) -> TAEMEnergyLine {
+    let c = configuration, v = c.vehicle
+    let g = c.planet.gravitationalParameter / frame.origin.squaredLength
+    let hacLength = hac.map { Self.spiralLength($0, to: hacTurn) } ?? 0
+    // Spiral curvature by distance before the NEP, for the turn load.
+    func curvature(_ d: Double) -> Double {
+      guard let hac, d < hacLength, hacLength > 0 else { return 0 }
+      return abs(hac.sample(remainingAngle: hacTurn * d / hacLength).curvature)
+    }
+    func air(_ h: Double) -> AtmosphericState {
+      atmosphere.sample(position: frame.position(along: nepAlong, cross: 0, height: max(0, h)), time: state.time)
+    }
+    let floor = min(alphaCeiling, max(0, v.minimumAngleOfAttack))
+    // Front-side q: best-L/D AoA carries weight times the turn load.
+    func best(mach: Double, q: Double) -> AerodynamicCoefficients {
+      let alpha = aero.bestGlideAlpha(mach: mach, maximumAlpha: alphaCeiling, dynamicPressure: q,
+        gear: state.systems.gearDown)
+      return aero.coefficients(mach: mach, alpha: alpha, dynamicPressure: q, gear: state.systems.gearDown)
+    }
+    func frontQ(mach: Double, q: Double, load: Double) -> Double {
+      g * load * state.mass / max(1e-9, aero.referenceArea * best(mach: mach, q: q).lift * liftGain)
+    }
+    // Schedule (cf. QBREF): both lines fly the front-side (best-L/D) q and
+    // rise to the NEP q over the distance the NEP glide slope needs to gain
+    // that speed: kinetic height gained per metre is tan|gamma_NEP| - 1/(L/D).
+    // The nominal line prices the drag the configured aerodynamic
+    // uncertainty allows (cf. EN over EMIN); the vehicle flies the energy
+    // between them off by raising q (see update).
+    let reserve = nominal ? 1 + v.aerodynamicUncertainty : 1
+    // The q at which the modelled drag IS the reserved drag: the front-side
+    // point whose L/D is best L/D / reserve. The nominal line's altitude
+    // (HREF) is where its energy flies that q, so a vehicle tracking HREF
+    // on EN spends the reserve instead of carrying it to the NEP.
+    func reservedQ(mach: Double, q: Double) -> Double {
+      let bestAlpha = aero.bestGlideAlpha(mach: mach, maximumAlpha: alphaCeiling, dynamicPressure: q,
+        gear: state.systems.gearDown)
+      func coefficients(_ alpha: Double) -> AerodynamicCoefficients {
+        aero.coefficients(mach: mach, alpha: alpha, dynamicPressure: q, gear: state.systems.gearDown)
+      }
+      func ratio(_ alpha: Double) -> Double { coefficients(alpha).lift / max(1e-9, coefficients(alpha).drag) }
+      let target = ratio(bestAlpha) / reserve
+      var lo = min(floor, bestAlpha), hi = bestAlpha
+      if ratio(lo) >= target { hi = lo }
+      for _ in 0..<24 where hi > lo {
+        let mid = (lo + hi) / 2
+        if ratio(mid) < target { lo = mid } else { hi = mid }
+      }
+      return min(v.maximumDynamicPressure,
+        g * state.mass / max(1e-9, aero.referenceArea * max(1e-6, coefficients(hi).lift) * liftGain))
+    }
+    func scheduledQ(mach: Double, q: Double) -> Double { frontQ(mach: mach, q: q, load: 1) }
+    let nepAir = air(nep.height)
+    let nepQ = 0.5 * nepAir.density * nep.airspeed * nep.airspeed
+    let nepMach = nep.airspeed / max(1, nepAir.speedOfSound)
+    let nepFront = scheduledQ(mach: nepMach, q: nepQ)
+    let nepPolar = best(mach: nepMach, q: nepQ)
+    let gain = tan(abs(nep.flightPathAngle)) - nepPolar.drag * dragGain / max(1e-9, nepPolar.lift * liftGain)
+    let ramp = max(0, (nepQ - nepFront) / nepAir.density / g) / max(1e-3, gain)
+    func schedule(_ d: Double) -> Double { ramp > 0 ? nepQ * max(0, 1 - d / ramp) : 0 }
+    let steps = 240, dd = maximumRange / Double(steps)
+    var out = TAEMEnergyLine()
+    var energy = nep.height + nep.airspeed * nep.airspeed / (2 * g)
+    var previousHeight = nep.height
+    for i in 0...steps {
+      let d = Double(i) * dd
+      // Solve the altitude on this energy level whose q meets the schedule.
+      var lo = 0.0, hi = max(0, energy)
+      var load = 1.0
+      for _ in 0..<28 {
+        let h = (lo + hi) / 2, a = air(h), speed = sqrt(max(0, 2 * g * (energy - h)))
+        let q = 0.5 * a.density * speed * speed
+        // The HAC radius follows the line's own speed; the acquisition arc's
+        // load is fixed by how it is flown (see acquisitionLeg).
+        if let acquisition, acquisition.span.contains(d) { load = acquisition.load }
+        else { load = hypot(1, speed * speed * curvature(d) / g) }
+        // No more load than the configured bank limit can fly.
+        load = min(load, 1 / cos(v.maximumBank))
+        // Turns are flown at the scheduled q; their load costs induced drag.
+        let target = max(schedule(d), scheduledQ(mach: speed / max(1, a.speedOfSound), q: q))
+        if q > target { lo = h } else { hi = h }
+      }
+      let h = lo, a = air(h), speed = sqrt(max(1, 2 * g * (energy - h)))
+      let q = 0.5 * a.density * speed * speed, mach = speed / max(1, a.speedOfSound)
+      var reference = h
+      if nominal {
+        let spend = max(schedule(d), reservedQ(mach: mach, q: q))
+        var lo = 0.0, hi = h
+        for _ in 0..<28 {
+          let m = (lo + hi) / 2
+          if 0.5 * air(m).density * 2 * g * (energy - m) > spend { lo = m } else { hi = m }
+        }
+        reference = lo
+      }
+      out.append(range: d, energy: energy, height: reference, dynamicPressure: q,
+        frontDynamicPressure: frontQ(mach: mach, q: q, load: load))
+      // Drag of the AoA that carries the load, with measured force gains.
+      let lift = aero.liftSolution(acceleration: g * load / max(1e-9, liftGain), mass: state.mass,
+        dynamicPressure: q, mach: mach, minimumAlpha: floor, maximumAlpha: alphaCeiling,
+        gear: state.systems.gearDown)
+      let cd = aero.coefficients(mach: mach, alpha: lift.alpha, dynamicPressure: q,
+        gear: state.systems.gearDown).drag * dragGain
+      let slope = i == 0 ? tan(abs(nep.flightPathAngle)) : (h - previousHeight) / dd
+      previousHeight = h
+      energy += reserve * q * aero.referenceArea * cd / (state.mass * g) * dd * hypot(1, slope)
+    }
+    return out
+  }
+
+  // MARK: Update
+
+  func update(_ state: VehicleState, nep: NominalEnergyPoint, liftGain: Double, dragGain: Double,
+              attainableAlphaCeiling: Double?, pitchResponseSeconds: Double?,
+              rollResponseSeconds: Double?) -> GuidanceTarget {
+    let c = configuration, v = c.vehicle, a = state.aerodynamics
+    let g = c.planet.gravitationalParameter / state.position.squaredLength
+    let p = frame.coordinates(of: state.position)
+    let point = p.horizontal
+    let velocity = frame.coordinateVelocity(at: state.position, velocity: state.velocity)
+    let vh = max(1, velocity.length), speed = max(1, a.airspeed)
+    let tau = max(c.guidance.pathLookaheadTime, pitchResponseSeconds ?? 0)
+    let rollTime = max(c.guidance.pathLookaheadTime, rollResponseSeconds ?? 0)
+    let ceiling = rotation.supportedTrimAlpha(state, identifiedCeiling: attainableAlphaCeiling)
+    let energy = p.height + speed * speed / (2 * g)
+    status.energyHeight = energy
+
+    // HAC size: final radius flies the NEP airspeed, the spiral grows so a
+    // full loop's entry radius flies the reference speed there, both at the
+    // uncertainty-reserved bank and never below the configured minimum.
+    prepareGeometry(nep: nep, gravity: g, adapt: status.phase != .headingAlignment)
+    let rf = geometry!.finalRadius, growth = geometry!.growth
+
+    // Ground track for each HAC side and winding (GTP).
+    struct Track {
+      var side: Int; var turn: Double; var range: Double; var tangent: Vector2; var hac: SpiralHAC
+      /// Acquisition turn flown first, at the far end of the track, and its load.
+      var arc = 0.0
+      var arcLoad = 1.0
+    }
+    let acquisitionRadius = turnRadius(speed: vh, gravity: g)
+    func track(side: Int, turn: Double) -> Track? {
+      guard let hac = spiral(side: side, finalRadius: rf, growth: growth, turn: turn) else { return nil }
+      let entry = hac.sample(remainingAngle: turn).position
+      let offset = entry - point
+      let bearing = atan2(velocity.cross(offset), velocity.dot(offset))
+      let leg = Self.acquisitionLeg(distance: offset.length, bearing: bearing, radius: acquisitionRadius,
+        speed: vh, gravity: g)
+      return .init(side: side, turn: turn, range: leg.length + Self.spiralLength(hac, to: turn),
+        tangent: entry, hac: hac, arc: leg.arc, arcLoad: leg.load)
+    }
+    var candidates: [Track] = []
+    for side in [1, -1] {
+      guard let probe = spiral(side: side, finalRadius: rf, growth: growth, turn: 2 * .pi) else { continue }
+      for turn in Self.tangencies(of: probe, from: point, maximumTurn: 2 * .pi) {
+        if let t = track(side: side, turn: turn) { candidates.append(t) }
+      }
+    }
+
+    // On the HAC: follow the measured remaining angle on the latched spiral.
+    if status.phase == .headingAlignment, let current = spiral(side: status.side, finalRadius: rf,
+      growth: growth, turn: max(status.remainingTurn, 1e-3) + .pi / 2) {
+      let turn = current.fittedRemainingAngle(at: point)
+      status.remainingTurn = min(status.remainingTurn, max(0, turn))
+      if let latched = spiral(side: status.side, finalRadius: rf, growth: growth, turn: max(1e-6, status.remainingTurn)) {
+        candidates = [.init(side: status.side, turn: status.remainingTurn,
+          range: Self.spiralLength(latched, to: status.remainingTurn), tangent: point, hac: latched)]
+      }
+    }
+    if candidates.isEmpty, let t = track(side: status.side, turn: max(status.remainingTurn, 1e-3)) {
+      candidates = [t]
+    }
+    guard !candidates.isEmpty else {
+      return .init(angleOfAttack: a.angleOfAttack, bank: 0, desiredSpeed: speed,
+        desiredHeight: p.height + c.runway.elevation)
+    }
+
+    // Reference lines for the latched (or provisional) HAC.
+    func refreshLines(for t: Track) {
+      let range = max(t.range, candidates.map(\.range).max() ?? 0) * 1.25 + c.guidance.finalDistance
+      let turn = (span: (t.range - t.arc)...t.range, load: t.arcLoad)
+      let nominal = makeLine(state: state, nep: nep, maximumRange: range, hac: t.hac, hacTurn: t.turn,
+        acquisition: turn,
+        liftGain: liftGain, dragGain: dragGain, alphaCeiling: ceiling, nominal: true)
+      let minimum = makeLine(state: state, nep: nep, maximumRange: range, hac: t.hac, hacTurn: t.turn,
+        acquisition: turn,
+        liftGain: liftGain, dragGain: dragGain, alphaCeiling: ceiling, nominal: false)
+      lines = (state.time, t.side, t.turn, nominal, minimum)
+    }
+
+    // Selection (overhead default, below). Latched; one low-energy downmode.
+    // The side is latched once chosen (only the downmode changes it); the
+    // winding follows the measured geometry on that side.
+    var selected = lines == nil ? nil : candidates.filter {
+      $0.side == status.side && abs($0.turn - status.remainingTurn) < .pi / 2
+    }.min { abs($0.turn - status.remainingTurn) < abs($1.turn - status.remainingTurn) }
+    // Never jump to another winding: past the tangency, keep this one.
+    if lines != nil, selected == nil, let t = track(side: status.side, turn: max(status.remainingTurn, 1e-3)) {
+      selected = t
+    }
+    if lines == nil || selected == nil {
+      // Overhead by default: the longest track whose nominal energy is met,
+      // else the longest still above its minimum line (the downmode test);
+      // the shortest only when none is.
+      var best: Track?, fallback: Track?
+      for t in candidates.sorted(by: { $0.range > $1.range }) {
+        refreshLines(for: t)
+        if energy >= lines!.nominal.sample(t.range).energy { best = t; break }
+        if fallback == nil, energy >= lines!.minimum.sample(t.range).energy { fallback = t }
+      }
+      selected = best ?? fallback ?? candidates.min { $0.range < $1.range }
+      refreshLines(for: selected!)
+    } else if state.time - lines!.time >= c.guidance.terminalReplanInterval
+      || lines!.side != selected!.side || abs(lines!.turn - selected!.turn) > radians(10) {
+      refreshLines(for: selected!)
+    }
+    debug = candidates.map { "side \($0.side) turn \(degrees($0.turn)) range \($0.range) arc \($0.arc) EN \(lines!.nominal.sample($0.range).energy)" }.joined(separator: "; ") + " acqR \(acquisitionRadius)" // SCRATCH
+    var t = selected!
+    if status.phase != .headingAlignment, !status.downmoded,
+       energy < lines!.minimum.sample(t.range).energy,
+       let shorter = candidates.filter({ $0.range < t.range }).min(by: { $0.range < $1.range }) {
+      status.downmoded = true; t = shorter; refreshLines(for: t)
+    }
+    status.side = t.side; status.remainingTurn = t.turn; status.range = t.range
+    status.finalRadius = rf; status.growth = growth
+    let nominal = lines!.nominal.sample(t.range), minimum = lines!.minimum.sample(t.range)
+    status.nominalEnergy = nominal.energy; status.minimumEnergy = minimum.energy
+    status.insufficientEnergy = energy < minimum.energy
+
+    // Phase transitions (TGTRAN).
+    let toTangent = t.tangent - point
+    let headingError = atan2(velocity.cross(toTangent), velocity.dot(toTangent))
+    // S-turn initiation line (TGTRAN's ES above EN): the nominal's own
+    // margin above the minimum line, mirrored above EN. A smaller excess is
+    // absorbed by q; turning this vehicle is costly, so do not S-turn on it.
+    let sTurnEnergy = nominal.energy + max(0, nominal.energy - minimum.energy)
+    switch status.phase {
+    case .sTurn:
+      if energy <= nominal.energy { status.phase = .acquisition }
+    case .acquisition:
+      // Roll onto the spiral one roll response before its tangent point. An
+      // S-turn turns away, back across the track and realigns: a full
+      // circle of acquisition-radius turning must fit before the tangent.
+      if toTangent.length <= vh * rollTime {
+        status.phase = .headingAlignment
+      } else if energy > sTurnEnergy, toTangent.length > 2 * .pi * acquisitionRadius + vh * rollTime {
+        status.phase = .sTurn
+        sTurnSign = -Double(t.side)
+        if sTurnSign * headingError < 0 && t.turn < .pi / 2 { sTurnSign = -sTurnSign }
+      }
+    case .headingAlignment:
+      break
+    }
+
+    // Lateral (TGPHIC), as lateral acceleration.
+    let support = max(0, (g - state.horizontalSpeed * state.horizontalSpeed / state.position.length)
+      * cos(state.flightPathAngle))
+    var lateral: Double
+    switch status.phase {
+    case .sTurn:
+      lateral = sTurnSign * support * tan(geometryBank)
+    case .acquisition:
+      lateral = 2 * vh * sin(clamp(headingError, -.pi / 2, .pi / 2)) / rollTime
+    case .headingAlignment:
+      let center = Vector2(nepAlong, Double(t.side) * rf)
+      let radial = point - center
+      let r = radial.length, rdot = velocity.dot(radial) / max(1, r)
+      let reference = t.hac.radius(at: t.turn)
+      let rdotReference = -vh * 2 * growth * t.turn / max(1, reference)
+      let omega = 1 / rollTime
+      let centripetal = max(0, vh * vh - rdot * rdot) / max(1, reference)
+      lateral = Double(t.side) * (centripetal + omega * omega * (r - reference) + 2 * omega * (rdot - rdotReference))
+    }
+
+    // Vertical (TGNZC). Track the nominal line's altitude (HREF): energy
+    // above EN then shows as speed, whose drag dissipates it. The q limits
+    // (QBMNNZ/QBMXNZ) become altitude bounds for the vehicle's OWN energy:
+    // never higher than its energy can hold at the front-side (best-L/D) q,
+    // so altitude it cannot pay for is not chased (the 2244 collapse), and
+    // never lower than it holds at the maximum q.
+    let density = max(1e-9, state.atmosphere.density)
+    let turnLoad = 1 / max(0.2, cos(state.aerodynamics.bank))
+    let bestAlpha = aero.bestGlideAlpha(mach: a.mach, maximumAlpha: ceiling, dynamicPressure: a.dynamicPressure,
+      gear: state.systems.gearDown)
+    let bestLift = aero.coefficients(mach: a.mach, alpha: bestAlpha, dynamicPressure: a.dynamicPressure,
+      gear: state.systems.gearDown).lift * liftGain
+    let frontQ = g * turnLoad * state.mass / max(1e-9, aero.referenceArea * bestLift)
+    func height(atDynamicPressure q: Double) -> Double {
+      var lo = 0.0, hi = max(0, energy)
+      for _ in 0..<28 {
+        let h = (lo + hi) / 2
+        let rho = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross, height: h),
+          time: state.time).density
+        if rho * g * (energy - h) > q { lo = h } else { hi = h }
+      }
+      return lo
+    }
+    let frontHeight = height(atDynamicPressure: frontQ)
+    let targetHeight = min(frontHeight, max(nominal.height, height(atDynamicPressure: v.maximumDynamicPressure)))
+    let targetDensity = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross,
+      height: targetHeight), time: state.time).density
+    let commandedQ = targetDensity * g * max(0, energy - targetHeight)
+    status.minimumDynamicPressure = frontQ
+    status.referenceDynamicPressure = commandedQ
+    status.referenceHeight = targetHeight
+    let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
+    let dragAcceleration = a.measuredForces ? a.drag / max(1, state.mass)
+      : aero.coefficients(mach: a.mach, alpha: a.angleOfAttack, dynamicPressure: a.dynamicPressure,
+          gear: state.systems.gearDown).drag * a.dynamicPressure * aero.referenceArea / max(1, state.mass)
+    // Feedforward: HREF's own descent while tracking it (range closes at
+    // the ground speed), else the steady glide at the present drag.
+    let tracksReference = targetHeight == nominal.height
+    let feedforward = tracksReference ? -vh * lines!.nominal.slope(t.range)
+      : -speed * clamp(dragAcceleration / g, 0, 1)
+    let desiredRate = feedforward + (targetHeight - p.height) / (2 * tau)
+    let gamma = clamp(asin(clamp(desiredRate / speed, -1, 1)), -glide, glide)
+    var vertical = support + speed * (gamma - state.flightPathAngle) / tau
+    // Hard q bounds (QBMNNZ/QBMXNZ) for a state far off the target.
+    let floorSpeed = sqrt(2 * frontQ / density)
+    let ceilingSpeed = sqrt(2 * v.maximumDynamicPressure / density)
+    if speed < floorSpeed {
+      vertical = min(vertical, max(0, support - speed * asin(clamp((floorSpeed - speed) / (g * tau), 0, 1)) / tau))
+    } else if speed > ceilingSpeed {
+      vertical = max(vertical, support + speed * asin(clamp((speed - ceilingSpeed) / (g * tau), 0, 1)) / tau)
+    }
+
+    // One lift vector: vertical first, lateral from what remains.
+    let floorAlpha = min(ceiling, max(0, v.minimumAngleOfAttack))
+    let maximumLift = min(v.maximumLoadFactor * 9.80665, aero.liftSolution(acceleration: 0, mass: state.mass,
+      dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
+      gear: state.systems.gearDown).maximumAcceleration * liftGain * (1 - v.aerodynamicUncertainty))
+    vertical = clamp(vertical, 0, maximumLift)
+    let lateralLimit = min(sqrt(max(0, maximumLift * maximumLift - vertical * vertical)),
+      vertical * tan(v.maximumBank))
+    lateral = clamp(lateral, -lateralLimit, lateralLimit)
+    let total = hypot(vertical, lateral)
+    let solution = aero.liftSolution(acceleration: total / max(1e-9, liftGain), mass: state.mass,
+      dynamicPressure: a.dynamicPressure, mach: a.mach, minimumAlpha: floorAlpha, maximumAlpha: ceiling,
+      gear: state.systems.gearDown)
+    let alpha = solution.alpha
+    let bank = total > 0 ? atan2(lateral, vertical) : 0
+    let gear = state.systems.gearDown || p.height <= (c.guidance.gearDeploymentAltitude ?? 1500)
+    return .init(angleOfAttack: alpha, bank: bank,
+      desiredSpeed: sqrt(2 * commandedQ / density),
+      desiredHeight: targetHeight + c.runway.elevation, desiredFlightPath: gamma,
+      gearDown: gear, speedbrakeFraction: nil)
+  }
+
+  /// Acquisition to a point at `distance` and relative `bearing`: the
+  /// geometry-bank turn then straight (Dubins CS), or, for a point inside
+  /// that turn circle (nearly ahead at high speed), the single gentler arc
+  /// through it, which is what the bank law actually flies. Returns the
+  /// path length, its turning arc and that arc's load factor.
+  static func acquisitionLeg(distance d: Double, bearing: Double, radius r: Double, speed: Double,
+                             gravity g: Double) -> (length: Double, arc: Double, load: Double) {
+    let beta = abs(wrapAngle(bearing))
+    let tx = d * cos(beta), ty = d * sin(beta)
+    if r > 0, hypot(tx, ty - r) <= r, beta > 1e-9, beta < .pi / 2 {
+      let radius = d / (2 * sin(beta)), arc = 2 * beta * radius
+      return (arc, arc, hypot(1, speed * speed / (g * radius)))
+    }
+    let leg = turnThenStraight(distance: d, bearing: bearing, radius: r)
+    return (leg.length, abs(leg.turn) * r, hypot(1, speed * speed / (g * max(1, r))))
+  }
+
+  /// Turn at `radius` then straight to a point at `distance` and relative
+  /// bearing (Dubins CS); a point inside the turn circle costs a half turn.
+  static func turnThenStraight(distance d: Double, bearing: Double, radius r: Double)
+    -> (length: Double, turn: Double) {
+    let beta = abs(wrapAngle(bearing)), sign: Double = bearing < 0 ? -1 : 1
+    guard r > 0, r.isFinite else { return (d, 0) }
+    let tx = d * cos(beta), ty = d * sin(beta)
+    let q = hypot(tx, ty - r)
+    guard q > r else { return (d + .pi * r, sign * .pi) }
+    let theta = atan2(ty - r, tx)
+    let tangentAngle = theta - acos(r / q)
+    var arc = (tangentAngle + .pi / 2).truncatingRemainder(dividingBy: 2 * .pi)
+    if arc < 0 { arc += 2 * .pi }
+    return (r * arc + sqrt(q * q - r * r), sign * arc)
+  }
+}
+
+/// A TAEM reference tabulated against predicted range to the NEP.
+struct TAEMEnergyLine: Sendable {
+  private(set) var range: [Double] = []
+  private(set) var energy: [Double] = []
+  private(set) var height: [Double] = []
+  private(set) var dynamicPressure: [Double] = []
+  private(set) var frontDynamicPressure: [Double] = []
+  mutating func append(range d: Double, energy e: Double, height h: Double, dynamicPressure q: Double,
+                       frontDynamicPressure f: Double) {
+    range.append(d); energy.append(e); height.append(h); dynamicPressure.append(q); frontDynamicPressure.append(f)
+  }
+  struct Sample { var energy, height, dynamicPressure, frontDynamicPressure: Double }
+  private func bracket(_ d: Double) -> (Int, Double) {
+    guard range.count > 1 else { return (0, 0) }
+    let step = range[1] - range[0]
+    let i = min(range.count - 2, max(0, Int(d / step)))
+    return (i, (d - range[i]) / step)
+  }
+  /// Linear interpolation; beyond the table the last segment extrapolates.
+  func sample(_ d: Double) -> Sample {
+    let (i, u) = bracket(d)
+    func f(_ x: [Double]) -> Double { x[i] + (x[min(i + 1, x.count - 1)] - x[i]) * u }
+    return .init(energy: f(energy), height: f(height), dynamicPressure: f(dynamicPressure),
+      frontDynamicPressure: f(frontDynamicPressure))
+  }
+  func energyIndex(atLeast e: Double) -> Int? { energy.firstIndex { $0 >= e } }
+  func rangeValue(_ i: Int) -> Double { range[i] }
+  func slope(_ d: Double) -> Double {
+    let (i, _) = bracket(d)
+    guard range.count > 1 else { return 0 }
+    return (height[i + 1] - height[i]) / (range[i + 1] - range[i])
+  }
+}
+
+/// Offline placement of the TAEM interface for configuration (see
+/// `TAEMGuidanceEngine.nominalInterface`).
+public enum TAEMInterfacePlacement {
+  public static func solve(configuration c: MissionConfiguration, atmosphere: AtmosphericModelEngine,
+                           aerodynamics: AerodynamicsEngine) throws -> String {
+    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
+    let e = c.entrySettings
+    let along = -e.terminalTargetRange, height = e.terminalTargetAltitude - c.runway.elevation
+    let position = frame.position(along: along, cross: 0, height: height)
+    let sound = atmosphere.sample(position: position, time: 0).speedOfSound
+    let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
+    let forward = frame.direction(at: .init(along, 0), tangent: .init(1, 0))
+    let velocity = (forward * cos(glide) - position.normalized * sin(glide)) * e.terminalTargetMach * sound
+    let state = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+      .observe(.init(time: 0, position: position, velocity: velocity,
+        attitude: .windAttitude(position: position, airVelocity: velocity, alpha: e.nominalAlpha, bank: 0),
+        mass: c.vehicle.nominalMass))
+    guard let nep = NominalEnergyPointSolver(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+      .solve(from: state) else { throw FlightError.invalidConfiguration("No NEP solution") }
+    let engine = TAEMGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    guard let result = engine.nominalInterface(state: state, nep: nep) else {
+      throw FlightError.invalidConfiguration("Interface energy not reached on the nominal TAEM line")
+    }
+    let straight = result.range - result.hacLength
+    return String(format: "nominal TAEM range %.0f m (full-loop HAC %.0f m); taemInterfaceRange %.0f m (NEP %.0f m/s at %.0f m, interface q %.0f Pa)",
+      result.range, result.hacLength, straight + c.guidance.finalDistance, nep.airspeed, nep.height,
+      state.aerodynamics.dynamicPressure)
+  }
+}

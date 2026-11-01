@@ -195,6 +195,18 @@ struct LandingCLI {
         .forecast(from: state, rangeMultiplier: option("--range-multiplier").flatMap(Double.init) ?? 1.0,
           crossAim: option("--cross-aim").flatMap(Double.init) ?? 0.0)
       try output(forecast)
+    case "taem-interface":
+      // Offline: place the TAEM interface on this vehicle's nominal TAEM
+      // energy line (configured interface altitude and Mach, full overhead
+      // HAC). Prints the runway range to configure as taemInterfaceRange.
+      guard let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("taem-interface requires --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self,
+        from: Data(contentsOf: URL(fileURLWithPath: path)))
+      let atm = try AtmosphericModelEngine(planet: c.planet)
+      let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+      print(try TAEMInterfacePlacement.solve(configuration: c, atmosphere: atm, aerodynamics: aero))
     case "entry-plan":
       // Offline diagnostic of the exact MM304 proposal built from a recorded
       // VehicleState. Does not connect to or control KSP.

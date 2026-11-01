@@ -29,14 +29,9 @@ final class EntryCaptureObjectivePlanner {
     let glide = c.guidance.taemGlideAngle ?? c.guidance.outerGlideAngle
     let evaluator = TAEMCaptureEvaluator(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
     let physics = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
-    // MM304 delivers to the NEP OVERHEAD capture region: the NEP station on
-    // the selected centerline plus a compact HAC beside it (terminal capture
-    // range). The previous objective added a straight-in descent of the whole
-    // capture altitude on the TAEM glide slope, (h - h_NEP)/tan(gamma_TAEM),
-    // which at 25 km ASL moved the inlet ~56 km up-range and made MM304 hand
-    // a distant straight-in waypoint to MM305. Altitude above the NEP is
-    // dissipated on the HAC overhead; the HAC search still prices it.
-    func preferredRange(_ altitude: Double) -> Double { c.nepOverheadCaptureRange }
+    // MM304 delivers to the configured TAEM interface (Shuttle: Mach 2.5 at
+    // its range-to-go). TAEM's own ground track dissipates what remains.
+    func preferredRange(_ altitude: Double) -> Double { c.taemInterfaceRange }
     var best: (EntryCaptureObjective, Double)?
     for altitude in [c.mm304DeliveryAltitude] {
       let height = altitude-c.runway.elevation
@@ -81,7 +76,7 @@ final class EntryCaptureObjectivePlanner {
       }
     }
     // An unsuccessful preview is not a landing certificate. Steer toward the
-    // same NEP overhead region while the live planner searches for a route.
+    // same TAEM interface; TAEM does not need a preview to take over.
     let fallbackRange = preferredRange(c.mm304DeliveryAltitude)
     let fallbackCross = clamp(e.handoffCross+crossAim,
       -fallbackRange+1, fallbackRange-1)

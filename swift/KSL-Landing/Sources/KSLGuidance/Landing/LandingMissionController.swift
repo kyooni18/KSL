@@ -10,7 +10,9 @@ public final class LandingMissionController {
   private let planner: HACPlanningEngine
   private let tracker: PathTrackingEngine
   private let approach: ApproachGuidanceEngine
-  private let terminalRecovery: TerminalRecoveryGuidanceEngine
+  private let taem: TAEMGuidanceEngine
+  private let nepSolver: NominalEnergyPointSolver
+  private var nominalEnergyPoint: (time: Double, point: NominalEnergyPoint?)?
   private let frame: RunwayFrame
   private let touchdown: TouchdownMonitor
   private let authority: AerodynamicAuthorityEstimator
@@ -40,7 +42,7 @@ public final class LandingMissionController {
     incidence.combined(with: controlFeedback?.trimEvidence == .identified ? controlFeedback?.trimAlphaCeiling : nil)
   }
   public var measuredAttainableAlphaCeiling: Double? { incidence.ceiling }
-  public private(set) var lastRecoveryMode: TerminalRecoveryMode?
+  public var taemStatus: TAEMStatus { taem.status }
   public let externalPlanning: Bool
   public private(set) var lastAdmission: MM305Admission?
   /// MM305's own physical verdict on the last searched state.
@@ -58,7 +60,7 @@ public final class LandingMissionController {
   public func invalidateDynamics(at state: VehicleState) {
     authority.reset(); entry.invalidatePrediction(); approach.invalidatePrediction()
     incidence.reset()
-    terminalRecovery.invalidatePrediction()
+    nominalEnergyPoint = nil
     controlSnapshot = nil; controlFeedback = nil
     lastPlanningResult = nil; lastAdmission = nil; lastPlanAttempt = -.infinity
     lastCapture = nil; advisoryPlan = nil; publishedTerminalEpoch = nil
@@ -86,7 +88,8 @@ public final class LandingMissionController {
     tracker = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     approach = .init(configuration: configuration, atmosphere: atmosphere,
       aerodynamics: aerodynamics, externalPlanning: externalPlanning)
-    terminalRecovery = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    taem = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
+    nepSolver = .init(configuration: configuration, atmosphere: atmosphere, aerodynamics: aerodynamics)
     authority = .init(model: aerodynamics)
     maximumGlideRatio = aerodynamics.maximumLiftToDragRatio
     frame = .init(runway: configuration.runway, planet: configuration.planet)
@@ -94,23 +97,26 @@ public final class LandingMissionController {
   }
   private var terminalSearchArmed = false
   private var forcedTerminalOwnership = false
-  /// MM304 owns the vehicle until it reaches the NEP overhead capture region
-  /// (an admitted plan transfers earlier through admission). Crossing the
-  /// upper MM305 altitude is NOT a handoff: that is where MM304 is still far
-  /// up-range. MM304 cannot keep authority to the ground either:
-  /// mm304HandoffDeadlineAltitude is the irrevocable deadline.
+  /// Shuttle TAEM is initiated on velocity (JSC-16522): on its drag profile
+  /// the orbiter reaches the interface velocity at the interface energy.
+  /// MM304 delivers that ENERGY (interface altitude at interface Mach); this
+  /// vehicle decelerates through Mach 2.5 above it, 60+ km out, so a bare
+  /// Mach gate hands over early. Hand over at the interface energy, at the
+  /// bottom of the configured Mach window, or at the altitude deadline.
+  /// Crossing an altitude far up-range is not a handoff.
   public static func terminalHandoffDue(phase: MissionPhase, plan: TerminalPlan?,
     state: VehicleState, configuration c: MissionConfiguration) -> Bool {
     guard phase == .entry && plan == nil && state.verticalSpeed < 0 else { return false }
-    if state.position.length - c.planet.radius <= c.mm304HandoffDeadlineAltitude { return true }
-    let frame = RunwayFrame(runway: c.runway, planet: c.planet)
-    let p = frame.coordinates(of: state.position)
-    // NEP overhead region: the NEP station plus a compact HAC beside it.
-    let nep = Vector2(-c.guidance.finalDistance, c.entrySettings.handoffCross)
-    // MM304's objective lies on this region's edge; its own delivery
-    // tolerance is included so arriving on the objective hands over.
-    return (p.horizontal - nep).length
-      <= c.nepOverheadCaptureRange - c.guidance.finalDistance + c.entrySettings.handoffRadius
+    let altitude = state.position.length - c.planet.radius
+    if altitude <= c.mm304HandoffDeadlineAltitude { return true }
+    let a = state.aerodynamics
+    guard a.dynamicPressure > 0, a.mach > 0 else { return false }
+    if a.mach <= c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth { return true }
+    let g = c.planet.gravitationalParameter / state.position.squaredLength
+    let sound = a.airspeed / a.mach
+    let interfaceSpeed = c.mm304DeliveryMach * sound
+    return altitude + a.airspeed * a.airspeed / (2 * g)
+      <= c.mm304DeliveryAltitude + interfaceSpeed * interfaceSpeed / (2 * g)
   }
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let cadence = configuration.guidance.terminalReplanInterval
@@ -157,7 +163,8 @@ public final class LandingMissionController {
     return context
   }
   private func terminalSearchDue(_ state: VehicleState) -> Bool {
-    [.entry, .acquisition, .headingAlignment].contains(phase) && !hacCompleted
+    // HAC previews advise MM304 only; TAEM owns MM305 without a certificate.
+    phase == .entry && !hacCompleted
       && (plan != nil || inTerminalSearchEnvelope(state))
       && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
   }
@@ -230,27 +237,8 @@ public final class LandingMissionController {
     let admission = MM305Admission.evaluate(state, plan: candidate,
       configuration: configuration, availableLift: available)
     lastAdmission = admission
-    // Only an ADMITTED plan (feasible and closed-loop qualified through Final,
-    // flare, touchdown and rollout) may own the vehicle, in any phase. An
-    // unqualified candidate stays an advisory: committing it made the tracker
-    // chase unattainable lift on 40-km "acquisition" geometry in the 1 Nov
-    // live flight. Without admission MM305 flies its no-plan recovery, and
-    // an already committed plan is kept only while it is still flown and
-    // its latest search verdict remains feasible.
-    if !admission.accepted {
-      if plan != nil && (!tracksCurrentRoute || !verdict.feasible) {
-        plan = nil; tracker.reset(); hacEstablished = false
-        terminalRecovery.invalidatePrediction()
-      }
-      return
-    }
-    guard candidate.stations.count >= 2, admission.planAge >= 0,
-      admission.planAge <= 2 * configuration.guidance.terminalReplanInterval,
-      candidate.stations.allSatisfy({ $0.distance.isFinite && $0.position.x.isFinite
-        && $0.position.y.isFinite && $0.height.isFinite && $0.slope.isFinite }) else { return }
-    if plan == nil { hacCompleted = false }
-    if !tracksCurrentRoute { hacEstablished = false }
-    plan = candidate; activePlanDynamicsCurrent = true; activeReferenceCache = nil; tracker.reset()
+    // NASA TAEM: a HAC preview never takes control. MM304 hands over on
+    // Mach and TAEM regenerates its ground track every cycle.
   }
   /// Keep the active route and target limiter, but restart the sample clock.
   public func resumeAfterTelemetryGap() { previousTime = nil }
@@ -346,6 +334,7 @@ public final class LandingMissionController {
     let p = frame.coordinates(of: state.position)
     if Self.terminalHandoffDue(phase: phase, plan: plan, state: state, configuration: configuration) {
       phase = .acquisition
+      taem.reset()
       forcedTerminalOwnership = true
       terminalSearchArmed = true
       lastPlanAttempt = -.infinity
@@ -385,7 +374,7 @@ public final class LandingMissionController {
         pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
         identifiedTrimCeiling: attainableAlphaCeiling)
     } else {
-      if !externalPlanning && !hacCompleted && (plan != nil || inTerminalSearchEnvelope(state))
+      if !externalPlanning && phase == .entry && !hacCompleted && inTerminalSearchEnvelope(state)
         && state.time - lastPlanAttempt >= configuration.guidance.terminalReplanInterval
       {
         let context = hacContext()
@@ -407,76 +396,40 @@ public final class LandingMissionController {
         lastPlanAttempt = state.time
         acceptTerminal(result, state: state)
       }
-      if let committed = plan {
-        let (target, reference) = tracker.update(
-          state, plan: committed, liftEffectiveness: authority.liftEffectiveness,
-          identifiedTrimCeiling: attainableAlphaCeiling,
-          rollResponseSeconds: controlFeedback?.rollResponseSeconds, pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
-          referenceDynamicsCurrent: activePlanDynamicsCurrent)
-        let onReference = tracksCurrentRoute
-        if reference.segment == .spiral && onReference { hacEstablished = true }
-        // A reference label cannot bypass actual final capture. Match the
-        // gate already used by TerminalTrajectoryEvaluator.
-        if reference.segment == .final && approach.canCapture(state) {
+      if phase == .acquisition || phase == .headingAlignment {
+        if state.time - (nominalEnergyPoint?.time ?? -.infinity) >= configuration.guidance.terminalReplanInterval {
+          // The NEP is a runway-fixed station; a refresh that fails from a
+          // transient state (an S-turn bank) keeps the last solved one.
+          nominalEnergyPoint = (state.time, nepSolver.solve(from: state, trimAlphaCeiling: attainableAlphaCeiling)
+            ?? nominalEnergyPoint?.point)
+        }
+        let nepAlong = -configuration.guidance.finalDistance
+        if let nep = nominalEnergyPoint?.point, !(taem.status.phase == .headingAlignment && p.along >= nepAlong) {
+          let target = taem.update(state, nep: nep, liftGain: authority.liftEffectiveness,
+            dragGain: authority.dragEffectiveness, attainableAlphaCeiling: attainableAlphaCeiling,
+            pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
+            rollResponseSeconds: controlFeedback?.rollResponseSeconds)
+          let s = taem.status
+          var violations: [ConstraintViolation] = []
+          if s.insufficientEnergy {
+            violations.append(.init(.insufficientEnergy,
+              "TAEM energy below the best-L/D line to the NEP; flying the front-side q bound",
+              value: s.energyHeight, limit: s.minimumEnergy))
+          }
+          raw = .init(phase: s.phase == .headingAlignment ? .headingAlignment : .acquisition,
+            target: target, violations: violations, pathRemaining: s.range,
+            diagnostic: "TAEM phase=\(s.phase.rawValue) side=\(s.side) hacTurn=\(degrees(s.remainingTurn)) deg rpred=\(s.range) m E=\(s.energyHeight) m EN=\(s.nominalEnergy) m EMIN=\(s.minimumEnergy) m href=\(s.referenceHeight) m qref=\(s.referenceDynamicPressure) Pa qmin=\(s.minimumDynamicPressure) Pa rf=\(s.finalRadius) m growth=\(s.growth) m/rad2 downmoded=\(s.downmoded)")
+        } else {
+          // Past the NEP on the HAC without a Final capture (or no solved
+          // NEP): only the Final law can finish the landing; it says so.
           hacCompleted = true
           raw = approach.update(
             state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
             pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
             identifiedTrimCeiling: attainableAlphaCeiling)
-        } else {
-          raw = .init(
-            phase: reference.segment == .spiral && onReference ? .headingAlignment : .acquisition, target: target,
-            violations: committed.stressCases.contains(where: { !$0.feasible })
-              ? [
-                .init(
-                  .modelUncertainty,
-                  "Nominal terminal route fails at least one configured aerodynamic stress case; this is not a robust-feasibility certificate"
-                )
-              ] : [],
-            planID: committed.identifier, pathRemaining: committed.length - reference.distance)
-        }
-        if reference.segment == .final && !hacCompleted {
           raw.violations.append(.init(.invalidGeometry,
-            "Final reference reached without measured position/heading/energy capture; terminal recovery continues"))
-        }
-        if tracker.trackingError > max(1500, state.horizontalSpeed * 8) {
-          if poorTrackingSince == nil { poorTrackingSince = state.time }
-          if state.time - poorTrackingSince! > 8 && p.height > 5000 {
-            lastPlanAttempt = -.infinity
-            raw.violations.append(.init(.modelUncertainty,
-              "HAC tracking error persists; retained path progress and requested a fresh acquisition"))
-            poorTrackingSince = nil
-          }
-        } else {
-          poorTrackingSince = nil
-        }
-      } else if phase == .acquisition || phase == .headingAlignment {
-        // MM305 already owns the vehicle even when no complete route was
-        // admitted. Continue planning but fly a measured-force final-alignment
-        // recovery, never an unqualified HAC or the obsolete MM304 drag law.
-        let recovery = terminalRecovery.update(state, attainableAlphaCeiling: attainableAlphaCeiling,
-          pitchResponseSeconds: controlFeedback?.pitchResponseSeconds)
-        lastRecoveryMode = recovery.mode
-        var violations: [ConstraintViolation] = [.init(.modelUncertainty,
-          "MM305 no-plan recovery (\(recovery.mode.rawValue)); no admitted terminal plan, runway capture is NOT qualified")]
-        if recovery.mode == .runwayUnreachable {
-          violations.append(.init(.insufficientEnergy,
-            "Runway unreachable: minimum-loss continuation exceeds modeled glide range; flying best glide",
-            value: recovery.requiredRange, limit: recovery.nominalRange))
-        }
-        let diagnostic = "MM305 no-plan recovery mode=\(recovery.mode.rawValue) aimAlong=\(recovery.aimAlong) m path=\(recovery.requiredRange) m glideRange=\(recovery.availableRange) m nominalRange=\(recovery.nominalRange) m energyHeight=\(recovery.energyHeight) m turnRadius=\(recovery.turnRadius) m lateral demand=\(recovery.lateralDemand) m/s2, available=\(recovery.lateralAvailable) m/s2, selected drag=\(recovery.selectedDrag) m/s2"
-        if recovery.mode != .alignment && p.along >= -configuration.guidance.finalDistance {
-          // Inside the Final region on a direct continuation: the Final,
-          // flare, touchdown and rollout law is the only terminal law that
-          // can finish the landing. Its capture is unqualified, and said so.
-          raw = approach.update(
-            state, previousPhase: phase, liftEffectiveness: authority.liftEffectiveness, dragEffectiveness: authority.dragEffectiveness,
-            pitchResponseSeconds: controlFeedback?.pitchResponseSeconds,
-            identifiedTrimCeiling: attainableAlphaCeiling)
-          raw.violations += violations
-          raw.diagnostic = diagnostic
-        } else {
-          raw = .init(phase: .acquisition, target: recovery.target, violations: violations, diagnostic: diagnostic)
+            nominalEnergyPoint?.point == nil ? "No solved NEP; Final law flies without TAEM references"
+              : "HAC ended without measured Final capture; Final law continues unqualified"))
         }
       } else {
         let target = entry.update(state, synchronousPlanning: !externalPlanning,
@@ -555,7 +508,7 @@ public final class LandingMissionController {
     d.actualRunwayRange = frame.distance(from: state.position, to: frame.origin)
     d.plannedCrossAim = entry.crossAim
     if let nep = (plan ?? advisoryPlan)?.nominalEnergyPoint ?? lastPlanningResult?.nominalEnergyPoint
-      ?? terminalRecovery.currentNominalEnergyPoint {
+      ?? nominalEnergyPoint?.point {
       d.nominalEnergyAlong = nep.along; d.nominalEnergyHeight = nep.height
       d.nominalEnergyAirspeed = nep.airspeed; d.nominalEnergyFlightPath = nep.flightPathAngle
       d.nominalEnergyPredictedTouchdownSpeed = nep.predictedTouchdownSpeed

@@ -22,7 +22,7 @@ public enum RunwayApproachSelector {
   public static func assess(_ state: VehicleState, configuration c: MissionConfiguration)
     -> RunwayApproachAssessment {
     let frame = RunwayFrame(runway: c.runway, planet: c.planet)
-    let inletAlong = c.nepOverheadCaptureAlong
+    let inletAlong = c.taemInterfaceAlong
     let inletCross = c.entrySettings.handoffCross
     let pInlet = frame.position(along: inletAlong, cross: inletCross,
       height: c.mm304DeliveryAltitude - c.runway.elevation)

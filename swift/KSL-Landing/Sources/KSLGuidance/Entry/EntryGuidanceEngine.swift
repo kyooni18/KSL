@@ -119,7 +119,7 @@ public final class EntryGuidanceEngine {
   /// A common, dimensionless runway residual for ranking unpriced failures.
   static func fallbackDeliveryCost(along: Double, cross: Double,
                                    configuration c: MissionConfiguration) -> Double {
-    hypot(along-c.nepOverheadCaptureAlong, cross-c.entrySettings.handoffCross)
+    hypot(along-c.taemInterfaceAlong, cross-c.entrySettings.handoffCross)
       / max(1, c.entrySettings.terminalTargetRange)
   }
 
