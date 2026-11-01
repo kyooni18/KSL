@@ -10,6 +10,13 @@ final class PhysicsTests: XCTestCase {
     XCTAssertEqual(a.sample(altitude: 26977.92).pressure, 690.5929, accuracy: 1e-5)
     XCTAssertEqual(a.sample(altitude: 70_000).density, 0)
     XCTAssertGreaterThan(a.sample(altitude: 69_000).density, 0)
+    // The q limiter uses the local gradient, including temperature. Check
+    // it against the same unmodified Kerbin curves in the entry region.
+    let h = 25_000.0, dh = 0.1
+    let numerical = (log(a.sample(altitude: h + dh).density)
+      - log(a.sample(altitude: h - dh).density)) / (2 * dh)
+    XCTAssertEqual(a.logDensityAltitudeGradient(position: .init(a.planet.radius + h, 0, 0), time: 0),
+      numerical, accuracy: 1e-10)
     XCTAssertNotEqual(
       a.sample(altitude: 1000, latitude: 0).temperature,
       a.sample(altitude: 1000, latitude: radians(70)).temperature)

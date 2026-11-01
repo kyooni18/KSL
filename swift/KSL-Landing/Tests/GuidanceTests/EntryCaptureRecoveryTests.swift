@@ -107,6 +107,12 @@ final class EntryCaptureRecoveryTests: XCTestCase {
     engine.considerTerminal(candidate, deficit: .none)
     _ = engine.update(state, synchronousPlanning: false)
     XCTAssertEqual(engine.diagnostics.terminalSteeringActive, true)
+    XCTAssertEqual(engine.diagnostics.energyBudgetEndpoint, "entry-objective",
+      "Terminal steering advice must not spend the interface energy reserved for TAEM")
+    let objective = EntryCaptureObjective.seed(configuration: c, atmosphere: atmosphere,
+      frame: frame, crossAim: engine.crossAim, time: state.time)
+    XCTAssertEqual(try XCTUnwrap(engine.diagnostics.captureSpecificEnergy),
+      objective.specificEnergy(configuration: c), accuracy: 1e-6)
   }
 
   func testReciprocalRunwayHeadingActuallyAlignsWithEastboundEntry() {

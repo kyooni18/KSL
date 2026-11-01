@@ -14,6 +14,19 @@ public struct HermiteCurve: Sendable {
     else { throw FlightError.invalidConfiguration("Invalid atmosphere FloatCurve") }
     keys = rows.map { .init(x: $0[0], y: $0[1], incoming: $0[2], outgoing: $0[3]) }
   }
+  /// Exact derivative of the same Hermite interpolant used by `value`.
+  public func derivative(at x: Double) -> Double {
+    guard x > keys[0].x, x < keys[keys.count - 1].x else { return 0 }
+    var low = 0, high = keys.count - 1
+    while high - low > 1 {
+      let mid = (low + high) / 2
+      if keys[mid].x <= x { low = mid } else { high = mid }
+    }
+    let a = keys[low], b = keys[high], dx = b.x - a.x
+    let t = (x - a.x) / dx
+    return (6*t*t - 6*t) * a.y / dx + (3*t*t - 4*t + 1) * a.outgoing
+      + (-6*t*t + 6*t) * b.y / dx + (3*t*t - 2*t) * b.incoming
+  }
   public func value(at x: Double) -> Double {
     if x <= keys[0].x { return keys[0].y }
     if x >= keys[keys.count - 1].x { return keys[keys.count - 1].y }
@@ -81,6 +94,22 @@ public final class AtmosphericModelEngine: Sendable {
     guard correction.observedAt != nil, correction.densityScale.isFinite, correction.densityScale > 0,
       correction.soundSpeedScale.isFinite, correction.soundSpeedScale > 0 else { return self }
     return .init(copy: self, correction: correction)
+  }
+  /// d ln(rho) / dh (1/m), at fixed latitude, longitude and time.
+  /// Includes both pressure and temperature gradients of the actual Kerbin
+  /// curves; a constant exponential scale height is not assumed.
+  public func logDensityAltitudeGradient(position: Vector3, time: Double) -> Double {
+    let geo = GeodeticPosition(position: position, radius: planet.radius), h = geo.altitude
+    guard h > 0, h < planet.atmosphereTop else { return 0 }
+    let p = pressure.value(at: h)
+    guard p > 0 else { return 0 }
+    let solarHour = geo.longitude + (planet.rotationRate - 2 * .pi / 9_203_544.61750141) * time - 3.14000010490417
+    let illumination = 0.5 * cos(solarHour - .pi / 4) + 0.5
+    let bias = latitudeBias.value(at: abs(degrees(geo.latitude)))
+      + latitudeSun.value(at: abs(degrees(geo.latitude))) * illumination
+    let t = temperature.value(at: h) + sunMultiplier.value(at: h) * bias
+    let dt = t > 1 ? temperature.derivative(at: h) + sunMultiplier.derivative(at: h) * bias : 0
+    return pressure.derivative(at: h) / p - dt / max(1, t)
   }
   public func sample(position: Vector3, time: Double) -> AtmosphericState {
     let geo = GeodeticPosition(position: position, radius: planet.radius)

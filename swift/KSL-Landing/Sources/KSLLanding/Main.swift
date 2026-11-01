@@ -197,8 +197,8 @@ struct LandingCLI {
       try output(forecast)
     case "taem-interface":
       // Offline: place the TAEM interface on this vehicle's nominal TAEM
-      // energy line (configured interface altitude and Mach, full overhead
-      // HAC). Prints the runway range to configure as taemInterfaceRange.
+      // energy line at configured Mach. Derives altitude, speed, q and
+      // range together; reports a straight-in downmode if overhead fails.
       guard let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("taem-interface requires --configuration")
       }

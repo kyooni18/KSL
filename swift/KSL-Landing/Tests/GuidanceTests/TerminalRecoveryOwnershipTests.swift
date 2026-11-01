@@ -90,6 +90,11 @@ final class TerminalRecoveryOwnershipTests: XCTestCase {
     XCTAssertEqual(solution.phase, .acquisition)
     XCTAssertNil(solution.planID, "A fallback cannot invent a certified HAC")
     XCTAssertTrue(solution.diagnostic.contains("TAEM phase="), "TAEM owns MM305 without a certificate")
+    let forecast = EntryCaptureForecaster(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero).forecast(from: state)
+    XCTAssertTrue(forecast.reachedTerminalRegion)
+    XCTAssertEqual(forecast.terminalTime, state.time, accuracy: 1e-9,
+      "Forecast must stop at the live ownership boundary even without a qualified route")
   }
 
   func testSustainedPitchSaturationBoundsThenReleasesAttainableAoA() {

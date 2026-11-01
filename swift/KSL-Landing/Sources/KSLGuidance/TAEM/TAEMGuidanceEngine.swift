@@ -13,6 +13,7 @@ public struct TAEMStatus: Codable, Sendable {
   public var remainingTurn = 0.0
   /// Predicted ground track to the NEP (m), RPRED.
   public var range = 0.0
+  /// Exact rotating energy relative to runway, divided by fixed runway gravity (m).
   public var energyHeight = 0.0
   /// Nominal (EN) and minimum, best-L/D (MEP-like) energy at `range` (m).
   public var nominalEnergy = 0.0
@@ -55,7 +56,9 @@ final class TAEMGuidanceEngine {
   private let aero: AerodynamicsEngine
   private let frame: RunwayFrame
   private let rotation: RotationalDynamicsEngine
+  private let energyModel: RunwayEnergy
   private(set) var status = TAEMStatus()
+  private(set) var interfaceFailure: String?
   var debug = "" // SCRATCH
   var debugLines: String { guard let l = lines else { return "" }; return stride(from: 0.0, through: 60000, by: 4000).map { d in let n = l.nominal.sample(d), m = l.minimum.sample(d); return String(format: "%.0f: EN %.0f h %.0f q %.0f | EMIN %.0f h %.0f q %.0f", d, n.energy, n.height, n.dynamicPressure, m.energy, m.height, m.dynamicPressure) }.joined(separator: "\n") } // SCRATCH
   private var geometry: (side: Int, finalRadius: Double, growth: Double, turn: Double)?
@@ -66,6 +69,7 @@ final class TAEMGuidanceEngine {
   init(configuration: MissionConfiguration, atmosphere: AtmosphericModelEngine, aerodynamics: AerodynamicsEngine) {
     self.configuration = configuration; self.atmosphere = atmosphere; aero = aerodynamics
     frame = .init(runway: configuration.runway, planet: configuration.planet)
+    energyModel = .init(configuration: configuration)
     rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
   }
 
@@ -82,6 +86,21 @@ final class TAEMGuidanceEngine {
     speed * speed / (gravity * tan(max(1e-3, geometryBank)))
   }
   private var nepAlong: Double { -configuration.guidance.finalDistance }
+  private func referencePosition(_ height: Double) -> Vector3 {
+    frame.position(along: nepAlong, cross: 0, height: height)
+  }
+  private func referenceSpeedSquared(energy: Double, height: Double) -> Double {
+    energyModel.speedSquared(height: energy, position: referencePosition(height))
+  }
+  private func gravity(atHeight height: Double) -> Double {
+    configuration.planet.gravitationalParameter / referencePosition(height).squaredLength
+  }
+  /// The reference is an atmospheric, still-air trajectory. At its upper
+  /// root bound density is zero; do not assume geometric h <= energy height
+  /// when gravity and centrifugal potential vary with altitude.
+  private var maximumReferenceHeight: Double {
+    configuration.planet.atmosphereTop - configuration.runway.elevation
+  }
 
   /// Spiral length from remaining angle `theta` to the NEP.
   static func spiralLength(_ s: SpiralHAC, to theta: Double) -> Double {
@@ -139,42 +158,64 @@ final class TAEMGuidanceEngine {
     if adapt, !geometryAdapted, let line = lines?.minimum, let hac = spiral(side: geometry!.side,
       finalRadius: geometry!.finalRadius, growth: geometry!.growth, turn: 2 * .pi) {
       let entry = line.sample(Self.spiralLength(hac, to: 2 * .pi))
-      let entrySpeed = sqrt(max(0, 2 * g * (entry.energy - entry.height)))
+      let entrySpeed = sqrt(referenceSpeedSquared(energy: entry.energy, height: entry.height))
       geometry!.growth = max(geometry!.finalRadius * 1e-3,
         turnRadius(speed: entrySpeed, gravity: g) - geometry!.finalRadius) / (4 * .pi * .pi)
       geometryAdapted = true
     }
   }
 
-  /// TAEM interface placement (offline): the predicted range whose nominal
-  /// energy equals the interface state's, flying an overhead HAC of `turn`.
+  /// TAEM interface placement (offline): the point on HREF at configured
+  /// interface Mach, flying an overhead HAC of `turn`.
   /// Returns that range and the HAC part of it. The Shuttle's 52 nm comes
   /// from the orbiter's polar; this vehicle's supersonic L/D is below one.
   func nominalInterface(state: VehicleState, nep: NominalEnergyPoint, turn: Double = 2 * .pi)
-    -> (range: Double, hacLength: Double)? {
+    -> (range: Double, hacLength: Double, height: Double, speed: Double, q: Double, slope: Double)? {
     let c = configuration
     let g = c.planet.gravitationalParameter / frame.origin.squaredLength
-    let h = frame.coordinates(of: state.position).height
-    let energy = h + state.aerodynamics.airspeed * state.aerodynamics.airspeed / (2 * g)
     let ceiling = rotation.supportedTrimAlpha(state, identifiedCeiling: nil)
     reset()
+    interfaceFailure = nil
     var range = c.entrySettings.terminalTargetRange, hacLength = 0.0
+    var result: (range: Double, hacLength: Double, height: Double, speed: Double, q: Double, slope: Double)?
     for _ in 0..<6 {
       geometryAdapted = false
       prepareGeometry(nep: nep, gravity: g, adapt: true)
       guard let hac = spiral(side: 1, finalRadius: geometry!.finalRadius, growth: geometry!.growth, turn: turn)
       else { return nil }
       hacLength = Self.spiralLength(hac, to: turn)
-      let line = makeLine(state: state, nep: nep, maximumRange: 3 * range, hac: hac, hacTurn: turn,
+      let line = makeLine(state: state, nep: nep, maximumRange: c.guidance.maximumPathLength, hac: hac, hacTurn: turn,
         liftGain: 1, dragGain: 1, alphaCeiling: ceiling, nominal: true)
-      let minimum = makeLine(state: state, nep: nep, maximumRange: 3 * range, hac: hac, hacTurn: turn,
+      let minimum = makeLine(state: state, nep: nep, maximumRange: c.guidance.maximumPathLength, hac: hac, hacTurn: turn,
         liftGain: 1, dragGain: 1, alphaCeiling: ceiling, nominal: false)
       lines = (state.time, 1, turn, line, minimum)
-      guard let i = line.energyIndex(atLeast: energy) else { return nil }
-      range = line.rangeValue(i)
+      // Mach remains an explicit configured regime boundary; altitude and
+      // range must be on the same attainable HREF, not a copied Earth pair.
+      func mach(_ d: Double) -> Double {
+        let x = line.sample(d)
+        let speed = sqrt(referenceSpeedSquared(energy: x.energy, height: x.height))
+        return speed / atmosphere.sample(position: referencePosition(x.height), time: state.time).speedOfSound
+      }
+      guard let i = line.range.indices.dropFirst().first(where: {
+        line.range[$0] >= hacLength && mach(line.range[$0]) >= c.mm304DeliveryMach
+      }) else { interfaceFailure = "Configured Mach not reached within maximumPathLength"; reset(); return nil }
+      var lo = max(hacLength, line.range[i - 1]), hi = line.range[i]
+      guard mach(lo) <= c.mm304DeliveryMach else {
+        interfaceFailure = "full HAC entry Mach \(mach(hacLength)), configured interface Mach \(c.mm304DeliveryMach), HAC length \(hacLength)"
+        reset(); return nil
+      }
+      for _ in 0..<32 {
+        let mid = (lo + hi) / 2
+        if mach(mid) < c.mm304DeliveryMach { lo = mid } else { hi = mid }
+      }
+      range = (lo + hi) / 2
+      let x = line.sample(range)
+      let speed = sqrt(referenceSpeedSquared(energy: x.energy, height: x.height))
+      let rho = atmosphere.sample(position: referencePosition(x.height), time: state.time).density
+      result = (range, hacLength, x.height, speed, 0.5 * rho * speed * speed, line.slope(range))
     }
     reset()
-    return (range, hacLength)
+    return result
   }
 
   // MARK: Reference lines (TGCOMP)
@@ -202,8 +243,8 @@ final class TAEMGuidanceEngine {
         gear: state.systems.gearDown)
       return aero.coefficients(mach: mach, alpha: alpha, dynamicPressure: q, gear: state.systems.gearDown)
     }
-    func frontQ(mach: Double, q: Double, load: Double) -> Double {
-      g * load * state.mass / max(1e-9, aero.referenceArea * best(mach: mach, q: q).lift * liftGain)
+    func frontQ(mach: Double, q: Double, load: Double, gravity: Double) -> Double {
+      gravity * load * state.mass / max(1e-9, aero.referenceArea * best(mach: mach, q: q).lift * liftGain)
     }
     // Schedule (cf. QBREF): the minimum line flies the front-side (best-L/D)
     // q; the nominal flies the q at which the modelled drag is the drag the
@@ -215,7 +256,7 @@ final class TAEMGuidanceEngine {
     // flown, so near the NEP, where the ramp already exceeds the reserved
     // q, no reserve is priced that the vehicle could not spend.
     let reserve = 1 + v.aerodynamicUncertainty
-    func reservedQ(mach: Double, q: Double) -> Double {
+    func reservedQ(mach: Double, q: Double, gravity: Double, load: Double) -> Double {
       let bestAlpha = aero.bestGlideAlpha(mach: mach, maximumAlpha: alphaCeiling, dynamicPressure: q,
         gear: state.systems.gearDown)
       func coefficients(_ alpha: Double) -> AerodynamicCoefficients {
@@ -230,59 +271,53 @@ final class TAEMGuidanceEngine {
         if ratio(mid) < target { lo = mid } else { hi = mid }
       }
       return min(v.maximumDynamicPressure,
-        g * state.mass / max(1e-9, aero.referenceArea * max(1e-6, coefficients(hi).lift) * liftGain))
+        gravity * load * state.mass / max(1e-9, aero.referenceArea * max(1e-6, coefficients(hi).lift) * liftGain))
     }
     let nepAir = air(nep.height)
     let nepQ = 0.5 * nepAir.density * nep.airspeed * nep.airspeed
     let nepMach = nep.airspeed / max(1, nepAir.speedOfSound)
-    let nepFront = frontQ(mach: nepMach, q: nepQ, load: 1)
+    let nepFront = frontQ(mach: nepMach, q: nepQ, load: 1, gravity: gravity(atHeight: nep.height))
     let nepPolar = best(mach: nepMach, q: nepQ)
     let gain = tan(abs(nep.flightPathAngle)) - nepPolar.drag * dragGain / max(1e-9, nepPolar.lift * liftGain)
-    let ramp = max(0, (nepQ - nepFront) / nepAir.density / g) / max(1e-3, gain)
+    let ramp = max(0, (nepQ - nepFront) / nepAir.density / gravity(atHeight: nep.height)) / max(1e-3, gain)
     func schedule(_ d: Double) -> Double { ramp > 0 ? nepQ * max(0, 1 - d / ramp) : 0 }
     let steps = 240, dd = maximumRange / Double(steps)
     var out = TAEMEnergyLine()
-    var energy = nep.height + nep.airspeed * nep.airspeed / (2 * g)
+    var energy = energyModel.height(position: referencePosition(nep.height), speedSquared: nep.airspeed * nep.airspeed)
     var previousHeight = nep.height
     for i in 0...steps {
       let d = Double(i) * dd
       // Solve the altitude on this energy level whose q meets the schedule.
-      var lo = 0.0, hi = max(0, energy)
+      var lo = 0.0, hi = maximumReferenceHeight
       var load = 1.0
       for _ in 0..<28 {
-        let h = (lo + hi) / 2, a = air(h), speed = sqrt(max(0, 2 * g * (energy - h)))
+        let h = (lo + hi) / 2, a = air(h), speed = sqrt(referenceSpeedSquared(energy: energy, height: h))
         let q = 0.5 * a.density * speed * speed
         // The HAC radius follows the line's own speed; the acquisition arc's
         // load is fixed by how it is flown (see acquisitionLeg).
         if let acquisition, acquisition.span.contains(d) { load = acquisition.load }
-        else { load = hypot(1, speed * speed * curvature(d) / g) }
+        else { load = hypot(1, speed * speed * curvature(d) / gravity(atHeight: h)) }
         // No more load than the configured bank limit can fly.
         load = min(load, 1 / cos(v.maximumBank))
         // A turn raises the front-side q by its load (as the flight law's
         // q floor does), else best L/D could not carry it.
-        let target = max(schedule(d), frontQ(mach: speed / max(1, a.speedOfSound), q: q, load: load))
+        let mach = speed / max(1, a.speedOfSound), localGravity = gravity(atHeight: h)
+        let front = frontQ(mach: mach, q: q, load: load, gravity: localGravity)
+        let target = max(schedule(d), front,
+          nominal ? reservedQ(mach: mach, q: q, gravity: localGravity, load: load) : front)
         if q > target { lo = h } else { hi = h }
       }
-      let h = lo, a = air(h), speed = sqrt(max(1, 2 * g * (energy - h)))
+      let h = lo, a = air(h), speed = sqrt(referenceSpeedSquared(energy: energy, height: h))
       let q = 0.5 * a.density * speed * speed, mach = speed / max(1, a.speedOfSound)
-      var reference = h
-      if nominal {
-        let spend = max(q, reservedQ(mach: mach, q: q))
-        var lo = 0.0, hi = h
-        for _ in 0..<28 {
-          let m = (lo + hi) / 2
-          if 0.5 * air(m).density * 2 * g * (energy - m) > spend { lo = m } else { hi = m }
-        }
-        reference = lo
-      }
+      let reference = h
       out.append(range: d, energy: energy, height: reference, dynamicPressure: q,
-        frontDynamicPressure: frontQ(mach: mach, q: q, load: load))
+        frontDynamicPressure: frontQ(mach: mach, q: q, load: load, gravity: gravity(atHeight: h)))
       // Drag where the line is flown (HREF for the nominal), of the AoA that
       // carries the load, with measured force gains.
-      let flown = air(reference), flownSpeed = sqrt(max(1, 2 * g * (energy - reference)))
+      let flown = air(reference), flownSpeed = sqrt(referenceSpeedSquared(energy: energy, height: reference))
       let flownQ = 0.5 * flown.density * flownSpeed * flownSpeed
       let flownMach = flownSpeed / max(1, flown.speedOfSound)
-      let lift = aero.liftSolution(acceleration: g * load / max(1e-9, liftGain), mass: state.mass,
+      let lift = aero.liftSolution(acceleration: gravity(atHeight: reference) * load / max(1e-9, liftGain), mass: state.mass,
         dynamicPressure: flownQ, mach: flownMach, minimumAlpha: floor, maximumAlpha: alphaCeiling,
         gear: state.systems.gearDown)
       let cd = aero.coefficients(mach: flownMach, alpha: lift.alpha, dynamicPressure: flownQ,
@@ -308,7 +343,7 @@ final class TAEMGuidanceEngine {
     let tau = max(c.guidance.pathLookaheadTime, pitchResponseSeconds ?? 0)
     let rollTime = max(c.guidance.pathLookaheadTime, rollResponseSeconds ?? 0)
     let ceiling = rotation.supportedTrimAlpha(state, identifiedCeiling: attainableAlphaCeiling)
-    let energy = p.height + speed * speed / (2 * g)
+    let energy = energyModel.height(state)
     status.energyHeight = energy
 
     // HAC size: final radius flies the NEP airspeed, the spiral grows so a
@@ -472,12 +507,16 @@ final class TAEMGuidanceEngine {
       gear: state.systems.gearDown).lift * liftGain
     let frontQ = g * turnLoad * state.mass / max(1e-9, aero.referenceArea * bestLift)
     func height(atDynamicPressure q: Double) -> Double {
-      var lo = 0.0, hi = max(0, energy)
+      var lo = 0.0, hi = maximumReferenceHeight
       for _ in 0..<28 {
         let h = (lo + hi) / 2
         let rho = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross, height: h),
           time: state.time).density
-        if rho * g * (energy - h) > q { lo = h } else { hi = h }
+        let position = frame.position(along: p.along, cross: p.cross, height: h)
+        let groundSpeed = sqrt(energyModel.speedSquared(height: energy, position: position))
+        let wind = atmosphere.sample(position: position, time: state.time).wind
+        let airSpeedSquared = (state.velocity.normalized * groundSpeed - wind).squaredLength
+        if 0.5 * rho * airSpeedSquared > q { lo = h } else { hi = h }
       }
       return lo
     }
@@ -485,7 +524,10 @@ final class TAEMGuidanceEngine {
     let targetHeight = min(frontHeight, max(nominal.height, height(atDynamicPressure: v.maximumDynamicPressure)))
     let targetDensity = atmosphere.sample(position: frame.position(along: p.along, cross: p.cross,
       height: targetHeight), time: state.time).density
-    let commandedQ = targetDensity * g * max(0, energy - targetHeight)
+    let targetPosition = frame.position(along: p.along, cross: p.cross, height: targetHeight)
+    let targetGroundSpeed = sqrt(energyModel.speedSquared(height: energy, position: targetPosition))
+    let targetWind = atmosphere.sample(position: targetPosition, time: state.time).wind
+    let commandedQ = 0.5 * targetDensity * (state.velocity.normalized * targetGroundSpeed - targetWind).squaredLength
     status.minimumDynamicPressure = frontQ
     status.referenceDynamicPressure = commandedQ
     status.referenceHeight = targetHeight
@@ -502,12 +544,27 @@ final class TAEMGuidanceEngine {
     let gamma = clamp(asin(clamp(desiredRate / speed, -1, 1)), -glide, glide)
     var vertical = support + speed * (gamma - state.flightPathAngle) / tau
     // Hard q bounds (QBMNNZ/QBMXNZ) for a state far off the target.
-    let floorSpeed = sqrt(2 * frontQ / density)
-    let ceilingSpeed = sqrt(2 * v.maximumDynamicPressure / density)
-    if speed < floorSpeed {
-      vertical = min(vertical, max(0, support - speed * asin(clamp((floorSpeed - speed) / (g * tau), 0, 1)) / tau))
-    } else if speed > ceilingSpeed {
-      vertical = max(vertical, support + speed * asin(clamp((speed - ceilingSpeed) / (g * tau), 0, 1)) / tau)
+    // In still air qdot/q = V*gammaSin*dln(rho)/dh
+    //                         - 2*(D/m + geff*gammaSin)/V.
+    // The density term can dominate on Kerbin. Solve this local equation
+    // over the identified pitch response instead of treating q as speed
+    // alone in a constant-density atmosphere. Wind cases retain the
+    // kinematic speed bound until a wind-gradient model is available.
+    let densityGradient = atmosphere.logDensityAltitudeGradient(position: state.position, time: state.time)
+    let effectiveGravity = g - c.planet.angularVelocity.cross(state.position).squaredLength / state.position.length
+    func pressureBound(_ q: Double) -> Double {
+      let floorSpeed = sqrt(2 * q / density)
+      let speedOnly = -asin(clamp((floorSpeed - speed) / (g * tau), -1, 1))
+      let coefficient = speed * densityGradient - 2 * effectiveGravity / speed
+      guard state.atmosphere.wind.squaredLength == 0, a.dynamicPressure > 0,
+        coefficient < 0 else { return speedOnly }
+      let fractionalRate = log(q / a.dynamicPressure) / tau
+      return asin(clamp((fractionalRate + 2 * dragAcceleration / speed) / coefficient, -1, 1))
+    }
+    if a.dynamicPressure < frontQ {
+      vertical = min(vertical, support + speed * (pressureBound(frontQ) - state.flightPathAngle) / tau)
+    } else if a.dynamicPressure > v.maximumDynamicPressure {
+      vertical = max(vertical, support + speed * (pressureBound(v.maximumDynamicPressure) - state.flightPathAngle) / tau)
     }
 
     // One lift vector: vertical first, lateral from what remains.
@@ -620,12 +677,19 @@ public enum TAEMInterfacePlacement {
     guard let nep = NominalEnergyPointSolver(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
       .solve(from: state) else { throw FlightError.invalidConfiguration("No NEP solution") }
     let engine = TAEMGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aerodynamics)
-    guard let result = engine.nominalInterface(state: state, nep: nep) else {
-      throw FlightError.invalidConfiguration("Interface energy not reached on the nominal TAEM line")
+    let overhead = engine.nominalInterface(state: state, nep: nep)
+    let overheadFailure = engine.interfaceFailure
+    guard let result = overhead ?? engine.nominalInterface(state: state, nep: nep, turn: 0) else {
+      throw FlightError.invalidConfiguration("No interface: overhead: \(overheadFailure ?? "geometry unavailable"); straight-in: \(engine.interfaceFailure ?? "geometry unavailable")")
     }
+    let altitude = result.height + c.runway.elevation
+    let window = (c.entrySettings.terminalMinimumAltitude...c.entrySettings.terminalMaximumAltitude).contains(altitude)
+      ? "within configured altitude window" : "OUTSIDE configured altitude window; configuration review required"
+    let mode = overhead == nil ? "straight-in; overhead unavailable (\(overheadFailure ?? "geometry"))" : "overhead"
     let straight = result.range - result.hacLength
-    return String(format: "nominal TAEM range %.0f m (full-loop HAC %.0f m); taemInterfaceRange %.0f m (NEP %.0f m/s at %.0f m, interface q %.0f Pa)",
-      result.range, result.hacLength, straight + c.guidance.finalDistance, nep.airspeed, nep.height,
-      state.aerodynamics.dynamicPressure)
+    return "\(mode); \(window): " + String(format: "nominal TAEM range %.0f m (HAC %.0f m); taemInterfaceRange %.0f m; interface altitude ASL %.0f m, speed %.1f m/s, Mach %.3f, q %.0f Pa, flight-path %.2f deg (NEP %.0f m/s at %.0f m). Model-derived candidate, not flight-validated.",
+      result.range, result.hacLength, straight + c.guidance.finalDistance,
+      result.height + c.runway.elevation, result.speed, c.mm304DeliveryMach,
+      result.q, -degrees(atan(result.slope)), nep.airspeed, nep.height)
   }
 }

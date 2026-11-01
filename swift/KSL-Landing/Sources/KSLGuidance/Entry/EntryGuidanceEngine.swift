@@ -63,6 +63,10 @@ public final class EntryGuidanceEngine {
   public func setCrossAim(_ value: Double) { law.memory.retargetCrossAim(value) }
   public func setObjective(_ objective: EntryCaptureObjective?) { law.memory.objective = objective }
   public var crossAim: Double { law.memory.crossAim }
+  func captureObjective(at time: Double) -> EntryCaptureObjective {
+    law.memory.objective ?? EntryCaptureObjective.seed(configuration: configuration,
+      atmosphere: law.atmosphere, frame: frame, crossAim: law.memory.crossAim, time: time)
+  }
   public func considerTerminal(_ plan: TerminalPlan?, deficit: TAEMCaptureDeficit) {
     // Only a complete, physically feasible preview may shape MM304 while
     // it keeps flight authority. An unqualified or impossible HAC is advice

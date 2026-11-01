@@ -136,7 +136,7 @@ public final class EntryCaptureForecaster {
     }
     var terminalControls = controls, terminalTarget = previousTarget
     var capture = TAEMCaptureAssessment()
-    var searched = false, nextCapture = state.time
+    var searched = false, handedOff = false, nextCapture = state.time
     let first = predictor.predict(from: state, duration: c.guidance.maximumPredictionDuration,
       step: c.guidance.predictionStep, recordEvery: 10, terminalSpeed: 0,
       controlSnapshot: controls, previousTarget: previousTarget,
@@ -148,6 +148,17 @@ public final class EntryCaptureForecaster {
       handoff: { terminalControls = $0; terminalTarget = $1 },
       terminalCondition: { s in
         let altitude = s.position.length-c.planet.radius
+        let objective = law.memory.objective ?? EntryCaptureObjective.seed(configuration: c,
+          atmosphere: self.atmosphere, frame: self.frame,
+          crossAim: law.memory.crossAim, time: s.time)
+        // Search advisories can steer entry, but ownership ends at precisely
+        // the live executive's boundary, independently of plan feasibility.
+        if LandingMissionController.terminalHandoffDue(phase: .entry, plan: nil,
+          state: s, configuration: c, objective: objective) {
+          searched = true; handedOff = true
+          capture = evaluateCapture(s)
+          return true
+        }
         if !searched {
           let runwayRange = self.frame.distance(from: s.position, to: self.frame.origin)
           guard runwayRange <= TerminalExploration.searchRange(state: s, configuration: c,
@@ -162,8 +173,8 @@ public final class EntryCaptureForecaster {
         // still well above the MM305 altitude envelope. Survey the current
         // state, then aim the next forecast at the upper inlet altitude or
         // halfway to its lower tolerance. The real MM305 planner retains
-        // its original 5-second cadence, and a feasible capture still ends
-        // this branch immediately. Never skip the near-inlet survey.
+        // its original 5-second cadence. Surveys remain advisory until
+        // the shared ownership boundary. Never skip the near-inlet survey.
         let cadence = c.guidance.terminalReplanInterval
         let upperInlet = c.entrySettings.terminalMaximumAltitude
         let lowerInlet = c.mm304DeliveryFloor
@@ -171,20 +182,13 @@ public final class EntryCaptureForecaster {
         let descent = max(1.0, -s.verticalSpeed)
         let travel = max(0, altitude - nextHeight) / descent
         nextCapture = s.time + clamp(travel, cadence, altitude > upperInlet ? 12*cadence : 3*cadence)
-        // A failed MM305 capture must be diagnosed while entry altitude and
-        // speed still exist. Flying the *forecast* to a near-stall at 3 km
-        // before returning an entry proposal wastes its entire freshness
-        // budget and supplies a misleading terminal-energy classification.
-        // The operator's 22-km inlet floor is conservatively extended by its
-        // allowed position tolerance, not by an arbitrary ground altitude.
-        let predictionFloor = c.mm304DeliveryFloor
-        return capture.feasible || altitude <= predictionFloor
+        return false
       }) { s in
         let target = law.update(s, rangeMultiplier: rangeMultiplier)
         return .init(alpha: target.angleOfAttack, bank: target.bank)
       }
     let samples = first.samples, violations = first.violations, end = first.terminalState
-    if capture.feasible && certify {
+    if handedOff && capture.feasible && certify {
       capture = evaluator.evaluate(end, certify: true, controlSnapshot: terminalControls,
         previousTarget: terminalTarget, context: captureContext())
     }
@@ -196,6 +200,10 @@ public final class EntryCaptureForecaster {
       capture.violations = violations
       capture.deficit = violations.isEmpty ? .terminalRegionNotReached : .envelopeViolation
     }
+    if !handedOff {
+      capture.feasible = false
+      capture.deficit = .terminalRegionNotReached
+    }
     if searched, !violations.isEmpty {
       capture.feasible = false; capture.violations += violations; capture.deficit = .envelopeViolation
     }
@@ -206,7 +214,7 @@ public final class EntryCaptureForecaster {
       return [s.time, q.along, q.cross, q.height, s.velocity.length, s.angleOfAttack, s.bank]
     }
     var result = EntryCaptureForecast(createdAt: state.time, rangeMultiplier: rangeMultiplier,
-      reachedTerminalRegion: searched,
+      reachedTerminalRegion: handedOff,
       violations: violations, terminalTime: end.time, terminalAltitude: p.height,
       terminalMach: end.aerodynamics.mach, terminalAlong: p.along, terminalCross: p.cross,
       maximumDynamicPressure: maxQ, maximumLoad: maxLoad, capture: capture, track: track)
@@ -224,21 +232,23 @@ public final class EntryCaptureForecaster {
       envelope.excessEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.deficitEnergyMargin > -Double.greatestFiniteMagnitude,
       envelope.excessEnergyMargin + envelope.deficitEnergyMargin > 0 {
-      let gravity = c.planet.gravitationalParameter / pow(end.position.length, 2)
+      let energyModel = RunwayEnergy(configuration: c)
       let energy = capture.envelope.energyHeight
         + (capture.envelope.excessEnergyMargin - capture.envelope.deficitEnergyMargin) / 2
       // Preserve high capture altitude and center energy through speed,
       // inside the configured moderate-speed band.
       let sound = end.atmosphere.speedOfSound
-      let centeredSpeed = clamp(sqrt(max(0, 2*gravity*(energy-p.height))),
+      let target = result.objective!
+      let targetPosition = frame.position(along: target.along, cross: target.cross,
+        height: target.altitude-c.runway.elevation)
+      let centeredSpeed = clamp(sqrt(energyModel.speedSquared(height: energy, position: targetPosition)),
         max(0, c.mm304DeliveryMach-c.entrySettings.terminalMachHalfWidth)*sound,
         (c.mm304DeliveryMach+c.entrySettings.terminalMachHalfWidth)*sound)
       // The optimizer may refine the capture energy, not move the five-km
       // centerline objective to wherever an unsuccessful rollout happened to end.
-      let target = result.objective!
       result.suggestedObjective = .init(along: target.along, cross: target.cross,
         altitude: target.altitude, speed: centeredSpeed,
-        energyHeight: target.altitude-c.runway.elevation+centeredSpeed*centeredSpeed/(2*gravity),
+        energyHeight: energyModel.height(position: targetPosition, speedSquared: centeredSpeed*centeredSpeed),
         flightPath: target.flightPath)
     }
     return result

@@ -27,9 +27,9 @@ public struct EntryCaptureObjective: Codable, Sendable {
     let position = frame.position(along: along, cross: cross, height: 0).normalized * radius
     let speed = c.mm304DeliveryMach
       * atmosphere.sample(position: position, time: time).speedOfSound
-    let g = c.planet.gravitationalParameter / (radius * radius)
     return .init(along: along, cross: cross, altitude: c.mm304DeliveryAltitude, speed: speed,
-      energyHeight: c.mm304DeliveryAltitude - c.runway.elevation + speed * speed / (2 * g), flightPath: -glide)
+      energyHeight: RunwayEnergy(configuration: c).height(position: position, speedSquared: speed * speed),
+      flightPath: -glide)
   }
 }
 
@@ -140,7 +140,6 @@ final class EntryCommandLaw {
     var lateralDemand = EntryLateralController.demand(state: s, configuration: c,
       azimuthError: azimuth, crossError: aimCross - p.cross, crossRate: crossRate,
       alignment: alignment, range: abs(objective.along - p.along))
-    var terminalRemaining: Double?
     if let advice = memory.terminalAdvice,
       advice.assessment.feasible && advice.assessment.predictionComplete != false,
       advice.stations.count >= 2,
@@ -151,7 +150,6 @@ final class EntryCommandLaw {
       let steering = terminalTracker.lateralDemand(s, plan: advice,
         rollResponseSeconds: memory.rollResponseSeconds)
       lateralDemand = steering.acceleration
-      terminalRemaining = max(0, advice.length - steering.reference.distance)
       memory.terminalProjectionIndex = terminalTracker.index
       d.terminalAdviceAge = s.time - advice.createdAt
       d.terminalSteeringActive = true
@@ -187,17 +185,12 @@ final class EntryCommandLaw {
       ?? choices.max { $0.lift < $1.lift }!
     let energy = s.velocity.squaredLength/2-c.planet.gravitationalParameter/s.position.length
       - c.planet.angularVelocity.cross(s.position).squaredLength/2
-    var endpointEnergy = objective.specificEnergy(configuration: c)
-    if terminalRemaining != nil {
-      // Prospective HAC geometry includes the return turn and final, so price
-      // it against the configured touchdown state, not a 25-km point already abeam.
-      let touchdown = frame.position(along: c.guidance.touchdownAlong, cross: 0, height: c.vehicle.gearHeight)
-      endpointEnergy = c.vehicle.landingSpeed * c.vehicle.landingSpeed / 2
-        - c.planet.gravitationalParameter / touchdown.length
-        - c.planet.angularVelocity.cross(touchdown).squaredLength / 2
-    }
+    // Terminal geometry is lateral advice. MM304 must retain the same
+    // interface energy endpoint used by its drag reference and handoff;
+    // spending a touchdown budget here releases it far before that interface.
+    let endpointEnergy = objective.specificEnergy(configuration: c)
     let available = energy - endpointEnergy
-    let pathDistance = max(terminalRemaining ?? range, s.horizontalSpeed * c.guidance.pathLookaheadTime)
+    let pathDistance = max(range, s.horizontalSpeed * c.guidance.pathLookaheadTime)
       * a.airspeed / max(1, s.horizontalSpeed)
     // Reserve uncertain best-range drag work and the unavoidable work while
     // the measured pitch loop sheds its old demand. Both are J/kg, not metres.
@@ -214,7 +207,7 @@ final class EntryCommandLaw {
     d.jointMinimumDrag = joint.minimumSimultaneousDrag
     d.jointDragBudgetDeficit = joint.dragBudgetDeficit
     d.jointForceAttainable = joint.simultaneouslySupported
-    d.referenceDrag = terminalRemaining == nil ? min(d.referenceDrag, budget) : budget
+    d.referenceDrag = min(d.referenceDrag, budget)
     // The same force allocation is flown live and evaluated by the deorbit
     // predictor (EntryCaptureForecaster -> EntryCommandLaw).
     let decision = EntryForceAllocator.decide(points: choices,
@@ -229,7 +222,7 @@ final class EntryCommandLaw {
     d.dragTrackingResidual = decision.drag - d.referenceDrag
     d.captureSpecificEnergy = endpointEnergy
     d.terminalDeficit = memory.terminalDeficit?.rawValue
-    d.energyBudgetEndpoint = terminalRemaining == nil ? "entry-objective" : "terminal-touchdown"
+    d.energyBudgetEndpoint = "entry-objective"
     let maximumTurn = choices.reduce(0.0) { result, point in
       max(result, NormalForceEnvelope(maximumLift: min(point.lift, loadLimit),
         maximumBank: c.vehicle.maximumBank).lateralAuthority(reserving: captureLift))

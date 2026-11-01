@@ -73,6 +73,18 @@ final class EntryRangeTruthRegressionTests: XCTestCase {
       - (rotation.cross(p).squaredLength - rotation.cross(frame.origin).squaredLength)/2)
       / (mu/frame.origin.squaredLength)
     XCTAssertEqual(engine.energyHeight(state), expected, accuracy: 1e-9)
+    let coordinate = RunwayEnergy(configuration: c)
+    XCTAssertEqual(coordinate.speedSquared(height: expected, position: p),
+      v.squaredLength, accuracy: 1e-6)
+    let taem = TAEMGuidanceEngine(configuration: c, atmosphere: atmosphere, aerodynamics: aero)
+    let observed = ShuttlePhysicsEngine(configuration: c, atmosphere: atmosphere,
+      aerodynamics: aero).observe(state)
+    let nep = try XCTUnwrap(NominalEnergyPointSolver(configuration: c,
+      atmosphere: atmosphere, aerodynamics: aero).solve(from: observed))
+    _ = taem.update(observed, nep: nep, liftGain: 1, dragGain: 1,
+      attainableAlphaCeiling: nil, pitchResponseSeconds: nil, rollResponseSeconds: nil)
+    XCTAssertEqual(taem.status.energyHeight, expected, accuracy: 1e-9,
+      "TAEM and entry/terminal pricing must use the same rotating energy coordinate")
     var zeroRotation = c
     zeroRotation.planet.rotationRate = 0
     let inertialEngine = EnergyManagementEngine(configuration: zeroRotation,

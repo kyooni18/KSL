@@ -37,14 +37,7 @@ public final class EnergyManagementEngine {
   /// including it keeps terminal pricing consistent with MM304's true work
   /// equation, eDot = -dragAcceleration*airspeed in co-rotating still air.
   public func energyHeight(_ state: VehicleState) -> Double {
-    let p = state.position
-    let origin = frame.origin
-    let mu = configuration.planet.gravitationalParameter
-    let g = mu / origin.squaredLength
-    let rotation = configuration.planet.angularVelocity
-    let potentialChange = mu * (1 / origin.length - 1 / p.length)
-      - (rotation.cross(p).squaredLength - rotation.cross(origin).squaredLength) / 2
-    return (state.velocity.squaredLength / 2 + potentialChange) / g
+    RunwayEnergy(configuration: configuration).height(state)
   }
   /// Energy-consistent TAEM vertical profile along a horizontal path. Heights
   /// follow a dynamic-pressure schedule (descend as speed bleeds so lift can

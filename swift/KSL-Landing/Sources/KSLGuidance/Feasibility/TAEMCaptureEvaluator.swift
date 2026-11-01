@@ -127,12 +127,10 @@ public final class TAEMCaptureEvaluator {
     let v = c.vehicle, frame = RunwayFrame(runway: c.runway, planet: c.planet)
     var a = TAEMCaptureAssessment()
     let p = frame.coordinates(of: state.position)
-    let g = c.planet.gravitationalParameter / state.position.length.squared
-    let airspeed = max(1, state.aerodynamics.airspeed)
     a.time = state.time; a.altitude = p.height; a.mach = state.aerodynamics.mach
     a.rangeToRunway = frame.distance(from: state.position, to: frame.origin)
     a.headingError = wrapAngle(frame.bearing(from: state.position, to: frame.origin) - state.course)
-    a.envelope.energyHeight = p.height + airspeed * airspeed / (2 * g)
+    a.envelope.energyHeight = RunwayEnergy(configuration: c).height(state)
     let runwayDirection = frame.direction(at: p.horizontal, tangent: .init(1, 0))
     a.runwayHeadingError = wrapAngle(state.localFrame.heading(of: runwayDirection) - state.course)
     a.envelope.requiredHeadingChange = abs(a.runwayHeadingError ?? 0)

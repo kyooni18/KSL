@@ -55,15 +55,15 @@ final class EntryCaptureObjectivePlanner {
           // Price a COMPLETE HAC/Final, never a distance-only waypoint.
           guard capture.feasible, capture.hacRadius != nil,
                 envelope.energyMargin.isFinite, envelope.energyMargin > 0 else { continue }
-          let g = c.planet.gravitationalParameter/position.squaredLength
+          let energyModel = RunwayEnergy(configuration: c)
           let energy = envelope.energyHeight
             + (envelope.excessEnergyMargin-envelope.deficitEnergyMargin)/2
-          let centeredSpeed = clamp(sqrt(max(0, 2*g*(energy-height))),
+          let centeredSpeed = clamp(sqrt(energyModel.speedSquared(height: energy, position: position)),
             max(0, c.mm304DeliveryMach-e.terminalMachHalfWidth)*sound,
             (c.mm304DeliveryMach+e.terminalMachHalfWidth)*sound)
           let objective = EntryCaptureObjective(along: along, cross: cross,
             altitude: altitude, speed: centeredSpeed,
-            energyHeight: height+centeredSpeed*centeredSpeed/(2*g), flightPath: -glide)
+            energyHeight: energyModel.height(position: position, speedSquared: centeredSpeed*centeredSpeed), flightPath: -glide)
           // Prefer the altitude-consistent inlet, not the old shortest
           // centerline intercept. An actual HAC can overrule the ideal range.
           let cost = abs(range-ideal)/e.terminalTargetRange

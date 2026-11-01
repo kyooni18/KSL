@@ -105,18 +105,23 @@ public final class LandingMissionController {
   /// bottom of the configured Mach window, or at the altitude deadline.
   /// Crossing an altitude far up-range is not a handoff.
   public static func terminalHandoffDue(phase: MissionPhase, plan: TerminalPlan?,
-    state: VehicleState, configuration c: MissionConfiguration) -> Bool {
+    state: VehicleState, configuration c: MissionConfiguration,
+    objective: EntryCaptureObjective? = nil) -> Bool {
     guard phase == .entry && plan == nil && state.verticalSpeed < 0 else { return false }
     let altitude = state.position.length - c.planet.radius
     if altitude <= c.mm304HandoffDeadlineAltitude { return true }
     let a = state.aerodynamics
     guard a.dynamicPressure > 0, a.mach > 0 else { return false }
     if a.mach <= c.mm304DeliveryMach - c.entrySettings.terminalMachHalfWidth { return true }
-    let g = c.planet.gravitationalParameter / state.position.squaredLength
-    let sound = a.airspeed / a.mach
-    let interfaceSpeed = c.mm304DeliveryMach * sound
-    return altitude + a.airspeed * a.airspeed / (2 * g)
-      <= c.mm304DeliveryAltitude + interfaceSpeed * interfaceSpeed / (2 * g)
+    // Use the same fixed interface state as MM304's reference, not a Mach
+    // speed recomputed using the atmosphere at the vehicle's current altitude.
+    guard let target = objective ?? (try? AtmosphericModelEngine(planet: c.planet)).map({
+      EntryCaptureObjective.seed(configuration: c, atmosphere: $0,
+        frame: RunwayFrame(runway: c.runway, planet: c.planet), crossAim: 0, time: state.time)
+    }) else { return false }
+    let energy = state.velocity.squaredLength / 2 - c.planet.gravitationalParameter / state.position.length
+      - c.planet.angularVelocity.cross(state.position).squaredLength / 2
+    return energy <= target.specificEnergy(configuration: c)
   }
   private func inTerminalSearchEnvelope(_ state: VehicleState) -> Bool {
     let cadence = configuration.guidance.terminalReplanInterval
@@ -332,7 +337,8 @@ public final class LandingMissionController {
       commandedAlpha: limiter.previous?.angleOfAttack, feedback: controlFeedback,
       fallbackResponseSeconds: configuration.guidance.pathLookaheadTime)
     let p = frame.coordinates(of: state.position)
-    if Self.terminalHandoffDue(phase: phase, plan: plan, state: state, configuration: configuration) {
+    if Self.terminalHandoffDue(phase: phase, plan: plan, state: state, configuration: configuration,
+      objective: entry.captureObjective(at: state.time)) {
       phase = .acquisition
       taem.reset()
       forcedTerminalOwnership = true
