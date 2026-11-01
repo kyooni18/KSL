@@ -20,11 +20,16 @@ public final class AerodynamicsEngine: Sendable {
   public let history: HistoricalAerodynamics?
   private let machs: [Double]
   private let alphas: [Double]
+  /// Exact lift-search breakpoints are immutable for one physical model.
+  /// Constructing and sorting this set for every HAC path station dominated
+  /// repeated entry/terminal previews; keep the identical knots once.
+  private let liftKnots: [Double]
   private let liftTable: [[Double]]
   private let dragTable: [[Double]]
   private init(copy: AerodynamicsEngine, liftMultiplier: Double, dragMultiplier: Double) {
     referenceArea = copy.referenceArea; history = copy.history
-    machs = copy.machs; alphas = copy.alphas; liftTable = copy.liftTable; dragTable = copy.dragTable
+    machs = copy.machs; alphas = copy.alphas; liftKnots = copy.liftKnots
+    liftTable = copy.liftTable; dragTable = copy.dragTable
     liftScale = copy.liftScale * liftMultiplier; dragScale = copy.dragScale * dragMultiplier
     maximumLiftToDragRatio = copy.maximumLiftToDragRatio * liftMultiplier / dragMultiplier
   }
@@ -65,6 +70,12 @@ public final class AerodynamicsEngine: Sendable {
     }
     machs = Array(Set(rows.map { $0[0] })).sorted()
     alphas = Array(Set(rows.map { radians($0[1]) })).sorted()
+    // Sample alphas bracket the history kernel's lift maximum. Quantize them to
+    // 0.25 deg (well under the kernel's 10-deg support) so liftSolution scans
+    // hundreds of knots rather than one per archived sample.
+    let knotStep = radians(0.25)
+    let sampleKnots = Set((history?.history.samples ?? []).map { (($0.observation.alpha) / knotStep).rounded() * knotStep })
+    liftKnots = Array(Set(alphas).union(sampleKnots)).sorted()
     guard machs.count >= 2, alphas.count >= 2, rows.count == machs.count * alphas.count else {
       throw FlightError.invalidConfiguration("Incomplete aerodynamic grid")
     }
@@ -97,7 +108,7 @@ public final class AerodynamicsEngine: Sendable {
   public func coefficients(mach: Double, alpha: Double, dynamicPressure q: Double? = nil,
                            beta: Double = 0, gear: Bool = false, brakes: Bool = false,
                            airbrakes: Bool = false) -> AerodynamicCoefficients {
-    if let q, let sample = history?.estimate(q: q, mach: mach, alpha: alpha, beta: beta,
+    if let q, let sample = history?.force(q: q, mach: mach, alpha: alpha, beta: beta,
       gear: gear, brakes: brakes, airbrakes: airbrakes) {
       return .init(lift: sample.forcePerDynamicPressure.y * liftScale / referenceArea,
                    drag: sample.forcePerDynamicPressure.x * dragScale / referenceArea)
@@ -131,7 +142,7 @@ public final class AerodynamicsEngine: Sendable {
     let bodyUp = attitude.rotate(.init(0, 0, -1))
     result.bank = atan2(bodyUp.dot(windRight), bodyUp.dot(windUp))
     let c = coefficients(mach: result.mach, alpha: result.angleOfAttack)
-    let observed = history?.estimate(q: result.dynamicPressure, mach: result.mach,
+    let observed = history?.force(q: result.dynamicPressure, mach: result.mach,
       alpha: result.angleOfAttack, beta: result.sideslip, gear: gear, brakes: brakes, airbrakes: airbrakes)
     result.lift = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.y * liftScale } ?? (referenceArea * c.lift))
     result.drag = result.dynamicPressure * (observed.map { $0.forcePerDynamicPressure.x * dragScale } ?? (referenceArea * c.drag))
@@ -151,9 +162,11 @@ public final class AerodynamicsEngine: Sendable {
     beta: Double = 0, gear: Bool = false, brakes: Bool = false
   ) -> LiftSolution {
     let factor = q * referenceArea / max(1, mass)
-    let historical = history?.history.samples.map { $0.observation.alpha } ?? []
-    let knots = Array(Set([minimumAlpha, maximumAlpha]
-      + (alphas + historical).filter { $0 > minimumAlpha && $0 < maximumAlpha })).sorted()
+    // Boundary knots and all interior polar/history breakpoints are unchanged.
+    // Unlike sorting a new Set on every evaluation, these are already ordered.
+    let knots = minimumAlpha < maximumAlpha
+      ? [minimumAlpha] + liftKnots.filter { $0 > minimumAlpha && $0 < maximumAlpha } + [maximumAlpha]
+      : [minimumAlpha]
     func lift(_ alpha: Double) -> Double {
       coefficients(mach: mach, alpha: alpha, dynamicPressure: q, beta: beta,
         gear: gear, brakes: brakes).lift * factor

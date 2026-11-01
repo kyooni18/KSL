@@ -67,12 +67,30 @@ struct LandingCLI {
     // particular, `fly --help` must not connect, arm, or command a vessel.
     let command = args.contains("--help") || args.contains("-h") ? "help" : (args.first ?? "help")
     switch command {
+    case "deorbit-plan":
+      // Offline replanning from a recorded plan's source state and configuration.
+      guard let input = option("--input") else {
+        throw FlightError.invalidConfiguration("deorbit-plan requires --input plan.json")
+      }
+      let recorded = try JSONDecoder().decode(DeorbitPlan.self, from: Data(contentsOf: URL(fileURLWithPath: input)))
+      let configuration = try await PhysicsModelLoader.resolvingDefaultArchive(recorded.configuration,
+        path: ProcessInfo.processInfo.environment["KSL_SWIFT_PHYSICS_ARCHIVE"] ?? "Runtime/Physics/observations.sqlite3")
+      let clock = ContinuousClock(), start = clock.now
+      let aero = try await PhysicsModelLoader.aerodynamics(configuration: configuration)
+      let loaded = clock.now
+      let plan = try await DeorbitPlanner.planSelectingRunway(from: recorded.source,
+        configuration: configuration, aerodynamics: aero, allowReciprocal: true) { p in
+        FileHandle.standardError.write(Data("\(clock.now - start) \(p.runwayName ?? "") \(p.stage) \(p.candidate)/\(p.totalCases)\n".utf8))
+      }
+      print("archive \(loaded - start) planning \(clock.now - loaded) runway \(plan.configuration.runway.name) qualified \(plan.executionQualified)")
+      if let output = option("--output") { try JSONEncoder().encode(plan).write(to: URL(fileURLWithPath: output)) }
     case "deorbit-trace":
       guard let input = option("--input"), let path = option("--log") else {
         throw FlightError.invalidConfiguration("deorbit-trace requires --input plan.json and --log output.jsonl")
       }
       let plan = try JSONDecoder().decode(DeorbitPlan.self, from: Data(contentsOf: URL(fileURLWithPath: input)))
-      try await DeorbitDiagnostic.traceNominal(plan: plan, output: URL(fileURLWithPath: path))
+      try await DeorbitDiagnostic.traceNominal(plan: plan, output: URL(fileURLWithPath: path),
+        entryReplanning: args.contains("--entry-replanning"))
     case "deorbit-screen":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("deorbit-screen requires --input state.json and --configuration")
@@ -83,23 +101,115 @@ struct LandingCLI {
         throw FlightError.invalidTelemetry("Deorbit screening requires measured propulsion")
       }
       let search = try DeorbitWindowSearch(configuration: configuration).search(from: state, propulsion: propulsion)
+      struct CandidateForecastSummary: Encodable {
+        var burnStart: Double
+        var entryRange: Double
+        var entryCrossrange: Double
+        var terminalAlong: Double
+        var terminalCross: Double
+        var terminalAltitude: Double
+        var terminalMach: Double
+        var reachedTerminalRegion: Bool
+        var feasible: Bool
+        var captureFeasible: Bool
+        var captureDeficit: String
+        var energyMargin: Double
+        var violationCount: Int
+        /// State closest to the 25 km MM304-to-MM305 target (runway chart).
+        var nearTAEMAltitude: Double?
+        var nearTAEMAlong: Double?
+        var nearTAEMCross: Double?
+        var nearTAEMSpeed: Double?
+      }
       struct ScreenReport: Encodable {
-        let evidence = "offline-orbital-screen-only-not-an-execution-certificate"
+        // This inexpensive command starts entry at the ideal window state;
+        // unlike DeorbitPlanner it does not execute the controlled OMS burn.
+        let evidence = "offline-ideal-orbital-entry-screen-only-not-an-execution-certificate"
         let evaluated: Int
         let horizon: Double
         let rejections: [String: Int]
         let candidates: [DeorbitWindow]
+        let preview: [CandidateForecastSummary]?
+      }
+      var preview: [CandidateForecastSummary]? = nil
+      if args.contains("--forecast") {
+        let atmosphere = try AtmosphericModelEngine(planet: configuration.planet)
+        let aero = try await PhysicsModelLoader.aerodynamics(configuration: configuration)
+        let entry = LandingAwareWindowSelector(configuration: configuration,
+          atmosphere: atmosphere, aerodynamics: aero)
+        let forecast = EntryCaptureForecaster(configuration: configuration,
+          atmosphere: atmosphere, aerodynamics: aero)
+        preview = search.candidates.map { window in
+          let result = forecast.forecast(from: entry.entryState(window))
+          let targetHeight = configuration.entrySettings.terminalTargetAltitude
+            - configuration.runway.elevation
+          let nearTAEM = result.track.filter { $0.count >= 5 }
+            .min { abs($0[3]-targetHeight) < abs($1[3]-targetHeight) }
+          return CandidateForecastSummary(burnStart: window.burnStart,
+            entryRange: window.entryRange, entryCrossrange: window.crossrange,
+            terminalAlong: result.terminalAlong, terminalCross: result.terminalCross,
+            terminalAltitude: result.terminalAltitude, terminalMach: result.terminalMach,
+            reachedTerminalRegion: result.reachedTerminalRegion, feasible: result.feasible,
+            captureFeasible: result.capture.feasible,
+            captureDeficit: result.capture.deficit.rawValue,
+            energyMargin: result.capture.envelope.energyMargin,
+            violationCount: result.violations.count,
+            nearTAEMAltitude: nearTAEM?[3],
+            nearTAEMAlong: nearTAEM?[1],
+            nearTAEMCross: nearTAEM?[2],
+            nearTAEMSpeed: nearTAEM?[4])
+        }
       }
       try output(ScreenReport(evaluated: search.evaluated, horizon: search.horizon,
-        rejections: search.rejections, candidates: search.candidates))
+        rejections: search.rejections, candidates: search.candidates, preview: preview))
+    case "pitch-balance-probe":
+      guard let input = option("--input"), let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("pitch-balance-probe requires --input and --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+      try await PitchBalanceProbe.run(input: input, configuration: c)
     case "entry-energy-probe":
       guard let input = option("--input"), let path = option("--configuration") else {
         throw FlightError.invalidConfiguration("entry-energy-probe requires --input and --configuration")
       }
       let c = try JSONDecoder().decode(MissionConfiguration.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
-      try await EntryEnergyProbe.run(input: input, configuration: c)
+      if let elapsed = option("--compare-from").flatMap(Double.init) {
+        try await EntryEnergyProbe.compare(input: input, configuration: c, elapsed: elapsed,
+          duration: Double(option("--duration") ?? "120") ?? 120)
+      } else { try await EntryEnergyProbe.run(input: input, configuration: c) }
     case "shuttlesim-controller":
       try await ShuttleSimStream.run(arguments: args)
+    case "entry-forecast":
+      // Inspect a single physical MM304/TAEM continuation from recorded
+      // telemetry. Never connects to KSP; captures cannot qualify a landing.
+      guard let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("entry-forecast requires --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self,
+        from: Data(contentsOf: URL(fileURLWithPath: path)))
+      let state = try JSONDecoder().decode(VehicleState.self,
+        from: FileHandle.standardInput.readDataToEndOfFile())
+      let atm = try AtmosphericModelEngine(planet: c.planet)
+      let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+      let forecast = EntryCaptureForecaster(configuration: c, atmosphere: atm, aerodynamics: aero)
+        .forecast(from: state, rangeMultiplier: option("--range-multiplier").flatMap(Double.init) ?? 1.0,
+          crossAim: option("--cross-aim").flatMap(Double.init) ?? 0.0)
+      try output(forecast)
+    case "entry-plan":
+      // Offline diagnostic of the exact MM304 proposal built from a recorded
+      // VehicleState. Does not connect to or control KSP.
+      guard let path = option("--configuration") else {
+        throw FlightError.invalidConfiguration("entry-plan requires --configuration")
+      }
+      let c = try JSONDecoder().decode(MissionConfiguration.self,
+        from: Data(contentsOf: URL(fileURLWithPath: path)))
+      let state = try JSONDecoder().decode(VehicleState.self,
+        from: FileHandle.standardInput.readDataToEndOfFile())
+      let atmosphere = try AtmosphericModelEngine(planet: c.planet)
+      let aero = try await PhysicsModelLoader.aerodynamics(configuration: c)
+      let entry = EntryGuidanceEngine(configuration: c, atmosphere: atmosphere,
+        aerodynamics: aero)
+      if let request = entry.request(from: state) { try output(entry.plan(request)) }
     case "capture-probe":
       // Diagnostic: run MM305's own closed-loop capture evaluation on a
       // recorded VehicleState (JSON on stdin) with a run's configuration.
@@ -175,14 +285,7 @@ struct LandingCLI {
       if let s = option("--duration"), let duration = Double(s) {
         scenario.maximumDuration = duration
       }
-      let engine = try SimulationEngine(
-        scenario: scenario, liftScale: Double(option("--lift-scale") ?? "1") ?? 1,
-        dragScale: Double(option("--drag-scale") ?? "1") ?? 1,
-        densityScale: Double(option("--density-scale") ?? "1") ?? 1,
-        windENU: .init(
-          Double(option("--wind-east") ?? "0") ?? 0, Double(option("--wind-north") ?? "0") ?? 0,
-          Double(option("--wind-up") ?? "0") ?? 0),
-        controlAuthorityScale: Double(option("--actuator-scale") ?? "1") ?? 1)
+      let engine = try SimulationEngine(scenario: scenario)
       let result = try engine.run(
         logURL: option("--log").map { URL(fileURLWithPath: $0) },
         logEvery: Int(option("--log-every") ?? "1") ?? 1)
@@ -205,6 +308,34 @@ struct LandingCLI {
       var c = MissionConfiguration(); c.entry = c.entrySettings
       try output(c)
     case "scenario": try output(scenarioFromOptions())
+    case "runway-select":
+      let scenario = try scenarioFromOptions()
+      let input = scenario.configuration
+      let state = scenario.initialState
+      let options = RunwayApproachSelector.candidates(configuration: input)
+      let selected = RunwayApproachSelector.choose(state, configuration: input)
+      struct RunwayDecision: Encodable {
+        let selected: String
+        let evidence: String
+        let options: [RunwayMetric]
+      }
+      struct RunwayMetric: Encodable {
+        let name: String
+        let turnToInletDegrees: Double
+        let turnIntoFinalDegrees: Double
+        let minimumHeadingTravelDegrees: Double
+        let pathDistanceMetres: Double
+      }
+      try output(RunwayDecision(selected: selected.runway.name,
+        evidence: "Measured entry state; necessary heading geometry only, not landing qualification",
+        options: options.map {
+          let x = RunwayApproachSelector.assess(state, configuration: $0)
+          return RunwayMetric(name: x.runway.name,
+            turnToInletDegrees: degrees(x.turnToInlet),
+            turnIntoFinalDegrees: degrees(x.turnIntoFinal),
+            minimumHeadingTravelDegrees: degrees(x.minimumHeadingTravel),
+            pathDistanceMetres: x.pathDistance)
+        }))
     case "plan":
       let scenario = try scenarioFromOptions()
       let c = scenario.configuration
@@ -311,7 +442,7 @@ struct LandingCLI {
       }
       config.entry = config.entrySettings
       try config.validate()
-      let io = KRPCFlightIO(
+      var io = KRPCFlightIO(
         connection: connection, configuration: config,
         airbrakeActionGroup: UInt32(option("--airbrake-group") ?? "1") ?? 1)
       do {
@@ -340,24 +471,59 @@ struct LandingCLI {
           await io.shutdown()
         } else {
           let logPath = option("--log") ?? "ksl-live-\(Int(Date().timeIntervalSince1970)).jsonl"
+          let source = try await io.readState()
+          let originalRunway = config.runway
+          let aero = try await PhysicsModelLoader.aerodynamics(configuration: config)
+          var selectedDeorbitPlan: DeorbitPlan?
+          if args.contains("--deorbit") {
+            if let planPath = option("--deorbit-plan") {
+              selectedDeorbitPlan = try JSONDecoder().decode(DeorbitPlan.self,
+                from: Data(contentsOf: URL(fileURLWithPath: planPath)))
+            } else {
+              selectedDeorbitPlan = try await DeorbitPlanner.planSelectingRunway(
+                from: source, configuration: config, aerodynamics: aero,
+                allowReciprocal: !args.contains("--fixed-runway")) { progress in
+                  let sim = progress.simulationElapsed.map { " sim=\(String(format: "%.1f", $0))" } ?? ""
+                  let phase = progress.phase.map { " phase=\($0)" } ?? ""
+                  let message = "deorbit \(progress.stage) candidate=\(progress.candidate) case=\(progress.stressCase)/\(progress.totalCases)\(sim)\(phase)\n"
+                  FileHandle.standardError.write(Data(message.utf8))
+                }
+            }
+            // Before publishing a runway choice, connecting an armed backend,
+            // or recording a burn plan, enforce the actual route gate. A
+            // failed offline prediction must not masquerade as a selection.
+            if let planned = selectedDeorbitPlan {
+              try planned.authorize(identifier: planned.identifier,
+                reducedAssurance: args.contains("--reduced-assurance"))
+              config = planned.configuration
+            }
+          } else if !args.contains("--fixed-runway") {
+            // Standalone fly uses the same automatic approach-end decision as
+            // the operator/backend, never a hardcoded Runway 09 or 27.
+            config = RunwayApproachSelector.choose(source, configuration: config)
+          }
+          if config.runway != originalRunway {
+            await io.shutdown()
+            io = KRPCFlightIO(connection: connection, configuration: config,
+              airbrakeActionGroup: UInt32(option("--airbrake-group") ?? "1") ?? 1)
+            _ = try await io.connect(expectedVesselName: option("--vessel") ?? "STS")
+          }
+          try config.validate()
           try encoder.encode(config).write(
             to: URL(fileURLWithPath: logPath + ".configuration.json"))
           let recorder = try JSONLTelemetryRecorder(url: URL(fileURLWithPath: logPath))
-          let aero = try await PhysicsModelLoader.aerodynamics(configuration: config)
+          let planKind = selectedDeorbitPlan?.executionQualified == true
+            ? "qualified nominal orbit-to-rollout continuation"
+            : "not independently qualified; route evidence and authorization required"
+          FileHandle.standardError.write(Data(
+            "ksl-landing: automatic approach \(config.runway.name), heading \(degrees(config.runway.heading)) deg; \(planKind)\n".utf8))
           // Orbital execution owns the same IO and recorder through entry and
           // rollout. Keep its existing qualification and fresh-orbit checks;
           // ordinary `fly` remains an entry replay for backwards compatibility.
           let task: Task<RuntimeOutcome, Error>
           if args.contains("--deorbit") {
-            let plan: DeorbitPlan
-            if let planPath = option("--deorbit-plan") {
-              plan = try JSONDecoder().decode(DeorbitPlan.self, from: Data(contentsOf: URL(fileURLWithPath: planPath)))
-            } else {
-              let source = try await io.readState()
-              plan = try await DeorbitPlanner(configuration: config, aerodynamics: aero).plan(from: source) { progress in
-                let message = "deorbit planning: \(progress.stage) candidate=\(progress.candidate) case=\(progress.stressCase)/\(progress.totalCases)\n"
-                FileHandle.standardError.write(Data(message.utf8))
-              }
+            guard let plan = selectedDeorbitPlan else {
+              throw FlightError.invalidConfiguration("Deorbit selection returned no selected plan")
             }
             let recordedPlanURL = URL(fileURLWithPath: logPath + ".deorbit-plan.json").standardizedFileURL
             if option("--deorbit-plan").map({ URL(fileURLWithPath: $0).standardizedFileURL }) != recordedPlanURL {
@@ -403,8 +569,7 @@ struct LandingCLI {
         KSL Swift landing runtime (Swift 6)
           simulate [--entry | --scenario file.ini|file.json] [--duration seconds]
                    [--log file.jsonl] [--log-every 1] [--output report.json] [--require-success]
-                   [--lift-scale 1] [--drag-scale 1] [--density-scale 1] [--actuator-scale 1]
-                   [--wind-east 0] [--wind-north 0] [--wind-up 0] [--spiral-only]
+                   [--spiral-only]
           scenario [--entry] [--output scenario.json]
           plan [--entry | --scenario file] [--spiral-only] [--output plan.json]
           Initial-state options: --along meters --cross meters --height meters

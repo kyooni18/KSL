@@ -39,9 +39,9 @@ actor BackendServer {
   func emit(_ object: [String: Any]) {
     do {
       var data = try JSONSerialization.data(withJSONObject: object, options: .sortedKeys)
-      data.append(10); FileHandle.standardOutput.write(data)
+      data.append(10); try FileHandle.standardOutput.write(contentsOf: data)
     } catch {
-      FileHandle.standardError.write(Data("Operator serialization failed: \(error)\n".utf8))
+      try? FileHandle.standardError.write(contentsOf: Data("Operator output failed: \(error)\n".utf8))
     }
   }
   func publish() { emit(["type": "snapshot", "snapshot": snapshot()]) }
@@ -87,12 +87,20 @@ actor BackendServer {
       configuration.physicsArchive?.excludedSession = sessionID
       configuration.physicsArchive?.excludedFlight = sessionID
     }
-    if configuration != previous, let io { await io.shutdown(); self.io = nil }
+    // The kRPC adapter never reads the archive identity; resolving it must not
+    // cost a full reconnect (tens of seconds against a loaded KSP scene).
+    var ioRelevant = configuration; ioRelevant.physicsArchive = previous.physicsArchive
+    if ioRelevant != previous, let io { await io.shutdown(); self.io = nil }
     var value = try await connectIfNeeded(), state = try await value.readState()
-    if settings.allowReciprocal {
-      let frame = RunwayFrame(runway: configuration.runway, planet: configuration.planet)
-      if state.velocity.dot(frame.alongAxis) < 0 {
-        configuration.runway = configuration.runway.reciprocal(planet: configuration.planet)
+    // The deorbit planner searches both runway orientations using complete
+    // burn-to-stop evidence. Select by measured approach state only when
+    // already inside the atmosphere (otherwise orbital track is misleading).
+    if settings.allowReciprocal,
+       state.position.length-configuration.planet.radius <= configuration.planet.atmosphereTop,
+       state.contact == .airborne {
+      let selected = RunwayApproachSelector.choose(state, configuration: configuration)
+      if selected.runway != configuration.runway {
+        configuration = selected
         await value.shutdown(); io = nil
         value = try await connectIfNeeded(); state = try await value.readState()
       }
@@ -204,8 +212,9 @@ struct ServerRecorder: TelemetryRecording {
   let server: BackendServer
   let file: SessionTelemetryRecorder
   func record(_ record: FlightRecord) async throws {
-    try await file.record(record)
+    // Keep live status flowing even when the independent disk sink fails.
     await server.observe(record)
+    try await file.record(record)
   }
   func close() async throws { try await file.close() }
 }
