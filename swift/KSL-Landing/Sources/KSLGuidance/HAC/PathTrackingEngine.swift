@@ -11,88 +11,180 @@ public final class PathTrackingEngine {
   public private(set) var trackingError = 0.0
   public private(set) var reference: PathStation?
   public private(set) var headingError = 0.0
-  public init(configuration: MissionConfiguration, aerodynamics: AerodynamicsEngine) {
+  public private(set) var lateralAccelerationDemand = 0.0
+  public private(set) var allocatedLateralAcceleration = 0.0
+  public private(set) var lookaheadDistance = 0.0
+  public private(set) var lookaheadHeadingError = 0.0
+  public init(configuration: MissionConfiguration, aerodynamics: AerodynamicsEngine, initialIndex: Int = 0) {
     self.configuration = configuration
     frame = .init(runway: configuration.runway, planet: configuration.planet)
     aero = aerodynamics
-    rotation = .init(configuration: configuration.vehicle)
+    rotation = .init(configuration: configuration.vehicle, planet: configuration.planet)
+    index = max(0, initialIndex)
   }
   public func reset() {
     index = 0
     trackingError = 0; reference = nil; headingError = 0
+    lateralAccelerationDemand = 0; allocatedLateralAcceleration = 0
+    lookaheadDistance = 0; lookaheadHeadingError = 0
   }
-  public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1,
-                     identifiedTrimCeiling: Double? = nil, rollResponseSeconds: Double? = nil,
-                     pitchResponseSeconds: Double? = nil) -> (
-    GuidanceTarget, PathStation
-  ) {
+
+  /// Advance along this winding only. A quarter-turn of accumulated tangent
+  /// change keeps the preview on the local arc even when a large response
+  /// distance would otherwise look through a complete loop of advisory geometry.
+  private func lookahead(from reference: PathStation, plan: TerminalPlan, distance: Double) -> PathStation {
+    let end = min(plan.length, reference.distance + max(0, distance))
+    var previous = reference, turn = 0.0
+    for i in (index + 1)..<plan.stations.count {
+      guard plan.stations[i].distance > previous.distance else { continue }
+      let next = plan.station(at: min(end, plan.stations[i].distance))
+      let change = abs(atan2(previous.tangent.cross(next.tangent), previous.tangent.dot(next.tangent)))
+      if turn + change > .pi / 2 {
+        let fraction = (.pi / 2 - turn) / change
+        return plan.station(at: previous.distance + (next.distance - previous.distance) * fraction)
+      }
+      turn += change
+      if next.distance >= end { return next }
+      previous = next
+    }
+    return previous
+  }
+
+  /// Shared lateral geometry for MM304's advisory steering and MM305 control.
+  /// Walk contiguous segments; a nearby later winding is not an acquired path.
+  public func lateralDemand(_ state: VehicleState, plan: TerminalPlan,
+                            rollResponseSeconds: Double? = nil) -> (acceleration: Double, reference: PathStation) {
     let p = frame.coordinates(of: state.position)
-    index = max(index, plan.nearest(to: p.horizontal, startingAt: index))
-    let nearest = plan.stations[index]
-    let alongOffset = (p.horizontal - nearest.position).dot(nearest.tangent)
-    let ref = plan.station(at: clamp(nearest.distance + alongOffset, 0, plan.length))
+    guard !plan.stations.isEmpty else {
+      // Invalid external/legacy geometry must not crash the active owner.
+      // Return an unpriced local reference and retain bounded support recovery.
+      let velocity = frame.coordinateVelocity(at: state.position, velocity: state.velocity)
+      let tangent = velocity.length > 0 && velocity.length.isFinite ? velocity.normalized : Vector2(1, 0)
+      let ref = PathStation(distance: 0, position: p.horizontal, tangent: tangent,
+        curvature: 0, height: p.height, slope: tan(state.flightPathAngle), segment: .acquisition)
+      index = 0; reference = ref; trackingError = 0; headingError = 0; lateralAccelerationDemand = 0
+      lookaheadDistance = 0; lookaheadHeadingError = 0
+      return (0, ref)
+    }
+    index = min(max(0, index), max(0, plan.stations.count - 2))
+    while index + 2 < plan.stations.count {
+      let a = plan.stations[index], b = plan.stations[index + 1]
+      let segment = b.position - a.position
+      guard (p.horizontal - b.position).dot(segment) >= 0 else { break }
+      let next = plan.stations[index + 2].position - b.position
+      let denominator = next.dot(next)
+      let u = denominator > 0 ? clamp((p.horizontal - b.position).dot(next) / denominator, 0, 1) : 0
+      let nextDistance = (p.horizontal - (b.position + next * u)).length
+      if nextDistance > (p.horizontal - b.position).length { break }
+      index += 1
+    }
+    let a = plan.stations[index]
+    let b = plan.stations[min(index + 1, plan.stations.count - 1)]
+    let segment = b.position - a.position
+    let denominator = segment.dot(segment)
+    let u = denominator > 0 ? clamp((p.horizontal - a.position).dot(segment) / denominator, 0, 1) : 0
+    let ref = plan.station(at: a.distance + (b.distance - a.distance) * u)
     reference = ref
     let offset = p.horizontal - ref.position
     trackingError = offset.length
-    let tangent = frame.direction(at: ref.position, tangent: ref.tangent)
-    let course = state.localFrame.heading(of: tangent)
-    let headingError = wrapAngle(course - state.course)
-    self.headingError = headingError
+    // Compare directions at the vehicle, not two different tangent planes.
+    let tangent = frame.direction(at: p.horizontal, tangent: ref.tangent)
+    headingError = wrapAngle(state.localFrame.heading(of: tangent) - state.course)
     let crossError = -offset.dot(ref.tangent.rightNormal)
-    let vh = max(25, state.horizontalSpeed)
-    // Outer loops must be slower than the attitude loop they drive (a
-    // cascade needs bandwidth separation), so every time constant is
-    // floored at a multiple of the measured closed-loop response.
+    let vh = max(1, state.horizontalSpeed)
     let separation = 1 / (1 - GuidanceTargetLimiter.responseReserve)
     let rollFloor = (rollResponseSeconds ?? 0) * separation
-    let pitchFloor = (pitchResponseSeconds ?? 0) * separation
     let timeConstant = max(rollFloor, ref.segment == .spiral && abs(ref.curvature) > 1e-8
       ? max(configuration.guidance.pathLookaheadTime,
-          0.65*(configuration.guidance.hacLookaheadAngle ?? radians(16))/(abs(ref.curvature)*vh))
+          0.65 * (configuration.guidance.hacLookaheadAngle ?? radians(16)) / (abs(ref.curvature) * vh))
       : configuration.guidance.pathLookaheadTime)
-    let lateral =
-      vh * vh * ref.curvature + 2 * 0.9 / timeConstant * vh * sin(headingError) + crossError
-      / (timeConstant * timeConstant)
-    let gamma = atan(ref.slope)
-    let g = configuration.planet.gravitationalParameter / pow(state.position.length, 2)
-    // TAEM energy exchange: off the final segment, a speed error is repaid
-    // with its exact energy-height equivalent instead of holding geometric
-    // height with angle of attack (which turns a deficit into more drag).
+    // A regenerated C2 inlet matches measured position, course and curvature.
+    // Tracking only that station initially reproduces the current turn on every
+    // replan and does not anticipate the bend being requested downstream.
+    // Park/Deyst/How nonlinear lookahead: a_lat = 2 Vh² sin(eta) / L1.
+    // Do not add local curvature again; the preview already supplies it.
+    let chartSpeed = frame.coordinateVelocity(at: state.position, velocity: state.velocity).length
+    let preview = lookahead(from: ref, plan: plan,
+      distance: (chartSpeed.isFinite ? chartSpeed : vh) * timeConstant)
+    let aim = frame.position(along: preview.position.x, cross: preview.position.y, height: p.height)
+    let direction = (aim - state.position).projected(onPlaneWithNormal: state.position.normalized)
+    lookaheadDistance = direction.length
+    var error = lookaheadDistance > 0
+      ? wrapAngle(state.localFrame.heading(of: direction) - state.course) : headingError
+    // At exactly reciprocal heading either turn is geometrically equivalent;
+    // retain the current turn direction rather than toggling on roundoff.
+    if abs(abs(error) - .pi) <= sqrt(Double.ulpOfOne) {
+      error = state.aerodynamics.bank < 0 ? -.pi : .pi
+    }
+    lookaheadHeadingError = error
+    let captureSine = sin(clamp(error, -.pi / 2, .pi / 2))
+    if lookaheadDistance > 0 {
+      // One travelled control interval is a numerical endpoint guard, not an
+      // aerodynamic radius or a claim that the demanded force is available.
+      lateralAccelerationDemand = 2 * vh * vh * captureSine
+        / max(vh * configuration.guidance.controlInterval, lookaheadDistance)
+    } else {
+      // No forward path remains: keep its final tangent and cross-track
+      // recovery defined. Actual final capture still has its separate gate.
+      lateralAccelerationDemand = vh * vh * ref.curvature
+        + 2 * 0.9 / timeConstant * vh * captureSine
+        + crossError / (timeConstant * timeConstant)
+    }
+    return (lateralAccelerationDemand, ref)
+  }
+
+  public func update(_ state: VehicleState, plan: TerminalPlan, liftEffectiveness: Double = 1,
+                     identifiedTrimCeiling: Double? = nil, rollResponseSeconds: Double? = nil,
+                     pitchResponseSeconds: Double? = nil, referenceDynamicsCurrent: Bool = true) -> (GuidanceTarget, PathStation) {
+    let (lateral, ref) = lateralDemand(state, plan: plan, rollResponseSeconds: rollResponseSeconds)
+    let p = frame.coordinates(of: state.position)
     let speed = state.aerodynamics.airspeed
-    let exchange = ref.segment != .final && ref.speed > 0
+    let g = configuration.planet.gravitationalParameter / state.position.squaredLength
+    let gamma = atan(ref.slope)
+    let pitchFloor = (pitchResponseSeconds ?? 0) / (1 - GuidanceTargetLimiter.responseReserve)
+    // An unpriced geometric tail has no predicted speed to exchange for height.
+    let priced = referenceDynamicsCurrent && ref.speed > 0
+      && ref.distance <= (plan.assessment.predictedThroughDistance ?? plan.length)
+    let exchange = ref.segment != .final && priced
       ? (ref.speed * ref.speed - speed * speed) / (2 * g) : 0
     let heightTarget = ref.height - exchange
     let rateTime = max(5, pitchFloor), heightTime = rateTime * 12 / 5
-    let desiredVertical =
-      speed * sin(gamma) + clamp((heightTarget - p.height) / heightTime, -35, 35)
-    let vertical =
-      ((g - vh * vh / state.position.length) * cos(state.flightPathAngle)
-        + (desiredVertical - state.verticalSpeed) / rateTime + state.aerodynamics.airspeed
-        * state.aerodynamics.airspeed * ref.verticalCurvature)
+    let desiredVertical = speed * sin(gamma) + clamp((heightTarget - p.height) / heightTime, -35, 35)
+    let desiredGamma = asin(clamp(desiredVertical / max(1, speed), -1, 1))
+    let support = max(0, (g - speed * speed / state.position.length) * cos(state.flightPathAngle))
+    let vertical = support + speed * wrapAngle(desiredGamma - state.flightPathAngle) / rateTime
+      + speed * speed * ref.verticalCurvature
     let maxAlpha = rotation.supportedTrimAlpha(state, identifiedCeiling: identifiedTrimCeiling)
-    let availableLift = aero.liftSolution(acceleration: 0, mass: state.mass,
+    let scale = max(Double.leastNormalMagnitude, liftEffectiveness)
+    let available = aero.liftSolution(acceleration: 0, mass: state.mass,
       dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
-      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha)
-      .maximumAcceleration * max(0.5, liftEffectiveness)
-    // A low-energy vehicle cannot repay tracking error by banking away the
-    // lift supporting it. Unload the turn until normal force is available.
-    let support = max(0, (g-vh*vh/state.position.length)*cos(state.flightPathAngle))
-    let reservedVertical = max(support, vertical)
-    let bankAuthority = availableLift > reservedVertical
-      ? min(configuration.vehicle.maximumBank, acos(clamp(reservedVertical/availableLift, 0, 1))) : 0
-    let bank = clamp(atan2(lateral, max(1, vertical)), -bankAuthority, bankAuthority)
-    let required = clamp(
-      vertical / max(0.3, cos(bank)), 0, configuration.vehicle.maximumLoadFactor * 9.80665)
-    let lift = aero.liftSolution(
-      acceleration: required / max(0.5, liftEffectiveness), mass: state.mass,
-      dynamicPressure: state.aerodynamics.dynamicPressure,
-      mach: state.aerodynamics.mach, minimumAlpha: configuration.vehicle.minimumAngleOfAttack,
-      maximumAlpha: maxAlpha)
-    return (
-      .init(
-        angleOfAttack: lift.alpha, bank: bank, desiredSpeed: ref.speed, desiredHeight: ref.height,
-        desiredFlightPath: gamma,
-        gearDown: p.height < (configuration.guidance.gearDeploymentAltitude ?? 1500)), ref
-    )
+      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha,
+      beta: state.aerodynamics.sideslip, gear: state.systems.gearDown).maximumAcceleration * scale
+    let force = NormalForceEnvelope(
+      maximumLift: min(available, configuration.vehicle.maximumLoadFactor * 9.80665),
+      maximumBank: configuration.vehicle.maximumBank)
+    // Preserve the pre-existing support-first recovery for infeasible geometry.
+    // A priced, feasible positive normal vector may unload along its reference.
+    let reservedVertical = plan.assessment.feasible && priced && vertical > 0
+      ? vertical : max(support, vertical)
+    let allocation = force.allocate(vertical: reservedVertical, lateral: lateral)
+    allocatedLateralAcceleration = allocation.lateral
+    let lift = aero.liftSolution(acceleration: allocation.lift / scale, mass: state.mass,
+      dynamicPressure: state.aerodynamics.dynamicPressure, mach: state.aerodynamics.mach,
+      minimumAlpha: configuration.vehicle.minimumAngleOfAttack, maximumAlpha: maxAlpha,
+      beta: state.aerodynamics.sideslip, gear: state.systems.gearDown)
+    // Past best L/D, extra alpha only buys drag. When the demand is out of
+    // reach, or speed nears the safe floor, give up height to protect speed
+    // rather than mushing at the trim ceiling.
+    var alpha = lift.alpha
+    let safeSpeed = configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed
+    if !lift.achievable || speed < 1.15 * safeSpeed {
+      alpha = min(alpha, aero.bestGlideAlpha(mach: state.aerodynamics.mach, maximumAlpha: maxAlpha,
+        dynamicPressure: state.aerodynamics.dynamicPressure, gear: state.systems.gearDown))
+    }
+    return (.init(angleOfAttack: alpha, bank: allocation.bank,
+      desiredSpeed: priced ? ref.speed : (configuration.vehicle.minimumSafeSpeed ?? configuration.vehicle.landingSpeed),
+      desiredHeight: heightTarget, desiredFlightPath: desiredGamma,
+      gearDown: state.systems.gearDown || p.height <= (configuration.guidance.gearDeploymentAltitude ?? 1500)), ref)
   }
 }
